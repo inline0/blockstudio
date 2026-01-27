@@ -1,0 +1,93 @@
+.blockstudio-element-image-comparison {
+  display: block;
+  position: relative;
+  width: 100%;
+  overflow: hidden;
+  height: var(--blockstudio-element-image-comparison--height);
+
+  &__container {
+    width: 100%;
+    position: absolute;
+    top: 0;
+    left: 0;
+    pointer-events: none;
+    overflow: hidden;
+    user-select: none;
+    height: var(--blockstudio-element-image-comparison--height);
+
+    &--before img {
+      width: 100%;
+    }
+
+    &--after {
+      width: var(--blockstudio-element-image-comparison--start);
+    }
+  }
+
+  &__image {
+    height: 100% !important;
+    object-fit: cover !important;
+    max-width: unset !important;
+  }
+
+  &__scroller {
+    width: 50px;
+    height: 50px;
+    position: absolute;
+    left: 100px;
+    top: 50%;
+    transform: translateY(-50%);
+    border-radius: 50%;
+    background-color: transparent;
+    cursor: pointer;
+    backdrop-filter: blur(12px);
+    background: rgba(0, 0, 0, 0.5);
+    transition: background 0.1s ease-in;
+
+    &:hover {
+      background: #000;
+
+      &:before,
+      &:after {
+        background: #000;
+      }
+    }
+
+    &:before,
+    &:after {
+      content: "";
+      display: block;
+      width: 4px;
+      height: 9999px;
+      position: absolute;
+      left: 50%;
+      margin-left: -2px;
+      z-index: 30;
+      background: rgba(0, 0, 0, 0.5);
+      transition: background 0.1s ease-in;
+      backdrop-filter: blur(12px);
+    }
+
+    &:before {
+      top: 100%;
+    }
+
+    &:after {
+      bottom: 100%;
+    }
+  }
+
+  &__thumb {
+    height: 100%;
+    width: 100%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+
+    svg {
+      width: 32px;
+      height: 32px;
+      fill: #fff;
+    }
+  }
+}

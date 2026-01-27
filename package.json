@@ -4,7 +4,9 @@
   "type": "module",
   "scripts": {
     "playground": "tsx tests/playground-server.ts",
+    "playground:v7": "tsx tests/playground-server-v7.ts",
     "test": "playwright test",
+    "test:v7": "PLAYGROUND_PORT=9401 playwright test",
     "test:headed": "playwright test --headed",
     "test:debug": "playwright test --debug"
   },

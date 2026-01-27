@@ -12,6 +12,7 @@ export interface PlaygroundServerOptions {
   additionalPlugins?: string[];
   title?: string;
   excludeDirs?: string[];
+  excludeFiles?: string[];
   landingPage?: string;
   phpVersion?: string;
   wpVersion?: string;
@@ -20,6 +21,7 @@ export interface PlaygroundServerOptions {
 function getAllFiles(
   dirPath: string,
   excludeDirs: string[] = [],
+  excludeFiles: string[] = [],
   arrayOfFiles: string[] = []
 ): string[] {
   const files = readdirSync(dirPath);
@@ -31,7 +33,7 @@ function getAllFiles(
       const allExcludes = [...defaultExcludes, ...excludeDirs];
 
       if (!allExcludes.some((exclude) => file.includes(exclude))) {
-        arrayOfFiles = getAllFiles(filePath, excludeDirs, arrayOfFiles);
+        arrayOfFiles = getAllFiles(filePath, excludeDirs, excludeFiles, arrayOfFiles);
       }
     } else if (
       file.endsWith(".php") ||
@@ -41,7 +43,10 @@ function getAllFiles(
       file.endsWith(".css") ||
       file.endsWith(".js")
     ) {
-      arrayOfFiles.push(filePath);
+      // Skip excluded files
+      if (!excludeFiles.some((exclude) => file === exclude)) {
+        arrayOfFiles.push(filePath);
+      }
     }
   });
 
@@ -59,6 +64,7 @@ export function createPlaygroundServer(options: PlaygroundServerOptions) {
     additionalPlugins = [],
     title = "WordPress Playground",
     excludeDirs = [],
+    excludeFiles = [],
     landingPage = "/wp-admin",
     phpVersion = "8.2",
     wpVersion = "latest",
@@ -70,7 +76,7 @@ export function createPlaygroundServer(options: PlaygroundServerOptions) {
 
   app.get("/api/plugin-files", (_: express.Request, res: express.Response) => {
     try {
-      const files = getAllFiles(pluginPath, excludeDirs).map((filePath) => {
+      const files = getAllFiles(pluginPath, excludeDirs, excludeFiles).map((filePath) => {
         const relativePath = relative(pluginPath, filePath);
         return {
           path: `/wordpress/wp-content/plugins/${pluginSlug}/${relativePath}`,

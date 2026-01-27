@@ -1,0 +1,43 @@
+<?xml version="1.0"?>
+<ruleset name="Blockstudio">
+	<description>WordPress Coding Standards for Blockstudio v7</description>
+
+	<!-- Only check migrated v7 code -->
+	<file>./blockstudio-v7.php</file>
+	<file>./includes-v7/class-plugin.php</file>
+
+	<!-- Exclude vendor and node_modules -->
+	<exclude-pattern>*/vendor/*</exclude-pattern>
+	<exclude-pattern>*/node_modules/*</exclude-pattern>
+
+	<!-- Exclude copied v6 classes (not yet migrated) -->
+	<exclude-pattern>*/includes-v7/classes/*</exclude-pattern>
+	<exclude-pattern>*/includes-v7/functions/*</exclude-pattern>
+	<exclude-pattern>*/includes-v7/admin/*</exclude-pattern>
+	<exclude-pattern>*/includes-v7/templates/*</exclude-pattern>
+
+	<!-- Use WordPress coding standards -->
+	<rule ref="WordPress"/>
+
+	<!-- PHP 8.2+ -->
+	<config name="testVersion" value="8.2-"/>
+
+	<!-- Text domain -->
+	<rule ref="WordPress.WP.I18n">
+		<properties>
+			<property name="text_domain" type="array">
+				<element value="blockstudio"/>
+			</property>
+		</properties>
+	</rule>
+
+	<!-- Prefix for hooks, functions, classes -->
+	<rule ref="WordPress.NamingConventions.PrefixAllGlobals">
+		<properties>
+			<property name="prefixes" type="array">
+				<element value="blockstudio"/>
+				<element value="Blockstudio"/>
+			</property>
+		</properties>
+	</rule>
+</ruleset>

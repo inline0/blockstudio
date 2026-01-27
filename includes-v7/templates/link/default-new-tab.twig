@@ -1,0 +1,6 @@
+{% set link = a.fieldName %}
+{% if link %}
+    <a href="{{ link.url }}" target="{{ link.opensInNewTab ? '_blank' : '_self' }}">
+        {{ link.title }}
+    </a>
+{% endif %}

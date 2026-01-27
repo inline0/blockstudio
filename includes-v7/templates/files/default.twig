@@ -1,0 +1,4 @@
+{% set file = a.fileName %}
+{% if file %}
+    {{ fn('wp_get_attachment_image', file.ID, 'full') }}
+{% endif %}

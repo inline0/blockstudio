@@ -1,0 +1,74 @@
+{
+  "$schema": "https://app.blockstudio.dev/schema",
+  "apiVersion": 2,
+  "version": "1.0.0",
+  "textdomain": "blockstudio",
+  "name": "blockstudio-element/image-comparison",
+  "title": "Image Comparison",
+  "category": "blockstudio-elements",
+  "icon": "star-filled",
+  "description": "Compare two images (e.g. before/after) using a slider.",
+  "keywords": [
+    "blockstudio",
+    "image comparison"
+  ],
+  "example": {
+    "attributes": {
+      "images": {
+        "blockstudio": true,
+        "type": "image",
+        "amount": 2
+      },
+      "icon": {
+        "set": "octicons",
+        "icon": "arrow-both-24"
+      }
+    }
+  },
+  "blockstudio": {
+    "attributes": [
+      {
+        "type": "group",
+        "title": "Images",
+        "attributes": [
+          {
+            "id": "images",
+            "type": "files",
+            "allowedTypes": "image",
+            "multiple": true,
+            "min": 2,
+            "max": 2,
+            "size": true
+          }
+        ]
+      },
+      {
+        "type": "group",
+        "title": "Appearance",
+        "attributes": [
+          {
+            "id": "height",
+            "type": "number",
+            "label": "Height",
+            "default": 250
+          },
+          {
+            "id": "start",
+            "type": "number",
+            "label": "Start",
+            "default": 125
+          },
+          {
+            "id": "icon",
+            "type": "icon",
+            "label": "Icon",
+            "default": {
+              "set": "octicons",
+              "icon": "arrow-both-24"
+            }
+          }
+        ]
+      }
+    ]
+  }
+}
