@@ -181,7 +181,7 @@ class Extensions {
 		}
 
 		$element = $content->get_updated_html();
-		$assets  = Assets::renderCodeFieldAssets( $attribute_data );
+		$assets  = Assets::render_code_field_assets( $attribute_data );
 
 		return $element . $assets;
 	}

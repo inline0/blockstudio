@@ -1,4 +1,9 @@
 <?php
+/**
+ * Assets class.
+ *
+ * @package Blockstudio
+ */
 
 namespace Blockstudio;
 
@@ -7,1118 +12,1275 @@ use BlockstudioVendor\MatthiasMullie\Minify;
 use BlockstudioVendor\ScssPhp\ScssPhp\Exception\SassException;
 
 /**
- * Assets class.
- *
- * @date   04/09/2022
- * @since  3.0.0
+ * Handles asset processing and rendering.
  */
-class Assets
-{
-    private static array $modules = [];
-
-    /**
-     * Construct.
-     *
-     * @date   04/09/2022
-     * @since  3.0.0
-     */
-    function __construct()
-    {
-        add_action('template_redirect', [$this, 'maybeBufferOutput'], 3);
-        add_filter(
-            'blockstudio/buffer/output',
-            [$this, 'parseOutput'],
-            1000000
-        );
-        add_action('admin_footer', function () {
-            $this->getAssets();
-        });
-        add_action('customize_preview_init', function () {
-            $this->getAssets('customizer');
-        });
-        add_action('admin_init', function () {
-            $this->getAdminAndEditorAssets();
-        });
-    }
-
-    /**
-     * Maybe return.
-     *
-     * @date   04/09/2022
-     * @since  3.0.0
-     */
-    function maybeBufferOutput()
-    {
-        if (function_exists('is_customize_preview') && is_customize_preview()) {
-            return false;
-        }
-
-        if (is_admin()) {
-            return false;
-        }
-
-        ob_start([$this, 'returnBuffer']);
-    }
-
-    /**
-     * Parse output and return assets.
-     *
-     * @date   04/09/2022
-     * @since  3.0.0
-     *
-     * @param  $html
-     *
-     * @return string
-     */
-    function parseOutput($html): string
-    {
-        $blocks = Build::data();
-        $blocksNative = Build::blocks();
-        $ids = [];
-        $blocksOnPage = [];
-        $assetIds = [];
-
-        $stylePattern =
-            '/<style[^>]+data-blockstudio-asset[^>]*>(.*?)<\/style>/is';
-        $scriptPattern =
-            '/<script[^>]+data-blockstudio-asset[^>]*>(.*?)<\/script>/is';
-        preg_match_all($stylePattern, $html, $styleMatches);
-        $head = implode('', $styleMatches[0]);
-        $html = preg_replace($stylePattern, '', $html);
-        preg_match_all($scriptPattern, $html, $scriptMatches);
-        $footer = implode('', $scriptMatches[0]);
-        $html = preg_replace($scriptPattern, '', $html);
-
-        foreach ($blocks as $block) {
-            $id = Block::comment($block['name']);
-            $ids[] = $id;
-
-            if (stripos($html, $id) !== false) {
-                $blocksOnPage[$block['name']] = $blocksNative[$block['name']];
-            }
-
-            if (!isset($block['assets'])) {
-                continue;
-            }
-
-            $hasGlobal = array_reduce(
-                array_keys($block['assets']),
-                function ($carry, $key) {
-                    return $carry || strpos($key, 'global') === 0;
-                },
-                false
-            );
-
-            if (strpos($html, $id) === false && !$hasGlobal) {
-                continue;
-            }
-
-            self::getModuleCssAssets($block, $assetIds, $head);
-
-            foreach ($block['assets'] as $k => $v) {
-                $isAdmin = Files::startsWith($k, 'admin');
-                $isBlockEditor = Files::startsWith($k, 'block-editor');
-
-                if ($isAdmin || $isBlockEditor) {
-                    continue;
-                }
-
-                $isGlobal = Files::startsWith($k, 'global');
-                if (strpos($html, $id) === false && !$isGlobal) {
-                    continue;
-                }
-
-                $assetId = $v['path'];
-                if (in_array($assetId, $assetIds)) {
-                    continue;
-                }
-                $assetIds[] = $assetId;
-
-                if ($v['editor']) {
-                    continue;
-                }
-
-                if ($v['type'] !== 'inline') {
-                    if (self::isCss($k)) {
-                        $head .= self::renderTag($k, $v, $block);
-                    } else {
-                        $footer .= self::renderTag($k, $v, $block);
-                    }
-                } else {
-                    if (self::isCss($k)) {
-                        $head .= self::renderInline($k, $v, $block, true);
-                    } else {
-                        $footer .= self::renderInline($k, $v, $block, true);
-                    }
-                }
-            }
-        }
-
-        $head = apply_filters('blockstudio/render/head', $head, $blocksOnPage);
-        $footer = apply_filters(
-            'blockstudio/render/footer',
-            $footer,
-            $blocksOnPage
-        );
-
-        $output = strtr(str_replace($ids, '', $html), [
-            '</body>' => $footer . '</body>',
-            '</head>' => $head . '</head>',
-            '</BODY>' => $footer . '</BODY>',
-            '</HEAD>' => $head . '</HEAD>',
-        ]);
-
-        return apply_filters('blockstudio/render', $output, $blocksOnPage);
-    }
-
-    /**
-     * Get Interactivity API.
-     *
-     * @date   07/05/2025
-     * @since  6.0.0
-     */
-    public static function getInteractivityApiImportMap()
-    {
-        $string =
-            '<script type="importmap"> { "imports": { "@wordpress/interactivity": "@path/@wordpress/interactivity/build-module/index.js", "preact": "@path/preact/dist/preact.module.js", "preact/hooks": "@path/preact/hooks/dist/hooks.module.js", "@preact/signals": "@path/@preact/signals/dist/signals.module.js", "@preact/signals-core": "@path/@preact/signals-core/dist/signals-core.module.js" } } </script>';
-        $path = plugin_dir_url(__FILE__) . '../assets/interactivity';
-
-        return str_replace('@path', $path, $string);
-    }
-
-    /**
-     * Get admin and editor assets.
-     *
-     * @date   07/05/2024
-     * @since  5.5.0
-     */
-    public static function getAdminAndEditorAssets()
-    {
-        $adminAssets = Build::assetsAdmin();
-        foreach ($adminAssets as $asset) {
-            add_action('admin_enqueue_scripts', function () use ($asset) {
-                $path = self::getPath($asset['path']);
-                $url = Files::getRelativeUrl($path);
-
-                if (Assets::isCss($url)) {
-                    wp_enqueue_style(
-                        Assets::getId('admin', [
-                            'name' => Block::id($asset, $asset),
-                        ]),
-                        $url,
-                        [],
-                        $asset['key']
-                    );
-                } else {
-                    wp_enqueue_script(
-                        Assets::getId('admin', [
-                            'name' => Block::id($asset, $asset),
-                        ]),
-                        $url,
-                        [],
-                        $asset['key']
-                    );
-                }
-            });
-        }
-
-        $blockEditorAssets = Build::assetsBlockEditor();
-        foreach ($blockEditorAssets as $asset) {
-            add_action('enqueue_block_editor_assets', function () use ($asset) {
-                $path = self::getPath($asset['path']);
-                $url = Files::getRelativeUrl($path);
-
-                if (Assets::isCss($url)) {
-                    wp_enqueue_style(
-                        Assets::getId('block-editor', [
-                            'name' => Block::id($asset, $asset),
-                        ]),
-                        $url,
-                        [],
-                        $asset['key']
-                    );
-                } else {
-                    wp_enqueue_script(
-                        Assets::getId('block-editor', [
-                            'name' => Block::id($asset, $asset),
-                        ]),
-                        $url,
-                        [],
-                        $asset['key']
-                    );
-                }
-            });
-        }
-    }
-
-    /**
-     * Get imported modification times.
-     *
-     * @date   04/11/2023
-     * @since  5.2.12
-     *
-     * @param  $path
-     * @param  $scopedClass
-     *
-     * @return string
-     */
-    public static function getImportedModificationTimes(
-        $path,
-        $scopedClass
-    ): string {
-        $mtimes = [filemtime($path)];
-
-        if ($scopedClass !== '') {
-            $mtimes[] = $scopedClass;
-        }
-
-        if (Files::endsWith($path, '.js') || !self::shouldProcessScss($path)) {
-            return $mtimes[0];
-        }
-
-        $content = file_get_contents($path);
-        preg_match_all(
-            '/@import\s*([\'"])(.*?)(?<!\\\\)\1/',
-            $content,
-            $matches
-        );
-
-        foreach (
-            apply_filters('blockstudio/assets/process/scss/importPaths', [])
-            as $importPath
-        ) {
-            if (file_exists($importPath)) {
-                $mtimes[] = filemtime($importPath);
-            }
-        }
-
-        foreach ($matches[2] as $import) {
-            $importPath = dirname($path) . '/' . $import;
-
-            if (file_exists($importPath)) {
-                $mtimes[] = filemtime($importPath);
-            }
-        }
-
-        if (count($mtimes) === 1) {
-            return $mtimes[0];
-        }
-
-        return md5(implode('-', $mtimes));
-    }
-
-    /**
-     * Get a compiled asset file name.
-     *
-     * @date   15/10/2022
-     * @since  3.0.8
-     *
-     * @param  $path
-     * @param  string  $scopedClass
-     *
-     * @return string
-     */
-    public static function getCompiledFilename(
-        $path,
-        string $scopedClass = ''
-    ): string {
-        $file = pathinfo($path);
-        $dir = $file['dirname'];
-        $file = $file['filename'];
-
-        $ext = pathinfo($path, PATHINFO_EXTENSION);
-        $id = self::getImportedModificationTimes(
-            $path,
-            Files::endsWith($file, '-scoped') ? $scopedClass : ''
-        );
-
-        if (Settings::get('assets/process/scssFiles') && $ext === 'scss') {
-            $ext = 'css';
-        }
-
-        return $dir . '/_dist/' . $file . '-' . $id . '.' . $ext;
-    }
-
-    /**
-     * Get all matches for a compiled asset name.
-     *
-     * @date   16/10/2022
-     * @since  3.0.8
-     *
-     * @param  $path
-     *
-     * @return array
-     */
-    public static function getMatches($path): array
-    {
-        $file = pathinfo($path);
-        $dir = $file['dirname'] . '/_dist';
-        $name = $file['filename'];
-        $ext = $file['extension'];
-
-        if (Settings::get('assets/process/scssFiles') && $ext === 'scss') {
-            $ext = 'css';
-        }
-
-        $allFiles = glob($dir . '/*.' . $ext);
-
-        $matchedFiles = preg_grep(
-            '/^' .
-                preg_quote($dir . '/' . $name, '/') .
-                '-(?:[a-f0-9]{32}|[0-9]+)' .
-                '\.' .
-                $ext .
-                "$/",
-            $allFiles
-        );
-
-        return array_values($matchedFiles);
-    }
-
-    /**
-     * Get unique ID of a block.
-     *
-     * @date   05/09/2022
-     * @since  3.0.0
-     *
-     * @param  $type
-     * @param  $block
-     *
-     * @return string
-     */
-    public static function getId($type, $block): string
-    {
-        $name = $block['nameAlt'] ?? $block['name'];
-
-        return str_replace(['/', '.', ' '], '-', "blockstudio-$name-$type");
-    }
-
-    /**
-     * Get the path of a compiled asset name if it exists,
-     * otherwise return the normal path.
-     *
-     * @date   15/10/2022
-     * @since  3.0.8
-     *
-     * @param  $path
-     *
-     * @return string
-     */
-    public static function getPath($path): string
-    {
-        $match = self::getMatches($path);
-
-        if (count($match) === 1) {
-            return $match[0];
-        }
-
-        return $path;
-    }
-
-    /**
-     * Get CSS compiler.
-     *
-     * @date   18/10/2023
-     * @since  5.2.10
-     *
-     * @param  string  $path
-     *
-     * @return Compiler
-     */
-    public static function getScssCompiler(string $path): Compiler
-    {
-        $compiler = new Compiler();
-
-        if ($path !== '') {
-            $importPath = pathinfo($path, PATHINFO_DIRNAME);
-            $compiler->setImportPaths($importPath);
-        }
-
-        foreach (
-            apply_filters('blockstudio/assets/process/scss/importPaths', [])
-            as $iPath
-        ) {
-            if (!is_dir($iPath)) {
-                continue;
-            }
-            $compiler->addImportPath(function ($path) use ($iPath) {
-                return $iPath . '/' . $path;
-            });
-        }
-
-        return $compiler;
-    }
-
-    /**
-     * Get all assets for a preview window in Gutenberg.
-     *
-     * @date   29/11/2022
-     * @since  3.1.0
-     *
-     * @param  $block
-     * @param  bool  $styles
-     *
-     * @return string
-     */
-    public static function getPreviewAssets($block, bool $styles = true): string
-    {
-        $style = '';
-        $script = '';
-
-        foreach ($block['assets'] ?? [] as $k => $v) {
-            if ($v['type'] !== 'inline') {
-                if (strpos($k, 'style') !== false) {
-                    $style .= self::renderTag($k, $v, $block);
-                } else {
-                    $script .= self::renderTag($k, $v, $block);
-                }
-            } else {
-                $k = str_replace('-inline', '', $k);
-
-                if (strpos($k, 'style') !== false) {
-                    $style .= self::renderInline($k, $v, $block, true);
-                } else {
-                    $script .= self::renderInline($k, $v, $block, true);
-                }
-            }
-        }
-
-        return $styles ? $style : $script;
-    }
-
-    /**
-     * Get module CSS assets.
-     *
-     * @date   11/11/2023
-     * @since  5.2.16
-     */
-    public static function getModuleCssAssets($block, &$assetIds, &$element)
-    {
-        foreach (
-            Files::getFilesWithExtension(
-                $block['file']['dirname'] . '/_dist/modules',
-                'css'
-            )
-            as $filename
-        ) {
-            $file = pathinfo($filename);
-            if (in_array($file['filename'], $assetIds)) {
-                continue;
-            }
-            $assetIds[] = $file['filename'];
-
-            $element .= self::renderTag(
-                $file['basename'],
-                [
-                    'editor' => false,
-                    'file' => $file,
-                    'path' => $filename,
-                    'type' => 'external',
-                    'url' => Files::getRelativeUrl($filename),
-                ],
-                $block
-            );
-        }
-    }
-
-    /**
-     * Get assets.
-     *
-     * @date   04/09/2022
-     * @since  3.0.0
-     */
-    public static function getAssets($type = 'editor')
-    {
-        if ($type === 'editor' && !self::isEditorScreen()) {
-            return;
-        }
-
-        $blocks = Build::data();
-
-        $footer = '';
-        $editorAssets = [];
-        $assetIds = [];
-
-        foreach ($blocks as $block) {
-            if (isset($block['assets'])) {
-                foreach ($block['assets'] as $k => $v) {
-                    if (
-                        strpos(
-                            $k,
-                            $type === 'customizer' ? 'editor' : 'view'
-                        ) !== false
-                    ) {
-                        continue;
-                    }
-
-                    if (preg_match('/-editor\.(css|scss|js)$/', $k)) {
-                        $editorAssets[] = [$k, $v, $block];
-                        continue;
-                    }
-
-                    if ($type === 'customizer') {
-                        if ($v['type'] !== 'inline') {
-                            $footer .= self::renderTag($k, $v, $block);
-                        } else {
-                            $footer .= self::renderInline($k, $v, $block, true);
-                        }
-                    } else {
-                        if (self::isCssExtension($v['file']['extension'])) {
-                            $footer .= self::renderInline(
-                                $k,
-                                $v,
-                                $block,
-                                true,
-                                true
-                            );
-                        } else {
-                            $footer .= self::renderInline($k, $v, $block, true);
-                        }
-                    }
-
-                    self::getModuleCssAssets($block, $assetIds, $footer);
-                }
-            }
-        }
-
-        foreach ($editorAssets as list($k, $v, $block)) {
-            if ($type === 'customizer') {
-                if ($v['type'] !== 'inline') {
-                    $footer .= self::renderTag($k, $v, $block);
-                } else {
-                    $footer .= self::renderInline($k, $v, $block, true);
-                }
-            } else {
-                if (self::isCssExtension($v['file']['extension'])) {
-                    $footer .= self::renderInline($k, $v, $block, true, true);
-                } else {
-                    $footer .= self::renderInline($k, $v, $block, true);
-                }
-            }
-        }
-
-        echo $footer;
-    }
-
-    /**
-     * Check if the editor screen is currently active.
-     *
-     * @date   22/08/2023
-     * @since  5.2.0
-     *
-     * @return bool
-     */
-    public static function isEditorScreen(): bool
-    {
-        global $current_screen;
-        if (function_exists('get_current_screen')) {
-            $current_screen = get_current_screen();
-        }
-
-        if (!$current_screen) {
-            return false;
-        }
-
-        return method_exists($current_screen, 'is_block_editor') &&
-            $current_screen->is_block_editor();
-    }
-
-    /**
-     * Check if the path is a CSS file.
-     *
-     * @date   22/08/2023
-     * @since  5.2.0
-     *
-     * @param  $path
-     *
-     * @return bool
-     */
-    public static function isCss($path): bool
-    {
-        return Files::endsWith($path, '.css') ||
-            Files::endsWith($path, '.scss');
-    }
-
-    /**
-     * Check if a path ends with a CSS extension.
-     *
-     * @date   22/08/2023
-     * @since  5.2.0
-     *
-     * @param  $ext
-     *
-     * @return bool
-     */
-    public static function isCssExtension($ext): bool
-    {
-        return $ext === 'css' || $ext === 'scss';
-    }
-
-    /**
-     * Prefix CSS.
-     *
-     * @date   18/11/2021
-     * @since  2.1.2
-     *
-     * @param  $css
-     * @param  $prefix
-     *
-     * @return string
-     */
-    public static function prefixCss($css, $prefix): string
-    {
-        $data = "$prefix { $css }";
-
-        return self::compileScss($data, '');
-    }
-
-    /**
-     * Prefix editor styles, similar to WordPress add_editor_style function.
-     *
-     * @date   24/08/2022
-     * @since  5.2.0
-     *
-     * @param  $css
-     *
-     * @return string
-     */
-    public static function prefixEditorStyles($css): string
-    {
-        $css = self::prefixCss($css, '.editor-styles-wrapper');
-        $css = preg_replace(
-            '/\bbody(?=[\s{,]|$)/',
-            '.editor-styles-wrapper',
-            $css
-        );
-        $css = str_replace('.editor-styles-wrapper :root', ':root', $css);
-
-        return str_replace(
-            '.editor-styles-wrapper .editor-styles-wrapper',
-            '.editor-styles-wrapper',
-            $css
-        );
-    }
-
-    /**
-     * Compile CSS.
-     *
-     * @date   18/10/2023
-     * @since  5.2.10
-     *
-     * @param  string  $scss
-     * @param  string  $path
-     *
-     * @return Compiler|string
-     */
-    public static function compileScss(string $scss, string $path): string
-    {
-        $compiler = self::getScssCompiler($path);
-        try {
-            return $compiler->compileString($scss)->getCss();
-        } catch (SassException $e) {
-            return '';
-        }
-    }
-
-    /**
-     * Should process SCSS.
-     *
-     * @date   04/11/2023
-     * @since  5.2.12
-     *
-     * @param  $path
-     *
-     * @return bool
-     */
-    public static function shouldProcessScss($path): bool
-    {
-        $isScssExt =
-            Files::endsWith($path, '.scss') &&
-            Settings::get('assets/process/scssFiles');
-
-        return Settings::get('assets/process/scss') || $isScssExt;
-    }
-
-    /**
-     * Transform CSS assets and print to file.
-     *
-     * @date   22/08/2023
-     * @since  5.2.0
-     *
-     * @param  $path
-     * @param  $distFolder
-     * @param  $scopedClass
-     *
-     * @return string|void
-     */
-    public static function processCss($path, $distFolder, $scopedClass)
-    {
-        $file = pathinfo($path);
-        $filename = $file['filename'];
-
-        $minifyCss = Settings::get('assets/minify/css');
-        $processScss = self::shouldProcessScss($path);
-        $scopeCss = Files::endsWith($filename, '-scoped');
-        $compiledFilename = self::getCompiledFilename($path, $scopedClass);
-
-        if (
-            file_exists($compiledFilename) &&
-            ($minifyCss || $processScss || $scopeCss)
-        ) {
-            return $compiledFilename;
-        }
-
-        if (!$minifyCss && !$processScss && !$scopeCss) {
-            return;
-        }
-
-        if ($minifyCss || $processScss || $scopeCss) {
-            $data = apply_filters(
-                'blockstudio/assets/process/css/content',
-                file_get_contents($path)
-            );
-
-            if ($processScss) {
-                $data = self::compileScss($data, $path);
-            }
-
-            if ($scopeCss) {
-                $data = self::prefixCss($data, '.' . $scopedClass);
-            }
-
-            if ($minifyCss) {
-                $minifier = new Minify\CSS();
-                $minifier->add($data);
-                $data = $minifier->minify();
-            }
-
-            if (!is_dir($distFolder)) {
-                mkdir($distFolder);
-            }
-
-            file_put_contents($compiledFilename, $data);
-
-            return $compiledFilename;
-        }
-    }
-
-    /**
-     * Transform JS assets and print to file.
-     *
-     * @date   22/08/2023
-     * @since  5.2.0
-     *
-     * @param  $path
-     * @param  $distFolder
-     *
-     * @return array|void
-     */
-    public static function processJs($path, $distFolder)
-    {
-        $pathinfo = pathinfo($path);
-        $minifyJs = Settings::get('assets/minify/js');
-        $data = apply_filters(
-            'blockstudio/assets/process/js/content',
-            file_get_contents($path)
-        );
-        $compiledFilename = self::getCompiledFilename($path);
-
-        $cssModules = ESModulesCSS::fetch_all_modules_and_write_to_file(
-            $data,
-            $pathinfo['dirname']
-        );
-        $hasCssModules = count($cssModules['objects']) >= 1;
-
-        if ($hasCssModules) {
-            $data = ESModulesCSS::replace_module_references($data);
-        }
-
-        $esModules = ESModules::fetch_all_modules_and_write_to_file(
-            $data,
-            $pathinfo['dirname']
-        );
-        $hasEsModules = count($esModules['objects']) >= 1;
-
-        if ($hasEsModules) {
-            foreach ($esModules['objects'] as $module) {
-                $name = $module['name'];
-                $version = $module['version'];
-                $nameTransformed = $module['nameTransformed'];
-                $data = str_replace(
-                    "blockstudio/$name@$version",
-                    "./modules/$nameTransformed/$version.js",
-                    $data
-                );
-            }
-        }
-
-        if (
-            file_exists($compiledFilename) &&
-            ($minifyJs || $hasEsModules || $hasCssModules)
-        ) {
-            return array_merge(
-                $esModules['filenames'],
-                $cssModules['filenames'],
-                [$compiledFilename]
-            );
-        }
-
-        if ($minifyJs) {
-            $minifier = new Minify\JS();
-            $minifier->add($data);
-            $data = $minifier->minify();
-        }
-
-        if (
-            !file_exists($compiledFilename) &&
-            ($minifyJs || $hasEsModules || $hasCssModules)
-        ) {
-            if (!is_dir($distFolder)) {
-                mkdir($distFolder);
-            }
-
-            file_put_contents($compiledFilename, $data);
-
-            return array_merge(
-                $esModules['filenames'],
-                $cssModules['filenames'],
-                [$compiledFilename]
-            );
-        }
-    }
-
-    /**
-     * Transform assets.
-     *
-     * @date   08/08/2023
-     * @since  5.2.0
-     *
-     * @param  $path
-     * @param  string  $scopedClass
-     *
-     * @return array|string|void|null
-     */
-    public static function process($path, string $scopedClass)
-    {
-        $pathinfo = pathinfo($path);
-        $ext = $pathinfo['extension'];
-        $distFolder = $pathinfo['dirname'] . '/_dist';
-
-        if (self::isCssExtension($ext)) {
-            return self::processCss($path, $distFolder, $scopedClass);
-        }
-
-        if ($ext === 'js') {
-            return self::processJs($path, $distFolder);
-        }
-    }
-
-    /**
-     * Render inline asset.
-     *
-     * @date   18/11/2021
-     * @since  2.1.2
-     *
-     * @param  $type
-     * @param  $data
-     * @param  $block
-     * @param  bool  $return
-     * @param  bool  $prefix
-     *
-     * @return string|void|null
-     */
-    public static function renderInline(
-        $type,
-        $data,
-        $block,
-        $return = false,
-        $prefix = false
-    ) {
-        $id = self::getId($type, $block);
-
-        if (
-            in_array($id, apply_filters('blockstudio/assets/disable', [])) &&
-            $return !== 'gutenberg'
-        ) {
-            return null;
-        }
-
-        $tag = Files::endsWith($type, '.js') ? 'script' : 'style';
-        $isScript = Files::endsWith($type, '.js');
-        $isPrefix = $prefix && !$isScript;
-
-        $processedString = '';
-        $key = '';
-        if ($return !== 'gutenberg') {
-            $path = self::getPath($data['path']);
-            $isProcessed = count(self::getMatches($data['path'])) === 1;
-            $processedString = $isProcessed ? 'data-processed' : '';
-
-            if (Files::endsWith($path, '.scss')) {
-                return null;
-            }
-
-            $contents = file_get_contents($path);
-            $key = "data-key='" . filemtime($path) . "'";
-        } else {
-            $contents = $data;
-        }
-
-        if ($isPrefix) {
-            $contents = self::prefixEditorStyles($contents);
-        }
-
-        if ($isScript) {
-            preg_match_all(
-                "/[\"'](.\/modules\/)([a-zA-Z0-9.-@_-]*)[\"']/",
-                $contents,
-                $modules
-            );
-
-            foreach ($modules[2] as $module) {
-                $name = explode('/', $module)[0];
-                $version = str_replace('.js', '', explode('/', $module)[1]);
-                $modulePath =
-                    $block['file']['dirname'] .
-                    '/_dist/modules/' .
-                    $name .
-                    '/' .
-                    $version .
-                    '.js';
-                $moduleId = $name . '-' . $version;
-
-                if (file_exists($modulePath)) {
-                    if (!isset(self::$modules[$moduleId])) {
-                        self::$modules[$moduleId] = Files::getRelativeUrl(
-                            $modulePath
-                        );
-                    }
-                    $contents = preg_replace(
-                        "/[\"'](.\/modules\/)([a-zA-Z0-9.-@_-]*)[\"']/",
-                        '"' . self::$modules[$moduleId] . '"',
-                        $contents,
-                        1
-                    );
-                }
-            }
-        }
-
-        $type = $tag === 'script' ? 'type="module"' : '';
-        $string =
-            "<$tag id='$id' $processedString $type $key>" .
-            $contents .
-            "</$tag>";
-
-        if ($return) {
-            return $return === 'gutenberg' ? $contents : $string;
-        }
-
-        echo $string;
-    }
-
-    /**
-     * Render tag asset.
-     *
-     * @date   05/09/2022
-     * @since  3.0.0
-     *
-     * @param  $type
-     * @param  $data
-     * @param  $block
-     *
-     * @return string|null
-     */
-    public static function renderTag($type, $data, $block): ?string
-    {
-        $id = self::getId($type, $block);
-
-        if (in_array($id, apply_filters('blockstudio/assets/disable', []))) {
-            return null;
-        }
-
-        $path = $data['path'];
-        $maybeCompiledPath = self::getPath($path);
-
-        if (filesize($maybeCompiledPath) === 0) {
-            return null;
-        }
-
-        $src = Files::getRelativeUrl($maybeCompiledPath);
-        $key = filemtime($path);
-        $processed =
-            count(self::getMatches($path)) === 1 ? 'data-processed' : '';
-
-        if (self::isCss($type)) {
-            if (Files::endsWith($src, '.scss')) {
-                return null;
-            }
-
-            return "<link rel='stylesheet' $processed id='$id' href='$src?ver=$key'>";
-        }
-
-        return "<script type='module' $processed id='$id' src='$src?ver=$key'></script>";
-    }
-
-    /**
-     * Render code field assets.
-     *
-     * @date   07/05/2024
-     * @since  5.5.0
-     *
-     * @param  $attributeData
-     * @param  string  $key
-     *
-     * @return string|null
-     */
-    public static function renderCodeFieldAssets(
-        $attributeData,
-        string $key = 'assets'
-    ): ?string {
-        $assetsString = '';
-        foreach ($attributeData[$key] as $asset) {
-            $type = $asset['language'] ?? 'html';
-
-            if ($type === 'javascript') {
-                $assetsString .=
-                    '<script id="' .
-                    $attributeData['selectorAttributeId'] .
-                    '-' .
-                    uniqid() .
-                    '" data-blockstudio-asset>' .
-                    $asset['value'] .
-                    '</script>';
-            }
-            if ($type === 'css') {
-                $assetsString .=
-                    '<style id="' .
-                    $attributeData['selectorAttributeId'] .
-                    '-' .
-                    uniqid() .
-                    '" data-blockstudio-asset>' .
-                    $asset['value'] .
-                    '</style>';
-            }
-        }
-
-        return $assetsString;
-    }
-
-    /**
-     * Return buffer.
-     *
-     * @date   04/09/2022
-     * @since  3.0.0
-     *
-     * @param  $html
-     *
-     * @return mixed|null
-     */
-    public static function returnBuffer($html)
-    {
-        if (!$html) {
-            return $html;
-        }
-
-        return apply_filters('blockstudio/buffer/output', $html);
-    }
+class Assets {
+
+	/**
+	 * Loaded modules.
+	 *
+	 * @var array
+	 */
+	private static array $modules = array();
+
+	/**
+	 * Constructor.
+	 */
+	public function __construct() {
+		add_action( 'template_redirect', array( $this, 'maybe_buffer_output' ), 3 );
+		add_filter( 'blockstudio/buffer/output', array( $this, 'parse_output' ), 1000000 );
+		add_action(
+			'admin_footer',
+			function () {
+				$this->get_assets();
+			}
+		);
+		add_action(
+			'customize_preview_init',
+			function () {
+				$this->get_assets( 'customizer' );
+			}
+		);
+		add_action(
+			'admin_init',
+			function () {
+				$this->get_admin_and_editor_assets();
+			}
+		);
+	}
+
+	/**
+	 * Maybe buffer output.
+	 *
+	 * @return bool|void
+	 */
+	public function maybe_buffer_output() {
+		if ( function_exists( 'is_customize_preview' ) && is_customize_preview() ) {
+			return false;
+		}
+
+		if ( is_admin() ) {
+			return false;
+		}
+
+		ob_start( array( $this, 'return_buffer' ) );
+	}
+
+	/**
+	 * Parse output and return assets.
+	 *
+	 * @param string $html The HTML content.
+	 *
+	 * @return string The processed HTML.
+	 */
+	public function parse_output( $html ): string {
+		$blocks        = Build::data();
+		$blocks_native = Build::blocks();
+		$ids           = array();
+		$blocks_on_page = array();
+		$asset_ids     = array();
+
+		$style_pattern  = '/<style[^>]+data-blockstudio-asset[^>]*>(.*?)<\/style>/is';
+		$script_pattern = '/<script[^>]+data-blockstudio-asset[^>]*>(.*?)<\/script>/is';
+
+		preg_match_all( $style_pattern, $html, $style_matches );
+		$head = implode( '', $style_matches[0] );
+		$html = preg_replace( $style_pattern, '', $html );
+
+		preg_match_all( $script_pattern, $html, $script_matches );
+		$footer = implode( '', $script_matches[0] );
+		$html   = preg_replace( $script_pattern, '', $html );
+
+		foreach ( $blocks as $block ) {
+			$id    = Block::comment( $block['name'] );
+			$ids[] = $id;
+
+			if ( false !== stripos( $html, $id ) ) {
+				$blocks_on_page[ $block['name'] ] = $blocks_native[ $block['name'] ];
+			}
+
+			if ( ! isset( $block['assets'] ) ) {
+				continue;
+			}
+
+			$has_global = array_reduce(
+				array_keys( $block['assets'] ),
+				function ( $carry, $key ) {
+					return $carry || 0 === strpos( $key, 'global' );
+				},
+				false
+			);
+
+			if ( false === strpos( $html, $id ) && ! $has_global ) {
+				continue;
+			}
+
+			self::get_module_css_assets( $block, $asset_ids, $head );
+
+			foreach ( $block['assets'] as $k => $v ) {
+				$is_admin        = Files::starts_with( $k, 'admin' );
+				$is_block_editor = Files::starts_with( $k, 'block-editor' );
+
+				if ( $is_admin || $is_block_editor ) {
+					continue;
+				}
+
+				$is_global = Files::starts_with( $k, 'global' );
+				if ( false === strpos( $html, $id ) && ! $is_global ) {
+					continue;
+				}
+
+				$asset_id = $v['path'];
+				if ( in_array( $asset_id, $asset_ids, true ) ) {
+					continue;
+				}
+				$asset_ids[] = $asset_id;
+
+				if ( $v['editor'] ) {
+					continue;
+				}
+
+				if ( 'inline' !== $v['type'] ) {
+					if ( self::is_css( $k ) ) {
+						$head .= self::render_tag( $k, $v, $block );
+					} else {
+						$footer .= self::render_tag( $k, $v, $block );
+					}
+				} else {
+					if ( self::is_css( $k ) ) {
+						$head .= self::render_inline( $k, $v, $block, true );
+					} else {
+						$footer .= self::render_inline( $k, $v, $block, true );
+					}
+				}
+			}
+		}
+
+		$head   = apply_filters( 'blockstudio/render/head', $head, $blocks_on_page );
+		$footer = apply_filters( 'blockstudio/render/footer', $footer, $blocks_on_page );
+
+		$output = strtr(
+			str_replace( $ids, '', $html ),
+			array(
+				'</body>' => $footer . '</body>',
+				'</head>' => $head . '</head>',
+				'</BODY>' => $footer . '</BODY>',
+				'</HEAD>' => $head . '</HEAD>',
+			)
+		);
+
+		return apply_filters( 'blockstudio/render', $output, $blocks_on_page );
+	}
+
+	/**
+	 * Get Interactivity API import map.
+	 *
+	 * @return string The import map HTML.
+	 */
+	public static function get_interactivity_api_import_map(): string {
+		$string = '<script type="importmap"> { "imports": { "@wordpress/interactivity": "@path/@wordpress/interactivity/build-module/index.js", "preact": "@path/preact/dist/preact.module.js", "preact/hooks": "@path/preact/hooks/dist/hooks.module.js", "@preact/signals": "@path/@preact/signals/dist/signals.module.js", "@preact/signals-core": "@path/@preact/signals-core/dist/signals-core.module.js" } } </script>';
+		$path   = plugin_dir_url( __FILE__ ) . '../assets/interactivity';
+
+		return str_replace( '@path', $path, $string );
+	}
+
+	/**
+	 * Get admin and editor assets.
+	 *
+	 * @return void
+	 */
+	public static function get_admin_and_editor_assets(): void {
+		$admin_assets = Build::assetsAdmin();
+
+		foreach ( $admin_assets as $asset ) {
+			add_action(
+				'admin_enqueue_scripts',
+				function () use ( $asset ) {
+					$path = self::get_path( $asset['path'] );
+					$url  = Files::get_relative_url( $path );
+
+					if ( self::is_css( $url ) ) {
+						wp_enqueue_style(
+							self::get_id(
+								'admin',
+								array( 'name' => Block::id( $asset, $asset ) )
+							),
+							$url,
+							array(),
+							$asset['key']
+						);
+					} else {
+						wp_enqueue_script(
+							self::get_id(
+								'admin',
+								array( 'name' => Block::id( $asset, $asset ) )
+							),
+							$url,
+							array(),
+							$asset['key'],
+							true
+						);
+					}
+				}
+			);
+		}
+
+		$block_editor_assets = Build::assetsBlockEditor();
+
+		foreach ( $block_editor_assets as $asset ) {
+			add_action(
+				'enqueue_block_editor_assets',
+				function () use ( $asset ) {
+					$path = self::get_path( $asset['path'] );
+					$url  = Files::get_relative_url( $path );
+
+					if ( self::is_css( $url ) ) {
+						wp_enqueue_style(
+							self::get_id(
+								'block-editor',
+								array( 'name' => Block::id( $asset, $asset ) )
+							),
+							$url,
+							array(),
+							$asset['key']
+						);
+					} else {
+						wp_enqueue_script(
+							self::get_id(
+								'block-editor',
+								array( 'name' => Block::id( $asset, $asset ) )
+							),
+							$url,
+							array(),
+							$asset['key'],
+							true
+						);
+					}
+				}
+			);
+		}
+	}
+
+	/**
+	 * Get imported modification times.
+	 *
+	 * @param string $path         The file path.
+	 * @param string $scoped_class The scoped class name.
+	 *
+	 * @return string The modification time hash.
+	 */
+	public static function get_imported_modification_times( $path, $scoped_class ): string {
+		$mtimes = array( filemtime( $path ) );
+
+		if ( '' !== $scoped_class ) {
+			$mtimes[] = $scoped_class;
+		}
+
+		if ( Files::ends_with( $path, '.js' ) || ! self::should_process_scss( $path ) ) {
+			return $mtimes[0];
+		}
+
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Reading local file.
+		$content = file_get_contents( $path );
+		preg_match_all( '/@import\s*([\'"])(.*?)(?<!\\\\)\1/', $content, $matches );
+
+		foreach ( apply_filters( 'blockstudio/assets/process/scss/importPaths', array() ) as $import_path ) {
+			if ( file_exists( $import_path ) ) {
+				$mtimes[] = filemtime( $import_path );
+			}
+		}
+
+		foreach ( $matches[2] as $import ) {
+			$import_path = dirname( $path ) . '/' . $import;
+
+			if ( file_exists( $import_path ) ) {
+				$mtimes[] = filemtime( $import_path );
+			}
+		}
+
+		if ( 1 === count( $mtimes ) ) {
+			return $mtimes[0];
+		}
+
+		return md5( implode( '-', $mtimes ) );
+	}
+
+	/**
+	 * Get a compiled asset file name.
+	 *
+	 * @param string $path         The file path.
+	 * @param string $scoped_class The scoped class name.
+	 *
+	 * @return string The compiled filename.
+	 */
+	public static function get_compiled_filename( $path, string $scoped_class = '' ): string {
+		$file = pathinfo( $path );
+		$dir  = $file['dirname'];
+		$file = $file['filename'];
+
+		$ext = pathinfo( $path, PATHINFO_EXTENSION );
+		$id  = self::get_imported_modification_times(
+			$path,
+			Files::ends_with( $file, '-scoped' ) ? $scoped_class : ''
+		);
+
+		if ( Settings::get( 'assets/process/scssFiles' ) && 'scss' === $ext ) {
+			$ext = 'css';
+		}
+
+		return $dir . '/_dist/' . $file . '-' . $id . '.' . $ext;
+	}
+
+	/**
+	 * Get all matches for a compiled asset name.
+	 *
+	 * @param string $path The file path.
+	 *
+	 * @return array Array of matching files.
+	 */
+	public static function get_matches( $path ): array {
+		$file = pathinfo( $path );
+		$dir  = $file['dirname'] . '/_dist';
+		$name = $file['filename'];
+		$ext  = $file['extension'];
+
+		if ( Settings::get( 'assets/process/scssFiles' ) && 'scss' === $ext ) {
+			$ext = 'css';
+		}
+
+		$all_files = glob( $dir . '/*.' . $ext );
+
+		$matched_files = preg_grep(
+			'/^' . preg_quote( $dir . '/' . $name, '/' ) . '-(?:[a-f0-9]{32}|[0-9]+)\.' . $ext . '$/',
+			$all_files
+		);
+
+		return array_values( $matched_files );
+	}
+
+	/**
+	 * Get unique ID of a block.
+	 *
+	 * @param string $type  The asset type.
+	 * @param array  $block The block data.
+	 *
+	 * @return string The unique ID.
+	 */
+	public static function get_id( $type, $block ): string {
+		$name = $block['nameAlt'] ?? $block['name'];
+
+		return str_replace( array( '/', '.', ' ' ), '-', "blockstudio-$name-$type" );
+	}
+
+	/**
+	 * Get the path of a compiled asset name if it exists.
+	 *
+	 * @param string $path The file path.
+	 *
+	 * @return string The compiled path or original path.
+	 */
+	public static function get_path( $path ): string {
+		$match = self::get_matches( $path );
+
+		if ( 1 === count( $match ) ) {
+			return $match[0];
+		}
+
+		return $path;
+	}
+
+	/**
+	 * Get SCSS compiler.
+	 *
+	 * @param string $path The file path.
+	 *
+	 * @return Compiler The SCSS compiler.
+	 */
+	public static function get_scss_compiler( string $path ): Compiler {
+		$compiler = new Compiler();
+
+		if ( '' !== $path ) {
+			$import_path = pathinfo( $path, PATHINFO_DIRNAME );
+			$compiler->setImportPaths( $import_path );
+		}
+
+		foreach ( apply_filters( 'blockstudio/assets/process/scss/importPaths', array() ) as $i_path ) {
+			if ( ! is_dir( $i_path ) ) {
+				continue;
+			}
+			$compiler->addImportPath(
+				function ( $path ) use ( $i_path ) {
+					return $i_path . '/' . $path;
+				}
+			);
+		}
+
+		return $compiler;
+	}
+
+	/**
+	 * Get all assets for a preview window in Gutenberg.
+	 *
+	 * @param array $block  The block data.
+	 * @param bool  $styles Whether to return styles.
+	 *
+	 * @return string The preview assets.
+	 */
+	public static function get_preview_assets( $block, bool $styles = true ): string {
+		$style  = '';
+		$script = '';
+
+		foreach ( $block['assets'] ?? array() as $k => $v ) {
+			if ( 'inline' !== $v['type'] ) {
+				if ( false !== strpos( $k, 'style' ) ) {
+					$style .= self::render_tag( $k, $v, $block );
+				} else {
+					$script .= self::render_tag( $k, $v, $block );
+				}
+			} else {
+				$k = str_replace( '-inline', '', $k );
+
+				if ( false !== strpos( $k, 'style' ) ) {
+					$style .= self::render_inline( $k, $v, $block, true );
+				} else {
+					$script .= self::render_inline( $k, $v, $block, true );
+				}
+			}
+		}
+
+		return $styles ? $style : $script;
+	}
+
+	/**
+	 * Get module CSS assets.
+	 *
+	 * @param array  $block     The block data.
+	 * @param array  $asset_ids The asset IDs array.
+	 * @param string $element   The element string.
+	 *
+	 * @return void
+	 */
+	public static function get_module_css_assets( $block, &$asset_ids, &$element ): void {
+		foreach (
+			Files::get_files_with_extension(
+				$block['file']['dirname'] . '/_dist/modules',
+				'css'
+			) as $filename
+		) {
+			$file = pathinfo( $filename );
+
+			if ( in_array( $file['filename'], $asset_ids, true ) ) {
+				continue;
+			}
+			$asset_ids[] = $file['filename'];
+
+			$element .= self::render_tag(
+				$file['basename'],
+				array(
+					'editor' => false,
+					'file'   => $file,
+					'path'   => $filename,
+					'type'   => 'external',
+					'url'    => Files::get_relative_url( $filename ),
+				),
+				$block
+			);
+		}
+	}
+
+	/**
+	 * Get assets.
+	 *
+	 * @param string $type The asset type.
+	 *
+	 * @return void
+	 */
+	public static function get_assets( $type = 'editor' ): void {
+		if ( 'editor' === $type && ! self::is_editor_screen() ) {
+			return;
+		}
+
+		$blocks = Build::data();
+
+		$footer        = '';
+		$editor_assets = array();
+		$asset_ids     = array();
+
+		foreach ( $blocks as $block ) {
+			if ( isset( $block['assets'] ) ) {
+				foreach ( $block['assets'] as $k => $v ) {
+					if (
+						false !== strpos(
+							$k,
+							'customizer' === $type ? 'editor' : 'view'
+						)
+					) {
+						continue;
+					}
+
+					if ( preg_match( '/-editor\.(css|scss|js)$/', $k ) ) {
+						$editor_assets[] = array( $k, $v, $block );
+						continue;
+					}
+
+					if ( 'customizer' === $type ) {
+						if ( 'inline' !== $v['type'] ) {
+							$footer .= self::render_tag( $k, $v, $block );
+						} else {
+							$footer .= self::render_inline( $k, $v, $block, true );
+						}
+					} else {
+						if ( self::is_css_extension( $v['file']['extension'] ) ) {
+							$footer .= self::render_inline( $k, $v, $block, true, true );
+						} else {
+							$footer .= self::render_inline( $k, $v, $block, true );
+						}
+					}
+
+					self::get_module_css_assets( $block, $asset_ids, $footer );
+				}
+			}
+		}
+
+		foreach ( $editor_assets as list( $k, $v, $block ) ) {
+			if ( 'customizer' === $type ) {
+				if ( 'inline' !== $v['type'] ) {
+					$footer .= self::render_tag( $k, $v, $block );
+				} else {
+					$footer .= self::render_inline( $k, $v, $block, true );
+				}
+			} else {
+				if ( self::is_css_extension( $v['file']['extension'] ) ) {
+					$footer .= self::render_inline( $k, $v, $block, true, true );
+				} else {
+					$footer .= self::render_inline( $k, $v, $block, true );
+				}
+			}
+		}
+
+		// phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Asset output.
+		echo $footer;
+	}
+
+	/**
+	 * Check if the editor screen is currently active.
+	 *
+	 * @return bool Whether the editor screen is active.
+	 */
+	public static function is_editor_screen(): bool {
+		global $current_screen;
+
+		if ( function_exists( 'get_current_screen' ) ) {
+			$current_screen = get_current_screen();
+		}
+
+		if ( ! $current_screen ) {
+			return false;
+		}
+
+		return method_exists( $current_screen, 'is_block_editor' ) && $current_screen->is_block_editor();
+	}
+
+	/**
+	 * Check if the path is a CSS file.
+	 *
+	 * @param string $path The file path.
+	 *
+	 * @return bool Whether the path is a CSS file.
+	 */
+	public static function is_css( $path ): bool {
+		return Files::ends_with( $path, '.css' ) || Files::ends_with( $path, '.scss' );
+	}
+
+	/**
+	 * Check if a path ends with a CSS extension.
+	 *
+	 * @param string $ext The extension.
+	 *
+	 * @return bool Whether it's a CSS extension.
+	 */
+	public static function is_css_extension( $ext ): bool {
+		return 'css' === $ext || 'scss' === $ext;
+	}
+
+	/**
+	 * Prefix CSS.
+	 *
+	 * @param string $css    The CSS content.
+	 * @param string $prefix The prefix.
+	 *
+	 * @return string The prefixed CSS.
+	 */
+	public static function prefix_css( $css, $prefix ): string {
+		$data = "$prefix { $css }";
+
+		return self::compile_scss( $data, '' );
+	}
+
+	/**
+	 * Prefix editor styles.
+	 *
+	 * @param string $css The CSS content.
+	 *
+	 * @return string The prefixed CSS.
+	 */
+	public static function prefix_editor_styles( $css ): string {
+		$css = self::prefix_css( $css, '.editor-styles-wrapper' );
+		$css = preg_replace( '/\bbody(?=[\s{,]|$)/', '.editor-styles-wrapper', $css );
+		$css = str_replace( '.editor-styles-wrapper :root', ':root', $css );
+
+		return str_replace(
+			'.editor-styles-wrapper .editor-styles-wrapper',
+			'.editor-styles-wrapper',
+			$css
+		);
+	}
+
+	/**
+	 * Compile SCSS.
+	 *
+	 * @param string $scss The SCSS content.
+	 * @param string $path The file path.
+	 *
+	 * @return string The compiled CSS.
+	 */
+	public static function compile_scss( string $scss, string $path ): string {
+		$compiler = self::get_scss_compiler( $path );
+
+		try {
+			return $compiler->compileString( $scss )->getCss();
+		} catch ( SassException $e ) {
+			return '';
+		}
+	}
+
+	/**
+	 * Should process SCSS.
+	 *
+	 * @param string $path The file path.
+	 *
+	 * @return bool Whether to process SCSS.
+	 */
+	public static function should_process_scss( $path ): bool {
+		$is_scss_ext = Files::ends_with( $path, '.scss' ) && Settings::get( 'assets/process/scssFiles' );
+
+		return Settings::get( 'assets/process/scss' ) || $is_scss_ext;
+	}
+
+	/**
+	 * Transform CSS assets and print to file.
+	 *
+	 * @param string $path         The file path.
+	 * @param string $dist_folder  The distribution folder.
+	 * @param string $scoped_class The scoped class.
+	 *
+	 * @return string|void The compiled filename or void.
+	 */
+	public static function process_css( $path, $dist_folder, $scoped_class ) {
+		$file     = pathinfo( $path );
+		$filename = $file['filename'];
+
+		$minify_css        = Settings::get( 'assets/minify/css' );
+		$process_scss      = self::should_process_scss( $path );
+		$scope_css         = Files::ends_with( $filename, '-scoped' );
+		$compiled_filename = self::get_compiled_filename( $path, $scoped_class );
+
+		if (
+			file_exists( $compiled_filename ) &&
+			( $minify_css || $process_scss || $scope_css )
+		) {
+			return $compiled_filename;
+		}
+
+		if ( ! $minify_css && ! $process_scss && ! $scope_css ) {
+			return;
+		}
+
+		if ( $minify_css || $process_scss || $scope_css ) {
+			// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Reading local file.
+			$data = apply_filters( 'blockstudio/assets/process/css/content', file_get_contents( $path ) );
+
+			if ( $process_scss ) {
+				$data = self::compile_scss( $data, $path );
+			}
+
+			if ( $scope_css ) {
+				$data = self::prefix_css( $data, '.' . $scoped_class );
+			}
+
+			if ( $minify_css ) {
+				$minifier = new Minify\CSS();
+				$minifier->add( $data );
+				$data = $minifier->minify();
+			}
+
+			if ( ! is_dir( $dist_folder ) ) {
+				wp_mkdir_p( $dist_folder );
+			}
+
+			// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents -- Writing compiled file.
+			file_put_contents( $compiled_filename, $data );
+
+			return $compiled_filename;
+		}
+	}
+
+	/**
+	 * Transform JS assets and print to file.
+	 *
+	 * @param string $path        The file path.
+	 * @param string $dist_folder The distribution folder.
+	 *
+	 * @return array|void The array of filenames or void.
+	 */
+	public static function process_js( $path, $dist_folder ) {
+		$pathinfo = pathinfo( $path );
+		$minify_js = Settings::get( 'assets/minify/js' );
+
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Reading local file.
+		$data = apply_filters( 'blockstudio/assets/process/js/content', file_get_contents( $path ) );
+
+		$compiled_filename = self::get_compiled_filename( $path );
+
+		$css_modules     = ESModulesCSS::fetch_all_modules_and_write_to_file( $data, $pathinfo['dirname'] );
+		$has_css_modules = count( $css_modules['objects'] ) >= 1;
+
+		if ( $has_css_modules ) {
+			$data = ESModulesCSS::replace_module_references( $data );
+		}
+
+		$es_modules     = ESModules::fetch_all_modules_and_write_to_file( $data, $pathinfo['dirname'] );
+		$has_es_modules = count( $es_modules['objects'] ) >= 1;
+
+		if ( $has_es_modules ) {
+			foreach ( $es_modules['objects'] as $module ) {
+				$name             = $module['name'];
+				$version          = $module['version'];
+				$name_transformed = $module['nameTransformed'];
+				$data             = str_replace(
+					"blockstudio/$name@$version",
+					"./modules/$name_transformed/$version.js",
+					$data
+				);
+			}
+		}
+
+		if (
+			file_exists( $compiled_filename ) &&
+			( $minify_js || $has_es_modules || $has_css_modules )
+		) {
+			return array_merge(
+				$es_modules['filenames'],
+				$css_modules['filenames'],
+				array( $compiled_filename )
+			);
+		}
+
+		if ( $minify_js ) {
+			$minifier = new Minify\JS();
+			$minifier->add( $data );
+			$data = $minifier->minify();
+		}
+
+		if (
+			! file_exists( $compiled_filename ) &&
+			( $minify_js || $has_es_modules || $has_css_modules )
+		) {
+			if ( ! is_dir( $dist_folder ) ) {
+				wp_mkdir_p( $dist_folder );
+			}
+
+			// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents -- Writing compiled file.
+			file_put_contents( $compiled_filename, $data );
+
+			return array_merge(
+				$es_modules['filenames'],
+				$css_modules['filenames'],
+				array( $compiled_filename )
+			);
+		}
+	}
+
+	/**
+	 * Transform assets.
+	 *
+	 * @param string $path         The file path.
+	 * @param string $scoped_class The scoped class.
+	 *
+	 * @return array|string|void The processed result.
+	 */
+	public static function process( $path, string $scoped_class ) {
+		$pathinfo    = pathinfo( $path );
+		$ext         = $pathinfo['extension'];
+		$dist_folder = $pathinfo['dirname'] . '/_dist';
+
+		if ( self::is_css_extension( $ext ) ) {
+			return self::process_css( $path, $dist_folder, $scoped_class );
+		}
+
+		if ( 'js' === $ext ) {
+			return self::process_js( $path, $dist_folder );
+		}
+	}
+
+	/**
+	 * Render inline asset.
+	 *
+	 * @param string      $type   The asset type.
+	 * @param array       $data   The asset data.
+	 * @param array       $block  The block data.
+	 * @param bool|string $return Whether to return the result.
+	 * @param bool        $prefix Whether to prefix styles.
+	 *
+	 * @return string|null The rendered asset or null.
+	 */
+	public static function render_inline( $type, $data, $block, $return = false, $prefix = false ) {
+		$id = self::get_id( $type, $block );
+
+		if (
+			in_array( $id, apply_filters( 'blockstudio/assets/disable', array() ), true ) &&
+			'gutenberg' !== $return
+		) {
+			return null;
+		}
+
+		$tag       = Files::ends_with( $type, '.js' ) ? 'script' : 'style';
+		$is_script = Files::ends_with( $type, '.js' );
+		$is_prefix = $prefix && ! $is_script;
+
+		$processed_string = '';
+		$key              = '';
+
+		if ( 'gutenberg' !== $return ) {
+			$path         = self::get_path( $data['path'] );
+			$is_processed = 1 === count( self::get_matches( $data['path'] ) );
+			$processed_string = $is_processed ? 'data-processed' : '';
+
+			if ( Files::ends_with( $path, '.scss' ) ) {
+				return null;
+			}
+
+			// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Reading local file.
+			$contents = file_get_contents( $path );
+			$key      = "data-key='" . filemtime( $path ) . "'";
+		} else {
+			$contents = $data;
+		}
+
+		if ( $is_prefix ) {
+			$contents = self::prefix_editor_styles( $contents );
+		}
+
+		if ( $is_script ) {
+			preg_match_all( "/[\"'](.\/modules\/)([a-zA-Z0-9.-@_-]*)[\"']/", $contents, $modules );
+
+			foreach ( $modules[2] as $module ) {
+				$name        = explode( '/', $module )[0];
+				$version     = str_replace( '.js', '', explode( '/', $module )[1] );
+				$module_path = $block['file']['dirname'] . '/_dist/modules/' . $name . '/' . $version . '.js';
+				$module_id   = $name . '-' . $version;
+
+				if ( file_exists( $module_path ) ) {
+					if ( ! isset( self::$modules[ $module_id ] ) ) {
+						self::$modules[ $module_id ] = Files::get_relative_url( $module_path );
+					}
+					$contents = preg_replace(
+						"/[\"'](.\/modules\/)([a-zA-Z0-9.-@_-]*)[\"']/",
+						'"' . self::$modules[ $module_id ] . '"',
+						$contents,
+						1
+					);
+				}
+			}
+		}
+
+		$type   = 'script' === $tag ? 'type="module"' : '';
+		$string = "<$tag id='$id' $processed_string $type $key>" . $contents . "</$tag>";
+
+		if ( $return ) {
+			return 'gutenberg' === $return ? $contents : $string;
+		}
+
+		// phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Asset output.
+		echo $string;
+	}
+
+	/**
+	 * Render tag asset.
+	 *
+	 * @param string $type  The asset type.
+	 * @param array  $data  The asset data.
+	 * @param array  $block The block data.
+	 *
+	 * @return string|null The rendered tag or null.
+	 */
+	public static function render_tag( $type, $data, $block ): ?string {
+		$id = self::get_id( $type, $block );
+
+		if ( in_array( $id, apply_filters( 'blockstudio/assets/disable', array() ), true ) ) {
+			return null;
+		}
+
+		$path               = $data['path'];
+		$maybe_compiled_path = self::get_path( $path );
+
+		if ( 0 === filesize( $maybe_compiled_path ) ) {
+			return null;
+		}
+
+		$src       = Files::get_relative_url( $maybe_compiled_path );
+		$key       = filemtime( $path );
+		$processed = 1 === count( self::get_matches( $path ) ) ? 'data-processed' : '';
+
+		if ( self::is_css( $type ) ) {
+			if ( Files::ends_with( $src, '.scss' ) ) {
+				return null;
+			}
+
+			return "<link rel='stylesheet' $processed id='$id' href='$src?ver=$key'>";
+		}
+
+		return "<script type='module' $processed id='$id' src='$src?ver=$key'></script>";
+	}
+
+	/**
+	 * Render code field assets.
+	 *
+	 * @param array  $attribute_data The attribute data.
+	 * @param string $key           The key.
+	 *
+	 * @return string|null The rendered assets.
+	 */
+	public static function render_code_field_assets( $attribute_data, string $key = 'assets' ): ?string {
+		$assets_string = '';
+
+		foreach ( $attribute_data[ $key ] as $asset ) {
+			$type = $asset['language'] ?? 'html';
+
+			if ( 'javascript' === $type ) {
+				$assets_string .= '<script id="' . $attribute_data['selectorAttributeId'] . '-' . uniqid() . '" data-blockstudio-asset>' . $asset['value'] . '</script>';
+			}
+			if ( 'css' === $type ) {
+				$assets_string .= '<style id="' . $attribute_data['selectorAttributeId'] . '-' . uniqid() . '" data-blockstudio-asset>' . $asset['value'] . '</style>';
+			}
+		}
+
+		return $assets_string;
+	}
+
+	/**
+	 * Return buffer.
+	 *
+	 * @param string $html The HTML content.
+	 *
+	 * @return mixed|null The filtered content.
+	 */
+	public static function return_buffer( $html ) {
+		if ( ! $html ) {
+			return $html;
+		}
+
+		return apply_filters( 'blockstudio/buffer/output', $html );
+	}
+
+	// Legacy method wrappers for backward compatibility.
+
+	/**
+	 * Maybe buffer output (legacy).
+	 *
+	 * @deprecated Use maybe_buffer_output() instead.
+	 * @return bool|void
+	 */
+	public function maybeBufferOutput() {
+		return $this->maybe_buffer_output();
+	}
+
+	/**
+	 * Parse output (legacy).
+	 *
+	 * @deprecated Use parse_output() instead.
+	 * @param string $html The HTML.
+	 * @return string
+	 */
+	public function parseOutput( $html ): string {
+		return $this->parse_output( $html );
+	}
+
+	/**
+	 * Get interactivity API import map (legacy).
+	 *
+	 * @deprecated Use get_interactivity_api_import_map() instead.
+	 * @return string
+	 */
+	public static function getInteractivityApiImportMap(): string {
+		return self::get_interactivity_api_import_map();
+	}
+
+	/**
+	 * Get admin and editor assets (legacy).
+	 *
+	 * @deprecated Use get_admin_and_editor_assets() instead.
+	 */
+	public static function getAdminAndEditorAssets(): void {
+		self::get_admin_and_editor_assets();
+	}
+
+	/**
+	 * Get imported modification times (legacy).
+	 *
+	 * @deprecated Use get_imported_modification_times() instead.
+	 * @param string $path The path.
+	 * @param string $scoped_class The scoped class.
+	 * @return string
+	 */
+	public static function getImportedModificationTimes( $path, $scoped_class ): string {
+		return self::get_imported_modification_times( $path, $scoped_class );
+	}
+
+	/**
+	 * Get compiled filename (legacy).
+	 *
+	 * @deprecated Use get_compiled_filename() instead.
+	 * @param string $path The path.
+	 * @param string $scoped_class The scoped class.
+	 * @return string
+	 */
+	public static function getCompiledFilename( $path, string $scoped_class = '' ): string {
+		return self::get_compiled_filename( $path, $scoped_class );
+	}
+
+	/**
+	 * Get matches (legacy).
+	 *
+	 * @deprecated Use get_matches() instead.
+	 * @param string $path The path.
+	 * @return array
+	 */
+	public static function getMatches( $path ): array {
+		return self::get_matches( $path );
+	}
+
+	/**
+	 * Get ID (legacy).
+	 *
+	 * @deprecated Use get_id() instead.
+	 * @param string $type The type.
+	 * @param array  $block The block.
+	 * @return string
+	 */
+	public static function getId( $type, $block ): string {
+		return self::get_id( $type, $block );
+	}
+
+	/**
+	 * Get path (legacy).
+	 *
+	 * @deprecated Use get_path() instead.
+	 * @param string $path The path.
+	 * @return string
+	 */
+	public static function getPath( $path ): string {
+		return self::get_path( $path );
+	}
+
+	/**
+	 * Get SCSS compiler (legacy).
+	 *
+	 * @deprecated Use get_scss_compiler() instead.
+	 * @param string $path The path.
+	 * @return Compiler
+	 */
+	public static function getScssCompiler( string $path ): Compiler {
+		return self::get_scss_compiler( $path );
+	}
+
+	/**
+	 * Get preview assets (legacy).
+	 *
+	 * @deprecated Use get_preview_assets() instead.
+	 * @param array $block The block.
+	 * @param bool  $styles Whether styles.
+	 * @return string
+	 */
+	public static function getPreviewAssets( $block, bool $styles = true ): string {
+		return self::get_preview_assets( $block, $styles );
+	}
+
+	/**
+	 * Get module CSS assets (legacy).
+	 *
+	 * @deprecated Use get_module_css_assets() instead.
+	 * @param array  $block The block.
+	 * @param array  $asset_ids The asset IDs.
+	 * @param string $element The element.
+	 */
+	public static function getModuleCssAssets( $block, &$asset_ids, &$element ): void {
+		self::get_module_css_assets( $block, $asset_ids, $element );
+	}
+
+	/**
+	 * Get assets (legacy).
+	 *
+	 * @deprecated Use get_assets() instead.
+	 * @param string $type The type.
+	 */
+	public static function getAssets( $type = 'editor' ): void {
+		self::get_assets( $type );
+	}
+
+	/**
+	 * Is editor screen (legacy).
+	 *
+	 * @deprecated Use is_editor_screen() instead.
+	 * @return bool
+	 */
+	public static function isEditorScreen(): bool {
+		return self::is_editor_screen();
+	}
+
+	/**
+	 * Is CSS (legacy).
+	 *
+	 * @deprecated Use is_css() instead.
+	 * @param string $path The path.
+	 * @return bool
+	 */
+	public static function isCss( $path ): bool {
+		return self::is_css( $path );
+	}
+
+	/**
+	 * Is CSS extension (legacy).
+	 *
+	 * @deprecated Use is_css_extension() instead.
+	 * @param string $ext The extension.
+	 * @return bool
+	 */
+	public static function isCssExtension( $ext ): bool {
+		return self::is_css_extension( $ext );
+	}
+
+	/**
+	 * Prefix CSS (legacy).
+	 *
+	 * @deprecated Use prefix_css() instead.
+	 * @param string $css The CSS.
+	 * @param string $prefix The prefix.
+	 * @return string
+	 */
+	public static function prefixCss( $css, $prefix ): string {
+		return self::prefix_css( $css, $prefix );
+	}
+
+	/**
+	 * Prefix editor styles (legacy).
+	 *
+	 * @deprecated Use prefix_editor_styles() instead.
+	 * @param string $css The CSS.
+	 * @return string
+	 */
+	public static function prefixEditorStyles( $css ): string {
+		return self::prefix_editor_styles( $css );
+	}
+
+	/**
+	 * Compile SCSS (legacy).
+	 *
+	 * @deprecated Use compile_scss() instead.
+	 * @param string $scss The SCSS.
+	 * @param string $path The path.
+	 * @return string
+	 */
+	public static function compileScss( string $scss, string $path ): string {
+		return self::compile_scss( $scss, $path );
+	}
+
+	/**
+	 * Should process SCSS (legacy).
+	 *
+	 * @deprecated Use should_process_scss() instead.
+	 * @param string $path The path.
+	 * @return bool
+	 */
+	public static function shouldProcessScss( $path ): bool {
+		return self::should_process_scss( $path );
+	}
+
+	/**
+	 * Process CSS (legacy).
+	 *
+	 * @deprecated Use process_css() instead.
+	 * @param string $path The path.
+	 * @param string $dist_folder The folder.
+	 * @param string $scoped_class The class.
+	 * @return string|void
+	 */
+	public static function processCss( $path, $dist_folder, $scoped_class ) {
+		return self::process_css( $path, $dist_folder, $scoped_class );
+	}
+
+	/**
+	 * Process JS (legacy).
+	 *
+	 * @deprecated Use process_js() instead.
+	 * @param string $path The path.
+	 * @param string $dist_folder The folder.
+	 * @return array|void
+	 */
+	public static function processJs( $path, $dist_folder ) {
+		return self::process_js( $path, $dist_folder );
+	}
+
+	/**
+	 * Render inline (legacy).
+	 *
+	 * @deprecated Use render_inline() instead.
+	 * @param string      $type The type.
+	 * @param array       $data The data.
+	 * @param array       $block The block.
+	 * @param bool|string $return The return.
+	 * @param bool        $prefix The prefix.
+	 * @return string|null
+	 */
+	public static function renderInline( $type, $data, $block, $return = false, $prefix = false ) {
+		return self::render_inline( $type, $data, $block, $return, $prefix );
+	}
+
+	/**
+	 * Render tag (legacy).
+	 *
+	 * @deprecated Use render_tag() instead.
+	 * @param string $type The type.
+	 * @param array  $data The data.
+	 * @param array  $block The block.
+	 * @return string|null
+	 */
+	public static function renderTag( $type, $data, $block ): ?string {
+		return self::render_tag( $type, $data, $block );
+	}
+
+	/**
+	 * Render code field assets (legacy).
+	 *
+	 * @deprecated Use render_code_field_assets() instead.
+	 * @param array  $attribute_data The data.
+	 * @param string $key The key.
+	 * @return string|null
+	 */
+	public static function renderCodeFieldAssets( $attribute_data, string $key = 'assets' ): ?string {
+		return self::render_code_field_assets( $attribute_data, $key );
+	}
+
+	/**
+	 * Return buffer (legacy).
+	 *
+	 * @deprecated Use return_buffer() instead.
+	 * @param string $html The HTML.
+	 * @return mixed|null
+	 */
+	public static function returnBuffer( $html ) {
+		return self::return_buffer( $html );
+	}
 }
+
+new Assets();
