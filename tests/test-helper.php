@@ -193,4 +193,60 @@ add_action('rest_api_init', function () {
         },
         'permission_callback' => '__return_true',
     ]);
+
+    // ==========================================================================
+    // COMPILED ASSETS ENDPOINT - Get actual content of compiled _dist files
+    // ==========================================================================
+    register_rest_route('blockstudio-test/v1', '/compiled-assets', [
+        'methods' => 'GET',
+        'callback' => function () {
+            $theme_blockstudio_path = get_stylesheet_directory() . '/blockstudio';
+            $compiled = [];
+
+            if (!is_dir($theme_blockstudio_path)) {
+                return new WP_Error('not_found', 'Blockstudio theme directory not found', ['status' => 404]);
+            }
+
+            // Find all _dist directories recursively
+            $iterator = new RecursiveIteratorIterator(
+                new RecursiveDirectoryIterator($theme_blockstudio_path, RecursiveDirectoryIterator::SKIP_DOTS),
+                RecursiveIteratorIterator::SELF_FIRST
+            );
+
+            foreach ($iterator as $file) {
+                if ($file->isFile()) {
+                    $path = $file->getPathname();
+                    $relativePath = str_replace($theme_blockstudio_path . '/', '', $path);
+
+                    // Only include files in _dist directories
+                    if (strpos($relativePath, '_dist/') !== false) {
+                        $extension = $file->getExtension();
+
+                        // Only include CSS and JS files
+                        if (in_array($extension, ['css', 'js'])) {
+                            $content = file_get_contents($path);
+
+                            // Normalize the key by removing hashes/timestamps from filename
+                            // style-8c61297c7ad6a7f39af80a70d8992118.css -> style.css
+                            // script-1746475334.js -> script.js
+                            $normalizedFilename = preg_replace('/-[a-f0-9]{32}\./', '.', $file->getBasename());
+                            $normalizedFilename = preg_replace('/-\d{10,}\./', '.', $normalizedFilename);
+
+                            $normalizedKey = dirname($relativePath) . '/' . $normalizedFilename;
+
+                            $compiled[$normalizedKey] = [
+                                'content' => $content,
+                                'size' => strlen($content),
+                                'extension' => $extension,
+                            ];
+                        }
+                    }
+                }
+            }
+
+            ksort($compiled);
+            return $compiled;
+        },
+        'permission_callback' => '__return_true',
+    ]);
 });

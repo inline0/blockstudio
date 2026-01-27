@@ -291,6 +291,39 @@ npm test
 
 ---
 
+### Compiled Assets Testing
+
+In addition to Build class metadata, we also snapshot the **actual compiled output** from `_dist/` directories. This tests the SCSS compilation pipeline and ensures generated CSS/JS doesn't change unexpectedly.
+
+**What's Tested:**
+- Compiled CSS from SCSS source files
+- Generated JS files
+- ES module bundles in `_dist/modules/`
+- Scoped CSS output
+
+**Snapshot Location:** `tests/snapshots/compiled-assets.json`
+
+**Updating the Compiled Assets Snapshot:**
+
+```bash
+# Start Playground
+npm run playground
+
+# Capture compiled assets
+npx tsx tests/capture-compiled-assets.ts
+
+# Run tests
+npm test
+```
+
+**Why This Matters:**
+- SCSS compilation depends on scssphp library
+- Migration could break compilation if library versions change
+- Ensures CSS scoping works correctly
+- Catches any changes to minification/bundling
+
+---
+
 ### Unit Tests (WordPress Playground + REST API)
 
 Test PHP functions directly by calling them through a test helper plugin that exposes REST endpoints.
