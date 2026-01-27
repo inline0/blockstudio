@@ -242,6 +242,55 @@ Both use WordPress Playground. Unit tests call PHP functions via REST API. E2E t
 
 ---
 
+### Snapshot Testing
+
+**The primary testing strategy is snapshot testing.** We capture the exact output from all Build class methods and test that future runs produce identical data. This ensures the migration doesn't break anything.
+
+**Build Class Methods Tested:**
+- `blocks()` - All discovered blocks with their configurations
+- `data()` - Block data indexed by path
+- `extensions()` - Extension configurations
+- `files()` - All discovered files
+- `assetsAdmin()` - Admin-specific assets
+- `assetsBlockEditor()` - Block editor assets
+- `assetsGlobal()` - Global assets
+- `paths()` - Block discovery paths
+- `overrides()` - Block overrides
+- `assets()` - All assets
+- `blade()` - Blade template configurations
+
+**How It Works:**
+
+1. **Capture Snapshot** - Run `npx tsx tests/capture-snapshot.ts` with Playground running
+2. **Snapshot Saved** - Data saved to `tests/snapshots/build-snapshot.json` (~4MB)
+3. **Run Tests** - Each test compares fresh data against the snapshot
+4. **Normalization** - Dynamic values (timestamps, hashes, scope URLs) are normalized before comparison
+
+**Dynamic Values Normalized:**
+- Playground scope URLs: `scope:0.1234567890` → `scope:NORMALIZED`
+- Timestamps in filenames: `test-1769516162.js` → `test-TIMESTAMP.js`
+- Content hashes: `style-10af90f280e9944d28a32c07649e0628.css` → `style-CONTENTHASH.css`
+- Generated hash IDs: `blockstudio-49a9c898bab4` → `blockstudio-HASHID`
+- Scoped class hashes: `bs-43849caa438e2447ef552c25a075ff08` → `bs-NORMALIZED_HASH`
+- `mtime` fields → `NORMALIZED_MTIME`
+- `key` timestamp fields → `NORMALIZED_KEY`
+
+**Updating the Snapshot:**
+
+When you intentionally change Build class output:
+```bash
+# Start Playground in one terminal
+npm run playground
+
+# Capture new snapshot in another terminal
+npx tsx tests/capture-snapshot.ts
+
+# Run tests to verify
+npm test
+```
+
+---
+
 ### Unit Tests (WordPress Playground + REST API)
 
 Test PHP functions directly by calling them through a test helper plugin that exposes REST endpoints.
