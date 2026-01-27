@@ -217,6 +217,151 @@ class Plugin {
 
 ---
 
+## V7 Class Architecture
+
+### Key Architectural Changes from V6
+
+| Aspect | V6 (includes/) | V7 (includes-v7/) |
+|--------|----------------|-------------------|
+| **State Storage** | Static properties on Build class | Block_Registry singleton |
+| **Build::init()** | ~700 line monolithic function | Orchestrator delegating to focused classes |
+| **File Discovery** | Inline in Build::init() | Block_Discovery class |
+| **Method Names** | camelCase (`getData()`) | snake_case (`get_data()`) |
+| **String Functions** | Custom helpers (`Files::endsWith()`) | PHP 8.0+ built-ins (`str_ends_with()`) |
+
+### New V7 Classes
+
+```
+includes-v7/classes/
+├── block-registry.php      # Singleton state store (replaces static properties)
+├── block-discovery.php     # File discovery and classification
+├── asset-discovery.php     # Asset discovery and processing
+├── block-registrar.php     # WordPress block registration
+├── file-classifier.php     # File type classification
+├── attribute-builder.php   # Builds block attributes from fields
+├── constants.php           # Centralized configuration constants
+├── error-handler.php       # Centralized error handling
+├── field-handlers/         # Strategy pattern for field types
+│   ├── field-handler-interface.php
+│   ├── text-field-handler.php
+│   ├── number-field-handler.php
+│   ├── boolean-field-handler.php
+│   ├── select-field-handler.php
+│   ├── media-field-handler.php
+│   └── container-field-handler.php
+└── settings/               # Settings loaders
+    ├── options-loader.php
+    ├── json-loader.php
+    └── filter-loader.php
+```
+
+### Block_Registry Singleton
+
+Replaces all static properties from v6 Build class:
+
+```php
+// V6 - Static properties on Build class
+Build::$blocks[]
+Build::$data[]
+Build::$extensions[]
+Build::$files[]
+Build::$assetsAdmin[]
+// ... etc
+
+// V7 - Block_Registry singleton
+Block_Registry::instance()->get_blocks()
+Block_Registry::instance()->get_data()
+Block_Registry::instance()->get_extensions()
+Block_Registry::instance()->get_files()
+Block_Registry::instance()->get_assets_admin()
+// ... etc
+```
+
+Public API is preserved - Build class getter methods delegate to Block_Registry:
+
+```php
+// Build::blocks() now delegates
+public static function blocks(): array {
+    return Block_Registry::instance()->get_blocks();
+}
+```
+
+### Build::init() Orchestration
+
+V6 had everything inline (~700 lines). V7 decomposes into phases:
+
+```php
+public static function init( $args = false ) {
+    $registry = Block_Registry::instance();
+
+    // Phase 1: Discover blocks using Block_Discovery
+    $discovery = new Block_Discovery();
+    $results   = $discovery->discover( $path, $instance, $library, $editor );
+
+    // Phase 2: Process assets for each discovered item
+    foreach ( $store as $name => &$data ) {
+        self::process_block_assets( $data, $name, $instance, $editor, $registry );
+    }
+
+    // Phase 3: Register blocks with WordPress
+    foreach ( $registerable as $name => $item ) {
+        self::register_block_type( $item['data'], $item['block_json'], ... );
+    }
+
+    // Phase 4: Apply overrides
+    self::apply_overrides( $registry );
+}
+```
+
+### Block_Discovery Class
+
+Handles all file iteration and classification:
+
+```php
+$discovery = new Block_Discovery();
+$results = $discovery->discover( $path, $instance, $library, $editor );
+
+// Returns:
+[
+    'store'           => [...],  // All discovered items
+    'registerable'    => [...],  // Items needing WP registration
+    'blade_templates' => [...],  // Blade template mappings
+    'overrides'       => [...],  // Override blocks
+]
+```
+
+### Method Name Mapping (V6 → V7)
+
+All public methods renamed to snake_case for WordPress Coding Standards:
+
+| V6 Method | V7 Method |
+|-----------|-----------|
+| `Build::getBlocks()` | `Build::blocks()` |
+| `Build::getData()` | `Build::data()` |
+| `Build::dataSorted()` | `Build::data_sorted()` |
+| `Build::assetsAdmin()` | `Build::assets_admin()` |
+| `Build::assetsBlockEditor()` | `Build::assets_block_editor()` |
+| `Build::assetsGlobal()` | `Build::assets_global()` |
+| `Build::isTailwindActive()` | `Build::is_tailwind_active()` |
+| `Build::buildAttributes()` | `Build::build_attributes()` |
+| `Build::filterAttributes()` | `Build::filter_attributes()` |
+| `Build::mergeAttributes()` | `Build::merge_attributes()` |
+| `Build::getInstanceName()` | `Build::get_instance_name()` |
+| `Build::getBuildDir()` | `Build::get_build_dir()` |
+
+### Verification
+
+All 14 snapshot tests verify v7 produces identical output to v6:
+
+```bash
+npm run test:v7  # Runs against includes-v7/
+npm test         # Runs against includes/ (v6 reference)
+```
+
+Both must pass with identical snapshots, ensuring no functional regressions.
+
+---
+
 ## Testing Strategy
 
 ### Philosophy
