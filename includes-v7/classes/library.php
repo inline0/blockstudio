@@ -8,7 +8,35 @@
 namespace Blockstudio;
 
 /**
- * Handles the Blockstudio element library.
+ * Built-in Blockstudio Elements library management.
+ *
+ * This class manages the optional "Blockstudio Elements" library - a
+ * collection of pre-built blocks included with the plugin.
+ *
+ * Library Structure:
+ * The element library lives in includes/library/ and contains
+ * ready-to-use blocks for common patterns (buttons, cards, etc.).
+ *
+ * Enabling the Library:
+ * Set in Settings or blockstudio.json:
+ * ```json
+ * { "library": true }
+ * ```
+ *
+ * Block Category:
+ * Registers "Blockstudio Elements" category in Gutenberg to group
+ * library blocks together in the block inserter.
+ *
+ * Custom Icon:
+ * Library blocks (name starting with "blockstudio-element") get a
+ * distinctive Blockstudio icon to identify them as built-in elements.
+ *
+ * Initialization Flow:
+ * 1. block_categories_all: Adds "Blockstudio Elements" category
+ * 2. init: Calls Build::init() with library=true flag
+ * 3. blockstudio/blocks/meta: Adds icon to element blocks
+ *
+ * @since 2.0.0
  */
 class Library {
 

@@ -10,7 +10,42 @@ namespace Blockstudio;
 use WP_Block_Parser;
 
 /**
- * Handles block editor integration.
+ * Gutenberg block editor integration and script enqueuing.
+ *
+ * This class handles the JavaScript side of Blockstudio in the block editor,
+ * enqueuing scripts and providing initial block render data.
+ *
+ * Responsibilities:
+ *
+ * 1. Script Enqueuing:
+ *    - Enqueues the main blocks/index.tsx.js script
+ *    - Provides blockstudio and blockstudioAdmin global objects
+ *    - Includes nonces, REST URLs, and admin data
+ *
+ * 2. Initial Block Rendering:
+ *    - Parses current post content to find Blockstudio blocks
+ *    - Pre-renders each block server-side for instant display
+ *    - Provides blockstudioBlocks object with { rendered, block } data
+ *
+ * 3. CSS Class/Variable Injection:
+ *    - Reads cssClasses and cssVariables settings
+ *    - Provides style handles to the editor for class autocomplete
+ *
+ * Global Objects Provided:
+ *
+ * window.blockstudio:
+ * - nonce: AJAX nonce
+ * - nonceRest: REST API nonce
+ * - rest: REST API base URL
+ * - blockstudioBlocks: Pre-rendered block data keyed by serialized attrs
+ *
+ * window.blockstudioAdmin:
+ * - All data from Admin::data(false)
+ * - styles: All enqueued stylesheets
+ * - cssClasses: Handles for class extraction
+ * - cssVariables: Handles for CSS variable extraction
+ *
+ * @since 1.0.0
  */
 class Blocks {
 

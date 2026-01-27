@@ -10,7 +10,44 @@ namespace Blockstudio;
 use Throwable;
 
 /**
- * Handles errors and logging for Blockstudio.
+ * Centralized error handling and logging for Blockstudio.
+ *
+ * This class provides consistent error handling throughout the plugin
+ * with support for different log levels and exception handling.
+ *
+ * Log Levels:
+ * - debug: Detailed diagnostic info (only when WP_DEBUG or debug mode)
+ * - info: General information (only when WP_DEBUG or debug mode)
+ * - warning: Potential issues that don't stop execution (always logged)
+ * - error: Critical problems (always logged)
+ *
+ * Usage Examples:
+ * ```php
+ * // Simple logging
+ * Error_Handler::error('Block registration failed');
+ * Error_Handler::warning('Asset file not found', ['path' => $path]);
+ * Error_Handler::debug('Processing block', ['name' => $name]);
+ *
+ * // Exception handling
+ * Error_Handler::handle_exception($e, 'SCSS Compilation');
+ *
+ * // Safe try-catch wrapper
+ * $result = Error_Handler::try_catch(
+ *     fn() => risky_operation(),
+ *     'Risky Operation',
+ *     $default_value
+ * );
+ * ```
+ *
+ * Log Output Format:
+ * ```
+ * [Blockstudio] [2024-01-15 14:30:00] [ERROR] Message | Context: {"key":"value"}
+ * ```
+ *
+ * WordPress Integration:
+ * - Uses error_log() when WP_DEBUG_LOG is enabled
+ * - Fires blockstudio/error/logged action for custom handlers
+ * - Fires blockstudio/error/exception action for exception handlers
  *
  * @since 7.0.0
  */

@@ -8,7 +8,46 @@
 namespace Blockstudio;
 
 /**
- * Utility functions for Blockstudio.
+ * Template utility functions for block developers.
+ *
+ * This class provides helper methods for common template operations
+ * like rendering data attributes and CSS variables.
+ *
+ * Data Attributes:
+ * ```php
+ * // In block template
+ * <div <?php echo Utils::attributes($attributes, ['color', 'size']); ?>>
+ *
+ * // Output: data-color="blue" data-size="large"
+ * ```
+ *
+ * CSS Variables:
+ * ```php
+ * <div style="<?php echo Utils::attributes($attributes, [], true); ?>">
+ *
+ * // Output: --color: blue; --size: large;
+ * ```
+ *
+ * HTML Attributes from Field:
+ * For fields with field="attributes" that output custom HTML attributes:
+ * ```php
+ * <img <?php echo Utils::data_attributes($attributes['imageAttributes']); ?>>
+ *
+ * // Output: src="image.jpg" srcset="..." alt="Description"
+ * ```
+ *
+ * Debugging:
+ * ```php
+ * Utils::console_log($attributes);
+ * // Outputs: <script>console.log({...})</script>
+ * ```
+ *
+ * Key Transformations:
+ * - camelCase → kebab-case (dataColor → data-color)
+ * - Objects with 'value' key → extracts value
+ * - Arrays → JSON encoded
+ *
+ * @since 1.0.0
  */
 class Utils {
 

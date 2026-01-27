@@ -8,7 +8,55 @@
 namespace Blockstudio;
 
 /**
- * Handles population of attribute options.
+ * Dynamic option population for select, checkbox, and radio fields.
+ *
+ * This class fetches options from WordPress data sources (posts, users,
+ * terms) or custom sources to populate choice-type block attributes.
+ *
+ * Population Types:
+ *
+ * 1. Query-based (posts, users, terms):
+ *    ```json
+ *    "populate": {
+ *      "type": "query",
+ *      "query": "posts",
+ *      "arguments": { "post_type": "page", "posts_per_page": -1 }
+ *    }
+ *    ```
+ *
+ * 2. Function-based:
+ *    ```json
+ *    "populate": {
+ *      "type": "function",
+ *      "function": "get_my_options",
+ *      "arguments": ["arg1", "arg2"]
+ *    }
+ *    ```
+ *
+ * 3. Custom filter-based:
+ *    ```json
+ *    "populate": {
+ *      "type": "custom",
+ *      "custom": "my_options"
+ *    }
+ *    ```
+ *    Then register via filter:
+ *    ```php
+ *    add_filter('blockstudio/blocks/attributes/populate', function($options) {
+ *      $options['my_options'] = [
+ *        ['value' => 'a', 'label' => 'Option A'],
+ *        ['value' => 'b', 'label' => 'Option B'],
+ *      ];
+ *      return $options;
+ *    });
+ *    ```
+ *
+ * Extra IDs:
+ * The $extra_ids parameter ensures selected values are always included
+ * in query results, even if they wouldn't match the query arguments.
+ * This prevents "orphaned" selections when items are modified.
+ *
+ * @since 1.0.0
  */
 class Populate {
 

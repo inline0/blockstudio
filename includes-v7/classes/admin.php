@@ -11,7 +11,45 @@ use BlockstudioPlugin;
 use stdClass;
 
 /**
- * Admin class used for editor-related functions.
+ * WordPress admin interface and Blockstudio editor integration.
+ *
+ * This class manages the Blockstudio admin experience including:
+ *
+ * Admin Menu:
+ * - Registers top-level "Blockstudio" menu page
+ * - Displays loading screen while React app initializes
+ * - Enqueues editor scripts and provides localized data
+ *
+ * Editor Data (blockstudioAdmin):
+ * The React editor receives comprehensive data via wp_localize_script:
+ * - blocks: All registered block definitions (WP_Block_Type objects)
+ * - blocksSorted: Block data organized by directory structure
+ * - files: All discovered files in block directories
+ * - paths: Block source directory paths
+ * - overrides: Block override configurations
+ * - extensions: Block extension configurations
+ * - templates: Available block templates
+ * - scripts/styles: All enqueued assets across contexts
+ * - options*: Settings from all configuration sources
+ *
+ * Asset Capture:
+ * - Captures enqueued scripts/styles from multiple contexts
+ * - block_editor: Assets from enqueue_block_editor_assets hook
+ * - admin: Assets from admin_enqueue_scripts hook
+ * - frontend: Assets from wp_footer (via transient capture)
+ * - Provides this data to editor for asset dependency resolution
+ *
+ * User Access Control:
+ * - is_allowed() checks if current user can access editor
+ * - Configured via Settings: users/ids and users/roles
+ * - Restricts editor to specific users or role groups
+ *
+ * Loading Screen:
+ * - Shows animated logo while React app loads
+ * - Uses MutationObserver to detect when app is ready
+ * - Hides WordPress admin chrome in block editing mode
+ *
+ * @since 1.0.0
  */
 class Admin {
 

@@ -8,7 +8,45 @@
 namespace Blockstudio;
 
 /**
- * Field helper utilities.
+ * Field helper utilities for working with block attributes.
+ *
+ * This class provides utility methods for template developers to work
+ * with Blockstudio block attributes, particularly grouped fields.
+ *
+ * Group Fields:
+ * When you define a "group" field in block.json, child attributes are
+ * stored with a prefix: groupName_fieldName. This class helps extract
+ * and work with grouped attributes.
+ *
+ * Example block.json:
+ * ```json
+ * {
+ *   "attributes": {
+ *     "cta": {
+ *       "type": "object",
+ *       "field": "group",
+ *       "attributes": {
+ *         "text": { "type": "string", "field": "text" },
+ *         "url": { "type": "string", "field": "url" }
+ *       }
+ *     }
+ *   }
+ * }
+ * ```
+ *
+ * In template, attributes arrive as:
+ * - $attributes['cta_text'] = 'Learn More'
+ * - $attributes['cta_url'] = 'https://...'
+ *
+ * Using Field::group():
+ * ```php
+ * $cta = Field::group($attributes, 'cta');
+ * // Result: ['text' => 'Learn More', 'url' => 'https://...']
+ *
+ * echo '<a href="' . $cta['url'] . '">' . $cta['text'] . '</a>';
+ * ```
+ *
+ * @since 3.0.0
  */
 class Field {
 

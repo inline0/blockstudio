@@ -8,9 +8,39 @@
 namespace Blockstudio;
 
 /**
- * Discovers and processes assets for blocks.
+ * Asset discovery and categorization for Blockstudio blocks.
  *
- * This class extracts asset discovery logic from the Build class.
+ * This class handles Phase 2 of Build::init() - discovering, processing,
+ * and categorizing CSS/JS assets found in block directories.
+ *
+ * Asset Processing Flow:
+ * 1. Filter block files to find CSS (.css, .scss) and JS (.js) assets
+ * 2. Apply blockstudio/assets/enable filter (allows per-asset opt-out)
+ * 3. Process assets via Assets::process() (SCSS→CSS, minification)
+ * 4. Categorize by naming convention (admin, block-editor, global)
+ * 5. Register for WordPress enqueuing
+ *
+ * Asset Categories (based on file prefix):
+ * - admin-*.css/js: Only in WordPress admin pages
+ * - block-editor-*.css/js: Only in Gutenberg editor
+ * - global-*.css/js: Loaded everywhere (frontend + admin)
+ * - No prefix: Standard block assets (loaded with block)
+ *
+ * Asset Modifiers (based on file suffix):
+ * - *-inline.css/js: Injected inline, not enqueued as file
+ * - *-scoped.css: CSS wrapped in block's unique class
+ * - *-editor.css/js: Only loaded in editor, not frontend
+ *
+ * Output Structure:
+ * ```php
+ * [
+ *   'assets' => [
+ *     'style.css' => ['type' => 'external', 'path' => '...', 'url' => '...'],
+ *     'style-inline.css' => ['type' => 'inline', 'path' => '...', ...],
+ *   ],
+ *   'processed' => ['/path/to/_dist/style-abc123.css', ...],
+ * ]
+ * ```
  *
  * @since 7.0.0
  */

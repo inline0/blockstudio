@@ -8,7 +8,31 @@
 namespace Blockstudio;
 
 /**
- * Handles block and asset registration.
+ * WordPress block and asset registration hooks.
+ *
+ * This class hooks into WordPress to register Blockstudio blocks
+ * and their assets with the WordPress system.
+ *
+ * Hooks Used:
+ * - init (PHP_INT_MAX): Register blocks after all plugins loaded
+ * - wp_enqueue_scripts: Pre-register assets for conditional loading
+ *
+ * Block Registration:
+ * Iterates through Build::blocks() and calls register_block_type()
+ * for each. The blockstudio/blocks/meta filter allows modification
+ * of block metadata before registration.
+ *
+ * Asset Registration:
+ * Pre-registers all block scripts and styles so they can be
+ * conditionally enqueued when blocks are rendered. Assets are
+ * registered (not enqueued) to enable on-demand loading.
+ *
+ * Why PHP_INT_MAX Priority:
+ * Blocks are registered last to ensure all other plugins have
+ * registered their blocks first. This is important for overrides
+ * and extensions that need to modify existing blocks.
+ *
+ * @since 1.0.0
  */
 class Register {
 

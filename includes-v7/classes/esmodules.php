@@ -10,7 +10,42 @@ namespace Blockstudio;
 use Exception;
 
 /**
- * Handles ES Module imports and bundling.
+ * ES Module import resolution and bundling from esm.sh CDN.
+ *
+ * This class enables importing npm packages directly in block JavaScript
+ * using a custom Blockstudio syntax. Packages are fetched from esm.sh
+ * and cached locally in the block's _dist/modules/ directory.
+ *
+ * Import Syntax:
+ * ```javascript
+ * import lodash from "blockstudio/lodash@4.17.21";
+ * import { motion } from "blockstudio/framer-motion@10.16.4";
+ * ```
+ *
+ * How It Works:
+ * 1. During asset processing, regex finds blockstudio/package@version imports
+ * 2. For development: rewrites to https://esm.sh/package@version?bundle
+ * 3. For production: fetches bundle from esm.sh and caches locally
+ *
+ * Directory Structure:
+ * ```
+ * my-block/
+ * ├── index.js          # Contains blockstudio/lodash@4.17.21 import
+ * └── _dist/
+ *     └── modules/
+ *         └── lodash/
+ *             └── 4.17.21.js    # Cached bundle from esm.sh
+ * ```
+ *
+ * Benefits:
+ * - No build tooling required (webpack, esbuild, etc.)
+ * - Direct npm package access from block code
+ * - Automatic versioning and caching
+ * - Works in development and production
+ *
+ * Related: ESModulesCSS handles CSS imports with same pattern
+ *
+ * @since 4.0.0
  */
 class ESModules {
 

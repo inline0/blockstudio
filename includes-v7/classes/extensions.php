@@ -10,7 +10,49 @@ namespace Blockstudio;
 use WP_HTML_Tag_Processor;
 
 /**
- * Handles block extensions.
+ * Block extensions system for adding attributes to existing blocks.
+ *
+ * Extensions allow adding custom attributes and behavior to any
+ * registered WordPress block without modifying its source code.
+ *
+ * How Extensions Work:
+ * 1. Create a block.json with blockstudio.extend: true
+ * 2. Specify target blocks using the "name" field (supports wildcards)
+ * 3. Define attributes that will be added to matched blocks
+ * 4. Optionally use "set" to apply values to the block's HTML
+ *
+ * Example Extension (block.json):
+ * ```json
+ * {
+ *   "name": "core/paragraph",       // Or ["core/paragraph", "core/heading"]
+ *   "blockstudio": { "extend": true },
+ *   "attributes": {
+ *     "textColor": {
+ *       "type": "string",
+ *       "field": "select",
+ *       "options": ["primary", "secondary"],
+ *       "set": [{ "attribute": "class", "value": "text-{attributes.textColor}" }]
+ *     }
+ *   }
+ * }
+ * ```
+ *
+ * Wildcard Matching:
+ * - "core/*" matches all core blocks
+ * - "core/heading" matches only headings
+ * - ["core/paragraph", "core/heading"] matches both
+ *
+ * Set Configuration:
+ * The "set" array defines how attribute values modify block HTML:
+ * - { "attribute": "class", "value": "{value}" } → adds CSS class
+ * - { "attribute": "style", "value": "--color: {value}" } → adds inline style
+ * - { "attribute": "data-foo", "value": "{value}" } → adds data attribute
+ *
+ * Template Syntax:
+ * - {attributes.fieldName} → current field value
+ * - {attributes.otherField} → another field's value
+ *
+ * @since 3.0.0
  */
 class Extensions {
 

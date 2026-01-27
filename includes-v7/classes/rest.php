@@ -20,7 +20,55 @@ use WP_REST_Response;
 use ZipArchive;
 
 /**
- * Handles REST API endpoints.
+ * REST API endpoints for the Blockstudio editor and Gutenberg integration.
+ *
+ * This class provides all REST endpoints used by the React-based editor
+ * and the Gutenberg block editor for block management operations.
+ *
+ * Endpoint Categories:
+ *
+ * 1. Data Retrieval (GET):
+ *    - /data: Block data, sorted data, and files
+ *    - /blocks: All block configurations
+ *    - /blocks-sorted: Blocks organized by directory
+ *    - /files: All discovered block files
+ *    - /files/dist: Compiled asset contents
+ *    - /icons: Icon set data for icon picker
+ *
+ * 2. File Operations (POST):
+ *    - /editor/file/create: Create files/folders, import ZIPs
+ *    - /editor/file/delete: Delete files/folders with cleanup
+ *    - /editor/file/rename: Rename/move files or folders
+ *    - /editor/zip/create: Export blocks as ZIP download
+ *
+ * 3. Block Operations (POST):
+ *    - /editor/block/save: Save block files and recompile assets
+ *    - /editor/block/test: Test block template for syntax errors
+ *    - /editor/block/render: Render block with test data
+ *
+ * 4. Settings (POST):
+ *    - /editor/options/save: Save plugin options (DB or JSON)
+ *    - /editor/settings/save: Save user-specific settings
+ *    - /editor/tailwind/save: Save compiled Tailwind CSS
+ *
+ * 5. Gutenberg Integration (POST):
+ *    - /gutenberg/block/render/{name}: Server-side block render
+ *    - /gutenberg/block/render/all: Batch render multiple blocks
+ *    - /gutenberg/block/update: Live preview updates during editing
+ *
+ * 6. Attribute Building (POST):
+ *    - /attributes/build: Convert block.json fields to WP attributes
+ *    - /attributes/populate: Fetch dynamic options for select fields
+ *
+ * Security:
+ * - Most endpoints require Admin::is_allowed() permission
+ * - Gutenberg endpoints use edit_post capability checks
+ * - All path parameters validated to prevent directory traversal
+ * - WP_Filesystem used for all file operations
+ *
+ * Response Format:
+ * - Success: { code, message, data: { status: 200, ... } }
+ * - Error: WP_Error with code, message, and status
  *
  * @since 2.3.0
  */

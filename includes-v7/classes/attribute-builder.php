@@ -16,10 +16,53 @@ use Blockstudio\Field_Handlers\Media_Field_Handler;
 use Blockstudio\Field_Handlers\Container_Field_Handler;
 
 /**
- * Builds block attributes from field configurations using the strategy pattern.
+ * Builds WordPress block attributes from Blockstudio field configurations.
  *
- * This class extracts the build_attributes() logic from the Build class
- * and delegates to specialized handlers for each field type.
+ * This class converts the field definitions in block.json into the
+ * WordPress block attributes format using a strategy pattern with
+ * specialized handlers for each field type.
+ *
+ * Field to Attribute Conversion:
+ * Blockstudio fields in block.json define UI controls and data types.
+ * This class converts them to WordPress block attribute definitions
+ * that Gutenberg understands.
+ *
+ * Example Conversion:
+ * ```json
+ * // block.json field
+ * "title": {
+ *   "type": "string",
+ *   "field": "text",
+ *   "default": "Hello"
+ * }
+ *
+ * // Becomes WordPress attribute
+ * "title": {
+ *   "type": "string",
+ *   "default": "Hello"
+ * }
+ * ```
+ *
+ * Strategy Pattern:
+ * Each field type has a dedicated handler class:
+ * - Text_Field_Handler: text, textarea, code, classes, etc.
+ * - Number_Field_Handler: number, range
+ * - Boolean_Field_Handler: toggle, checkbox
+ * - Select_Field_Handler: select, radio, checkbox (multi)
+ * - Media_Field_Handler: image, file, gallery
+ * - Container_Field_Handler: group, repeater, tabs
+ *
+ * Handler Interface:
+ * ```php
+ * interface Field_Handler_Interface {
+ *     public function supports(string $type): bool;
+ *     public function build(array $field, array &$attributes, string $prefix): void;
+ * }
+ * ```
+ *
+ * Custom Handlers:
+ * Register custom handlers via register_handler() for plugin-specific
+ * field types or to override default behavior.
  *
  * @since 7.0.0
  */

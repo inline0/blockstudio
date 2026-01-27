@@ -8,7 +8,56 @@
 namespace Blockstudio;
 
 /**
- * Handles plugin settings.
+ * Handles plugin settings with a layered configuration system.
+ *
+ * This class implements a cascading settings architecture where values
+ * can come from multiple sources, each overriding the previous:
+ *
+ * Configuration Priority (lowest to highest):
+ * 1. $defaults - Hardcoded default values in this class
+ * 2. $settings_options - Values from wp_options table ('blockstudio_settings')
+ * 3. $settings_json - Values from theme's blockstudio.json file
+ * 4. $settings_filters - Values from WordPress filters (blockstudio/settings/*)
+ *
+ * Settings Structure:
+ * - assets/enqueue: Enable/disable asset loading on frontend
+ * - assets/minify/css: Enable CSS minification
+ * - assets/minify/js: Enable JavaScript minification
+ * - assets/process/scss: Enable inline SCSS compilation
+ * - assets/process/scssFiles: Enable .scss file compilation
+ * - editor/formatOnSave: Auto-format code in editor
+ * - editor/library: Enable block library panel
+ * - tailwind/enabled: Enable Tailwind CSS integration
+ * - users/ids: Array of user IDs allowed to use editor
+ * - users/roles: Array of user roles allowed to use editor
+ *
+ * Access Pattern:
+ * Use Settings::get('path/to/setting') with forward-slash notation:
+ * - Settings::get('assets/enqueue') → true/false
+ * - Settings::get('users/ids') → [1, 2, 3]
+ *
+ * JSON Configuration:
+ * Place blockstudio.json in theme root to configure via file:
+ * ```json
+ * {
+ *   "assets": { "enqueue": true, "minify": { "css": true } },
+ *   "tailwind": { "enabled": true }
+ * }
+ * ```
+ *
+ * Filter Configuration:
+ * Use filters for dynamic/conditional settings:
+ * ```php
+ * add_filter('blockstudio/settings/assets/enqueue', fn() => true);
+ * add_filter('blockstudio/settings/tailwind/enabled', fn() => WP_DEBUG);
+ * ```
+ *
+ * Initialization:
+ * - Settings singleton is created on 'blockstudio/init/before' or 'init'
+ * - Loads options first, then JSON, then applies filters
+ * - Includes migration logic for settings from v5.x
+ *
+ * @since 1.0.0
  */
 class Settings {
 

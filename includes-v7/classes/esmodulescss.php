@@ -10,7 +10,39 @@ namespace Blockstudio;
 use Exception;
 
 /**
- * Handles ES Modules CSS imports.
+ * CSS imports from npm packages via esm.sh CDN.
+ *
+ * This class enables importing CSS files from npm packages directly
+ * in block JavaScript, similar to how bundlers handle CSS imports.
+ *
+ * Import Syntax:
+ * ```javascript
+ * import "blockstudio/swiper@10.0.0/swiper-bundle.min.css";
+ * import "blockstudio/@fancyapps/ui@5.0.0/dist/fancybox.css";
+ * ```
+ *
+ * How It Works:
+ * 1. Regex finds blockstudio/package@version/path.css imports
+ * 2. Fetches CSS from esm.sh (e.g., esm.sh/swiper@10.0.0/swiper.css)
+ * 3. Caches CSS file locally in _dist/modules/
+ * 4. Removes import statement from JS (CSS is loaded separately)
+ *
+ * Directory Structure:
+ * ```
+ * my-block/
+ * ├── index.js                  # Contains CSS import
+ * └── _dist/
+ *     └── modules/
+ *         └── swiper/
+ *             └── 10.0.0-swiper-bundle.min.css
+ * ```
+ *
+ * The cached CSS files are then enqueued by the Assets class as
+ * part of the block's stylesheet dependencies.
+ *
+ * Related: ESModules handles JavaScript imports with same pattern
+ *
+ * @since 4.0.0
  */
 class ESModulesCSS {
 

@@ -10,9 +10,42 @@ namespace Blockstudio;
 use WP_Block_Type;
 
 /**
- * Registers blocks with WordPress.
+ * WordPress block type registration and configuration.
  *
- * This class extracts block registration logic from the Build class.
+ * This class handles Phase 3 of Build::init() - creating WP_Block_Type
+ * instances and registering them with WordPress.
+ *
+ * Registration Process:
+ * 1. Convert Blockstudio fields to WP block attributes
+ * 2. Create WP_Block_Type with render_callback to Block::render()
+ * 3. Add standard attributes (blockstudio, anchor, className)
+ * 4. Configure context (postId, postType, custom contexts)
+ * 5. Process variations if defined
+ * 6. Build blockstudio metadata for editor
+ *
+ * Block Types Registered:
+ * - Standard blocks: Full blocks with render templates
+ * - Override blocks: Modify existing registered blocks
+ * - Extension blocks: Add attributes to other blocks
+ *
+ * WP_Block_Type Properties Set:
+ * - api_version: Always 3 (latest block API)
+ * - render_callback: Points to Block::render()
+ * - attributes: Merged from block.json and Blockstudio fields
+ * - uses_context: postId, postType, plus custom contexts
+ * - provides_context: Block name maps to blockstudio data
+ * - path: Template file path for rendering
+ * - blockstudio: Custom metadata for editor features
+ *
+ * Override Application:
+ * Overrides merge their attributes into existing blocks:
+ * ```php
+ * $registrar->apply_override(
+ *     $override_data,
+ *     $override_json,
+ *     $existing_block
+ * );
+ * ```
  *
  * @since 7.0.0
  */

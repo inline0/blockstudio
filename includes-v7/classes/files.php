@@ -12,7 +12,34 @@ use RecursiveDirectoryIterator;
 use RecursiveIteratorIterator;
 
 /**
- * Handles file operations.
+ * Filesystem utility methods for Blockstudio.
+ *
+ * This class provides static utility methods for common filesystem
+ * operations needed throughout the plugin.
+ *
+ * Template Discovery:
+ * - get_render_template(): Finds index.php, index.blade.php, or index.twig
+ * - Used by Block_Discovery and Block classes to locate render templates
+ *
+ * URL Generation:
+ * - get_relative_url(): Converts absolute paths to WordPress content URLs
+ * - get_root_folder(): Gets wp-content folder name for URL construction
+ * - Used by Assets class for asset URL generation
+ *
+ * Directory Operations:
+ * - delete_all_files(): Recursively deletes directory contents
+ * - is_directory_empty(): Checks if directory has any files
+ * - get_files_recursively_and_delete_empty_folders(): Cleans up empty dirs
+ * - get_files_with_extension(): Finds files by extension (e.g., all .css)
+ *
+ * Structure Mapping:
+ * - get_folder_structure_with_contents(): Builds nested array of directory
+ *   structure with file contents, used for template browsing in editor
+ *
+ * Note: This class uses PHP's native filesystem functions rather than
+ * WP_Filesystem for performance reasons in read-heavy discovery operations.
+ *
+ * @since 1.0.0
  */
 class Files {
 

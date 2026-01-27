@@ -14,23 +14,60 @@ use Timber\Timber;
 use WP_HTML_Tag_Processor;
 
 /**
- * Handles block rendering and attribute transformation.
+ * Handles rendering of Blockstudio blocks on the frontend and in the editor.
+ *
+ * This class is responsible for:
+ *
+ * 1. Block Rendering (render method):
+ *    - Called by WordPress when a block needs to be displayed
+ *    - Transforms block attributes into template variables
+ *    - Supports PHP, Twig, and Blade template engines
+ *    - Handles inline assets, scoped CSS, and interactivity API
+ *
+ * 2. Attribute Transformation (transform_attributes):
+ *    - Converts raw block attributes into structured data
+ *    - Resolves media IDs to attachment data (URLs, alt text, etc.)
+ *    - Processes repeater fields recursively
+ *    - Handles option fields (select, checkbox, radio)
+ *
+ * 3. Component Replacement:
+ *    - Replaces custom tags like <RichText>, <InnerBlocks>, <MediaPlaceholder>
+ *    - Processes useBlockProps for wrapper element attributes
+ *
+ * 4. Block Tracking:
+ *    - Tracks render count per block type ($count_by_block)
+ *    - Provides index numbers for CSS nth-child styling
+ *
+ * Template Variables Available:
+ *   $block['index']       - Current block index (nth instance of this type)
+ *   $block['indexTotal']  - Total blocks rendered so far
+ *   $block['id']          - Unique block ID for this render
+ *   $block['name']        - Block name (e.g., 'blockstudio/my-block')
+ *   $block['classes']     - CSS classes for the wrapper
+ *   $attributes           - Transformed block attributes
  *
  * @since 2.4.0
  */
 class Block {
 
 	/**
-	 * Block render count.
+	 * Total number of blocks rendered in the current request.
+	 *
+	 * Incremented each time any Blockstudio block is rendered.
+	 * Available in templates as $block['indexTotal'].
 	 *
 	 * @var int
 	 */
 	private static int $count = 0;
 
 	/**
-	 * Block render count by block name.
+	 * Render count per block type, indexed by block name.
 	 *
-	 * @var array
+	 * Tracks how many times each specific block type has been rendered.
+	 * Used to provide $block['index'] for nth-child CSS targeting.
+	 * Example: ['blockstudio/hero' => 2, 'blockstudio/card' => 5]
+	 *
+	 * @var array<string, int>
 	 */
 	private static array $count_by_block = array();
 

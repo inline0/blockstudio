@@ -12,7 +12,49 @@ use BlockstudioVendor\MatthiasMullie\Minify;
 use BlockstudioVendor\ScssPhp\ScssPhp\Exception\SassException;
 
 /**
- * Handles asset processing and rendering.
+ * Handles asset processing, compilation, and rendering for Blockstudio blocks.
+ *
+ * This class manages the complete asset lifecycle:
+ *
+ * Asset Processing Pipeline:
+ * 1. Discovery: Assets found in block directories during Build::init()
+ * 2. Compilation: SCSS→CSS, minification, ES module bundling
+ * 3. Caching: Compiled files stored in _dist/ with content-hash filenames
+ * 4. Rendering: Assets injected into page head/footer based on block usage
+ *
+ * Output Buffering Strategy:
+ * - Captures entire page output via ob_start() on template_redirect
+ * - Scans for block comment markers (<!-- blockstudio/name -->)
+ * - Only injects assets for blocks actually present on the page
+ * - Moves inline styles/scripts to head/footer for proper loading order
+ *
+ * Asset Types Handled:
+ * - CSS/SCSS: Compiled, optionally minified, scoped to block wrapper
+ * - JavaScript: ES modules bundled, external imports resolved
+ * - Inline assets: Injected directly into page (style/script tags)
+ * - External assets: Enqueued via wp_enqueue_style/script
+ *
+ * Compilation Features:
+ * - SCSS compilation via scssphp library
+ * - CSS minification via MatthiasMullie\Minify
+ * - JS minification via MatthiasMullie\Minify
+ * - CSS scoping: *-scoped.css wrapped in block's unique class
+ * - ES Module resolution: blockstudio/package@version → CDN URLs
+ *
+ * Key Methods:
+ * - process(): Main entry point for asset compilation
+ * - process_css(): SCSS compilation, scoping, minification
+ * - process_js(): ES module resolution, minification
+ * - parse_output(): Scans page output and injects relevant assets
+ * - render_inline(): Outputs inline style/script tags
+ * - render_tag(): Outputs link/script tags for external files
+ *
+ * Cache Invalidation:
+ * - Compiled filenames include content hash or mtime
+ * - Changes to source files or imports trigger recompilation
+ * - Import mtimes tracked for SCSS @import invalidation
+ *
+ * @since 1.0.0
  */
 class Assets {
 

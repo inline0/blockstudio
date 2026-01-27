@@ -8,7 +8,46 @@
 namespace Blockstudio;
 
 /**
- * Handles block rendering.
+ * Programmatic block rendering utility for theme developers.
+ *
+ * This class provides a simple API for rendering Blockstudio blocks
+ * directly from PHP code, useful for:
+ *
+ * - Including blocks in theme templates
+ * - Rendering blocks in custom page builders
+ * - Generating block output for AJAX/REST responses
+ * - Testing block output during development
+ *
+ * Usage Examples:
+ *
+ * ```php
+ * // Render by block name (echoes output)
+ * Render::block('blockstudio/hero');
+ *
+ * // Render with custom attributes
+ * Render::block([
+ *     'name' => 'blockstudio/card',
+ *     'data' => [
+ *         'title' => 'My Card',
+ *         'image' => 123  // Attachment ID
+ *     ]
+ * ]);
+ *
+ * // Render with inner content
+ * Render::block([
+ *     'name' => 'blockstudio/section',
+ *     'data' => ['background' => 'dark'],
+ *     'content' => '<p>Inner HTML content</p>'
+ * ]);
+ * ```
+ *
+ * Helper Function:
+ * The blockstudio_render_block() function wraps this class:
+ * ```php
+ * blockstudio_render_block(['name' => 'blockstudio/hero']);
+ * ```
+ *
+ * @since 1.0.0
  */
 class Render {
 

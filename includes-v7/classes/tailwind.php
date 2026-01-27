@@ -8,7 +8,37 @@
 namespace Blockstudio;
 
 /**
- * Handles Tailwind CSS integration.
+ * Tailwind CSS integration for Blockstudio.
+ *
+ * This class handles the integration of Tailwind CSS for block development,
+ * including both the CDN-based development workflow and production CSS output.
+ *
+ * Development Workflow:
+ * 1. Enable Tailwind in settings (tailwind/enabled)
+ * 2. Use Tailwind utility classes in block templates
+ * 3. The React editor compiles CSS via Tailwind CDN
+ * 4. Compiled CSS is saved via REST API to uploads/blockstudio/tailwind/
+ *
+ * Production Assets:
+ * - editor.css: Global compiled styles for the editor
+ * - {post_id}.css: Per-page compiled styles for frontend
+ * - preflight.css: Tailwind's CSS reset (always included when active)
+ *
+ * Paths and URLs:
+ * - get_assets_dir(): uploads/blockstudio/tailwind/ (filterable)
+ * - get_css_path(): Full path to CSS file
+ * - get_css_url(): Public URL for enqueuing
+ * - get_cdn_url(): URL to bundled Tailwind CDN script
+ *
+ * Filter: blockstudio/tailwind/assets/dir
+ * Customize the Tailwind output directory:
+ * ```php
+ * add_filter('blockstudio/tailwind/assets/dir', function($dir) {
+ *     return get_stylesheet_directory() . '/assets/tailwind';
+ * });
+ * ```
+ *
+ * @since 5.0.0
  */
 class Tailwind {
 
