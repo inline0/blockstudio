@@ -185,51 +185,46 @@ class Plugin {
 ### Design Principles
 
 1. **CI-First** - Tests must run in GitHub Actions without local dependencies
-2. **No Local Config** - No MySQL, no local WP installation required for unit tests
-3. **Fast Feedback** - Unit tests run in seconds, not minutes
-4. **Incremental Integration** - Add wp-env integration tests later for critical paths
+2. **No Docker Required** - Use WordPress Playground (WebAssembly) instead of wp-env
+3. **Fast Feedback** - Unit tests run in seconds, integration in under a minute
+4. **No E2E for Now** - Focus on PHP testing, UI testing comes later
 
 ### Test Pyramid
 
 ```
         /\
-       /  \     E2E Tests (existing Playwright, keep as-is)
+       /  \     E2E Tests (later - not in Phase 1)
       /----\
-     /      \   Integration Tests (wp-env in CI, ~10% of tests)
+     /      \   Integration Tests (WordPress Playground, ~40%)
     /--------\
-   /          \ Unit Tests (Brain Monkey, ~90% of tests)
+   /          \ Unit Tests (Brain Monkey, ~60%)
   /------------\
 ```
 
-### Unit Tests (Priority 1 - Write First)
+### Two-Tier Testing Approach
 
-Fast tests that mock WordPress functions using **Brain Monkey**. These test business logic in isolation without requiring WordPress.
+| Tier | Tool | Tests | Speed |
+|------|------|-------|-------|
+| **Unit** | Brain Monkey | Pure PHP logic, no WP classes needed | ~5ms/test |
+| **Integration** | WordPress Playground | WP classes (`WP_Block_Type_Registry`, REST API) | ~50ms/test |
 
-**Why Brain Monkey?**
-- Mocks WordPress functions (`get_option`, `add_action`, etc.)
-- No database, no WordPress installation needed
-- Runs anywhere: local, CI, any PHP environment
-- Fast: hundreds of tests in seconds
+---
 
-**Testing Framework:**
-- PHPUnit 10.x
-- Brain Monkey ^2.6 (WordPress function mocking)
-- Mockery ^1.6 (general mocking)
+### Unit Tests (Brain Monkey)
+
+Fast tests that mock WordPress **functions**. For pure PHP logic that doesn't need real WP classes.
 
 **What to Unit Test:**
 
 | Class | Test Focus |
 |-------|------------|
-| `Build` | Block discovery, attribute building, metadata parsing |
-| `Block` | Template rendering, attribute transformation |
-| `Assets` | CSS/JS parsing, SCSS compilation, asset scoping |
-| `Settings` | Configuration get/set, defaults, validation |
-| `Field` | Field extraction, grouping logic |
+| `Build` | JSON parsing, attribute building from fields |
+| `Assets` | CSS/JS string parsing, SCSS compilation |
+| `Settings` | Configuration get/set, defaults |
 | `Utils` | Utility functions, path helpers |
-| `Populate` | Option population (posts, terms, users) |
+| `Field` | Field extraction, grouping logic |
 | `ESModules` | URL transformation, package resolution |
-| `Tailwind` | Class extraction, CSS generation |
-| `Extensions` | Extension application, merge logic |
+| `Tailwind` | Class extraction |
 
 **Example Unit Test:**
 
@@ -252,26 +247,6 @@ class BuildTest extends TestCase {
         parent::tearDown();
     }
 
-    public function test_discovers_blocks_in_directory(): void {
-        // Mock WordPress functions
-        Functions\when('get_option')->justReturn([]);
-        Functions\when('wp_upload_dir')->justReturn(['basedir' => '/tmp']);
-
-        $build = new Build();
-        $blocks = $build->discoverBlocks(__DIR__ . '/../Fixtures/blocks');
-
-        $this->assertCount(2, $blocks);
-        $this->assertArrayHasKey('test-block', $blocks);
-    }
-
-    public function test_parses_block_json_attributes(): void {
-        $build = new Build();
-        $attributes = $build->parseBlockJson(__DIR__ . '/../Fixtures/blocks/test-block/block.json');
-
-        $this->assertEquals('Test Block', $attributes['title']);
-        $this->assertArrayHasKey('fields', $attributes);
-    }
-
     public function test_builds_attributes_from_fields(): void {
         $fields = [
             ['name' => 'title', 'type' => 'text', 'default' => 'Hello'],
@@ -283,76 +258,160 @@ class BuildTest extends TestCase {
 
         $this->assertEquals('string', $attributes['title']['type']);
         $this->assertEquals('Hello', $attributes['title']['default']);
-        $this->assertEquals('number', $attributes['count']['type']);
     }
 }
 ```
 
-### Integration Tests (Priority 2 - Add Later)
+---
 
-Tests that require a real WordPress environment. **Only for critical WP integration points** (~10% of tests).
+### Integration Tests (WordPress Playground)
 
-**Uses wp-env (Docker-based)** - runs identically in local dev and CI.
+Tests that need real WordPress classes like `WP_Block_Type_Registry`, `WP_REST_Server`, etc.
+
+**Why WordPress Playground?**
+- No Docker required (runs in WebAssembly)
+- No MySQL (uses SQLite in-memory)
+- Fast startup (~2-3 seconds vs ~30s for wp-env)
+- Works identically local and CI
+- Same approach as sleek-* plugins
 
 **What to Integration Test:**
 
 | Class | Test Focus |
 |-------|------------|
-| `Register` | `register_block_type()` calls, block registration |
-| `Rest` | REST API endpoints, permissions, responses |
-| `Admin` | Admin page registration, capability checks |
+| `Register` | `WP_Block_Type_Registry::is_registered()` |
+| `Block` | `render_block()` output |
+| `Rest` | REST API endpoints, responses |
 | `Blocks` | Block editor script enqueuing |
 
-**wp-env Configuration:**
+**Architecture (based on sleek-* plugins):**
 
-```json
-// .wp-env.json
-{
-  "core": "WordPress/WordPress#6.7",
-  "phpVersion": "8.2",
-  "plugins": ["."],
-  "config": {
-    "WP_DEBUG": true,
-    "SCRIPT_DEBUG": true
-  }
-}
+```
+┌─────────────────────────────────────────────────────────┐
+│              Express Server (localhost:9400)             │
+│                          ↓                               │
+│  ┌───────────────────────────────────────────────────┐  │
+│  │           WordPress Playground (WebAssembly)       │  │
+│  │                                                    │  │
+│  │  • Plugin files loaded via /api/plugin-files      │  │
+│  │  • Plugin activated automatically                 │  │
+│  │  • PHP assertions run via client.run()           │  │
+│  └───────────────────────────────────────────────────┘  │
+└─────────────────────────────────────────────────────────┘
 ```
 
-**Example Integration Test:**
+**Test Infrastructure:**
+
+```
+tests/
+├── bootstrap.php                 # Brain Monkey setup for unit tests
+├── Unit/                         # Unit tests (PHPUnit + Brain Monkey)
+│   ├── BuildTest.php
+│   ├── AssetsTest.php
+│   └── ...
+├── Integration/                  # Integration tests
+│   ├── playground-server.ts      # Express server for WP Playground
+│   ├── run-php-tests.ts          # Runs PHP assertions in Playground
+│   ├── RegisterTest.php          # PHP test file (loaded into Playground)
+│   ├── RestTest.php
+│   └── ...
+└── Fixtures/                     # Test blocks and data
+    └── blocks/
+```
+
+**Playground Server (TypeScript):**
+
+```typescript
+// tests/Integration/playground-server.ts
+import { createPlaygroundServer } from './wordpress-playground';
+import { join } from 'path';
+
+createPlaygroundServer({
+  port: 9400,
+  pluginPath: join(__dirname, '../..'),
+  pluginSlug: 'blockstudio',
+  pluginMainFile: 'blockstudio.php',
+  title: 'Blockstudio - Test Environment',
+});
+```
+
+**Running PHP Tests in Playground:**
+
+```typescript
+// tests/Integration/run-php-tests.ts
+import { startPlaygroundWeb } from '@wp-playground/client';
+
+const client = await startPlaygroundWeb({ /* config */ });
+
+// Run PHP assertion
+const result = await client.run({
+  code: `<?php
+    require_once '/wordpress/wp-load.php';
+
+    // Test block registration
+    $registered = WP_Block_Type_Registry::get_instance()
+      ->is_registered('blockstudio/test-block');
+
+    echo json_encode([
+      'test' => 'block_registration',
+      'passed' => $registered === true,
+      'message' => $registered ? 'Block registered' : 'Block NOT registered'
+    ]);
+  `
+});
+
+console.log(JSON.parse(result.text));
+```
+
+**Example Integration Test (PHP file loaded into Playground):**
 
 ```php
 <?php
-namespace Blockstudio\Tests\Integration;
+// tests/Integration/RegisterTest.php
+// This file is loaded and executed inside WordPress Playground
 
-use WP_UnitTestCase;
-use Blockstudio\Register;
+require_once '/wordpress/wp-load.php';
 
-class RegisterTest extends WP_UnitTestCase {
-    public function test_registers_block_type(): void {
-        $register = new Register([
-            'name' => 'blockstudio/test',
-            'title' => 'Test Block',
-            'render_callback' => fn() => '<div>Test</div>',
-        ]);
+$results = [];
 
-        $registered = WP_Block_Type_Registry::get_instance()->get_registered('blockstudio/test');
+// Test 1: Block is registered
+$results[] = [
+    'test' => 'block_is_registered',
+    'passed' => WP_Block_Type_Registry::get_instance()->is_registered('blockstudio/test-block'),
+];
 
-        $this->assertNotNull($registered);
-        $this->assertEquals('Test Block', $registered->title);
-    }
-}
+// Test 2: Block has correct attributes
+$block = WP_Block_Type_Registry::get_instance()->get_registered('blockstudio/test-block');
+$results[] = [
+    'test' => 'block_has_title_attribute',
+    'passed' => isset($block->attributes['title']),
+];
+
+// Test 3: Block renders correctly
+$html = render_block([
+    'blockName' => 'blockstudio/test-block',
+    'attrs' => ['title' => 'Hello World'],
+]);
+$results[] = [
+    'test' => 'block_renders_title',
+    'passed' => strpos($html, 'Hello World') !== false,
+];
+
+// Output results as JSON
+echo json_encode(['results' => $results]);
 ```
 
-**Running Integration Tests:**
+**npm Scripts:**
 
-```bash
-# Local (requires Docker)
-npm install -g @wordpress/env
-wp-env start
-wp-env run phpunit -- --testsuite integration
-
-# Or via composer script
-composer test:integration
+```json
+{
+  "scripts": {
+    "test:unit": "composer test:unit",
+    "test:integration": "tsx tests/Integration/run-tests.ts",
+    "test:integration:server": "tsx tests/Integration/playground-server.ts",
+    "test": "npm run test:unit && npm run test:integration"
+  }
+}
 ```
 
 ### Test Fixtures
@@ -474,17 +533,23 @@ tests/Fixtures/
 
 ## Dependencies
 
-### Production
+### Production (PHP)
 - PHP 8.2+
 - WordPress 6.0+
 - `scssphp/scssphp` ^2.0 (SCSS compilation)
 - `matthiasmullie/minify` (JS/CSS minification)
 
-### Development
+### Development (PHP - composer.json)
 - `phpunit/phpunit` ^10.0
-- `brain/monkey` ^2.6 (WordPress mocking)
+- `brain/monkey` ^2.6 (WordPress function mocking)
 - `mockery/mockery` ^1.6
 - `squizlabs/php_codesniffer` ^3.7 (coding standards)
+
+### Development (Node.js - package.json)
+- `express` ^5.0 (test server)
+- `tsx` ^4.0 (TypeScript execution)
+- `@wp-playground/client` (WordPress Playground API)
+- `typescript` ^5.0
 
 ---
 
@@ -492,13 +557,16 @@ tests/Fixtures/
 
 ```bash
 # Run all tests
-composer test
+npm test
 
-# Run unit tests only (fast, no dependencies)
+# Run unit tests only (fast, PHP + Brain Monkey)
 composer test:unit
 
-# Run integration tests (requires Docker + wp-env)
-composer test:integration
+# Run integration tests (Node.js + WordPress Playground)
+npm run test:integration
+
+# Start Playground server manually (for debugging)
+npm run test:integration:server
 
 # Run tests with coverage
 composer test:coverage
@@ -531,7 +599,7 @@ on:
 
 jobs:
   unit:
-    name: Unit Tests
+    name: Unit Tests (PHP ${{ matrix.php }})
     runs-on: ubuntu-latest
 
     strategy:
@@ -547,7 +615,7 @@ jobs:
           php-version: ${{ matrix.php }}
           coverage: xdebug
 
-      - name: Install dependencies
+      - name: Install Composer dependencies
         run: composer install --prefer-dist --no-progress
 
       - name: Run Unit Tests
@@ -560,7 +628,7 @@ jobs:
           files: ./coverage.xml
 
   integration:
-    name: Integration Tests
+    name: Integration Tests (WordPress Playground)
     runs-on: ubuntu-latest
     needs: unit  # Only run if unit tests pass
 
@@ -580,13 +648,10 @@ jobs:
       - name: Install dependencies
         run: |
           composer install --prefer-dist --no-progress
-          npm install -g @wordpress/env
-
-      - name: Start wp-env
-        run: wp-env start
+          npm ci
 
       - name: Run Integration Tests
-        run: wp-env run phpunit -- --testsuite integration
+        run: npm run test:integration
 
   coding-standards:
     name: Coding Standards
@@ -611,9 +676,20 @@ jobs:
 
 | Test Suite | Target Time | Environment |
 |------------|-------------|-------------|
-| Unit | < 10 seconds | Any PHP environment |
-| Integration | < 60 seconds | Docker (wp-env) |
-| Full Suite | < 90 seconds | CI |
+| Unit | < 10 seconds | PHP + Brain Monkey |
+| Integration | < 30 seconds | Node.js + WP Playground |
+| Full Suite | < 60 seconds | CI |
+
+### Why WordPress Playground over wp-env?
+
+| Aspect | wp-env (Docker) | WordPress Playground |
+|--------|-----------------|---------------------|
+| **CI Setup** | Docker-in-Docker complexity | Just Node.js |
+| **Startup** | ~30 seconds | ~2-3 seconds |
+| **Dependencies** | Docker daemon required | None (WebAssembly) |
+| **Database** | MySQL container | SQLite in-memory |
+| **Isolation** | Container-based | Complete (browser sandbox) |
+| **Same as sleek-*** | No | Yes ✓ |
 
 ---
 
