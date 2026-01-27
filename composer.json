@@ -1,8 +1,8 @@
 {
-  "name": "fabrikat/blockstudio",
+  "name": "blockstudio/blockstudio",
   "description": "The block framework for WordPress.",
   "minimum-stability": "stable",
-  "license": "proprietary",
+  "license": "GPL-2.0-or-later",
   "authors": [
     {
       "name": "dennis",
@@ -10,6 +10,7 @@
     }
   ],
   "require": {
+    "php": ">=8.2",
     "ext-dom": "*",
     "ext-json": "*",
     "ext-zip": "*",
@@ -17,13 +18,29 @@
     "ext-libxml": "*",
     "ext-iconv": "*"
   },
-  "scripts": {
-    "scope": "vendor/bin/php-scoper add-prefix --output-dir=lib --force"
+  "require-dev": {
+    "phpunit/phpunit": "^10.5",
+    "brain/monkey": "^2.6",
+    "mockery/mockery": "^1.6",
+    "squizlabs/php_codesniffer": "^3.7"
   },
   "autoload": {
     "classmap": [
       "lib/"
     ]
+  },
+  "autoload-dev": {
+    "psr-4": {
+      "Blockstudio\\Tests\\": "tests/"
+    }
+  },
+  "scripts": {
+    "scope": "vendor/bin/php-scoper add-prefix --output-dir=lib --force",
+    "test": "@test:unit",
+    "test:unit": "phpunit --testsuite unit",
+    "test:coverage": "phpunit --testsuite unit --coverage-html coverage",
+    "cs": "phpcs",
+    "cs:fix": "phpcbf"
   },
   "config": {
     "allow-plugins": {

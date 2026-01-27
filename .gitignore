@@ -31,10 +31,11 @@ package/.last-run.json
 package/test-results/
 package/playwright-report/
 
-# Test coverage
+# Test coverage & cache
 coverage/
 .phpunit.result.cache
 .phpunit.cache/
+coverage.xml
 
 # Environment
 .env
