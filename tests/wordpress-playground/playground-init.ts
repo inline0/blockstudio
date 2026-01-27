@@ -32,7 +32,7 @@ function getAllFiles(
       const defaultExcludes = ["node_modules", ".git"];
       const allExcludes = [...defaultExcludes, ...excludeDirs];
 
-      if (!allExcludes.some((exclude) => file.includes(exclude))) {
+      if (!allExcludes.some((exclude) => file === exclude || filePath.endsWith("/" + exclude))) {
         arrayOfFiles = getAllFiles(filePath, excludeDirs, excludeFiles, arrayOfFiles);
       }
     } else if (

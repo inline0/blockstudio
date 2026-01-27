@@ -2,7 +2,7 @@
 
 ## Project Overview
 
-**Blockstudio** is a WordPress block framework plugin that enables developers to create custom Gutenberg blocks using a filesystem-based approach. This document outlines the migration from a proprietary, legacy architecture to an open-source, modern singleton-based architecture following the sleek-* plugin patterns.
+**Blockstudio** is a WordPress block framework plugin that enables developers to create custom Gutenberg blocks using a filesystem-based approach. This document outlines the migration from a proprietary, legacy architecture to an open-source, modern singleton-based architecture following **100% WordPress Coding Standards** (for potential WordPress.org submission).
 
 ### Goals
 
@@ -54,125 +54,166 @@ blockstudio7/
 
 ```
 blockstudio/
-├── blockstudio.php              # Entry point with PSR-4 autoloader
-├── includes/
-│   ├── Plugin.php               # Main singleton orchestrator
-│   ├── classes/                 # Namespaced service classes
-│   │   ├── Admin.php            # Blockstudio\Admin
-│   │   ├── Assets.php           # Blockstudio\Assets
-│   │   ├── Block.php            # Blockstudio\Block
-│   │   ├── Blocks.php           # Blockstudio\Blocks
-│   │   ├── Build.php            # Blockstudio\Build
-│   │   ├── Register.php         # Blockstudio\Register
-│   │   ├── Rest/                # Blockstudio\Rest\*
-│   │   │   ├── Controller.php
-│   │   │   ├── Blocks.php
-│   │   │   └── ...
+├── blockstudio.php              # v6 entry point (unchanged)
+├── blockstudio-v7.php           # v7 entry point (WP coding standards)
+├── includes/                    # v6 code (unchanged during migration)
+│   └── classes/                 # Original classes
+├── includes-v7/                 # v7 code (WordPress coding standards)
+│   ├── class-plugin.php         # Main singleton orchestrator
+│   ├── classes/                 # Classes being migrated one-by-one
+│   │   ├── admin.php            # Blockstudio\Admin (to migrate)
+│   │   ├── build.php            # Blockstudio\Build (to migrate)
 │   │   └── ...
 │   ├── functions/
 │   │   └── functions.php        # Public API (backwards compatible)
-│   └── shared/                  # Shared utilities
+│   └── admin/                   # Admin assets and templates
 ├── tests/
-│   ├── bootstrap.php            # Test bootstrap with WP stubs
-│   ├── Unit/                    # Fast unit tests (no WP)
-│   │   ├── BuildTest.php
-│   │   ├── BlockTest.php
-│   │   ├── AssetsTest.php
-│   │   └── ...
-│   ├── Integration/             # Tests with WP (slower)
-│   │   ├── RegisterTest.php
-│   │   ├── RestTest.php
-│   │   └── ...
-│   └── Fixtures/                # Test blocks and data
+│   ├── wordpress-playground/    # Shared test infrastructure
+│   ├── playground-server.ts     # v6 test server (port 9400)
+│   ├── playground-server-v7.ts  # v7 test server (port 9401)
+│   ├── test-helper.php          # PHP plugin exposing test endpoints
+│   ├── unit/                    # Snapshot tests
+│   │   ├── build-snapshot.test.ts
+│   │   └── compiled-assets.test.ts
+│   └── snapshots/               # Snapshot data
+│       ├── build-snapshot.json
+│       └── compiled-assets.json
 ├── vendor/                      # Composer dependencies
-├── composer.json                # With autoload + dev dependencies
-└── phpunit.xml                  # PHPUnit configuration
+├── composer.json                # With WPCS dev dependencies
+└── phpcs.xml                    # WordPress coding standards config
 ```
 
-### Singleton Pattern (sleek-* style)
+### Singleton Pattern (WordPress Coding Standards)
+
+**All v7 code must follow 100% WordPress Coding Standards** - no exclusions. This ensures potential submission to WordPress.org.
 
 ```php
 <?php
-// blockstudio.php
-const BLOCKSTUDIO_VERSION = '7.0.0';
-const BLOCKSTUDIO_FILE = __FILE__;
-const BLOCKSTUDIO_DIR = __DIR__;
+/**
+ * Plugin Name: Blockstudio
+ * Version: 7.0.0
+ *
+ * @package Blockstudio
+ */
 
-if (!defined('ABSPATH')) {
-    exit();
+// blockstudio-v7.php - Loading guard prevents conflicts with v6.
+if ( defined( 'BLOCKSTUDIO_VERSION' ) ) {
+	return;
 }
 
-// PSR-4 Autoloader
-spl_autoload_register(function ($class) {
-    $prefix = 'Blockstudio\\';
-    $baseDir = __DIR__ . '/includes/classes/';
+define( 'BLOCKSTUDIO_VERSION', '7.0.0' );
+define( 'BLOCKSTUDIO_FILE', __FILE__ );
+define( 'BLOCKSTUDIO_DIR', __DIR__ );
 
-    $len = strlen($prefix);
-    if (strncmp($prefix, $class, $len) !== 0) {
-        return;
-    }
-
-    $relativeClass = substr($class, $len);
-    $file = $baseDir . str_replace('\\', '/', $relativeClass) . '.php';
-
-    if (file_exists($file)) {
-        require $file;
-    }
-});
-
-require_once __DIR__ . '/includes/Plugin.php';
-require_once __DIR__ . '/includes/functions/functions.php';
-
-use Blockstudio\Plugin;
-
-function blockstudio(): Plugin {
-    return Plugin::getInstance();
+if ( ! defined( 'ABSPATH' ) ) {
+	exit();
 }
 
-// Initialize
+// PSR-4 Autoloader (with WP spacing).
+spl_autoload_register(
+	function ( $class_name ) {
+		$prefix   = 'Blockstudio\\';
+		$base_dir = __DIR__ . '/includes-v7/classes/';
+
+		$len = strlen( $prefix );
+		if ( strncmp( $prefix, $class_name, $len ) !== 0 ) {
+			return;
+		}
+
+		$relative_class = substr( $class_name, $len );
+		$file           = $base_dir . str_replace( '\\', '/', $relative_class ) . '.php';
+
+		if ( file_exists( $file ) ) {
+			require $file;
+		}
+	}
+);
+
+require_once BLOCKSTUDIO_DIR . '/vendor/autoload.php';
+require_once __DIR__ . '/includes-v7/class-plugin.php';
+require_once __DIR__ . '/includes-v7/functions/functions.php';
+
+/**
+ * Get the Plugin instance.
+ *
+ * @return \Blockstudio\Plugin
+ */
+function blockstudio(): \Blockstudio\Plugin {
+	return \Blockstudio\Plugin::get_instance();
+}
+
 blockstudio();
 ```
 
 ```php
 <?php
-// includes/Plugin.php
+/**
+ * Main Plugin class.
+ *
+ * @package Blockstudio
+ */
+
 namespace Blockstudio;
 
+/**
+ * Plugin singleton class.
+ */
 class Plugin {
-    private static ?self $instance = null;
 
-    private function __construct() {
-        $this->init();
-    }
+	/**
+	 * Singleton instance.
+	 *
+	 * @var Plugin|null
+	 */
+	private static ?Plugin $instance = null;
 
-    public static function getInstance(): self {
-        if (self::$instance === null) {
-            self::$instance = new self();
-        }
-        return self::$instance;
-    }
+	/**
+	 * Get singleton instance.
+	 *
+	 * @return Plugin
+	 */
+	public static function get_instance(): Plugin {
+		if ( null === self::$instance ) {  // Yoda condition.
+			self::$instance = new self();
+		}
+		return self::$instance;
+	}
 
-    private function init(): void {
-        $this->loadClasses();
-        do_action('blockstudio/init', $this);
-    }
+	/**
+	 * Private constructor.
+	 */
+	private function __construct() {
+		$this->init();
+	}
 
-    private function loadClasses(): void {
-        new Settings();
-        new Build();
-        new Register();
-        new Block();
-        new Blocks();
-        new Assets();
-        new Admin();
-        new Rest\Controller();
-        new Tailwind();
-        new Extensions();
-        new Library();
-        // ... other services
-    }
+	/**
+	 * Initialize the plugin.
+	 */
+	private function init(): void {
+		$this->load_classes();
+		do_action( 'blockstudio_init', $this );  // Underscore hooks, not slashes.
+	}
+
+	/**
+	 * Load all plugin classes.
+	 */
+	private function load_classes(): void {
+		new Settings();
+		new Build();
+		// ... other services
+	}
 }
 ```
+
+**WordPress Coding Standards Requirements:**
+- Tabs for indentation (not spaces)
+- Spaces inside parentheses: `if ( $condition )`
+- Yoda conditions: `null === self::$instance`
+- Snake_case for methods: `get_instance()` not `getInstance()`
+- Snake_case for variables: `$class_name` not `$className`
+- File naming: `class-plugin.php` not `Plugin.php`
+- Hook naming: `blockstudio_init` not `blockstudio/init`
+- Proper docblocks with `@package`, `@var`, `@param`, `@return`
 
 ---
 
@@ -524,6 +565,91 @@ test.describe('Block Rendering', () => {
 
 ---
 
+## v7 Class Migration Workflow
+
+Classes are migrated **one at a time** from `includes-v7/classes/` to WordPress Coding Standards. The workflow:
+
+### 1. Current State
+
+- `includes-v7/classes/` contains copied v6 classes (not yet WP compliant)
+- `phpcs.xml` only checks migrated files (currently `blockstudio-v7.php` and `class-plugin.php`)
+- v7 tests pass using the copied classes
+
+### 2. Migration Process (Per Class)
+
+```bash
+# 1. Pick a class to migrate (e.g., build.php)
+# 2. Add it to phpcs.xml
+<file>./includes-v7/classes/build.php</file>
+
+# 3. Run PHPCS to see all issues
+composer phpcs
+
+# 4. Fix issues (use phpcbf for auto-fixable ones)
+composer phpcbf
+
+# 5. Manually fix remaining issues:
+#    - Snake_case methods: getData() → get_data()
+#    - Yoda conditions: $x === null → null === $x
+#    - Proper docblocks
+
+# 6. Run v7 tests to ensure nothing broke
+npm run test:v7
+
+# 7. Commit the migrated class
+git add includes-v7/classes/build.php phpcs.xml
+git commit -m "Migrate Build class to WordPress coding standards"
+```
+
+### 3. phpcs.xml Configuration
+
+```xml
+<?xml version="1.0"?>
+<ruleset name="Blockstudio">
+    <description>WordPress Coding Standards for Blockstudio v7</description>
+
+    <!-- Only check migrated v7 code -->
+    <file>./blockstudio-v7.php</file>
+    <file>./includes-v7/class-plugin.php</file>
+    <!-- Add each class as it's migrated -->
+
+    <!-- Exclude vendor and node_modules -->
+    <exclude-pattern>*/vendor/*</exclude-pattern>
+    <exclude-pattern>*/node_modules/*</exclude-pattern>
+
+    <!-- Use WordPress coding standards -->
+    <rule ref="WordPress"/>
+
+    <!-- PHP 8.2+ -->
+    <config name="testVersion" value="8.2-"/>
+
+    <!-- Prefix for hooks, functions, classes -->
+    <rule ref="WordPress.NamingConventions.PrefixAllGlobals">
+        <properties>
+            <property name="prefixes" type="array">
+                <element value="blockstudio"/>
+                <element value="Blockstudio"/>
+            </property>
+        </properties>
+    </rule>
+</ruleset>
+```
+
+### 4. Migration Priority
+
+Start with classes that have fewer dependencies:
+
+1. **Settings** - Configuration, minimal dependencies
+2. **Utils** - Utility functions
+3. **Build** - Core engine, many methods
+4. **Block** - Block rendering
+5. **Register** - Block registration
+6. **Assets** - Asset pipeline
+7. **Admin** - Admin interface
+8. **Rest** - REST API endpoints
+
+---
+
 ## Migration Steps
 
 ### Phase 1: Test Infrastructure (Week 1)
@@ -633,21 +759,43 @@ test.describe('Block Rendering', () => {
 ## Commands
 
 ```bash
-# Start Playground server (for development)
+# Start v6 Playground server (port 9400)
 npm run playground
 
-# Run unit tests (Playwright + WordPress Playground)
+# Start v7 Playground server (port 9401)
+npm run playground:v7
+
+# Run v6 tests (against includes/)
 npm test
+
+# Run v7 tests (against includes-v7/)
+npm run test:v7
 
 # Run tests in headed mode (for debugging)
 npm run test:headed
 
-# Check coding standards
-composer cs
+# Capture new snapshots (when Build output changes intentionally)
+npm run playground          # Start server first
+npx tsx tests/capture-snapshot.ts
+npx tsx tests/capture-compiled-assets.ts
 
-# Fix coding standards
-composer cs:fix
+# Check WordPress coding standards (v7 code only)
+composer phpcs
+
+# Fix coding standards automatically
+composer phpcbf
 ```
+
+### Dual Test Environment
+
+Both v6 and v7 code can be tested independently:
+
+| Version | Entry Point | Directory | Port | Command |
+|---------|-------------|-----------|------|---------|
+| v6 | `blockstudio.php` | `includes/` | 9400 | `npm test` |
+| v7 | `blockstudio-v7.php` | `includes-v7/` | 9401 | `npm run test:v7` |
+
+This allows side-by-side comparison during migration. Both test suites run the same 14 snapshot tests.
 
 ---
 
@@ -783,28 +931,43 @@ test/*      # Test development branches
 
 When working on this project:
 
-1. **Always run tests** after making changes
+1. **Always run tests** after making changes (`npm test` for v6, `npm run test:v7` for v7)
 2. **One class at a time** - migrate and test incrementally
-3. **Preserve backwards compatibility** - public functions must work
-4. **Follow sleek-* patterns** - consistent with existing plugins
+3. **100% WordPress Coding Standards** - no exclusions, no exceptions
+4. **Preserve backwards compatibility** - public functions must work
 5. **Document decisions** - update this file as needed
+
+### WordPress Coding Standards Checklist
+
+When migrating a class:
+- [ ] Tabs for indentation
+- [ ] Spaces inside parentheses: `if ( $x )` not `if ($x)`
+- [ ] Yoda conditions: `null === $var` not `$var === null`
+- [ ] Snake_case for methods and variables
+- [ ] Proper docblocks with `@param`, `@return`, `@var`
+- [ ] File header with `@package Blockstudio`
+- [ ] Add file to `phpcs.xml` and verify `composer phpcs` passes
+- [ ] Run `npm run test:v7` to verify tests pass
 
 ### Key Files to Reference
 
-- `/includes/classes/build.php` - Core block engine (most complex)
-- `/includes/classes/block.php` - Rendering logic
-- `/includes/classes/settings.php` - Already has singleton-like pattern
-- `/includes/functions/functions.php` - Public API to preserve
+- `/includes-v7/class-plugin.php` - Main singleton (WP compliant example)
+- `/blockstudio-v7.php` - Entry point (WP compliant example)
+- `/includes-v7/classes/build.php` - Core block engine (to migrate)
+- `/phpcs.xml` - Add files here as they're migrated
 
 ### Testing Commands
 
 ```bash
-# Quick test run
-./vendor/bin/phpunit --testsuite unit
+# Run v6 tests (original code)
+npm test
 
-# Specific test file
-./vendor/bin/phpunit tests/Unit/BuildTest.php
+# Run v7 tests (migrated code)
+npm run test:v7
 
-# With verbose output
-./vendor/bin/phpunit --testsuite unit -v
+# Check coding standards
+composer phpcs
+
+# Auto-fix coding standards
+composer phpcbf
 ```

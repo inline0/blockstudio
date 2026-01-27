@@ -518,9 +518,9 @@ class Admin
                     ? 'true'
                     : 'false',
                 'llmTxtUrl' => LLM::getTxtUrl(),
-                'loader' => plugin_dir_url(BLOCKSTUDIO) . 'includes/editor/vs',
+                'loader' => plugin_dir_url(BLOCKSTUDIO) . 'includes-v7/editor/vs',
                 'logo' => plugins_url(
-                    'includes/admin/assets/fabrikatLogo.svg',
+                    'includes-v7/admin/assets/fabrikatLogo.svg',
                     __FILE__
                 ),
                 'nonce' => wp_create_nonce('ajax-nonce'),
@@ -551,7 +551,7 @@ class Admin
         wp_enqueue_script(
             'blockstudio-admin',
             plugins_url(
-                'includes/admin/assets/admin/index.tsx.js',
+                'includes-v7/admin/assets/admin/index.tsx.js',
                 BLOCKSTUDIO
             ),
             $editorScripts['dependencies'],
