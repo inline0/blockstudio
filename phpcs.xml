@@ -25,6 +25,9 @@
 	<file>./includes-v7/classes/settings.php</file>
 	<file>./includes-v7/classes/admin.php</file>
 	<file>./includes-v7/classes/assets.php</file>
+	<file>./includes-v7/classes/block.php</file>
+	<file>./includes-v7/classes/rest.php</file>
+	<file>./includes-v7/classes/build.php</file>
 
 	<!-- Exclude vendor and node_modules -->
 	<exclude-pattern>*/vendor/*</exclude-pattern>

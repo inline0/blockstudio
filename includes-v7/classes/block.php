@@ -1,4 +1,9 @@
 <?php
+/**
+ * Block class.
+ *
+ * @package Blockstudio
+ */
 
 namespace Blockstudio;
 
@@ -9,1282 +14,1452 @@ use Timber\Timber;
 use WP_HTML_Tag_Processor;
 
 /**
- * Block class.
+ * Handles block rendering and attribute transformation.
  *
- * @date   02/07/2022
- * @since  2.4.0
+ * @since 2.4.0
  */
-class Block
-{
-    private static int $count = 0;
-    private static array $countByBlock = [];
-
-    /**
-     * Get unique ID.
-     *
-     * @date   06/05/2024
-     * @since  5.5.0
-     *
-     * @param  $block
-     * @param  $attributes
-     *
-     * @return string
-     */
-    public static function id($block, $attributes): string
-    {
-        return 'blockstudio-' .
-            substr(
-                md5(uniqid() . json_encode($block) . json_encode($attributes)),
-                0,
-                12
-            );
-    }
-
-    /**
-     * Get block ID as an HTML comment.
-     *
-     * @date   04/09/2022
-     * @since  3.0.0
-     *
-     * @param  $name
-     *
-     * @return string
-     */
-    public static function comment($name): string
-    {
-        return '<!--blockstudio/' . Build::data()[$name]['name'] . '-->';
-    }
-
-    /**
-     * Get option value.
-     *
-     * @date   22/09/2022
-     * @since  3.0.4
-     *
-     * @param  $data
-     * @param  $returnFormat
-     * @param  $v
-     * @param  array  $populate
-     *
-     * @return string
-     */
-    public static function getOptionValue(
-        $data,
-        $returnFormat,
-        $v,
-        array $populate = []
-    ) {
-        $fetch = $populate['fetch'] ?? false;
-        $optionsMap = [];
-        $options = $fetch ? [$v] : $data['options'] ?? [];
-
-        foreach ($options as $option) {
-            $value = $option['value'] ?? false;
-            $queryOptions = ['posts', 'users', 'terms'];
-            if (
-                isset($populate['type']) &&
-                $populate['type'] === 'query' &&
-                isset($populate['query']) &&
-                ((in_array($populate['query'], $queryOptions) &&
-                    in_array($value, $data['optionsPopulate'])) ||
-                    $fetch)
-            ) {
-                $isObject =
-                    (isset($populate['returnFormat']['value']) &&
-                        $populate['returnFormat']['value'] !== 'id') ||
-                    !isset($populate['returnFormat']['value']);
-
-                $queryFunctionMap = [
-                    'posts' => 'get_post',
-                    'users' => 'get_user_by',
-                    'terms' => 'get_term',
-                ];
-
-                if ($isObject) {
-                    $value =
-                        $populate['query'] === 'users'
-                            ? get_user_by('id', $value)
-                            : call_user_func(
-                                $queryFunctionMap[$populate['query']],
-                                $value
-                            );
-                }
-            }
-
-            if (isset($option['value'])) {
-                $optionsMap[$option['value']] = [
-                    'value' => $value,
-                    'label' => $option['label'] ?? $value,
-                ];
-            } elseif (!$fetch) {
-                $optionsMap[$option] = [
-                    'value' => $option,
-                    'label' => $option,
-                ];
-            }
-        }
-
-        try {
-            if ($returnFormat === 'label') {
-                return $optionsMap[$v['value'] ?? $v]['label'] ?? false;
-            }
-            if ($returnFormat === 'both') {
-                return $optionsMap[$v['value'] ?? $v] ?? false;
-            }
-
-            return $optionsMap[$v['value'] ?? $v]['value'] ?? false;
-        } catch (Throwable $err) {
-            return false;
-        }
-    }
-
-    /**
-     * Get attachment data for the file field.
-     *
-     * @date   05/11/2022
-     * @since  3.0.11
-     *
-     * @param  null    $id
-     * @param  bool    $example
-     * @param  int     $index
-     * @param  string  $size
-     *
-     * @return array|false
-     */
-    public static function getAttachmentData(
-        $id = null,
-        $example = false,
-        $index = 0,
-        $size = 'full'
-    ) {
-        $image = [];
-
-        if ($example) {
-            $url = Files::getRelativeUrl($example);
-            $image['ID'] = $index;
-            $image['title'] = "Image title $index";
-            $image['alt'] = "Image alt $index";
-            $image['caption'] = "Image caption $index";
-            $image['description'] = "Image description $index";
-            $image['href'] = $url;
-            $image['url'] = $url;
-
-            $xmlGet = simplexml_load_string(file_get_contents($example));
-            $xmlAttributes = $xmlGet->attributes();
-            $width = (string) $xmlAttributes->width;
-            $height = (string) $xmlAttributes->height;
-
-            if ($sizes = get_intermediate_image_sizes()) {
-                array_unshift($sizes, 'full');
-
-                foreach ($sizes as $size) {
-                    $image['sizes'][$size] = $url;
-                    $image['sizes'][$size . '-width'] = $width;
-                    $image['sizes'][$size . '-height'] = $height;
-                }
-            }
-
-            return $image;
-        }
-
-        if (!empty($id) && ($meta = get_post($id))) {
-            $image['ID'] = $id;
-            $image['title'] = $meta->post_title;
-            $image['alt'] = ($alt = get_post_meta(
-                $meta->ID,
-                '_wp_attachment_image_alt',
-                true
-            ))
-                ? $alt
-                : $meta->post_title;
-            $image['caption'] = $meta->post_excerpt;
-            $image['description'] = $meta->post_content;
-            $image['href'] = get_permalink($meta->ID);
-            if ($size !== 'full') {
-                $image['url'] =
-                    wp_get_attachment_image_src($id, $size)[0] ?? '';
-            } else {
-                $image['url'] = $meta->guid;
-            }
-
-            if ($sizes = get_intermediate_image_sizes()) {
-                array_unshift($sizes, 'full');
-
-                foreach ($sizes as $size) {
-                    $src = wp_get_attachment_image_src($id, $size);
-                    if ($src) {
-                        $image['sizes'][$size] = $src[0];
-                        $image['sizes'][$size . '-width'] = $src[1];
-                        $image['sizes'][$size . '-height'] = $src[2];
-                    }
-                }
-            } else {
-                $image['sizes'] = null;
-            }
-
-            return $image;
-        }
-
-        return false;
-    }
-
-    /**
-     * Replace custom block tags.
-     *
-     * @date   08/04/2023
-     * @since  4.2.0
-     *
-     * @param  $content
-     * @param  $replace
-     * @param  $block
-     * @param  $blockAttributes
-     * @param  $tag
-     * @param  $type
-     */
-    public static function replaceCustomTag(
-        &$content,
-        $replace,
-        $block,
-        $blockAttributes,
-        $tag,
-        $type
-    ) {
-        $regex =
-            $type !== 'InnerBlocks'
-                ? '/<' .
-                    preg_quote($tag) .
-                    '(?=[^>]*(\battribute=["\']' .
-                    preg_quote($type) .
-                    '["\']))\s*(.*?)\s*\/?>/s'
-                : '/<' . preg_quote($tag) . '\s*(.*?)\s*\/?>/s';
-        $replace = str_replace('$', '\$', $replace);
-        preg_match($regex, $content, $matches);
-
-        $hasMatch = count($matches) >= 2;
-
-        if ($hasMatch) {
-            $attributeMap = [];
-            $attributes =
-                $tag === 'InnerBlocks'
-                    ? $matches[1] ?? $matches[2]
-                    : $matches[2] ?? $matches[1];
-
-            $attributes = str_replace(['"', '"'], '"', $attributes);
-
-            $pattern =
-                '/([a-zA-Z_][a-zA-Z0-9\-_:.]*)(?:\s*=\s*(?:"([^"]*)"|\'([^\']*)\'|([^ \/>]+)))?/';
-
-            preg_match_all($pattern, $attributes, $matches, PREG_SET_ORDER);
-
-            foreach ($matches as $match) {
-                $attrName = $match[1];
-                $attrValue = $match[2] ?? ($match[3] ?? ($match[4] ?? true));
-                $attributeMap[$attrName] = $attrValue;
-            }
-
-            $attribute =
-                $blockAttributes[$attributeMap['attribute'] ?? null] ?? null;
-            $elementTag =
-                $attributeMap['tag'] ?? ($type === 'InnerBlocks' ? 'div' : 'p');
-
-            $attr = '';
-            foreach ($attributeMap as $name => $value) {
-                if ($value === true) {
-                    $attr .= "$name ";
-                } else {
-                    $attr .= sprintf(
-                        '%s="%s" ',
-                        $name,
-                        htmlspecialchars($value)
-                    );
-                }
-            }
-            $attr = trim($attr);
-
-            if ($tag === 'RichText') {
-                $richTextContent = apply_filters(
-                    'blockstudio/blocks/components/richtext/render',
-                    $attribute,
-                    $block
-                );
-
-                $content = preg_replace(
-                    $regex,
-                    $attribute
-                        ? "<$elementTag $attr>" .
-                            $richTextContent .
-                            "</$elementTag>"
-                        : '',
-                    $content
-                );
-            } else {
-                $innerBlocksContent =
-                    isset($block->blockstudioEditor) &&
-                    isset($block->blockstudio['editor']['innerBlocks'])
-                        ? $block->blockstudio['editor']['innerBlocks']
-                        : $replace;
-                $innerBlocksContent = apply_filters(
-                    'blockstudio/blocks/components/innerblocks/render',
-                    $innerBlocksContent,
-                    $block
-                );
-                $content = preg_replace(
-                    $regex,
-                    apply_filters(
-                        'blockstudio/blocks/components/innerblocks/frontend/wrap',
-                        true,
-                        $block
-                    )
-                        ? "<$elementTag $attr>" .
-                            $innerBlocksContent .
-                            "</$elementTag>"
-                        : $innerBlocksContent,
-                    $content
-                );
-            }
-        }
-    }
-
-    /**
-     * Remove component from block content.
-     *
-     * @date   17/12/2023
-     * @since  5.3.0
-     *
-     * @param  $content
-     * @param  $component
-     */
-    public static function removeCustomTag(&$content, $component)
-    {
-        $regex = '/<' . preg_quote($component) . '\s*(.*?)\s*\/?>/s';
-        $content = preg_replace($regex, '', $content);
-    }
-
-    /**
-     * Replace block content with components.
-     *
-     * @date   04/01/2023
-     * @since  4.0.0
-     *
-     * @param  $content
-     * @param  $innerBlocks
-     * @param  $isEditorOrPreview
-     * @param  $block
-     * @param  $attributes
-     * @param  $attributesBlock
-     * @param  $attributeData
-     *
-     * @return array|string|string[]|null
-     */
-    public static function replaceComponents(
-        $content,
-        $innerBlocks,
-        $isEditorOrPreview,
-        $block,
-        $attributes,
-        $attributesBlock,
-        $attributeData
-    ) {
-        if ($isEditorOrPreview) {
-            if (
-                class_exists('WP_HTML_Tag_Processor') &&
-                strpos($content, 'useBlockProps') !== false
-            ) {
-                $content = new WP_HTML_Tag_Processor($content);
-                if ($content->next_tag()) {
-                    $classes = $content->get_attribute('class');
-                    $content->set_attribute(
-                        'class',
-                        $classes . ' wp-block block-editor-block-list__block'
-                    );
-                }
-            }
-
-            return str_replace(
-                'useBlockProps',
-                'useblockprops="true"',
-                $content
-            );
-        }
-
-        self::replaceCustomTag(
-            $content,
-            $innerBlocks,
-            $block,
-            $attributes,
-            'InnerBlocks',
-            'InnerBlocks'
-        );
-
-        foreach ($block->attributes ?? [] as $attribute) {
-            if (
-                isset($attribute['id']) &&
-                isset($attribute['type']) &&
-                $attribute['type'] !== 'richtext'
-            ) {
-                self::replaceCustomTag(
-                    $content,
-                    $innerBlocks,
-                    $block,
-                    $attributes,
-                    'RichText',
-                    $attribute['id']
-                );
-            }
-        }
-
-        self::removeCustomTag($content, 'MediaPlaceholder');
-
-        $attributesToRemove = [
-            // General
-            'useBlockProps',
-            'tag',
-            // InnerBlocks
-            'allowedBlocks',
-            'defaultBlock',
-            'directInsert',
-            'prioritizedInserterBlocks',
-            'renderAppender',
-            'template',
-            'templateInsertUpdatesSelection',
-            'templateLock',
-            // RichText
-            'attribute',
-            'placeholder',
-            'allowedFormats',
-            'autocompleters',
-            'multiline',
-            'preserveWhiteSpace',
-            'withoutInteractiveFormatting',
-        ];
-
-        $hasAttribute = false;
-        foreach ($attributesToRemove as $attribute) {
-            if (strpos($content, $attribute) !== false) {
-                $hasAttribute = true;
-                break;
-            }
-        }
-
-        if ($hasAttribute) {
-            $content = str_replace(
-                'useBlockProps',
-                'useblockprops="true"',
-                $content
-            );
-
-            $doc = new DOMDocument();
-            libxml_use_internal_errors(true);
-            $doc->loadHTML(
-                mb_encode_numericentity(
-                    $content,
-                    [0x80, 0x10ffff, 0, 0xffffff],
-                    'UTF-8'
-                )
-            );
-            libxml_clear_errors();
-            $elements = $doc->getElementsByTagName('*');
-            foreach ($elements as $element) {
-                if ($element->hasAttribute('useblockprops')) {
-                    $classes = $element->getAttribute('class');
-
-                    if ($attributeData['hasCodeSelector'] ?? false) {
-                        $element->setAttribute(
-                            'data-assets',
-                            $attributeData['selectorAttributeId'] ?? ''
-                        );
-                    }
-
-                    $attributes = [];
-                    preg_match_all(
-                        '/(\S+)="([^"]+)"/',
-                        apply_filters(
-                            'blockstudio/blocks/components/useblockprops/render',
-                            get_block_wrapper_attributes([
-                                'class' => $classes,
-                                'id' =>
-                                    $attributesBlock['anchor'] ??
-                                    $element->getAttribute('id'),
-                            ]),
-                            $block
-                        ),
-                        $attributes,
-                        PREG_SET_ORDER
-                    );
-
-                    foreach ($attributes as $attribute) {
-                        $element->setAttribute($attribute[1], $attribute[2]);
-                    }
-                }
-                foreach ($attributesToRemove as $attribute) {
-                    $attr = strtolower($attribute);
-                    if (
-                        $element->hasAttribute($attr) &&
-                        $element->nodeName !== 'input' &&
-                        $element->nodeName !== 'textarea'
-                    ) {
-                        $element->removeAttribute($attr);
-                    }
-                }
-            }
-            $trimOffFront = strpos($doc->saveHTML(), '<body>') + 6;
-            $trimOffEnd =
-                strrpos($doc->saveHTML(), '</body>') - strlen($doc->saveHTML());
-
-            $content = substr($doc->saveHTML(), $trimOffFront, $trimOffEnd);
-        }
-
-        return $content;
-    }
-
-    /**
-     * Transform attributes.
-     *
-     * @date   01/03/2023
-     * @since  4.1.5
-     *
-     * @param  $attributes
-     * @param  $attributeNames
-     * @param  $disabled
-     * @param  $name
-     * @param  $block
-     * @param  $repeater
-     * @param  $blockAttributes
-     * @param  $attributeData
-     *
-     * @return array
-     */
-    public static function transformAttributes(
-        &$attributes,
-        &$attributeNames,
-        $disabled,
-        $name,
-        $block,
-        $repeater = false,
-        $blockAttributes = [],
-        &$attributeData = []
-    ): array {
-        if ($attributeData['selectorAttributeId'] ?? false) {
-            $selectorAttributeId = $attributeData['selectorAttributeId'];
-        } else {
-            $selectorAttributeId = self::id($block, $attributes);
-            $attributeData['selectorAttributeId'] = $selectorAttributeId;
-        }
-        $selectorAttribute = "data-assets='$selectorAttributeId'";
-
-        foreach ($attributes as $k => $v) {
-            $att = $repeater
-                ? array_values(
-                        array_filter(
-                            $repeater,
-                            fn($item) => ($item['id'] ?? false) === $k
-                        )
-                    )[0] ?? false
-                : $blockAttributes[$k] ?? false;
-
-            if (isset($att['blockstudio']) && !$repeater) {
-                $attributeNames[] = $k;
-            }
-
-            if (isset($att['type']) && $att && (!empty($v) || $v === '0')) {
-                $returnFormat = $att['returnFormat'] ?? 'value';
-                $populate = $att['populate'] ?? [];
-                $type = $att['field'] ?? false;
-
-                if (!$type) {
-                    continue;
-                }
-
-                if (
-                    $type === 'select' ||
-                    $type === 'radio' ||
-                    $type === 'checkbox' ||
-                    $type === 'token'
-                ) {
-                    if (
-                        $type === 'select' &&
-                        isset($populate['type']) &&
-                        $populate['type'] === 'fetch'
-                    ) {
-                        $attributes[$k] = $v;
-                    } else {
-                        if ($type === 'select' || $type === 'radio') {
-                            $attributes[$k] = self::getOptionValue(
-                                $att,
-                                $returnFormat,
-                                $v,
-                                $populate
-                            );
-                        }
-                        if (
-                            $type === 'checkbox' ||
-                            ($type === 'select' && ($att['multiple'] ?? false))
-                        ) {
-                            $newValues = [];
-                            foreach ($v as $l) {
-                                $val = self::getOptionValue(
-                                    $att,
-                                    $returnFormat,
-                                    $l,
-                                    $populate
-                                );
-
-                                if ($val) {
-                                    $newValues[] = $val;
-                                }
-                            }
-
-                            if ($type === 'checkbox') {
-                                if (
-                                    isset($newValues[0]->ID) ||
-                                    isset($newValues[0]->term_id)
-                                ) {
-                                    $isId = isset($newValues[0]->ID);
-                                    $isTerm = isset($newValues[0]->term_id);
-                                    $key = $isId ? 'ID' : 'term_id';
-
-                                    $sortingArr = array_column(
-                                        $att['options'],
-                                        'value'
-                                    );
-
-                                    if ($isId || $isTerm) {
-                                        uasort($newValues, function (
-                                            $a,
-                                            $b
-                                        ) use ($key, $sortingArr) {
-                                            return array_search(
-                                                $a->{$key} ??
-                                                    ($a['value'] ?? $a),
-                                                $sortingArr
-                                            ) <=>
-                                                array_search(
-                                                    $b->{$key} ??
-                                                        ($b['value'] ?? $b),
-                                                    $sortingArr
-                                                );
-                                        });
-                                    }
-                                } else {
-                                    if (
-                                        isset($att['options'][0]['label']) &&
-                                        $returnFormat === 'label'
-                                    ) {
-                                        $sortingArr = array_column(
-                                            $att['options'],
-                                            'label'
-                                        );
-                                    } elseif (
-                                        isset($att['options'][0]['value'])
-                                    ) {
-                                        $sortingArr = array_column(
-                                            $att['options'],
-                                            'value'
-                                        );
-                                    } else {
-                                        $sortingArr = $att['options'];
-                                    }
-
-                                    uasort($newValues, function ($a, $b) use (
-                                        $sortingArr
-                                    ) {
-                                        return array_search(
-                                            $a['value'] ?? $a,
-                                            $sortingArr
-                                        ) <=>
-                                            array_search(
-                                                $b['value'] ?? $b,
-                                                $sortingArr
-                                            );
-                                    });
-                                }
-                            }
-                            $attributes[$k] = array_values($newValues);
-                        }
-                        if ($type === 'token' && $returnFormat !== 'both') {
-                            $newValues = [];
-                            foreach ($v as $l) {
-                                $newValues[] = $l[$returnFormat] ?? $l;
-                            }
-                            $attributes[$k] = $newValues;
-                        }
-                    }
-                }
-
-                if ($type === 'files') {
-                    if (is_array($v)) {
-                        foreach ($v as $fileId) {
-                            if (in_array($k . '_' . $fileId, $disabled)) {
-                                $attributes[$k] = array_filter(
-                                    $attributes[$k],
-                                    fn($val) => $val !== $fileId
-                                );
-                            }
-                        }
-                        $attributes[$k] = array_values($attributes[$k]);
-                    } elseif (in_array($k . '_' . $v, $disabled)) {
-                        $attributes[$k] = false;
-                    }
-
-                    $size = 'full';
-
-                    if (isset($attributes[$k . '__size'])) {
-                        $size = $attributes[$k . '__size'] ?? 'full';
-                    }
-
-                    if ($returnFormat !== 'id' && $returnFormat !== 'url') {
-                        if (is_array($attributes[$k])) {
-                            $objectArray = [];
-                            foreach ($attributes[$k] as $o) {
-                                $objectArray[] = self::getAttachmentData(
-                                    $o,
-                                    false,
-                                    0,
-                                    $size
-                                );
-                            }
-                            $attributes[$k] = $objectArray;
-                        } elseif ($attributes[$k]) {
-                            $attributes[$k] = self::getAttachmentData(
-                                $attributes[$k],
-                                false,
-                                0,
-                                $size
-                            );
-                        }
-                    }
-
-                    if ($returnFormat === 'url') {
-                        $media = fn($id, $size) => wp_attachment_is(
-                            'image',
-                            $id
-                        )
-                            ? wp_get_attachment_image_src($id, $size)[0] ??
-                                false
-                            : wp_get_attachment_url($id) ?? false;
-
-                        if (is_array($attributes[$k])) {
-                            $urlArray = [];
-                            foreach ($attributes[$k] as $o) {
-                                $urlArray[] = $media($o, $att['returnSize']);
-                            }
-                            $attributes[$k] = $urlArray;
-                        } elseif ($attributes[$k]) {
-                            $attributes[$k] = $media(
-                                $attributes[$k],
-                                $att['returnSize']
-                            );
-                        }
-
-                        if (
-                            ($att['multiple'] ?? false) &&
-                            !is_array($attributes[$k])
-                        ) {
-                            $attributes[$k] = [$attributes[$k]];
-                        }
-                    }
-
-                    if (
-                        $attributes[$k] &&
-                        ($att['multiple'] ?? false) &&
-                        ($attributes[$k]['ID'] ??
-                            (is_numeric($attributes[$k]) ?? false))
-                    ) {
-                        $attributes[$k] = [$attributes[$k]];
-                    }
-                }
-
-                if ($type === 'number' || $type === 'range') {
-                    $attributes[$k] = floatval($v);
-                }
-
-                if ($type === 'repeater') {
-                    foreach ($attributes[$k] as $i => $r) {
-                        self::transformAttributes(
-                            $attributes[$k][$i],
-                            $attributeNames,
-                            [],
-                            $name,
-                            $block,
-                            $att['attributes'],
-                            [],
-                            $attributeData
-                        );
-                    }
-                }
-
-                if ($type === 'icon') {
-                    if ($returnFormat === 'element') {
-                        $attributes[$k] = bs_icon($v);
-                    } else {
-                        $attributes[$k]['element'] = bs_icon($v);
-                    }
-                }
-
-                if ($type === 'code') {
-                    $lang = $att['language'];
-                    $replacedValue = str_replace(
-                        '%selector%',
-                        "[$selectorAttribute]",
-                        $v
-                    );
-
-                    if (Files::contains($v, '%selector%')) {
-                        $attributeData['hasCodeSelector'] = true;
-                    }
-
-                    if ($lang === 'css' || $lang === 'javascript') {
-                        $assetData = [
-                            'language' => $lang,
-                            'value' => $replacedValue,
-                        ];
-                        $attributeData['assets'][] = $assetData;
-                        if ($att['asset'] ?? false) {
-                            $attributeData['assetsAsset'][] = $assetData;
-                        }
-                    }
-
-                    $attributes[$k] = $replacedValue;
-                }
-            }
-
-            $isFalse =
-                $v === '' ||
-                (is_array($attributes[$k]) && count($attributes[$k]) === 0) ||
-                in_array($k, $disabled);
-
-            if (($att['fallback'] ?? false) && $isFalse) {
-                $attributes[$k] = $att['fallback'];
-            } elseif ($isFalse) {
-                $attributes[$k] = false;
-            }
-
-            $attributes[$k] = apply_filters(
-                'blockstudio/blocks/attributes/render',
-                $attributes[$k],
-                $k,
-                $block
-            );
-        }
-
-        return [
-            'assets' => $attributeData['assets'] ?? [],
-            'assetsAsset' => $attributeData['assetsAsset'] ?? [],
-            'selectorAttribute' => $selectorAttribute,
-            'selectorAttributeId' => $selectorAttributeId,
-            'hasCodeSelector' => $attributeData['hasCodeSelector'] ?? false,
-        ];
-    }
-
-    /**
-     * Transform block data.
-     *
-     * @date   29/11/2022
-     * @since  3.1.0
-     *
-     * @param  $attributes
-     * @param  $block
-     * @param  $name
-     * @param  $editor
-     * @param  $isPreview
-     * @param  array  $blockAttributes
-     *
-     * @return array
-     */
-    public static function transform(
-        &$attributes,
-        &$block,
-        $name,
-        $editor,
-        $isPreview,
-        $blockAttributes = []
-    ): array {
-        $attr = $blockAttributes;
-        $disabled = $attributes['blockstudio']['disabled'] ?? [];
-
-        // Defaults
-        foreach ($attr as $k => $v) {
-            $attr[$k] = $v['default'] ?? false;
-        }
-        $attributes = array_merge(
-            $attr ?? [],
-            $attributes['blockstudio']['attributes'] ?? []
-        );
-
-        // Transform
-        $attributeNames = [];
-        $attributeData = self::transformAttributes(
-            $attributes,
-            $attributeNames,
-            $disabled,
-            $name,
-            $block,
-            false,
-            $blockAttributes
-        );
-
-        //  Examples
-        if (
-            isset(Build::blocks()[$name]->example['attributes']) &&
-            ($editor || $isPreview)
-        ) {
-            foreach (
-                Build::blocks()[$name]->example['attributes']
-                as $k => $v
-            ) {
-                if (
-                    isset($v['blockstudio']) &&
-                    isset($v['type']) &&
-                    $v['type'] === 'image'
-                ) {
-                    $files = [];
-                    $index = 0;
-                    $indexTotal = 0;
-                    foreach (range(1, $v['amount'] ?? 1) as $i) {
-                        $indexTotal++;
-                        $index++;
-                        if ($index === 12) {
-                            $index = 1;
-                        }
-                        $files[] = self::getAttachmentData(
-                            null,
-                            BLOCKSTUDIO_DIR .
-                                '/includes-v7/examples/images/' .
-                                $index .
-                                '.svg',
-                            $indexTotal
-                        );
-                    }
-                    $attributes[$k] = $files;
-                } elseif ($isPreview) {
-                    $attributes[$k] = $v;
-                }
-            }
-        }
-
-        unset($attributes['blockstudio']);
-
-        foreach ($attributes as $k => $v) {
-            if (
-                !in_array($k, $attributeNames) &&
-                strpos($k, '__size') === false
-            ) {
-                unset($attributes[$k]);
-            } else {
-                unset($block[$k]);
-            }
-        }
-
-        return $attributeData;
-    }
-
-  /**
-   * Native render.
-   *
-   * @date   02/07/2022
-   * @since  2.4.0
-   *
-   * @param  $attributes
-   * @param  $innerBlocks
-   * @param  $wpBlock
-   * @param  $content
-   *
-   * @return false|string
-   * @throws ErrorException
-   */
-    public static function render(
-        $attributes,
-        $innerBlocks = '',
-        $wpBlock = '',
-        $content = ''
-    ) {
-        $isInlineEditor =
-            isset($_GET['blockstudioEditor']) &&
-            $_GET['blockstudioEditor'] === 'true';
-        $isEditor =
-            isset($_GET['blockstudioMode']) &&
-            $_GET['blockstudioMode'] === 'editor';
-        $isPreview =
-            isset($_GET['blockstudioMode']) &&
-            $_GET['blockstudioMode'] === 'preview';
-
-        $postId = isset($_GET['postId'])
-            ? intval($_GET['postId'])
-            : get_the_ID();
-        $post_id = $postId;
-        $objectId = isset($_GET['postId'])
-            ? intval($_GET['postId'])
-            : get_queried_object_id();
-
-        $name =
-            $attributes['blockstudio']['name'] ??
-            ($wpBlock->parsed_block['blockName'] ?? false);
-        if (!$name) {
-            return false;
-        }
-
-        self::$count++;
-        if (!isset(self::$countByBlock[$name])) {
-            self::$countByBlock[$name] = 1;
-        } else {
-            self::$countByBlock[$name]++;
-        }
-
-        $extensionAttributes = [];
-        $matches = Extensions::getMatches($name, Build::extensions());
-        if (count($matches) >= 1) {
-            foreach ($matches as $match) {
-                foreach ($match->attributes as $key => $value) {
-                    if ($value['field'] ?? false) {
-                        $extensionAttributes[$key] = $value;
-                    }
-                }
-            }
-        }
-
-        $BLOCKSTUDIO_ID = self::comment($name);
-        $blockData = Build::data()[$name];
-        $data = Build::blocks()[$name] ?? false;
-        $overrideData = Build::overrides()[$name] ?? false;
-        $hasOverridePath =
-            $overrideData &&
-            isset($overrideData->path) &&
-            Files::getRenderTemplate($overrideData->path);
-        $path =
-            $hasOverridePath && isset($overrideData->path)
-                ? Files::getRenderTemplate($overrideData->path)
-                : $data->path ?? false;
-
-        if (!$path) {
-            return null;
-        }
-
-        $editor = $attributes['blockstudio']['editor'] ?? false;
-        if ($editor && ($data->name ?? false)) {
-            $data->blockstudioEditor = true;
-        }
-
-        $block = $attributes;
-        unset($block['blockstudio']);
-        unset($block['__internalWidgetId']);
-        $block['id'] = self::id($block, $attributes);
-        $block['name'] = $name;
-        $block['postId'] = $objectId;
-        $block['postType'] = get_post_type($objectId);
-        $block['index'] = self::$countByBlock[$name];
-        $block['indexTotal'] = self::$count;
-
-        $compiledContext = [];
-        $blockNames = array_keys(Build::blocks());
-        foreach ($data->usesContext ?? [] as $contextProvider) {
-            if (!in_array($contextProvider, $blockNames)) {
-                continue;
-            }
-
-            if ($block['_BLOCKSTUDIO_CONTEXT'][$contextProvider] ?? false) {
-                $traceAttributes = [
-                    'blockstudio' => [
-                        'attributes' =>
-                            $block['_BLOCKSTUDIO_CONTEXT'][$contextProvider][
-                                'attributes'
-                            ],
-                    ],
-                ];
-                $attributeData = self::transform(
-                    $traceAttributes,
-                    $block,
-                    $contextProvider,
-                    $editor,
-                    $isPreview,
-                    Build::blocks()[$contextProvider]->attributes
-                );
-                $compiledContext[$contextProvider] = $traceAttributes;
-            } else {
-                $stackTrace = debug_backtrace();
-
-                foreach ($stackTrace as $trace) {
-                    $traceName = $trace['object']->block_type->name ?? '';
-                    if ($traceName === $contextProvider) {
-                        $traceAttributes = $trace['object']->attributes;
-                        $attributeData = self::transform(
-                            $traceAttributes,
-                            $block,
-                            $contextProvider,
-                            $editor,
-                            $isPreview,
-                            Build::blocks()[$contextProvider]->attributes
-                        );
-                        $compiledContext[$contextProvider] = $traceAttributes;
-                    }
-                }
-            }
-        }
-
-        $block['context'] =
-            $block['_BLOCKSTUDIO_CONTEXT'] ?? ($wpBlock->context ?? []);
-
-        unset($block['_BLOCKSTUDIO_CONTEXT']);
-
-        $context = $compiledContext;
-
-        $attributeData = self::transform(
-            $attributes,
-            $block,
-            $name,
-            $editor,
-            $isPreview,
-            Build::blocks()[$name]->attributes + $extensionAttributes
-        );
-        $assets = Assets::renderCodeFieldAssets($attributeData, 'assetsAsset');
-
-        $filterData = $data;
-        if ($filterData) {
-            $filterData->blockstudio['data']['block'] = $block;
-            $filterData->blockstudio['data']['context'] = $context;
-            $filterData->blockstudio['data']['attributes'] = $attributes;
-            $filterData->blockstudio['data']['path'] = $path;
-            $filterData->blockstudio['data']['blade'] =
-                Build::blade()[$blockData['instance']] ?? [];
-        }
-
-        if (
-            substr_compare($path, '.twig', -strlen('.twig')) === 0 &&
-            class_exists('Timber\Site')
-        ) {
-            Timber::init();
-            $twigContext = Timber::context();
-
-            $twigContext['attributes'] = $attributes;
-            $twigContext['a'] = $attributes;
-            $twigContext['block'] = $block;
-            $twigContext['b'] = $block;
-            $twigContext['context'] = $context;
-            $twigContext['c'] = $context;
-            $twigContext['content'] = $content;
-            $twigContext['isEditor'] = $isEditor;
-            $twigContext['isPreview'] = $isPreview;
-            $twigContext['postId'] = $postId;
-            $twigContext['post_id'] = $postId;
-
-            $addCustomPath = function ($paths) use (
-                $hasOverridePath,
-                $overrideData,
-                $data
-            ) {
-                if (!isset($paths[0])) {
-                    $paths[0] = [];
-                }
-                $paths[0][] = dirname($data->path);
-                if ($hasOverridePath) {
-                    $paths[0][] = dirname($overrideData->path);
-                }
-
-                return $paths;
-            };
-
-            add_filter('timber/locations', $addCustomPath);
-
-            try {
-                $compiledString = Timber::compile_string(
-                    $isInlineEditor
-                        ? get_transient(
-                            'blockstudio_gutenberg_' . $name . '_index.twig'
-                        )
-                        : ($editor ?:
-                        file_get_contents($path)),
-                    $twigContext
-                );
-            } catch (Throwable $e) {
-                $previousError = $e->getPrevious();
-                if (
-                    $previousError &&
-                    str_starts_with(
-                        $e->getMessage(),
-                        'An exception has been thrown during the rendering'
-                    )
-                ) {
-                    $e = $previousError;
-                }
-
-                throw new ErrorException(
-                    $e->getMessage(),
-                    $e->getCode() ?? 0,
-                    $e instanceof ErrorException ? $e->getSeverity() : E_ERROR,
-                    $e->getFile(),
-                    $e->getLine()
-                );
-            }
-
-            $render = self::replaceComponents(
-                $compiledString,
-                $innerBlocks,
-                $isEditor || $isPreview,
-                $data,
-                $attributes,
-                $block,
-                $attributeData
-            );
-
-            $renderedBlock =
-                (trim($render ?? '') !== '' ? $BLOCKSTUDIO_ID : '') .
-                ($isPreview ? Assets::getPreviewAssets($blockData) : '') .
-                $render .
-                ($isPreview ? Assets::getPreviewAssets($blockData, false) : '');
-
-            remove_filter('timber/locations', $addCustomPath);
-        } else {
-            ob_start();
-            $a = $attributes;
-            $b = $block;
-            $c = $context;
-
-            $render = true;
-
-            if ($editor) {
-                @eval(' ?>' . $editor . '<?php ');
-            } else {
-                ob_start();
-                $render = trim(include $path);
-                ob_end_clean();
-
-                if ($isPreview) {
-                    echo Assets::getPreviewAssets($blockData);
-                }
-                $isInlineEditor
-                    ? @eval(
-                        ' ?>' .
-                            get_transient(
-                                'blockstudio_gutenberg_' . $name . '_index.php'
-                            ) .
-                            '<?php '
-                    )
-                    : include $path;
-                if ($isPreview) {
-                    echo Assets::getPreviewAssets($blockData, false);
-                }
-            }
-
-            $renderedBlock =
-                ($render !== '' ? $BLOCKSTUDIO_ID : '') .
-                self::replaceComponents(
-                    ob_get_clean(),
-                    $innerBlocks,
-                    $isEditor || $isPreview,
-                    $filterData,
-                    $attributes,
-                    $block,
-                    $attributeData
-                );
-        }
-
-        $renderedBlock = $renderedBlock . (!$isEditor ? $assets : '');
-
-        return apply_filters(
-            'blockstudio/blocks/render',
-            $renderedBlock,
-            $filterData,
-            $isEditor,
-            $isPreview
-        );
-    }
+class Block {
+
+	/**
+	 * Block render count.
+	 *
+	 * @var int
+	 */
+	private static int $count = 0;
+
+	/**
+	 * Block render count by block name.
+	 *
+	 * @var array
+	 */
+	private static array $count_by_block = array();
+
+	/**
+	 * Get unique ID.
+	 *
+	 * @since 5.5.0
+	 *
+	 * @param mixed $block      The block data.
+	 * @param array $attributes The block attributes.
+	 *
+	 * @return string The unique ID.
+	 */
+	public static function id( $block, $attributes ): string {
+		return 'blockstudio-' .
+			substr(
+				md5( uniqid() . wp_json_encode( $block ) . wp_json_encode( $attributes ) ),
+				0,
+				12
+			);
+	}
+
+	/**
+	 * Get block ID as an HTML comment.
+	 *
+	 * @since 3.0.0
+	 *
+	 * @param string $name The block name.
+	 *
+	 * @return string The HTML comment.
+	 */
+	public static function comment( $name ): string {
+		return '<!--blockstudio/' . Build::data()[ $name ]['name'] . '-->';
+	}
+
+	/**
+	 * Get option value.
+	 *
+	 * @since 3.0.4
+	 *
+	 * @param array  $data          The field data.
+	 * @param string $return_format The return format.
+	 * @param mixed  $v             The value.
+	 * @param array  $populate      The populate settings.
+	 *
+	 * @return mixed The option value.
+	 */
+	public static function get_option_value(
+		$data,
+		$return_format,
+		$v,
+		array $populate = array()
+	) {
+		$fetch       = $populate['fetch'] ?? false;
+		$options_map = array();
+		$options     = $fetch ? array( $v ) : $data['options'] ?? array();
+
+		foreach ( $options as $option ) {
+			$value         = $option['value'] ?? false;
+			$query_options = array( 'posts', 'users', 'terms' );
+			if (
+				isset( $populate['type'] ) &&
+				'query' === $populate['type'] &&
+				isset( $populate['query'] ) &&
+				( ( in_array( $populate['query'], $query_options, true ) &&
+					in_array( $value, $data['optionsPopulate'], true ) ) ||
+					$fetch )
+			) {
+				$is_object =
+					( isset( $populate['returnFormat']['value'] ) &&
+						'id' !== $populate['returnFormat']['value'] ) ||
+					! isset( $populate['returnFormat']['value'] );
+
+				$query_function_map = array(
+					'posts' => 'get_post',
+					'users' => 'get_user_by',
+					'terms' => 'get_term',
+				);
+
+				if ( $is_object ) {
+					$value =
+						'users' === $populate['query']
+							? get_user_by( 'id', $value )
+							: call_user_func(
+								$query_function_map[ $populate['query'] ],
+								$value
+							);
+				}
+			}
+
+			if ( isset( $option['value'] ) ) {
+				$options_map[ $option['value'] ] = array(
+					'value' => $value,
+					'label' => $option['label'] ?? $value,
+				);
+			} elseif ( ! $fetch ) {
+				$options_map[ $option ] = array(
+					'value' => $option,
+					'label' => $option,
+				);
+			}
+		}
+
+		try {
+			if ( 'label' === $return_format ) {
+				return $options_map[ $v['value'] ?? $v ]['label'] ?? false;
+			}
+			if ( 'both' === $return_format ) {
+				return $options_map[ $v['value'] ?? $v ] ?? false;
+			}
+
+			return $options_map[ $v['value'] ?? $v ]['value'] ?? false;
+		} catch ( Throwable $err ) {
+			return false;
+		}
+	}
+
+	/**
+	 * Get attachment data for the file field.
+	 *
+	 * @since 3.0.11
+	 *
+	 * @param int|null    $id      The attachment ID.
+	 * @param string|bool $example The example file path.
+	 * @param int         $index   The index.
+	 * @param string      $size    The image size.
+	 *
+	 * @return array|false The attachment data or false.
+	 */
+	public static function get_attachment_data(
+		$id = null,
+		$example = false,
+		$index = 0,
+		$size = 'full'
+	) {
+		$image = array();
+
+		if ( $example ) {
+			$url                   = Files::get_relative_url( $example );
+			$image['ID']           = $index;
+			$image['title']        = "Image title $index";
+			$image['alt']          = "Image alt $index";
+			$image['caption']      = "Image caption $index";
+			$image['description']  = "Image description $index";
+			$image['href']         = $url;
+			$image['url']          = $url;
+
+			$xml_get        = simplexml_load_string( file_get_contents( $example ) );
+			$xml_attributes = $xml_get->attributes();
+			$width          = (string) $xml_attributes->width;
+			$height         = (string) $xml_attributes->height;
+
+			$sizes = get_intermediate_image_sizes();
+			if ( $sizes ) {
+				array_unshift( $sizes, 'full' );
+
+				foreach ( $sizes as $size ) {
+					$image['sizes'][ $size ]              = $url;
+					$image['sizes'][ $size . '-width' ]   = $width;
+					$image['sizes'][ $size . '-height' ]  = $height;
+				}
+			}
+
+			return $image;
+		}
+
+		if ( ! empty( $id ) && ( $meta = get_post( $id ) ) ) {
+			$image['ID']          = $id;
+			$image['title']       = $meta->post_title;
+			$alt                  = get_post_meta(
+				$meta->ID,
+				'_wp_attachment_image_alt',
+				true
+			);
+			$image['alt']         = $alt ? $alt : $meta->post_title;
+			$image['caption']     = $meta->post_excerpt;
+			$image['description'] = $meta->post_content;
+			$image['href']        = get_permalink( $meta->ID );
+			if ( 'full' !== $size ) {
+				$image['url'] =
+					wp_get_attachment_image_src( $id, $size )[0] ?? '';
+			} else {
+				$image['url'] = $meta->guid;
+			}
+
+			$sizes = get_intermediate_image_sizes();
+			if ( $sizes ) {
+				array_unshift( $sizes, 'full' );
+
+				foreach ( $sizes as $size ) {
+					$src = wp_get_attachment_image_src( $id, $size );
+					if ( $src ) {
+						$image['sizes'][ $size ]              = $src[0];
+						$image['sizes'][ $size . '-width' ]   = $src[1];
+						$image['sizes'][ $size . '-height' ]  = $src[2];
+					}
+				}
+			} else {
+				$image['sizes'] = null;
+			}
+
+			return $image;
+		}
+
+		return false;
+	}
+
+	/**
+	 * Replace custom block tags.
+	 *
+	 * @since 4.2.0
+	 *
+	 * @param string $content          The block content (passed by reference).
+	 * @param string $replace          The replacement content.
+	 * @param object $block            The block data.
+	 * @param array  $block_attributes The block attributes.
+	 * @param string $tag              The tag to replace.
+	 * @param string $type             The attribute type.
+	 *
+	 * @return void
+	 */
+	public static function replace_custom_tag(
+		&$content,
+		$replace,
+		$block,
+		$block_attributes,
+		$tag,
+		$type
+	) {
+		$regex =
+			'InnerBlocks' !== $type
+				? '/<' .
+					preg_quote( $tag, '/' ) .
+					'(?=[^>]*(\battribute=["\']' .
+					preg_quote( $type, '/' ) .
+					'["\']))\s*(.*?)\s*\/?>/s'
+				: '/<' . preg_quote( $tag, '/' ) . '\s*(.*?)\s*\/?>/s';
+
+		$replace = str_replace( '$', '\$', $replace );
+		preg_match( $regex, $content, $matches );
+
+		$has_match = count( $matches ) >= 2;
+
+		if ( $has_match ) {
+			$attribute_map = array();
+			$attributes    =
+				'InnerBlocks' === $tag
+					? $matches[1] ?? $matches[2]
+					: $matches[2] ?? $matches[1];
+
+			$attributes = str_replace( array( '"', '"' ), '"', $attributes );
+
+			$pattern =
+				'/([a-zA-Z_][a-zA-Z0-9\-_:.]*)(?:\s*=\s*(?:"([^"]*)"|\'([^\']*)\'|([^ \/>]+)))?/';
+
+			preg_match_all( $pattern, $attributes, $matches, PREG_SET_ORDER );
+
+			foreach ( $matches as $match ) {
+				$attr_name                    = $match[1];
+				$attr_value                   = $match[2] ?? ( $match[3] ?? ( $match[4] ?? true ) );
+				$attribute_map[ $attr_name ]  = $attr_value;
+			}
+
+			$attribute   =
+				$block_attributes[ $attribute_map['attribute'] ?? null ] ?? null;
+			$element_tag =
+				$attribute_map['tag'] ?? ( 'InnerBlocks' === $type ? 'div' : 'p' );
+
+			$attr = '';
+			foreach ( $attribute_map as $name => $value ) {
+				if ( true === $value ) {
+					$attr .= "$name ";
+				} else {
+					$attr .= sprintf(
+						'%s="%s" ',
+						$name,
+						htmlspecialchars( $value )
+					);
+				}
+			}
+			$attr = trim( $attr );
+
+			if ( 'RichText' === $tag ) {
+				$rich_text_content = apply_filters(
+					'blockstudio/blocks/components/richtext/render',
+					$attribute,
+					$block
+				);
+
+				$content = preg_replace(
+					$regex,
+					$attribute
+						? "<$element_tag $attr>" .
+							$rich_text_content .
+							"</$element_tag>"
+						: '',
+					$content
+				);
+			} else {
+				$inner_blocks_content =
+					isset( $block->blockstudioEditor ) &&
+					isset( $block->blockstudio['editor']['innerBlocks'] )
+						? $block->blockstudio['editor']['innerBlocks']
+						: $replace;
+				$inner_blocks_content = apply_filters(
+					'blockstudio/blocks/components/innerblocks/render',
+					$inner_blocks_content,
+					$block
+				);
+				$content              = preg_replace(
+					$regex,
+					apply_filters(
+						'blockstudio/blocks/components/innerblocks/frontend/wrap',
+						true,
+						$block
+					)
+						? "<$element_tag $attr>" .
+							$inner_blocks_content .
+							"</$element_tag>"
+						: $inner_blocks_content,
+					$content
+				);
+			}
+		}
+	}
+
+	/**
+	 * Remove component from block content.
+	 *
+	 * @since 5.3.0
+	 *
+	 * @param string $content   The block content (passed by reference).
+	 * @param string $component The component to remove.
+	 *
+	 * @return void
+	 */
+	public static function remove_custom_tag( &$content, $component ) {
+		$regex   = '/<' . preg_quote( $component, '/' ) . '\s*(.*?)\s*\/?>/s';
+		$content = preg_replace( $regex, '', $content );
+	}
+
+	/**
+	 * Replace block content with components.
+	 *
+	 * @since 4.0.0
+	 *
+	 * @param string $content              The block content.
+	 * @param string $inner_blocks         The inner blocks content.
+	 * @param bool   $is_editor_or_preview Whether in editor or preview mode.
+	 * @param object $block                The block data.
+	 * @param array  $attributes           The block attributes.
+	 * @param array  $attributes_block     The block's attributes array.
+	 * @param array  $attribute_data       The attribute data.
+	 *
+	 * @return string The modified content.
+	 */
+	public static function replace_components(
+		$content,
+		$inner_blocks,
+		$is_editor_or_preview,
+		$block,
+		$attributes,
+		$attributes_block,
+		$attribute_data
+	) {
+		if ( $is_editor_or_preview ) {
+			if (
+				class_exists( 'WP_HTML_Tag_Processor' ) &&
+				false !== strpos( $content, 'useBlockProps' )
+			) {
+				$content = new WP_HTML_Tag_Processor( $content );
+				if ( $content->next_tag() ) {
+					$classes = $content->get_attribute( 'class' );
+					$content->set_attribute(
+						'class',
+						$classes . ' wp-block block-editor-block-list__block'
+					);
+				}
+			}
+
+			return str_replace(
+				'useBlockProps',
+				'useblockprops="true"',
+				$content
+			);
+		}
+
+		self::replace_custom_tag(
+			$content,
+			$inner_blocks,
+			$block,
+			$attributes,
+			'InnerBlocks',
+			'InnerBlocks'
+		);
+
+		foreach ( $block->attributes ?? array() as $attribute ) {
+			if (
+				isset( $attribute['id'] ) &&
+				isset( $attribute['type'] ) &&
+				'richtext' !== $attribute['type']
+			) {
+				self::replace_custom_tag(
+					$content,
+					$inner_blocks,
+					$block,
+					$attributes,
+					'RichText',
+					$attribute['id']
+				);
+			}
+		}
+
+		self::remove_custom_tag( $content, 'MediaPlaceholder' );
+
+		$attributes_to_remove = array(
+			// General.
+			'useBlockProps',
+			'tag',
+			// InnerBlocks.
+			'allowedBlocks',
+			'defaultBlock',
+			'directInsert',
+			'prioritizedInserterBlocks',
+			'renderAppender',
+			'template',
+			'templateInsertUpdatesSelection',
+			'templateLock',
+			// RichText.
+			'attribute',
+			'placeholder',
+			'allowedFormats',
+			'autocompleters',
+			'multiline',
+			'preserveWhiteSpace',
+			'withoutInteractiveFormatting',
+		);
+
+		$has_attribute = false;
+		foreach ( $attributes_to_remove as $attribute ) {
+			if ( false !== strpos( $content, $attribute ) ) {
+				$has_attribute = true;
+				break;
+			}
+		}
+
+		if ( $has_attribute ) {
+			$content = str_replace(
+				'useBlockProps',
+				'useblockprops="true"',
+				$content
+			);
+
+			$doc = new DOMDocument();
+			libxml_use_internal_errors( true );
+			$doc->loadHTML(
+				mb_encode_numericentity(
+					$content,
+					array( 0x80, 0x10ffff, 0, 0xffffff ),
+					'UTF-8'
+				)
+			);
+			libxml_clear_errors();
+			$elements = $doc->getElementsByTagName( '*' );
+			foreach ( $elements as $element ) {
+				if ( $element->hasAttribute( 'useblockprops' ) ) {
+					$classes = $element->getAttribute( 'class' );
+
+					if ( $attribute_data['hasCodeSelector'] ?? false ) {
+						$element->setAttribute(
+							'data-assets',
+							$attribute_data['selectorAttributeId'] ?? ''
+						);
+					}
+
+					$attributes = array();
+					preg_match_all(
+						'/(\S+)="([^"]+)"/',
+						apply_filters(
+							'blockstudio/blocks/components/useblockprops/render',
+							get_block_wrapper_attributes(
+								array(
+									'class' => $classes,
+									'id'    =>
+										$attributes_block['anchor'] ??
+										$element->getAttribute( 'id' ),
+								)
+							),
+							$block
+						),
+						$attributes,
+						PREG_SET_ORDER
+					);
+
+					foreach ( $attributes as $attribute ) {
+						$element->setAttribute( $attribute[1], $attribute[2] );
+					}
+				}
+				foreach ( $attributes_to_remove as $attribute ) {
+					$attr = strtolower( $attribute );
+					if (
+						$element->hasAttribute( $attr ) &&
+						'input' !== $element->nodeName &&
+						'textarea' !== $element->nodeName
+					) {
+						$element->removeAttribute( $attr );
+					}
+				}
+			}
+			$trim_off_front = strpos( $doc->saveHTML(), '<body>' ) + 6;
+			$trim_off_end   =
+				strrpos( $doc->saveHTML(), '</body>' ) - strlen( $doc->saveHTML() );
+
+			$content = substr( $doc->saveHTML(), $trim_off_front, $trim_off_end );
+		}
+
+		return $content;
+	}
+
+	/**
+	 * Transform attributes.
+	 *
+	 * @since 4.1.5
+	 *
+	 * @param array      $attributes       The attributes (passed by reference).
+	 * @param array      $attribute_names  The attribute names (passed by reference).
+	 * @param array      $disabled         The disabled attributes.
+	 * @param string     $name             The block name.
+	 * @param mixed      $block            The block data.
+	 * @param array|bool $repeater         The repeater attributes.
+	 * @param array      $block_attributes The block attributes.
+	 * @param array      $attribute_data   The attribute data (passed by reference).
+	 *
+	 * @return array The transformed attribute data.
+	 */
+	public static function transform_attributes(
+		&$attributes,
+		&$attribute_names,
+		$disabled,
+		$name,
+		$block,
+		$repeater = false,
+		$block_attributes = array(),
+		&$attribute_data = array()
+	): array {
+		if ( $attribute_data['selectorAttributeId'] ?? false ) {
+			$selector_attribute_id = $attribute_data['selectorAttributeId'];
+		} else {
+			$selector_attribute_id                = self::id( $block, $attributes );
+			$attribute_data['selectorAttributeId'] = $selector_attribute_id;
+		}
+		$selector_attribute = "data-assets='$selector_attribute_id'";
+
+		foreach ( $attributes as $k => $v ) {
+			$att = $repeater
+				? array_values(
+						array_filter(
+							$repeater,
+							fn( $item ) => ( $item['id'] ?? false ) === $k
+						)
+					)[0] ?? false
+				: $block_attributes[ $k ] ?? false;
+
+			if ( isset( $att['blockstudio'] ) && ! $repeater ) {
+				$attribute_names[] = $k;
+			}
+
+			if ( isset( $att['type'] ) && $att && ( ! empty( $v ) || '0' === $v ) ) {
+				$return_format = $att['returnFormat'] ?? 'value';
+				$populate      = $att['populate'] ?? array();
+				$type          = $att['field'] ?? false;
+
+				if ( ! $type ) {
+					continue;
+				}
+
+				if (
+					'select' === $type ||
+					'radio' === $type ||
+					'checkbox' === $type ||
+					'token' === $type
+				) {
+					if (
+						'select' === $type &&
+						isset( $populate['type'] ) &&
+						'fetch' === $populate['type']
+					) {
+						$attributes[ $k ] = $v;
+					} else {
+						if ( 'select' === $type || 'radio' === $type ) {
+							$attributes[ $k ] = self::get_option_value(
+								$att,
+								$return_format,
+								$v,
+								$populate
+							);
+						}
+						if (
+							'checkbox' === $type ||
+							( 'select' === $type && ( $att['multiple'] ?? false ) )
+						) {
+							$new_values = array();
+							foreach ( $v as $l ) {
+								$val = self::get_option_value(
+									$att,
+									$return_format,
+									$l,
+									$populate
+								);
+
+								if ( $val ) {
+									$new_values[] = $val;
+								}
+							}
+
+							if ( 'checkbox' === $type ) {
+								if (
+									isset( $new_values[0]->ID ) ||
+									isset( $new_values[0]->term_id )
+								) {
+									$is_id   = isset( $new_values[0]->ID );
+									$is_term = isset( $new_values[0]->term_id );
+									$key     = $is_id ? 'ID' : 'term_id';
+
+									$sorting_arr = array_column(
+										$att['options'],
+										'value'
+									);
+
+									if ( $is_id || $is_term ) {
+										uasort(
+											$new_values,
+											function (
+												$a,
+												$b
+											) use ( $key, $sorting_arr ) {
+												return array_search(
+													$a->{$key} ??
+														( $a['value'] ?? $a ),
+													$sorting_arr,
+													true
+												) <=>
+													array_search(
+														$b->{$key} ??
+															( $b['value'] ?? $b ),
+														$sorting_arr,
+														true
+													);
+											}
+										);
+									}
+								} else {
+									if (
+										isset( $att['options'][0]['label'] ) &&
+										'label' === $return_format
+									) {
+										$sorting_arr = array_column(
+											$att['options'],
+											'label'
+										);
+									} elseif (
+										isset( $att['options'][0]['value'] )
+									) {
+										$sorting_arr = array_column(
+											$att['options'],
+											'value'
+										);
+									} else {
+										$sorting_arr = $att['options'];
+									}
+
+									uasort(
+										$new_values,
+										function ( $a, $b ) use (
+											$sorting_arr
+										) {
+											return array_search(
+												$a['value'] ?? $a,
+												$sorting_arr,
+												true
+											) <=>
+												array_search(
+													$b['value'] ?? $b,
+													$sorting_arr,
+													true
+												);
+										}
+									);
+								}
+							}
+							$attributes[ $k ] = array_values( $new_values );
+						}
+						if ( 'token' === $type && 'both' !== $return_format ) {
+							$new_values = array();
+							foreach ( $v as $l ) {
+								$new_values[] = $l[ $return_format ] ?? $l;
+							}
+							$attributes[ $k ] = $new_values;
+						}
+					}
+				}
+
+				if ( 'files' === $type ) {
+					if ( is_array( $v ) ) {
+						foreach ( $v as $file_id ) {
+							if ( in_array( $k . '_' . $file_id, $disabled, true ) ) {
+								$attributes[ $k ] = array_filter(
+									$attributes[ $k ],
+									fn( $val ) => $val !== $file_id
+								);
+							}
+						}
+						$attributes[ $k ] = array_values( $attributes[ $k ] );
+					} elseif ( in_array( $k . '_' . $v, $disabled, true ) ) {
+						$attributes[ $k ] = false;
+					}
+
+					$size = 'full';
+
+					if ( isset( $attributes[ $k . '__size' ] ) ) {
+						$size = $attributes[ $k . '__size' ] ?? 'full';
+					}
+
+					if ( 'id' !== $return_format && 'url' !== $return_format ) {
+						if ( is_array( $attributes[ $k ] ) ) {
+							$object_array = array();
+							foreach ( $attributes[ $k ] as $o ) {
+								$object_array[] = self::get_attachment_data(
+									$o,
+									false,
+									0,
+									$size
+								);
+							}
+							$attributes[ $k ] = $object_array;
+						} elseif ( $attributes[ $k ] ) {
+							$attributes[ $k ] = self::get_attachment_data(
+								$attributes[ $k ],
+								false,
+								0,
+								$size
+							);
+						}
+					}
+
+					if ( 'url' === $return_format ) {
+						$media = fn( $id, $size ) => wp_attachment_is(
+							'image',
+							$id
+						)
+							? wp_get_attachment_image_src( $id, $size )[0] ??
+								false
+							: wp_get_attachment_url( $id ) ?? false;
+
+						if ( is_array( $attributes[ $k ] ) ) {
+							$url_array = array();
+							foreach ( $attributes[ $k ] as $o ) {
+								$url_array[] = $media( $o, $att['returnSize'] );
+							}
+							$attributes[ $k ] = $url_array;
+						} elseif ( $attributes[ $k ] ) {
+							$attributes[ $k ] = $media(
+								$attributes[ $k ],
+								$att['returnSize']
+							);
+						}
+
+						if (
+							( $att['multiple'] ?? false ) &&
+							! is_array( $attributes[ $k ] )
+						) {
+							$attributes[ $k ] = array( $attributes[ $k ] );
+						}
+					}
+
+					if (
+						$attributes[ $k ] &&
+						( $att['multiple'] ?? false ) &&
+						( $attributes[ $k ]['ID'] ??
+							( is_numeric( $attributes[ $k ] ) ?? false ) )
+					) {
+						$attributes[ $k ] = array( $attributes[ $k ] );
+					}
+				}
+
+				if ( 'number' === $type || 'range' === $type ) {
+					$attributes[ $k ] = floatval( $v );
+				}
+
+				if ( 'repeater' === $type ) {
+					foreach ( $attributes[ $k ] as $i => $r ) {
+						self::transform_attributes(
+							$attributes[ $k ][ $i ],
+							$attribute_names,
+							array(),
+							$name,
+							$block,
+							$att['attributes'],
+							array(),
+							$attribute_data
+						);
+					}
+				}
+
+				if ( 'icon' === $type ) {
+					if ( 'element' === $return_format ) {
+						$attributes[ $k ] = bs_icon( $v );
+					} else {
+						$attributes[ $k ]['element'] = bs_icon( $v );
+					}
+				}
+
+				if ( 'code' === $type ) {
+					$lang           = $att['language'];
+					$replaced_value = str_replace(
+						'%selector%',
+						"[$selector_attribute]",
+						$v
+					);
+
+					if ( Files::contains( $v, '%selector%' ) ) {
+						$attribute_data['hasCodeSelector'] = true;
+					}
+
+					if ( 'css' === $lang || 'javascript' === $lang ) {
+						$asset_data = array(
+							'language' => $lang,
+							'value'    => $replaced_value,
+						);
+						$attribute_data['assets'][] = $asset_data;
+						if ( $att['asset'] ?? false ) {
+							$attribute_data['assetsAsset'][] = $asset_data;
+						}
+					}
+
+					$attributes[ $k ] = $replaced_value;
+				}
+			}
+
+			$is_false =
+				'' === $v ||
+				( is_array( $attributes[ $k ] ) && 0 === count( $attributes[ $k ] ) ) ||
+				in_array( $k, $disabled, true );
+
+			if ( ( $att['fallback'] ?? false ) && $is_false ) {
+				$attributes[ $k ] = $att['fallback'];
+			} elseif ( $is_false ) {
+				$attributes[ $k ] = false;
+			}
+
+			$attributes[ $k ] = apply_filters(
+				'blockstudio/blocks/attributes/render',
+				$attributes[ $k ],
+				$k,
+				$block
+			);
+		}
+
+		return array(
+			'assets'              => $attribute_data['assets'] ?? array(),
+			'assetsAsset'         => $attribute_data['assetsAsset'] ?? array(),
+			'selectorAttribute'   => $selector_attribute,
+			'selectorAttributeId' => $selector_attribute_id,
+			'hasCodeSelector'     => $attribute_data['hasCodeSelector'] ?? false,
+		);
+	}
+
+	/**
+	 * Transform block data.
+	 *
+	 * @since 3.1.0
+	 *
+	 * @param array $attributes       The attributes (passed by reference).
+	 * @param mixed $block            The block data (passed by reference).
+	 * @param mixed $name             The block name.
+	 * @param bool  $editor           Whether in editor mode.
+	 * @param bool  $is_preview       Whether in preview mode.
+	 * @param array $block_attributes The block attributes.
+	 *
+	 * @return array The transformed data.
+	 */
+	public static function transform(
+		&$attributes,
+		&$block,
+		$name,
+		$editor,
+		$is_preview,
+		$block_attributes = array()
+	): array {
+		$attr     = $block_attributes;
+		$disabled = $attributes['blockstudio']['disabled'] ?? array();
+
+		// Defaults.
+		foreach ( $attr as $k => $v ) {
+			$attr[ $k ] = $v['default'] ?? false;
+		}
+		$attributes = array_merge(
+			$attr ?? array(),
+			$attributes['blockstudio']['attributes'] ?? array()
+		);
+
+		// Transform.
+		$attribute_names = array();
+		$attribute_data  = self::transform_attributes(
+			$attributes,
+			$attribute_names,
+			$disabled,
+			$name,
+			$block,
+			false,
+			$block_attributes
+		);
+
+		// Examples.
+		if (
+			isset( Build::blocks()[ $name ]->example['attributes'] ) &&
+			( $editor || $is_preview )
+		) {
+			foreach (
+				Build::blocks()[ $name ]->example['attributes']
+				as $k => $v
+			) {
+				if (
+					isset( $v['blockstudio'] ) &&
+					isset( $v['type'] ) &&
+					'image' === $v['type']
+				) {
+					$files       = array();
+					$index       = 0;
+					$index_total = 0;
+					foreach ( range( 1, $v['amount'] ?? 1 ) as $i ) {
+						++$index_total;
+						++$index;
+						if ( 12 === $index ) {
+							$index = 1;
+						}
+						$files[] = self::get_attachment_data(
+							null,
+							BLOCKSTUDIO_DIR .
+								'/includes-v7/examples/images/' .
+								$index .
+								'.svg',
+							$index_total
+						);
+					}
+					$attributes[ $k ] = $files;
+				} elseif ( $is_preview ) {
+					$attributes[ $k ] = $v;
+				}
+			}
+		}
+
+		unset( $attributes['blockstudio'] );
+
+		foreach ( $attributes as $k => $v ) {
+			if (
+				! in_array( $k, $attribute_names, true ) &&
+				false === strpos( $k, '__size' )
+			) {
+				unset( $attributes[ $k ] );
+			} else {
+				unset( $block[ $k ] );
+			}
+		}
+
+		return $attribute_data;
+	}
+
+	/**
+	 * Native render.
+	 *
+	 * @since 2.4.0
+	 *
+	 * @param array  $attributes   The block attributes.
+	 * @param string $inner_blocks The inner blocks content.
+	 * @param mixed  $wp_block     The WordPress block instance.
+	 * @param string $content      The block content.
+	 *
+	 * @return string|false|null The rendered block or false/null on failure.
+	 * @throws ErrorException When rendering fails.
+	 */
+	public static function render(
+		$attributes,
+		$inner_blocks = '',
+		$wp_block = '',
+		$content = ''
+	) {
+		// phpcs:disable WordPress.Security.NonceVerification.Recommended -- Reading query params for render mode detection.
+		$is_inline_editor =
+			isset( $_GET['blockstudioEditor'] ) &&
+			'true' === $_GET['blockstudioEditor'];
+		$is_editor        =
+			isset( $_GET['blockstudioMode'] ) &&
+			'editor' === $_GET['blockstudioMode'];
+		$is_preview       =
+			isset( $_GET['blockstudioMode'] ) &&
+			'preview' === $_GET['blockstudioMode'];
+
+		$post_id   = isset( $_GET['postId'] )
+			? intval( $_GET['postId'] )
+			: get_the_ID();
+		$object_id = isset( $_GET['postId'] )
+			? intval( $_GET['postId'] )
+			: get_queried_object_id();
+		// phpcs:enable WordPress.Security.NonceVerification.Recommended
+
+		$name =
+			$attributes['blockstudio']['name'] ??
+			( $wp_block->parsed_block['blockName'] ?? false );
+		if ( ! $name ) {
+			return false;
+		}
+
+		++self::$count;
+		if ( ! isset( self::$count_by_block[ $name ] ) ) {
+			self::$count_by_block[ $name ] = 1;
+		} else {
+			++self::$count_by_block[ $name ];
+		}
+
+		$extension_attributes = array();
+		$matches              = Extensions::get_matches( $name, Build::extensions() );
+		if ( count( $matches ) >= 1 ) {
+			foreach ( $matches as $match ) {
+				foreach ( $match->attributes as $key => $value ) {
+					if ( $value['field'] ?? false ) {
+						$extension_attributes[ $key ] = $value;
+					}
+				}
+			}
+		}
+
+		$blockstudio_id  = self::comment( $name );
+		$block_data      = Build::data()[ $name ];
+		$data            = Build::blocks()[ $name ] ?? false;
+		$override_data   = Build::overrides()[ $name ] ?? false;
+		$has_override_path =
+			$override_data &&
+			isset( $override_data->path ) &&
+			Files::get_render_template( $override_data->path );
+		$path            =
+			$has_override_path && isset( $override_data->path )
+				? Files::get_render_template( $override_data->path )
+				: $data->path ?? false;
+
+		if ( ! $path ) {
+			return null;
+		}
+
+		$editor = $attributes['blockstudio']['editor'] ?? false;
+		if ( $editor && ( $data->name ?? false ) ) {
+			$data->blockstudioEditor = true;
+		}
+
+		$block = $attributes;
+		unset( $block['blockstudio'] );
+		unset( $block['__internalWidgetId'] );
+		$block['id']         = self::id( $block, $attributes );
+		$block['name']       = $name;
+		$block['postId']     = $object_id;
+		$block['postType']   = get_post_type( $object_id );
+		$block['index']      = self::$count_by_block[ $name ];
+		$block['indexTotal'] = self::$count;
+
+		$compiled_context = array();
+		$block_names      = array_keys( Build::blocks() );
+		foreach ( $data->usesContext ?? array() as $context_provider ) {
+			if ( ! in_array( $context_provider, $block_names, true ) ) {
+				continue;
+			}
+
+			if ( $block['_BLOCKSTUDIO_CONTEXT'][ $context_provider ] ?? false ) {
+				$trace_attributes = array(
+					'blockstudio' => array(
+						'attributes' =>
+							$block['_BLOCKSTUDIO_CONTEXT'][ $context_provider ][
+								'attributes'
+							],
+					),
+				);
+				$attribute_data   = self::transform(
+					$trace_attributes,
+					$block,
+					$context_provider,
+					$editor,
+					$is_preview,
+					Build::blocks()[ $context_provider ]->attributes
+				);
+				$compiled_context[ $context_provider ] = $trace_attributes;
+			} else {
+				$stack_trace = debug_backtrace(); // phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_debug_backtrace
+
+				foreach ( $stack_trace as $trace ) {
+					$trace_name = $trace['object']->block_type->name ?? '';
+					if ( $trace_name === $context_provider ) {
+						$trace_attributes = $trace['object']->attributes;
+						$attribute_data   = self::transform(
+							$trace_attributes,
+							$block,
+							$context_provider,
+							$editor,
+							$is_preview,
+							Build::blocks()[ $context_provider ]->attributes
+						);
+						$compiled_context[ $context_provider ] = $trace_attributes;
+					}
+				}
+			}
+		}
+
+		$block['context'] =
+			$block['_BLOCKSTUDIO_CONTEXT'] ?? ( $wp_block->context ?? array() );
+
+		unset( $block['_BLOCKSTUDIO_CONTEXT'] );
+
+		$context = $compiled_context;
+
+		$attribute_data = self::transform(
+			$attributes,
+			$block,
+			$name,
+			$editor,
+			$is_preview,
+			Build::blocks()[ $name ]->attributes + $extension_attributes
+		);
+		$assets         = Assets::render_code_field_assets( $attribute_data, 'assetsAsset' );
+
+		$filter_data = $data;
+		if ( $filter_data ) {
+			$filter_data->blockstudio['data']['block']      = $block;
+			$filter_data->blockstudio['data']['context']    = $context;
+			$filter_data->blockstudio['data']['attributes'] = $attributes;
+			$filter_data->blockstudio['data']['path']       = $path;
+			$filter_data->blockstudio['data']['blade']      =
+				Build::blade()[ $block_data['instance'] ] ?? array();
+		}
+
+		if (
+			0 === substr_compare( $path, '.twig', -strlen( '.twig' ) ) &&
+			class_exists( 'Timber\Site' )
+		) {
+			Timber::init();
+			$twig_context = Timber::context();
+
+			$twig_context['attributes'] = $attributes;
+			$twig_context['a']          = $attributes;
+			$twig_context['block']      = $block;
+			$twig_context['b']          = $block;
+			$twig_context['context']    = $context;
+			$twig_context['c']          = $context;
+			$twig_context['content']    = $content;
+			$twig_context['isEditor']   = $is_editor;
+			$twig_context['isPreview']  = $is_preview;
+			$twig_context['postId']     = $post_id;
+			$twig_context['post_id']    = $post_id;
+
+			$add_custom_path = function ( $paths ) use (
+				$has_override_path,
+				$override_data,
+				$data
+			) {
+				if ( ! isset( $paths[0] ) ) {
+					$paths[0] = array();
+				}
+				$paths[0][] = dirname( $data->path );
+				if ( $has_override_path ) {
+					$paths[0][] = dirname( $override_data->path );
+				}
+
+				return $paths;
+			};
+
+			add_filter( 'timber/locations', $add_custom_path );
+
+			try {
+				$compiled_string = Timber::compile_string(
+					$is_inline_editor
+						? get_transient(
+							'blockstudio_gutenberg_' . $name . '_index.twig'
+						)
+						: ( $editor ?:
+						file_get_contents( $path ) ), // phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents
+					$twig_context
+				);
+			} catch ( Throwable $e ) {
+				$previous_error = $e->getPrevious();
+				if (
+					$previous_error &&
+					str_starts_with(
+						$e->getMessage(),
+						'An exception has been thrown during the rendering'
+					)
+				) {
+					$e = $previous_error;
+				}
+
+				throw new ErrorException(
+					$e->getMessage(),
+					$e->getCode() ?? 0,
+					$e instanceof ErrorException ? $e->getSeverity() : E_ERROR,
+					$e->getFile(),
+					$e->getLine()
+				);
+			}
+
+			$render = self::replace_components(
+				$compiled_string,
+				$inner_blocks,
+				$is_editor || $is_preview,
+				$data,
+				$attributes,
+				$block,
+				$attribute_data
+			);
+
+			$rendered_block =
+				( '' !== trim( $render ?? '' ) ? $blockstudio_id : '' ) .
+				( $is_preview ? Assets::get_preview_assets( $block_data ) : '' ) .
+				$render .
+				( $is_preview ? Assets::get_preview_assets( $block_data, false ) : '' );
+
+			remove_filter( 'timber/locations', $add_custom_path );
+		} else {
+			ob_start();
+			$a = $attributes;
+			$b = $block;
+			$c = $context;
+
+			$render = true;
+
+			if ( $editor ) {
+				@eval( ' ?>' . $editor . '<?php ' ); // phpcs:ignore Squiz.PHP.Eval.Discouraged
+			} else {
+				ob_start();
+				$render = trim( include $path );
+				ob_end_clean();
+
+				if ( $is_preview ) {
+					echo Assets::get_preview_assets( $block_data ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
+				}
+				$is_inline_editor
+					? @eval( // phpcs:ignore Squiz.PHP.Eval.Discouraged
+						' ?>' .
+							get_transient(
+								'blockstudio_gutenberg_' . $name . '_index.php'
+							) .
+							'<?php '
+					)
+					: include $path;
+				if ( $is_preview ) {
+					echo Assets::get_preview_assets( $block_data, false ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
+				}
+			}
+
+			$rendered_block =
+				( '' !== $render ? $blockstudio_id : '' ) .
+				self::replace_components(
+					ob_get_clean(),
+					$inner_blocks,
+					$is_editor || $is_preview,
+					$filter_data,
+					$attributes,
+					$block,
+					$attribute_data
+				);
+		}
+
+		$rendered_block = $rendered_block . ( ! $is_editor ? $assets : '' );
+
+		return apply_filters(
+			'blockstudio/blocks/render',
+			$rendered_block,
+			$filter_data,
+			$is_editor,
+			$is_preview
+		);
+	}
+
+	/**
+	 * Get option value (legacy method name).
+	 *
+	 * @deprecated Use get_option_value() instead.
+	 *
+	 * @param array  $data          The field data.
+	 * @param string $return_format The return format.
+	 * @param mixed  $v             The value.
+	 * @param array  $populate      The populate settings.
+	 *
+	 * @return mixed The option value.
+	 */
+	public static function getOptionValue(
+		$data,
+		$return_format,
+		$v,
+		array $populate = array()
+	) {
+		return self::get_option_value( $data, $return_format, $v, $populate );
+	}
+
+	/**
+	 * Get attachment data (legacy method name).
+	 *
+	 * @deprecated Use get_attachment_data() instead.
+	 *
+	 * @param int|null    $id      The attachment ID.
+	 * @param string|bool $example The example file path.
+	 * @param int         $index   The index.
+	 * @param string      $size    The image size.
+	 *
+	 * @return array|false The attachment data or false.
+	 */
+	public static function getAttachmentData(
+		$id = null,
+		$example = false,
+		$index = 0,
+		$size = 'full'
+	) {
+		return self::get_attachment_data( $id, $example, $index, $size );
+	}
+
+	/**
+	 * Replace custom tag (legacy method name).
+	 *
+	 * @deprecated Use replace_custom_tag() instead.
+	 *
+	 * @param string $content          The block content (passed by reference).
+	 * @param string $replace          The replacement content.
+	 * @param object $block            The block data.
+	 * @param array  $block_attributes The block attributes.
+	 * @param string $tag              The tag to replace.
+	 * @param string $type             The attribute type.
+	 *
+	 * @return void
+	 */
+	public static function replaceCustomTag(
+		&$content,
+		$replace,
+		$block,
+		$block_attributes,
+		$tag,
+		$type
+	) {
+		self::replace_custom_tag( $content, $replace, $block, $block_attributes, $tag, $type );
+	}
+
+	/**
+	 * Remove custom tag (legacy method name).
+	 *
+	 * @deprecated Use remove_custom_tag() instead.
+	 *
+	 * @param string $content   The block content (passed by reference).
+	 * @param string $component The component to remove.
+	 *
+	 * @return void
+	 */
+	public static function removeCustomTag( &$content, $component ) {
+		self::remove_custom_tag( $content, $component );
+	}
+
+	/**
+	 * Replace components (legacy method name).
+	 *
+	 * @deprecated Use replace_components() instead.
+	 *
+	 * @param string $content              The block content.
+	 * @param string $inner_blocks         The inner blocks content.
+	 * @param bool   $is_editor_or_preview Whether in editor or preview mode.
+	 * @param object $block                The block data.
+	 * @param array  $attributes           The block attributes.
+	 * @param array  $attributes_block     The block's attributes array.
+	 * @param array  $attribute_data       The attribute data.
+	 *
+	 * @return string The modified content.
+	 */
+	public static function replaceComponents(
+		$content,
+		$inner_blocks,
+		$is_editor_or_preview,
+		$block,
+		$attributes,
+		$attributes_block,
+		$attribute_data
+	) {
+		return self::replace_components(
+			$content,
+			$inner_blocks,
+			$is_editor_or_preview,
+			$block,
+			$attributes,
+			$attributes_block,
+			$attribute_data
+		);
+	}
+
+	/**
+	 * Transform attributes (legacy method name).
+	 *
+	 * @deprecated Use transform_attributes() instead.
+	 *
+	 * @param array      $attributes       The attributes (passed by reference).
+	 * @param array      $attribute_names  The attribute names (passed by reference).
+	 * @param array      $disabled         The disabled attributes.
+	 * @param string     $name             The block name.
+	 * @param mixed      $block            The block data.
+	 * @param array|bool $repeater         The repeater attributes.
+	 * @param array      $block_attributes The block attributes.
+	 * @param array      $attribute_data   The attribute data (passed by reference).
+	 *
+	 * @return array The transformed attribute data.
+	 */
+	public static function transformAttributes(
+		&$attributes,
+		&$attribute_names,
+		$disabled,
+		$name,
+		$block,
+		$repeater = false,
+		$block_attributes = array(),
+		&$attribute_data = array()
+	): array {
+		return self::transform_attributes(
+			$attributes,
+			$attribute_names,
+			$disabled,
+			$name,
+			$block,
+			$repeater,
+			$block_attributes,
+			$attribute_data
+		);
+	}
 }
