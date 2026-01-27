@@ -1,0 +1,26 @@
+{
+  "$schema": "https://app.blockstudio.dev/schema",
+  "name": "blockstudio/type-classes",
+  "title": "Native Classes",
+  "category": "blockstudio-test-native",
+  "icon": "star-filled",
+  "description": "Native Blockstudio Classes block.",
+  "keywords": [
+    "text",
+    "native",
+    "classes"
+  ],
+  "supports": {
+    "anchor": true
+  },
+  "blockstudio": {
+    "attributes": [
+      {
+        "id": "classes",
+        "type": "classes",
+        "label": "Class",
+        "default": "class-1 class-2"
+      }
+    ]
+  }
+}

@@ -1,0 +1,3 @@
+setTimeout(function () {
+  console.log("test native view");
+}, 2000);

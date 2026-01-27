@@ -1,0 +1,74 @@
+import { ReactNode } from 'react';
+import { PanelBody, TabPanel } from '@wordpress/components';
+import { Panel } from '@/blocks/components/Panel';
+import { dispatch } from '@/blocks/utils/dispatch';
+import { isAllowedToRender } from '@/blocks/utils/isAllowedToRender';
+import { BlockstudioAttribute } from '@/type/block';
+import {
+  Any,
+  BlockstudioBlock,
+  BlockstudioBlockAttributes,
+} from '@/type/types';
+
+export const El = ({
+  attributes,
+  block = null,
+  element,
+  item,
+  portal,
+}: {
+  attributes: BlockstudioBlockAttributes;
+  block?: BlockstudioBlock;
+  element: (item: BlockstudioAttribute) => ReactNode;
+  item: BlockstudioBlock['blockstudio']['attributes'][0];
+  portal?: boolean;
+}) => {
+  return item.type === 'group' ? (
+    <Panel {...{ item, element, isAllowedToRender, attributes, portal }} />
+  ) : item.type === 'tabs' ? (
+    <div className="blockstudio-fields__field--tabs">
+      <PanelBody opened={portal}>
+        <div>
+          <TabPanel
+            onSelect={() => {
+              dispatch(block, `tabs/${item.id}/change`);
+              if (item.key) {
+                dispatch(block, `tabs/${item.key}/change`);
+              }
+            }}
+            tabs={item.tabs.map(
+              (e: { title: string; attributes: Any }, i: number) => {
+                return {
+                  name: `tab-${i}`,
+                  title: e.title,
+                  attributes: e.attributes,
+                };
+              }
+            )}
+          >
+            {(tab) =>
+              tab.attributes.map(
+                (item: BlockstudioAttribute, index: number) => {
+                  if (!isAllowedToRender(item, attributes)) {
+                    return false;
+                  }
+
+                  return (
+                    <El
+                      key={`tab-child-${index}`}
+                      {...{ item, element, attributes }}
+                    />
+                  );
+                }
+              )
+            }
+          </TabPanel>
+        </div>
+      </PanelBody>
+    </div>
+  ) : (
+    isAllowedToRender(item, attributes) && (
+      <PanelBody>{element(item)}</PanelBody>
+    )
+  );
+};

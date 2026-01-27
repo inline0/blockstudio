@@ -1,0 +1,22 @@
+{
+  "$schema": "https://app.blockstudio.dev/schema",
+  "name": "blockstudio/type-datetime",
+  "title": "Native Datetime",
+  "category": "blockstudio-test-native",
+  "icon": "star-filled",
+  "description": "Native Blockstudio Datetime block.",
+  "keywords": [
+    "datetime",
+    "native"
+  ],
+  "blockstudio": {
+    "attributes": [
+      {
+        "id": "datetime",
+        "type": "datetime",
+        "label": "Datetime",
+        "default": "2023-03-14T11:14:03"
+      }
+    ]
+  }
+}

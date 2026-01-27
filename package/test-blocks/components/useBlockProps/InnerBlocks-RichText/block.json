@@ -1,0 +1,23 @@
+{
+  "$schema": "https://app.blockstudio.dev/schema",
+  "name": "blockstudio/component-useblockprops-innerblocks-richtext",
+  "title": "Native useBlockProps InnerBlocks RichText",
+  "category": "blockstudio-test-native",
+  "icon": "star-filled",
+  "description": "Native Blockstudio useBlockProps InnerBlocks RichText block.",
+  "keywords": [
+    "useblockprops",
+    "inner",
+    "innerblocks",
+    "richtext",
+    "native"
+  ],
+  "blockstudio": {
+    "attributes": [
+      {
+        "id": "richtext",
+        "type": "richtext"
+      }
+    ]
+  }
+}

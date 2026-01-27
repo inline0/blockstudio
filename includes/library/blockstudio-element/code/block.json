@@ -1,0 +1,109 @@
+{
+  "$schema": "https://app.blockstudio.dev/schema",
+  "apiVersion": 2,
+  "version": "1.0.0",
+  "textdomain": "blockstudio",
+  "name": "blockstudio-element/code",
+  "title": "Code",
+  "category": "blockstudio-elements",
+  "icon": "star-filled",
+  "description": "Highlight text like in a code editor.",
+  "keywords": [
+    "blockstudio",
+    "code"
+  ],
+  "example": {
+    "attributes": {
+      "language": {
+        "value": "javascript"
+      },
+      "code": "function highlightMe() { console.log('hello'); }",
+      "lineNumbers": true,
+      "copyButton": "true"
+    }
+  },
+  "blockstudio": {
+    "attributes": [
+      {
+        "type": "group",
+        "title": "Code",
+        "initialOpen": true,
+        "attributes": [
+          {
+            "id": "language",
+            "type": "select",
+            "label": "Language",
+            "options": [
+              {
+                "value": "html",
+                "label": "HTML"
+              },
+              {
+                "value": "css",
+                "label": "CSS"
+              },
+              {
+                "value": "scss",
+                "label": "SCSS"
+              },
+              {
+                "value": "javascript",
+                "label": "Javascript"
+              },
+              {
+                "value": "php",
+                "label": "PHP"
+              },
+              {
+                "value": "twig",
+                "label": "Twig"
+              },
+              {
+                "value": "json",
+                "label": "JSON"
+              }
+            ],
+            "default": "html"
+          },
+          {
+            "id": "code",
+            "type": "textarea",
+            "label": "Code"
+          }
+        ]
+      },
+      {
+        "type": "group",
+        "title": "Appearance",
+        "initialOpen": true,
+        "attributes": [
+          {
+            "type": "toggle",
+            "id": "lineNumbers",
+            "label": "Line Numbers"
+          },
+          {
+            "type": "toggle",
+            "id": "copyButton",
+            "label": "Copy Button"
+          },
+          {
+            "type": "text",
+            "id": "copyButtonText",
+            "label": "Copy Button Text",
+            "default": "Copy",
+            "conditions": [
+              [
+                {
+                  "id": "copyButton",
+                  "operator": "==",
+                  "value": true
+                }
+              ]
+            ]
+          }
+        ]
+      }
+    ]
+  }
+}

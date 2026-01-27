@@ -1,0 +1,261 @@
+{
+  "$schema": "https://app.blockstudio.dev/schema",
+  "name": "blockstudio/type-checkbox",
+  "title": "Native Checkbox",
+  "category": "blockstudio-test-native",
+  "icon": "star-filled",
+  "description": "Native Blockstudio Checkbox block.",
+  "keywords": [
+    "checkbox",
+    "native"
+  ],
+  "blockstudio": {
+    "attributes": [
+      {
+        "id": "defaultNumberBothWrongDefault",
+        "type": "checkbox",
+        "label": "Default - Number - Both - Wrong Default",
+        "options": [
+          {
+            "value": 1,
+            "label": "One"
+          },
+          {
+            "value": 2,
+            "label": "Two"
+          },
+          {
+            "value": 3,
+            "label": "Three"
+          }
+        ],
+        "default": "three-1",
+        "returnFormat": "both",
+        "toggle": true
+      },
+      {
+        "id": "defaultValueLabel",
+        "type": "checkbox",
+        "label": "Default - Label",
+        "options": [
+          {
+            "value": "one",
+            "label": "One"
+          },
+          {
+            "value": "two",
+            "label": "Two"
+          },
+          {
+            "value": "three",
+            "label": "Three"
+          }
+        ],
+        "default": "three",
+        "returnFormat": "label",
+        "toggle": "Custom toggle label"
+      },
+      {
+        "id": "defaultNumberArray",
+        "type": "checkbox",
+        "label": "Default - Number - Array",
+        "options": [
+          1,
+          2,
+          3
+        ],
+        "default": 3
+      },
+      {
+        "id": "defaultNumberArrayBoth",
+        "type": "checkbox",
+        "label": "Default - Number - Array - Both",
+        "options": [
+          1,
+          2,
+          3
+        ],
+        "default": 3,
+        "returnFormat": "both"
+      },
+      {
+        "id": "defaultValueStringNumber",
+        "type": "checkbox",
+        "label": "Default - String Number",
+        "options": [
+          {
+            "value": "1",
+            "label": "One"
+          },
+          {
+            "value": "2",
+            "label": "Two"
+          },
+          {
+            "value": "3",
+            "label": "Three"
+          }
+        ],
+        "default": "2"
+      },
+      {
+        "id": "defaultValueStringNumberBoth",
+        "type": "checkbox",
+        "label": "Default - String Number - Array - Both",
+        "options": [
+          "1",
+          "2",
+          "3"
+        ],
+        "default": "3",
+        "returnFormat": "both"
+      },
+      {
+        "id": "populateQuery",
+        "type": "checkbox",
+        "label": "Populate - Query",
+        "options": [
+          {
+            "value": "one",
+            "label": "One"
+          },
+          {
+            "value": "two",
+            "label": "Two"
+          },
+          {
+            "value": "three",
+            "label": "Three"
+          }
+        ],
+        "populate": {
+          "type": "query",
+          "query": "posts"
+        },
+        "default": 1388
+      },
+      {
+        "id": "populateQueryIdBefore",
+        "type": "checkbox",
+        "label": "Populate - Query ID - Before",
+        "options": [
+          {
+            "value": "one",
+            "label": "One"
+          },
+          {
+            "value": "two",
+            "label": "Two"
+          },
+          {
+            "value": "three",
+            "label": "Three"
+          }
+        ],
+        "populate": {
+          "type": "query",
+          "query": "posts",
+          "returnFormat": {
+            "value": "id",
+            "label": "post_name"
+          },
+          "position": "before"
+        },
+        "default": 1388
+      },
+      {
+        "id": "populateCustom",
+        "type": "checkbox",
+        "label": "Populate - Custom",
+        "options": [
+          {
+            "value": "one",
+            "label": "One"
+          },
+          {
+            "value": "two",
+            "label": "Two"
+          },
+          {
+            "value": "three",
+            "label": "Three"
+          }
+        ],
+        "populate": {
+          "type": "custom",
+          "custom": "default"
+        },
+        "default": "three"
+      },
+      {
+        "id": "populateCustomArrayBeforeBoth",
+        "type": "checkbox",
+        "label": "Populate - Custom - Array - Before - Both",
+        "options": [
+          "one",
+          "two",
+          "three"
+        ],
+        "populate": {
+          "type": "custom",
+          "custom": "array",
+          "position": "before"
+        },
+        "default": "three",
+        "returnFormat": "both"
+      },
+      {
+        "id": "populateCustomOnly",
+        "type": "checkbox",
+        "label": "Populate only - Custom - Array",
+        "populate": {
+          "type": "custom",
+          "custom": "array"
+        },
+        "default": "custom-1"
+      },
+      {
+        "id": "populateOnlyQuery",
+        "type": "checkbox",
+        "label": "Populate only - Query",
+        "populate": {
+          "type": "query",
+          "query": "posts"
+        },
+        "default": 1388
+      },
+      {
+        "id": "populateOnlyQueryUser",
+        "type": "checkbox",
+        "label": "Populate only - Query - User",
+        "populate": {
+          "type": "query",
+          "query": "users"
+        },
+        "default": 644
+      },
+      {
+        "id": "populateOnlyQueryTerm",
+        "type": "checkbox",
+        "label": "Populate only - Query - Term",
+        "populate": {
+          "type": "query",
+          "query": "terms"
+        },
+        "default": 6
+      },
+      {
+        "id": "populateNonExistingTerm",
+        "type": "checkbox",
+        "label": "Populate only - Query - Term",
+        "populate": {
+          "type": "query",
+          "query": "terms",
+          "arguments": {
+            "taxonomy": "non-existing"
+          }
+        }
+      }
+    ]
+  }
+}

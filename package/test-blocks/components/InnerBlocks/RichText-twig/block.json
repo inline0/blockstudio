@@ -1,0 +1,22 @@
+{
+  "$schema": "https://app.blockstudio.dev/schema",
+  "name": "blockstudio/component-innerblocks-richtext-twig",
+  "title": "Native InnerBlocks RichText Twig",
+  "category": "blockstudio-test-native",
+  "icon": "star-filled",
+  "description": "Native Blockstudio InnerBlocks RichText Twig block.",
+  "keywords": [
+    "inner",
+    "innerblocks",
+    "richtext",
+    "native"
+  ],
+  "blockstudio": {
+    "attributes": [
+      {
+        "id": "richtext",
+        "type": "richtext"
+      }
+    ]
+  }
+}

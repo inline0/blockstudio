@@ -1,0 +1,3 @@
+setTimeout(function () {
+  console.log("test native nested view");
+}, 2000);

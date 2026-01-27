@@ -1,0 +1,5 @@
+body:not(.wp-admin) {
+  h1 {
+    color: red;
+  }
+}

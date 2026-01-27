@@ -1,0 +1,15 @@
+{
+  "$schema": "https://app.blockstudio.dev/schema",
+  "name": "blockstudio/component-innerblocks-no-wrapper",
+  "title": "Native InnerBlocks no wrapper",
+  "category": "blockstudio-test-native",
+  "icon": "star-filled",
+  "description": "Native Blockstudio InnerBlocks no wrapper block.",
+  "keywords": [
+    "inner",
+    "innerblocks",
+    "no wrapper",
+    "native"
+  ],
+  "blockstudio": true
+}

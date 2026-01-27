@@ -1,0 +1,550 @@
+{
+  "$schema": "https://app.blockstudio.dev/schema",
+  "name": "blockstudio/native-nested",
+  "title": "Native Nested Block",
+  "category": "blockstudio-test-native",
+  "icon": "star-filled",
+  "description": "Native Blockstudio Nested block.",
+  "keywords": [
+    "block",
+    "native"
+  ],
+  "supports": {
+    "align": true
+  },
+  "example": {
+    "attributes": {
+      "group_message": "This is a group message",
+      "message": "This is a message"
+    }
+  },
+  "blockstudio": {
+    "attributes": [
+      {
+        "id": "group",
+        "type": "group",
+        "title": "Group",
+        "initialOpen": true,
+        "attributes": [
+          {
+            "id": "textConditionPostId",
+            "type": "text",
+            "label": "Message",
+            "conditions": [
+              [
+                {
+                  "type": "postId",
+                  "operator": "==",
+                  "value": "1386"
+                },
+                {
+                  "type": "postType",
+                  "operator": "==",
+                  "value": "test"
+                }
+              ]
+            ]
+          },
+          {
+            "id": "textConditionPostType",
+            "type": "text",
+            "label": "Message",
+            "conditions": [
+              [
+                {
+                  "type": "postType",
+                  "operator": "==",
+                  "value": "post"
+                },
+                {
+                  "type": "test",
+                  "operator": "==",
+                  "value": "0"
+                }
+              ]
+            ]
+          },
+          {
+            "id": "textConditionUserRole",
+            "type": "text",
+            "label": "Message",
+            "conditions": [
+              [
+                {
+                  "type": "userRole",
+                  "operator": "==",
+                  "value": "editor"
+                }
+              ],
+              [
+                {
+                  "type": "test",
+                  "operator": "==",
+                  "value": "0"
+                }
+              ]
+            ]
+          },
+          {
+            "id": "icon",
+            "type": "icon",
+            "label": "Icon"
+          },
+          {
+            "id": "link",
+            "type": "link",
+            "label": "Link",
+            "textButton": "Custom Link Button",
+            "opensInNewTab": true,
+            "hasRichPreviews": true,
+            "conditions": [
+              [
+                {
+                  "type": "postId",
+                  "operator": "==",
+                  "value": "1386"
+                },
+                {
+                  "type": "postType",
+                  "operator": "==",
+                  "value": "post"
+                },
+                {
+                  "type": "test",
+                  "operator": "==",
+                  "value": "1"
+                }
+              ]
+            ]
+          },
+          {
+            "id": "date",
+            "type": "date",
+            "label": "Date",
+            "conditions": [
+              [
+                {
+                  "type": "postType",
+                  "operator": "==",
+                  "value": "post"
+                }
+              ]
+            ]
+          },
+          {
+            "id": "datetime",
+            "type": "datetime",
+            "label": "Datetime"
+          },
+          {
+            "id": "files",
+            "type": "files",
+            "label": "Files",
+            "multiple": true,
+            "returnFormat": "id",
+            "textMediaButton": "Custom Media Button"
+          },
+          {
+            "id": "message",
+            "type": "text",
+            "label": "Message",
+            "max": 10,
+            "min": 5
+          },
+          {
+            "id": "textarea",
+            "type": "textarea",
+            "label": "Textarea"
+          },
+          {
+            "id": "number",
+            "type": "number",
+            "label": "Number"
+          },
+          {
+            "id": "toggle",
+            "type": "toggle",
+            "label": "Toggle"
+          },
+          {
+            "id": "range",
+            "type": "range",
+            "label": "Range",
+            "min": 10,
+            "max": 100
+          },
+          {
+            "id": "select",
+            "type": "select",
+            "label": "Select",
+            "options": [
+              {
+                "value": "one",
+                "label": "One"
+              },
+              {
+                "value": "two",
+                "label": "Two"
+              },
+              {
+                "value": "three",
+                "label": "Three"
+              }
+            ]
+          },
+          {
+            "id": "token",
+            "type": "token",
+            "label": "Token",
+            "options": [
+              {
+                "value": "one",
+                "label": "One"
+              },
+              {
+                "value": "two",
+                "label": "Two"
+              },
+              {
+                "value": "three",
+                "label": "Three"
+              }
+            ],
+            "returnFormat": "label"
+          },
+          {
+            "id": "checkbox",
+            "type": "checkbox",
+            "label": "Checkbox",
+            "options": [
+              {
+                "value": "one",
+                "label": "Checkbox One"
+              },
+              {
+                "value": "two",
+                "label": "Checkbox Two"
+              },
+              {
+                "value": "three",
+                "label": "Checkbox Three"
+              }
+            ],
+            "returnFormat": "both"
+          },
+          {
+            "id": "radio",
+            "type": "radio",
+            "label": "Radio",
+            "options": [
+              {
+                "value": "one",
+                "label": "One"
+              },
+              {
+                "value": "two",
+                "label": "Two"
+              },
+              {
+                "value": "three",
+                "label": "Three"
+              }
+            ]
+          },
+          {
+            "id": "color",
+            "type": "color",
+            "label": "Color",
+            "options": [
+              {
+                "name": "red",
+                "value": "#f00",
+                "slug": "red"
+              },
+              {
+                "name": "white",
+                "value": "#fff",
+                "slug": "white"
+              },
+              {
+                "name": "blue",
+                "value": "#00f",
+                "slug": "blue"
+              }
+            ]
+          },
+          {
+            "id": "gradient",
+            "type": "gradient",
+            "label": "Gradient",
+            "options": [
+              {
+                "name": "JShine",
+                "value": "linear-gradient(135deg,#12c2e9 0%,#c471ed 50%,#f64f59 100%)",
+                "slug": "jshine"
+              },
+              {
+                "name": "Moonlit Asteroid",
+                "value": "linear-gradient(135deg,#0F2027 0%, #203A43 0%, #2c5364 100%)",
+                "slug": "moonlit-asteroid"
+              },
+              {
+                "name": "Rastafarie",
+                "value": "linear-gradient(135deg,#1E9600 0%, #FFF200 0%, #FF0000 100%)",
+                "slug": "rastafari"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "id": "textConditionPostId",
+        "type": "text",
+        "label": "Message",
+        "conditions": [
+          [
+            {
+              "type": "postId",
+              "operator": "==",
+              "value": "1386"
+            },
+            {
+              "type": "postType",
+              "operator": "==",
+              "value": "test"
+            }
+          ]
+        ]
+      },
+      {
+        "id": "textConditionPostType",
+        "type": "text",
+        "label": "Message",
+        "conditions": [
+          [
+            {
+              "type": "postType",
+              "operator": "==",
+              "value": "test"
+            }
+          ]
+        ]
+      },
+      {
+        "id": "textConditionUserRole",
+        "type": "text",
+        "label": "Message",
+        "conditions": [
+          [
+            {
+              "type": "userRole",
+              "operator": "==",
+              "value": "editor"
+            }
+          ]
+        ]
+      },
+      {
+        "id": "icon",
+        "type": "icon",
+        "label": "Icon",
+        "sets": "heroicons",
+        "subSets": "solid"
+      },
+      {
+        "id": "link",
+        "type": "link",
+        "label": "Link",
+        "opensInNewTab": true,
+        "conditions": [
+          [
+            {
+              "type": "postId",
+              "operator": "==",
+              "value": "1386"
+            },
+            {
+              "type": "postType",
+              "operator": "==",
+              "value": "post"
+            }
+          ]
+        ]
+      },
+      {
+        "id": "date",
+        "type": "date",
+        "label": "Date",
+        "conditions": [
+          [
+            {
+              "type": "postType",
+              "operator": "==",
+              "value": "post"
+            }
+          ]
+        ]
+      },
+      {
+        "id": "datetime",
+        "type": "datetime",
+        "label": "Datetime"
+      },
+      {
+        "id": "files",
+        "type": "files",
+        "label": "Files",
+        "multiple": true
+      },
+      {
+        "id": "message",
+        "type": "text",
+        "label": "Message"
+      },
+      {
+        "id": "textarea",
+        "type": "textarea",
+        "label": "Textarea"
+      },
+      {
+        "id": "number",
+        "type": "number",
+        "label": "Number"
+      },
+      {
+        "id": "toggle",
+        "type": "toggle",
+        "label": "Toggle"
+      },
+      {
+        "id": "range",
+        "type": "range",
+        "label": "Range",
+        "min": 10,
+        "max": 100
+      },
+      {
+        "id": "select",
+        "type": "select",
+        "label": "Select",
+        "options": [
+          {
+            "value": "one",
+            "label": "One"
+          },
+          {
+            "value": "two",
+            "label": "Two"
+          },
+          {
+            "value": "three",
+            "label": "Three"
+          }
+        ]
+      },
+      {
+        "id": "token",
+        "type": "token",
+        "label": "Token",
+        "options": [
+          {
+            "value": "one",
+            "label": "One"
+          },
+          {
+            "value": "two",
+            "label": "Two"
+          },
+          {
+            "value": "three",
+            "label": "Three"
+          }
+        ],
+        "returnFormat": "label"
+      },
+      {
+        "id": "checkbox",
+        "type": "checkbox",
+        "label": "Checkbox",
+        "options": [
+          {
+            "value": "one",
+            "label": "Checkbox One"
+          },
+          {
+            "value": "two",
+            "label": "Checkbox Two"
+          },
+          {
+            "value": "three",
+            "label": "Checkbox Three"
+          }
+        ],
+        "returnFormat": "both"
+      },
+      {
+        "id": "radio",
+        "type": "radio",
+        "label": "Radio",
+        "options": [
+          {
+            "value": "one",
+            "label": "One"
+          },
+          {
+            "value": "two",
+            "label": "Two"
+          },
+          {
+            "value": "three",
+            "label": "Three"
+          }
+        ]
+      },
+      {
+        "id": "color",
+        "type": "color",
+        "label": "Color",
+        "options": [
+          {
+            "name": "red",
+            "value": "#f00",
+            "slug": "red"
+          },
+          {
+            "name": "white",
+            "value": "#fff",
+            "slug": "white"
+          },
+          {
+            "name": "blue",
+            "value": "#00f",
+            "slug": "blue"
+          }
+        ]
+      },
+      {
+        "id": "gradient",
+        "type": "gradient",
+        "label": "Gradient",
+        "options": [
+          {
+            "name": "JShine",
+            "value": "linear-gradient(135deg,#12c2e9 0%,#c471ed 50%,#f64f59 100%)",
+            "slug": "jshine"
+          },
+          {
+            "name": "Moonlit Asteroid",
+            "value": "linear-gradient(135deg,#0F2027 0%, #203A43 0%, #2c5364 100%)",
+            "slug": "moonlit-asteroid"
+          },
+          {
+            "name": "Rastafarie",
+            "value": "linear-gradient(135deg,#1E9600 0%, #FFF200 0%, #FF0000 100%)",
+            "slug": "rastafari"
+          }
+        ]
+      }
+    ]
+  }
+}

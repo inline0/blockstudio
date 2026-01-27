@@ -1,0 +1,9 @@
+{
+   "$schema": "https://app.blockstudio.dev/schema",
+   "apiVersion": 2,
+   "name": "blockstudio/assets-dist",
+   "title": "Native Assets dist",
+   "category": "blockstudio-test-native",
+   "icon": "star-filled",
+   "blockstudio": true
+}

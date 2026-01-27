@@ -1,0 +1,33 @@
+{
+  "name": "fabrikat/blockstudio",
+  "description": "The block framework for WordPress.",
+  "minimum-stability": "stable",
+  "license": "proprietary",
+  "authors": [
+    {
+      "name": "dennis",
+      "email": "dnnsjsk@gmail.com"
+    }
+  ],
+  "require": {
+    "ext-dom": "*",
+    "ext-json": "*",
+    "ext-zip": "*",
+    "ext-simplexml": "*",
+    "ext-libxml": "*",
+    "ext-iconv": "*"
+  },
+  "scripts": {
+    "scope": "vendor/bin/php-scoper add-prefix --output-dir=lib --force"
+  },
+  "autoload": {
+    "classmap": [
+      "lib/"
+    ]
+  },
+  "config": {
+    "allow-plugins": {
+      "composer/installers": true
+    }
+  }
+}

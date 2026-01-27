@@ -1,0 +1,506 @@
+import { Browser, expect, Frame, Page, test } from '@playwright/test';
+
+export const count = async (
+  page: Page | Frame,
+  selector: string,
+  count: number
+) => {
+  await expect(
+    typeof selector === 'string' ? page.locator(selector) : selector
+  ).toHaveCount(count);
+};
+
+export const text = async (page: Page, value: string) => {
+  const wait = await page.waitForFunction(
+    (value: string) => document.documentElement.innerHTML.includes(value),
+    value,
+    {
+      timeout: 30000,
+    }
+  );
+  await wait;
+  const val = (
+    await page.evaluate(() => document.documentElement.innerHTML)
+  ).includes(value);
+
+  return expect(val).toBeTruthy();
+};
+
+export const countText = async (page: Page, value: string, count: unknown) => {
+  const regexPattern = new RegExp(
+    value.replace(/([.*+?^=!:${}()|[\]/\\])/g, '\\$1'),
+    'g'
+  );
+
+  const wait = await page.waitForFunction(
+    ({ regexPattern, count }) =>
+      (
+        document
+          .querySelector('.is-root-container')
+          .innerHTML.match(regexPattern) || []
+      ).length === count,
+    { regexPattern, count },
+    {
+      timeout: 30000,
+    }
+  );
+  await wait;
+
+  const val = (
+    (await page.locator('.is-root-container').innerHTML()).match(
+      regexPattern
+    ) || []
+  ).length;
+
+  return expect(val).toBe(count);
+};
+
+export const innerHTML = async (
+  page: Page,
+  selector: string,
+  content: string,
+  first = true
+) => {
+  if (first) {
+    await expect(page.locator(selector).first()).toHaveText(content);
+  } else {
+    await expect(page.locator(selector).last()).toHaveText(content);
+  }
+};
+
+export const checkStyle = async (
+  page: Page | Frame,
+  selector: string,
+  type: string,
+  value: string,
+  not = false
+) => {
+  await page.waitForSelector(selector);
+
+  if (not) {
+    expect(
+      await page.$eval(selector, (e, type) => getComputedStyle(e)[type], type)
+    ).not.toBe(value);
+  } else {
+    expect(
+      await page.$eval(selector, (e, type) => getComputedStyle(e)[type], type)
+    ).toBe(value);
+  }
+};
+
+export const pBlocks = async (
+  browser: Browser,
+  url = 'https://fabrikat.local/blockstudio/wp-admin/post.php?post=1483&action=edit',
+  wait = '.wp-block-post-title',
+  remove = true
+) => {
+  const context = await browser.newContext();
+  const page = await context.newPage();
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  await page.goto(url);
+  await page.fill('#user_login', 'testuser');
+  await page.fill('#user_pass', 'testuser');
+  await page.click('#wp-submit');
+  await page.locator(wait).waitFor({ state: 'visible' });
+  const modal = await page.$('text=Welcome to the block editor');
+  if (modal) {
+    await page.click(
+      '.components-modal__screen-overlay .components-button.has-icon'
+    );
+  }
+  await count(page, '.is-root-container', 1);
+  if (remove) {
+    await removeBlocks(page);
+  }
+  return page;
+};
+
+export const pEditor = async (browser: Browser) => {
+  const context = await browser.newContext();
+  const page = await context.newPage();
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  page.on('dialog', async (dialog: any) => {
+    await dialog.accept();
+  });
+  await page.goto(`https://fabrikat.local/blockstudio/wp-admin`);
+  await page.fill('#user_login', 'testuser');
+  await page.fill('#user_pass', 'testuser');
+  await page.click('#wp-submit');
+  await page.goto(
+    'https://fabrikat.local/blockstudio/wp-admin/admin.php?page=blockstudio#/editor'
+  );
+  await page
+    .locator('#instance-plugins-blockstudio-package-test-blocks')
+    .first()
+    .waitFor({ state: 'visible' });
+
+  return page;
+};
+
+export const removeBlocks = async (page: Page) => {
+  const root = await page.$('.is-root-container');
+  if (root) {
+    await page.click('.is-root-container');
+  } else {
+    await page.reload({ waitUntil: 'load' });
+    await removeBlocks(page);
+  }
+  await page.evaluate(() => {
+    (window as any).wp.data.dispatch('core/block-editor').resetBlocks([]);
+  });
+};
+
+export const delay = (ms: number) =>
+  new Promise((resolve) => setTimeout(resolve, ms));
+
+export const save = async (page: Page) => {
+  await page.click('.editor-post-publish-button');
+  await count(page, '.components-snackbar', 1);
+};
+
+export const saveAndReload = async (page: Page) => {
+  const reloadAndCheck = async () => {
+    await page.reload();
+    if (!(await page.$('.wp-block-post-title'))) {
+      await reloadAndCheck();
+    }
+  };
+
+  await save(page);
+  await reloadAndCheck();
+
+  await page.locator('.wp-block-post-title').waitFor({ state: 'visible' });
+  await count(page, '.is-root-container', 1);
+};
+
+export const clickEditorToolbar = async (
+  page: Page,
+  type: string,
+  show: boolean
+) => {
+  const toolbarSelector = `#blockstudio-editor-toolbar-${type}`;
+  const elementSelector = `#blockstudio-editor-${type}`;
+  const el = await page.$(elementSelector);
+  if (!el && show) {
+    await page.click(toolbarSelector);
+    await delay(1000);
+    await count(page, elementSelector, 1);
+  }
+  if (el && !show) {
+    await page.click(toolbarSelector);
+    await delay(1000);
+    await count(page, elementSelector, 0);
+  }
+};
+
+export const openBlockInserter = async (page: Page) => {
+  async function openInserter() {
+    const sidebar = await page.$('.block-editor-inserter__block-list');
+    if (!sidebar) {
+      await page.click('.editor-document-tools__inserter-toggle');
+      await openInserter();
+    }
+  }
+
+  await openInserter();
+  await count(page, '.block-editor-inserter__block-list', 1);
+};
+
+export const openSidebar = async (page: Page) => {
+  if (!(await page.$('.blockstudio-fields'))) {
+    await page.click('[aria-controls="edit-post:block"]');
+  }
+};
+
+export const addBlock = async (page: Page, type: string) => {
+  await openBlockInserter(page);
+  await delay(1000);
+  await page.click(`.editor-block-list-item-blockstudio-${type}`);
+};
+
+export const searchForBlock = async (
+  page: Page,
+  type: string,
+  selector: string
+) => {
+  await page.fill('[placeholder="Search"]', type);
+  await page.locator(selector).click();
+};
+
+export const checkForLeftoverAttributes = async (page: Page) => {
+  for (const item of [
+    // General
+    'useBlockProps',
+    'tag',
+    // InnerBlocks
+    'allowedBlocks',
+    'renderAppender',
+    'template',
+    'templateLock',
+    // RichText
+    'attribute',
+    'placeholder',
+    'allowedFormats',
+    'autocompleters',
+    'multiline',
+    'preserveWhiteSpace',
+    'withoutInteractiveFormatting',
+  ]) {
+    await count(page, `[${item.toLowerCase()}]`, 0);
+  }
+};
+
+export const testType = async (
+  field: string,
+  def: any = false,
+  cb: any = false,
+  remove = true
+) => {
+  let page: Page;
+
+  test.describe.configure({ mode: 'serial' });
+
+  test.beforeAll(async ({ browser }) => {
+    page = await pBlocks(browser);
+    await page.setViewportSize({ width: 1920, height: 1080 });
+  });
+
+  test.afterAll(async () => {
+    await page.close();
+  });
+
+  test.describe(field, () => {
+    test.describe('defaults', () => {
+      test('add block', async () => {
+        await openBlockInserter(page);
+        await addBlock(page, `type-${field}`);
+        await count(page, '.is-root-container > .wp-block', 1);
+      });
+
+      test('has correct defaults', async () => {
+        if (def) {
+          await text(page, `${def}`);
+        }
+      });
+
+      test('remove block', async () => {
+        await removeBlocks(page);
+      });
+    });
+
+    test.describe('fields', () => {
+      ['outer', 'inner'].forEach((type) => {
+        test.describe(type, () => {
+          if (type === 'outer') {
+            test('add block', async () => {
+              await addBlock(page, `type-${field}`);
+              await count(page, '.is-root-container > .wp-block', 1);
+              await openSidebar(page);
+            });
+          } else {
+            test('add InnerBlocks', async () => {
+              await page.click('.wp-block');
+              await removeBlocks(page);
+              await addBlock(page, 'component-innerblocks-bare-spaceless');
+              await count(page, '.is-root-container > .wp-block', 1);
+              await page.click(
+                '.editor-document-tools__document-overview-toggle'
+              );
+              await page.click(
+                '[aria-label="Native InnerBlocks bare spaceless"]'
+              );
+              await page.click('.editor-document-tools__inserter-toggle');
+              await page.click(
+                `.editor-block-list-item-blockstudio-type-${field}`
+              );
+              await delay(2000);
+            });
+          }
+
+          if (cb && typeof cb === 'function') {
+            if (type === 'inner' && field === 'repeater') {
+              return;
+            }
+
+            const testItems = cb(page);
+            if (Array.isArray(testItems)) {
+              for (const testItem of testItems) {
+                if (
+                  Array.isArray(testItem.params) &&
+                  typeof testItem.generateTestCases === 'function'
+                ) {
+                  for (const param of testItem.params) {
+                    const testCases = testItem.generateTestCases(param);
+                    if (Array.isArray(testCases)) {
+                      for (const testCase of testCases) {
+                        if (
+                          testCase.groupName &&
+                          Array.isArray(testCase.testCases)
+                        ) {
+                          test.describe(testCase.groupName, () => {
+                            for (const nestedTestCase of testCase.testCases) {
+                              const { description, testFunction } =
+                                nestedTestCase;
+                              test(description, async () => {
+                                await testFunction(page);
+                              });
+                            }
+                          });
+                        }
+                      }
+                    }
+                  }
+                } else if (
+                  testItem.groupName &&
+                  Array.isArray(testItem.testCases)
+                ) {
+                  test.describe(testItem.groupName, () => {
+                    for (const testCase of testItem.testCases) {
+                      const { description, testFunction } = testCase;
+                      test(description, async () => {
+                        await testFunction(page);
+                      });
+                    }
+                  });
+                } else if (
+                  testItem.description &&
+                  typeof testItem.testFunction === 'function'
+                ) {
+                  test(testItem.description, async () => {
+                    await testItem.testFunction(page);
+                  });
+                }
+              }
+            }
+          }
+        });
+      });
+
+      if (remove) {
+        test('remove block', async () => {
+          await removeBlocks(page);
+        });
+      }
+    });
+  });
+};
+
+export const testContext = async (type: string, cb: any = false) => {
+  let page: Page;
+
+  test.beforeAll(async ({ browser }) => {
+    page = await pEditor(browser);
+  });
+
+  test.afterAll(async () => {
+    await page.close();
+  });
+
+  test.describe(type, async () => {
+    test.describe('open structure', () => {
+      test('open first level', async () => {
+        await page.click('#instance-plugins-blockstudio-includes-library');
+        await count(
+          page,
+          '#folder-plugins-blockstudio-includes-library-blockstudio-element',
+          1
+        );
+      });
+
+      test('open second level', async () => {
+        await page.click(
+          '#folder-plugins-blockstudio-includes-library-blockstudio-element'
+        );
+        await count(
+          page,
+          '#folder-plugins-blockstudio-includes-library-blockstudio-element-code',
+          1
+        );
+      });
+
+      test('open third level', async () => {
+        await page.click(
+          '#folder-plugins-blockstudio-includes-library-blockstudio-element-code'
+        );
+        await count(
+          page,
+          '#file-plugins-blockstudio-includes-library-blockstudio-element-code-block-json',
+          1
+        );
+      });
+    });
+
+    if (cb && typeof cb === 'function') {
+      const testItems = cb(page);
+      if (Array.isArray(testItems)) {
+        for (const testItem of testItems) {
+          if (
+            Array.isArray(testItem.params) &&
+            typeof testItem.generateTestCases === 'function'
+          ) {
+            for (const param of testItem.params) {
+              const testCases = testItem.generateTestCases(param);
+              if (Array.isArray(testCases)) {
+                for (const testCase of testCases) {
+                  if (testCase.groupName && Array.isArray(testCase.testCases)) {
+                    test.describe(testCase.groupName, () => {
+                      for (const nestedTestCase of testCase.testCases) {
+                        const { description, testFunction } = nestedTestCase;
+                        test(description, async () => {
+                          await testFunction(page);
+                        });
+                      }
+                    });
+                  }
+                }
+              }
+            }
+          } else if (testItem.groupName && Array.isArray(testItem.testCases)) {
+            test.describe(testItem.groupName, () => {
+              for (const testCase of testItem.testCases) {
+                const { description, testFunction } = testCase;
+                test(description, async () => {
+                  await testFunction(page);
+                });
+              }
+            });
+          } else if (
+            testItem.description &&
+            typeof testItem.testFunction === 'function'
+          ) {
+            test(testItem.description, async () => {
+              await testItem.testFunction(page);
+            });
+          }
+        }
+      }
+    }
+  });
+};
+
+export const getFrame = async (page: Page, name: string) => {
+  await page.waitForSelector(`[name="${name}"]`);
+  const frame = page.frame(name);
+  await frame.waitForLoadState('domcontentloaded');
+  await frame.waitForTimeout(2000);
+
+  return frame;
+};
+
+export const addTailwindClass = async (
+  page: Page,
+  selector: string,
+  className: string
+) => {
+  if (!(await page.$('.editor-list-view-sidebar'))) {
+    await page.click('.editor-document-tools__document-overview-toggle');
+  }
+  await page.click(`.block-editor-list-view-block__contents-container`);
+  await page.click('.blockstudio-builder__controls [role="combobox"]');
+  await page.fill(
+    '.blockstudio-builder__controls [role="combobox"]',
+    className
+  );
+  await page.keyboard.press('ArrowDown');
+  await page.keyboard.press('Enter');
+};

@@ -1,0 +1,40 @@
+{
+  "$schema": "https://app.blockstudio.dev/schema",
+  "name": "blockstudio/type-group",
+  "title": "Native Group Override",
+  "blockstudio": {
+    "override": true,
+    "attributes": [
+      {
+        "id": "text",
+        "type": "text",
+        "default": "Override test",
+        "label": "Override label"
+      },
+      {
+        "id": "group",
+        "type": "group",
+        "attributes": [
+          {
+            "id": "text",
+            "type": "text",
+            "default": "Override ID test",
+            "label": "Override ID label"
+          }
+        ]
+      },
+      {
+        "type": "group",
+        "title": "Added",
+        "attributes": [
+          {
+            "id": "addedText",
+            "type": "text",
+            "label": "Added text",
+            "default": "Added test"
+          }
+        ]
+      }
+    ]
+  }
+}

@@ -1,0 +1,275 @@
+{
+  "$schema": "https://app.blockstudio.dev/schema",
+  "name": "blockstudio/type-repeater",
+  "title": "Native Repeater",
+  "category": "blockstudio-test-native",
+  "icon": "star-filled",
+  "description": "Native Blockstudio Repeater block.",
+  "keywords": ["native", "repeater"],
+  "blockstudio": {
+    "conditions": [
+      [
+        {
+          "type": "postType",
+          "operator": "==",
+          "value": "post"
+        }
+      ]
+    ],
+    "attributes": [
+      {
+        "id": "text",
+        "type": "text",
+        "label": "Text"
+      },
+      {
+        "id": "repeater",
+        "type": "repeater",
+        "label": "Repeater",
+        "min": 1,
+        "textButton": "Add repeater 1",
+        "attributes": [
+          {
+            "id": "groupShouldntBeHere",
+            "type": "group",
+            "label": "Group Inner",
+            "attributes": [
+              {
+                "id": "text",
+                "type": "text",
+                "label": "Text"
+              },
+              {
+                "id": "group",
+                "type": "group",
+                "label": "Group",
+                "attributes": [
+                  {
+                    "id": "text",
+                    "type": "text",
+                    "label": "Text"
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "id": "files",
+            "type": "files",
+            "label": "Files",
+            "max": 4,
+            "multiple": true,
+            "size": true
+          },
+          {
+            "id": "defaultValueLabel",
+            "type": "select",
+            "label": "Default - Label",
+            "options": [
+              {
+                "value": "one",
+                "label": "One"
+              },
+              {
+                "value": "two",
+                "label": "Two"
+              },
+              {
+                "value": "three",
+                "label": "Three"
+              }
+            ],
+            "default": "three",
+            "returnFormat": "label"
+          },
+          {
+            "id": "color",
+            "type": "color",
+            "label": "Color",
+            "options": [
+              {
+                "name": "red",
+                "value": "#f00",
+                "slug": "red"
+              },
+              {
+                "name": "white",
+                "value": "#fff",
+                "slug": "white"
+              },
+              {
+                "name": "blue",
+                "value": "#00f",
+                "slug": "blue"
+              }
+            ],
+            "default": "#f00"
+          },
+          {
+            "id": "text",
+            "type": "text",
+            "label": "Text",
+            "default": "test"
+          },
+          {
+            "id": "wysiwyg",
+            "type": "wysiwyg",
+            "label": "WYSIWYG",
+            "toolbar": {
+              "tags": {
+                "headings": [1, 2, 3, 4, 5, 6]
+              },
+              "formats": {
+                "bold": true,
+                "italic": true,
+                "orderedList": true,
+                "strikethrough": true,
+                "underline": true,
+                "unorderedList": true
+              }
+            }
+          },
+          {
+            "id": "repeater",
+            "type": "repeater",
+            "label": "Repeater Minimized",
+            "min": 1,
+            "max": 2,
+            "textButton": "Add repeater 2",
+            "textMinimized": {
+              "id": "number",
+              "fallback": "Fallback value",
+              "prefix": "Prefix: ",
+              "suffix": " - Suffix"
+            },
+            "attributes": [
+              {
+                "id": "groupShouldntBeHere",
+                "type": "group",
+                "label": "Group Inner",
+                "attributes": [
+                  {
+                    "id": "text",
+                    "type": "text",
+                    "label": "Text"
+                  },
+                  {
+                    "id": "group",
+                    "type": "group",
+                    "label": "Group",
+                    "attributes": [
+                      {
+                        "id": "text",
+                        "type": "text",
+                        "label": "Text"
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "id": "files",
+                "type": "files",
+                "label": "Files",
+                "max": 2,
+                "multiple": true
+              },
+              {
+                "id": "defaultValueLabel",
+                "type": "select",
+                "label": "Default - Label",
+                "options": [
+                  {
+                    "value": "one",
+                    "label": "One"
+                  },
+                  {
+                    "value": "two",
+                    "label": "Two"
+                  },
+                  {
+                    "value": "three",
+                    "label": "Three"
+                  }
+                ],
+                "default": "three",
+                "returnFormat": "label"
+              },
+              {
+                "id": "populateCustom",
+                "type": "select",
+                "label": "Populate - Custom",
+                "options": [
+                  {
+                    "value": "one",
+                    "label": "One"
+                  },
+                  {
+                    "value": "two",
+                    "label": "Two"
+                  },
+                  {
+                    "value": "three",
+                    "label": "Three"
+                  }
+                ],
+                "populate": {
+                  "type": "custom",
+                  "custom": "default"
+                },
+                "default": "three"
+              },
+              {
+                "id": "number",
+                "type": "number",
+                "label": "Number",
+                "default": 10
+              },
+              {
+                "id": "repeater",
+                "type": "repeater",
+                "label": "Repeater",
+                "min": 2,
+                "max": 3,
+                "textButton": "Add repeater 3",
+                "textMinimized": "Minimized element",
+                "attributes": [
+                  {
+                    "id": "groupShouldntBeHere",
+                    "type": "group",
+                    "label": "Group Inner",
+                    "attributes": [
+                      {
+                        "id": "text",
+                        "type": "text",
+                        "label": "Text"
+                      },
+                      {
+                        "id": "group",
+                        "type": "group",
+                        "label": "Group",
+                        "attributes": [
+                          {
+                            "id": "text",
+                            "type": "text",
+                            "label": "Text"
+                          }
+                        ]
+                      }
+                    ]
+                  },
+                  {
+                    "id": "range",
+                    "type": "range",
+                    "label": "Range",
+                    "default": 50
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  }
+}

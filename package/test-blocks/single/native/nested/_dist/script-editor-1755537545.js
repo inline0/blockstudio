@@ -1,0 +1,1 @@
+setTimeout(function(){console.log("test native nested editor")},2000)

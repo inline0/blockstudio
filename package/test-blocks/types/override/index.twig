@@ -1,0 +1,26 @@
+{% if isPreview %}
+    <div class="blockstudio-element__preview">
+        {{ fn('__', 'Gallery', 'blockstudio') }}
+    </div>
+{% elseif a.images %}
+    <div
+            class="blockstudio-element-gallery blockstudio-element-gallery--{{ a.type }}"
+            style="
+                    --blockstudio-element-gallery--width: {{ a.width }}px;
+                    --blockstudio-element-gallery--gap: {{ a.gap }}px;
+                    ">
+        {% for image in a.images %}
+            <div class="blockstudio-element-gallery__content">
+                {% block image %}
+                    <img
+                            src="{{ image.url }}"
+                            class="blockstudio-element-gallery__image"/>
+                {% endblock %}
+            </div>
+        {% endfor %}
+    </div>
+{% elseif isEditor %}
+    <div class="blockstudio-element__placeholder">
+        {{ fn('__', 'No images selected', 'blockstudio') }}
+    </div>
+{% endif %}

@@ -1,0 +1,41 @@
+{
+  "$schema": "https://app.blockstudio.dev/schema",
+  "name": "blockstudio/component-richtext-bare",
+  "title": "Native RichText bare",
+  "category": "blockstudio-test-native",
+  "icon": "star-filled",
+  "description": "Native Blockstudio RichText bare block.",
+  "keywords": [
+    "richtext",
+    "bare",
+    "native"
+  ],
+  "blockstudio": {
+    "attributes": [
+      {
+        "id": "richtext",
+        "type": "richtext"
+      },
+      {
+        "id": "richtext2",
+        "type": "richtext"
+      },
+      {
+        "id": "color",
+        "type": "color",
+        "options": [
+          {
+            "name": "red",
+            "value": "#f00",
+            "slug": "red"
+          },
+          {
+            "name": "blue",
+            "value": "#00f",
+            "slug": "blue"
+          }
+        ]
+      }
+    ]
+  }
+}
