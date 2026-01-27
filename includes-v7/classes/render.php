@@ -1,70 +1,70 @@
 <?php
+/**
+ * Render class.
+ *
+ * @package Blockstudio
+ */
 
 namespace Blockstudio;
 
 /**
- * Block class.
- *
- * @date   24/02/2022
- * @since  2.2.0
+ * Handles block rendering.
  */
-class Render
-{
-    /**
-     * Render block function.
-     *
-     * @date   24/02/2022
-     * @since  2.2.0
-     *
-     * @param  $value
-     *
-     * @return false|string|void
-     */
-    public static function block($value)
-    {
-        $data = [];
-        $content = false;
+class Render {
 
-        if (is_array($value)) {
-            $name = $value['name'] ?? $value['id'];
-            $data = $value['data'] ?? [];
-            $content = $value['content'] ?? false;
-        } else {
-            $name = $value;
-        }
+	/**
+	 * Render a block by name or configuration.
+	 *
+	 * @param string|array $value Block name or configuration array.
+	 *
+	 * @return false|string|void Returns HTML string, false on failure, or void when echoing.
+	 */
+	public static function block( $value ) {
+		$data    = array();
+		$content = false;
 
-        $blocks = Build::data();
+		if ( is_array( $value ) ) {
+			$name    = $value['name'] ?? $value['id'];
+			$data    = $value['data'] ?? array();
+			$content = $value['content'] ?? false;
+		} else {
+			$name = $value;
+		}
 
-        if (
-            !isset($blocks[$name]['path']) &&
-            !isset($data['_BLOCKSTUDIO_EDITOR_STRING'])
-        ) {
-            return false;
-        }
+		$blocks = Build::data();
 
-        $editor = $data['_BLOCKSTUDIO_EDITOR_STRING'] ?? false;
-        unset($data['_BLOCKSTUDIO_EDITOR_STRING']);
+		if (
+			! isset( $blocks[ $name ]['path'] ) &&
+			! isset( $data['_BLOCKSTUDIO_EDITOR_STRING'] )
+		) {
+			return false;
+		}
 
-        if ($editor) {
-            return Block::render([
-                'blockstudio' => [
-                    'editor' => $editor,
-                    'name' => $name,
-                    'attributes' => $data,
-                ],
-            ]);
-        } else {
-            echo Block::render(
-                [
-                    'blockstudio' => [
-                        'name' => $name,
-                        'attributes' => $data,
-                    ],
-                ],
-                '',
-                '',
-                $content
-            );
-        }
-    }
+		$editor = $data['_BLOCKSTUDIO_EDITOR_STRING'] ?? false;
+		unset( $data['_BLOCKSTUDIO_EDITOR_STRING'] );
+
+		if ( $editor ) {
+			return Block::render(
+				array(
+					'blockstudio' => array(
+						'editor'     => $editor,
+						'name'       => $name,
+						'attributes' => $data,
+					),
+				)
+			);
+		} else {
+			echo Block::render(
+				array(
+					'blockstudio' => array(
+						'name'       => $name,
+						'attributes' => $data,
+					),
+				),
+				'',
+				'',
+				$content
+			);
+		}
+	}
 }

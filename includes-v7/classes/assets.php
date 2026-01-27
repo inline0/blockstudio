@@ -823,14 +823,14 @@ class Assets
         );
         $compiledFilename = self::getCompiledFilename($path);
 
-        $cssModules = ESModulesCSS::fetchAllModulesAndWriteToFile(
+        $cssModules = ESModulesCSS::fetch_all_modules_and_write_to_file(
             $data,
             $pathinfo['dirname']
         );
         $hasCssModules = count($cssModules['objects']) >= 1;
 
         if ($hasCssModules) {
-            $data = ESModulesCSS::replaceModuleReferences($data);
+            $data = ESModulesCSS::replace_module_references($data);
         }
 
         $esModules = ESModules::fetchAllModulesAndWriteToFile(

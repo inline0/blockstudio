@@ -179,7 +179,7 @@ function bs_render_variables($data, array $allowed = [])
 
 function bs_data_attributes($data): string
 {
-    return Blockstudio\Utils::dataAttributes($data);
+    return Blockstudio\Utils::data_attributes($data);
 }
 
 /**
@@ -193,7 +193,7 @@ function bs_data_attributes($data): string
 
 function bs_render_data_attributes($data)
 {
-    echo Blockstudio\Utils::dataAttributes($data);
+    echo Blockstudio\Utils::data_attributes($data);
 }
 
 /**

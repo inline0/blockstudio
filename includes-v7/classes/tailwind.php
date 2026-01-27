@@ -1,122 +1,107 @@
 <?php
+/**
+ * Tailwind class.
+ *
+ * @package Blockstudio
+ */
 
 namespace Blockstudio;
 
 /**
- * Tailwind.
- *
- * @date   08/07/2024
- * @since  5.5.0
+ * Handles Tailwind CSS integration.
  */
-class Tailwind
-{
-    /**
-     * Construct.
-     *
-     * @date   05/03/2022
-     * @since  2.3.0
-     */
-    function __construct()
-    {
-        $enqueue = function () {
-            if (
-                Settings::get('tailwind/enabled') &&
-                file_exists(self::getCSSPath())
-            ) {
-                wp_enqueue_style(
-                    'blockstudio-tailwind',
-                    self::getCSSUrl(),
-                    [],
-                    filemtime(self::getCSSPath())
-                );
-            }
+class Tailwind {
 
-            if (Build::isTailwindActive()) {
-                $preflight =
-                    BLOCKSTUDIO_DIR .
-                    '/includes-v7/admin/assets/tailwind/preflight.css';
-                wp_enqueue_style(
-                    'blockstudio-tailwind-preflight',
-                    Files::getRelativeUrl($preflight),
-                    [],
-                    filemtime($preflight)
-                );
-                if (file_exists(self::getCSSPath(get_the_ID()))) {
-                    $id = get_the_ID();
-                    wp_enqueue_style(
-                        'blockstudio-tailwind-' . $id,
-                        self::getCSSUrl($id),
-                        [],
-                        filemtime(self::getCSSPath($id))
-                    );
-                }
-            }
-        };
+	/**
+	 * Constructor.
+	 */
+	public function __construct() {
+		add_action( 'wp_enqueue_scripts', array( $this, 'enqueue_styles' ) );
+		add_action( 'enqueue_block_assets', array( $this, 'enqueue_styles' ) );
+	}
 
-        add_action('wp_enqueue_scripts', $enqueue);
-        add_action('enqueue_block_assets', $enqueue);
-    }
+	/**
+	 * Enqueue Tailwind styles.
+	 *
+	 * @return void
+	 */
+	public function enqueue_styles(): void {
+		if (
+			Settings::get( 'tailwind/enabled' ) &&
+			file_exists( self::get_css_path() )
+		) {
+			wp_enqueue_style(
+				'blockstudio-tailwind',
+				self::get_css_url(),
+				array(),
+				filemtime( self::get_css_path() )
+			);
+		}
 
-    /**
-     * Get CDN URL.
-     *
-     * @date   08/07/2024
-     * @since  5.5.0
-     *
-     * @return string
-     */
-    public static function getCdnUrl(): string
-    {
-        $path = BLOCKSTUDIO_DIR . '/includes-v7/admin/assets/tailwind/cdn.js';
+		if ( Build::isTailwindActive() ) {
+			$preflight = BLOCKSTUDIO_DIR . '/includes-v7/admin/assets/tailwind/preflight.css';
+			wp_enqueue_style(
+				'blockstudio-tailwind-preflight',
+				Files::getRelativeUrl( $preflight ),
+				array(),
+				filemtime( $preflight )
+			);
+			if ( file_exists( self::get_css_path( get_the_ID() ) ) ) {
+				$id = get_the_ID();
+				wp_enqueue_style(
+					'blockstudio-tailwind-' . $id,
+					self::get_css_url( $id ),
+					array(),
+					filemtime( self::get_css_path( $id ) )
+				);
+			}
+		}
+	}
 
-        return Files::getRelativeUrl($path);
-    }
+	/**
+	 * Get Tailwind CDN URL.
+	 *
+	 * @return string The CDN URL.
+	 */
+	public static function get_cdn_url(): string {
+		$path = BLOCKSTUDIO_DIR . '/includes-v7/admin/assets/tailwind/cdn.js';
 
-    /**
-     * Get assets dir.
-     *
-     * @date   07/04/2023
-     * @since  5.5.0
-     *
-     * @return string
-     */
-    public static function getAssetsDir(): string
-    {
-        return apply_filters(
-            'blockstudio/tailwind/assets/dir',
-            wp_upload_dir()['basedir'] . '/blockstudio/tailwind'
-        );
-    }
+		return Files::getRelativeUrl( $path );
+	}
 
-    /**
-     * Get CSS path.
-     *
-     * @date   07/04/2023
-     * @since  5.5.0
-     *
-     * @param  string  $id
-     *
-     * @return string
-     */
-    public static function getCSSPath(string $id = 'editor'): string
-    {
-        return self::getAssetsDir() . "/$id.css";
-    }
+	/**
+	 * Get the Tailwind assets directory path.
+	 *
+	 * @return string The assets directory path.
+	 */
+	public static function get_assets_dir(): string {
+		return apply_filters(
+			'blockstudio/tailwind/assets/dir',
+			wp_upload_dir()['basedir'] . '/blockstudio/tailwind'
+		);
+	}
 
-    /**
-     * Get CSS url.
-     *
-     * @date   07/04/2023
-     * @since  5.5.0
-     *
-     * @param  string  $id
-     *
-     * @return string
-     */
-    public static function getCSSUrl(string $id = 'editor'): string
-    {
-        return Files::getRelativeUrl(self::getCSSPath($id));
-    }
+	/**
+	 * Get the CSS file path.
+	 *
+	 * @param string $id The identifier (default 'editor').
+	 *
+	 * @return string The CSS file path.
+	 */
+	public static function get_css_path( string $id = 'editor' ): string {
+		return self::get_assets_dir() . "/$id.css";
+	}
+
+	/**
+	 * Get the CSS file URL.
+	 *
+	 * @param string $id The identifier (default 'editor').
+	 *
+	 * @return string The CSS file URL.
+	 */
+	public static function get_css_url( string $id = 'editor' ): string {
+		return Files::getRelativeUrl( self::get_css_path( $id ) );
+	}
 }
 
 new Tailwind();

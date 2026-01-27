@@ -1304,7 +1304,7 @@ class Rest
             'error' => 'Tailwind compiling failed',
         ];
 
-        $path = Tailwind::getCSSPath($data['id'] ?? 'editor');
+        $path = Tailwind::get_css_path($data['id'] ?? 'editor');
         $dir = dirname($path);
 
         try {

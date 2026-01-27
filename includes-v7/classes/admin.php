@@ -530,7 +530,7 @@ class Admin
                 'postType' => $post->post_type ?? null,
                 'rest' => esc_url_raw(rest_url()),
                 'site' => site_url(),
-                'tailwindUrl' => Tailwind::getCdnUrl(),
+                'tailwindUrl' => Tailwind::get_cdn_url(),
                 'userId' => get_current_user_id() ?? null,
                 'userRole' => wp_get_current_user()->roles[0] ?? null,
             ],

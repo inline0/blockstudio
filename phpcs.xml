@@ -5,6 +5,18 @@
 	<!-- Only check migrated v7 code -->
 	<file>./blockstudio-v7.php</file>
 	<file>./includes-v7/class-plugin.php</file>
+	<file>./includes-v7/classes/utils.php</file>
+	<file>./includes-v7/classes/field.php</file>
+	<file>./includes-v7/classes/examples.php</file>
+	<file>./includes-v7/classes/configurator.php</file>
+	<file>./includes-v7/classes/register.php</file>
+	<file>./includes-v7/classes/render.php</file>
+	<file>./includes-v7/classes/library.php</file>
+	<file>./includes-v7/classes/builder.php</file>
+	<file>./includes-v7/classes/tailwind.php</file>
+	<file>./includes-v7/classes/migrate.php</file>
+	<file>./includes-v7/classes/populate.php</file>
+	<file>./includes-v7/classes/esmodulescss.php</file>
 
 	<!-- Exclude vendor and node_modules -->
 	<exclude-pattern>*/vendor/*</exclude-pattern>

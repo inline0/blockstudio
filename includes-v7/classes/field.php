@@ -1,37 +1,35 @@
 <?php
+/**
+ * Field class.
+ *
+ * @package Blockstudio
+ */
 
 namespace Blockstudio;
 
 /**
- * Field class.
- *
- * @date   21/08/2022
- * @since  2.6.0
+ * Field helper utilities.
  */
-class Field
-{
-    /**
-     * Get group.
-     *
-     * @date   21/08/2022
-     * @since  2.6.0
-     *
-     * @param  $attributes
-     * @param  $group
-     *
-     * @return array
-     */
-    public static function group($attributes, $group): array
-    {
-        $g = [];
-        foreach ($attributes as $k => $v) {
-            if (strpos($k, $group) === 0) {
-                $len = strlen($group . '_');
-                $key = substr($k, $len);
-                $g[$key] = $v;
-            }
-        }
+class Field {
 
-        return $g;
-    }
+	/**
+	 * Get attributes belonging to a group.
+	 *
+	 * @param array  $attributes All block attributes.
+	 * @param string $group      The group prefix to filter by.
+	 *
+	 * @return array Filtered attributes with group prefix removed from keys.
+	 */
+	public static function group( $attributes, $group ): array {
+		$g = array();
+		foreach ( $attributes as $k => $v ) {
+			if ( 0 === strpos( $k, $group ) ) {
+				$len     = strlen( $group . '_' );
+				$key     = substr( $k, $len );
+				$g[ $key ] = $v;
+			}
+		}
+
+		return $g;
+	}
 }
