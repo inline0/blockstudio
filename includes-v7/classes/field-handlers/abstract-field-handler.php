@@ -11,7 +11,44 @@ use Blockstudio\Interfaces\Field_Handler_Interface;
 use Blockstudio\Field_Type_Config;
 
 /**
- * Abstract base class for field handlers.
+ * Abstract base class for field type handlers.
+ *
+ * Field handlers convert Blockstudio field definitions into WordPress
+ * block attributes. Each handler specializes in one category of fields.
+ *
+ * Implementation Requirements:
+ * Subclasses must:
+ * 1. Set $supported_types array with field types they handle
+ * 2. Implement build() method to create attributes
+ *
+ * Provided Methods:
+ * - supports(): Checks if handler can process a field type
+ * - get_field_id(): Builds prefixed field ID for nested fields
+ * - create_base_attribute(): Creates base attribute structure
+ * - apply_defaults(): Adds default/fallback values
+ * - get_default_value(): Gets type-appropriate default
+ *
+ * Example Handler:
+ * ```php
+ * class My_Field_Handler extends Abstract_Field_Handler {
+ *     protected array $supported_types = ['myfield'];
+ *
+ *     public function build(array $field, array &$attributes, string $prefix): void {
+ *         $id = $this->get_field_id($field, $prefix);
+ *         $attribute = $this->create_base_attribute('myfield', 'string');
+ *         $this->apply_defaults($field, $attribute);
+ *         $attributes[$id] = $attribute;
+ *     }
+ * }
+ * ```
+ *
+ * Existing Handlers:
+ * - Text_Field_Handler: text, textarea, code, classes, richtext
+ * - Number_Field_Handler: number, range
+ * - Boolean_Field_Handler: toggle
+ * - Select_Field_Handler: select, radio, checkbox, color, gradient
+ * - Media_Field_Handler: files (images, attachments)
+ * - Container_Field_Handler: group, tabs, repeater
  *
  * @since 7.0.0
  */

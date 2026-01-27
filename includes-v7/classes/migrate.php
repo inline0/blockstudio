@@ -8,7 +8,41 @@
 namespace Blockstudio;
 
 /**
- * Handles plugin version migrations.
+ * Database and settings migration between plugin versions.
+ *
+ * This class handles data migrations when users upgrade from older
+ * versions of Blockstudio. It ensures settings and data structures
+ * are updated to match the current version's expectations.
+ *
+ * Migration Flow:
+ * 1. On plugin activation: check for first install vs upgrade
+ * 2. On plugins_loaded: compare stored version to current
+ * 3. Run any pending migrations for versions between stored and current
+ * 4. Update stored version in database
+ *
+ * Registered Migrations:
+ * - 5.2.0: Migrate from blockstudio_options to blockstudio_settings
+ *   - formatOnSave → editor/formatOnSave
+ *   - processorScss → assets/minify/css + assets/process/scss
+ *   - processorEsbuild → assets/minify/js
+ *
+ * Adding New Migrations:
+ * ```php
+ * // In constructor $migrations array:
+ * '7.1.0' => array( $this, 'migrate_to_710' ),
+ *
+ * // Then define the method:
+ * private function migrate_to_710(): void {
+ *     // Migration logic here
+ * }
+ * ```
+ *
+ * Version Storage:
+ * - Option name: blockstudio_version
+ * - Contains the last-run plugin version
+ * - Compared against BLOCKSTUDIO_VERSION constant
+ *
+ * @since 5.2.0
  */
 class Migrate {
 

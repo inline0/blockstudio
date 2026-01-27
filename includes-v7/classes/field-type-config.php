@@ -8,7 +8,40 @@
 namespace Blockstudio;
 
 /**
- * Centralized field type configuration.
+ * Centralized field type configuration and type-checking utilities.
+ *
+ * This class defines all supported Blockstudio field types and their
+ * properties. It's used by Attribute_Builder and field handlers to
+ * determine how fields should be converted to WordPress attributes.
+ *
+ * Field Type Categories:
+ * - STRING_TYPES: text, textarea, code, date, classes, richtext, wysiwyg
+ * - NUMBER_TYPES: number, range
+ * - BOOLEAN_TYPES: toggle
+ * - OBJECT_TYPES: color, gradient, icon, link, radio, select, group
+ * - ARRAY_TYPES: repeater, checkbox, token, attributes
+ * - CONTAINER_TYPES: group, tabs, repeater (contain other fields)
+ * - NON_ATTRIBUTE_TYPES: message (display only, no attribute)
+ *
+ * Type Configuration (TYPES constant):
+ * Each type defines:
+ * - attribute: The WordPress attribute type (string|number|boolean|object|array)
+ * - default: The default value for the attribute
+ * - source: (optional) For richtext - 'html' source from inner content
+ *
+ * Usage Examples:
+ * ```php
+ * // Get attribute type for a field
+ * $type = Field_Type_Config::get_attribute_type('text'); // 'string'
+ *
+ * // Check field category
+ * Field_Type_Config::is_string_type('textarea'); // true
+ * Field_Type_Config::is_container_type('repeater'); // true
+ *
+ * // Check if field supports options
+ * Field_Type_Config::has_options('select'); // true
+ * Field_Type_Config::is_multiple_options('checkbox', $field); // true
+ * ```
  *
  * @since 7.0.0
  */

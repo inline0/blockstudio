@@ -10,7 +10,37 @@ namespace Blockstudio\Settings_Loaders;
 use Blockstudio\Interfaces\Settings_Loader_Interface;
 
 /**
- * Loads settings from WordPress options.
+ * Settings loader for WordPress wp_options table.
+ *
+ * This loader reads and writes Blockstudio settings from the WordPress
+ * options table, providing persistent database-backed configuration.
+ *
+ * Option Name: blockstudio_settings (configurable)
+ *
+ * Storage Format:
+ * Settings are stored as a nested associative array:
+ * ```php
+ * [
+ *   'assets' => ['enqueue' => true, 'minify' => ['css' => true]],
+ *   'editor' => ['formatOnSave' => true],
+ * ]
+ * ```
+ *
+ * Access Pattern:
+ * Uses forward-slash notation for nested keys:
+ * ```php
+ * $loader->get('assets/minify/css'); // true
+ * $loader->get('missing/key', 'default'); // 'default'
+ * ```
+ *
+ * Priority:
+ * In the Settings class loader chain, Options_Loader typically has
+ * the lowest priority (runs first), allowing JSON and Filter loaders
+ * to override database values.
+ *
+ * Persistence:
+ * Unlike JSON or Filter loaders, changes via save() persist to the
+ * database and survive plugin deactivation/reactivation.
  *
  * @since 7.0.0
  */

@@ -10,9 +10,37 @@ namespace Blockstudio;
 use Exception;
 
 /**
- * Base class for ES Module handlers.
+ * Base class for ES Module handlers (JavaScript and CSS).
  *
- * Provides common functionality for both JS and CSS module handling.
+ * Provides shared functionality for both ESModules (JS) and ESModulesCSS
+ * classes including directory management, HTTP fetching, and caching.
+ *
+ * Shared Responsibilities:
+ * - Directory structure creation (_dist/modules/package-name/)
+ * - Remote HTTP requests to esm.sh CDN
+ * - File caching and existence checks
+ * - Module name parsing (package@version)
+ * - Name transformation for filesystem (slashes → dashes)
+ *
+ * Abstract Methods (implemented by subclasses):
+ * - get_blockstudio_regex(): Pattern to match imports in source code
+ * - get_file_extension(): The output file extension (js or css)
+ * - get_module_type(): Type identifier for logging/errors
+ *
+ * Directory Structure Created:
+ * ```
+ * block-folder/
+ * └── _dist/
+ *     └── modules/
+ *         └── package-name/
+ *             ├── 1.0.0.js
+ *             └── 1.0.0-file.css
+ * ```
+ *
+ * Cache Strategy:
+ * - Modules are cached by version number
+ * - Files only fetched if not already cached
+ * - Cache persists until manually cleared
  *
  * @since 7.0.0
  */
