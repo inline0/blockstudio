@@ -833,7 +833,7 @@ class Assets
             $data = ESModulesCSS::replace_module_references($data);
         }
 
-        $esModules = ESModules::fetchAllModulesAndWriteToFile(
+        $esModules = ESModules::fetch_all_modules_and_write_to_file(
             $data,
             $pathinfo['dirname']
         );

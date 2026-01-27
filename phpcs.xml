@@ -17,6 +17,8 @@
 	<file>./includes-v7/classes/migrate.php</file>
 	<file>./includes-v7/classes/populate.php</file>
 	<file>./includes-v7/classes/esmodulescss.php</file>
+	<file>./includes-v7/classes/esmodules.php</file>
+	<file>./includes-v7/classes/blocks.php</file>
 
 	<!-- Exclude vendor and node_modules -->
 	<exclude-pattern>*/vendor/*</exclude-pattern>
