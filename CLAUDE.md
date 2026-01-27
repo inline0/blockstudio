@@ -182,26 +182,39 @@ class Plugin {
 
 **Write tests FIRST before any refactoring.** The test suite becomes the safety net that ensures functionality is preserved during migration.
 
+### Design Principles
+
+1. **CI-First** - Tests must run in GitHub Actions without local dependencies
+2. **No Local Config** - No MySQL, no local WP installation required for unit tests
+3. **Fast Feedback** - Unit tests run in seconds, not minutes
+4. **Incremental Integration** - Add wp-env integration tests later for critical paths
+
 ### Test Pyramid
 
 ```
         /\
-       /  \     E2E Tests (existing, keep as-is)
+       /  \     E2E Tests (existing Playwright, keep as-is)
       /----\
-     /      \   Integration Tests (WP environment)
+     /      \   Integration Tests (wp-env in CI, ~10% of tests)
     /--------\
-   /          \ Unit Tests (fast, isolated, mocked WP)
+   /          \ Unit Tests (Brain Monkey, ~90% of tests)
   /------------\
 ```
 
 ### Unit Tests (Priority 1 - Write First)
 
-Fast tests that mock WordPress functions. These test business logic in isolation.
+Fast tests that mock WordPress functions using **Brain Monkey**. These test business logic in isolation without requiring WordPress.
+
+**Why Brain Monkey?**
+- Mocks WordPress functions (`get_option`, `add_action`, etc.)
+- No database, no WordPress installation needed
+- Runs anywhere: local, CI, any PHP environment
+- Fast: hundreds of tests in seconds
 
 **Testing Framework:**
 - PHPUnit 10.x
-- Brain Monkey (WordPress function mocking)
-- Mockery (general mocking)
+- Brain Monkey ^2.6 (WordPress function mocking)
+- Mockery ^1.6 (general mocking)
 
 **What to Unit Test:**
 
@@ -275,9 +288,11 @@ class BuildTest extends TestCase {
 }
 ```
 
-### Integration Tests (Priority 2)
+### Integration Tests (Priority 2 - Add Later)
 
-Tests that require a real WordPress environment. Slower but test actual WP integration.
+Tests that require a real WordPress environment. **Only for critical WP integration points** (~10% of tests).
+
+**Uses wp-env (Docker-based)** - runs identically in local dev and CI.
 
 **What to Integration Test:**
 
@@ -288,7 +303,22 @@ Tests that require a real WordPress environment. Slower but test actual WP integ
 | `Admin` | Admin page registration, capability checks |
 | `Blocks` | Block editor script enqueuing |
 
-**WP Test Setup (using wp-env or similar):**
+**wp-env Configuration:**
+
+```json
+// .wp-env.json
+{
+  "core": "WordPress/WordPress#6.7",
+  "phpVersion": "8.2",
+  "plugins": ["."],
+  "config": {
+    "WP_DEBUG": true,
+    "SCRIPT_DEBUG": true
+  }
+}
+```
+
+**Example Integration Test:**
 
 ```php
 <?php
@@ -311,6 +341,18 @@ class RegisterTest extends WP_UnitTestCase {
         $this->assertEquals('Test Block', $registered->title);
     }
 }
+```
+
+**Running Integration Tests:**
+
+```bash
+# Local (requires Docker)
+npm install -g @wordpress/env
+wp-env start
+wp-env run phpunit -- --testsuite integration
+
+# Or via composer script
+composer test:integration
 ```
 
 ### Test Fixtures
@@ -452,10 +494,10 @@ tests/Fixtures/
 # Run all tests
 composer test
 
-# Run unit tests only (fast)
+# Run unit tests only (fast, no dependencies)
 composer test:unit
 
-# Run integration tests (requires WP)
+# Run integration tests (requires Docker + wp-env)
 composer test:integration
 
 # Run tests with coverage
@@ -470,6 +512,108 @@ composer cs:fix
 # Static analysis
 composer analyse
 ```
+
+---
+
+## CI/CD Configuration
+
+### GitHub Actions Workflow
+
+```yaml
+# .github/workflows/tests.yml
+name: Tests
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+
+jobs:
+  unit:
+    name: Unit Tests
+    runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        php: ['8.2', '8.3']
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: ${{ matrix.php }}
+          coverage: xdebug
+
+      - name: Install dependencies
+        run: composer install --prefer-dist --no-progress
+
+      - name: Run Unit Tests
+        run: composer test:unit
+
+      - name: Upload coverage
+        uses: codecov/codecov-action@v4
+        if: matrix.php == '8.2'
+        with:
+          files: ./coverage.xml
+
+  integration:
+    name: Integration Tests
+    runs-on: ubuntu-latest
+    needs: unit  # Only run if unit tests pass
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2'
+
+      - name: Install dependencies
+        run: |
+          composer install --prefer-dist --no-progress
+          npm install -g @wordpress/env
+
+      - name: Start wp-env
+        run: wp-env start
+
+      - name: Run Integration Tests
+        run: wp-env run phpunit -- --testsuite integration
+
+  coding-standards:
+    name: Coding Standards
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2'
+
+      - name: Install dependencies
+        run: composer install --prefer-dist --no-progress
+
+      - name: Check coding standards
+        run: composer cs
+```
+
+### Test Speed Targets
+
+| Test Suite | Target Time | Environment |
+|------------|-------------|-------------|
+| Unit | < 10 seconds | Any PHP environment |
+| Integration | < 60 seconds | Docker (wp-env) |
+| Full Suite | < 90 seconds | CI |
 
 ---
 
