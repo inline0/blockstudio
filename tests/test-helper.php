@@ -38,27 +38,52 @@ add_action('plugins_loaded', function () {
 add_action('rest_api_init', function () {
     // ==========================================================================
     // SNAPSHOT ENDPOINT - Get ALL Build class data at once
+    // Supports both v6 (camelCase) and v7 (snake_case) method names
     // ==========================================================================
     register_rest_route('blockstudio-test/v1', '/snapshot', [
         'methods' => 'GET',
         'callback' => function () {
-            if (!class_exists('Blockstudio\\Build')) {
-                return new WP_Error('not_loaded', 'Blockstudio Build class not loaded', ['status' => 500]);
-            }
+            try {
+                if (!class_exists('Blockstudio\\Build')) {
+                    return new WP_Error('not_loaded', 'Blockstudio Build class not loaded', ['status' => 500]);
+                }
 
-            return [
-                'blocks' => \Blockstudio\Build::blocks(),
-                'data' => \Blockstudio\Build::data(),
-                'extensions' => \Blockstudio\Build::extensions(),
-                'files' => \Blockstudio\Build::files(),
-                'assetsAdmin' => \Blockstudio\Build::assets_admin(),
-                'assetsBlockEditor' => \Blockstudio\Build::assets_block_editor(),
-                'assetsGlobal' => \Blockstudio\Build::assets_global(),
-                'paths' => \Blockstudio\Build::paths(),
-                'overrides' => \Blockstudio\Build::overrides(),
-                'assets' => \Blockstudio\Build::assets(),
-                'blade' => \Blockstudio\Build::blade(),
-            ];
+                // Detect v6 vs v7 by checking method names
+                $is_v7 = method_exists('Blockstudio\\Build', 'assets_admin');
+
+                if ($is_v7) {
+                    return [
+                        'blocks' => \Blockstudio\Build::blocks(),
+                        'data' => \Blockstudio\Build::data(),
+                        'extensions' => \Blockstudio\Build::extensions(),
+                        'files' => \Blockstudio\Build::files(),
+                        'assetsAdmin' => \Blockstudio\Build::assets_admin(),
+                        'assetsBlockEditor' => \Blockstudio\Build::assets_block_editor(),
+                        'assetsGlobal' => \Blockstudio\Build::assets_global(),
+                        'paths' => \Blockstudio\Build::paths(),
+                        'overrides' => \Blockstudio\Build::overrides(),
+                        'assets' => \Blockstudio\Build::assets(),
+                        'blade' => \Blockstudio\Build::blade(),
+                    ];
+                } else {
+                    // v6 uses camelCase
+                    return [
+                        'blocks' => \Blockstudio\Build::blocks(),
+                        'data' => \Blockstudio\Build::data(),
+                        'extensions' => \Blockstudio\Build::extensions(),
+                        'files' => \Blockstudio\Build::files(),
+                        'assetsAdmin' => \Blockstudio\Build::assetsAdmin(),
+                        'assetsBlockEditor' => \Blockstudio\Build::assetsBlockEditor(),
+                        'assetsGlobal' => \Blockstudio\Build::assetsGlobal(),
+                        'paths' => \Blockstudio\Build::paths(),
+                        'overrides' => \Blockstudio\Build::overrides(),
+                        'assets' => \Blockstudio\Build::assets(),
+                        'blade' => \Blockstudio\Build::blade(),
+                    ];
+                }
+            } catch (\Throwable $e) {
+                return new WP_Error('php_error', $e->getMessage() . ' in ' . $e->getFile() . ':' . $e->getLine(), ['status' => 500]);
+            }
         },
         'permission_callback' => '__return_true',
     ]);

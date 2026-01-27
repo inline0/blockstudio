@@ -118,14 +118,14 @@ class Assets {
 			self::get_module_css_assets( $block, $asset_ids, $head );
 
 			foreach ( $block['assets'] as $k => $v ) {
-				$is_admin        = Files::starts_with( $k, 'admin' );
-				$is_block_editor = Files::starts_with( $k, 'block-editor' );
+				$is_admin        = str_starts_with( $k, 'admin' );
+				$is_block_editor = str_starts_with( $k, 'block-editor' );
 
 				if ( $is_admin || $is_block_editor ) {
 					continue;
 				}
 
-				$is_global = Files::starts_with( $k, 'global' );
+				$is_global = str_starts_with( $k, 'global' );
 				if ( false === strpos( $html, $id ) && ! $is_global ) {
 					continue;
 				}
@@ -276,7 +276,7 @@ class Assets {
 			$mtimes[] = $scoped_class;
 		}
 
-		if ( Files::ends_with( $path, '.js' ) || ! self::should_process_scss( $path ) ) {
+		if ( str_ends_with( $path, '.js' ) || ! self::should_process_scss( $path ) ) {
 			return $mtimes[0];
 		}
 
@@ -321,7 +321,7 @@ class Assets {
 		$ext = pathinfo( $path, PATHINFO_EXTENSION );
 		$id  = self::get_imported_modification_times(
 			$path,
-			Files::ends_with( $file, '-scoped' ) ? $scoped_class : ''
+			str_ends_with( $file, '-scoped' ) ? $scoped_class : ''
 		);
 
 		if ( Settings::get( 'assets/process/scssFiles' ) && 'scss' === $ext ) {
@@ -589,7 +589,7 @@ class Assets {
 	 * @return bool Whether the path is a CSS file.
 	 */
 	public static function is_css( $path ): bool {
-		return Files::ends_with( $path, '.css' ) || Files::ends_with( $path, '.scss' );
+		return str_ends_with( $path, '.css' ) || str_ends_with( $path, '.scss' );
 	}
 
 	/**
@@ -662,7 +662,7 @@ class Assets {
 	 * @return bool Whether to process SCSS.
 	 */
 	public static function should_process_scss( $path ): bool {
-		$is_scss_ext = Files::ends_with( $path, '.scss' ) && Settings::get( 'assets/process/scssFiles' );
+		$is_scss_ext = str_ends_with( $path, '.scss' ) && Settings::get( 'assets/process/scssFiles' );
 
 		return Settings::get( 'assets/process/scss' ) || $is_scss_ext;
 	}
@@ -682,7 +682,7 @@ class Assets {
 
 		$minify_css        = Settings::get( 'assets/minify/css' );
 		$process_scss      = self::should_process_scss( $path );
-		$scope_css         = Files::ends_with( $filename, '-scoped' );
+		$scope_css         = str_ends_with( $filename, '-scoped' );
 		$compiled_filename = self::get_compiled_filename( $path, $scoped_class );
 
 		if (
@@ -844,8 +844,8 @@ class Assets {
 			return null;
 		}
 
-		$tag       = Files::ends_with( $type, '.js' ) ? 'script' : 'style';
-		$is_script = Files::ends_with( $type, '.js' );
+		$tag       = str_ends_with( $type, '.js' ) ? 'script' : 'style';
+		$is_script = str_ends_with( $type, '.js' );
 		$is_prefix = $prefix && ! $is_script;
 
 		$processed_string = '';
@@ -856,7 +856,7 @@ class Assets {
 			$is_processed = 1 === count( self::get_matches( $data['path'] ) );
 			$processed_string = $is_processed ? 'data-processed' : '';
 
-			if ( Files::ends_with( $path, '.scss' ) ) {
+			if ( str_ends_with( $path, '.scss' ) ) {
 				return null;
 			}
 
@@ -933,7 +933,7 @@ class Assets {
 		$processed = 1 === count( self::get_matches( $path ) ) ? 'data-processed' : '';
 
 		if ( self::is_css( $type ) ) {
-			if ( Files::ends_with( $src, '.scss' ) ) {
+			if ( str_ends_with( $src, '.scss' ) ) {
 				return null;
 			}
 

@@ -65,6 +65,45 @@ class Plugin {
 	private function load_classes(): void {
 		$classes_dir = BLOCKSTUDIO_DIR . '/includes-v7/classes/';
 
+		// Core configuration classes.
+		require_once $classes_dir . 'constants.php';
+		require_once $classes_dir . 'field-type-config.php';
+		require_once $classes_dir . 'block-registry.php';
+		require_once $classes_dir . 'option-value-resolver.php';
+
+		// Interfaces.
+		require_once BLOCKSTUDIO_DIR . '/includes-v7/interfaces/field-handler-interface.php';
+		require_once BLOCKSTUDIO_DIR . '/includes-v7/interfaces/settings-loader-interface.php';
+
+		// Field handlers.
+		require_once $classes_dir . 'field-handlers/abstract-field-handler.php';
+		require_once $classes_dir . 'field-handlers/text-field-handler.php';
+		require_once $classes_dir . 'field-handlers/number-field-handler.php';
+		require_once $classes_dir . 'field-handlers/boolean-field-handler.php';
+		require_once $classes_dir . 'field-handlers/select-field-handler.php';
+		require_once $classes_dir . 'field-handlers/media-field-handler.php';
+		require_once $classes_dir . 'field-handlers/container-field-handler.php';
+
+		// Attribute builder.
+		require_once $classes_dir . 'attribute-builder.php';
+
+		// Block discovery and registration (Phase 5).
+		require_once $classes_dir . 'file-classifier.php';
+		require_once $classes_dir . 'block-discovery.php';
+		require_once $classes_dir . 'asset-discovery.php';
+		require_once $classes_dir . 'block-registrar.php';
+
+		// Settings loaders (Phase 6).
+		require_once $classes_dir . 'settings-loaders/options-loader.php';
+		require_once $classes_dir . 'settings-loaders/json-loader.php';
+		require_once $classes_dir . 'settings-loaders/filter-loader.php';
+
+		// Abstract classes (Phase 6).
+		require_once $classes_dir . 'abstract-esmodule.php';
+
+		// Error handling (Phase 6).
+		require_once $classes_dir . 'error-handler.php';
+
 		require_once $classes_dir . 'migrate.php';
 		require_once $classes_dir . 'files.php';
 		require_once $classes_dir . 'settings.php';

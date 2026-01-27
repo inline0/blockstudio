@@ -15,12 +15,12 @@ class Populate {
 	/**
 	 * Initialize population for attributes.
 	 *
-	 * @param array      $data      Population configuration data.
-	 * @param array|bool $extra_ids Optional extra IDs to include.
+	 * @param array $data      Population configuration data.
+	 * @param mixed $extra_ids Optional extra IDs to include.
 	 *
 	 * @return array The populated query results.
 	 */
-	public static function init( $data, $extra_ids = false ): array {
+	public static function init( array $data, mixed $extra_ids = false ): array {
 		$query     = array();
 		$arguments = $data['arguments'] ?? array();
 		$custom    = count( apply_filters( 'blockstudio/blocks/attributes/populate', array() ) ) >= 1

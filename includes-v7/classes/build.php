@@ -869,16 +869,16 @@ class Build {
 					$is_blockstudio && $check_key( $contents, 'override' );
 				$is_init        =
 					'php' === ( $path_info['extension'] ?? '' ) &&
-					Files::starts_with( $path_info['basename'], 'init' );
+					str_starts_with( $path_info['basename'], 'init' );
 				$is_dir         =
 					is_dir( $file ) &&
 					! file_exists( $file . '/block.json' ) &&
 					! Files::get_render_template( $file );
-				$is_php         = ! Files::ends_with( $file, '.twig' );
-				$is_blade       = Files::ends_with( $file, '.blade.php' );
+				$is_php         = ! str_ends_with( $file, '.twig' );
+				$is_blade       = str_ends_with( $file, '.blade.php' );
 
 				if (
-					Files::starts_with( $path_info['basename'], '.' ) &&
+					str_starts_with( $path_info['basename'], '.' ) &&
 					( ! $editor || '.' !== $path_info['basename'] )
 				) {
 					continue;
@@ -896,7 +896,7 @@ class Build {
 					if ( ! is_dir( $file ) ) {
 						$block_json = json_decode(
 							file_get_contents( // phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents
-								Files::ends_with( $file, 'block.json' )
+								str_ends_with( $file, 'block.json' )
 									? $file
 									: str_replace(
 										array(
@@ -911,7 +911,7 @@ class Build {
 							true
 						);
 					}
-					$block_json_path = Files::ends_with( $file, 'block.json' )
+					$block_json_path = str_ends_with( $file, 'block.json' )
 						? $file
 						: str_replace(
 							'block.json',
@@ -1063,7 +1063,7 @@ class Build {
 						$assets = array_filter(
 							$block_arr_files,
 							fn( $e ) => Assets::is_css( $e ) ||
-								Files::ends_with( $e, '.js' )
+								str_ends_with( $e, '.js' )
 						);
 						$processed_assets = array();
 
@@ -1114,7 +1114,7 @@ class Build {
 							);
 
 							if (
-								Files::starts_with(
+								str_starts_with(
 									$asset_file['basename'],
 									'admin'
 								) &&
@@ -1129,7 +1129,7 @@ class Build {
 							}
 
 							if (
-								Files::starts_with(
+								str_starts_with(
 									$asset_file['basename'],
 									'block-editor'
 								) &&
@@ -1144,7 +1144,7 @@ class Build {
 							}
 
 							if (
-								Files::starts_with(
+								str_starts_with(
 									$asset_file['basename'],
 									'global'
 								) &&
@@ -1160,17 +1160,17 @@ class Build {
 								$store[ $name ] ?? array( 'name' => $name )
 							);
 							$is_editor =
-								Files::ends_with( $asset, '-editor.css' ) ||
-								Files::ends_with( $asset, '-editor.scss' ) ||
-								Files::ends_with( $asset, '-editor.js' );
+								str_ends_with( $asset, '-editor.css' ) ||
+								str_ends_with( $asset, '-editor.scss' ) ||
+								str_ends_with( $asset, '-editor.js' );
 
 							$store[ $name ]['assets'][ $id ] = array(
 								'type'     =>
-									Files::ends_with( $asset, '-inline.css' ) ||
-									Files::ends_with( $asset, '-inline.scss' ) ||
-									Files::ends_with( $asset, '-inline.js' ) ||
-									Files::ends_with( $asset, '-scoped.css' ) ||
-									Files::ends_with( $asset, '-scoped.scss' )
+									str_ends_with( $asset, '-inline.css' ) ||
+									str_ends_with( $asset, '-inline.scss' ) ||
+									str_ends_with( $asset, '-inline.js' ) ||
+									str_ends_with( $asset, '-scoped.css' ) ||
+									str_ends_with( $asset, '-scoped.scss' )
 										? 'inline'
 										: 'external',
 								'path'     => $asset_path,

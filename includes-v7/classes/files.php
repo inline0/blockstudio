@@ -23,7 +23,7 @@ class Files {
 	 *
 	 * @return string|false The template path or false if not found.
 	 */
-	public static function get_render_template( $file ) {
+	public static function get_render_template( string $file ): string|false {
 		$directory = dirname( $file );
 
 		if ( file_exists( $directory . '/index.php' ) ) {
@@ -39,60 +39,6 @@ class Files {
 		}
 
 		return false;
-	}
-
-	/**
-	 * Check if string starts with.
-	 *
-	 * @param string $haystack The string to search in.
-	 * @param string $needle   The string to search for.
-	 *
-	 * @return bool Whether the haystack starts with the needle.
-	 */
-	public static function starts_with( $haystack, $needle ): bool {
-		if ( function_exists( 'str_starts_with' ) ) {
-			return str_starts_with( $haystack, $needle );
-		}
-
-		return 0 === strpos( $haystack, $needle );
-	}
-
-	/**
-	 * Check if string ends with.
-	 *
-	 * @param string $haystack The string to search in.
-	 * @param string $needle   The string to search for.
-	 *
-	 * @return bool Whether the haystack ends with the needle.
-	 */
-	public static function ends_with( $haystack, $needle ): bool {
-		if ( function_exists( 'str_ends_with' ) ) {
-			return str_ends_with( $haystack, $needle );
-		}
-
-		$length = strlen( $needle );
-
-		if ( ! $length ) {
-			return true;
-		}
-
-		return substr( $haystack, -$length ) === $needle;
-	}
-
-	/**
-	 * Check if string contains another string.
-	 *
-	 * @param string $haystack The string to search in.
-	 * @param string $needle   The string to search for.
-	 *
-	 * @return bool Whether the haystack contains the needle.
-	 */
-	public static function contains( $haystack, $needle ): bool {
-		if ( function_exists( 'str_contains' ) ) {
-			return str_contains( $haystack, $needle );
-		}
-
-		return false !== strpos( $haystack, $needle );
 	}
 
 	/**
@@ -163,7 +109,7 @@ class Files {
 	 *
 	 * @return string The relative URL.
 	 */
-	public static function get_relative_url( $url ): string {
+	public static function get_relative_url( string $url ): string {
 		$url = str_replace( '\\', '/', $url );
 		$str = substr(
 			$url,
@@ -196,7 +142,7 @@ class Files {
 	 *
 	 * @return array Array of file paths.
 	 */
-	public static function get_files_recursively_and_delete_empty_folders( $dir ): array {
+	public static function get_files_recursively_and_delete_empty_folders( string $dir ): array {
 		$files = array();
 
 		if ( ! is_dir( $dir ) ) {

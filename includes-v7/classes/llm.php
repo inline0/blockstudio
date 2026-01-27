@@ -181,7 +181,7 @@ class LLM {
 
 		$enabled = Settings::get( 'ai/enableContextGeneration' );
 
-		if ( Files::ends_with( $request_uri, '/blockstudio-llm.txt' ) && $enabled ) {
+		if ( str_ends_with( $request_uri, '/blockstudio-llm.txt' ) && $enabled ) {
 			header( 'Content-Type: text/plain; charset=utf-8' );
 			status_header( 200 );
 			// phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Plain text output for LLM context.

@@ -84,7 +84,7 @@ class Extensions {
 
 			if (
 				'' !== trim( $current_style ?? '' ) &&
-				! Files::ends_with( $current_style, ';' )
+				! str_ends_with( $current_style, ';' )
 			) {
 				$current_style .= ';';
 			}

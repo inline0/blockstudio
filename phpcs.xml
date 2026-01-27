@@ -5,6 +5,10 @@
 	<!-- Only check migrated v7 code -->
 	<file>./blockstudio-v7.php</file>
 	<file>./includes-v7/class-plugin.php</file>
+	<file>./includes-v7/classes/constants.php</file>
+	<file>./includes-v7/classes/field-type-config.php</file>
+	<file>./includes-v7/classes/block-registry.php</file>
+	<file>./includes-v7/classes/option-value-resolver.php</file>
 	<file>./includes-v7/classes/utils.php</file>
 	<file>./includes-v7/classes/field.php</file>
 	<file>./includes-v7/classes/examples.php</file>
@@ -28,6 +32,39 @@
 	<file>./includes-v7/classes/block.php</file>
 	<file>./includes-v7/classes/rest.php</file>
 	<file>./includes-v7/classes/build.php</file>
+
+	<!-- Interfaces -->
+	<file>./includes-v7/interfaces/field-handler-interface.php</file>
+
+	<!-- Field handlers -->
+	<file>./includes-v7/classes/field-handlers/abstract-field-handler.php</file>
+	<file>./includes-v7/classes/field-handlers/text-field-handler.php</file>
+	<file>./includes-v7/classes/field-handlers/number-field-handler.php</file>
+	<file>./includes-v7/classes/field-handlers/boolean-field-handler.php</file>
+	<file>./includes-v7/classes/field-handlers/select-field-handler.php</file>
+	<file>./includes-v7/classes/field-handlers/media-field-handler.php</file>
+	<file>./includes-v7/classes/field-handlers/container-field-handler.php</file>
+
+	<!-- Attribute builder -->
+	<file>./includes-v7/classes/attribute-builder.php</file>
+
+	<!-- Block discovery and registration (Phase 5) -->
+	<file>./includes-v7/classes/file-classifier.php</file>
+	<file>./includes-v7/classes/block-discovery.php</file>
+	<file>./includes-v7/classes/asset-discovery.php</file>
+	<file>./includes-v7/classes/block-registrar.php</file>
+
+	<!-- Settings loader interface and implementations (Phase 6) -->
+	<file>./includes-v7/interfaces/settings-loader-interface.php</file>
+	<file>./includes-v7/classes/settings-loaders/options-loader.php</file>
+	<file>./includes-v7/classes/settings-loaders/json-loader.php</file>
+	<file>./includes-v7/classes/settings-loaders/filter-loader.php</file>
+
+	<!-- Abstract classes (Phase 6) -->
+	<file>./includes-v7/classes/abstract-esmodule.php</file>
+
+	<!-- Error handling (Phase 6) -->
+	<file>./includes-v7/classes/error-handler.php</file>
 
 	<!-- Exclude vendor and node_modules -->
 	<exclude-pattern>*/vendor/*</exclude-pattern>

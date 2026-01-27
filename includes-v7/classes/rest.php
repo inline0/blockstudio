@@ -1542,8 +1542,8 @@ class Rest {
 			$file = pathinfo( $name );
 
 			if (
-				Files::ends_with( $name, '.php' ) ||
-				Files::ends_with( $name, '.twig' )
+				str_ends_with( $name, '.php' ) ||
+				str_ends_with( $name, '.twig' )
 			) {
 				set_transient(
 					'blockstudio_gutenberg_' .
@@ -1559,7 +1559,7 @@ class Rest {
 					$content = Assets::compile_scss( $content, $name );
 				}
 			}
-			if ( Assets::is_css( $name ) || Files::ends_with( $name, '.js' ) ) {
+			if ( Assets::is_css( $name ) || str_ends_with( $name, '.js' ) ) {
 				$files_changed[
 					Assets::get_id( $file['filename'], $block ) .
 						'-' .

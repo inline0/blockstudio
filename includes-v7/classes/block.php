@@ -851,7 +851,7 @@ class Block {
 						$v
 					);
 
-					if ( Files::contains( $v, '%selector%' ) ) {
+					if ( str_contains( $v, '%selector%' ) ) {
 						$attribute_data['hasCodeSelector'] = true;
 					}
 
