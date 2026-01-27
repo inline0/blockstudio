@@ -1,4 +1,9 @@
 <?php
+/**
+ * Files class.
+ *
+ * @package Blockstudio
+ */
 
 namespace Blockstudio;
 
@@ -7,341 +12,436 @@ use RecursiveDirectoryIterator;
 use RecursiveIteratorIterator;
 
 /**
- * Files.
- *
- * @date   22/08/2023
- * @since  5.2.0
+ * Handles file operations.
  */
-class Files
-{
-    /**
-     * Get render template.
-     *
-     * @date   26/12/2023
-     * @since  5.3.0
-     *
-     * @param  $file
-     *
-     * @return false|string
-     */
-    public static function getRenderTemplate($file)
-    {
-        $directory = dirname($file);
+class Files {
 
-        if (file_exists($directory . '/index.php')) {
-            return $directory . '/index.php';
-        }
+	/**
+	 * Get render template.
+	 *
+	 * @param string $file The file path.
+	 *
+	 * @return string|false The template path or false if not found.
+	 */
+	public static function get_render_template( $file ) {
+		$directory = dirname( $file );
 
-        if (file_exists($directory . '/index.blade.php')) {
-            return $directory . '/index.blade.php';
-        }
+		if ( file_exists( $directory . '/index.php' ) ) {
+			return $directory . '/index.php';
+		}
 
-        if (file_exists($directory . '/index.twig')) {
-            return $directory . '/index.twig';
-        }
+		if ( file_exists( $directory . '/index.blade.php' ) ) {
+			return $directory . '/index.blade.php';
+		}
 
-        return false;
-    }
+		if ( file_exists( $directory . '/index.twig' ) ) {
+			return $directory . '/index.twig';
+		}
 
-    /**
-     * Check if string starts with.
-     *
-     * @date   01/06/2023
-     * @since  5.0.0
-     *
-     * @param  $haystack
-     * @param  $needle
-     *
-     * @return bool
-     */
-    public static function startsWith($haystack, $needle): bool
-    {
-        if (function_exists('str_starts_with')) {
-            return str_starts_with($haystack, $needle);
-        }
+		return false;
+	}
 
-        return strpos($haystack, $needle) === 0;
-    }
+	/**
+	 * Check if string starts with.
+	 *
+	 * @param string $haystack The string to search in.
+	 * @param string $needle   The string to search for.
+	 *
+	 * @return bool Whether the haystack starts with the needle.
+	 */
+	public static function starts_with( $haystack, $needle ): bool {
+		if ( function_exists( 'str_starts_with' ) ) {
+			return str_starts_with( $haystack, $needle );
+		}
 
-    /**
-     * Check if string ends with.
-     *
-     * @date   17/03/2022
-     * @since  2.3.1
-     *
-     * @param  $haystack
-     * @param  $needle
-     *
-     * @return bool
-     */
-    public static function endsWith($haystack, $needle): bool
-    {
-        if (function_exists('str_ends_with')) {
-            return str_ends_with($haystack, $needle);
-        }
+		return 0 === strpos( $haystack, $needle );
+	}
 
-        $length = strlen($needle);
-        if (!$length) {
-            return true;
-        }
+	/**
+	 * Check if string ends with.
+	 *
+	 * @param string $haystack The string to search in.
+	 * @param string $needle   The string to search for.
+	 *
+	 * @return bool Whether the haystack ends with the needle.
+	 */
+	public static function ends_with( $haystack, $needle ): bool {
+		if ( function_exists( 'str_ends_with' ) ) {
+			return str_ends_with( $haystack, $needle );
+		}
 
-        return substr($haystack, -$length) === $needle;
-    }
+		$length = strlen( $needle );
 
-    /**
-     * Check if string contains another string.
-     *
-     * @date   17/03/2022
-     * @since  2.3.1
-     *
-     * @param  $haystack
-     * @param  $needle
-     *
-     * @return bool
-     */
-    public static function contains($haystack, $needle): bool
-    {
-        if (function_exists('str_contains')) {
-            return str_contains($haystack, $needle);
-        }
+		if ( ! $length ) {
+			return true;
+		}
 
-        return strpos($haystack, $needle) !== false;
-    }
+		return substr( $haystack, -$length ) === $needle;
+	}
 
-    /**
-     * Delete all files.
-     *
-     * @param  string  $dir
-     * @param  bool    $deleteDir
-     *
-     * @return bool
-     */
-    public static function deleteAllFiles(
-        string $dir,
-        bool $deleteDir = true
-    ): bool {
-        if (false === file_exists($dir)) {
-            return false;
-        }
+	/**
+	 * Check if string contains another string.
+	 *
+	 * @param string $haystack The string to search in.
+	 * @param string $needle   The string to search for.
+	 *
+	 * @return bool Whether the haystack contains the needle.
+	 */
+	public static function contains( $haystack, $needle ): bool {
+		if ( function_exists( 'str_contains' ) ) {
+			return str_contains( $haystack, $needle );
+		}
 
-        $files = new RecursiveIteratorIterator(
-            new RecursiveDirectoryIterator($dir, FilesystemIterator::SKIP_DOTS),
-            RecursiveIteratorIterator::CHILD_FIRST
-        );
+		return false !== strpos( $haystack, $needle );
+	}
 
-        foreach ($files as $fileInfo) {
-            if ($fileInfo->isDir()) {
-                if (false === rmdir($fileInfo->getRealPath())) {
-                    return false;
-                }
-            } else {
-                if (false === unlink($fileInfo->getRealPath())) {
-                    return false;
-                }
-            }
-        }
+	/**
+	 * Delete all files in a directory.
+	 *
+	 * @param string $dir        The directory path.
+	 * @param bool   $delete_dir Whether to delete the directory itself.
+	 *
+	 * @return bool Whether the operation was successful.
+	 */
+	public static function delete_all_files( string $dir, bool $delete_dir = true ): bool {
+		if ( false === file_exists( $dir ) ) {
+			return false;
+		}
 
-        if ($deleteDir) {
-            return rmdir($dir);
-        }
+		$files = new RecursiveIteratorIterator(
+			new RecursiveDirectoryIterator( $dir, FilesystemIterator::SKIP_DOTS ),
+			RecursiveIteratorIterator::CHILD_FIRST
+		);
 
-        return true;
-    }
+		foreach ( $files as $file_info ) {
+			if ( $file_info->isDir() ) {
+				// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_rmdir -- Direct filesystem operation for cleanup.
+				if ( false === rmdir( $file_info->getRealPath() ) ) {
+					return false;
+				}
+			} else {
+				// phpcs:ignore WordPress.WP.AlternativeFunctions.unlink_unlink -- Direct filesystem operation for cleanup.
+				if ( false === unlink( $file_info->getRealPath() ) ) {
+					return false;
+				}
+			}
+		}
 
-    /**
-     * Check if dir is empty.
-     *
-     * @param  string  $dir
-     *
-     * @return bool|null
-     */
-    public static function isDirectoryEmpty(string $dir): ?bool
-    {
-        if (!is_dir($dir)) {
-            return false;
-        }
+		if ( $delete_dir ) {
+			// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_rmdir -- Direct filesystem operation for cleanup.
+			return rmdir( $dir );
+		}
 
-        if (!is_readable($dir)) {
-            return null;
-        }
-        $files = scandir($dir);
+		return true;
+	}
 
-        return count($files) == 2;
-    }
+	/**
+	 * Check if directory is empty.
+	 *
+	 * @param string $dir The directory path.
+	 *
+	 * @return bool|null True if empty, false if not empty or not a directory, null if not readable.
+	 */
+	public static function is_directory_empty( string $dir ): ?bool {
+		if ( ! is_dir( $dir ) ) {
+			return false;
+		}
 
-    /**
-     * Get relative URL for assets.
-     *
-     * @date   05/10/2022
-     * @since  2.0.0
-     *
-     * @param  $url
-     *
-     * @return string
-     */
-    public static function getRelativeUrl($url): string
-    {
-        $url = str_replace('\\', '/', $url);
-        $str = substr(
-            $url,
-            strpos(
-                $url,
-                substr(WP_CONTENT_DIR, strrpos(WP_CONTENT_DIR, '/') + 1)
-            )
-        );
+		if ( ! is_readable( $dir ) ) {
+			return null;
+		}
 
-        return WP_CONTENT_URL .
-            substr(
-                $str,
-                strrpos($str, Files::getRootFolder()) +
-                    strlen(Files::getRootFolder())
-            );
-    }
+		$files = scandir( $dir );
 
-    /**
-     * Get WordPress root folder name.
-     *
-     * @date   25/04/2022
-     * @since  2.3.3
-     *
-     * @return string
-     */
-    public static function getRootFolder(): string
-    {
-        return array_slice(explode('/', WP_CONTENT_DIR), -1)[0];
-    }
+		return 2 === count( $files );
+	}
 
-    /**
-     * Get files recursively and delete empty folders.
-     *
-     * @date   18/10/2023
-     * @since  5.2.10
-     *
-     * @param  $dir
-     *
-     * @return array
-     */
-    public static function getFilesRecursivelyAndDeleteEmptyFolders($dir): array
-    {
-        $files = [];
+	/**
+	 * Get relative URL for assets.
+	 *
+	 * @param string $url The URL or path.
+	 *
+	 * @return string The relative URL.
+	 */
+	public static function get_relative_url( $url ): string {
+		$url = str_replace( '\\', '/', $url );
+		$str = substr(
+			$url,
+			strpos(
+				$url,
+				substr( WP_CONTENT_DIR, strrpos( WP_CONTENT_DIR, '/' ) + 1 )
+			)
+		);
 
-        if (!is_dir($dir)) {
-            return $files;
-        }
+		return WP_CONTENT_URL .
+			substr(
+				$str,
+				strrpos( $str, self::get_root_folder() ) + strlen( self::get_root_folder() )
+			);
+	}
 
-        $directoryIterator = new RecursiveDirectoryIterator(
-            $dir,
-            FilesystemIterator::SKIP_DOTS
-        );
-        $iterator = new RecursiveIteratorIterator(
-            $directoryIterator,
-            RecursiveIteratorIterator::CHILD_FIRST
-        );
+	/**
+	 * Get WordPress root folder name.
+	 *
+	 * @return string The root folder name.
+	 */
+	public static function get_root_folder(): string {
+		return array_slice( explode( '/', WP_CONTENT_DIR ), -1 )[0];
+	}
 
-        foreach ($iterator as $fileInfo) {
-            if ($fileInfo->isFile()) {
-                $files[] = $fileInfo->getPathname();
-            } elseif (
-                $fileInfo->isDir() &&
-                !(new FilesystemIterator($fileInfo->getPathname()))->valid()
-            ) {
-                rmdir($fileInfo->getPathname());
-            }
-        }
+	/**
+	 * Get files recursively and delete empty folders.
+	 *
+	 * @param string $dir The directory path.
+	 *
+	 * @return array Array of file paths.
+	 */
+	public static function get_files_recursively_and_delete_empty_folders( $dir ): array {
+		$files = array();
 
-        return $files;
-    }
+		if ( ! is_dir( $dir ) ) {
+			return $files;
+		}
 
-    /**
-     * Get all files recursively with a certain extension.
-     *
-     * @date   03/11/2023
-     * @since  5.2.12
-     *
-     * @param  string  $dir
-     * @param  string  $extension
-     *
-     * @return array
-     */
-    public static function getFilesWithExtension(
-        string $dir,
-        string $extension
-    ): array {
-        $files = [];
+		$directory_iterator = new RecursiveDirectoryIterator(
+			$dir,
+			FilesystemIterator::SKIP_DOTS
+		);
 
-        if (!is_dir($dir)) {
-            return $files;
-        }
+		$iterator = new RecursiveIteratorIterator(
+			$directory_iterator,
+			RecursiveIteratorIterator::CHILD_FIRST
+		);
 
-        $directoryIterator = new RecursiveDirectoryIterator(
-            $dir,
-            FilesystemIterator::SKIP_DOTS
-        );
-        $iterator = new RecursiveIteratorIterator($directoryIterator);
+		foreach ( $iterator as $file_info ) {
+			if ( $file_info->isFile() ) {
+				$files[] = $file_info->getPathname();
+			} elseif (
+				$file_info->isDir() &&
+				! ( new FilesystemIterator( $file_info->getPathname() ) )->valid()
+			) {
+				// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_rmdir -- Direct filesystem operation for cleanup.
+				rmdir( $file_info->getPathname() );
+			}
+		}
 
-        foreach ($iterator as $fileInfo) {
-            if (
-                $fileInfo->isFile() &&
-                $fileInfo->getExtension() === $extension
-            ) {
-                $files[] = $fileInfo->getPathname();
-            }
-        }
+		return $files;
+	}
 
-        return $files;
-    }
+	/**
+	 * Get all files recursively with a certain extension.
+	 *
+	 * @param string $dir       The directory path.
+	 * @param string $extension The file extension to filter by.
+	 *
+	 * @return array Array of file paths.
+	 */
+	public static function get_files_with_extension( string $dir, string $extension ): array {
+		$files = array();
 
-    /**
-     * Get a folder structure as an associative array with file contents.
-     *
-     * @date   16/08/2024
-     * @since  5.6.0
-     *
-     * @param  string  $dir
-     *
-     * @return array|false|string
-     */
-    public static function getFolderStructureWithContents(string $dir)
-    {
-        $structure = [];
+		if ( ! is_dir( $dir ) ) {
+			return $files;
+		}
 
-        if (!is_dir($dir)) {
-            return $structure;
-        }
+		$directory_iterator = new RecursiveDirectoryIterator(
+			$dir,
+			FilesystemIterator::SKIP_DOTS
+		);
 
-        $directoryIterator = new RecursiveDirectoryIterator(
-            $dir,
-            FilesystemIterator::SKIP_DOTS
-        );
-        $iterator = new RecursiveIteratorIterator(
-            $directoryIterator,
-            RecursiveIteratorIterator::SELF_FIRST
-        );
+		$iterator = new RecursiveIteratorIterator( $directory_iterator );
 
-        foreach ($iterator as $fileInfo) {
-            $innerIterator = $iterator->getInnerIterator();
+		foreach ( $iterator as $file_info ) {
+			if (
+				$file_info->isFile() &&
+				$file_info->getExtension() === $extension
+			) {
+				$files[] = $file_info->getPathname();
+			}
+		}
 
-            if (!$innerIterator instanceof RecursiveDirectoryIterator) {
-                continue;
-            }
+		return $files;
+	}
 
-            $subPath = $innerIterator->getSubPathName();
+	/**
+	 * Get a folder structure as an associative array with file contents.
+	 *
+	 * @param string $dir The directory path.
+	 *
+	 * @return array|false|string The folder structure with contents.
+	 */
+	public static function get_folder_structure_with_contents( string $dir ) {
+		$structure = array();
 
-            $pathParts = explode(DIRECTORY_SEPARATOR, $subPath);
-            $temp = &$structure;
+		if ( ! is_dir( $dir ) ) {
+			return $structure;
+		}
 
-            foreach ($pathParts as $part) {
-                if (!isset($temp[$part])) {
-                    $temp[$part] = [];
-                }
-                $temp = &$temp[$part];
-            }
+		$directory_iterator = new RecursiveDirectoryIterator(
+			$dir,
+			FilesystemIterator::SKIP_DOTS
+		);
 
-            if ($fileInfo->isFile()) {
-                $temp = file_get_contents($fileInfo->getPathname());
-            }
-        }
+		$iterator = new RecursiveIteratorIterator(
+			$directory_iterator,
+			RecursiveIteratorIterator::SELF_FIRST
+		);
 
-        return $structure;
-    }
+		foreach ( $iterator as $file_info ) {
+			$inner_iterator = $iterator->getInnerIterator();
+
+			if ( ! $inner_iterator instanceof RecursiveDirectoryIterator ) {
+				continue;
+			}
+
+			$sub_path   = $inner_iterator->getSubPathName();
+			$path_parts = explode( DIRECTORY_SEPARATOR, $sub_path );
+			$temp       = &$structure;
+
+			foreach ( $path_parts as $part ) {
+				if ( ! isset( $temp[ $part ] ) ) {
+					$temp[ $part ] = array();
+				}
+				$temp = &$temp[ $part ];
+			}
+
+			if ( $file_info->isFile() ) {
+				// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Reading local files.
+				$temp = file_get_contents( $file_info->getPathname() );
+			}
+		}
+
+		return $structure;
+	}
+
+	/**
+	 * Get render template (legacy method name).
+	 *
+	 * @deprecated Use get_render_template() instead.
+	 *
+	 * @param string $file The file path.
+	 *
+	 * @return string|false The template path or false if not found.
+	 */
+	public static function getRenderTemplate( $file ) {
+		return self::get_render_template( $file );
+	}
+
+	/**
+	 * Check if string starts with (legacy method name).
+	 *
+	 * @deprecated Use starts_with() instead.
+	 *
+	 * @param string $haystack The string to search in.
+	 * @param string $needle   The string to search for.
+	 *
+	 * @return bool Whether the haystack starts with the needle.
+	 */
+	public static function startsWith( $haystack, $needle ): bool {
+		return self::starts_with( $haystack, $needle );
+	}
+
+	/**
+	 * Check if string ends with (legacy method name).
+	 *
+	 * @deprecated Use ends_with() instead.
+	 *
+	 * @param string $haystack The string to search in.
+	 * @param string $needle   The string to search for.
+	 *
+	 * @return bool Whether the haystack ends with the needle.
+	 */
+	public static function endsWith( $haystack, $needle ): bool {
+		return self::ends_with( $haystack, $needle );
+	}
+
+	/**
+	 * Delete all files (legacy method name).
+	 *
+	 * @deprecated Use delete_all_files() instead.
+	 *
+	 * @param string $dir        The directory path.
+	 * @param bool   $delete_dir Whether to delete the directory itself.
+	 *
+	 * @return bool Whether the operation was successful.
+	 */
+	public static function deleteAllFiles( string $dir, bool $delete_dir = true ): bool {
+		return self::delete_all_files( $dir, $delete_dir );
+	}
+
+	/**
+	 * Check if directory is empty (legacy method name).
+	 *
+	 * @deprecated Use is_directory_empty() instead.
+	 *
+	 * @param string $dir The directory path.
+	 *
+	 * @return bool|null True if empty, false if not empty or not a directory, null if not readable.
+	 */
+	public static function isDirectoryEmpty( string $dir ): ?bool {
+		return self::is_directory_empty( $dir );
+	}
+
+	/**
+	 * Get relative URL (legacy method name).
+	 *
+	 * @deprecated Use get_relative_url() instead.
+	 *
+	 * @param string $url The URL or path.
+	 *
+	 * @return string The relative URL.
+	 */
+	public static function getRelativeUrl( $url ): string {
+		return self::get_relative_url( $url );
+	}
+
+	/**
+	 * Get root folder (legacy method name).
+	 *
+	 * @deprecated Use get_root_folder() instead.
+	 *
+	 * @return string The root folder name.
+	 */
+	public static function getRootFolder(): string {
+		return self::get_root_folder();
+	}
+
+	/**
+	 * Get files recursively and delete empty folders (legacy method name).
+	 *
+	 * @deprecated Use get_files_recursively_and_delete_empty_folders() instead.
+	 *
+	 * @param string $dir The directory path.
+	 *
+	 * @return array Array of file paths.
+	 */
+	public static function getFilesRecursivelyAndDeleteEmptyFolders( $dir ): array {
+		return self::get_files_recursively_and_delete_empty_folders( $dir );
+	}
+
+	/**
+	 * Get files with extension (legacy method name).
+	 *
+	 * @deprecated Use get_files_with_extension() instead.
+	 *
+	 * @param string $dir       The directory path.
+	 * @param string $extension The file extension to filter by.
+	 *
+	 * @return array Array of file paths.
+	 */
+	public static function getFilesWithExtension( string $dir, string $extension ): array {
+		return self::get_files_with_extension( $dir, $extension );
+	}
+
+	/**
+	 * Get folder structure with contents (legacy method name).
+	 *
+	 * @deprecated Use get_folder_structure_with_contents() instead.
+	 *
+	 * @param string $dir The directory path.
+	 *
+	 * @return array|false|string The folder structure with contents.
+	 */
+	public static function getFolderStructureWithContents( string $dir ) {
+		return self::get_folder_structure_with_contents( $dir );
+	}
 }

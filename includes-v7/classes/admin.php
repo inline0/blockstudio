@@ -517,7 +517,7 @@ class Admin
                 'isTailwindActive' => Build::isTailwindActive()
                     ? 'true'
                     : 'false',
-                'llmTxtUrl' => LLM::getTxtUrl(),
+                'llmTxtUrl' => LLM::get_txt_url(),
                 'loader' => plugin_dir_url(BLOCKSTUDIO) . 'includes-v7/editor/vs',
                 'logo' => plugins_url(
                     'includes-v7/admin/assets/fabrikatLogo.svg',

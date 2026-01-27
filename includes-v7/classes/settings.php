@@ -1,483 +1,550 @@
 <?php
+/**
+ * Settings class.
+ *
+ * @package Blockstudio
+ */
 
 namespace Blockstudio;
 
 /**
- * Settings.
- *
- * @date   13/08/2023
- * @since  5.2.0
+ * Handles plugin settings.
  */
-class Settings
-{
-    protected static array $defaults = [
-        'builderDeprecated' => [
-            'enabled' => false,
-        ],
-        'users' => [
-            'ids' => [],
-            'roles' => [],
-        ],
-        'assets' => [
-            'enqueue' => true,
-            'minify' => [
-                'css' => false,
-                'js' => false,
-            ],
-            'process' => [
-                'scss' => false,
-                'scssFiles' => true,
-            ],
-        ],
-        'editor' => [
-            'formatOnSave' => false,
-            'library' => false,
-            'assets' => [],
-            'markup' => false,
-        ],
-        'tailwind' => [
-            'enabled' => false,
-            'customClasses' => [],
-        ],
-        'blockEditor' => [
-            'disableLoading' => false,
-            'cssClasses' => [],
-            'cssVariables' => [],
-        ],
-        'library' => false,
-        'ai' => [
-            'enableContextGeneration' => false,
-        ],
-    ];
+class Settings {
 
-    private static ?Settings $instance = null;
-    protected static array $settings = [];
-    protected static array $settingsOptions = [];
-    protected static $settingsJson = null;
-    protected static array $settingsFilters = [];
-    protected static array $settingsFiltersValues = [];
+	/**
+	 * Default settings.
+	 *
+	 * @var array
+	 */
+	protected static array $defaults = array(
+		'builderDeprecated' => array(
+			'enabled' => false,
+		),
+		'users'             => array(
+			'ids'   => array(),
+			'roles' => array(),
+		),
+		'assets'            => array(
+			'enqueue' => true,
+			'minify'  => array(
+				'css' => false,
+				'js'  => false,
+			),
+			'process' => array(
+				'scss'      => false,
+				'scssFiles' => true,
+			),
+		),
+		'editor'            => array(
+			'formatOnSave' => false,
+			'library'      => false,
+			'assets'       => array(),
+			'markup'       => false,
+		),
+		'tailwind'          => array(
+			'enabled'       => false,
+			'customClasses' => array(),
+		),
+		'blockEditor'       => array(
+			'disableLoading' => false,
+			'cssClasses'     => array(),
+			'cssVariables'   => array(),
+		),
+		'library'           => false,
+		'ai'                => array(
+			'enableContextGeneration' => false,
+		),
+	);
 
-    /**
-     * Get instance
-     *
-     * @date   13/08/2023
-     * @since  5.2.0
-     */
-    public static function getInstance(): ?Settings
-    {
-        if (self::$instance === null) {
-            self::$instance = new self();
-        }
+	/**
+	 * Singleton instance.
+	 *
+	 * @var Settings|null
+	 */
+	private static ?Settings $instance = null;
 
-        return self::$instance;
-    }
+	/**
+	 * Current settings.
+	 *
+	 * @var array
+	 */
+	protected static array $settings = array();
 
-    /**
-     * Construct.
-     *
-     * @date   13/08/2023
-     * @since  5.2.0
-     */
-    function __construct()
-    {
-        static::$settings = static::$defaults;
-        static::$settingsFilters = static::$defaults;
-        static::$settingsFilters['assets']['enqueue'] = false;
-        static::$settingsFilters['assets']['process']['scssFiles'] = false;
-        if (!self::json()) {
-            static::$settingsOptions = static::$defaults;
-            $this->loadSettingsFromOptions();
-        }
-        $this->migrateSettingsFromOldVersion(static::$settings);
-        $this->migrateSettingsFromOldVersion(static::$settingsFilters);
-        if (self::json()) {
-            static::$settingsJson = static::$defaults;
-            $this->loadSettingsFromJson();
-        }
-        $this->loadSettingsFromFilters();
-    }
+	/**
+	 * Settings from options table.
+	 *
+	 * @var array
+	 */
+	protected static array $settings_options = array();
 
-    /**
-     * Migrate from 5.1.1.
-     *
-     * @date   13/08/2023
-     * @since  5.2.0
-     *
-     * @param  $settings
-     *
-     * @TODO   : Remove in 6.0.0
-     */
-    protected function migrateSettingsFromOldVersion(&$settings)
-    {
-        if (has_filter('blockstudio/library')) {
-            $library = apply_filters('blockstudio/library', false);
-            $settings['library'] = $library;
-        }
+	/**
+	 * Settings from JSON file.
+	 *
+	 * @var array|null
+	 */
+	protected static $settings_json = null;
 
-        if (has_filter('blockstudio/assets')) {
-            $assets = apply_filters('blockstudio/assets', true);
-            $settings['assets']['enqueue'] = $assets;
-        }
+	/**
+	 * Settings from filters.
+	 *
+	 * @var array
+	 */
+	protected static array $settings_filters = array();
 
-        if (has_filter('blockstudio/editor/library')) {
-            $editorLibrary = apply_filters('blockstudio/editor/library', false);
-            $settings['editor']['library'] = $editorLibrary;
-        }
+	/**
+	 * Filter values.
+	 *
+	 * @var array
+	 */
+	protected static array $settings_filters_values = array();
 
-        if (has_filter('blockstudio/editor/assets')) {
-            $editorAssets = apply_filters('blockstudio/editor/assets', false);
-            $settings['editor']['assets'] = $editorAssets;
-        }
+	/**
+	 * Get singleton instance.
+	 *
+	 * @return Settings|null The singleton instance.
+	 */
+	public static function get_instance(): ?Settings {
+		if ( null === self::$instance ) {
+			self::$instance = new self();
+		}
 
-        if (has_filter('blockstudio/editor/markup')) {
-            $editorMarkup = apply_filters('blockstudio/editor/markup', false);
-            $settings['editor']['markup'] = $editorMarkup;
-        }
+		return self::$instance;
+	}
 
-        if (has_filter('blockstudio/editor/users')) {
-            $editorUserIds = apply_filters('blockstudio/editor/users', false);
-            $settings['users']['ids'] = $editorUserIds;
-        }
+	/**
+	 * Constructor.
+	 */
+	public function __construct() {
+		static::$settings         = static::$defaults;
+		static::$settings_filters = static::$defaults;
 
-        if (has_filter('blockstudio/editor/users/roles')) {
-            $editorUserRoles = apply_filters(
-                'blockstudio/editor/users/roles',
-                false
-            );
-            $settings['users']['roles'] = $editorUserRoles;
-        }
+		static::$settings_filters['assets']['enqueue']             = false;
+		static::$settings_filters['assets']['process']['scssFiles'] = false;
 
-        if (has_filter('blockstudio/editor/options')) {
-            $editorOptions = apply_filters('blockstudio/editor/options', false);
-            $formatOnSave = $editorOptions['formatOnSave'] ?? false;
-            $processorScss = $editorOptions['processorScss'] ?? false;
-            $processorEsbuild = $editorOptions['processorEsbuild'] ?? false;
+		if ( ! self::json() ) {
+			static::$settings_options = static::$defaults;
+			$this->load_settings_from_options();
+		}
 
-            if ($formatOnSave) {
-                $settings['editor']['formatOnSave'] = $formatOnSave;
-            }
-            if ($processorScss) {
-                $settings['assets']['minify']['css'] = $processorScss;
-                $settings['assets']['process']['scss'] = $processorScss;
-            }
-            if ($processorEsbuild) {
-                $settings['assets']['minify']['js'] = $processorEsbuild;
-            }
-        }
-    }
+		$this->migrate_settings_from_old_version( static::$settings );
+		$this->migrate_settings_from_old_version( static::$settings_filters );
 
-    /**
-     * Object to array.
-     *
-     * @date   13/08/2023
-     * @since  5.2.0
-     *
-     * @param  $data
-     *
-     * @return array|mixed
-     */
-    protected function objectToArray($data)
-    {
-        if (is_object($data)) {
-            $data = get_object_vars($data);
-        }
-        if (is_array($data)) {
-            return array_map([$this, 'objectToArray'], $data);
-        }
+		if ( self::json() ) {
+			static::$settings_json = static::$defaults;
+			$this->load_settings_from_json();
+		}
 
-        return $data;
-    }
+		$this->load_settings_from_filters();
+	}
 
-    /**
-     * Load settings from the options table.
-     *
-     * @date   13/08/2023
-     * @since  5.2.0
-     */
-    protected function loadSettingsFromOptions()
-    {
-        $options = $this->objectToArray(get_option('blockstudio_settings', []));
-        if (!is_array($options)) {
-            $options = [];
-        }
-        static::$settings = $this->arrayDeepMerge(static::$settings, $options);
-        static::$settingsOptions = $this->arrayDeepMerge(
-            static::$settings,
-            $options
-        );
-    }
+	/**
+	 * Migrate from 5.1.1.
+	 *
+	 * @param array $settings The settings array.
+	 *
+	 * @todo Remove in 6.0.0.
+	 */
+	protected function migrate_settings_from_old_version( &$settings ): void {
+		if ( has_filter( 'blockstudio/library' ) ) {
+			$library             = apply_filters( 'blockstudio/library', false );
+			$settings['library'] = $library;
+		}
 
-    /**
-     * Get JSON path.
-     *
-     * @date   13/08/2023
-     * @since  5.2.0
-     *
-     * @return string
-     */
-    public static function jsonPath(): string
-    {
-        return apply_filters(
-            'blockstudio/settings/path',
-            get_stylesheet_directory() . '/blockstudio.json'
-        );
-    }
+		if ( has_filter( 'blockstudio/assets' ) ) {
+			$assets                       = apply_filters( 'blockstudio/assets', true );
+			$settings['assets']['enqueue'] = $assets;
+		}
 
-    /**
-     * Get JSON.
-     *
-     * @date   13/08/2023
-     * @since  5.2.0
-     *
-     * @return bool|string
-     */
-    public static function json()
-    {
-        if (file_exists(self::jsonPath())) {
-            return self::jsonPath();
-        }
+		if ( has_filter( 'blockstudio/editor/library' ) ) {
+			$editor_library             = apply_filters( 'blockstudio/editor/library', false );
+			$settings['editor']['library'] = $editor_library;
+		}
 
-        return false;
-    }
+		if ( has_filter( 'blockstudio/editor/assets' ) ) {
+			$editor_assets             = apply_filters( 'blockstudio/editor/assets', false );
+			$settings['editor']['assets'] = $editor_assets;
+		}
 
-    /**
-     * Load settings from the blockstudio.json file.
-     *
-     * @date   13/08/2023
-     * @since  5.2.0
-     */
-    protected function loadSettingsFromJson()
-    {
-        $this->mergeJsonSettingsFromPath(self::$settings);
-        $this->mergeJsonSettingsFromPath(self::$settingsJson);
-    }
+		if ( has_filter( 'blockstudio/editor/markup' ) ) {
+			$editor_markup             = apply_filters( 'blockstudio/editor/markup', false );
+			$settings['editor']['markup'] = $editor_markup;
+		}
 
-    /**
-     * Merge JSON settings from path.
-     *
-     * @date   13/08/2023
-     * @since  5.2.0
-     *
-     * @param  $settings
-     */
-    private function mergeJsonSettingsFromPath(&$settings)
-    {
-        $jsonData = file_get_contents(self::json());
-        $jsonSettings = json_decode($jsonData, true);
-        if ($jsonSettings && is_array($jsonSettings)) {
-            $settings = $this->arrayDeepMerge($settings, $jsonSettings);
-        }
-    }
+		if ( has_filter( 'blockstudio/editor/users' ) ) {
+			$editor_user_ids       = apply_filters( 'blockstudio/editor/users', false );
+			$settings['users']['ids'] = $editor_user_ids;
+		}
 
-    /**
-     * Recursively merge arrays.
-     *
-     * @date   13/08/2023
-     * @since  5.2.0
-     *
-     * @param  array  $base   The base array.
-     * @param  array  $merge  The array to merge with base.
-     *
-     * @return array
-     */
-    protected function arrayDeepMerge(array $base, array $merge): array
-    {
-        foreach ($merge as $key => $value) {
-            if (
-                isset($base[$key]) &&
-                is_array($base[$key]) &&
-                is_array($value)
-            ) {
-                $base[$key] = $this->arrayDeepMerge($base[$key], $value);
-            } else {
-                $base[$key] = $value;
-            }
-        }
+		if ( has_filter( 'blockstudio/editor/users/roles' ) ) {
+			$editor_user_roles       = apply_filters( 'blockstudio/editor/users/roles', false );
+			$settings['users']['roles'] = $editor_user_roles;
+		}
 
-        return $base;
-    }
+		if ( has_filter( 'blockstudio/editor/options' ) ) {
+			$editor_options    = apply_filters( 'blockstudio/editor/options', false );
+			$format_on_save    = $editor_options['formatOnSave'] ?? false;
+			$processor_scss    = $editor_options['processorScss'] ?? false;
+			$processor_esbuild = $editor_options['processorEsbuild'] ?? false;
 
-    /**
-     * Load settings by applying filters.
-     *
-     * @date   13/08/2023
-     * @since  5.2.0
-     */
-    protected function loadSettingsFromFilters()
-    {
-        $this->applySettingsFilters(static::$settings);
-        $this->applySettingsFilters(static::$settingsFilters);
-    }
+			if ( $format_on_save ) {
+				$settings['editor']['formatOnSave'] = $format_on_save;
+			}
+			if ( $processor_scss ) {
+				$settings['assets']['minify']['css']  = $processor_scss;
+				$settings['assets']['process']['scss'] = $processor_scss;
+			}
+			if ( $processor_esbuild ) {
+				$settings['assets']['minify']['js'] = $processor_esbuild;
+			}
+		}
+	}
 
-    /**
-     * Apply settings filters.
-     *
-     * @date   13/08/2023
-     * @since  5.2.0
-     *
-     * @param  array  $settings
-     * @param  array  $path
-     */
-    protected function applySettingsFilters(array &$settings, array $path = [])
-    {
-        foreach ($settings as $key => &$value) {
-            $currentPath = array_merge($path, [$key]);
+	/**
+	 * Convert object to array.
+	 *
+	 * @param mixed $data The data to convert.
+	 *
+	 * @return array|mixed The converted data.
+	 */
+	protected function object_to_array( $data ) {
+		if ( is_object( $data ) ) {
+			$data = get_object_vars( $data );
+		}
+		if ( is_array( $data ) ) {
+			return array_map( array( $this, 'object_to_array' ), $data );
+		}
 
-            if (is_array($value) && count($value) !== 0) {
-                $this->applySettingsFilters($value, $currentPath);
-            } else {
-                $filterName =
-                    'blockstudio/settings/' . implode('/', $currentPath);
-                $value = apply_filters($filterName, $value);
-                if (has_filter($filterName)) {
-                    static::$settingsFiltersValues[$filterName] = $value;
-                }
-            }
-        }
-    }
+		return $data;
+	}
 
-    /**
-     * Get a setting value.
-     *
-     * @date   13/08/2023
-     * @since  5.2.0
-     *
-     * @param  string  $key
-     * @param  mixed   $default
-     *
-     * @return mixed
-     */
-    public static function get(string $key, $default = null)
-    {
-        $value = static::fetchValueFromKey($key, static::$settings);
+	/**
+	 * Load settings from the options table.
+	 *
+	 * @return void
+	 */
+	protected function load_settings_from_options(): void {
+		$options = $this->object_to_array( get_option( 'blockstudio_settings', array() ) );
 
-        if ($value === null) {
-            $value = static::fetchValueFromKey($key, static::$defaults);
-        }
+		if ( ! is_array( $options ) ) {
+			$options = array();
+		}
 
-        if ($value === null) {
-            $value = $default;
-        }
+		static::$settings         = $this->array_deep_merge( static::$settings, $options );
+		static::$settings_options = $this->array_deep_merge( static::$settings, $options );
+	}
 
-        if (has_filter('blockstudio/settings/' . $key)) {
-            return apply_filters('blockstudio/settings/' . $key, $value);
-        }
+	/**
+	 * Get JSON path.
+	 *
+	 * @return string The JSON file path.
+	 */
+	public static function json_path(): string {
+		return apply_filters(
+			'blockstudio/settings/path',
+			get_stylesheet_directory() . '/blockstudio.json'
+		);
+	}
 
-        return $value;
-    }
+	/**
+	 * Get JSON file if it exists.
+	 *
+	 * @return string|false The JSON file path or false.
+	 */
+	public static function json() {
+		if ( file_exists( self::json_path() ) ) {
+			return self::json_path();
+		}
 
-    /**
-     * Fetch value from key.
-     *
-     * @date   13/08/2023
-     * @since  5.2.0
-     *
-     * @param  string  $key
-     * @param  array   $array
-     *
-     * @return mixed
-     */
-    private static function fetchValueFromKey(string $key, array $array)
-    {
-        $keys = explode('/', $key);
-        $temp = $array;
+		return false;
+	}
 
-        foreach ($keys as $segment) {
-            if (!isset($temp[$segment])) {
-                return null;
-            }
-            $temp = $temp[$segment];
-        }
+	/**
+	 * Load settings from the blockstudio.json file.
+	 *
+	 * @return void
+	 */
+	protected function load_settings_from_json(): void {
+		$this->merge_json_settings_from_path( self::$settings );
+		$this->merge_json_settings_from_path( self::$settings_json );
+	}
 
-        return $temp;
-    }
+	/**
+	 * Merge JSON settings from path.
+	 *
+	 * @param array $settings The settings array to merge into.
+	 *
+	 * @return void
+	 */
+	private function merge_json_settings_from_path( &$settings ): void {
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Reading local JSON file.
+		$json_data     = file_get_contents( self::json() );
+		$json_settings = json_decode( $json_data, true );
 
-    /**
-     * Get all setting values.
-     *
-     * @date   13/08/2023
-     * @since  5.2.0
-     *
-     * @return array
-     */
-    public static function getAll(): array
-    {
-        return static::$settings;
-    }
+		if ( $json_settings && is_array( $json_settings ) ) {
+			$settings = $this->array_deep_merge( $settings, $json_settings );
+		}
+	}
 
-    /**
-     * Get options setting values.
-     *
-     * @date   13/08/2023
-     * @since  5.2.0
-     *
-     * @return array
-     */
-    public static function getOptions(): array
-    {
-        return static::$settingsOptions;
-    }
+	/**
+	 * Recursively merge arrays.
+	 *
+	 * @param array $base  The base array.
+	 * @param array $merge The array to merge with base.
+	 *
+	 * @return array The merged array.
+	 */
+	protected function array_deep_merge( array $base, array $merge ): array {
+		foreach ( $merge as $key => $value ) {
+			if (
+				isset( $base[ $key ] ) &&
+				is_array( $base[ $key ] ) &&
+				is_array( $value )
+			) {
+				$base[ $key ] = $this->array_deep_merge( $base[ $key ], $value );
+			} else {
+				$base[ $key ] = $value;
+			}
+		}
 
-    /**
-     * Get JSON setting values.
-     *
-     * @date   13/08/2023
-     * @since  5.2.0
-     *
-     * @return array|null
-     */
-    public static function getJson(): ?array
-    {
-        return static::$settingsJson;
-    }
+		return $base;
+	}
 
-    /**
-     * Get filters setting values.
-     *
-     * @date   13/08/2023
-     * @since  5.2.0
-     *
-     * @return array
-     */
-    public static function getFilters(): array
-    {
-        return static::$settingsFilters;
-    }
+	/**
+	 * Load settings by applying filters.
+	 *
+	 * @return void
+	 */
+	protected function load_settings_from_filters(): void {
+		$this->apply_settings_filters( static::$settings );
+		$this->apply_settings_filters( static::$settings_filters );
+	}
 
-    /**
-     * Get filters setting values.
-     *
-     * @date   19/010/2023
-     * @since  5.2.10
-     *
-     * @return array
-     */
-    public static function getFiltersValues(): array
-    {
-        return static::$settingsFiltersValues;
-    }
+	/**
+	 * Apply settings filters.
+	 *
+	 * @param array $settings The settings array.
+	 * @param array $path     The current path.
+	 *
+	 * @return void
+	 */
+	protected function apply_settings_filters( array &$settings, array $path = array() ): void {
+		foreach ( $settings as $key => &$value ) {
+			$current_path = array_merge( $path, array( $key ) );
 
-    /**
-     * Get schema.
-     *
-     * @date   13/08/2023
-     * @since  5.2.0
-     *
-     * @return array
-     */
-    public static function getSchema(): array
-    {
-        return json_decode(
-            file_get_contents(
-                BLOCKSTUDIO_DIR . '/includes-v7/schemas/blockstudio.json'
-            ),
-            true
-        );
-    }
+			if ( is_array( $value ) && 0 !== count( $value ) ) {
+				$this->apply_settings_filters( $value, $current_path );
+			} else {
+				$filter_name = 'blockstudio/settings/' . implode( '/', $current_path );
+				$value       = apply_filters( $filter_name, $value );
+
+				if ( has_filter( $filter_name ) ) {
+					static::$settings_filters_values[ $filter_name ] = $value;
+				}
+			}
+		}
+	}
+
+	/**
+	 * Get a setting value.
+	 *
+	 * @param string $key     The setting key.
+	 * @param mixed  $default The default value.
+	 *
+	 * @return mixed The setting value.
+	 */
+	public static function get( string $key, $default = null ) {
+		$value = static::fetch_value_from_key( $key, static::$settings );
+
+		if ( null === $value ) {
+			$value = static::fetch_value_from_key( $key, static::$defaults );
+		}
+
+		if ( null === $value ) {
+			$value = $default;
+		}
+
+		if ( has_filter( 'blockstudio/settings/' . $key ) ) {
+			return apply_filters( 'blockstudio/settings/' . $key, $value );
+		}
+
+		return $value;
+	}
+
+	/**
+	 * Fetch value from key.
+	 *
+	 * @param string $key   The key path.
+	 * @param array  $array The array to search.
+	 *
+	 * @return mixed|null The value or null.
+	 */
+	private static function fetch_value_from_key( string $key, array $array ) {
+		$keys = explode( '/', $key );
+		$temp = $array;
+
+		foreach ( $keys as $segment ) {
+			if ( ! isset( $temp[ $segment ] ) ) {
+				return null;
+			}
+			$temp = $temp[ $segment ];
+		}
+
+		return $temp;
+	}
+
+	/**
+	 * Get all setting values.
+	 *
+	 * @return array All settings.
+	 */
+	public static function get_all(): array {
+		return static::$settings;
+	}
+
+	/**
+	 * Get options setting values.
+	 *
+	 * @return array Options settings.
+	 */
+	public static function get_options(): array {
+		return static::$settings_options;
+	}
+
+	/**
+	 * Get JSON setting values.
+	 *
+	 * @return array|null JSON settings.
+	 */
+	public static function get_json(): ?array {
+		return static::$settings_json;
+	}
+
+	/**
+	 * Get filters setting values.
+	 *
+	 * @return array Filters settings.
+	 */
+	public static function get_filters(): array {
+		return static::$settings_filters;
+	}
+
+	/**
+	 * Get filter values.
+	 *
+	 * @return array Filter values.
+	 */
+	public static function get_filters_values(): array {
+		return static::$settings_filters_values;
+	}
+
+	/**
+	 * Get schema.
+	 *
+	 * @return array The schema.
+	 */
+	public static function get_schema(): array {
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Reading local schema file.
+		return json_decode(
+			file_get_contents( BLOCKSTUDIO_DIR . '/includes-v7/schemas/blockstudio.json' ),
+			true
+		);
+	}
+
+	/**
+	 * Get instance (legacy method name).
+	 *
+	 * @deprecated Use get_instance() instead.
+	 *
+	 * @return Settings|null The singleton instance.
+	 */
+	public static function getInstance(): ?Settings {
+		return self::get_instance();
+	}
+
+	/**
+	 * Get all settings (legacy method name).
+	 *
+	 * @deprecated Use get_all() instead.
+	 *
+	 * @return array All settings.
+	 */
+	public static function getAll(): array {
+		return self::get_all();
+	}
+
+	/**
+	 * Get options (legacy method name).
+	 *
+	 * @deprecated Use get_options() instead.
+	 *
+	 * @return array Options settings.
+	 */
+	public static function getOptions(): array {
+		return self::get_options();
+	}
+
+	/**
+	 * Get JSON (legacy method name).
+	 *
+	 * @deprecated Use get_json() instead.
+	 *
+	 * @return array|null JSON settings.
+	 */
+	public static function getJson(): ?array {
+		return self::get_json();
+	}
+
+	/**
+	 * Get filters (legacy method name).
+	 *
+	 * @deprecated Use get_filters() instead.
+	 *
+	 * @return array Filters settings.
+	 */
+	public static function getFilters(): array {
+		return self::get_filters();
+	}
+
+	/**
+	 * Get filter values (legacy method name).
+	 *
+	 * @deprecated Use get_filters_values() instead.
+	 *
+	 * @return array Filter values.
+	 */
+	public static function getFiltersValues(): array {
+		return self::get_filters_values();
+	}
+
+	/**
+	 * Get schema (legacy method name).
+	 *
+	 * @deprecated Use get_schema() instead.
+	 *
+	 * @return array The schema.
+	 */
+	public static function getSchema(): array {
+		return self::get_schema();
+	}
+
+	/**
+	 * Get JSON path (legacy method name).
+	 *
+	 * @deprecated Use json_path() instead.
+	 *
+	 * @return string The JSON file path.
+	 */
+	public static function jsonPath(): string {
+		return self::json_path();
+	}
 }
 
-foreach (['blockstudio/init/before', 'init'] as $hook) {
-    add_action($hook, function () {
-        Settings::getInstance();
-    });
+foreach ( array( 'blockstudio/init/before', 'init' ) as $hook ) {
+	add_action(
+		$hook,
+		function () {
+			Settings::get_instance();
+		}
+	);
 }

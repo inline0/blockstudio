@@ -19,6 +19,10 @@
 	<file>./includes-v7/classes/esmodulescss.php</file>
 	<file>./includes-v7/classes/esmodules.php</file>
 	<file>./includes-v7/classes/blocks.php</file>
+	<file>./includes-v7/classes/llm.php</file>
+	<file>./includes-v7/classes/files.php</file>
+	<file>./includes-v7/classes/extensions.php</file>
+	<file>./includes-v7/classes/settings.php</file>
 
 	<!-- Exclude vendor and node_modules -->
 	<exclude-pattern>*/vendor/*</exclude-pattern>
