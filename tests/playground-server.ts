@@ -6,9 +6,9 @@ createPlaygroundServer({
   pluginPath: join(__dirname, ".."),
   pluginSlug: "blockstudio7",
   pluginMainFile: "blockstudio.php",
-  testBlocksPath: "package/test-blocks",
+  testBlocksPath: "tests/blocks",
   testHelperPluginPath: "tests/test-helper.php",
   title: "Blockstudio - Test Environment",
-  excludeDirs: ["tests", "package/node_modules"],
+  excludeDirs: ["package/node_modules"],
   landingPage: "/wp-admin",
 });

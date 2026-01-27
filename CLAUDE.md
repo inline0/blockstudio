@@ -187,7 +187,7 @@ class Plugin {
 1. **CI-First** - Tests must run in GitHub Actions without local dependencies
 2. **No Docker Required** - Use WordPress Playground (WebAssembly) instead of wp-env
 3. **No Mocking** - Test against real WordPress, not mocked functions
-4. **Test All Blocks** - Use the extensive test blocks in `package/test-blocks/`
+4. **Test All Blocks** - Use the extensive test blocks in `tests/blocks/`
 
 ### Test Architecture
 
@@ -199,7 +199,7 @@ class Plugin {
 │  │           WordPress Playground (WebAssembly)       │  │
 │  │                                                    │  │
 │  │  • Plugin files loaded via /api/plugin-files      │  │
-│  │  • Test blocks from package/test-blocks/          │  │
+│  │  • Test blocks from tests/blocks/          │  │
 │  │  • Plugin activated automatically                 │  │
 │  │  • PHP assertions run via Playwright              │  │
 │  └───────────────────────────────────────────────────┘  │
@@ -218,10 +218,10 @@ class Plugin {
 
 ### Test Blocks
 
-Over 100 test blocks available in `package/test-blocks/`:
+Over 100 test blocks available in `tests/blocks/`:
 
 ```
-package/test-blocks/
+tests/blocks/
 ├── components/           # InnerBlocks, RichText, useBlockProps, MediaPlaceholder
 ├── functions/            # assets, context, events, init
 ├── overrides/            # group, tabs, repeater
@@ -288,7 +288,7 @@ The test-helper.php plugin does two things:
  */
 
 // 1. Configure Blockstudio to find test blocks in theme directory
-// Test blocks from package/test-blocks/ are copied to:
+// Test blocks from tests/blocks/ are copied to:
 // /wp-content/themes/{active-theme}/blockstudio/
 add_filter('blockstudio/settings/blocks/paths', function ($paths) {
     $theme_blockstudio_path = get_stylesheet_directory() . '/blockstudio';
@@ -450,7 +450,7 @@ test.describe('Block Rendering', () => {
    - [ ] Setup WordPress Playground infrastructure (from sleek-*)
    - [ ] Create test-helper.php plugin for REST endpoints
    - [ ] Configure Playwright for WordPress Playground
-   - [ ] Use existing test blocks from `package/test-blocks/`
+   - [ ] Use existing test blocks from `tests/blocks/`
 
 2. **Write Unit Tests (Playwright + REST API)**
    - [ ] `build.test.ts` - Build class get methods for all test blocks
