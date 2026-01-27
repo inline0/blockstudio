@@ -8,7 +8,23 @@
 namespace Blockstudio;
 
 /**
- * Centralized configuration constants.
+ * Centralized configuration constants for Blockstudio.
+ *
+ * This class provides a single location for all magic strings and configuration
+ * values used throughout the plugin. Using constants instead of hardcoded strings:
+ *
+ * - Prevents typos and inconsistencies
+ * - Makes refactoring easier (change in one place)
+ * - Provides IDE autocompletion
+ * - Documents available configuration options
+ *
+ * Categories:
+ * - Block namespace and API version
+ * - File and folder names (block.json, index.php, _dist, etc.)
+ * - Asset prefixes and suffixes (admin-, -editor, -inline, etc.)
+ * - Settings paths for configuration lookup
+ * - Hook and filter names
+ * - Character replacements for ID sanitization
  *
  * @since 7.0.0
  */

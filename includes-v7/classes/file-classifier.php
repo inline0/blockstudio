@@ -10,9 +10,29 @@ namespace Blockstudio;
 use Exception;
 
 /**
- * Classifies files in the block filesystem.
+ * Classifies files in Blockstudio block directories.
  *
- * Determines if a file is a block, extension, override, asset, etc.
+ * This class determines what type of file is being processed based on:
+ * - File extension (.php, .twig, .blade.php, .css, .scss, .js)
+ * - File naming conventions (admin-, block-editor-, global-, -inline, -editor)
+ * - JSON content for block.json files (blockstudio key, extend/override flags)
+ *
+ * File Classification Types:
+ * - Block: Has block.json with 'blockstudio' key and a render template
+ * - Override: Has 'blockstudio.override: true' - modifies existing blocks
+ * - Extension: Has 'blockstudio.extend: true' - adds to core blocks
+ * - Init file: PHP file starting with 'init' - executed during build
+ * - Directory: Empty directory (no block.json or template)
+ * - Blade: Template using Laravel Blade syntax (.blade.php)
+ * - Twig: Template using Twig syntax (.twig)
+ *
+ * Asset Classification by Naming Convention:
+ * - admin-*.css/js: Only loaded in WordPress admin
+ * - block-editor-*.css/js: Only loaded in Gutenberg editor
+ * - global-*.css/js: Loaded everywhere (frontend + admin)
+ * - *-editor.css/js: Only loaded in editor, not frontend
+ * - *-inline.css/js: Injected inline rather than enqueued
+ * - *-scoped.css/scss: CSS scoped to block's wrapper element
  *
  * @since 7.0.0
  */

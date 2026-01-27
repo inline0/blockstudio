@@ -12,7 +12,53 @@ use Exception;
 use WP_Block_Type;
 
 /**
- * Handles building and registering blocks.
+ * Main entry point for discovering, processing, and registering Blockstudio blocks.
+ *
+ * This class orchestrates the entire block build process through its init() method,
+ * which is typically called during WordPress initialization. The build process has
+ * four phases:
+ *
+ * Phase 1 - Discovery (Block_Discovery):
+ *   Recursively scans directories for block.json files and classifies each file
+ *   as a block, override, extension, init file, or blade template.
+ *
+ * Phase 2 - Asset Processing (process_block_assets):
+ *   Processes CSS/SCSS/JS files found in each block directory. Handles SCSS
+ *   compilation, CSS scoping, minification, and categorizes assets by type
+ *   (admin, block-editor, global, inline).
+ *
+ * Phase 3 - Block Registration (register_block_type):
+ *   Creates WP_Block_Type instances for each discovered block and registers
+ *   them with WordPress. Builds block attributes from field definitions.
+ *
+ * Phase 4 - Override Application (apply_overrides):
+ *   Merges override configurations into their target blocks, allowing blocks
+ *   to be extended or modified by other block definitions.
+ *
+ * Public API Methods:
+ *   Build::init()              - Run the build process for a directory
+ *   Build::blocks()            - Get all registered block types
+ *   Build::data()              - Get block metadata indexed by name
+ *   Build::extensions()        - Get extension block types
+ *   Build::files()             - Get discovered files (editor mode)
+ *   Build::assets()            - Get registered assets
+ *   Build::assets_admin()      - Get admin-only assets
+ *   Build::assets_block_editor() - Get block editor assets
+ *   Build::assets_global()     - Get globally loaded assets
+ *   Build::paths()             - Get registered block paths
+ *   Build::overrides()         - Get override configurations
+ *   Build::blade()             - Get Blade template configurations
+ *
+ * Usage:
+ *   // Register blocks from theme directory
+ *   Build::init( get_stylesheet_directory() . '/blockstudio' );
+ *
+ *   // Register blocks with options
+ *   Build::init([
+ *       'dir'     => '/path/to/blocks',
+ *       'library' => true,  // Shared block library
+ *       'editor'  => false, // Normal mode (not editor)
+ *   ]);
  *
  * @since 1.0.0
  */

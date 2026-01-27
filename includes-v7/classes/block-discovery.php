@@ -12,66 +12,118 @@ use RecursiveIteratorIterator;
 use Exception;
 
 /**
- * Discovers blocks from filesystem paths.
+ * Discovers Blockstudio blocks by scanning filesystem directories.
  *
- * This class extracts block discovery logic from the Build class.
- * It produces the exact same data structure as Build::init().
+ * This class handles Phase 1 of Build::init() - recursively scanning directories
+ * to find block.json files, classify them, and build metadata for each block.
+ *
+ * Block Types Discovered:
+ * - Regular blocks: Have block.json with 'blockstudio' key and a render template
+ * - Override blocks: Have 'blockstudio.override' set to true in block.json
+ * - Extension blocks: Have 'blockstudio.extend' set to true (extend core blocks)
+ * - Init files: PHP files prefixed with 'init' (executed during build)
+ * - Blade templates: Files ending in .blade.php (for Blade templating)
+ *
+ * Discovery Modes:
+ * - Normal mode: Only discovers block.json files and builds registration data
+ * - Editor mode: Discovers ALL files for the code editor feature
+ *
+ * Usage:
+ *   $discovery = new Block_Discovery();
+ *   $results = $discovery->discover( '/path/to/blocks', 'my-instance' );
+ *   // $results['store'] contains all discovered items
+ *   // $results['registerable'] contains items that need WP registration
  *
  * @since 7.0.0
  */
 class Block_Discovery {
 
 	/**
-	 * Discovered store (all discovered items).
+	 * All discovered items indexed by block name (or file path in editor mode).
 	 *
-	 * @var array
+	 * Each entry contains block metadata: path, files, assets, scopedClass, etc.
+	 * In editor mode, this includes every file (not just blocks).
+	 *
+	 * @var array<string, array>
 	 */
 	private array $store = array();
 
 	/**
-	 * Items that need block registration.
+	 * Items that require WordPress block registration.
 	 *
-	 * @var array
+	 * Only populated in non-editor mode. Contains blocks, overrides, and
+	 * extensions with their classification and block.json data needed
+	 * for creating WP_Block_Type instances.
+	 *
+	 * @var array<string, array{data: array, block_json: array, classification: array, contents: string}>
 	 */
 	private array $registerable = array();
 
 	/**
-	 * Blade templates discovered.
+	 * Discovered Blade templates indexed by instance then template name.
 	 *
-	 * @var array
+	 * Structure: ['instance-name' => ['template-name' => 'relative.path']]
+	 * Blade templates use .blade.php extension and are registered separately.
+	 *
+	 * @var array<string, array<string, string>>
 	 */
 	private array $blade_templates = array();
 
 	/**
-	 * Block JSON data for registration.
+	 * Parsed block.json data indexed by block name.
 	 *
-	 * @var array
+	 * Cached to avoid re-parsing the same block.json multiple times
+	 * when processing related files in the same directory.
+	 *
+	 * @var array<string, array>
 	 */
 	private array $block_json_data = array();
 
 	/**
-	 * File contents cache.
+	 * File contents cache to avoid repeated disk reads.
 	 *
-	 * @var array
+	 * Key is absolute file path, value is file contents.
+	 * Cleared between discover() calls.
+	 *
+	 * @var array<string, string>
 	 */
 	private array $contents_cache = array();
 
 	/**
-	 * Override entries (tracked separately for editor mode).
+	 * Override blocks tracked separately for editor mode asset merging.
 	 *
-	 * @var array
+	 * When in editor mode, override assets need to be merged with their
+	 * target block's assets. This tracks overrides regardless of mode
+	 * so the merging can happen correctly.
+	 *
+	 * @var array<string, array{name: string, data: array, classification: array}>
 	 */
 	private array $overrides = array();
 
 	/**
-	 * Discover blocks in a path.
+	 * Discover blocks in a directory path.
 	 *
-	 * @param string $base_path  The path to scan.
-	 * @param string $instance   The instance name.
-	 * @param bool   $is_library Whether this is a library path.
-	 * @param bool   $is_editor  Whether in editor mode.
+	 * Recursively scans the given path for Blockstudio blocks, classifying
+	 * each file and building metadata. Results vary based on editor mode:
 	 *
-	 * @return array The discovered items.
+	 * Normal mode: Only processes block.json files and their associated
+	 * render templates. Returns blocks ready for WordPress registration.
+	 *
+	 * Editor mode: Processes ALL files for the code editor feature.
+	 * Every file gets an entry in the store, keyed by file path.
+	 *
+	 * @param string $base_path  Absolute path to scan for blocks.
+	 * @param string $instance   Instance identifier (e.g., 'themes/mytheme/blockstudio').
+	 * @param bool   $is_library Whether this is a shared library (affects visibility).
+	 * @param bool   $is_editor  Whether running in editor mode (discovers all files).
+	 *
+	 * @return array{
+	 *     store: array<string, array>,
+	 *     registerable: array<string, array>,
+	 *     blade_templates: array<string, array>,
+	 *     block_json_data: array<string, array>,
+	 *     overrides: array<string, array>
+	 * } Discovery results for Build::init() to process.
 	 */
 	public function discover( string $base_path, string $instance, bool $is_library = false, bool $is_editor = false ): array {
 		$this->store           = array();

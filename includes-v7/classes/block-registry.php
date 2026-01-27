@@ -10,10 +10,25 @@ namespace Blockstudio;
 use WP_Block_Type;
 
 /**
- * Centralized registry for block data.
+ * Centralized singleton registry for all Blockstudio state.
  *
- * This class acts as a shared state store, eliminating the circular dependency
- * between Build and Block classes.
+ * This class replaces the static properties that were previously scattered across
+ * the Build class (v6). It provides a single source of truth for:
+ *
+ * - Registered blocks and their metadata
+ * - Block extensions and overrides
+ * - Discovered files from filesystem scanning
+ * - Assets (CSS/JS) for various contexts (admin, editor, global)
+ * - Blade template configurations
+ * - Instance paths for block discovery
+ *
+ * By centralizing state here, we eliminate circular dependencies between Build
+ * and Block classes, and make the codebase easier to test (via reset() method).
+ *
+ * Usage:
+ *   $registry = Block_Registry::instance();
+ *   $blocks = $registry->get_blocks();
+ *   $registry->register_block( 'blockstudio/my-block', $block_type );
  *
  * @since 7.0.0
  */
@@ -27,105 +42,152 @@ final class Block_Registry {
 	private static ?Block_Registry $instance = null;
 
 	/**
-	 * Registered blocks.
+	 * Registered WP_Block_Type instances indexed by block name.
+	 *
+	 * Contains all Blockstudio blocks that have been registered with WordPress.
+	 * Key is the full block name (e.g., 'blockstudio/my-block').
 	 *
 	 * @var array<string, WP_Block_Type>
 	 */
 	private array $blocks = array();
 
 	/**
-	 * Block data indexed by name.
+	 * Block metadata indexed by block name.
+	 *
+	 * Contains parsed block.json data plus computed fields like:
+	 * - path: Absolute path to block directory
+	 * - files: List of files in the block directory
+	 * - assets: Processed CSS/JS assets
+	 * - scopedClass: Generated CSS class for scoping styles
 	 *
 	 * @var array<string, array>
 	 */
 	private array $data = array();
 
 	/**
-	 * Block extensions.
+	 * Block extensions (blocks that extend core WordPress blocks).
+	 *
+	 * Extensions add attributes/controls to existing blocks without
+	 * replacing them. Used for features like adding custom fields
+	 * to core/paragraph or core/image blocks.
 	 *
 	 * @var array<WP_Block_Type>
 	 */
 	private array $extensions = array();
 
 	/**
-	 * Discovered files.
+	 * All discovered files during editor mode scanning.
+	 *
+	 * In editor mode, every file in block directories is tracked for
+	 * the code editor feature. Key is file path, value is file metadata.
 	 *
 	 * @var array<string, array>
 	 */
 	private array $files = array();
 
 	/**
-	 * Registered assets.
+	 * Assets to register with WordPress (styles and scripts).
+	 *
+	 * Structured as: ['style' => [...], 'script' => [...]]
+	 * Each contains handles mapped to asset data (path, mtime).
 	 *
 	 * @var array<string, array>
 	 */
 	private array $assets = array();
 
 	/**
-	 * Admin assets.
+	 * Admin-only assets (files prefixed with 'admin-').
+	 *
+	 * Enqueued only on WordPress admin pages, not on frontend.
 	 *
 	 * @var array<string, array>
 	 */
 	private array $assets_admin = array();
 
 	/**
-	 * Block editor assets.
+	 * Block editor assets (files prefixed with 'block-editor-').
+	 *
+	 * Enqueued only when the Gutenberg block editor is active.
 	 *
 	 * @var array<string, array>
 	 */
 	private array $assets_block_editor = array();
 
 	/**
-	 * Global assets.
+	 * Global assets (files prefixed with 'global-').
+	 *
+	 * Enqueued on every page (frontend and admin).
+	 * Key is sanitized handle, value is asset URL.
 	 *
 	 * @var array<string, string>
 	 */
 	private array $assets_global = array();
 
 	/**
-	 * Block overrides.
+	 * Override block types indexed by the block name they override.
+	 *
+	 * Overrides modify existing Blockstudio blocks, adding or changing
+	 * attributes, render callbacks, etc.
 	 *
 	 * @var array<string, WP_Block_Type>
 	 */
 	private array $overrides = array();
 
 	/**
-	 * Override configurations.
+	 * Override configurations (parsed from override block.json files).
+	 *
+	 * Contains the raw configuration that will be merged into the
+	 * original block during the apply_overrides phase.
 	 *
 	 * @var array<string, array>
 	 */
 	private array $override_configs = array();
 
 	/**
-	 * Data overrides.
+	 * Override data for editor mode.
+	 *
+	 * Tracks override blocks separately during editor mode so their
+	 * assets can be merged with the original block's assets.
 	 *
 	 * @var array<string, array>
 	 */
 	private array $data_overrides = array();
 
 	/**
-	 * Blade templates.
+	 * Blade template engine configurations per instance.
+	 *
+	 * Structure: ['instance-name' => ['path' => '...', 'templates' => [...]]]
+	 * Allows blocks to use Laravel Blade templating.
 	 *
 	 * @var array<string, array>
 	 */
 	private array $blade = array();
 
 	/**
-	 * Registered paths.
+	 * Registered block discovery paths.
+	 *
+	 * Each entry maps an instance name to its filesystem path.
+	 * Used to track where blocks are loaded from (theme, plugin, etc.).
 	 *
 	 * @var array<array{instance: string, path: string}>
 	 */
 	private array $paths = array();
 
 	/**
-	 * Registered instances.
+	 * Registered block source instances.
+	 *
+	 * Tracks each location where Build::init() was called, including
+	 * whether it's a library (shared blocks) or regular blocks.
 	 *
 	 * @var array<array{path: string, library: bool}>
 	 */
 	private array $instances = array();
 
 	/**
-	 * Whether Tailwind is active.
+	 * Whether any block uses Tailwind CSS classes field.
+	 *
+	 * When true, indicates Tailwind integration should be active.
+	 * Set when a field has 'tailwind' => true in its config.
 	 *
 	 * @var bool
 	 */
