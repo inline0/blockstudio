@@ -36,6 +36,33 @@ add_action('plugins_loaded', function () {
 }, 100);
 
 add_action('rest_api_init', function () {
+    // ==========================================================================
+    // SNAPSHOT ENDPOINT - Get ALL Build class data at once
+    // ==========================================================================
+    register_rest_route('blockstudio-test/v1', '/snapshot', [
+        'methods' => 'GET',
+        'callback' => function () {
+            if (!class_exists('Blockstudio\\Build')) {
+                return new WP_Error('not_loaded', 'Blockstudio Build class not loaded', ['status' => 500]);
+            }
+
+            return [
+                'blocks' => \Blockstudio\Build::blocks(),
+                'data' => \Blockstudio\Build::data(),
+                'extensions' => \Blockstudio\Build::extensions(),
+                'files' => \Blockstudio\Build::files(),
+                'assetsAdmin' => \Blockstudio\Build::assetsAdmin(),
+                'assetsBlockEditor' => \Blockstudio\Build::assetsBlockEditor(),
+                'assetsGlobal' => \Blockstudio\Build::assetsGlobal(),
+                'paths' => \Blockstudio\Build::paths(),
+                'overrides' => \Blockstudio\Build::overrides(),
+                'assets' => \Blockstudio\Build::assets(),
+                'blade' => \Blockstudio\Build::blade(),
+            ];
+        },
+        'permission_callback' => '__return_true',
+    ]);
+
     // Get all blocks from Build class
     register_rest_route('blockstudio-test/v1', '/build/all', [
         'methods' => 'GET',
@@ -43,7 +70,7 @@ add_action('rest_api_init', function () {
             if (!class_exists('Blockstudio\\Build')) {
                 return new WP_Error('not_loaded', 'Blockstudio Build class not loaded', ['status' => 500]);
             }
-            return \Blockstudio\Build::getBlocks();
+            return \Blockstudio\Build::blocks();
         },
         'permission_callback' => '__return_true',
     ]);
