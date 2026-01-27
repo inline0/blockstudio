@@ -23,6 +23,7 @@
 	<file>./includes-v7/classes/files.php</file>
 	<file>./includes-v7/classes/extensions.php</file>
 	<file>./includes-v7/classes/settings.php</file>
+	<file>./includes-v7/classes/admin.php</file>
 
 	<!-- Exclude vendor and node_modules -->
 	<exclude-pattern>*/vendor/*</exclude-pattern>

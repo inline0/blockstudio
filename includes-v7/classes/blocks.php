@@ -125,7 +125,7 @@ class Blocks {
 			return;
 		}
 
-		$all_assets               = Admin::getAllAssets();
+		$all_assets               = Admin::get_all_assets();
 		$chosen_css_class_styles  = Settings::get( 'blockEditor/cssClasses' );
 		$css_classes              = array();
 		$chosen_css_vars_styles   = Settings::get( 'blockEditor/cssVariables' );
