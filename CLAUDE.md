@@ -936,6 +936,7 @@ When working on this project:
 3. **100% WordPress Coding Standards** - no exclusions, no exceptions
 4. **Preserve backwards compatibility** - public functions must work
 5. **Document decisions** - update this file as needed
+6. **NEVER touch `includes/` directory** - This is the v6 reference code. Only modify files in `includes-v7/`. The `includes/` directory exists as a reference implementation and must remain unchanged.
 
 ### WordPress Coding Standards Checklist
 

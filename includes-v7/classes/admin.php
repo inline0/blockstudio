@@ -433,7 +433,7 @@ class Admin {
 
 		if ( $editor ) {
 			$data          = Build::data();
-			$data_sorted   = Build::dataSorted();
+			$data_sorted   = Build::data_sorted();
 			$editor_markup = Settings::get( 'editor/markup' );
 			$files         = Build::files();
 			$functions     = get_defined_functions();
@@ -508,7 +508,7 @@ class Admin {
 					),
 					$editor_only_data
 				),
-				'isTailwindActive' => Build::isTailwindActive() ? 'true' : 'false',
+				'isTailwindActive' => Build::is_tailwind_active() ? 'true' : 'false',
 				'llmTxtUrl'        => LLM::get_txt_url(),
 				'loader'           => plugin_dir_url( BLOCKSTUDIO ) . 'includes-v7/editor/vs',
 				'logo'             => plugins_url( 'includes-v7/admin/assets/fabrikatLogo.svg', __FILE__ ),
@@ -549,7 +549,7 @@ class Admin {
 		$all_assets  = self::get_all_assets();
 		$blocks      = Build::blocks();
 		$data        = Build::data();
-		$data_sorted = Build::dataSorted();
+		$data_sorted = Build::data_sorted();
 		$extensions  = Build::extensions();
 		$files       = Build::files();
 		$overrides   = Build::overrides();
@@ -575,75 +575,6 @@ class Admin {
 		<div id="blockstudio">
 		</div>
 		<?php
-	}
-
-	/**
-	 * Capture frontend assets (legacy method name).
-	 *
-	 * @deprecated Use capture_frontend_assets() instead.
-	 *
-	 * @return void
-	 */
-	public static function captureFrontendAssets(): void {
-		self::capture_frontend_assets();
-	}
-
-	/**
-	 * Check if allowed (legacy method name).
-	 *
-	 * @deprecated Use is_allowed() instead.
-	 *
-	 * @return bool Whether the user is allowed.
-	 */
-	public static function isAllowed(): bool {
-		return self::is_allowed();
-	}
-
-	/**
-	 * Ensure full URL (legacy method name).
-	 *
-	 * @deprecated Use ensure_full_url() instead.
-	 *
-	 * @param string $src The source URL.
-	 *
-	 * @return string The full URL.
-	 */
-	public static function ensureFullUrl( $src ): string {
-		return self::ensure_full_url( $src );
-	}
-
-	/**
-	 * Get all assets (legacy method name).
-	 *
-	 * @deprecated Use get_all_assets() instead.
-	 *
-	 * @return array The assets array.
-	 */
-	public static function getAllAssets(): array {
-		return self::get_all_assets();
-	}
-
-	/**
-	 * Get assets data (legacy method name).
-	 *
-	 * @deprecated Use get_assets_data() instead.
-	 *
-	 * @param array  $final_scripts The scripts array.
-	 * @param array  $final_styles  The styles array.
-	 * @param object $wp_scripts    The WP_Scripts object.
-	 * @param object $wp_styles     The WP_Styles object.
-	 * @param string $context       The context.
-	 *
-	 * @return void
-	 */
-	public static function getAssetsData(
-		&$final_scripts,
-		&$final_styles,
-		$wp_scripts,
-		$wp_styles,
-		$context
-	): void {
-		self::get_assets_data( $final_scripts, $final_styles, $wp_scripts, $wp_styles, $context );
 	}
 }
 

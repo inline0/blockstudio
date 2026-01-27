@@ -38,7 +38,7 @@ class Tailwind {
 			);
 		}
 
-		if ( Build::isTailwindActive() ) {
+		if ( Build::is_tailwind_active() ) {
 			$preflight = BLOCKSTUDIO_DIR . '/includes-v7/admin/assets/tailwind/preflight.css';
 			wp_enqueue_style(
 				'blockstudio-tailwind-preflight',

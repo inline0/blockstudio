@@ -281,48 +281,6 @@ class Extensions {
 
 		return $target;
 	}
-
-	/**
-	 * Render blocks (legacy method name).
-	 *
-	 * @deprecated Use render_blocks() instead.
-	 *
-	 * @param string $block_content The block content.
-	 * @param array  $block         The block data.
-	 *
-	 * @return string The modified block content.
-	 */
-	public static function renderBlocks( $block_content, $block ): string {
-		return self::render_blocks( $block_content, $block );
-	}
-
-	/**
-	 * Get matches (legacy method name).
-	 *
-	 * @deprecated Use get_matches() instead.
-	 *
-	 * @param string $string     The block name.
-	 * @param array  $extensions The extensions array.
-	 *
-	 * @return array Array of matching extensions.
-	 */
-	public static function getMatches( $string, $extensions ): array {
-		return self::get_matches( $string, $extensions );
-	}
-
-	/**
-	 * Parse template (legacy method name).
-	 *
-	 * @deprecated Use parse_template() instead.
-	 *
-	 * @param string $template_string The template string.
-	 * @param array  $values          The values to replace.
-	 *
-	 * @return string|null The parsed string.
-	 */
-	public static function parseTemplate( $template_string, $values ) {
-		return self::parse_template( $template_string, $values );
-	}
 }
 
 new Extensions();

@@ -108,7 +108,7 @@ class LLM {
 		);
 		// phpcs:enable WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents
 
-		$blocks_raw         = Build::dataSorted();
+		$blocks_raw         = Build::data_sorted();
 		$transformed_blocks = array();
 
 		foreach ( $blocks_raw as $instance_key => $instance_data ) {

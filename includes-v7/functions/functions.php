@@ -231,7 +231,7 @@ function bs_build_configurator_block($attr): string
     $decoded = json_decode($attr, true);
 
     $attributes = [];
-    Build::buildAttributes($decoded['blockstudio']['attributes'], $attributes);
+    Build::build_attributes($decoded['blockstudio']['attributes'], $attributes);
 
     $block = $decoded;
     $block['attributes'] = $attributes;

@@ -106,7 +106,7 @@ class Plugin {
 				if ( class_exists( 'Blockstudio\Build' ) ) {
 					Build::init(
 						array(
-							'dir' => Build::getBuildDir(),
+							'dir' => Build::get_build_dir(),
 						)
 					);
 				}

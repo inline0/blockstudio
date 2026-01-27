@@ -652,7 +652,7 @@ class Rest {
 	public function data(): array {
 		return array(
 			'data'       => Build::data(),
-			'dataSorted' => Build::dataSorted(),
+			'dataSorted' => Build::data_sorted(),
 			'files'      => Build::files(),
 		);
 	}
@@ -676,7 +676,7 @@ class Rest {
 	 * @return array The sorted blocks data.
 	 */
 	public function blocks_sorted(): array {
-		return Build::dataSorted();
+		return Build::data_sorted();
 	}
 
 	/**
@@ -1415,7 +1415,7 @@ class Rest {
 	 */
 	public function attributes_build( WP_REST_Request $arguments ): array {
 		$attributes = array();
-		Build::buildAttributes( $arguments->get_params(), $attributes );
+		Build::build_attributes( $arguments->get_params(), $attributes );
 
 		return $attributes;
 	}
@@ -1431,7 +1431,7 @@ class Rest {
 	 */
 	public function attributes_populate( WP_REST_Request $arguments ): array {
 		$attributes = array();
-		Build::buildAttributes( array( $arguments->get_params() ), $attributes );
+		Build::build_attributes( array( $arguments->get_params() ), $attributes );
 
 		return array_values( $attributes )[0]['options'] ?? array();
 	}
@@ -1657,320 +1657,6 @@ class Rest {
 		}
 
 		return $zip->close();
-	}
-
-	/**
-	 * Register endpoints (legacy method name).
-	 *
-	 * @deprecated Use register_endpoints() instead.
-	 *
-	 * @return void
-	 */
-	public function registerEndpoints() {
-		$this->register_endpoints();
-	}
-
-	/**
-	 * Response or error (legacy method name).
-	 *
-	 * @deprecated Use response_or_error() instead.
-	 *
-	 * @param bool   $condition The condition to check.
-	 * @param string $code      The response code.
-	 * @param array  $message   Array with 'success' and 'error' keys.
-	 * @param array  $data      Additional data.
-	 *
-	 * @return WP_Error|WP_REST_Response The response or error.
-	 */
-	public function responseOrError( $condition, $code, $message, array $data = array() ) {
-		return $this->response_or_error( $condition, $code, $message, $data );
-	}
-
-	/**
-	 * Blocks sorted (legacy method name).
-	 *
-	 * @deprecated Use blocks_sorted() instead.
-	 *
-	 * @return array The sorted blocks data.
-	 */
-	public function blocksSorted(): array {
-		return $this->blocks_sorted();
-	}
-
-	/**
-	 * Files dist (legacy method name).
-	 *
-	 * @deprecated Use files_dist() instead.
-	 *
-	 * @param array $data The request data.
-	 *
-	 * @return array The files data.
-	 */
-	public function filesDist( $data ): array {
-		return $this->files_dist( $data );
-	}
-
-	/**
-	 * Editor plugin activate (legacy method name).
-	 *
-	 * @deprecated Use editor_plugin_activate() instead.
-	 *
-	 * @param array $data The request data.
-	 *
-	 * @return WP_Error|WP_REST_Response The response or error.
-	 */
-	public function editorPluginActivate( $data ) {
-		return $this->editor_plugin_activate( $data );
-	}
-
-	/**
-	 * Editor file create (legacy method name).
-	 *
-	 * @deprecated Use editor_file_create() instead.
-	 *
-	 * @param array $data The request data.
-	 *
-	 * @return WP_Error|WP_REST_Response The response or error.
-	 */
-	public function editorFileCreate( $data ) {
-		return $this->editor_file_create( $data );
-	}
-
-	/**
-	 * Editor file delete (legacy method name).
-	 *
-	 * @deprecated Use editor_file_delete() instead.
-	 *
-	 * @param array $data The request data.
-	 *
-	 * @return WP_Error|WP_REST_Response The response or error.
-	 */
-	public function editorFileDelete( $data ) {
-		return $this->editor_file_delete( $data );
-	}
-
-	/**
-	 * Editor file rename (legacy method name).
-	 *
-	 * @deprecated Use editor_file_rename() instead.
-	 *
-	 * @param array $data The request data.
-	 *
-	 * @return WP_Error|WP_REST_Response The response or error.
-	 */
-	public function editorFileRename( $data ) {
-		return $this->editor_file_rename( $data );
-	}
-
-	/**
-	 * Editor block save (legacy method name).
-	 *
-	 * @deprecated Use editor_block_save() instead.
-	 *
-	 * @param array $data The request data.
-	 *
-	 * @return WP_Error|WP_REST_Response The response or error.
-	 */
-	public function editorBlockSave( $data ) {
-		return $this->editor_block_save( $data );
-	}
-
-	/**
-	 * Editor block test (legacy method name).
-	 *
-	 * @deprecated Use editor_block_test() instead.
-	 *
-	 * @param array $data The request data.
-	 *
-	 * @return WP_Error|WP_REST_Response The response or error.
-	 */
-	public function editorBlockTest( $data ) {
-		return $this->editor_block_test( $data );
-	}
-
-	/**
-	 * Editor block render (legacy method name).
-	 *
-	 * @deprecated Use editor_block_render() instead.
-	 *
-	 * @param array $data The request data.
-	 *
-	 * @return WP_Error|WP_REST_Response The response or error.
-	 */
-	public function editorBlockRender( $data ) {
-		return $this->editor_block_render( $data );
-	}
-
-	/**
-	 * Editor ZIP create (legacy method name).
-	 *
-	 * @deprecated Use editor_zip_create() instead.
-	 *
-	 * @param array $data The request data.
-	 *
-	 * @return void|WP_Error
-	 */
-	public function editorZipCreate( $data ) {
-		return $this->editor_zip_create( $data );
-	}
-
-	/**
-	 * Editor processor SCSS (legacy method name).
-	 *
-	 * @deprecated Use editor_processor_scss() instead.
-	 *
-	 * @param array $data The request data.
-	 *
-	 * @return WP_Error|WP_REST_Response The response or error.
-	 */
-	public function editorProcessorScss( $data ) {
-		return $this->editor_processor_scss( $data );
-	}
-
-	/**
-	 * Editor options save (legacy method name).
-	 *
-	 * @deprecated Use editor_options_save() instead.
-	 *
-	 * @param array $data The request data.
-	 *
-	 * @return WP_Error|WP_REST_Response The response or error.
-	 */
-	public function editorOptionsSave( $data ) {
-		return $this->editor_options_save( $data );
-	}
-
-	/**
-	 * Editor settings save (legacy method name).
-	 *
-	 * @deprecated Use editor_settings_save() instead.
-	 *
-	 * @param array $data The request data.
-	 *
-	 * @return WP_Error|WP_REST_Response The response or error.
-	 */
-	public function editorSettingsSave( $data ) {
-		return $this->editor_settings_save( $data );
-	}
-
-	/**
-	 * Editor Tailwind save (legacy method name).
-	 *
-	 * @deprecated Use editor_tailwind_save() instead.
-	 *
-	 * @param array $data The request data.
-	 *
-	 * @return WP_Error|WP_REST_Response The response or error.
-	 */
-	public function editorTailwindSave( $data ) {
-		return $this->editor_tailwind_save( $data );
-	}
-
-	/**
-	 * Attributes build (legacy method name).
-	 *
-	 * @deprecated Use attributes_build() instead.
-	 *
-	 * @param WP_REST_Request $arguments The REST request.
-	 *
-	 * @return array The built attributes.
-	 */
-	public function attributesBuild( WP_REST_Request $arguments ): array {
-		return $this->attributes_build( $arguments );
-	}
-
-	/**
-	 * Attributes populate (legacy method name).
-	 *
-	 * @deprecated Use attributes_populate() instead.
-	 *
-	 * @param WP_REST_Request $arguments The REST request.
-	 *
-	 * @return array The populated attributes.
-	 */
-	public function attributesPopulate( WP_REST_Request $arguments ): array {
-		return $this->attributes_populate( $arguments );
-	}
-
-	/**
-	 * Gutenberg block render (legacy method name).
-	 *
-	 * @deprecated Use gutenberg_block_render() instead.
-	 *
-	 * @param WP_REST_Request $request The REST request.
-	 *
-	 * @return WP_Error|WP_HTTP_Response|WP_REST_Response The response.
-	 */
-	public function gutenbergBlockRender( $request ) {
-		return $this->gutenberg_block_render( $request );
-	}
-
-	/**
-	 * Gutenberg block render all (legacy method name).
-	 *
-	 * @deprecated Use gutenberg_block_render_all() instead.
-	 *
-	 * @param WP_REST_Request $request The REST request.
-	 *
-	 * @return WP_Error|WP_HTTP_Response|WP_REST_Response The response.
-	 */
-	public function gutenbergBlockRenderAll( $request ) {
-		return $this->gutenberg_block_render_all( $request );
-	}
-
-	/**
-	 * Gutenberg block update (legacy method name).
-	 *
-	 * @deprecated Use gutenberg_block_update() instead.
-	 *
-	 * @param array $data The request data.
-	 *
-	 * @return array The updated block data.
-	 */
-	public function gutenbergBlockUpdate( $data ): array {
-		return $this->gutenberg_block_update( $data );
-	}
-
-	/**
-	 * Render block (legacy method name).
-	 *
-	 * @deprecated Use render_block_content() instead.
-	 *
-	 * @param array  $data    The block data.
-	 * @param string $content The block content.
-	 *
-	 * @return false|string|null The rendered content.
-	 */
-	public function renderBlock( $data, $content ) {
-		return $this->render_block_content( $data, $content );
-	}
-
-	/**
-	 * Test code (legacy method name).
-	 *
-	 * @deprecated Use test_code() instead.
-	 *
-	 * @param string $snippet The code snippet to test.
-	 *
-	 * @return bool Whether the code has errors.
-	 */
-	public function testCode( $snippet ): bool {
-		return $this->test_code( $snippet );
-	}
-
-	/**
-	 * Create ZIP (legacy method name).
-	 *
-	 * @deprecated Use create_zip() instead.
-	 *
-	 * @param array  $files       The files to include.
-	 * @param string $destination The ZIP file path.
-	 * @param string $root_path   The root path for relative paths.
-	 *
-	 * @return bool Whether the ZIP was created successfully.
-	 */
-	public function createZip( $files, $destination, $root_path ): bool {
-		return $this->create_zip( $files, $destination, $root_path );
 	}
 }
 
