@@ -9,8 +9,6 @@ namespace Blockstudio;
 
 use BlockstudioVendor\ScssPhp\ScssPhp\Exception\SassException;
 use Exception;
-use RecursiveDirectoryIterator;
-use RecursiveIteratorIterator;
 use WP_Block_Type;
 
 /**
@@ -26,111 +24,6 @@ class Build {
 	 * @var bool
 	 */
 	private static bool $interactivity_api_rendered = false;
-
-	/**
-	 * Admin assets.
-	 *
-	 * @var array
-	 */
-	private static array $assets_admin = array();
-
-	/**
-	 * Block editor assets.
-	 *
-	 * @var array
-	 */
-	private static array $assets_block_editor = array();
-
-	/**
-	 * Global assets.
-	 *
-	 * @var array
-	 */
-	private static array $assets_global = array();
-
-	/**
-	 * Registered assets.
-	 *
-	 * @var array
-	 */
-	private static array $assets_register = array();
-
-	/**
-	 * Blade templates.
-	 *
-	 * @var array
-	 */
-	private static array $blade = array();
-
-	/**
-	 * Blocks.
-	 *
-	 * @var array
-	 */
-	private static array $blocks = array();
-
-	/**
-	 * Block overrides.
-	 *
-	 * @var array
-	 */
-	private static array $blocks_overrides = array();
-
-	/**
-	 * Block data.
-	 *
-	 * @var array
-	 */
-	private static array $data = array();
-
-	/**
-	 * Data overrides.
-	 *
-	 * @var array
-	 */
-	private static array $data_overrides = array();
-
-	/**
-	 * Extensions.
-	 *
-	 * @var array
-	 */
-	private static array $extensions = array();
-
-	/**
-	 * Files.
-	 *
-	 * @var array
-	 */
-	private static array $files = array();
-
-	/**
-	 * Instances.
-	 *
-	 * @var array
-	 */
-	private static array $instances = array();
-
-	/**
-	 * Overrides.
-	 *
-	 * @var array
-	 */
-	private static array $overrides = array();
-
-	/**
-	 * Paths.
-	 *
-	 * @var array
-	 */
-	private static array $paths = array();
-
-	/**
-	 * Whether Tailwind is active.
-	 *
-	 * @var bool
-	 */
-	private static bool $is_tailwind_active = false;
 
 	/**
 	 * Filter deep array everything but a given string.
@@ -308,7 +201,7 @@ class Build {
 						);
 
 						if ( 'classes' === $type && ( $v['tailwind'] ?? false ) ) {
-							self::$is_tailwind_active = true;
+							Block_Registry::instance()->set_tailwind_active( true );
 						}
 					}
 
@@ -790,7 +683,7 @@ class Build {
 	}
 
 	/**
-	 * Build.
+	 * Initialize the build.
 	 *
 	 * @since 1.0.0
 	 *
@@ -806,653 +699,145 @@ class Build {
 			$p    = $args;
 			$args = $p['dir'] ?? false;
 		}
-		$arr               = array();
-		$path              = false === $args ? self::get_build_dir() : $args;
-		$store             = array();
-		$instance          = '';
+		$path               = false === $args ? self::get_build_dir() : $args;
 		$empty_dist_folders = array();
 
-		if ( is_dir( $path ) ) {
-			self::$instances[] = array(
-				'path'    => $path,
-				'library' => $library,
-			);
+		$registry = Block_Registry::instance();
 
-			$path     = wp_normalize_path( $path );
-			$instance = self::get_instance_name( $path );
+		if ( ! is_dir( $path ) ) {
+			return;
+		}
 
-			if ( ! $library && ! Settings::get( 'editor/library' ) ) {
-				self::$paths[] = array(
-					'instance' => $instance,
-					'path'     => $path,
-				);
+		$registry->add_instance( $path, $library );
+
+		$path     = wp_normalize_path( $path );
+		$instance = self::get_instance_name( $path );
+
+		if ( ! $library && ! Settings::get( 'editor/library' ) ) {
+			$registry->add_path( $instance, $path );
+		}
+
+		do_action( 'blockstudio/init/before' );
+		do_action( "blockstudio/init/before/$instance" );
+
+		$registry->set_blade_instance( $instance, $path );
+
+		// Phase 1: Discover blocks using Block_Discovery.
+		$discovery = new Block_Discovery();
+		$results   = $discovery->discover( $path, $instance, $library, $editor );
+
+		$store        = $results['store'];
+		$registerable = $results['registerable'];
+		$overrides    = $results['overrides'];
+
+		// Register blade templates.
+		foreach ( $results['blade_templates'] as $blade_instance => $templates ) {
+			foreach ( $templates as $template_name => $template_path ) {
+				$registry->add_blade_template( $blade_instance, $template_name, $template_path );
 			}
+		}
 
-			do_action( 'blockstudio/init/before' );
-			do_action( "blockstudio/init/before/$instance" );
+		// Handle overrides in editor mode.
+		if ( $editor ) {
+			foreach ( $overrides as $override_key => $override_info ) {
+				$registry->set_data_override( $override_key, $override_info['data'] );
+			}
+		}
 
-			$files = new RecursiveDirectoryIterator( $path );
+		// Phase 2: Process assets for each discovered item.
+		foreach ( $store as $name => &$data ) {
+			$file_dir = dirname( $data['path'] );
 
-			self::$blade[ $instance ]['path'] = $path;
+			if ( Settings::get( 'assets/enqueue' ) || $editor ) {
+				$processed_assets = self::process_block_assets(
+					$data,
+					$name,
+					$instance,
+					$editor,
+					$registry
+				);
 
-			$check_key = function ( $contents, $flag ) {
-				try {
-					$data = json_decode( $contents, true );
+				// Cleanup dist folder.
+				$dist_folder          = $file_dir . '/_dist';
+				$all_processed_assets = Files::get_files_recursively_and_delete_empty_folders(
+					$dist_folder
+				);
 
-					return isset( $data['blockstudio'][ $flag ] ) &&
-						$data['blockstudio'][ $flag ];
-				} catch ( Exception $e ) {
-					return false;
-				}
-			};
-
-			foreach (
-				new RecursiveIteratorIterator( $files )
-				as $filename => $file
-			) {
-				$filename  = wp_normalize_path( $filename );
-				$file      = wp_normalize_path( $file );
-				$file_dir  = dirname( $file );
-				$path_info = pathinfo( $file );
-				$block_json = array();
-				$contents  = is_file( $file ) ? file_get_contents( $file ) : '{}'; // phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents
-
-				$is_blockstudio =
-					'block.json' === pathinfo( $file )['basename'] &&
-					isset( json_decode( $contents, true )['blockstudio'] );
-				$is_extend      = $check_key( $contents, 'extend' );
-				$is_block       =
-					$is_blockstudio &&
-					Files::get_render_template( $file ) &&
-					! $is_extend;
-				$is_override    =
-					$is_blockstudio && $check_key( $contents, 'override' );
-				$is_init        =
-					'php' === ( $path_info['extension'] ?? '' ) &&
-					str_starts_with( $path_info['basename'], 'init' );
-				$is_dir         =
-					is_dir( $file ) &&
-					! file_exists( $file . '/block.json' ) &&
-					! Files::get_render_template( $file );
-				$is_php         = ! str_ends_with( $file, '.twig' );
-				$is_blade       = str_ends_with( $file, '.blade.php' );
-
-				if (
-					str_starts_with( $path_info['basename'], '.' ) &&
-					( ! $editor || '.' !== $path_info['basename'] )
-				) {
-					continue;
-				}
-
-				if (
-					$is_block ||
-					$is_blade ||
-					$is_init ||
-					$is_dir ||
-					$is_override ||
-					$is_extend ||
-					$editor
-				) {
-					if ( ! is_dir( $file ) ) {
-						$block_json = json_decode(
-							file_get_contents( // phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents
-								str_ends_with( $file, 'block.json' )
-									? $file
-									: str_replace(
-										array(
-											'index.blade.php',
-											'index.php',
-											'index.twig',
-										),
-										'block.json',
-										$file
-									)
-							),
-							true
-						);
-					}
-					$block_json_path = str_ends_with( $file, 'block.json' )
-						? $file
-						: str_replace(
-							'block.json',
-							$is_blade
-								? 'index.blade.php'
-								: ( $is_php
-									? 'index.php'
-									: 'index.twig' ),
-							$file
-						);
-
-					$name = $editor
-						? $file
-						: ( $is_override
-							? $block_json['name'] . '-override'
-							: $block_json['name'] ?? $file );
-
-					if ( $is_blade ) {
-						$relative_path = str_replace(
-							array( $path, '.blade.php' ),
-							'',
-							$filename
-						);
-						$relative_path = str_replace(
-							DIRECTORY_SEPARATOR,
-							'.',
-							$relative_path
-						);
-
-						self::$blade[ $instance ]['templates'][ $name ] = ltrim(
-							$relative_path,
-							'.'
-						);
-						self::$blade[ $instance ]['path'] = $path;
-
-						continue;
-					}
-
-					if ( is_array( $name ) ) {
-						$name = wp_json_encode( $name );
-					}
-					$name_file = false;
-
-					if ( $editor && file_exists( $file_dir . '/block.json' ) ) {
-						$name_file =
-							json_decode(
-								file_get_contents( $file_dir . '/block.json' ), // phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents
-								true
-							)['name'] ?? false;
-						if ( ! $name_file ) {
-							$block_json = array(
-								'name' => 'test/test',
-							);
+				if ( ! $editor ) {
+					foreach ( $all_processed_assets as $file_path ) {
+						if (
+							! in_array( $file_path, $processed_assets, true ) &&
+							file_exists( $file_path )
+						) {
+							unlink( $file_path ); // phpcs:ignore WordPress.WP.AlternativeFunctions.unlink_unlink
 						}
 					}
 
-					$level_explode = explode( Files::get_root_folder(), $path );
-					$level         = explode(
-						$level_explode[ count( $level_explode ) - 1 ],
-						$filename
-					)[1];
-
-					$block_arr_files = array_values(
-						array_filter(
-							scandir( $file_dir ),
-							fn( $item ) => ! is_dir( $file_dir . '/' . $item ) &&
-								'.' !== $item[0]
-						)
-					);
-					$block_arr_files_paths = array_map(
-						fn( $item ) => $file_dir . '/' . $item,
-						$block_arr_files
-					);
-					$block_arr_folders = array_values(
-						array_map(
-							'basename',
-							array_filter( glob( dirname( $file ) . '/*' ), 'is_dir' )
-						)
-					);
-					$block_arr_structure_array = explode(
-						'/',
-						str_replace(
-							array(
-								'/' . pathinfo( $file )['basename'],
-								pathinfo( $file )['basename'],
-							),
-							'',
-							$level
-						)
-					);
-					$block_arr_structure_explode = explode(
-						Files::get_root_folder() . '/',
-						$path
-					);
-					$block_arr_structure = ltrim(
-						explode(
-							$block_arr_structure_explode[
-								count( $block_arr_structure_explode ) - 1
-							],
-							$block_json_path
-						)[1],
-						'/'
-					);
-
-					if ( $is_init ) {
-						$block_json = array(
-							'name' => 'init-' . str_replace( '/', '-', $file ),
-						);
-					}
-
-					$data = array(
-						'directory'     => $is_dir,
-						'example'       => $block_json['example'] ?? false,
-						'extend'        => $is_extend,
-						'file'          => pathinfo( $block_json_path ),
-						'files'         => $block_arr_files,
-						'filesPaths'    => $block_arr_files_paths,
-						'folders'       => $block_arr_folders,
-						'init'          => $is_init,
-						'instance'      => $instance,
-						'instancePath'  => $path,
-						'level'         => substr_count( $level, '/' ),
-						'library'       => $library,
-						'name'          => false !== $name_file ? $name_file : $name,
-						'path'          => $block_json_path,
-						'previewAssets' =>
-							$block_json['blockstudio']['editor']['assets'] ?? array(),
-						'scopedClass'   => 'bs-' . md5( $name ),
-						'structure'     => $block_arr_structure,
-						'structureArray' => $block_arr_structure_array,
-						'twig'          => ! $is_php,
-					);
-					if ( $data['name'] === $data['path'] ) {
-						$data['nameAlt'] = Block::id( $data, $data );
-					}
-
-					if ( $editor && '.' !== $path_info['basename'] ) {
-						$data['value'] = file_get_contents( $file ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents
-					}
-
-					$store[ $name ] = $data;
-					if ( $is_override && $editor ) {
-						self::$data_overrides[
-							false !== $name_file ? $name_file : $name
-						] = $data;
-					}
-
-					if ( Settings::get( 'assets/enqueue' ) || $editor ) {
-						$assets = array_filter(
-							$block_arr_files,
-							fn( $e ) => Assets::is_css( $e ) ||
-								str_ends_with( $e, '.js' )
-						);
-						$processed_assets = array();
-
-						foreach ( $assets as $asset ) {
-							$is_css = Assets::is_css( $asset );
-
-							$asset_fn = fn( $relative ) => $relative
-								? Files::get_relative_url( $file_dir . '/' . $asset )
-								: $file_dir . '/' . $asset;
-
-							$asset_file = pathinfo( $asset_fn( false ) );
-							$asset_path = $asset_fn( false );
-							$asset_url  = $asset_fn( true );
-
-							if (
-								false === apply_filters(
-									'blockstudio/assets/enable',
-									true,
-									array(
-										'file' => $asset_file,
-										'path' => $asset_path,
-										'url'  => $asset_url,
-										'type' => $is_css ? 'css' : 'js',
-									)
-								)
-							) {
-								continue;
-							}
-
-							if ( ! $editor ) {
-								$processed_asset = Assets::process(
-									$asset_path,
-									$data['scopedClass']
-								);
-
-								if ( is_array( $processed_asset ) ) {
-									$processed_assets = array_merge(
-										$processed_assets,
-										$processed_asset
-									);
-								} else {
-									$processed_assets[] = $processed_asset;
-								}
-							}
-
-							$id = strtolower(
-								preg_replace( '/(?<!^)[A-Z]/', '-$0', $asset )
-							);
-
-							if (
-								str_starts_with(
-									$asset_file['basename'],
-									'admin'
-								) &&
-								! $editor
-							) {
-								self::$assets_admin[
-									sanitize_title( $asset_path )
-								] = array(
-									'path' => $asset_path,
-									'key'  => filemtime( $asset_fn( false ) ),
-								);
-							}
-
-							if (
-								str_starts_with(
-									$asset_file['basename'],
-									'block-editor'
-								) &&
-								! $editor
-							) {
-								self::$assets_block_editor[
-									sanitize_title( $asset_path )
-								] = array(
-									'path' => $asset_path,
-									'key'  => filemtime( $asset_fn( false ) ),
-								);
-							}
-
-							if (
-								str_starts_with(
-									$asset_file['basename'],
-									'global'
-								) &&
-								! $editor
-							) {
-								self::$assets_global[
-									sanitize_title( $asset_path )
-								] = $asset_url;
-							}
-
-							$handle    = Assets::get_id(
-								$id,
-								$store[ $name ] ?? array( 'name' => $name )
-							);
-							$is_editor =
-								str_ends_with( $asset, '-editor.css' ) ||
-								str_ends_with( $asset, '-editor.scss' ) ||
-								str_ends_with( $asset, '-editor.js' );
-
-							$store[ $name ]['assets'][ $id ] = array(
-								'type'     =>
-									str_ends_with( $asset, '-inline.css' ) ||
-									str_ends_with( $asset, '-inline.scss' ) ||
-									str_ends_with( $asset, '-inline.js' ) ||
-									str_ends_with( $asset, '-scoped.css' ) ||
-									str_ends_with( $asset, '-scoped.scss' )
-										? 'inline'
-										: 'external',
-								'path'     => $asset_path,
-								'url'      => $asset_url,
-								'editor'   => $is_editor,
-								'instance' => $instance,
-								'file'     => $asset_file,
-							);
-
-							if ( ! $editor ) {
-								if ( $is_css ) {
-									self::$assets_register['style'][ $handle ] = array(
-										'path'  => $asset_fn( true ),
-										'mtime' => filemtime( $asset_fn( false ) ),
-									);
-								} else {
-									self::$assets_register['script'][ $handle ] = array(
-										'path'  => $asset_fn( true ),
-										'mtime' => filemtime( $asset_fn( false ) ),
-									);
-								}
-							}
+					foreach ( $all_processed_assets as $file_path ) {
+						$directory = dirname( $file_path );
+						if (
+							false !== glob( $directory . '/*' ) &&
+							0 !== count( glob( $directory . '/*' ) )
+						) {
+							continue;
 						}
 
-						$dist_folder          = $file_dir . '/_dist';
-						$all_processed_assets = Files::get_files_recursively_and_delete_empty_folders(
-							$dist_folder
-						);
-
-						if ( ! $editor ) {
-							foreach ( $all_processed_assets as $file_path ) {
-								if (
-									! in_array( $file_path, $processed_assets, true ) &&
-									file_exists( $file_path )
-								) {
-									unlink( $file_path ); // phpcs:ignore WordPress.WP.AlternativeFunctions.unlink_unlink
-								}
-							}
-
-							foreach ( $all_processed_assets as $file_path ) {
-								$directory = dirname( $file_path );
-								if (
-									false !== glob( $directory . '/*' ) &&
-									0 !== count( glob( $directory . '/*' ) )
-								) {
-									continue;
-								}
-
-								if ( is_dir( $directory ) ) {
-									rmdir( $directory ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_rmdir
-								}
-							}
-
-							if ( Files::is_directory_empty( $dist_folder ) ) {
-								$empty_dist_folders[] = $dist_folder;
-							}
+						if ( is_dir( $directory ) ) {
+							rmdir( $directory ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_rmdir
 						}
 					}
 
-					if ( ( $is_block || $is_override || $is_extend ) && ! $editor ) {
-						$native_path =
-							$is_override && ! $is_block
-								? $file
-								: Files::get_render_template( $file );
-
-						$attributes          = array();
-						$filtered_attributes = array();
-						if ( isset( $block_json['blockstudio']['attributes'] ) ) {
-							if ( ! $is_override ) {
-								self::filter_attributes(
-									$block_json,
-									$block_json['blockstudio']['attributes'],
-									$filtered_attributes
-								);
-							}
-
-							self::build_attributes(
-								$block_json['blockstudio']['attributes'],
-								$attributes,
-								'',
-								false,
-								false,
-								false,
-								$is_extend
-							);
-						}
-
-						$attributes['blockstudio'] = array(
-							'type'    => 'object',
-							'default' => array(
-								'name' => $block_json['name'],
-							),
-						);
-
-						$attributes['anchor'] = $is_extend
-							? array(
-								'type'      => 'string',
-								'source'    => 'attribute',
-								'attribute' => 'id',
-								'selector'  => '*',
-							)
-							: array(
-								'type' => 'string',
-							);
-
-						$attributes['className'] = array(
-							'type' => 'string',
-						);
-
-						$block              = new WP_Block_Type(
-							$block_json['name'],
-							$block_json
-						);
-						$block->api_version = 3;
-						$block->render_callback = array(
-							'Blockstudio\Block',
-							'render',
-						);
-						$block->attributes  = array_merge(
-							$block_json['attributes'] ?? array(),
-							$attributes
-						);
-						$block->uses_context = array_merge(
-							array( 'postId', 'postType' ),
-							$block_json['usesContext'] ?? array()
-						);
-						$block->provides_context = array_merge(
-							array(
-								$name => 'blockstudio',
-							),
-							$block_json['providesContext'] ?? array()
-						);
-						$block->path = $native_path;
-
-						if ( isset( $block_json['variations'] ) ) {
-							$variations = array();
-							foreach ( $block_json['variations'] as $variation ) {
-								$variations[] =
-									array(
-										'attributes' => array(
-											'blockstudio' => array(
-												'attributes' =>
-													$variation['attributes'],
-											),
-										),
-									) + $variation;
-							}
-
-							$block->variations = $variations;
-						}
-
-						$disable_loading =
-							$block_json['blockstudio']['blockEditor'][
-								'disableLoading'
-							] ??
-							( Settings::get( 'blockEditor/disableLoading' ) ??
-								false );
-
-						$block->blockstudio = array(
-							'attributes'  => $filtered_attributes,
-							'blockEditor' => array(
-								'disableLoading' => $disable_loading,
-							),
-							'conditions'  => isset(
-								$block->blockstudio['conditions']
-							)
-								? $block->blockstudio['conditions']
-								: true,
-							'editor'      => isset( $block->blockstudio['editor'] )
-								? $block->blockstudio['editor']
-								: false,
-							'extend'      => isset( $block->blockstudio['extend'] )
-								? $block->blockstudio['extend']
-								: false,
-							'group'       => isset( $block->blockstudio['group'] )
-								? $block->blockstudio['group']
-								: false,
-							'icon'        => isset( $block->blockstudio['icon'] )
-								? $block->blockstudio['icon']
-								: null,
-							'refreshOn'   => isset(
-								$block->blockstudio['refreshOn']
-							)
-								? $block->blockstudio['refreshOn']
-								: false,
-							'transforms'  => isset(
-								$block->blockstudio['transforms']
-							)
-								? $block->blockstudio['transforms']
-								: false,
-							'variations'  => $block->variations ?? false,
-						);
-
-						if ( $is_override ) {
-							self::$overrides[ $block_json['name'] ] = json_decode(
-								$contents,
-								true
-							);
-							self::$blocks_overrides[ $block_json['name'] ] = $block;
-						} elseif ( ! $is_extend ) {
-							self::$blocks[ $block_json['name'] ] = $block;
-						} else {
-							self::$extensions[] = $block;
-						}
+					if ( Files::is_directory_empty( $dist_folder ) ) {
+						$empty_dist_folders[] = $dist_folder;
 					}
 				}
 			}
 		}
+		unset( $data ); // Break reference.
 
+		// Phase 3: Register blocks.
+		if ( ! $editor ) {
+			foreach ( $registerable as $name => $item ) {
+				self::register_block_type(
+					$item['data'],
+					$item['block_json'],
+					$item['classification'],
+					$item['contents'],
+					$name,
+					$registry
+				);
+			}
+		}
+
+		// Final processing.
 		if ( $editor ) {
-			self::$files = array_merge( self::$files, $store );
-			foreach ( self::$data_overrides as $override ) {
-				foreach ( $override['filesPaths'] as $path ) {
-					self::$files[ $path ]['assets'] = array_merge(
-						self::$data[ $override['name'] ]['assets'] ?? array(),
-						$override['assets'] ?? array()
-					);
+			$registry->merge_files( $store );
+			foreach ( $registry->get_data_overrides() as $override ) {
+				foreach ( $override['filesPaths'] as $override_path ) {
+					$file_data = $registry->get_file_data( $override_path );
+					if ( $file_data ) {
+						$file_data['assets'] = array_merge(
+							$registry->get_block_data( $override['name'] )['assets'] ?? array(),
+							$override['assets'] ?? array()
+						);
+						$registry->merge_files( array( $override_path => $file_data ) );
+					}
 				}
 			}
 
 			return;
 		}
 
-		self::$data = array_merge( self::$data, $store );
+		$registry->merge_data( $store );
 
-		foreach ( self::$data as $file ) {
+		foreach ( $registry->get_data() as $file ) {
 			if ( $file['init'] ) {
 				include_once $file['path'];
 			}
 		}
 
-		foreach ( self::$blocks as $block ) {
-			if ( self::$overrides[ $block->name ] ?? false ) {
-				foreach ( self::$overrides[ $block->name ] as $key => $value ) {
-					if ( 'blockstudio' === $key ) {
-						$override_attributes = $value['attributes'] ?? array();
-						self::merge_attributes(
-							$block->blockstudio['attributes'],
-							$override_attributes
-						);
-
-						$override_built_attributes = array();
-						self::build_attributes(
-							$override_attributes,
-							$override_built_attributes,
-							'',
-							false,
-							false,
-							true
-						);
-						self::$blocks_overrides[
-							$block->name
-						]->attributes = $override_built_attributes;
-						self::merge_attributes(
-							$block->attributes,
-							$override_built_attributes
-						);
-
-						$mapped_attributes = array();
-						foreach ( $block->attributes as $name => $attribute ) {
-							if ( isset( $attribute['id'] ) ) {
-								$mapped_attributes[
-									$attribute['id']
-								] = $attribute;
-							} else {
-								$mapped_attributes[ $name ] = $attribute;
-							}
-						}
-						$block->attributes = $mapped_attributes;
-
-						continue;
-					}
-
-					$block->{$key} = $value;
-				}
-
-				self::$data[ $block->name ]['assets'] = array_merge(
-					self::$data[ $block->name ]['assets'] ?? array(),
-					self::$data[ $block->name . '-override' ]['assets'] ?? array()
-				);
-			}
-		}
+		// Apply overrides.
+		self::apply_overrides( $registry );
 
 		foreach ( $empty_dist_folders as $folder ) {
 			if ( is_dir( $folder ) ) {
@@ -1462,6 +847,364 @@ class Build {
 
 		do_action( 'blockstudio/init' );
 		do_action( "blockstudio/init/$instance" );
+	}
+
+	/**
+	 * Process assets for a block.
+	 *
+	 * @since 7.0.0
+	 *
+	 * @param array          $data     The block data (passed by reference).
+	 * @param string         $name     The block name.
+	 * @param string         $instance The instance name.
+	 * @param bool           $editor   Whether in editor mode.
+	 * @param Block_Registry $registry The block registry.
+	 *
+	 * @return array The processed assets.
+	 */
+	private static function process_block_assets(
+		array &$data,
+		string $name,
+		string $instance,
+		bool $editor,
+		Block_Registry $registry
+	): array {
+		$file_dir         = dirname( $data['path'] );
+		$block_arr_files  = $data['files'];
+		$processed_assets = array();
+
+		$assets = array_filter(
+			$block_arr_files,
+			fn( $e ) => Assets::is_css( $e ) || str_ends_with( $e, '.js' )
+		);
+
+		foreach ( $assets as $asset ) {
+			$is_css = Assets::is_css( $asset );
+
+			$asset_fn = fn( $relative ) => $relative
+				? Files::get_relative_url( $file_dir . '/' . $asset )
+				: $file_dir . '/' . $asset;
+
+			$asset_file = pathinfo( $asset_fn( false ) );
+			$asset_path = $asset_fn( false );
+			$asset_url  = $asset_fn( true );
+
+			if (
+				false === apply_filters(
+					'blockstudio/assets/enable',
+					true,
+					array(
+						'file' => $asset_file,
+						'path' => $asset_path,
+						'url'  => $asset_url,
+						'type' => $is_css ? 'css' : 'js',
+					)
+				)
+			) {
+				continue;
+			}
+
+			if ( ! $editor ) {
+				$processed_asset = Assets::process(
+					$asset_path,
+					$data['scopedClass']
+				);
+
+				if ( is_array( $processed_asset ) ) {
+					$processed_assets = array_merge(
+						$processed_assets,
+						$processed_asset
+					);
+				} else {
+					$processed_assets[] = $processed_asset;
+				}
+			}
+
+			$id = strtolower(
+				preg_replace( '/(?<!^)[A-Z]/', '-$0', $asset )
+			);
+
+			if ( str_starts_with( $asset_file['basename'], 'admin' ) && ! $editor ) {
+				$registry->add_admin_asset(
+					sanitize_title( $asset_path ),
+					array(
+						'path' => $asset_path,
+						'key'  => filemtime( $asset_fn( false ) ),
+					)
+				);
+			}
+
+			if ( str_starts_with( $asset_file['basename'], 'block-editor' ) && ! $editor ) {
+				$registry->add_block_editor_asset(
+					sanitize_title( $asset_path ),
+					array(
+						'path' => $asset_path,
+						'key'  => filemtime( $asset_fn( false ) ),
+					)
+				);
+			}
+
+			if ( str_starts_with( $asset_file['basename'], 'global' ) && ! $editor ) {
+				$registry->add_global_asset(
+					sanitize_title( $asset_path ),
+					$asset_url
+				);
+			}
+
+			$handle          = Assets::get_id( $id, $data );
+			$is_editor_asset =
+				str_ends_with( $asset, '-editor.css' ) ||
+				str_ends_with( $asset, '-editor.scss' ) ||
+				str_ends_with( $asset, '-editor.js' );
+
+			$data['assets'][ $id ] = array(
+				'type'     =>
+					str_ends_with( $asset, '-inline.css' ) ||
+					str_ends_with( $asset, '-inline.scss' ) ||
+					str_ends_with( $asset, '-inline.js' ) ||
+					str_ends_with( $asset, '-scoped.css' ) ||
+					str_ends_with( $asset, '-scoped.scss' )
+						? 'inline'
+						: 'external',
+				'path'     => $asset_path,
+				'url'      => $asset_url,
+				'editor'   => $is_editor_asset,
+				'instance' => $instance,
+				'file'     => $asset_file,
+			);
+
+			if ( ! $editor ) {
+				if ( $is_css ) {
+					$registry->add_asset(
+						'style',
+						$handle,
+						array(
+							'path'  => $asset_fn( true ),
+							'mtime' => filemtime( $asset_fn( false ) ),
+						)
+					);
+				} else {
+					$registry->add_asset(
+						'script',
+						$handle,
+						array(
+							'path'  => $asset_fn( true ),
+							'mtime' => filemtime( $asset_fn( false ) ),
+						)
+					);
+				}
+			}
+		}
+
+		return $processed_assets;
+	}
+
+	/**
+	 * Register a block type with WordPress.
+	 *
+	 * @since 7.0.0
+	 *
+	 * @param array          $data           The block data.
+	 * @param array          $block_json     The block.json data.
+	 * @param array          $classification The classification.
+	 * @param string         $contents       The file contents.
+	 * @param string         $name           The block name.
+	 * @param Block_Registry $registry       The block registry.
+	 *
+	 * @return void
+	 */
+	private static function register_block_type(
+		array $data,
+		array $block_json,
+		array $classification,
+		string $contents,
+		string $name,
+		Block_Registry $registry
+	): void {
+		$is_block    = $classification['is_block'];
+		$is_override = $classification['is_override'];
+		$is_extend   = $classification['is_extend'];
+
+		$native_path = $is_override && ! $is_block
+			? $data['path']
+			: Files::get_render_template( $data['path'] );
+
+		$attributes          = array();
+		$filtered_attributes = array();
+
+		if ( isset( $block_json['blockstudio']['attributes'] ) ) {
+			if ( ! $is_override ) {
+				self::filter_attributes(
+					$block_json,
+					$block_json['blockstudio']['attributes'],
+					$filtered_attributes
+				);
+			}
+
+			self::build_attributes(
+				$block_json['blockstudio']['attributes'],
+				$attributes,
+				'',
+				false,
+				false,
+				false,
+				$is_extend
+			);
+		}
+
+		$attributes['blockstudio'] = array(
+			'type'    => 'object',
+			'default' => array(
+				'name' => $block_json['name'],
+			),
+		);
+
+		$attributes['anchor'] = $is_extend
+			? array(
+				'type'      => 'string',
+				'source'    => 'attribute',
+				'attribute' => 'id',
+				'selector'  => '*',
+			)
+			: array(
+				'type' => 'string',
+			);
+
+		$attributes['className'] = array(
+			'type' => 'string',
+		);
+
+		$block              = new WP_Block_Type( $block_json['name'], $block_json );
+		$block->api_version = 3;
+		$block->render_callback = array( 'Blockstudio\Block', 'render' );
+		$block->attributes  = array_merge(
+			$block_json['attributes'] ?? array(),
+			$attributes
+		);
+		$block->uses_context = array_merge(
+			array( 'postId', 'postType' ),
+			$block_json['usesContext'] ?? array()
+		);
+		$block->provides_context = array_merge(
+			array( $name => 'blockstudio' ),
+			$block_json['providesContext'] ?? array()
+		);
+		$block->path = $native_path;
+
+		if ( isset( $block_json['variations'] ) ) {
+			$variations = array();
+			foreach ( $block_json['variations'] as $variation ) {
+				$variations[] = array(
+					'attributes' => array(
+						'blockstudio' => array(
+							'attributes' => $variation['attributes'],
+						),
+					),
+				) + $variation;
+			}
+			$block->variations = $variations;
+		}
+
+		$disable_loading = $block_json['blockstudio']['blockEditor']['disableLoading']
+			?? ( Settings::get( 'blockEditor/disableLoading' ) ?? false );
+
+		$block->blockstudio = array(
+			'attributes'  => $filtered_attributes,
+			'blockEditor' => array(
+				'disableLoading' => $disable_loading,
+			),
+			'conditions'  => $block->blockstudio['conditions'] ?? true,
+			'editor'      => $block->blockstudio['editor'] ?? false,
+			'extend'      => $block->blockstudio['extend'] ?? false,
+			'group'       => $block->blockstudio['group'] ?? false,
+			'icon'        => $block->blockstudio['icon'] ?? null,
+			'refreshOn'   => $block->blockstudio['refreshOn'] ?? false,
+			'transforms'  => $block->blockstudio['transforms'] ?? false,
+			'variations'  => $block->variations ?? false,
+		);
+
+		if ( $is_override ) {
+			$registry->register_override(
+				$block_json['name'],
+				$block,
+				json_decode( $contents, true )
+			);
+		} elseif ( ! $is_extend ) {
+			$registry->register_block( $block_json['name'], $block );
+		} else {
+			$registry->register_extension( $block );
+		}
+	}
+
+	/**
+	 * Apply overrides to registered blocks.
+	 *
+	 * @since 7.0.0
+	 *
+	 * @param Block_Registry $registry The block registry.
+	 *
+	 * @return void
+	 */
+	private static function apply_overrides( Block_Registry $registry ): void {
+		foreach ( $registry->get_blocks() as $block ) {
+			$override_config = $registry->get_override_config( $block->name );
+			if ( ! $override_config ) {
+				continue;
+			}
+
+			foreach ( $override_config as $key => $value ) {
+				if ( 'blockstudio' === $key ) {
+					$override_attributes = $value['attributes'] ?? array();
+					self::merge_attributes(
+						$block->blockstudio['attributes'],
+						$override_attributes
+					);
+
+					$override_built_attributes = array();
+					self::build_attributes(
+						$override_attributes,
+						$override_built_attributes,
+						'',
+						false,
+						false,
+						true
+					);
+
+					$override_block = $registry->get_override( $block->name );
+					if ( $override_block ) {
+						$override_block->attributes = $override_built_attributes;
+					}
+
+					self::merge_attributes(
+						$block->attributes,
+						$override_built_attributes
+					);
+
+					$mapped_attributes = array();
+					foreach ( $block->attributes as $attr_name => $attribute ) {
+						if ( isset( $attribute['id'] ) ) {
+							$mapped_attributes[ $attribute['id'] ] = $attribute;
+						} else {
+							$mapped_attributes[ $attr_name ] = $attribute;
+						}
+					}
+					$block->attributes = $mapped_attributes;
+
+					continue;
+				}
+
+				$block->{$key} = $value;
+			}
+
+			$block_data = $registry->get_block_data( $block->name );
+			if ( $block_data ) {
+				$block_data['assets'] = array_merge(
+					$block_data['assets'] ?? array(),
+					$registry->get_block_data( $block->name . '-override' )['assets'] ?? array()
+				);
+				$registry->set_block_data( $block->name, $block_data );
+			}
+		}
 	}
 
 	/**
@@ -1543,10 +1286,10 @@ class Build {
 	 * @throws SassException When SCSS compilation fails.
 	 */
 	public static function data_sorted(): array {
-		self::files();
+		$files  = self::files();
 		$sorted = array();
 
-		foreach ( self::$files as $d ) {
+		foreach ( $files as $d ) {
 			if ( $d['library'] && ! Settings::get( 'editor/library' ) ) {
 				continue;
 			}
@@ -1577,7 +1320,7 @@ class Build {
 	 * @return array The blocks.
 	 */
 	public static function blocks(): array {
-		return self::$blocks;
+		return Block_Registry::instance()->get_blocks();
 	}
 
 	/**
@@ -1588,7 +1331,7 @@ class Build {
 	 * @return array The data.
 	 */
 	public static function data(): array {
-		return self::$data;
+		return Block_Registry::instance()->get_data();
 	}
 
 	/**
@@ -1599,7 +1342,7 @@ class Build {
 	 * @return array The extensions.
 	 */
 	public static function extensions(): array {
-		return self::$extensions;
+		return Block_Registry::instance()->get_extensions();
 	}
 
 	/**
@@ -1611,7 +1354,8 @@ class Build {
 	 * @throws SassException When SCSS compilation fails.
 	 */
 	public static function files(): array {
-		foreach ( self::$instances as $instance ) {
+		$registry = Block_Registry::instance();
+		foreach ( $registry->get_instances() as $instance ) {
 			self::init(
 				array(
 					'dir'     => $instance['path'],
@@ -1621,7 +1365,7 @@ class Build {
 			);
 		}
 
-		return self::$files;
+		return $registry->get_files();
 	}
 
 	/**
@@ -1632,7 +1376,7 @@ class Build {
 	 * @return array The admin assets.
 	 */
 	public static function assets_admin(): array {
-		return self::$assets_admin;
+		return Block_Registry::instance()->get_assets_admin();
 	}
 
 	/**
@@ -1643,7 +1387,7 @@ class Build {
 	 * @return array The block editor assets.
 	 */
 	public static function assets_block_editor(): array {
-		return self::$assets_block_editor;
+		return Block_Registry::instance()->get_assets_block_editor();
 	}
 
 	/**
@@ -1654,7 +1398,7 @@ class Build {
 	 * @return array The global assets.
 	 */
 	public static function assets_global(): array {
-		return self::$assets_global;
+		return Block_Registry::instance()->get_assets_global();
 	}
 
 	/**
@@ -1665,7 +1409,7 @@ class Build {
 	 * @return array The paths.
 	 */
 	public static function paths(): array {
-		return self::$paths;
+		return Block_Registry::instance()->get_paths();
 	}
 
 	/**
@@ -1676,7 +1420,7 @@ class Build {
 	 * @return array The overrides.
 	 */
 	public static function overrides(): array {
-		return self::$blocks_overrides;
+		return Block_Registry::instance()->get_overrides();
 	}
 
 	/**
@@ -1687,7 +1431,7 @@ class Build {
 	 * @return array The assets.
 	 */
 	public static function assets(): array {
-		return self::$assets_register;
+		return Block_Registry::instance()->get_assets();
 	}
 
 	/**
@@ -1698,7 +1442,7 @@ class Build {
 	 * @return array The blade templates.
 	 */
 	public static function blade(): array {
-		return self::$blade;
+		return Block_Registry::instance()->get_blade();
 	}
 
 	/**
@@ -1709,6 +1453,6 @@ class Build {
 	 * @return bool Whether Tailwind is active.
 	 */
 	public static function is_tailwind_active(): bool {
-		return self::$is_tailwind_active;
+		return Block_Registry::instance()->is_tailwind_active();
 	}
 }

@@ -15,239 +15,341 @@ use Exception;
  * Discovers blocks from filesystem paths.
  *
  * This class extracts block discovery logic from the Build class.
+ * It produces the exact same data structure as Build::init().
  *
  * @since 7.0.0
  */
 class Block_Discovery {
 
 	/**
-	 * Discovered blocks.
+	 * Discovered store (all discovered items).
 	 *
 	 * @var array
 	 */
-	private array $blocks = array();
+	private array $store = array();
 
 	/**
-	 * Discovered extensions.
+	 * Items that need block registration.
 	 *
 	 * @var array
 	 */
-	private array $extensions = array();
+	private array $registerable = array();
 
 	/**
-	 * Discovered overrides.
-	 *
-	 * @var array
-	 */
-	private array $overrides = array();
-
-	/**
-	 * Discovered Blade templates.
+	 * Blade templates discovered.
 	 *
 	 * @var array
 	 */
 	private array $blade_templates = array();
 
 	/**
-	 * File classifier instance.
+	 * Block JSON data for registration.
 	 *
-	 * @var File_Classifier
+	 * @var array
 	 */
-	private File_Classifier $classifier;
+	private array $block_json_data = array();
 
 	/**
-	 * Constructor.
+	 * File contents cache.
 	 *
-	 * @param File_Classifier|null $classifier Optional file classifier.
+	 * @var array
 	 */
-	public function __construct( ?File_Classifier $classifier = null ) {
-		$this->classifier = $classifier ?? new File_Classifier();
-	}
+	private array $contents_cache = array();
+
+	/**
+	 * Override entries (tracked separately for editor mode).
+	 *
+	 * @var array
+	 */
+	private array $overrides = array();
 
 	/**
 	 * Discover blocks in a path.
 	 *
-	 * @param string $path         The path to scan.
-	 * @param bool   $is_library   Whether this is a library path.
-	 * @param bool   $is_editor    Whether in editor mode.
+	 * @param string $base_path  The path to scan.
+	 * @param string $instance   The instance name.
+	 * @param bool   $is_library Whether this is a library path.
+	 * @param bool   $is_editor  Whether in editor mode.
 	 *
 	 * @return array The discovered items.
 	 */
-	public function discover( string $path, bool $is_library = false, bool $is_editor = false ): array {
-		$this->blocks          = array();
-		$this->extensions      = array();
-		$this->overrides       = array();
+	public function discover( string $base_path, string $instance, bool $is_library = false, bool $is_editor = false ): array {
+		$this->store           = array();
+		$this->registerable    = array();
 		$this->blade_templates = array();
+		$this->block_json_data = array();
+		$this->contents_cache  = array();
+		$this->overrides       = array();
 
-		if ( ! is_dir( $path ) ) {
+		if ( ! is_dir( $base_path ) ) {
 			return $this->get_results();
 		}
 
-		$path     = wp_normalize_path( $path );
-		$instance = $this->get_instance_name( $path );
+		$base_path = wp_normalize_path( $base_path );
 
 		$iterator = new RecursiveIteratorIterator(
-			new RecursiveDirectoryIterator( $path )
+			new RecursiveDirectoryIterator( $base_path )
 		);
 
 		foreach ( $iterator as $filename => $file ) {
 			$filename  = wp_normalize_path( $filename );
 			$file_path = wp_normalize_path( $file );
 
-			$classification = $this->classifier->classify( $file_path );
-
-			if ( null === $classification ) {
-				continue;
-			}
-
-			$block_data = $this->build_block_data(
+			$this->process_file(
 				$file_path,
 				$filename,
-				$path,
+				$base_path,
 				$instance,
 				$is_library,
-				$classification
+				$is_editor
 			);
-
-			if ( null === $block_data ) {
-				continue;
-			}
-
-			$this->categorize_discovery( $block_data, $classification, $instance );
 		}
 
 		return $this->get_results();
 	}
 
 	/**
-	 * Build block data from a file.
+	 * Process a single file.
 	 *
-	 * @param string $file_path      The file path.
-	 * @param string $filename       The filename.
-	 * @param string $base_path      The base path.
-	 * @param string $instance       The instance name.
-	 * @param bool   $is_library     Whether this is a library path.
-	 * @param array  $classification The file classification.
+	 * @param string $file_path   The file path.
+	 * @param string $filename    The filename from iterator.
+	 * @param string $base_path   The base path.
+	 * @param string $instance    The instance name.
+	 * @param bool   $is_library  Whether this is a library path.
+	 * @param bool   $is_editor   Whether in editor mode.
 	 *
-	 * @return array|null The block data or null.
+	 * @return void
 	 */
-	private function build_block_data(
+	private function process_file(
 		string $file_path,
 		string $filename,
 		string $base_path,
 		string $instance,
 		bool $is_library,
-		array $classification
-	): ?array {
+		bool $is_editor
+	): void {
 		$file_dir  = dirname( $file_path );
 		$path_info = pathinfo( $file_path );
+		$contents  = $this->get_file_contents( $file_path );
 
-		// Skip hidden files.
-		if ( str_starts_with( $path_info['basename'], '.' ) ) {
-			return null;
+		// Classify the file.
+		$classification = $this->classify_file( $file_path, $path_info, $contents );
+
+		// Skip hidden files (unless editor mode and basename is '.').
+		if (
+			str_starts_with( $path_info['basename'], '.' ) &&
+			( ! $is_editor || '.' !== $path_info['basename'] )
+		) {
+			return;
 		}
 
-		$block_json = $this->get_block_json( $file_path, $classification );
-		if ( null === $block_json && ! $classification['is_init'] && ! $classification['is_directory'] ) {
-			return null;
+		// Check if this file should be processed.
+		if ( ! $this->should_process( $classification, $is_editor ) ) {
+			return;
 		}
 
-		$name = $this->determine_block_name( $block_json, $file_path, $classification );
+		// Read block.json if needed.
+		$block_json = $this->read_block_json( $file_path, $classification );
 
+		// Determine paths.
 		$block_json_path = $this->get_block_json_path( $file_path, $classification );
-		$level           = $this->calculate_level( $base_path, $filename );
-		$structure       = $this->calculate_structure( $base_path, $block_json_path );
 
-		$files       = $this->get_directory_files( $file_dir );
-		$files_paths = array_map(
-			fn( $item ) => $file_dir . '/' . $item,
-			$files
-		);
-		$folders = array_values(
-			array_map(
-				'basename',
-				array_filter( glob( $file_dir . '/*' ), 'is_dir' )
-			)
+		// Determine name.
+		$name = $this->determine_name( $block_json, $file_path, $classification, $is_editor );
+
+		// Handle blade templates separately.
+		if ( $classification['is_blade'] ) {
+			$this->register_blade_template( $filename, $base_path, $instance, $name );
+			return;
+		}
+
+		// Handle array names.
+		if ( is_array( $name ) ) {
+			$name = wp_json_encode( $name );
+		}
+
+		// Get name from block.json in editor mode.
+		$name_file = false;
+		if ( $is_editor && file_exists( $file_dir . '/block.json' ) ) {
+			$dir_block_json = $this->read_json_file( $file_dir . '/block.json' );
+			$name_file      = $dir_block_json['name'] ?? false;
+			if ( ! $name_file ) {
+				$block_json = array( 'name' => 'test/test' );
+			}
+		}
+
+		// Build level and structure info.
+		$level                   = $this->calculate_level( $base_path, $filename );
+		$block_arr_files         = $this->get_directory_files( $file_dir );
+		$block_arr_files_paths   = array_map( fn( $item ) => $file_dir . '/' . $item, $block_arr_files );
+		$block_arr_folders       = $this->get_directory_folders( $file_path );
+		$block_arr_structure_array = $this->calculate_structure_array( $level, $path_info );
+		$block_arr_structure     = $this->calculate_structure( $base_path, $block_json_path );
+
+		// Handle init files.
+		if ( $classification['is_init'] ) {
+			$block_json = array(
+				'name' => 'init-' . str_replace( '/', '-', $file_path ),
+			);
+		}
+
+		// Build the data array (exact same structure as Build::init).
+		$data = array(
+			'directory'      => $classification['is_dir'],
+			'example'        => $block_json['example'] ?? false,
+			'extend'         => $classification['is_extend'],
+			'file'           => pathinfo( $block_json_path ),
+			'files'          => $block_arr_files,
+			'filesPaths'     => $block_arr_files_paths,
+			'folders'        => $block_arr_folders,
+			'init'           => $classification['is_init'],
+			'instance'       => $instance,
+			'instancePath'   => $base_path,
+			'level'          => substr_count( $level, '/' ),
+			'library'        => $is_library,
+			'name'           => false !== $name_file ? $name_file : $name,
+			'path'           => $block_json_path,
+			'previewAssets'  => $block_json['blockstudio']['editor']['assets'] ?? array(),
+			'scopedClass'    => 'bs-' . md5( $name ),
+			'structure'      => $block_arr_structure,
+			'structureArray' => $block_arr_structure_array,
+			'twig'           => $classification['is_twig'],
 		);
 
-		$structure_array = explode(
-			'/',
-			str_replace(
-				array(
-					'/' . $path_info['basename'],
-					$path_info['basename'],
-				),
-				'',
-				$level
-			)
-		);
+		// Add nameAlt if name equals path.
+		if ( $data['name'] === $data['path'] ) {
+			$data['nameAlt'] = Block::id( $data, $data );
+		}
+
+		// Add value in editor mode.
+		if ( $is_editor && '.' !== $path_info['basename'] ) {
+			$data['value'] = $this->get_file_contents( $file_path );
+		}
+
+		// Store the data using $name as the key (original behavior).
+		// Note: $name_file is only used for the data's 'name' field, not the store key.
+		$this->store[ $name ] = $data;
+
+		// Track overrides (needed for both editor and non-editor modes).
+		if ( $classification['is_override'] ) {
+			$override_key                    = false !== $name_file ? $name_file : $name;
+			$this->overrides[ $override_key ] = array(
+				'name'           => $name,
+				'data'           => $data,
+				'classification' => $classification,
+			);
+		}
+
+		// Track items that need registration.
+		if ( ( $classification['is_block'] || $classification['is_override'] || $classification['is_extend'] ) && ! $is_editor ) {
+			$this->registerable[ $name ] = array(
+				'data'           => $data,
+				'block_json'     => $block_json,
+				'classification' => $classification,
+				'contents'       => $contents,
+			);
+		}
+
+		// Store block_json for later use.
+		$this->block_json_data[ $name ] = $block_json;
+	}
+
+	/**
+	 * Classify a file.
+	 *
+	 * @param string $file_path The file path.
+	 * @param array  $path_info The pathinfo array.
+	 * @param string $contents  The file contents.
+	 *
+	 * @return array The classification.
+	 */
+	private function classify_file( string $file_path, array $path_info, string $contents ): array {
+		$is_blockstudio = 'block.json' === $path_info['basename']
+			&& isset( $this->decode_json( $contents )['blockstudio'] );
+
+		$is_extend   = $this->check_blockstudio_flag( $contents, 'extend' );
+		$is_override = $is_blockstudio && $this->check_blockstudio_flag( $contents, 'override' );
+		$is_block    = $is_blockstudio && Files::get_render_template( $file_path ) && ! $is_extend;
+		$is_init     = 'php' === ( $path_info['extension'] ?? '' )
+			&& str_starts_with( $path_info['basename'], 'init' );
+		$is_dir      = is_dir( $file_path )
+			&& ! file_exists( $file_path . '/block.json' )
+			&& ! Files::get_render_template( $file_path );
+		$is_twig     = str_ends_with( $file_path, '.twig' );
+		$is_php      = ! $is_twig;
+		$is_blade    = str_ends_with( $file_path, '.blade.php' );
 
 		return array(
-			'block_json'       => $block_json,
-			'classification'   => $classification,
-			'directory'        => $classification['is_directory'],
-			'example'          => $block_json['example'] ?? false,
-			'extend'           => $classification['is_extend'],
-			'file'             => pathinfo( $block_json_path ),
-			'files'            => $files,
-			'filesPaths'       => $files_paths,
-			'folders'          => $folders,
-			'init'             => $classification['is_init'],
-			'instance'         => $instance,
-			'instancePath'     => $base_path,
-			'level'            => substr_count( $level, '/' ),
-			'library'          => $is_library,
-			'name'             => $name,
-			'path'             => $block_json_path,
-			'previewAssets'    => $block_json['blockstudio']['editor']['assets'] ?? array(),
-			'scopedClass'      => 'bs-' . md5( $name ),
-			'structure'        => $structure,
-			'structureArray'   => $structure_array,
-			'twig'             => $classification['is_twig'],
+			'is_blockstudio' => $is_blockstudio,
+			'is_block'       => $is_block,
+			'is_extend'      => $is_extend,
+			'is_override'    => $is_override,
+			'is_init'        => $is_init,
+			'is_dir'         => $is_dir,
+			'is_twig'        => $is_twig,
+			'is_php'         => $is_php,
+			'is_blade'       => $is_blade,
 		);
 	}
 
 	/**
-	 * Categorize a discovered item.
+	 * Check if a file should be processed.
 	 *
-	 * @param array  $block_data     The block data.
-	 * @param array  $classification The classification.
-	 * @param string $instance       The instance name.
+	 * @param array $classification The classification.
+	 * @param bool  $is_editor      Whether in editor mode.
 	 *
-	 * @return void
+	 * @return bool Whether to process.
 	 */
-	private function categorize_discovery( array $block_data, array $classification, string $instance ): void {
-		if ( $classification['is_blade'] ) {
-			$this->blade_templates[ $instance ][ $block_data['name'] ] = $block_data;
-			return;
-		}
+	private function should_process( array $classification, bool $is_editor ): bool {
+		return $classification['is_block']
+			|| $classification['is_blade']
+			|| $classification['is_init']
+			|| $classification['is_dir']
+			|| $classification['is_override']
+			|| $classification['is_extend']
+			|| $is_editor;
+	}
 
-		if ( $classification['is_override'] ) {
-			$this->overrides[ $block_data['name'] ] = $block_data;
-			return;
-		}
+	/**
+	 * Check for a blockstudio flag in contents.
+	 *
+	 * @param string $contents The file contents.
+	 * @param string $flag     The flag to check.
+	 *
+	 * @return bool Whether the flag is set.
+	 */
+	private function check_blockstudio_flag( string $contents, string $flag ): bool {
+		$data = $this->decode_json( $contents );
+		return isset( $data['blockstudio'][ $flag ] ) && $data['blockstudio'][ $flag ];
+	}
 
-		if ( $classification['is_extend'] ) {
-			$this->extensions[ $block_data['name'] ] = $block_data;
-			return;
-		}
-
-		if ( $classification['is_block'] ) {
-			$this->blocks[ $block_data['name'] ] = $block_data;
+	/**
+	 * Decode JSON safely.
+	 *
+	 * @param string $contents The JSON string.
+	 *
+	 * @return array The decoded array or empty array.
+	 */
+	private function decode_json( string $contents ): array {
+		try {
+			$result = json_decode( $contents, true );
+			return is_array( $result ) ? $result : array();
+		} catch ( Exception $e ) {
+			return array();
 		}
 	}
 
 	/**
-	 * Get the block.json content.
+	 * Read block.json for a file.
 	 *
 	 * @param string $file_path      The file path.
 	 * @param array  $classification The classification.
 	 *
-	 * @return array|null The block.json data or null.
+	 * @return array The block.json data.
 	 */
-	private function get_block_json( string $file_path, array $classification ): ?array {
+	private function read_block_json( string $file_path, array $classification ): array {
 		if ( is_dir( $file_path ) ) {
-			return null;
+			return array();
 		}
 
 		$json_path = str_ends_with( $file_path, 'block.json' )
@@ -258,42 +360,26 @@ class Block_Discovery {
 				$file_path
 			);
 
-		if ( ! file_exists( $json_path ) ) {
-			return null;
-		}
-
-		$contents = file_get_contents( $json_path ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents
-
-		try {
-			return json_decode( $contents, true );
-		} catch ( Exception $e ) {
-			return null;
-		}
+		return $this->read_json_file( $json_path );
 	}
 
 	/**
-	 * Determine the block name.
+	 * Read a JSON file.
 	 *
-	 * @param array|null $block_json     The block.json data.
-	 * @param string     $file_path      The file path.
-	 * @param array      $classification The classification.
+	 * @param string $path The file path.
 	 *
-	 * @return string The block name.
+	 * @return array The decoded JSON or empty array.
 	 */
-	private function determine_block_name( ?array $block_json, string $file_path, array $classification ): string {
-		if ( $classification['is_init'] ) {
-			return 'init-' . str_replace( '/', '-', $file_path );
+	private function read_json_file( string $path ): array {
+		if ( ! file_exists( $path ) ) {
+			return array();
 		}
-
-		if ( $classification['is_override'] && isset( $block_json['name'] ) ) {
-			return $block_json['name'] . '-override';
-		}
-
-		return $block_json['name'] ?? $file_path;
+		$contents = file_get_contents( $path ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents
+		return $this->decode_json( $contents );
 	}
 
 	/**
-	 * Get the block.json path from a file path.
+	 * Get the block.json path for a file.
 	 *
 	 * @param string $file_path      The file path.
 	 * @param array  $classification The classification.
@@ -316,6 +402,45 @@ class Block_Discovery {
 	}
 
 	/**
+	 * Determine the block name.
+	 *
+	 * @param array  $block_json     The block.json data.
+	 * @param string $file_path      The file path.
+	 * @param array  $classification The classification.
+	 * @param bool   $is_editor      Whether in editor mode.
+	 *
+	 * @return string|array The block name.
+	 */
+	private function determine_name( array $block_json, string $file_path, array $classification, bool $is_editor ) {
+		if ( $is_editor ) {
+			return $file_path;
+		}
+
+		if ( $classification['is_override'] ) {
+			return ( $block_json['name'] ?? '' ) . '-override';
+		}
+
+		return $block_json['name'] ?? $file_path;
+	}
+
+	/**
+	 * Register a blade template.
+	 *
+	 * @param string $filename  The filename.
+	 * @param string $base_path The base path.
+	 * @param string $instance  The instance name.
+	 * @param string $name      The template name.
+	 *
+	 * @return void
+	 */
+	private function register_blade_template( string $filename, string $base_path, string $instance, string $name ): void {
+		$relative_path = str_replace( array( $base_path, '.blade.php' ), '', $filename );
+		$relative_path = str_replace( DIRECTORY_SEPARATOR, '.', $relative_path );
+
+		$this->blade_templates[ $instance ][ $name ] = ltrim( $relative_path, '.' );
+	}
+
+	/**
 	 * Calculate the level string.
 	 *
 	 * @param string $base_path The base path.
@@ -325,12 +450,27 @@ class Block_Discovery {
 	 */
 	private function calculate_level( string $base_path, string $filename ): string {
 		$level_explode = explode( Files::get_root_folder(), $base_path );
-		$level         = explode(
-			$level_explode[ count( $level_explode ) - 1 ],
-			$filename
-		)[1] ?? '';
+		$level_parts   = explode( $level_explode[ count( $level_explode ) - 1 ], $filename );
+		return $level_parts[1] ?? '';
+	}
 
-		return $level;
+	/**
+	 * Calculate the structure array.
+	 *
+	 * @param string $level     The level string.
+	 * @param array  $path_info The pathinfo array.
+	 *
+	 * @return array The structure array.
+	 */
+	private function calculate_structure_array( string $level, array $path_info ): array {
+		return explode(
+			'/',
+			str_replace(
+				array( '/' . $path_info['basename'], $path_info['basename'] ),
+				'',
+				$level
+			)
+		);
 	}
 
 	/**
@@ -342,18 +482,12 @@ class Block_Discovery {
 	 * @return string The structure string.
 	 */
 	private function calculate_structure( string $base_path, string $block_json_path ): string {
-		$structure_explode = explode(
-			Files::get_root_folder() . '/',
-			$base_path
+		$structure_explode = explode( Files::get_root_folder() . '/', $base_path );
+		$structure_parts   = explode(
+			$structure_explode[ count( $structure_explode ) - 1 ],
+			$block_json_path
 		);
-
-		return ltrim(
-			explode(
-				$structure_explode[ count( $structure_explode ) - 1 ],
-				$block_json_path
-			)[1] ?? '',
-			'/'
-		);
+		return ltrim( $structure_parts[1] ?? '', '/' );
 	}
 
 	/**
@@ -377,16 +511,38 @@ class Block_Discovery {
 	}
 
 	/**
-	 * Get instance name from path.
+	 * Get folders in a directory.
 	 *
-	 * @param string $path The path.
+	 * @param string $file_path The file path.
 	 *
-	 * @return string The instance name.
+	 * @return array The folders.
 	 */
-	private function get_instance_name( string $path ): string {
-		return wp_normalize_path(
-			trim( explode( Files::get_root_folder(), $path )[1] ?? '', '/\\' )
-		);
+	private function get_directory_folders( string $file_path ): array {
+		$glob_result = glob( dirname( $file_path ) . '/*' );
+		if ( false === $glob_result ) {
+			return array();
+		}
+		return array_values( array_map( 'basename', array_filter( $glob_result, 'is_dir' ) ) );
+	}
+
+	/**
+	 * Get file contents with caching.
+	 *
+	 * @param string $file_path The file path.
+	 *
+	 * @return string The file contents.
+	 */
+	private function get_file_contents( string $file_path ): string {
+		if ( isset( $this->contents_cache[ $file_path ] ) ) {
+			return $this->contents_cache[ $file_path ];
+		}
+
+		$contents = is_file( $file_path )
+			? file_get_contents( $file_path ) // phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents
+			: '{}';
+
+		$this->contents_cache[ $file_path ] = $contents;
+		return $contents;
 	}
 
 	/**
@@ -396,46 +552,56 @@ class Block_Discovery {
 	 */
 	private function get_results(): array {
 		return array(
-			'blocks'          => $this->blocks,
-			'extensions'      => $this->extensions,
-			'overrides'       => $this->overrides,
+			'store'           => $this->store,
+			'registerable'    => $this->registerable,
 			'blade_templates' => $this->blade_templates,
+			'block_json_data' => $this->block_json_data,
+			'overrides'       => $this->overrides,
 		);
 	}
 
 	/**
-	 * Get discovered blocks.
+	 * Get discovered store.
 	 *
-	 * @return array The blocks.
+	 * @return array The store.
 	 */
-	public function get_blocks(): array {
-		return $this->blocks;
+	public function get_store(): array {
+		return $this->store;
 	}
 
 	/**
-	 * Get discovered extensions.
+	 * Get registerable items.
 	 *
-	 * @return array The extensions.
+	 * @return array The registerable items.
 	 */
-	public function get_extensions(): array {
-		return $this->extensions;
+	public function get_registerable(): array {
+		return $this->registerable;
 	}
 
 	/**
-	 * Get discovered overrides.
+	 * Get blade templates.
+	 *
+	 * @return array The blade templates.
+	 */
+	public function get_blade_templates(): array {
+		return $this->blade_templates;
+	}
+
+	/**
+	 * Get block JSON data.
+	 *
+	 * @return array The block JSON data.
+	 */
+	public function get_block_json_data(): array {
+		return $this->block_json_data;
+	}
+
+	/**
+	 * Get overrides.
 	 *
 	 * @return array The overrides.
 	 */
 	public function get_overrides(): array {
 		return $this->overrides;
-	}
-
-	/**
-	 * Get discovered Blade templates.
-	 *
-	 * @return array The Blade templates.
-	 */
-	public function get_blade_templates(): array {
-		return $this->blade_templates;
 	}
 }
