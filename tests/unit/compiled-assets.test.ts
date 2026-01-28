@@ -1,9 +1,6 @@
 /**
- * Compiled Assets Snapshot Tests
- *
- * These tests verify that SCSS compilation and asset generation produce
- * EXACTLY the same output as captured in the snapshot. This ensures the
- * migration doesn't break the asset compilation pipeline.
+ * Compiled Assets Snapshot Tests.
+ * Verifies SCSS compilation produces identical output to catch migration regressions.
  */
 
 import { test, expect } from "../wordpress-playground/fixtures";
@@ -14,10 +11,7 @@ import { fileURLToPath } from "url";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
-// Load the snapshot
 const snapshotPath = join(__dirname, "snapshots", "compiled-assets.json");
-
-// Only run tests if snapshot exists
 const snapshotExists = existsSync(snapshotPath);
 const snapshot = snapshotExists
   ? JSON.parse(readFileSync(snapshotPath, "utf-8"))

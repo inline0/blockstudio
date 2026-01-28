@@ -1,18 +1,12 @@
 /**
- * E2E Test Utilities for WordPress Playground
- *
- * Adapted from package/playwright-utils.ts to work with Playground's
- * iframe structure and shared page approach.
+ * E2E Test Utilities for WordPress Playground.
+ * Works with Playground's nested iframe structure (iframe#playground > iframe#wp).
  */
 
 import { expect, FrameLocator } from "@playwright/test";
 import { test } from "./fixtures";
 
-// Type alias for the editor frame
 type Editor = FrameLocator;
-
-// Page-like convenience functions for FrameLocator
-// These make it easier to migrate tests that were written for Page API
 
 export const click = async (editor: Editor, selector: string) => {
   await editor.locator(selector).click();
@@ -145,18 +139,15 @@ export const delay = (ms: number) =>
   new Promise((resolve) => setTimeout(resolve, ms));
 
 export const save = async (editor: Editor) => {
-  // Try multiple selectors for the publish/save button
   const publishButton = editor.locator('button:has-text("Publish")').first();
   const saveButton = editor.locator('button:has-text("Save draft")').first();
   const updateButton = editor.locator('button:has-text("Update")').first();
 
   if (await updateButton.isVisible().catch(() => false)) {
-    // Post already published, just update
     await updateButton.click();
   } else if (await publishButton.isVisible().catch(() => false)) {
     await publishButton.click();
 
-    // Handle pre-publish panel if it appears
     const prePublishPanel = editor.locator(".editor-post-publish-panel");
     const panelVisible = await prePublishPanel
       .waitFor({ state: "visible", timeout: 2000 })
@@ -164,36 +155,32 @@ export const save = async (editor: Editor) => {
       .catch(() => false);
 
     if (panelVisible) {
-      // Click the confirmation Publish button inside the panel (the primary button, not the toggle)
+      // Use specific class to avoid matching "Publish: Immediately" toggle
       const confirmButton = prePublishPanel.locator('.editor-post-publish-button');
       await confirmButton.click();
     }
   } else if (await saveButton.isVisible().catch(() => false)) {
     await saveButton.click();
   } else {
-    // Fallback to original selector
     await editor.locator(".editor-post-publish-button").click();
   }
 
-  // Wait for snackbar notification
   await editor.locator(".components-snackbar").waitFor({ state: "visible", timeout: 10000 });
 };
 
 export const saveAndReload = async (editor: Editor) => {
   await save(editor);
 
-  // Navigate to wp-admin (Playground doesn't persist on reload, so we navigate away and back)
+  // Playground doesn't persist on page reload, so navigate away and back instead
   await editor.locator("body").evaluate(() => {
     window.location.href = "/wp-admin/edit.php";
   });
 
-  // Wait for posts list to load
   await editor.locator(".wp-list-table").waitFor({ state: "visible", timeout: 30000 });
 
-  // Click on the first post to edit it (our test post is the most recent)
+  // First post is most recent (our test post)
   await editor.locator(".wp-list-table .row-title").first().click();
 
-  // Wait for editor to load
   await editor
     .locator(".is-root-container")
     .waitFor({ state: "visible", timeout: 30000 });
@@ -213,7 +200,7 @@ export const openBlockInserter = async (editor: Editor) => {
   const inserterButton = editor.locator(".editor-document-tools__inserter-toggle");
   const blockList = editor.locator(".block-editor-inserter__block-list");
 
-  // Retry up to 3 times to handle state synchronization issues
+  // Retry because button aria-pressed state can desync after resetBlocks()
   for (let attempt = 0; attempt < 3; attempt++) {
     const sidebarVisible = await blockList.isVisible().catch(() => false);
 
@@ -221,18 +208,15 @@ export const openBlockInserter = async (editor: Editor) => {
       break;
     }
 
-    // Check if button is already "pressed" but sidebar not visible (state mismatch)
+    // Button shows pressed but sidebar isn't visible - click to sync state
     const buttonPressed = await inserterButton.getAttribute("aria-pressed");
     if (buttonPressed === "true") {
-      // Button thinks it's open but sidebar isn't visible - click to close first
       await inserterButton.click();
       await delay(300);
     }
 
-    // Click to open
     await inserterButton.click();
 
-    // Wait for sidebar with shorter timeout, then retry if needed
     const opened = await blockList
       .waitFor({ state: "visible", timeout: 3000 })
       .then(() => true)
@@ -242,7 +226,6 @@ export const openBlockInserter = async (editor: Editor) => {
       break;
     }
 
-    // Wait a bit before retrying
     await delay(500);
   }
 
@@ -264,12 +247,11 @@ export const addBlock = async (editor: Editor, type: string) => {
   await openBlockInserter(editor);
   await delay(500);
 
-  // Search for the block since Blockstudio blocks may not be visible in default view
+  // Search because Blockstudio blocks aren't in the default inserter view
   const searchInput = editor.locator('.block-editor-inserter__search input');
   await searchInput.fill(type);
   await delay(500);
 
-  // Click the block
   await editor.locator(`.editor-block-list-item-blockstudio-${type}`).click();
 };
 
@@ -360,10 +342,7 @@ export const addTailwindClass = async (
   await editor.locator("body").press("Enter");
 };
 
-/**
- * Main test helper for field type tests.
- * Creates a test suite for a specific field type with default and field tests.
- */
+/** Creates a standardized test suite for a field type with defaults and field tests. */
 export const testType = (
   field: string,
   defaultValue: any = false,
@@ -424,13 +403,12 @@ export const testType = (
           }
 
           if (testCallback && typeof testCallback === "function") {
-            // Skip repeater tests in inner context
+            // Repeater doesn't work inside InnerBlocks
             if (type === "inner" && field === "repeater") {
               return;
             }
 
-            // Get test items from callback - we need to pass a placeholder
-            // since we can't access the fixture here
+            // Placeholder needed because fixture isn't available at describe time
             const testItems = testCallback({} as Editor);
 
             if (Array.isArray(testItems)) {
@@ -495,9 +473,7 @@ export const testType = (
   });
 };
 
-/**
- * Test helper for context/editor tests.
- */
+/** Creates a test suite for context/editor tests. */
 export const testContext = (
   type: string,
   testCallback: ((editor: Editor) => any[]) | false = false

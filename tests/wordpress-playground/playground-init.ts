@@ -45,7 +45,6 @@ function getAllFiles(
       file.endsWith(".css") ||
       file.endsWith(".js")
     ) {
-      // Skip excluded files
       if (!excludeFiles.some((exclude) => file === exclude)) {
         arrayOfFiles.push(filePath);
       }
@@ -94,7 +93,6 @@ export function createPlaygroundServer(options: PlaygroundServerOptions) {
     }
   });
 
-  // Serve test blocks if configured
   app.get(
     "/api/test-blocks",
     (_: express.Request, res: express.Response) => {
@@ -111,7 +109,7 @@ export function createPlaygroundServer(options: PlaygroundServerOptions) {
       }
 
       try {
-        // Use test theme if configured, otherwise fall back to twentytwentyfive
+        // Test blocks go into theme's blockstudio/ directory
         const themeName = testThemePath ? "blockstudio-test" : "twentytwentyfive";
         const files = getAllFiles(fullPath, []).map((filePath) => {
           const relativePath = relative(fullPath, filePath);
@@ -151,7 +149,6 @@ export function createPlaygroundServer(options: PlaygroundServerOptions) {
     }
   );
 
-  // Serve test theme if configured
   app.get(
     "/api/test-theme",
     (_: express.Request, res: express.Response) => {

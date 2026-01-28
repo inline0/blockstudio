@@ -1,8 +1,6 @@
 /**
- * E2E Test Fixtures for WordPress Playground
- *
- * Provides a shared page that navigates to the block editor once,
- * avoiding repeated logins and page reloads.
+ * E2E Test Fixtures for WordPress Playground.
+ * Provides shared page instance to avoid repeated Playground initialization.
  */
 
 import { test as base, Page, FrameLocator, expect } from "@playwright/test";
@@ -11,9 +9,7 @@ let sharedPage: Page | null = null;
 let wpFrame: FrameLocator | null = null;
 
 type E2EFixtures = {
-  /** The WordPress iframe inside Playground - already in block editor */
   editor: FrameLocator;
-  /** Reset blocks to empty state */
   resetBlocks: () => Promise<void>;
 };
 
@@ -26,10 +22,9 @@ async function closeModals(frame: FrameLocator) {
 
     if (!modalOverlay) break;
 
-    // Try clicking the modal's close button using multiple selectors
-    // The button might have aria-label="Close" or just text content "Close"
+    // Multiple selectors because button structure varies across WP versions
     const closeSelectors = [
-      '.components-modal__header button',  // Close button in modal header
+      '.components-modal__header button',
       'button[aria-label="Close"]',
       '.components-modal__frame button:has-text("Close")',
       'button:has-text("Close")',
@@ -48,7 +43,6 @@ async function closeModals(frame: FrameLocator) {
 
     if (closed) continue;
 
-    // Try Escape key as fallback
     await frame.locator("body").press("Escape");
     await new Promise((r) => setTimeout(r, 500));
   }
@@ -58,7 +52,6 @@ export const test = base.extend<E2EFixtures>({
   editor: async ({ browser }, use) => {
     const port = process.env.PLAYGROUND_PORT || "9410";
 
-    // Initialize shared page if needed
     if (!sharedPage) {
       sharedPage = await browser.newPage();
       await sharedPage.goto(`http://localhost:${port}`);
@@ -69,30 +62,25 @@ export const test = base.extend<E2EFixtures>({
       const playgroundFrame = sharedPage.frameLocator("iframe#playground");
       wpFrame = playgroundFrame.frameLocator("iframe#wp");
 
-      // Navigate to editor
       await wpFrame
         .locator("body")
         .evaluate(() => (window.location.href = "/wp-admin/post-new.php"));
 
-      // Wait for editor to load
       await wpFrame
         .locator(".is-root-container")
         .waitFor({ state: "visible", timeout: 60000 });
 
-      // Wait for editor to stabilize
+      // Editor needs time to fully initialize before interactions
       await new Promise((r) => setTimeout(r, 2000));
     }
 
-    // Always try to close modals before each test
     await closeModals(wpFrame!);
-
     await use(wpFrame!);
   },
 
   resetBlocks: async ({}, use) => {
     const reset = async () => {
       if (wpFrame) {
-        // Close inserter if open
         const inserterOpen = await wpFrame
           .locator(".block-editor-inserter__block-list")
           .isVisible()
@@ -102,7 +90,6 @@ export const test = base.extend<E2EFixtures>({
           await new Promise((r) => setTimeout(r, 300));
         }
 
-        // Reset blocks
         await wpFrame.locator("body").evaluate(() => {
           (window as any).wp.data.dispatch("core/block-editor").resetBlocks([]);
         });

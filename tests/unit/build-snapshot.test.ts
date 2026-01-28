@@ -1,11 +1,7 @@
 /**
- * Build Class Snapshot Tests
- *
- * These tests verify that the Build class returns EXACTLY the same data
- * as captured in the snapshot. This ensures the migration doesn't break anything.
- *
- * Note: Some dynamic values (URLs with scope IDs, mtimes, generated IDs) are
- * normalized before comparison since they change between Playground instances.
+ * Build Class Snapshot Tests.
+ * Verifies Build class output matches snapshot exactly to catch migration regressions.
+ * Dynamic values (scope URLs, mtimes, generated IDs) are normalized before comparison.
  */
 
 import { test, expect } from "../wordpress-playground/fixtures";
@@ -16,27 +12,15 @@ import { fileURLToPath } from "url";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
-// Load the snapshot
 const snapshotPath = join(__dirname, "snapshots", "build-snapshot.json");
 const snapshot = JSON.parse(readFileSync(snapshotPath, "utf-8"));
 
-/**
- * Normalize dynamic values in the data so we can compare structures.
- * - Replace Playground scope IDs in URLs with a placeholder
- * - Remove/normalize mtimes
- * - Normalize generated IDs (nameAlt)
- * - Normalize timestamps in filenames
- * - Normalize generated hash IDs in keys
- */
+/** Normalizes dynamic values (scope URLs, timestamps, hashes) for comparison. */
 function normalizeString(str: string): string {
   return str
-    // Normalize Playground scope URLs: scope:0.1234567890 -> scope:NORMALIZED
     .replace(/scope:[0-9.]+/g, "scope:NORMALIZED")
-    // Normalize timestamps in filenames: test-1769516162.js -> test-TIMESTAMP.js
     .replace(/(-\d{10,})\.(js|css|scss)/g, "-TIMESTAMP.$2")
-    // Normalize content hashes in filenames: style-10af90f280e9944d28a32c07649e0628.css -> style-CONTENTHASH.css
     .replace(/-[a-f0-9]{32}\.(js|css|scss)/g, "-CONTENTHASH.$1")
-    // Normalize generated 12-char hex IDs: blockstudio-49a9c898bab4 -> blockstudio-HASHID
     .replace(/blockstudio-[a-f0-9]{12}/g, "blockstudio-HASHID");
 }
 
@@ -60,35 +44,29 @@ function normalizeData(obj: any): any {
   if (typeof obj === "object") {
     const normalized: any = {};
     for (const [key, value] of Object.entries(obj)) {
-      // Normalize the key itself (may contain hash IDs)
       const normalizedKey = normalizeString(key);
 
-      // Skip mtime fields entirely - they always change
+      // These fields change between runs
       if (key === "mtime") {
         normalized[normalizedKey] = "NORMALIZED_MTIME";
         continue;
       }
-      // Skip key fields that are timestamps (10-digit numbers)
       if (key === "key" && typeof value === "number" && value > 1000000000) {
         normalized[normalizedKey] = "NORMALIZED_KEY";
         continue;
       }
-      // Normalize filename fields with timestamps (e.g., test-1769516162 -> test-TIMESTAMP)
       if (key === "filename" && typeof value === "string" && /-\d{10,}$/.test(value)) {
         normalized[normalizedKey] = value.replace(/-\d{10,}$/, "-TIMESTAMP");
         continue;
       }
-      // Normalize filename fields with content hashes (e.g., style-10af90f280e9944d28a32c07649e0628 -> style-CONTENTHASH)
       if (key === "filename" && typeof value === "string" && /-[a-f0-9]{32}$/.test(value)) {
         normalized[normalizedKey] = value.replace(/-[a-f0-9]{32}$/, "-CONTENTHASH");
         continue;
       }
-      // Normalize nameAlt (generated IDs like blockstudio-49a9c898bab4)
       if (key === "nameAlt" && typeof value === "string" && value.startsWith("blockstudio-")) {
         normalized[normalizedKey] = "blockstudio-NORMALIZED";
         continue;
       }
-      // Normalize scopedClass (hash like bs-43849caa438e2447ef552c25a075ff08)
       if (key === "scopedClass" && typeof value === "string" && /^bs-[a-f0-9]{32}$/.test(value)) {
         normalized[normalizedKey] = "bs-NORMALIZED_HASH";
         continue;
@@ -111,14 +89,12 @@ test.describe("Build Class Snapshot Tests", () => {
     const normalizedFresh = normalizeData(fresh.blocks);
     const normalizedSnapshot = normalizeData(snapshot.blocks);
 
-    // Compare block count
     const snapshotBlockNames = Object.keys(normalizedSnapshot);
     const freshBlockNames = Object.keys(normalizedFresh);
 
     expect(freshBlockNames.length).toBe(snapshotBlockNames.length);
     expect(freshBlockNames.sort()).toEqual(snapshotBlockNames.sort());
 
-    // Compare each block
     for (const blockName of snapshotBlockNames) {
       expect(normalizedFresh[blockName]).toEqual(normalizedSnapshot[blockName]);
     }
