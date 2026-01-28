@@ -15,12 +15,7 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
 // Load the snapshot
-const snapshotPath = join(
-  __dirname,
-  "..",
-  "snapshots",
-  "compiled-assets.json"
-);
+const snapshotPath = join(__dirname, "snapshots", "compiled-assets.json");
 
 // Only run tests if snapshot exists
 const snapshotExists = existsSync(snapshotPath);

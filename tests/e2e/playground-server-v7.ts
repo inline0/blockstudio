@@ -10,7 +10,7 @@ createPlaygroundServer({
   pluginPath: join(__dirname, "../.."),
   pluginSlug: "blockstudio7",
   pluginMainFile: "blockstudio-v7.php", // v7 entry point
-  testBlocksPath: "tests/e2e/types", // E2E test blocks
+  testBlocksPath: "tests/blocks", // Same test blocks as unit tests
   testHelperPluginPath: "tests/test-helper.php",
   title: "Blockstudio E2E - Test Environment (v7)",
   excludeDirs: ["package/node_modules", "includes"], // Exclude v6 includes

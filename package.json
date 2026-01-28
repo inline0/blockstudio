@@ -3,8 +3,8 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "playground": "tsx tests/playground-server.ts",
-    "playground:v7": "tsx tests/playground-server-v7.ts",
+    "playground": "tsx tests/unit/playground-server.ts",
+    "playground:v7": "tsx tests/unit/playground-server-v7.ts",
     "playground:e2e": "tsx tests/e2e/playground-server.ts",
     "playground:e2e:v7": "tsx tests/e2e/playground-server-v7.ts",
     "test": "playwright test",

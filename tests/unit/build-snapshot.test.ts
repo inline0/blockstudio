@@ -17,7 +17,7 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
 // Load the snapshot
-const snapshotPath = join(__dirname, "..", "snapshots", "build-snapshot.json");
+const snapshotPath = join(__dirname, "snapshots", "build-snapshot.json");
 const snapshot = JSON.parse(readFileSync(snapshotPath, "utf-8"));
 
 /**
