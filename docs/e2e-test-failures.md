@@ -11,6 +11,97 @@
 
 The E2E tests are run with worker-scoped Playwright fixtures, meaning each test file shares a single Playground instance. When a test fails within a file, subsequent tests in that file are skipped.
 
+## Goal
+
+**100% passing E2E tests** - All 628 tests must pass before release.
+
+## Debugging Strategy
+
+Fix tests one at a time using this workflow:
+
+### 1. Isolate Single Test
+
+Run only the failing test to get fast feedback:
+
+```bash
+# Run single test by name
+npm run test:e2e:v7 -- --grep "attributes › fields › inner › check frontend"
+
+# Or run single test file
+npm run test:e2e:v7 -- tests/e2e/types/attributes.ts
+```
+
+### 2. Debug with Playwright Tools
+
+```bash
+# Run in headed mode (see browser)
+npm run test:e2e:v7 -- --headed --grep "test name"
+
+# Run in debug mode (step through)
+npm run test:e2e:v7 -- --debug --grep "test name"
+
+# Show trace after failure
+npx playwright show-trace test-results/[test-folder]/trace.zip
+```
+
+### 3. Add Logging
+
+Add `console.log` in test code or use Playwright's built-in logging:
+
+```typescript
+// In test file
+await editor.locator('.selector').click();
+console.log('Clicked selector');
+
+// Check current state
+const html = await editor.locator('body').innerHTML();
+console.log(html);
+```
+
+### 4. Fix and Verify
+
+- Fix the issue in test code or plugin code
+- Re-run the isolated test until it passes
+- Run the full test file to ensure no regressions
+
+### 5. Move to Next Test
+
+Once fixed, move to the next failing test. Track progress by updating this document.
+
+## Progress Tracker
+
+| # | Test | Status | Notes |
+|---|------|--------|-------|
+| 1 | attributes › check frontend | pending | |
+| 2 | classes-tailwind › add block | pending | |
+| 3 | code-selector-asset-repeater › check frontend | pending | |
+| 4 | code-selector-asset › check frontend | pending | |
+| 5 | color-populate › add InnerBlocks | pending | |
+| 6 | files › select files 0 | pending | |
+| 7 | loading › check loading state | pending | |
+| 8 | number › check number | pending | |
+| 9 | populate-function › change values | pending | |
+| 10 | radio-innerblocks › layout 2 | pending | |
+| 11 | range › add block | pending | |
+| 12 | repeater-complete › set media size | pending | |
+| 13 | repeater-nested › add media 3 | pending | |
+| 14 | repeater-outside › has correct defaults | pending | |
+| 15 | repeater › remove | pending | |
+| 16 | text › add block (reusable) | pending | |
+| 17 | select-fetch › add test entry | pending | |
+| 18 | classes › check blockstudio block | pending | |
+| 19 | tabs-nested › add block | pending | |
+| 20 | tailwind › add container | pending | |
+| 21 | text › has correct defaults | pending | |
+| 22 | textarea › add block | pending | |
+| 23 | token › add InnerBlocks | pending | |
+| 24 | transforms-3 › check transforms | pending | |
+| 25 | variations › add block | pending | |
+| 26 | variations/variation-2 › add InnerBlocks | pending | |
+| 27 | wysiwyg-switch › add block | pending | |
+
+---
+
 ## Failed Tests
 
 ### 1. attributes › fields › inner › check frontend
