@@ -12,6 +12,7 @@ createPlaygroundServer({
   pluginMainFile: "blockstudio.php",
   testBlocksPath: "tests/blocks", // Same test blocks as unit tests
   testHelperPluginPath: "tests/test-helper.php",
+  testThemePath: "tests/e2e/theme", // Custom theme with Timber
   title: "Blockstudio E2E - Test Environment (v6)",
   excludeDirs: ["package/node_modules"],
   landingPage: "/wp-admin/post-new.php", // Start in editor for E2E tests

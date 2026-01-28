@@ -10,6 +10,8 @@ export interface PlaygroundServerOptions {
   testBlocksPath?: string;
   testHelperPluginPath?: string;
   additionalPlugins?: string[];
+  /** Path to a custom test theme directory (relative to pluginPath) */
+  testThemePath?: string;
   title?: string;
   excludeDirs?: string[];
   excludeFiles?: string[];
@@ -62,6 +64,7 @@ export function createPlaygroundServer(options: PlaygroundServerOptions) {
     testBlocksPath,
     testHelperPluginPath,
     additionalPlugins = [],
+    testThemePath,
     title = "WordPress Playground",
     excludeDirs = [],
     excludeFiles = [],
@@ -108,10 +111,12 @@ export function createPlaygroundServer(options: PlaygroundServerOptions) {
       }
 
       try {
+        // Use test theme if configured, otherwise fall back to twentytwentyfive
+        const themeName = testThemePath ? "blockstudio-test" : "twentytwentyfive";
         const files = getAllFiles(fullPath, []).map((filePath) => {
           const relativePath = relative(fullPath, filePath);
           return {
-            path: `/wordpress/wp-content/themes/twentytwentyfive/blockstudio/${relativePath}`,
+            path: `/wordpress/wp-content/themes/${themeName}/blockstudio/${relativePath}`,
             content: readFileSync(filePath, "utf-8"),
           };
         });
@@ -143,6 +148,38 @@ export function createPlaygroundServer(options: PlaygroundServerOptions) {
 
       const testHelperPlugin = readFileSync(fullTestHelperPath, "utf-8");
       res.type("text/plain").send(testHelperPlugin);
+    }
+  );
+
+  // Serve test theme if configured
+  app.get(
+    "/api/test-theme",
+    (_: express.Request, res: express.Response) => {
+      if (!testThemePath) {
+        return res.status(404).json({ error: "Test theme not configured" });
+      }
+
+      const fullPath = isAbsolute(testThemePath)
+        ? testThemePath
+        : join(pluginPath, testThemePath);
+
+      if (!existsSync(fullPath)) {
+        return res.status(404).json({ error: "Test theme directory not found" });
+      }
+
+      try {
+        const files = getAllFiles(fullPath, []).map((filePath) => {
+          const relativePath = relative(fullPath, filePath);
+          return {
+            path: `/wordpress/wp-content/themes/blockstudio-test/${relativePath}`,
+            content: readFileSync(filePath, "utf-8"),
+          };
+        });
+        res.json(files);
+      } catch (error) {
+        console.error("Error reading test theme:", error);
+        res.status(500).json({ error: "Failed to read test theme" });
+      }
     }
   );
 
@@ -181,6 +218,20 @@ export function createPlaygroundServer(options: PlaygroundServerOptions) {
                 try { await client.mkdir(dir); } catch (e) {}
                 await client.writeFile(file.path, file.content);
               }`
+      : "";
+
+    const testThemeCode = testThemePath
+      ? `
+              const testThemeFiles = await fetch('/api/test-theme').then((r) => r.json());
+              for (const file of testThemeFiles) {
+                const dir = file.path.substring(0, file.path.lastIndexOf('/'));
+                try { await client.mkdir(dir); } catch (e) {}
+                await client.writeFile(file.path, file.content);
+              }`
+      : "";
+
+    const switchThemeCode = testThemePath
+      ? `switch_theme('blockstudio-test');`
       : "";
 
     res.send(`
@@ -235,11 +286,25 @@ export function createPlaygroundServer(options: PlaygroundServerOptions) {
                 await client.writeFile(file.path, file.content);
               }
               ${testHelperCode}
+              ${testThemeCode}
               ${testBlocksCode}
 
               await client.run({ code: \`<?php
                 require_once '/wordpress/wp-load.php';
+                ${switchThemeCode}
                 ${activateCode}
+
+                // Disable the "Welcome to the editor" guide modal
+                $user_id = get_current_user_id();
+                if ($user_id) {
+                  $prefs = get_user_meta($user_id, 'wp_persisted_preferences', true);
+                  if (!is_array($prefs)) $prefs = array();
+                  $prefs['core/edit-post'] = array_merge(
+                    $prefs['core/edit-post'] ?? array(),
+                    array('welcomeGuide' => false, 'fullscreenMode' => false)
+                  );
+                  update_user_meta($user_id, 'wp_persisted_preferences', $prefs);
+                }
               \` });
 
               loadingEl.style.display = 'none';

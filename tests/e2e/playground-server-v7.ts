@@ -12,6 +12,7 @@ createPlaygroundServer({
   pluginMainFile: "blockstudio-v7.php", // v7 entry point
   testBlocksPath: "tests/blocks", // Same test blocks as unit tests
   testHelperPluginPath: "tests/test-helper.php",
+  testThemePath: "tests/e2e/theme", // Custom theme with Timber
   title: "Blockstudio E2E - Test Environment (v7)",
   excludeDirs: ["package/node_modules", "includes"], // Exclude v6 includes
   excludeFiles: ["blockstudio.php"], // Exclude v6 entry point

@@ -1,0 +1,12 @@
+{
+    "name": "blockstudio/test-theme",
+    "description": "Test theme for Blockstudio E2E tests",
+    "type": "wordpress-theme",
+    "require": {
+        "php": ">=8.2",
+        "timber/timber": "^2.0"
+    },
+    "config": {
+        "optimize-autoloader": true
+    }
+}

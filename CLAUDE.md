@@ -421,10 +421,165 @@ tests/blocks/
 
 | Type | Focus | Status |
 |------|-------|--------|
-| **Unit Tests** | PHP code - Build class, block registration, rendering | Now |
-| **E2E Tests** | UI - Block editor, inspector controls | Later |
+| **Unit Tests** | PHP code - Build class, block registration, rendering | Active |
+| **E2E Tests** | UI - Block editor, inspector controls, field interactions | Active |
 
-Both use WordPress Playground. Unit tests call PHP functions via REST API. E2E tests use Playwright to interact with the UI.
+Both use WordPress Playground. Unit tests call PHP functions via REST API. E2E tests use Playwright to interact with the Gutenberg editor UI.
+
+---
+
+### E2E Testing Infrastructure
+
+E2E tests interact with the WordPress block editor through Playwright, testing actual user workflows like adding blocks, editing fields, and saving posts.
+
+#### Architecture
+
+```
+┌─────────────────────────────────────────────────────────────────────┐
+│                    Playwright Test Runner                            │
+│                            ↓                                         │
+│  ┌────────────────────────────────────────────────────────────────┐ │
+│  │              Express Server (localhost:9410)                    │ │
+│  │  • Serves plugin files via /api/plugin-files                   │ │
+│  │  • Serves test blocks via /api/test-blocks                     │ │
+│  │  • Serves test theme via /api/test-theme                       │ │
+│  │  • Serves test helper plugin via /api/test-helper-plugin       │ │
+│  └────────────────────────────────────────────────────────────────┘ │
+│                            ↓                                         │
+│  ┌────────────────────────────────────────────────────────────────┐ │
+│  │           WordPress Playground (WebAssembly)                    │ │
+│  │                                                                 │ │
+│  │  ┌──────────────────────────────────────────────────────────┐  │ │
+│  │  │  iframe#playground → iframe#wp (nested iframe structure)  │  │ │
+│  │  │                                                           │  │ │
+│  │  │  • Custom theme with Timber/Twig loaded                  │  │ │
+│  │  │  • Test blocks in theme's blockstudio/ directory         │  │ │
+│  │  │  • Welcome guide disabled via user preferences           │  │ │
+│  │  │  • Shared page instance across serial tests              │  │ │
+│  │  └──────────────────────────────────────────────────────────┘  │ │
+│  └────────────────────────────────────────────────────────────────┘ │
+└─────────────────────────────────────────────────────────────────────┘
+```
+
+#### Key Files
+
+```
+tests/e2e/
+├── playground-server.ts      # Express server config for E2E (port 9410)
+├── playground-server-v7.ts   # v7 server config (port 9411)
+├── theme/                    # Custom WordPress theme with Timber
+│   ├── style.css             # Theme header
+│   ├── functions.php         # Loads Timber autoloader
+│   ├── composer.json         # Timber dependency
+│   └── vendor/               # Timber/Twig (installed via composer)
+├── utils/
+│   ├── fixtures.ts           # Playwright fixtures (editor, resetBlocks)
+│   └── playwright-utils.ts   # Test helper functions
+└── types/                    # Field type tests
+    └── number.ts             # Example: number field tests
+```
+
+#### Playwright Fixtures
+
+The `fixtures.ts` file provides two key fixtures:
+
+```typescript
+type E2EFixtures = {
+  editor: FrameLocator;        // WordPress iframe - already in block editor
+  resetBlocks: () => Promise<void>;  // Clear all blocks between tests
+};
+```
+
+**`editor`** - The WordPress iframe inside Playground, navigated to the block editor. Tests run serially sharing a single page instance to avoid repeated Playground initialization (~40s startup).
+
+**`resetBlocks`** - Clears all blocks using `wp.data.dispatch("core/block-editor").resetBlocks([])`. Use between test groups to start fresh.
+
+#### Important Playground Behaviors
+
+1. **No Persistence on Reload** - Playground runs in WebAssembly with in-memory SQLite. Page reloads reset the entire WordPress state. Use `saveAndReload()` which navigates to the posts list and back instead of reloading.
+
+2. **Nested Iframe Structure** - WordPress runs inside `iframe#playground > iframe#wp`. All locators must use `FrameLocator`, not `Page`.
+
+3. **Button State Synchronization** - After `resetBlocks()`, UI buttons (like the block inserter toggle) may show incorrect `aria-pressed` state. The `openBlockInserter()` function handles this with retries.
+
+4. **Welcome Guide Modal** - Disabled via WordPress user preferences in `playground-init.ts`. The `closeModals()` function handles any modals that appear.
+
+5. **Two-Step Publish Flow** - WordPress shows a pre-publish panel before publishing. The `save()` function handles both the initial click and the confirmation.
+
+#### Test Helper Functions
+
+| Function | Purpose |
+|----------|---------|
+| `addBlock(editor, type)` | Opens inserter, searches, and inserts a block |
+| `openBlockInserter(editor)` | Opens the block inserter with retry logic |
+| `openSidebar(editor)` | Opens the block inspector sidebar |
+| `save(editor)` | Publishes/updates post, handles pre-publish panel |
+| `saveAndReload(editor)` | Saves, navigates to posts list, returns to post |
+| `resetBlocks()` | Clears all blocks via WordPress data store |
+| `click(editor, selector)` | Clicks an element |
+| `fill(editor, selector, value)` | Fills an input |
+| `text(editor, value)` | Waits for text to appear in the editor |
+| `count(editor, selector, n)` | Asserts element count |
+| `delay(ms)` | Waits for specified milliseconds |
+
+#### Writing Field Type Tests
+
+Use the `testType()` helper to create standardized test suites:
+
+```typescript
+// tests/e2e/types/number.ts
+import { testType, click, saveAndReload, expect, locator } from "../utils/playwright-utils";
+
+testType("number", '"number":10,"numberZero":0', () => {
+  return [
+    {
+      description: "change number",
+      testFunction: async (editor) => {
+        await click(editor, '[data-type="blockstudio/type-number"]');
+        await editor.locator(".blockstudio-fields__field--number input").first().fill("100");
+        await saveAndReload(editor);
+      },
+    },
+    {
+      description: "check number",
+      testFunction: async (editor) => {
+        await click(editor, '[data-type="blockstudio/type-number"]');
+        await expect(
+          locator(editor, ".blockstudio-fields__field--number input").nth(0)
+        ).toHaveValue("100");
+      },
+    },
+  ];
+});
+```
+
+The `testType()` helper automatically creates:
+- **defaults** test group: add block, check defaults, remove block
+- **fields/outer** test group: block in root container
+- **fields/inner** test group: block inside InnerBlocks
+
+#### Running E2E Tests
+
+```bash
+# Run all E2E tests
+npm run test:e2e
+
+# Run specific test file
+npm run test:e2e -- tests/e2e/types/number.ts
+
+# Run with headed browser (for debugging)
+npm run test:e2e:headed
+
+# Run v7 E2E tests
+npm run test:e2e:v7
+```
+
+#### Ports
+
+| Test Type | v6 Port | v7 Port |
+|-----------|---------|---------|
+| Unit Tests | 9400 | 9401 |
+| E2E Tests | 9410 | 9411 |
 
 ---
 

@@ -1,333 +1,443 @@
-import { Browser, expect, Frame, Page, test } from '@playwright/test';
+/**
+ * E2E Test Utilities for WordPress Playground
+ *
+ * Adapted from package/playwright-utils.ts to work with Playground's
+ * iframe structure and shared page approach.
+ */
+
+import { expect, FrameLocator } from "@playwright/test";
+import { test } from "./fixtures";
+
+// Type alias for the editor frame
+type Editor = FrameLocator;
+
+// Page-like convenience functions for FrameLocator
+// These make it easier to migrate tests that were written for Page API
+
+export const click = async (editor: Editor, selector: string) => {
+  await editor.locator(selector).click();
+};
+
+export const fill = async (editor: Editor, selector: string, value: string) => {
+  await editor.locator(selector).fill(value);
+};
+
+export const type = async (editor: Editor, selector: string, text: string, options?: { delay?: number }) => {
+  await editor.locator(selector).pressSequentially(text, options);
+};
+
+export const press = async (editor: Editor, key: string) => {
+  await editor.locator("body").press(key);
+};
+
+export const waitForSelector = async (editor: Editor, selector: string) => {
+  await editor.locator(selector).waitFor({ state: "visible" });
+};
+
+export const locator = (editor: Editor, selector: string) => {
+  return editor.locator(selector);
+};
 
 export const count = async (
-  page: Page | Frame,
+  editor: Editor,
   selector: string,
-  count: number
+  expectedCount: number
 ) => {
-  await expect(
-    typeof selector === 'string' ? page.locator(selector) : selector
-  ).toHaveCount(count);
+  await expect(editor.locator(selector)).toHaveCount(expectedCount);
 };
 
-export const text = async (page: Page, value: string) => {
-  const wait = await page.waitForFunction(
-    (value: string) => document.documentElement.innerHTML.includes(value),
-    value,
-    {
-      timeout: 30000,
-    }
+export const text = async (editor: Editor, value: string) => {
+  await editor.locator("body").evaluate(
+    (body, val) => {
+      return new Promise<void>((resolve, reject) => {
+        const timeout = setTimeout(
+          () => reject(new Error(`Text "${val}" not found`)),
+          30000
+        );
+        const check = () => {
+          if (body.innerHTML.includes(val)) {
+            clearTimeout(timeout);
+            resolve();
+          } else {
+            requestAnimationFrame(check);
+          }
+        };
+        check();
+      });
+    },
+    value
   );
-  await wait;
-  const val = (
-    await page.evaluate(() => document.documentElement.innerHTML)
-  ).includes(value);
 
-  return expect(val).toBeTruthy();
+  const html = await editor.locator("body").evaluate((body) => body.innerHTML);
+  expect(html.includes(value)).toBeTruthy();
 };
 
-export const countText = async (page: Page, value: string, count: unknown) => {
-  const regexPattern = new RegExp(
-    value.replace(/([.*+?^=!:${}()|[\]/\\])/g, '\\$1'),
-    'g'
+export const countText = async (
+  editor: Editor,
+  value: string,
+  expectedCount: number
+) => {
+  const escapedValue = value.replace(/([.*+?^=!:${}()|[\]/\\])/g, "\\$1");
+  const regexPattern = new RegExp(escapedValue, "g");
+
+  await editor.locator(".is-root-container").evaluate(
+    (container, { pattern, count }) => {
+      return new Promise<void>((resolve, reject) => {
+        const timeout = setTimeout(
+          () => reject(new Error(`Expected ${count} matches for "${pattern}"`)),
+          30000
+        );
+        const check = () => {
+          const matches = container.innerHTML.match(new RegExp(pattern, "g")) || [];
+          if (matches.length === count) {
+            clearTimeout(timeout);
+            resolve();
+          } else {
+            requestAnimationFrame(check);
+          }
+        };
+        check();
+      });
+    },
+    { pattern: escapedValue, count: expectedCount }
   );
 
-  const wait = await page.waitForFunction(
-    ({ regexPattern, count }) =>
-      (
-        document
-          .querySelector('.is-root-container')
-          .innerHTML.match(regexPattern) || []
-      ).length === count,
-    { regexPattern, count },
-    {
-      timeout: 30000,
-    }
-  );
-  await wait;
-
-  const val = (
-    (await page.locator('.is-root-container').innerHTML()).match(
-      regexPattern
-    ) || []
-  ).length;
-
-  return expect(val).toBe(count);
+  const html = await editor.locator(".is-root-container").innerHTML();
+  const matches = html.match(regexPattern) || [];
+  expect(matches.length).toBe(expectedCount);
 };
 
 export const innerHTML = async (
-  page: Page,
+  editor: Editor,
   selector: string,
   content: string,
   first = true
 ) => {
   if (first) {
-    await expect(page.locator(selector).first()).toHaveText(content);
+    await expect(editor.locator(selector).first()).toHaveText(content);
   } else {
-    await expect(page.locator(selector).last()).toHaveText(content);
+    await expect(editor.locator(selector).last()).toHaveText(content);
   }
 };
 
 export const checkStyle = async (
-  page: Page | Frame,
+  editor: Editor,
   selector: string,
-  type: string,
+  property: string,
   value: string,
   not = false
 ) => {
-  await page.waitForSelector(selector);
+  await editor.locator(selector).first().waitFor({ state: "visible" });
+
+  const computedValue = await editor.locator(selector).first().evaluate(
+    (el, prop) => getComputedStyle(el)[prop as any],
+    property
+  );
 
   if (not) {
-    expect(
-      await page.$eval(selector, (e, type) => getComputedStyle(e)[type], type)
-    ).not.toBe(value);
+    expect(computedValue).not.toBe(value);
   } else {
-    expect(
-      await page.$eval(selector, (e, type) => getComputedStyle(e)[type], type)
-    ).toBe(value);
+    expect(computedValue).toBe(value);
   }
-};
-
-export const pBlocks = async (
-  browser: Browser,
-  url = 'https://fabrikat.local/blockstudio/wp-admin/post.php?post=1483&action=edit',
-  wait = '.wp-block-post-title',
-  remove = true
-) => {
-  const context = await browser.newContext();
-  const page = await context.newPage();
-  await page.emulateMedia({ reducedMotion: 'reduce' });
-  await page.goto(url);
-  await page.fill('#user_login', 'testuser');
-  await page.fill('#user_pass', 'testuser');
-  await page.click('#wp-submit');
-  await page.locator(wait).waitFor({ state: 'visible' });
-  const modal = await page.$('text=Welcome to the block editor');
-  if (modal) {
-    await page.click(
-      '.components-modal__screen-overlay .components-button.has-icon'
-    );
-  }
-  await count(page, '.is-root-container', 1);
-  if (remove) {
-    await removeBlocks(page);
-  }
-  return page;
-};
-
-export const pEditor = async (browser: Browser) => {
-  const context = await browser.newContext();
-  const page = await context.newPage();
-  await page.emulateMedia({ reducedMotion: 'reduce' });
-  page.on('dialog', async (dialog: any) => {
-    await dialog.accept();
-  });
-  await page.goto(`https://fabrikat.local/blockstudio/wp-admin`);
-  await page.fill('#user_login', 'testuser');
-  await page.fill('#user_pass', 'testuser');
-  await page.click('#wp-submit');
-  await page.goto(
-    'https://fabrikat.local/blockstudio/wp-admin/admin.php?page=blockstudio#/editor'
-  );
-  await page
-    .locator('#instance-plugins-blockstudio-package-test-blocks')
-    .first()
-    .waitFor({ state: 'visible' });
-
-  return page;
-};
-
-export const removeBlocks = async (page: Page) => {
-  const root = await page.$('.is-root-container');
-  if (root) {
-    await page.click('.is-root-container');
-  } else {
-    await page.reload({ waitUntil: 'load' });
-    await removeBlocks(page);
-  }
-  await page.evaluate(() => {
-    (window as any).wp.data.dispatch('core/block-editor').resetBlocks([]);
-  });
 };
 
 export const delay = (ms: number) =>
   new Promise((resolve) => setTimeout(resolve, ms));
 
-export const save = async (page: Page) => {
-  await page.click('.editor-post-publish-button');
-  await count(page, '.components-snackbar', 1);
+export const save = async (editor: Editor) => {
+  // Try multiple selectors for the publish/save button
+  const publishButton = editor.locator('button:has-text("Publish")').first();
+  const saveButton = editor.locator('button:has-text("Save draft")').first();
+  const updateButton = editor.locator('button:has-text("Update")').first();
+
+  if (await updateButton.isVisible().catch(() => false)) {
+    // Post already published, just update
+    await updateButton.click();
+  } else if (await publishButton.isVisible().catch(() => false)) {
+    await publishButton.click();
+
+    // Handle pre-publish panel if it appears
+    const prePublishPanel = editor.locator(".editor-post-publish-panel");
+    const panelVisible = await prePublishPanel
+      .waitFor({ state: "visible", timeout: 2000 })
+      .then(() => true)
+      .catch(() => false);
+
+    if (panelVisible) {
+      // Click the confirmation Publish button inside the panel (the primary button, not the toggle)
+      const confirmButton = prePublishPanel.locator('.editor-post-publish-button');
+      await confirmButton.click();
+    }
+  } else if (await saveButton.isVisible().catch(() => false)) {
+    await saveButton.click();
+  } else {
+    // Fallback to original selector
+    await editor.locator(".editor-post-publish-button").click();
+  }
+
+  // Wait for snackbar notification
+  await editor.locator(".components-snackbar").waitFor({ state: "visible", timeout: 10000 });
 };
 
-export const saveAndReload = async (page: Page) => {
-  const reloadAndCheck = async () => {
-    await page.reload();
-    if (!(await page.$('.wp-block-post-title'))) {
-      await reloadAndCheck();
+export const saveAndReload = async (editor: Editor) => {
+  await save(editor);
+
+  // Navigate to wp-admin (Playground doesn't persist on reload, so we navigate away and back)
+  await editor.locator("body").evaluate(() => {
+    window.location.href = "/wp-admin/edit.php";
+  });
+
+  // Wait for posts list to load
+  await editor.locator(".wp-list-table").waitFor({ state: "visible", timeout: 30000 });
+
+  // Click on the first post to edit it (our test post is the most recent)
+  await editor.locator(".wp-list-table .row-title").first().click();
+
+  // Wait for editor to load
+  await editor
+    .locator(".is-root-container")
+    .waitFor({ state: "visible", timeout: 30000 });
+};
+
+export const removeBlocks = async (editor: Editor) => {
+  const root = await editor.locator(".is-root-container").isVisible();
+  if (root) {
+    await editor.locator(".is-root-container").click();
+  }
+  await editor.locator("body").evaluate(() => {
+    (window as any).wp.data.dispatch("core/block-editor").resetBlocks([]);
+  });
+};
+
+export const openBlockInserter = async (editor: Editor) => {
+  const inserterButton = editor.locator(".editor-document-tools__inserter-toggle");
+  const blockList = editor.locator(".block-editor-inserter__block-list");
+
+  // Retry up to 3 times to handle state synchronization issues
+  for (let attempt = 0; attempt < 3; attempt++) {
+    const sidebarVisible = await blockList.isVisible().catch(() => false);
+
+    if (sidebarVisible) {
+      break;
     }
-  };
 
-  await save(page);
-  await reloadAndCheck();
+    // Check if button is already "pressed" but sidebar not visible (state mismatch)
+    const buttonPressed = await inserterButton.getAttribute("aria-pressed");
+    if (buttonPressed === "true") {
+      // Button thinks it's open but sidebar isn't visible - click to close first
+      await inserterButton.click();
+      await delay(300);
+    }
 
-  await page.locator('.wp-block-post-title').waitFor({ state: 'visible' });
-  await count(page, '.is-root-container', 1);
+    // Click to open
+    await inserterButton.click();
+
+    // Wait for sidebar with shorter timeout, then retry if needed
+    const opened = await blockList
+      .waitFor({ state: "visible", timeout: 3000 })
+      .then(() => true)
+      .catch(() => false);
+
+    if (opened) {
+      break;
+    }
+
+    // Wait a bit before retrying
+    await delay(500);
+  }
+
+  await count(editor, ".block-editor-inserter__block-list", 1);
+};
+
+export const openSidebar = async (editor: Editor) => {
+  const fieldsVisible = await editor
+    .locator(".blockstudio-fields")
+    .isVisible()
+    .catch(() => false);
+
+  if (!fieldsVisible) {
+    await editor.locator('[aria-controls="edit-post:block"]').click();
+  }
+};
+
+export const addBlock = async (editor: Editor, type: string) => {
+  await openBlockInserter(editor);
+  await delay(500);
+
+  // Search for the block since Blockstudio blocks may not be visible in default view
+  const searchInput = editor.locator('.block-editor-inserter__search input');
+  await searchInput.fill(type);
+  await delay(500);
+
+  // Click the block
+  await editor.locator(`.editor-block-list-item-blockstudio-${type}`).click();
+};
+
+export const searchForBlock = async (
+  editor: Editor,
+  searchTerm: string,
+  selector: string
+) => {
+  await editor.locator('[placeholder="Search"]').fill(searchTerm);
+  await editor.locator(selector).click();
+};
+
+export const checkForLeftoverAttributes = async (editor: Editor) => {
+  const leftoverAttrs = [
+    // General
+    "useBlockProps",
+    "tag",
+    // InnerBlocks
+    "allowedBlocks",
+    "renderAppender",
+    "template",
+    "templateLock",
+    // RichText
+    "attribute",
+    "placeholder",
+    "allowedFormats",
+    "autocompleters",
+    "multiline",
+    "preserveWhiteSpace",
+    "withoutInteractiveFormatting",
+  ];
+
+  for (const item of leftoverAttrs) {
+    await count(editor, `[${item.toLowerCase()}]`, 0);
+  }
 };
 
 export const clickEditorToolbar = async (
-  page: Page,
+  editor: Editor,
   type: string,
   show: boolean
 ) => {
   const toolbarSelector = `#blockstudio-editor-toolbar-${type}`;
   const elementSelector = `#blockstudio-editor-${type}`;
-  const el = await page.$(elementSelector);
-  if (!el && show) {
-    await page.click(toolbarSelector);
+
+  const elementExists = await editor
+    .locator(elementSelector)
+    .isVisible()
+    .catch(() => false);
+
+  if (!elementExists && show) {
+    await editor.locator(toolbarSelector).click();
     await delay(1000);
-    await count(page, elementSelector, 1);
+    await count(editor, elementSelector, 1);
   }
-  if (el && !show) {
-    await page.click(toolbarSelector);
+  if (elementExists && !show) {
+    await editor.locator(toolbarSelector).click();
     await delay(1000);
-    await count(page, elementSelector, 0);
+    await count(editor, elementSelector, 0);
   }
 };
 
-export const openBlockInserter = async (page: Page) => {
-  async function openInserter() {
-    const sidebar = await page.$('.block-editor-inserter__block-list');
-    if (!sidebar) {
-      await page.click('.editor-document-tools__inserter-toggle');
-      await openInserter();
-    }
-  }
-
-  await openInserter();
-  await count(page, '.block-editor-inserter__block-list', 1);
-};
-
-export const openSidebar = async (page: Page) => {
-  if (!(await page.$('.blockstudio-fields'))) {
-    await page.click('[aria-controls="edit-post:block"]');
-  }
-};
-
-export const addBlock = async (page: Page, type: string) => {
-  await openBlockInserter(page);
-  await delay(1000);
-  await page.click(`.editor-block-list-item-blockstudio-${type}`);
-};
-
-export const searchForBlock = async (
-  page: Page,
-  type: string,
-  selector: string
+export const addTailwindClass = async (
+  editor: Editor,
+  selector: string,
+  className: string
 ) => {
-  await page.fill('[placeholder="Search"]', type);
-  await page.locator(selector).click();
-};
+  const listViewVisible = await editor
+    .locator(".editor-list-view-sidebar")
+    .isVisible()
+    .catch(() => false);
 
-export const checkForLeftoverAttributes = async (page: Page) => {
-  for (const item of [
-    // General
-    'useBlockProps',
-    'tag',
-    // InnerBlocks
-    'allowedBlocks',
-    'renderAppender',
-    'template',
-    'templateLock',
-    // RichText
-    'attribute',
-    'placeholder',
-    'allowedFormats',
-    'autocompleters',
-    'multiline',
-    'preserveWhiteSpace',
-    'withoutInteractiveFormatting',
-  ]) {
-    await count(page, `[${item.toLowerCase()}]`, 0);
+  if (!listViewVisible) {
+    await editor
+      .locator(".editor-document-tools__document-overview-toggle")
+      .click();
   }
+  await editor
+    .locator(".block-editor-list-view-block__contents-container")
+    .click();
+  await editor
+    .locator('.blockstudio-builder__controls [role="combobox"]')
+    .click();
+  await editor
+    .locator('.blockstudio-builder__controls [role="combobox"]')
+    .fill(className);
+  await editor.locator("body").press("ArrowDown");
+  await editor.locator("body").press("Enter");
 };
 
-export const testType = async (
+/**
+ * Main test helper for field type tests.
+ * Creates a test suite for a specific field type with default and field tests.
+ */
+export const testType = (
   field: string,
-  def: any = false,
-  cb: any = false,
-  remove = true
+  defaultValue: any = false,
+  testCallback: ((editor: Editor) => any[]) | false = false,
+  removeAtEnd = true
 ) => {
-  let page: Page;
-
-  test.describe.configure({ mode: 'serial' });
-
-  test.beforeAll(async ({ browser }) => {
-    page = await pBlocks(browser);
-    await page.setViewportSize({ width: 1920, height: 1080 });
-  });
-
-  test.afterAll(async () => {
-    await page.close();
-  });
+  test.describe.configure({ mode: "serial" });
 
   test.describe(field, () => {
-    test.describe('defaults', () => {
-      test('add block', async () => {
-        await openBlockInserter(page);
-        await addBlock(page, `type-${field}`);
-        await count(page, '.is-root-container > .wp-block', 1);
+    test.describe("defaults", () => {
+      test("add block", async ({ editor, resetBlocks }) => {
+        await resetBlocks();
+        await openBlockInserter(editor);
+        await addBlock(editor, `type-${field}`);
+        await count(editor, ".is-root-container > .wp-block", 1);
       });
 
-      test('has correct defaults', async () => {
-        if (def) {
-          await text(page, `${def}`);
+      test("has correct defaults", async ({ editor }) => {
+        if (defaultValue) {
+          await text(editor, `${defaultValue}`);
         }
       });
 
-      test('remove block', async () => {
-        await removeBlocks(page);
+      test("remove block", async ({ resetBlocks }) => {
+        await resetBlocks();
       });
     });
 
-    test.describe('fields', () => {
-      ['outer', 'inner'].forEach((type) => {
+    test.describe("fields", () => {
+      for (const type of ["outer", "inner"]) {
         test.describe(type, () => {
-          if (type === 'outer') {
-            test('add block', async () => {
-              await addBlock(page, `type-${field}`);
-              await count(page, '.is-root-container > .wp-block', 1);
-              await openSidebar(page);
+          if (type === "outer") {
+            test("add block", async ({ editor, resetBlocks }) => {
+              await resetBlocks();
+              await addBlock(editor, `type-${field}`);
+              await count(editor, ".is-root-container > .wp-block", 1);
+              await openSidebar(editor);
             });
           } else {
-            test('add InnerBlocks', async () => {
-              await page.click('.wp-block');
-              await removeBlocks(page);
-              await addBlock(page, 'component-innerblocks-bare-spaceless');
-              await count(page, '.is-root-container > .wp-block', 1);
-              await page.click(
-                '.editor-document-tools__document-overview-toggle'
-              );
-              await page.click(
-                '[aria-label="Native InnerBlocks bare spaceless"]'
-              );
-              await page.click('.editor-document-tools__inserter-toggle');
-              await page.click(
-                `.editor-block-list-item-blockstudio-type-${field}`
-              );
+            test("add InnerBlocks", async ({ editor, resetBlocks }) => {
+              await resetBlocks();
+              await addBlock(editor, "component-innerblocks-bare-spaceless");
+              await count(editor, ".is-root-container > .wp-block", 1);
+              await editor
+                .locator(".editor-document-tools__document-overview-toggle")
+                .click();
+              await editor
+                .locator('[aria-label="Native InnerBlocks bare spaceless"]')
+                .click();
+              await editor
+                .locator('button[aria-label="Block Inserter"]')
+                .click();
+              await editor
+                .locator(`.editor-block-list-item-blockstudio-type-${field}`)
+                .click();
               await delay(2000);
             });
           }
 
-          if (cb && typeof cb === 'function') {
-            if (type === 'inner' && field === 'repeater') {
+          if (testCallback && typeof testCallback === "function") {
+            // Skip repeater tests in inner context
+            if (type === "inner" && field === "repeater") {
               return;
             }
 
-            const testItems = cb(page);
+            // Get test items from callback - we need to pass a placeholder
+            // since we can't access the fixture here
+            const testItems = testCallback({} as Editor);
+
             if (Array.isArray(testItems)) {
               for (const testItem of testItems) {
                 if (
                   Array.isArray(testItem.params) &&
-                  typeof testItem.generateTestCases === 'function'
+                  typeof testItem.generateTestCases === "function"
                 ) {
                   for (const param of testItem.params) {
                     const testCases = testItem.generateTestCases(param);
@@ -341,8 +451,8 @@ export const testType = async (
                             for (const nestedTestCase of testCase.testCases) {
                               const { description, testFunction } =
                                 nestedTestCase;
-                              test(description, async () => {
-                                await testFunction(page);
+                              test(description, async ({ editor }) => {
+                                await testFunction(editor);
                               });
                             }
                           });
@@ -357,119 +467,91 @@ export const testType = async (
                   test.describe(testItem.groupName, () => {
                     for (const testCase of testItem.testCases) {
                       const { description, testFunction } = testCase;
-                      test(description, async () => {
-                        await testFunction(page);
+                      test(description, async ({ editor }) => {
+                        await testFunction(editor);
                       });
                     }
                   });
                 } else if (
                   testItem.description &&
-                  typeof testItem.testFunction === 'function'
+                  typeof testItem.testFunction === "function"
                 ) {
-                  test(testItem.description, async () => {
-                    await testItem.testFunction(page);
+                  test(testItem.description, async ({ editor }) => {
+                    await testItem.testFunction(editor);
                   });
                 }
               }
             }
           }
         });
-      });
+      }
 
-      if (remove) {
-        test('remove block', async () => {
-          await removeBlocks(page);
+      if (removeAtEnd) {
+        test("remove block", async ({ resetBlocks }) => {
+          await resetBlocks();
         });
       }
     });
   });
 };
 
-export const testContext = async (type: string, cb: any = false) => {
-  let page: Page;
-
-  test.beforeAll(async ({ browser }) => {
-    page = await pEditor(browser);
-  });
-
-  test.afterAll(async () => {
-    await page.close();
-  });
-
-  test.describe(type, async () => {
-    test.describe('open structure', () => {
-      test('open first level', async () => {
-        await page.click('#instance-plugins-blockstudio-includes-library');
+/**
+ * Test helper for context/editor tests.
+ */
+export const testContext = (
+  type: string,
+  testCallback: ((editor: Editor) => any[]) | false = false
+) => {
+  test.describe(type, () => {
+    test.describe("open structure", () => {
+      test("open first level", async ({ editor }) => {
+        await editor
+          .locator("#instance-plugins-blockstudio-includes-library")
+          .click();
         await count(
-          page,
-          '#folder-plugins-blockstudio-includes-library-blockstudio-element',
+          editor,
+          "#folder-plugins-blockstudio-includes-library-blockstudio-element",
           1
         );
       });
 
-      test('open second level', async () => {
-        await page.click(
-          '#folder-plugins-blockstudio-includes-library-blockstudio-element'
-        );
+      test("open second level", async ({ editor }) => {
+        await editor
+          .locator(
+            "#folder-plugins-blockstudio-includes-library-blockstudio-element"
+          )
+          .click();
         await count(
-          page,
-          '#folder-plugins-blockstudio-includes-library-blockstudio-element-code',
+          editor,
+          "#folder-plugins-blockstudio-includes-library-blockstudio-element-code",
           1
         );
       });
 
-      test('open third level', async () => {
-        await page.click(
-          '#folder-plugins-blockstudio-includes-library-blockstudio-element-code'
-        );
+      test("open third level", async ({ editor }) => {
+        await editor
+          .locator(
+            "#folder-plugins-blockstudio-includes-library-blockstudio-element-code"
+          )
+          .click();
         await count(
-          page,
-          '#file-plugins-blockstudio-includes-library-blockstudio-element-code-block-json',
+          editor,
+          "#file-plugins-blockstudio-includes-library-blockstudio-element-code-block-json",
           1
         );
       });
     });
 
-    if (cb && typeof cb === 'function') {
-      const testItems = cb(page);
+    if (testCallback && typeof testCallback === "function") {
+      const testItems = testCallback({} as Editor);
       if (Array.isArray(testItems)) {
         for (const testItem of testItems) {
           if (
-            Array.isArray(testItem.params) &&
-            typeof testItem.generateTestCases === 'function'
-          ) {
-            for (const param of testItem.params) {
-              const testCases = testItem.generateTestCases(param);
-              if (Array.isArray(testCases)) {
-                for (const testCase of testCases) {
-                  if (testCase.groupName && Array.isArray(testCase.testCases)) {
-                    test.describe(testCase.groupName, () => {
-                      for (const nestedTestCase of testCase.testCases) {
-                        const { description, testFunction } = nestedTestCase;
-                        test(description, async () => {
-                          await testFunction(page);
-                        });
-                      }
-                    });
-                  }
-                }
-              }
-            }
-          } else if (testItem.groupName && Array.isArray(testItem.testCases)) {
-            test.describe(testItem.groupName, () => {
-              for (const testCase of testItem.testCases) {
-                const { description, testFunction } = testCase;
-                test(description, async () => {
-                  await testFunction(page);
-                });
-              }
-            });
-          } else if (
             testItem.description &&
-            typeof testItem.testFunction === 'function'
+            typeof testItem.testFunction === "function"
           ) {
-            test(testItem.description, async () => {
-              await testItem.testFunction(page);
+            test(testItem.description, async ({ editor }) => {
+              await testItem.testFunction(editor);
             });
           }
         }
@@ -478,29 +560,5 @@ export const testContext = async (type: string, cb: any = false) => {
   });
 };
 
-export const getFrame = async (page: Page, name: string) => {
-  await page.waitForSelector(`[name="${name}"]`);
-  const frame = page.frame(name);
-  await frame.waitForLoadState('domcontentloaded');
-  await frame.waitForTimeout(2000);
-
-  return frame;
-};
-
-export const addTailwindClass = async (
-  page: Page,
-  selector: string,
-  className: string
-) => {
-  if (!(await page.$('.editor-list-view-sidebar'))) {
-    await page.click('.editor-document-tools__document-overview-toggle');
-  }
-  await page.click(`.block-editor-list-view-block__contents-container`);
-  await page.click('.blockstudio-builder__controls [role="combobox"]');
-  await page.fill(
-    '.blockstudio-builder__controls [role="combobox"]',
-    className
-  );
-  await page.keyboard.press('ArrowDown');
-  await page.keyboard.press('Enter');
-};
+// Re-export test and expect for convenience
+export { test, expect } from "./fixtures";

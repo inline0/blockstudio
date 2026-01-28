@@ -4,10 +4,10 @@ const port = parseInt(process.env.PLAYGROUND_PORT || "9410", 10);
 const isV7 = port === 9411;
 
 export default createWordPressPlaygroundConfig({
-  testDir: "./tests/e2e/unit",
+  testDir: "./tests/e2e/types",
   globalSetup: "./tests/wordpress-playground/global-setup.ts",
   port,
-  testMatch: "**/*.test.ts",
+  testMatch: "**/*.ts",
   timeout: 120000, // E2E tests need more time
   workers: 1,
   extraConfig: {
