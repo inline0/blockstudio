@@ -1056,6 +1056,72 @@ Start with classes that have fewer dependencies:
 
 ---
 
+## JavaScript/TypeScript Comment Policy
+
+**This applies to JS/TS code only (tests, packages/, etc.) - not PHP.**
+
+### Test Comments
+- **No JSDoc** on test functions - test names are self-documenting
+- **No "should" comments** repeating what the test name says
+- Only comment when setup or assertion logic is non-obvious (WHY, not WHAT)
+
+```typescript
+// CORRECT - descriptive test name, no redundant comments
+it("returns undefined for expired keys", async () => {
+  const kv = createKv();
+  kv.set("key", "value", { ttl: 100 });
+  await sleep(150);
+  expect(kv.get("key")).toBeUndefined();
+});
+
+// WRONG - redundant comment
+it("returns undefined for expired keys", async () => {
+  // Set a key with TTL and wait for it to expire  <-- DON'T DO THIS
+  const kv = createKv();
+  kv.set("key", "value", { ttl: 100 });
+  await sleep(150);
+  expect(kv.get("key")).toBeUndefined();
+});
+```
+
+### Documentation Policy (JS/TS)
+
+**Public API (JSDoc Required):**
+Every public export needs comprehensive JSDoc:
+- **Functions**: `@description`, `@param` (with types), `@returns`, `@example`
+- **Interfaces/Types**: Description + every property documented
+
+**Internal Code:**
+- **No JSDoc** for internal/private functions
+- Internal functions should **not be exported**
+- Inline comments only to explain **WHY**, not **WHAT**
+
+```typescript
+// CORRECT - Public interface with JSDoc
+/**
+ * Opens the block inserter sidebar.
+ * Handles button state synchronization with retry logic.
+ *
+ * @param editor - The WordPress editor FrameLocator
+ * @example
+ * await openBlockInserter(editor);
+ */
+export const openBlockInserter = async (editor: Editor) => { ... };
+
+// CORRECT - Internal helper, no JSDoc
+const normalizeSelector = (sel: string) => sel.toLowerCase();
+
+// CORRECT - WHY comment
+// Retry up to 3 times because button state can desync after resetBlocks()
+for (let attempt = 0; attempt < 3; attempt++) { ... }
+
+// WRONG - WHAT comment (obvious from code)
+// Click the button  <-- DON'T DO THIS
+await button.click();
+```
+
+---
+
 ## Commands
 
 ```bash
