@@ -1,14 +1,16 @@
 /**
  * E2E Test Fixtures for WordPress Playground.
- * Provides shared page instance to avoid repeated Playground initialization.
+ * Uses worker-scoped fixtures to share page across ALL tests in a worker.
  */
 
-import { test as base, Page, FrameLocator, expect } from "@playwright/test";
+import { test as base, Page, FrameLocator, expect, BrowserContext } from "@playwright/test";
 
-let sharedPage: Page | null = null;
-let wpFrame: FrameLocator | null = null;
+type WorkerFixtures = {
+  workerPage: Page;
+  workerWpFrame: FrameLocator;
+};
 
-type E2EFixtures = {
+type TestFixtures = {
   editor: FrameLocator;
   resetBlocks: () => Promise<void>;
 };
@@ -22,7 +24,6 @@ async function closeModals(frame: FrameLocator) {
 
     if (!modalOverlay) break;
 
-    // Multiple selectors because button structure varies across WP versions
     const closeSelectors = [
       '.components-modal__header button',
       'button[aria-label="Close"]',
@@ -48,63 +49,78 @@ async function closeModals(frame: FrameLocator) {
   }
 }
 
-export const test = base.extend<E2EFixtures>({
-  editor: async ({ browser }, use) => {
+export const test = base.extend<TestFixtures, WorkerFixtures>({
+  // Worker-scoped: shared across ALL tests in the worker
+  workerPage: [async ({ browser }, use) => {
     const port = process.env.PLAYGROUND_PORT || "9410";
 
-    if (!sharedPage) {
-      sharedPage = await browser.newPage();
-      await sharedPage.goto(`http://localhost:${port}`);
-      await sharedPage.waitForFunction("window.playgroundReady === true", {
-        timeout: 120000,
+    console.log("\n  [Worker] Initializing shared Playground page...");
+
+    const page = await browser.newPage();
+    await page.goto(`http://localhost:${port}`);
+    await page.waitForFunction("window.playgroundReady === true", {
+      timeout: 120000,
+    });
+
+    const playgroundFrame = page.frameLocator("iframe#playground");
+    const wpFrame = playgroundFrame.frameLocator("iframe#wp");
+
+    // Call E2E setup endpoint ONCE to create all required test fixtures
+    const setupResult = await wpFrame.locator("body").evaluate(async () => {
+      const res = await fetch("/wp-json/blockstudio-test/v1/e2e/setup", {
+        method: "POST",
       });
+      return res.json();
+    });
+    console.log("  [Worker] E2E Setup:", setupResult.message || setupResult);
 
-      const playgroundFrame = sharedPage.frameLocator("iframe#playground");
-      wpFrame = playgroundFrame.frameLocator("iframe#wp");
+    // Navigate to editor
+    await wpFrame
+      .locator("body")
+      .evaluate(() => (window.location.href = "/wp-admin/post-new.php"));
 
-      // Call E2E setup endpoint to create all required test fixtures
-      // (posts, media, users, terms with specific IDs)
-      const setupResult = await wpFrame.locator("body").evaluate(async () => {
-        const res = await fetch("/wp-json/blockstudio-test/v1/e2e/setup", {
-          method: "POST",
-        });
-        return res.json();
-      });
-      console.log("E2E Setup:", setupResult.message || setupResult);
+    await wpFrame
+      .locator(".is-root-container")
+      .waitFor({ state: "visible", timeout: 60000 });
 
-      await wpFrame
-        .locator("body")
-        .evaluate(() => (window.location.href = "/wp-admin/post-new.php"));
+    await new Promise((r) => setTimeout(r, 2000));
 
-      await wpFrame
-        .locator(".is-root-container")
-        .waitFor({ state: "visible", timeout: 60000 });
+    console.log("  [Worker] Playground ready!\n");
 
-      // Editor needs time to fully initialize before interactions
-      await new Promise((r) => setTimeout(r, 2000));
-    }
+    await use(page);
 
-    await closeModals(wpFrame!);
-    await use(wpFrame!);
+    await page.close();
+  }, { scope: "worker" }],
+
+  // Worker-scoped wpFrame derived from workerPage
+  workerWpFrame: [async ({ workerPage }, use) => {
+    const playgroundFrame = workerPage.frameLocator("iframe#playground");
+    const wpFrame = playgroundFrame.frameLocator("iframe#wp");
+    await use(wpFrame);
+  }, { scope: "worker" }],
+
+  // Test-scoped: runs for each test
+  editor: async ({ workerWpFrame }, use) => {
+    await closeModals(workerWpFrame);
+    await use(workerWpFrame);
+    // Note: Tests call resetBlocks() themselves when needed
   },
 
-  resetBlocks: async ({}, use) => {
+  resetBlocks: async ({ workerWpFrame }, use) => {
     const reset = async () => {
-      if (wpFrame) {
-        const inserterOpen = await wpFrame
-          .locator(".block-editor-inserter__block-list")
-          .isVisible()
-          .catch(() => false);
-        if (inserterOpen) {
-          await wpFrame.locator('button[aria-label="Block Inserter"]').click();
-          await new Promise((r) => setTimeout(r, 300));
-        }
-
-        await wpFrame.locator("body").evaluate(() => {
-          (window as any).wp.data.dispatch("core/block-editor").resetBlocks([]);
-        });
+      const inserterOpen = await workerWpFrame
+        .locator(".block-editor-inserter__block-list")
+        .isVisible()
+        .catch(() => false);
+      if (inserterOpen) {
+        await workerWpFrame.locator('button[aria-label="Block Inserter"]').click();
         await new Promise((r) => setTimeout(r, 300));
       }
+
+      await workerWpFrame.locator("body").evaluate(() => {
+        (window as any).wp.data.dispatch("core/block-editor").resetBlocks([]);
+      });
+      await new Promise((r) => setTimeout(r, 300));
     };
     await use(reset);
   },
