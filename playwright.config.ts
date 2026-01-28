@@ -13,8 +13,8 @@ export default createWordPressPlaygroundConfig({
   extraConfig: {
     webServer: {
       command: isV7
-        ? "npx tsx tests/playground-server-v7.ts"
-        : "npx tsx tests/playground-server.ts",
+        ? "npx tsx tests/unit/playground-server-v7.ts"
+        : "npx tsx tests/unit/playground-server.ts",
       url: `http://localhost:${port}`,
       reuseExistingServer: !process.env.CI,
       timeout: 120000,

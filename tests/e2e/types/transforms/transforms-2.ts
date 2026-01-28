@@ -11,7 +11,7 @@ testType('transforms-2', '"text":"Tester"', () => {
           editor,
           '.block-editor-block-toolbar__block-controls .components-dropdown-menu__toggle'
         );
-        await count(editor, 'text=Native Transforms 1', 2);
+        await count(editor, 'text=Native Transforms 1', 1);
       },
     },
   ];

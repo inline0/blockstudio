@@ -1,5 +1,5 @@
 import { FrameLocator } from '@playwright/test';
-import { count, fill, testType, text } from '../utils/playwright-utils';
+import { count, testType, text } from '../utils/playwright-utils';
 
 testType(
   'group',
@@ -9,11 +9,12 @@ testType(
       {
         description: 'without id',
         testFunction: async (editor: FrameLocator) => {
-          await fill(
-            editor,
-            '.blockstudio-fields__field.blockstudio-fields__field--group input[type="text"]',
-            'test'
-          );
+          await editor
+            .locator(
+              '.blockstudio-fields__field.blockstudio-fields__field--group input[type="text"]'
+            )
+            .first()
+            .fill('test');
           await text(
             editor,
             '"text":"test","toggle":false,"toggle2":false,"group_text":"Override ID test","group_toggle3":false,"group_toggle4":false,"group_text1":false,"group_text2":false,"addedText":"Added test"'
@@ -27,6 +28,7 @@ testType(
             .locator(
               '.blockstudio-fields__field.blockstudio-fields__field--group input[type="checkbox"]'
             )
+            .first()
             .check();
           await text(
             editor,

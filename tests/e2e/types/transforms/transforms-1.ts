@@ -11,7 +11,7 @@ testType('transforms-1', '"text":"Default value"', () => {
           editor,
           '.block-editor-block-toolbar__block-controls .components-dropdown-menu__toggle'
         );
-        await count(editor, 'text=Native Transforms 2', 2);
+        await count(editor, 'text=Native Transforms 2', 1);
       },
     },
   ];

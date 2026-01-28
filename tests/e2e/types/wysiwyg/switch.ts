@@ -6,7 +6,7 @@ testType('wysiwyg-switch', 'Default text', () => [
     description: 'type and switch',
     testFunction: async (editor: FrameLocator) => {
       await click(editor, 'text=Switch to Code');
-      await click(editor, '.cm-line');
+      await editor.locator('.cm-line').first().click();
       await press(editor, 'Meta+A');
       await press(editor, 'Backspace');
       await editor.locator('body').pressSequentially('<h1>Switch Test</h1>');

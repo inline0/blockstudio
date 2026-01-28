@@ -8,15 +8,15 @@ testType('repeater', false, () => {
       testFunction: async (editor: FrameLocator) => {
         await editor.locator('body').evaluate(() => window.localStorage.clear());
 
-        await click(
-          editor,
-          '[aria-label="Repeater Minimized"] + div .blockstudio-repeater__minimize'
-        );
+        await editor
+          .locator('[aria-label="Repeater Minimized"] + div .blockstudio-repeater__minimize')
+          .first()
+          .click();
         await count(editor, 'text=Prefix: 20 - Suffix', 1);
-        await click(
-          editor,
-          '[aria-label="Repeater Minimized"] + div .blockstudio-repeater__minimize'
-        );
+        await editor
+          .locator('[aria-label="Repeater Minimized"] + div .blockstudio-repeater__minimize')
+          .first()
+          .click();
       },
     },
     {

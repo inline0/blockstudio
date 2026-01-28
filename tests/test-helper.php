@@ -26,6 +26,25 @@ add_filter('blockstudio/settings/blocks/paths', function ($paths) {
 }, 10, 1);
 
 /**
+ * Provide populate data for color and gradient fields.
+ * In the old wp-env environment, these were provided by the active theme.
+ * In WordPress Playground, we need to register them explicitly.
+ */
+add_filter('blockstudio/blocks/attributes/populate', function ($options) {
+    $options['colors'] = [
+        ['value' => '#f00', 'label' => 'red', 'name' => 'red', 'slug' => 'red'],
+        ['value' => '#0f0', 'label' => 'green', 'name' => 'green', 'slug' => 'green'],
+        ['value' => '#00f', 'label' => 'blue', 'name' => 'blue', 'slug' => 'blue'],
+    ];
+    $options['gradients'] = [
+        ['value' => 'linear-gradient(135deg, #12c2e9 0%, #c471ed 50%, #f64f59 100%)', 'label' => 'JShine', 'name' => 'JShine', 'slug' => 'jshine'],
+        ['value' => 'linear-gradient(135deg, #11998e 0%, #38ef7d 100%)', 'label' => 'Lush', 'name' => 'Lush', 'slug' => 'lush'],
+        ['value' => 'linear-gradient(135deg, #1a9850 0%, #fcae91 50%, #d73027 100%)', 'label' => 'Rastafarie', 'name' => 'Rastafarie', 'slug' => 'rastafarie'],
+    ];
+    return $options;
+});
+
+/**
  * Force block discovery after all plugins are loaded.
  */
 add_action('plugins_loaded', function () {
