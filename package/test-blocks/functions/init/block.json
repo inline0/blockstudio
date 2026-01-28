@@ -1,0 +1,8 @@
+{
+   "$schema": "https://app.blockstudio.dev/schema",
+   "name": "blockstudio/init",
+   "title": "Native Init",
+   "category": "blockstudio-test-native",
+   "icon": "star-filled",
+   "blockstudio": true
+}

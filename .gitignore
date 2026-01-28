@@ -21,6 +21,9 @@ Desktop.ini
 node_modules/
 vendor/
 
+# Reference v6 codebase (local only)
+_reference/
+
 # Build artifacts
 artifacts/
 .last-run.json

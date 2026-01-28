@@ -1,0 +1,31 @@
+{
+  "$schema": "https://app.blockstudio.dev/schema",
+  "name": "blockstudio/events",
+  "title": "Native Events",
+  "category": "blockstudio-test-native",
+  "icon": "star-filled",
+  "description": "Native Blockstudio Events block.",
+  "keywords": [
+    "event",
+    "native"
+  ],
+  "blockstudio": {
+    "attributes": [
+      {
+        "id": "select",
+        "type": "select",
+        "label": "Layouts",
+        "options": [
+          {
+            "value": "layout-1",
+            "label": "Layout 1"
+          },
+          {
+            "value": "layout-2",
+            "label": "Layout 2"
+          }
+        ]
+      }
+    ]
+  }
+}

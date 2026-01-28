@@ -1,101 +1,105 @@
 <?php
+/**
+ * Builder class.
+ *
+ * @package Blockstudio
+ */
 
 namespace Blockstudio;
 
 /**
- * Builder class.
- *
- * @date   11/05/2024
- * @since  5.6.0
+ * Handles the deprecated Blockstudio builder blocks.
  */
-class Builder
-{
-    private static array $blocks = [
-        'blockstudio/container',
-        'blockstudio/element',
-        'blockstudio/text',
-    ];
+class Builder {
 
-    /**
-     * Construct.
-     *
-     * @date   11/05/2024
-     * @since  5.6.0
-     */
-    function __construct()
-    {
-        add_action('enqueue_block_editor_assets', function () {
-            if (!Settings::get('builderDeprecated/enabled')) {
-                return;
-            }
+	/**
+	 * Builder block names.
+	 *
+	 * @var array
+	 */
+	private static array $blocks = array(
+		'blockstudio/container',
+		'blockstudio/element',
+		'blockstudio/text',
+	);
 
-            $blockScripts = include BLOCKSTUDIO_DIR .
-                '/includes/admin/assets/builder/index.tsx.asset.php';
-            wp_enqueue_script(
-                'blockstudio-builder',
-                plugin_dir_url(__FILE__) .
-                    '../admin/assets/builder/index.tsx.js',
-                $blockScripts['dependencies'],
-                $blockScripts['version']
-            );
-            wp_localize_script(
-                'blockstudio-builder',
-                'blockstudioAdmin',
-                Admin::data(false)
-            );
-        });
+	/**
+	 * Constructor.
+	 */
+	public function __construct() {
+		add_action( 'enqueue_block_editor_assets', array( $this, 'enqueue_editor_assets' ) );
+		add_filter( 'render_block', array( __CLASS__, 'render_blocks' ), 10, 2 );
+	}
 
-        add_filter('render_block', [__CLASS__, 'renderBlocks'], 10, 2);
-    }
+	/**
+	 * Enqueue builder editor assets.
+	 *
+	 * @return void
+	 */
+	public function enqueue_editor_assets(): void {
+		if ( ! Settings::get( 'builderDeprecated/enabled' ) ) {
+			return;
+		}
 
-    /**
-     * Render blocks.
-     *
-     * @date   11/05/2024
-     * @since  5.6.0
-     *
-     * @param  $blockContent
-     * @param  $block
-     *
-     * @return string
-     */
-    public static function renderBlocks($blockContent, $block): string
-    {
-        if (!in_array($block['blockName'], self::$blocks)) {
-            return $blockContent;
-        }
+		$block_scripts = include BLOCKSTUDIO_DIR . '/includes-v7/admin/assets/builder/index.tsx.asset.php';
+		wp_enqueue_script(
+			'blockstudio-builder',
+			plugin_dir_url( __FILE__ ) . '../admin/assets/builder/index.tsx.js',
+			$block_scripts['dependencies'],
+			$block_scripts['version'],
+			true
+		);
+		wp_localize_script(
+			'blockstudio-builder',
+			'blockstudioAdmin',
+			Admin::data( false )
+		);
+	}
 
-        $name = $block['blockName'];
-        $data = $block['attrs']['blockstudio']['data'] ?? [];
+	/**
+	 * Render builder blocks.
+	 *
+	 * @param string $block_content The block content.
+	 * @param array  $block         The block data.
+	 *
+	 * @return string The rendered block HTML.
+	 */
+	public static function render_blocks( $block_content, $block ): string {
+		if ( ! in_array( $block['blockName'], self::$blocks, true ) ) {
+			return $block_content;
+		}
 
-        if ($block['blockName'] === 'blockstudio/container') {
-            $tag = $data['tag'] ?? 'div';
-            $content = $blockContent ?? '';
-        } elseif ($block['blockName'] === 'blockstudio/element') {
-            $tag = $data['tag'] ?? 'img';
-            $content = '';
-        } else {
-            $tag = $data['tag'] ?? 'p';
-            $content = $data['content'] ?? '';
-        }
+		$name = $block['blockName'];
+		$data = $block['attrs']['blockstudio']['data'] ?? array();
 
-        $className = $data['className'] ?? '';
+		if ( 'blockstudio/container' === $block['blockName'] ) {
+			$tag     = $data['tag'] ?? 'div';
+			$content = $block_content ?? '';
+		} elseif ( 'blockstudio/element' === $block['blockName'] ) {
+			$tag     = $data['tag'] ?? 'img';
+			$content = '';
+		} else {
+			$tag     = $data['tag'] ?? 'p';
+			$content = $data['content'] ?? '';
+		}
 
-        $class = '';
-        if (!is_array($className) && trim($className ?? '') !== '') {
-            $class = "class='$className'";
-        }
+		$class_name = $data['className'] ?? '';
 
-        $attribute = Utils::dataAttributes($data['attributes'] ?? []);
+		$class = '';
+		if ( ! is_array( $class_name ) && '' !== trim( $class_name ?? '' ) ) {
+			$class = "class='" . esc_attr( $class_name ) . "'";
+		}
 
-        $attributeBlockstudio = "data-blockstudio='$name'";
+		$attribute = Utils::data_attributes( $data['attributes'] ?? array() );
 
-        if ($block['blockName'] === 'blockstudio/element') {
-            return "<$tag $class $attributeBlockstudio $attribute />";
-        }
+		$attribute_blockstudio = "data-blockstudio='" . esc_attr( $name ) . "'";
 
-        return "<$tag $class $attributeBlockstudio $attribute>$content</$tag>";
-    }
+		if ( 'blockstudio/element' === $block['blockName'] ) {
+			return "<$tag $class $attribute_blockstudio $attribute />";
+		}
+
+		return "<$tag $class $attribute_blockstudio $attribute>$content</$tag>";
+	}
 }
 
 new Builder();

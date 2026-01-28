@@ -1,0 +1,22 @@
+{
+  "$schema": "https://app.blockstudio.dev/schema",
+  "name": "blockstudio/component-useblockprops-richtext-default",
+  "title": "Native useBlockProps RichText default",
+  "category": "blockstudio-test-native",
+  "icon": "star-filled",
+  "description": "Native Blockstudio useBlockProps RichText default block.",
+  "keywords": [
+    "useblockprops",
+    "richtext",
+    "default",
+    "native"
+  ],
+  "blockstudio": {
+    "attributes": [
+      {
+        "id": "richtext",
+        "type": "richtext"
+      }
+    ]
+  }
+}

@@ -1,0 +1,14 @@
+{
+  "$schema": "https://app.blockstudio.dev/schema",
+  "name": "blockstudio/component-useblockprops-double-twig",
+  "title": "Native useBlockProps double Twig",
+  "category": "blockstudio-test-native",
+  "icon": "star-filled",
+  "description": "Native Blockstudio useBlockProps double Twig block.",
+  "keywords": [
+    "useblockprops",
+    "double",
+    "native"
+  ],
+  "blockstudio": true
+}

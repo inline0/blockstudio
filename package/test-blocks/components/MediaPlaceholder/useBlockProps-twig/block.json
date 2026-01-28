@@ -1,0 +1,24 @@
+{
+  "$schema": "https://app.blockstudio.dev/schema",
+  "name": "blockstudio/component-mediaplaceholder-useblockprops-twig",
+  "title": "Native MediaPlaceholder useBlockProps default ",
+  "category": "blockstudio-test-native",
+  "icon": "star-filled",
+  "description": "Native Blockstudio MediaPlaceholder useBlockProps default Twig block.",
+  "keywords": [
+    "mediaplaceholder",
+    "useblockprops",
+    "default",
+    "native"
+  ],
+  "blockstudio": {
+    "attributes": [
+      {
+        "id": "files",
+        "type": "files",
+        "label": "Files",
+        "multiple": true
+      }
+    ]
+  }
+}

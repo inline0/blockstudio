@@ -1,0 +1,1 @@
+<h1><?php echo bs_get_scoped_class($b['name']); ?></h1>

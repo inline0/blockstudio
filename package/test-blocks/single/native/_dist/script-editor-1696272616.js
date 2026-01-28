@@ -1,0 +1,1 @@
+setInterval(function(){console.log('test native editor')},10000)

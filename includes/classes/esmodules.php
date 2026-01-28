@@ -1,241 +1,249 @@
 <?php
+/**
+ * ES Modules class.
+ *
+ * @package Blockstudio
+ */
 
 namespace Blockstudio;
 
 use Exception;
 
 /**
- * ES Modules class.
+ * ES Module import resolution and bundling from esm.sh CDN.
  *
- * @date   08/07/2023
- * @since  5.2.0
+ * This class enables importing npm packages directly in block JavaScript
+ * using a custom Blockstudio syntax. Packages are fetched from esm.sh
+ * and cached locally in the block's _dist/modules/ directory.
+ *
+ * Import Syntax:
+ * ```javascript
+ * import lodash from "blockstudio/lodash@4.17.21";
+ * import { motion } from "blockstudio/framer-motion@10.16.4";
+ * ```
+ *
+ * How It Works:
+ * 1. During asset processing, regex finds blockstudio/package@version imports
+ * 2. For development: rewrites to https://esm.sh/package@version?bundle
+ * 3. For production: fetches bundle from esm.sh and caches locally
+ *
+ * Directory Structure:
+ * ```
+ * my-block/
+ * ├── index.js          # Contains blockstudio/lodash@4.17.21 import
+ * └── _dist/
+ *     └── modules/
+ *         └── lodash/
+ *             └── 4.17.21.js    # Cached bundle from esm.sh
+ * ```
+ *
+ * Benefits:
+ * - No build tooling required (webpack, esbuild, etc.)
+ * - Direct npm package access from block code
+ * - Automatic versioning and caching
+ * - Works in development and production
+ *
+ * Related: ESModulesCSS handles CSS imports with same pattern
+ *
+ * @since 4.0.0
  */
-class ESModules
-{
-    /**
-     * Get Blockstudio Regex.
-     *
-     * @date   08/07/2023
-     * @since  5.2.0
-     *
-     * @return string
-     */
-    public static function getBlockstudioRegex(): string
-    {
-        return '/\bfrom\s*["\']?(blockstudio\/[^"\']*)["\']/';
-    }
+class ESModules {
 
-    /**
-     * Get HTTP Regex.
-     *
-     * @date   08/07/2023
-     * @since  5.2.0
-     *
-     * @return string
-     */
-    public static function getHttpRegex(): string
-    {
-        return '/^export \* from\s*"([^"]*)";$/m';
-    }
+	/**
+	 * Get Blockstudio regex pattern for module imports.
+	 *
+	 * @return string The regex pattern.
+	 */
+	public static function get_blockstudio_regex(): string {
+		return '/\bfrom\s*["\']?(blockstudio\/[^"\']*)["\']/';
+	}
 
-    /**
-     * Match all modules.
-     *
-     * @date   08/07/2023
-     * @since  5.2.0
-     *
-     * @param  $str
-     * @param  bool  $obj
-     *
-     * @return array|string|string[]
-     */
-    public static function getModuleMatches($str, bool $obj = false)
-    {
-        $replacer = function ($str) {
-            $str = str_replace('from"blockstudio', 'from "blockstudio', $str);
+	/**
+	 * Get HTTP regex pattern for export statements.
+	 *
+	 * @return string The regex pattern.
+	 */
+	public static function get_http_regex(): string {
+		return '/^export \* from\s*"([^"]*)";$/m';
+	}
 
-            return str_replace("from'blockstudio", "from 'blockstudio", $str);
-        };
+	/**
+	 * Match all modules in a string.
+	 *
+	 * @param string $str The input string.
+	 * @param bool   $obj Whether to return object data.
+	 *
+	 * @return array|string Module data or transformed string.
+	 */
+	public static function get_module_matches( $str, bool $obj = false ) {
+		$replacer = function ( $str ) {
+			$str = str_replace( 'from"blockstudio', 'from "blockstudio', $str );
 
-        $getter = function ($str) use ($replacer) {
-            $nameVersion = $replacer(trim($str, "'\""));
-            $nameVersion = str_replace('blockstudio/', '', $nameVersion);
+			return str_replace( "from'blockstudio", "from 'blockstudio", $str );
+		};
 
-            $lastAtPosition = strrpos($nameVersion, '@');
-            $name = substr($nameVersion, 0, $lastAtPosition);
-            $version = substr($nameVersion, $lastAtPosition + 1);
+		$getter = function ( $str ) use ( $replacer ) {
+			$name_version = $replacer( trim( $str, "'\"" ) );
+			$name_version = str_replace( 'blockstudio/', '', $name_version );
 
-            return [
-                'name' => $name,
-                'nameTransformed' => str_replace('/', '-', $name),
-                'version' => $version,
-                'nameVersion' => $name . '@' . $version,
-            ];
-        };
+			$last_at_position = strrpos( $name_version, '@' );
+			$name             = substr( $name_version, 0, $last_at_position );
+			$version          = substr( $name_version, $last_at_position + 1 );
 
-        if ($obj) {
-            return $getter($str);
-        }
+			return array(
+				'name'            => $name,
+				'nameTransformed' => str_replace( '/', '-', $name ),
+				'version'         => $version,
+				'nameVersion'     => $name . '@' . $version,
+			);
+		};
 
-        $str = $replacer($str);
+		if ( $obj ) {
+			return $getter( $str );
+		}
 
-        preg_match_all(self::getBlockstudioRegex(), $str, $matches);
-        foreach ($matches[0] as $item) {
-            $obj = $getter($item);
-            $str = str_replace(
-                str_replace('from ', '', $item),
-                "\"https://esm.sh/{$obj['nameVersion']}?bundle\"",
-                $str
-            );
-        }
+		$str = $replacer( $str );
 
-        return $str;
-    }
+		preg_match_all( self::get_blockstudio_regex(), $str, $matches );
+		foreach ( $matches[0] as $item ) {
+			$module_obj = $getter( $item );
+			$str        = str_replace(
+				str_replace( 'from ', '', $item ),
+				"\"https://esm.sh/{$module_obj['nameVersion']}?bundle\"",
+				$str
+			);
+		}
 
-    /**
-     * Get module strings.
-     *
-     * @date   08/07/2023
-     * @since  5.2.0
-     *
-     * @param  $str
-     *
-     * @return array
-     */
-    public static function getModuleStrings($str): array
-    {
-        return preg_match_all(self::getBlockstudioRegex(), $str, $matches)
-            ? $matches[1]
-            : [];
-    }
+		return $str;
+	}
 
-    /**
-     * Fetch module.
-     *
-     * @since  5.2.0
-     * @date   08/07/2023
-     *
-     * @param  $str
-     *
-     * @return string
-     */
-    public static function fetchModule($str)
-    {
-        $module = self::getModuleMatches($str, true);
+	/**
+	 * Get module import strings from code.
+	 *
+	 * @param string $str The input string.
+	 *
+	 * @return array Array of module strings.
+	 */
+	public static function get_module_strings( $str ): array {
+		return preg_match_all( self::get_blockstudio_regex(), $str, $matches )
+			? $matches[1]
+			: array();
+	}
 
-        try {
-            $response = wp_remote_get(
-                "https://esm.sh/{$module['nameVersion']}?bundle"
-            );
-            if (wp_remote_retrieve_response_code($response) != 200) {
-                return false;
-            }
+	/**
+	 * Fetch a module from esm.sh.
+	 *
+	 * @param string $str Module import string.
+	 *
+	 * @return string|false Module content or false on failure.
+	 */
+	public static function fetch_module( $str ) {
+		$module = self::get_module_matches( $str, true );
 
-            $e = wp_remote_retrieve_body($response);
+		try {
+			$response = wp_remote_get(
+				"https://esm.sh/{$module['nameVersion']}?bundle"
+			);
+			if ( 200 !== wp_remote_retrieve_response_code( $response ) ) {
+				return false;
+			}
 
-            $httpMatcher = self::getHttpRegex();
-            preg_match_all($httpMatcher, $e, $matches);
-            $match = reset($matches[1]);
+			$e = wp_remote_retrieve_body( $response );
 
-            $url =
-                strpos($match, 'http') === 0
-                    ? $match
-                    : "https://esm.sh{$match}";
-            $urlResponse = wp_remote_get($url);
+			$http_matcher = self::get_http_regex();
+			preg_match_all( $http_matcher, $e, $matches );
+			$match = reset( $matches[1] );
 
-            if (wp_remote_retrieve_response_code($urlResponse) != 200) {
-                return false;
-            }
+			$url          = 0 === strpos( $match, 'http' )
+				? $match
+				: "https://esm.sh{$match}";
+			$url_response = wp_remote_get( $url );
 
-            $content = wp_remote_retrieve_body($urlResponse);
+			if ( 200 !== wp_remote_retrieve_response_code( $url_response ) ) {
+				return false;
+			}
 
-            if (stripos($content, '<html') !== false) {
-                return false;
-            }
+			$content = wp_remote_retrieve_body( $url_response );
 
-            return $content;
-        } catch (Exception $error) {
-            return false;
-        }
-    }
+			if ( false !== stripos( $content, '<html' ) ) {
+				return false;
+			}
 
-    /**
-     * Write to file.
-     *
-     * @since  5.2.0
-     * @date   08/07/2023
-     *
-     * @param  $str
-     * @param  $folder
-     *
-     * @return false|string
-     */
-    public static function fetchModuleAndWriteToFile($str, $folder)
-    {
-        $module = self::getModuleMatches($str, true);
-        $folderDist = $folder . '/_dist';
-        $folderModules = $folderDist . '/modules';
-        $folderModule = $folderModules . '/' . $module['nameTransformed'];
-        $filename = $folderModule . '/' . $module['version'] . '.js';
+			return $content;
+		} catch ( Exception $error ) {
+			return false;
+		}
+	}
 
-        if (file_exists($filename)) {
-            return $filename;
-        }
+	/**
+	 * Fetch a module and write it to file.
+	 *
+	 * @param string $str    Module import string.
+	 * @param string $folder The base folder path.
+	 *
+	 * @return string|false The filename or false on failure.
+	 */
+	public static function fetch_module_and_write_to_file( $str, $folder ) {
+		$module         = self::get_module_matches( $str, true );
+		$folder_dist    = $folder . '/_dist';
+		$folder_modules = $folder_dist . '/modules';
+		$folder_module  = $folder_modules . '/' . $module['nameTransformed'];
+		$filename       = $folder_module . '/' . $module['version'] . '.js';
 
-        $data = self::fetchModule($str);
+		if ( file_exists( $filename ) ) {
+			return $filename;
+		}
 
-        if (!$data) {
-            return false;
-        }
+		$data = self::fetch_module( $str );
 
-        if (!is_dir($folderDist)) {
-            mkdir($folderDist);
-        }
+		if ( ! $data ) {
+			return false;
+		}
 
-        if (!is_dir($folderModules)) {
-            mkdir($folderModules);
-        }
+		if ( ! is_dir( $folder_dist ) ) {
+			wp_mkdir_p( $folder_dist );
+		}
 
-        if (!is_dir($folderModule)) {
-            mkdir($folderModule);
-        }
+		if ( ! is_dir( $folder_modules ) ) {
+			wp_mkdir_p( $folder_modules );
+		}
 
-        file_put_contents($filename, $data);
+		if ( ! is_dir( $folder_module ) ) {
+			wp_mkdir_p( $folder_module );
+		}
 
-        return $filename;
-    }
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents -- Writing cached module file.
+		file_put_contents( $filename, $data );
 
-    /**
-     * Fetch all modules and write to file.
-     *
-     * @since  5.2.0
-     * @date   08/07/2023
-     *
-     * @param  $str
-     * @param  $folder
-     *
-     * @return array
-     */
-    public static function fetchAllModulesAndWriteToFile($str, $folder): array
-    {
-        $modules = self::getModuleStrings($str);
-        $objects = [];
-        $filenames = [];
+		return $filename;
+	}
 
-        try {
-            foreach ($modules as $module) {
-                $objects[] = self::getModuleMatches($module, true);
-                $filenames[] = self::fetchModuleAndWriteToFile(
-                    $module,
-                    $folder
-                );
-            }
-        } catch (Exception $error) {
-        }
+	/**
+	 * Fetch all modules and write them to files.
+	 *
+	 * @param string $str    The input string containing module imports.
+	 * @param string $folder The base folder path.
+	 *
+	 * @return array Array with 'objects' and 'filenames' keys.
+	 */
+	public static function fetch_all_modules_and_write_to_file( $str, $folder ): array {
+		$modules   = self::get_module_strings( $str );
+		$objects   = array();
+		$filenames = array();
 
-        return [
-            'objects' => $objects,
-            'filenames' => $filenames,
-        ];
-    }
+		try {
+			foreach ( $modules as $module ) {
+				$objects[]   = self::get_module_matches( $module, true );
+				$filenames[] = self::fetch_module_and_write_to_file( $module, $folder );
+			}
+		} catch ( Exception $error ) {
+			// Silently fail on module fetch errors.
+			unset( $error );
+		}
+
+		return array(
+			'objects'   => $objects,
+			'filenames' => $filenames,
+		);
+	}
 }

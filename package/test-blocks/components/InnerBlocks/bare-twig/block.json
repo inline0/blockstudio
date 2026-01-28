@@ -1,0 +1,15 @@
+{
+  "$schema": "https://app.blockstudio.dev/schema",
+  "name": "blockstudio/component-innerblocks-bare-twig",
+  "title": "Native InnerBlocks bare Twig",
+  "category": "blockstudio-test-native",
+  "icon": "star-filled",
+  "description": "Native Blockstudio InnerBlocks bare Twig block.",
+  "keywords": [
+    "inner",
+    "innerblocks",
+    "bare",
+    "native"
+  ],
+  "blockstudio": true
+}

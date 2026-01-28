@@ -65,7 +65,7 @@ function bs_icon($args)
  */
 function bs_render_icon($args)
 {
-    $path = BLOCKSTUDIO_DIR . '/includes/icons';
+    $path = BLOCKSTUDIO_DIR . '/includes-v7/icons';
     $iconVersion = '1';
     $expirationTime = 30 * DAY_IN_SECONDS;
 
@@ -179,7 +179,7 @@ function bs_render_variables($data, array $allowed = [])
 
 function bs_data_attributes($data): string
 {
-    return Blockstudio\Utils::dataAttributes($data);
+    return Blockstudio\Utils::data_attributes($data);
 }
 
 /**
@@ -193,7 +193,7 @@ function bs_data_attributes($data): string
 
 function bs_render_data_attributes($data)
 {
-    echo Blockstudio\Utils::dataAttributes($data);
+    echo Blockstudio\Utils::data_attributes($data);
 }
 
 /**
@@ -231,7 +231,7 @@ function bs_build_configurator_block($attr): string
     $decoded = json_decode($attr, true);
 
     $attributes = [];
-    Build::buildAttributes($decoded['blockstudio']['attributes'], $attributes);
+    Build::build_attributes($decoded['blockstudio']['attributes'], $attributes);
 
     $block = $decoded;
     $block['attributes'] = $attributes;

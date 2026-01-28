@@ -1,0 +1,25 @@
+{
+  "$schema": "https://app.blockstudio.dev/schema",
+  "name": "blockstudio/type-classes-tailwind",
+  "title": "Native Classes Tailwind",
+  "category": "blockstudio-test-native",
+  "icon": "star-filled",
+  "description": "Native Blockstudio Classes Tailwind block.",
+  "keywords": [
+    "text",
+    "native",
+    "classes",
+    "tailwind"
+  ],
+  "blockstudio": {
+    "attributes": [
+      {
+        "id": "classes",
+        "type": "classes",
+        "label": "Class",
+        "tailwind": true,
+        "default": "text-red-500"
+      }
+    ]
+  }
+}

@@ -13,13 +13,15 @@ import { fileURLToPath } from "url";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
+const port = process.env.PLAYGROUND_PORT || "9401";
+
 async function captureCompiledAssets() {
   console.log("Starting browser...");
   const browser = await chromium.launch({ headless: true });
   const page = await browser.newPage();
 
-  console.log("Opening WordPress Playground...");
-  await page.goto("http://localhost:9400", { timeout: 60000 });
+  console.log(`Opening WordPress Playground on port ${port}...`);
+  await page.goto(`http://localhost:${port}`, { timeout: 60000 });
 
   console.log("Waiting for Playground to initialize...");
   await page.waitForFunction("window.playgroundReady === true", {

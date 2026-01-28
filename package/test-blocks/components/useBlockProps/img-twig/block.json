@@ -1,0 +1,21 @@
+{
+  "$schema": "https://app.blockstudio.dev/schema",
+  "name": "blockstudio/component-useblockprops-img-twig",
+  "title": "Native useBlockProps img Twig",
+  "category": "blockstudio-test-native",
+  "icon": "star-filled",
+  "description": "Native Blockstudio useBlockProps img Twig block.",
+  "keywords": [
+    "useblockprops",
+    "img",
+    "native"
+  ],
+  "blockstudio": {
+    "attributes": [
+      {
+        "id": "richtext",
+        "type": "richtext"
+      }
+    ]
+  }
+}

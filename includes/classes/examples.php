@@ -1,46 +1,45 @@
 <?php
+/**
+ * Examples class.
+ *
+ * @package Blockstudio
+ */
 
 namespace Blockstudio;
 
 /**
- * Examples.
- *
- * @date   05/03/2022
- * @since  5.5.0
+ * Handles example templates.
  */
-class Examples
-{
-    /**
-     * Get examples.
-     *
-     * @date   05/03/2022
-     * @since  5.5.0
-     *
-     * @return array
-     */
-    public static function get(): array
-    {
-        $basePath = BLOCKSTUDIO_DIR . '/includes/templates';
-        $results = [];
+class Examples {
 
-        if (is_dir($basePath)) {
-            $subdirectories = glob($basePath . '/*', GLOB_ONLYDIR);
-            foreach ($subdirectories as $subdir) {
-                $subdirName = basename($subdir);
-                $results[$subdirName] = [];
-                $files = array_merge(
-                    glob($subdir . '/*.php'),
-                    glob($subdir . '/*.twig')
-                );
+	/**
+	 * Get all example templates.
+	 *
+	 * @return array Example templates organized by subdirectory.
+	 */
+	public static function get(): array {
+		$base_path = BLOCKSTUDIO_DIR . '/includes-v7/templates';
+		$results   = array();
 
-                foreach ($files as $file) {
-                    $fileName = basename($file);
-                    $content = file_get_contents($file);
-                    $results[$subdirName][$fileName] = $content;
-                }
-            }
-        }
+		if ( is_dir( $base_path ) ) {
+			$subdirectories = glob( $base_path . '/*', GLOB_ONLYDIR );
+			foreach ( $subdirectories as $subdir ) {
+				$subdir_name             = basename( $subdir );
+				$results[ $subdir_name ] = array();
+				$files                   = array_merge(
+					glob( $subdir . '/*.php' ),
+					glob( $subdir . '/*.twig' )
+				);
 
-        return $results;
-    }
+				foreach ( $files as $file ) {
+					$file_name = basename( $file );
+					// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Reading local plugin file.
+					$content                                  = file_get_contents( $file );
+					$results[ $subdir_name ][ $file_name ] = $content;
+				}
+			}
+		}
+
+		return $results;
+	}
 }

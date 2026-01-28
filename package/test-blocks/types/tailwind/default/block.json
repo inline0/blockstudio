@@ -1,0 +1,13 @@
+{
+  "$schema": "https://app.blockstudio.dev/schema",
+  "name": "blockstudio/type-tailwind",
+  "title": "Native Tailwind",
+  "category": "blockstudio-test-native",
+  "icon": "star-filled",
+  "description": "Native Blockstudio Tailwind block.",
+  "keywords": [
+    "tailwind",
+    "native"
+  ],
+  "blockstudio": true
+}

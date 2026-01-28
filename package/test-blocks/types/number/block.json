@@ -1,0 +1,42 @@
+{
+  "$schema": "https://app.blockstudio.dev/schema",
+  "name": "blockstudio/type-number",
+  "title": "Native Number",
+  "category": "blockstudio-test-native",
+  "icon": "star-filled",
+  "description": "Native Blockstudio Number block.",
+  "keywords": [
+    "number",
+    "native"
+  ],
+  "blockstudio": {
+    "attributes": [
+      {
+        "id": "number",
+        "type": "number",
+        "label": "Number",
+        "default": 10
+      },
+      {
+        "id": "numberZero",
+        "type": "number",
+        "label": "Number",
+        "default": 0
+      },
+      {
+        "id": "textOnZero",
+        "type": "text",
+        "label": "Text on zero",
+        "conditions": [
+          [
+            {
+              "id": "numberZero",
+              "operator": "==",
+              "value": 0
+            }
+          ]
+        ]
+      }
+    ]
+  }
+}

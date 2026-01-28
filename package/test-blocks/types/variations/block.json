@@ -1,0 +1,45 @@
+{
+  "$schema": "https://app.blockstudio.dev/schema",
+  "name": "blockstudio/type-variations",
+  "title": "Native Variation",
+  "category": "blockstudio-test-native",
+  "icon": "star-filled",
+  "description": "Native Blockstudio Variations block.",
+  "keywords": [
+    "variations",
+    "native"
+  ],
+  "variations": [
+    {
+      "name": "variation-2",
+      "title": "Native Variation 2",
+      "description": "Native Blockstudio Variations block 2.",
+      "attributes": {
+        "select": {
+          "value": "variation-2"
+        }
+      }
+    }
+  ],
+  "blockstudio": {
+    "attributes": [
+      {
+        "id": "select",
+        "type": "select",
+        "label": "Select",
+        "hidden": true,
+        "options": [
+          {
+            "value": "variation-1",
+            "label": "Default text"
+          },
+          {
+            "value": "variation-2",
+            "label": "Default text 2"
+          }
+        ],
+        "default": "variation-1"
+      }
+    ]
+  }
+}

@@ -1,0 +1,24 @@
+{
+  "$schema": "https://app.blockstudio.dev/schema",
+  "name": "blockstudio/type-interactivity-alpinejs",
+  "title": "Native Interactivity Alpine",
+  "category": "blockstudio-test-native",
+  "icon": "star-filled",
+  "description": "Native Blockstudio Interactivity Alpine block.",
+  "keywords": [
+    "text",
+    "native",
+    "interactivity",
+    "alpinejs"
+  ],
+  "blockstudio": {
+    "attributes": [
+      {
+        "id": "text",
+        "type": "text",
+        "label": "Text",
+        "default": "Default value"
+      }
+    ]
+  }
+}

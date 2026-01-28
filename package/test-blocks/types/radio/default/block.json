@@ -1,0 +1,260 @@
+{
+  "$schema": "https://app.blockstudio.dev/schema",
+  "name": "blockstudio/type-radio",
+  "title": "Native Radio",
+  "category": "blockstudio-test-native",
+  "icon": "star-filled",
+  "description": "Native Blockstudio Radio block.",
+  "keywords": [
+    "radio",
+    "native"
+  ],
+  "blockstudio": {
+    "attributes": [
+      {
+        "id": "defaultNumberBothWrongDefault",
+        "type": "radio",
+        "label": "Default - Number - Both - Wrong Default",
+        "options": [
+          {
+            "value": 1,
+            "label": "One"
+          },
+          {
+            "value": 2,
+            "label": "Two"
+          },
+          {
+            "value": 3,
+            "label": "Three"
+          }
+        ],
+        "default": "three-1",
+        "returnFormat": "both",
+        "allowNull": true
+      },
+      {
+        "id": "defaultValueLabel",
+        "type": "radio",
+        "label": "Default - Label",
+        "options": [
+          {
+            "value": "one",
+            "label": "One"
+          },
+          {
+            "value": "two",
+            "label": "Two"
+          },
+          {
+            "value": "three",
+            "label": "Three"
+          }
+        ],
+        "default": "three",
+        "returnFormat": "label"
+      },
+      {
+        "id": "defaultNumberArray",
+        "type": "radio",
+        "label": "Default - Number - Array",
+        "options": [
+          1,
+          2,
+          3
+        ],
+        "default": 3
+      },
+      {
+        "id": "defaultNumberArrayBoth",
+        "type": "radio",
+        "label": "Default - Number - Array - Both",
+        "options": [
+          1,
+          2,
+          3
+        ],
+        "default": 3,
+        "returnFormat": "both"
+      },
+      {
+        "id": "defaultValueStringNumber",
+        "type": "radio",
+        "label": "Default - String Number",
+        "options": [
+          {
+            "value": "1",
+            "label": "One"
+          },
+          {
+            "value": "2",
+            "label": "Two"
+          },
+          {
+            "value": "3",
+            "label": "Three"
+          }
+        ],
+        "default": "2"
+      },
+      {
+        "id": "defaultValueStringNumberBoth",
+        "type": "radio",
+        "label": "Default - String Number - Array - Both",
+        "options": [
+          "1",
+          "2",
+          "3"
+        ],
+        "default": "3",
+        "returnFormat": "both"
+      },
+      {
+        "id": "populateQuery",
+        "type": "radio",
+        "label": "Populate - Query",
+        "options": [
+          {
+            "value": "one",
+            "label": "One"
+          },
+          {
+            "value": "two",
+            "label": "Two"
+          },
+          {
+            "value": "three",
+            "label": "Three"
+          }
+        ],
+        "populate": {
+          "type": "query",
+          "query": "posts"
+        },
+        "default": 1388
+      },
+      {
+        "id": "populateQueryIdBefore",
+        "type": "radio",
+        "label": "Populate - Query ID - Before",
+        "options": [
+          {
+            "value": "one",
+            "label": "One"
+          },
+          {
+            "value": "two",
+            "label": "Two"
+          },
+          {
+            "value": "three",
+            "label": "Three"
+          }
+        ],
+        "populate": {
+          "type": "query",
+          "query": "posts",
+          "returnFormat": {
+            "value": "id",
+            "label": "post_name"
+          },
+          "position": "before"
+        },
+        "default": 1388
+      },
+      {
+        "id": "populateCustom",
+        "type": "radio",
+        "label": "Populate - Custom",
+        "options": [
+          {
+            "value": "one",
+            "label": "One"
+          },
+          {
+            "value": "two",
+            "label": "Two"
+          },
+          {
+            "value": "three",
+            "label": "Three"
+          }
+        ],
+        "populate": {
+          "type": "custom",
+          "custom": "default"
+        },
+        "default": "three"
+      },
+      {
+        "id": "populateCustomArrayBeforeBoth",
+        "type": "radio",
+        "label": "Populate - Custom - Array - Before - Both",
+        "options": [
+          "one",
+          "two",
+          "three"
+        ],
+        "populate": {
+          "type": "custom",
+          "custom": "array",
+          "position": "before"
+        },
+        "default": "three",
+        "returnFormat": "both"
+      },
+      {
+        "id": "populateCustomOnly",
+        "type": "radio",
+        "label": "Populate only - Custom - Array",
+        "populate": {
+          "type": "custom",
+          "custom": "array"
+        },
+        "default": "custom-1"
+      },
+      {
+        "id": "populateOnlyQuery",
+        "type": "radio",
+        "label": "Populate only - Query",
+        "populate": {
+          "type": "query",
+          "query": "posts"
+        },
+        "default": 1388
+      },
+      {
+        "id": "populateOnlyQueryUser",
+        "type": "radio",
+        "label": "Populate only - Query - User",
+        "populate": {
+          "type": "query",
+          "query": "users"
+        },
+        "default": 644
+      },
+      {
+        "id": "populateOnlyQueryTerm",
+        "type": "radio",
+        "label": "Populate only - Query - Term",
+        "populate": {
+          "type": "query",
+          "query": "terms"
+        },
+        "default": 6
+      },
+      {
+        "id": "populateNonExistingTerm",
+        "type": "radio",
+        "label": "Populate only - Query - Term",
+        "populate": {
+          "type": "query",
+          "query": "terms",
+          "arguments": {
+            "taxonomy": "non-existing"
+          }
+        }
+      }
+    ]
+  }
+}

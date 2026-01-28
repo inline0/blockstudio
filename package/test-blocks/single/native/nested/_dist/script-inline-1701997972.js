@@ -1,0 +1,1 @@
+setTimeout(function(){console.log('test native nested inline')},2000)

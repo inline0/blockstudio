@@ -1,70 +1,109 @@
 <?php
+/**
+ * Render class.
+ *
+ * @package Blockstudio
+ */
 
 namespace Blockstudio;
 
 /**
- * Block class.
+ * Programmatic block rendering utility for theme developers.
  *
- * @date   24/02/2022
- * @since  2.2.0
+ * This class provides a simple API for rendering Blockstudio blocks
+ * directly from PHP code, useful for:
+ *
+ * - Including blocks in theme templates
+ * - Rendering blocks in custom page builders
+ * - Generating block output for AJAX/REST responses
+ * - Testing block output during development
+ *
+ * Usage Examples:
+ *
+ * ```php
+ * // Render by block name (echoes output)
+ * Render::block('blockstudio/hero');
+ *
+ * // Render with custom attributes
+ * Render::block([
+ *     'name' => 'blockstudio/card',
+ *     'data' => [
+ *         'title' => 'My Card',
+ *         'image' => 123  // Attachment ID
+ *     ]
+ * ]);
+ *
+ * // Render with inner content
+ * Render::block([
+ *     'name' => 'blockstudio/section',
+ *     'data' => ['background' => 'dark'],
+ *     'content' => '<p>Inner HTML content</p>'
+ * ]);
+ * ```
+ *
+ * Helper Function:
+ * The blockstudio_render_block() function wraps this class:
+ * ```php
+ * blockstudio_render_block(['name' => 'blockstudio/hero']);
+ * ```
+ *
+ * @since 1.0.0
  */
-class Render
-{
-    /**
-     * Render block function.
-     *
-     * @date   24/02/2022
-     * @since  2.2.0
-     *
-     * @param  $value
-     *
-     * @return false|string|void
-     */
-    public static function block($value)
-    {
-        $data = [];
-        $content = false;
+class Render {
 
-        if (is_array($value)) {
-            $name = $value['name'] ?? $value['id'];
-            $data = $value['data'] ?? [];
-            $content = $value['content'] ?? false;
-        } else {
-            $name = $value;
-        }
+	/**
+	 * Render a block by name or configuration.
+	 *
+	 * @param string|array $value Block name or configuration array.
+	 *
+	 * @return false|string|void Returns HTML string, false on failure, or void when echoing.
+	 */
+	public static function block( $value ) {
+		$data    = array();
+		$content = false;
 
-        $blocks = Build::data();
+		if ( is_array( $value ) ) {
+			$name    = $value['name'] ?? $value['id'];
+			$data    = $value['data'] ?? array();
+			$content = $value['content'] ?? false;
+		} else {
+			$name = $value;
+		}
 
-        if (
-            !isset($blocks[$name]['path']) &&
-            !isset($data['_BLOCKSTUDIO_EDITOR_STRING'])
-        ) {
-            return false;
-        }
+		$blocks = Build::data();
 
-        $editor = $data['_BLOCKSTUDIO_EDITOR_STRING'] ?? false;
-        unset($data['_BLOCKSTUDIO_EDITOR_STRING']);
+		if (
+			! isset( $blocks[ $name ]['path'] ) &&
+			! isset( $data['_BLOCKSTUDIO_EDITOR_STRING'] )
+		) {
+			return false;
+		}
 
-        if ($editor) {
-            return Block::render([
-                'blockstudio' => [
-                    'editor' => $editor,
-                    'name' => $name,
-                    'attributes' => $data,
-                ],
-            ]);
-        } else {
-            echo Block::render(
-                [
-                    'blockstudio' => [
-                        'name' => $name,
-                        'attributes' => $data,
-                    ],
-                ],
-                '',
-                '',
-                $content
-            );
-        }
-    }
+		$editor = $data['_BLOCKSTUDIO_EDITOR_STRING'] ?? false;
+		unset( $data['_BLOCKSTUDIO_EDITOR_STRING'] );
+
+		if ( $editor ) {
+			return Block::render(
+				array(
+					'blockstudio' => array(
+						'editor'     => $editor,
+						'name'       => $name,
+						'attributes' => $data,
+					),
+				)
+			);
+		} else {
+			echo Block::render(
+				array(
+					'blockstudio' => array(
+						'name'       => $name,
+						'attributes' => $data,
+					),
+				),
+				'',
+				'',
+				$content
+			);
+		}
+	}
 }

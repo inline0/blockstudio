@@ -1,0 +1,212 @@
+{
+  "name": ["blockstudio/type-text", "blockstudio/type-textarea"],
+  "blockstudio": {
+    "extend": true,
+    "attributes": [
+      {
+        "type": "group",
+        "title": "Addons attributes",
+        "attributes": [
+          {
+            "id": "textClasses",
+            "type": "classes",
+            "label": "Text Classes",
+            "set": [
+              {
+                "attribute": "class",
+                "value": "{attributes.textClasses}"
+              }
+            ]
+          },
+          {
+            "id": "textAttributes",
+            "type": "attributes",
+            "label": "Text attributes"
+          },
+          {
+            "id": "textClassSelect",
+            "type": "select",
+            "label": "Text class",
+            "options": [
+              {
+                "value": "class-1",
+                "label": "Class 1"
+              },
+              {
+                "value": "class-2",
+                "label": "Class 2"
+              }
+            ],
+            "default": "class-2"
+          },
+          {
+            "id": "textClassSelectPopulateValue",
+            "type": "select",
+            "label": "Text class populate value",
+            "options": [
+              {
+                "value": "one",
+                "label": "One"
+              },
+              {
+                "value": "two",
+                "label": "Two"
+              },
+              {
+                "value": "three",
+                "label": "Three"
+              }
+            ],
+            "populate": {
+              "type": "query",
+              "query": "posts"
+            },
+            "default": 1386
+          },
+          {
+            "id": "textClassSelectPopulateLabel",
+            "type": "select",
+            "label": "Text class populate label",
+            "options": [
+              {
+                "value": "one",
+                "label": "One"
+              },
+              {
+                "value": "two",
+                "label": "Two"
+              },
+              {
+                "value": "three",
+                "label": "Three"
+              }
+            ],
+            "populate": {
+              "type": "query",
+              "query": "posts"
+            },
+            "returnFormat": "label",
+            "default": 1099
+          },
+          {
+            "id": "textClassSelectPopulateBoth",
+            "type": "select",
+            "label": "Text class populate both",
+            "options": [
+              {
+                "value": "one",
+                "label": "One"
+              },
+              {
+                "value": "two",
+                "label": "Two"
+              },
+              {
+                "value": "three",
+                "label": "Three"
+              }
+            ],
+            "populate": {
+              "type": "query",
+              "query": "posts"
+            },
+            "returnFormat": "both",
+            "default": 1386
+          }
+        ]
+      },
+      {
+        "type": "group",
+        "title": "Addons style",
+        "attributes": [
+          {
+            "id": "textColor",
+            "type": "color",
+            "label": "Text color",
+            "options": [
+              {
+                "name": "red",
+                "value": "#f00",
+                "slug": "red"
+              },
+              {
+                "name": "white",
+                "value": "#fff",
+                "slug": "white"
+              },
+              {
+                "name": "blue",
+                "value": "#00f",
+                "slug": "blue"
+              }
+            ],
+            "default": "#f00",
+            "set": [
+              {
+                "attribute": "style",
+                "value": "color: {attributes.textColor.value}"
+              }
+            ]
+          },
+          {
+            "id": "textBackground",
+            "type": "gradient",
+            "label": "Text background",
+            "options": [
+              {
+                "name": "JShine",
+                "value": "linear-gradient(135deg,#12c2e9 0%,#c471ed 50%,#f64f59 100%)",
+                "slug": "jshine"
+              },
+              {
+                "name": "Moonlit Asteroid",
+                "value": "linear-gradient(135deg,#0F2027 0%, #203A43 0%, #2c5364 100%)",
+                "slug": "moonlit-asteroid"
+              },
+              {
+                "name": "Rastafarie",
+                "value": "linear-gradient(135deg,#1E9600 0%, #FFF200 0%, #FF0000 100%)",
+                "slug": "rastafari"
+              }
+            ],
+            "default": "linear-gradient(135deg,#12c2e9 0%,#c471ed 50%,#f64f59 100%)",
+            "set": [
+              {
+                "attribute": "style",
+                "value": "background: {attributes.textBackground.value}"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "type": "group",
+        "title": "Addons class",
+        "attributes": [
+          {
+            "id": "textClass",
+            "type": "text",
+            "label": "Text class",
+            "set": [
+              {
+                "attribute": "class",
+                "value": "text-{attributes.textClass}"
+              }
+            ]
+          },
+          {
+            "id": "textClass2",
+            "type": "text",
+            "label": "Text class 2",
+            "set": [
+              {
+                "attribute": "class",
+                "value": "text-{attributes.textClass2}-2"
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  }
+}

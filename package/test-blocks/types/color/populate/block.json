@@ -1,0 +1,26 @@
+{
+  "$schema": "https://app.blockstudio.dev/schema",
+  "name": "blockstudio/type-color-populate",
+  "title": "Native Color Populate",
+  "category": "blockstudio-test-native",
+  "icon": "star-filled",
+  "description": "Native Blockstudio Color Populate block",
+  "keywords": [
+    "color",
+    "populate",
+    "native"
+  ],
+  "blockstudio": {
+    "attributes": [
+      {
+        "id": "color",
+        "type": "color",
+        "label": "Color",
+        "populate": {
+          "type": "custom",
+          "custom": "colors"
+        }
+      }
+    ]
+  }
+}

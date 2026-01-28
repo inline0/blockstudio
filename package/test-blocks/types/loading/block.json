@@ -1,0 +1,17 @@
+{
+  "$schema": "https://app.blockstudio.dev/schema",
+  "name": "blockstudio/type-loading",
+  "title": "Native Loading",
+  "category": "blockstudio-test-native",
+  "icon": "star-filled",
+  "description": "Native Blockstudio Loading block.",
+  "keywords": [
+    "loading",
+    "native"
+  ],
+  "blockstudio": {
+    "blockEditor": {
+      "disableLoading": true
+    }
+  }
+}

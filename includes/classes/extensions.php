@@ -1,298 +1,328 @@
 <?php
+/**
+ * Extensions class.
+ *
+ * @package Blockstudio
+ */
 
 namespace Blockstudio;
 
 use WP_HTML_Tag_Processor;
 
 /**
- * Extends class.
+ * Block extensions system for adding attributes to existing blocks.
  *
- * @date   14/02/2024
- * @since  5.4.0
+ * Extensions allow adding custom attributes and behavior to any
+ * registered WordPress block without modifying its source code.
+ *
+ * How Extensions Work:
+ * 1. Create a block.json with blockstudio.extend: true
+ * 2. Specify target blocks using the "name" field (supports wildcards)
+ * 3. Define attributes that will be added to matched blocks
+ * 4. Optionally use "set" to apply values to the block's HTML
+ *
+ * Example Extension (block.json):
+ * ```json
+ * {
+ *   "name": "core/paragraph",       // Or ["core/paragraph", "core/heading"]
+ *   "blockstudio": { "extend": true },
+ *   "attributes": {
+ *     "textColor": {
+ *       "type": "string",
+ *       "field": "select",
+ *       "options": ["primary", "secondary"],
+ *       "set": [{ "attribute": "class", "value": "text-{attributes.textColor}" }]
+ *     }
+ *   }
+ * }
+ * ```
+ *
+ * Wildcard Matching:
+ * - "core/*" matches all core blocks
+ * - "core/heading" matches only headings
+ * - ["core/paragraph", "core/heading"] matches both
+ *
+ * Set Configuration:
+ * The "set" array defines how attribute values modify block HTML:
+ * - { "attribute": "class", "value": "{value}" } → adds CSS class
+ * - { "attribute": "style", "value": "--color: {value}" } → adds inline style
+ * - { "attribute": "data-foo", "value": "{value}" } → adds data attribute
+ *
+ * Template Syntax:
+ * - {attributes.fieldName} → current field value
+ * - {attributes.otherField} → another field's value
+ *
+ * @since 3.0.0
  */
-class Extensions
-{
-    /**
-     * Construct.
-     *
-     * @date   14/02/2024
-     * @since  5.4.0
-     */
-    function __construct()
-    {
-        add_filter('render_block', [__CLASS__, 'renderBlocks'], 10, 2);
-    }
+class Extensions {
 
-    /**
-     * Render blocks.
-     *
-     * @date   14/02/2024
-     * @since  5.4.0
-     *
-     * @param  $blockContent
-     * @param  $block
-     *
-     * @return string
-     */
-    public static function renderBlocks($blockContent, $block): string
-    {
-        if (!class_exists('WP_HTML_Tag_Processor')) {
-            return $blockContent;
-        }
+	/**
+	 * Constructor.
+	 */
+	public function __construct() {
+		add_filter( 'render_block', array( __CLASS__, 'render_blocks' ), 10, 2 );
+	}
 
-        $extensions = Build::extensions();
-        $matches = self::getMatches($block['blockName'], $extensions);
+	/**
+	 * Render blocks with extensions.
+	 *
+	 * @param string $block_content The block content.
+	 * @param array  $block         The block data.
+	 *
+	 * @return string The modified block content.
+	 */
+	public static function render_blocks( $block_content, $block ): string {
+		if ( ! class_exists( 'WP_HTML_Tag_Processor' ) ) {
+			return $block_content;
+		}
 
-        $attributes = [];
-        $blockAttributes = $block['attrs']['blockstudio']['attributes'] ?? [];
+		$extensions = Build::extensions();
+		$matches    = self::get_matches( $block['blockName'], $extensions );
 
-        foreach ($matches as $match) {
-            foreach ($match->attributes as $attributeId => $attribute) {
-                if (isset($blockAttributes[$attributeId])) {
-                    $attributes[$attributeId] = $attribute;
-                }
-            }
-        }
+		$attributes       = array();
+		$block_attributes = $block['attrs']['blockstudio']['attributes'] ?? array();
 
-        $blockstudioAttributes = [
-            'blockstudio' => [
-                'attributes' => $blockAttributes,
-                'disabled' => $block['attrs']['blockstudio']['disabled'] ?? [],
-            ],
-        ];
-        $ref = $blockstudioAttributes;
+		foreach ( $matches as $match ) {
+			foreach ( $match->attributes as $attribute_id => $attribute ) {
+				if ( isset( $block_attributes[ $attribute_id ] ) ) {
+					$attributes[ $attribute_id ] = $attribute;
+				}
+			}
+		}
 
-        $attributeData = Block::transform(
-            $blockstudioAttributes,
-            $ref,
-            null,
-            false,
-            false,
-            $attributes
-        );
+		$blockstudio_attributes = array(
+			'blockstudio' => array(
+				'attributes' => $block_attributes,
+				'disabled'   => $block['attrs']['blockstudio']['disabled'] ?? array(),
+			),
+		);
+		$ref                    = $blockstudio_attributes;
 
-        if (empty($matches) && !($attributeData['hasCodeSelector'] ?? false)) {
-            return $blockContent;
-        }
+		$attribute_data = Block::transform(
+			$blockstudio_attributes,
+			$ref,
+			null,
+			false,
+			false,
+			$attributes
+		);
 
-        $content = new WP_HTML_Tag_Processor($blockContent);
+		if ( empty( $matches ) && ! ( $attribute_data['hasCodeSelector'] ?? false ) ) {
+			return $block_content;
+		}
 
-        $isSequential = function ($arr) {
-            return is_array($arr) &&
-                array_keys($arr) === range(0, count($arr) - 1);
-        };
+		$content = new WP_HTML_Tag_Processor( $block_content );
 
-        if ($content->next_tag()) {
-            $class = '';
-            $style = '';
-            $currentClass = $content->get_attribute('class');
-            $currentStyle = $content->get_attribute('style');
+		$is_sequential = function ( $arr ) {
+			return is_array( $arr ) &&
+				array_keys( $arr ) === range( 0, count( $arr ) - 1 );
+		};
 
-            if (
-                trim($currentStyle ?? '') !== '' &&
-                !Files::endsWith($currentStyle, ';')
-            ) {
-                $currentStyle .= ';';
-            }
+		if ( $content->next_tag() ) {
+			$class         = '';
+			$style         = '';
+			$current_class = $content->get_attribute( 'class' );
+			$current_style = $content->get_attribute( 'style' );
 
-            if ($attributeData['hasCodeSelector']) {
-                $content->set_attribute(
-                    'data-assets',
-                    $attributeData['selectorAttributeId']
-                );
-            }
+			if (
+				'' !== trim( $current_style ?? '' ) &&
+				! str_ends_with( $current_style, ';' )
+			) {
+				$current_style .= ';';
+			}
 
-            foreach ($attributes as $key => $value) {
-                if (
-                    !isset($value['set']) &&
-                    isset($value['field']) &&
-                    $value['field'] === 'attributes'
-                ) {
-                    if (is_array($blockstudioAttributes[$key])) {
-                        foreach ($blockstudioAttributes[$key] as $attr) {
-                            $content->set_attribute(
-                                $attr['attribute'],
-                                $attr['value']
-                            );
-                        }
-                    }
-                }
+			if ( $attribute_data['hasCodeSelector'] ) {
+				$content->set_attribute(
+					'data-assets',
+					$attribute_data['selectorAttributeId']
+				);
+			}
 
-                foreach ($value['set'] ?? [] as $set) {
-                    $val = $blockstudioAttributes[$key];
+			foreach ( $attributes as $key => $value ) {
+				if (
+					! isset( $value['set'] ) &&
+					isset( $value['field'] ) &&
+					'attributes' === $value['field']
+				) {
+					if ( is_array( $blockstudio_attributes[ $key ] ) ) {
+						foreach ( $blockstudio_attributes[ $key ] as $attr ) {
+							$content->set_attribute(
+								$attr['attribute'],
+								$attr['value']
+							);
+						}
+					}
+				}
 
-                    if (!$val) {
-                        continue;
-                    }
+				foreach ( $value['set'] ?? array() as $set ) {
+					$val = $blockstudio_attributes[ $key ];
 
-                    $applyValue = function ($value, $attr) use (
-                        &$class,
-                        &$style,
-                        $set,
-                        $content
-                    ) {
-                        if ($set['value'] ?? false) {
-                            $value = self::parseTemplate($set['value'], [
-                                'attributes' => $attr,
-                            ]);
-                        }
+					if ( ! $val ) {
+						continue;
+					}
 
-                        if ($set['attribute'] === 'class') {
-                            $class .= ' ' . $value;
-                        } elseif ($set['attribute'] === 'style') {
-                            $style .= ' ' . $value . ';';
-                            $style = str_replace(';;', ';', $style);
-                        } else {
-                            $content->set_attribute($set['attribute'], $value);
-                        }
-                    };
+					$apply_value = function ( $value, $attr ) use (
+						&$class,
+						&$style,
+						$set,
+						$content
+					) {
+						if ( $set['value'] ?? false ) {
+							$value = self::parse_template(
+								$set['value'],
+								array(
+									'attributes' => $attr,
+								)
+							);
+						}
 
-                    if ($isSequential($val)) {
-                        $index = -1;
-                        foreach ($val as $v) {
-                            $index++;
+						if ( 'class' === $set['attribute'] ) {
+							$class .= ' ' . $value;
+						} elseif ( 'style' === $set['attribute'] ) {
+							$style .= ' ' . $value . ';';
+							$style  = str_replace( ';;', ';', $style );
+						} else {
+							$content->set_attribute( $set['attribute'], $value );
+						}
+					};
 
-                            if (!isset($blockstudioAttributes[$key][$index])) {
-                                continue;
-                            }
+					if ( $is_sequential( $val ) ) {
+						$index = -1;
+						foreach ( $val as $v ) {
+							++$index;
 
-                            $applyValue($v, [
-                                $key => $blockstudioAttributes[$key][$index],
-                            ]);
-                        }
-                    } else {
-                        $applyValue($value, $blockstudioAttributes);
-                    }
-                }
-            }
+							if ( ! isset( $blockstudio_attributes[ $key ][ $index ] ) ) {
+								continue;
+							}
 
-            $combinedClass = trim($currentClass . $class);
-            if ($combinedClass !== '') {
-                $content->set_attribute('class', $combinedClass);
-            }
+							$apply_value(
+								$v,
+								array(
+									$key => $blockstudio_attributes[ $key ][ $index ],
+								)
+							);
+						}
+					} else {
+						$apply_value( $value, $blockstudio_attributes );
+					}
+				}
+			}
 
-            $combinedStyle = trim($currentStyle . $style);
-            if ($combinedStyle !== '') {
-                $content->set_attribute(
-                    'style',
-                    str_replace(';;', ';', $combinedStyle)
-                );
-            }
-        }
+			$combined_class = trim( $current_class . $class );
+			if ( '' !== $combined_class ) {
+				$content->set_attribute( 'class', $combined_class );
+			}
 
-        $element = $content->get_updated_html();
-        $assets = Assets::renderCodeFieldAssets($attributeData);
+			$combined_style = trim( $current_style . $style );
+			if ( '' !== $combined_style ) {
+				$content->set_attribute(
+					'style',
+					str_replace( ';;', ';', $combined_style )
+				);
+			}
+		}
 
-        return $element . $assets;
-    }
+		$element = $content->get_updated_html();
+		$assets  = Assets::render_code_field_assets( $attribute_data );
 
-    /**
-     * Get matches.
-     *
-     * @date   14/02/2024
-     * @since  5.4.0
-     *
-     * @param  $string
-     * @param  $extensions
-     *
-     * @return array
-     */
-    public static function getMatches($string, $extensions): array
-    {
-        $matches = [];
-        $matchFound = function ($name, $string) {
-            if (!$name || !$string) {
-                return false;
-            }
+		return $element . $assets;
+	}
 
-            if (substr($name, -1) == '*') {
-                $prefix = substr($name, 0, -1);
+	/**
+	 * Get matching extensions for a block.
+	 *
+	 * @param string $string     The block name.
+	 * @param array  $extensions The extensions array.
+	 *
+	 * @return array Array of matching extensions.
+	 */
+	public static function get_matches( $string, $extensions ): array {
+		$matches     = array();
+		$match_found = function ( $name, $string ) {
+			if ( ! $name || ! $string ) {
+				return false;
+			}
 
-                return strpos($string, $prefix) === 0;
-            } else {
-                return $name === $string;
-            }
-        };
+			if ( '*' === substr( $name, -1 ) ) {
+				$prefix = substr( $name, 0, -1 );
 
-        foreach ($extensions as $e) {
-            if (is_array($e->name)) {
-                foreach ($e->name as $name) {
-                    if ($matchFound($name, $string)) {
-                        $matches[] = $e;
-                    }
-                }
-            } else {
-                if ($matchFound($e->name, $string)) {
-                    $matches[] = $e;
-                }
-            }
-        }
+				return 0 === strpos( $string, $prefix );
+			} else {
+				return $name === $string;
+			}
+		};
 
-        return $matches;
-    }
+		foreach ( $extensions as $e ) {
+			if ( is_array( $e->name ) ) {
+				foreach ( $e->name as $name ) {
+					if ( $match_found( $name, $string ) ) {
+						$matches[] = $e;
+					}
+				}
+			} else {
+				if ( $match_found( $e->name, $string ) ) {
+					$matches[] = $e;
+				}
+			}
+		}
 
-    /**
-     * Replace template string.
-     *
-     * @date   14/02/2024
-     * @since  5.4.0
-     *
-     * @param  $templateString
-     * @param  $values
-     *
-     * @return array|string|string[]|null
-     */
-    public static function parseTemplate($templateString, $values)
-    {
-        return preg_replace_callback(
-            '/\{([^}]+)\}/',
-            function ($matches) use ($values) {
-                $path = $matches[1];
+		return $matches;
+	}
 
-                return self::get($values, $path);
-            },
-            $templateString
-        );
-    }
+	/**
+	 * Replace template string placeholders.
+	 *
+	 * @param string $template_string The template string.
+	 * @param array  $values          The values to replace.
+	 *
+	 * @return string|null The parsed string.
+	 */
+	public static function parse_template( $template_string, $values ) {
+		return preg_replace_callback(
+			'/\{([^}]+)\}/',
+			function ( $matches ) use ( $values ) {
+				$path = $matches[1];
 
-    /**
-     * Get a nested array element similar to Lodash/Get.
-     *
-     * @date   14/02/2024
-     * @since  5.4.0
-     *
-     * @param  $target
-     * @param  $key
-     * @param  null  $default
-     *
-     * @return mixed|null
-     */
-    public static function get($target, $key, $default = null)
-    {
-        if (is_null($key)) {
-            return $target;
-        }
+				return self::get( $values, $path );
+			},
+			$template_string
+		);
+	}
 
-        $key = is_array($key) ? $key : explode('.', $key);
+	/**
+	 * Get a nested array element similar to Lodash/Get.
+	 *
+	 * @param mixed       $target  The target array or object.
+	 * @param string|null $key     The key path.
+	 * @param mixed       $default The default value.
+	 *
+	 * @return mixed The value or default.
+	 */
+	public static function get( $target, $key, $default = null ) {
+		if ( is_null( $key ) ) {
+			return $target;
+		}
 
-        foreach ($key as $segment) {
-            if (!is_array($target) && !is_object($target)) {
-                return $default;
-            }
-            if (is_array($target) && array_key_exists($segment, $target)) {
-                $target = $target[$segment];
-            } elseif (
-                is_object($target) &&
-                property_exists($target, $segment)
-            ) {
-                $target = $target->$segment;
-            } else {
-                return $default;
-            }
-        }
+		$key = is_array( $key ) ? $key : explode( '.', $key );
 
-        return $target;
-    }
+		foreach ( $key as $segment ) {
+			if ( ! is_array( $target ) && ! is_object( $target ) ) {
+				return $default;
+			}
+			if ( is_array( $target ) && array_key_exists( $segment, $target ) ) {
+				$target = $target[ $segment ];
+			} elseif (
+				is_object( $target ) &&
+				property_exists( $target, $segment )
+			) {
+				$target = $target->$segment;
+			} else {
+				return $default;
+			}
+		}
+
+		return $target;
+	}
 }
 
 new Extensions();

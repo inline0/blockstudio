@@ -7,12 +7,12 @@ const __dirname = dirname(__filename);
 
 createPlaygroundServer({
   port: 9400,
-  pluginPath: join(__dirname, "../.."),
-  pluginSlug: "blockstudio7",
+  pluginPath: join(__dirname, "../../_reference"),
+  pluginSlug: "blockstudio",
   pluginMainFile: "blockstudio.php",
-  testBlocksPath: "tests/blocks",
-  testHelperPluginPath: "tests/test-helper.php",
-  title: "Blockstudio - Test Environment",
+  testBlocksPath: "../../tests/blocks",
+  testHelperPluginPath: "../../tests/test-helper.php",
+  title: "Blockstudio v6 Reference - Test Environment",
   excludeDirs: ["package/node_modules"],
   landingPage: "/wp-admin",
 });
