@@ -276,56 +276,110 @@ add_action('rest_api_init', function () {
     ]);
 
     // ==========================================================================
-    // E2E TEST DATA SETUP - Create dummy data for E2E tests
+    // E2E TEST DATA SETUP - Create dummy data with specific IDs for E2E tests
+    // Test blocks expect: post ID 1388, user ID 644, term ID 6
     // ==========================================================================
     register_rest_route('blockstudio-test/v1', '/e2e/setup', [
         'methods' => 'POST',
         'callback' => function () {
+            global $wpdb;
+
             $created = [
                 'posts' => [],
                 'users' => [],
                 'terms' => [],
             ];
 
-            // Create test posts
-            for ($i = 1; $i <= 5; $i++) {
-                $post_id = wp_insert_post([
-                    'post_title' => "Test Post $i",
-                    'post_content' => "This is test post content for post $i.",
+            // Create post with specific ID 1388 (used in test blocks)
+            $post_id = 1388;
+            if (!get_post($post_id)) {
+                $wpdb->insert($wpdb->posts, [
+                    'ID' => $post_id,
+                    'post_author' => 1,
+                    'post_date' => current_time('mysql'),
+                    'post_date_gmt' => current_time('mysql', 1),
+                    'post_content' => 'Test post content for E2E tests.',
+                    'post_title' => 'Test Post 1388',
+                    'post_excerpt' => '',
                     'post_status' => 'publish',
+                    'comment_status' => 'open',
+                    'ping_status' => 'open',
+                    'post_name' => 'test-post-1388',
+                    'post_modified' => current_time('mysql'),
+                    'post_modified_gmt' => current_time('mysql', 1),
                     'post_type' => 'post',
                 ]);
-                if (!is_wp_error($post_id)) {
-                    $created['posts'][] = $post_id;
+                $created['posts'][] = $post_id;
+            }
+
+            // Create a few more posts for variety
+            for ($i = 1; $i <= 3; $i++) {
+                $id = wp_insert_post([
+                    'post_title' => "Test Post $i",
+                    'post_content' => "Test content $i",
+                    'post_status' => 'publish',
+                ]);
+                if ($id && !is_wp_error($id)) {
+                    $created['posts'][] = $id;
                 }
             }
 
-            // Create test category
-            $term = wp_insert_term('Test Category', 'category', [
-                'description' => 'A test category for E2E tests',
-                'slug' => 'test-category',
-            ]);
-            if (!is_wp_error($term)) {
-                $created['terms'][] = $term['term_id'];
+            // Create user with specific ID 644 (used in test blocks)
+            $user_id = 644;
+            if (!get_user_by('id', $user_id)) {
+                $wpdb->insert($wpdb->users, [
+                    'ID' => $user_id,
+                    'user_login' => 'testuser644',
+                    'user_pass' => wp_hash_password('testpass'),
+                    'user_nicename' => 'testuser644',
+                    'user_email' => 'testuser644@example.com',
+                    'user_registered' => current_time('mysql'),
+                    'display_name' => 'Test User 644',
+                ]);
+                $created['users'][] = $user_id;
             }
 
-            // Create test tag
-            $tag = wp_insert_term('Test Tag', 'post_tag', [
-                'description' => 'A test tag for E2E tests',
-                'slug' => 'test-tag',
-            ]);
+            // Create term with specific ID 6 (used in test blocks)
+            $term_id = 6;
+            $existing_term = $wpdb->get_var($wpdb->prepare(
+                "SELECT term_id FROM $wpdb->terms WHERE term_id = %d",
+                $term_id
+            ));
+
+            if (!$existing_term) {
+                $wpdb->insert($wpdb->terms, [
+                    'term_id' => $term_id,
+                    'name' => 'Test Category 6',
+                    'slug' => 'test-category-6',
+                ]);
+
+                $wpdb->insert($wpdb->term_taxonomy, [
+                    'term_id' => $term_id,
+                    'taxonomy' => 'category',
+                    'description' => 'Test category for E2E tests',
+                    'count' => 0,
+                ]);
+                $created['terms'][] = $term_id;
+            }
+
+            // Create a few more categories and tags
+            $cat = wp_insert_term('Test Category', 'category');
+            if (!is_wp_error($cat)) {
+                $created['terms'][] = $cat['term_id'];
+            }
+
+            $tag = wp_insert_term('Test Tag', 'post_tag');
             if (!is_wp_error($tag)) {
                 $created['terms'][] = $tag['term_id'];
             }
 
-            // Note: We don't create users as admin (ID 1) already exists
-            // and creating users requires more complex setup
-            $created['users'][] = 1; // Admin user
+            // Clean caches
+            wp_cache_flush();
 
             return [
                 'success' => true,
                 'created' => $created,
-                'message' => 'E2E test data created successfully',
+                'message' => 'E2E test data created with specific IDs (post: 1388, user: 644, term: 6)',
             ];
         },
         'permission_callback' => '__return_true',
