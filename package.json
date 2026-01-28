@@ -5,8 +5,13 @@
   "scripts": {
     "playground": "tsx tests/playground-server.ts",
     "playground:v7": "tsx tests/playground-server-v7.ts",
+    "playground:e2e": "tsx tests/e2e/playground-server.ts",
+    "playground:e2e:v7": "tsx tests/e2e/playground-server-v7.ts",
     "test": "playwright test",
     "test:v7": "PLAYGROUND_PORT=9401 playwright test",
+    "test:e2e": "PLAYGROUND_PORT=9410 playwright test --config=playwright.e2e.config.ts",
+    "test:e2e:v7": "PLAYGROUND_PORT=9411 playwright test --config=playwright.e2e.config.ts",
+    "test:e2e:headed": "PLAYGROUND_PORT=9410 playwright test --config=playwright.e2e.config.ts --headed",
     "test:headed": "playwright test --headed",
     "test:debug": "playwright test --debug"
   },

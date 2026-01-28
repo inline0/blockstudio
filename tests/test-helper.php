@@ -274,4 +274,98 @@ add_action('rest_api_init', function () {
         },
         'permission_callback' => '__return_true',
     ]);
+
+    // ==========================================================================
+    // E2E TEST DATA SETUP - Create dummy data for E2E tests
+    // ==========================================================================
+    register_rest_route('blockstudio-test/v1', '/e2e/setup', [
+        'methods' => 'POST',
+        'callback' => function () {
+            $created = [
+                'posts' => [],
+                'users' => [],
+                'terms' => [],
+            ];
+
+            // Create test posts
+            for ($i = 1; $i <= 5; $i++) {
+                $post_id = wp_insert_post([
+                    'post_title' => "Test Post $i",
+                    'post_content' => "This is test post content for post $i.",
+                    'post_status' => 'publish',
+                    'post_type' => 'post',
+                ]);
+                if (!is_wp_error($post_id)) {
+                    $created['posts'][] = $post_id;
+                }
+            }
+
+            // Create test category
+            $term = wp_insert_term('Test Category', 'category', [
+                'description' => 'A test category for E2E tests',
+                'slug' => 'test-category',
+            ]);
+            if (!is_wp_error($term)) {
+                $created['terms'][] = $term['term_id'];
+            }
+
+            // Create test tag
+            $tag = wp_insert_term('Test Tag', 'post_tag', [
+                'description' => 'A test tag for E2E tests',
+                'slug' => 'test-tag',
+            ]);
+            if (!is_wp_error($tag)) {
+                $created['terms'][] = $tag['term_id'];
+            }
+
+            // Note: We don't create users as admin (ID 1) already exists
+            // and creating users requires more complex setup
+            $created['users'][] = 1; // Admin user
+
+            return [
+                'success' => true,
+                'created' => $created,
+                'message' => 'E2E test data created successfully',
+            ];
+        },
+        'permission_callback' => '__return_true',
+    ]);
+
+    // Get E2E test data IDs (for tests to use dynamic IDs instead of hardcoded)
+    register_rest_route('blockstudio-test/v1', '/e2e/data', [
+        'methods' => 'GET',
+        'callback' => function () {
+            // Get first few posts
+            $posts = get_posts([
+                'numberposts' => 5,
+                'post_status' => 'publish',
+            ]);
+
+            // Get first few terms
+            $categories = get_terms([
+                'taxonomy' => 'category',
+                'number' => 5,
+                'hide_empty' => false,
+            ]);
+
+            $tags = get_terms([
+                'taxonomy' => 'post_tag',
+                'number' => 5,
+                'hide_empty' => false,
+            ]);
+
+            // Get users
+            $users = get_users([
+                'number' => 5,
+            ]);
+
+            return [
+                'posts' => array_map(fn($p) => ['id' => $p->ID, 'title' => $p->post_title], $posts),
+                'categories' => array_map(fn($t) => ['id' => $t->term_id, 'name' => $t->name], is_array($categories) ? $categories : []),
+                'tags' => array_map(fn($t) => ['id' => $t->term_id, 'name' => $t->name], is_array($tags) ? $tags : []),
+                'users' => array_map(fn($u) => ['id' => $u->ID, 'name' => $u->display_name], $users),
+            ];
+        },
+        'permission_callback' => '__return_true',
+    ]);
 });
