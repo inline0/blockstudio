@@ -119,6 +119,7 @@ class Plugin {
 		require_once $classes_dir . 'llm.php';
 		require_once $classes_dir . 'utils.php';
 		require_once $classes_dir . 'library.php';
+		require_once BLOCKSTUDIO_DIR . '/includes/admin/blockstudio-updater.php';
 		require_once $classes_dir . 'admin.php';
 		require_once $classes_dir . 'blocks.php';
 		require_once $classes_dir . 'configurator.php';

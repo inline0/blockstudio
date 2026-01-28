@@ -65,7 +65,7 @@ function bs_icon($args)
  */
 function bs_render_icon($args)
 {
-    $path = BLOCKSTUDIO_DIR . '/includes-v7/icons';
+    $path = BLOCKSTUDIO_DIR . '/includes/icons';
     $iconVersion = '1';
     $expirationTime = 30 * DAY_IN_SECONDS;
 

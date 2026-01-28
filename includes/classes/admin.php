@@ -478,7 +478,7 @@ class Admin {
 			$overrides     = Build::overrides();
 			$paths         = Build::paths();
 			$templates     = Files::get_folder_structure_with_contents(
-				BLOCKSTUDIO_DIR . '/includes-v7/templates'
+				BLOCKSTUDIO_DIR . '/includes/templates'
 			);
 			$all_assets    = self::get_all_assets();
 			$scripts       = $all_assets['scripts'];
@@ -492,7 +492,7 @@ class Admin {
 				'optionsRoles'         => array_keys( $wp_roles->roles ),
 				'optionsSchema'        => json_decode(
 					// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Reading local schema file.
-					file_get_contents( BLOCKSTUDIO_DIR . '/includes-v7/schemas/blockstudio.json' ),
+					file_get_contents( BLOCKSTUDIO_DIR . '/includes/schemas/blockstudio.json' ),
 					true
 				),
 				'optionsUsers'         => Settings::get( 'users/ids' )
@@ -506,7 +506,7 @@ class Admin {
 					)
 					: array(),
 				'plugin'               => BlockstudioPlugin::getData(),
-				'pluginVersion'        => get_plugin_data( BLOCKSTUDIO )['Version'],
+				'pluginVersion'        => get_plugin_data( BLOCKSTUDIO_FILE )['Version'],
 				'plugins'              => get_plugins(),
 				'pluginsPath'          => plugin_dir_path( BLOCKSTUDIO_DIR ),
 				'settings'             => get_user_meta( get_current_user_id(), 'blockstudio_settings' )
@@ -548,8 +548,8 @@ class Admin {
 				),
 				'isTailwindActive' => Build::is_tailwind_active() ? 'true' : 'false',
 				'llmTxtUrl'        => LLM::get_txt_url(),
-				'loader'           => plugin_dir_url( BLOCKSTUDIO ) . 'includes-v7/editor/vs',
-				'logo'             => plugins_url( 'includes-v7/admin/assets/fabrikatLogo.svg', __FILE__ ),
+				'loader'           => plugin_dir_url( BLOCKSTUDIO_FILE ) . 'includes/editor/vs',
+				'logo'             => plugins_url( 'includes/admin/assets/fabrikatLogo.svg', BLOCKSTUDIO_FILE ),
 				'nonce'            => wp_create_nonce( 'ajax-nonce' ),
 				'nonceRest'        => wp_create_nonce( 'wp_rest' ),
 				'options'          => Settings::get_all(),
@@ -571,11 +571,11 @@ class Admin {
 	 * @return void
 	 */
 	public static function page(): void {
-		$editor_scripts = include BLOCKSTUDIO_DIR . '/includes-v7/admin/assets/admin/index.tsx.asset.php';
+		$editor_scripts = include BLOCKSTUDIO_DIR . '/includes/admin/assets/admin/index.tsx.asset.php';
 
 		wp_enqueue_script(
 			'blockstudio-admin',
-			plugins_url( 'includes-v7/admin/assets/admin/index.tsx.js', BLOCKSTUDIO ),
+			plugins_url( 'includes/admin/assets/admin/index.tsx.js', BLOCKSTUDIO_FILE ),
 			$editor_scripts['dependencies'],
 			$editor_scripts['version'],
 			true
@@ -595,7 +595,7 @@ class Admin {
 		$scripts     = $all_assets['scripts'];
 		$styles      = $all_assets['styles'];
 		$templates   = Files::get_folder_structure_with_contents(
-			BLOCKSTUDIO_DIR . '/includes-v7/templates'
+			BLOCKSTUDIO_DIR . '/includes/templates'
 		);
 		?>
 		<script>

@@ -18,7 +18,7 @@ class Examples {
 	 * @return array Example templates organized by subdirectory.
 	 */
 	public static function get(): array {
-		$base_path = BLOCKSTUDIO_DIR . '/includes-v7/templates';
+		$base_path = BLOCKSTUDIO_DIR . '/includes/templates';
 		$results   = array();
 
 		if ( is_dir( $base_path ) ) {

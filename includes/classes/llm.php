@@ -92,18 +92,18 @@ class LLM {
 	 */
 	public static function get_txt_data(): string {
 		// phpcs:disable WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Reading local template files.
-		$txt  = file_get_contents( BLOCKSTUDIO_DIR . '/includes-v7/llm/llm.txt' );
-		$docs = file_get_contents( BLOCKSTUDIO_DIR . '/includes-v7/llm/blockstudio.md' );
+		$txt  = file_get_contents( BLOCKSTUDIO_DIR . '/includes/llm/llm.txt' );
+		$docs = file_get_contents( BLOCKSTUDIO_DIR . '/includes/llm/blockstudio.md' );
 
 		$block_schema = wp_json_encode(
 			json_decode(
-				file_get_contents( BLOCKSTUDIO_DIR . '/includes-v7/schemas/block.json' )
+				file_get_contents( BLOCKSTUDIO_DIR . '/includes/schemas/block.json' )
 			)
 		);
 
 		$extensions_schema = wp_json_encode(
 			json_decode(
-				file_get_contents( BLOCKSTUDIO_DIR . '/includes-v7/schemas/extensions.json' )
+				file_get_contents( BLOCKSTUDIO_DIR . '/includes/schemas/extensions.json' )
 			)
 		);
 		// phpcs:enable WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents
@@ -125,7 +125,7 @@ class LLM {
 		$txt = str_replace( '%%settings%%', wp_json_encode( Settings::get_all() ), $txt );
 		$txt = str_replace( '%%blocks%%', wp_json_encode( $transformed_blocks ), $txt );
 
-		$example_blocks_base_path = BLOCKSTUDIO_DIR . '/includes-v7/library/blockstudio-element/';
+		$example_blocks_base_path = BLOCKSTUDIO_DIR . '/includes/library/blockstudio-element/';
 		$example_block_names      = array( 'gallery', 'icon', 'image-comparison', 'slider' );
 		$block_creation_examples  = PHP_EOL;
 

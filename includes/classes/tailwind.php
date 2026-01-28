@@ -69,7 +69,7 @@ class Tailwind {
 		}
 
 		if ( Build::is_tailwind_active() ) {
-			$preflight = BLOCKSTUDIO_DIR . '/includes-v7/admin/assets/tailwind/preflight.css';
+			$preflight = BLOCKSTUDIO_DIR . '/includes/admin/assets/tailwind/preflight.css';
 			wp_enqueue_style(
 				'blockstudio-tailwind-preflight',
 				Files::get_relative_url( $preflight ),
@@ -94,7 +94,7 @@ class Tailwind {
 	 * @return string The CDN URL.
 	 */
 	public static function get_cdn_url(): string {
-		$path = BLOCKSTUDIO_DIR . '/includes-v7/admin/assets/tailwind/cdn.js';
+		$path = BLOCKSTUDIO_DIR . '/includes/admin/assets/tailwind/cdn.js';
 
 		return Files::get_relative_url( $path );
 	}

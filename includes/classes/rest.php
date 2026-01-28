@@ -162,7 +162,7 @@ class Rest {
 	 */
 	public function filesystem(): ?bool {
 		if ( ! function_exists( 'WP_Filesystem' ) ) {
-			require_once ABSPATH . 'wp-admin/includes-v7/file.php';
+			require_once ABSPATH . 'wp-admin/includes/file.php';
 		}
 
 		return WP_Filesystem();
@@ -791,7 +791,7 @@ class Rest {
 
 		$path =
 			BLOCKSTUDIO_DIR .
-			'/includes-v7/icons/' .
+			'/includes/icons/' .
 			$set .
 			( $sub_set ? '-' . $sub_set : '' ) .
 			'.json';
@@ -822,7 +822,7 @@ class Rest {
 			return $this->error( $code, 'Failed to initialize WP_Filesystem' );
 		}
 
-		require_once ABSPATH . '/wp-admin/includes-v7/plugin.php';
+		require_once ABSPATH . '/wp-admin/includes/plugin.php';
 
 		$message = array(
 			'success' => 'Plugin activated',

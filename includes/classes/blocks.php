@@ -65,7 +65,7 @@ class Blocks {
 	public function enqueue_editor_assets(): void {
 		global $post;
 
-		$block_scripts = include BLOCKSTUDIO_DIR . '/includes-v7/admin/assets/blocks/index.tsx.asset.php';
+		$block_scripts = include BLOCKSTUDIO_DIR . '/includes/admin/assets/blocks/index.tsx.asset.php';
 		wp_enqueue_script(
 			'blockstudio-blocks',
 			plugin_dir_url( __FILE__ ) . '../admin/assets/blocks/index.tsx.js',

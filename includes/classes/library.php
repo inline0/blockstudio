@@ -78,7 +78,7 @@ class Library {
 		if ( Settings::get( 'library' ) ) {
 			Build::init(
 				array(
-					'dir'     => BLOCKSTUDIO_DIR . '/includes-v7/library',
+					'dir'     => BLOCKSTUDIO_DIR . '/includes/library',
 					'library' => true,
 				)
 			);

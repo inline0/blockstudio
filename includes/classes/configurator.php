@@ -27,7 +27,7 @@ class Configurator {
 	public function render_shortcode(): string {
 		Admin::assets();
 
-		$block_scripts = include BLOCKSTUDIO_DIR . '/includes-v7/admin/assets/configurator/index.tsx.asset.php';
+		$block_scripts = include BLOCKSTUDIO_DIR . '/includes/admin/assets/configurator/index.tsx.asset.php';
 		wp_enqueue_script(
 			'blockstudio-configurator',
 			plugin_dir_url( __FILE__ ) . '../admin/assets/configurator/index.tsx.js',

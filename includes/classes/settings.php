@@ -495,7 +495,7 @@ class Settings {
 	public static function get_schema(): array {
 		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Reading local schema file.
 		return json_decode(
-			file_get_contents( BLOCKSTUDIO_DIR . '/includes-v7/schemas/blockstudio.json' ),
+			file_get_contents( BLOCKSTUDIO_DIR . '/includes/schemas/blockstudio.json' ),
 			true
 		);
 	}

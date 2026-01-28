@@ -1007,7 +1007,7 @@ class Block {
 						$files[] = self::get_attachment_data(
 							null,
 							BLOCKSTUDIO_DIR .
-								'/includes-v7/examples/images/' .
+								'/includes/examples/images/' .
 								$index .
 								'.svg',
 							$index_total

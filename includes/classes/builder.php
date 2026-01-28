@@ -41,7 +41,7 @@ class Builder {
 			return;
 		}
 
-		$block_scripts = include BLOCKSTUDIO_DIR . '/includes-v7/admin/assets/builder/index.tsx.asset.php';
+		$block_scripts = include BLOCKSTUDIO_DIR . '/includes/admin/assets/builder/index.tsx.asset.php';
 		wp_enqueue_script(
 			'blockstudio-builder',
 			plugin_dir_url( __FILE__ ) . '../admin/assets/builder/index.tsx.js',
