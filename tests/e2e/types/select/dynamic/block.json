@@ -1,0 +1,41 @@
+{
+  "$schema": "https://app.blockstudio.dev/schema",
+  "name": "blockstudio/type-select-dynamic",
+  "title": "Native Select Dynamic",
+  "category": "blockstudio-test-native",
+  "icon": "star-filled",
+  "description": "Native Blockstudio Select Dynamic block.",
+  "keywords": [
+    "select",
+    "dynamic",
+    "native"
+  ],
+  "blockstudio": {
+    "attributes": [
+      {
+        "id": "type",
+        "type": "select",
+        "label": "Type",
+        "options": [
+          {
+            "value": "posts",
+            "label": "Posts"
+          },
+          {
+            "value": "pages",
+            "label": "Pages"
+          }
+        ]
+      },
+      {
+        "id": "query",
+        "type": "select",
+        "label": "Query",
+        "populate": {
+          "type": "query",
+          "query": "{attributes.type.value}"
+        }
+      }
+    ]
+  }
+}

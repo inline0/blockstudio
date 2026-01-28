@@ -1,0 +1,33 @@
+{
+  "$schema": "https://app.blockstudio.dev/schema",
+  "name": "blockstudio/type-transforms-2",
+  "title": "Native Transforms 2",
+  "category": "blockstudio-test-native",
+  "icon": "star-filled",
+  "description": "Native Blockstudio Transforms 2 block.",
+  "keywords": [
+    "transforms",
+    "native"
+  ],
+  "blockstudio": {
+    "transforms": {
+      "from": [
+        {
+          "type": "block",
+          "blocks": [
+            "blockstudio/type-transforms-1",
+            "blockstudio/type-transforms-3"
+          ]
+        }
+      ]
+    },
+    "attributes": [
+      {
+        "id": "text",
+        "type": "text",
+        "label": "Text",
+        "default": "Tester"
+      }
+    ]
+  }
+}

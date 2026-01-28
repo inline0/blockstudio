@@ -1,0 +1,43 @@
+{
+  "$schema": "https://app.blockstudio.dev/schema",
+  "name": "blockstudio/type-code-selector-asset-repeater",
+  "title": "Native Code Selector Asset Repeater",
+  "category": "blockstudio-test-native",
+  "icon": "star-filled",
+  "description": "Native Blockstudio Code Selector Asset Repeater block.",
+  "keywords": [
+    "code",
+    "native",
+    "selector",
+    "asset",
+    "repeater"
+  ],
+  "blockstudio": {
+    "attributes": [
+      {
+        "id": "repeater",
+        "type": "repeater",
+        "label": "Repeater",
+        "attributes": [
+          {
+            "id": "code",
+            "type": "code",
+            "label": "Code One",
+            "language": "css",
+            "asset": true,
+            "default": "%selector% { background: black; }"
+          },
+          {
+            "id": "codeTwo",
+            "type": "code",
+            "label": "Code Two",
+            "language": "css",
+            "asset": true,
+            "default": "%selector% { border: 2px solid red; }"
+          }
+        ],
+        "min": 1
+      }
+    ]
+  }
+}
