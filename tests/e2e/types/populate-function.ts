@@ -1,5 +1,6 @@
-import { Page } from '@playwright/test';
+import { FrameLocator } from '@playwright/test';
 import {
+  click,
   count,
   saveAndReload,
   testType,
@@ -13,10 +14,10 @@ testType(
     return [
       {
         description: 'wrong function not returning array',
-        testFunction: async (page: Page) => {
-          await page.click('[data-type="blockstudio/type-populate-function"]');
+        testFunction: async (editor: FrameLocator) => {
+          await click(editor, '[data-type="blockstudio/type-populate-function"]');
           await count(
-            page,
+            editor,
             '.blockstudio-fields .components-panel__body >> nth=3 .components-checkbox-control',
             0
           );
@@ -24,34 +25,40 @@ testType(
       },
       {
         description: 'change values',
-        testFunction: async (page: Page) => {
-          await page.click(
+        testFunction: async (editor: FrameLocator) => {
+          await click(
+            editor,
             `.blockstudio-fields .components-panel__body:nth-of-type(1) .components-checkbox-control:nth-of-type(1) .components-checkbox-control__input`
           );
-          await page.click(
+          await click(
+            editor,
             `.blockstudio-fields .components-panel__body:nth-of-type(1) .components-checkbox-control:nth-of-type(2) .components-checkbox-control__input`
           );
-          await page.click(
+          await click(
+            editor,
             `.blockstudio-fields .components-panel__body:nth-of-type(2) .components-checkbox-control:nth-of-type(1) .components-checkbox-control__input`
           );
-          await page.click(
+          await click(
+            editor,
             `.blockstudio-fields .components-panel__body:nth-of-type(2) .components-checkbox-control:nth-of-type(2) .components-checkbox-control__input`
           );
-          await page.click(
+          await click(
+            editor,
             `.blockstudio-fields .components-panel__body:nth-of-type(3) .components-checkbox-control:nth-of-type(1) .components-checkbox-control__input`
           );
-          await page.click(
+          await click(
+            editor,
             `.blockstudio-fields .components-panel__body:nth-of-type(3) .components-checkbox-control:nth-of-type(2) .components-checkbox-control__input`
           );
-          await saveAndReload(page);
+          await saveAndReload(editor);
         },
       },
       {
         description: 'check values',
-        testFunction: async (page: Page) => {
-          await page.click('[data-type="blockstudio/type-populate-function"]');
+        testFunction: async (editor: FrameLocator) => {
+          await click(editor, '[data-type="blockstudio/type-populate-function"]');
           await text(
-            page,
+            editor,
             '"postTypes":[{"value":"post","label":"post"},{"value":"page","label":"page"}],"postTypesArguments":["post","page"],"valueLabel":["option-1","option-2"],"wrongFunction":false'
           );
         },

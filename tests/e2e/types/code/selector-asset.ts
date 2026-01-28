@@ -1,7 +1,11 @@
-import { Page } from '@playwright/test';
+import { FrameLocator } from '@playwright/test';
 import {
   checkStyle,
-  count,
+  click,
+  navigateToEditor,
+  navigateToFrontend,
+  press,
+  save,
   saveAndReload,
   testType,
 } from '../../utils/playwright-utils';
@@ -10,46 +14,46 @@ testType('code-selector-asset', false, () => {
   return [
     {
       description: 'check and change code',
-      testFunction: async (page: Page) => {
+      testFunction: async (editor: FrameLocator) => {
         await checkStyle(
-          page,
+          editor,
           '[data-type="blockstudio/type-code-selector-asset"]',
           'background',
           'rgb(0, 0, 0) none repeat scroll 0% 0% / auto padding-box border-box'
         );
-        await page.click('[data-type="blockstudio/type-code-selector-asset"]');
-        await page.click('.cm-line');
-        await page.keyboard.press('Meta+A');
-        await page.keyboard.press('Backspace');
-        await page.keyboard.type(
+        await click(editor, '[data-type="blockstudio/type-code-selector-asset"]');
+        await click(editor, '.cm-line');
+        await press(editor, 'Meta+A');
+        await press(editor, 'Backspace');
+        await editor.locator('body').pressSequentially(
           '%selector% { background: black; } %selector% h1 { color: yellow !important; }'
         );
         await checkStyle(
-          page,
+          editor,
           '[data-type="blockstudio/type-code-selector-asset"]',
           'background',
           'rgb(0, 0, 0) none repeat scroll 0% 0% / auto padding-box border-box'
         );
         await checkStyle(
-          page,
+          editor,
           '[data-type="blockstudio/type-code-selector-asset"] h1',
           'color',
           'rgb(255, 255, 0)'
         );
-        await saveAndReload(page);
+        await saveAndReload(editor);
       },
     },
     {
       description: 'check code',
-      testFunction: async (page: Page) => {
+      testFunction: async (editor: FrameLocator) => {
         await checkStyle(
-          page,
+          editor,
           '[data-type="blockstudio/type-code-selector-asset"]',
           'background',
           'rgb(0, 0, 0) none repeat scroll 0% 0% / auto padding-box border-box'
         );
         await checkStyle(
-          page,
+          editor,
           '[data-type="blockstudio/type-code-selector-asset"] h1',
           'color',
           'rgb(255, 255, 0)'
@@ -58,25 +62,24 @@ testType('code-selector-asset', false, () => {
     },
     {
       description: 'check frontend',
-      testFunction: async (page: Page) => {
-        await page.goto('https://fabrikat.local/blockstudio/native-single');
+      testFunction: async (editor: FrameLocator) => {
+        // Save and navigate to frontend
+        await save(editor);
+        await navigateToFrontend(editor);
         await checkStyle(
-          page,
+          editor,
           '.blockstudio-test__block',
           'background',
           'rgb(0, 0, 0) none repeat scroll 0% 0% / auto padding-box border-box'
         );
         await checkStyle(
-          page,
+          editor,
           '.blockstudio-test__block h1',
           'color',
           'rgb(255, 255, 0)'
         );
-        await page.goto(
-          `https://fabrikat.local/blockstudio/wp-admin/post.php?post=1483&action=edit`
-        );
-        await page.reload();
-        await count(page, '.editor-styles-wrapper', 1);
+        // Navigate back to editor via admin bar
+        await navigateToEditor(editor);
       },
     },
   ];

@@ -1,22 +1,22 @@
-import { expect, Page } from '@playwright/test';
-import { saveAndReload, testType } from '../utils/playwright-utils';
+import { FrameLocator } from '@playwright/test';
+import { click, expect, locator, saveAndReload, testType } from '../utils/playwright-utils';
 
 testType('toggle', '"toggle":true', () => {
   return [
     {
       description: 'change toggle',
-      testFunction: async (page: Page) => {
-        await page.click('[data-type="blockstudio/type-toggle"]');
-        await page.uncheck('.blockstudio-fields__field--toggle input');
-        await saveAndReload(page);
+      testFunction: async (editor: FrameLocator) => {
+        await click(editor, '[data-type="blockstudio/type-toggle"]');
+        await editor.locator('.blockstudio-fields__field--toggle input').uncheck();
+        await saveAndReload(editor);
       },
     },
     {
       description: 'check toggle',
-      testFunction: async (page: Page) => {
-        await page.click('[data-type="blockstudio/type-toggle"]');
+      testFunction: async (editor: FrameLocator) => {
+        await click(editor, '[data-type="blockstudio/type-toggle"]');
         await expect(
-          page.locator('.blockstudio-fields__field--toggle input')
+          locator(editor, '.blockstudio-fields__field--toggle input')
         ).not.toBeChecked();
       },
     },

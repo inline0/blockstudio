@@ -1,6 +1,8 @@
-import { Page } from '@playwright/test';
+import { FrameLocator } from '@playwright/test';
 import {
+  click,
   count,
+  fill,
   saveAndReload,
   testType,
   text,
@@ -13,66 +15,66 @@ testType(
     return [
       {
         description: 'only two tabs',
-        testFunction: async (page: Page) => {
-          await count(page, 'text=Tab 1', 1);
-          await count(page, 'text=Override tab', 1);
-          await count(page, 'text=Tab 2', 0);
+        testFunction: async (editor: FrameLocator) => {
+          await count(editor, 'text=Tab 1', 1);
+          await count(editor, 'text=Override tab', 1);
+          await count(editor, 'text=Tab 2', 0);
         },
       },
       {
         description: 'change first tab',
-        testFunction: async (page: Page) => {
-          await page
+        testFunction: async (editor: FrameLocator) => {
+          await editor
             .locator('.blockstudio-fields__field--text input')
             .nth(0)
             .fill('test');
-          await page
+          await editor
             .locator('.blockstudio-fields__field--text input')
             .nth(1)
             .fill('test');
           await text(
-            page,
+            editor,
             '"toggle":false,"toggle2":false,"text":"test","text2":"test","group_text":false,"group_text2":false'
           );
         },
       },
       {
         description: 'toggle',
-        testFunction: async (page: Page) => {
-          await page
+        testFunction: async (editor: FrameLocator) => {
+          await editor
             .locator('.blockstudio-fields__field--toggle input')
             .check();
           await text(
-            page,
+            editor,
             '"toggle":true,"toggle2":false,"text":"test","text2":"test","group_text":false,"group_text2":false'
           );
-          await count(page, 'text=Toggle 2', 1);
+          await count(editor, 'text=Toggle 2', 1);
         },
       },
       {
         description: 'change second tab',
-        testFunction: async (page: Page) => {
-          await page.click('text=Override tab');
-          await page
+        testFunction: async (editor: FrameLocator) => {
+          await click(editor, 'text=Override tab');
+          await editor
             .locator('.blockstudio-fields__field--text input')
             .nth(0)
             .fill('test');
-          await page
+          await editor
             .locator('.blockstudio-fields__field--text input')
             .nth(1)
             .fill('test');
           await text(
-            page,
+            editor,
             '"toggle":true,"toggle2":false,"text":"test","text2":"test","group_text":"test","group_text2":"test"'
           );
-          await saveAndReload(page);
+          await saveAndReload(editor);
         },
       },
       {
         description: 'check',
-        testFunction: async (page: Page) => {
+        testFunction: async (editor: FrameLocator) => {
           await text(
-            page,
+            editor,
             '"toggle":true,"toggle2":false,"text":"test","text2":"test","group_text":"test","group_text2":"test"'
           );
         },

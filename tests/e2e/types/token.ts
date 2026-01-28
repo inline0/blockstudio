@@ -1,6 +1,9 @@
-import { Page } from '@playwright/test';
+import { FrameLocator } from '@playwright/test';
 import {
+  click,
   count,
+  fill,
+  press,
   saveAndReload,
   testType,
   text,
@@ -10,34 +13,36 @@ testType('token', '"token":[{"value":"three","label":"Three"}]', () => {
   return [
     {
       description: 'change tokens',
-      testFunction: async (page: Page) => {
-        await page.click('[data-type="blockstudio/type-token"]');
-        await page.click(
+      testFunction: async (editor: FrameLocator) => {
+        await click(editor, '[data-type="blockstudio/type-token"]');
+        await click(
+          editor,
           '.blockstudio-fields__field--token .components-form-token-field__input-container'
         );
-        await page.press('body', 'Backspace');
-        await page.press('body', 'Backspace');
+        await press(editor, 'Backspace');
+        await press(editor, 'Backspace');
         for (const tokenValue of ['one', 'two']) {
-          await page.fill(
+          await fill(
+            editor,
             '.blockstudio-fields__field--token input',
             tokenValue
           );
-          await page.press('body', 'Enter');
+          await press(editor, 'Enter');
         }
-        await saveAndReload(page);
+        await saveAndReload(editor);
       },
     },
     {
       description: 'check tokens',
-      testFunction: async (page: Page) => {
-        await page.click('[data-type="blockstudio/type-token"]');
+      testFunction: async (editor: FrameLocator) => {
+        await click(editor, '[data-type="blockstudio/type-token"]');
         await count(
-          page,
+          editor,
           '.blockstudio-fields__field--token .components-form-token-field__token',
           2
         );
         await text(
-          page,
+          editor,
           '"token":[{"value":"one","label":"One"},{"value":"two","label":"Two"}]'
         );
       },

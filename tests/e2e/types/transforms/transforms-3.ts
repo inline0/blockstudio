@@ -1,45 +1,46 @@
-import { Page } from '@playwright/test';
-import { count, testType } from '../../utils/playwright-utils';
+import { FrameLocator } from '@playwright/test';
+import { click, count, press, testType } from '../../utils/playwright-utils';
 
 testType('transforms-3', '"text":19', () => {
   return [
     {
       description: 'check transforms',
-      testFunction: async (page: Page) => {
-        await page.click('[data-type="blockstudio/type-transforms-3"]');
-        await page.click(
+      testFunction: async (editor: FrameLocator) => {
+        await click(editor, '[data-type="blockstudio/type-transforms-3"]');
+        await click(
+          editor,
           '.block-editor-block-toolbar__block-controls .components-dropdown-menu__toggle'
         );
-        await count(page, 'text=Native Transforms 1', 1);
-        await count(page, 'text=Native Transforms 2', 1);
+        await count(editor, 'text=Native Transforms 1', 1);
+        await count(editor, 'text=Native Transforms 2', 1);
       },
     },
     {
       description: 'regex transform',
-      testFunction: async (page: Page) => {
-        await page.click('[data-type="blockstudio/type-transforms-3"]');
-        await page.keyboard.press('Enter');
-        await page.keyboard.press('-');
-        await page.keyboard.press('-');
-        await page.keyboard.press('-');
-        await page.keyboard.press('Enter');
-        await page
+      testFunction: async (editor: FrameLocator) => {
+        await click(editor, '[data-type="blockstudio/type-transforms-3"]');
+        await press(editor, 'Enter');
+        await press(editor, '-');
+        await press(editor, '-');
+        await press(editor, '-');
+        await press(editor, 'Enter');
+        await editor
           .locator('[data-type="blockstudio/type-transforms-3"]')
           .nth(1)
           .click();
-        await count(page, '[data-type="blockstudio/type-transforms-3"]', 2);
+        await count(editor, '[data-type="blockstudio/type-transforms-3"]', 2);
       },
     },
     {
       description: 'prefix transform',
-      testFunction: async (page: Page) => {
-        await page.click('[data-type="blockstudio/type-transforms-3"]');
-        await page.keyboard.press('Enter');
-        await page.keyboard.press('?');
-        await page.keyboard.press('?');
-        await page.keyboard.press('?');
-        await page.keyboard.press('Space');
-        await count(page, '[data-type="blockstudio/type-transforms-3"]', 3);
+      testFunction: async (editor: FrameLocator) => {
+        await click(editor, '[data-type="blockstudio/type-transforms-3"]');
+        await press(editor, 'Enter');
+        await press(editor, '?');
+        await press(editor, '?');
+        await press(editor, '?');
+        await press(editor, 'Space');
+        await count(editor, '[data-type="blockstudio/type-transforms-3"]', 3);
       },
     },
   ];

@@ -1,22 +1,22 @@
-import { Page, expect } from '@playwright/test';
-import { saveAndReload, testType } from '../utils/playwright-utils';
+import { FrameLocator } from '@playwright/test';
+import { click, expect, fill, locator, saveAndReload, testType } from '../utils/playwright-utils';
 
 testType('blade', '"text":"Default value"', () => {
   return [
     {
       description: 'change text',
-      testFunction: async (page: Page) => {
-        await page.click('[data-type="blockstudio/type-blade"]');
-        await page.fill('.blockstudio-fields__field--text input', '100');
-        await saveAndReload(page);
+      testFunction: async (editor: FrameLocator) => {
+        await click(editor, '[data-type="blockstudio/type-blade"]');
+        await fill(editor, '.blockstudio-fields__field--text input', '100');
+        await saveAndReload(editor);
       },
     },
     {
       description: 'check text',
-      testFunction: async (page: Page) => {
-        await page.click('[data-type="blockstudio/type-blade"]');
+      testFunction: async (editor: FrameLocator) => {
+        await click(editor, '[data-type="blockstudio/type-blade"]');
         await expect(
-          page.locator('.blockstudio-fields__field--text input').nth(0)
+          locator(editor, '.blockstudio-fields__field--text input').nth(0)
         ).toHaveValue('100');
       },
     },

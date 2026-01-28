@@ -276,8 +276,10 @@ add_action('rest_api_init', function () {
     ]);
 
     // ==========================================================================
-    // E2E TEST DATA SETUP - Create dummy data with specific IDs for E2E tests
-    // Test blocks expect: post ID 1388, user ID 644, term ID 6
+    // E2E TEST DATA SETUP - Create ALL dummy data needed for E2E tests
+    // Posts: 1386 (Native), 1388 (Native Render)
+    // Media: 8 (video), 1604 (image), 1605 (image)
+    // User: 644, Term: 6
     // ==========================================================================
     register_rest_route('blockstudio-test/v1', '/e2e/setup', [
         'methods' => 'POST',
@@ -286,30 +288,153 @@ add_action('rest_api_init', function () {
 
             $created = [
                 'posts' => [],
+                'media' => [],
                 'users' => [],
                 'terms' => [],
             ];
 
-            // Create post with specific ID 1388 (used in test blocks)
-            $post_id = 1388;
-            if (!get_post($post_id)) {
-                $wpdb->insert($wpdb->posts, [
-                    'ID' => $post_id,
-                    'post_author' => 1,
-                    'post_date' => current_time('mysql'),
-                    'post_date_gmt' => current_time('mysql', 1),
-                    'post_content' => 'Test post content for E2E tests.',
-                    'post_title' => 'Test Post 1388',
-                    'post_excerpt' => '',
-                    'post_status' => 'publish',
-                    'comment_status' => 'open',
-                    'ping_status' => 'open',
-                    'post_name' => 'test-post-1388',
-                    'post_modified' => current_time('mysql'),
-                    'post_modified_gmt' => current_time('mysql', 1),
-                    'post_type' => 'post',
-                ]);
-                $created['posts'][] = $post_id;
+            // Helper to create post with specific ID
+            $create_post_with_id = function ($id, $title, $name, $type = 'post') use ($wpdb, &$created) {
+                if (!get_post($id)) {
+                    $wpdb->insert($wpdb->posts, [
+                        'ID' => $id,
+                        'post_author' => 1,
+                        'post_date' => '2022-07-09 06:36:30',
+                        'post_date_gmt' => '2022-07-09 06:36:30',
+                        'post_content' => '',
+                        'post_title' => $title,
+                        'post_excerpt' => '',
+                        'post_status' => 'publish',
+                        'comment_status' => 'closed',
+                        'ping_status' => 'closed',
+                        'post_password' => '',
+                        'post_name' => $name,
+                        'post_modified' => '2023-06-17 13:57:45',
+                        'post_modified_gmt' => '2023-06-17 13:57:45',
+                        'post_type' => $type,
+                        'guid' => home_url("/?p=$id"),
+                    ]);
+                    $created['posts'][] = $id;
+                    return true;
+                }
+                return false;
+            };
+
+            // Helper to create dummy image file
+            $create_dummy_image = function ($filename, $width = 100, $height = 100) {
+                $upload_dir = wp_upload_dir();
+                $file_path = $upload_dir['path'] . '/' . $filename;
+
+                // Create directory if needed
+                if (!file_exists($upload_dir['path'])) {
+                    wp_mkdir_p($upload_dir['path']);
+                }
+
+                // Create a simple PNG image
+                $image = imagecreatetruecolor($width, $height);
+                $bg_color = imagecolorallocate($image, rand(0, 255), rand(0, 255), rand(0, 255));
+                imagefill($image, 0, 0, $bg_color);
+                imagepng($image, $file_path);
+                imagedestroy($image);
+
+                return [
+                    'path' => $file_path,
+                    'url' => $upload_dir['url'] . '/' . $filename,
+                    'subdir' => $upload_dir['subdir'],
+                ];
+            };
+
+            // Helper to create dummy video file (just a small binary file)
+            $create_dummy_video = function ($filename) {
+                $upload_dir = wp_upload_dir();
+                $file_path = $upload_dir['path'] . '/' . $filename;
+
+                if (!file_exists($upload_dir['path'])) {
+                    wp_mkdir_p($upload_dir['path']);
+                }
+
+                // Create minimal MP4 file header (not a real video, but enough for testing)
+                file_put_contents($file_path, str_repeat("\x00", 1000));
+
+                return [
+                    'path' => $file_path,
+                    'url' => $upload_dir['url'] . '/' . $filename,
+                    'subdir' => $upload_dir['subdir'],
+                ];
+            };
+
+            // Helper to create attachment with specific ID
+            $create_attachment_with_id = function ($id, $filename, $mime_type, $file_info) use ($wpdb, &$created) {
+                if (!get_post($id)) {
+                    $wpdb->insert($wpdb->posts, [
+                        'ID' => $id,
+                        'post_author' => 1,
+                        'post_date' => '2022-12-01 00:00:00',
+                        'post_date_gmt' => '2022-12-01 00:00:00',
+                        'post_content' => '',
+                        'post_title' => pathinfo($filename, PATHINFO_FILENAME),
+                        'post_excerpt' => '',
+                        'post_status' => 'inherit',
+                        'comment_status' => 'open',
+                        'ping_status' => 'closed',
+                        'post_password' => '',
+                        'post_name' => sanitize_title(pathinfo($filename, PATHINFO_FILENAME)),
+                        'post_modified' => '2022-12-01 00:00:00',
+                        'post_modified_gmt' => '2022-12-01 00:00:00',
+                        'post_type' => 'attachment',
+                        'post_mime_type' => $mime_type,
+                        'guid' => $file_info['url'],
+                    ]);
+
+                    // Set _wp_attached_file meta
+                    update_post_meta($id, '_wp_attached_file', ltrim($file_info['subdir'], '/') . '/' . $filename);
+
+                    // Set attachment metadata for images
+                    if (strpos($mime_type, 'image') !== false) {
+                        $metadata = [
+                            'width' => 100,
+                            'height' => 100,
+                            'file' => ltrim($file_info['subdir'], '/') . '/' . $filename,
+                            'sizes' => [
+                                'thumbnail' => [
+                                    'file' => $filename,
+                                    'width' => 100,
+                                    'height' => 100,
+                                    'mime-type' => $mime_type,
+                                ],
+                            ],
+                        ];
+                        update_post_meta($id, '_wp_attachment_metadata', $metadata);
+                    }
+
+                    $created['media'][] = $id;
+                    return true;
+                }
+                return false;
+            };
+
+            // ==========================================
+            // CREATE POSTS
+            // ==========================================
+
+            // Post 1386 - "Native" (used in text.ts for populate)
+            $create_post_with_id(1386, 'Native', 'native');
+
+            // Post 1388 - "Native Render" (used in select-fetch and other tests)
+            $create_post_with_id(1388, 'Native Render', 'native-render');
+
+            // Post 1483 - Used in text.ts for navigation
+            $create_post_with_id(1483, 'Test Navigation Post', 'test-navigation-post');
+
+            // Create "Reusable" post for text.ts populate tests
+            $reusable_id = wp_insert_post([
+                'post_title' => 'Reusable',
+                'post_name' => 'reusable',
+                'post_content' => '',
+                'post_status' => 'publish',
+            ]);
+            if ($reusable_id && !is_wp_error($reusable_id)) {
+                $created['posts'][] = $reusable_id;
             }
 
             // Create a few more posts for variety
@@ -324,7 +449,26 @@ add_action('rest_api_init', function () {
                 }
             }
 
-            // Create user with specific ID 644 (used in test blocks)
+            // ==========================================
+            // CREATE MEDIA ATTACHMENTS
+            // ==========================================
+
+            // Attachment 8 - gutenbergEdit.mp4 (video)
+            $video_file = $create_dummy_video('gutenbergEdit.mp4');
+            $create_attachment_with_id(8, 'gutenbergEdit.mp4', 'video/mp4', $video_file);
+
+            // Attachment 1604 - blockstudioEDDRetina.png (image)
+            $image1_file = $create_dummy_image('blockstudioEDDRetina.png', 200, 200);
+            $create_attachment_with_id(1604, 'blockstudioEDDRetina.png', 'image/png', $image1_file);
+
+            // Attachment 1605 - blockstudioSEO.png (image)
+            $image2_file = $create_dummy_image('blockstudioSEO.png', 200, 200);
+            $create_attachment_with_id(1605, 'blockstudioSEO.png', 'image/png', $image2_file);
+
+            // ==========================================
+            // CREATE USER
+            // ==========================================
+
             $user_id = 644;
             if (!get_user_by('id', $user_id)) {
                 $wpdb->insert($wpdb->users, [
@@ -339,7 +483,10 @@ add_action('rest_api_init', function () {
                 $created['users'][] = $user_id;
             }
 
-            // Create term with specific ID 6 (used in test blocks)
+            // ==========================================
+            // CREATE TERMS
+            // ==========================================
+
             $term_id = 6;
             $existing_term = $wpdb->get_var($wpdb->prepare(
                 "SELECT term_id FROM $wpdb->terms WHERE term_id = %d",
@@ -362,7 +509,7 @@ add_action('rest_api_init', function () {
                 $created['terms'][] = $term_id;
             }
 
-            // Create a few more categories and tags
+            // Create additional categories and tags
             $cat = wp_insert_term('Test Category', 'category');
             if (!is_wp_error($cat)) {
                 $created['terms'][] = $cat['term_id'];
@@ -379,7 +526,7 @@ add_action('rest_api_init', function () {
             return [
                 'success' => true,
                 'created' => $created,
-                'message' => 'E2E test data created with specific IDs (post: 1388, user: 644, term: 6)',
+                'message' => 'E2E test data created: posts (1386, 1388, 1483), media (8, 1604, 1605), user (644), term (6)',
             ];
         },
         'permission_callback' => '__return_true',

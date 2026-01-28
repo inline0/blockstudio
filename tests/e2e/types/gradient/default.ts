@@ -1,5 +1,5 @@
-import { Page } from '@playwright/test';
-import { count, saveAndReload, testType } from '../../utils/playwright-utils';
+import { FrameLocator } from '@playwright/test';
+import { click, count, saveAndReload, testType } from '../../utils/playwright-utils';
 
 testType(
   'gradient',
@@ -8,19 +8,20 @@ testType(
     return [
       {
         description: 'change gradient',
-        testFunction: async (page: Page) => {
-          await page.click(
+        testFunction: async (editor: FrameLocator) => {
+          await click(
+            editor,
             '.blockstudio-fields__field--gradient [aria-label="Gradient: Rastafarie"]'
           );
-          await saveAndReload(page);
+          await saveAndReload(editor);
         },
       },
       {
         description: 'check gradient',
-        testFunction: async (page: Page) => {
-          await page.click('[data-type="blockstudio/type-gradient"]');
+        testFunction: async (editor: FrameLocator) => {
+          await click(editor, '[data-type="blockstudio/type-gradient"]');
           await count(
-            page,
+            editor,
             '.blockstudio-fields__field--gradient [aria-label="Gradient: Rastafarie"]',
             1
           );

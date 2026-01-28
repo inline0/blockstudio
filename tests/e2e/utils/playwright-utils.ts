@@ -138,6 +138,67 @@ export const checkStyle = async (
 export const delay = (ms: number) =>
   new Promise((resolve) => setTimeout(resolve, ms));
 
+/**
+ * Navigate to the frontend (View Post) from the editor.
+ * Uses the "View Post" link in the post-publish panel or editor bar.
+ */
+export const navigateToFrontend = async (editor: Editor) => {
+  // Try to find View Post link (appears after saving)
+  const viewPostLink = editor.locator('a:has-text("View Post")').first();
+  const viewPostVisible = await viewPostLink.isVisible().catch(() => false);
+
+  if (viewPostVisible) {
+    await viewPostLink.click();
+  } else {
+    // Try the post-publish panel link
+    const panelLink = editor.locator('.post-publish-panel__postpublish-buttons a').first();
+    if (await panelLink.isVisible().catch(() => false)) {
+      await panelLink.click();
+    } else {
+      throw new Error('No View Post link found. Make sure the post is saved first.');
+    }
+  }
+
+  // Wait for frontend to load
+  await delay(2000);
+};
+
+/**
+ * Navigate back to the editor from frontend.
+ * Uses the "Edit Post" link in the WordPress admin bar if available,
+ * otherwise navigates via posts list.
+ */
+export const navigateToEditor = async (editor: Editor) => {
+  // Try admin bar first (visible on frontend when logged in and enabled)
+  const adminBarEdit = editor.locator('#wp-admin-bar-edit a');
+  const adminBarVisible = await adminBarEdit.isVisible().catch(() => false);
+
+  if (adminBarVisible) {
+    await adminBarEdit.click();
+  } else {
+    // Fallback: navigate to posts list and click the first post
+    // Retry logic for transient Playground errors (Bad Gateway, etc.)
+    for (let attempt = 0; attempt < 3; attempt++) {
+      await editor.locator('body').evaluate(() => {
+        (window as any).location.href = '/wp-admin/edit.php';
+      });
+
+      const loaded = await editor.locator('.wp-list-table')
+        .waitFor({ state: 'visible', timeout: 15000 })
+        .then(() => true)
+        .catch(() => false);
+
+      if (loaded) break;
+      await delay(2000);
+    }
+
+    await editor.locator('.wp-list-table .row-title').first().click();
+  }
+
+  // Wait for editor to load
+  await editor.locator(".is-root-container").waitFor({ state: "visible", timeout: 30000 });
+};
+
 export const save = async (editor: Editor) => {
   const publishButton = editor.locator('button:has-text("Publish")').first();
   const saveButton = editor.locator('button:has-text("Save draft")').first();
@@ -165,25 +226,44 @@ export const save = async (editor: Editor) => {
     await editor.locator(".editor-post-publish-button").click();
   }
 
+  // Wait for snackbar to appear indicating save completed
   await editor.locator(".components-snackbar").waitFor({ state: "visible", timeout: 10000 });
+
+  // Wait for Save button to be enabled (not disabled, not "Saving...")
+  // This ensures the save is fully complete before continuing
+  for (let attempt = 0; attempt < 20; attempt++) {
+    const saveBtn = editor.locator('.editor-header__settings button').first();
+    const isDisabled = await saveBtn.isDisabled().catch(() => true);
+    if (!isDisabled) {
+      break;
+    }
+    await delay(500);
+  }
 };
 
 export const saveAndReload = async (editor: Editor) => {
   await save(editor);
+  await delay(2000);
 
-  // Playground doesn't persist on page reload, so navigate away and back instead
-  await editor.locator("body").evaluate(() => {
-    window.location.href = "/wp-admin/edit.php";
-  });
+  // Navigate to posts list and back to simulate a "reload"
+  // Playground doesn't persist on actual page reload
+  // Retry logic for transient Playground errors
+  for (let attempt = 0; attempt < 3; attempt++) {
+    await editor.locator('body').evaluate(() => {
+      (window as any).location.href = '/wp-admin/edit.php';
+    });
 
-  await editor.locator(".wp-list-table").waitFor({ state: "visible", timeout: 30000 });
+    const loaded = await editor.locator('.wp-list-table')
+      .waitFor({ state: 'visible', timeout: 15000 })
+      .then(() => true)
+      .catch(() => false);
 
-  // First post is most recent (our test post)
-  await editor.locator(".wp-list-table .row-title").first().click();
+    if (loaded) break;
+    await delay(2000);
+  }
 
-  await editor
-    .locator(".is-root-container")
-    .waitFor({ state: "visible", timeout: 30000 });
+  await editor.locator('.wp-list-table .row-title').first().click();
+  await editor.locator(".is-root-container").waitFor({ state: "visible", timeout: 30000 });
 };
 
 export const removeBlocks = async (editor: Editor) => {
@@ -253,6 +333,15 @@ export const addBlock = async (editor: Editor, type: string) => {
   await delay(500);
 
   await editor.locator(`.editor-block-list-item-blockstudio-${type}`).click();
+  await delay(500);
+
+  // Close Block Inserter if still open (Playground sometimes leaves it open)
+  const inserterButton = editor.locator('button[aria-label="Block Inserter"]');
+  const isPressed = await inserterButton.getAttribute('aria-pressed').catch(() => null);
+  if (isPressed === 'true') {
+    await inserterButton.click();
+    await delay(300);
+  }
 };
 
 export const searchForBlock = async (
@@ -398,7 +487,18 @@ export const testType = (
               await editor
                 .locator(`.editor-block-list-item-blockstudio-type-${field}`)
                 .click();
-              await delay(2000);
+              await delay(1000);
+              // Close Block Inserter if still open
+              const inserterButton = editor.locator('button[aria-label="Block Inserter"]');
+              const isPressed = await inserterButton.getAttribute('aria-pressed');
+              if (isPressed === 'true') {
+                await inserterButton.click();
+              }
+              // Click on the inner block to select it
+              await editor.locator(`[data-type="blockstudio/type-${field}"]`).click();
+              await delay(500);
+              // Open sidebar for the inner block
+              await openSidebar(editor);
             });
           }
 

@@ -1,5 +1,6 @@
-import { Page } from '@playwright/test';
+import { FrameLocator } from '@playwright/test';
 import {
+  click,
   count,
   openBlockInserter,
   removeBlocks,
@@ -13,15 +14,15 @@ testType(
     return [
       {
         description: 'load multiple reusables',
-        testFunction: async (page: Page) => {
-          await removeBlocks(page);
-          await openBlockInserter(page);
-          await page.click('[role="tab"]:has-text("Patterns")');
-          await page.click('button:has-text("My patterns")');
-          await page.click('#core\\/block\\/2644');
-          await page.click('#core\\/block\\/2643');
-          await count(page, '[data-type="blockstudio/type-text"]', 2);
-          await count(page, '[data-type="blockstudio/type-textarea"]', 2);
+        testFunction: async (editor: FrameLocator) => {
+          await removeBlocks(editor);
+          await openBlockInserter(editor);
+          await click(editor, '[role="tab"]:has-text("Patterns")');
+          await click(editor, 'button:has-text("My patterns")');
+          await click(editor, '#core\\/block\\/2644');
+          await click(editor, '#core\\/block\\/2643');
+          await count(editor, '[data-type="blockstudio/type-text"]', 2);
+          await count(editor, '[data-type="blockstudio/type-textarea"]', 2);
         },
       },
     ];

@@ -62,6 +62,16 @@ export const test = base.extend<E2EFixtures>({
       const playgroundFrame = sharedPage.frameLocator("iframe#playground");
       wpFrame = playgroundFrame.frameLocator("iframe#wp");
 
+      // Call E2E setup endpoint to create all required test fixtures
+      // (posts, media, users, terms with specific IDs)
+      const setupResult = await wpFrame.locator("body").evaluate(async () => {
+        const res = await fetch("/wp-json/blockstudio-test/v1/e2e/setup", {
+          method: "POST",
+        });
+        return res.json();
+      });
+      console.log("E2E Setup:", setupResult.message || setupResult);
+
       await wpFrame
         .locator("body")
         .evaluate(() => (window.location.href = "/wp-admin/post-new.php"));

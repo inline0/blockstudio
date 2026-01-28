@@ -1,5 +1,5 @@
-import { Page } from '@playwright/test';
-import { countText, delay, testType } from '../../utils/playwright-utils';
+import { FrameLocator } from '@playwright/test';
+import { click, countText, delay, testType } from '../../utils/playwright-utils';
 
 testType(
   'repeater-nested',
@@ -9,7 +9,7 @@ testType(
     return Array.from({ length: 9 }).map((_, index) => {
       return {
         description: `add media ${index}`,
-        testFunction: async (page: Page) => {
+        testFunction: async (editor: FrameLocator) => {
           if (
             index === 0 ||
             index === 2 ||
@@ -18,18 +18,18 @@ testType(
             index === 8
           ) {
             await delay(1000);
-            await page.locator(`text=Open Media Library`).nth(index).click();
+            await editor.locator(`text=Open Media Library`).nth(index).click();
           }
           await delay(1000);
-          await page.locator(`text=Open Media Library`).nth(index).click();
-          await page.locator('#menu-item-browse:visible').click();
-          await page.keyboard.down('Meta');
-          await page.click('li[data-id="1604"]:visible');
-          await page.click('li[data-id="1605"]:visible');
-          await page.keyboard.up('Meta');
+          await editor.locator(`text=Open Media Library`).nth(index).click();
+          await click(editor, '#menu-item-browse:visible');
+          await editor.locator('body').press('Meta');
+          await click(editor, 'li[data-id="1604"]:visible');
+          await click(editor, 'li[data-id="1605"]:visible');
+          await editor.locator('body').press('Meta');
           await delay(1000);
-          await page.click('.media-frame-toolbar button:visible');
-          await countText(page, '"ID":1605', index + 1);
+          await click(editor, '.media-frame-toolbar button:visible');
+          await countText(editor, '"ID":1605', index + 1);
         },
       };
     });

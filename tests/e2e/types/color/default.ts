@@ -1,23 +1,24 @@
-import { Page } from '@playwright/test';
-import { count, saveAndReload, testType } from '../../utils/playwright-utils';
+import { FrameLocator } from '@playwright/test';
+import { click, count, saveAndReload, testType } from '../../utils/playwright-utils';
 
 testType('color', '"color":{"name":"red","value":"#f00","slug":"red"}', () => {
   return [
     {
       description: 'change color',
-      testFunction: async (page: Page) => {
-        await page.click(
+      testFunction: async (editor: FrameLocator) => {
+        await click(
+          editor,
           '.blockstudio-fields__field--color [aria-label="blue"]'
         );
-        await saveAndReload(page);
+        await saveAndReload(editor);
       },
     },
     {
       description: 'check color',
-      testFunction: async (page: Page) => {
-        await page.click('[data-type="blockstudio/type-color"]');
+      testFunction: async (editor: FrameLocator) => {
+        await click(editor, '[data-type="blockstudio/type-color"]');
         await count(
-          page,
+          editor,
           '.blockstudio-fields__field--color [aria-label="blue"]',
           1
         );
