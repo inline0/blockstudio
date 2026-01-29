@@ -1,4 +1,4 @@
-import { FrameLocator } from '@playwright/test';
+import { Page } from '@playwright/test';
 import {
   click,
   count,
@@ -14,7 +14,7 @@ testType('unit', '"unit":"1rem"', () => {
   return [
     {
       description: 'has rem from default',
-      testFunction: async (editor: FrameLocator) => {
+      testFunction: async (editor: Page) => {
         await click(editor, '[data-type="blockstudio/type-unit"]');
         await count(editor, '.blockstudio-fields__field--unit option', 4);
         await count(editor, '.blockstudio-fields__field--unit [value="rem"]', 1);
@@ -22,7 +22,7 @@ testType('unit', '"unit":"1rem"', () => {
     },
     {
       description: 'change unit and data',
-      testFunction: async (editor: FrameLocator) => {
+      testFunction: async (editor: Page) => {
         await editor
           .locator('.blockstudio-fields__field--unit select')
           .selectOption({ index: 1 });
@@ -33,7 +33,7 @@ testType('unit', '"unit":"1rem"', () => {
     },
     {
       description: 'check unit and data',
-      testFunction: async (editor: FrameLocator) => {
+      testFunction: async (editor: Page) => {
         await click(editor, '[data-type="blockstudio/type-unit"]');
         await expect(
           locator(editor, '.blockstudio-fields__field--unit input')

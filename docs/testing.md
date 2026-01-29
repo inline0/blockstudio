@@ -2,24 +2,19 @@
 
 ## Philosophy
 
-**WordPress Playground Only.** All tests run in a real WordPress environment using WordPress Playground (WebAssembly). This provides true integration testing without mocking.
+**Hybrid Approach:** Unit tests use WordPress Playground (fast, in-memory). E2E tests use wp-env (Docker, real MySQL).
 
-### Why WordPress Playground?
-
-| Aspect | wp-env (Docker) | WordPress Playground |
-|--------|-----------------|---------------------|
-| **CI Setup** | Docker-in-Docker complexity | Just Node.js |
-| **Startup** | ~30 seconds | ~2-3 seconds |
-| **Dependencies** | Docker daemon required | None (WebAssembly) |
-| **Database** | MySQL container | SQLite in-memory |
-| **Isolation** | Container-based | Complete (browser sandbox) |
+| Test Type | Environment | Why |
+|-----------|-------------|-----|
+| **Unit Tests** | WordPress Playground | Fast startup, snapshot testing |
+| **E2E Tests** | wp-env (Docker) | Stable UI testing, real database |
 
 ## Current Status
 
 | Test Suite | Status | Focus |
 |------------|--------|-------|
 | **Unit Tests** | **All passing** (14/14) | Build class snapshot verification |
-| **E2E Tests** | Work in progress | Field type interactions |
+| **E2E Tests** | 35/49 passing (71%) | Field type interactions |
 
 ### Unit Tests
 
@@ -33,7 +28,7 @@ Unit tests verify that the Build class produces correct output by comparing agai
 
 ### E2E Tests
 
-E2E tests interact with the Gutenberg editor to test field types (text, number, select, repeater, etc.). They were migrated from the original test suite.
+E2E tests interact with the Gutenberg editor to test field types (text, number, select, repeater, etc.). They use wp-env for stability.
 
 **Goal: 100% passing for field type tests in `tests/e2e/types/`.**
 
@@ -43,23 +38,14 @@ Current E2E tests focus on:
 - Saving and verifying persistence
 - Testing default values
 
-The E2E tests are not all passing yet - this is active work.
+See `docs/e2e-testing-prd.md` for detailed progress tracking.
 
 ## Test Types
 
-| Type | Focus | Location |
-|------|-------|----------|
-| **Unit Tests** | Build class snapshots | `tests/unit/` |
-| **E2E Tests** | Field type UI interactions | `tests/e2e/types/` |
-
-Both use WordPress Playground with Playwright.
-
-## Ports
-
-| Environment | v6 Reference | v7 Primary |
-|-------------|--------------|------------|
-| **Unit Tests** | 9400 | 9401 |
-| **E2E Tests** | 9410 | 9411 |
+| Type | Focus | Location | Environment |
+|------|-------|----------|-------------|
+| **Unit Tests** | Build class snapshots | `tests/unit/` | Playground (port 9401) |
+| **E2E Tests** | Field type UI interactions | `tests/e2e/types/` | wp-env (port 8888) |
 
 ## Snapshot Testing
 
@@ -123,7 +109,7 @@ The capture scripts use `PLAYGROUND_PORT` environment variable (defaults to 9401
 
 ```
 tests/
-├── wordpress-playground/     # Shared infrastructure
+├── wordpress-playground/     # Playground infrastructure (unit tests)
 │   ├── fixtures.ts           # Playwright fixtures with WP frame
 │   ├── global-setup.ts       # One-time Playground initialization
 │   ├── playground-init.ts    # Express server factory
@@ -136,18 +122,19 @@ tests/
 │   ├── capture-snapshot.ts       # Snapshot capture script
 │   └── capture-compiled-assets.ts
 ├── e2e/
-│   ├── playground-server.ts      # v6 E2E server (port 9410)
-│   ├── playground-server-v7.ts   # v7 E2E server (port 9411)
 │   ├── theme/                    # Custom theme with Timber
-│   └── utils/                    # Test helpers
+│   ├── types/                    # E2E test files (49 tests)
+│   └── utils/                    # Test helpers (playwright-utils.ts)
+├── plugins/
+│   └── test-helper/              # E2E setup plugin
+│       └── test-helper.php       # REST endpoints, test data setup
 ├── blocks/                       # 100+ test blocks
 │   ├── components/               # InnerBlocks, RichText, etc.
 │   ├── functions/                # assets, context, events
 │   ├── overrides/                # group, tabs, repeater
 │   ├── single/                   # native blocks, elements
 │   └── types/                    # All field types
-├── snapshots/                    # Snapshot data
-└── test-helper.php               # PHP plugin for REST endpoints
+└── snapshots/                    # Snapshot data
 ```
 
 ## Test Helper Plugin
@@ -182,14 +169,14 @@ register_rest_route('blockstudio-test/v1', '/compiled-assets', [...]);
 
 ## Running Tests
 
-```bash
-# v7 Primary Tests
-npm run playground:v7    # Start server
-npm run test:v7          # Run tests (14 tests)
+### Unit Tests (Playground)
 
-# v6 Reference Tests (baseline)
-npm run playground       # Start server
-npm test                 # Run tests
+```bash
+# Start v7 Playground server
+npm run playground:v7
+
+# Run unit tests (14 tests)
+npm run test:v7
 
 # Headed mode (debugging)
 npm run test:headed
@@ -198,39 +185,67 @@ npm run test:headed
 npm run test:v7 -- tests/unit/build-snapshot.test.ts
 ```
 
-## E2E Testing
+### E2E Tests (wp-env)
 
-E2E tests interact with the WordPress block editor through Playwright.
+```bash
+# Start wp-env (first time or after reset)
+npm run wp-env:start
 
-### Key Fixtures
+# Run all E2E tests
+npm run test:e2e
 
-```typescript
-type E2EFixtures = {
-  editor: FrameLocator;              // WordPress iframe
-  resetBlocks: () => Promise<void>;  // Clear all blocks
-};
+# Run single test file
+npm run test:e2e -- tests/e2e/types/text.ts --retries=0
+
+# Headed mode (watch browser)
+npm run test:e2e:headed -- tests/e2e/types/text.ts --retries=0
+
+# Reset wp-env completely (wipe DB + media + reset data)
+npm run wp-env:reset
+
+# Stop wp-env
+npm run wp-env:stop
 ```
 
-### Important Playground Behaviors
+## E2E Testing
 
-1. **No Persistence on Reload** - Playground uses in-memory SQLite. Use `saveAndReload()` instead of page reload.
+E2E tests interact with the WordPress block editor through Playwright, running against wp-env (Docker).
 
-2. **Nested Iframe Structure** - WordPress runs inside `iframe#playground > iframe#wp`. Use `FrameLocator`, not `Page`.
+### Worker-Scoped Fixtures
 
-3. **Button State Sync** - After `resetBlocks()`, UI buttons may show incorrect state. Helper functions include retry logic.
+Tests use worker-scoped fixtures for efficiency - the browser stays logged in across all tests in a worker:
 
-4. **Two-Step Publish** - WordPress shows pre-publish panel. The `save()` helper handles both clicks.
+```typescript
+type WorkerFixtures = {
+  workerPage: Page;  // Shared across all tests
+};
+
+type TestFixtures = {
+  editor: Page;  // Per-test, uses workerPage
+};
+```
 
 ### Test Helper Functions
 
 | Function | Purpose |
 |----------|---------|
 | `addBlock(editor, type)` | Opens inserter, searches, inserts block |
-| `openBlockInserter(editor)` | Opens inserter with retry logic |
+| `openBlockInserter(editor)` | Opens inserter |
 | `openSidebar(editor)` | Opens block inspector sidebar |
 | `save(editor)` | Publishes/updates, handles pre-publish |
-| `saveAndReload(editor)` | Saves, navigates away and back |
-| `resetBlocks()` | Clears all blocks via data store |
+| `saveAndReload(editor)` | Saves and reloads page |
+| `removeBlocks(editor)` | Clears all blocks via data store |
+| `testType(field, default, tests)` | Creates standard field type test suite |
+
+### Test Data Setup
+
+The test-helper plugin provides a REST endpoint that creates test data:
+
+```bash
+curl -X POST http://localhost:8888/wp-json/blockstudio-test/v1/e2e/setup
+```
+
+This creates posts, media, users, and terms needed by E2E tests. It's called automatically when the worker initializes.
 
 ## Compiled Assets Testing
 

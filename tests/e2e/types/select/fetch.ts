@@ -1,11 +1,11 @@
-import { FrameLocator } from '@playwright/test';
+import { Page } from '@playwright/test';
 import { click, count, delay, fill, press, testType, text } from '../../utils/playwright-utils';
 
 testType('select-fetch', '"select":false', () => {
   return [
     {
       description: 'add test entry',
-      testFunction: async (editor: FrameLocator) => {
+      testFunction: async (editor: Page) => {
         await click(editor, '[data-type="blockstudio/type-select-fetch"]');
         await fill(
           editor,
@@ -21,7 +21,7 @@ testType('select-fetch', '"select":false', () => {
     },
     {
       description: 'add second entry',
-      testFunction: async (editor: FrameLocator) => {
+      testFunction: async (editor: Page) => {
         await click(editor, '[data-type="blockstudio/type-select-fetch"]');
         await fill(
           editor,
@@ -38,7 +38,7 @@ testType('select-fetch', '"select":false', () => {
     },
     {
       description: 'reorder',
-      testFunction: async (editor: FrameLocator) => {
+      testFunction: async (editor: Page) => {
         await editor.locator('[data-rfd-draggable-id]').nth(0).focus();
         await press(editor, 'ArrowDown');
         await text(

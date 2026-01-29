@@ -1,11 +1,11 @@
-import { FrameLocator } from '@playwright/test';
+import { Page } from '@playwright/test';
 import { click, count, testType } from '../../utils/playwright-utils';
 
 testType('radio-innerblocks', '"layout":false', () => {
   return [
     {
       description: 'layout 1',
-      testFunction: async (editor: FrameLocator) => {
+      testFunction: async (editor: Page) => {
         await click(editor, '[data-type="blockstudio/type-radio-innerblocks"]');
         await editor
           .locator('.blockstudio-fields .components-radio-control__input')
@@ -19,7 +19,7 @@ testType('radio-innerblocks', '"layout":false', () => {
     },
     {
       description: 'layout 2',
-      testFunction: async (editor: FrameLocator) => {
+      testFunction: async (editor: Page) => {
         await click(editor, '[data-type="blockstudio/type-radio-innerblocks"]');
         await editor
           .locator('.blockstudio-fields .components-radio-control__input')

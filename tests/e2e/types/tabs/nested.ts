@@ -1,4 +1,4 @@
-import { FrameLocator } from '@playwright/test';
+import { Page } from '@playwright/test';
 import { count, testType } from '../../utils/playwright-utils';
 
 testType(
@@ -8,7 +8,7 @@ testType(
     return [
       {
         description: 'nested tabs exist',
-        testFunction: async (editor: FrameLocator) => {
+        testFunction: async (editor: Page) => {
           await count(editor, 'text=Tab 1', 2);
           await count(editor, 'text=Tab 2', 2);
         },

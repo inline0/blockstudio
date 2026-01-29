@@ -1,4 +1,4 @@
-import { FrameLocator } from '@playwright/test';
+import { Page } from '@playwright/test';
 import {
   click,
   count,
@@ -16,13 +16,13 @@ testType(
     return [
       {
         description: 'two svg',
-        testFunction: async (editor: FrameLocator) => {
+        testFunction: async (editor: Page) => {
           await count(editor, '#blockstudio-type-icon svg', 2);
         },
       },
       {
         description: 'change icon',
-        testFunction: async (editor: FrameLocator) => {
+        testFunction: async (editor: Page) => {
           await click(editor, '[data-type="blockstudio/type-icon"]');
           await editor
             .locator(
@@ -41,14 +41,14 @@ testType(
       },
       {
         description: 'check icon',
-        testFunction: async (editor: FrameLocator) => {
+        testFunction: async (editor: Page) => {
           await click(editor, '[data-type="blockstudio/type-icon"]');
           await text(editor, 'accessibility-16');
         },
       },
       {
         description: 'check repeater',
-        testFunction: async (editor: FrameLocator) => {
+        testFunction: async (editor: Page) => {
           await click(editor, 'text=Add an Icon');
           await click(editor, 'text=Add an Icon');
           await editor

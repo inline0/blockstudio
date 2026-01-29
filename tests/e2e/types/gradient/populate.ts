@@ -1,18 +1,18 @@
-import { FrameLocator } from '@playwright/test';
+import { Page } from '@playwright/test';
 import { click, count, saveAndReload, testType } from '../../utils/playwright-utils';
 
 testType('gradient-populate', false, () => {
   return [
     {
       description: 'check gradient populate',
-      testFunction: async (editor: FrameLocator) => {
+      testFunction: async (editor: Page) => {
         await click(editor, '[data-type="blockstudio/type-gradient-populate"]');
         await count(editor, '.components-circular-option-picker__option', 3);
       },
     },
     {
       description: 'change gradient',
-      testFunction: async (editor: FrameLocator) => {
+      testFunction: async (editor: Page) => {
         await click(
           editor,
           '.blockstudio-fields__field--gradient [aria-label="Gradient: Rastafarie"]'
@@ -22,7 +22,7 @@ testType('gradient-populate', false, () => {
     },
     {
       description: 'check gradient',
-      testFunction: async (editor: FrameLocator) => {
+      testFunction: async (editor: Page) => {
         await click(editor, '[data-type="blockstudio/type-gradient-populate"]');
         await count(
           editor,

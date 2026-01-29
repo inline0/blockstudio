@@ -1,4 +1,4 @@
-import { FrameLocator } from '@playwright/test';
+import { Page } from '@playwright/test';
 import { click, count, press, testType } from '../utils/playwright-utils';
 
 testType('conditions', false, () => {
@@ -11,7 +11,7 @@ testType('conditions', false, () => {
           testCases: [
             {
               description: 'text on toggle',
-              testFunction: async (editor: FrameLocator) => {
+              testFunction: async (editor: Page) => {
                 if (item === 'repeater') {
                   await click(editor, `text=Add row`);
                 }
@@ -31,7 +31,7 @@ testType('conditions', false, () => {
             },
             {
               description: 'text on includes value',
-              testFunction: async (editor: FrameLocator) => {
+              testFunction: async (editor: Page) => {
                 await click(
                   editor,
                   `.blockstudio-fields__field--${item} [aria-label="Text on toggle"] + div input`
@@ -49,7 +49,7 @@ testType('conditions', false, () => {
             },
             {
               description: 'number on empty',
-              testFunction: async (editor: FrameLocator) => {
+              testFunction: async (editor: Page) => {
                 await click(
                   editor,
                   `.blockstudio-fields__field--${item} [aria-label="Text on includes value"] + div input`
@@ -67,7 +67,7 @@ testType('conditions', false, () => {
             },
             {
               description: 'number on smaller than',
-              testFunction: async (editor: FrameLocator) => {
+              testFunction: async (editor: Page) => {
                 await click(
                   editor,
                   `.blockstudio-fields__field--${item} [aria-label="Number on empty"] + div input`
@@ -92,7 +92,7 @@ testType('conditions', false, () => {
             },
             {
               description: 'number on smaller than or even',
-              testFunction: async (editor: FrameLocator) => {
+              testFunction: async (editor: Page) => {
                 await click(
                   editor,
                   `.blockstudio-fields__field--${item} [aria-label="Number on smaller than"] + div input`
@@ -118,7 +118,7 @@ testType('conditions', false, () => {
             },
             {
               description: 'number on bigger than',
-              testFunction: async (editor: FrameLocator) => {
+              testFunction: async (editor: Page) => {
                 await click(
                   editor,
                   `.blockstudio-fields__field--${item} [aria-label="Number on smaller than or even"] + div input`
@@ -143,7 +143,7 @@ testType('conditions', false, () => {
             },
             {
               description: 'number on bigger than or even',
-              testFunction: async (editor: FrameLocator) => {
+              testFunction: async (editor: Page) => {
                 await click(
                   editor,
                   `.blockstudio-fields__field--${item} [aria-label="Number on bigger than"] + div input`
@@ -167,7 +167,7 @@ testType('conditions', false, () => {
             },
             {
               description: 'select on bigger than or even',
-              testFunction: async (editor: FrameLocator) => {
+              testFunction: async (editor: Page) => {
                 await click(
                   editor,
                   `.blockstudio-fields__field--${item} [aria-label="Number on bigger than or even"] + div input`
@@ -191,7 +191,7 @@ testType('conditions', false, () => {
             },
             {
               description: 'final toggle',
-              testFunction: async (editor: FrameLocator) => {
+              testFunction: async (editor: Page) => {
                 await editor
                   .locator(
                     `.blockstudio-fields__field--${item} .blockstudio-fields__field--select select`
@@ -215,56 +215,56 @@ testType('conditions', false, () => {
       testCases: [
         {
           description: 'text on toggle',
-          testFunction: async (editor: FrameLocator) => {
+          testFunction: async (editor: Page) => {
             await click(editor, `text=Add main`);
             await count(editor, `text=Text on toggle`, 3);
           },
         },
         {
           description: 'text on includes value',
-          testFunction: async (editor: FrameLocator) => {
+          testFunction: async (editor: Page) => {
             await count(editor, `text=Text on includes value`, 3);
           },
         },
         {
           description: 'number on empty',
-          testFunction: async (editor: FrameLocator) => {
+          testFunction: async (editor: Page) => {
             await count(editor, `text=Number on empty`, 3);
           },
         },
         {
           description: 'number on smaller than',
-          testFunction: async (editor: FrameLocator) => {
+          testFunction: async (editor: Page) => {
             await count(editor, `text=Number on smaller than`, 6);
           },
         },
         {
           description: 'number on smaller than or even',
-          testFunction: async (editor: FrameLocator) => {
+          testFunction: async (editor: Page) => {
             await count(editor, `text=Number on smaller than or even`, 3);
           },
         },
         {
           description: 'number on bigger than',
-          testFunction: async (editor: FrameLocator) => {
+          testFunction: async (editor: Page) => {
             await count(editor, `text=Number on bigger than`, 6);
           },
         },
         {
           description: 'number on bigger than or even',
-          testFunction: async (editor: FrameLocator) => {
+          testFunction: async (editor: Page) => {
             await count(editor, `text=Number on bigger than or even`, 3);
           },
         },
         {
           description: 'select on bigger than or even',
-          testFunction: async (editor: FrameLocator) => {
+          testFunction: async (editor: Page) => {
             await count(editor, `text=Select on bigger than or even`, 3);
           },
         },
         {
           description: 'final toggle',
-          testFunction: async (editor: FrameLocator) => {
+          testFunction: async (editor: Page) => {
             await count(editor, `text=Final toggle`, 3);
           },
         },

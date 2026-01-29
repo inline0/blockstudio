@@ -5,20 +5,26 @@
   "scripts": {
     "playground": "tsx tests/unit/playground-server.ts",
     "playground:v7": "tsx tests/unit/playground-server-v7.ts",
-    "playground:e2e": "tsx tests/e2e/playground-server.ts",
-    "playground:e2e:v7": "tsx tests/e2e/playground-server-v7.ts",
     "test": "playwright test",
     "test:v7": "PLAYGROUND_PORT=9401 playwright test",
-    "test:e2e": "PLAYGROUND_PORT=9410 playwright test --config=playwright.e2e.config.ts",
-    "test:e2e:v7": "PLAYGROUND_PORT=9411 playwright test --config=playwright.e2e.config.ts",
-    "test:e2e:headed": "PLAYGROUND_PORT=9410 playwright test --config=playwright.e2e.config.ts --headed",
     "test:headed": "playwright test --headed",
-    "test:debug": "playwright test --debug"
+    "test:debug": "playwright test --debug",
+    "wp-env": "wp-env",
+    "wp-env:start": "wp-env start",
+    "wp-env:stop": "wp-env stop",
+    "wp-env:clean": "wp-env clean all",
+    "wp-env:logs": "wp-env logs",
+    "wp-env:reset": "wp-env stop; wp-env clean all; wp-env start && curl -s -X POST http://localhost:8888/wp-json/blockstudio-test/v1/e2e/setup",
+    "wp-env:setup": "curl -s -X POST http://localhost:8888/wp-json/blockstudio-test/v1/e2e/setup",
+    "test:e2e": "playwright test --config=playwright.wp-env.config.ts",
+    "test:e2e:headed": "playwright test --config=playwright.wp-env.config.ts --headed",
+    "test:e2e:debug": "playwright test --config=playwright.wp-env.config.ts --debug"
   },
   "devDependencies": {
     "@playwright/test": "^1.40.0",
     "@types/express": "^4.17.21",
     "@types/node": "^20.10.0",
+    "@wordpress/env": "^10.39.0",
     "express": "^4.18.2",
     "tsx": "^4.7.0",
     "typescript": "^5.3.0"

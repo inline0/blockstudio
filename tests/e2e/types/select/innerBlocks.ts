@@ -1,11 +1,11 @@
-import { FrameLocator } from '@playwright/test';
+import { Page } from '@playwright/test';
 import { click, count, testType, text } from '../../utils/playwright-utils';
 
 testType('select-innerblocks', '"layout":false', () => {
   return [
     {
       description: 'layout 1',
-      testFunction: async (editor: FrameLocator) => {
+      testFunction: async (editor: Page) => {
         await click(editor, 'text=ID: blockstudio-type-select-innerblocks');
         await editor
           .locator('.blockstudio-fields .components-select-control__input')
@@ -28,7 +28,7 @@ testType('select-innerblocks', '"layout":false', () => {
     },
     {
       description: 'layout 2',
-      testFunction: async (editor: FrameLocator) => {
+      testFunction: async (editor: Page) => {
         await click(editor, 'text=ID: blockstudio-type-select-innerblocks');
         await editor
           .locator('.blockstudio-fields .components-select-control__input')

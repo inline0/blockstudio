@@ -1,11 +1,11 @@
-import { FrameLocator } from '@playwright/test';
+import { Page } from '@playwright/test';
 import { click, expect, locator, saveAndReload, testType } from '../utils/playwright-utils';
 
 testType('date', '"date":"2023-03-14T11:14:03"', () => {
   return [
     {
       description: 'change date',
-      testFunction: async (editor: FrameLocator) => {
+      testFunction: async (editor: Page) => {
         await click(editor, '[data-type="blockstudio/type-date"]');
         await click(
           editor,
@@ -16,7 +16,7 @@ testType('date', '"date":"2023-03-14T11:14:03"', () => {
     },
     {
       description: 'check date',
-      testFunction: async (editor: FrameLocator) => {
+      testFunction: async (editor: Page) => {
         await click(editor, '[data-type="blockstudio/type-date"]');
         await expect(
           locator(

@@ -1,4 +1,4 @@
-import { FrameLocator } from '@playwright/test';
+import { Page } from '@playwright/test';
 import { count, testType, text } from '../utils/playwright-utils';
 
 testType(
@@ -8,7 +8,7 @@ testType(
     return [
       {
         description: 'without id',
-        testFunction: async (editor: FrameLocator) => {
+        testFunction: async (editor: Page) => {
           await editor
             .locator(
               '.blockstudio-fields__field.blockstudio-fields__field--group input[type="text"]'
@@ -23,7 +23,7 @@ testType(
       },
       {
         description: 'condition without id',
-        testFunction: async (editor: FrameLocator) => {
+        testFunction: async (editor: Page) => {
           await editor
             .locator(
               '.blockstudio-fields__field.blockstudio-fields__field--group input[type="checkbox"]'
@@ -39,7 +39,7 @@ testType(
       },
       {
         description: 'with id',
-        testFunction: async (editor: FrameLocator) => {
+        testFunction: async (editor: Page) => {
           await editor
             .locator(
               '.blockstudio-fields__field.blockstudio-fields__field--group input[type="text"]'
@@ -54,7 +54,7 @@ testType(
       },
       {
         description: 'condition with id',
-        testFunction: async (editor: FrameLocator) => {
+        testFunction: async (editor: Page) => {
           await editor
             .locator(
               '.blockstudio-fields__field.blockstudio-fields__field--group input[type="checkbox"]'
@@ -70,7 +70,7 @@ testType(
       },
       {
         description: 'added element from override',
-        testFunction: async (editor: FrameLocator) => {
+        testFunction: async (editor: Page) => {
           await editor
             .locator(
               '.blockstudio-fields__field.blockstudio-fields__field--group input[type="text"]'
@@ -85,7 +85,7 @@ testType(
       },
       {
         description: 'with style',
-        testFunction: async (editor: FrameLocator) => {
+        testFunction: async (editor: Page) => {
           await text(
             editor,
             'style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;"'
@@ -94,7 +94,7 @@ testType(
       },
       {
         description: 'with disabled toggles',
-        testFunction: async (editor: FrameLocator) => {
+        testFunction: async (editor: Page) => {
           await count(
             editor,
             '.blockstudio-fields__field--group >> nth=2 .blockstudio-fields__field-toggle',

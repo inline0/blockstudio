@@ -1,4 +1,4 @@
-import { FrameLocator } from '@playwright/test';
+import { Page } from '@playwright/test';
 import {
   click,
   count,
@@ -14,7 +14,7 @@ testType(
     return [
       {
         description: 'load multiple reusables',
-        testFunction: async (editor: FrameLocator) => {
+        testFunction: async (editor: Page) => {
           await removeBlocks(editor);
           await openBlockInserter(editor);
           await click(editor, '[role="tab"]:has-text("Patterns")');

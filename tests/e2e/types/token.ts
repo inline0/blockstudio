@@ -1,4 +1,4 @@
-import { FrameLocator } from '@playwright/test';
+import { Page } from '@playwright/test';
 import {
   click,
   count,
@@ -13,7 +13,7 @@ testType('token', '"token":[{"value":"three","label":"Three"}]', () => {
   return [
     {
       description: 'change tokens',
-      testFunction: async (editor: FrameLocator) => {
+      testFunction: async (editor: Page) => {
         await click(editor, '[data-type="blockstudio/type-token"]');
         await click(
           editor,
@@ -34,7 +34,7 @@ testType('token', '"token":[{"value":"three","label":"Three"}]', () => {
     },
     {
       description: 'check tokens',
-      testFunction: async (editor: FrameLocator) => {
+      testFunction: async (editor: Page) => {
         await click(editor, '[data-type="blockstudio/type-token"]');
         await count(
           editor,

@@ -1,10 +1,10 @@
-import { FrameLocator } from '@playwright/test';
+import { Page } from '@playwright/test';
 import { click, count, press, testType } from '../../utils/playwright-utils';
 
 testType('wysiwyg-switch', 'Default text', () => [
   {
     description: 'type and switch',
-    testFunction: async (editor: FrameLocator) => {
+    testFunction: async (editor: Page) => {
       await click(editor, 'text=Switch to Code');
       await editor.locator('.cm-line').first().click();
       await press(editor, 'Meta+A');

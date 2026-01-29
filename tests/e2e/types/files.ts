@@ -1,11 +1,11 @@
-import { FrameLocator } from '@playwright/test';
+import { Page } from '@playwright/test';
 import { click, countText, delay, testType, text } from '../utils/playwright-utils';
 
 testType('files', false, () => {
   return Array.from({ length: 6 }).map((_, index) => {
     return {
       description: `select files ${index}`,
-      testFunction: async (editor: FrameLocator) => {
+      testFunction: async (editor: Page) => {
         async function clickFirst() {
           await editor
             .locator('.blockstudio-fields__field--files')
@@ -45,9 +45,10 @@ testType('files', false, () => {
           } else if (index === 1) {
             await countText(editor, '[1604]', 1);
           } else {
+            // Check for URL array containing the filename (wp-env uses localhost:8888)
             await countText(
               editor,
-              '["https:\\/\\/fabrikat.local\\/blockstudio\\/wp-content\\/uploads\\/sites\\/309\\/2022\\/12\\/blockstudioEDDRetina.png"]',
+              'blockstudioEDDRetina.png"]',
               1
             );
           }
@@ -76,21 +77,27 @@ testType('files', false, () => {
             await clickFirst();
             await countText(editor, '[1604,1605]', 1);
           } else {
+            // Check for both filenames in the URL array
             await countText(
               editor,
-              '["https:\\/\\/fabrikat.local\\/blockstudio\\/wp-content\\/uploads\\/sites\\/309\\/2022\\/12\\/blockstudioEDDRetina.png","https:\\/\\/fabrikat.local\\/blockstudio\\/wp-content\\/uploads\\/sites\\/309\\/2022\\/12\\/blockstudioSEO.png"]',
+              'blockstudioEDDRetina.png","http',
+              1
+            );
+            await countText(
+              editor,
+              'blockstudioSEO.png"]',
               1
             );
             await clickFirst();
             await countText(
               editor,
-              '["https:\\/\\/fabrikat.local\\/blockstudio\\/wp-content\\/uploads\\/sites\\/309\\/2022\\/12\\/blockstudioEDDRetina.png","https:\\/\\/fabrikat.local\\/blockstudio\\/wp-content\\/uploads\\/sites\\/309\\/2022\\/12\\/blockstudioSEO.png"]',
+              'blockstudioEDDRetina.png","http',
               0
             );
             await clickFirst();
             await countText(
               editor,
-              '["https:\\/\\/fabrikat.local\\/blockstudio\\/wp-content\\/uploads\\/sites\\/309\\/2022\\/12\\/blockstudioEDDRetina.png","https:\\/\\/fabrikat.local\\/blockstudio\\/wp-content\\/uploads\\/sites\\/309\\/2022\\/12\\/blockstudioSEO.png"]',
+              'blockstudioEDDRetina.png","http',
               1
             );
           }
@@ -105,9 +112,10 @@ testType('files', false, () => {
           } else if (index === 1) {
             await countText(editor, '8]', 1);
           } else {
+            // Check for video filename
             await countText(
               editor,
-              '"https:\\/\\/fabrikat.local\\/blockstudio\\/wp-content\\/uploads\\/sites\\/309\\/2020\\/11\\/gutenbergEdit.mp4"',
+              'gutenbergEdit.mp4"',
               1
             );
           }
@@ -135,9 +143,15 @@ testType('files', false, () => {
             await clickFirst();
             await countText(editor, '"filesSingleId":1604', 1);
           } else {
+            // Check for URL containing filename
             await countText(
               editor,
-              '"filesSingleUrl":"https:\\/\\/fabrikat.local\\/blockstudio\\/wp-content\\/uploads\\/sites\\/309\\/2022\\/12\\/blockstudioEDDRetina.png"',
+              '"filesSingleUrl":"http',
+              1
+            );
+            await countText(
+              editor,
+              'blockstudioEDDRetina.png"',
               1
             );
             await clickFirst();
@@ -145,7 +159,7 @@ testType('files', false, () => {
             await clickFirst();
             await countText(
               editor,
-              '"filesSingleUrl":"https:\\/\\/fabrikat.local\\/blockstudio\\/wp-content\\/uploads\\/sites\\/309\\/2022\\/12\\/blockstudioEDDRetina.png"',
+              'blockstudioEDDRetina.png"',
               1
             );
           }

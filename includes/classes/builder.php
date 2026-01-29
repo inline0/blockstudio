@@ -49,11 +49,11 @@ class Builder {
 			$block_scripts['version'],
 			true
 		);
-		wp_localize_script(
-			'blockstudio-builder',
-			'blockstudioAdmin',
-			Admin::data( false )
-		);
+		// wp_localize_script(
+		// 	'blockstudio-builder',
+		// 	'blockstudioAdmin',
+		// 	Admin::data( false )
+		// );
 	}
 
 	/**

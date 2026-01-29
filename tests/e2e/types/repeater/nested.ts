@@ -1,4 +1,4 @@
-import { FrameLocator } from '@playwright/test';
+import { Page } from '@playwright/test';
 import { click, countText, delay, testType } from '../../utils/playwright-utils';
 
 testType(
@@ -9,7 +9,7 @@ testType(
     return Array.from({ length: 9 }).map((_, index) => {
       return {
         description: `add media ${index}`,
-        testFunction: async (editor: FrameLocator) => {
+        testFunction: async (editor: Page) => {
           if (
             index === 0 ||
             index === 2 ||

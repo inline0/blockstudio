@@ -1,4 +1,4 @@
-import { FrameLocator } from '@playwright/test';
+import { Page } from '@playwright/test';
 import {
   checkStyle,
   click,
@@ -14,7 +14,7 @@ testType('code-selector-asset-repeater', false, () => {
   return [
     {
       description: 'check and change code',
-      testFunction: async (editor: FrameLocator) => {
+      testFunction: async (editor: Page) => {
         await checkStyle(
           editor,
           '[data-type="blockstudio/type-code-selector-asset-repeater"]',
@@ -51,7 +51,7 @@ testType('code-selector-asset-repeater', false, () => {
     },
     {
       description: 'check code',
-      testFunction: async (editor: FrameLocator) => {
+      testFunction: async (editor: Page) => {
         await checkStyle(
           editor,
           '[data-type="blockstudio/type-code-selector-asset-repeater"]',
@@ -68,7 +68,7 @@ testType('code-selector-asset-repeater', false, () => {
     },
     {
       description: 'check frontend',
-      testFunction: async (editor: FrameLocator) => {
+      testFunction: async (editor: Page) => {
         // Save and navigate to frontend
         await save(editor);
         await navigateToFrontend(editor);

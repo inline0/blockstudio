@@ -1,11 +1,11 @@
-import { expect, FrameLocator } from '@playwright/test';
+import { expect, Page } from '@playwright/test';
 import { click, saveAndReload, testType, text } from '../utils/playwright-utils';
 
 testType('classes', '"classes":"class-1 class-2"', () => {
   return [
     {
       description: 'blockstudio block',
-      testFunction: async (editor: FrameLocator) => {
+      testFunction: async (editor: Page) => {
         await click(editor, '[data-type="blockstudio/type-classes"]');
         await click(editor, 'text=Advanced');
         await editor.getByLabel('HTML Anchor').fill('anchor-test');
@@ -16,7 +16,7 @@ testType('classes', '"classes":"class-1 class-2"', () => {
     },
     {
       description: 'check blockstudio block',
-      testFunction: async (editor: FrameLocator) => {
+      testFunction: async (editor: Page) => {
         await click(editor, '[data-type="blockstudio/type-classes"]');
         await text(editor, '"anchor":"anchor-test","className":"class-test"');
         await saveAndReload(editor);
@@ -24,7 +24,7 @@ testType('classes', '"classes":"class-1 class-2"', () => {
     },
     {
       description: 'core block',
-      testFunction: async (editor: FrameLocator) => {
+      testFunction: async (editor: Page) => {
         await click(editor, '[data-type="blockstudio/type-classes"]');
         await editor.locator('body').press('Enter');
         await editor.locator('body').pressSequentially('/heading', { delay: 100 });
@@ -39,7 +39,7 @@ testType('classes', '"classes":"class-1 class-2"', () => {
     },
     {
       description: 'check core block',
-      testFunction: async (editor: FrameLocator) => {
+      testFunction: async (editor: Page) => {
         await click(editor, '[data-type="core/heading"]');
         await click(editor, 'text=Advanced');
         await expect(editor.getByLabel('HTML Anchor')).toHaveValue('anchor-test');

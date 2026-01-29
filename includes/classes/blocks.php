@@ -50,11 +50,17 @@ use WP_Block_Parser;
 class Blocks {
 
 	/**
+	 * Flag to prevent recursive calls when getting assets.
+	 *
+	 * @var bool
+	 */
+	private static bool $getting_assets = false;
+
+	/**
 	 * Constructor.
 	 */
 	public function __construct() {
 		add_action( 'enqueue_block_editor_assets', array( $this, 'enqueue_editor_assets' ) );
-		add_action( 'admin_footer', array( $this, 'output_admin_footer_scripts' ) );
 	}
 
 	/**
@@ -139,60 +145,57 @@ class Blocks {
 			$localize_array
 		);
 
+		// Build styles data for CSS classes and variables autocomplete.
+		// Use flag to prevent infinite recursion (get_all_assets triggers enqueue_block_editor_assets).
+		$styles        = array();
+		$css_classes   = array();
+		$css_variables = array();
+
+		if ( ! self::$getting_assets ) {
+			self::$getting_assets = true;
+
+			$all_assets              = Admin::get_all_assets();
+			$chosen_css_class_styles = Settings::get( 'blockEditor/cssClasses' );
+			$chosen_css_vars_styles  = Settings::get( 'blockEditor/cssVariables' );
+
+			$styles = $all_assets['styles'];
+
+			if ( is_array( $chosen_css_class_styles ) && count( $chosen_css_class_styles ) > 0 ) {
+				foreach ( $styles as $key => $style ) {
+					if ( ! in_array( $key, $chosen_css_class_styles, true ) ) {
+						continue;
+					}
+
+					$css_classes[] = $key;
+				}
+			}
+
+			if ( is_array( $chosen_css_vars_styles ) && count( $chosen_css_vars_styles ) > 0 ) {
+				foreach ( $styles as $key => $style ) {
+					if ( ! in_array( $key, $chosen_css_vars_styles, true ) ) {
+						continue;
+					}
+
+					$css_variables[] = $key;
+				}
+			}
+
+			self::$getting_assets = false;
+		}
+
 		wp_localize_script(
 			'blockstudio-blocks',
 			'blockstudioAdmin',
 			array_merge(
 				Admin::data( false ),
-				apply_filters( 'blockstudio/blocks/conditions', array() )
+				apply_filters( 'blockstudio/blocks/conditions', array() ),
+				array(
+					'styles'       => $styles,
+					'cssClasses'   => $css_classes,
+					'cssVariables' => $css_variables,
+				)
 			)
 		);
-	}
-
-	/**
-	 * Output admin footer scripts for block editor.
-	 *
-	 * @return void
-	 */
-	public function output_admin_footer_scripts(): void {
-		$current_screen = get_current_screen();
-		if ( ! $current_screen->is_block_editor() ) {
-			return;
-		}
-
-		$all_assets               = Admin::get_all_assets();
-		$chosen_css_class_styles  = Settings::get( 'blockEditor/cssClasses' );
-		$css_classes              = array();
-		$chosen_css_vars_styles   = Settings::get( 'blockEditor/cssVariables' );
-		$css_variables            = array();
-
-		$styles = $all_assets['styles'];
-
-		if ( count( $chosen_css_class_styles ) > 0 ) {
-			foreach ( $styles as $key => $style ) {
-				if ( ! in_array( $key, $chosen_css_class_styles, true ) ) {
-					continue;
-				}
-
-				$css_classes[] = $key;
-			}
-		}
-
-		if ( count( $chosen_css_vars_styles ) > 0 ) {
-			foreach ( $styles as $key => $style ) {
-				if ( ! in_array( $key, $chosen_css_vars_styles, true ) ) {
-					continue;
-				}
-
-				$css_variables[] = $key;
-			}
-		}
-
-		echo '<script>';
-		echo 'window.blockstudioAdmin.styles = ' . wp_json_encode( $all_assets['styles'] ) . ';';
-		echo 'window.blockstudioAdmin.cssClasses = ' . wp_json_encode( $css_classes ) . ';';
-		echo 'window.blockstudioAdmin.cssVariables = ' . wp_json_encode( $css_variables ) . ';';
-		echo '</script>';
 	}
 
 	/**

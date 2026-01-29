@@ -1,10 +1,10 @@
-import { FrameLocator } from '@playwright/test';
+import { Page } from '@playwright/test';
 import { click, count, press, testType } from '../../utils/playwright-utils';
 
 testType('wysiwyg', 'Default text', () => [
   {
     description: 'type text',
-    testFunction: async (editor: FrameLocator) => {
+    testFunction: async (editor: Page) => {
       await click(editor, '.blockstudio-fields .ProseMirror');
       await editor.locator('body').pressSequentially('TEST', { delay: 1000 });
       await count(editor, '#blockstudio-type-wysiwyg p', 1);
@@ -13,7 +13,7 @@ testType('wysiwyg', 'Default text', () => [
   },
   {
     description: 'toolbar',
-    testFunction: async (editor: FrameLocator) => {
+    testFunction: async (editor: Page) => {
       await count(
         editor,
         '.blockstudio-fields__field--wysiwyg .components-select-control__input option',
@@ -34,7 +34,7 @@ testType('wysiwyg', 'Default text', () => [
   ].flatMap((tag) => [
     {
       description: `${tag} exists`,
-      testFunction: async (editor: FrameLocator) => {
+      testFunction: async (editor: Page) => {
         await count(
           editor,
           `.blockstudio-fields__field--wysiwyg [aria-label="${tag}"]`,
@@ -44,7 +44,7 @@ testType('wysiwyg', 'Default text', () => [
     },
     {
       description: `${tag} can be pressed`,
-      testFunction: async (editor: FrameLocator) => {
+      testFunction: async (editor: Page) => {
         await click(editor, `.blockstudio-fields [aria-label="${tag}"]`);
         await count(
           editor,

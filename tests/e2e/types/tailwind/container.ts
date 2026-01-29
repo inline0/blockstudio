@@ -1,4 +1,4 @@
-import { FrameLocator } from '@playwright/test';
+import { Page } from '@playwright/test';
 import {
   addBlock,
   addTailwindClass,
@@ -19,7 +19,7 @@ testType('tailwind', false, () => {
   return [
     {
       description: 'add container',
-      testFunction: async (editor: FrameLocator) => {
+      testFunction: async (editor: Page) => {
         await removeBlocks(editor);
         await addBlock(editor, 'container');
         await click(
@@ -33,7 +33,7 @@ testType('tailwind', false, () => {
     },
     {
       description: 'add attributes',
-      testFunction: async (editor: FrameLocator) => {
+      testFunction: async (editor: Page) => {
         await addTailwindClass(editor, 'Container', 'text-blue-950');
         await click(editor, 'text=Add Attribute');
         await editor
@@ -86,7 +86,7 @@ testType('tailwind', false, () => {
     },
     {
       description: 'test classes',
-      testFunction: async (editor: FrameLocator) => {
+      testFunction: async (editor: Page) => {
         await addTailwindClass(editor, 'Container', 'bg-red-50');
         await click(editor, '.blockstudio-builder__controls [role="combobox"]');
         await fill(
@@ -102,7 +102,7 @@ testType('tailwind', false, () => {
     },
     {
       description: 'add classes',
-      testFunction: async (editor: FrameLocator) => {
+      testFunction: async (editor: Page) => {
         await addTailwindClass(editor, 'Container', 'p-4');
         await addTailwindClass(editor, 'Container', 'bg-red-500');
         await count(editor, '.p-4', 1);
@@ -114,7 +114,7 @@ testType('tailwind', false, () => {
     },
     {
       description: 'check frontend',
-      testFunction: async (editor: FrameLocator) => {
+      testFunction: async (editor: Page) => {
         await save(editor);
         await delay(2000);
         // Navigate to frontend

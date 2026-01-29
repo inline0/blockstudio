@@ -1,4 +1,4 @@
-import { FrameLocator } from '@playwright/test';
+import { Page } from '@playwright/test';
 import { click, count, fill, saveAndReload, testType } from '../utils/playwright-utils';
 
 testType(
@@ -8,7 +8,7 @@ testType(
     return [
       {
         description: 'change link',
-        testFunction: async (editor: FrameLocator) => {
+        testFunction: async (editor: Page) => {
           await click(editor, '[data-type="blockstudio/type-link"]');
           await click(
             editor,
@@ -31,7 +31,7 @@ testType(
       },
       {
         description: 'check link',
-        testFunction: async (editor: FrameLocator) => {
+        testFunction: async (editor: Page) => {
           await click(editor, '[data-type="blockstudio/type-link"]');
           await count(editor, 'text=blockstudio.dev', 1);
         },

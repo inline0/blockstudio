@@ -1,4 +1,4 @@
-import { FrameLocator, expect } from '@playwright/test';
+import { Page, expect } from '@playwright/test';
 import {
   checkStyle,
   click,
@@ -15,31 +15,31 @@ import {
 
 testType(
   'text',
-  '"text":"Default value","textClasses":false,"textAttributes":false,"textClassSelect":"class-2","textClassSelectPopulateValue":{"ID":1386,"post_author":"1","post_date":"2022-07-09 06:36:30","post_date_gmt":"2022-07-09 06:36:30","post_content":"\\n\\n\\n\\n\\n\\n\\n\\n\\n\\n","post_title":"Native","post_excerpt":"","post_status":"publish","comment_status":"closed","ping_status":"closed","post_password":"","post_name":"native","to_ping":"","pinged":"","post_modified":"2023-06-17 13:57:45","post_modified_gmt":"2023-06-17 13:57:45","post_content_filtered":"","post_parent":0,"guid":"https:\\/\\/fabrikat.local\\/blockstudio\\/?p=1386","menu_order":0,"post_type":"post","post_mime_type":"","comment_count":"0","filter":"raw"},"textClassSelectPopulateLabel":"Reusable","textClassSelectPopulateBoth":{"value":{"ID":1386,"post_author":"1","post_date":"2022-07-09 06:36:30","post_date_gmt":"2022-07-09 06:36:30","post_content":"\\n\\n\\n\\n\\n\\n\\n\\n\\n\\n","post_title":"Native","post_excerpt":"","post_status":"publish","comment_status":"closed","ping_status":"closed","post_password":"","post_name":"native","to_ping":"","pinged":"","post_modified":"2023-06-17 13:57:45","post_modified_gmt":"2023-06-17 13:57:45","post_content_filtered":"","post_parent":0,"guid":"https:\\/\\/fabrikat.local\\/blockstudio\\/?p=1386","menu_order":0,"post_type":"post","post_mime_type":"","comment_count":"0","filter":"raw"},"label":"Native"},"textColor":{"name":"red","value":"#f00","slug":"red"},"textBackground":{"name":"JShine","value":"linear-gradient(135deg,#12c2e9 0%,#c471ed 50%,#f64f59 100%)","slug":"jshine"},"textClass":false,"textClass2":false',
+  '"text":"Default value","textClasses":false,"textAttributes":false,"textClassSelect":"class-2","textClassSelectPopulateValue":{"ID":1386,"post_author":"1","post_date":"2022-07-09 06:36:30","post_date_gmt":"2022-07-09 06:36:30","post_content":"","post_title":"Native","post_excerpt":"","post_status":"publish","comment_status":"closed","ping_status":"closed","post_password":"","post_name":"native","to_ping":"","pinged":"","post_modified":"2023-06-17 13:57:45","post_modified_gmt":"2023-06-17 13:57:45","post_content_filtered":"","post_parent":0,"guid":"http:\\/\\/localhost:8888\\/?p=1386","menu_order":0,"post_type":"post","post_mime_type":"","comment_count":"0","filter":"raw"},"textClassSelectPopulateLabel":false,"textClassSelectPopulateBoth":{"value":{"ID":1386,"post_author":"1","post_date":"2022-07-09 06:36:30","post_date_gmt":"2022-07-09 06:36:30","post_content":"","post_title":"Native","post_excerpt":"","post_status":"publish","comment_status":"closed","ping_status":"closed","post_password":"","post_name":"native","to_ping":"","pinged":"","post_modified":"2023-06-17 13:57:45","post_modified_gmt":"2023-06-17 13:57:45","post_content_filtered":"","post_parent":0,"guid":"http:\\/\\/localhost:8888\\/?p=1386","menu_order":0,"post_type":"post","post_mime_type":"","comment_count":"0","filter":"raw"},"label":"Native"},"textColor":{"name":"red","value":"#f00","slug":"red"},"textBackground":{"name":"JShine","value":"linear-gradient(135deg,#12c2e9 0%,#c471ed 50%,#f64f59 100%)","slug":"jshine"},"textClass":false,"textClass2":false',
   () => {
     return [
       {
         description: 'change text',
-        testFunction: async (editor: FrameLocator) => {
+        testFunction: async (editor: Page) => {
           await click(editor, '[data-type="blockstudio/type-text"]');
-          await fill(editor, '.blockstudio-fields__field--text input', '100');
+          await fill(editor, '[data-id="text"] input', '100');
           await saveAndReload(editor);
         },
       },
       {
         description: 'check text',
-        testFunction: async (editor: FrameLocator) => {
+        testFunction: async (editor: Page) => {
           await click(editor, '[data-type="blockstudio/type-text"]');
           await expect(
-            editor.locator('.blockstudio-fields__field--text input').nth(0)
+            editor.locator('[data-id="text"] input')
           ).toHaveValue('100');
         },
       },
       {
         description: 'add custom classes and attributes',
-        testFunction: async (editor: FrameLocator) => {
+        testFunction: async (editor: Page) => {
           await fill(editor, '[data-id="textClasses"] input', 'is-');
-          await click(editor, '[data-id="textClasses"] *:has-text("is-large")');
+          await click(editor, '[data-id="textClasses"] [role="option"]:has-text("is-large")');
           await click(editor, 'text=Add Attribute');
           await fill(editor, '[placeholder="Attribute"]', 'data-test');
           await click(editor, '.cm-content');
@@ -63,7 +63,7 @@ testType(
       },
       {
         description: 'add heading',
-        testFunction: async (editor: FrameLocator) => {
+        testFunction: async (editor: Page) => {
           await click(editor, '[data-type="blockstudio/type-text"]');
           await press(editor, 'Enter');
           await editor.locator('body').pressSequentially('/heading', {
@@ -82,7 +82,7 @@ testType(
           // await count(editor, '.wp-block-heading.is-style-squared', 1);
           // await press(editor, 'Escape');
           // await count(editor, '.wp-block-heading.is-style-squared', 0);
-          await click(editor, '[data-id="allClasses"] *:has-text("is-large")');
+          await click(editor, '[data-id="allClasses"] [role="option"]:has-text("is-large")');
           await click(editor, 'text=Add Attribute');
           await fill(editor, '[placeholder="Attribute"]', 'data-test');
           await editor.locator('.cm-line').nth(0).click();
@@ -130,7 +130,7 @@ testType(
       },
       {
         description: 'check front',
-        testFunction: async (editor: FrameLocator) => {
+        testFunction: async (editor: Page) => {
           await save(editor);
           await delay(2000);
           // Navigate to frontend
