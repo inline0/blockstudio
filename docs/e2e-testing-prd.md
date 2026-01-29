@@ -79,7 +79,7 @@ npm run wp-env:reset
 | 10 | conditions.ts | ✅ | 6 | |
 | 11 | date.ts | ✅ | 10 | |
 | 12 | datetime.ts | ✅ | 10 | |
-| 13 | files.ts | ❌ | 4/18 | Media ID 1604 not found in expected format - needs investigation |
+| 13 | files.ts | ❌ | 4/18 | Media multi-select via Meta key not working |
 | 14 | gradient/default.ts | ✅ | 10 | |
 | 15 | gradient/populate.ts | ✅ | 12 | |
 | 16 | group.ts | ✅ | 20 | |
@@ -103,7 +103,7 @@ npm run wp-env:reset
 | 34 | supports.ts | ✅ | 14 | Fixed: use getByRole for Advanced button |
 | 35 | tabs/default.ts | ✅ | 16 | Fixed: addBlock priority for "override" suffix |
 | 36 | tabs/nested.ts | ✅ | 8 | |
-| 37 | tailwind/container.ts | ❌ | 4/16 | Strict mode - search placeholder resolved to 2 elements |
+| 37 | tailwind/container.ts | ❌ | 4/16 | InnerBlocks stability - browser crashes |
 | 38 | text.ts | ❌ | 7/16 | Test expects class from unselected dropdown option |
 | 39 | textarea.ts | ✅ | 10 | |
 | 40 | toggle.ts | ✅ | 10 | |
@@ -125,15 +125,23 @@ npm run wp-env:reset
 - **Failing**: 10 / 49 (20%)
 - **Status**: Fixing selector and block matching issues
 
-### Failing Tests Summary
+### Failing Tests Summary (10 remaining)
 
-| Category | Tests | Common Issues |
-|----------|-------|---------------|
-| Repeater | 4 | Timeouts, InnerBlocks crashes |
-| Media/Files | 1 | Media ID not found in expected format |
-| Selectors | 3 | Strict mode violations (multiple elements) |
-| Missing Elements | 3 | Text/selectors not found |
-| InnerBlocks | 2 | Browser closed/timeout |
+| Category | Tests | Issues |
+|----------|-------|--------|
+| Repeater | 4 | repeater/complete, nested, outside, repeater - stability issues |
+| InnerBlocks | 2 | tailwind/container, variations/variation-2 - browser crashes |
+| WP Version | 1 | reusable.ts - "My patterns" UI changed |
+| Blockstudio | 1 | transforms/transforms-3 - transforms not registering |
+| Test Data | 1 | text.ts - expects class from unselected dropdown |
+| Media | 1 | files.ts - Meta key multi-select not working |
+
+### Fixed This Session
+
+- **supports.ts**: Use `getByRole('button', { name: 'Advanced' })`
+- **tabs/default.ts**: Added "override" suffix priority in `addBlock()`
+- **select/innerBlocks.ts**: Fixed `aria-label="Color: blue"`
+- **playwright-utils.ts**: Improved block matching for override blocks
 
 ---
 
