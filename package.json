@@ -14,10 +14,10 @@
     "wp-env:stop": "wp-env stop",
     "wp-env:clean": "wp-env clean all",
     "wp-env:logs": "wp-env logs",
-    "wp-env:reset": "wp-env stop; wp-env clean all; wp-env start && curl -s -X POST http://localhost:8888/wp-json/blockstudio-test/v1/e2e/setup",
+    "wp-env:reset": "wp-env stop; wp-env clean all; wp-env start && wp-env run cli wp theme activate theme && wp-env run cli wp rewrite structure '/%postname%/' --hard && curl -s -X POST http://localhost:8888/wp-json/blockstudio-test/v1/e2e/setup",
     "wp-env:setup": "curl -s -X POST http://localhost:8888/wp-json/blockstudio-test/v1/e2e/setup",
-    "test:e2e": "playwright test --config=playwright.wp-env.config.ts",
-    "test:e2e:headed": "playwright test --config=playwright.wp-env.config.ts --headed",
+    "test:e2e": "playwright test --config=playwright.wp-env.config.ts; npm run wp-env:reset",
+    "test:e2e:headed": "playwright test --config=playwright.wp-env.config.ts --headed; npm run wp-env:reset",
     "test:e2e:debug": "playwright test --config=playwright.wp-env.config.ts --debug"
   },
   "devDependencies": {
