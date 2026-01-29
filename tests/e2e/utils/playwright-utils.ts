@@ -140,27 +140,35 @@ export const delay = (ms: number) =>
 
 /**
  * Navigate to the frontend (View Post) from the editor.
- * Uses the "View Post" link in the post-publish panel or editor bar.
+ * Uses the "View Post" link in the post-publish panel, notice, or editor bar.
  */
 export const navigateToFrontend = async (editor: Editor) => {
-  // Try to find View Post link (appears after saving)
-  const viewPostLink = editor.locator('a:has-text("View Post")').first();
-  const viewPostVisible = await viewPostLink.isVisible().catch(() => false);
+  // Try multiple selectors in order of preference
+  const selectors = [
+    // Notice link after save (has visible text "View Post")
+    '.components-snackbar a:has-text("View Post")',
+    // Notice link with "opens in new tab" text
+    'a:has-text("View Post(opens in a new tab)")',
+    // Top bar View Post link (uses aria-label)
+    'a[aria-label="View Post"]',
+    // Generic link with View Post text
+    'a:has-text("View Post")',
+    // Post-publish panel link
+    '.post-publish-panel__postpublish-buttons a',
+  ];
 
-  if (viewPostVisible) {
-    await viewPostLink.click();
-  } else {
-    // Try the post-publish panel link
-    const panelLink = editor.locator('.post-publish-panel__postpublish-buttons a').first();
-    if (await panelLink.isVisible().catch(() => false)) {
-      await panelLink.click();
-    } else {
-      throw new Error('No View Post link found. Make sure the post is saved first.');
+  for (const selector of selectors) {
+    const link = editor.locator(selector).first();
+    const isVisible = await link.isVisible().catch(() => false);
+    if (isVisible) {
+      await link.click();
+      // Wait for frontend to load
+      await delay(2000);
+      return;
     }
   }
 
-  // Wait for frontend to load
-  await delay(2000);
+  throw new Error('No View Post link found. Make sure the post is saved first.');
 };
 
 /**
@@ -200,45 +208,87 @@ export const navigateToEditor = async (editor: Editor) => {
 };
 
 export const save = async (editor: Editor) => {
-  const publishButton = editor.locator('button:has-text("Publish")').first();
-  const saveButton = editor.locator('button:has-text("Save draft")').first();
-  const updateButton = editor.locator('button:has-text("Update")').first();
+  // Order matters: check "Save" (published posts) before "Publish" (draft posts)
+  // The "Saved" button and "Save" button are different states
+  const savedButton = editor.locator('.editor-header__settings button:has-text("Saved")').first();
+  const saveButton = editor.locator('.editor-header__settings button:has-text("Save"):not(:has-text("Saved"))').first();
+  const publishButton = editor.locator('.editor-header__settings button:has-text("Publish")').first();
+  const saveDraftButton = editor.locator('button:has-text("Save draft")').first();
 
-  if (await updateButton.isVisible().catch(() => false)) {
-    await updateButton.click();
-  } else if (await publishButton.isVisible().catch(() => false)) {
-    await publishButton.click();
+  let clicked = false;
 
-    const prePublishPanel = editor.locator(".editor-post-publish-panel");
-    const panelVisible = await prePublishPanel
-      .waitFor({ state: "visible", timeout: 2000 })
-      .then(() => true)
-      .catch(() => false);
+  // Check if "Saved" button is visible (disabled) - post is already saved
+  if (await savedButton.isVisible().catch(() => false)) {
+    // Post is already saved, but may need publishing
+    // Check if Publish button is available (post is draft)
+    if (await publishButton.isVisible().catch(() => false)) {
+      const isDisabled = await publishButton.isDisabled().catch(() => false);
+      if (!isDisabled) {
+        await publishButton.click();
+        clicked = true;
 
-    if (panelVisible) {
-      // Use specific class to avoid matching "Publish: Immediately" toggle
-      const confirmButton = prePublishPanel.locator('.editor-post-publish-button');
-      await confirmButton.click();
+        const prePublishPanel = editor.locator(".editor-post-publish-panel");
+        const panelVisible = await prePublishPanel
+          .waitFor({ state: "visible", timeout: 2000 })
+          .then(() => true)
+          .catch(() => false);
+
+        if (panelVisible) {
+          const confirmButton = prePublishPanel.locator('.editor-post-publish-button');
+          await confirmButton.click();
+        }
+      }
     }
+    // If no Publish button, post is already published and saved - nothing to do
   } else if (await saveButton.isVisible().catch(() => false)) {
-    await saveButton.click();
-  } else {
-    await editor.locator(".editor-post-publish-button").click();
-  }
-
-  // Wait for snackbar to appear indicating save completed
-  await editor.locator(".components-snackbar").waitFor({ state: "visible", timeout: 10000 });
-
-  // Wait for Save button to be enabled (not disabled, not "Saving...")
-  // This ensures the save is fully complete before continuing
-  for (let attempt = 0; attempt < 20; attempt++) {
-    const saveBtn = editor.locator('.editor-header__settings button').first();
-    const isDisabled = await saveBtn.isDisabled().catch(() => true);
+    // Save button (for published posts with changes)
+    const isDisabled = await saveButton.isDisabled().catch(() => false);
     if (!isDisabled) {
-      break;
+      await saveButton.click();
+      clicked = true;
     }
-    await delay(500);
+  } else if (await publishButton.isVisible().catch(() => false)) {
+    // Publish button for draft posts
+    const isDisabled = await publishButton.isDisabled().catch(() => false);
+    if (!isDisabled) {
+      await publishButton.click();
+      clicked = true;
+
+      const prePublishPanel = editor.locator(".editor-post-publish-panel");
+      const panelVisible = await prePublishPanel
+        .waitFor({ state: "visible", timeout: 2000 })
+        .then(() => true)
+        .catch(() => false);
+
+      if (panelVisible) {
+        const confirmButton = prePublishPanel.locator('.editor-post-publish-button');
+        await confirmButton.click();
+      }
+    }
+  } else if (await saveDraftButton.isVisible().catch(() => false)) {
+    const isDisabled = await saveDraftButton.isDisabled().catch(() => false);
+    if (!isDisabled) {
+      await saveDraftButton.click();
+      clicked = true;
+    }
   }
+
+  // Only wait for snackbar if we actually clicked a save button
+  if (clicked) {
+    // Wait for snackbar to appear indicating save completed
+    await editor.locator(".components-snackbar").waitFor({ state: "visible", timeout: 10000 });
+
+    // Wait for save state to stabilize
+    for (let attempt = 0; attempt < 20; attempt++) {
+      const saveBtn = editor.locator('.editor-header__settings button').first();
+      const isDisabled = await saveBtn.isDisabled().catch(() => true);
+      if (!isDisabled) {
+        break;
+      }
+      await delay(500);
+    }
+  }
+  // If nothing was clicked, the post is already saved and published - nothing to do
 };
 
 export const saveAndReload = async (editor: Editor) => {

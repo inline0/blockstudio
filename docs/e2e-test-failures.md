@@ -250,27 +250,61 @@ Once fixed, move to the next failing test. Track progress by updating this docum
 | Frontend check failure | 3 | #1, #3, #4 |
 | Other | 2 | #6, #15, #16 |
 
+## Root Cause Analysis (2026-01-29)
+
+### Critical Issue: InnerBlocks Causing PHP Crashes
+
+**Pattern Identified:** All "outer" tests pass. When InnerBlocks are added and then `saveAndReload()` is called, the Playground crashes with "Bad Gateway" (PHP fatal error).
+
+**Investigation Results:**
+1. ✅ Outer tests pass (add block, change values, check frontend)
+2. ✅ "add InnerBlocks" test passes
+3. ❌ Any test after InnerBlocks that calls `saveAndReload()` crashes
+4. The crash shows "Bad Gateway" or "Critical error on this website"
+
+**Likely Cause:** PHP error in Blockstudio's InnerBlocks rendering code when the editor loads a post containing InnerBlocks content.
+
+**To Debug:**
+```bash
+# Enable WP_DEBUG in Playground and check logs
+# Look for PHP errors when loading a post with InnerBlocks
+# Check includes/classes/ for InnerBlocks rendering logic
+```
+
+### Test Infrastructure Fixes Applied
+
+1. **`navigateToFrontend()`** - Fixed to try multiple selectors for "View Post" link:
+   - Snackbar notice link
+   - aria-label attribute
+   - Generic text matching
+   - Post-publish panel link
+
+2. **`save()`** - Fixed to:
+   - Check if post is already saved (disabled "Saved" button)
+   - Auto-publish draft posts when needed
+   - Skip snackbar wait if nothing was clicked
+
 ## Patterns
 
-1. **Timeouts (7 failures)** - Many tests fail due to 120s timeout, often with "Target page, context or browser has been closed". This suggests Playground instability during long operations.
+1. **[CRITICAL] InnerBlocks + saveAndReload crashes** - ALL tests that use InnerBlocks and then call `saveAndReload()` fail with PHP crash. This is a plugin code issue, not test infrastructure.
 
-2. **Block insertion failures (7 failures)** - Several blocks fail at the "add block" step, suggesting they may not be registered properly or the inserter search is failing.
+2. **Hardcoded test data** - Tests have hardcoded URLs/data from `fabrikat.local` (e.g., text.ts line 17-18) that don't match Playground environment.
 
-3. **InnerBlocks issues (3 failures)** - Tests involving InnerBlocks selection after adding them frequently fail.
+3. **Timeouts (7 failures)** - Many tests fail due to 120s timeout, often with "Target page, context or browser has been closed".
 
-4. **Data validation failures (5 failures)** - Expected JSON data not found in block output, suggesting default values or transforms not working correctly.
+4. **Block insertion failures (7 failures)** - Several blocks fail at the "add block" step.
 
 ## Recommended Fixes
 
-1. **Increase stability for long operations** - Add retry logic or increase timeouts for media operations and nested structures.
+1. **[CRITICAL] Fix InnerBlocks PHP error** - Debug and fix the PHP crash when loading posts with InnerBlocks. Check `includes/classes/` for rendering code.
 
-2. **Fix block registration** - Verify all test blocks are properly registered and searchable in the inserter.
+2. **Fix test data expectations** - Tests have hardcoded URLs/data from `fabrikat.local`. Either:
+   - Update test expectations to use partial matching
+   - Generate expected values dynamically based on environment
 
-3. **Fix InnerBlocks selection** - Review the InnerBlocks click/selection logic in `playwright-utils.ts`.
+3. **Increase stability** - Add retry logic or increase timeouts for media operations and nested structures.
 
-4. **Review default values** - Ensure test fixtures create the expected data (posts, media, users, terms).
-
-5. **Fix selector ambiguity** - Update `[aria-controls="edit-post:block"]` selector to be more specific.
+4. **Fix block registration** - Verify all test blocks are properly registered and searchable in the inserter.
 
 ## Test Files Affected
 
