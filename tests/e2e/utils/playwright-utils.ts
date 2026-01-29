@@ -422,7 +422,23 @@ export const addBlock = async (page: Page, blockName: string) => {
 		}
 	}
 
-	// Priority 2: Shortest non-twig match (likely the base block, not a variant)
+	// Priority 2: Match with "override" suffix (for overridden blocks)
+	for (const info of blockInfos) {
+		const textLower = info.text.toLowerCase().trim();
+		const textNormalized = textLower.replace(/^native\s+/, '');
+
+		// Skip twig blocks
+		if (textLower.includes('twig')) continue;
+
+		// Check for override match (e.g., "tabs" matches "tabs override")
+		if (textNormalized === searchNormalized + ' override') {
+			await blocks.nth(info.index).click();
+			await delay(500);
+			return;
+		}
+	}
+
+	// Priority 3: Shortest non-twig match (likely the base block, not a variant)
 	const nonTwigBlocks = blockInfos.filter(
 		(info) => !info.text.toLowerCase().includes('twig')
 	);

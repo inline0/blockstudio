@@ -21,9 +21,9 @@ testType('select-innerblocks', '"layout":false', () => {
           '"text":"This is the left Text.","textClassSelect":"class-1"'
         );
         await click(editor, 'text=This is the left Heading Level 1.');
-        await count(editor, '[aria-label="blue"][aria-selected="true"]', 1);
+        await count(editor, '[aria-label="Color: blue"][aria-selected="true"]', 1);
         await click(editor, 'text=This is the right Heading Level 1.');
-        await count(editor, '[aria-label="blue"][aria-selected="true"]', 1);
+        await count(editor, '[aria-label="Color: blue"][aria-selected="true"]', 1);
       },
     },
     {
@@ -44,9 +44,9 @@ testType('select-innerblocks', '"layout":false', () => {
           '"text":"This is the left Text.","textClassSelect":"class-1"'
         );
         await click(editor, 'text=This is the left Heading Level 2.');
-        await count(editor, '[aria-label="blue"][aria-selected="true"]', 1);
+        await count(editor, '[aria-label="Color: blue"][aria-selected="true"]', 1);
         await click(editor, 'text=This is the right Heading Level 2.');
-        await count(editor, '[aria-label="blue"][aria-selected="true"]', 1);
+        await count(editor, '[aria-label="Color: blue"][aria-selected="true"]', 1);
       },
     },
   ];

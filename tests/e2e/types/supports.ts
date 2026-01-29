@@ -7,7 +7,7 @@ testType('classes', '"classes":"class-1 class-2"', () => {
       description: 'blockstudio block',
       testFunction: async (editor: Page) => {
         await click(editor, '[data-type="blockstudio/type-classes"]');
-        await click(editor, 'text=Advanced');
+        await editor.getByRole('button', { name: 'Advanced' }).click();
         await editor.getByLabel('HTML Anchor').fill('anchor-test');
         await editor.getByLabel('Additional CSS class(es)').fill('class-test');
         await text(editor, '"anchor":"anchor-test","className":"class-test"');
@@ -31,7 +31,7 @@ testType('classes', '"classes":"class-1 class-2"', () => {
         await editor.locator('body').press('Enter');
         await editor.locator('body').pressSequentially('Heading test', { delay: 100 });
         await click(editor, '[data-type="core/heading"]');
-        await click(editor, 'text=Advanced');
+        await editor.getByRole('button', { name: 'Advanced' }).click();
         await editor.getByLabel('HTML Anchor').fill('anchor-test');
         await editor.getByLabel('Additional CSS class(es)').fill('class-test');
         await saveAndReload(editor);
@@ -41,7 +41,7 @@ testType('classes', '"classes":"class-1 class-2"', () => {
       description: 'check core block',
       testFunction: async (editor: Page) => {
         await click(editor, '[data-type="core/heading"]');
-        await click(editor, 'text=Advanced');
+        await editor.getByRole('button', { name: 'Advanced' }).click();
         await expect(editor.getByLabel('HTML Anchor')).toHaveValue('anchor-test');
         await expect(editor.getByLabel('Additional CSS class(es)')).toHaveValue(
           'class-test'

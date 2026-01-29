@@ -97,20 +97,20 @@ npm run wp-env:reset
 | 28 | repeater/nested.ts | ❌ | 7/24 | Timeout on "add media 3" - browser closed |
 | 29 | repeater/outside.ts | ❌ | 1/6 | Defaults check failed - text not found |
 | 30 | repeater/repeater.ts | ❌ | 4/13 | Timeout on "correct minimized value" |
-| 31 | reusable.ts | ❌ | 4/7 | Timeout - "My patterns" button not found |
+| 31 | reusable.ts | ❌ | 4/7 | WP version: "My patterns" UI changed |
 | 32 | select/fetch.ts | ✅ | 12 | |
-| 33 | select/innerBlocks.ts | ❌ | 4/10 | Layout selector not found - aria-label="blue" |
-| 34 | supports.ts | ❌ | 0/10 | Strict mode - "Advanced" selector resolved to 2 elements |
-| 35 | tabs/default.ts | ❌ | 1/16 | Timeout on "has correct defaults" - text search failed |
+| 33 | select/innerBlocks.ts | ✅ | 10 | Fixed: aria-label="Color: blue" |
+| 34 | supports.ts | ✅ | 14 | Fixed: use getByRole for Advanced button |
+| 35 | tabs/default.ts | ✅ | 16 | Fixed: addBlock priority for "override" suffix |
 | 36 | tabs/nested.ts | ✅ | 8 | |
 | 37 | tailwind/container.ts | ❌ | 4/16 | Strict mode - search placeholder resolved to 2 elements |
-| 38 | text.ts | ❌ | 7/16 | Count failed - ".select-post-Reusable" not found |
+| 38 | text.ts | ❌ | 7/16 | Test expects class from unselected dropdown option |
 | 39 | textarea.ts | ✅ | 10 | |
 | 40 | toggle.ts | ✅ | 10 | |
 | 41 | token.ts | ✅ | 10 | |
 | 42 | transforms/transforms-1.ts | ✅ | 8 | |
 | 43 | transforms/transforms-2.ts | ✅ | 8 | |
-| 44 | transforms/transforms-3.ts | ❌ | 4/12 | Count failed - "Native Transforms 1" not found |
+| 44 | transforms/transforms-3.ts | ❌ | 4/12 | Blockstudio issue: block transforms not registering |
 | 45 | unit.ts | ✅ | 12 | |
 | 46 | variations/variation-1.ts | ✅ | 8 | |
 | 47 | variations/variation-2.ts | ❌ | 5/8 | Timeout on "add InnerBlocks" - browser closed |
@@ -121,9 +121,9 @@ npm run wp-env:reset
 
 ## Progress
 
-- **Passing**: 36 / 49 (73%)
-- **Failing**: 13 / 49 (27%)
-- **Status**: Initial test run complete
+- **Passing**: 39 / 49 (80%)
+- **Failing**: 10 / 49 (20%)
+- **Status**: Fixing selector and block matching issues
 
 ### Failing Tests Summary
 

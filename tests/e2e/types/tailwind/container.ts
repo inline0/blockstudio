@@ -27,8 +27,9 @@ testType('tailwind', false, () => {
           '[data-type="blockstudio/container"] .block-editor-inserter__toggle'
         );
         await count(editor, '.components-popover__content', 2);
-        await fill(editor, '[placeholder="Search"]', 'heading');
-        await click(editor, '.editor-block-list-item-heading');
+        await editor.locator('[placeholder="Search"]').first().fill('heading');
+        await editor.locator('.editor-block-list-item-heading').waitFor({ state: 'visible' });
+        await editor.locator('.editor-block-list-item-heading').click();
       },
     },
     {

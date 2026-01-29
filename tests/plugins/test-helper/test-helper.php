@@ -532,6 +532,53 @@ add_action('rest_api_init', function () {
                 $created['posts'][] = $reusable_id;
             }
 
+            // ==========================================
+            // CREATE REUSABLE BLOCK PATTERNS (wp_block)
+            // ==========================================
+            // These are required for reusable.ts test
+
+            // Pattern 2643 - contains type-text block
+            $pattern_2643_content = '<!-- wp:blockstudio/type-text /--><!-- wp:blockstudio/type-textarea /-->';
+            $existing_2643 = get_post(2643);
+            if (!$existing_2643 || $existing_2643->post_type !== 'wp_block') {
+                $wpdb->delete($wpdb->posts, ['ID' => 2643]);
+                $wpdb->insert($wpdb->posts, [
+                    'ID' => 2643,
+                    'post_author' => 1,
+                    'post_date' => current_time('mysql'),
+                    'post_date_gmt' => current_time('mysql', 1),
+                    'post_content' => $pattern_2643_content,
+                    'post_title' => 'Test Pattern 1',
+                    'post_status' => 'publish',
+                    'post_name' => 'test-pattern-1',
+                    'post_type' => 'wp_block',
+                    'post_modified' => current_time('mysql'),
+                    'post_modified_gmt' => current_time('mysql', 1),
+                ]);
+                $created['patterns'][] = 2643;
+            }
+
+            // Pattern 2644 - contains type-text block
+            $pattern_2644_content = '<!-- wp:blockstudio/type-text /--><!-- wp:blockstudio/type-textarea /-->';
+            $existing_2644 = get_post(2644);
+            if (!$existing_2644 || $existing_2644->post_type !== 'wp_block') {
+                $wpdb->delete($wpdb->posts, ['ID' => 2644]);
+                $wpdb->insert($wpdb->posts, [
+                    'ID' => 2644,
+                    'post_author' => 1,
+                    'post_date' => current_time('mysql'),
+                    'post_date_gmt' => current_time('mysql', 1),
+                    'post_content' => $pattern_2644_content,
+                    'post_title' => 'Test Pattern 2',
+                    'post_status' => 'publish',
+                    'post_name' => 'test-pattern-2',
+                    'post_type' => 'wp_block',
+                    'post_modified' => current_time('mysql'),
+                    'post_modified_gmt' => current_time('mysql', 1),
+                ]);
+                $created['patterns'][] = 2644;
+            }
+
             // Create a few more posts for variety
             for ($i = 1; $i <= 3; $i++) {
                 $id = wp_insert_post([
