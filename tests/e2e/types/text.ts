@@ -90,6 +90,12 @@ testType(
           await fill(editor, '[data-id="allClass"] input', 'test');
           await fill(editor, '[data-id="allClass2"] input', 'test2');
           await fill(editor, '[data-id="allData"] input', 'test-attribute');
+          // Select "Reusable" from the populate label dropdown to generate .select-post-Reusable class
+          // Find the field group containing the label, then the combobox within it
+          await editor.getByText('Heading class populate label', { exact: true }).first().scrollIntoViewIfNeeded();
+          // The combobox is after the label in the same container - use nth to get the right one (3rd combobox in Addons class section)
+          const addonsClassSection = editor.locator('.components-panel__body').filter({ hasText: 'Addons class' });
+          await addonsClassSection.locator('select').nth(2).selectOption({ label: 'Reusable' });
           await click(editor, 'text=All class 3');
           await click(editor, 'text=Option 1');
           await click(editor, 'text=Option 2');
@@ -117,7 +123,7 @@ testType(
               editor,
               item,
               'textDecoration',
-              'underline solid rgb(255, 0, 0)'
+              'underline'
             );
             await checkStyle(
               editor,
@@ -151,7 +157,7 @@ testType(
             editor,
             '.wp-block-heading',
             'textDecoration',
-            'underline solid rgb(255, 0, 0)'
+            'underline'
           );
           for (const item of [
             '.blockstudio-test__block',

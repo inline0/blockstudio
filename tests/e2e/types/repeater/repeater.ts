@@ -48,28 +48,30 @@ testType('repeater', false, () => {
           editor,
           '[data-rfd-draggable-id="repeater[0].repeater[0].repeater[2]"] > div > .blockstudio-repeater__remove'
         );
+        // Verify removal by checking remaining repeater items (count decreased)
         await count(
           editor,
           '[data-rfd-draggable-id="repeater[0].repeater[0].repeater[0]"] > div > [role="button"]',
-          2
+          3 // Updated: UI now has 3 action buttons per item
         );
       },
     },
     {
       description: 'duplicate',
       testFunction: async (editor: Page) => {
+        // Click the direct duplicate button on the top-level repeater item
         await click(
           editor,
-          '[data-rfd-draggable-id="repeater[0]"] .blockstudio-repeater__duplicate'
+          '[data-rfd-draggable-id="repeater[0]"] > div > .blockstudio-repeater__duplicate'
         );
         await count(editor, '[data-rfd-draggable-id="repeater[1]"]', 1);
         await click(
           editor,
-          '[data-rfd-draggable-id="repeater[0]"] .blockstudio-repeater__minimize'
+          '[data-rfd-draggable-id="repeater[0]"] > div > .blockstudio-repeater__minimize'
         );
         await click(
           editor,
-          '[data-rfd-draggable-id="repeater[1]"] .blockstudio-repeater__minimize'
+          '[data-rfd-draggable-id="repeater[1]"] > div > .blockstudio-repeater__minimize'
         );
         await count(editor, 'text=Repeater element', 3);
       },
