@@ -8,9 +8,9 @@ testType(
     return [
       {
         description: 'nested tabs exist',
-        testFunction: async (editor: Page) => {
-          await count(editor, 'text=Tab 1', 2);
-          await count(editor, 'text=Tab 2', 2);
+        testFunction: async (page: Page) => {
+          await count(page, 'text=Tab 1', 2);
+          await count(page, 'text=Tab 2', 2);
         },
       },
     ];

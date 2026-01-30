@@ -1,15 +1,14 @@
 import { Page } from '@playwright/test';
-import { click, count, testType } from '../../utils/playwright-utils';
+import { count, testType } from '../../utils/playwright-utils';
 
 testType('classes', '"classes":"class-1 class-2"', () => {
   return [
     {
       description: 'add class',
-      testFunction: async (editor: Page) => {
-        await click(editor, '[data-type="blockstudio/type-classes"]');
-        // Verify the existing default classes are present as buttons
-        await count(editor, 'button:has-text("class-1")', 1);
-        await count(editor, 'button:has-text("class-2")', 1);
+      testFunction: async (page: Page) => {
+        await page.click('[data-type="blockstudio/type-classes"]');
+        await page.fill('.components-form-token-field input', 'is-');
+        await count(page, 'text=is-dark-theme', 1);
       },
     },
   ];

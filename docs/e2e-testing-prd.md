@@ -63,99 +63,67 @@ npm run wp-env:reset
 
 ## Test Status Tracker
 
-**Goal: 100% passing** | **Total: 49 files**
+**Goal: 100% passing** | **Total: 49 files** | **WP 6.9 Migration in progress**
 
 | # | File | Status | Tests | Notes |
 |---|------|--------|-------|-------|
-| 1 | attributes.ts | ✅ | 10 | |
-| 2 | blade.ts | ✅ | 10 | |
-| 3 | classes/default.ts | ✅ | 8 | |
-| 4 | classes/tailwind.ts | ✅ | 8 | |
-| 5 | code/default.ts | ✅ | 10 | |
-| 6 | code/selector-asset-repeater.ts | ✅ | 12 | |
-| 7 | code/selector-asset.ts | ✅ | 12 | |
-| 8 | color/default.ts | ✅ | 10 | |
-| 9 | color/populate.ts | ✅ | 12 | |
-| 10 | conditions.ts | ✅ | 6 | |
-| 11 | date.ts | ✅ | 10 | |
-| 12 | datetime.ts | ✅ | 10 | |
-| 13 | files.ts | ✅ | 18 | Fixed: Use click({ modifiers: ['Meta'] }) for multi-select |
-| 14 | gradient/default.ts | ✅ | 10 | |
-| 15 | gradient/populate.ts | ✅ | 12 | |
-| 16 | group.ts | ✅ | 20 | |
-| 17 | help.ts | ✅ | 8 | |
-| 18 | icon.ts | ✅ | 14 | |
-| 19 | link.ts | ✅ | 10 | |
-| 20 | loading.ts | ✅ | 10 | |
-| 21 | message.ts | ✅ | 8 | |
-| 22 | number.ts | ✅ | 10 | |
-| 23 | populate-function.ts | ✅ | 12 | |
-| 24 | post-meta.ts | ✅ | 8 | |
-| 25 | radio/innerBlocks.ts | ✅ | 10 | |
-| 26 | range.ts | ✅ | 10 | |
-| 27 | repeater/complete.ts | ✅ | 14 | Fixed: Simplified JSON checks, nested add buttons verify click works |
-| 28 | repeater/nested.ts | ⚠️ | 7/24 | Browser crash at test 8 - stability issue with many media operations |
-| 29 | repeater/outside.ts | ✅ | 6 | Fixed: simplified defaults check |
-| 30 | repeater/repeater.ts | ⚠️ | 10/13 | Fixed selectors; "reorder" has browser crash |
-| 31 | reusable.ts | ✅ | 7 | Fixed: Updated for WP6+ patterns UI |
-| 32 | select/fetch.ts | ✅ | 12 | |
-| 33 | select/innerBlocks.ts | ✅ | 10 | Fixed: aria-label="Color: blue" |
-| 34 | supports.ts | ✅ | 14 | Fixed: use getByRole for Advanced button |
-| 35 | tabs/default.ts | ✅ | 16 | Fixed: addBlock priority for "override" suffix |
-| 36 | tabs/nested.ts | ✅ | 8 | |
-| 37 | tailwind/container.ts | ⚠️ | 4/16 | Blockstudio React state issue - browser crash on InnerBlocks |
-| 38 | text.ts | ✅ | 16 | Fixed: select Reusable dropdown + CSS computed value |
-| 39 | textarea.ts | ✅ | 10 | |
-| 40 | toggle.ts | ✅ | 10 | |
-| 41 | token.ts | ✅ | 10 | |
-| 42 | transforms/transforms-1.ts | ✅ | 8 | |
-| 43 | transforms/transforms-2.ts | ✅ | 8 | |
-| 44 | transforms/transforms-3.ts | ❌ | 4/12 | Blockstudio issue: block transforms not registering |
-| 45 | unit.ts | ✅ | 12 | |
-| 46 | variations/variation-1.ts | ✅ | 8 | |
-| 47 | variations/variation-2.ts | ⚠️ | 5/8 | Blockstudio React state issue - browser crash on InnerBlocks |
-| 48 | wysiwyg/default.ts | ✅ | 46 | |
-| 49 | wysiwyg/switch.ts | ✅ | 8 | |
+| 1 | attributes.ts | ? | | |
+| 2 | blade.ts | ? | | |
+| 3 | classes/default.ts | ? | | |
+| 4 | classes/tailwind.ts | ? | | |
+| 5 | code/default.ts | ? | | |
+| 6 | code/selector-asset-repeater.ts | ? | | |
+| 7 | code/selector-asset.ts | ? | | |
+| 8 | color/default.ts | ? | | |
+| 9 | color/populate.ts | ? | | |
+| 10 | conditions.ts | ? | | |
+| 11 | date.ts | ? | | |
+| 12 | datetime.ts | ? | | |
+| 13 | files.ts | ? | | |
+| 14 | gradient/default.ts | ? | | |
+| 15 | gradient/populate.ts | ? | | |
+| 16 | group.ts | ? | | |
+| 17 | help.ts | ? | | |
+| 18 | icon.ts | ? | | |
+| 19 | link.ts | ? | | |
+| 20 | loading.ts | ? | | |
+| 21 | message.ts | ? | | |
+| 22 | number.ts | ? | | |
+| 23 | populate-function.ts | ? | | |
+| 24 | post-meta.ts | ? | | |
+| 25 | radio/innerBlocks.ts | ? | | |
+| 26 | range.ts | ? | | |
+| 27 | repeater/complete.ts | ? | | |
+| 28 | repeater/nested.ts | ? | | |
+| 29 | repeater/outside.ts | ? | | |
+| 30 | repeater/repeater.ts | ? | | |
+| 31 | reusable.ts | ? | | |
+| 32 | select/fetch.ts | ? | | |
+| 33 | select/innerBlocks.ts | ? | | |
+| 34 | supports.ts | ? | | |
+| 35 | tabs/default.ts | ? | | |
+| 36 | tabs/nested.ts | ? | | |
+| 37 | tailwind/container.ts | ? | | |
+| 38 | text.ts | ? | | |
+| 39 | textarea.ts | ? | | |
+| 40 | toggle.ts | ? | | |
+| 41 | token.ts | ? | | |
+| 42 | transforms/transforms-1.ts | ? | | |
+| 43 | transforms/transforms-2.ts | ? | | |
+| 44 | transforms/transforms-3.ts | ? | | |
+| 45 | unit.ts | ? | | |
+| 46 | variations/variation-1.ts | ? | | |
+| 47 | variations/variation-2.ts | ? | | |
+| 48 | wysiwyg/default.ts | ? | | |
+| 49 | wysiwyg/switch.ts | ? | | |
 
 ---
 
 ## Progress
 
-- **Passing**: 45 / 49 (92%)
-- **Failing**: 4 / 49 (8%)
-- **Status**: Fixed repeater/complete.ts; remaining are Blockstudio stability/feature issues
-
-### Failing Tests Summary
-
-| Category | Tests | Root Cause |
-|----------|-------|------------|
-| Blockstudio Stability | repeater/nested.ts, tailwind/container.ts, variations/variation-2.ts | Browser crashes after cumulative state; React warnings in Blockstudio code |
-| Blockstudio Feature | transforms/transforms-3.ts | Block transforms not registering |
-
-### Investigation Notes
-
-**Media Library / Browser Crash Issue (repeater/nested, tailwind/container):**
-- Media library itself works fine in isolation
-- Blockstudio console shows: "Cannot update a component while rendering a different component"
-- Console shows Preact internal errors: "Cannot read properties of null (reading '__k')"
-- WordPress Interactivity API module resolution errors appear at page load
-- Crash occurs after ~7 operations on complex nested repeaters (3 levels deep)
-- Root cause: Blockstudio React state management issues, not test logic
-
-**Code Fixes Applied (partial mitigation):**
-- `Control/index.tsx`: Destructure `remove` prop to prevent "Invalid value for prop 'remove' on <div> tag"
-- `Fields/index.tsx`: Deferred repeater initialization to useEffect to avoid setState-during-render
-- `useMedia.ts`: Batched setMedia calls to avoid render cascades
-- `mediaModal.ts`: Fixed null reference when min/max classes aren't found
-
-These fixes improve code quality but don't resolve the fundamental stability issue with deeply nested repeaters.
-
-### Fixed This Session
-
-- **supports.ts**: Use `getByRole('button', { name: 'Advanced' })`
-- **tabs/default.ts**: Added "override" suffix priority in `addBlock()`
-- **select/innerBlocks.ts**: Fixed `aria-label="Color: blue"`
-- **playwright-utils.ts**: Improved block matching for override blocks
+- **Passing**: 0 / 49
+- **Failing**: 0 / 49
+- **Status**: Fresh start with reference tests (WP 6.9)
 
 ---
 

@@ -1,31 +1,30 @@
 import { Page } from '@playwright/test';
-import { click, count, saveAndReload, testType } from '../../utils/playwright-utils';
+import { count, saveAndReload, testType } from '../../utils/playwright-utils';
 
 testType('gradient-populate', false, () => {
   return [
     {
       description: 'check gradient populate',
-      testFunction: async (editor: Page) => {
-        await click(editor, '[data-type="blockstudio/type-gradient-populate"]');
-        await count(editor, '.components-circular-option-picker__option', 3);
+      testFunction: async (page: Page) => {
+        await page.click('[data-type="blockstudio/type-gradient-populate"]');
+        await count(page, '.components-circular-option-picker__option', 3);
       },
     },
     {
       description: 'change gradient',
-      testFunction: async (editor: Page) => {
-        await click(
-          editor,
+      testFunction: async (page: Page) => {
+        await page.click(
           '.blockstudio-fields__field--gradient [aria-label="Gradient: Rastafarie"]'
         );
-        await saveAndReload(editor);
+        await saveAndReload(page);
       },
     },
     {
       description: 'check gradient',
-      testFunction: async (editor: Page) => {
-        await click(editor, '[data-type="blockstudio/type-gradient-populate"]');
+      testFunction: async (page: Page) => {
+        await page.click('[data-type="blockstudio/type-gradient-populate"]');
         await count(
-          editor,
+          page,
           '.blockstudio-fields__field--gradient [aria-label="Gradient: Rastafarie"]',
           1
         );

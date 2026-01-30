@@ -10,6 +10,33 @@ if (!defined('ABSPATH')) {
 }
 
 /**
+ * Simple frontend endpoint for E2E test setup.
+ * Usage: ?blockstudio_e2e_setup=1
+ * Returns JSON with test data and exits early.
+ */
+add_action('template_redirect', function () {
+    if (!isset($_GET['blockstudio_e2e_setup'])) {
+        return;
+    }
+
+    // Create a test post for E2E tests
+    $post_id = wp_insert_post([
+        'post_title' => 'E2E Test Post ' . time(),
+        'post_content' => '',
+        'post_status' => 'publish',
+        'post_type' => 'post',
+    ]);
+
+    header('Content-Type: application/json');
+    echo json_encode([
+        'success' => true,
+        'post_id' => $post_id,
+        'message' => 'E2E test post created',
+    ]);
+    exit;
+}, 1);
+
+/**
  * Configure Blockstudio to find test blocks in the theme directory.
  * The test blocks are copied to /wp-content/themes/{active-theme}/blockstudio/
  * This filter tells Blockstudio where to look for blocks.
@@ -381,6 +408,19 @@ add_action('rest_api_init', function () {
         'callback' => function () {
             global $wpdb;
 
+            // ==========================================
+            // CLEANUP: Delete all existing posts first
+            // ==========================================
+            $all_posts = get_posts([
+                'post_type' => ['post', 'page', 'attachment', 'wp_block'],
+                'post_status' => 'any',
+                'numberposts' => -1,
+                'fields' => 'ids',
+            ]);
+            foreach ($all_posts as $post_id) {
+                wp_delete_post($post_id, true);
+            }
+
             $created = [
                 'posts' => [],
                 'media' => [],
@@ -519,7 +559,22 @@ add_action('rest_api_init', function () {
             $create_post_with_id(1388, 'Native Render', 'native-render');
 
             // Post 1483 - Used in text.ts for navigation
-            $create_post_with_id(1483, 'Test Navigation Post', 'test-navigation-post');
+            $create_post_with_id(1483, 'Nav Post', 'nav-post');
+
+            // Post 560 - Used in select/fetch.ts test (searchable as "test")
+            $create_post_with_id(560, 'Test', 'test-select-fetch');
+
+            // Post 533 - Used in select/fetch.ts test
+            $create_post_with_id(533, 'Et adipisci quia aut', 'et-adipisci-quia-aut');
+
+            // Additional posts for select/fetch.ts (searching for "e" should return 9 results)
+            // Posts: Native(1386), Native Render(1388), Test(560), Et adipisci(533) = 4 posts with "e"
+            // Need 5 more to get 9 total
+            $create_post_with_id(534, 'Example One', 'example-one');
+            $create_post_with_id(535, 'Reference', 'reference');
+            $create_post_with_id(536, 'Guide', 'guide');
+            $create_post_with_id(537, 'Release', 'release');
+            $create_post_with_id(538, 'Feature', 'feature');
 
             // Create "Reusable" post for text.ts populate tests
             $reusable_id = wp_insert_post([
@@ -579,17 +634,8 @@ add_action('rest_api_init', function () {
                 $created['patterns'][] = 2644;
             }
 
-            // Create a few more posts for variety
-            for ($i = 1; $i <= 3; $i++) {
-                $id = wp_insert_post([
-                    'post_title' => "Test Post $i",
-                    'post_content' => "Test content $i",
-                    'post_status' => 'publish',
-                ]);
-                if ($id && !is_wp_error($id)) {
-                    $created['posts'][] = $id;
-                }
-            }
+            // Note: Removed "Sample Post" loop - those posts interfered with select-fetch test
+            // which expects exactly 9 results when searching for "e"
 
             // ==========================================
             // CREATE MEDIA ATTACHMENTS

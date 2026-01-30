@@ -1,9 +1,6 @@
 import { Page } from '@playwright/test';
 import {
-  click,
   count,
-  fill,
-  press,
   saveAndReload,
   testType,
   text,
@@ -13,36 +10,34 @@ testType('token', '"token":[{"value":"three","label":"Three"}]', () => {
   return [
     {
       description: 'change tokens',
-      testFunction: async (editor: Page) => {
-        await click(editor, '[data-type="blockstudio/type-token"]');
-        await click(
-          editor,
+      testFunction: async (page: Page) => {
+        await page.click('[data-type="blockstudio/type-token"]');
+        await page.click(
           '.blockstudio-fields__field--token .components-form-token-field__input-container'
         );
-        await press(editor, 'Backspace');
-        await press(editor, 'Backspace');
+        await page.press('body', 'Backspace');
+        await page.press('body', 'Backspace');
         for (const tokenValue of ['one', 'two']) {
-          await fill(
-            editor,
+          await page.fill(
             '.blockstudio-fields__field--token input',
             tokenValue
           );
-          await press(editor, 'Enter');
+          await page.press('body', 'Enter');
         }
-        await saveAndReload(editor);
+        await saveAndReload(page);
       },
     },
     {
       description: 'check tokens',
-      testFunction: async (editor: Page) => {
-        await click(editor, '[data-type="blockstudio/type-token"]');
+      testFunction: async (page: Page) => {
+        await page.click('[data-type="blockstudio/type-token"]');
         await count(
-          editor,
+          page,
           '.blockstudio-fields__field--token .components-form-token-field__token',
           2
         );
         await text(
-          editor,
+          page,
           '"token":[{"value":"one","label":"One"},{"value":"two","label":"Two"}]'
         );
       },

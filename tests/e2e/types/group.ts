@@ -8,95 +8,90 @@ testType(
     return [
       {
         description: 'without id',
-        testFunction: async (editor: Page) => {
-          await editor
-            .locator(
-              '.blockstudio-fields__field.blockstudio-fields__field--group input[type="text"]'
-            )
-            .first()
-            .fill('test');
+        testFunction: async (page: Page) => {
+          await page.fill(
+            '.blockstudio-fields__field.blockstudio-fields__field--group input[type="text"]',
+            'test'
+          );
           await text(
-            editor,
+            page,
             '"text":"test","toggle":false,"toggle2":false,"group_text":"Override ID test","group_toggle3":false,"group_toggle4":false,"group_text1":false,"group_text2":false,"addedText":"Added test"'
           );
         },
       },
       {
         description: 'condition without id',
-        testFunction: async (editor: Page) => {
-          await editor
-            .locator(
-              '.blockstudio-fields__field.blockstudio-fields__field--group input[type="checkbox"]'
-            )
-            .first()
-            .check();
+        testFunction: async (page: Page) => {
+          await page.check(
+            '.blockstudio-fields__field.blockstudio-fields__field--group input[type="checkbox"]'
+          );
           await text(
-            editor,
+            page,
             '"text":"test","toggle":true,"toggle2":false,"group_text":"Override ID test","group_toggle3":false,"group_toggle4":false,"group_text1":false,"group_text2":false,"addedText":"Added test"'
           );
-          await count(editor, 'text=Toggle 2', 1);
+          await count(page, 'text=Toggle 2', 1);
         },
       },
       {
         description: 'with id',
-        testFunction: async (editor: Page) => {
-          await editor
+        testFunction: async (page: Page) => {
+          await page
             .locator(
               '.blockstudio-fields__field.blockstudio-fields__field--group input[type="text"]'
             )
             .nth(1)
             .fill('test');
           await text(
-            editor,
+            page,
             '"text":"test","toggle":true,"toggle2":false,"group_text":"test","group_toggle3":false,"group_toggle4":false,"group_text1":false,"group_text2":false,"addedText":"Added test"'
           );
         },
       },
       {
         description: 'condition with id',
-        testFunction: async (editor: Page) => {
-          await editor
+        testFunction: async (page: Page) => {
+          await page
             .locator(
               '.blockstudio-fields__field.blockstudio-fields__field--group input[type="checkbox"]'
             )
             .nth(2)
             .check();
           await text(
-            editor,
+            page,
             '"text":"test","toggle":true,"toggle2":false,"group_text":"test","group_toggle3":true,"group_toggle4":false,"group_text1":false,"group_text2":false,"addedText":"Added test"'
           );
-          await count(editor, 'text=Toggle 4', 1);
+          await count(page, 'text=Toggle 4', 1);
         },
       },
       {
         description: 'added element from override',
-        testFunction: async (editor: Page) => {
-          await editor
+        testFunction: async (page: Page) => {
+          await page
             .locator(
               '.blockstudio-fields__field.blockstudio-fields__field--group input[type="text"]'
             )
             .nth(4)
             .fill('test');
           await text(
-            editor,
+            page,
             '"text":"test","toggle":true,"toggle2":false,"group_text":"test","group_toggle3":true,"group_toggle4":false,"group_text1":false,"group_text2":false,"addedText":"test"'
           );
         },
       },
       {
         description: 'with style',
-        testFunction: async (editor: Page) => {
+        testFunction: async (page: Page) => {
           await text(
-            editor,
+            page,
             'style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;"'
           );
         },
       },
       {
         description: 'with disabled toggles',
-        testFunction: async (editor: Page) => {
+        testFunction: async (page: Page) => {
           await count(
-            editor,
+            page,
             '.blockstudio-fields__field--group >> nth=2 .blockstudio-fields__field-toggle',
             0
           );

@@ -1,48 +1,46 @@
 import { Page } from '@playwright/test';
-import { click, count, delay, fill, press, testType, text } from '../../utils/playwright-utils';
+import { count, delay, testType, text } from '../../utils/playwright-utils';
 
 testType('select-fetch', '"select":false', () => {
   return [
     {
       description: 'add test entry',
-      testFunction: async (editor: Page) => {
-        await click(editor, '[data-type="blockstudio/type-select-fetch"]');
-        await fill(
-          editor,
+      testFunction: async (page: Page) => {
+        await page.click('[data-type="blockstudio/type-select-fetch"]');
+        await page.fill(
           '.blockstudio-fields .components-combobox-control__input',
           'test'
         );
-        await count(editor, '.components-form-token-field__suggestion', 1);
+        await count(page, '.components-form-token-field__suggestion', 1);
         await delay(5000);
-        await press(editor, 'ArrowDown');
-        await press(editor, 'Enter');
-        await text(editor, '"select":[{"label":"Test","value":560}]');
+        await page.keyboard.press('ArrowDown');
+        await page.keyboard.press('Enter');
+        await text(page, '"select":[{"label":"Test","value":560}]');
       },
     },
     {
       description: 'add second entry',
-      testFunction: async (editor: Page) => {
-        await click(editor, '[data-type="blockstudio/type-select-fetch"]');
-        await fill(
-          editor,
+      testFunction: async (page: Page) => {
+        await page.click('[data-type="blockstudio/type-select-fetch"]');
+        await page.fill(
           '.blockstudio-fields .components-combobox-control__input',
           'e'
         );
-        await count(editor, '.components-form-token-field__suggestion', 9);
-        await press(editor, 'Enter');
+        await count(page, '.components-form-token-field__suggestion', 9);
+        await page.keyboard.press('Enter');
         await text(
-          editor,
+          page,
           '"select":[{"label":"Test","value":560},{"label":"Et adipisci quia aut","value":533}]'
         );
       },
     },
     {
       description: 'reorder',
-      testFunction: async (editor: Page) => {
-        await editor.locator('[data-rfd-draggable-id]').nth(0).focus();
-        await press(editor, 'ArrowDown');
+      testFunction: async (page: Page) => {
+        await page.locator('[data-rfd-draggable-id]').nth(0).focus();
+        await page.keyboard.press('ArrowDown');
         await text(
-          editor,
+          page,
           '"select":[{"label":"Et adipisci quia aut","value":533},{"label":"Test","value":560}]'
         );
       },

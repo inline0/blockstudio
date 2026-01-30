@@ -20,8 +20,8 @@
         "populate": {
           "type": "fetch",
           "arguments": {
-            "url": "https://fabrikat.local/streamline/wp-json/wp/v2/posts",
-            "urlSearch": "https://fabrikat.local/streamline/wp-json/wp/v2/posts?search="
+            "url": "http://localhost:8888/wp-json/wp/v2/posts?orderby=id&order=asc",
+            "urlSearch": "http://localhost:8888/wp-json/wp/v2/posts?orderby=id&order=asc&search="
           },
           "returnFormat": {
             "value": "id",

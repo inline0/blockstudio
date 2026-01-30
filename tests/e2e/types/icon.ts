@@ -1,13 +1,12 @@
-import { Page } from '@playwright/test';
+import { Dialog, expect, Page } from '@playwright/test';
 import {
-  click,
   count,
-  expect,
-  locator,
   saveAndReload,
   testType,
   text,
 } from '../utils/playwright-utils';
+
+const handleDialog = (dialog: Dialog) => dialog.accept();
 
 testType(
   'icon',
@@ -16,54 +15,56 @@ testType(
     return [
       {
         description: 'two svg',
-        testFunction: async (editor: Page) => {
-          await count(editor, '#blockstudio-type-icon svg', 2);
+        testFunction: async (page: Page) => {
+          await count(page, '#blockstudio-type-icon svg', 2);
         },
       },
       {
         description: 'change icon',
-        testFunction: async (editor: Page) => {
-          await click(editor, '[data-type="blockstudio/type-icon"]');
-          await editor
+        testFunction: async (page: Page) => {
+          await page.click('[data-type="blockstudio/type-icon"]');
+          await page
             .locator(
               '.blockstudio-fields__field--icon .components-combobox-control__input'
             )
             .last()
             .click();
-          await editor
+          await page
             .locator(
               '.blockstudio-fields__field--icon .components-form-token-field__suggestion'
             )
             .nth(0)
             .click();
-          await saveAndReload(editor);
+          await saveAndReload(page);
         },
       },
       {
         description: 'check icon',
-        testFunction: async (editor: Page) => {
-          await click(editor, '[data-type="blockstudio/type-icon"]');
-          await text(editor, 'accessibility-16');
+        testFunction: async (page: Page) => {
+          await page.click('[data-type="blockstudio/type-icon"]');
+          await text(page, 'accessibility-16');
         },
       },
       {
         description: 'check repeater',
-        testFunction: async (editor: Page) => {
-          await click(editor, 'text=Add an Icon');
-          await click(editor, 'text=Add an Icon');
-          await editor
+        testFunction: async (page: Page) => {
+          page.off('dialog', handleDialog);
+          page.on('dialog', handleDialog);
+          await page.click('text=Add an Icon');
+          await page.click('text=Add an Icon');
+          await page
             .locator('.blockstudio-fields .components-combobox-control__input')
             .nth(3)
             .click();
-          await editor
+          await page
             .locator(
               '.blockstudio-fields .components-form-token-field__suggestion'
             )
             .nth(0)
             .click();
-          await editor.locator('.blockstudio-repeater__remove').nth(1).click();
+          await page.locator('.blockstudio-repeater__remove').nth(1).click();
           await expect(
-            locator(editor, '.components-form-token-field__input').nth(2)
+            page.locator('.components-form-token-field__input').nth(2)
           ).not.toHaveValue('0');
         },
       },

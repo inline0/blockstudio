@@ -1,24 +1,24 @@
 import { expect, Page } from '@playwright/test';
-import { click, press, saveAndReload, testType } from '../../utils/playwright-utils';
+import { saveAndReload, testType } from '../../utils/playwright-utils';
 
 testType('code', '"code":".selector { display: block; }"', () => {
   return [
     {
       description: 'change code',
-      testFunction: async (editor: Page) => {
-        await click(editor, '[data-type="blockstudio/type-code"]');
-        await click(editor, '.cm-line');
-        await press(editor, 'Meta+A');
-        await press(editor, 'Backspace');
-        await editor.locator('body').pressSequentially('.selector { display: none; }');
-        await saveAndReload(editor);
+      testFunction: async (page: Page) => {
+        await page.click('[data-type="blockstudio/type-code"]');
+        await page.click('.cm-line');
+        await page.keyboard.press('Meta+A');
+        await page.keyboard.press('Backspace');
+        await page.keyboard.type('.selector { display: none; }');
+        await saveAndReload(page);
       },
     },
     {
       description: 'check code',
-      testFunction: async (editor: Page) => {
-        await click(editor, '[data-type="blockstudio/type-code"]');
-        await expect(editor.locator('.cm-line').nth(0)).toHaveText(
+      testFunction: async (page: Page) => {
+        await page.click('[data-type="blockstudio/type-code"]');
+        await expect(page.locator('.cm-line').nth(0)).toHaveText(
           '.selector { display: none; }'
         );
       },

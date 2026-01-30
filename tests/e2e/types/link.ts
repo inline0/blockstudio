@@ -1,5 +1,5 @@
 import { Page } from '@playwright/test';
-import { click, count, fill, saveAndReload, testType } from '../utils/playwright-utils';
+import { count, saveAndReload, testType } from '../utils/playwright-utils';
 
 testType(
   'link',
@@ -8,32 +8,30 @@ testType(
     return [
       {
         description: 'change link',
-        testFunction: async (editor: Page) => {
-          await click(editor, '[data-type="blockstudio/type-link"]');
-          await click(
-            editor,
+        testFunction: async (page: Page) => {
+          await page.click('[data-type="blockstudio/type-link"]');
+          await page.click(
             '.blockstudio-fields__field--link .components-button'
           );
-          const edit = editor.locator('[aria-label="Edit link"]');
-          if (await edit.isVisible().catch(() => false)) {
+          const edit = await page.$('[aria-label="Edit link"]');
+          if (edit) {
             await edit.click();
           }
-          await fill(
-            editor,
+          await page.fill(
             '.block-editor-link-control__text-content .components-text-control__input',
             'Blockstudio'
           );
-          await fill(editor, '[value="https://google.com"]', 'blockstudio.dev');
-          await click(editor, '.block-editor-link-control__search-submit');
-          await click(editor, '.components-modal__header [aria-label="Close"]');
-          await saveAndReload(editor);
+          await page.fill('[value="https://google.com"]', 'blockstudio.dev');
+          await page.click('.block-editor-link-control__search-submit');
+          await page.click('.components-modal__header [aria-label="Close"]');
+          await saveAndReload(page);
         },
       },
       {
         description: 'check link',
-        testFunction: async (editor: Page) => {
-          await click(editor, '[data-type="blockstudio/type-link"]');
-          await count(editor, 'text=blockstudio.dev', 1);
+        testFunction: async (page: Page) => {
+          await page.click('[data-type="blockstudio/type-link"]');
+          await count(page, 'text=blockstudio.dev', 1);
         },
       },
     ];
