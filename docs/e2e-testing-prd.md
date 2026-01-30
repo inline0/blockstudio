@@ -103,7 +103,7 @@ npm run wp-env:reset
 | 34 | supports.ts | ✅ | 14 | Fixed: removed unnecessary save call |
 | 35 | tabs/default.ts | ✅ | 16 | |
 | 36 | tabs/nested.ts | ✅ | 8 | |
-| 37 | tailwind/container.ts | ⏭️ | | Skip - known stability issue |
+| 37 | tailwind/container.ts | ✅ | 16 | Fixed: heading selector, http URL check |
 | 38 | text.ts | ✅ | 16 | Fixed: post 1099, textDecorationLine, class counts |
 | 39 | textarea.ts | ✅ | 10 | |
 | 40 | toggle.ts | ✅ | 10 | |
@@ -121,8 +121,8 @@ npm run wp-env:reset
 
 ## Progress
 
-- **Fully Passing**: 44 / 49 (90%)
-- **Skipped**: 5 / 49 (repeater/*, tailwind/container - known stability issues)
+- **Fully Passing**: 45 / 49 (92%)
+- **Skipped**: 4 / 49 (repeater/* - known stability issues)
 - **Status**: WP 6.9 Migration complete
 
 ---

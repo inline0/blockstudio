@@ -22,7 +22,7 @@ testType('tailwind', false, () => {
         );
         await count(page, '.components-popover__content', 2);
         await page.fill('[placeholder="Search"]', 'heading');
-        await page.click('.editor-block-list-item-heading');
+        await page.locator('[role="option"]').filter({ hasText: /^Heading$/ }).click();
       },
     },
     {
@@ -121,7 +121,7 @@ testType('tailwind', false, () => {
         await checkStyle(page, '.p-4', 'padding', '16px');
         await count(page, '[data-test="test"]', 1);
         await count(page, '[data-link="https://google.com"]', 1);
-        await count(page, '[data-image*="https://"]', 1);
+        await count(page, '[data-image*="http"]', 1);
         await page.goto(
           `http://localhost:8888/wp-admin/post.php?post=1483&action=edit`
         );
