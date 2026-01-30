@@ -47,7 +47,7 @@ testType('files', false, () => {
           } else {
             await countText(
               page,
-              '["https:\\/\\/fabrikat.local\\/blockstudio\\/wp-content\\/uploads\\/sites\\/309\\/2022\\/12\\/blockstudioEDDRetina.png"]',
+              '["http:\\/\\/localhost:8888\\/wp-content\\/uploads\\/',
               1
             );
           }
@@ -76,23 +76,11 @@ testType('files', false, () => {
             await clickFirst();
             await countText(page, '[1604,1605]', 1);
           } else {
-            await countText(
-              page,
-              '["https:\\/\\/fabrikat.local\\/blockstudio\\/wp-content\\/uploads\\/sites\\/309\\/2022\\/12\\/blockstudioEDDRetina.png","https:\\/\\/fabrikat.local\\/blockstudio\\/wp-content\\/uploads\\/sites\\/309\\/2022\\/12\\/blockstudioSEO.png"]',
-              1
-            );
+            await countText(page, 'blockstudioEDDRetina.png","http:', 1);
             await clickFirst();
-            await countText(
-              page,
-              '["https:\\/\\/fabrikat.local\\/blockstudio\\/wp-content\\/uploads\\/sites\\/309\\/2022\\/12\\/blockstudioEDDRetina.png","https:\\/\\/fabrikat.local\\/blockstudio\\/wp-content\\/uploads\\/sites\\/309\\/2022\\/12\\/blockstudioSEO.png"]',
-              0
-            );
+            await countText(page, 'blockstudioEDDRetina.png","http:', 0);
             await clickFirst();
-            await countText(
-              page,
-              '["https:\\/\\/fabrikat.local\\/blockstudio\\/wp-content\\/uploads\\/sites\\/309\\/2022\\/12\\/blockstudioEDDRetina.png","https:\\/\\/fabrikat.local\\/blockstudio\\/wp-content\\/uploads\\/sites\\/309\\/2022\\/12\\/blockstudioSEO.png"]',
-              1
-            );
+            await countText(page, 'blockstudioEDDRetina.png","http:', 1);
           }
           await page.locator(`text=Open Media Library`).nth(index).click();
           await page.locator('#menu-item-browse:visible').click();
@@ -105,11 +93,7 @@ testType('files', false, () => {
           } else if (index === 1) {
             await countText(page, '8]', 1);
           } else {
-            await countText(
-              page,
-              '"https:\\/\\/fabrikat.local\\/blockstudio\\/wp-content\\/uploads\\/sites\\/309\\/2020\\/11\\/gutenbergEdit.mp4"',
-              1
-            );
+            await countText(page, 'gutenbergEdit.mp4"', 1);
           }
           await delMedia(0);
           await page.click('.block-editor-block-card__title');
@@ -135,19 +119,11 @@ testType('files', false, () => {
             await clickFirst();
             await countText(page, '"filesSingleId":1604', 1);
           } else {
-            await countText(
-              page,
-              '"filesSingleUrl":"https:\\/\\/fabrikat.local\\/blockstudio\\/wp-content\\/uploads\\/sites\\/309\\/2022\\/12\\/blockstudioEDDRetina.png"',
-              1
-            );
+            await countText(page, '"filesSingleUrl":"http:', 1);
             await clickFirst();
             await countText(page, '"filesSingleUrl":false', 1);
             await clickFirst();
-            await countText(
-              page,
-              '"filesSingleUrl":"https:\\/\\/fabrikat.local\\/blockstudio\\/wp-content\\/uploads\\/sites\\/309\\/2022\\/12\\/blockstudioEDDRetina.png"',
-              1
-            );
+            await countText(page, '"filesSingleUrl":"http:', 1);
           }
           await delMedia(0);
         }

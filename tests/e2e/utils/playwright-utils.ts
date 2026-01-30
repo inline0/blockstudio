@@ -96,11 +96,18 @@ export const pBlocks = async (
   const page = await context.newPage();
   await page.emulateMedia({ reducedMotion: 'reduce' });
 
-  // Login first
+  // Login first - robust approach to avoid race condition
   await page.goto('http://localhost:8888/wp-login.php');
-  await page.fill('#user_login', 'admin');
-  await page.fill('#user_pass', 'password');
-  await page.click('#wp-submit');
+  await page.waitForLoadState('networkidle');
+  const userLogin = page.locator('#user_login');
+  const userPass = page.locator('#user_pass');
+  await userLogin.waitFor({ state: 'visible' });
+  await userPass.waitFor({ state: 'visible' });
+  await userLogin.click();
+  await userLogin.fill('admin');
+  await userPass.click();
+  await userPass.fill('password');
+  await page.locator('#wp-submit').click();
   await page.waitForURL('**/wp-admin/**');
 
   // Navigate to test post (ID 1483 = "Native Single")
@@ -127,10 +134,18 @@ export const pEditor = async (browser: Browser) => {
   page.on('dialog', async (dialog: any) => {
     await dialog.accept();
   });
+  // Login first - robust approach to avoid race condition
   await page.goto('http://localhost:8888/wp-login.php');
-  await page.fill('#user_login', 'admin');
-  await page.fill('#user_pass', 'password');
-  await page.click('#wp-submit');
+  await page.waitForLoadState('networkidle');
+  const userLogin = page.locator('#user_login');
+  const userPass = page.locator('#user_pass');
+  await userLogin.waitFor({ state: 'visible' });
+  await userPass.waitFor({ state: 'visible' });
+  await userLogin.click();
+  await userLogin.fill('admin');
+  await userPass.click();
+  await userPass.fill('password');
+  await page.locator('#wp-submit').click();
   await page.waitForURL('**/wp-admin/**');
   await page.goto(
     'http://localhost:8888/wp-admin/admin.php?page=blockstudio#/editor'
