@@ -41,7 +41,6 @@ testType('repeater', false, () => {
     {
       description: 'remove',
       testFunction: async (page: Page) => {
-        page.on('dialog', (dialog) => dialog.accept());
         await page.click(
           '[data-rfd-draggable-id="repeater[0].repeater[0].repeater[2]"] > div > .blockstudio-repeater__remove'
         );

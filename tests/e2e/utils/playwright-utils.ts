@@ -16,6 +16,11 @@ export const getSharedPage = async (browser: Browser): Promise<Page> => {
   await sharedPage.setViewportSize({ width: 1920, height: 1080 });
   await sharedPage.emulateMedia({ reducedMotion: 'reduce' });
 
+  // Handle all dialogs automatically (confirm dialogs, alerts, etc.)
+  sharedPage.on('dialog', async (dialog) => {
+    await dialog.accept();
+  });
+
   // Login once
   await sharedPage.goto('http://localhost:8888/wp-login.php');
   await sharedPage.waitForLoadState('networkidle');

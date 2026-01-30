@@ -1,12 +1,10 @@
-import { Dialog, expect, Page } from '@playwright/test';
+import { expect, Page } from '@playwright/test';
 import {
   count,
   saveAndReload,
   testType,
   text,
 } from '../utils/playwright-utils';
-
-const handleDialog = (dialog: Dialog) => dialog.accept();
 
 testType(
   'icon',
@@ -48,8 +46,6 @@ testType(
       {
         description: 'check repeater',
         testFunction: async (page: Page) => {
-          page.off('dialog', handleDialog);
-          page.on('dialog', handleDialog);
           await page.click('text=Add an Icon');
           await page.click('text=Add an Icon');
           await page
