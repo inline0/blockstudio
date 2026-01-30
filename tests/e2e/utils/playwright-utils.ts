@@ -320,12 +320,16 @@ export const checkForLeftoverAttributes = async (page: Page) => {
 };
 
 export const testType = async (
-  field: string,
+  field: string | [string, string],
   def: any = false,
   cb: any = false,
   remove = true
 ) => {
   let page: Page;
+
+  // Support [displayName, blockName] or just string (uses same for both)
+  const displayName = Array.isArray(field) ? field[0] : field;
+  const blockName = Array.isArray(field) ? field[1] : field;
 
   test.describe.configure({ mode: 'serial' });
 
@@ -338,11 +342,11 @@ export const testType = async (
 
   // Note: No afterAll close - page is shared and reused
 
-  test.describe(field, () => {
+  test.describe(displayName, () => {
     test.describe('defaults', () => {
       test('add block', async () => {
         await openBlockInserter(page);
-        await addBlock(page, `type-${field}`);
+        await addBlock(page, `type-${blockName}`);
         await count(page, '.is-root-container > .wp-block', 1);
       });
 
@@ -362,7 +366,7 @@ export const testType = async (
         test.describe(type, () => {
           if (type === 'outer') {
             test('add block', async () => {
-              await addBlock(page, `type-${field}`);
+              await addBlock(page, `type-${blockName}`);
               await count(page, '.is-root-container > .wp-block', 1);
               await openSidebar(page);
             });
@@ -380,14 +384,14 @@ export const testType = async (
               );
               await page.click('.editor-document-tools__inserter-toggle');
               await page.click(
-                `.editor-block-list-item-blockstudio-type-${field}`
+                `.editor-block-list-item-blockstudio-type-${blockName}`
               );
               await delay(2000);
             });
           }
 
           if (cb && typeof cb === 'function') {
-            if (type === 'inner' && field === 'repeater') {
+            if (type === 'inner' && blockName === 'repeater') {
               return;
             }
 
