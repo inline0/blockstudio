@@ -91,13 +91,13 @@ npm run wp-env:reset
 | 22 | number.ts | ✅ | 10 | |
 | 23 | populate-function.ts | ✅ | 12 | Fixed: added blockstudioCustomSelect function |
 | 24 | post-meta.ts | ✅ | 8 | |
-| 25 | radio/innerBlocks.ts | ⚠️ | 5/10 | Popover intercepts clicks |
+| 25 | radio/innerBlocks.ts | ✅ | 10 | Fixed: use breadcrumb selector |
 | 26 | range.ts | ✅ | 10 | |
 | 27 | repeater/complete.ts | ⏭️ | | Skip - known stability issue |
 | 28 | repeater/nested.ts | ⏭️ | | Skip - known stability issue |
 | 29 | repeater/outside.ts | ⏭️ | | Skip - known stability issue |
 | 30 | repeater/repeater.ts | ⏭️ | | Skip - known stability issue |
-| 31 | reusable.ts | ⚠️ | 6/7 | Inner blocks sync issue |
+| 31 | reusable.ts | ✅ | 7 | |
 | 32 | select/fetch.ts | ✅ | 12 | |
 | 33 | select/innerBlocks.ts | ✅ | 10 | |
 | 34 | supports.ts | ⚠️ | 5/14 | Save button disabled issue |
