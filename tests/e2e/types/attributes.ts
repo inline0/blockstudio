@@ -61,12 +61,12 @@ testType('attributes', false, () => {
       testFunction: async (page: Page) => {
         await save(page);
         await delay(5000);
-        await page.goto('https://fabrikat.local/blockstudio/native-single');
+        await page.goto('http://localhost:8888/native-single');
         await count(page, '[data-test="test"]', 1);
         await count(page, '[data-link="https://google.com"]', 1);
         await count(page, '[data-image*="https://"]', 1);
         await page.goto(
-          `https://fabrikat.local/blockstudio/wp-admin/post.php?post=1483&action=edit`
+          `http://localhost:8888/wp-admin/post.php?post=1483&action=edit`
         );
         await page.reload();
         await count(page, '.editor-styles-wrapper', 1);

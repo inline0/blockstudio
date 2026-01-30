@@ -10,33 +10,6 @@ if (!defined('ABSPATH')) {
 }
 
 /**
- * Simple frontend endpoint for E2E test setup.
- * Usage: ?blockstudio_e2e_setup=1
- * Returns JSON with test data and exits early.
- */
-add_action('template_redirect', function () {
-    if (!isset($_GET['blockstudio_e2e_setup'])) {
-        return;
-    }
-
-    // Create a test post for E2E tests
-    $post_id = wp_insert_post([
-        'post_title' => 'E2E Test Post ' . time(),
-        'post_content' => '',
-        'post_status' => 'publish',
-        'post_type' => 'post',
-    ]);
-
-    header('Content-Type: application/json');
-    echo json_encode([
-        'success' => true,
-        'post_id' => $post_id,
-        'message' => 'E2E test post created',
-    ]);
-    exit;
-}, 1);
-
-/**
  * Configure Blockstudio to find test blocks in the theme directory.
  * The test blocks are copied to /wp-content/themes/{active-theme}/blockstudio/
  * This filter tells Blockstudio where to look for blocks.
@@ -558,8 +531,8 @@ add_action('rest_api_init', function () {
             // Post 1388 - "Native Render" (used in select-fetch and other tests)
             $create_post_with_id(1388, 'Native Render', 'native-render');
 
-            // Post 1483 - Used in text.ts for navigation
-            $create_post_with_id(1483, 'Nav Post', 'nav-post');
+            // Post 1483 - "Native Single" - the main test post for editing
+            $create_post_with_id(1483, 'Native Single', 'native-single');
 
             // Post 560 - Used in select/fetch.ts test (searchable as "test")
             $create_post_with_id(560, 'Test', 'test-select-fetch');
@@ -653,6 +626,10 @@ add_action('rest_api_init', function () {
             $image2_file = $create_dummy_image('blockstudioSEO.png', 200, 200);
             $create_attachment_with_id(1605, 'blockstudioSEO.png', 'image/png', $image2_file);
 
+            // Attachment 3081 - test image for attributes.ts and tailwind/container.ts
+            $image3_file = $create_dummy_image('test-image-3081.png', 200, 200);
+            $create_attachment_with_id(3081, 'test-image-3081.png', 'image/png', $image3_file);
+
             // ==========================================
             // CREATE USER
             // ==========================================
@@ -720,7 +697,7 @@ add_action('rest_api_init', function () {
             return [
                 'success' => true,
                 'created' => $created,
-                'message' => 'E2E test data created: posts (1386, 1388, 1483), media (8, 1604, 1605), user (644), term (6)',
+                'message' => 'E2E test data created: posts (1386, 1388, 1483), media (8, 1604, 1605, 3081), user (644), term (6)',
             ];
         },
         'permission_callback' => '__return_true',

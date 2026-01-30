@@ -64,7 +64,7 @@ testType('code-selector-asset-repeater', false, () => {
     {
       description: 'check frontend',
       testFunction: async (page: Page) => {
-        await page.goto('https://fabrikat.local/blockstudio/native-single');
+        await page.goto('http://localhost:8888/native-single');
         await checkStyle(
           page,
           '.blockstudio-test__block',
@@ -78,7 +78,7 @@ testType('code-selector-asset-repeater', false, () => {
           '12px'
         );
         await page.goto(
-          `https://fabrikat.local/blockstudio/wp-admin/post.php?post=1483&action=edit`
+          `http://localhost:8888/wp-admin/post.php?post=1483&action=edit`
         );
         await page.reload();
         await count(page, '.editor-styles-wrapper', 1);

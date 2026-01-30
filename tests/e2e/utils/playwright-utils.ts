@@ -103,12 +103,8 @@ export const pBlocks = async (
   await page.click('#wp-submit');
   await page.waitForURL('**/wp-admin/**');
 
-  // Setup test data via test-helper
-  const response = await page.goto('http://localhost:8888/?blockstudio_e2e_setup=1');
-  const setupData = await response?.json() || {};
-
-  // Navigate to test post
-  const postUrl = url || `http://localhost:8888/wp-admin/post.php?post=${setupData.post_id}&action=edit`;
+  // Navigate to test post (ID 1483 = "Native Single")
+  const postUrl = url || 'http://localhost:8888/wp-admin/post.php?post=1483&action=edit';
   await page.goto(postUrl);
   await page.locator(wait).waitFor({ state: 'visible' });
   const modal = await page.$('text=Welcome to the block editor');

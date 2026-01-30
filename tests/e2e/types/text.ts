@@ -160,7 +160,7 @@ testType(
             );
           }
           await page.goto(
-            'https://fabrikat.local/blockstudio/wp-admin/post.php?post=1483&action=edit'
+            'http://localhost:8888/wp-admin/post.php?post=1483&action=edit'
           );
           await count(page, '.editor-styles-wrapper', 1);
         },
