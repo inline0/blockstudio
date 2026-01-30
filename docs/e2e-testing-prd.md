@@ -100,11 +100,11 @@ npm run wp-env:reset
 | 31 | reusable.ts | ✅ | 7 | |
 | 32 | select/fetch.ts | ✅ | 12 | |
 | 33 | select/innerBlocks.ts | ✅ | 10 | |
-| 34 | supports.ts | ⚠️ | 5/14 | Save button disabled issue |
+| 34 | supports.ts | ✅ | 14 | Fixed: removed unnecessary save call |
 | 35 | tabs/default.ts | ✅ | 16 | |
 | 36 | tabs/nested.ts | ✅ | 8 | |
 | 37 | tailwind/container.ts | ⏭️ | | Skip - known stability issue |
-| 38 | text.ts | ⚠️ | 7/16 | Populate default issue (.select-post-Reusable) |
+| 38 | text.ts | ✅ | 16 | Fixed: post 1099, textDecorationLine, class counts |
 | 39 | textarea.ts | ✅ | 10 | |
 | 40 | toggle.ts | ✅ | 10 | |
 | 41 | token.ts | ✅ | 10 | |
@@ -121,10 +121,9 @@ npm run wp-env:reset
 
 ## Progress
 
-- **Fully Passing**: 39 / 49 (80%)
-- **Partial**: 5 / 49 (populate-function, radio/innerBlocks, reusable, supports, text)
+- **Fully Passing**: 44 / 49 (90%)
 - **Skipped**: 5 / 49 (repeater/*, tailwind/container - known stability issues)
-- **Status**: WP 6.9 Migration complete - login race condition fixed
+- **Status**: WP 6.9 Migration complete
 
 ---
 

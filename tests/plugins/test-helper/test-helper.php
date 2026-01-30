@@ -561,16 +561,8 @@ add_action('rest_api_init', function () {
             $create_post_with_id(537, 'Release', 'release');
             $create_post_with_id(538, 'Feature', 'feature');
 
-            // Create "Reusable" post for text.ts populate tests
-            $reusable_id = wp_insert_post([
-                'post_title' => 'Reusable',
-                'post_name' => 'reusable',
-                'post_content' => '',
-                'post_status' => 'publish',
-            ]);
-            if ($reusable_id && !is_wp_error($reusable_id)) {
-                $created['posts'][] = $reusable_id;
-            }
+            // Post 1099 - "Reusable" for text.ts populate tests (matches extension default)
+            $create_post_with_id(1099, 'Reusable', 'reusable');
 
             // ==========================================
             // CREATE REUSABLE BLOCK PATTERNS (wp_block)

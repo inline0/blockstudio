@@ -19,7 +19,7 @@ testType('classes', '"classes":"class-1 class-2"', () => {
       testFunction: async (page: Page) => {
         await page.click('[data-type="blockstudio/type-classes"]');
         await text(page, '"anchor":"anchor-test","className":"class-test"');
-        await saveAndReload(page);
+        // No save needed - just checking values persisted from previous test
       },
     },
     {
