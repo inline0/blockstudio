@@ -10,6 +10,18 @@ if (!defined('ABSPATH')) {
 }
 
 /**
+ * Custom populate function for populate-function.ts test.
+ * Returns options for the valueLabel checkbox field.
+ */
+function blockstudioCustomSelect(): array {
+    return [
+        ['value' => 'option-1', 'label' => 'Option 1'],
+        ['value' => 'option-2', 'label' => 'Option 2'],
+        ['value' => 'option-3', 'label' => 'Option 3'],
+    ];
+}
+
+/**
  * Configure Blockstudio to find test blocks in the theme directory.
  * The test blocks are copied to /wp-content/themes/{active-theme}/blockstudio/
  * This filter tells Blockstudio where to look for blocks.

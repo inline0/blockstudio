@@ -89,7 +89,7 @@ npm run wp-env:reset
 | 20 | loading.ts | ✅ | 10 | |
 | 21 | message.ts | ✅ | 8 | |
 | 22 | number.ts | ✅ | 10 | |
-| 23 | populate-function.ts | ⚠️ | 5/12 | Panel selector issue |
+| 23 | populate-function.ts | ✅ | 12 | Fixed: added blockstudioCustomSelect function |
 | 24 | post-meta.ts | ✅ | 8 | |
 | 25 | radio/innerBlocks.ts | ⚠️ | 5/10 | Popover intercepts clicks |
 | 26 | range.ts | ✅ | 10 | |
