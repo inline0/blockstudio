@@ -93,10 +93,10 @@ npm run wp-env:reset
 | 24 | post-meta.ts | ✅ | 8 | |
 | 25 | radio/innerBlocks.ts | ✅ | 10 | Fixed: use breadcrumb selector |
 | 26 | range.ts | ✅ | 10 | |
-| 27 | repeater/complete.ts | ⏭️ | | Skip - known stability issue |
-| 28 | repeater/nested.ts | ⏭️ | | Skip - known stability issue |
-| 29 | repeater/outside.ts | ⏭️ | | Skip - known stability issue |
-| 30 | repeater/repeater.ts | ⏭️ | | Skip - known stability issue |
+| 27 | repeater/complete.ts | ❌ | | Fails: JSON checks contain fabrikat.local URLs |
+| 28 | repeater/nested.ts | ✅ | 24 | |
+| 29 | repeater/outside.ts | ❌ | | Fails: JSON default check with fabrikat.local |
+| 30 | repeater/repeater.ts | ✅ | 13 | |
 | 31 | reusable.ts | ✅ | 7 | |
 | 32 | select/fetch.ts | ✅ | 12 | |
 | 33 | select/innerBlocks.ts | ✅ | 10 | |
@@ -121,8 +121,8 @@ npm run wp-env:reset
 
 ## Progress
 
-- **Fully Passing**: 45 / 49 (92%)
-- **Skipped**: 4 / 49 (repeater/* - known stability issues)
+- **Fully Passing**: 47 / 49 (96%)
+- **Failing**: 2 / 49 (repeater/complete, repeater/outside - JSON checks with fabrikat.local URLs)
 - **Status**: WP 6.9 Migration complete
 
 ---
