@@ -40,7 +40,8 @@ export const resetPageState = async (page: Page) => {
 
   // Wait for root container and remove all blocks
   await page.waitForSelector('.is-root-container', { timeout: 10000 });
-  await page.click('.is-root-container');
+  // Press Escape to dismiss any popovers, then reset blocks via JS
+  await page.keyboard.press('Escape');
   await page.evaluate(() => {
     (window as any).wp.data.dispatch('core/block-editor').resetBlocks([]);
   });
@@ -206,12 +207,13 @@ export const pEditor = async (browser: Browser) => {
 
 export const removeBlocks = async (page: Page) => {
   const root = await page.$('.is-root-container');
-  if (root) {
-    await page.click('.is-root-container');
-  } else {
+  if (!root) {
     await page.reload({ waitUntil: 'load' });
     await removeBlocks(page);
+    return;
   }
+  // Press Escape to dismiss any popovers, then reset blocks via JS
+  await page.keyboard.press('Escape');
   await page.evaluate(() => {
     (window as any).wp.data.dispatch('core/block-editor').resetBlocks([]);
   });
