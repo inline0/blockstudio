@@ -9,7 +9,7 @@ import {
 
 testType(
   'text',
-  false, // Default check skipped - contains environment-specific post data (ID 1386, fabrikat.local URLs)
+  false,
   () => {
     return [
       {
@@ -107,7 +107,6 @@ testType(
             await count(page, `${item}.is-large`, 1);
             await count(page, `${item}[data-test="test"]`, 1);
             await checkStyle(page, item, 'color', 'rgb(255, 0, 0)');
-            // Check textDecorationLine instead - textDecoration computed value varies by browser
             await checkStyle(page, item, 'textDecorationLine', 'underline');
             await checkStyle(
               page,
@@ -123,7 +122,6 @@ testType(
         testFunction: async (page: Page) => {
           await save(page);
           await page.locator('text=View Post').nth(1).click();
-          // Text extension classes appear on both the text block wrapper and inner heading
           await count(page, '.text-test', 2);
           await count(page, '.text-test2-2', 2);
           await count(page, '.select-class-2', 1);
@@ -136,7 +134,6 @@ testType(
           await count(page, '.all-toggle', 1);
           await count(page, '.all-checkbox-option-1', 1);
           await count(page, '.all-checkbox-option-2', 1);
-          // Check textDecorationLine instead - textDecoration computed value varies by browser
           await checkStyle(page, '.wp-block-heading', 'textDecorationLine', 'underline');
           for (const item of [
             '.blockstudio-test__block',

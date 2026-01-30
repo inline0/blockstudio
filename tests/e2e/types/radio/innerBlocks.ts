@@ -20,7 +20,6 @@ testType('radio-innerblocks', '"layout":false', () => {
     {
       description: 'layout 2',
       testFunction: async (page: Page) => {
-        // Select parent block via breadcrumb (not the inserter button)
         await page.locator('.block-editor-block-breadcrumb button:has-text("Native Radio InnerBlocks")').click();
         await page
           .locator('.blockstudio-fields .components-radio-control__input')
