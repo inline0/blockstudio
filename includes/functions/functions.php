@@ -219,22 +219,3 @@ function bs_get_scoped_class($name): string
 
     return isset($blocks[$name]) ? $blocks[$name]['scopedClass'] : '';
 }
-
-/**
- * Build configurator block.
- *
- * @date   11/12/2022
- * @since  3.2.0
- */
-function bs_build_configurator_block($attr): string
-{
-    $decoded = json_decode($attr, true);
-
-    $attributes = [];
-    Build::build_attributes($decoded['blockstudio']['attributes'], $attributes);
-
-    $block = $decoded;
-    $block['attributes'] = $attributes;
-
-    return json_encode($block);
-}

@@ -571,17 +571,6 @@ class Admin {
 	 * @return void
 	 */
 	public static function page(): void {
-		$editor_scripts = include BLOCKSTUDIO_DIR . '/includes/admin/assets/admin/index.tsx.asset.php';
-
-		wp_enqueue_script(
-			'blockstudio-admin',
-			plugins_url( 'includes/admin/assets/admin/index.tsx.js', BLOCKSTUDIO_FILE ),
-			$editor_scripts['dependencies'],
-			$editor_scripts['version'],
-			true
-		);
-
-		wp_localize_script( 'blockstudio-admin', 'blockstudioAdmin', self::data() );
 		wp_enqueue_style( 'wp-components' );
 
 		$all_assets  = self::get_all_assets();

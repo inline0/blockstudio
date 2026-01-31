@@ -122,7 +122,6 @@ class Plugin {
 		require_once BLOCKSTUDIO_DIR . '/includes/admin/blockstudio-updater.php';
 		require_once $classes_dir . 'admin.php';
 		require_once $classes_dir . 'blocks.php';
-		require_once $classes_dir . 'configurator.php';
 		require_once $classes_dir . 'rest.php';
 		require_once $classes_dir . 'extensions.php';
 		require_once $classes_dir . 'builder.php';
