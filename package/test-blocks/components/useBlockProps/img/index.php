@@ -1,6 +1,0 @@
-<img
-  useBlockProps
-  style="padding: 1rem; background: #f1f1f1;"
-  class="blockstudio-test__block test test2 test3"
-  id="<?php echo str_replace('/', '-', $b['name']); ?>"
-/>

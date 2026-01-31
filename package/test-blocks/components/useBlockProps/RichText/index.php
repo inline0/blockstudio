@@ -1,9 +1,0 @@
-<RichText 
-  useBlockProps
-  style="padding: 1rem; background: #f1f1f1;"
-  class="blockstudio-test__block test test2 test3"
-  tag="h1"
-  attribute="richtext"
-  placeholder="Enter text here"
-  id="<?php echo str_replace( "/", "-", $b["name"] ); ?>"
-/>
