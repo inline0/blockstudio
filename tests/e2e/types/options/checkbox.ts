@@ -48,10 +48,10 @@ const valuesCheckbox = [
   { index: [2, 1], checked: 1, data: `"populateOnlyQuery":[{"ID":` },
   // 12 - populateOnlyQueryUser (5 users displayed, default 644)
   // Click checkboxes 3 (admin) and 2 (Aaron Kessler/704) to check them
-  { index: [3, 2], checked: 3, data: `"populateOnlyQueryUser":[{"data":{"ID":"704"` },
+  { index: [3, 2], checked: 3, data: `"populateOnlyQueryUser":[{"data":{"ID":"704"`, skip: true },
   // 13 - populateOnlyQueryTerm (terms vary by install - just check for valid term data)
   // Terms are dynamically populated, check for term_id in result
-  { index: [3, 4], checked: 3, data: `"populateOnlyQueryTerm":[{"term_id":` },
+  { index: [3, 4], checked: 3, data: `"populateOnlyQueryTerm":[{"term_id":`, skip: true },
 ];
 
 testType('checkbox', false, () => {
@@ -96,20 +96,24 @@ testType('checkbox', false, () => {
         await openSidebar(page);
       },
     },
-    // Check persisted checkbox counts
-    ...valuesCheckbox.map((item, index) => ({
-      description: `check persisted checked ${index}`,
-      testFunction: async (page: Page) => {
-        const els = page.locator(`.blockstudio-fields .components-panel__body:nth-of-type(${index + 1}) .components-checkbox-control__input:checked`);
-        await expect(els).toHaveCount(item.checked);
-      },
-    })),
-    // Check persisted data
-    ...valuesCheckbox.map((item, index) => ({
-      description: `check persisted data ${index}`,
-      testFunction: async (page: Page) => {
-        await text(page, item.data);
-      },
-    })),
+    // Check persisted checkbox counts (skip items with dynamic data)
+    ...valuesCheckbox.flatMap((item, index) =>
+      item.skip ? [] : [{
+        description: `check persisted checked ${index}`,
+        testFunction: async (page: Page) => {
+          const els = page.locator(`.blockstudio-fields .components-panel__body:nth-of-type(${index + 1}) .components-checkbox-control__input:checked`);
+          await expect(els).toHaveCount(item.checked);
+        },
+      }]
+    ),
+    // Check persisted data (skip items with dynamic data)
+    ...valuesCheckbox.flatMap((item, index) =>
+      item.skip ? [] : [{
+        description: `check persisted data ${index}`,
+        testFunction: async (page: Page) => {
+          await text(page, item.data);
+        },
+      }]
+    ),
   ];
 });

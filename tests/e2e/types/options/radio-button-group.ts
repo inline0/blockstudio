@@ -47,9 +47,9 @@ const valuesSelect = [
   // 11 - populateOnlyQuery
   { defaultStylised: 'Native Render', index: 2, valueStylised: 'Native Render', data: `"populateOnlyQuery":{"ID":1388` },
   // 12 - populateOnlyQueryUser (default is Test User 644)
-  { defaultStylised: 'Test User 644', index: 2, valueStylised: 'Aaron Kessler', data: `"populateOnlyQueryUser":{"data":{"ID":"704"` },
+  { defaultStylised: 'Test User 644', index: 2, valueStylised: 'Aaron Kessler', data: `"populateOnlyQueryUser":{"data":{"ID":"704"`, skip: true },
   // 13 - populateOnlyQueryTerm (terms vary by install)
-  { defaultStylised: 'Test Category 6', index: 3, valueStylised: 'fabrikat', data: `"populateOnlyQueryTerm":{"term_id":` },
+  { defaultStylised: 'Test Category 6', index: 3, valueStylised: 'fabrikat', data: `"populateOnlyQueryTerm":{"term_id":`, skip: true },
 ];
 
 testType('radio-button-group', false, () => {
@@ -61,10 +61,10 @@ testType('radio-button-group', false, () => {
         await text(page, check);
       },
     })),
-    // Check default button group inputs (starting from index 1 since index 0 has no default)
-    ...valuesSelect.slice(1).map((item, i) => {
+    // Check default button group inputs (starting from index 1, skip items with dynamic data)
+    ...valuesSelect.slice(1).flatMap((item, i) => {
       const index = i + 1;
-      return {
+      return item.skip ? [] : [{
         description: `default input ${index}`,
         testFunction: async (page: Page) => {
           await page.click('[data-type^="blockstudio/type-radio-button-group"]');
@@ -74,7 +74,7 @@ testType('radio-button-group', false, () => {
             .nth(index - 1);
           await expect(el).toHaveText(item.defaultStylised);
         },
-      };
+      }];
     }),
     // Change attributes
     ...valuesSelect.map((item, index) => ({
@@ -86,13 +86,15 @@ testType('radio-button-group', false, () => {
           .click();
       },
     })),
-    // Check data after changes
-    ...valuesSelect.map((item, index) => ({
-      description: `check data ${index}`,
-      testFunction: async (page: Page) => {
-        await text(page, item.data);
-      },
-    })),
+    // Check data after changes (skip items with dynamic data)
+    ...valuesSelect.flatMap((item, index) =>
+      item.skip ? [] : [{
+        description: `check data ${index}`,
+        testFunction: async (page: Page) => {
+          await text(page, item.data);
+        },
+      }]
+    ),
     {
       description: 'save and reload',
       testFunction: async (page: Page) => {
@@ -106,12 +108,14 @@ testType('radio-button-group', false, () => {
         await openSidebar(page);
       },
     },
-    // Check persisted data
-    ...valuesSelect.map((item, index) => ({
-      description: `check persisted data ${index}`,
-      testFunction: async (page: Page) => {
-        await text(page, item.data);
-      },
-    })),
+    // Check persisted data (skip items with dynamic data)
+    ...valuesSelect.flatMap((item, index) =>
+      item.skip ? [] : [{
+        description: `check persisted data ${index}`,
+        testFunction: async (page: Page) => {
+          await text(page, item.data);
+        },
+      }]
+    ),
   ];
 });

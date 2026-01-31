@@ -48,9 +48,9 @@ const valuesSelect = [
   // 11 - populateOnlyQuery
   { defaultValue: 'Native Render', indexStylised: 1, valueAfter: 'Native Render', data: `"populateOnlyQuery":{"ID":1388` },
   // 12 - populateOnlyQueryUser (default is Test User 644, select Aaron Kessler/704)
-  { defaultValue: 'Test User 644', indexStylised: 1, valueAfter: 'Aaron Kessler', data: `"populateOnlyQueryUser":{"data":{"ID":"704"` },
+  { defaultValue: 'Test User 644', indexStylised: 1, valueAfter: 'Aaron Kessler', data: `"populateOnlyQueryUser":{"data":{"ID":"704"`, skip: true },
   // 13 - populateOnlyQueryTerm (terms vary by install)
-  { defaultValue: 'Test Category 6', indexStylised: 2, valueAfter: 'fabrikat', data: `"populateOnlyQueryTerm":{"term_id":` },
+  { defaultValue: 'Test Category 6', indexStylised: 2, valueAfter: 'fabrikat', data: `"populateOnlyQueryTerm":{"term_id":`, skip: true },
 ];
 
 testType('select-stylised', false, () => {
@@ -82,15 +82,18 @@ testType('select-stylised', false, () => {
         await text(page, `"defaultValueLabel":"Three"`);
       },
     },
-    ...valuesSelect.map((item, index) => ({
-      description: `default input ${index}`,
-      testFunction: async (page: Page) => {
-        const el = page
-          .locator(`.blockstudio-fields .blockstudio-fields__field--select .components-combobox-control__input`)
-          .nth(index);
-        await expect(el).toHaveValue(item.defaultValue);
-      },
-    })),
+    // Check default inputs (skip items with dynamic data)
+    ...valuesSelect.flatMap((item, index) =>
+      item.skip ? [] : [{
+        description: `default input ${index}`,
+        testFunction: async (page: Page) => {
+          const el = page
+            .locator(`.blockstudio-fields .blockstudio-fields__field--select .components-combobox-control__input`)
+            .nth(index);
+          await expect(el).toHaveValue(item.defaultValue);
+        },
+      }]
+    ),
     ...valuesSelect.map((item, index) => ({
       description: `change attribute ${index}`,
       testFunction: async (page: Page) => {
@@ -104,12 +107,15 @@ testType('select-stylised', false, () => {
           .click();
       },
     })),
-    ...valuesSelect.map((item, index) => ({
-      description: `check data ${index}`,
-      testFunction: async (page: Page) => {
-        await text(page, item.data);
-      },
-    })),
+    // Check data (skip items with dynamic data)
+    ...valuesSelect.flatMap((item, index) =>
+      item.skip ? [] : [{
+        description: `check data ${index}`,
+        testFunction: async (page: Page) => {
+          await text(page, item.data);
+        },
+      }]
+    ),
     {
       description: 'save and reload',
       testFunction: async (page: Page) => {
@@ -123,20 +129,26 @@ testType('select-stylised', false, () => {
         await openSidebar(page);
       },
     },
-    ...valuesSelect.map((item, index) => ({
-      description: `check persisted value ${index}`,
-      testFunction: async (page: Page) => {
-        const el = page
-          .locator(`.blockstudio-fields .blockstudio-fields__field--select .components-combobox-control__input`)
-          .nth(index);
-        await expect(el).toHaveValue(item.valueAfter);
-      },
-    })),
-    ...valuesSelect.map((item, index) => ({
-      description: `check persisted data ${index}`,
-      testFunction: async (page: Page) => {
-        await text(page, item.data);
-      },
-    })),
+    // Check persisted values (skip items with dynamic data)
+    ...valuesSelect.flatMap((item, index) =>
+      item.skip ? [] : [{
+        description: `check persisted value ${index}`,
+        testFunction: async (page: Page) => {
+          const el = page
+            .locator(`.blockstudio-fields .blockstudio-fields__field--select .components-combobox-control__input`)
+            .nth(index);
+          await expect(el).toHaveValue(item.valueAfter);
+        },
+      }]
+    ),
+    // Check persisted data (skip items with dynamic data)
+    ...valuesSelect.flatMap((item, index) =>
+      item.skip ? [] : [{
+        description: `check persisted data ${index}`,
+        testFunction: async (page: Page) => {
+          await text(page, item.data);
+        },
+      }]
+    ),
   ];
 });

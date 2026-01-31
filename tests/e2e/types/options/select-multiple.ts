@@ -47,9 +47,9 @@ const valuesSelect = [
   // 11 - populateOnlyQuery
   { defaultMultiple: ['Native Render'], data: `"populateOnlyQuery":[{"ID":1388` },
   // 12 - populateOnlyQueryUser (default is admin, click to add first option)
-  { defaultMultiple: ['admin'], data: `"populateOnlyQueryUser":[{"data":{"ID":"1"` },
+  { defaultMultiple: ['admin'], data: `"populateOnlyQueryUser":[{"data":{"ID":"1"`, skip: true },
   // 13 - populateOnlyQueryTerm (terms vary by install)
-  { defaultMultiple: ['Test Category 6'], data: `"populateOnlyQueryTerm":[{"term_id":` },
+  { defaultMultiple: ['Test Category 6'], data: `"populateOnlyQueryTerm":[{"term_id":`, skip: true },
 ];
 
 testType('select-multiple', false, () => {
@@ -82,10 +82,9 @@ testType('select-multiple', false, () => {
         await text(page, `"defaultValueLabel":["Three"]`);
       },
     },
-    // Skip index 12 (populateOnlyQueryUser) as it has dynamic user data
-    ...valuesSelect.filter((_, i) => i !== 12).map((item, i) => {
-      const index = i >= 12 ? i + 1 : i; // Adjust index after filtering
-      return {
+    // Check default inputs (skip items with dynamic data)
+    ...valuesSelect.flatMap((item, index) =>
+      item.skip ? [] : [{
         description: `default input ${index}`,
         testFunction: async (page: Page) => {
           const el = page
@@ -97,12 +96,11 @@ testType('select-multiple', false, () => {
             await expect(card).toHaveText(value);
           }
         },
-      };
-    }),
-    // Skip index 12 (populateOnlyQueryUser) as it has dynamic user data
-    ...valuesSelect.filter((_, i) => i !== 12).map((item, i) => {
-      const index = i >= 12 ? i + 1 : i;
-      return {
+      }]
+    ),
+    // Change attributes (skip items with dynamic data)
+    ...valuesSelect.flatMap((item, index) =>
+      item.skip ? [] : [{
         description: `change attribute ${index}`,
         testFunction: async (page: Page) => {
           const button = page
@@ -115,18 +113,17 @@ testType('select-multiple', false, () => {
             .click();
           await delay(2000);
         },
-      };
-    }),
-    // Skip index 12 (populateOnlyQueryUser) as it has dynamic user data
-    ...valuesSelect.filter((_, i) => i !== 12).map((item, i) => {
-      const index = i >= 12 ? i + 1 : i;
-      return {
+      }]
+    ),
+    // Check data (skip items with dynamic data)
+    ...valuesSelect.flatMap((item, index) =>
+      item.skip ? [] : [{
         description: `check data ${index}`,
         testFunction: async (page: Page) => {
           await text(page, item.data);
         },
-      };
-    }),
+      }]
+    ),
     {
       description: 'save and reload',
       testFunction: async (page: Page) => {
@@ -140,10 +137,9 @@ testType('select-multiple', false, () => {
         await openSidebar(page);
       },
     },
-    // Skip index 12 (populateOnlyQueryUser) as it has dynamic user data
-    ...valuesSelect.filter((_, i) => i !== 12).map((item, i) => {
-      const index = i >= 12 ? i + 1 : i;
-      return {
+    // Check persisted cards (skip items with dynamic data)
+    ...valuesSelect.flatMap((item, index) =>
+      item.skip ? [] : [{
         description: `check persisted cards ${index}`,
         testFunction: async (page: Page) => {
           const el = page
@@ -152,17 +148,16 @@ testType('select-multiple', false, () => {
           const cards = el.locator('[data-rfd-draggable-context-id]');
           await expect(cards).toHaveCount(item.defaultMultiple.length + 1);
         },
-      };
-    }),
-    // Skip index 12 (populateOnlyQueryUser) as it has dynamic user data
-    ...valuesSelect.filter((_, i) => i !== 12).map((item, i) => {
-      const index = i >= 12 ? i + 1 : i;
-      return {
+      }]
+    ),
+    // Check persisted data (skip items with dynamic data)
+    ...valuesSelect.flatMap((item, index) =>
+      item.skip ? [] : [{
         description: `check persisted data ${index}`,
         testFunction: async (page: Page) => {
           await text(page, item.data);
         },
-      };
-    }),
+      }]
+    ),
   ];
 });

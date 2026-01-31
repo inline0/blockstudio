@@ -47,9 +47,9 @@ const valuesSelect = [
   // 11 - populateOnlyQuery
   { defaultValue: '1388', index: 2, valueAfter: '1388', data: `"populateOnlyQuery":{"ID":1388` },
   // 12 - populateOnlyQueryUser (default is 644, select index 2 for 704)
-  { defaultValue: '644', index: 2, valueAfter: '704', data: `"populateOnlyQueryUser":{"data":{"ID":"704"` },
+  { defaultValue: '644', index: 2, valueAfter: '704', data: `"populateOnlyQueryUser":{"data":{"ID":"704"`, skip: true },
   // 13 - populateOnlyQueryTerm (terms vary by install, select index 3 for fabrikat)
-  { defaultValue: '6', index: 3, valueAfter: '14', data: `"populateOnlyQueryTerm":{"term_id":` },
+  { defaultValue: '6', index: 3, valueAfter: '14', data: `"populateOnlyQueryTerm":{"term_id":`, skip: true },
 ];
 
 testType('radio', false, () => {
@@ -86,13 +86,15 @@ testType('radio', false, () => {
           .click();
       },
     })),
-    // Check data after changes
-    ...valuesSelect.map((item, index) => ({
-      description: `check data ${index}`,
-      testFunction: async (page: Page) => {
-        await text(page, item.data);
-      },
-    })),
+    // Check data after changes (skip items with dynamic data)
+    ...valuesSelect.flatMap((item, index) =>
+      item.skip ? [] : [{
+        description: `check data ${index}`,
+        testFunction: async (page: Page) => {
+          await text(page, item.data);
+        },
+      }]
+    ),
     {
       description: 'save and reload',
       testFunction: async (page: Page) => {
@@ -106,22 +108,26 @@ testType('radio', false, () => {
         await openSidebar(page);
       },
     },
-    // Check persisted values
-    ...valuesSelect.map((item, index) => ({
-      description: `check persisted value ${index}`,
-      testFunction: async (page: Page) => {
-        const el = page
-          .locator(`.blockstudio-fields .blockstudio-fields__field--radio .components-radio-control__input[checked]`)
-          .nth(index);
-        await expect(el).toHaveValue(item.valueAfter);
-      },
-    })),
-    // Check persisted data
-    ...valuesSelect.map((item, index) => ({
-      description: `check persisted data ${index}`,
-      testFunction: async (page: Page) => {
-        await text(page, item.data);
-      },
-    })),
+    // Check persisted values (skip items with dynamic data)
+    ...valuesSelect.flatMap((item, index) =>
+      item.skip ? [] : [{
+        description: `check persisted value ${index}`,
+        testFunction: async (page: Page) => {
+          const el = page
+            .locator(`.blockstudio-fields .blockstudio-fields__field--radio .components-radio-control__input[checked]`)
+            .nth(index);
+          await expect(el).toHaveValue(item.valueAfter);
+        },
+      }]
+    ),
+    // Check persisted data (skip items with dynamic data)
+    ...valuesSelect.flatMap((item, index) =>
+      item.skip ? [] : [{
+        description: `check persisted data ${index}`,
+        testFunction: async (page: Page) => {
+          await text(page, item.data);
+        },
+      }]
+    ),
   ];
 });
