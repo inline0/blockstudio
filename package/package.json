@@ -3,19 +3,14 @@
   "version": "6.0.2",
   "description": "The block framework for WordPress",
   "scripts": {
-    "build": "npm run build:blocks && npm run build:builder",
+    "build": "npm run build:blocks",
     "build:activity": "gulp interactivityAssets",
     "build:blocks": "wp-scripts build src/blocks/index.tsx --output-path=./../includes/admin/assets/blocks",
-    "build:builder": "wp-scripts build src/builder/index.tsx --output-path=./../includes/admin/assets/builder",
     "docs": "gulp docs",
     "icons": "gulp icons",
     "packages-update": "wp-scripts packages-update",
     "schema": "gulp schema",
     "start:blocks": "wp-scripts start src/blocks/index.tsx --output-path=./../includes/admin/assets/blocks",
-    "start:builder": "wp-scripts start src/builder/index.tsx --output-path=./../includes/admin/assets/builder",
-    "tailwind": "gulp tailwind",
-    "tailwind-classes": "npx tailwindcss -c ./src/tailwind/data/classes/tailwind.config.js -i ./src/tailwind/data/classes/main.css -o ./src/tailwind/data/classes/output.css && gulp tailwindClasses",
-    "tailwind-preflight": "npx tailwindcss -c ./src/tailwind/data/preflight/tailwind.config.js -i ./src/tailwind/data/preflight/main.css -o ./src/tailwind/data/preflight/output.css && gulp tailwindPreflight",
     "types": "gulp schema && quicktype ../includes/schemas/block.json -s schema -o src/types/block.ts && quicktype ../includes/schemas/blockstudio.json -s schema -o src/types/blockstudio.ts"
   },
   "dependencies": {

@@ -13,7 +13,7 @@ import parserBabel from 'prettier/esm/parser-babel.mjs';
 import prettier from 'prettier/esm/standalone.mjs';
 import { Classes as Tailwind } from '@/blocks/components/Fields/components/Classes';
 import { style } from '@/const/index';
-import { SPACING } from '@/editor/const/spacings';
+import { SPACING } from '@/const/spacings';
 import { selectors } from '@/tailwind/store/selectors';
 import { Any, BlockstudioBlockAttributes } from '@/type/types';
 import { __ } from '@/utils/__';

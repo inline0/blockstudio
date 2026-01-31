@@ -9,7 +9,7 @@ import {
 import { debounce } from 'lodash-es';
 import { selectors } from '@/blocks/store/selectors';
 import { getAssetId } from '@/blocks/utils/getAssetId';
-import { isCss } from '@/editor/utils/isCss';
+import { isCss } from '@/utils/isCss';
 import { Any } from '@/type/types';
 
 export const Editor = () => {

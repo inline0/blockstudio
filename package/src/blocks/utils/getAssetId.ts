@@ -1,4 +1,4 @@
-import { getFilename } from '@/editor/utils/getFilename';
+import { getFilename } from '@/utils/getFilename';
 import { BlockstudioEditorBlock } from '@/type/types';
 
 export const getAssetId = (block: BlockstudioEditorBlock, file: string) => {
