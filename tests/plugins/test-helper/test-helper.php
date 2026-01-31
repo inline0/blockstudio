@@ -142,6 +142,37 @@ add_action('plugins_loaded', function () {
     }
 }, 100);
 
+/**
+ * Register custom taxonomies for E2E tests.
+ * These are needed for term populate tests.
+ */
+add_action('init', function () {
+    // Use blockstudio_theme instead of wp_theme to avoid conflict with WP core
+    if (!taxonomy_exists('blockstudio_theme')) {
+        register_taxonomy('blockstudio_theme', 'post', [
+            'label' => 'Blockstudio Theme',
+            'public' => true,
+            'show_in_rest' => true,
+        ]);
+    }
+
+    if (!taxonomy_exists('blockstudio-project-status')) {
+        register_taxonomy('blockstudio-project-status', 'post', [
+            'label' => 'Project Status',
+            'public' => true,
+            'show_in_rest' => true,
+        ]);
+    }
+
+    if (!taxonomy_exists('edd_log_type')) {
+        register_taxonomy('edd_log_type', 'post', [
+            'label' => 'EDD Log Type',
+            'public' => true,
+            'show_in_rest' => true,
+        ]);
+    }
+}, 5);
+
 add_action('rest_api_init', function () {
     // ==========================================================================
     // SNAPSHOT ENDPOINT - Get ALL Build class data at once
@@ -635,50 +666,114 @@ add_action('rest_api_init', function () {
             $create_attachment_with_id(3081, 'test-image-3081.png', 'image/png', $image3_file);
 
             // ==========================================
-            // CREATE USER
+            // CREATE USERS
             // ==========================================
 
-            $user_id = 644;
-            if (!get_user_by('id', $user_id)) {
-                $wpdb->insert($wpdb->users, [
-                    'ID' => $user_id,
-                    'user_login' => 'testuser644',
-                    'user_pass' => wp_hash_password('testpass'),
-                    'user_nicename' => 'testuser644',
-                    'user_email' => 'testuser644@example.com',
-                    'user_registered' => current_time('mysql'),
-                    'display_name' => 'Test User 644',
+            // Helper to create user with specific ID
+            $create_user_with_id = function ($id, $login, $email, $display_name) use ($wpdb, &$created) {
+                if (!get_user_by('id', $id)) {
+                    $wpdb->insert($wpdb->users, [
+                        'ID' => $id,
+                        'user_login' => $login,
+                        'user_pass' => wp_hash_password('testpass'),
+                        'user_nicename' => $login,
+                        'user_email' => $email,
+                        'user_registered' => '2020-12-02 18:41:10',
+                        'display_name' => $display_name,
+                    ]);
+                    // Add user meta for capabilities
+                    update_user_meta($id, 'wp_capabilities', ['subscriber' => true]);
+                    update_user_meta($id, 'wp_user_level', 0);
+                    $created['users'][] = $id;
+                    return true;
+                }
+                return false;
+            };
+
+            // User 644 - Nathan Baldwin (465media) - for options tests
+            $create_user_with_id(644, '465media', 'nbaldwin@465-media.com', 'Nathan Baldwin');
+
+            // User 446 - Taylor Drayson - for select-multiple user tests
+            $create_user_with_id(446, 'tdrayson', 'taylor@thecreativetinker.com', 'Taylor Drayson');
+
+            // User 704 - Aaron Kessler - for user populate tests
+            $create_user_with_id(704, 'aaronkessler.de', 'mail@aaronkessler.de', 'Aaron Kessler');
+
+            // User 795 - Vasilii Leitman - for select-multiple user tests
+            $create_user_with_id(795, '1wpdev', 'help@1wp.dev', 'Vasilii Leitman');
+
+            // ==========================================
+            // REGISTER CUSTOM TAXONOMIES
+            // ==========================================
+            // These taxonomies are needed for term populate tests
+
+            if (!taxonomy_exists('blockstudio_theme')) {
+                register_taxonomy('blockstudio_theme', 'post', [
+                    'label' => 'WP Theme',
+                    'public' => true,
+                    'show_in_rest' => true,
                 ]);
-                $created['users'][] = $user_id;
+            }
+
+            if (!taxonomy_exists('blockstudio-project-status')) {
+                register_taxonomy('blockstudio-project-status', 'post', [
+                    'label' => 'Project Status',
+                    'public' => true,
+                    'show_in_rest' => true,
+                ]);
+            }
+
+            if (!taxonomy_exists('edd_log_type')) {
+                register_taxonomy('edd_log_type', 'post', [
+                    'label' => 'EDD Log Type',
+                    'public' => true,
+                    'show_in_rest' => true,
+                ]);
             }
 
             // ==========================================
             // CREATE TERMS
             // ==========================================
 
-            $term_id = 6;
-            $existing_term = $wpdb->get_var($wpdb->prepare(
-                "SELECT term_id FROM $wpdb->terms WHERE term_id = %d",
-                $term_id
-            ));
+            // Helper to create term - uses WP API and accepts any ID
+            $create_term = function ($name, $slug, $taxonomy) use (&$created) {
+                // Check if taxonomy exists
+                if (!taxonomy_exists($taxonomy)) {
+                    return false;
+                }
 
-            if (!$existing_term) {
-                $wpdb->insert($wpdb->terms, [
-                    'term_id' => $term_id,
-                    'name' => 'Test Category 6',
-                    'slug' => 'test-category-6',
-                ]);
+                // Check if term already exists
+                $existing = get_term_by('slug', $slug, $taxonomy);
+                if ($existing) {
+                    return $existing->term_id;
+                }
 
-                $wpdb->insert($wpdb->term_taxonomy, [
-                    'term_id' => $term_id,
-                    'taxonomy' => 'category',
-                    'description' => 'Test category for E2E tests',
-                    'count' => 0,
-                ]);
-                $created['terms'][] = $term_id;
-            }
+                // Create the term using WordPress API
+                $result = wp_insert_term($name, $taxonomy, ['slug' => $slug]);
 
-            // Create additional categories and tags
+                if (is_wp_error($result)) {
+                    return false;
+                }
+
+                $created['terms'][] = $result['term_id'];
+                return $result['term_id'];
+            };
+
+            // Create terms for options tests - IDs will be auto-assigned
+            $term_blockstudio_child = $create_term('blockstudio-child', 'blockstudio-child', 'blockstudio_theme');
+            $term_fabrikat = $create_term('fabrikat', 'fabrikat', 'blockstudio_theme');
+            $term_backlog = $create_term('Backlog', 'backlog', 'blockstudio-project-status');
+            $term_file_download = $create_term('file_download', 'file_download', 'edd_log_type');
+
+            // Store created term IDs for reference in tests
+            update_option('blockstudio_e2e_terms', [
+                'blockstudio-child' => $term_blockstudio_child,
+                'fabrikat' => $term_fabrikat,
+                'backlog' => $term_backlog,
+                'file_download' => $term_file_download,
+            ]);
+
+            // Create additional categories and tags for general tests
             $cat = wp_insert_term('Test Category', 'category');
             if (!is_wp_error($cat)) {
                 $created['terms'][] = $cat['term_id'];
@@ -701,50 +796,7 @@ add_action('rest_api_init', function () {
             return [
                 'success' => true,
                 'created' => $created,
-                'message' => 'E2E test data created: posts (1386, 1388, 1483), media (8, 1604, 1605, 3081), user (644), term (6)',
-            ];
-        },
-        'permission_callback' => '__return_true',
-    ]);
-
-    // Debug endpoint for checking cssClasses settings and cached transient
-    register_rest_route('blockstudio-test/v1', '/e2e/debug-styles', [
-        'methods' => 'GET',
-        'callback' => function () {
-            if (!class_exists('Blockstudio\\Settings')) {
-                return new WP_Error('not_loaded', 'Blockstudio Settings class not loaded', ['status' => 500]);
-            }
-
-            $css_classes_setting = \Blockstudio\Settings::get('blockEditor/cssClasses');
-            $css_variables_setting = \Blockstudio\Settings::get('blockEditor/cssVariables');
-
-            // Check the cached transient (don't call get_all_assets which requires admin context)
-            $cached_assets = get_transient('blockstudio_editor_all_assets');
-            $styles = $cached_assets ? ($cached_assets['styles'] ?? []) : [];
-
-            // Get the style handles that would be passed to frontend
-            $chosen_css_class_styles = $css_classes_setting ?: [];
-            $css_classes = [];
-
-            if (is_array($chosen_css_class_styles) && count($chosen_css_class_styles) > 0) {
-                foreach ($styles as $key => $style) {
-                    if (in_array($key, $chosen_css_class_styles, true)) {
-                        $css_classes[] = $key;
-                    }
-                }
-            }
-
-            return [
-                'settings' => [
-                    'blockEditor/cssClasses' => $css_classes_setting,
-                    'blockEditor/cssVariables' => $css_variables_setting,
-                ],
-                'transient_exists' => $cached_assets !== false,
-                'cached_styles_count' => count($styles),
-                'cached_style_handles' => array_keys($styles),
-                'matched_css_classes' => $css_classes,
-                'wp_block_library_theme_in_styles' => isset($styles['wp-block-library-theme']),
-                'wp_block_library_theme_data' => $styles['wp-block-library-theme'] ?? null,
+                'message' => 'E2E test data created successfully',
             ];
         },
         'permission_callback' => '__return_true',

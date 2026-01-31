@@ -137,6 +137,14 @@ class Populate {
 		}
 
 		if ( 'terms' === $data['query'] ) {
+			// If no taxonomy specified, query all public taxonomies
+			if ( empty( $arguments['taxonomy'] ) ) {
+				$arguments['taxonomy'] = get_taxonomies( array( 'public' => true ), 'names' );
+			}
+			// Default to showing empty terms unless explicitly set
+			if ( ! isset( $arguments['hide_empty'] ) ) {
+				$arguments['hide_empty'] = false;
+			}
 			$original_terms = get_terms( $arguments );
 
 			if ( is_wp_error( $original_terms ) ) {
