@@ -20,19 +20,8 @@ blockstudio7/
 ├── includes/            # PHP classes (primary codebase)
 ├── package/             # Frontend code
 ├── _reference/          # v6 reference (gitignored, for snapshots)
-├── tests/               # Test infrastructure
-└── docs/                # Detailed documentation
+└── tests/               # Test infrastructure
 ```
-
-## Documentation
-
-| Document | Description |
-|----------|-------------|
-| [docs/README.md](docs/README.md) | Overview and quick start |
-| [docs/architecture.md](docs/architecture.md) | Singleton pattern, class design, Build decomposition |
-| [docs/testing.md](docs/testing.md) | Snapshot testing, Playground setup, ports |
-| [docs/migration.md](docs/migration.md) | Class migration workflow, WPCS checklist |
-| [docs/conventions.md](docs/conventions.md) | WordPress coding standards, JS/TS policies |
 
 ## Key Rules for Claude
 
