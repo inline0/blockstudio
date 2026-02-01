@@ -105,10 +105,11 @@ export const WYSIWYG = ({
     if (!editor) return;
 
     if (codeMode) {
-      prettier.format(editor.getHTML(), {
+      const formatted = prettier.format(editor.getHTML(), {
         parser: 'html',
         plugins: [parserHtml],
-      }).then((formatted: string) => setVal(formatted));
+      });
+      setVal(formatted);
     } else {
       editor.commands.setContent(val);
     }

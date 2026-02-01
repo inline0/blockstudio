@@ -39,14 +39,11 @@ export const Class = ({
   const index = customClasses?.map((item) => item.className).indexOf(text) ?? -1;
 
   useEffect(() => {
-    prettier
-      .format(findCssRules(`.${text}`)?.[0] || '', {
-        parser: 'css',
-        plugins: [parserCss],
-      })
-      .then((formatted: string) => {
-        setCssRule(formatted.trim().replaceAll('\\:', ':'));
-      });
+    const formatted = prettier.format(findCssRules(`.${text}`)?.[0] || '', {
+      parser: 'css',
+      plugins: [parserCss],
+    });
+    setCssRule(formatted.trim().replaceAll('\\:', ':'));
   }, [text]);
 
   return (
