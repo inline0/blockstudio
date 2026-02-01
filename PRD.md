@@ -10,17 +10,22 @@ Modernize the frontend tooling while keeping webpack as the build system.
 2. **Rename package → src** - Standard naming for source code
 3. **Remove gulp** - Keep type generation scripts standalone
 4. **Stricter TypeScript** - Enable strict mode, fix all errors
-5. **Biome for linting/formatting** - Replace ESLint + Prettier
+5. **Keep ESLint + Prettier** - Keep existing linting/formatting setup
 6. **Single pipeline** - One command for format, lint, and type-check
 
 ## Principles
 
 - **Use newest versions** - All new packages must use latest stable versions
+- **Verify after each change** - After each refactor step, run build and tests:
+  ```bash
+  npm run build && npx playwright test --config=playwright.wp-env.config.ts tests/e2e/types/text.ts
+  ```
 
 ## Non-Goals
 
 - Migrating to Vite (keeping webpack)
 - Changing test infrastructure
+- Replacing ESLint/Prettier with Biome
 
 ## Tasks
 
@@ -29,7 +34,7 @@ Modernize the frontend tooling while keeping webpack as the build system.
 - [ ] Rename `package/` to `src/`
 - [ ] Move `package/package.json` dependencies to root `package.json`
 - [ ] Move `package/tsconfig.json` to root
-- [ ] Move `package/webpack.config.js` to root
+- [ ] Move `package/webpack.config.js` to root as `webpack.config.ts`
 - [ ] Update all import paths and aliases
 - [ ] Delete `package/` directory artifacts (gulp, babel, etc.)
 
@@ -40,27 +45,45 @@ Modernize the frontend tooling while keeping webpack as the build system.
 - [ ] Remove gulp dependencies from package.json
 - [ ] Update npm scripts
 
-### Phase 3: Biome Setup
+### Phase 3: ESLint + Prettier Setup
 
-- [ ] Install biome
-- [ ] Create biome.json config
-- [ ] Remove ESLint config and dependencies
-- [ ] Remove Prettier config and dependencies
-- [ ] Add npm scripts: `check`, `fix`, `format`, `lint`
+- [ ] Move ESLint config to root
+- [ ] Move Prettier config to root
+- [ ] Update npm scripts: `lint`, `format`
 
-### Phase 4: Strict TypeScript
+### Phase 4: Single Pipeline
+
+- [ ] Create unified `npm run check` command
+- [ ] Runs: eslint + prettier --check + tsc --noEmit
+- [ ] Create `npm run fix` for auto-fixing
+- [ ] Update CI/pre-commit if applicable
+
+### Phase 5: Strict TypeScript
 
 - [ ] Enable strict mode in tsconfig.json
 - [ ] Fix all TypeScript errors
 - [ ] Add proper types where `any` is used
 - [ ] Ensure no implicit any
 
-### Phase 5: Single Pipeline
+### Phase 6: ESLint Strictening
 
-- [ ] Create unified `npm run check` command
-- [ ] Runs: biome check + tsc --noEmit
-- [ ] Create `npm run fix` for auto-fixing
-- [ ] Update CI/pre-commit if applicable
+- [ ] Move ESLint config to `eslint.config.ts` if supported
+- [ ] Enable stricter rules
+- [ ] Refactor code to fix new lint errors
+- [ ] Remove any unnecessary eslint-disable comments
+
+### Phase 7: Babel → SWC (Optional)
+
+- [ ] Verify Emotion CSS transforms work with SWC
+- [ ] If compatible, replace Babel with SWC
+- [ ] Update webpack config to use swc-loader
+- [ ] Remove Babel dependencies
+
+### Phase 8: Update Dependencies
+
+- [ ] Update all npm packages to latest versions
+- [ ] Fix any breaking changes
+- [ ] Run full test suite to verify
 
 ## File Structure (After)
 
@@ -77,8 +100,9 @@ blockstudio7/
 ├── includes/               # PHP (unchanged)
 ├── package.json            # Root package.json with all deps
 ├── tsconfig.json           # Root TypeScript config
-├── webpack.config.js       # Root webpack config
-└── biome.json              # Biome config
+├── webpack.config.ts       # Root webpack config (TypeScript)
+├── eslint.config.mjs       # ESLint config
+└── .prettierrc             # Prettier config
 ```
 
 ## Success Criteria
