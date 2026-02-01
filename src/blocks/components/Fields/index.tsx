@@ -110,7 +110,7 @@ export const Fields = ({
 
     const props: Any = { ...item };
     const transformedOptions =
-      (block?.attributes as Any)?.[item.id]?.['options'] || item.options;
+      (block?.attributes as Any)?.[item.id]?.options || item.options;
     delete props.type;
     delete props.id;
 
@@ -420,7 +420,7 @@ export const Fields = ({
       ) as BlockstudioBlock['blockstudio']['attributes'];
 
       const obj: Record<string | number, Any> = {};
-      transformed.attributes.map(
+      transformed.attributes.forEach(
         (e: { id: string | number; default: boolean }) => {
           obj[e.id] = e?.default || false;
         },
@@ -668,7 +668,7 @@ export const Fields = ({
           },
         })}
       >
-        {block['blockstudio']?.['attributes']?.map(
+        {block.blockstudio?.attributes?.map(
           (item: BlockstudioAttribute, index: number) => {
             if (!isAllowedToRender(item, attributes)) return false;
             if (item.type === 'tabs' && index !== 0) return null;

@@ -47,7 +47,7 @@ export const CustomClasses = ({
     const optionsClone = cloneDeep(blockstudio.options);
     optionsClone.tailwind.customClasses = internalClasses;
     // prettier ESM standalone returns string sync, not Promise - see src/types/prettier.d.ts
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
+     
     const formatted = prettier.format(JSON.stringify(optionsClone), {
       parser: 'json',
       plugins: [parserBabel],
