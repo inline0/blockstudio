@@ -3212,7 +3212,7 @@ function transform(val: any, typ: any, getProps: any, key: any = '', parent: any
             const typ = typs[i];
             try {
                 return transform(val, typ, getProps);
-            } catch (_) {}
+            } catch {}
         }
         return invalidValue(typs, val, key, parent);
     }

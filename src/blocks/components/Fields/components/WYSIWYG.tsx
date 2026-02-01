@@ -105,10 +105,12 @@ export const WYSIWYG = ({
     if (!editor) return;
 
     if (codeMode) {
-      prettier.format(editor.getHTML(), {
-        parser: 'html',
-        plugins: [parserHtml],
-      }).then((formatted: string) => setVal(formatted));
+      setVal(
+        prettier.format(editor.getHTML(), {
+          parser: 'html',
+          plugins: [parserHtml],
+        }),
+      );
     } else {
       editor.commands.setContent(val);
     }
@@ -297,6 +299,7 @@ export const WYSIWYG = ({
                     />
                   );
                 }
+                return null;
               })}
             </Toolbar>
           )}
