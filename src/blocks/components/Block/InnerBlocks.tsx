@@ -69,7 +69,7 @@ export const InnerBlocks = ({
         try {
           const defaults = getDefaultsFromTemplate(blocks[item[0]], item);
           return [item[0], defaults];
-        } catch {
+        } catch (e) {
           const templateBlock = {
             name: item[0],
             attributes: item[1],

@@ -7,7 +7,7 @@ const isValidRegex = (value: string) => {
     try {
       new RegExp(match[1], match[2]);
       return true;
-    } catch {
+    } catch (e) {
       return false;
     }
   }
@@ -88,8 +88,7 @@ export const transforms = (
                 transform: () => createBlock(block.name),
               };
             }
-            return null;
-          }).filter(Boolean),
+          }),
       }
     : [];
 };

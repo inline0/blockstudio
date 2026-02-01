@@ -5,7 +5,7 @@ declare module 'prettier/esm/parser-postcss.mjs' {
 
 declare module 'prettier/esm/standalone.mjs' {
   const prettier: {
-    format: (source: string, options: unknown) => string;
+    format: (source: string, options: unknown) => Promise<string>;
   };
   export default prettier;
 }

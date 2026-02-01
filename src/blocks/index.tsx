@@ -30,18 +30,19 @@ register(tailwindStore);
 mediaModal();
 
 const blocks = window.blockstudioAdmin.data.blocksNative;
+let contentIndex = -1;
 
 const renderedIds: string[] = [];
 
-Object.values(blocks).forEach((block: Any) => {
-  if (!isAllowedToRender(block.blockstudio)) return;
+Object.values(blocks).map((block: Any) => {
+  if (!isAllowedToRender(block.blockstudio)) return false;
 
   // @ts-ignore
   registerBlockType(block, {
     ...(block?.blockstudio?.icon
       ? {
           icon: {
-            src: parse(block?.blockstudio?.icon),
+            src: parse(block?.['blockstudio']?.icon),
           },
         }
       : {}),
@@ -129,7 +130,7 @@ Object.values(blocks).forEach((block: Any) => {
           .filter(
             (item: Any) => item.field === 'richtext'
           )
-          .forEach((attribute: Any) => {
+          .map((attribute: Any) => {
             richTexts[attribute.id] =
               (attributes?.blockstudio?.attributes as Record<string, Any>)?.[attribute.id];
           });
@@ -143,6 +144,7 @@ Object.values(blocks).forEach((block: Any) => {
       }, []);
 
       useEffect(() => {
+        contentIndex++;
         setTimeout(() => setIsLoaded(true), 100);
       }, []);
 

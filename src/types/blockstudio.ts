@@ -235,7 +235,7 @@ function transform(val: any, typ: any, getProps: any, key: any = '', parent: any
             const typ = typs[i];
             try {
                 return transform(val, typ, getProps);
-            } catch {}
+            } catch (_) {}
         }
         return invalidValue(typs, val, key, parent);
     }

@@ -72,12 +72,12 @@ Modernize the frontend tooling while keeping webpack as the build system.
 - [x] Add proper types where `any` is used
 - [x] Ensure no implicit any
 
-### Phase 7: ESLint Strictening ✅
+### Phase 7: ESLint Strictening
 
-- [x] ESLint config already uses flat config format (eslint.config.mjs)
-- [x] Enable stricter rules (no-unused-vars, no-unused-expressions, array-callback-return, dot-notation, no-empty-function)
-- [x] Refactor code to fix lint errors (5 unused vars, 5 array-callback-return, 4 dot-notation)
-- [x] No eslint-disable comments in codebase
+- [ ] Move ESLint config to `eslint.config.ts` if supported
+- [ ] Enable stricter rules
+- [ ] Refactor code to fix new lint errors
+- [ ] Remove any unnecessary eslint-disable comments
 
 ### Phase 8: Babel → SWC (Optional)
 
