@@ -570,7 +570,7 @@ export const getFrame = async (page: Page, name: string) => {
 
 export const addTailwindClass = async (
   page: Page,
-  selector: string,
+  _selector: string,
   className: string
 ) => {
   if (!(await page.$('.editor-list-view-sidebar'))) {

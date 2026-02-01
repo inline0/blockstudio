@@ -43,7 +43,7 @@ export const BlockProps = ({
 
   delete (
     blockProps as unknown as {
-      class: string;
+      class?: string;
     }
   ).class;
 

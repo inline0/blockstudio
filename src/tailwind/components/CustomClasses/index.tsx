@@ -46,16 +46,15 @@ export const CustomClasses = ({
     setIsLoading(true);
     const optionsClone = cloneDeep(blockstudio.options);
     optionsClone.tailwind.customClasses = internalClasses;
+    const formatted = await prettier.format(JSON.stringify(optionsClone), {
+      parser: 'json',
+      plugins: [parserBabel],
+    });
     await apiFetch({
       path: '/blockstudio/v1/editor/options/save',
       method: 'POST',
       data: {
-        options: encodeURIComponent(
-          prettier.format(JSON.stringify(optionsClone), {
-            parser: 'json',
-            plugins: [parserBabel],
-          }),
-        ),
+        options: encodeURIComponent(formatted),
         json: blockstudio.optionsJson !== null,
       },
     }).finally(() => {
@@ -65,23 +64,23 @@ export const CustomClasses = ({
   };
 
   const handleChange = (index: number, type: string, value: string) => {
-    const clone = cloneDeep(internalClasses);
+    const clone = cloneDeep(internalClasses) || [];
     clone[index] = {
-      ...clone[index],
+      ...(clone[index] || {}),
       [type]: value,
     };
     setInternalClasses(clone);
   };
 
   const addClass = () => {
-    const clone = cloneDeep(internalClasses);
+    const clone = cloneDeep(internalClasses) || [];
     clone.push({ className: '', value: '' });
     setInternalClasses(clone);
   };
 
-  const removeClass = (index: number) => {
-    const clone = cloneDeep(internalClasses);
-    clone.splice(index, 1);
+  const removeClass = (indexToRemove: number) => {
+    const clone = cloneDeep(internalClasses) || [];
+    clone.splice(indexToRemove, 1);
     setInternalClasses(clone);
   };
 
@@ -90,7 +89,7 @@ export const CustomClasses = ({
   }, [show]);
 
   useEffect(() => {
-    setShow(externalShow);
+    if (externalShow !== undefined) setShow(externalShow);
   }, [externalShow]);
 
   return (
@@ -111,19 +110,19 @@ export const CustomClasses = ({
                   display: 'grid',
                 })}
               >
-                {internalClasses.length
-                  ? internalClasses.map((item, i) => {
-                      const showIndex = index + 1 && index + 1 === i + 1;
-                      const show = !(index + 1) || showIndex;
+                {internalClasses?.length
+                  ? internalClasses?.map((item, i) => {
+                      const showIndex = (index ?? -1) + 1 && (index ?? -1) + 1 === i + 1;
+                      const showItem = !((index ?? -1) + 1) || showIndex;
 
                       return (
                         <div
-                          key={index}
+                          key={i}
                           css={css({
-                            display: show ? 'block' : 'none',
-                            paddingTop: i !== 0 && '24px',
-                            marginTop: i !== 0 && '24px',
-                            borderTop: i !== 0 && style.border,
+                            display: showItem ? 'block' : 'none',
+                            paddingTop: i !== 0 ? '24px' : undefined,
+                            marginTop: i !== 0 ? '24px' : undefined,
+                            borderTop: i !== 0 ? style.border : undefined,
                           })}
                         >
                           <div

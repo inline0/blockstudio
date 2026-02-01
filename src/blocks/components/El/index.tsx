@@ -12,15 +12,15 @@ import {
 
 export const El = ({
   attributes,
-  block = null,
+  block,
   element,
   item,
   portal,
 }: {
   attributes: BlockstudioBlockAttributes;
-  block?: BlockstudioBlock;
+  block?: BlockstudioBlock | null;
   element: (item: BlockstudioAttribute) => ReactNode;
-  item: BlockstudioBlock['blockstudio']['attributes'][0];
+  item: NonNullable<BlockstudioBlock['blockstudio']['attributes']>[0];
   portal?: boolean;
 }) => {
   return item.type === 'group' ? (
@@ -31,13 +31,13 @@ export const El = ({
         <div>
           <TabPanel
             onSelect={() => {
-              dispatch(block, `tabs/${item.id}/change`);
+              dispatch(block as BlockstudioBlock, `tabs/${item.id}/change`);
               if (item.key) {
-                dispatch(block, `tabs/${item.key}/change`);
+                dispatch(block as BlockstudioBlock, `tabs/${item.key}/change`);
               }
             }}
-            tabs={item.tabs.map(
-              (e: { title: string; attributes: Any }, i: number) => {
+            tabs={(item.tabs || []).map(
+              (e: Any, i: number) => {
                 return {
                   name: `tab-${i}`,
                   title: e.title,

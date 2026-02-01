@@ -22,9 +22,9 @@ export const isAllowedToRender = (
   }
 
   try {
-    const results = [];
+    const results: boolean[] = [];
     item.conditions.forEach((condition: BlockstudioCondition[]) => {
-      const resultsInner = [];
+      const resultsInner: boolean[] = [];
 
       condition.forEach((innerCondition: BlockstudioCondition) => {
         if (!innerCondition?.operator) {
@@ -70,17 +70,18 @@ export const isAllowedToRender = (
             : attributes || false;
 
         if (
-          (innerCondition?.type && blockstudioData?.[innerCondition.type]) ||
+          (innerCondition?.type && (blockstudioData as Record<string, unknown>)?.[innerCondition.type]) ||
           innerCondition?.id
         ) {
+          const conditionId = innerCondition?.id ?? '';
           resultsInner.push(
-            operators[innerCondition?.operator](
-              blockstudioData?.[innerCondition.type] ||
+            operators[innerCondition?.operator ?? ''](
+              (blockstudioData as Record<string, unknown>)?.[innerCondition?.type ?? ''] ||
                 (attr &&
                   ((attr as unknown as BlockstudioBlock).blockstudio
-                    .attributes?.[innerCondition?.id]?.value ||
+                    .attributes?.[conditionId as unknown as number]?.value ||
                     (attr as unknown as BlockstudioBlock).blockstudio
-                      .attributes?.[innerCondition?.id])),
+                      .attributes?.[conditionId as unknown as number])),
               innerCondition?.value
             )
           );

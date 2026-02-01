@@ -54,7 +54,7 @@ export const WYSIWYG = ({
   const [codeMode, setCodeMode] = useState(item?.mode === 'code');
   const [openLink, setOpenLink] = useState(false);
   const [opensInNewTab, setOpensInNewTab] = useState(false);
-  const [selection, setSelection] = useState(null);
+  const [selection, setSelection] = useState<number[] | null>(null);
   const [val, setVal] = useState(value);
 
   const editor = useEditor({
@@ -105,43 +105,42 @@ export const WYSIWYG = ({
     if (!editor) return;
 
     if (codeMode) {
-      setVal(
-        prettier.format(editor.getHTML(), {
-          parser: 'html',
-          plugins: [parserHtml],
-        }),
-      );
+      prettier.format(editor.getHTML(), {
+        parser: 'html',
+        plugins: [parserHtml],
+      }).then((formatted: string) => setVal(formatted));
     } else {
       editor.commands.setContent(val);
     }
   }, [codeMode, editor]);
 
+  const headings = item?.toolbar?.tags?.headings || [];
   const tags = [
     {
       value: 'p',
       label: __('p'),
     },
-    item?.toolbar?.tags?.headings.includes(1) && {
+    headings.includes(1) && {
       value: 1,
       label: __('h1'),
     },
-    item?.toolbar?.tags?.headings.includes(2) && {
+    headings.includes(2) && {
       value: 2,
       label: __('h2'),
     },
-    item?.toolbar?.tags?.headings.includes(3) && {
+    headings.includes(3) && {
       value: 3,
       label: __('h3'),
     },
-    item?.toolbar?.tags?.headings.includes(4) && {
+    headings.includes(4) && {
       value: 4,
       label: __('h4'),
     },
-    item?.toolbar?.tags?.headings.includes(5) && {
+    headings.includes(5) && {
       value: 5,
       label: __('h5'),
     },
-    item?.toolbar?.tags?.headings.includes(6) && {
+    headings.includes(6) && {
       value: 6,
       label: __('h6'),
     },
@@ -291,7 +290,7 @@ export const WYSIWYG = ({
                   return (
                     <ToolbarButton
                       key={`align-${align}`}
-                      icon={textAlignMap[align]}
+                      icon={(textAlignMap as Record<string, typeof alignLeft>)[align]}
                       label={__(`Align ${align}`)}
                       onClick={() => editor.commands.setTextAlign(align)}
                       isPressed={editor?.isActive({ textAlign: align })}
@@ -400,11 +399,11 @@ export const WYSIWYG = ({
         <LinkModal
           onChange={(e) => {
             setOpensInNewTab(
-              (e as unknown as BlockstudioAttribute).opensInNewTab,
+              !!(e as unknown as BlockstudioAttribute).opensInNewTab,
             );
             editor.commands.setTextSelection({
-              from: selection[0],
-              to: selection[1],
+              from: selection?.[0] ?? 0,
+              to: selection?.[1] ?? 0,
             });
             editor.commands.setLink({
               href: (e as unknown as BlockstudioAttribute).url,
@@ -415,8 +414,8 @@ export const WYSIWYG = ({
           }}
           onRemove={() => {
             editor.commands.setTextSelection({
-              from: selection[0],
-              to: selection[1],
+              from: selection?.[0] ?? 0,
+              to: selection?.[1] ?? 0,
             });
             editor.commands.unsetLink();
             setOpensInNewTab(false);

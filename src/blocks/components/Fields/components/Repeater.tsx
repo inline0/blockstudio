@@ -80,7 +80,7 @@ const DragElement = ({
 
   if (item?.textMinimized?.id) {
     textMinimized = `${item?.textMinimized?.prefix || ''}${
-      result(attributes, `blockstudio.attributes.${draggableId}`)?.[
+      (result(attributes, `blockstudio.attributes.${draggableId}`) as Any)?.[
         item.textMinimized?.id
       ] ||
       item?.textMinimized?.fallback ||
@@ -116,7 +116,7 @@ const DragElement = ({
             ...{ position: 'relative' },
             ...(getItemStyle(
               snapshot.isDragging,
-              provided.draggableProps.style,
+              provided.draggableProps.style || {},
               index
             ) as { [key: string]: string }),
           }}
@@ -141,8 +141,8 @@ const DragElement = ({
               e.preventDefault();
               e.stopPropagation();
             }
-            if (e.key === 'ArrowUp') moveUp(index, innerId, repeaterId);
-            if (e.key === 'ArrowDown') moveDown(index, innerId, repeaterId);
+            if (e.key === 'ArrowUp') moveUp?.(index, innerId, repeaterId);
+            if (e.key === 'ArrowDown') moveDown?.(index, innerId, repeaterId);
           }}
         >
           <div
@@ -234,9 +234,9 @@ const DragElement = ({
                     <Icon
                       icon={item.icon}
                       css={css({
-                        transform: item.reverse && 'rotate(180deg)',
+                        transform: item.reverse ? 'rotate(180deg)' : undefined,
                         position: 'relative',
-                        top: item.reverse && '1px',
+                        top: item.reverse ? '1px' : undefined,
                       })}
                     />
                   </div>
@@ -303,7 +303,7 @@ export const Repeater = ({
   transformed: BlockstudioBlock['blockstudio'];
   v: string[];
 }) => {
-  const [groups, setGroups] = useState([]);
+  const [groups, setGroups] = useState<Any[]>([]);
   const innerId = id === '' ? item.id : id;
 
   useEffect(() => {
@@ -313,18 +313,18 @@ export const Repeater = ({
   }, [attributes]);
 
   const createGroup = () => {
-    let newGroups = [];
+    let newGroups: Any[] = [];
 
     v.forEach(() => {
       newGroups = [
         ...newGroups,
-        item.attributes.filter((e: { type: string }) => e.type !== 'group'),
+        (item.attributes || []).filter((e: { type: string }) => e.type !== 'group'),
       ];
     });
     setGroups(newGroups);
     repeaters = {
       ...repeaters,
-      [innerId]: newGroups,
+      [innerId ?? '']: newGroups,
     };
   };
 
@@ -353,28 +353,26 @@ export const Repeater = ({
         {({ moveUp, moveDown }) =>
           v &&
           groups
-            .filter((e) => e.type !== 'group')
-            .map((group, index) => {
+            .filter((e: Any) => e.type !== 'group')
+            .map((group: Any, index: number) => {
               const draggableId = getId(index);
               return (
                 <DragElement
-                  {...{
-                    attributes,
-                    block,
-                    draggableId,
-                    duplicate,
-                    element,
-                    getId,
-                    group,
-                    index,
-                    innerId,
-                    item,
-                    moveDown,
-                    moveUp,
-                    remove,
-                    transformed,
-                  }}
-                  length={groups.filter((e) => e.type !== 'group').length}
+                  attributes={attributes}
+                  block={block}
+                  draggableId={draggableId}
+                  duplicate={duplicate}
+                  element={element}
+                  getId={getId}
+                  group={group}
+                  index={index}
+                  innerId={innerId ?? ''}
+                  item={item}
+                  length={groups.filter((e: Any) => e.type !== 'group').length}
+                  moveDown={moveDown}
+                  moveUp={moveUp}
+                  remove={remove}
+                  transformed={transformed as Any}
                   key={draggableId}
                 />
               );
@@ -383,12 +381,12 @@ export const Repeater = ({
       </List>
       <Button
         variant="secondary"
-        onClick={() => add(innerId)}
+        onClick={() => add(innerId ?? '')}
         css={css({
           marginTop: '16px',
           marginLeft: '-4px',
         })}
-        disabled={item?.max && item.max <= v?.length}
+        disabled={!!(item?.max && item.max <= v?.length)}
       >
         {__(
           item?.textButton || 'Add row',

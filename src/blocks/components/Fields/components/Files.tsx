@@ -39,7 +39,7 @@ export const Files = ({
     [],
   );
 
-  const Btn = ({ open }) => {
+  const Btn = ({ open }: { open?: () => void }) => {
     return (
       <Button variant="secondary" onClick={open}>
         {__(
@@ -66,7 +66,7 @@ export const Files = ({
           })}
           value={
             (!inRepeater
-              ? attributes?.blockstudio?.attributes?.[item.id + '__size']
+              ? (attributes?.blockstudio?.attributes as unknown as Record<string, string>)?.[item.id + '__size']
               : result(
                   attributes,
                   `blockstudio.attributes.${repeaterId}__size`,
@@ -110,7 +110,7 @@ export const Files = ({
                     )
                   : media.length === 1
                     ? change(media[0].id)
-                    : change(media?.map((e) => e.id))
+                    : change(media?.map((e: { id: string }) => e.id))
               }
               render={({ open }) => <Btn {...{ open }} />}
             />

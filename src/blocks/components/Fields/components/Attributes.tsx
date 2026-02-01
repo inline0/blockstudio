@@ -153,8 +153,8 @@ export const Attribute = ({
                                 open();
                                 document
                                   .querySelectorAll('.media-modal')
-                                  .forEach((el: HTMLElement) => {
-                                    el.style.zIndex = '999999999999';
+                                  .forEach((el) => {
+                                    (el as HTMLElement).style.zIndex = '999999999999';
                                   });
                               }}
                             >
@@ -191,7 +191,7 @@ export const Attribute = ({
             moveDown={() => {}}
             change={() => {}}
             v={{}}
-            data={media?.[pair.data.media]}
+            data={media?.[pair.data.media] || {}}
             id={media?.[pair.data.media]?.id || ''}
             loaded={!!media?.[pair.data.media]}
             onClick={() => {}}
@@ -265,14 +265,14 @@ export const Attributes = ({
 
   const addAttributePair = () => {
     const clone = cloneDeep(attributes);
-    const existing = get(clone, keyName, []);
+    const existing = get(clone, keyName, []) as AttributePair[];
     if (!existing || !isArray(existing)) {
       set(clone, keyName, [{ attribute: '', value: '' }]);
     } else {
       existing.push({ attribute: '', value: '' });
       set(clone, keyName, existing);
     }
-    setAttributes({
+    setAttributes?.({
       ...attributes,
       blockstudio: clone.blockstudio,
     });
@@ -299,8 +299,8 @@ export const Attributes = ({
                   link,
                   media,
                   pair,
-                  setAttributes,
                 }}
+                setAttributes={setAttributes!}
               />
             );
           })}
@@ -309,7 +309,7 @@ export const Attributes = ({
         variant="secondary"
         onClick={addAttributePair}
         css={css({
-          marginTop: isArray(attr) && attr?.filter((e) => e).length && '16px',
+          marginTop: isArray(attr) && attr?.filter((e) => e).length ? '16px' : undefined,
         })}
       >
         {__('Add Attribute')}

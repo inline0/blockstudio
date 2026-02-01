@@ -1,4 +1,4 @@
-import { Any } from '@/typetypes';
+import { Any } from '@/types/types';
 
 export const replaceEmptyStringsWithFalse = (obj: Any): Any => {
   if (Array.isArray(obj)) {

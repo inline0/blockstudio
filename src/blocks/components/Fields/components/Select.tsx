@@ -77,11 +77,11 @@ const AdvancedSelect = ({
   const [searchValue, setSearchValue] = useState('');
 
   const filteredValue = multiple
-    ? (value || []).filter((e) => e?.value)
+    ? (value || []).filter((e: Any) => e?.value)
     : value;
   const filteredOptions = multiple
     ? allOptions.filter(
-        (option) => !filteredValue.map((e) => e.value).includes(option.value),
+        (option) => !filteredValue.map((e: Any) => e.value).includes(option.value),
       )
     : allOptions;
 
@@ -106,10 +106,10 @@ const AdvancedSelect = ({
           res = await res.json();
           res = (res as unknown as object[]).map((e) => ({
             label:
-              get(e, item?.populate?.returnFormat?.label) ||
+              get(e, item?.populate?.returnFormat?.label || '') ||
               `${Object.values(e)[0]}`,
             value:
-              get(e, item?.populate?.returnFormat?.value) ||
+              get(e, item?.populate?.returnFormat?.value || '') ||
               `${Object.values(e)[0]}`,
           }));
         }
@@ -153,19 +153,19 @@ const AdvancedSelect = ({
     return debounce((searchValue: string) => fetcher(searchValue), 250);
   }, []);
 
-  const onChange = (val: string) => {
+  const onChange = (val: string | null | undefined) => {
     if (multiple) {
       change(
         isFetch
           ? [
-              ...(value || []).filter((e) => e.value && e.label),
+              ...(value || []).filter((e: Any) => e.value && e.label),
               allOptions.find((e) => e.value === val),
             ]
           : val,
         isFetch,
       );
 
-      const input = ref.current.querySelector('input');
+      const input = (ref.current as HTMLElement | null)?.querySelector('input');
       if (input) {
         input.blur();
         input.focus();
@@ -187,10 +187,11 @@ const AdvancedSelect = ({
   };
 
   useEffect(() => {
-    ref?.current &&
-      ref.current.querySelector('input') &&
-      item?.allowNull &&
-      (ref.current.querySelector('input').placeholder = item.allowNull);
+    const element = ref?.current as HTMLElement | null;
+    const input = element?.querySelector('input');
+    if (input && item?.allowNull) {
+      input.placeholder = String(item.allowNull);
+    }
   }, [allOptions]);
 
   useEffect(() => {
@@ -216,7 +217,7 @@ const AdvancedSelect = ({
           },
         },
         '.components-form-token-field__input': {
-          paddingRight: isFetch && '24px',
+          paddingRight: isFetch ? '24px' : undefined,
         },
       })}
     >
@@ -338,7 +339,7 @@ export const Select = ({
             options,
           }}
           value={v}
-          multiple={item.multiple}
+          multiple={item.multiple ?? false}
         />
       ) : (
         <SelectControl

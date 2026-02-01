@@ -5,7 +5,7 @@ export const Range = ({ ...rest }) => {
     <RangeControl
       {...rest}
       help={false}
-      label={null}
+      label={undefined}
       className={`components-base-control`}
     />
   );

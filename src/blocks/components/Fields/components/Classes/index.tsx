@@ -42,7 +42,7 @@ export const Classes = ({
   onResetTemporaryValue?: () => void;
   only?: boolean;
   setAttributes?: (props: BlockstudioBlockAttributes) => void;
-  setValue?: (value: string, temporaryValue: string) => void;
+  setValue?: (value: string, temporaryValue?: string) => void;
   tailwind?: boolean;
   value: string;
 }) => {
@@ -57,33 +57,33 @@ export const Classes = ({
         select('blockstudio/tailwind') as typeof selectorsTailwind
       ).getCustomClasses(),
     [],
-  );
+  ) || [];
   const allClasses = [
     ...(tailwind
-      ? [...classes, ...customClasses.map((item) => item.className)]
+      ? [...classes, ...(customClasses || []).map((item: { className: string }) => item.className)]
       : []),
     ...settingsCssClasses,
   ] as string[];
   const [showCustomClasses, setShowCustomClasses] = useState(false);
-  const [suggestions, setSuggestions] = useState<string[]>(classes);
-  const ref = useRef(null);
+  const [suggestions, setSuggestions] = useState<string[]>([...classes] as string[]);
+  const ref = useRef<HTMLDivElement | null>(null);
   const valueRef = useRef(value);
   valueRef.current = value;
   const attributesRef = useRef(attributes);
   attributesRef.current = attributes;
 
   const sorted = sortClasses(value.trim());
-  const groupedClasses = sorted.reduce((acc, className) => {
+  const groupedClasses = sorted.reduce((acc: Record<string, string[]>, className: string) => {
     const parts = className.split(':');
     const prefix =
-      parts.length === 2 ? `${parts[0]} (${screens[parts[0]]})` : __('Base');
+      parts.length === 2 ? `${parts[0]} (${(screens as Record<string, string>)[parts[0]]})` : __('Base');
     if (!className) return acc;
     if (!acc[prefix]) {
       acc[prefix] = [];
     }
     acc[prefix].push(className);
     return acc;
-  }, {});
+  }, {} as Record<string, string[]>);
 
   const handleChange = (val: string, temporaryVal: string) => {
     if (setValue) {
@@ -91,15 +91,17 @@ export const Classes = ({
       return;
     }
 
-    const clone = cloneDeep(attributesRef.current);
-    set(clone, keyName, val.trim());
+    const clone = cloneDeep(attributesRef.current) as BlockstudioBlockAttributes | undefined;
+    if (clone) {
+      set(clone as object, keyName, val.trim());
+    }
     setTemporaryClasses({
       [`${clientId}-${attributeId}`]: temporaryVal,
     });
-    setAttributes({
+    setAttributes?.({
       ...attributes,
-      blockstudio: clone.blockstudio,
-    });
+      blockstudio: clone?.blockstudio,
+    } as BlockstudioBlockAttributes);
   };
 
   const resetTemporaryValue = () => {
@@ -119,13 +121,13 @@ export const Classes = ({
           mutation.type === 'attributes' &&
           mutation.attributeName === 'aria-selected'
         ) {
-          const selected = ref.current.querySelector(
+          const selected = ref.current?.querySelector(
             '.components-form-token-field__suggestion[aria-selected="true"]',
           );
-          if (selected) handleChange(valueRef.current, selected.textContent);
+          if (selected) handleChange(valueRef.current, selected.textContent || '');
         }
         if (
-          !ref.current.querySelector('.components-form-token-field__suggestion')
+          !ref.current?.querySelector('.components-form-token-field__suggestion')
         ) {
           resetTemporaryValue();
         }
@@ -151,7 +153,7 @@ export const Classes = ({
     const escapeHandler = (e: KeyboardEvent) => {
       if (!ref.current) return;
       if (e.key === 'Escape') {
-        const input = ref.current.querySelector('input');
+        const input = ref.current?.querySelector('input');
         if (input) input.blur();
         resetTemporaryValue();
       }
@@ -180,8 +182,8 @@ export const Classes = ({
           <FormTokenField
             {...{ label }}
             suggestions={suggestions.filter((c) => !value.includes(c))}
-            onChange={(val: string[]) => {
-              handleChange(mergeClassNames(value, val.join(' ')), '');
+            onChange={(val) => {
+              handleChange(mergeClassNames(value, (val as string[]).join(' ')), '');
             }}
             onInputChange={(val) => {
               if (val.includes(':')) {
@@ -202,7 +204,7 @@ export const Classes = ({
             <DropdownMenu
               css={css({
                 '.components-button': {
-                  marginTop: only && '23px',
+                  marginTop: only ? '23px' : undefined,
                   width: '32px',
                   height: '32px',
                 },

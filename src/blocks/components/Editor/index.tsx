@@ -12,23 +12,25 @@ import { getAssetId } from '@/blocks/utils/getAssetId';
 import { isCss } from '@/utils/isCss';
 import { Any } from '@/types/types';
 
+type EditorState = Record<string, string> & { name?: string };
+
 export const Editor = () => {
   const { setEditor } = useDispatch('blockstudio/blocks');
   const editor = useSelect(
     (select) => (select('blockstudio/blocks') as typeof selectors).getEditor(),
     [],
-  );
+  ) as EditorState | undefined;
   const editorFocus = useSelect(
     (select) =>
       (select('blockstudio/blocks') as typeof selectors).getEditorFocus(),
     [],
   );
-  const [currentEditor, setCurrentEditor] = useState(null);
+  const [currentEditor, setCurrentEditor] = useState<EditorState | null>(null);
   const [newWindowRoot, setNewWindowRoot] = useState<HTMLDivElement | null>(
     null,
   );
-  const winRef = useRef(null);
-  const assetsRef = useRef({});
+  const winRef = useRef<Window | null>(null);
+  const assetsRef = useRef<Record<string, string>>({});
 
   useEffect(() => {
     handleParentWindowUnload();
@@ -89,45 +91,39 @@ export const Editor = () => {
     }
   }, [editor]);
 
-  const debounced = debounce(async (data) => {
-    await apiFetch({
+  const debounced = debounce(async (data: { filesChanged: Record<string, string> }) => {
+    const response = await apiFetch({
       method: 'POST',
       path: '/blockstudio/v1/gutenberg/block/update',
       data: {
         block: editor,
         filesChanged: data.filesChanged,
       },
-    }).then(
-      (e: {
-        filesChanged: {
-          [key: string]: string;
-        };
-      }) => {
-        const event = new CustomEvent(`blockstudio/${editor.name}/refresh`, {
-          detail: e,
-        });
-        document.dispatchEvent(event);
-        Object.entries(e?.filesChanged || {}).forEach(([key, value]) => {
-          if (key.endsWith('-css') || key.endsWith('-js')) {
-            const assetElement = document.querySelector(`#${key}`);
-            if (assetElement) {
-              assetElement.textContent = value as string;
-            } else {
-              const newAssetElement = document.createElement(
-                key.endsWith('-css') ? 'style' : 'script',
-              );
-              newAssetElement.id = key;
-              newAssetElement.textContent = value as string;
-              document.body.appendChild(newAssetElement);
-            }
-          }
-        });
-      },
-    );
+    }) as { filesChanged: Record<string, string> };
+
+    const event = new CustomEvent(`blockstudio/${editor?.name}/refresh`, {
+      detail: response,
+    });
+    document.dispatchEvent(event);
+    Object.entries(response?.filesChanged || {}).forEach(([key, value]) => {
+      if (key.endsWith('-css') || key.endsWith('-js')) {
+        const assetElement = document.querySelector(`#${key}`);
+        if (assetElement) {
+          assetElement.textContent = value as string;
+        } else {
+          const newAssetElement = document.createElement(
+            key.endsWith('-css') ? 'style' : 'script',
+          );
+          newAssetElement.id = key;
+          newAssetElement.textContent = value as string;
+          document.body.appendChild(newAssetElement);
+        }
+      }
+    });
   }, 500);
 
-  const reset = (obj = editor) => {
-    const event = new CustomEvent(`blockstudio/${obj.name}/refresh`);
+  const reset = (obj: EditorState | undefined = editor) => {
+    const event = new CustomEvent(`blockstudio/${obj?.name}/refresh`);
     document.dispatchEvent(event);
     Object.entries(assetsRef.current || {}).forEach(([key, value]) => {
       console.log(key, value);

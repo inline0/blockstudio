@@ -27,16 +27,16 @@ export const Control = ({
   className?: string;
   customCss?: object;
   customCssInner?: object;
-  description?: string;
+  description?: string | null;
   enabled?: boolean;
-  help?: string;
+  help?: string | null;
   inRepeater?: boolean;
   isRepeater?: boolean;
-  label?: string;
+  label?: string | null;
   margin?: boolean;
-  name?: string;
+  name?: string | null;
   onClick?: () => void;
-  type?: string;
+  type?: string | null;
   [key: string]: Any;
 }) => {
   return (
@@ -44,7 +44,7 @@ export const Control = ({
       {...rest}
       aria-disabled={!active}
       css={css({
-        margin: margin && '0 -16px',
+        margin: margin ? '0 -16px' : undefined,
         padding: isRepeater ? '0 16px 0 20px' : '0 16px',
         position: 'relative',
         ...customCss,
@@ -67,14 +67,14 @@ export const Control = ({
             top: 0,
             width: !isRepeater ? '16px' : '20px',
             height: '100%',
-            cursor: !isRepeater && !inRepeater && 'pointer',
+            cursor: !isRepeater && !inRepeater ? 'pointer' : undefined,
             zIndex: 50,
 
             '&:hover, &:focus-visible': {
               boxShadow:
-                !isRepeater &&
-                !inRepeater &&
-                'inset 4px 0 0 0 var(--wp-admin-theme-color)',
+                !isRepeater && !inRepeater
+                  ? 'inset 4px 0 0 0 var(--wp-admin-theme-color)'
+                  : undefined,
             },
           })}
         />
@@ -90,7 +90,7 @@ export const Control = ({
           },
         })}
       >
-        {type !== 'toggle' && <Label {...{ label, help }} />}
+        {type !== 'toggle' && label && <Label label={label} help={help || ''} />}
         {children}
         {description && (
           <Text

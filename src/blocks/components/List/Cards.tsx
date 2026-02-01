@@ -78,7 +78,7 @@ export const Card = forwardRef<
     },
     ref,
   ) => {
-    const [showDelete, setShowDelete] = useState(null);
+    const [showDelete, setShowDelete] = useState<boolean>(false);
     const media = data?.media_type;
     const isImage = media === 'image';
     const name = loaded ? `${id}_${data.id || data.value}` : '';
@@ -116,8 +116,8 @@ export const Card = forwardRef<
         })}
         onKeyDown={(e) => {
           e.preventDefault();
-          if (e.key === 'ArrowUp') moveUp(index);
-          if (e.key === 'ArrowDown') moveDown(index);
+          if (e.key === 'ArrowUp') moveUp?.(index ?? 0);
+          if (e.key === 'ArrowDown') moveDown?.(index ?? 0);
         }}
       >
         <Control
@@ -158,14 +158,14 @@ export const Card = forwardRef<
               borderRadius: 'var(--blockstudio-border-radius)',
               marginRight: `${grid * 1.5}px`,
               overflow: 'hidden',
-              border: loaded && (isImage || !media) && '1px solid #eeeeee',
+              border: loaded && (isImage || !media) ? '1px solid #eeeeee' : undefined,
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
               flexShrink: '0',
               zIndex: 50,
               position: 'relative',
-              cursor: showDelete && 'pointer',
+              cursor: showDelete ? 'pointer' : undefined,
 
               '&:focus': {
                 borderColor: 'var(--wp-admin-theme-color)',
@@ -180,7 +180,7 @@ export const Card = forwardRef<
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  opacity: showDelete ? 1 : !media && 0.25,
+                  opacity: showDelete ? 1 : !media ? 0.25 : undefined,
                 })}
               >
                 {media ? (
@@ -285,7 +285,7 @@ export const Cards = ({
       {({ moveUp, moveDown }) =>
         (v.length ? v : [v]).map(
           (itemInner: string | number, index: number) => {
-            const el = media[itemInner] ?? itemInner;
+            const el = (media as Record<string, Any>)?.[itemInner] ?? itemInner;
             const id = `${v[index]?.value || v[index]}`;
 
             return (
@@ -310,12 +310,12 @@ export const Cards = ({
                       v,
                     }}
                     data={el}
-                    id={item.id || item.value}
+                    id={item.id || item.value || ''}
                     loaded={media ? el?.mime_type : true}
                     onClick={(id) => disable(id)}
                     style={getItemStyle(
                       snapshot.isDragging,
-                      provided.draggableProps.style,
+                      provided.draggableProps.style || {},
                     )}
                   />
                 )}

@@ -19,10 +19,10 @@ export const mediaModal = () => {
       if (modal) {
         const classes = modal.classList.value.split(' ');
         const min = Number(
-          classes.find((e) => e.startsWith(`${id}-min`)).split(`${id}-min-`)[1]
+          classes.find((e) => e.startsWith(`${id}-min`))?.split(`${id}-min-`)[1]
         );
         const max = Number(
-          classes.find((e) => e.startsWith(`${id}-max`)).split(`${id}-max-`)[1]
+          classes.find((e) => e.startsWith(`${id}-max`))?.split(`${id}-max-`)[1]
         );
 
         const all = document.querySelectorAll('.attachment');

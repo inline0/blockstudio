@@ -11,7 +11,7 @@ type BlockData = {
   name: string;
 };
 
-const createNestedBlocks = (blockData: BlockData) => {
+const createNestedBlocks = (blockData: BlockData): ReturnType<typeof createBlock> => {
   const { name, attributes, innerBlocks = [] } = blockData;
 
   const defaults = getDefaultsFromTemplate(
@@ -61,7 +61,7 @@ export const createBlocks = (blocks: [], clientId: string) => {
   const childBlocks = currentBlock.innerBlocks;
 
   const clientIds = childBlocks.map((block: BlockData) => block.clientId);
-  clientIds.forEach((item) => {
+  clientIds.forEach((item: string) => {
     // @ts-ignore
     dispatch('core/block-editor').removeBlock(item);
   });

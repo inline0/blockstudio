@@ -95,7 +95,7 @@ export const Link = ({
           value={value}
           onChange={(link) => change(link)}
           onRemove={() => change({})}
-          opensInNewTab={item?.opensInNewTab}
+          opensInNewTab={item?.opensInNewTab ?? false}
           setOpen={setOpen}
         />
       )}

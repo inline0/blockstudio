@@ -10,17 +10,17 @@ export const useGetCssVariables = (
   styles: {
     [key: string]: Any;
   } = {},
-  allAssets = [],
-  reload = []
+  allAssets: string[] = [],
+  reload: Any[] = []
 ) => {
-  const [variables, setVariables] = useState(new Set());
+  const [variables, setVariables] = useState(new Set<string>());
 
   useEffect(() => {
     const allVariables = new Set() as Set<string>;
 
     const fetchVariables = async () => {
       for (const [k, v] of Object.entries(styles)) {
-        const variables = new Set(allAssets);
+        const variables = new Set<string>(allAssets);
 
         if (cache[k] && [...variables].includes(k)) {
           cache[k].forEach((cls: string) => allVariables.add(cls));

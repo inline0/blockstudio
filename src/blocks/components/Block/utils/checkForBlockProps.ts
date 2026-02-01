@@ -15,11 +15,11 @@ export const checkForBlockProps = (htmlString: string, component = false) => {
 
   if (component) {
     return (
-      (innerblocks || richtext) && firstElement.hasAttribute('useblockprops')
+      (innerblocks || richtext) && firstElement?.hasAttribute('useblockprops')
     );
   }
 
   return (
-    !innerblocks && !richtext && firstElement.hasAttribute('useblockprops')
+    !innerblocks && !richtext && firstElement?.hasAttribute('useblockprops')
   );
 };

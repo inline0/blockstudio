@@ -31,8 +31,8 @@ export const Label = ({
         css={css({
           display: 'flex',
           alignItems: 'center',
-          cursor: help && 'pointer',
-          marginBottom: !toggle && '8px',
+          cursor: help ? 'pointer' : undefined,
+          marginBottom: !toggle ? '8px' : undefined,
           width: 'max-content',
           maxWidth: 'fit-content',
 

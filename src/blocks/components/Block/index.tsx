@@ -79,16 +79,16 @@ export const Block = ({
   const { setInitialLoad, setInitialLoadRendered } =
     useDispatch('blockstudio/blocks');
   const editorRef = useRef(editor);
-  const firstRenderDone = useRef(null);
-  const ref = useRef(null);
+  const firstRenderDone = useRef<boolean | null>(null);
+  const ref = useRef<HTMLDivElement | null>(null);
   const attributesRef = useRef(attributes);
   const [disableLoading, setDisableLoading] = useState(
     block?.blockstudio?.blockEditor?.disableLoading
   );
   const [isInPreview, setIsInPreview] = useState(false);
-  const [hasBlockProps, setHasBlockProps] = useState(false);
+  const [hasBlockProps, setHasBlockProps] = useState<boolean | null>(false);
   const [hasMarkup, setHasMarkup] = useState(false);
-  const [markup, setMarkup] = useState(null);
+  const [markup, setMarkup] = useState<Any>(null);
   const blockProps = useBlockProps();
   const postId =
     useSelect((select: Any) => select('core/editor')?.getCurrentPostId(), []) ||
@@ -152,7 +152,7 @@ export const Block = ({
                   blockResponse,
                   clientId,
                 }}
-                hasOwnBlockProps={hasComponentBlockProps}
+                hasOwnBlockProps={hasComponentBlockProps ?? false}
               />
             );
           }
@@ -169,7 +169,7 @@ export const Block = ({
                   clientId,
                 }}
                 data={attributeMap[node.attribs.class]}
-                hasOwnBlockProps={hasComponentBlockProps}
+                hasOwnBlockProps={hasComponentBlockProps ?? false}
               />
             );
           }
@@ -189,7 +189,7 @@ export const Block = ({
       });
     };
 
-    const attributeMap = {};
+    const attributeMap: Record<string, Any> = {};
     const blockResponse = (
       response as unknown as {
         rendered: string;
@@ -223,7 +223,7 @@ export const Block = ({
 
     setMarkup(m);
     setHasMarkup(true);
-    setHasBlockProps(hasBlockProps || hasComponentBlockProps);
+    setHasBlockProps(hasBlockProps || hasComponentBlockProps || null);
   };
 
   const fetchData = (event: CustomEvent | false = false) => {
@@ -248,9 +248,9 @@ export const Block = ({
     };
 
     if (
-      !initialLoadRendered[clientId] &&
+      !initialLoadRendered?.[clientId] &&
       !event &&
-      !block.blockstudio.blockEditor.disableLoading
+      !block.blockstudio.blockEditor?.disableLoading
     ) {
       setInitialLoad({
         [clientId]: {
@@ -276,7 +276,7 @@ export const Block = ({
         context,
       },
     })
-      .then((response: { rendered: string }) => parseBlock(response))
+      .then((response) => parseBlock(response as { rendered: string }))
       .then(() => {
         loaded();
       });
@@ -284,8 +284,8 @@ export const Block = ({
   const debouncedFetchData = useDebounce(fetchData, 500);
 
   useEffect(() => {
-    const keysRendered = Object.keys(initialLoadRendered);
-    const keysLoaded = Object.keys(initialLoad);
+    const keysRendered = Object.keys(initialLoadRendered || {});
+    const keysLoaded = Object.keys(initialLoad || {});
     const currentBatchSize = keysRendered.length;
 
     if (keysLoaded.length === keysRendered.length) {
@@ -303,10 +303,10 @@ export const Block = ({
     }
 
     GLOBAL_INITIAL_LOAD_TIMEOUT = setTimeout(() => {
-      const unloadedBlocks = {};
+      const unloadedBlocks: Record<string, Any> = {};
 
-      Object.entries(initialLoad).forEach(([key, value]) => {
-        if (!initialLoadRendered[key]) {
+      Object.entries(initialLoad || {}).forEach(([key, value]) => {
+        if (!initialLoadRendered?.[key]) {
           unloadedBlocks[key] = value;
         }
       });
@@ -322,8 +322,8 @@ export const Block = ({
           data: unloadedBlocks,
         },
       })
-        .then((response: { [key: string]: string }) => {
-          setInitialLoadRendered(response);
+        .then((response) => {
+          setInitialLoadRendered(response as { [key: string]: string });
         })
         .finally(() => {
           GLOBAL_INITIAL_LOAD_TIMEOUT = null;
@@ -370,7 +370,7 @@ export const Block = ({
 
   useEffect(() => {
     setIsInPreview(
-      ref.current?.closest('.block-editor-block-preview__content-iframe')
+      !!ref.current?.closest('.block-editor-block-preview__content-iframe')
     );
 
     fetchData();
@@ -393,7 +393,7 @@ export const Block = ({
 
   useEffect(
     function onAttributeChange() {
-      const newAttributes = cloneDeep(attributes);
+      const newAttributes = cloneDeep(attributes) as Record<string, Any>;
       Object.keys(attributes).forEach((key) => {
         if (key.startsWith('BLOCKSTUDIO_RICH_TEXT')) {
           delete newAttributes[key];
@@ -405,7 +405,7 @@ export const Block = ({
       ) {
         return;
       }
-      attributesRef.current = newAttributes;
+      attributesRef.current = newAttributes as BlockstudioBlockAttributes;
       if (firstRenderDone.current) {
         debouncedFetchData();
       }

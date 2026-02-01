@@ -1,7 +1,13 @@
 import { useSelect } from '@wordpress/data';
 import { useCallback, useEffect, useRef, useState } from '@wordpress/element';
-import { selectors } from '@/editor/store/selectors';
 import { selectors as selectorsTailwind } from '@/tailwind/store/selectors';
+import { BlockstudioAdmin } from '@/types/types';
+
+// Types for blockstudio/editor store selectors
+type EditorSelectors = {
+  getBlockstudio: () => BlockstudioAdmin | undefined;
+  getOptions: () => BlockstudioAdmin['options'] | undefined;
+};
 
 export const useTailwind = ({
   id = 'default',
@@ -23,7 +29,7 @@ export const useTailwind = ({
 
   const blockstudio = useSelect(
     (select) =>
-      (select('blockstudio/editor') as typeof selectors)?.getBlockstudio(),
+      (select('blockstudio/editor') as EditorSelectors | undefined)?.getBlockstudio(),
     [],
   );
   const customClasses = useSelect(
@@ -35,7 +41,7 @@ export const useTailwind = ({
   );
   const options = useSelect(
     (select) =>
-      (select('blockstudio/editor') as typeof selectors)?.getOptions(),
+      (select('blockstudio/editor') as EditorSelectors | undefined)?.getOptions(),
     [],
   );
   const hasStyle = useRef(false);
@@ -70,7 +76,7 @@ export const useTailwind = ({
     }
 
     let classes = '';
-    customClasses.forEach((item) => {
+    customClasses?.forEach((item) => {
       classes += `.${item.className} { @apply ${item.value}; } `;
     });
 
@@ -93,7 +99,7 @@ export const useTailwind = ({
       template.style.display = 'none';
       doc.body.appendChild(template);
     } else {
-      template.innerHTML = html;
+      template.innerHTML = html || '';
     }
 
     const script = doc.getElementById(scriptId);
@@ -115,7 +121,7 @@ export const useTailwind = ({
         })}`;
         doc.head.appendChild(settings);
         createCustomClasses();
-        template.innerHTML = html;
+        template.innerHTML = html || '';
       };
     }
 

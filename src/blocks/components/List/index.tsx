@@ -32,7 +32,7 @@ export const List = ({
   const repeaterData = (droppableId: string) => {
     return repeaters?.[droppableId]
       ? repeaters[droppableId].map((_: string, i: number) => i)
-      : [...ids];
+      : [...(ids || [])];
   };
 
   const reorder = (
@@ -52,10 +52,10 @@ export const List = ({
   };
 
   const onDragEnd = (result: {
-    destination: { droppableId: string; index: number };
+    destination: { droppableId: string; index: number } | null;
     source: { index: number };
   }) => {
-    const droppableId = result?.destination?.droppableId;
+    const droppableId = result?.destination?.droppableId || '';
 
     if (!result.destination) {
       return;
@@ -68,7 +68,7 @@ export const List = ({
       result.destination.index,
     ) as string[];
 
-    onChange(newItems, droppableId);
+    onChange?.(newItems, droppableId || '');
   };
 
   const reorderAndFocus = (
@@ -80,14 +80,14 @@ export const List = ({
     const offset = moveDirection === 'up' ? -1 : 1;
     if (
       (moveDirection === 'up' && index <= 0) ||
-      (moveDirection === 'down' && index >= ids.length - 1)
+      (moveDirection === 'down' && index >= (ids?.length || 0) - 1)
     ) {
       return;
     }
 
-    const data = droppableId ? repeaterData(droppableId) : ids;
+    const data = droppableId ? repeaterData(droppableId) : (ids || []);
     const newItems = reorder(data, index, index + offset);
-    onChange(newItems as string[], droppableId);
+    onChange?.(newItems as string[], droppableId);
 
     const focusIndex = index + offset;
     (

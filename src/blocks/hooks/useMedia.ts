@@ -12,7 +12,7 @@ export const useMedia = (v: string[] | string) => {
 
   useEffect(() => {
     if (v?.length || v) {
-      const existingIds = Object.keys(media).map((item) => `${item}`);
+      const existingIds = Object.keys(media || {}).map((item) => `${item}`);
 
       const newIds = ((v.length ? v : [v]) as string[]).filter(
         (item: string) => !existingIds.includes(`${item}`)
@@ -24,14 +24,13 @@ export const useMedia = (v: string[] | string) => {
           ','
         )}&per_page=${(v.length ? v : [v]).length}`,
       }).then(
-        (
-          res: {
+        (response) => {
+          const res = response as {
             id: number;
             mime_type: string;
-          }[]
-        ) => {
+          }[];
           res.forEach((item) => {
-            if (!media[item.id]) {
+            if (!media?.[item.id]) {
               setMedia({
                 ...media,
                 [item.id]: item,

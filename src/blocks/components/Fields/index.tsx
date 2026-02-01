@@ -102,19 +102,19 @@ export const Fields = ({
     transform = false,
   ) => {
     if (item.type === 'message')
-      return <Message {...{ attributes, block }} value={item.value} />;
+      return <Message {...{ attributes, block }} value={item.value ?? ''} />;
 
-    const transformed = transform || block.attributes?.[item.id];
+    const transformed = transform || (block.attributes as Any)?.[item.id ?? ''];
 
     if (item.type === 'group' || !item.id || !item.type) return false;
 
-    const props = { ...item };
+    const props: Any = { ...item };
     const transformedOptions =
-      block?.['attributes']?.[item.id]?.['options'] || item.options;
+      (block?.attributes as Any)?.[item.id]?.['options'] || item.options;
     delete props.type;
     delete props.id;
 
-    let v = attributes.blockstudio?.attributes?.[item.id];
+    let v = (attributes.blockstudio?.attributes as Any)?.[item.id];
     let val = v?.value;
     const key = `blockstudio.attributes.${repeaterId}`;
 
@@ -142,7 +142,7 @@ export const Fields = ({
     }
 
     const getValue = (
-      item: BlockstudioBlock['blockstudio']['attributes'][0],
+      item: Any,
       value: string | number,
     ) => {
       const finder = (innerValue = value) => {
@@ -215,8 +215,8 @@ export const Fields = ({
           ...attributes.blockstudio,
           attributes: {
             ...attributes.blockstudio.attributes,
-            [key]: newAttributes.blockstudio.attributes?.[key]
-              ? newAttributes.blockstudio.attributes[key].filter((e) => e)
+            [key]: (newAttributes.blockstudio.attributes as Any)?.[key]
+              ? (newAttributes.blockstudio.attributes as Any)[key].filter((e: Any) => e)
               : false,
           },
         },
@@ -239,7 +239,7 @@ export const Fields = ({
       !v &&
       !isDeleting
     ) {
-      const arr = [];
+      const arr: Any[] = [];
 
       Array.from({ length: item.min }).forEach(() => {
         const obj = getDefaults(transformed?.attributes);
@@ -311,7 +311,7 @@ export const Fields = ({
         item.type === 'radio'
       ) {
         const innerBlocks = transformedOptions?.find(
-          (e) => String(e?.value || e) === String(value),
+          (e: Any) => String(e?.value || e) === String(value),
         )?.innerBlocks;
 
         if (innerBlocks) {
@@ -365,13 +365,13 @@ export const Fields = ({
       const key = `blockstudio.attributes.${id}`;
       const newAttributes = JSON.parse(JSON.stringify(attributes));
       const values = (
-        result(
+        (result(
           newAttributes,
           key,
-        ) as BlockstudioBlock['blockstudio']['attributes']
+        ) || []) as Any[]
       ).map(
         (
-          e: BlockstudioBlock['blockstudio']['attributes'][0],
+          e: Any,
           index: number,
         ) => {
           return {
@@ -419,7 +419,7 @@ export const Fields = ({
         key,
       ) as BlockstudioBlock['blockstudio']['attributes'];
 
-      const obj = {};
+      const obj: Record<string | number, Any> = {};
       transformed.attributes.map(
         (e: { id: string | number; default: boolean }) => {
           obj[e.id] = e?.default || false;
@@ -439,11 +439,11 @@ export const Fields = ({
       const outerRepeater = key.replace(/\[\d+\]$/, '');
 
       const filteredAttributes = (
-        result(
+        (result(
           newAttributes,
           outerRepeater,
-        ) as BlockstudioBlock['blockstudio']['attributes']
-      ).filter((e) => e);
+        ) || []) as Any[]
+      ).filter((e: Any) => e);
 
       set(newAttributes, outerRepeater, filteredAttributes);
 
@@ -460,12 +460,12 @@ export const Fields = ({
       const attributeToDuplicate = get(newAttributes, key);
       const duplicatedAttribute = cloneDeep(attributeToDuplicate);
       const outerRepeater = key.replace(/\[\d+\]$/, '');
-      const repeaterAttributes = result(
+      const repeaterAttributes = (result(
         newAttributes,
         outerRepeater,
-      ) as BlockstudioBlock['blockstudio']['attributes'] as unknown[];
+      ) || []) as Any[];
       const attributeIndex = repeaterAttributes.findIndex(
-        (attr: { id: string }) => attr.id === id,
+        (attr: Any) => attr.id === id,
       );
       repeaterAttributes.splice(attributeIndex + 1, 0, duplicatedAttribute);
       set(newAttributes, outerRepeater, repeaterAttributes);
@@ -490,7 +490,7 @@ export const Fields = ({
     };
 
     const optionSetter = () => {
-      const transform = transformedOptions?.map((e) => {
+      const transform = transformedOptions?.map((e: Any) => {
         return {
           value: e?.value || e,
           label: e?.label || e,
@@ -540,7 +540,7 @@ export const Fields = ({
         label={item.label}
         name={item.id}
         description={item.description}
-        onClick={() => disable(item.id)}
+        onClick={() => disable(item.id ?? '')}
         remove={() => remove(repeaterId)}
         type={item.type}
       >
@@ -648,8 +648,8 @@ export const Fields = ({
           <Attributes
             {...{ attributes, setAttributes }}
             keyName={`${key}${item.id}`}
-            link={item.link}
-            media={item.media}
+            link={item.link ?? false}
+            media={item.media ?? false}
           />
         ) : null}
       </Control>

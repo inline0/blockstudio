@@ -10,17 +10,17 @@ export const useGetCssClasses = (
   styles: {
     [key: string]: Any;
   } = {},
-  allAssets = [],
-  reload = []
+  allAssets: string[] = [],
+  reload: Any[] = []
 ) => {
-  const [classes, setClasses] = useState(new Set());
+  const [classes, setClasses] = useState(new Set<string>());
 
   useEffect(() => {
     const allClasses = new Set() as Set<string>;
 
     const fetchClasses = async () => {
       for (const [k, v] of Object.entries(styles)) {
-        const assets = new Set(allAssets);
+        const assets = new Set<string>(allAssets);
 
         if (cache[k] && [...assets].includes(k)) {
           cache[k].forEach((cls: string) => allClasses.add(cls));

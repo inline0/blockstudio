@@ -1,5 +1,5 @@
 import { BlockInstance, createBlock } from '@wordpress/blocks';
-import { BlockstudioBlock } from '@/types/types';
+import { Any, BlockstudioBlock } from '@/types/types';
 
 const isValidRegex = (value: string) => {
   const match = value.match(/\/(.*)\/(.*)?/);
@@ -18,13 +18,13 @@ const compareAttributeTypes = (
   block1: BlockstudioBlock,
   block2: BlockstudioBlock,
 ) => {
-  const keys1 = Object.keys(block1.attributes);
-  const keys2 = Object.keys(block2.attributes);
+  const keys1 = Object.keys(block1.attributes || {});
+  const keys2 = Object.keys(block2.attributes || {});
 
   const commonKeys = keys1.filter((value) => keys2.includes(value));
 
   for (const key of commonKeys) {
-    if (block2.attributes[key].type !== block1.attributes[key].type) {
+    if ((block2.attributes as Record<string, Any>)?.[key]?.type !== (block1.attributes as Record<string, Any>)?.[key]?.type) {
       return false;
     }
   }
@@ -34,7 +34,7 @@ const compareAttributeTypes = (
 
 export const transforms = (
   block: BlockstudioBlock,
-  blocks: BlockstudioBlock[],
+  blocks: Record<string, BlockstudioBlock>,
 ) => {
   return block?.blockstudio?.transforms?.from?.length
     ? {
@@ -71,9 +71,9 @@ export const transforms = (
               };
             }
 
-            if (e.type === 'enter' && isValidRegex(e.regExp)) {
+            if (e.type === 'enter' && e.regExp && isValidRegex(e.regExp)) {
               const regExpParts = e.regExp.match(/\/(.*)\/(.*)?/);
-              const regExp = new RegExp(regExpParts[1], regExpParts[2]);
+              const regExp = new RegExp(regExpParts?.[1] || '', regExpParts?.[2] || '');
 
               return {
                 ...e,

@@ -35,19 +35,18 @@ export const Class = ({
     [],
   );
   const [cssRule, setCssRule] = useState('');
-  const isCustom = customClasses.map((item) => item.className).includes(text);
-  const index = customClasses.map((item) => item.className).indexOf(text);
+  const isCustom = customClasses?.map((item) => item.className).includes(text) ?? false;
+  const index = customClasses?.map((item) => item.className).indexOf(text) ?? -1;
 
   useEffect(() => {
-    setCssRule(
-      prettier
-        .format(findCssRules(`.${text}`)?.[0] || '', {
-          parser: 'css',
-          plugins: [parserCss],
-        })
-        .trim()
-        .replaceAll('\\:', ':'),
-    );
+    prettier
+      .format(findCssRules(`.${text}`)?.[0] || '', {
+        parser: 'css',
+        plugins: [parserCss],
+      })
+      .then((formatted: string) => {
+        setCssRule(formatted.trim().replaceAll('\\:', ':'));
+      });
   }, [text]);
 
   return (
@@ -56,7 +55,7 @@ export const Class = ({
         display: 'flex',
         position: 'relative',
         border: '1px solid #949494',
-        borderStyle: isCustom && 'dashed',
+        borderStyle: isCustom ? 'dashed' : undefined,
         borderRadius: '9999px',
       })}
     >
@@ -72,7 +71,7 @@ export const Class = ({
             );
           }
 
-          const clone = cloneDeep(attributes);
+          const clone = cloneDeep(attributes || {});
           set(
             clone,
             keyName,
@@ -82,10 +81,10 @@ export const Class = ({
               .join(' '),
           );
           set(clone, `${keyName}__temporary`, '');
-          setAttributes({
+          setAttributes?.({
             ...attributes,
-            blockstudio: clone.blockstudio,
-          });
+            blockstudio: (clone as BlockstudioBlockAttributes)?.blockstudio,
+          } as BlockstudioBlockAttributes);
         }}
         css={css({
           width: 'max-content',

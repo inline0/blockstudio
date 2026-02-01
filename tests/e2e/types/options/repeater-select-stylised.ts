@@ -1,7 +1,6 @@
 import { expect, Page } from '@playwright/test';
 import {
   count,
-  delay,
   openSidebar,
   saveAndReload,
   testType,

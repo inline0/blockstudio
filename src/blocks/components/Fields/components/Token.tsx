@@ -27,17 +27,17 @@ export const Token = ({
         {...rest}
         value={isArray(value) ? value : []}
         isBorderless={false}
-        label={null}
+        label={undefined}
         suggestions={
-          transformedOptions?.some((e) => e.value)
-            ? transformedOptions?.map((e) => e?.value)
-            : transformedOptions
+          transformedOptions?.some((e) => typeof e !== 'string' && e.value)
+            ? transformedOptions?.map((e) => typeof e !== 'string' ? e?.value : e)
+            : (transformedOptions as string[])
         }
         __experimentalValidateInput={(e) =>
           item.optionsOnly
-            ? (transformedOptions?.some((e) => e.value)
-                ? transformedOptions?.map((e) => e?.value)
-                : transformedOptions
+            ? (transformedOptions?.some((opt) => typeof opt !== 'string' && opt.value)
+                ? transformedOptions?.map((opt) => typeof opt !== 'string' ? opt?.value : opt)
+                : (transformedOptions as string[])
               ).includes(e)
             : true
         }

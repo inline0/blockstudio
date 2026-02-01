@@ -1,4 +1,4 @@
-import { BlockstudioFieldsOptions } from '@/types/types';
+import { Any, BlockstudioFieldsOptions } from '@/types/types';
 
 type BlockstudioDefaults = {
   attributes: BlockstudioDefaults[];
@@ -9,8 +9,8 @@ type BlockstudioDefaults = {
   type: string;
 };
 
-export const getDefaults = (block: BlockstudioDefaults[], attributes = {}) => {
-  const defaults = {};
+export const getDefaults = (block: BlockstudioDefaults[], attributes: Record<string, Any> = {}) => {
+  const defaults: Record<string, Any> = {};
 
   if (!block) {
     return defaults;
@@ -46,7 +46,7 @@ export const getDefaults = (block: BlockstudioDefaults[], attributes = {}) => {
           ) ||
           item.options
             .map((e: BlockstudioFieldsOptions) => String(e?.value || e))
-            .includes(String(item.default?.[0]?.value)) ||
+            .includes(String((item.default as BlockstudioFieldsOptions[])?.[0]?.value)) ||
           item.options
             .map((e: BlockstudioFieldsOptions) => String(e?.value || e))
             .includes(String(item.default))))

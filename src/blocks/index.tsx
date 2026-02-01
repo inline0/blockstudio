@@ -24,7 +24,7 @@ import { Any, BlockstudioBlockAttributes } from '@/types/types';
 import { css } from '@/utils/css';
 import { onSavePost } from '@/utils/onSavePost';
 
-window['__@hello-pangea/dnd-disable-dev-warnings'] = true;
+(window as Record<string, Any>)['__@hello-pangea/dnd-disable-dev-warnings'] = true;
 register(store);
 register(tailwindStore);
 mediaModal();
@@ -32,7 +32,7 @@ mediaModal();
 const blocks = window.blockstudioAdmin.data.blocksNative;
 let contentIndex = -1;
 
-const renderedIds = [];
+const renderedIds: string[] = [];
 
 Object.values(blocks).map((block: Any) => {
   if (!isAllowedToRender(block.blockstudio)) return false;
@@ -48,7 +48,7 @@ Object.values(blocks).map((block: Any) => {
       : {}),
     apiVersion: 2,
     providesContext: { [block.name]: 'blockstudio' },
-    transforms: transforms(block, blocks) as Any,
+    transforms: transforms(block, blocks as unknown as Record<string, Any>) as Any,
     usesContext: ['postId', 'postType', ...(block?.usesContext || [])],
     save: () => <InnerBlocks.Content />,
     edit: ({
@@ -125,14 +125,14 @@ Object.values(blocks).map((block: Any) => {
       useEffect(() => {
         if (renderedIds.includes(clientId)) return;
 
-        const richTexts = {};
-        Object.values(block.attributes)
+        const richTexts: Record<string, Any> = {};
+        Object.values(block.attributes as Record<string, Any>)
           .filter(
-            (item: { field: string; id: string }) => item.field === 'richtext'
+            (item: Any) => item.field === 'richtext'
           )
-          .map((attribute: { id: string }) => {
+          .map((attribute: Any) => {
             richTexts[attribute.id] =
-              attributes?.blockstudio?.attributes?.[attribute.id];
+              (attributes?.blockstudio?.attributes as Record<string, Any>)?.[attribute.id];
           });
 
         setRichText({

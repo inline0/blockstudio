@@ -45,7 +45,7 @@ export const RichText = ({
     className:
       (rest?.class || '') +
       (hasOwnBlockProps ? ` ${blockProps.className}` : ''),
-    style: styleToObject(rest?.style || ''),
+    style: styleToObject(rest?.style || '') || undefined,
   };
 
   if (rest.class) delete rest.class;
@@ -53,7 +53,7 @@ export const RichText = ({
 
   const props = { ...richTextBlockProps, ...rest };
 
-  if (!block.attributes?.[data.attribute]) return null;
+  if (!(block.attributes as Record<string, Any>)?.[data.attribute]) return null;
 
   const setter = (value: string) => {
     const obj = {
@@ -75,7 +75,7 @@ export const RichText = ({
   return (
     <WordPressRichText
       {...props}
-      value={richText?.[clientId]?.[data?.attribute] || ''}
+      value={(richText?.[clientId] as unknown as Record<string, string>)?.[data?.attribute] || ''}
       onChange={(value: string) => setter(value)}
     />
   );

@@ -24,7 +24,7 @@
     },
     "resolveJsonModule": true,
     "skipLibCheck": true,
-    "strict": false,
+    "strict": true,
     "target": "ES2020",
     "useDefineForClassFields": true,
     "types": ["node", "@emotion/react/types/css-prop"]

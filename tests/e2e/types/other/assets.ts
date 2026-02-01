@@ -1,5 +1,5 @@
 import { Page, expect } from '@playwright/test';
-import { count, testType } from '../../utils/playwright-utils';
+import { testType } from '../../utils/playwright-utils';
 
 const atLeast = async (page: Page, selector: string, min: number) => {
 	const cnt = await page.locator(selector).count();

@@ -1,5 +1,5 @@
 import { Page } from '@playwright/test';
-import { count, testType, text } from '../utils/playwright-utils';
+import { count, testType } from '../utils/playwright-utils';
 
 testType('message', '"text":false', () => {
   return [

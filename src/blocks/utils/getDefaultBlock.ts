@@ -7,7 +7,7 @@ export const getDefaultBlock = (block: Block, name: string) => {
   let otherAttributes = {};
   let defaults = getDefaults(Object.values(block?.attributes || {}), {});
 
-  Object.values(getMatches(name)).forEach((e: BlockstudioBlock) => {
+  (Object.values(getMatches(name)) as BlockstudioBlock[]).forEach((e) => {
     defaults = {
       ...defaults,
       ...getDefaults(Object.values(e?.attributes || {}), defaults),

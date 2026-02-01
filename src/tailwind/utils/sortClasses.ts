@@ -1,12 +1,12 @@
 import { classes } from '@/tailwind/data/classes';
 import { screens } from '@/tailwind/data/screens';
 
-const screenOrder = Object.keys(screens).reduce((acc, key, index) => {
+const screenOrder = Object.keys(screens).reduce((acc: Record<string, number>, key, index) => {
   acc[key] = index;
   return acc;
 }, {});
 
-const classOrder = classes.reduce((acc, className, index) => {
+const classOrder = classes.reduce((acc: Record<string, number>, className, index) => {
   acc[className] = index;
   return acc;
 }, {});

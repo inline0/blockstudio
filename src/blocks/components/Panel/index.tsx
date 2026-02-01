@@ -20,7 +20,7 @@ export const Panel = ({
   item: BlockstudioAttribute;
   portal?: boolean;
 }) => {
-  const props = { ...item };
+  const props = { ...item } as Partial<BlockstudioAttribute>;
   delete props.icon;
   delete props.id;
   delete props.type;

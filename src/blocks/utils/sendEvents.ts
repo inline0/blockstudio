@@ -1,12 +1,13 @@
 import { select } from '@wordpress/data';
 import { isArray } from 'lodash-es';
+import { Any } from '@/types/types';
 
 export const sendEvents = () => {
-  const blockTypes = window.blockstudioAdmin.data.blocksNative;
+  const blockTypes = window.blockstudioAdmin.data.blocksNative as Record<string, Any>;
 
-  const getAllNestedBlockNames = () => {
-    const getBlockNames = (blocks: any[]) => {
-      return blocks.reduce((acc, block) => {
+  const getAllNestedBlockNames = (): string[] => {
+    const getBlockNames = (blocks: Any[]): string[] => {
+      return blocks.reduce((acc: string[], block) => {
         acc.push(block.name);
         if (block.innerBlocks && block.innerBlocks.length) {
           acc = acc.concat(getBlockNames(block.innerBlocks));
@@ -23,7 +24,7 @@ export const sendEvents = () => {
 
   const blocks = getAllNestedBlockNames();
 
-  blocks.forEach((item: string) => {
+  blocks.forEach((item) => {
     if (Object.keys(blockTypes).includes(item)) {
       const refreshOn = blockTypes[item]?.blockstudio?.refreshOn;
 

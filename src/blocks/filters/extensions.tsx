@@ -35,9 +35,9 @@ const getMatchesWithWildcard = (string: string) => {
         return matchFound(e.name, string);
       }
     })
-    .sort((a, b) => {
-      const prioA = a.blockstudio.extend?.priority || 0;
-      const prioB = b.blockstudio.extend?.priority || 0;
+    .sort((a: BlockstudioBlock, b: BlockstudioBlock) => {
+      const prioA = (a.blockstudio as Any)?.extend?.priority || 0;
+      const prioB = (b.blockstudio as Any)?.extend?.priority || 0;
 
       if (prioA > prioB) {
         return 1;
@@ -62,19 +62,19 @@ const getAttributes = (
   name: string,
   disabled: string[]
 ) => {
-  const classNames = [];
-  const styles = [];
-  const dataAttributes = {};
+  const classNames: string[] = [];
+  const styles: string[] = [];
+  const dataAttributes: Record<string, string> = {};
 
   getMatches(name).forEach((block: BlockstudioBlock) => {
-    Object.values(block.attributes).forEach((attribute) => {
+    Object.values(block.attributes || {}).forEach((attribute: Any) => {
       if (disabled.includes(attribute.id)) return;
       if (attribute.set?.length) {
         attribute.set.forEach((set: { attribute: string; value: string }) => {
-          if (attributes?.[attribute.id]) {
-            const copy = cloneDeep(attributes);
+          if ((attributes as Any)?.[attribute.id]) {
+            const copy = cloneDeep(attributes) as Any;
 
-            const applyValue = (value) => {
+            const applyValue = (value: Any) => {
               if (['select', 'radio', 'checkbox'].includes(attribute.field)) {
                 if (
                   attribute.populate &&
@@ -110,7 +110,7 @@ const getAttributes = (
             };
 
             if (isArray(copy[attribute.id])) {
-              copy[attribute.id].forEach((value: string) => applyValue(value));
+              copy[attribute.id].forEach((value: Any) => applyValue(value));
             } else {
               applyValue(copy[attribute.id]);
             }
@@ -118,11 +118,11 @@ const getAttributes = (
         });
       }
       if (attribute.field === 'attributes') {
-        const copy = cloneDeep(attributes);
+        const copy = cloneDeep(attributes) as Any;
         (copy?.[attribute.id] || [])
-          .filter((attribute) => attribute?.attribute)
-          .forEach((attribute) => {
-            dataAttributes[attribute.attribute] = attribute.value;
+          .filter((attr: Any) => attr?.attribute)
+          .forEach((attr: Any) => {
+            dataAttributes[attr.attribute] = attr.value;
           });
       }
     });
@@ -140,7 +140,7 @@ addFilter(
   'blockstudio/extensions/set',
   createHigherOrderComponent((BlockEdit) => {
     return (props: Any) => {
-      const ref = useRef<HTMLDivElement>(undefined);
+      const ref = useRef<HTMLDivElement>(null);
 
       if (!shouldExtend(props.name)) return <BlockEdit {...props} />;
 
@@ -150,7 +150,7 @@ addFilter(
       useEffect(() => {
         const html = ref?.current?.closest('html');
         if (
-          html.classList.contains('block-editor-block-preview__content-iframe')
+          html?.classList.contains('block-editor-block-preview__content-iframe')
         ) {
           return;
         }
@@ -243,7 +243,7 @@ addFilter(
         []
       );
 
-      const currentTemporaryClasses = Object.entries(temporaryClasses)
+      const currentTemporaryClasses = Object.entries(temporaryClasses || {})
         .filter(([key, _]) => key.startsWith(props.clientId))
         .map(([_, value]) => value)
         .join(' ')

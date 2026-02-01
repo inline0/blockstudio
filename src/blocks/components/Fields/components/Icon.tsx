@@ -7,7 +7,7 @@ import { Base } from '@/blocks/components/Base';
 import { selectors } from '@/blocks/store/selectors';
 import { css } from '@/utils/css';
 
-const iconData = {
+const iconData: Record<string, string[]> = {
   octicons: [],
   'vscode-icons': [],
   'remix-icons': [
@@ -87,7 +87,7 @@ export const Icon = ({
   const string = iconData?.[set]?.includes(subSet) ? `${set}-${subSet}` : set;
 
   useEffect(() => {
-    if (!icons[string]) {
+    if (!icons?.[string]) {
       apiFetch({
         path: iconData?.[set].includes(subSet)
           ? `/blockstudio/v1/icons?set=${set}&subSet=${subSet}`
@@ -164,8 +164,8 @@ export const Icon = ({
               };
             })}
             onChange={(icon) =>
-              change(
-                iconData?.[set].includes(subSet)
+              icon && change(
+                iconData?.[set]?.includes(subSet)
                   ? { set, subSet, icon }
                   : {
                       set,
@@ -187,7 +187,7 @@ export const Icon = ({
                   },
                 })}
                 dangerouslySetInnerHTML={{
-                  __html: `${icons?.[string][e.item.value + '.svg']} ${
+                  __html: `${(icons?.[string] as unknown as Record<string, string>)?.[e.item.value + '.svg']} ${
                     e.item.label
                   }`,
                 }}

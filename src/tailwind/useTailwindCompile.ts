@@ -4,7 +4,7 @@ import { useTailwind } from '@/tailwind/useTailwind';
 const TIMEOUT = 1000;
 
 export const useTailwindCompile = ({ enabled }: { enabled?: boolean }) => {
-  const [doc, setDoc] = useState(null);
+  const [doc, setDoc] = useState<Document | undefined>(undefined);
   const [htmlInner, setHtmlInner] = useState('');
   const [started, setStarted] = useState(false);
   const tailwind = useTailwind({
@@ -15,9 +15,9 @@ export const useTailwindCompile = ({ enabled }: { enabled?: boolean }) => {
     started,
   });
 
-  const stableTimeoutRef = useRef(null);
+  const stableTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const lastCSSRef = useRef('');
-  const resolveRef = useRef(null);
+  const resolveRef = useRef<((value: unknown) => void) | null>(null);
 
   useEffect(() => {
     if (!started) return;
@@ -27,7 +27,7 @@ export const useTailwindCompile = ({ enabled }: { enabled?: boolean }) => {
     iframe.id = 'blockstudio-tailwind-iframe';
     document.body.appendChild(iframe);
 
-    setDoc(iframe.contentDocument);
+    setDoc(iframe.contentDocument || undefined);
   }, [started]);
 
   useEffect(() => {
@@ -38,7 +38,7 @@ export const useTailwindCompile = ({ enabled }: { enabled?: boolean }) => {
         }
       } else {
         lastCSSRef.current = tailwind;
-        clearTimeout(stableTimeoutRef.current);
+        if (stableTimeoutRef.current) clearTimeout(stableTimeoutRef.current);
         stableTimeoutRef.current = setTimeout(checkStability, TIMEOUT);
       }
     };
@@ -53,7 +53,7 @@ export const useTailwindCompile = ({ enabled }: { enabled?: boolean }) => {
     return new Promise((resolve) => {
       resolveRef.current = resolve;
       lastCSSRef.current = '';
-      clearTimeout(stableTimeoutRef.current);
+      if (stableTimeoutRef.current) clearTimeout(stableTimeoutRef.current);
       stableTimeoutRef.current = setTimeout(() => {
         if (tailwind !== '') resolve(tailwind);
       }, TIMEOUT);

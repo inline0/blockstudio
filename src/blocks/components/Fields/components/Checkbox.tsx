@@ -41,7 +41,7 @@ export const Checkbox = ({
               key={itemInner.value}
               onChange={() => change(itemInner.value)}
               checked={
-                v?.length && v.map((e) => e.value).includes(itemInner.value)
+                v?.length && v.map((e: { value: string }) => e.value).includes(itemInner.value)
               }
               label={itemInner.label}
               className={`components-base-control`}
