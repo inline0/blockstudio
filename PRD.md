@@ -65,19 +65,16 @@ Modernize the frontend tooling while keeping webpack as the build system.
 - [x] Remove unused packages from package.json
 - [x] Verify build still works
 
-### Phase 6: Strict TypeScript ✅ (with known bug)
+### Phase 6: Strict TypeScript ✅
 
 - [x] Enable strict mode in tsconfig.json
 - [x] Fix all TypeScript errors (176 → 0)
 - [x] Add proper types where `any` is used
 - [x] Ensure no implicit any
-- [ ] **BUG**: prettier.format() typed as returning Promise but returns string sync
-  - Files affected: WYSIWYG.tsx, Class.tsx, prettier.d.ts
-  - Fix: Change type to `string`, remove `.then()` calls
+- [x] Fix prettier.format() sync type (returns string, not Promise)
 
 ### Phase 7: ESLint Strictening
 
-- [ ] Fix prettier sync bug from Phase 6 first
 - [ ] Enable stricter rules (no-unused-vars, array-callback-return, dot-notation)
 - [ ] Refactor code to fix new lint errors
 - [ ] Remove any unnecessary eslint-disable comments
