@@ -39,6 +39,8 @@ export const Class = ({
   const index = customClasses?.map((item) => item.className).indexOf(text) ?? -1;
 
   useEffect(() => {
+    // prettier ESM standalone returns string sync, not Promise - see src/types/prettier.d.ts
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
     const formatted = prettier.format(findCssRules(`.${text}`)?.[0] || '', {
       parser: 'css',
       plugins: [parserCss],
