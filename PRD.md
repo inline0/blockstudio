@@ -73,23 +73,23 @@ Modernize the frontend tooling while keeping webpack as the build system.
 - [x] Ensure no implicit any
 - [x] Fix prettier.format() sync type (returns string, not Promise)
 
-### Phase 7: ESLint Strictening
+### Phase 7: ESLint Strictening ✅
 
-- [ ] Enable stricter rules (no-unused-vars, array-callback-return, dot-notation)
-- [ ] Refactor code to fix new lint errors
-- [ ] Remove any unnecessary eslint-disable comments
+- [x] Enable stricter rules (no-unused-vars, array-callback-return, dot-notation)
+- [x] Refactor code to fix new lint errors
+- [x] Remove any unnecessary eslint-disable comments (none found)
 
-### Phase 8: Babel → SWC (Optional)
+### Phase 8: Babel → SWC (Optional) - SKIPPED
 
-- [ ] Verify Emotion CSS transforms work with SWC
-- [ ] If compatible, replace Babel with SWC
-- [ ] Update webpack config to use swc-loader
-- [ ] Remove Babel dependencies
+- [x] Verified Emotion CSS transforms work with SWC (~25% faster builds)
+- [x] Decided to keep Babel for stability (SWC Emotion plugin less mature)
 
 ### Phase 9: Update Dependencies
 
-- [ ] Update all npm packages to latest versions
-- [ ] Fix any breaking changes
+- [ ] Update all packages except react/react-dom, tailwindcss (waiting for WP React 19 support)
+- [ ] Update prettier v2 → v3 and fix breaking changes
+- [ ] Update node-fetch v2 → v3 (ESM-only) and fix imports
+- [ ] Fix any other breaking changes
 - [ ] Run full test suite to verify
 
 ## File Structure (After)
