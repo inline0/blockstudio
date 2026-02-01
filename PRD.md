@@ -36,7 +36,8 @@ Modernize the frontend tooling while keeping webpack as the build system.
 - [ ] Move `package/tsconfig.json` to root
 - [ ] Move `package/webpack.config.js` to root as `webpack.config.ts`
 - [ ] Update all import paths and aliases
-- [ ] Delete `package/` directory artifacts (gulp, babel, etc.)
+- [ ] Move `package/.babelrc` to root
+- [ ] Delete `package/` directory artifacts (gulp, etc.)
 
 ### Phase 2: Remove Gulp
 
@@ -58,28 +59,34 @@ Modernize the frontend tooling while keeping webpack as the build system.
 - [ ] Create `npm run fix` for auto-fixing
 - [ ] Update CI/pre-commit if applicable
 
-### Phase 5: Strict TypeScript
+### Phase 5: Purge Unused Packages
+
+- [ ] Run `npx depcheck` to identify unused dependencies
+- [ ] Remove unused packages from package.json
+- [ ] Verify build still works
+
+### Phase 6: Strict TypeScript
 
 - [ ] Enable strict mode in tsconfig.json
 - [ ] Fix all TypeScript errors
 - [ ] Add proper types where `any` is used
 - [ ] Ensure no implicit any
 
-### Phase 6: ESLint Strictening
+### Phase 7: ESLint Strictening
 
 - [ ] Move ESLint config to `eslint.config.ts` if supported
 - [ ] Enable stricter rules
 - [ ] Refactor code to fix new lint errors
 - [ ] Remove any unnecessary eslint-disable comments
 
-### Phase 7: Babel → SWC (Optional)
+### Phase 8: Babel → SWC (Optional)
 
 - [ ] Verify Emotion CSS transforms work with SWC
 - [ ] If compatible, replace Babel with SWC
 - [ ] Update webpack config to use swc-loader
 - [ ] Remove Babel dependencies
 
-### Phase 8: Update Dependencies
+### Phase 9: Update Dependencies
 
 - [ ] Update all npm packages to latest versions
 - [ ] Fix any breaking changes
