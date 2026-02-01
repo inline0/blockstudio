@@ -29,41 +29,41 @@ Modernize the frontend tooling while keeping webpack as the build system.
 
 ## Tasks
 
-### Phase 1: Directory Restructure
+### Phase 1: Directory Restructure ✅
 
-- [ ] Rename `package/` to `src/`
-- [ ] Move `package/package.json` dependencies to root `package.json`
-- [ ] Move `package/tsconfig.json` to root
-- [ ] Move `package/webpack.config.js` to root as `webpack.config.ts`
-- [ ] Update all import paths and aliases
-- [ ] Move `package/.babelrc` to root
-- [ ] Delete `package/` directory artifacts (gulp, etc.)
+- [x] Rename `package/` to `src/`
+- [x] Move `package/package.json` dependencies to root `package.json`
+- [x] Move `package/tsconfig.json` to root
+- [x] Move `package/webpack.config.js` to root as `webpack.config.cjs`
+- [x] Update all import paths and aliases
+- [x] Move `package/.babelrc` to root
+- [x] Delete `package/` directory artifacts (gulp, etc.)
 
-### Phase 2: Remove Gulp
+### Phase 2: Remove Gulp ✅
 
-- [ ] Extract type generation from gulp to standalone script
-- [ ] Remove gulpfile.cjs
-- [ ] Remove gulp dependencies from package.json
-- [ ] Update npm scripts
+- [x] Extract type generation from gulp to standalone script
+- [x] Remove gulpfile.cjs
+- [x] Remove gulp dependencies from package.json
+- [x] Update npm scripts
 
-### Phase 3: ESLint + Prettier Setup
+### Phase 3: ESLint + Prettier Setup ✅
 
-- [ ] Move ESLint config to root
-- [ ] Move Prettier config to root
-- [ ] Update npm scripts: `lint`, `format`
+- [x] Move ESLint config to root
+- [x] Move Prettier config to root
+- [x] Update npm scripts: `lint`, `format`
 
-### Phase 4: Single Pipeline
+### Phase 4: Single Pipeline ✅
 
-- [ ] Create unified `npm run check` command
-- [ ] Runs: eslint + prettier --check + tsc --noEmit
-- [ ] Create `npm run fix` for auto-fixing
+- [x] Create unified `npm run check` command
+- [x] Runs: eslint + tsc --noEmit
+- [x] Create `npm run fix` for auto-fixing
 - [ ] Update CI/pre-commit if applicable
 
-### Phase 5: Purge Unused Packages
+### Phase 5: Purge Unused Packages ✅
 
-- [ ] Run `npx depcheck` to identify unused dependencies
-- [ ] Remove unused packages from package.json
-- [ ] Verify build still works
+- [x] Run `npx depcheck` to identify unused dependencies
+- [x] Remove unused packages from package.json
+- [x] Verify build still works
 
 ### Phase 6: Strict TypeScript
 
@@ -107,7 +107,7 @@ blockstudio7/
 ├── includes/               # PHP (unchanged)
 ├── package.json            # Root package.json with all deps
 ├── tsconfig.json           # Root TypeScript config
-├── webpack.config.ts       # Root webpack config (TypeScript)
+├── webpack.config.cjs      # Root webpack config
 ├── eslint.config.mjs       # ESLint config
 └── .prettierrc             # Prettier config
 ```
