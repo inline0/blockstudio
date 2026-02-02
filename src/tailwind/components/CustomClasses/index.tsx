@@ -9,8 +9,8 @@ import { useDispatch, useSelect } from '@wordpress/data';
 import { useEffect, useState } from '@wordpress/element';
 import { trash } from '@wordpress/icons';
 import { cloneDeep } from 'lodash-es';
-import parserBabel from 'prettier/esm/parser-babel.mjs';
-import prettier from 'prettier/esm/standalone.mjs';
+import parserBabel from 'prettier/plugins/babel';
+import prettier from 'prettier/standalone';
 import { Classes as Tailwind } from '@/blocks/components/Fields/components/Classes';
 import { style } from '@/const/index';
 import { SPACING } from '@/const/spacings';
@@ -46,9 +46,7 @@ export const CustomClasses = ({
     setIsLoading(true);
     const optionsClone = cloneDeep(blockstudio.options);
     optionsClone.tailwind.customClasses = internalClasses;
-    // prettier ESM standalone returns string sync, not Promise - see src/types/prettier.d.ts
-     
-    const formatted = prettier.format(JSON.stringify(optionsClone), {
+    const formatted = await prettier.format(JSON.stringify(optionsClone), {
       parser: 'json',
       plugins: [parserBabel],
     });

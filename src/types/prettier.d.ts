@@ -1,26 +1,21 @@
-declare module 'prettier/esm/parser-postcss.mjs' {
+declare module 'prettier/plugins/postcss' {
   const parser: unknown;
   export default parser;
 }
 
-/**
- * IMPORTANT: The ESM standalone version returns a string SYNCHRONOUSLY.
- * Do NOT use .then() or await - it's not a Promise!
- * The regular prettier package is async, but this ESM bundle is sync.
- */
-declare module 'prettier/esm/standalone.mjs' {
+declare module 'prettier/standalone' {
   const prettier: {
-    format: (source: string, options: unknown) => string;
+    format: (source: string, options: unknown) => Promise<string>;
   };
   export default prettier;
 }
 
-declare module 'prettier/esm/parser-html.mjs' {
+declare module 'prettier/plugins/html' {
   const parser: unknown;
   export default parser;
 }
 
-declare module 'prettier/esm/parser-babel.mjs' {
+declare module 'prettier/plugins/babel' {
   const parser: unknown;
   export default parser;
 }

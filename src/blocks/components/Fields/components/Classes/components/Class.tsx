@@ -5,8 +5,8 @@ import { useSelect } from '@wordpress/data';
 import { useEffect, useState } from '@wordpress/element';
 import { pencil } from '@wordpress/icons';
 import { cloneDeep, set } from 'lodash-es';
-import parserCss from 'prettier/esm/parser-postcss.mjs';
-import prettier from 'prettier/esm/standalone.mjs';
+import parserCss from 'prettier/plugins/postcss';
+import prettier from 'prettier/standalone';
 import { style } from '@/const/css';
 import { CustomClasses } from '@/tailwind/components/CustomClasses';
 import { selectors } from '@/tailwind/store/selectors';
@@ -39,13 +39,14 @@ export const Class = ({
   const index = customClasses?.map((item) => item.className).indexOf(text) ?? -1;
 
   useEffect(() => {
-    // prettier ESM standalone returns string sync, not Promise - see src/types/prettier.d.ts
-     
-    const formatted = prettier.format(findCssRules(`.${text}`)?.[0] || '', {
-      parser: 'css',
-      plugins: [parserCss],
-    });
-    setCssRule(formatted.trim().replaceAll('\\:', ':'));
+    const formatCss = async () => {
+      const formatted = await prettier.format(findCssRules(`.${text}`)?.[0] || '', {
+        parser: 'css',
+        plugins: [parserCss],
+      });
+      setCssRule(formatted.trim().replaceAll('\\:', ':'));
+    };
+    formatCss();
   }, [text]);
 
   return (

@@ -29,13 +29,14 @@ blockstudio7/
 2. **Never modify `_reference/`** - read-only v6 baseline
 3. **100% WordPress Coding Standards** - no exceptions
 4. **One class at a time** - migrate and test incrementally
+5. **Never use `npx`** - always use `npm run` scripts from package.json
 
 ## Commands
 
 | Command | Description |
 |---------|-------------|
 | `npm run playground:v7` | Start v7 server (port 9401) |
-| `npm run test:v7` | Run v7 tests (14 tests) |
+| `npm run test:v7` | Run v7 unit/snapshot tests (not E2E) |
 | `npm run playground` | Start v6 reference server (port 9400) |
 | `composer cs` | Check PHPCS |
 | `composer cs:fix` | Auto-fix PHPCS issues |

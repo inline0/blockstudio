@@ -58,10 +58,12 @@ const createNestedBlocks = (blockData: BlockData): ReturnType<typeof createBlock
 export const createBlocks = (blocks: [], clientId: string) => {
   const currentBlock =
     select('core/block-editor').getBlocksByClientId(clientId)[0];
+  if (!currentBlock) return;
   const childBlocks = currentBlock.innerBlocks;
 
   const clientIds = childBlocks.map((block: BlockData) => block.clientId);
-  clientIds.forEach((item: string) => {
+  clientIds.forEach((item) => {
+    if (!item) return;
     // @ts-ignore
     dispatch('core/block-editor').removeBlock(item);
   });

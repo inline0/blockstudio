@@ -24,8 +24,8 @@ import {
   link,
   code,
 } from '@wordpress/icons';
-import parserHtml from 'prettier/esm/parser-html.mjs';
-import prettier from 'prettier/esm/standalone.mjs';
+import parserHtml from 'prettier/plugins/html';
+import prettier from 'prettier/standalone';
 import { Base } from '@/blocks/components/Base';
 import { Code } from '@/blocks/components/Fields/components/Code';
 import { Alignment, BlockstudioAttribute } from '@/types/block';
@@ -105,13 +105,14 @@ export const WYSIWYG = ({
     if (!editor) return;
 
     if (codeMode) {
-      // prettier ESM standalone returns string sync, not Promise - see src/types/prettier.d.ts
-       
-      const formatted = prettier.format(editor.getHTML(), {
-        parser: 'html',
-        plugins: [parserHtml],
-      });
-      setVal(formatted);
+      const formatHtml = async () => {
+        const formatted = await prettier.format(editor.getHTML(), {
+          parser: 'html',
+          plugins: [parserHtml],
+        });
+        setVal(formatted);
+      };
+      formatHtml();
     } else {
       editor.commands.setContent(val);
     }

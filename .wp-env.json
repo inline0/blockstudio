@@ -1,5 +1,5 @@
 {
-	"core": "WordPress/WordPress#6.7",
+	"core": "WordPress/WordPress#6.9",
 	"plugins": [".", "./tests/plugins/test-helper"],
 	"themes": ["./tests/e2e/theme"],
 	"config": {

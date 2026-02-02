@@ -13,25 +13,25 @@ declare module 'htmlparser2' {
   export type DomElement = DomHandlerElement;
 }
 
-// Declare prettier ESM modules
-declare module 'prettier/esm/parser-postcss.mjs' {
+// Declare prettier modules (v3)
+declare module 'prettier/plugins/postcss' {
   const parser: unknown;
   export default parser;
 }
 
-declare module 'prettier/esm/standalone.mjs' {
+declare module 'prettier/standalone' {
   const prettier: {
     format: (source: string, options: unknown) => Promise<string>;
   };
   export default prettier;
 }
 
-declare module 'prettier/esm/parser-html.mjs' {
+declare module 'prettier/plugins/html' {
   const parser: unknown;
   export default parser;
 }
 
-declare module 'prettier/esm/parser-babel.mjs' {
+declare module 'prettier/plugins/babel' {
   const parser: unknown;
   export default parser;
 }

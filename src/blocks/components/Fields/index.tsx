@@ -68,7 +68,9 @@ export const Fields = ({
 
   const {
     __unstableMarkNextChangeAsNotPersistent: markNextChangeAsNotPersistent,
-  } = useDispatch('core/block-editor');
+  } = useDispatch('core/block-editor') as unknown as {
+    __unstableMarkNextChangeAsNotPersistent: () => void;
+  };
 
   const defaultsRepeaters = useRef(false);
   const defaultValue = useRef(false);

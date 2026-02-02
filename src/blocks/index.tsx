@@ -64,7 +64,9 @@ Object.values(blocks).forEach((block: Any) => {
       const { setRichText } = useDispatch('blockstudio/blocks');
       const {
         __unstableMarkNextChangeAsNotPersistent: markNextChangeAsNotPersistent,
-      } = useDispatch('core/block-editor');
+      } = useDispatch('core/block-editor') as unknown as {
+        __unstableMarkNextChangeAsNotPersistent: () => void;
+      };
       const [isLoaded, setIsLoaded] = useState(false);
       const richText = useSelect(
         (select) =>
