@@ -208,8 +208,8 @@ class Select_Field_Handler extends Abstract_Field_Handler {
 					foreach ( $options_addons as $opt ) {
 						$val = $opt->{$return_map_value[ $q ]};
 
-						$options_populate[]      = $val;
-						$options_transformed[]   = array(
+						$options_populate[]            = $val;
+						$options_transformed[]         = array(
 							'value' => $val,
 							'label' => $opt->{$field['populate']['returnFormat']['label']
 								?? $return_map_label[ $q ]},
@@ -229,7 +229,7 @@ class Select_Field_Handler extends Abstract_Field_Handler {
 					foreach ( $options_addons as $opt ) {
 						$opt = (array) $opt;
 
-						$val = $opt[ $val ]
+						$val                   = $opt[ $val ]
 							?? ( $opt['value'] ?? ( array_values( $opt )[0] ?? $opt ) );
 						$options_populate[]    = $val;
 						$options_transformed[] = array(

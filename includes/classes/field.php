@@ -62,8 +62,8 @@ class Field {
 		$g = array();
 		foreach ( $attributes as $k => $v ) {
 			if ( 0 === strpos( $k, $group ) ) {
-				$len     = strlen( $group . '_' );
-				$key     = substr( $k, $len );
+				$len       = strlen( $group . '_' );
+				$key       = substr( $k, $len );
 				$g[ $key ] = $v;
 			}
 		}

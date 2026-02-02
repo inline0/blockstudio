@@ -2,83 +2,34 @@
 <ruleset name="Blockstudio">
 	<description>WordPress Coding Standards for Blockstudio v7</description>
 
-	<!-- Only check migrated v7 code -->
+	<!-- Files and directories to check -->
 	<file>./blockstudio.php</file>
 	<file>./includes/class-plugin.php</file>
-	<file>./includes/classes/constants.php</file>
-	<file>./includes/classes/field-type-config.php</file>
-	<file>./includes/classes/block-registry.php</file>
-	<file>./includes/classes/option-value-resolver.php</file>
-	<file>./includes/classes/utils.php</file>
-	<file>./includes/classes/field.php</file>
-	<file>./includes/classes/examples.php</file>
-	<file>./includes/classes/configurator.php</file>
-	<file>./includes/classes/register.php</file>
-	<file>./includes/classes/render.php</file>
-	<file>./includes/classes/library.php</file>
-	<file>./includes/classes/builder.php</file>
-	<file>./includes/classes/tailwind.php</file>
-	<file>./includes/classes/migrate.php</file>
-	<file>./includes/classes/populate.php</file>
-	<file>./includes/classes/esmodulescss.php</file>
-	<file>./includes/classes/esmodules.php</file>
-	<file>./includes/classes/blocks.php</file>
-	<file>./includes/classes/llm.php</file>
-	<file>./includes/classes/files.php</file>
-	<file>./includes/classes/extensions.php</file>
-	<file>./includes/classes/settings.php</file>
-	<file>./includes/classes/admin.php</file>
-	<file>./includes/classes/assets.php</file>
-	<file>./includes/classes/block.php</file>
-	<file>./includes/classes/rest.php</file>
-	<file>./includes/classes/build.php</file>
-
-	<!-- Interfaces -->
-	<file>./includes/interfaces/field-handler-interface.php</file>
-
-	<!-- Field handlers -->
-	<file>./includes/classes/field-handlers/abstract-field-handler.php</file>
-	<file>./includes/classes/field-handlers/text-field-handler.php</file>
-	<file>./includes/classes/field-handlers/number-field-handler.php</file>
-	<file>./includes/classes/field-handlers/boolean-field-handler.php</file>
-	<file>./includes/classes/field-handlers/select-field-handler.php</file>
-	<file>./includes/classes/field-handlers/media-field-handler.php</file>
-	<file>./includes/classes/field-handlers/container-field-handler.php</file>
-
-	<!-- Attribute builder -->
-	<file>./includes/classes/attribute-builder.php</file>
-
-	<!-- Block discovery and registration (Phase 5) -->
-	<file>./includes/classes/file-classifier.php</file>
-	<file>./includes/classes/block-discovery.php</file>
-	<file>./includes/classes/asset-discovery.php</file>
-	<file>./includes/classes/block-registrar.php</file>
-
-	<!-- Settings loader interface and implementations (Phase 6) -->
-	<file>./includes/interfaces/settings-loader-interface.php</file>
-	<file>./includes/classes/settings-loaders/options-loader.php</file>
-	<file>./includes/classes/settings-loaders/json-loader.php</file>
-	<file>./includes/classes/settings-loaders/filter-loader.php</file>
-
-	<!-- Abstract classes (Phase 6) -->
-	<file>./includes/classes/abstract-esmodule.php</file>
-
-	<!-- Error handling (Phase 6) -->
-	<file>./includes/classes/error-handler.php</file>
+	<file>./includes/classes/</file>
+	<file>./includes/functions/</file>
+	<file>./includes/interfaces/</file>
+	<file>./tests/plugins/test-helper/test-helper.php</file>
 
 	<!-- Exclude vendor, node_modules, and reference v6 code -->
 	<exclude-pattern>*/vendor/*</exclude-pattern>
 	<exclude-pattern>*/node_modules/*</exclude-pattern>
 	<exclude-pattern>*/_reference/*</exclude-pattern>
 
-	<!-- Exclude copied v6 classes (not yet migrated) -->
-	<exclude-pattern>*/includes/classes/*</exclude-pattern>
-	<exclude-pattern>*/includes/functions/*</exclude-pattern>
-	<exclude-pattern>*/includes/admin/*</exclude-pattern>
-	<exclude-pattern>*/includes/templates/*</exclude-pattern>
-
 	<!-- Use WordPress coding standards -->
 	<rule ref="WordPress"/>
+
+	<!-- Exclude class file naming - using PSR-4 style naming -->
+	<rule ref="WordPress.Files.FileName.InvalidClassFileName">
+		<exclude-pattern>*</exclude-pattern>
+	</rule>
+	<rule ref="WordPress.Files.FileName.NotHyphenatedLowercase">
+		<exclude-pattern>*</exclude-pattern>
+	</rule>
+
+	<!-- Allow hook names with hyphens (public API, can't change) -->
+	<rule ref="WordPress.NamingConventions.ValidHookName.UseUnderscores">
+		<severity>0</severity>
+	</rule>
 
 	<!-- PHP 8.2+ -->
 	<config name="testVersion" value="8.2-"/>

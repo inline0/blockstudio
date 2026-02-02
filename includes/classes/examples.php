@@ -34,7 +34,7 @@ class Examples {
 				foreach ( $files as $file ) {
 					$file_name = basename( $file );
 					// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Reading local plugin file.
-					$content                                  = file_get_contents( $file );
+					$content                               = file_get_contents( $file );
 					$results[ $subdir_name ][ $file_name ] = $content;
 				}
 			}

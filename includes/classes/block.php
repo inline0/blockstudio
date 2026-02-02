@@ -206,15 +206,16 @@ class Block {
 		$image = array();
 
 		if ( $example ) {
-			$url                   = Files::get_relative_url( $example );
-			$image['ID']           = $index;
-			$image['title']        = "Image title $index";
-			$image['alt']          = "Image alt $index";
-			$image['caption']      = "Image caption $index";
-			$image['description']  = "Image description $index";
-			$image['href']         = $url;
-			$image['url']          = $url;
+			$url                  = Files::get_relative_url( $example );
+			$image['ID']          = $index;
+			$image['title']       = "Image title $index";
+			$image['alt']         = "Image alt $index";
+			$image['caption']     = "Image caption $index";
+			$image['description'] = "Image description $index";
+			$image['href']        = $url;
+			$image['url']         = $url;
 
+			// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Reading local example file.
 			$xml_get        = simplexml_load_string( file_get_contents( $example ) );
 			$xml_attributes = $xml_get->attributes();
 			$width          = (string) $xml_attributes->width;
@@ -225,16 +226,17 @@ class Block {
 				array_unshift( $sizes, 'full' );
 
 				foreach ( $sizes as $size ) {
-					$image['sizes'][ $size ]              = $url;
-					$image['sizes'][ $size . '-width' ]   = $width;
-					$image['sizes'][ $size . '-height' ]  = $height;
+					$image['sizes'][ $size ]             = $url;
+					$image['sizes'][ $size . '-width' ]  = $width;
+					$image['sizes'][ $size . '-height' ] = $height;
 				}
 			}
 
 			return $image;
 		}
 
-		if ( ! empty( $id ) && ( $meta = get_post( $id ) ) ) {
+		$meta = get_post( $id );
+		if ( ! empty( $id ) && $meta ) {
 			$image['ID']          = $id;
 			$image['title']       = $meta->post_title;
 			$alt                  = get_post_meta(
@@ -260,9 +262,9 @@ class Block {
 				foreach ( $sizes as $size ) {
 					$src = wp_get_attachment_image_src( $id, $size );
 					if ( $src ) {
-						$image['sizes'][ $size ]              = $src[0];
-						$image['sizes'][ $size . '-width' ]   = $src[1];
-						$image['sizes'][ $size . '-height' ]  = $src[2];
+						$image['sizes'][ $size ]             = $src[0];
+						$image['sizes'][ $size . '-width' ]  = $src[1];
+						$image['sizes'][ $size . '-height' ] = $src[2];
 					}
 				}
 			} else {
@@ -326,9 +328,9 @@ class Block {
 			preg_match_all( $pattern, $attributes, $matches, PREG_SET_ORDER );
 
 			foreach ( $matches as $match ) {
-				$attr_name                    = $match[1];
-				$attr_value                   = $match[2] ?? ( $match[3] ?? ( $match[4] ?? true ) );
-				$attribute_map[ $attr_name ]  = $attr_value;
+				$attr_name                   = $match[1];
+				$attr_value                  = $match[2] ?? ( $match[3] ?? ( $match[4] ?? true ) );
+				$attribute_map[ $attr_name ] = $attr_value;
 			}
 
 			$attribute   =
@@ -367,11 +369,13 @@ class Block {
 					$content
 				);
 			} else {
+				// phpcs:disable WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Internal property name.
 				$inner_blocks_content =
 					isset( $block->blockstudioEditor ) &&
 					isset( $block->blockstudio['editor']['innerBlocks'] )
 						? $block->blockstudio['editor']['innerBlocks']
 						: $replace;
+				// phpcs:enable WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase
 				$inner_blocks_content = apply_filters(
 					'blockstudio/blocks/components/innerblocks/render',
 					$inner_blocks_content,
@@ -568,11 +572,13 @@ class Block {
 				}
 				foreach ( $attributes_to_remove as $attribute ) {
 					$attr = strtolower( $attribute );
+					// phpcs:disable WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- DOM property.
 					if (
 						$element->hasAttribute( $attr ) &&
 						'input' !== $element->nodeName &&
 						'textarea' !== $element->nodeName
 					) {
+						// phpcs:enable WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase
 						$element->removeAttribute( $attr );
 					}
 				}
@@ -616,7 +622,7 @@ class Block {
 		if ( $attribute_data['selectorAttributeId'] ?? false ) {
 			$selector_attribute_id = $attribute_data['selectorAttributeId'];
 		} else {
-			$selector_attribute_id                = self::id( $block, $attributes );
+			$selector_attribute_id                 = self::id( $block, $attributes );
 			$attribute_data['selectorAttributeId'] = $selector_attribute_id;
 		}
 		$selector_attribute = "data-assets='$selector_attribute_id'";
@@ -624,11 +630,11 @@ class Block {
 		foreach ( $attributes as $k => $v ) {
 			$att = $repeater
 				? array_values(
-						array_filter(
-							$repeater,
-							fn( $item ) => ( $item['id'] ?? false ) === $k
-						)
-					)[0] ?? false
+					array_filter(
+						$repeater,
+						fn( $item ) => ( $item['id'] ?? false ) === $k
+					)
+				)[0] ?? false
 				: $block_attributes[ $k ] ?? false;
 
 			if ( isset( $att['blockstudio'] ) && ! $repeater ) {
@@ -703,7 +709,10 @@ class Block {
 											function (
 												$a,
 												$b
-											) use ( $key, $sorting_arr ) {
+											) use (
+												$key,
+												$sorting_arr
+											) {
 												return array_search(
 													$a->{$key} ??
 														( $a['value'] ?? $a ),
@@ -741,7 +750,10 @@ class Block {
 
 									uasort(
 										$new_values,
-										function ( $a, $b ) use (
+										function (
+											$a,
+											$b
+										) use (
 											$sorting_arr
 										) {
 											return array_search(
@@ -893,7 +905,7 @@ class Block {
 					}
 
 					if ( 'css' === $lang || 'javascript' === $lang ) {
-						$asset_data = array(
+						$asset_data                 = array(
 							'language' => $lang,
 							'value'    => $replaced_value,
 						);
@@ -1100,15 +1112,15 @@ class Block {
 			}
 		}
 
-		$blockstudio_id  = self::comment( $name );
-		$block_data      = Build::data()[ $name ];
-		$data            = Build::blocks()[ $name ] ?? false;
-		$override_data   = Build::overrides()[ $name ] ?? false;
+		$blockstudio_id    = self::comment( $name );
+		$block_data        = Build::data()[ $name ];
+		$data              = Build::blocks()[ $name ] ?? false;
+		$override_data     = Build::overrides()[ $name ] ?? false;
 		$has_override_path =
 			$override_data &&
 			isset( $override_data->path ) &&
 			Files::get_render_template( $override_data->path );
-		$path            =
+		$path              =
 			$has_override_path && isset( $override_data->path )
 				? Files::get_render_template( $override_data->path )
 				: $data->path ?? false;
@@ -1119,7 +1131,7 @@ class Block {
 
 		$editor = $attributes['blockstudio']['editor'] ?? false;
 		if ( $editor && ( $data->name ?? false ) ) {
-			$data->blockstudioEditor = true;
+			$data->blockstudioEditor = true; // phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase
 		}
 
 		$block = $attributes;
@@ -1134,21 +1146,20 @@ class Block {
 
 		$compiled_context = array();
 		$block_names      = array_keys( Build::blocks() );
+		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- WordPress block API property.
 		foreach ( $data->usesContext ?? array() as $context_provider ) {
 			if ( ! in_array( $context_provider, $block_names, true ) ) {
 				continue;
 			}
 
 			if ( $block['_BLOCKSTUDIO_CONTEXT'][ $context_provider ] ?? false ) {
-				$trace_attributes = array(
+				$trace_attributes                      = array(
 					'blockstudio' => array(
 						'attributes' =>
-							$block['_BLOCKSTUDIO_CONTEXT'][ $context_provider ][
-								'attributes'
-							],
+							$block['_BLOCKSTUDIO_CONTEXT'][ $context_provider ]['attributes'],
 					),
 				);
-				$attribute_data   = self::transform(
+				$attribute_data                        = self::transform(
 					$trace_attributes,
 					$block,
 					$context_provider,
@@ -1163,8 +1174,8 @@ class Block {
 				foreach ( $stack_trace as $trace ) {
 					$trace_name = $trace['object']->block_type->name ?? '';
 					if ( $trace_name === $context_provider ) {
-						$trace_attributes = $trace['object']->attributes;
-						$attribute_data   = self::transform(
+						$trace_attributes                      = $trace['object']->attributes;
+						$attribute_data                        = self::transform(
 							$trace_attributes,
 							$block,
 							$context_provider,
@@ -1243,13 +1254,14 @@ class Block {
 			add_filter( 'timber/locations', $add_custom_path );
 
 			try {
-				$compiled_string = Timber::compile_string(
+				// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Reading local template file.
+				$template_content = $editor ? $editor : file_get_contents( $path );
+				$compiled_string  = Timber::compile_string(
 					$is_inline_editor
 						? get_transient(
 							'blockstudio_gutenberg_' . $name . '_index.twig'
 						)
-						: ( $editor ?:
-						file_get_contents( $path ) ), // phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents
+						: $template_content,
 					$twig_context
 				);
 			} catch ( Throwable $e ) {
@@ -1264,6 +1276,7 @@ class Block {
 					$e = $previous_error;
 				}
 
+				// phpcs:disable WordPress.Security.EscapeOutput.ExceptionNotEscaped -- Constructing exception for error handling.
 				throw new ErrorException(
 					$e->getMessage(),
 					$e->getCode() ?? 0,
@@ -1271,6 +1284,7 @@ class Block {
 					$e->getFile(),
 					$e->getLine()
 				);
+				// phpcs:enable WordPress.Security.EscapeOutput.ExceptionNotEscaped
 			}
 
 			$render = self::replace_components(

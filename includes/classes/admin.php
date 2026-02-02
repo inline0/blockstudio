@@ -178,7 +178,7 @@ class Admin {
 	 * @return void
 	 */
 	public function register_admin_menu(): void {
-		$icon_base64  = 'PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIzMjAiIGhlaWdodD0iMzIwIiB2aWV3Qm94PSIwIDAgMzIwIDMyMCI+PGcgZmlsbD0iI0E3QUFBRCIgZmlsbC1ydWxlPSJldmVub2RkIj48cGF0aCBkPSJNMTYwLDAgQzI4OC4wMTI1OTMsMCAzMjAsMzEuOTg3NDA2NSAzMjAsMTYwIEMzMjAsMjg4LjAxMjU5MyAyODguMDEyNTkzLDMyMCAxNjAsMzIwIEMzMS45ODc0MDY1LDMyMCAwLDI4OC4wMTI1OTMgMCwxNjAgQzAsMzEuOTg3NDA2NSAzMS45ODc0MDY1LDAgMTYwLDAgWiBNNTQuODE4Mzg1MywxMzIuNDQ4NjcxIEMzMi4zNzYzNjAzLDIxNi4yMDM0NDggNDcuNjk3MDA4NywyNDIuNzM5NTkgMTMxLjQ1MTc4NiwyNjUuMTgxNjE1IEMyMTUuMjA2NTY0LDI4Ny42MjM2NCAyNDEuNzQyNzA1LDI3Mi4zMDI5OTEgMjY0LjE4NDczLDE4OC41NDgyMTQgQzI4Ni42MjY3NTUsMTA0Ljc5MzQzNiAyNzEuMzA2MTA3LDc4LjI1NzI5NSAxODcuNTUxMzI5LDU1LjgxNTI3IEMxMDMuNzk2NTUyLDMzLjM3MzI0NTEgNzcuMjYwNDEwMyw0OC42OTM4OTM1IDU0LjgxODM4NTMsMTMyLjQ0ODY3MSBaIi8+PHBhdGggZD0iTTE1OS41MDE1NTgsMTA2LjMxMDQ0NSBDMTE2LjE0Njg5NSwxMDYuMzEwNDQ1IDEwNS4zMTM1NiwxMTcuMTQzNzc5IDEwNS4zMTM1NiwxNjAuNDk4NDQyIEMxMDUuMzEzNTYsMjAzLjg1MzEwNSAxMTYuMTQ2ODk1LDIxNC42ODY0NCAxNTkuNTAxNTU4LDIxNC42ODY0NCBDMjAyLjg1NjIyMSwyMTQuNjg2NDQgMjEzLjY4OTU1NSwyMDMuODUzMTA1IDIxMy42ODk1NTUsMTYwLjQ5ODQ0MiBDMjEzLjY4OTU1NSwxMTcuMTQzNzc5IDIwMi44NTYyMjEsMTA2LjMxMDQ0NSAxNTkuNTAxNTU4LDEwNi4zMTA0NDUgWiIgdHJhbnNmb3JtPSJyb3RhdGUoLTQ1IDE1OS41MDIgMTYwLjQ5OCkiLz48L2c+PC9zdmc+';
+		$icon_base64   = 'PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIzMjAiIGhlaWdodD0iMzIwIiB2aWV3Qm94PSIwIDAgMzIwIDMyMCI+PGcgZmlsbD0iI0E3QUFBRCIgZmlsbC1ydWxlPSJldmVub2RkIj48cGF0aCBkPSJNMTYwLDAgQzI4OC4wMTI1OTMsMCAzMjAsMzEuOTg3NDA2NSAzMjAsMTYwIEMzMjAsMjg4LjAxMjU5MyAyODguMDEyNTkzLDMyMCAxNjAsMzIwIEMzMS45ODc0MDY1LDMyMCAwLDI4OC4wMTI1OTMgMCwxNjAgQzAsMzEuOTg3NDA2NSAzMS45ODc0MDY1LDAgMTYwLDAgWiBNNTQuODE4Mzg1MywxMzIuNDQ4NjcxIEMzMi4zNzYzNjAzLDIxNi4yMDM0NDggNDcuNjk3MDA4NywyNDIuNzM5NTkgMTMxLjQ1MTc4NiwyNjUuMTgxNjE1IEMyMTUuMjA2NTY0LDI4Ny42MjM2NCAyNDEuNzQyNzA1LDI3Mi4zMDI5OTEgMjY0LjE4NDczLDE4OC41NDgyMTQgQzI4Ni42MjY3NTUsMTA0Ljc5MzQzNiAyNzEuMzA2MTA3LDc4LjI1NzI5NSAxODcuNTUxMzI5LDU1LjgxNTI3IEMxMDMuNzk2NTUyLDMzLjM3MzI0NTEgNzcuMjYwNDEwMyw0OC42OTM4OTM1IDU0LjgxODM4NTMsMTMyLjQ0ODY3MSBaIi8+PHBhdGggZD0iTTE1OS41MDE1NTgsMTA2LjMxMDQ0NSBDMTE2LjE0Njg5NSwxMDYuMzEwNDQ1IDEwNS4zMTM1NiwxMTcuMTQzNzc5IDEwNS4zMTM1NiwxNjAuNDk4NDQyIEMxMDUuMzEzNTYsMjAzLjg1MzEwNSAxMTYuMTQ2ODk1LDIxNC42ODY0NCAxNTkuNTAxNTU4LDIxNC42ODY0NCBDMjAyLjg1NjIyMSwyMTQuNjg2NDQgMjEzLjY4OTU1NSwyMDMuODUzMTA1IDIxMy42ODk1NTUsMTYwLjQ5ODQ0MiBDMjEzLjY4OTU1NSwxMTcuMTQzNzc5IDIwMi44NTYyMjEsMTA2LjMxMDQ0NSAxNTkuNTAxNTU4LDEwNi4zMTA0NDUgWiIgdHJhbnNmb3JtPSJyb3RhdGUoLTQ1IDE1OS41MDIgMTYwLjQ5OCkiLz48L2c+PC9zdmc+';
 		$icon_data_uri = 'data:image/svg+xml;base64,' . $icon_base64;
 
 		$hook_suffix = add_menu_page(
@@ -341,6 +341,7 @@ class Admin {
 			$wp_scripts->queue = array();
 			$wp_styles->queue  = array();
 
+			// phpcs:disable WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedHooknameFound -- WordPress core hooks.
 			switch ( $context ) {
 				case 'block_editor':
 					do_action( 'enqueue_block_editor_assets' );
@@ -349,6 +350,7 @@ class Admin {
 					do_action( 'admin_enqueue_scripts' );
 					break;
 			}
+			// phpcs:enable WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedHooknameFound
 
 			self::get_assets_data(
 				$final_scripts,
@@ -374,8 +376,10 @@ class Admin {
 			}
 		}
 
+		// phpcs:disable WordPress.WP.GlobalVariablesOverride.Prohibited -- Restoring original globals after capture.
 		$wp_scripts = $original_wp_scripts;
 		$wp_styles  = $original_wp_styles;
+		// phpcs:enable WordPress.WP.GlobalVariablesOverride.Prohibited
 
 		$all_assets = array(
 			'scripts' => $final_scripts,
@@ -463,8 +467,8 @@ class Admin {
 		global $wp_roles;
 		$post = get_post();
 
-		$image_sizes     = get_intermediate_image_sizes();
-		$editor_only     = array();
+		$image_sizes      = get_intermediate_image_sizes();
+		$editor_only      = array();
 		$editor_only_data = array(
 			'imageSizes' => $image_sizes,
 		);
@@ -509,11 +513,9 @@ class Admin {
 				'pluginVersion'        => get_plugin_data( BLOCKSTUDIO_FILE )['Version'],
 				'plugins'              => get_plugins(),
 				'pluginsPath'          => plugin_dir_path( BLOCKSTUDIO_DIR ),
-				'settings'             => get_user_meta( get_current_user_id(), 'blockstudio_settings' )
-					? wp_json_encode(
-						get_user_meta( get_current_user_id(), 'blockstudio_settings', true ) ?: new stdClass()
-					)
-					: new stdClass(),
+				'settings'             => get_user_meta( get_current_user_id(), 'blockstudio_settings', true )
+					? wp_json_encode( get_user_meta( get_current_user_id(), 'blockstudio_settings', true ) )
+					: wp_json_encode( new stdClass() ),
 			);
 
 			$editor_only_data = array(

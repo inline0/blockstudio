@@ -161,7 +161,10 @@ class Extensions {
 						continue;
 					}
 
-					$apply_value = function ( $value, $attr ) use (
+					$apply_value = function (
+						$value,
+						$attr
+					) use (
 						&$class,
 						&$style,
 						$set,
@@ -259,10 +262,8 @@ class Extensions {
 						$matches[] = $e;
 					}
 				}
-			} else {
-				if ( $match_found( $e->name, $string ) ) {
+			} elseif ( $match_found( $e->name, $string ) ) {
 					$matches[] = $e;
-				}
 			}
 		}
 

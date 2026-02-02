@@ -339,7 +339,7 @@ class Build {
 							( $is_override && isset( $v['populate'] ) ) ||
 							! $is_override
 						) {
-							$options =
+							$options                            =
 								'select' === $type &&
 								( $v['populate']['fetch'] ?? false )
 									? array()
@@ -376,13 +376,11 @@ class Build {
 									foreach ( $options_addons as $opt ) {
 										$val = $opt->{$return_map_value[ $q ]};
 
-										$options_populate[]      = $val;
-										$options_transformed[]   = array(
+										$options_populate[]            = $val;
+										$options_transformed[]         = array(
 											'value' => $val,
 											'label' =>
-												$opt->{$v['populate'][
-													'returnFormat'
-												]['label'] ??
+												$opt->{$v['populate']['returnFormat']['label'] ??
 													$return_map_label[ $q ]},
 										);
 										$options_populate_full[ $val ] = $opt;
@@ -390,14 +388,10 @@ class Build {
 								}
 
 								if ( 'function' === $v['populate']['type'] ) {
-									$val =
-										$v['populate']['returnFormat'][
-											'value'
-										] ?? false;
+									$val   =
+										$v['populate']['returnFormat']['value'] ?? false;
 									$label =
-										$v['populate']['returnFormat'][
-											'label'
-										] ?? false;
+										$v['populate']['returnFormat']['label'] ?? false;
 
 									if ( ! $val && ! $label ) {
 										$options_addons = array_values(
@@ -408,7 +402,7 @@ class Build {
 									foreach ( $options_addons as $opt ) {
 										$opt = (array) $opt;
 
-										$val =
+										$val                   =
 											$opt[ $val ] ??
 											( $opt['value'] ??
 												( array_values( $opt )[0] ??
@@ -424,12 +418,8 @@ class Build {
 								}
 
 								if ( count( $options_populate ) >= 1 ) {
-									$attributes[ $field_id ][
-										'optionsPopulate'
-									] = $options_populate;
-									$attributes[ $field_id ][
-										'optionsPopulateFull'
-									] = $options_populate_full;
+									$attributes[ $field_id ]['optionsPopulate']     = $options_populate;
+									$attributes[ $field_id ]['optionsPopulateFull'] = $options_populate_full;
 								}
 
 								$is_transform =
@@ -511,9 +501,7 @@ class Build {
 									$option = fn( $val ) => Block::get_option_value(
 										array(
 											'options' =>
-												$attributes[ $field_id ][
-													'options'
-												] ?? $v['options'],
+												$attributes[ $field_id ]['options'] ?? $v['options'],
 										),
 										$val,
 										array(
@@ -527,9 +515,7 @@ class Build {
 									);
 								}
 
-								$attributes[ $field_id ][
-									$item
-								] = $is_multiple_options
+								$attributes[ $field_id ][ $item ] = $is_multiple_options
 									? $default_select
 									: $default_select[0];
 							}
@@ -602,8 +588,8 @@ class Build {
 			if ( isset( $b['type'] ) && isset( $b['id'] ) ) {
 				if ( 'group' === $b['type'] ) {
 					foreach ( $b['attributes'] as &$d ) {
-						$id        = $d['id'];
-						$d['id']   = $b['id'] . '_' . $id;
+						$id      = $d['id'];
+						$d['id'] = $b['id'] . '_' . $id;
 
 						if ( isset( $d['attributes'] ) ) {
 							self::build_attribute_ids( $d['attributes'] );
@@ -1120,14 +1106,14 @@ class Build {
 			'type' => 'string',
 		);
 
-		$block              = new WP_Block_Type( $block_json['name'], $block_json );
-		$block->api_version = 3;
-		$block->render_callback = array( 'Blockstudio\Block', 'render' );
-		$block->attributes  = array_merge(
+		$block                   = new WP_Block_Type( $block_json['name'], $block_json );
+		$block->api_version      = 3;
+		$block->render_callback  = array( 'Blockstudio\Block', 'render' );
+		$block->attributes       = array_merge(
 			$block_json['attributes'] ?? array(),
 			$attributes
 		);
-		$block->uses_context = array_merge(
+		$block->uses_context     = array_merge(
 			array( 'postId', 'postType' ),
 			$block_json['usesContext'] ?? array()
 		);
@@ -1135,7 +1121,7 @@ class Build {
 			array( $name => 'blockstudio' ),
 			$block_json['providesContext'] ?? array()
 		);
-		$block->path = $native_path;
+		$block->path             = $native_path;
 
 		if ( isset( $block_json['variations'] ) ) {
 			$variations = array();

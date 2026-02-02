@@ -188,7 +188,7 @@ class Rest {
 						: 0;
 
 					if ( $post_id > 0 ) {
-						$post = get_post( $post_id );
+						$post = get_post( $post_id ); // phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited -- Setting post context for permission check.
 
 						if ( ! $post || ! current_user_can( 'edit_post', $post->ID ) ) {
 							return new WP_Error(
@@ -202,8 +202,7 @@ class Rest {
 								)
 							);
 						}
-					} else {
-						if ( ! current_user_can( 'edit_posts' ) ) {
+					} elseif ( ! current_user_can( 'edit_posts' ) ) {
 							return new WP_Error(
 								'block_cannot_read',
 								__(
@@ -214,7 +213,6 @@ class Rest {
 									'status' => rest_authorization_required_code(),
 								)
 							);
-						}
 					}
 
 					return true;
@@ -650,7 +648,7 @@ class Rest {
 
 				register_rest_route(
 					'blockstudio/v1',
-					'/gutenberg/block/render' . '/(?P<name>[a-z0-9-]+/[a-z0-9-]+)',
+					'/gutenberg/block/render/(?P<name>[a-z0-9-]+/[a-z0-9-]+)',
 					array(
 						'methods'             => 'POST',
 						'callback'            => array( $this, 'gutenberg_block_render' ),
@@ -1006,11 +1004,11 @@ class Rest {
 						"Failed to delete directory: $sanitized_path"
 					);
 				} elseif ( $wp_filesystem->is_file( $sanitized_path ) ) {
-					$dir            = pathinfo( $sanitized_path )['dirname'];
-					$compiled_asset = Assets::get_compiled_filename(
+					$dir             = pathinfo( $sanitized_path )['dirname'];
+					$compiled_asset  = Assets::get_compiled_filename(
 						$sanitized_path
 					);
-					$other_php_files = count( glob( $dir . '/' . '*.php' ) ) >= 1;
+					$other_php_files = count( glob( $dir . '/*.php' ) ) >= 1;
 
 					if ( ! $wp_filesystem->delete( $sanitized_path ) ) {
 						return $this->error(
@@ -1019,7 +1017,7 @@ class Rest {
 						);
 					}
 
-					$other_files = count( glob( $dir . '/' . '*.*' ) ) >= 1;
+					$other_files = count( glob( $dir . '/*.*' ) ) >= 1;
 
 					if ( ! $other_php_files && file_exists( $compiled_asset ) ) {
 						$wp_filesystem->delete( $compiled_asset );
@@ -1319,8 +1317,8 @@ class Rest {
 
 		try {
 			foreach ( $data['content'] as $asset ) {
-				$compiler                    = Assets::get_scss_compiler( $asset['path'] );
-				$compiled[ $asset['path'] ]  = $compiler
+				$compiler                   = Assets::get_scss_compiler( $asset['path'] );
+				$compiled[ $asset['path'] ] = $compiler
 					->compileString( $asset['content'] )
 					->getCss();
 			}
@@ -1499,7 +1497,7 @@ class Rest {
 		$post_id = isset( $request['post_id'] ) ? (int) $request['post_id'] : 0;
 
 		if ( $post_id > 0 ) {
-			$post = get_post( $post_id );
+			$post = get_post( $post_id ); // phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited -- Setting post context for rendering.
 			setup_postdata( $post );
 		}
 
@@ -1608,17 +1606,15 @@ class Rest {
 				}
 			}
 			if ( Assets::is_css( $name ) || str_ends_with( $name, '.js' ) ) {
-				$files_changed[
-					Assets::get_id( $file['filename'], $block ) .
+				$files_changed[ Assets::get_id( $file['filename'], $block ) .
 						'-' .
-						$file['extension']
-				] = Assets::render_inline(
-					$file['basename'],
-					$content,
-					$block,
-					'gutenberg',
-					true
-				);
+						$file['extension'] ] = Assets::render_inline(
+							$file['basename'],
+							$content,
+							$block,
+							'gutenberg',
+							true
+						);
 			}
 		}
 

@@ -231,12 +231,12 @@ class Block_Discovery {
 		}
 
 		// Build level and structure info.
-		$level                   = $this->calculate_level( $base_path, $filename );
-		$block_arr_files         = $this->get_directory_files( $file_dir );
-		$block_arr_files_paths   = array_map( fn( $item ) => $file_dir . '/' . $item, $block_arr_files );
-		$block_arr_folders       = $this->get_directory_folders( $file_path );
+		$level                     = $this->calculate_level( $base_path, $filename );
+		$block_arr_files           = $this->get_directory_files( $file_dir );
+		$block_arr_files_paths     = array_map( fn( $item ) => $file_dir . '/' . $item, $block_arr_files );
+		$block_arr_folders         = $this->get_directory_folders( $file_path );
 		$block_arr_structure_array = $this->calculate_structure_array( $level, $path_info );
-		$block_arr_structure     = $this->calculate_structure( $base_path, $block_json_path );
+		$block_arr_structure       = $this->calculate_structure( $base_path, $block_json_path );
 
 		// Handle init files.
 		if ( $classification['is_init'] ) {
@@ -284,7 +284,7 @@ class Block_Discovery {
 
 		// Track overrides (needed for both editor and non-editor modes).
 		if ( $classification['is_override'] ) {
-			$override_key                    = false !== $name_file ? $name_file : $name;
+			$override_key                     = false !== $name_file ? $name_file : $name;
 			$this->overrides[ $override_key ] = array(
 				'name'           => $name,
 				'data'           => $data,

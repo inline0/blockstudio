@@ -142,6 +142,7 @@ class Migrate {
 		if ( $old_options ) {
 			$new_settings = array();
 
+			// phpcs:disable WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Reading legacy option names.
 			if ( isset( $old_options->formatOnSave ) && $old_options->formatOnSave ) {
 				$new_settings['editor']['formatOnSave'] = true;
 			}
@@ -150,7 +151,7 @@ class Migrate {
 				isset( $old_options->processorScss ) &&
 				$old_options->processorScss
 			) {
-				$new_settings['assets']['minify']['css']  = true;
+				$new_settings['assets']['minify']['css']   = true;
 				$new_settings['assets']['process']['scss'] = true;
 			}
 
@@ -160,6 +161,7 @@ class Migrate {
 			) {
 				$new_settings['assets']['minify']['js'] = true;
 			}
+			// phpcs:enable WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase
 
 			update_option( 'blockstudio_settings', $new_settings );
 			delete_option( 'blockstudio_options' );

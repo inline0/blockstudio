@@ -115,7 +115,7 @@ class Blocks {
 					wp_json_encode( $block_obj )
 				);
 				// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Setting mode for rendering.
-				$_GET['blockstudioMode']     = 'editor';
+				$_GET['blockstudioMode']   = 'editor';
 				$blockstudio_blocks[ $id ] = array(
 					'rendered' => render_block( $block ),
 					'block'    => $block_obj,

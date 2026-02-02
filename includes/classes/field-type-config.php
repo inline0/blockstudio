@@ -56,97 +56,97 @@ final class Field_Type_Config {
 	 */
 	public const TYPES = array(
 		// String types.
-		'code'     => array(
+		'code'       => array(
 			'attribute' => 'string',
 			'default'   => '',
 		),
-		'date'     => array(
+		'date'       => array(
 			'attribute' => 'string',
 			'default'   => '',
 		),
-		'datetime' => array(
+		'datetime'   => array(
 			'attribute' => 'string',
 			'default'   => '',
 		),
-		'text'     => array(
+		'text'       => array(
 			'attribute' => 'string',
 			'default'   => '',
 		),
-		'textarea' => array(
+		'textarea'   => array(
 			'attribute' => 'string',
 			'default'   => '',
 		),
-		'unit'     => array(
+		'unit'       => array(
 			'attribute' => 'string',
 			'default'   => '',
 		),
-		'classes'  => array(
+		'classes'    => array(
 			'attribute' => 'string',
 			'default'   => '',
 		),
-		'richtext' => array(
+		'richtext'   => array(
 			'attribute' => 'string',
 			'default'   => '',
 			'source'    => 'html',
 		),
-		'wysiwyg'  => array(
+		'wysiwyg'    => array(
 			'attribute' => 'string',
 			'default'   => '',
 			'source'    => 'html',
 		),
 
 		// Number types.
-		'number'   => array(
+		'number'     => array(
 			'attribute' => 'number',
 			'default'   => 0,
 		),
-		'range'    => array(
+		'range'      => array(
 			'attribute' => 'number',
 			'default'   => 0,
 		),
 
 		// Boolean types.
-		'toggle'   => array(
+		'toggle'     => array(
 			'attribute' => 'boolean',
 			'default'   => false,
 		),
 
 		// Object types.
-		'color'    => array(
+		'color'      => array(
 			'attribute' => 'object',
 			'default'   => null,
 		),
-		'gradient' => array(
+		'gradient'   => array(
 			'attribute' => 'object',
 			'default'   => null,
 		),
-		'icon'     => array(
+		'icon'       => array(
 			'attribute' => 'object',
 			'default'   => null,
 		),
-		'link'     => array(
+		'link'       => array(
 			'attribute' => 'object',
 			'default'   => null,
 		),
-		'radio'    => array(
+		'radio'      => array(
 			'attribute' => 'object',
 			'default'   => null,
 		),
-		'select'   => array(
+		'select'     => array(
 			'attribute' => 'object',
 			'default'   => null,
 		),
 
 		// Array types.
-		'repeater' => array(
+		'repeater'   => array(
 			'attribute' => 'array',
 			'default'   => array(),
 		),
-		'checkbox' => array(
+		'checkbox'   => array(
 			'attribute' => 'array',
 			'default'   => array(),
 		),
-		'token'    => array(
+		'token'      => array(
 			'attribute' => 'array',
 			'default'   => array(),
 		),
@@ -156,19 +156,19 @@ final class Field_Type_Config {
 		),
 
 		// Mixed/special types.
-		'files'    => array(
+		'files'      => array(
 			'attribute' => array( 'number', 'object', 'array' ),
 			'default'   => null,
 		),
-		'group'    => array(
+		'group'      => array(
 			'attribute' => 'object',
 			'default'   => null,
 		),
-		'tabs'     => array(
+		'tabs'       => array(
 			'attribute' => null,
 			'default'   => null,
 		),
-		'message'  => array(
+		'message'    => array(
 			'attribute' => null,
 			'default'   => null,
 		),

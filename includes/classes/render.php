@@ -93,6 +93,7 @@ class Render {
 				)
 			);
 		} else {
+			// phpcs:disable WordPress.Security.EscapeOutput.OutputNotEscaped -- Block render handles escaping.
 			echo Block::render(
 				array(
 					'blockstudio' => array(
@@ -104,6 +105,7 @@ class Render {
 				'',
 				$content
 			);
+			// phpcs:enable WordPress.Security.EscapeOutput.OutputNotEscaped
 		}
 	}
 }

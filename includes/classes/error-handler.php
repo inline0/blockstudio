@@ -108,12 +108,16 @@ class Error_Handler {
 	public static function handle_exception( Throwable $exception, string $context = '' ): void {
 		$message = self::format_exception( $exception, $context );
 
-		self::log( $message, self::LEVEL_ERROR, array(
-			'exception_class' => get_class( $exception ),
-			'file'            => $exception->getFile(),
-			'line'            => $exception->getLine(),
-			'trace'           => $exception->getTraceAsString(),
-		) );
+		self::log(
+			$message,
+			self::LEVEL_ERROR,
+			array(
+				'exception_class' => get_class( $exception ),
+				'file'            => $exception->getFile(),
+				'line'            => $exception->getLine(),
+				'trace'           => $exception->getTraceAsString(),
+			)
+		);
 
 		// Trigger an action for custom exception handlers.
 		do_action( 'blockstudio/error/exception', $exception, $context );
@@ -216,7 +220,7 @@ class Error_Handler {
 	 * @return string The formatted message.
 	 */
 	private static function format_message( string $message, string $level, array $context ): string {
-		$timestamp = gmdate( 'Y-m-d H:i:s' );
+		$timestamp   = gmdate( 'Y-m-d H:i:s' );
 		$level_upper = strtoupper( $level );
 
 		$formatted = "[Blockstudio] [{$timestamp}] [{$level_upper}] {$message}";
@@ -254,9 +258,9 @@ class Error_Handler {
 	/**
 	 * Wrap a callable in error handling.
 	 *
-	 * @param callable    $callback The callback to execute.
-	 * @param string      $context  The context for error reporting.
-	 * @param mixed|null  $default  The default value on error.
+	 * @param callable   $callback The callback to execute.
+	 * @param string     $context  The context for error reporting.
+	 * @param mixed|null $default  The default value on error.
 	 *
 	 * @return mixed The callback result or default value.
 	 */

@@ -553,7 +553,7 @@ final class Block_Registry {
 	 */
 	public function set_blade_instance( string $instance, string $path, array $templates = array() ): void {
 		// Preserve existing templates when re-setting the instance.
-		$existing_templates = $this->blade[ $instance ]['templates'] ?? array();
+		$existing_templates       = $this->blade[ $instance ]['templates'] ?? array();
 		$this->blade[ $instance ] = array(
 			'path'      => $path,
 			'templates' => array_merge( $existing_templates, $templates ),

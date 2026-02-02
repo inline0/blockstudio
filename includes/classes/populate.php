@@ -98,9 +98,9 @@ class Populate {
 			$original_posts = get_posts( $arguments );
 
 			if ( $extra_ids ) {
-				$extra_ids       = is_array( $extra_ids ) ? $extra_ids : array( $extra_ids );
+				$extra_ids        = is_array( $extra_ids ) ? $extra_ids : array( $extra_ids );
 				$extra_posts_args = array(
-					'include'    => $extra_ids,
+					'include'     => $extra_ids,
 					'post_type'   => 'any',
 					'post_status' => 'any',
 				);
@@ -120,7 +120,7 @@ class Populate {
 			$original_users = get_users( $arguments );
 
 			if ( $extra_ids ) {
-				$extra_ids       = is_array( $extra_ids ) ? $extra_ids : array( $extra_ids );
+				$extra_ids        = is_array( $extra_ids ) ? $extra_ids : array( $extra_ids );
 				$extra_users_args = array(
 					'include' => $extra_ids,
 				);
@@ -137,11 +137,11 @@ class Populate {
 		}
 
 		if ( 'terms' === $data['query'] ) {
-			// If no taxonomy specified, query all public taxonomies
+			// If no taxonomy specified, query all public taxonomies.
 			if ( empty( $arguments['taxonomy'] ) ) {
 				$arguments['taxonomy'] = get_taxonomies( array( 'public' => true ), 'names' );
 			}
-			// Default to showing empty terms unless explicitly set
+			// Default to showing empty terms unless explicitly set.
 			if ( ! isset( $arguments['hide_empty'] ) ) {
 				$arguments['hide_empty'] = false;
 			}
@@ -152,7 +152,7 @@ class Populate {
 			}
 
 			if ( $extra_ids ) {
-				$extra_ids       = is_array( $extra_ids ) ? $extra_ids : array( $extra_ids );
+				$extra_ids        = is_array( $extra_ids ) ? $extra_ids : array( $extra_ids );
 				$extra_terms_args = array(
 					'include' => $extra_ids,
 				);

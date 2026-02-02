@@ -92,11 +92,9 @@ class Files {
 				if ( false === rmdir( $file_info->getRealPath() ) ) {
 					return false;
 				}
-			} else {
 				// phpcs:ignore WordPress.WP.AlternativeFunctions.unlink_unlink -- Direct filesystem operation for cleanup.
-				if ( false === unlink( $file_info->getRealPath() ) ) {
-					return false;
-				}
+			} elseif ( false === unlink( $file_info->getRealPath() ) ) {
+				return false;
 			}
 		}
 

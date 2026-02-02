@@ -116,11 +116,11 @@ class Assets {
 	 * @return string The processed HTML.
 	 */
 	public function parse_output( $html ): string {
-		$blocks        = Build::data();
-		$blocks_native = Build::blocks();
-		$ids           = array();
+		$blocks         = Build::data();
+		$blocks_native  = Build::blocks();
+		$ids            = array();
 		$blocks_on_page = array();
-		$asset_ids     = array();
+		$asset_ids      = array();
 
 		$style_pattern  = '/<style[^>]+data-blockstudio-asset[^>]*>(.*?)<\/style>/is';
 		$script_pattern = '/<script[^>]+data-blockstudio-asset[^>]*>(.*?)<\/script>/is';
@@ -188,12 +188,10 @@ class Assets {
 					} else {
 						$footer .= self::render_tag( $k, $v, $block );
 					}
-				} else {
-					if ( self::is_css( $k ) ) {
+				} elseif ( self::is_css( $k ) ) {
 						$head .= self::render_inline( $k, $v, $block, true );
-					} else {
-						$footer .= self::render_inline( $k, $v, $block, true );
-					}
+				} else {
+					$footer .= self::render_inline( $k, $v, $block, true );
 				}
 			}
 		}
@@ -326,6 +324,7 @@ class Assets {
 		$content = file_get_contents( $path );
 		preg_match_all( '/@import\s*([\'"])(.*?)(?<!\\\\)\1/', $content, $matches );
 
+		// phpcs:ignore WordPress.NamingConventions.ValidHookName.NotLowercase -- Public API hook name.
 		foreach ( apply_filters( 'blockstudio/assets/process/scss/importPaths', array() ) as $import_path ) {
 			if ( file_exists( $import_path ) ) {
 				$mtimes[] = filemtime( $import_path );
@@ -446,6 +445,7 @@ class Assets {
 			$compiler->setImportPaths( $import_path );
 		}
 
+		// phpcs:ignore WordPress.NamingConventions.ValidHookName.NotLowercase -- Public API hook name.
 		foreach ( apply_filters( 'blockstudio/assets/process/scss/importPaths', array() ) as $i_path ) {
 			if ( ! is_dir( $i_path ) ) {
 				continue;
@@ -571,12 +571,10 @@ class Assets {
 						} else {
 							$footer .= self::render_inline( $k, $v, $block, true );
 						}
-					} else {
-						if ( self::is_css_extension( $v['file']['extension'] ) ) {
+					} elseif ( self::is_css_extension( $v['file']['extension'] ) ) {
 							$footer .= self::render_inline( $k, $v, $block, true, true );
-						} else {
-							$footer .= self::render_inline( $k, $v, $block, true );
-						}
+					} else {
+						$footer .= self::render_inline( $k, $v, $block, true );
 					}
 
 					self::get_module_css_assets( $block, $asset_ids, $footer );
@@ -591,12 +589,10 @@ class Assets {
 				} else {
 					$footer .= self::render_inline( $k, $v, $block, true );
 				}
-			} else {
-				if ( self::is_css_extension( $v['file']['extension'] ) ) {
+			} elseif ( self::is_css_extension( $v['file']['extension'] ) ) {
 					$footer .= self::render_inline( $k, $v, $block, true, true );
-				} else {
-					$footer .= self::render_inline( $k, $v, $block, true );
-				}
+			} else {
+				$footer .= self::render_inline( $k, $v, $block, true );
 			}
 		}
 
@@ -613,7 +609,7 @@ class Assets {
 		global $current_screen;
 
 		if ( function_exists( 'get_current_screen' ) ) {
-			$current_screen = get_current_screen();
+			$current_screen = get_current_screen(); // phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited
 		}
 
 		if ( ! $current_screen ) {
@@ -776,7 +772,7 @@ class Assets {
 	 * @return array|void The array of filenames or void.
 	 */
 	public static function process_js( $path, $dist_folder ) {
-		$pathinfo = pathinfo( $path );
+		$pathinfo  = pathinfo( $path );
 		$minify_js = Settings::get( 'assets/minify/js' );
 
 		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Reading local file.
@@ -894,8 +890,8 @@ class Assets {
 		$key              = '';
 
 		if ( 'gutenberg' !== $return ) {
-			$path         = self::get_path( $data['path'] );
-			$is_processed = 1 === count( self::get_matches( $data['path'] ) );
+			$path             = self::get_path( $data['path'] );
+			$is_processed     = 1 === count( self::get_matches( $data['path'] ) );
 			$processed_string = $is_processed ? 'data-processed' : '';
 
 			if ( str_ends_with( $path, '.scss' ) ) {
@@ -963,7 +959,7 @@ class Assets {
 			return null;
 		}
 
-		$path               = $data['path'];
+		$path                = $data['path'];
 		$maybe_compiled_path = self::get_path( $path );
 
 		if ( 0 === filesize( $maybe_compiled_path ) ) {
@@ -979,9 +975,11 @@ class Assets {
 				return null;
 			}
 
+			// phpcs:ignore WordPress.WP.EnqueuedResources.NonEnqueuedStylesheet -- Intentional inline tag rendering.
 			return "<link rel='stylesheet' $processed id='$id' href='$src?ver=$key'>";
 		}
 
+		// phpcs:ignore WordPress.WP.EnqueuedResources.NonEnqueuedScript -- Intentional inline tag rendering.
 		return "<script type='module' $processed id='$id' src='$src?ver=$key'></script>";
 	}
 

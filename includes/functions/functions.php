@@ -1,4 +1,9 @@
 <?php
+/**
+ * Blockstudio public API functions.
+ *
+ * @package Blockstudio
+ */
 
 use Blockstudio\Render;
 use Blockstudio\Build;
@@ -6,216 +11,263 @@ use Blockstudio\Build;
 /**
  * Render block.
  *
- * @date   10/02/2022
- * @since  2.1.2
+ * @since 2.1.2
+ *
+ * @param string|array $value Block name or configuration array.
+ *
+ * @return false|string|void Returns HTML string, false on failure, or void when echoing.
  */
-function blockstudio_render_block($value)
-{
-    return Render::block($value);
+function blockstudio_render_block( $value ) {
+	return Render::block( $value );
 }
 
 /**
  * Get block.
  *
- * @date   10/02/2022
- * @since  2.1.2
+ * @since 2.1.2
+ *
+ * @param string|array $value Block name or configuration array.
+ *
+ * @return string|false The block content or false on failure.
+ *
+ * @phpcs:disable WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedFunctionFound -- Public API function.
  */
-function bs_block($value)
-{
-    ob_start();
-    Render::block($value);
-    $content = ob_get_contents();
-    ob_end_clean();
+function bs_block( $value ) {
+	// phpcs:enable WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedFunctionFound
+	ob_start();
+	Render::block( $value );
+	$content = ob_get_contents();
+	ob_end_clean();
 
-    return $content;
+	return $content;
 }
 
 /**
  * Render block.
  *
- * @date   10/02/2022
- * @since  2.1.2
+ * @since 2.1.2
+ *
+ * @param string|array $value Block name or configuration array.
+ *
+ * @return false|string|void Returns HTML string, false on failure, or void when echoing.
+ *
+ * @phpcs:disable WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedFunctionFound -- Public API function.
  */
-function bs_render_block($value)
-{
-    return Render::block($value);
+function bs_render_block( $value ) {
+	// phpcs:enable WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedFunctionFound
+	return Render::block( $value );
 }
 
 /**
  * Get icon.
  *
- * @date   10/02/2022
- * @since  2.1.2
+ * @since 2.1.2
+ *
+ * @param array $args Icon arguments with 'set', 'subSet', and 'icon' keys.
+ *
+ * @return string|false The icon SVG content or false on failure.
+ *
+ * @phpcs:disable WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedFunctionFound -- Public API function.
  */
-function bs_icon($args)
-{
-    ob_start();
-    bs_render_icon($args);
-    $content = ob_get_contents();
-    ob_end_clean();
+function bs_icon( $args ) {
+	// phpcs:enable WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedFunctionFound
+	ob_start();
+	bs_render_icon( $args );
+	$content = ob_get_contents();
+	ob_end_clean();
 
-    return $content;
+	return $content;
 }
 
 /**
  * Render icon.
  *
- * @date   10/02/2022
- * @since  2.1.2
+ * @since 2.1.2
+ *
+ * @param array $args Icon arguments with 'set', 'subSet', and 'icon' keys.
+ *
+ * @return void
+ *
+ * @phpcs:disable WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedFunctionFound -- Public API function.
  */
-function bs_render_icon($args)
-{
-    $path = BLOCKSTUDIO_DIR . '/includes/icons';
-    $iconVersion = '1';
-    $expirationTime = 30 * DAY_IN_SECONDS;
+function bs_render_icon( $args ) {
+	// phpcs:enable WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedFunctionFound
+	$path            = BLOCKSTUDIO_DIR . '/includes/icons';
+	$icon_version    = '1';
+	$expiration_time = 30 * DAY_IN_SECONDS;
 
-    $set = $args['set'];
-    $subSet = isset($args['subSet']) ? '-' . $args['subSet'] : '';
-    $icon = $args['icon'];
+	$set     = $args['set'];
+	$sub_set = isset( $args['subSet'] ) ? '-' . $args['subSet'] : '';
+	$icon    = $args['icon'];
 
-    $completePath = "$path/$set$subSet.json";
+	$complete_path = "$path/$set$sub_set.json";
 
-    $setIconTransientKey =
-        'blockstudio_' . $iconVersion . '_icon_set_' . md5("$set$subSet");
+	$set_icon_transient_key =
+		'blockstudio_' . $icon_version . '_icon_set_' . md5( "$set$sub_set" );
 
-    $iconTransientKey =
-        'blockstudio_' . $iconVersion . '_icon_' . md5("$set$subSet$icon");
+	$icon_transient_key =
+		'blockstudio_' . $icon_version . '_icon_' . md5( "$set$sub_set$icon" );
 
-    $iconData = get_transient($iconTransientKey);
+	$icon_data = get_transient( $icon_transient_key );
 
-    if (false === $iconData) {
-        $data = get_transient($setIconTransientKey);
+	if ( false === $icon_data ) {
+		$data = get_transient( $set_icon_transient_key );
 
-        if (false === $data) {
-            if (file_exists($completePath)) {
-                $data = json_decode(file_get_contents($completePath), true);
+		if ( false === $data ) {
+			if ( file_exists( $complete_path ) ) {
+				// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Reading local icon file.
+				$data = json_decode( file_get_contents( $complete_path ), true );
 
-                set_transient($setIconTransientKey, $data, $expirationTime);
-            }
-        }
+				set_transient( $set_icon_transient_key, $data, $expiration_time );
+			}
+		}
 
-        if ($data && isset($data[$icon . '.svg'])) {
-            $iconData = $data[$icon . '.svg'];
-            set_transient($iconTransientKey, $iconData, $expirationTime);
-        }
-    }
+		if ( $data && isset( $data[ $icon . '.svg' ] ) ) {
+			$icon_data = $data[ $icon . '.svg' ];
+			set_transient( $icon_transient_key, $icon_data, $expiration_time );
+		}
+	}
 
-    if ($iconData) {
-        echo $iconData;
-    }
+	if ( $icon_data ) {
+		// phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- SVG icon data is trusted.
+		echo $icon_data;
+	}
 }
 
 /**
  * Get attributes.
  *
- * @date   11/04/2024
- * @since  5.5.0
+ * @since 5.5.0
  *
- * @param  $data
- * @param  array  $allowed
+ * @param mixed $data    The data to convert to attributes.
+ * @param array $allowed Allowed attribute names.
  *
- * @return string
+ * @return string The attributes string.
+ *
+ * @phpcs:disable WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedFunctionFound -- Public API function.
  */
-function bs_attributes($data, array $allowed = []): string
-{
-    return Blockstudio\Utils::attributes($data, $allowed);
+function bs_attributes( $data, array $allowed = array() ): string {
+	// phpcs:enable WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedFunctionFound
+	return Blockstudio\Utils::attributes( $data, $allowed );
 }
 
 /**
  * Render attributes.
  *
- * @date   07/04/2023
- * @since  4.2.0
+ * @since 4.2.0
  *
- * @param  $data
- * @param  array  $allowed
+ * @param mixed $data    The data to convert to attributes.
+ * @param array $allowed Allowed attribute names.
+ *
+ * @return void
+ *
+ * @phpcs:disable WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedFunctionFound -- Public API function.
  */
-function bs_render_attributes($data, array $allowed = [])
-{
-    echo Blockstudio\Utils::attributes($data, $allowed);
+function bs_render_attributes( $data, array $allowed = array() ) {
+	// phpcs:enable WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedFunctionFound
+	// phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Utils::attributes handles escaping.
+	echo Blockstudio\Utils::attributes( $data, $allowed );
 }
 
 /**
  * Get variables.
  *
- * @date   11/04/2024
- * @since  5.5.0
+ * @since 5.5.0
  *
- * @param  $data
- * @param  array  $allowed
+ * @param mixed $data    The data to convert to CSS variables.
+ * @param array $allowed Allowed variable names.
  *
- * @return string
+ * @return string The CSS variables string.
+ *
+ * @phpcs:disable WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedFunctionFound -- Public API function.
  */
-
-function bs_variables($data, array $allowed = []): string
-{
-    return Blockstudio\Utils::attributes($data, $allowed, true);
+function bs_variables( $data, array $allowed = array() ): string {
+	// phpcs:enable WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedFunctionFound
+	return Blockstudio\Utils::attributes( $data, $allowed, true );
 }
 
 /**
  * Render variables.
  *
- * @date   07/04/2023
- * @since  4.2.0
+ * @since 4.2.0
  *
- * @param  $data
- * @param  array  $allowed
+ * @param mixed $data    The data to convert to CSS variables.
+ * @param array $allowed Allowed variable names.
+ *
+ * @return void
+ *
+ * @phpcs:disable WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedFunctionFound -- Public API function.
  */
-function bs_render_variables($data, array $allowed = [])
-{
-    echo Blockstudio\Utils::attributes($data, $allowed, true);
+function bs_render_variables( $data, array $allowed = array() ) {
+	// phpcs:enable WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedFunctionFound
+	// phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Utils::attributes handles escaping.
+	echo Blockstudio\Utils::attributes( $data, $allowed, true );
 }
 
 /**
  * Get data attributes.
  *
- * @date   15/08/2024
- * @since  5.6.0
+ * @since 5.6.0
  *
- * @param  $data
+ * @param mixed $data The data to convert to data attributes.
  *
- * @return string
+ * @return string The data attributes string.
+ *
+ * @phpcs:disable WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedFunctionFound -- Public API function.
  */
-
-function bs_data_attributes($data): string
-{
-    return Blockstudio\Utils::data_attributes($data);
+function bs_data_attributes( $data ): string {
+	// phpcs:enable WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedFunctionFound
+	return Blockstudio\Utils::data_attributes( $data );
 }
 
 /**
  * Get render data attributes.
  *
- * @date   15/08/2024
- * @since  5.6.0
+ * @since 5.6.0
  *
- * @param  $data
+ * @param mixed $data The data to convert to data attributes.
+ *
+ * @return void
+ *
+ * @phpcs:disable WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedFunctionFound -- Public API function.
  */
-
-function bs_render_data_attributes($data)
-{
-    echo Blockstudio\Utils::data_attributes($data);
+function bs_render_data_attributes( $data ) {
+	// phpcs:enable WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedFunctionFound
+	// phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Utils::data_attributes handles escaping.
+	echo Blockstudio\Utils::data_attributes( $data );
 }
 
 /**
  * Get group.
  *
- * @date   21/08/2022
- * @since  2.6.0
+ * @since 2.6.0
+ *
+ * @param array  $attributes The block attributes.
+ * @param string $name       The group name.
+ *
+ * @return array The group data.
+ *
+ * @phpcs:disable WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedFunctionFound -- Public API function.
  */
-function bs_get_group($attributes, $name): array
-{
-    return Blockstudio\Field::group($attributes, $name);
+function bs_get_group( $attributes, $name ): array {
+	// phpcs:enable WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedFunctionFound
+	return Blockstudio\Field::group( $attributes, $name );
 }
 
 /**
  * Get scoped ID.
  *
- * @date   28/08/2022
- * @since  2.7.0
+ * @since 2.7.0
+ *
+ * @param string $name The block name.
+ *
+ * @return string The scoped class name.
+ *
+ * @phpcs:disable WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedFunctionFound -- Public API function.
  */
-function bs_get_scoped_class($name): string
-{
-    $blocks = Build::data();
+function bs_get_scoped_class( $name ): string {
+	// phpcs:enable WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedFunctionFound
+	$blocks = Build::data();
 
-    return isset($blocks[$name]) ? $blocks[$name]['scopedClass'] : '';
+	return isset( $blocks[ $name ] ) ? $blocks[ $name ]['scopedClass'] : '';
 }

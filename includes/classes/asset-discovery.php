@@ -199,8 +199,8 @@ class Asset_Discovery {
 		// Build asset ID.
 		$id = strtolower( preg_replace( '/(?<!^)[A-Z]/', '-$0', $asset_filename ) );
 
-		$handle    = Assets::get_id( $id, array( 'name' => $name ) );
-		$is_inline = $this->classifier->is_inline_asset( $asset_filename );
+		$handle         = Assets::get_id( $id, array( 'name' => $name ) );
+		$is_inline      = $this->classifier->is_inline_asset( $asset_filename );
 		$is_editor_only = $this->classifier->is_editor_asset( $asset_filename );
 
 		$asset = array(

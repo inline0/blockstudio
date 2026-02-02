@@ -93,7 +93,15 @@ abstract class Abstract_Field_Handler implements Field_Handler_Interface {
 	 *
 	 * @return array The base attribute.
 	 */
-	protected function create_base_attribute( string $type, string|array $attribute_type ): array {
+	/**
+	 * Create base attribute structure.
+	 *
+	 * @param string       $type           The field type.
+	 * @param string|array $attribute_type The attribute type (can be string or array for union types).
+	 *
+	 * @return array The base attribute.
+	 */
+	protected function create_base_attribute( string $type, $attribute_type ): array {
 		return array(
 			'blockstudio' => true,
 			'type'        => $attribute_type,

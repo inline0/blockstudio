@@ -162,7 +162,8 @@ class File_Classifier {
 			return '{}';
 		}
 
-		return file_get_contents( $file_path ) ?: '{}'; // phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents
+		$contents = file_get_contents( $file_path ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents
+		return false !== $contents ? $contents : '{}';
 	}
 
 	/**
@@ -174,15 +175,15 @@ class File_Classifier {
 	 */
 	private function determine_file_type( string $extension ): string {
 		$type_map = array(
-			'php'   => 'php',
-			'twig'  => 'twig',
-			'json'  => 'json',
-			'css'   => 'css',
-			'scss'  => 'scss',
-			'js'    => 'js',
-			'ts'    => 'typescript',
-			'jsx'   => 'jsx',
-			'tsx'   => 'tsx',
+			'php'  => 'php',
+			'twig' => 'twig',
+			'json' => 'json',
+			'css'  => 'css',
+			'scss' => 'scss',
+			'js'   => 'js',
+			'ts'   => 'typescript',
+			'jsx'  => 'jsx',
+			'tsx'  => 'tsx',
 		);
 
 		return $type_map[ $extension ] ?? 'unknown';
