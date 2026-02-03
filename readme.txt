@@ -18,6 +18,8 @@ Blockstudio gives you the ultimate developer experience for creating custom, pro
 = 7.0.0 (next) =
 * New: complete codebase refactor
 * New: Tailwind 4 support
+* Fix: conditional fields not respecting default values on first load
+* Fix: optionsPopulate null error in WPML contexts
 
 = 6.0.2 (18.08.2025) =
 * Enhancement: also preload blocks inside site editor
