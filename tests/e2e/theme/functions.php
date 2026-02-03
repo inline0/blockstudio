@@ -15,6 +15,51 @@ if ( class_exists( 'Timber\Timber' ) ) {
 	Timber\Timber::init();
 }
 
+// Blade template rendering.
+add_filter(
+	'blockstudio/blocks/render',
+	function ( $value, $block ) {
+		$path = $block->blockstudio['data']['path'] ?? '';
+
+		if ( ! str_ends_with( $path, '.blade.php' ) ) {
+			return $value;
+		}
+
+		if ( ! class_exists( '\Jenssegers\Blade\Blade' ) ) {
+			return 'Error: Blade class not found.';
+		}
+
+		$data       = $block->blockstudio['data'];
+		$blade_data = $data['blade'] ?? array();
+		$blade_path = $blade_data['path'] ?? '';
+
+		if ( empty( $blade_path ) || empty( $blade_data['templates'] ) ) {
+			return $value;
+		}
+
+		$blade = new \Jenssegers\Blade\Blade( $blade_path, sys_get_temp_dir() );
+
+		$template_name = $blade_data['templates'][ $block->name ] ?? '';
+		if ( empty( $template_name ) ) {
+			return $value;
+		}
+
+		return $blade->render(
+			$template_name,
+			array(
+				'a'          => $data['attributes'],
+				'attributes' => $data['attributes'],
+				'b'          => $data['block'],
+				'block'      => $data['block'],
+				'c'          => $data['context'],
+				'context'    => $data['context'],
+			)
+		);
+	},
+	10,
+	2
+);
+
 // Add theme support for block editor.
 add_action(
 	'after_setup_theme',
