@@ -133,7 +133,7 @@ class Block {
 				'query' === $populate['type'] &&
 				isset( $populate['query'] ) &&
 				( ( in_array( $populate['query'], $query_options, true ) &&
-					in_array( $value, $data['optionsPopulate'], true ) ) ||
+					in_array( $value, $data['optionsPopulate'] ?? array(), true ) ) ||
 					$fetch )
 			) {
 				$is_object =
