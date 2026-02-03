@@ -34,6 +34,7 @@
   },
   "scripts": {
     "scope": "vendor/bin/php-scoper add-prefix --output-dir=lib --force",
+    "preflight": "php bin/generate-preflight.php",
     "cs": "phpcs",
     "cs:fix": "phpcbf"
   },
