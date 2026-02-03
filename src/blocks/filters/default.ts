@@ -1,6 +1,6 @@
 import { addFilter } from '@wordpress/hooks';
 import { shouldExtend } from '@/blocks/filters/extensions';
-import { getDefaultBlock } from '@/blocks/utils/getDefaultBlock';
+import { getDefaultBlock } from '@/blocks/utils/get-default-block';
 
 const blocks = window.blockstudioAdmin.data.blocksNative;
 

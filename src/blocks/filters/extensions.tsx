@@ -4,9 +4,9 @@ import { useSelect } from '@wordpress/data';
 import { createPortal, useEffect, useRef, useState } from '@wordpress/element';
 import { addFilter } from '@wordpress/hooks';
 import { cloneDeep, isArray, set as lodashSet } from 'lodash-es';
-import { Fields } from '@/blocks/components/Fields';
-import { getEditorDocument } from '@/blocks/utils/getEditorDocument';
-import { parseTemplate } from '@/blocks/utils/parseTemplate';
+import { Fields } from '@/blocks/components/fields';
+import { getEditorDocument } from '@/blocks/utils/get-editor-document';
+import { parseTemplate } from '@/blocks/utils/parse-template';
 import { selectors as selectorsTailwind } from '@/tailwind/store/selectors';
 import {
   Any,

@@ -1,7 +1,7 @@
 === blockstudio ===
 Contributors: dnnsjsk
 Requires at least: 5.0
-Tested up to: 6.8.1
+Tested up to: 7.0.0
 Requires PHP: 8.2
 Stable tag: 2.0
 License: GPLv2 or later

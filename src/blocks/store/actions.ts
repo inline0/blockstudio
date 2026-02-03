@@ -1,4 +1,4 @@
-import { makeActionCreator } from '@/utils/makeActionCreator';
+import { makeActionCreator } from '@/utils/make-action-creator';
 
 export const actions = {
   setEditor: makeActionCreator('SET_EDITOR', 'editor'),
