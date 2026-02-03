@@ -1313,7 +1313,7 @@ class Block {
 			$render = true;
 
 			if ( $editor ) {
-				@eval( ' ?>' . $editor . '<?php ' ); // phpcs:ignore Squiz.PHP.Eval.Discouraged
+				@eval( ' ?>' . $editor . '<?php ' ); // phpcs:ignore Squiz.PHP.Eval.Discouraged, WordPress.PHP.NoSilencedErrors.Discouraged
 			} else {
 				ob_start();
 				$render = trim( include $path );
@@ -1323,7 +1323,7 @@ class Block {
 					echo Assets::get_preview_assets( $block_data ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
 				}
 				$is_inline_editor
-					? @eval( // phpcs:ignore Squiz.PHP.Eval.Discouraged
+					? @eval( // phpcs:ignore Squiz.PHP.Eval.Discouraged, WordPress.PHP.NoSilencedErrors.Discouraged
 						' ?>' .
 							get_transient(
 								'blockstudio_gutenberg_' . $name . '_index.php'
