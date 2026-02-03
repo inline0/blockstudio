@@ -20,7 +20,7 @@ blockstudio7/
 ├── includes/            # PHP classes (primary codebase)
 ├── package/             # Frontend code
 ├── docs/                # Documentation (OneDocs/Next.js)
-├── .skills/             # Claude Code skills
+├── .claude/skills/      # Claude Code skills
 ├── readme.txt           # WordPress plugin readme with changelog
 ├── _reference/          # v6 reference (gitignored, for snapshots)
 └── tests/               # Test infrastructure

@@ -1,3 +1,8 @@
+---
+name: feature
+description: Build and ship complete features for Blockstudio 7.0 including implementation, E2E tests, documentation, and changelog updates
+---
+
 # Feature Build Skill
 
 Build and ship complete features for Blockstudio 7.0.
