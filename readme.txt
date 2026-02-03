@@ -15,6 +15,10 @@ Blockstudio gives you the ultimate developer experience for creating custom, pro
 
 == Changelog ==
 
+= 7.0.0 (next) =
+* New: complete codebase refactor
+* New: Tailwind 4 support
+
 = 6.0.2 (18.08.2025) =
 * Enhancement: also preload blocks inside site editor
 * Enhancement: better Twig error messages

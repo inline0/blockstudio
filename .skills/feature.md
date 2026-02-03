@@ -93,19 +93,14 @@ Add or update documentation in `docs/content/docs/`:
 
 ### 6. Update Changelog
 
-Add entry to `CHANGELOG.md` under the appropriate section:
+Add entry to `readme.txt` under the `== Changelog ==` section. Add to the current version at the top:
 
-```markdown
-## [Unreleased]
-
-### Added
-- New feature description
-
-### Changed
-- Modified behavior description
-
-### Fixed
-- Bug fix description
+```
+= 7.0.0 (next) =
+* New: feature description
+* Enhancement: improvement description
+* Fix: bug fix description
+* Breaking: breaking change description
 ```
 
 ## Checklist
@@ -119,7 +114,7 @@ Before marking complete, verify:
 - [ ] Unit tests pass (`npm run test:v7`)
 - [ ] E2E tests pass (`npm run test:e2e`)
 - [ ] Documentation added/updated
-- [ ] Changelog updated
+- [ ] Changelog updated in `readme.txt`
 
 ## Commands Reference
 

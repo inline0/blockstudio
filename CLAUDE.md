@@ -21,7 +21,7 @@ blockstudio7/
 ├── package/             # Frontend code
 ├── docs/                # Documentation (OneDocs/Next.js)
 ├── .skills/             # Claude Code skills
-├── CHANGELOG.md         # Version changelog
+├── readme.txt           # WordPress plugin readme with changelog
 ├── _reference/          # v6 reference (gitignored, for snapshots)
 └── tests/               # Test infrastructure
 ```
@@ -35,7 +35,7 @@ Use `/feature` when implementing new features. This skill guides the complete wo
 3. Add E2E test in `tests/e2e/types/`
 4. Add test block in `tests/blocks/types/`
 5. Update documentation in `docs/content/docs/`
-6. Update `CHANGELOG.md`
+6. Update changelog in `readme.txt`
 
 ## Documentation
 
