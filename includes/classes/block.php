@@ -359,6 +359,8 @@ class Block {
 					$block
 				);
 
+				$rich_text_content = str_replace( '$', '\$', $rich_text_content ?? '' );
+
 				$content = preg_replace(
 					$regex,
 					$attribute

@@ -54,4 +54,16 @@ test.describe('component-richtext-default', () => {
 		await page.click('[data-type="blockstudio/component-richtext-default"]');
 		await count(page, 'text=Test text', 2);
 	});
+
+	test('dollar signs preserved in content', async () => {
+		await page.goto('http://localhost:8888/wp-admin/post.php?post=1483&action=edit');
+		await page.waitForSelector('.editor-styles-wrapper', { timeout: 30000 });
+		await page.click('[data-type="blockstudio/component-richtext-default"]');
+		await page.locator('[aria-label="Enter text here"]').nth(0).click();
+		await page.keyboard.press('Control+a');
+		await page.keyboard.type('Price: $79');
+		await save(page);
+		await page.goto('http://localhost:8888/native-single/');
+		await count(page, 'text=$79', 1);
+	});
 });
