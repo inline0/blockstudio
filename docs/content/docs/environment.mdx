@@ -1,0 +1,56 @@
+---
+title: Environment
+description: Conditionally render content based on the rendering context.
+---
+
+# Environment
+
+Sometimes it is necessary to show content in your blocks exclusively when it is being rendered inside the Gutenberg editor and not on the frontend. This technique is very useful to provide users with helpful information and placeholders if the necessary data hasn't been input yet.
+
+## Editor
+
+<Tabs items={['PHP', 'Twig']}>
+  <Tab value="PHP">
+```php title="index.php"
+<?php if ($isEditor) : ?>
+  This content is only going to be rendered inside the editor.
+<?php else : ?>
+  This content is only going to be rendered on the frontend.
+<?php endif; ?>
+```
+  </Tab>
+  <Tab value="Twig">
+```twig title="index.twig"
+{% if isEditor %}
+  This content is only going to be rendered inside the editor.
+{% else %}
+  This content is only going to be rendered on the frontend.
+{% endif %}
+```
+  </Tab>
+</Tabs>
+
+## Preview
+
+Blockstudio adds another environment variable that will come in handy for block developers. `$isPreview` allows you to conditionally render content inside the block preview window when hovering over a block inside the block inserter.
+
+<Tabs items={['PHP', 'Twig']}>
+  <Tab value="PHP">
+```php title="index.php"
+<?php if ($isPreview) : ?>
+  This content is only going to be rendered inside the block preview.
+<?php else : ?>
+  This content is only going to be rendered on the frontend and editor.
+<?php endif; ?>
+```
+  </Tab>
+  <Tab value="Twig">
+```twig title="index.twig"
+{% if isPreview %}
+  This content is only going to be rendered inside the block preview.
+{% else %}
+  This content is only going to be rendered on the frontend and editor.
+{% endif %}
+```
+  </Tab>
+</Tabs>

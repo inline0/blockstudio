@@ -1,44 +1,72 @@
 ---
 title: Settings
-description: Configure Blockstudio with blockstudio.json.
+description: Configure Blockstudio with blockstudio.json or filters.
 ---
 
 # Settings
 
-Blockstudio can be configured using a `blockstudio.json` file in your theme root.
+Blockstudio includes a powerful settings API, that allows setting options via a `blockstudio.json` file inside your theme folder and/or filters. Additionally, allowed users are able to change the settings visually inside the admin area.
 
-## Configuration File
+## Via JSON
 
-Create `blockstudio.json` in your theme directory:
+If a `blockstudio.json` file is present inside your theme folder, it will be used to set the default options for the current site. A [JSON schema](https://app.blockstudio.dev/schema/blockstudio) is available to validate the file and help with autocompletion when used in an IDE.
+
+The following properties are available:
 
 ```json title="blockstudio.json"
 {
   "$schema": "https://app.blockstudio.dev/schema/blockstudio",
+  "users": {
+    "ids": [],
+    "roles": []
+  },
   "assets": {
     "enqueue": true,
     "minify": {
-      "css": true,
-      "js": true
+      "css": false,
+      "js": false
     },
     "process": {
-      "scss": true
+      "scss": false
     }
   },
   "editor": {
-    "formatOnSave": true,
-    "library": true
+    "formatOnSave": false,
+    "assets": [],
+    "markup": false
   },
-  "tailwind": {
-    "enabled": true
-  }
+  "library": false
 }
 ```
 
-## Options
+## Via Filters
+
+Alternatively you can use the `blockstudio/settings/${setting}` filter to set options via PHP for more flexibility.
+
+```php title="functions.php"
+add_filter('blockstudio/settings/assets/enqueue', '__return_false');
+add_filter('blockstudio/settings/editor/formatOnSave', '__return_true');
+add_filter('blockstudio/settings/library', '__return_true');
+```
+
+Options set via the `blockstudio/settings/${setting}` filter will override the ones set via the `blockstudio.json` file. Both methods can be used together.
+
+## Via Admin
+
+Allowed users from the `blockstudio/settings/users/ids` and `blockstudio/settings/users/roles` filters are able to change the settings visually inside the admin area. If the `Save as JSON` checkbox is checked, the settings will be saved to the JSON file, otherwise they will be saved to the database into the `options` table.
+
+Settings set via filters will be grayed out and disabled inside the admin area.
+
+## Available Settings
+
+### users
+
+| Option | Type | Default | Description |
+|--------|------|---------|-------------|
+| `ids` | array | `[]` | User IDs with editor access |
+| `roles` | array | `[]` | User roles with editor access |
 
 ### assets
-
-Configure asset handling:
 
 | Option | Type | Default | Description |
 |--------|------|---------|-------------|
@@ -49,41 +77,20 @@ Configure asset handling:
 
 ### editor
 
-Configure the block editor:
-
 | Option | Type | Default | Description |
 |--------|------|---------|-------------|
 | `formatOnSave` | boolean | `false` | Format block.json on save |
-| `library` | boolean | `false` | Enable block library |
 | `assets` | array | `[]` | Additional assets to load in editor |
-| `markup` | string | `""` | Additional markup for editor iframe |
+| `markup` | boolean | `false` | Enable markup editing |
 
-### tailwind
+### library
 
-Configure Tailwind CSS integration:
-
-| Option | Type | Default | Description |
-|--------|------|---------|-------------|
-| `enabled` | boolean | `false` | Enable Tailwind CSS |
-| `config` | string | `""` | Custom Tailwind config (CSS) |
-| `customClasses` | array | `[]` | Custom class definitions |
+| Type | Default | Description |
+|------|---------|-------------|
+| boolean | `false` | Enable the block library |
 
 ### blockEditor
 
-Configure the WordPress block editor:
-
 | Option | Type | Default | Description |
 |--------|------|---------|-------------|
-| `disableLoading` | boolean | `false` | Disable block editor loading screen |
-| `cssClasses` | array | `[]` | CSS classes to include in editor |
-| `cssVariables` | array | `[]` | CSS variable stylesheets |
-
-## Custom Path
-
-Change the config file location:
-
-```php title="functions.php"
-add_filter('blockstudio/settings/path', function() {
-  return get_stylesheet_directory() . '/config/blockstudio.json';
-});
-```
+| `disableLoading` | boolean | `false` | Disable block loading in editor |

@@ -1,0 +1,49 @@
+---
+title: Twig
+description: Use Twig templates for your Blockstudio blocks.
+---
+
+# Twig
+
+Twig is a flexible, fast, and secure template engine for PHP. It allows developers to write concise and readable code in templates, enhancing productivity and maintainability. Twig supports a variety of features designed to make templating both powerful and straightforward, making it ideal for projects that require robust, reusable templates.
+
+## Setup
+
+To use Twig templates with Blockstudio, you need to install the `timber/timber` package (which includes Twig) using Composer. Blockstudio will automatically detect if Timber is installed and enable Twig templating for your blocks.
+
+```bash title="Terminal"
+composer require timber/timber
+```
+
+Once Timber is installed, Blockstudio will automatically handle the rendering of `index.twig` files found within your block folders.
+
+## Template Variables
+
+All Twig files will have access to the Timber context, which includes common WordPress data and functions, as well as Blockstudio-specific variables:
+
+| Variable | Description |
+|----------|-------------|
+| `a` | An alias for `attributes` |
+| `attributes` | The block's attributes |
+| `b` | An alias for `block` |
+| `block` | Data related to the block itself (includes `postId`, `postType`, `context`, etc.) |
+| `c` | An alias for `context` |
+| `context` | The block's context (e.g., `postId`, `postType` when in a loop) |
+| `isEditor` | Boolean, true if the block is rendering in the editor |
+| `isPreview` | Boolean, true if the block is rendering in the inserter preview |
+
+## Usage
+
+To use Twig for your block's template, simply create an `index.twig` file in your block's directory. Blockstudio will then automatically use this file for rendering the block.
+
+```twig title="index.twig"
+<div class="my-block">
+  {% if a.title %}
+    <h2>{{ a.title }}</h2>
+  {% endif %}
+
+  {% if a.content %}
+    <p>{{ a.content }}</p>
+  {% endif %}
+</div>
+```

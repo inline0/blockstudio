@@ -1,0 +1,78 @@
+---
+title: Preview
+description: Enable block previews in the block inserter.
+---
+
+# Preview
+
+Gutenberg allows previewing blocks when hovering over the block in the fixed block inserter. To enable the preview of blocks made with Blockstudio, simply set the `example` key to an empty object.
+
+```json title="block.json"
+{
+  "name": "blockstudio/native",
+  "title": "Native Block",
+  "category": "text",
+  "icon": "star-filled",
+  "description": "Native Blockstudio block.",
+  "example": {},
+  "blockstudio": true
+}
+```
+
+## Custom Data
+
+It is also possible to provide structured data in the `example` key, so any custom attributes are correctly being rendered.
+
+```json title="block.json"
+{
+  "name": "blockstudio/native",
+  "title": "Native Block",
+  "category": "text",
+  "icon": "star-filled",
+  "description": "Native Blockstudio block.",
+  "example": {
+    "attributes": {
+      "title": "This title will be shown in the preview"
+    }
+  },
+  "blockstudio": true
+}
+```
+
+<Tabs items={['PHP', 'Twig']}>
+  <Tab value="PHP">
+```php title="index.php"
+<h1><?php echo $a['title']; ?></h1>
+```
+  </Tab>
+  <Tab value="Twig">
+```twig title="index.twig"
+<h1>{{ a.title }}</h1>
+```
+  </Tab>
+</Tabs>
+
+## InnerBlocks
+
+If your block relies on `InnerBlocks`, it is possible to provide a template for the InnerBlocks.
+
+```json title="block.json"
+{
+  "name": "blockstudio/native",
+  "title": "Native Block",
+  "category": "text",
+  "icon": "star-filled",
+  "description": "Native Blockstudio block.",
+  "example": {
+    "innerBlocks": [
+      {
+        "name": "core/paragraph",
+        "attributes": {
+          "content": "This is the default InnerBlocks block."
+        }
+      }
+    ]
+  },
+  "blockstudio": true
+}
+```

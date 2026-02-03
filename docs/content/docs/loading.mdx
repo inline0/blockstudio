@@ -1,0 +1,38 @@
+---
+title: Loading
+description: Control how blocks are loaded in the editor.
+---
+
+# Loading
+
+Blockstudio blocks are dynamic, meaning that they must be rendered on the server to be displayed in Gutenberg. This rendering is facilitated by a `fetch` call to the Blockstudio block renderer. Upon first opening the editor, each block fetches its respective template, which results in multiple requests depending on the number of blocks present on the page.
+
+On some hosts, this can cause timeouts and errors while loading other essential assets needed for the editor to function properly.
+
+## Disabling
+
+Rendering template loading can be disabled by setting the `disableLoading` key in `block.json` to `true`. A placeholder will be rendered in place of the block template. All field settings will still be available when opening the sidebar.
+
+```json title="block.json"
+{
+  "name": "blockstudio/native",
+  "title": "Native Block",
+  "category": "text",
+  "icon": "star-filled",
+  "description": "Native Blockstudio block.",
+  "blockstudio": {
+    "blockEditor": {
+      "disableLoading": true
+    }
+  }
+}
+```
+
+Alternatively, block loading can be disabled globally using the `blockEditor/disableLoading` setting:
+
+```php title="functions.php"
+add_filter('blockstudio/settings', function($settings) {
+  $settings['blockEditor']['disableLoading'] = true;
+  return $settings;
+});
+```

@@ -1,0 +1,41 @@
+---
+title: Code Snippets
+description: Use Blockstudio's file-first approach for code snippets.
+---
+
+# Code Snippets
+
+Although Blockstudio's main focus is on custom blocks, its file-first approach is also suitable for code snippets.
+
+## Setup
+
+To create a new code snippet, simply create a new folder and place an `init.php` file in it. Blockstudio will always execute that file. For more information on the init file, check the [Initialization](/docs/initialization) page.
+
+## Styles and Scripts
+
+Folders marked as code snippets will also process and enqueue styles and scripts. To enqueue global styles and scripts, use the `global` [prefix for the asset name](/docs/assets/registering#global).
+
+Example folder structure:
+
+```
+assets/
+├── init.php
+├── global-styles.css
+└── global-scripts.js
+```
+
+Assets inside code snippet folders also support all [processing](/docs/assets/processing).
+
+## Custom Directories
+
+The above technique can also be used on directories outside of the folder where all blocks are stored. For example, let's say you want to store global assets like styles and scripts inside your theme. Simply create a new Blockstudio instance using the `init` method.
+
+```php title="functions.php"
+add_action('init', function () {
+  Blockstudio\Build::init([
+    'dir' => get_template_directory() . '/assets'
+  ]);
+});
+```
+
+Now, simply follow the [setup](#setup) instructions to register a code snippet inside the `assets` folder.

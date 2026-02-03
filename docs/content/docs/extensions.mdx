@@ -1,56 +1,195 @@
 ---
 title: Extensions
-description: Extend Blockstudio blocks with additional features.
+description: Extend any registered block with custom attributes.
 ---
 
 # Extensions
 
-Extensions allow you to add additional functionality to your blocks without modifying the core block code.
+Extensions allow you to extend any registered block in your WordPress installation using a simple `.json` based API, which is similar to the `block.json` configuration. This includes core, third-party and blocks made with Blockstudio.
 
-## Available Extensions
+All [field types](/docs/attributes/field-types) can be added to any block, with the data being saved to the block's attributes. The complete feature set of attributes like [filtering](/docs/attributes/filtering), [disabling](/docs/attributes/disabling), [conditional logic](/docs/attributes/conditional-logic) and [populating options](/docs/attributes/populating-options) are available for extensions.
 
-Extensions can be enabled per-block in the `blockstudio.extensions` key:
+## Extension Types
 
-```json title="block.json"
+Extended values can be utilized in versatile ways:
+
+- **class**: Add a class using the attribute value to the block
+- **style**: Add inline styles using the attribute value to the block
+- **attributes**: Set any attribute value directly on the block
+- **data attributes**: Use extension values to set specific data attributes
+
+## Setup
+
+Imagine the following scenario: you want to add a custom class `select` field to every core block. All you need to do is add this `.json` file anywhere in your block folder, and it will be automatically registered as an extension.
+
+```json title="core.json"
 {
+  "$schema": "https://app.blockstudio.dev/schema/extend",
+  "name": "core/*",
+  "priority": 10,
   "blockstudio": {
-    "extensions": {
-      "spacing": true,
-      "visibility": true,
-      "animation": true
-    }
+    "extend": true,
+    "attributes": [
+      {
+        "id": "customColor",
+        "type": "select",
+        "label": "Custom color",
+        "options": [
+          {
+            "value": "#f00",
+            "label": "Red"
+          },
+          {
+            "value": "#00f",
+            "label": "Blue"
+          }
+        ],
+        "set": [
+          {
+            "attribute": "style",
+            "value": "color: {attributes.customColor}"
+          }
+        ]
+      }
+    ]
   }
 }
 ```
 
-## Spacing
+This will add a `customColor` field to every core block, allowing you to set the color of the block's text.
 
-Add margin and padding controls to your block.
+### File Name
 
-## Visibility
+Since there is no rendering template, an extension doesn't need a matching `index` file and thus doesn't need to be named `block.json`. This allows storing all extensions conveniently in a single folder.
 
-Control block visibility based on device breakpoints or user conditions.
+### Schema
 
-## Animation
+Blockstudio provides a custom JSON schema for extension configurations:
 
-Add entrance animations to your blocks.
+[View Extension schema](https://app.blockstudio.dev/schema/extend)
 
-## Custom Extensions
+### Name
 
-You can create custom extensions using the `blockstudio/extensions` filter:
+The `name` property of the configuration object defines which blocks should be extended. There are three options depending on your needs:
 
-```php title="functions.php"
-add_filter('blockstudio/extensions', function($extensions) {
-  $extensions['myExtension'] = [
-    'label' => 'My Extension',
-    'attributes' => [
-      [
-        'id' => 'customSetting',
-        'type' => 'toggle',
-        'label' => 'Enable Custom Setting'
-      ]
-    ]
-  ];
-  return $extensions;
-});
+- **blockName**: A single block name, e.g. `core/paragraph`
+- **[blockNameA, blockNameB]**: An array of block names, e.g. `["core/paragraph", "core/heading"]`
+- **core/\***: A wildcard to extend all blocks of a certain type
+
+### Blockstudio Key
+
+Just like when using `block.json` for custom blocks, the `blockstudio` property has to be present in the configuration object with `extend` set to `true`.
+
+### Position
+
+By default, extensions will render in its own tab in the block inspector. If you want to move the extensions to a different position, you can use the `group` property:
+
+- **settings**: The default position
+- **styles**: The styles tab
+- **advanced**: The advanced tab
+
+```json title="core.json"
+{
+  "$schema": "https://app.blockstudio.dev/schema/extend",
+  "name": "core/*",
+  "blockstudio": {
+    "extend": true,
+    "group": "styles",
+    "attributes": []
+  }
+}
 ```
+
+### Priority
+
+The `priority` property allows you to define the order in which extensions are rendered. Extensions with a higher priority will be rendered later.
+
+## Attributes
+
+For more information on how attributes work, please refer to the [attributes section](/docs/attributes/field-types).
+
+The only thing you need to know about attributes inside extensions is the `set` property. It is used to apply the value of the attribute to one of the [extension types](#extension-types).
+
+```json title="core.json"
+{
+  "$schema": "https://app.blockstudio.dev/schema/extend",
+  "name": "core/*",
+  "blockstudio": {
+    "extend": true,
+    "attributes": [
+      {
+        "id": "customColor",
+        "type": "select",
+        "label": "Heading color",
+        "options": [
+          {
+            "value": "#f00",
+            "label": "Red"
+          },
+          {
+            "value": "#00f",
+            "label": "Blue"
+          }
+        ],
+        "set": [
+          {
+            "attribute": "style",
+            "value": "color: {attributes.customColor}"
+          }
+        ]
+      }
+    ]
+  }
+}
+```
+
+### Getting Values
+
+Dot notation inside curly braces is used to get the value of an attribute.
+
+It is also possible to get nested values when attributes are not returning a single value, for example, when setting the return format to `both` on field types with options.
+
+```json
+{
+  "attributes": [
+    {
+      "id": "customColor",
+      "type": "select",
+      "label": "Heading color",
+      "options": [
+        {
+          "value": "#f00",
+          "label": "Red"
+        },
+        {
+          "value": "#00f",
+          "label": "Blue"
+        }
+      ],
+      "returnFormat": "both",
+      "set": [
+        {
+          "attribute": "style",
+          "value": "color: {attributes.customColor.value}"
+        },
+        {
+          "attribute": "data-color",
+          "value": "{attributes.customColor.label}"
+        }
+      ]
+    }
+  ]
+}
+```
+
+The example above will set the `style` attribute to `color: #f00` or `color: #00f` and the `data-color` attribute to `Red` or `Blue` depending on the value.
+
+For now, only values from the current attribute can be used inside `set` definitions. The ability to use values from other attributes might be added in the future.
+
+### Arrays
+
+When using arrays, the `set` property will be applied to every item in the array.
+
+### Attributes Field
+
+When using the `attributes` field, there is no `set` property needed, as the field automatically maps the values to the attribute name and value.

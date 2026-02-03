@@ -1,0 +1,57 @@
+---
+title: Disabling Attributes
+description: Temporarily disable attributes while preserving their values.
+---
+
+# Disabling Attributes
+
+Attributes can be deactivated on a per-block basis by hovering over the left side of the UI in the sidebar and clicking when the blue border appears. This is useful when an attribute should be disabled temporarily while leaving the filled content intact.
+
+## How It Works
+
+1. Hover over the left edge of any attribute field in the inspector
+2. A blue border will appear indicating the field can be toggled
+3. Click to disable the attribute
+
+When disabled:
+- The UI appears slightly translucent
+- The attribute value is preserved but not rendered
+- You can re-enable it at any time
+
+## Use Cases
+
+- **A/B Testing**: Temporarily hide content without deleting it
+- **Draft Content**: Prepare content that isn't ready to display
+- **Debugging**: Isolate which attributes affect the output
+- **Client Handoff**: Disable complex options for simpler editing
+
+## Files Field
+
+The same principle works for individual items in the **files** attribute type. You can disable specific images or files while keeping others active.
+
+## Checking Disabled State
+
+In your templates, you can check if an attribute is disabled:
+
+<Tabs items={['PHP', 'Twig']}>
+  <Tab value="PHP">
+```php title="index.php"
+<?php if (!empty($a['_disabled']) && in_array('title', $a['_disabled'])) : ?>
+  <!-- Title is disabled -->
+<?php else : ?>
+  <h1><?php echo $a['title']; ?></h1>
+<?php endif; ?>
+```
+  </Tab>
+  <Tab value="Twig">
+```twig title="index.twig"
+{% if '_disabled' in a|keys and 'title' in a._disabled %}
+  {# Title is disabled #}
+{% else %}
+  <h1>{{ a.title }}</h1>
+{% endif %}
+```
+  </Tab>
+</Tabs>
+
+Blockstudio automatically handles disabled attributes, so in most cases you don't need to check this manually - disabled attributes simply won't render.

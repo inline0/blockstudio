@@ -1,0 +1,62 @@
+---
+title: Filtering Attributes
+description: Filter and modify block attributes with PHP hooks.
+---
+
+# Filtering Attributes
+
+Blockstudio provides two methods to filter block attributes.
+
+## In Editor
+
+The first method filters the attributes in the editor. This is useful if you want to adjust the default value of an attribute or its conditions.
+
+```php title="functions.php"
+add_filter('blockstudio/block/attributes', function($attributes, $block) {
+  if ($block['name'] === 'my-theme/code-block') {
+    foreach ($attributes as &$attribute) {
+      // Set default value
+      if ($attribute['id'] === 'lineNumbers') {
+        $attribute['default'] = true;
+      }
+
+      // Add condition
+      if ($attribute['id'] === 'lineNumbers') {
+        $attribute['conditions'] = [
+          [
+            [
+              'id' => 'language',
+              'operator' => '==',
+              'value' => 'css'
+            ]
+          ]
+        ];
+      }
+    }
+  }
+  return $attributes;
+}, 10, 2);
+```
+
+The code above will set the default value of the `lineNumbers` attribute to `true` and will hide the attribute if the `language` attribute is not set to `css`.
+
+Keep in mind that this filter is only evaluated when inserting blocks in the editor.
+
+## On Frontend
+
+The second method filters the attributes on the frontend. This is useful if you want to adjust the attributes before they are passed to the block template.
+
+```php title="functions.php"
+add_filter('blockstudio/block/attributes/render', function($attributes, $block) {
+  if ($block['name'] === 'my-theme/code-block') {
+    // Override attribute value
+    $attributes['lineNumbers'] = true;
+
+    // Add computed value
+    $attributes['formattedDate'] = date('Y-m-d');
+  }
+  return $attributes;
+}, 10, 2);
+```
+
+Keep in mind that the above filter will override any values set in the editor.

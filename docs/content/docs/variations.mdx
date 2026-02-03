@@ -1,0 +1,85 @@
+---
+title: Variations
+description: Create block variations with different default attribute values.
+---
+
+# Variations
+
+The [Block Variation API](https://developer.wordpress.org/block-editor/reference-guides/block-api/block-variations/) allows you to register custom variations for existing blocks.
+
+Let's imagine a block that should have two different variations depending on the value of a simple select field.
+
+```json title="block.json"
+{
+  "$schema": "https://app.blockstudio.dev/schema",
+  "name": "blockstudio/variations",
+  "title": "Native Variation",
+  "description": "Native Blockstudio Variation block.",
+  "icon": "star-filled",
+  "variations": [
+    {
+      "name": "variation-2",
+      "title": "Native Variation 2",
+      "description": "Native Blockstudio Variation block 2.",
+      "attributes": {
+        "select": {
+          "value": "variation-2"
+        }
+      }
+    }
+  ],
+  "blockstudio": {
+    "attributes": [
+      {
+        "id": "select",
+        "type": "select",
+        "label": "Select",
+        "options": [
+          {
+            "value": "variation-1",
+            "label": "Variation 1"
+          },
+          {
+            "value": "variation-2",
+            "label": "Variation 2"
+          }
+        ],
+        "default": {
+          "value": "variation-1"
+        }
+      }
+    ]
+  }
+}
+```
+
+The above will create three blocks in the inserter, the main one, and two variations.
+
+## Hiding Attributes
+
+Attributes will automatically render the appropriate input in the sidebar. Since variation blocks depend on specific attribute values, you might want to hide those fields from the sidebar. To do so, you can use the `hidden` option.
+
+```json title="block.json"
+{
+  "blockstudio": {
+    "attributes": [
+      {
+        "id": "select",
+        "type": "select",
+        "label": "Select",
+        "hidden": true,
+        "options": [
+          {
+            "value": "variation-1",
+            "label": "Variation 1"
+          },
+          {
+            "value": "variation-2",
+            "label": "Variation 2"
+          }
+        ]
+      }
+    ]
+  }
+}
+```

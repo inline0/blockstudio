@@ -1,0 +1,28 @@
+---
+title: Initialization
+description: Execute code during WordPress initialization.
+---
+
+# Initialization
+
+Block templates will only be executed when the block is rendered. This is enough for most blocks; however, sometimes you need to execute code during an earlier stage of execution. For example, you may want to register a new post type or do some other type of setup unrelated to the block.
+
+To do this, you can add a PHP file that starts with `init-`, like `init.php` or `init-post-types.php` to your block directory. This file is executed during the `init` action. For more information on this specific stage, see the [WordPress documentation](https://developer.wordpress.org/reference/hooks/init/).
+
+Any `init.php` file that is found within the block directory will be executed, regardless if it is part of a block context or not. This makes it perfect for organizing code snippets that are not related to any certain blocks.
+
+## Example
+
+```php title="init.php"
+<?php
+// Register a custom post type
+register_post_type('project', [
+  'labels' => [
+    'name' => 'Projects',
+    'singular_name' => 'Project',
+  ],
+  'public' => true,
+  'has_archive' => true,
+  'supports' => ['title', 'editor', 'thumbnail'],
+]);
+```

@@ -1,0 +1,120 @@
+---
+title: MediaPlaceholder
+description: Add a media upload placeholder to your blocks.
+---
+
+# MediaPlaceholder
+
+The `MediaPlaceholder` component provides a placeholder to add media items to a block. The same component is being used in the `core/image` block. It is based on the [React component](https://github.com/WordPress/gutenberg/blob/trunk/packages/block-editor/src/components/media-placeholder/README.md) with the same name.
+
+<Callout type="warn">
+MediaPlaceholder is currently not working inside repeater fields.
+</Callout>
+
+## Basic Usage
+
+To use `MediaPlaceholder` in its most basic form, you need to add the appropriate attribute to your block.json and add the `MediaPlaceholder` component to your block.
+
+```json title="block.json"
+{
+  "$schema": "https://app.blockstudio.dev/schema",
+  "name": "blockstudio/media-placeholder",
+  "title": "Native Block",
+  "category": "text",
+  "icon": "star-filled",
+  "description": "Native Blockstudio MediaPlaceholder block.",
+  "blockstudio": {
+    "attributes": [
+      {
+        "id": "media",
+        "type": "files"
+      }
+    ]
+  }
+}
+```
+
+<Tabs items={['PHP', 'Twig']}>
+  <Tab value="PHP">
+```php title="index.php"
+<MediaPlaceholder attribute="media" />
+<?php foreach ($a['media'] as $file) {
+  echo wp_get_attachment_image($file['ID']);
+} ?>
+```
+  </Tab>
+  <Tab value="Twig">
+```twig title="index.twig"
+<MediaPlaceholder attribute="media" />
+{% for file in a.media %}
+  {{ fn('wp_get_attachment_image', file.ID) }}
+{% endfor %}
+```
+  </Tab>
+</Tabs>
+
+Once a media file has been selected, the `MediaPlaceholder` component will not be rendered anymore.
+
+## Properties
+
+### accept
+
+A string passed to FormFileUpload that tells the browser which file types can be upload to the upload window the browser use e.g.: `image/*` or `video/*`. More information about this string is available in [MDN documentation](https://developer.mozilla.org/en-US/docs/Web/HTML/Element/input/file#Unique_file_type_specifiers).
+
+### allowedTypes
+
+Array with the types of the media to upload/select from the media library. Each type is a string that can contain the general mime type e.g.: image, audio, text, or the complete mime type e.g.: `audio/mpeg`, `image/gif`. If allowedTypes is unset, all mime types should be allowed.
+
+<Tabs items={['PHP', 'Twig']}>
+  <Tab value="PHP">
+```php title="index.php"
+<MediaPlaceholder allowedTypes="<?php echo esc_attr(wp_json_encode(['image', 'video'])); ?>" />
+```
+  </Tab>
+  <Tab value="Twig">
+```twig title="index.twig"
+<MediaPlaceholder allowedTypes="{{ ['image', 'video']|json_encode|escape('html_attr') }}" />
+```
+  </Tab>
+</Tabs>
+
+### autoOpenMediaUpload
+
+If true, the MediaUpload component auto-opens the picker of the respective platform.
+
+### disableDropZone
+
+If true, the Drop Zone will not be rendered. Users won't be able to drag & drop any media into the component or the block. The UI controls to upload the media via file, url or the media library would be intact.
+
+### dropZoneUIOnly
+
+If true, only the Drop Zone will be rendered. No UI controls to upload the media will be shown. The `disableDropZone` prop still takes precedence over `dropZoneUIOnly` - specifying both as true will result in nothing to be rendered.
+
+### icon
+
+Dashicon to display to the left of the title.
+
+### isAppender
+
+If true, the property changes the look of the placeholder to be adequate to scenarios where new files are added to an already existing set of files, e.g., adding files to a gallery. If false, the default placeholder style is used.
+
+### disableMediaButtons
+
+If true, only the Drop Zone will be rendered. No UI controls to upload the media will be shown.
+
+### labels
+
+An object that can contain a title and instructions properties.
+
+<Tabs items={['PHP', 'Twig']}>
+  <Tab value="PHP">
+```php title="index.php"
+<MediaPlaceholder labels="<?php echo esc_attr(wp_json_encode(['title' => 'Custom title', 'instructions' => 'Custom instructions'])); ?>" />
+```
+  </Tab>
+  <Tab value="Twig">
+```twig title="index.twig"
+<MediaPlaceholder labels="{{ {title: 'Custom title', instructions: 'Custom instructions'}|json_encode|escape('html_attr') }}" />
+```
+  </Tab>
+</Tabs>

@@ -1,0 +1,100 @@
+---
+title: Programmatic Rendering
+description: Render Blockstudio blocks programmatically in PHP.
+---
+
+# Programmatic Rendering
+
+With Gutenberg becoming the prominent instrument in creating easily editable websites for clients, it makes sense to create all necessary website areas as blocks. While this approach will cater to most, advanced users and specific use cases might need to use those existing blocks outside the editor.
+
+Blockstudio provides two specific functions for exactly this use case:
+
+- `bs_render_block`: immediately renders the block to the page (no `echo` needed)
+- `bs_block`: needs an `echo` to be rendered to the page. This function is useful when [nesting](#nesting) blocks.
+
+All Blockstudio specific features like inline styles, scripts, and scoped styles are supported when using the render functions.
+
+## Without Data
+
+In its simplest form, the function accepts a single value which is the ID of the block that should be rendered on the page.
+
+```php
+bs_render_block('blockstudio/cta');
+```
+
+## With Data
+
+To render the block with custom data, an array needs to be used in place of a single value for the first parameter. The value in the data key will be passed to the `$attributes` and `$a` variable inside your block template.
+
+```php
+bs_render_block([
+  'id' => 'blockstudio/cta',
+  'data' => [
+    'title' => 'My title',
+    'subtitle' => 'My subtitle',
+  ],
+]);
+```
+
+## Nesting
+
+Blocks can be nested within each other using the `bs_block` function in combination with the powerful `$content` variable inside your block templates.
+
+```php title="index.php"
+<div>
+  <h1><?php echo $a['title']; ?></h1>
+  <p><?php echo $a['subtitle']; ?></p>
+  <?php echo $content; ?>
+</div>
+```
+
+```php
+echo bs_block([
+  'id' => 'blockstudio/cta',
+  'data' => [
+    'title' => 'My title',
+    'subtitle' => 'My subtitle',
+  ],
+  'content' => bs_block([
+    'id' => 'blockstudio/button',
+    'data' => [
+      'text' => 'Button Text',
+    ]
+  ])
+]);
+```
+
+The button block will be rendered in place of the `$content` variable inside the block template.
+
+### Multiple Slots
+
+It is also possible to create multiple content slots by simply making the `$content` variable an associative array and calling its appropriate keys in the `bs_block` function.
+
+```php title="index.php"
+<div>
+  <?php echo $content['beforeContent']; ?>
+  <h1><?php echo $a['title']; ?></h1>
+  <p><?php echo $a['subtitle']; ?></p>
+  <?php echo $content['afterContent']; ?>
+</div>
+```
+
+```php
+echo bs_block([
+  'id' => 'blockstudio/cta',
+  'data' => [
+    'title' => 'My title',
+    'subtitle' => 'My subtitle',
+  ],
+  'content' => [
+    'beforeContent' => bs_block([
+      'id' => 'blockstudio/badge',
+      'data' => ['text' => 'Before Content']
+    ]),
+    'afterContent' => bs_block([
+      'id' => 'blockstudio/button',
+      'data' => ['text' => 'Button Text']
+    ])
+  ]
+]);
+```

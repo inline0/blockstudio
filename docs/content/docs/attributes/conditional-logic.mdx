@@ -1,0 +1,261 @@
+---
+title: Conditional Logic
+description: Show or hide fields based on conditions.
+---
+
+# Conditional Logic
+
+Fields can be shown or hidden depending on conditions.
+
+## Operators
+
+There are 8 different operators which can be used:
+
+| Operator | Description |
+|----------|-------------|
+| `==` | Values are equal |
+| `!=` | Values are not equal |
+| `includes` | Value is included in reference value |
+| `!includes` | Value is not included in reference value |
+| `empty` | Value is empty |
+| `!empty` | Value is not empty |
+| `<` | Value is smaller than reference value |
+| `>` | Value is bigger than reference value |
+| `<=` | Value is smaller than or equal to reference value |
+| `>=` | Value is bigger than or equal to reference value |
+
+## Global Conditions
+
+By default, Blockstudio comes with 4 global conditions: post type, post ID, user role and user ID.
+
+```json title="block.json"
+{
+  "$schema": "https://app.blockstudio.dev/schema",
+  "name": "blockstudio/native",
+  "title": "Native Block",
+  "blockstudio": {
+    "attributes": [
+      {
+        "id": "message",
+        "type": "text",
+        "label": "My message",
+        "conditions": [
+          [
+            {
+              "type": "postId",
+              "operator": "==",
+              "value": "1386"
+            },
+            {
+              "type": "postType",
+              "operator": "==",
+              "value": "post"
+            }
+          ]
+        ]
+      }
+    ]
+  }
+}
+```
+
+In the example above, the text attribute will only show in the editor if the **post ID is 1386** AND the **post type is post**.
+
+Note that [camelCase](https://en.wikipedia.org/wiki/Camel_case) convention is used for the **type keys**: `postType`, `postId`, `userRole`, `userId`.
+
+### OR Conditions
+
+To create **or** conditions, move each condition group into its own array:
+
+```json title="block.json"
+{
+  "blockstudio": {
+    "attributes": [
+      {
+        "id": "message",
+        "type": "text",
+        "label": "My message",
+        "conditions": [
+          [
+            {
+              "type": "postId",
+              "operator": "==",
+              "value": "1386"
+            },
+            {
+              "type": "postType",
+              "operator": "==",
+              "value": "post"
+            }
+          ],
+          [
+            {
+              "type": "postType",
+              "operator": "==",
+              "value": "jobs"
+            }
+          ]
+        ]
+      }
+    ]
+  }
+}
+```
+
+The text attribute will show if (**post ID is 1386** AND **post type is post**) OR (**post type is jobs**).
+
+### Custom Conditions
+
+Custom conditions can be added using the `blockstudio/blocks/conditions` filter:
+
+```php title="functions.php"
+add_filter('blockstudio/block/conditions', function($conditions) {
+  $conditions['purchasedProduct'] = function($condition) {
+    // Check if user purchased the product
+    return user_has_purchased($condition['value']);
+  };
+  return $conditions;
+});
+```
+
+```json title="block.json"
+{
+  "blockstudio": {
+    "attributes": [
+      {
+        "id": "message",
+        "type": "text",
+        "label": "My message",
+        "conditions": [
+          [
+            {
+              "type": "purchasedProduct",
+              "operator": "==",
+              "value": "1"
+            }
+          ]
+        ]
+      }
+    ]
+  }
+}
+```
+
+## Block Conditions
+
+You can set conditions that depend on other attributes. Instead of setting a **type** key, use the **id** of the attribute you want to check against:
+
+```json title="block.json"
+{
+  "blockstudio": {
+    "attributes": [
+      {
+        "type": "toggle",
+        "id": "copyButton",
+        "label": "Copy Button"
+      },
+      {
+        "type": "text",
+        "id": "copyButtonText",
+        "label": "Copy Button Text",
+        "default": "Copy",
+        "conditions": [
+          [
+            {
+              "id": "copyButton",
+              "operator": "==",
+              "value": true
+            }
+          ]
+        ]
+      }
+    ]
+  }
+}
+```
+
+You can combine global conditions with block conditions as needed.
+
+### Repeater Context
+
+By default, conditions for attributes inside repeaters depend on the attributes of the currently repeated element.
+
+```json title="block.json"
+{
+  "blockstudio": {
+    "attributes": [
+      {
+        "type": "toggle",
+        "id": "toggle",
+        "label": "Toggle"
+      },
+      {
+        "type": "repeater",
+        "id": "repeater",
+        "label": "Repeater",
+        "attributes": [
+          {
+            "type": "toggle",
+            "id": "toggle",
+            "label": "Toggle"
+          },
+          {
+            "type": "text",
+            "id": "text",
+            "label": "Text",
+            "conditions": [
+              [
+                {
+                  "id": "toggle",
+                  "operator": "==",
+                  "value": true
+                }
+              ]
+            ]
+          }
+        ]
+      }
+    ]
+  }
+}
+```
+
+Since attribute IDs are scoped to the current repeater element, the text attribute inside the repeater will only show if the toggle **inside** the repeater is set to true.
+
+To check against the toggle outside the repeater, add `"context": "main"` to the condition:
+
+```json title="block.json"
+{
+  "blockstudio": {
+    "attributes": [
+      {
+        "type": "toggle",
+        "id": "toggle",
+        "label": "Toggle"
+      },
+      {
+        "type": "repeater",
+        "id": "repeater",
+        "label": "Repeater",
+        "attributes": [
+          {
+            "type": "text",
+            "id": "text",
+            "label": "Text",
+            "conditions": [
+              [
+                {
+                  "id": "toggle",
+                  "operator": "==",
+                  "value": true,
+                  "context": "main"
+                }
+              ]
+            ]
+          }
+        ]
+      }
+    ]
+  }
+}
+```

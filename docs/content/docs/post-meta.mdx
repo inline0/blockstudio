@@ -1,0 +1,82 @@
+---
+title: Post Meta
+description: Access post meta data in your block templates.
+---
+
+# Post Meta
+
+Since block templates are just normal PHP files, you can use any PHP code you want in them. However, since blocks don't have access to the global `$post` variable inside the editor, [get_the_ID()](https://developer.wordpress.org/reference/functions/get_the_id/) and other functions that depend on the variable will only work on the frontend.
+
+Blockstudio provides four different ways to access the current post ID in the editor and the frontend.
+
+<Tabs items={['PHP', 'Twig']}>
+  <Tab value="PHP">
+```php title="index.php"
+echo $post_id;
+echo $postId;
+echo $block['postId'];
+echo $b['postId'];
+```
+  </Tab>
+  <Tab value="Twig">
+```twig title="index.twig"
+{{ post_id }}
+{{ postId }}
+{{ block.postId }}
+{{ b.postId }}
+```
+  </Tab>
+</Tabs>
+
+## Getting Post Meta
+
+All common custom field plugins and WordPress itself provide the possibility to access post meta using a post ID.
+
+### ACF
+
+<Tabs items={['PHP', 'Twig']}>
+  <Tab value="PHP">
+```php title="index.php"
+echo get_field('field_name', $post_id);
+```
+  </Tab>
+  <Tab value="Twig">
+```twig title="index.twig"
+{{ fn('get_field', 'field_name', postId) }}
+```
+  </Tab>
+</Tabs>
+
+### Metabox
+
+<Tabs items={['PHP', 'Twig']}>
+  <Tab value="PHP">
+```php title="index.php"
+echo rwmb_get_value('field_id', null, $post_id);
+```
+  </Tab>
+  <Tab value="Twig">
+```twig title="index.twig"
+{{ fn('rwmb_get_value', 'field_id', postId) }}
+```
+  </Tab>
+</Tabs>
+
+## Refreshing Blocks
+
+By default, blocks won't be refreshed when you save or update a post. Thus, old data might be displayed in the editor after saving. To fix this, you can use the `refreshOn` key inside your `block.json` to tell Blockstudio to refresh the block when a post is saved.
+
+```json title="block.json"
+{
+  "name": "blockstudio/native",
+  "title": "Native Block",
+  "category": "text",
+  "icon": "star-filled",
+  "description": "Native Blockstudio block.",
+  "blockstudio": {
+    "refreshOn": [
+      "save"
+    ]
+  }
+}
+```

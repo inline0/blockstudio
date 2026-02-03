@@ -1,0 +1,72 @@
+---
+title: useBlockProps
+description: Create markup parity between editor and frontend.
+---
+
+# useBlockProps
+
+By default, Gutenberg has to create a wrapper around blocks to make them interactive inside the editor. This can become problematic for some block types like containers or columns, since the markup between editor and frontend will be different. The [useBlockProps](https://developer.wordpress.org/block-editor/reference-guides/block-api/block-edit-save/) hook makes it possible to mark an element inside the block template as the root element, thus creating markup parity between editor and frontend.
+
+## Usage
+
+Simply add the `useBlockProps` attribute to the root element of your block.
+
+```php title="index.php"
+<div useBlockProps class="my-class">
+  <!--
+  This element will be rendered
+  as the root element of your block
+  in Gutenberg.
+  -->
+</div>
+```
+
+Blockstudio will automatically combine classes and attributes from the editor (alignment classes etc.) along with whatever is defined in the block templates. [get_block_wrapper_attributes](https://developer.wordpress.org/reference/functions/get_block_wrapper_attributes/) is being used under the hood for that.
+
+**Output:**
+
+```html
+<div class="my-class wp-block-your-block-name alignright">
+</div>
+```
+
+## Considerations
+
+### Root Element
+
+Since there can only be one root element in a block template, when using `useBlockProps`, the block template has to have a single root element. For example, the following will not work and Gutenberg will create a wrapper around the template.
+
+```php title="index.php"
+<div useBlockProps>
+  First root element.
+</div>
+<span>
+  Second root element.
+</span>
+```
+
+Similarly, useBlockProps can only be used once per block template.
+
+### @ Sign
+
+Blockstudio converts the block template to valid React code inside Gutenberg using [html-react-parser](https://www.npmjs.com/package/html-react-parser). This comes with the limitation that the `@` character can't be used inside an HTML attribute name.
+
+Libraries like [Alpine.js](https://alpinejs.dev/start-here) use the `@` characters to define directives on HTML elements.
+
+```php title="index.php"
+<button useBlockProps @click="console.log('hi')">
+  Click me
+</button>
+```
+
+Inside Gutenberg, this `@click` attribute will be stripped from the element. (it will still work on the frontend, of course)
+
+To combat this issue, you can use the alternative syntax Alpine.js provides.
+
+```php title="index.php"
+<button useBlockProps x-on:click="console.log('hi')">
+  Click me
+</button>
+```
+
+The above will work inside Gutenberg and on the frontend.

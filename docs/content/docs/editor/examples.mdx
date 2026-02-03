@@ -1,0 +1,98 @@
+---
+title: Examples
+description: Preview blocks with custom example data.
+---
+
+# Examples
+
+The `default` value for attributes will be used in the editor. If you prefer to preview the block with different data, you can use the [example](https://developer.wordpress.org/block-editor/reference-guides/block-api/block-metadata/#example) key.
+
+Keep in mind that the example data will be also be used when [previewing](/docs/environment#preview) the block.
+
+## Usage
+
+```json title="block.json"
+{
+  "name": "blockstudio/native",
+  "title": "Native Block",
+  "category": "text",
+  "icon": "star-filled",
+  "description": "Native Blockstudio block.",
+  "example": {
+    "attributes": {
+      "title": "This is a title"
+    }
+  },
+  "blockstudio": {
+    "attributes": [
+      {
+        "type": "text",
+        "id": "title",
+        "label": "Title"
+      }
+    ]
+  }
+}
+```
+
+### Select
+
+When adding examples to select-like field types with values and labels (select, radio, checkbox etc.), the object has to include the `value` key.
+
+```json title="block.json"
+{
+  "name": "blockstudio/native",
+  "title": "Native Block",
+  "category": "text",
+  "icon": "star-filled",
+  "description": "Native Blockstudio block.",
+  "example": {
+    "attributes": {
+      "select": {
+        "value": "javascript"
+      }
+    }
+  },
+  "blockstudio": {
+    "attributes": [
+      {
+        "type": "select",
+        "id": "select",
+        "label": "Select"
+      }
+    ]
+  }
+}
+```
+
+### Images
+
+Blockstudio provides an easy way to populate the `files` field type with example data.
+
+```json title="block.json"
+{
+  "name": "blockstudio/native",
+  "title": "Native Block",
+  "category": "text",
+  "icon": "star-filled",
+  "description": "Native Blockstudio block.",
+  "example": {
+    "attributes": {
+      "files": {
+        "blockstudio": true,
+        "type": "image",
+        "amount": 20
+      }
+    }
+  },
+  "blockstudio": {
+    "attributes": [
+      {
+        "type": "files",
+        "id": "images",
+        "label": "Images"
+      }
+    ]
+  }
+}
+```

@@ -1,0 +1,94 @@
+---
+title: Transforms
+description: Define ways to transform blocks into other blocks.
+---
+
+# Transforms
+
+The [Block Transforms API](https://developer.wordpress.org/block-editor/reference-guides/block-api/block-transforms/) allows you to define ways in how to transform blocks. Blockstudio currently supports three different types:
+
+- **block to block**: transform a block into another block
+- **enter**: insert a block when the user enters text and presses `Enter`
+- **prefix**: insert a block when the user enters text and presses `Space`
+
+## Block to Block
+
+Block to block transforms allow you to transform a block into another block.
+
+```json title="block.json"
+{
+  "$schema": "https://app.blockstudio.dev/schema",
+  "name": "blockstudio/transforms",
+  "title": "Native Transforms",
+  "icon": "star-filled",
+  "description": "Native Blockstudio Transforms.",
+  "blockstudio": {
+    "transforms": {
+      "from": [
+        {
+          "type": "block",
+          "blocks": [
+            "blockstudio/transforms-2",
+            "blockstudio/transforms-3"
+          ]
+        }
+      ]
+    },
+    "attributes": [
+      {
+        "id": "text",
+        "type": "text",
+        "label": "Text"
+      }
+    ]
+  }
+}
+```
+
+When transforming into the new block, the attributes of the old block will be passed to the new block. In the example above, the `text` attribute will be passed to the new block. The same goes for all `InnerBlocks` content.
+
+It is important to note that the attribute types have to be the same for the block being transformed into and the block being transformed from. For example, if the block being transformed into has an attribute with the ID of `text` but the type of `number`, it won't appear in the transform list, as this would cause a type mismatch and rendering error.
+
+The number of attributes between the two blocks doesn't have to be the same.
+
+## Enter
+
+Enter transforms allow you to insert a block when the user types certain content and then presses the `Enter` key.
+
+```json title="block.json"
+{
+  "blockstudio": {
+    "transforms": {
+      "from": [
+        {
+          "type": "enter",
+          "regExp": "/^-{3,}$/"
+        }
+      ]
+    }
+  }
+}
+```
+
+In the example above, the block will be inserted when the user types three or more dashes (`-`) and then presses `Enter`.
+
+## Prefix
+
+Prefix transforms allow you to insert a block when the user types certain content and then presses the `Space` key.
+
+```json title="block.json"
+{
+  "blockstudio": {
+    "transforms": {
+      "from": [
+        {
+          "type": "prefix",
+          "regExp": "???"
+        }
+      ]
+    }
+  }
+}
+```
+
+In the example above, the block will be inserted when the user types three question marks (`?`) and then presses `Space`.

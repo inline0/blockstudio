@@ -1,0 +1,128 @@
+---
+title: Registering Assets
+description: Automatically enqueue CSS and JavaScript files for your blocks.
+---
+
+# Registering Assets
+
+Blockstudio will automatically enqueue all files ending with `.css`, `.scss` and `.js` when your block is being used on a page. It is possible to define how assets are being enqueued by using one of the following file names. The `*` is a wildcard that can be replaced with any string of your choice.
+
+| Pattern | Behavior |
+|---------|----------|
+| `*.(s)css` | Enqueues as a `<link>` tag in the editor and on the frontend |
+| `*-inline.(s)css` | Enqueues contents in an inline `<style>` tag in the editor and on the frontend |
+| `*-editor.(s)css` | Enqueues as a `<link>` tag in the editor only |
+| `*-scoped.(s)css` | Enqueues scoped contents in an inline `<style>` tag in the editor and on the frontend |
+| `*.js` | Enqueues as a `<script>` tag in the editor and on the frontend |
+| `*-inline.js` | Enqueues contents in an inline `<script>` tag in the editor and on the frontend |
+| `*-editor.js` | Enqueues as a `<script>` tag in the editor only |
+| `*-view.js` | Enqueues as a `<script>` tag on the frontend only |
+
+## Inline
+
+Inline styles and scripts have the big advantage that they are directly rendered as style or script tags inside the page. This can enhance loading times, since it saves extra requests that would have to be made otherwise.
+
+- `.js` files are inlined to the end of the body
+- `.(s)css` files are inlined to the end of the head
+- Each file is only being inlined once
+
+## Scoped
+
+Scoped styles are also inlined, but are prefixed with an ID that is unique to each block. Use the `bs_get_scoped_class` function to add the class to your template.
+
+```php title="index.php"
+<div class="<?php echo bs_get_scoped_class($b["name"]) ?>">
+  <h1>Scope me!</h1>
+  <p>Scope me too!</p>
+</div>
+```
+
+```css title="style-scoped.css"
+h1 {
+  color: red;
+}
+```
+
+The above will result in the following scoped style:
+
+```html
+<style>
+  .bs-62df71e6cc9a h1 {
+      color: red;
+  }
+  .bs-62df71e6cc9a p {
+      color: blue;
+  }
+</style>
+
+<div class="bs-62df71e6cc9a">
+  <h1>Scope me!</h1>
+  <p>Scope me too!</p>
+</div>
+```
+
+## Global
+
+Besides block specific assets, it is also possible to enqueue global assets, which will be available on all pages, regardless if a block is present. Enqueuing a global asset is done by adding the `global-` prefix to the file name. Any of the suffixes (e.g. `-inline`) can be used in combination.
+
+Possible combinations are:
+
+- `global-styles.(s)css`
+- `global-styles-inline.(s)css`
+- `global-styles-editor.(s)css`
+- `global-styles-scoped.(s)css`
+- `global-scripts.js`
+- `global-scripts-inline.js`
+- `global-scripts-editor.js`
+- `global-scripts-view.js`
+
+## Admin
+
+Admin assets are enqueued only in the WordPress admin area. The `admin-` prefix is used to define admin assets.
+
+- `admin-styles.(s)css`
+- `admin-scripts.js`
+
+## Block Editor
+
+Block editor assets are enqueued only in the block editor. The `block-editor-` prefix is used to define block editor assets.
+
+- `block-editor-styles.(s)css`
+- `block-editor-scripts.js`
+
+## Disable Enqueuing
+
+Automatic asset enqueuing can be disabled using the `assets/enqueue` setting. This is useful if you want to handle all asset enqueuing by yourself.
+
+```php title="functions.php"
+add_filter('blockstudio/settings', function($settings) {
+  $settings['assets']['enqueue'] = false;
+  return $settings;
+});
+```
+
+### Per Block
+
+When a block templates returns nothing, Blockstudio will not enqueue any assets for that particular block. This method comes in handy to disable enqueueing when a certain condition is met.
+
+<Tabs items={['PHP', 'Twig']}>
+  <Tab value="PHP">
+```php title="index.php"
+<?php
+  if ( !$a['slides'] ) {
+    // or return '';
+    return false;
+  }
+?>
+
+<div>my slider</div>
+```
+  </Tab>
+  <Tab value="Twig">
+```twig title="index.twig"
+{% if not a.slides %}
+  <div>my slider</div>
+{% endif %}
+```
+  </Tab>
+</Tabs>

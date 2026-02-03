@@ -1,0 +1,174 @@
+---
+title: HTML Utilities
+description: Render attribute values as data attributes or CSS variables.
+---
+
+# HTML Utilities
+
+Sometimes you need to use attribute values in your CSS or JS files. Blockstudio provides helper functions to render attributes as data attributes or CSS variables.
+
+## Example Block
+
+Let's imagine a block with the following attributes:
+
+```json title="block.json"
+{
+  "blockstudio": {
+    "attributes": [
+      {
+        "id": "message",
+        "type": "text",
+        "label": "My message"
+      },
+      {
+        "id": "color",
+        "type": "color",
+        "label": "My color"
+      }
+    ]
+  }
+}
+```
+
+## Data Attributes
+
+The `bs_render_attributes` function renders attributes as data attributes:
+
+<Tabs items={['PHP', 'Twig']}>
+  <Tab value="PHP">
+```php title="index.php"
+<h1 <?php bs_render_attributes($a); ?>>
+  <?php echo $a['message']; ?>
+</h1>
+```
+  </Tab>
+  <Tab value="Twig">
+```twig title="index.twig"
+<h1 {{ fn('bs_render_attributes', a) }}>
+  {{ a.message }}
+</h1>
+```
+  </Tab>
+</Tabs>
+
+**Output:**
+
+```html
+<h1 data-message="Hello" data-color="#7C3AED">
+  Hello
+</h1>
+```
+
+### Filtering Attributes
+
+Pass a second parameter to specify which attributes to render:
+
+<Tabs items={['PHP', 'Twig']}>
+  <Tab value="PHP">
+```php title="index.php"
+<h1 <?php bs_render_attributes($a, ['color']); ?>>
+  <?php echo $a['message']; ?>
+</h1>
+```
+  </Tab>
+  <Tab value="Twig">
+```twig title="index.twig"
+<h1 {{ fn('bs_render_attributes', a, ['color']) }}>
+  {{ a.message }}
+</h1>
+```
+  </Tab>
+</Tabs>
+
+**Output:**
+
+```html
+<h1 data-color="#7C3AED">
+  Hello
+</h1>
+```
+
+### Return Without Rendering
+
+Use `bs_attributes` to get the string without echoing:
+
+```php title="index.php"
+<?php $attrs = bs_attributes($a); ?>
+```
+
+## CSS Variables
+
+The `bs_render_variables` function renders attributes as CSS variables:
+
+<Tabs items={['PHP', 'Twig']}>
+  <Tab value="PHP">
+```php title="index.php"
+<h1 style="<?php bs_render_variables($a); ?>">
+  <?php echo $a['message']; ?>
+</h1>
+```
+  </Tab>
+  <Tab value="Twig">
+```twig title="index.twig"
+<h1 style="{{ fn('bs_render_variables', a) }}">
+  {{ a.message }}
+</h1>
+```
+  </Tab>
+</Tabs>
+
+**Output:**
+
+```html
+<h1 style="--message: Hello; --color: #7C3AED;">
+  Hello
+</h1>
+```
+
+### Filtering Variables
+
+```php title="index.php"
+<h1 style="<?php bs_render_variables($a, ['color']); ?>">
+```
+
+**Output:**
+
+```html
+<h1 style="--color: #7C3AED;">
+  Hello
+</h1>
+```
+
+### Return Without Rendering
+
+Use `bs_variables` to get the string without echoing:
+
+```php title="index.php"
+<?php $vars = bs_variables($a); ?>
+```
+
+## String Conversion
+
+Both functions convert attribute IDs to kebab-case:
+
+| Input | Output |
+|-------|--------|
+| `myAttribute` | `my-attribute` |
+| `my_attribute` | `my-attribute` |
+| `backgroundColor` | `background-color` |
+
+## Using in CSS
+
+```css title="style.css"
+.my-block h1 {
+  color: var(--color);
+}
+```
+
+## Using in JavaScript
+
+```javascript title="script.js"
+const block = document.querySelector('.my-block h1');
+const color = block.dataset.color;
+const message = block.dataset.message;
+```

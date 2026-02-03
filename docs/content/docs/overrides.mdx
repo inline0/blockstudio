@@ -1,0 +1,152 @@
+---
+title: Overrides
+description: Override blocks on a granular level.
+---
+
+# Overrides
+
+Blockstudio includes the possibility to override blocks on a very granular level. This can be useful for shared block libraries when you want to change the behavior of a block without having to create a new block from scratch.
+
+## block.json
+
+To get started, set the name of the block you want to override as the `name` key and set the `override` key to `true`.
+
+```json title="block.json"
+{
+  "name": "blockstudio/my-block",
+  "title": "My overridden block title",
+  "blockstudio": {
+    "override": true
+  }
+}
+```
+
+When the `override` property is set to `true`, the data from the new `block.json` will be merged with the data from the original block. This means that you can override any property of the original block.
+
+## Attributes
+
+Attributes can either be overridden by `id` or added additionally. For example, let's imagine that we want to override the `width` attribute of a block and add a new `height` attribute.
+
+```json title="block.json"
+{
+  "name": "blockstudio/my-block",
+  "title": "My overridden block title",
+  "blockstudio": {
+    "override": true,
+    "attributes": [
+      {
+        "id": "width",
+        "type": "number",
+        "default": 280,
+        "label": "Override width"
+      },
+      {
+        "id": "height",
+        "type": "number",
+        "default": 280,
+        "label": "New height"
+      }
+    ]
+  }
+}
+```
+
+When an attribute with the same `id` is found, the data will be merged with the original attribute. Attributes which are not found will be added to the block.
+
+<Callout type="warn">
+When overriding attributes, you have to provide the `type` of the original attribute, even if it stays the same.
+</Callout>
+
+### Complex Structures
+
+When overriding attributes with complex structures (repeaters, groups, tabs, etc.), you have to provide the full structure of the attribute to the point of the item that should be overridden.
+
+```json title="block.json"
+{
+  "name": "blockstudio/my-block",
+  "blockstudio": {
+    "override": true,
+    "attributes": [
+      {
+        "id": "tabs",
+        "type": "tabs",
+        "tabs": [
+          {
+            "id": "tab1",
+            "attributes": [
+              {
+                "key": "group1",
+                "type": "group",
+                "title": "Group",
+                "attributes": [
+                  {
+                    "id": "text",
+                    "type": "text",
+                    "label": "Override text"
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "id": "tab2",
+            "title": "Override tab",
+            "attributes": [
+              {
+                "id": "group",
+                "type": "group",
+                "title": "Group ID",
+                "attributes": [
+                  {
+                    "id": "text",
+                    "type": "text",
+                    "label": "Override text"
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  }
+}
+```
+
+## Assets
+
+Asset files will be replaced when the file name matches. For example, if a `style.css` file exists in the original block, it will be replaced by the `style.css` file in the overriding block. Files with names that do not match the original block will be added to the block.
+
+## Rendering Template
+
+Rendering templates can be overridden by providing a new template file, so either `index.php`, `index.twig` or `index.blade.php`.
+
+### Twig Blocks
+
+Twig templates can be overridden on a more granular level using the [block feature](https://twig.symfony.com/doc/3.x/functions/block.html) in Twig.
+
+Let's imagine the following rendering template for a fictional image block:
+
+```twig title="index.twig"
+<h1>Images:</h1>
+{% for image in a.images %}
+  <div class="content">
+    {% block image %}
+      <img src="{{ image.url }}" class="image" />
+    {% endblock %}
+  </div>
+{% endfor %}
+```
+
+Instead of replacing the whole template, we can use Twig's [extends](https://twig.symfony.com/doc/3.x/tags/extends.html) feature to override certain parts of the template while keeping the rest intact.
+
+```twig title="index.twig"
+{% extends 'index.twig' %}
+
+{% block image %}
+  <figure>
+    <img src="{{ image.url }}" class="image" />
+    <figcaption>{{ image.caption }}</figcaption>
+  </figure>
+{% endblock %}
+```

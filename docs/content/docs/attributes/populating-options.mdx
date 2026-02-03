@@ -1,0 +1,317 @@
+---
+title: Populating Options
+description: Dynamically populate field options from queries, functions, or external sources.
+---
+
+# Populating Options
+
+Instead of supplying different field types like Posts, Users or Terms, Blockstudio allows for a modular way of populating data right from the `block.json`. This feature works for `select`, `radio`, `checkbox`, `color` and `gradient` field types.
+
+Data can be populated in four ways:
+
+- **Query** - Return results from a post, user or term query
+- **Fetch** - Return results from an external source
+- **Function** - Return results from a custom function
+- **Custom** - Return results from a custom dataset
+
+## Query
+
+When choosing query mode, **Posts**, **Users** or **Terms** can be populated.
+
+```json title="block.json"
+{
+  "$schema": "https://app.blockstudio.dev/schema",
+  "name": "blockstudio/native",
+  "title": "Native Block",
+  "blockstudio": {
+    "attributes": [
+      {
+        "id": "posts",
+        "type": "select",
+        "label": "Posts",
+        "populate": {
+          "type": "query",
+          "query": "posts"
+        }
+      }
+    ]
+  }
+}
+```
+
+Available query types use these WordPress functions internally:
+
+| Query | Function |
+|-------|----------|
+| `posts` | [get_posts](https://developer.wordpress.org/reference/functions/get_posts/) |
+| `users` | [get_users](https://developer.wordpress.org/reference/functions/get_users/) |
+| `terms` | [get_terms](https://developer.wordpress.org/reference/functions/get_terms/) |
+
+### Arguments
+
+Custom arguments can be passed using the `arguments` attribute:
+
+```json title="block.json"
+{
+  "blockstudio": {
+    "attributes": [
+      {
+        "id": "posts",
+        "type": "select",
+        "label": "Posts",
+        "populate": {
+          "type": "query",
+          "query": "posts",
+          "arguments": {
+            "post_type": "jobs",
+            "numberposts": "20"
+          }
+        }
+      }
+    ]
+  }
+}
+```
+
+### Return Format
+
+By default, Blockstudio returns:
+
+| Query | Value | Label |
+|-------|-------|-------|
+| `posts` | post object | post_title |
+| `users` | user object | display_name |
+| `terms` | term object | name |
+
+Customize the response with `returnFormat`:
+
+```json title="block.json"
+{
+  "blockstudio": {
+    "attributes": [
+      {
+        "id": "posts",
+        "type": "select",
+        "label": "Posts",
+        "populate": {
+          "type": "query",
+          "query": "posts",
+          "arguments": {
+            "post_type": "posts",
+            "numberposts": "20"
+          },
+          "returnFormat": {
+            "value": "id",
+            "label": "post_name"
+          }
+        }
+      }
+    ]
+  }
+}
+```
+
+### Fetch Mode
+
+Enable dynamic searching with the `fetch` option:
+
+```json title="block.json"
+{
+  "blockstudio": {
+    "attributes": [
+      {
+        "id": "posts",
+        "type": "select",
+        "label": "Posts",
+        "populate": {
+          "type": "query",
+          "query": "posts",
+          "fetch": true,
+          "arguments": {
+            "post_type": "posts",
+            "numberposts": "20"
+          }
+        }
+      }
+    ]
+  }
+}
+```
+
+This enables `stylisedUi` and fetches the first 20 posts initially. Typing in the select field searches posts using the `s` argument.
+
+## Function
+
+Use a custom function to populate options:
+
+```json title="block.json"
+{
+  "blockstudio": {
+    "attributes": [
+      {
+        "id": "postTypes",
+        "type": "checkbox",
+        "label": "Post types",
+        "populate": {
+          "type": "function",
+          "function": "get_post_types"
+        }
+      }
+    ]
+  }
+}
+```
+
+### Arguments
+
+Pass arguments as an array (uses `call_user_func_array` internally):
+
+```json title="block.json"
+{
+  "blockstudio": {
+    "attributes": [
+      {
+        "id": "postTypes",
+        "type": "checkbox",
+        "label": "Post types",
+        "populate": {
+          "type": "function",
+          "function": "get_post_types",
+          "arguments": [[], "objects"]
+        }
+      }
+    ]
+  }
+}
+```
+
+### Return Format
+
+```json title="block.json"
+{
+  "blockstudio": {
+    "attributes": [
+      {
+        "id": "postTypes",
+        "type": "checkbox",
+        "label": "Post types",
+        "populate": {
+          "type": "function",
+          "function": "get_post_types",
+          "arguments": [[], "objects"],
+          "returnFormat": {
+            "value": "name",
+            "label": "label"
+          }
+        }
+      }
+    ]
+  }
+}
+```
+
+## Mixing Options
+
+Combine static options with populated data:
+
+```json title="block.json"
+{
+  "blockstudio": {
+    "attributes": [
+      {
+        "id": "users",
+        "type": "radio",
+        "label": "Users",
+        "options": [
+          {
+            "value": "administrators",
+            "label": "Administrators"
+          },
+          {
+            "value": "editors",
+            "label": "Editors"
+          }
+        ],
+        "populate": {
+          "type": "query",
+          "query": "users",
+          "position": "before"
+        }
+      }
+    ]
+  }
+}
+```
+
+The `position` option (`before` or `after`) controls where populated options appear relative to static options.
+
+<Callout type="warn">
+Mixing options and populate data is not supported when using **fetch** mode.
+</Callout>
+
+## Custom Data
+
+Create reusable datasets with the `blockstudio/blocks/populate` filter:
+
+```php title="functions.php"
+add_filter('blockstudio/block/attributes/populate', function($options, $attribute, $block) {
+  if ($attribute['populate']['custom'] === 'customData') {
+    return [
+      ['value' => '1', 'label' => 'Option 1'],
+      ['value' => '2', 'label' => 'Option 2'],
+    ];
+  }
+  return $options;
+}, 10, 3);
+```
+
+Then use it in your block:
+
+```json title="block.json"
+{
+  "blockstudio": {
+    "attributes": [
+      {
+        "id": "posts",
+        "type": "select",
+        "label": "Posts",
+        "populate": {
+          "type": "custom",
+          "custom": "customData"
+        }
+      }
+    ]
+  }
+}
+```
+
+## External Data
+
+Fetch data from an external source:
+
+```json title="block.json"
+{
+  "blockstudio": {
+    "attributes": [
+      {
+        "id": "select",
+        "type": "select",
+        "label": "Select",
+        "multiple": true,
+        "populate": {
+          "type": "fetch",
+          "arguments": {
+            "urlSearch": "https://example.com/wp-json/wp/v2/posts?search="
+          },
+          "returnFormat": {
+            "value": "id",
+            "label": "title.rendered"
+          }
+        }
+      }
+    ]
+  }
+}
+```
+
+The search term is appended to `urlSearch`.

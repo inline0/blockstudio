@@ -1,0 +1,132 @@
+---
+title: Rendering Attributes
+description: Access attribute values in your block templates.
+---
+
+# Rendering Attributes
+
+Inside template files, all attributes can be accessed using the `$attributes` or `$a` variables and the respective ID of the field.
+
+<Tabs items={['PHP', 'Twig']}>
+  <Tab value="PHP">
+```php title="index.php"
+<h1><?php echo $attributes['message']; ?></h1>
+<h1><?php echo $a['message']; ?></h1>
+```
+  </Tab>
+  <Tab value="Twig">
+```twig title="index.twig"
+<h1>{{ attributes.message }}</h1>
+<h1>{{ a.message }}</h1>
+```
+  </Tab>
+</Tabs>
+
+## Empty Values
+
+Attribute values return `false` if the field is empty or no option has been selected.
+
+<Tabs items={['PHP', 'Twig']}>
+  <Tab value="PHP">
+```php title="index.php"
+<?php if ($a['message']) : ?>
+  <h1><?php echo $a['message']; ?></h1>
+<?php endif; ?>
+```
+  </Tab>
+  <Tab value="Twig">
+```twig title="index.twig"
+{% if a.message %}
+  <h1>{{ a.message }}</h1>
+{% endif %}
+```
+  </Tab>
+</Tabs>
+
+## Complex Types
+
+### Files
+
+The files field returns an array with file data:
+
+<Tabs items={['PHP', 'Twig']}>
+  <Tab value="PHP">
+```php title="index.php"
+<?php if ($a['image']) : ?>
+  <img
+    src="<?php echo $a['image']['url']; ?>"
+    alt="<?php echo $a['image']['alt']; ?>"
+    width="<?php echo $a['image']['width']; ?>"
+    height="<?php echo $a['image']['height']; ?>"
+  />
+<?php endif; ?>
+```
+  </Tab>
+  <Tab value="Twig">
+```twig title="index.twig"
+{% if a.image %}
+  <img
+    src="{{ a.image.url }}"
+    alt="{{ a.image.alt }}"
+    width="{{ a.image.width }}"
+    height="{{ a.image.height }}"
+  />
+{% endif %}
+```
+  </Tab>
+</Tabs>
+
+### Link
+
+The link field returns an object with URL and attributes:
+
+<Tabs items={['PHP', 'Twig']}>
+  <Tab value="PHP">
+```php title="index.php"
+<?php if ($a['link']) : ?>
+  <a
+    href="<?php echo $a['link']['url']; ?>"
+    target="<?php echo $a['link']['target']; ?>"
+  >
+    <?php echo $a['link']['title']; ?>
+  </a>
+<?php endif; ?>
+```
+  </Tab>
+  <Tab value="Twig">
+```twig title="index.twig"
+{% if a.link %}
+  <a href="{{ a.link.url }}" target="{{ a.link.target }}">
+    {{ a.link.title }}
+  </a>
+{% endif %}
+```
+  </Tab>
+</Tabs>
+
+### Repeater
+
+Loop through repeater items:
+
+<Tabs items={['PHP', 'Twig']}>
+  <Tab value="PHP">
+```php title="index.php"
+<?php foreach ($a['items'] as $item) : ?>
+  <div class="item">
+    <h3><?php echo $item['title']; ?></h3>
+    <p><?php echo $item['description']; ?></p>
+  </div>
+<?php endforeach; ?>
+```
+  </Tab>
+  <Tab value="Twig">
+```twig title="index.twig"
+{% for item in a.items %}
+  <div class="item">
+    <h3>{{ item.title }}</h3>
+    <p>{{ item.description }}</p>
+  </div>
+{% endfor %}
+```
+  </Tab>
+</Tabs>

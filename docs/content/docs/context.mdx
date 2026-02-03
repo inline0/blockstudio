@@ -1,11 +1,48 @@
 ---
 title: Context
-description: Access WordPress and block context data in your templates.
+description: Access loop and post context data in your block templates.
 ---
 
 # Context
 
-Blockstudio provides access to various context data within your block templates.
+When blocks are used inside a loop (for example, a Query block), the block is executed once for each iteration of the loop. Blockstudio provides handy shortcuts for accessing the current loop and outer context.
+
+<Tabs items={['PHP', 'Twig']}>
+  <Tab value="PHP">
+```php title="index.php"
+<div>
+  <h1>
+    This is the data of current
+    element inside the loop:
+    <?php echo $block['context']['postId'] ?>
+    <?php echo $block['context']['postType'] ?>
+  </h1>
+  <h1>
+    This is the data the current post:
+    <?php echo $block['postId'] ?>
+    <?php echo $block['postType'] ?>
+  </h1>
+</div>
+```
+  </Tab>
+  <Tab value="Twig">
+```twig title="index.twig"
+<div>
+  <h1>
+    This is the data of current
+    element inside the loop:
+    {{ block.context.postId }}
+    {{ block.context.postType }}
+  </h1>
+  <h1>
+    This is the data the current post:
+    {{ block.postId }}
+    {{ block.postType }}
+  </h1>
+</div>
+```
+  </Tab>
+</Tabs>
 
 ## Available Variables
 
@@ -14,7 +51,7 @@ Inside your block templates, you have access to these variables:
 | Variable | Shorthand | Description |
 |----------|-----------|-------------|
 | `$attributes` | `$a` | Block attributes |
-| `$block` | `$b` | Block data (name, title, etc.) |
+| `$block` | `$b` | Block data (name, title, postId, postType, context, etc.) |
 | `$context` | `$c` | Parent block context |
 | `$innerBlocks` | - | InnerBlocks content |
 
@@ -22,44 +59,15 @@ Inside your block templates, you have access to these variables:
 
 The `$block` / `$b` variable contains:
 
-```php title="index.php"
-<?php
-// Block name
-echo $b['name']; // "my-theme/my-block"
-
-// Block title
-echo $b['title']; // "My Block"
-
-// Block directory path
-echo $b['dir'];
-
-// Block directory URL
-echo $b['url'];
-?>
-```
-
-## WordPress Context
-
-Access WordPress globals:
-
-```php title="index.php"
-<?php
-// Current post
-global $post;
-echo $post->ID;
-
-// Current user
-$user = wp_get_current_user();
-echo $user->display_name;
-?>
-```
-
-In Twig, use the `fn()` function:
-
-```twig title="index.twig"
-{{ fn('get_the_ID') }}
-{{ fn('get_the_title') }}
-```
+| Property | Description |
+|----------|-------------|
+| `name` | Block name (e.g., `my-theme/my-block`) |
+| `title` | Block title |
+| `dir` | Block directory path |
+| `url` | Block directory URL |
+| `postId` | Current post ID |
+| `postType` | Current post type |
+| `context` | Loop context (when inside a Query block) |
 
 ## Parent Context
 

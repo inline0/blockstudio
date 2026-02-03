@@ -14,49 +14,50 @@ Migrate Blockstudio documentation from Twig templates to OneDocs MDX format.
 - [x] index.mdx (general.twig → Introduction)
 - [x] getting-started.mdx (new)
 - [x] registration.mdx
-- [ ] initialization.mdx
-- [ ] activating.mdx
-- [ ] loading.mdx
-- [ ] environment.mdx
-- [ ] library.mdx
-- [ ] preview.mdx
-- [ ] post-meta.mdx
-- [ ] overrides.mdx
-- [ ] transforms.mdx
-- [ ] variations.mdx
-- [ ] composer.mdx
-- [ ] ai.mdx
-- [ ] code-snippets.mdx
+- [x] initialization.mdx
+- [x] activating.mdx
+- [x] loading.mdx
+- [x] environment.mdx
+- [x] library.mdx
+- [x] preview.mdx
+- [x] post-meta.mdx
+- [x] overrides.mdx
+- [x] transforms.mdx
+- [x] variations.mdx
+- [x] composer.mdx
+- [x] ai.mdx
+- [x] code-snippets.mdx
 - [x] context.mdx
 - [x] settings.mdx
 - [x] schema.mdx
 - [x] extensions.mdx
+- [x] rendering.mdx
 
 ### Attributes (`/attributes/`)
 
 - [x] registering.mdx
 - [x] field-types.mdx
-- [ ] block-attributes.mdx
-- [ ] conditional-logic.mdx
-- [ ] filtering.mdx
-- [ ] rendering.mdx
-- [ ] populating-options.mdx
-- [ ] html-utilities.mdx
-- [ ] disabling.mdx
+- [x] block-attributes.mdx
+- [x] conditional-logic.mdx
+- [x] filtering.mdx
+- [x] rendering.mdx
+- [x] populating-options.mdx
+- [x] html-utilities.mdx
+- [x] disabling.mdx
 
 ### Components (`/components/`)
 
 - [x] innerblocks.mdx
-- [ ] richtext.mdx
-- [ ] mediaplaceholder.mdx
-- [ ] useblockprops.mdx
+- [x] richtext.mdx
+- [x] mediaplaceholder.mdx
+- [x] useblockprops.mdx
 
 ### Editor (`/editor/`)
 
-- [ ] general.mdx
+- [x] general.mdx
 - [x] tailwind.mdx
-- [ ] gutenberg.mdx
-- [ ] examples.mdx
+- [x] gutenberg.mdx
+- [x] examples.mdx
 
 ### Hooks (`/hooks/`)
 
@@ -65,19 +66,19 @@ Migrate Blockstudio documentation from Twig templates to OneDocs MDX format.
 
 ### Assets (`/assets/`)
 
-- [ ] registering.mdx
-- [ ] processing.mdx
-- [ ] code-field.mdx
+- [x] registering.mdx
+- [x] processing.mdx
+- [x] code-field.mdx
 
 ### Templating (`/templating/`)
 
-- [ ] twig.mdx
-- [ ] blade.mdx
+- [x] twig.mdx
+- [x] blade.mdx
 
-### Rendering (`/rendering/`)
+### Rendering (`/rendering/`) - MERGED INTO MAIN rendering.mdx
 
-- [ ] twig.mdx
-- [ ] blade.mdx
+- [x] Twig content merged
+- [x] Blade content merged
 
 ---
 
@@ -85,15 +86,14 @@ Migrate Blockstudio documentation from Twig templates to OneDocs MDX format.
 
 | Section | Done | Total | Progress |
 |---------|------|-------|----------|
-| Core Pages | 6 | 20 | 30% |
-| Attributes | 2 | 9 | 22% |
-| Components | 1 | 4 | 25% |
-| Editor | 1 | 4 | 25% |
+| Core Pages | 21 | 21 | 100% |
+| Attributes | 9 | 9 | 100% |
+| Components | 4 | 4 | 100% |
+| Editor | 4 | 4 | 100% |
 | Hooks | 2 | 2 | 100% |
-| Assets | 0 | 3 | 0% |
-| Templating | 0 | 2 | 0% |
-| Rendering | 0 | 2 | 0% |
-| **Total** | **12** | **46** | **26%** |
+| Assets | 3 | 3 | 100% |
+| Templating | 2 | 2 | 100% |
+| **Total** | **45** | **45** | **100%** |
 
 ---
 
@@ -102,3 +102,4 @@ Migrate Blockstudio documentation from Twig templates to OneDocs MDX format.
 - Blog/release notes excluded from migration
 - JSON data files for dynamic content stored in `/public/data/`
 - Using Fumadocs/OneDocs MDX components for tabs, callouts, etc.
+- Rendering section (twig.twig, blade.twig) merged into main rendering.mdx since they contained duplicate content from templating section

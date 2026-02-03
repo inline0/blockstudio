@@ -1,0 +1,34 @@
+---
+title: Library
+description: Prebuilt blocks ready to use in your projects.
+---
+
+# Library
+
+Since version 3.1.0, Blockstudio includes a library of prebuilt elements. Of course, these elements are making use of all the features that are available to Blockstudio users. In fact, the library is actively being used to [dogfood](https://en.wikipedia.org/wiki/Eating_your_own_dog_food) our own product, helping us fast-track development and ensure a good developer experience for everyone.
+
+The library is a first step in making Blockstudio more available as a general collection of ready-to-use blocks for non developers, all the while being built with the most advanced block framework for WordPress. More blocks are actively being developed!
+
+## Activating
+
+To activate the library on your site, use the following `library` setting:
+
+```php title="functions.php"
+add_filter('blockstudio/settings', function($settings) {
+  $settings['library'] = true;
+  return $settings;
+});
+```
+
+Or via `blockstudio.json`:
+
+```json title="blockstudio.json"
+{
+  "$schema": "https://app.blockstudio.dev/schema/blockstudio",
+  "library": true
+}
+```
+
+## Available Blocks
+
+The library includes a variety of prebuilt blocks that you can use immediately in your projects. These blocks are continually being expanded and improved.
