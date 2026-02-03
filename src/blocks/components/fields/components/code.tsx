@@ -103,27 +103,30 @@ export const Code = ({
   );
 
   const getExtensions = () => {
-    const baseExtensions = [html(), javascript(), json(), php()];
+    switch (item.language) {
+      case 'css':
+        return [
+          cssLang(),
+          autocompletion({
+            override: [
+              (context: CompletionContext) => {
+                const cssVarResult =
+                  cssVariablesCompletion(settingsCssVariables)(context);
+                if (cssVarResult) return cssVarResult;
 
-    if (item.language === 'css') {
-      return [
-        cssLang(),
-        autocompletion({
-          override: [
-            (context: CompletionContext) => {
-              const cssVarResult =
-                cssVariablesCompletion(settingsCssVariables)(context);
-              if (cssVarResult) return cssVarResult;
-
-              return cssCompletionSource(context);
-            },
-          ],
-        }),
-        ...baseExtensions,
-      ];
+                return cssCompletionSource(context);
+              },
+            ],
+          }),
+        ];
+      case 'javascript':
+        return [javascript()];
+      case 'json':
+        return [json()];
+      case 'html':
+      default:
+        return [html(), javascript(), json(), php()];
     }
-
-    return baseExtensions;
   };
 
   const replacedVal = rest.value?.replaceAll(
