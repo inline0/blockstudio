@@ -1,0 +1,49 @@
+---
+title: Introduction
+description: Welcome to the Blockstudio documentation.
+---
+
+# Welcome to Blockstudio
+
+Blockstudio is a powerful WordPress block framework that lets you create custom blocks using Twig templates and a simple JSON configuration.
+
+## Features
+
+- **JSON Schema Configuration** - Define your blocks with a simple, validated JSON schema
+- **Twig Templates** - Use Twig for flexible, powerful templating
+- **Tailwind CSS Integration** - Built-in support with autocomplete and custom classes
+- **TypeScript Support** - Full type safety and modern development experience
+- **Live Preview** - See your changes instantly in the block editor
+
+## Quick Start
+
+Get started by creating your first block:
+
+```json
+{
+  "$schema": "https://app.blockstudio.dev/schema",
+  "name": "my-plugin/my-block",
+  "title": "My Block",
+  "blockstudio": {
+    "attributes": [
+      {
+        "id": "title",
+        "type": "text",
+        "label": "Title"
+      }
+    ]
+  }
+}
+```
+
+Then create a Twig template:
+
+```twig
+<div class="my-block">
+  <h2>{{ a.title }}</h2>
+</div>
+```
+
+## Next Steps
+
+- [Getting Started](/docs/getting-started) - Set up your first Blockstudio project
