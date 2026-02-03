@@ -16,7 +16,6 @@ If you don't already understand how the feature should work:
 - Explore the codebase to understand existing patterns
 - Check `includes/` for PHP classes
 - Check `package/` for frontend code
-- Check `_reference/` for v6 implementation (read-only)
 - Review similar features for patterns
 
 ### 2. Implement
@@ -28,7 +27,9 @@ If you don't already understand how the feature should work:
 
 ### 3. Add E2E Test
 
-Create test block in `tests/blocks/types/{feature-name}/`:
+Check if a matching folder already exists in `tests/blocks/types/` and `tests/e2e/types/`. If so, add your test to the existing folder/file instead of creating a new one.
+
+Otherwise, create test block in `tests/blocks/types/{feature-name}/`:
 
 ```
 tests/blocks/types/{feature-name}/
@@ -126,7 +127,7 @@ Before marking complete, verify:
 
 | Command | Description |
 |---------|-------------|
-| `npm run playground:v7` | Start v7 test server (port 9701) |
+| `npm run playground:v7` | Start test server (port 9701) |
 | `npm run test:v7` | Run unit/snapshot tests |
 | `npm run test:e2e` | Run E2E tests |
 | `composer cs` | Check PHP coding standards |

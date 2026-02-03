@@ -14,11 +14,12 @@ Fix bugs in Blockstudio 7.0 using a test-driven approach.
 - Get a clear description of the bug from the user
 - Identify expected vs actual behavior
 - Research the relevant code in `includes/` and `package/`
-- Check `_reference/` for v6 behavior if needed (read-only)
 
 ### 2. Write a Failing Test First
 
-Create a **minimal reproduction** test block in `tests/blocks/types/{bug-name}/`. Don't copy the user's full configuration - include only the fields necessary to trigger the bug:
+Check if a matching folder already exists in `tests/blocks/types/` and `tests/e2e/types/`. If so, add your test to the existing folder/file instead of creating a new one.
+
+Otherwise, create a **minimal reproduction** test block in `tests/blocks/types/{bug-name}/`. Don't copy the user's full configuration - include only the fields necessary to trigger the bug:
 
 ```
 tests/blocks/types/{bug-name}/
@@ -112,7 +113,7 @@ Before marking complete, verify:
 
 | Command | Description |
 |---------|-------------|
-| `npm run playground:v7` | Start v7 test server (port 9701) |
+| `npm run playground:v7` | Start test server (port 9701) |
 | `npm run test:v7` | Run unit/snapshot tests |
 | `npm run test:e2e` | Run all E2E tests |
 | `npx playwright test --config=playwright.wp-env.config.ts tests/e2e/types/{name}.ts` | Run specific E2E test |
