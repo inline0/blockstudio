@@ -57,6 +57,12 @@ npm run build            # Fetch schemas + generate + build
 
 Generated content is injected between `{/* GENERATED_*_START */}` and `{/* GENERATED_*_END */}` markers in MDX files.
 
+## Comment Policy
+
+- Internal code: no JSDoc; comments only for **why**, not **what**.
+- Public APIs: JSDoc required (description + params/returns/examples).
+- Tests: no redundant comments that restate test names; comment only when setup/assertion is non-obvious.
+
 ## Key Rules for Claude
 
 1. **Run tests** after changes: `npm run test:v7`

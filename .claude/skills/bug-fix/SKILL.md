@@ -18,7 +18,7 @@ Fix bugs in Blockstudio 7.0 using a test-driven approach.
 
 ### 2. Write a Failing Test First
 
-Create a test block in `tests/blocks/types/{bug-name}/`:
+Create a **minimal reproduction** test block in `tests/blocks/types/{bug-name}/`. Don't copy the user's full configuration - include only the fields necessary to trigger the bug:
 
 ```
 tests/blocks/types/{bug-name}/

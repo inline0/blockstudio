@@ -1,5 +1,5 @@
 import { useDispatch } from '@wordpress/data';
-import { useEffect, useRef } from '@wordpress/element';
+import { useEffect, useMemo, useRef } from '@wordpress/element';
 import { set, unset, result, isNumber, cloneDeep, get } from 'lodash-es';
 import { Base } from '@/blocks/components/base';
 import { Control } from '@/blocks/components/control';
@@ -75,13 +75,13 @@ export const Fields = ({
   const defaultsRepeaters = useRef(false);
   const defaultValue = useRef(false);
 
+  const defaults = useMemo(
+    () => getDefaults(Object.values(block?.attributes || {}), attributes),
+    [block?.attributes, attributes]
+  );
+
   useEffect(() => {
     if (!config) return;
-
-    const defaults = getDefaults(
-      Object.values(block?.attributes || {}),
-      attributes,
-    );
     if (defaultValue.current === false && Object.values(defaults).length) {
       setAttributes({
         ...attributes,
@@ -137,6 +137,7 @@ export const Fields = ({
             blockstudio: { attributes: repeaterAttributes },
           } as BlockstudioBlockAttributes,
           attributes as unknown as boolean,
+          defaults,
         )
       ) {
         return false;
@@ -672,13 +673,13 @@ export const Fields = ({
       >
         {block.blockstudio?.attributes?.map(
           (item: BlockstudioAttribute, index: number) => {
-            if (!isAllowedToRender(item, attributes)) return false;
+            if (!isAllowedToRender(item, attributes, false, defaults)) return false;
             if (item.type === 'tabs' && index !== 0) return null;
 
             return (
               <El
                 key={`field-${index}`}
-                {...{ item, element, attributes, block, portal }}
+                {...{ item, element, attributes, block, defaults, portal }}
               />
             );
           },

@@ -7,7 +7,8 @@ const blockstudioData = window.blockstudioAdmin;
 export const isAllowedToRender = (
   item: BlockstudioAttribute,
   attributes: BlockstudioBlockAttributes | boolean = false,
-  outerAttributes = false
+  outerAttributes: BlockstudioBlockAttributes | boolean = false,
+  defaults: Record<string, unknown> = {}
 ) => {
   if (item?.hidden) {
     return false;
@@ -74,14 +75,15 @@ export const isAllowedToRender = (
           innerCondition?.id
         ) {
           const conditionId = innerCondition?.id ?? '';
+          const attrValue = attr &&
+            ((attr as unknown as BlockstudioBlock).blockstudio
+              .attributes?.[conditionId as unknown as number]?.value ||
+              (attr as unknown as BlockstudioBlock).blockstudio
+                .attributes?.[conditionId as unknown as number]);
           resultsInner.push(
             operators[innerCondition?.operator ?? ''](
               (blockstudioData as Record<string, unknown>)?.[innerCondition?.type ?? ''] ||
-                (attr &&
-                  ((attr as unknown as BlockstudioBlock).blockstudio
-                    .attributes?.[conditionId as unknown as number]?.value ||
-                    (attr as unknown as BlockstudioBlock).blockstudio
-                      .attributes?.[conditionId as unknown as number])),
+                (attrValue ?? defaults[conditionId]),
               innerCondition?.value
             )
           );

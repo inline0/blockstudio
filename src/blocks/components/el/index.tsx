@@ -13,18 +13,26 @@ import {
 export const El = ({
   attributes,
   block,
+  defaults = {},
   element,
   item,
   portal,
 }: {
   attributes: BlockstudioBlockAttributes;
   block?: BlockstudioBlock | null;
+  defaults?: Record<string, unknown>;
   element: (item: BlockstudioAttribute) => ReactNode;
   item: NonNullable<BlockstudioBlock['blockstudio']['attributes']>[0];
   portal?: boolean;
 }) => {
+  const isAllowedToRenderWithDefaults = (
+    item: BlockstudioAttribute,
+    attrs: BlockstudioBlockAttributes,
+    outerAttrs: BlockstudioBlockAttributes | boolean = false
+  ) => isAllowedToRender(item, attrs, outerAttrs, defaults);
+
   return item.type === 'group' ? (
-    <Panel {...{ item, element, isAllowedToRender, attributes, portal }} />
+    <Panel {...{ item, element, isAllowedToRender: isAllowedToRenderWithDefaults, attributes, portal }} />
   ) : item.type === 'tabs' ? (
     <div className="blockstudio-fields__field--tabs">
       <PanelBody opened={portal}>
@@ -49,14 +57,14 @@ export const El = ({
             {(tab) =>
               tab.attributes.map(
                 (item: BlockstudioAttribute, index: number) => {
-                  if (!isAllowedToRender(item, attributes)) {
+                  if (!isAllowedToRender(item, attributes, false, defaults)) {
                     return false;
                   }
 
                   return (
                     <El
                       key={`tab-child-${index}`}
-                      {...{ item, element, attributes }}
+                      {...{ item, element, attributes, defaults }}
                     />
                   );
                 }
@@ -67,7 +75,7 @@ export const El = ({
       </PanelBody>
     </div>
   ) : (
-    isAllowedToRender(item, attributes) && (
+    isAllowedToRender(item, attributes, false, defaults) && (
       <PanelBody>{element(item)}</PanelBody>
     )
   );
