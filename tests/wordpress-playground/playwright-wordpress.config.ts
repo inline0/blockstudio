@@ -24,7 +24,7 @@ export function createWordPressPlaygroundConfig(
   const {
     testDir,
     globalSetup = "./tests/wordpress-playground/global-setup.ts",
-    port = 9400,
+    port = 9706,
     baseURL = `http://localhost:${port}`,
     workers = 1,
     retries = 0,

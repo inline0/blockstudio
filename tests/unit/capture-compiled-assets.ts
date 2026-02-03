@@ -13,7 +13,7 @@ import { fileURLToPath } from "url";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
-const port = process.env.PLAYGROUND_PORT || "9401";
+const port = process.env.PLAYGROUND_PORT || "9701";
 
 async function captureCompiledAssets() {
   console.log("Starting browser...");

@@ -6,7 +6,7 @@ export interface GlobalSetupOptions {
 }
 
 export function createGlobalSetup(options: GlobalSetupOptions = {}) {
-  const { baseURL = "http://localhost:9400", timeout = 120000 } = options;
+  const { baseURL = "http://localhost:9706", timeout = 120000 } = options;
 
   return async function globalSetup(_: FullConfig) {
     console.log(
@@ -32,7 +32,7 @@ export function createGlobalSetup(options: GlobalSetupOptions = {}) {
 }
 
 async function globalSetup(config: FullConfig) {
-  const port = process.env.PLAYGROUND_PORT || "9400";
+  const port = process.env.PLAYGROUND_PORT || "9706";
   const baseURL =
     (config.projects[0]?.use as any)?.baseURL || `http://localhost:${port}`;
   return createGlobalSetup({ baseURL })(config);

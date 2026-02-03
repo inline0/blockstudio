@@ -6,7 +6,7 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
 createPlaygroundServer({
-  port: 9400,
+  port: 9706,
   pluginPath: join(__dirname, "../../_reference"),
   pluginSlug: "blockstudio",
   pluginMainFile: "blockstudio.php",

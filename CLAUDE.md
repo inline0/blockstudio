@@ -31,7 +31,7 @@ The `docs/` folder contains the documentation site built with OneDocs (Fumadocs 
 ```bash
 cd docs
 npm install
-npm run dev              # Start dev server on port 4000
+npm run dev              # Start dev server on port 9700
 npm run fetch-schemas    # Fetch schemas from API (run once for dev)
 npm run generate         # Generate docs from schemas
 npm run build            # Fetch schemas + generate + build
@@ -56,9 +56,9 @@ Generated content is injected between `{/* GENERATED_*_START */}` and `{/* GENER
 
 | Command | Description |
 |---------|-------------|
-| `npm run playground:v7` | Start v7 server (port 9401) |
+| `npm run playground:v7` | Start v7 server (port 9701) |
 | `npm run test:v7` | Run v7 unit/snapshot tests (not E2E) |
-| `npm run playground` | Start v6 reference server (port 9400) |
+| `npm run playground` | Start v6 reference server (port 9706) |
 | `composer cs` | Check PHPCS |
 | `composer cs:fix` | Auto-fix PHPCS issues |
 
@@ -66,7 +66,7 @@ Generated content is injected between `{/* GENERATED_*_START */}` and `{/* GENER
 
 | Command | Description |
 |---------|-------------|
-| `npm run dev` | Start docs dev server (port 4000) |
+| `npm run dev` | Start docs dev server (port 9700) |
 | `npm run fetch-schemas` | Fetch schemas from API |
 | `npm run generate` | Generate MDX from schemas |
 | `npm run build` | Full build (fetch + generate + next build) |
@@ -75,8 +75,8 @@ Generated content is injected between `{/* GENERATED_*_START */}` and `{/* GENER
 
 | Server | Port |
 |--------|------|
-| Docs | 4000 |
-| v7 Unit Tests | 9401 |
-| v6 Reference | 9400 |
-| v7 E2E | 9411 |
-| v6 E2E | 9410 |
+| Docs | 9700 |
+| v7 Unit Tests | 9701 |
+| v6 Reference | 9706 |
+| v7 E2E | 9711 |
+| v6 E2E | 9710 |

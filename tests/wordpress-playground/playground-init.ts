@@ -56,7 +56,7 @@ function getAllFiles(
 
 export function createPlaygroundServer(options: PlaygroundServerOptions) {
   const {
-    port = 9400,
+    port = 9706,
     pluginPath,
     pluginSlug,
     pluginMainFile,

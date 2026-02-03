@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev -p 4000",
+    "dev": "next dev -p 9700",
     "build": "npm run generate && next build",
     "start": "next start",
     "fetch-schemas": "tsx scripts/fetch-schemas.ts",

@@ -1,7 +1,7 @@
 import { createWordPressPlaygroundConfig } from "./tests/wordpress-playground/playwright-wordpress.config";
 
-const port = parseInt(process.env.PLAYGROUND_PORT || "9400", 10);
-const isV7 = port === 9401;
+const port = parseInt(process.env.PLAYGROUND_PORT || "9706", 10);
+const isV7 = port === 9701;
 
 export default createWordPressPlaygroundConfig({
   testDir: "./tests/unit",
