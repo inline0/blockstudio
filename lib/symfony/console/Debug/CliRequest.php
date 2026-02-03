@@ -20,7 +20,7 @@ final class CliRequest extends Request
 {
     public function __construct(public readonly TraceableCommand $command)
     {
-        parent::__construct(attributes: ['_controller' => \get_class($command->command), '_virtual_type' => 'command'], server: $_SERVER);
+        parent::__construct(attributes: ['_controller' => $command->command::class, '_virtual_type' => 'command'], server: $_SERVER);
     }
     // Methods below allow to populate a profile, thus enable search and filtering
     public function getUri(): string

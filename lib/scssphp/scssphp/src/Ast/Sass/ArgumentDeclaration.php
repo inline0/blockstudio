@@ -12,6 +12,7 @@
 namespace BlockstudioVendor\ScssPhp\ScssPhp\Ast\Sass;
 
 use BlockstudioVendor\League\Uri\Contracts\UriInterface;
+use BlockstudioVendor\ScssPhp\ScssPhp\Exception\MultiSpanSassScriptException;
 use BlockstudioVendor\ScssPhp\ScssPhp\Exception\SassFormatException;
 use BlockstudioVendor\ScssPhp\ScssPhp\Exception\SassScriptException;
 use BlockstudioVendor\ScssPhp\ScssPhp\Logger\LoggerInterface;
@@ -113,13 +114,13 @@ final class ArgumentDeclaration implements SassNode
             if ($i < $positional) {
                 if (isset($names[$argument->getName()])) {
                     $originalName = $this->originalArgumentName($argument->getName());
-                    throw new SassScriptException(sprintf('Argument $%s was passed both by position and by name.', $originalName));
+                    throw new SassScriptException(sprintf('Argument %s was passed both by position and by name.', $originalName));
                 }
             } elseif (isset($names[$argument->getName()])) {
                 $nameUsed++;
             } elseif ($argument->getDefaultValue() === null) {
                 $originalName = $this->originalArgumentName($argument->getName());
-                throw new SassScriptException(sprintf('Missing argument $%s', $originalName));
+                throw new MultiSpanSassScriptException(sprintf('Missing argument %s.', $originalName), 'invocation', ['declaration' => $this->getSpanWithName()]);
             }
         }
         if ($this->restArgument !== null) {
@@ -127,13 +128,13 @@ final class ArgumentDeclaration implements SassNode
         }
         if ($positional > \count($this->arguments)) {
             $message = sprintf('Only %d %s%s allowed, but %d %s passed.', \count($this->arguments), empty($names) ? '' : 'positional ', StringUtil::pluralize('argument', \count($this->arguments)), $positional, StringUtil::pluralize('was', $positional, 'were'));
-            throw new SassScriptException($message);
+            throw new MultiSpanSassScriptException($message, 'invocation', ['declaration' => $this->getSpanWithName()]);
         }
         if ($nameUsed < \count($names)) {
             $unknownNames = array_values(array_diff(array_keys($names), array_map(fn($argument) => $argument->getName(), $this->arguments)));
             \assert(\count($unknownNames) > 0);
             $message = sprintf('No %s named %s.', StringUtil::pluralize('argument', \count($unknownNames)), StringUtil::toSentence(array_map(fn($name) => '$' . $name, $unknownNames), 'or'));
-            throw new SassScriptException($message);
+            throw new MultiSpanSassScriptException($message, 'invocation', ['declaration' => $this->getSpanWithName()]);
         }
     }
     private function originalArgumentName(string $name): string

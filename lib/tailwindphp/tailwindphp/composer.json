@@ -1,0 +1,153 @@
+{
+    "name": "tailwindphp\/tailwindphp",
+    "description": "A full port of TailwindCSS 4.x to PHP",
+    "type": "library",
+    "license": "MIT",
+    "keywords": [
+        "tailwind",
+        "tailwindcss",
+        "css",
+        "utility-css",
+        "php"
+    ],
+    "homepage": "https:\/\/github.com\/dnnsjsk\/tailwindphp",
+    "bin": [
+        "bin\/tailwindphp"
+    ],
+    "support": {
+        "issues": "https:\/\/github.com\/dnnsjsk\/tailwindphp\/issues",
+        "source": "https:\/\/github.com\/dnnsjsk\/tailwindphp"
+    },
+    "authors": [
+        {
+            "name": "Dennis Josek"
+        }
+    ],
+    "require": {
+        "php": "^8.2"
+    },
+    "require-dev": {
+        "phpunit\/phpunit": "^10.0",
+        "laravel\/pint": "^1.26",
+        "phpstan\/phpstan": "^2.1",
+        "brianium\/paratest": "^7.4"
+    },
+    "autoload": {
+        "psr-4": {
+            "BlockstudioVendor\\TailwindPHP\\": "src\/"
+        },
+        "files": [
+            "src\/_tailwindphp\/LightningCss.php",
+            "src\/_tailwindphp\/CssMinifier.php",
+            "src\/attribute-selector-parser.php",
+            "src\/utils\/segment.php",
+            "src\/utils\/escape.php",
+            "src\/utils\/default-map.php",
+            "src\/utils\/to-key-path.php",
+            "src\/utils\/brace-expansion.php",
+            "src\/utils\/compare.php",
+            "src\/utils\/compare-breakpoints.php",
+            "src\/utils\/dimensions.php",
+            "src\/utils\/topological-sort.php",
+            "src\/utils\/replace-shadow-colors.php",
+            "src\/utils\/is-color.php",
+            "src\/utils\/math-operators.php",
+            "src\/utils\/is-valid-arbitrary.php",
+            "src\/utils\/infer-data-type.php",
+            "src\/ast.php",
+            "src\/css-parser.php",
+            "src\/walk.php",
+            "src\/value-parser.php",
+            "src\/selector-parser.php",
+            "src\/constant-fold-declaration.php",
+            "src\/property-order.php",
+            "src\/expand-declaration.php",
+            "src\/theme.php",
+            "src\/utils\/decode-arbitrary-value.php",
+            "src\/candidate.php",
+            "src\/compile.php",
+            "src\/utilities.php",
+            "src\/variants.php",
+            "src\/design-system.php",
+            "src\/apply.php",
+            "src\/at-import.php",
+            "src\/css-functions.php",
+            "src\/plugin.php",
+            "src\/plugin\/plugins\/typography-plugin.php",
+            "src\/plugin\/plugins\/forms-plugin.php",
+            "src\/index.php"
+        ]
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "BlockstudioVendor\\TailwindPHP\\": "src\/",
+            "BlockstudioVendor\\TailwindPHP\\Tests\\": "tests\/"
+        },
+        "classmap": [
+            "src\/"
+        ],
+        "exclude-from-classmap": [
+            "src\/*.php",
+            "src\/**\/*.php",
+            "!src\/*.test.php",
+            "!src\/**\/*.test.php"
+        ]
+    },
+    "scripts": {
+        "extract": [
+            "php test-coverage\/extract-run-tests.php",
+            "php test-coverage\/extract-index-tests.php",
+            "php test-coverage\/extract-css-functions-tests.php",
+            "php test-coverage\/extract-candidate-tests.php",
+            "php test-coverage\/extract-ui-spec-tests.php"
+        ],
+        "extract-libs": [
+            "php test-coverage\/lib\/extract-clsx-tests.php",
+            "php test-coverage\/lib\/extract-tailwind-merge-tests.php",
+            "php test-coverage\/lib\/extract-cva-tests.php"
+        ],
+        "extract-plugins": [
+            "php test-coverage\/plugins\/extract-typography-tests.php"
+        ],
+        "extract-all": [
+            "@extract",
+            "@extract-libs",
+            "@extract-plugins"
+        ],
+        "test": "paratest --processes 8",
+        "test-serial": "phpunit",
+        "test-libs": "phpunit src\/_tailwindphp\/lib\/",
+        "test-plugins": "phpunit src\/plugin\/",
+        "extract-and-test": [
+            "@extract-all",
+            "phpunit"
+        ],
+        "update-and-test": [
+            "@update-all",
+            "@extract-all",
+            "@test"
+        ],
+        "update-all": [
+            "@update-tailwind",
+            "@update-libs",
+            "@update-plugins"
+        ],
+        "update-tailwind": "php scripts\/update-tailwind.php",
+        "update-libs": "php scripts\/update-libs.php",
+        "update-plugins": "php scripts\/update-plugins.php",
+        "versions": [
+            "php scripts\/update-tailwind.php --check",
+            "php scripts\/update-libs.php --check",
+            "php scripts\/update-plugins.php --check"
+        ],
+        "bench": "php scripts\/benchmark.php",
+        "bench:save": "php scripts\/benchmark.php --save",
+        "lint": "pint --test",
+        "format": "pint",
+        "analyse": "phpstan analyse --memory-limit=512M",
+        "quality": [
+            "@lint",
+            "@analyse"
+        ]
+    }
+}

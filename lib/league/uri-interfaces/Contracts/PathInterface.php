@@ -12,6 +12,9 @@ declare (strict_types=1);
 namespace BlockstudioVendor\League\Uri\Contracts;
 
 use BlockstudioVendor\League\Uri\Exceptions\SyntaxError;
+/**
+ * @method static normalize() returns the normalized string representation of the component
+ */
 interface PathInterface extends UriComponentInterface
 {
     /**

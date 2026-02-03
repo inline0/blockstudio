@@ -30,7 +30,10 @@ use BlockstudioVendor\ScssPhp\ScssPhp\Util\IterableUtil;
 use BlockstudioVendor\ScssPhp\ScssPhp\Util\ListUtil;
 use BlockstudioVendor\ScssPhp\ScssPhp\Util\ModifiableBox;
 use BlockstudioVendor\SourceSpan\FileSpan;
-class ConcreteExtensionStore implements ExtensionStore
+/**
+ * @internal
+ */
+final class ConcreteExtensionStore implements ExtensionStore
 {
     /**
      * A map from all simple selectors in the stylesheet to the selector lists
@@ -100,7 +103,7 @@ class ConcreteExtensionStore implements ExtensionStore
         $extender = ConcreteExtensionStore::createForMode($mode);
         if (!$selector->isInvisible()) {
             foreach ($selector->getComponents() as $component) {
-                $extender->originals->attach($component);
+                $extender->originals->offsetSet($component);
             }
         }
         foreach ($targets->getComponents() as $complex) {
@@ -185,7 +188,7 @@ class ConcreteExtensionStore implements ExtensionStore
         $originalSelector = $selector;
         if (!$originalSelector->isInvisible()) {
             foreach ($originalSelector->getComponents() as $component) {
-                $this->originals->attach($component);
+                $this->originals->offsetSet($component);
             }
         }
         if (\count($this->extensions) !== 0) {
@@ -197,7 +200,7 @@ class ConcreteExtensionStore implements ExtensionStore
         }
         $modifiableSelector = new ModifiableBox($selector);
         if ($mediaContext !== null) {
-            $this->mediaContexts->attach($modifiableSelector, $mediaContext);
+            $this->mediaContexts->offsetSet($modifiableSelector, $mediaContext);
         }
         $this->registerSelector($selector, $modifiableSelector);
         return $modifiableSelector->seal();
@@ -216,7 +219,7 @@ class ConcreteExtensionStore implements ExtensionStore
                     if (!isset($this->selectors[$simple])) {
                         /** @var ObjectSet<ModifiableBox<SelectorList>> $set */
                         $set = new ObjectSet();
-                        $this->selectors->attach($simple, $set);
+                        $this->selectors->offsetSet($simple, $set);
                     }
                     $this->selectors[$simple]->add($selector);
                     if ($simple instanceof PseudoSelector && $simple->getSelector() !== null) {
@@ -350,7 +353,7 @@ class ConcreteExtensionStore implements ExtensionStore
                             $this->extensionsByExtender[$simple] = $extensionsByExtender;
                         }
                     }
-                    if ($newExtensions->contains($extension->target)) {
+                    if ($newExtensions->offsetExists($extension->target)) {
                         /** @var SimpleSelectorMap<ComplexSelectorMap<Extension>> $additionalExtensions */
                         $additionalExtensions ??= new SimpleSelectorMap();
                         if (!isset($additionalExtensions[$extension->target])) {
@@ -380,7 +383,7 @@ class ConcreteExtensionStore implements ExtensionStore
             try {
                 $selector->setValue($this->extendList($selector->getValue(), $newExtensions, $this->mediaContexts[$selector] ?? null));
             } catch (SassException $e) {
-                throw new SimpleSassException("From {$e->getSpan()->message('')}\n" . $e->getOriginalMessage(), $e->getSpan(), $e);
+                throw new SimpleSassException("From {$oldValue->getSpan()->message('')}\n" . $e->getOriginalMessage(), $e->getSpan(), $e);
             }
             // If no extends actually happened (for example because unification
             // failed), we don't need to re-register the selector.
@@ -489,7 +492,7 @@ class ConcreteExtensionStore implements ExtensionStore
         if ($extended === null) {
             return $list;
         }
-        return new SelectorList($this->trim($extended, $this->originals->contains(...)), $list->getSpan());
+        return new SelectorList($this->trim($extended, $this->originals->offsetExists(...)), $list->getSpan());
     }
     /**
      * Extends $complex using $extensions, and returns the contents of a
@@ -520,7 +523,7 @@ class ConcreteExtensionStore implements ExtensionStore
         //     ]
         //
         $extendedNotExpanded = null;
-        $isOriginal = $this->originals->contains($complex);
+        $isOriginal = $this->originals->offsetExists($complex);
         foreach ($complex->getComponents() as $i => $component) {
             $extended = $this->extendCompound($component, $extensions, $mediaQueryContext, $isOriginal);
             \assert($extended === null || \count($extended) > 0, "extendCompound({$component}) should return null rather than [] if extension fails.");
@@ -553,8 +556,8 @@ class ConcreteExtensionStore implements ExtensionStore
                 // Make sure that copies of $complex retain their status as "original"
                 // selectors. This includes selectors that are modified because a :not()
                 // was extended into.
-                if ($first && $this->originals->contains($complex)) {
-                    $this->originals->attach($outputComplex);
+                if ($first && $this->originals->offsetExists($complex)) {
+                    $this->originals->offsetSet($outputComplex);
                 }
                 $first = \false;
                 return $outputComplex;
@@ -746,7 +749,7 @@ class ConcreteExtensionStore implements ExtensionStore
             if ($extensionsForSimple === null) {
                 return null;
             }
-            $targetsUsed?->attach($simple);
+            $targetsUsed?->offsetSet($simple);
             $result = [];
             if ($this->mode !== ExtendMode::replace) {
                 $result[] = $this->extenderForSimple($simple);
@@ -905,6 +908,10 @@ class ConcreteExtensionStore implements ExtensionStore
      */
     private function trim(array $selectors, callable $isOriginal): array
     {
+        // Avoid truly horrific quadratic behavior.
+        if (\count($selectors) > 100) {
+            return $selectors;
+        }
         // This is n² on the sequences, but only comparing between separate
         // sequences should limit the quadratic behavior. We iterate from last to
         // first and reverse the result so that, if two selectors are identical, we

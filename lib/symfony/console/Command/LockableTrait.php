@@ -10,6 +10,7 @@
  */
 namespace BlockstudioVendor\Symfony\Component\Console\Command;
 
+use BlockstudioVendor\Symfony\Component\Console\Attribute\AsCommand;
 use BlockstudioVendor\Symfony\Component\Console\Exception\LogicException;
 use BlockstudioVendor\Symfony\Component\Lock\LockFactory;
 use BlockstudioVendor\Symfony\Component\Lock\LockInterface;
@@ -43,7 +44,16 @@ trait LockableTrait
             }
             $this->lockFactory = new LockFactory($store);
         }
-        $this->lock = $this->lockFactory->createLock($name ?: $this->getName());
+        if (!$name) {
+            if ($this instanceof Command) {
+                $name = $this->getName();
+            } elseif ($attribute = (new \ReflectionClass($this::class))->getAttributes(AsCommand::class)) {
+                $name = $attribute[0]->newInstance()->name;
+            } else {
+                throw new LogicException(\sprintf('Lock name missing: provide it via "%s()", #[AsCommand] attribute, or by extending Command class.', __METHOD__));
+            }
+        }
+        $this->lock = $this->lockFactory->createLock($name);
         if (!$this->lock->acquire($blocking)) {
             $this->lock = null;
             return \false;

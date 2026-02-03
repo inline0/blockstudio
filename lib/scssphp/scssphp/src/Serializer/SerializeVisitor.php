@@ -499,7 +499,7 @@ MESSAGE
     private function writeCalculationValue(object $value): void
     {
         if ($value instanceof SassNumber && $value->hasComplexUnits() && !$this->inspect) {
-            throw new SassScriptException("{$value} is not a valid CSS value.");
+            throw new SassScriptException("{$value} isn't a valid CSS value.");
         }
         if ($value instanceof SassNumber && !is_finite($value->getValue())) {
             if (is_nan($value->getValue())) {
@@ -702,7 +702,7 @@ MESSAGE
     public function visitFunction(SassFunction $value): void
     {
         if (!$this->inspect) {
-            throw new SassScriptException("{$value} is not a valid CSS value.");
+            throw new SassScriptException("{$value} isn't a valid CSS value.");
         }
         $this->buffer->write('get-function(');
         $this->visitQuotedString($value->getCallable()->getName());
@@ -711,7 +711,7 @@ MESSAGE
     public function visitMixin(SassMixin $value): void
     {
         if (!$this->inspect) {
-            throw new SassScriptException("{$value} is not a valid CSS value.");
+            throw new SassScriptException("{$value} isn't a valid CSS value.");
         }
         $this->buffer->write('get-mixin(');
         $this->visitQuotedString($value->getCallable()->getName());
@@ -723,7 +723,7 @@ MESSAGE
             $this->buffer->writeChar('[');
         } elseif (\count($value->asList()) === 0) {
             if (!$this->inspect) {
-                throw new SassScriptException("() is not a valid CSS value.");
+                throw new SassScriptException("() isn't a valid CSS value.");
             }
             $this->buffer->write('()');
             return;
@@ -800,7 +800,7 @@ MESSAGE
     public function visitMap(SassMap $value): void
     {
         if (!$this->inspect) {
-            throw new SassScriptException("{$value} is not a valid CSS value.");
+            throw new SassScriptException("{$value} isn't a valid CSS value.");
         }
         $this->buffer->writeChar('(');
         $isFirst = \true;
@@ -848,7 +848,7 @@ MESSAGE
         }
         if ($value->hasComplexUnits()) {
             if (!$this->inspect) {
-                throw new SassScriptException("{$value} is not a valid CSS value.");
+                throw new SassScriptException("{$value} isn't a valid CSS value.");
             }
             $this->visitCalculation(SassCalculation::unsimplified('calc', [$value]));
         } else {

@@ -13,6 +13,9 @@ namespace BlockstudioVendor\ScssPhp\ScssPhp\Exception;
 
 use BlockstudioVendor\ScssPhp\ScssPhp\StackTrace\Trace;
 use BlockstudioVendor\SourceSpan\FileSpan;
+/**
+ * @internal
+ */
 final class MultiSpanSassRuntimeException extends MultiSpanSassException implements SassRuntimeException
 {
     private readonly Trace $sassTrace;

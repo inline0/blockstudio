@@ -25,7 +25,7 @@ use BlockstudioVendor\Symfony\Component\Stopwatch\Stopwatch;
  *
  * @author Jules Pietri <jules@heahprod.com>
  */
-final class TraceableCommand extends Command implements SignalableCommandInterface
+final class TraceableCommand extends Command
 {
     public readonly Command $command;
     public int $exitCode;
@@ -43,6 +43,7 @@ final class TraceableCommand extends Command implements SignalableCommandInterfa
     /** @var array<string, mixed> */
     public array $interactiveInputs = [];
     public array $handledSignals = [];
+    public ?array $invokableCommandInfo = null;
     public function __construct(Command $command, private readonly Stopwatch $stopwatch)
     {
         if ($command instanceof LazyCommand) {
@@ -73,13 +74,10 @@ final class TraceableCommand extends Command implements SignalableCommandInterfa
     }
     public function getSubscribedSignals(): array
     {
-        return $this->command instanceof SignalableCommandInterface ? $this->command->getSubscribedSignals() : [];
+        return $this->command->getSubscribedSignals();
     }
     public function handleSignal(int $signal, int|false $previousExitCode = 0): int|false
     {
-        if (!$this->command instanceof SignalableCommandInterface) {
-            return \false;
-        }
         $event = $this->stopwatch->start($this->getName() . '.handle_signal');
         $exit = $this->command->handleSignal($signal, $previousExitCode);
         $event->stop();
@@ -133,6 +131,12 @@ final class TraceableCommand extends Command implements SignalableCommandInterfa
      */
     public function setCode(callable $code): static
     {
+        if ($code instanceof InvokableCommand) {
+            $r = \Closure::bind(function () {
+                return $this->invokable;
+            }, $code, InvokableCommand::class)();
+            $this->invokableCommandInfo = ['class' => $r->getClosureScopeClass()->name, 'file' => $r->getFileName(), 'line' => $r->getStartLine()];
+        }
         $this->command->setCode($code);
         return parent::setCode(function (InputInterface $input, OutputInterface $output) use ($code): int {
             $event = $this->stopwatch->start($this->getName() . '.code');
@@ -219,7 +223,7 @@ final class TraceableCommand extends Command implements SignalableCommandInterfa
         $this->options = $input->getOptions();
         $event = $this->stopwatch->start($this->getName(), 'command');
         try {
-            $this->exitCode = parent::run($input, $output);
+            $this->exitCode = $this->command->run($input, $output);
         } finally {
             $event->stop();
             if ($output instanceof ConsoleOutputInterface && $output->isDebug()) {

@@ -11,6 +11,7 @@
 declare (strict_types=1);
 namespace BlockstudioVendor\League\Uri;
 
+use Deprecated;
 use JsonSerializable;
 use BlockstudioVendor\League\Uri\Contracts\UriAccess;
 use BlockstudioVendor\League\Uri\Contracts\UriInterface;
@@ -24,18 +25,23 @@ use Stringable;
 use function array_pop;
 use function array_reduce;
 use function count;
-use function end;
 use function explode;
 use function implode;
 use function in_array;
 use function preg_match;
 use function rawurldecode;
+use function sort;
+use function str_contains;
 use function str_repeat;
 use function str_replace;
 use function strpos;
 use function substr;
 /**
  * @phpstan-import-type ComponentMap from UriInterface
+ * @deprecated since version 7.6.0
+ *
+ * @see Modifier
+ * @see Uri
  */
 class BaseUri implements Stringable, JsonSerializable, UriAccess
 {
@@ -55,7 +61,8 @@ class BaseUri implements Stringable, JsonSerializable, UriAccess
     }
     public static function from(Stringable|string $uri, ?UriFactoryInterface $uriFactory = null): static
     {
-        return new static(static::formatHost(static::filterUri($uri, $uriFactory)), $uriFactory);
+        $uri = static::formatHost(static::filterUri($uri, $uriFactory));
+        return new static($uri, $uriFactory);
     }
     public function withUriFactory(UriFactoryInterface $uriFactory): static
     {
@@ -159,7 +166,7 @@ class BaseUri implements Stringable, JsonSerializable, UriAccess
      * Tells whether the URI is opaque or not.
      *
      * A URI is opaque if and only if it is absolute
-     * and does not has an authority path.
+     * and does not have an authority path.
      */
     public function isOpaque(): bool
     {
@@ -213,7 +220,17 @@ class BaseUri implements Stringable, JsonSerializable, UriAccess
      */
     public function isSameDocument(Stringable|string $uri): bool
     {
-        return $this->normalize(static::filterUri($uri)) === $this->normalize($this->uri);
+        return self::normalizedUri($this->uri)->equals(self::normalizedUri($uri));
+    }
+    private static function normalizedUri(Stringable|string $uri): Uri
+    {
+        // Normalize the URI according to RFC3986
+        $uri = ($uri instanceof Uri ? $uri : Uri::new($uri))->normalize();
+        return $uri->when(condition: '' === $uri->getPath() && null !== $uri->getAuthority(), onSuccess: fn(Uri $uri) => $uri->withPath('/'))->when(condition: null !== ($query = $uri->getQuery()) && str_contains($query, '&'), onSuccess: function (Uri $uri) use ($query) {
+            $pairs = explode('&', (string) $query);
+            sort($pairs);
+            return $uri->withQuery(implode('&', $pairs));
+        });
     }
     /**
      * Tells whether the URI contains an Internationalized Domain Name (IDN).
@@ -240,22 +257,11 @@ class BaseUri implements Stringable, JsonSerializable, UriAccess
      */
     public function resolve(Stringable|string $uri): static
     {
-        $uri = static::formatHost(static::filterUri($uri, $this->uriFactory));
-        $null = $uri instanceof Psr7UriInterface ? '' : null;
-        if ($null !== $uri->getScheme()) {
-            return new static($uri->withPath(static::removeDotSegments($uri->getPath())), $this->uriFactory);
-        }
-        if ($null !== $uri->getAuthority()) {
-            return new static($uri->withScheme($this->uri->getScheme())->withPath(static::removeDotSegments($uri->getPath())), $this->uriFactory);
-        }
-        $user = $null;
-        $pass = null;
-        $userInfo = $this->uri->getUserInfo();
-        if (null !== $userInfo) {
-            [$user, $pass] = explode(':', $userInfo, 2) + [1 => null];
-        }
-        [$path, $query] = $this->resolvePathAndQuery($uri);
-        return new static($uri->withPath($this->removeDotSegments($path))->withQuery($query)->withHost($this->uri->getHost())->withPort($this->uri->getPort())->withUserInfo($user, $pass)->withScheme($this->uri->getScheme()), $this->uriFactory);
+        $resolved = UriString::resolve($uri, $this->uri);
+        return new static(match ($this->uriFactory) {
+            null => Uri::new($resolved),
+            default => $this->uriFactory->createUri($resolved),
+        }, $this->uriFactory);
     }
     /**
      * Relativize a URI according to a base URI.
@@ -285,43 +291,19 @@ class BaseUri implements Stringable, JsonSerializable, UriAccess
     }
     final protected function computeOrigin(Psr7UriInterface|UriInterface $uri, ?string $nullValue): Psr7UriInterface|UriInterface|null
     {
-        $scheme = $uri->getScheme();
-        if ('blob' !== $scheme) {
-            return match (\true) {
-                isset(static::WHATWG_SPECIAL_SCHEMES[$scheme]) => $uri->withFragment($nullValue)->withQuery($nullValue)->withPath('')->withUserInfo($nullValue),
-                default => null,
-            };
+        if ($uri instanceof Uri) {
+            $origin = $uri->getOrigin();
+            if (null === $origin) {
+                return null;
+            }
+            return Uri::tryNew($origin);
         }
-        $components = UriString::parse($uri->getPath());
-        if ($uri instanceof Psr7UriInterface) {
-            /** @var ComponentMap $components */
-            $components = array_map(fn($component) => null === $component ? '' : $component, $components);
+        $origin = Uri::tryNew($uri)?->getOrigin();
+        if (null === $origin) {
+            return null;
         }
-        return match (\true) {
-            null !== $components['scheme'] && isset(static::WHATWG_SPECIAL_SCHEMES[strtolower($components['scheme'])]) => $uri->withFragment($nullValue)->withQuery($nullValue)->withPath('')->withHost($components['host'])->withPort($components['port'])->withScheme($components['scheme'])->withUserInfo($nullValue),
-            default => null,
-        };
-    }
-    /**
-     * Normalizes a URI for comparison; this URI string representation is not suitable for usage as per RFC guidelines.
-     */
-    final protected function normalize(Psr7UriInterface|UriInterface $uri): string
-    {
-        $null = $uri instanceof Psr7UriInterface ? '' : null;
-        $path = $uri->getPath();
-        if ('/' === ($path[0] ?? '') || '' !== $uri->getScheme() . $uri->getAuthority()) {
-            $path = $this->removeDotSegments($path);
-        }
-        $query = $uri->getQuery();
-        $pairs = null === $query ? [] : explode('&', $query);
-        sort($pairs);
-        static $regexpEncodedChars = ',%(2[D|E]|3\d|4[1-9|A-F]|5[\d|AF]|6[1-9|A-F]|7[\d|E]),i';
-        $value = preg_replace_callback($regexpEncodedChars, static fn(array $matches): string => rawurldecode($matches[0]), [$path, implode('&', $pairs)]) ?? ['', $null];
-        [$path, $query] = $value + ['', $null];
-        if ($null !== $uri->getAuthority() && '' === $path) {
-            $path = '/';
-        }
-        return $uri->withHost(Uri::fromComponents(['host' => $uri->getHost()])->getHost())->withPath($path)->withQuery([] === $pairs ? $null : $query)->withFragment($null)->__toString();
+        $components = UriString::parse($origin);
+        return $uri->withFragment($nullValue)->withQuery($nullValue)->withPath('')->withScheme('localhost')->withHost((string) $components['host'])->withPort($components['port'])->withScheme((string) $components['scheme'])->withUserInfo($nullValue);
     }
     /**
      * Input URI normalization to allow Stringable and string URI.
@@ -334,76 +316,6 @@ class BaseUri implements Stringable, JsonSerializable, UriAccess
             $uriFactory instanceof UriFactoryInterface => $uriFactory->createUri((string) $uri),
             default => Uri::new($uri),
         };
-    }
-    /**
-     * Remove dot segments from the URI path as per RFC specification.
-     */
-    final protected function removeDotSegments(string $path): string
-    {
-        if (!str_contains($path, '.')) {
-            return $path;
-        }
-        $reducer = function (array $carry, string $segment): array {
-            if ('..' === $segment) {
-                array_pop($carry);
-                return $carry;
-            }
-            if (!isset(static::DOT_SEGMENTS[$segment])) {
-                $carry[] = $segment;
-            }
-            return $carry;
-        };
-        $oldSegments = explode('/', $path);
-        $newPath = implode('/', array_reduce($oldSegments, $reducer(...), []));
-        if (isset(static::DOT_SEGMENTS[end($oldSegments)])) {
-            $newPath .= '/';
-        }
-        // @codeCoverageIgnoreStart
-        // added because some PSR-7 implementations do not respect RFC3986
-        if (str_starts_with($path, '/') && !str_starts_with($newPath, '/')) {
-            return '/' . $newPath;
-        }
-        // @codeCoverageIgnoreEnd
-        return $newPath;
-    }
-    /**
-     * Resolves an URI path and query component.
-     *
-     * @return array{0:string, 1:string|null}
-     */
-    final protected function resolvePathAndQuery(Psr7UriInterface|UriInterface $uri): array
-    {
-        $targetPath = $uri->getPath();
-        $null = $uri instanceof Psr7UriInterface ? '' : null;
-        if (str_starts_with($targetPath, '/')) {
-            return [$targetPath, $uri->getQuery()];
-        }
-        if ('' === $targetPath) {
-            $targetQuery = $uri->getQuery();
-            if ($null === $targetQuery) {
-                $targetQuery = $this->uri->getQuery();
-            }
-            $targetPath = $this->uri->getPath();
-            //@codeCoverageIgnoreStart
-            //because some PSR-7 Uri implementations allow this RFC3986 forbidden construction
-            if (null !== $this->uri->getAuthority() && !str_starts_with($targetPath, '/')) {
-                $targetPath = '/' . $targetPath;
-            }
-            //@codeCoverageIgnoreEnd
-            return [$targetPath, $targetQuery];
-        }
-        $basePath = $this->uri->getPath();
-        if (null !== $this->uri->getAuthority() && '' === $basePath) {
-            $targetPath = '/' . $targetPath;
-        }
-        if ('' !== $basePath) {
-            $segments = explode('/', $basePath);
-            array_pop($segments);
-            if ([] !== $segments) {
-                $targetPath = implode('/', $segments) . '/' . $targetPath;
-            }
-        }
-        return [$targetPath, $uri->getQuery()];
     }
     /**
      * Tells whether the component value from both URI object equals.
@@ -505,8 +417,103 @@ class BaseUri implements Stringable, JsonSerializable, UriAccess
     final protected static function formatPathWithEmptyBaseQuery(string $path): string
     {
         $targetSegments = static::getSegments($path);
-        /** @var string $basename */
-        $basename = end($targetSegments);
+        $basename = $targetSegments[array_key_last($targetSegments)];
         return '' === $basename ? './' : $basename;
+    }
+    /**
+     * Normalizes a URI for comparison; this URI string representation is not suitable for usage as per RFC guidelines.
+     *
+     * @deprecated since version 7.6.0
+     *
+     * @codeCoverageIgnore
+     */
+    #[Deprecated(message: 'no longer used by the isSameDocument method', since: 'league/uri-interfaces:7.6.0')]
+    final protected function normalize(Psr7UriInterface|UriInterface $uri): string
+    {
+        $newUri = $uri->withScheme($uri instanceof Psr7UriInterface ? '' : null);
+        if ('' === $newUri->__toString()) {
+            return '';
+        }
+        return UriString::normalize($newUri);
+    }
+    /**
+     * Remove dot segments from the URI path as per RFC specification.
+     *
+     * @deprecated since version 7.6.0
+     *
+     * @codeCoverageIgnore
+     */
+    #[Deprecated(message: 'no longer used by the isSameDocument method', since: 'league/uri-interfaces:7.6.0')]
+    final protected function removeDotSegments(string $path): string
+    {
+        if (!str_contains($path, '.')) {
+            return $path;
+        }
+        $reducer = function (array $carry, string $segment): array {
+            if ('..' === $segment) {
+                array_pop($carry);
+                return $carry;
+            }
+            if (!isset(static::DOT_SEGMENTS[$segment])) {
+                $carry[] = $segment;
+            }
+            return $carry;
+        };
+        $oldSegments = explode('/', $path);
+        $newPath = implode('/', array_reduce($oldSegments, $reducer(...), []));
+        if (isset(static::DOT_SEGMENTS[$oldSegments[array_key_last($oldSegments)]])) {
+            $newPath .= '/';
+        }
+        // @codeCoverageIgnoreStart
+        // added because some PSR-7 implementations do not respect RFC3986
+        if (str_starts_with($path, '/') && !str_starts_with($newPath, '/')) {
+            return '/' . $newPath;
+        }
+        // @codeCoverageIgnoreEnd
+        return $newPath;
+    }
+    /**
+     * Resolves an URI path and query component.
+     *
+     * @return array{0:string, 1:string|null}
+     *
+     * @deprecated since version 7.6.0
+     *
+     * @codeCoverageIgnore
+     */
+    #[Deprecated(message: 'no longer used by the isSameDocument method', since: 'league/uri-interfaces:7.6.0')]
+    final protected function resolvePathAndQuery(Psr7UriInterface|UriInterface $uri): array
+    {
+        $targetPath = $uri->getPath();
+        $null = $uri instanceof Psr7UriInterface ? '' : null;
+        if (str_starts_with($targetPath, '/')) {
+            return [$targetPath, $uri->getQuery()];
+        }
+        if ('' === $targetPath) {
+            $targetQuery = $uri->getQuery();
+            if ($null === $targetQuery) {
+                $targetQuery = $this->uri->getQuery();
+            }
+            $targetPath = $this->uri->getPath();
+            //@codeCoverageIgnoreStart
+            //because some PSR-7 Uri implementations allow this RFC3986 forbidden construction
+            if (null !== $this->uri->getAuthority() && !str_starts_with($targetPath, '/')) {
+                $targetPath = '/' . $targetPath;
+            }
+            //@codeCoverageIgnoreEnd
+            return [$targetPath, $targetQuery];
+        }
+        $basePath = $this->uri->getPath();
+        if (null !== $this->uri->getAuthority() && '' === $basePath) {
+            $targetPath = '/' . $targetPath;
+        }
+        if ('' !== $basePath) {
+            $segments = explode('/', $basePath);
+            array_pop($segments);
+            if ([] !== $segments) {
+                $targetPath = implode('/', $segments) . '/' . $targetPath;
+            }
+        }
+        return [$targetPath, $uri->getQuery()];
     }
 }

@@ -11,9 +11,13 @@
  */
 namespace BlockstudioVendor\ScssPhp\ScssPhp;
 
+use BlockstudioVendor\ScssPhp\ScssPhp\Collection\Map;
 use BlockstudioVendor\ScssPhp\ScssPhp\Logger\QuietLogger;
 use BlockstudioVendor\ScssPhp\ScssPhp\Node\Number;
+use BlockstudioVendor\ScssPhp\ScssPhp\Value\ListSeparator;
 use BlockstudioVendor\ScssPhp\ScssPhp\Value\SassBoolean;
+use BlockstudioVendor\ScssPhp\ScssPhp\Value\SassList;
+use BlockstudioVendor\ScssPhp\ScssPhp\Value\SassMap;
 use BlockstudioVendor\ScssPhp\ScssPhp\Value\SassNull;
 use BlockstudioVendor\ScssPhp\ScssPhp\Value\SassNumber;
 use BlockstudioVendor\ScssPhp\ScssPhp\Value\SassString;
@@ -66,10 +70,6 @@ SCSS;
         if ($value instanceof Number) {
             return SassNumber::withUnits($value->getDimension(), $value->getNumeratorUnits(), $value->getDenominatorUnits());
         }
-        if (is_array($value) && isset($value[0]) && \in_array($value[0], [Type::T_NULL, Type::T_COLOR, Type::T_KEYWORD, Type::T_LIST, Type::T_MAP, Type::T_STRING])) {
-            // TODO convert legacy value
-            throw new \LogicException('Not implemented');
-        }
         if ($value === null) {
             return SassNull::create();
         }
@@ -88,6 +88,21 @@ SCSS;
         if (\is_string($value)) {
             return new SassString($value);
         }
-        throw new \InvalidArgumentException(sprintf('Cannot convert the value of type "%s" to a Sass value.', gettype($value)));
+        if (\is_array($value)) {
+            if (array_is_list($value)) {
+                $result = [];
+                foreach ($value as $val) {
+                    $result[] = self::fromPhp($val);
+                }
+                return new SassList($result, \count($result) > 0 ? ListSeparator::COMMA : ListSeparator::UNDECIDED);
+            }
+            /** @var Map<Value> $map */
+            $map = new Map();
+            foreach ($value as $key => $val) {
+                $map->put(new SassString($key), self::fromPhp($val));
+            }
+            return SassMap::create($map);
+        }
+        throw new \InvalidArgumentException(sprintf('Cannot convert the value of type "%s" to a Sass value.', get_debug_type($value)));
     }
 }

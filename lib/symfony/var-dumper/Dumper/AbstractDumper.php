@@ -158,15 +158,35 @@ abstract class AbstractDumper implements DataDumperInterface, DumperInterface
         if (null === $s || preg_match('//u', $s)) {
             return $s;
         }
-        if (!\function_exists('iconv') && !\function_exists('BlockstudioVendor\iconv')) {
-            throw new \RuntimeException('Unable to convert a non-UTF-8 string to UTF-8: required function iconv() does not exist. You should install ext-iconv or symfony/polyfill-iconv.');
+        if (\function_exists('iconv')) {
+            if (\false !== $c = @iconv($this->charset, 'UTF-8', $s)) {
+                return $c;
+            }
+            if ('CP1252' !== $this->charset && \false !== $c = @iconv('CP1252', 'UTF-8', $s)) {
+                return $c;
+            }
         }
-        if (\false !== $c = @iconv($this->charset, 'UTF-8', $s)) {
-            return $c;
+        $s .= $s;
+        $len = \strlen($s);
+        $mapCp1252 = \false;
+        for ($i = $len >> 1, $j = 0; $i < $len; ++$i, ++$j) {
+            if ($s[$i] < "\x80") {
+                $s[$j] = $s[$i];
+            } elseif ($s[$i] < "\xc0") {
+                $s[$j] = "\xc2";
+                $s[++$j] = $s[$i];
+                if ($s[$i] < "\xa0") {
+                    $mapCp1252 = \true;
+                }
+            } else {
+                $s[$j] = "\xc3";
+                $s[++$j] = \chr(\ord($s[$i]) - 64);
+            }
         }
-        if ('CP1252' !== $this->charset && \false !== $c = @iconv('CP1252', 'UTF-8', $s)) {
-            return $c;
+        $s = substr($s, 0, $j);
+        if (!$mapCp1252) {
+            return $s;
         }
-        return iconv('CP850', 'UTF-8', $s);
+        return strtr($s, ["" => '€', "" => '‚', "" => 'ƒ', "" => '„', "" => '…', "" => '†', "" => '‡', "" => 'ˆ', "" => '‰', "" => 'Š', "" => '‹', "" => 'Œ', "" => 'Ž', "" => '‘', "" => '’', "" => '“', "" => '”', "" => '•', "" => '–', "" => '—', "" => '˜', "" => '™', "" => 'š', "" => '›', "" => 'œ', "" => 'ž']);
     }
 }

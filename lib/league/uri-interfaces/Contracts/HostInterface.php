@@ -11,6 +11,9 @@
 declare (strict_types=1);
 namespace BlockstudioVendor\League\Uri\Contracts;
 
+/**
+ * @method string|null encoded() returns RFC3986 encoded host
+ */
 interface HostInterface extends UriComponentInterface
 {
     /**

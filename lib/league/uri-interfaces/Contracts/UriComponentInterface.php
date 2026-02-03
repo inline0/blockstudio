@@ -13,6 +13,10 @@ namespace BlockstudioVendor\League\Uri\Contracts;
 
 use JsonSerializable;
 use Stringable;
+/**
+ * @method static when(callable|bool $condition, callable $onSuccess, ?callable $onFail = null) conditionally return a new instance
+ * @method bool equals(mixed $value) tells whether the submitted value is equal to the current instance value
+ */
 interface UriComponentInterface extends JsonSerializable, Stringable
 {
     /**
@@ -32,7 +36,7 @@ interface UriComponentInterface extends JsonSerializable, Stringable
      * but MUST NOT double-encode any characters. To determine what characters
      * to encode, please refer to RFC 3986, Sections 2 and 3.
      *
-     * If the instance is not defined an empty string is returned
+     * If the instance is not defined, an empty string is returned
      */
     public function toString(): string;
     /**
@@ -42,7 +46,7 @@ interface UriComponentInterface extends JsonSerializable, Stringable
      * but MUST NOT double-encode any characters. To determine what characters
      * to encode, please refer to RFC 3986, Sections 2 and 3.
      *
-     * If the instance is not defined an empty string is returned
+     * If the instance is not defined, an empty string is returned
      */
     public function __toString(): string;
     /**
@@ -52,7 +56,7 @@ interface UriComponentInterface extends JsonSerializable, Stringable
      * but MUST NOT double-encode any characters. To determine what characters
      * to encode, please refer to RFC 3986 or RFC 1738.
      *
-     * If the instance is not defined null is returned
+     * If the instance is not defined, null is returned
      */
     public function jsonSerialize(): ?string;
     /**
@@ -62,7 +66,7 @@ interface UriComponentInterface extends JsonSerializable, Stringable
      * characters. To determine what characters to encode, please refer to RFC 3986,
      * Sections 2 and 3.
      *
-     * If the instance is not defined an empty string is returned
+     * If the instance is not defined, an empty string is returned
      */
     public function getUriComponent(): string;
 }

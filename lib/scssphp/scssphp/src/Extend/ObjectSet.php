@@ -14,8 +14,10 @@ namespace BlockstudioVendor\ScssPhp\ScssPhp\Extend;
 /**
  * @template T of object
  * @template-implements \IteratorAggregate<int, T>
+ *
+ * @internal
  */
-class ObjectSet implements \IteratorAggregate
+final class ObjectSet implements \IteratorAggregate
 {
     /**
      * @var \SplObjectStorage<T, mixed>
@@ -30,14 +32,14 @@ class ObjectSet implements \IteratorAggregate
      */
     public function contains(object $value): bool
     {
-        return $this->storage->contains($value);
+        return $this->storage->offsetExists($value);
     }
     /**
      * @param T $value
      */
     public function add(object $value): void
     {
-        $this->storage->attach($value);
+        $this->storage->offsetSet($value);
     }
     /**
      * @param ObjectSet<T> $set

@@ -11,6 +11,9 @@
  */
 namespace BlockstudioVendor\ScssPhp\ScssPhp\Ast\Css;
 
+/**
+ * @internal
+ */
 enum MediaQuerySingletonMergeResult implements \BlockstudioVendor\ScssPhp\ScssPhp\Ast\Css\MediaQueryMergeResult
 {
     case empty;

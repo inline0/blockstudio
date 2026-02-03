@@ -20,6 +20,9 @@ return [
         Finder::create()
             ->files()
             ->in('vendor/symfony'),
+        Finder::create()
+            ->files()
+            ->in('vendor/tailwindphp'),
     ],
 
     'patchers' => [

@@ -34,8 +34,6 @@ class VarCloner extends AbstractCloner
         // Keep a ref to objects to ensure their handle cannot be reused while cloning
         $resRefs = [];
         // Map of original resource handles to their stub object counterpart
-        $values = [];
-        // Map of stub objects' ids to original values
         $maxItems = $this->maxItems;
         $maxString = $this->maxString;
         $minDepth = $this->minDepth;
@@ -45,8 +43,6 @@ class VarCloner extends AbstractCloner
         // Final $queue index for current tree depth
         $minimumDepthReached = 0 === $minDepth;
         // Becomes true when minimum tree depth has been reached
-        $cookie = (object) [];
-        // Unique object used to detect hard references
         $a = null;
         // Array cast for nested structures
         $stub = null;
@@ -63,7 +59,7 @@ class VarCloner extends AbstractCloner
                     $minimumDepthReached = \true;
                 }
             }
-            $refs = $vals = $queue[$i];
+            $vals = $queue[$i];
             foreach ($vals as $k => $v) {
                 // $v is the original value or a stub object in case of hard references
                 $zvalRef = ($r = \ReflectionReference::fromArrayElement($vals, $k)) ? $r->getId() : null;
@@ -216,9 +212,6 @@ class VarCloner extends AbstractCloner
                 }
             }
             $queue[$i] = $vals;
-        }
-        foreach ($values as $h => $v) {
-            $hardRefs[$h] = $v;
         }
         return $queue;
     }

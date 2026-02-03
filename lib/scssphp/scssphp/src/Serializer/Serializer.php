@@ -12,11 +12,14 @@
 namespace BlockstudioVendor\ScssPhp\ScssPhp\Serializer;
 
 use BlockstudioVendor\ScssPhp\ScssPhp\Ast\Css\CssNode;
+use BlockstudioVendor\ScssPhp\ScssPhp\Ast\Css\CssParentNode;
 use BlockstudioVendor\ScssPhp\ScssPhp\Ast\Selector\Selector;
 use BlockstudioVendor\ScssPhp\ScssPhp\Exception\SassScriptException;
 use BlockstudioVendor\ScssPhp\ScssPhp\Logger\LoggerInterface;
 use BlockstudioVendor\ScssPhp\ScssPhp\OutputStyle;
 use BlockstudioVendor\ScssPhp\ScssPhp\Value\Value;
+use BlockstudioVendor\ScssPhp\ScssPhp\Visitor\CssVisitor;
+use BlockstudioVendor\ScssPhp\ScssPhp\Visitor\ModifiableCssVisitor;
 /**
  * @internal
  */
@@ -49,6 +52,9 @@ final class Serializer
      */
     public static function serializeValue(Value $value, bool $inspect = \false, bool $quote = \true): string
     {
+        // Force loading the CssParentNode and CssVisitor before using the visitor because of a weird PHP behavior.
+        class_exists(CssParentNode::class);
+        class_exists(CssVisitor::class);
         $visitor = new SerializeVisitor($inspect, $quote);
         $value->accept($visitor);
         return (string) $visitor->getBuffer();
@@ -63,6 +69,9 @@ final class Serializer
      */
     public static function serializeSelector(Selector $selector, bool $inspect = \false): string
     {
+        // Force loading the CssParentNode and CssVisitor before using the visitor because of a weird PHP behavior.
+        class_exists(CssParentNode::class);
+        class_exists(CssVisitor::class);
         $visitor = new SerializeVisitor($inspect);
         $selector->accept($visitor);
         return (string) $visitor->getBuffer();

@@ -15,6 +15,8 @@ use BlockstudioVendor\Symfony\Component\Console\Command\Command;
 use BlockstudioVendor\Symfony\Component\Console\Exception\RunCommandFailedException;
 use BlockstudioVendor\Symfony\Component\Console\Input\StringInput;
 use BlockstudioVendor\Symfony\Component\Console\Output\BufferedOutput;
+use BlockstudioVendor\Symfony\Component\Messenger\Exception\RecoverableExceptionInterface;
+use BlockstudioVendor\Symfony\Component\Messenger\Exception\UnrecoverableExceptionInterface;
 /**
  * @author Kevin Bond <kevinbond@gmail.com>
  */
@@ -30,6 +32,8 @@ final class RunCommandMessageHandler
         $this->application->setCatchExceptions($message->catchExceptions);
         try {
             $exitCode = $this->application->run($input, $output);
+        } catch (UnrecoverableExceptionInterface|RecoverableExceptionInterface $e) {
+            throw $e;
         } catch (\Throwable $e) {
             throw new RunCommandFailedException($e, new RunCommandContext($message, Command::FAILURE, $output->fetch()));
         }

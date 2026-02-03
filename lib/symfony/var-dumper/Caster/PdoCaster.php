@@ -17,6 +17,8 @@ use BlockstudioVendor\Symfony\Component\VarDumper\Cloner\Stub;
  * @author Nicolas Grekas <p@tchwork.com>
  *
  * @final
+ *
+ * @internal since Symfony 7.3
  */
 class PdoCaster
 {

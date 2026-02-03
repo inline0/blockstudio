@@ -12,6 +12,9 @@ declare (strict_types=1);
 namespace BlockstudioVendor\League\Uri\Contracts;
 
 use BlockstudioVendor\Psr\Http\Message\UriInterface as Psr7UriInterface;
+/**
+ * @deprecated since version 7.6.0
+ */
 interface UriAccess
 {
     public function getUri(): UriInterface|Psr7UriInterface;

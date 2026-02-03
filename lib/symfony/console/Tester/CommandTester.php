@@ -21,8 +21,10 @@ use BlockstudioVendor\Symfony\Component\Console\Input\ArrayInput;
 class CommandTester
 {
     use TesterTrait;
-    public function __construct(private Command $command)
+    private Command $command;
+    public function __construct(callable|Command $command)
     {
+        $this->command = $command instanceof Command ? $command : new Command(null, $command);
     }
     /**
      * Executes the command.

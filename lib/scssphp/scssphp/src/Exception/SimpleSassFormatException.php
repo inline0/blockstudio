@@ -13,6 +13,7 @@ namespace BlockstudioVendor\ScssPhp\ScssPhp\Exception;
 
 use BlockstudioVendor\ScssPhp\ScssPhp\StackTrace\Trace;
 use BlockstudioVendor\ScssPhp\ScssPhp\Util;
+use BlockstudioVendor\ScssPhp\ScssPhp\Util\ErrorUtil;
 use BlockstudioVendor\SourceSpan\FileSpan;
 /**
  * @internal
@@ -25,7 +26,7 @@ final class SimpleSassFormatException extends \Exception implements SassFormatEx
     {
         $this->originalMessage = $message;
         $this->span = $span;
-        parent::__construct($span->message($message), 0, $previous);
+        parent::__construct(ErrorUtil::formatErrorMessage($message, $span, $this->getSassTrace()), 0, $previous);
     }
     /**
      * Gets the original message without the location info in it.

@@ -13,6 +13,7 @@ namespace BlockstudioVendor\ScssPhp\ScssPhp\Ast\Selector;
 
 use BlockstudioVendor\League\Uri\Contracts\UriInterface;
 use BlockstudioVendor\ScssPhp\ScssPhp\Ast\Css\CssValue;
+use BlockstudioVendor\ScssPhp\ScssPhp\Exception\MultiSpanSassException;
 use BlockstudioVendor\ScssPhp\ScssPhp\Exception\SassFormatException;
 use BlockstudioVendor\ScssPhp\ScssPhp\Exception\SassScriptException;
 use BlockstudioVendor\ScssPhp\ScssPhp\Exception\SimpleSassException;
@@ -22,6 +23,7 @@ use BlockstudioVendor\ScssPhp\ScssPhp\Parser\InterpolationMap;
 use BlockstudioVendor\ScssPhp\ScssPhp\Parser\SelectorParser;
 use BlockstudioVendor\ScssPhp\ScssPhp\Util\EquatableUtil;
 use BlockstudioVendor\ScssPhp\ScssPhp\Util\ListUtil;
+use BlockstudioVendor\ScssPhp\ScssPhp\Util\SpanUtil;
 use BlockstudioVendor\ScssPhp\ScssPhp\Value\ListSeparator;
 use BlockstudioVendor\ScssPhp\ScssPhp\Value\SassList;
 use BlockstudioVendor\ScssPhp\ScssPhp\Value\SassString;
@@ -257,7 +259,7 @@ final class SelectorList extends Selector
         return array_map(function (ComplexSelector $complex) use ($parentSelector, $resolvedSimples, $component) {
             $lastComponent = $complex->getLastComponent();
             if (\count($lastComponent->getCombinators()) !== 0) {
-                throw new SimpleSassException("Parent \"{$complex}\" is incompatible with this selector.", $parentSelector->getSpan());
+                throw new MultiSpanSassException("Selector \"{$complex}\" can't be used as a parent in a compound selector.", SpanUtil::trimRight($lastComponent->getSpan()), 'outer selector', ['parent selector' => $parentSelector->getSpan()]);
             }
             $suffix = $parentSelector->getSuffix();
             $lastSimples = $lastComponent->getSelector()->getComponents();

@@ -39,6 +39,8 @@ class StringScanner
     private readonly string $string;
     private int $position = 0;
     private readonly SourceFile $sourceFile;
+    private ?int $lastMatchStart = null;
+    private ?int $lastMatchPosition = null;
     public function __construct(string $content, ?UriInterface $sourceUrl = null)
     {
         $this->string = $content;
@@ -55,6 +57,7 @@ class StringScanner
     public function setPosition(int $position): void
     {
         $this->position = $position;
+        $this->lastMatchStart = null;
     }
     public function spanFrom(int $start, ?int $end = null): FileSpan
     {
@@ -140,6 +143,7 @@ class StringScanner
             return \false;
         }
         $this->position += \strlen($string);
+        $this->lastMatchPosition = $this->position;
         return \true;
     }
     /**
@@ -152,7 +156,12 @@ class StringScanner
         if ($this->position - 1 + \strlen($string) >= \strlen($this->string)) {
             return \false;
         }
-        return substr($this->string, $this->position, \strlen($string)) === $string;
+        if (substr($this->string, $this->position, \strlen($string)) === $string) {
+            $this->lastMatchStart = $this->position;
+            $this->lastMatchPosition = $this->position;
+            return \true;
+        }
+        return \false;
     }
     /**
      * If the next character in the string is $character, consumes it.
@@ -247,10 +256,24 @@ class StringScanner
      */
     public function error(string $message, ?int $position = null, ?int $length = null): never
     {
+        if ($position === null && $length === null && $this->getLastMatchStart() !== null) {
+            \assert($this->lastMatchStart !== null);
+            $position = $this->lastMatchStart;
+            $length = $this->position - $position;
+        }
         $position ??= $this->position;
         $length ??= 0;
         $span = $this->sourceFile->span($position, $position + $length);
         throw new FormatException($message, $span);
+    }
+    private function getLastMatchStart(): ?int
+    {
+        // Lazily unset $this->lastMatchStart so that we avoid extra assignments in
+        // character-by-character methods that are used in core loops.
+        if ($this->lastMatchPosition !== $this->position) {
+            $this->lastMatchStart = null;
+        }
+        return $this->lastMatchStart;
     }
     /**
      * @throws FormatException

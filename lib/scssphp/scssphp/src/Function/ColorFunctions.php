@@ -585,7 +585,7 @@ TXT
             return self::functionString($name, [$originalChannels]);
         }
         if (\count($list) > 3) {
-            throw new SassScriptException(sprintf('Only 3 elements allowed, but %s were passed', \count($list)));
+            throw new SassScriptException(sprintf('Only 3 elements allowed, but %s were passed.', \count($list)));
         }
         if (\count($list) < 3) {
             if (IterableUtil::any($list, fn(Value $value) => $value->isVar()) || \count($list) > 0 && self::isVarSlash($list[0])) {

@@ -145,7 +145,7 @@ class BuiltInCallable implements SassCallable
             }
             $mismatchDistance = \count($overload[0]->getArguments()) - $positional;
             if ($minMismatchDistance !== null) {
-                if (abs($mismatchDistance) > $minMismatchDistance) {
+                if (abs($mismatchDistance) > abs($minMismatchDistance)) {
                     continue;
                 }
                 // If two overloads have the same mismatch distance, favor the overload
@@ -161,5 +161,12 @@ class BuiltInCallable implements SassCallable
             return $fuzzyMatch;
         }
         throw new \LogicException("BuiltInCallable {$this->name} may not have empty overloads.");
+    }
+    /**
+     * Returns a copy of this callable with the given $name.
+     */
+    public function withName(string $name): BuiltInCallable
+    {
+        return new BuiltInCallable($name, $this->overloads, $this->acceptsContent);
     }
 }

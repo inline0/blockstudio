@@ -19,6 +19,10 @@ interface SignalableCommandInterface
 {
     /**
      * Returns the list of signals to subscribe.
+     *
+     * @return list<\SIG*>
+     *
+     * @see https://php.net/pcntl.constants for signals
      */
     public function getSubscribedSignals(): array;
     /**

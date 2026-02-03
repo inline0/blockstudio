@@ -22,8 +22,11 @@ use BlockstudioVendor\SourceSpan\SourceSpan;
  */
 final class StreamLogger implements LoggerInterface
 {
+    /**
+     * @var resource
+     */
     private $stream;
-    private $closeOnDestruct;
+    private bool $closeOnDestruct;
     /**
      * @param resource $stream          A stream resource
      * @param bool     $closeOnDestruct If true, takes ownership of the stream and close it on destruct to avoid leaks.

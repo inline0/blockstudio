@@ -34,7 +34,7 @@ You can also display the commands for a specific namespace:
 
   <info>%command.full_name% test</info>
 
-You can also output the information in other formats by using the <comment>--format</comment> option:
+You can also output the information in other formats by using the <info>--format</info> option:
 
   <info>%command.full_name% --format=xml</info>
 

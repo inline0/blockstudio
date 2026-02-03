@@ -12,7 +12,10 @@
 namespace BlockstudioVendor\ScssPhp\ScssPhp\Parser;
 
 use BlockstudioVendor\SourceSpan\FileSpan;
-class MultiSourceFormatException extends FormatException
+/**
+ * @internal
+ */
+final class MultiSourceFormatException extends FormatException
 {
     /**
      * {@see MultiSpanSassException::$primaryLabel}

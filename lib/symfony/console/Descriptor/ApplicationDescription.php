@@ -67,7 +67,6 @@ class ApplicationDescription
         $all = $this->application->all($this->namespace ? $this->application->findNamespace($this->namespace) : null);
         foreach ($this->sortCommands($all) as $namespace => $commands) {
             $names = [];
-            /** @var Command $command */
             foreach ($commands as $name => $command) {
                 if (!$command->getName() || !$this->showHidden && $command->isHidden()) {
                     continue;
@@ -82,6 +81,9 @@ class ApplicationDescription
             $this->namespaces[$namespace] = ['id' => $namespace, 'commands' => $names];
         }
     }
+    /**
+     * @return array<string, array<string, Command>>
+     */
     private function sortCommands(array $commands): array
     {
         $namespacedCommands = [];

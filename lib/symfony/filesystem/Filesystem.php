@@ -195,7 +195,7 @@ class Filesystem
      *
      * This method always throws on Windows, as the underlying PHP function is not supported.
      *
-     * @see https://www.php.net/chown
+     * @see https://php.net/chown
      *
      * @param string|int $user      A user name or number
      * @param bool       $recursive Whether change the owner recursively or not
@@ -222,7 +222,7 @@ class Filesystem
      *
      * This method always throws on Windows, as the underlying PHP function is not supported.
      *
-     * @see https://www.php.net/chgrp
+     * @see https://php.net/chgrp
      *
      * @param string|int $group     A group name or number
      * @param bool       $recursive Whether change the group recursively or not
@@ -490,11 +490,11 @@ class Filesystem
         }
     }
     /**
-     * Returns whether the file path is an absolute path.
+     * Returns whether the given path is absolute.
      */
     public function isAbsolutePath(string $file): bool
     {
-        return '' !== $file && (strspn($file, '/\\', 0, 1) || \strlen($file) > 3 && ctype_alpha($file[0]) && ':' === $file[1] && strspn($file, '/\\', 2, 1) || null !== parse_url($file, \PHP_URL_SCHEME));
+        return Path::isAbsolute($file);
     }
     /**
      * Creates a temporary file with support for custom stream wrappers.

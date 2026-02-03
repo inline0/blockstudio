@@ -11,6 +11,7 @@
 declare (strict_types=1);
 namespace BlockstudioVendor\League\Uri\Exceptions;
 
+use BackedEnum;
 use BlockstudioVendor\League\Uri\Idna\Error;
 use BlockstudioVendor\League\Uri\Idna\Result;
 use Stringable;
@@ -20,9 +21,12 @@ final class ConversionFailed extends SyntaxError
     {
         parent::__construct($message);
     }
-    public static function dueToIdnError(Stringable|string $host, Result $result): self
+    public static function dueToIdnError(BackedEnum|Stringable|string $host, Result $result): self
     {
         $reasons = array_map(fn(Error $error): string => $error->description(), $result->errors());
+        if ($host instanceof BackedEnum) {
+            $host = (string) $host->value;
+        }
         return new self('Host `' . $host . '` is invalid: ' . implode('; ', $reasons) . '.', (string) $host, $result);
     }
     public function getHost(): string

@@ -11,6 +11,7 @@
 declare (strict_types=1);
 namespace BlockstudioVendor\League\Uri\UriTemplate;
 
+use BackedEnum;
 use Deprecated;
 use BlockstudioVendor\League\Uri\Exceptions\SyntaxError;
 use Stringable;
@@ -20,8 +21,8 @@ use function array_reduce;
 use function array_unique;
 use function preg_match_all;
 use function preg_replace;
-use function str_contains;
 use function str_replace;
+use function strpbrk;
 use const PREG_SET_ORDER;
 /**
  * @internal The class exposes the internal representation of a Template and its usage
@@ -45,14 +46,15 @@ final class Template implements Stringable
      * @throws SyntaxError if the template contains invalid expressions
      * @throws SyntaxError if the template contains invalid variable specification
      */
-    public static function new(Stringable|string $template): self
+    public static function new(BackedEnum|Stringable|string $template): self
     {
+        if ($template instanceof BackedEnum) {
+            $template = $template->value;
+        }
         $template = (string) $template;
         /** @var string $remainder */
         $remainder = preg_replace(self::REGEXP_EXPRESSION_DETECTOR, '', $template);
-        if (str_contains($remainder, '{') || str_contains($remainder, '}')) {
-            throw new SyntaxError('The template "' . $template . '" contains invalid expressions.');
-        }
+        \false === strpbrk($remainder, '{}') || throw new SyntaxError('The template "' . $template . '" contains invalid expressions.');
         preg_match_all(self::REGEXP_EXPRESSION_DETECTOR, $template, $founds, PREG_SET_ORDER);
         return new self($template, ...array_values(array_reduce($founds, function (array $carry, array $found): array {
             if (!isset($carry[$found['expression']])) {

@@ -792,16 +792,16 @@ EOHTML
             }
             $label = esc(substr($value, -$attr['ellipsis']));
             $dumpTitle = $v . "\n" . $dumpTitle;
-            $v = sprintf('<span class="%s">%s</span>', $ellipsisClass, substr($v, 0, -\strlen($label)));
+            $v = \sprintf('<span class="%s">%s</span>', $ellipsisClass, substr($v, 0, -\strlen($label)));
             if (!empty($attr['ellipsis-tail'])) {
                 $tail = \strlen(esc(substr($value, -$attr['ellipsis'], $attr['ellipsis-tail'])));
-                $v .= sprintf('<span class="%s">%s</span><span class="sf-dump-ellipsis-tail">%s</span>', $ellipsisClass, substr($label, 0, $tail), substr($label, $tail));
+                $v .= \sprintf('<span class="%s">%s</span><span class="sf-dump-ellipsis-tail">%s</span>', $ellipsisClass, substr($label, 0, $tail), substr($label, $tail));
             } else {
-                $v .= sprintf('<span class="sf-dump-ellipsis-tail">%s</span>', $label);
+                $v .= \sprintf('<span class="sf-dump-ellipsis-tail">%s</span>', $label);
             }
         }
         $map = static::$controlCharsMap;
-        $v = sprintf('<span class=%s%s%1$s%s>%s</span>', 1 === count($dumpClasses) ? '' : '"', implode(' ', $dumpClasses), $dumpTitle ? ' title="' . $dumpTitle . '"' : '', preg_replace_callback(static::$controlCharsRx, function ($c) use ($map) {
+        $v = \sprintf('<span class=%s%s%1$s%s>%s</span>', 1 === \count($dumpClasses) ? '' : '"', implode(' ', $dumpClasses), $dumpTitle ? ' title="' . $dumpTitle . '"' : '', preg_replace_callback(static::$controlCharsRx, function ($c) use ($map) {
             $s = $b = '<span class="sf-dump-default';
             $c = $c[$i = 0];
             if ($ns = "\r" === $c[$i] || "\n" === $c[$i]) {

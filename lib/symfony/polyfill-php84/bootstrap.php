@@ -86,3 +86,20 @@ if (\extension_loaded('mbstring')) {
         }
     }
 }
+if (\extension_loaded('bcmath')) {
+    if (!\function_exists('bcdivmod') && !\function_exists('BlockstudioVendor\bcdivmod')) {
+        function bcdivmod(string $num1, string $num2, ?int $scale = null): ?array
+        {
+            return p\Php84::bcdivmod($num1, $num2, $scale);
+        }
+    }
+}
+if (\PHP_VERSION_ID >= 80200) {
+    return require __DIR__ . '/bootstrap82.php';
+}
+if (\extension_loaded('intl') && (!\function_exists('grapheme_str_split') && !\function_exists('BlockstudioVendor\grapheme_str_split'))) {
+    function grapheme_str_split(string $string, int $length = 1)
+    {
+        return p\Php84::grapheme_str_split($string, $length);
+    }
+}

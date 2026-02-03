@@ -113,7 +113,7 @@ abstract class ModifiableCssNode implements CssNode
         $this->indexInParent = null;
     }
     /**
-     * @@internal
+     * @internal
      */
     protected function resetParentReferences(): void
     {

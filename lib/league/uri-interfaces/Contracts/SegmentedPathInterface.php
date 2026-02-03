@@ -61,7 +61,7 @@ interface SegmentedPathInterface extends Countable, IteratorAggregate, PathInter
     /**
      * Appends a segment to the path.
      */
-    public function append(Stringable|string $segment): self;
+    public function append(Stringable|string $path): self;
     /**
      * Extracts a slice of $length elements starting at position $offset from the host.
      *
@@ -74,7 +74,7 @@ interface SegmentedPathInterface extends Countable, IteratorAggregate, PathInter
     /**
      * Prepends a segment to the path.
      */
-    public function prepend(Stringable|string $segment): self;
+    public function prepend(Stringable|string $path): self;
     /**
      * Returns an instance with the modified segment.
      *

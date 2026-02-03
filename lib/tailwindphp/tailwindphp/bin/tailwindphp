@@ -1,0 +1,42 @@
+#!/usr/bin/env php
+<?php 
+/**
+ * TailwindPHP CLI
+ *
+ * Generate Tailwind CSS with PHP - no Node.js required.
+ *
+ * A 1:1 port of @tailwindcss/cli - same options, same behavior.
+ *
+ * Usage:
+ *   tailwindphp [--input input.css] [--output output.css] [--watch] [options]
+ *
+ * @see https://github.com/dnnsjsk/tailwindphp
+ * @credits Tailwind Labs (https://tailwindcss.com) for the original @tailwindcss/cli
+ */
+declare (strict_types=1);
+namespace BlockstudioVendor;
+
+// Find autoloader
+$autoloaderPaths = [
+    // Installed as a dependency (vendor/dnnsjsk/tailwindphp/bin/tailwindphp)
+    __DIR__ . '/../../../autoload.php',
+    // Development (bin/tailwindphp from project root)
+    __DIR__ . '/../vendor/autoload.php',
+];
+$autoloaderFound = \false;
+foreach ($autoloaderPaths as $path) {
+    if (\file_exists($path)) {
+        require_once $path;
+        $autoloaderFound = \true;
+        break;
+    }
+}
+if (!$autoloaderFound) {
+    \fwrite(\STDERR, "Error: Could not find Composer autoloader.\n");
+    \fwrite(\STDERR, "Please run 'composer install' first.\n");
+    exit(1);
+}
+// Run the CLI application
+$app = new TailwindPHP\Cli\Application();
+$exitCode = $app->run();
+exit($exitCode);

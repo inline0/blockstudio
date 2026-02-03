@@ -20,6 +20,9 @@ use BlockstudioVendor\Symfony\Component\Console\Helper\SymfonyQuestionHelper;
 use BlockstudioVendor\Symfony\Component\Console\Helper\Table;
 use BlockstudioVendor\Symfony\Component\Console\Helper\TableCell;
 use BlockstudioVendor\Symfony\Component\Console\Helper\TableSeparator;
+use BlockstudioVendor\Symfony\Component\Console\Helper\TreeHelper;
+use BlockstudioVendor\Symfony\Component\Console\Helper\TreeNode;
+use BlockstudioVendor\Symfony\Component\Console\Helper\TreeStyle;
 use BlockstudioVendor\Symfony\Component\Console\Input\InputInterface;
 use BlockstudioVendor\Symfony\Component\Console\Output\ConsoleOutputInterface;
 use BlockstudioVendor\Symfony\Component\Console\Output\ConsoleSectionOutput;
@@ -294,6 +297,21 @@ class SymfonyStyle extends OutputStyle
     private function getProgressBar(): ProgressBar
     {
         return $this->progressBar ?? throw new RuntimeException('The ProgressBar is not started.');
+    }
+    /**
+     * @param iterable<string, iterable|string|TreeNode> $nodes
+     */
+    public function tree(iterable $nodes, string $root = ''): void
+    {
+        $this->createTree($nodes, $root)->render();
+    }
+    /**
+     * @param iterable<string, iterable|string|TreeNode> $nodes
+     */
+    public function createTree(iterable $nodes, string $root = ''): TreeHelper
+    {
+        $output = $this->output instanceof ConsoleOutputInterface ? $this->output->section() : $this->output;
+        return TreeHelper::createTree($output, $root, $nodes, TreeStyle::default());
     }
     private function autoPrependBlock(): void
     {

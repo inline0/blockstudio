@@ -17,6 +17,8 @@ use BlockstudioVendor\Symfony\Component\VarDumper\Cloner\Stub;
  * @author Baptiste Clavié <clavie.b@gmail.com>
  *
  * @final
+ *
+ * @internal since Symfony 7.3
  */
 class XmlReaderCaster
 {

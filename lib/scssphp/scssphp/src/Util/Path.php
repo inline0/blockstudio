@@ -2,7 +2,6 @@
 
 namespace BlockstudioVendor\ScssPhp\ScssPhp\Util;
 
-use BlockstudioVendor\League\Uri\BaseUri;
 use BlockstudioVendor\League\Uri\Contracts\UriInterface;
 use BlockstudioVendor\League\Uri\Uri;
 use BlockstudioVendor\Symfony\Component\Filesystem\Exception\InvalidArgumentException;
@@ -25,10 +24,13 @@ final class Path
     }
     public static function fromUri(UriInterface $uri): string
     {
-        if (\DIRECTORY_SEPARATOR === '\\') {
-            return BaseUri::from($uri)->windowsPath() ?? throw new \InvalidArgumentException("Uri {$uri} must have scheme 'file:'.");
+        if (!$uri instanceof Uri) {
+            $uri = Uri::new($uri);
         }
-        return BaseUri::from($uri)->unixPath() ?? throw new \InvalidArgumentException("Uri {$uri} must have scheme 'file:'.");
+        if (\DIRECTORY_SEPARATOR === '\\') {
+            return $uri->toWindowsPath() ?? throw new \InvalidArgumentException("Uri {$uri} must have scheme 'file:'.");
+        }
+        return $uri->toUnixPath() ?? throw new \InvalidArgumentException("Uri {$uri} must have scheme 'file:'.");
     }
     public static function isAbsolute(string $path): bool
     {

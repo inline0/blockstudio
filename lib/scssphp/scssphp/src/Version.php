@@ -18,5 +18,5 @@ namespace BlockstudioVendor\ScssPhp\ScssPhp;
  */
 final class Version
 {
-    const VERSION = '2.0.1';
+    const VERSION = '2.1.0';
 }

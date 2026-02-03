@@ -11,19 +11,16 @@
 declare (strict_types=1);
 namespace BlockstudioVendor\League\Uri\KeyValuePair;
 
-use BlockstudioVendor\League\Uri\Contracts\UriComponentInterface;
+use BackedEnum;
 use BlockstudioVendor\League\Uri\Exceptions\SyntaxError;
+use BlockstudioVendor\League\Uri\StringCoercionMode;
 use Stringable;
 use function array_combine;
 use function explode;
 use function implode;
-use function is_float;
-use function is_int;
 use function is_string;
-use function json_encode;
 use function preg_match;
 use function str_replace;
-use const JSON_PRESERVE_ZERO_FRACTION;
 use const PHP_QUERY_RFC1738;
 use const PHP_QUERY_RFC3986;
 final class Converter
@@ -95,36 +92,20 @@ final class Converter
     /**
      * @return array<non-empty-list<string|null>>
      */
-    public function toPairs(Stringable|string|int|float|bool|null $value): array
+    public function toPairs(BackedEnum|Stringable|string|int|float|bool|null $value): array
     {
-        $value = match (\true) {
-            $value instanceof UriComponentInterface => $value->value(),
-            $value instanceof Stringable, is_int($value) => (string) $value,
-            \false === $value => '0',
-            \true === $value => '1',
-            default => $value,
-        };
+        $value = StringCoercionMode::Native->coerce($value);
         if (null === $value) {
             return [];
         }
         $value = match (1) {
-            preg_match(self::REGEXP_INVALID_CHARS, (string) $value) => throw new SyntaxError('Invalid query string: `' . $value . '`.'),
-            default => str_replace($this->toEncoding, $this->fromRfc3986, (string) $value),
+            preg_match(self::REGEXP_INVALID_CHARS, $value) => throw new SyntaxError('Invalid query string: `' . $value . '`.'),
+            default => str_replace($this->toEncoding, $this->fromRfc3986, $value),
         };
         return array_map(fn(string $pair): array => explode('=', $pair, 2) + [1 => null], explode($this->separator, $value));
     }
-    private static function vString(Stringable|string|bool|int|float|null $value): ?string
-    {
-        return match (\true) {
-            $value => '1',
-            \false === $value => '0',
-            null === $value => null,
-            is_float($value) => (string) json_encode($value, JSON_PRESERVE_ZERO_FRACTION),
-            default => (string) $value,
-        };
-    }
     /**
-     * @param iterable<array{0:string|null, 1:Stringable|string|bool|int|float|null}> $pairs
+     * @param iterable<array{0:string|null, 1:BackedEnum|Stringable|string|bool|int|float|null}> $pairs
      */
     public function toValue(iterable $pairs): ?string
     {
@@ -132,8 +113,8 @@ final class Converter
         foreach ($pairs as $pair) {
             $filteredPairs[] = match (\true) {
                 !is_string($pair[0]) => throw new SyntaxError('the pair key MUST be a string;, `' . gettype($pair[0]) . '` given.'),
-                null === $pair[1] => self::vString($pair[0]),
-                default => self::vString($pair[0]) . '=' . self::vString($pair[1]),
+                null === $pair[1] => StringCoercionMode::Native->coerce($pair[0]),
+                default => StringCoercionMode::Native->coerce($pair[0]) . '=' . StringCoercionMode::Native->coerce($pair[1]),
             };
         }
         return match ([]) {

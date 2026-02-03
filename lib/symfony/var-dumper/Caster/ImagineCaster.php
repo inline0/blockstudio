@@ -14,6 +14,8 @@ use BlockstudioVendor\Imagine\Image\ImageInterface;
 use BlockstudioVendor\Symfony\Component\VarDumper\Cloner\Stub;
 /**
  * @author Grégoire Pineau <lyrixx@lyrixx.info>
+ *
+ * @internal since Symfony 7.3
  */
 final class ImagineCaster
 {

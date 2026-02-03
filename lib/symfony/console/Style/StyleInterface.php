@@ -59,10 +59,14 @@ interface StyleInterface
     public function table(array $headers, array $rows): void;
     /**
      * Asks a question.
+     *
+     * @param (callable(mixed):mixed)|null $validator
      */
     public function ask(string $question, ?string $default = null, ?callable $validator = null): mixed;
     /**
      * Asks a question with the user input hidden.
+     *
+     * @param (callable(mixed):mixed)|null $validator
      */
     public function askHidden(string $question, ?callable $validator = null): mixed;
     /**
