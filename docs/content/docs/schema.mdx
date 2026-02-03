@@ -1,0 +1,60 @@
+---
+title: Schema
+description: JSON Schema support for Blockstudio blocks.
+---
+
+# Schema
+
+Blockstudio provides JSON Schema validation for your block.json files, enabling autocomplete and validation in your IDE.
+
+## Using the Schema
+
+Add the `$schema` property to your block.json:
+
+```json title="block.json"
+{
+  "$schema": "https://app.blockstudio.dev/schema",
+  "name": "my-theme/my-block",
+  "title": "My Block",
+  "blockstudio": {
+    "attributes": []
+  }
+}
+```
+
+## IDE Support
+
+### VS Code
+
+VS Code automatically picks up the schema from the `$schema` property.
+
+For workspace-wide settings, add to `.vscode/settings.json`:
+
+```json title=".vscode/settings.json"
+{
+  "json.schemas": [
+    {
+      "fileMatch": ["**/block.json"],
+      "url": "https://app.blockstudio.dev/schema"
+    }
+  ]
+}
+```
+
+### JetBrains IDEs
+
+PhpStorm and other JetBrains IDEs support JSON Schema via the `$schema` property automatically.
+
+## Available Schemas
+
+| Schema | URL |
+|--------|-----|
+| Block Schema | `https://app.blockstudio.dev/schema` |
+| Settings Schema | `https://app.blockstudio.dev/schema/blockstudio` |
+
+## Benefits
+
+- **Autocomplete**: Get suggestions for all available properties
+- **Validation**: Catch errors before runtime
+- **Documentation**: Hover over properties for inline documentation
+- **Type Safety**: Ensure correct value types

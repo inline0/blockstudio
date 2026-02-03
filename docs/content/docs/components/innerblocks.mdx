@@ -1,0 +1,296 @@
+---
+title: InnerBlocks
+description: Allow nested blocks within your custom blocks.
+---
+
+# InnerBlocks
+
+Inner blocks allow you to insert additional blocks to your blocks. Under the
+hood, Blockstudio is using the
+[InnerBlocks](https://developer.wordpress.org/block-editor/how-to-guides/block-tutorial/nested-blocks-inner-blocks/)
+component. Please note that it is only possible to use one InnerBlocks component
+per block, this is a WordPress limitation.
+
+## Basic Usage
+
+To use InnerBlocks, add the `<InnerBlocks />` component to your block template:
+
+```php title="index.php"
+<InnerBlocks />
+```
+
+The composition is up to you. You can nest the `InnerBlocks` component as deep
+as you want or just use it by itself.
+
+## Properties
+
+### allowedBlocks
+
+The `allowedBlocks` prop allows you to define which blocks can be inserted into
+the `InnerBlocks` component.
+
+<Tabs items={['PHP', 'Twig']}>
+  <Tab value="PHP">
+```php title="index.php"
+<InnerBlocks allowedBlocks="<?php echo esc_attr(wp_json_encode(['core/heading', 'core/paragraph'])); ?>" />
+```
+  </Tab>
+  <Tab value="Twig">
+```twig title="index.twig"
+<InnerBlocks allowedBlocks="{{ ['core/heading', 'core/paragraph']|json_encode|escape('html_attr') }}" />
+```
+  </Tab>
+</Tabs>
+
+### tag
+
+By default, the `InnerBlocks` component is rendered as a `div` element. You can
+change this by using the `tag` prop.
+
+```php title="index.php"
+<InnerBlocks tag="section" />
+```
+
+### template
+
+The `template` prop allows you to define a template for the `InnerBlocks`
+component.
+
+<Tabs items={['PHP', 'Twig']}>
+  <Tab value="PHP">
+```php title="index.php"
+<InnerBlocks template="<?php echo esc_attr(wp_json_encode([
+  ['core/heading', ['placeholder' => 'Book Title']],
+  ['core/paragraph', ['placeholder' => 'Summary']]
+])); ?>" />
+```
+  </Tab>
+  <Tab value="Twig">
+```twig title="index.twig"
+<InnerBlocks template="{{ [
+  ['core/heading', { placeholder: 'Book Title' }],
+  ['core/paragraph', { placeholder: 'Summary' }]
+]|json_encode|escape('html_attr') }}" />
+```
+  </Tab>
+</Tabs>
+
+### templateLock
+
+The `templateLock` prop allows you to define if the template can be modified or
+not.
+
+| Value | Description |
+|-------|-------------|
+| `contentOnly` | Prevents all operations. Block types without content are hidden from the list view. Not overrideable by children. |
+| `all` | Prevents all operations. Cannot insert, move, or delete blocks. |
+| `insert` | Prevents inserting or removing blocks, but allows moving existing ones. |
+| `false` | Prevents locking from being applied even if a parent block contains locking. |
+
+### renderAppender
+
+The `renderAppender` prop allows you to define the block appender type.
+
+| Value | Description |
+|-------|-------------|
+| `default` | Display the default block appender (paragraph style appender when paragraph block is allowed) |
+| `button` | Display a + icon button as the appender |
+
+### useBlockProps
+
+`useBlockProps` will remove the outer wrapper of the `InnerBlocks` component
+inside the editor. See [useBlockProps](/docs/components/useblockprops) for more information.
+
+## Context
+
+### Registering
+
+Blockstudio supports context for the `InnerBlocks` component. This allows you to
+pass data from the parent block to the child blocks. While it uses the WordPress
+core [context mechanism](https://developer.wordpress.org/block-editor/reference-guides/block-api/block-context/)
+under the hood, Blockstudio provides a more convenient API.
+
+Instead of having to define all attributes that should be passed in the context
+separately, you can simply subscribe to all attributes of a parent block.
+
+Let's say you have a container block setup like so:
+
+```json title="container/block.json"
+{
+  "$schema": "https://app.blockstudio.dev/schema",
+  "name": "blockstudio/container",
+  "title": "Container",
+  "category": "design",
+  "icon": "star-filled",
+  "description": "Container block.",
+  "blockstudio": {
+    "attributes": [
+      {
+        "id": "full-width",
+        "type": "toggle",
+        "label": "Makes section full width"
+      }
+    ]
+  }
+}
+```
+
+Inside your child block, simply use the `usesContext` property with the parent
+block name to gain access to all parent attributes in your block template.
+
+```json title="element/block.json"
+{
+  "$schema": "https://app.blockstudio.dev/schema",
+  "name": "blockstudio/element",
+  "title": "Element",
+  "category": "design",
+  "icon": "star-filled",
+  "description": "Element block.",
+  "usesContext": ["blockstudio/container"],
+  "parent": ["blockstudio/container"],
+  "blockstudio": true
+}
+```
+
+### Templates
+
+The `$context` and `$c` variables are available inside your block templates to
+access all parent attributes. Child blocks will automatically reload in the
+editor if parent data changes.
+
+<Tabs items={['PHP', 'Twig']}>
+  <Tab value="PHP">
+```php title="index.php"
+<?php $container = $context['blockstudio/container']; ?>
+
+<h1>
+  <?php echo $container['full-width']
+      ? 'is full width'
+      : 'no full width'; ?>
+</h1>
+```
+  </Tab>
+  <Tab value="Twig">
+```twig title="index.twig"
+{% set container = context['blockstudio/container'] %}
+
+<h1>
+  {{ container['full-width']
+      ? 'is full width'
+      : 'no full width' }}
+</h1>
+```
+  </Tab>
+</Tabs>
+
+## Frontend Wrapper
+
+`InnerBlocks` has to render a wrapper element around its children inside the
+editor, however, it can be removed from the frontend by using the
+`blockstudio/blocks/components/innerblocks/frontend/wrap` filter.
+
+```php title="functions.php"
+add_filter('blockstudio/block/components/innerblocks/frontend/wrap', function($wrap, $block) {
+  return false; // Remove wrapper
+}, 10, 2);
+```
+
+## Return Early
+
+If you want to return early from the `render` method of your block, you can
+check if the `$innerBlocks` variable is empty. This comes in handy if you don't
+want to render anything if there are no inner blocks.
+
+```php title="index.php"
+<?php if (strip_tags($innerBlocks) === '') {
+  return;
+} ?>
+<InnerBlocks tag="section" />
+```
+
+Since `<InnerBlocks/>` will always render an empty paragraph tag, you can use
+the `strip_tags` function to check if the content is empty.
+
+## Dynamic Templates
+
+The [Select](/docs/attributes/field-types#select) and
+[Radio](/docs/attributes/field-types#radio) field types support dynamically
+generating the `InnerBlocks` template depending on the field value. This is
+useful if you want to allow the user to select a different template for the
+`InnerBlocks` component.
+
+To do so, simply add an `innerBlocks` key to the options array with the template:
+
+```json title="block.json"
+{
+  "$schema": "https://app.blockstudio.dev/schema",
+  "name": "blockstudio/dynamic-layout",
+  "title": "Dynamic Layout",
+  "blockstudio": {
+    "attributes": [
+      {
+        "id": "layout",
+        "type": "select",
+        "label": "Layout",
+        "options": [
+          {
+            "value": "1",
+            "label": "Two Columns",
+            "innerBlocks": [
+              {
+                "name": "core/columns",
+                "innerBlocks": [
+                  {
+                    "name": "core/column",
+                    "innerBlocks": [
+                      {
+                        "name": "core/heading",
+                        "attributes": {
+                          "content": "Left Heading",
+                          "level": 1
+                        }
+                      }
+                    ]
+                  },
+                  {
+                    "name": "core/column",
+                    "innerBlocks": [
+                      {
+                        "name": "core/heading",
+                        "attributes": {
+                          "content": "Right Heading",
+                          "level": 1
+                        }
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "value": "2",
+            "label": "Single Column",
+            "innerBlocks": [
+              {
+                "name": "core/heading",
+                "attributes": {
+                  "content": "Main Heading",
+                  "level": 1
+                }
+              },
+              {
+                "name": "core/paragraph",
+                "attributes": {
+                  "content": "Main content goes here."
+                }
+              }
+            ]
+          }
+        ],
+        "allowNull": "Select a layout"
+      }
+    ]
+  }
+}
+```

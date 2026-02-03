@@ -1,0 +1,4 @@
+{
+  "title": "Templating",
+  "pages": ["twig", "blade"]
+}

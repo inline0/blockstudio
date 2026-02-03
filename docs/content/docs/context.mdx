@@ -1,0 +1,75 @@
+---
+title: Context
+description: Access WordPress and block context data in your templates.
+---
+
+# Context
+
+Blockstudio provides access to various context data within your block templates.
+
+## Available Variables
+
+Inside your block templates, you have access to these variables:
+
+| Variable | Shorthand | Description |
+|----------|-----------|-------------|
+| `$attributes` | `$a` | Block attributes |
+| `$block` | `$b` | Block data (name, title, etc.) |
+| `$context` | `$c` | Parent block context |
+| `$innerBlocks` | - | InnerBlocks content |
+
+## Block Data
+
+The `$block` / `$b` variable contains:
+
+```php title="index.php"
+<?php
+// Block name
+echo $b['name']; // "my-theme/my-block"
+
+// Block title
+echo $b['title']; // "My Block"
+
+// Block directory path
+echo $b['dir'];
+
+// Block directory URL
+echo $b['url'];
+?>
+```
+
+## WordPress Context
+
+Access WordPress globals:
+
+```php title="index.php"
+<?php
+// Current post
+global $post;
+echo $post->ID;
+
+// Current user
+$user = wp_get_current_user();
+echo $user->display_name;
+?>
+```
+
+In Twig, use the `fn()` function:
+
+```twig title="index.twig"
+{{ fn('get_the_ID') }}
+{{ fn('get_the_title') }}
+```
+
+## Parent Context
+
+When using `usesContext`, access parent block data via `$context`:
+
+```php title="index.php"
+<?php
+$parent = $context['parent-block/name'];
+echo $parent['someAttribute'];
+?>
+```
+
+See [InnerBlocks Context](/docs/components/innerblocks#context) for more details.

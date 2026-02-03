@@ -1,0 +1,129 @@
+---
+title: Registering Attributes
+description: Learn how to register custom attributes for your blocks.
+---
+
+# Registering Attributes
+
+Attributes are defined within the `blockstudio.attributes` array in your block.json file.
+
+## Basic Example
+
+```json title="block.json"
+{
+  "name": "my-theme/my-block",
+  "title": "My Block",
+  "blockstudio": {
+    "attributes": [
+      {
+        "id": "title",
+        "type": "text",
+        "label": "Title"
+      },
+      {
+        "id": "content",
+        "type": "textarea",
+        "label": "Content"
+      }
+    ]
+  }
+}
+```
+
+## Attribute Properties
+
+All attributes share the following properties:
+
+| Property | Type | Description |
+|----------|------|-------------|
+| `id` | string | Unique identifier for the attribute |
+| `type` | string | The field type (text, textarea, select, etc.) |
+| `label` | string | Label displayed in the editor |
+| `default` | mixed | Default value for the attribute |
+| `help` | string | Help text displayed below the field |
+| `position` | string | Where the field appears: `inspector` (default) or `toolbar` |
+| `conditions` | array | Conditional logic for showing/hiding the field |
+
+## Position
+
+By default, all fields are displayed in the block inspector (sidebar). You can change this using the `position` property:
+
+```json title="block.json"
+{
+  "blockstudio": {
+    "attributes": [
+      {
+        "id": "alignment",
+        "type": "select",
+        "label": "Alignment",
+        "position": "toolbar",
+        "options": [
+          { "value": "left", "label": "Left" },
+          { "value": "center", "label": "Center" },
+          { "value": "right", "label": "Right" }
+        ]
+      }
+    ]
+  }
+}
+```
+
+## Default Values
+
+Set default values using the `default` property:
+
+```json title="block.json"
+{
+  "blockstudio": {
+    "attributes": [
+      {
+        "id": "title",
+        "type": "text",
+        "label": "Title",
+        "default": "Hello World"
+      },
+      {
+        "id": "showBorder",
+        "type": "toggle",
+        "label": "Show Border",
+        "default": true
+      }
+    ]
+  }
+}
+```
+
+## Help Text
+
+Add help text to guide users:
+
+```json title="block.json"
+{
+  "blockstudio": {
+    "attributes": [
+      {
+        "id": "apiKey",
+        "type": "text",
+        "label": "API Key",
+        "help": "Enter your API key from the settings page"
+      }
+    ]
+  }
+}
+```
+
+## Accessing Attributes
+
+In your template, attributes are available via the `$a` shorthand (or `$attributes`):
+
+```php title="index.php"
+<h1><?php echo $a['title']; ?></h1>
+<p><?php echo $a['content']; ?></p>
+```
+
+Or in Twig:
+
+```twig title="index.twig"
+<h1>{{ a.title }}</h1>
+<p>{{ a.content }}</p>
+```

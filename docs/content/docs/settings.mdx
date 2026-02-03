@@ -1,0 +1,89 @@
+---
+title: Settings
+description: Configure Blockstudio with blockstudio.json.
+---
+
+# Settings
+
+Blockstudio can be configured using a `blockstudio.json` file in your theme root.
+
+## Configuration File
+
+Create `blockstudio.json` in your theme directory:
+
+```json title="blockstudio.json"
+{
+  "$schema": "https://app.blockstudio.dev/schema/blockstudio",
+  "assets": {
+    "enqueue": true,
+    "minify": {
+      "css": true,
+      "js": true
+    },
+    "process": {
+      "scss": true
+    }
+  },
+  "editor": {
+    "formatOnSave": true,
+    "library": true
+  },
+  "tailwind": {
+    "enabled": true
+  }
+}
+```
+
+## Options
+
+### assets
+
+Configure asset handling:
+
+| Option | Type | Default | Description |
+|--------|------|---------|-------------|
+| `enqueue` | boolean | `true` | Auto-enqueue block assets |
+| `minify.css` | boolean | `false` | Minify CSS output |
+| `minify.js` | boolean | `false` | Minify JS output |
+| `process.scss` | boolean | `false` | Process SCSS files |
+
+### editor
+
+Configure the block editor:
+
+| Option | Type | Default | Description |
+|--------|------|---------|-------------|
+| `formatOnSave` | boolean | `false` | Format block.json on save |
+| `library` | boolean | `false` | Enable block library |
+| `assets` | array | `[]` | Additional assets to load in editor |
+| `markup` | string | `""` | Additional markup for editor iframe |
+
+### tailwind
+
+Configure Tailwind CSS integration:
+
+| Option | Type | Default | Description |
+|--------|------|---------|-------------|
+| `enabled` | boolean | `false` | Enable Tailwind CSS |
+| `config` | string | `""` | Custom Tailwind config (CSS) |
+| `customClasses` | array | `[]` | Custom class definitions |
+
+### blockEditor
+
+Configure the WordPress block editor:
+
+| Option | Type | Default | Description |
+|--------|------|---------|-------------|
+| `disableLoading` | boolean | `false` | Disable block editor loading screen |
+| `cssClasses` | array | `[]` | CSS classes to include in editor |
+| `cssVariables` | array | `[]` | CSS variable stylesheets |
+
+## Custom Path
+
+Change the config file location:
+
+```php title="functions.php"
+add_filter('blockstudio/settings/path', function() {
+  return get_stylesheet_directory() . '/config/blockstudio.json';
+});
+```

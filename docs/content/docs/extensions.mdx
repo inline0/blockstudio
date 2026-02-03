@@ -1,0 +1,56 @@
+---
+title: Extensions
+description: Extend Blockstudio blocks with additional features.
+---
+
+# Extensions
+
+Extensions allow you to add additional functionality to your blocks without modifying the core block code.
+
+## Available Extensions
+
+Extensions can be enabled per-block in the `blockstudio.extensions` key:
+
+```json title="block.json"
+{
+  "blockstudio": {
+    "extensions": {
+      "spacing": true,
+      "visibility": true,
+      "animation": true
+    }
+  }
+}
+```
+
+## Spacing
+
+Add margin and padding controls to your block.
+
+## Visibility
+
+Control block visibility based on device breakpoints or user conditions.
+
+## Animation
+
+Add entrance animations to your blocks.
+
+## Custom Extensions
+
+You can create custom extensions using the `blockstudio/extensions` filter:
+
+```php title="functions.php"
+add_filter('blockstudio/extensions', function($extensions) {
+  $extensions['myExtension'] = [
+    'label' => 'My Extension',
+    'attributes' => [
+      [
+        'id' => 'customSetting',
+        'type' => 'toggle',
+        'label' => 'Enable Custom Setting'
+      ]
+    ]
+  ];
+  return $extensions;
+});
+```

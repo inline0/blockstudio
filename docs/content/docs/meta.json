@@ -2,6 +2,18 @@
   "title": "Documentation",
   "pages": [
     "index",
-    "getting-started"
+    "getting-started",
+    "registration",
+    "attributes",
+    "components",
+    "editor",
+    "hooks",
+    "assets",
+    "templating",
+    "rendering",
+    "extensions",
+    "context",
+    "settings",
+    "schema"
   ]
 }

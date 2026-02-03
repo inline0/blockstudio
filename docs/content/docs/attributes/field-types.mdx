@@ -1,0 +1,723 @@
+---
+title: Field Types
+description: All available field types in Blockstudio.
+---
+
+# Field Types
+
+Blockstudio provides a variety of field types for building block interfaces.
+
+## General Properties
+
+All fields share these common properties:
+
+| Property | Type | Description |
+|----------|------|-------------|
+| `id` | string | Unique identifier |
+| `type` | string | Field type |
+| `label` | string | Display label |
+| `default` | mixed | Default value |
+| `help` | string | Help text |
+| `position` | string | `inspector` or `toolbar` |
+| `conditions` | array | Conditional logic |
+
+---
+
+## Text
+
+A single-line text input field.
+
+```json title="block.json"
+{
+  "blockstudio": {
+    "attributes": [
+      {
+        "id": "title",
+        "type": "text",
+        "label": "Title"
+      }
+    ]
+  }
+}
+```
+
+---
+
+## Textarea
+
+A multi-line text input field.
+
+```json title="block.json"
+{
+  "blockstudio": {
+    "attributes": [
+      {
+        "id": "description",
+        "type": "textarea",
+        "label": "Description"
+      }
+    ]
+  }
+}
+```
+
+---
+
+## Number
+
+A numeric input field.
+
+```json title="block.json"
+{
+  "blockstudio": {
+    "attributes": [
+      {
+        "id": "count",
+        "type": "number",
+        "label": "Count",
+        "min": 0,
+        "max": 100
+      }
+    ]
+  }
+}
+```
+
+---
+
+## Toggle
+
+A boolean toggle switch.
+
+```json title="block.json"
+{
+  "blockstudio": {
+    "attributes": [
+      {
+        "id": "enabled",
+        "type": "toggle",
+        "label": "Enabled",
+        "default": true
+      }
+    ]
+  }
+}
+```
+
+---
+
+## Select
+
+A dropdown select field.
+
+```json title="block.json"
+{
+  "blockstudio": {
+    "attributes": [
+      {
+        "id": "size",
+        "type": "select",
+        "label": "Size",
+        "options": [
+          { "value": "small", "label": "Small" },
+          { "value": "medium", "label": "Medium" },
+          { "value": "large", "label": "Large" }
+        ]
+      }
+    ]
+  }
+}
+```
+
+---
+
+## Radio
+
+Radio button group.
+
+```json title="block.json"
+{
+  "blockstudio": {
+    "attributes": [
+      {
+        "id": "layout",
+        "type": "radio",
+        "label": "Layout",
+        "options": [
+          { "value": "grid", "label": "Grid" },
+          { "value": "list", "label": "List" }
+        ]
+      }
+    ]
+  }
+}
+```
+
+---
+
+## Checkbox
+
+Checkbox group for multiple selections.
+
+```json title="block.json"
+{
+  "blockstudio": {
+    "attributes": [
+      {
+        "id": "features",
+        "type": "checkbox",
+        "label": "Features",
+        "options": [
+          { "value": "feature-1", "label": "Feature 1" },
+          { "value": "feature-2", "label": "Feature 2" }
+        ]
+      }
+    ]
+  }
+}
+```
+
+---
+
+## Range
+
+A slider/range input.
+
+```json title="block.json"
+{
+  "blockstudio": {
+    "attributes": [
+      {
+        "id": "opacity",
+        "type": "range",
+        "label": "Opacity",
+        "min": 0,
+        "max": 100,
+        "default": 100
+      }
+    ]
+  }
+}
+```
+
+---
+
+## Color
+
+A color picker field.
+
+```json title="block.json"
+{
+  "blockstudio": {
+    "attributes": [
+      {
+        "id": "backgroundColor",
+        "type": "color",
+        "label": "Background Color",
+        "options": [
+          { "name": "Red", "value": "#f00", "slug": "red" },
+          { "name": "Blue", "value": "#00f", "slug": "blue" }
+        ]
+      }
+    ]
+  }
+}
+```
+
+---
+
+## Gradient
+
+A gradient picker field.
+
+```json title="block.json"
+{
+  "blockstudio": {
+    "attributes": [
+      {
+        "id": "gradient",
+        "type": "gradient",
+        "label": "Gradient",
+        "options": [
+          {
+            "name": "Sunset",
+            "value": "linear-gradient(135deg, #f093fb 0%, #f5576c 100%)",
+            "slug": "sunset"
+          }
+        ]
+      }
+    ]
+  }
+}
+```
+
+---
+
+## Files
+
+Media/file upload field.
+
+```json title="block.json"
+{
+  "blockstudio": {
+    "attributes": [
+      {
+        "id": "image",
+        "type": "files",
+        "label": "Image",
+        "multiple": false
+      }
+    ]
+  }
+}
+```
+
+### Properties
+
+| Property | Type | Description |
+|----------|------|-------------|
+| `multiple` | boolean | Allow multiple files |
+| `allowedTypes` | array | Allowed mime types |
+| `size` | boolean | Show size dropdown |
+
+---
+
+## Link
+
+A link picker field.
+
+```json title="block.json"
+{
+  "blockstudio": {
+    "attributes": [
+      {
+        "id": "link",
+        "type": "link",
+        "label": "Link"
+      }
+    ]
+  }
+}
+```
+
+Returns an object with `url`, `title`, `target`, and `rel` properties.
+
+---
+
+## Icon
+
+An icon picker field.
+
+```json title="block.json"
+{
+  "blockstudio": {
+    "attributes": [
+      {
+        "id": "icon",
+        "type": "icon",
+        "label": "Icon"
+      }
+    ]
+  }
+}
+```
+
+### Available Icon Sets
+
+- octicons
+- vscode-icons
+- remix-icons (subsets: design, buildings, development, etc.)
+- tabler-icons
+- simple-icons
+- flat-color-icons
+- bootstrap-icons
+- material-design-icons (subsets: two-tone, outlined, filled, round, sharp)
+- box-icons (subsets: logos, solid, regular)
+- ion-icons
+- heroicons (subsets: solid, outline)
+- feather-icons
+- fontawesome-free (subsets: brands, solid, regular)
+- grommet-icons
+- css-gg
+
+---
+
+## Date
+
+A date picker field.
+
+```json title="block.json"
+{
+  "blockstudio": {
+    "attributes": [
+      {
+        "id": "date",
+        "type": "date",
+        "label": "Date"
+      }
+    ]
+  }
+}
+```
+
+---
+
+## Datetime
+
+A date and time picker field.
+
+```json title="block.json"
+{
+  "blockstudio": {
+    "attributes": [
+      {
+        "id": "datetime",
+        "type": "datetime",
+        "label": "Date & Time"
+      }
+    ]
+  }
+}
+```
+
+---
+
+## Unit
+
+A number input with unit selector.
+
+```json title="block.json"
+{
+  "blockstudio": {
+    "attributes": [
+      {
+        "id": "width",
+        "type": "unit",
+        "label": "Width",
+        "default": "100%",
+        "units": [
+          { "value": "px", "label": "px", "default": 0 },
+          { "value": "%", "label": "%", "default": 100 },
+          { "value": "em", "label": "em", "default": 0 }
+        ]
+      }
+    ]
+  }
+}
+```
+
+---
+
+## Token
+
+A token/tag input field.
+
+```json title="block.json"
+{
+  "blockstudio": {
+    "attributes": [
+      {
+        "id": "tags",
+        "type": "token",
+        "label": "Tags",
+        "options": ["option-1", "option-2", "option-3"]
+      }
+    ]
+  }
+}
+```
+
+---
+
+## Classes
+
+A class name input with Tailwind CSS support.
+
+```json title="block.json"
+{
+  "blockstudio": {
+    "attributes": [
+      {
+        "id": "classes",
+        "type": "classes",
+        "label": "CSS Classes",
+        "tailwind": true
+      }
+    ]
+  }
+}
+```
+
+---
+
+## Code
+
+A code editor field.
+
+```json title="block.json"
+{
+  "blockstudio": {
+    "attributes": [
+      {
+        "id": "customCss",
+        "type": "code",
+        "label": "Custom CSS",
+        "language": "css",
+        "default": ".selector { display: block; }"
+      }
+    ]
+  }
+}
+```
+
+---
+
+## WYSIWYG
+
+A rich text editor field.
+
+```json title="block.json"
+{
+  "blockstudio": {
+    "attributes": [
+      {
+        "id": "content",
+        "type": "wysiwyg",
+        "label": "Content",
+        "toolbar": {
+          "formats": {
+            "bold": true,
+            "italic": true,
+            "link": true
+          }
+        }
+      }
+    ]
+  }
+}
+```
+
+---
+
+## Message
+
+A display-only message field.
+
+```json title="block.json"
+{
+  "blockstudio": {
+    "attributes": [
+      {
+        "id": "info",
+        "type": "message",
+        "value": "The current block title is <strong>{block.title}</strong>"
+      }
+    ]
+  }
+}
+```
+
+---
+
+## Group
+
+A collapsible group of fields.
+
+```json title="block.json"
+{
+  "blockstudio": {
+    "attributes": [
+      {
+        "type": "group",
+        "title": "Settings",
+        "initialOpen": true,
+        "attributes": [
+          {
+            "id": "title",
+            "type": "text",
+            "label": "Title"
+          },
+          {
+            "id": "count",
+            "type": "number",
+            "label": "Count"
+          }
+        ]
+      }
+    ]
+  }
+}
+```
+
+### With ID Prefix
+
+When a group has an `id`, all inner attribute IDs are prefixed:
+
+```json title="block.json"
+{
+  "blockstudio": {
+    "attributes": [
+      {
+        "id": "settings",
+        "type": "group",
+        "title": "Settings",
+        "attributes": [
+          {
+            "id": "title",
+            "type": "text",
+            "label": "Title"
+          }
+        ]
+      }
+    ]
+  }
+}
+```
+
+Access via `$a['settings_title']` or use the helper:
+
+```php title="index.php"
+<?php
+$settings = bs_get_group($a, 'settings');
+echo $settings['title'];
+?>
+```
+
+---
+
+## Tabs
+
+Organize fields into tabs.
+
+```json title="block.json"
+{
+  "blockstudio": {
+    "attributes": [
+      {
+        "type": "tabs",
+        "tabs": [
+          {
+            "title": "Content",
+            "attributes": [
+              {
+                "id": "title",
+                "type": "text",
+                "label": "Title"
+              }
+            ]
+          },
+          {
+            "title": "Settings",
+            "attributes": [
+              {
+                "id": "columns",
+                "type": "number",
+                "label": "Columns"
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  }
+}
+```
+
+---
+
+## Repeater
+
+A repeatable group of fields.
+
+```json title="block.json"
+{
+  "blockstudio": {
+    "attributes": [
+      {
+        "id": "items",
+        "type": "repeater",
+        "label": "Items",
+        "min": 1,
+        "max": 10,
+        "textButton": "Add Item",
+        "attributes": [
+          {
+            "id": "title",
+            "type": "text",
+            "label": "Title"
+          },
+          {
+            "id": "description",
+            "type": "textarea",
+            "label": "Description"
+          }
+        ]
+      }
+    ]
+  }
+}
+```
+
+### Rendering
+
+```php title="index.php"
+<?php foreach ($a['items'] as $item): ?>
+  <div class="item">
+    <h3><?php echo $item['title']; ?></h3>
+    <p><?php echo $item['description']; ?></p>
+  </div>
+<?php endforeach; ?>
+```
+
+```twig title="index.twig"
+{% for item in a.items %}
+  <div class="item">
+    <h3>{{ item.title }}</h3>
+    <p>{{ item.description }}</p>
+  </div>
+{% endfor %}
+```
+
+### textMinimized
+
+Customize the minimized label:
+
+```json title="block.json"
+{
+  "blockstudio": {
+    "attributes": [
+      {
+        "id": "items",
+        "type": "repeater",
+        "label": "Items",
+        "textMinimized": {
+          "id": "title",
+          "fallback": "Untitled",
+          "prefix": "Item {index}: "
+        },
+        "attributes": [...]
+      }
+    ]
+  }
+}
+```
+
+---
+
+## Attributes
+
+HTML attributes field for adding custom data attributes.
+
+```json title="block.json"
+{
+  "blockstudio": {
+    "attributes": [
+      {
+        "id": "customAttributes",
+        "type": "attributes",
+        "label": "Custom Attributes"
+      }
+    ]
+  }
+}
+```

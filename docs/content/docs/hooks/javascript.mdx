@@ -1,0 +1,102 @@
+---
+title: JavaScript Hooks
+description: JavaScript filters and actions available in Blockstudio.
+---
+
+# JavaScript Hooks
+
+Blockstudio provides JavaScript hooks using the WordPress `@wordpress/hooks` package.
+
+## Using Hooks
+
+```javascript
+import { addFilter, addAction } from '@wordpress/hooks';
+
+// Add a filter
+addFilter(
+  'blockstudio.block.attributes',
+  'my-plugin/modify-attributes',
+  (attributes, block) => {
+    // Modify attributes
+    return attributes;
+  }
+);
+
+// Add an action
+addAction(
+  'blockstudio.block.rendered',
+  'my-plugin/on-rendered',
+  (block) => {
+    // Do something after block renders
+  }
+);
+```
+
+## Available Filters
+
+### blockstudio.block.attributes
+
+Modify block attributes before rendering.
+
+```javascript
+addFilter(
+  'blockstudio.block.attributes',
+  'my-plugin/modify-attributes',
+  (attributes, block) => {
+    return {
+      ...attributes,
+      customValue: 'modified'
+    };
+  }
+);
+```
+
+### blockstudio.field.options
+
+Modify field options dynamically.
+
+```javascript
+addFilter(
+  'blockstudio.field.options',
+  'my-plugin/modify-options',
+  (options, field, block) => {
+    if (field.id === 'mySelect') {
+      return [
+        ...options,
+        { value: 'new', label: 'New Option' }
+      ];
+    }
+    return options;
+  }
+);
+```
+
+## Available Actions
+
+### blockstudio.block.rendered
+
+Fires after a block is rendered in the editor.
+
+```javascript
+addAction(
+  'blockstudio.block.rendered',
+  'my-plugin/on-rendered',
+  (block, element) => {
+    console.log('Block rendered:', block.name);
+  }
+);
+```
+
+### blockstudio.init
+
+Fires when Blockstudio initializes.
+
+```javascript
+addAction(
+  'blockstudio.init',
+  'my-plugin/on-init',
+  () => {
+    console.log('Blockstudio initialized');
+  }
+);
+```

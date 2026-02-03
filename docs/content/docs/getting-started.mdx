@@ -9,7 +9,13 @@ This guide will help you set up Blockstudio and create your first custom block.
 
 ## Installation
 
-Install Blockstudio as a WordPress plugin:
+### Via Composer (Recommended)
+
+```bash
+composer require developer-developer/developer-developer/blockstudio
+```
+
+### Manual Installation
 
 1. Download the latest release from GitHub
 2. Upload to your WordPress plugins directory
@@ -19,21 +25,21 @@ Install Blockstudio as a WordPress plugin:
 
 ### 1. Create a Block Directory
 
-Create a new directory in your theme or plugin:
+Create a new directory in your theme:
 
 ```
 my-theme/
-  blocks/
+  blockstudio/
     my-first-block/
       block.json
-      index.twig
+      index.php
 ```
 
 ### 2. Define the Block Schema
 
 Create `block.json` with your block configuration:
 
-```json
+```json title="block.json"
 {
   "$schema": "https://app.blockstudio.dev/schema",
   "name": "my-theme/my-first-block",
@@ -60,31 +66,44 @@ Create `block.json` with your block configuration:
 
 ### 3. Create the Template
 
-Create `index.twig` for rendering:
+Create `index.php` for rendering:
 
-```twig
+```php title="index.php"
+<div class="my-first-block">
+  <h2><?php echo $a['heading']; ?></h2>
+  <p><?php echo $a['content']; ?></p>
+</div>
+```
+
+## Using Twig Templates
+
+Blockstudio supports Twig templates out of the box. Simply use `index.twig` instead:
+
+```twig title="index.twig"
 <div class="my-first-block">
   <h2>{{ a.heading }}</h2>
   <p>{{ a.content }}</p>
 </div>
 ```
 
-### 4. Register Your Blocks
+## Adding Styles
 
-In your theme's `functions.php` or plugin file:
+Create a `style.css` file in the same folder:
 
-```php
-add_filter('blockstudio/init', function($config) {
-    $config['locations'][] = get_template_directory() . '/blocks';
-    return $config;
-});
+```css title="style.css"
+.my-first-block {
+  padding: 2rem;
+  background: #f5f5f5;
+}
 ```
+
+Blockstudio will automatically enqueue this stylesheet when the block is used.
 
 ## Next Steps
 
 Your block is now ready to use in the WordPress editor. Continue exploring the documentation to learn about:
 
-- Field types and validation
-- Tailwind CSS integration
-- Advanced templating with Twig
-- Custom extensions
+- [Field Types](/docs/attributes/field-types) - All available field types
+- [Components](/docs/components/innerblocks) - InnerBlocks, RichText, and more
+- [Tailwind Integration](/docs/editor/tailwind) - Using Tailwind CSS
+- [Hooks](/docs/hooks/php) - Extending functionality with filters and actions
