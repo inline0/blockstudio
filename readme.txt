@@ -20,6 +20,7 @@ Blockstudio gives you the ultimate developer experience for creating custom, pro
 * New: Tailwind 4 support
 * Fix: conditional fields not respecting default values on first load
 * Fix: optionsPopulate null error in WPML contexts
+* Fix: dollar signs stripped from <RichText /> content on frontend
 
 = 6.0.2 (18.08.2025) =
 * Enhancement: also preload blocks inside site editor
