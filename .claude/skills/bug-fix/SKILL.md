@@ -106,6 +106,19 @@ Add entry to `readme.txt` under the `== Changelog ==` section:
 
 If tests cannot be run (e.g., environment not available), do NOT commit. Wait until testing is possible.
 
+## CRITICAL: Debug Until Solved
+
+When a test fails, **do not give up or move on**. Debug the issue until it is resolved:
+
+1. Add temporary `console.log()` statements to trace execution
+2. Use `await page.screenshot({ path: 'debug.png' })` to capture visual state
+3. Check the Playwright trace viewer for detailed debugging
+4. Inspect the DOM with `await page.content()` or `page.locator().innerHTML()`
+5. Add `await page.pause()` to stop execution and inspect manually
+6. Keep iterating until the root cause is found and fixed
+
+Remove all temporary debugging code before committing.
+
 ## Checklist
 
 Before marking complete, verify:
