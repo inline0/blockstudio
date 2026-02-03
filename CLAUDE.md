@@ -20,9 +20,22 @@ blockstudio7/
 ├── includes/            # PHP classes (primary codebase)
 ├── package/             # Frontend code
 ├── docs/                # Documentation (OneDocs/Next.js)
+├── .skills/             # Claude Code skills
+├── CHANGELOG.md         # Version changelog
 ├── _reference/          # v6 reference (gitignored, for snapshots)
 └── tests/               # Test infrastructure
 ```
+
+## Skills
+
+Use `/feature` when implementing new features. This skill guides the complete workflow:
+
+1. Research codebase (if needed)
+2. Implement the feature
+3. Add E2E test in `tests/e2e/types/`
+4. Add test block in `tests/blocks/types/`
+5. Update documentation in `docs/content/docs/`
+6. Update `CHANGELOG.md`
 
 ## Documentation
 
