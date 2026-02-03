@@ -84,7 +84,8 @@ testType(
 ```bash
 npm run playground:v7   # Start playground server (port 9701)
 npm run test:v7         # Run unit tests
-npm run test:e2e        # Run E2E tests (requires wp-env)
+npx playwright test --config=playwright.wp-env.config.ts tests/e2e/types/{feature-name}.ts
+npm run test:e2e        # Run all E2E tests
 ```
 
 ### 5. Add Documentation

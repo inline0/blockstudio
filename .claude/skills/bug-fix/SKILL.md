@@ -55,7 +55,7 @@ Run the test to confirm it fails with the current buggy behavior:
 
 ```bash
 npm run playground:v7   # Start playground server (port 9701)
-npm run test:e2e -- --grep "{bug-name}"  # Run only the bug test
+npx playwright test --config=playwright.wp-env.config.ts tests/e2e/types/{bug-name}.ts
 ```
 
 The test MUST fail at this point. If it passes, the test is not correctly capturing the bug.
@@ -72,7 +72,7 @@ The test MUST fail at this point. If it passes, the test is not correctly captur
 Run the test again to confirm the fix works:
 
 ```bash
-npm run test:e2e -- --grep "{bug-name}"
+npx playwright test --config=playwright.wp-env.config.ts tests/e2e/types/{bug-name}.ts
 ```
 
 The test should now PASS.
@@ -115,7 +115,7 @@ Before marking complete, verify:
 | `npm run playground:v7` | Start v7 test server (port 9701) |
 | `npm run test:v7` | Run unit/snapshot tests |
 | `npm run test:e2e` | Run all E2E tests |
-| `npm run test:e2e -- --grep "name"` | Run specific E2E test |
+| `npx playwright test --config=playwright.wp-env.config.ts tests/e2e/types/{name}.ts` | Run specific E2E test |
 | `composer cs` | Check PHP coding standards |
 | `composer cs:fix` | Auto-fix coding standards |
 
