@@ -1,4 +1,4 @@
 {
   "title": "Components",
-  "pages": ["innerblocks", "richtext", "mediaplaceholder", "useblockprops"]
+  "pages": ["useblockprops", "innerblocks", "richtext", "mediaplaceholder"]
 }

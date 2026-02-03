@@ -1,4 +1,4 @@
 {
   "title": "Editor",
-  "pages": ["general", "tailwind", "gutenberg", "examples"]
+  "pages": ["general", "examples", "gutenberg", "tailwind"]
 }

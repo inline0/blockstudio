@@ -2,13 +2,13 @@
   "title": "Attributes",
   "pages": [
     "registering",
-    "field-types",
-    "block-attributes",
-    "conditional-logic",
-    "filtering",
     "rendering",
+    "filtering",
+    "disabling",
+    "conditional-logic",
     "populating-options",
-    "html-utilities",
-    "disabling"
+    "block-attributes",
+    "field-types",
+    "html-utilities"
   ]
 }
