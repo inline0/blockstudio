@@ -368,6 +368,10 @@ export interface BlockstudioAttribute {
      */
     minHeight?: string;
     /**
+     * Whether to show a button that opens the editor in a popup window.
+     */
+    popout?: boolean;
+    /**
      * Whether the palette should have a clearing button or not.
      */
     clearable?: boolean;
@@ -742,6 +746,10 @@ export interface AttributeAttribute {
      * The minimum height of the editor.
      */
     minHeight?: string;
+    /**
+     * Whether to show a button that opens the editor in a popup window.
+     */
+    popout?: boolean;
     /**
      * Whether the palette should have a clearing button or not.
      */
@@ -1139,6 +1147,10 @@ export interface Attribute {
      * The minimum height of the editor.
      */
     minHeight?: string;
+    /**
+     * Whether to show a button that opens the editor in a popup window.
+     */
+    popout?: boolean;
     /**
      * Whether the palette should have a clearing button or not.
      */

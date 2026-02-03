@@ -784,7 +784,6 @@ class Rest {
 			'filesChanged' => $files_changed,
 		);
 	}
-
 }
 
 new Rest();

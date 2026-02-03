@@ -1,6 +1,8 @@
 import { readFileSync, writeFileSync, existsSync } from "fs";
 import { dirname, join } from "path";
 import { fileURLToPath } from "url";
+import { schema as getBlockSchema } from "../src/schemas/schema";
+import { blockstudio as blockstudioSchema } from "../src/schemas/blockstudio";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const DATA_DIR = join(__dirname, "../data");
@@ -23,16 +25,6 @@ interface Schema {
   title: string;
   properties: Record<string, SchemaProperty>;
   definitions?: Record<string, SchemaProperty>;
-}
-
-function loadSchema(name: string): Schema {
-  const filePath = join(DATA_DIR, `${name}.schema.json`);
-  if (!existsSync(filePath)) {
-    console.error(`Schema not found: ${filePath}`);
-    console.error("Run 'npm run fetch-schemas' first");
-    process.exit(1);
-  }
-  return JSON.parse(readFileSync(filePath, "utf-8"));
 }
 
 function formatExample(value: unknown, type: string | string[]): string {
@@ -60,7 +52,6 @@ function formatExample(value: unknown, type: string | string[]): string {
   }
 
   if (typeof value === "object" && value !== null) {
-    // Convert to PHP array syntax
     return formatPhpArray(value, 0);
   }
 
@@ -92,7 +83,6 @@ function generateSettingsFilters(schema: Schema): string {
   ) {
     const currentPath = path.join("/");
 
-    // If this property has nested properties, recurse
     if (prop.properties) {
       for (const [key, value] of Object.entries(prop.properties)) {
         processProperty(value, [...path, key], key);
@@ -100,7 +90,6 @@ function generateSettingsFilters(schema: Schema): string {
       return;
     }
 
-    // Only output leaf nodes with descriptionFilter
     if (prop.descriptionFilter) {
       const example = formatExample(prop.example, prop.type);
 
@@ -149,15 +138,12 @@ function generateFieldTypeDocs(fieldTypes: SchemaProperty[]): string {
       lines.push("");
     }
 
-    // Generate example JSON
     const exampleObj: Record<string, unknown> = { type: typeName };
     const properties = fieldType.properties || {};
 
-    // Add common properties to example
     if (properties.id) exampleObj.id = "myField";
     if (properties.label) exampleObj.label = `My ${typeName} field`;
 
-    // Add type-specific example properties
     if (properties.options) {
       exampleObj.options = [
         { value: "option1", label: "Option 1" },
@@ -175,7 +161,6 @@ function generateFieldTypeDocs(fieldTypes: SchemaProperty[]): string {
     lines.push("```");
     lines.push("");
 
-    // Generate properties table
     const propEntries = Object.entries(properties).filter(
       ([key]) => !["type"].includes(key)
     );
@@ -229,26 +214,23 @@ function updateMdxFile(filePath: string, startMarker: string, endMarker: string,
 function generateSettingsDoc() {
   console.log("Generating settings filters documentation...");
 
-  const schema = loadSchema("blockstudio");
-  const content = generateSettingsFilters(schema);
+  const content = generateSettingsFilters(blockstudioSchema as unknown as Schema);
 
-  // Save to data folder for reference
   const outputPath = join(DATA_DIR, "generated-settings-filters.mdx");
   writeFileSync(outputPath, content);
   console.log(`  Generated: ${outputPath}`);
 
-  // Update the actual MDX file
   const mdxPath = join(CONTENT_DIR, "hooks/php.mdx");
   if (updateMdxFile(mdxPath, "{/* GENERATED_SETTINGS_START */}", "{/* GENERATED_SETTINGS_END */}", content)) {
     console.log(`  Updated: ${mdxPath}`);
   }
 }
 
-function generateFieldTypesDoc() {
+async function generateFieldTypesDoc() {
   console.log("Generating field types documentation...");
 
-  const schema = loadSchema("block");
-  const fieldTypes = getFieldTypes(schema);
+  const schema = await getBlockSchema();
+  const fieldTypes = getFieldTypes(schema as unknown as Schema);
 
   if (fieldTypes.length === 0) {
     console.log("  No field types found in schema");
@@ -257,24 +239,22 @@ function generateFieldTypesDoc() {
 
   const content = generateFieldTypeDocs(fieldTypes);
 
-  // Save to data folder for reference
   const outputPath = join(DATA_DIR, "generated-field-types.mdx");
   writeFileSync(outputPath, content);
   console.log(`  Generated: ${outputPath}`);
   console.log(`  Found ${fieldTypes.length} field types`);
 
-  // Update the actual MDX file
   const mdxPath = join(CONTENT_DIR, "attributes/field-types.mdx");
   if (updateMdxFile(mdxPath, "{/* GENERATED_FIELD_TYPES_START */}", "{/* GENERATED_FIELD_TYPES_END */}", content)) {
     console.log(`  Updated: ${mdxPath}`);
   }
 }
 
-function main() {
+async function main() {
   console.log("Generating documentation from schemas...\n");
 
   generateSettingsDoc();
-  generateFieldTypesDoc();
+  await generateFieldTypesDoc();
 
   console.log("\nDone!");
 }

@@ -1,9 +1,10 @@
 import { ReactNode } from 'react';
 import { __experimentalText as Text } from '@wordpress/components';
-import { Label } from '@/blocks/components/label';
+import { Label, LabelAction } from '@/blocks/components/label';
 import { css } from '@/utils/css';
 
 export const Control = ({
+  actions,
   active = true,
   children = null,
   className = '',
@@ -21,6 +22,7 @@ export const Control = ({
   type = null,
   ...rest
 }: {
+  actions?: LabelAction[];
   active?: boolean;
   children?: ReactNode;
   className?: string;
@@ -89,7 +91,7 @@ export const Control = ({
           },
         })}
       >
-        {type !== 'toggle' && label && <Label label={label} help={help || ''} />}
+        {type !== 'toggle' && label && <Label label={label} help={help || ''} actions={actions} />}
         {children}
         {description && (
           <Text

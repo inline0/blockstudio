@@ -6,9 +6,7 @@
     "dev": "next dev -p 9700",
     "build": "npm run generate && next build",
     "start": "next start",
-    "fetch-schemas": "tsx scripts/fetch-schemas.ts",
-    "generate": "tsx scripts/generate-docs.ts",
-    "prebuild": "npm run fetch-schemas"
+    "generate": "tsx scripts/generate-docs.ts"
   },
   "dependencies": {
     "@tailwindcss/postcss": "^4.1.18",

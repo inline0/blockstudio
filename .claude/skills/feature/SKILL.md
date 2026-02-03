@@ -25,7 +25,29 @@ If you don't already understand how the feature should work:
 - Run `composer cs` to check coding standards
 - Run `composer cs:fix` to auto-fix issues
 
-### 3. Add E2E Test
+### 3. Update Schema (if adding new field properties)
+
+If the feature adds new properties to field types (e.g., a new option for the `code` field):
+
+1. Add the property to `docs/src/schemas/schema.ts` in the appropriate field definition
+2. Add the TypeScript type to `src/types/block.ts`
+
+Example - adding a `popout` property to the code field:
+
+```typescript
+// docs/src/schemas/schema.ts
+const code = {
+  properties: {
+    // ... existing properties
+    popout: {
+      type: "boolean",
+      description: "Whether to show a button that opens the editor in a popup window.",
+    },
+  },
+};
+```
+
+### 4. Add E2E Test
 
 Check if a matching folder already exists in `tests/blocks/types/` and `tests/e2e/types/`. If so, add your test to the existing folder/file instead of creating a new one.
 
@@ -80,7 +102,7 @@ testType(
 );
 ```
 
-### 4. Run Tests
+### 5. Run Tests
 
 ```bash
 npm run playground:v7   # Start playground server (port 9701)
@@ -89,7 +111,7 @@ npx playwright test --config=playwright.wp-env.config.ts tests/e2e/types/{featur
 npm run test:e2e        # Run all E2E tests
 ```
 
-### 5. Add Documentation
+### 6. Add Documentation
 
 Add or update documentation in `docs/content/docs/`:
 
@@ -98,7 +120,7 @@ Add or update documentation in `docs/content/docs/`:
 - Follow the existing documentation style
 - Include code examples
 
-### 6. Update Changelog
+### 7. Update Changelog
 
 Add entry to `readme.txt` under the `== Changelog ==` section. Add to the current version at the top:
 
@@ -139,6 +161,8 @@ Before marking complete, verify:
 
 - [ ] Feature implemented and working
 - [ ] WordPress Coding Standards pass (`composer cs`)
+- [ ] Schema updated if new field properties added (`docs/src/schemas/schema.ts`)
+- [ ] TypeScript types updated if new field properties added (`src/types/block.ts`)
 - [ ] Test block created in `tests/blocks/types/`
 - [ ] E2E test created in `tests/e2e/types/`
 - [ ] Unit tests pass (`npm run test:v7`)

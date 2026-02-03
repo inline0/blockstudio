@@ -7,7 +7,8 @@ import { El } from '@/blocks/components/el';
 import { Attributes } from '@/blocks/components/fields/components/attributes';
 import { Checkbox } from '@/blocks/components/fields/components/checkbox';
 import { Classes } from '@/blocks/components/fields/components/classes';
-import { Code } from '@/blocks/components/fields/components/code';
+import { Code, CodeActions } from '@/blocks/components/fields/components/code';
+import { LabelAction } from '@/blocks/components/label';
 import { Color } from '@/blocks/components/fields/components/color';
 import { Date } from '@/blocks/components/fields/components/date';
 import { Datetime } from '@/blocks/components/fields/components/datetime';
@@ -532,9 +533,13 @@ export const Fields = ({
       return null;
     }
 
-    return (
+    // Get actions wrapper for field types that need it
+    const ActionsWrapper = item.type === 'code' ? CodeActions : null;
+
+    const controlContent = (actions?: LabelAction[]) => (
       <Control
-        active={!attributes.blockstudio?.disabled?.includes(item.id)}
+        active={!attributes.blockstudio?.disabled?.includes(item.id ?? '')}
+        actions={actions}
         className={`blockstudio-fields__field blockstudio-fields__field--${item.type}`}
         enabled={item?.switch !== false}
         help={item.help}
@@ -634,7 +639,6 @@ export const Fields = ({
           <Code
             {...textProps()}
             {...{ clientId, extensions, repeaterId }}
-            properties={props}
             item={item}
             inRepeater={repeaterId !== ''}
           />
@@ -657,6 +661,16 @@ export const Fields = ({
         ) : null}
       </Control>
     );
+
+    if (ActionsWrapper) {
+      return (
+        <ActionsWrapper item={item}>
+          {({ actions }) => controlContent(actions)}
+        </ActionsWrapper>
+      );
+    }
+
+    return controlContent();
   };
 
   return (

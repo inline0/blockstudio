@@ -56,10 +56,6 @@ export const Block = ({
     rendered: string;
   } | null;
 }) => {
-  const editor = useSelect(
-    (select) => (select('blockstudio/blocks') as typeof selectors).getEditor(),
-    []
-  );
   const initialLoad = useSelect(
     (select) =>
       (select('blockstudio/blocks') as typeof selectors).getInitialLoad(),
@@ -78,7 +74,6 @@ export const Block = ({
   );
   const { setInitialLoad, setInitialLoadRendered } =
     useDispatch('blockstudio/blocks');
-  const editorRef = useRef(editor);
   const firstRenderDone = useRef<boolean | null>(null);
   const ref = useRef<HTMLDivElement | null>(null);
   const attributesRef = useRef(attributes);
@@ -235,14 +230,6 @@ export const Block = ({
       )
         ? 'preview'
         : 'editor',
-      blockstudioEditor:
-        editorRef.current?.name &&
-        event &&
-        Object.keys(event?.detail?.filesChanged || {}).some(
-          (e) => e.endsWith('.php') || e.endsWith('.twig')
-        )
-          ? 'true'
-          : 'false',
       postId,
       contextPostId: attributes.blockstudio?.contextBlock?.postId || postId,
       contextPostType:
@@ -388,10 +375,6 @@ export const Block = ({
         debouncedFetchData
       );
   }, [disableLoading]);
-
-  useEffect(() => {
-    editorRef.current = editor;
-  }, [editor]);
 
   useEffect(
     function onAttributeChange() {

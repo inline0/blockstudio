@@ -19,6 +19,7 @@ Blockstudio gives you the ultimate developer experience for creating custom, pro
 * New: Blockstudio is now free and open source
 * New: complete codebase refactor
 * New: Tailwind 4 support
+* New: code field popout option to open editor in separate window
 * Deprecation: Admin Area removed
 * Deprecation: License Key removed
 * Deprecation: Code Editor removed

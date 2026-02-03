@@ -18,8 +18,13 @@ composer cs
 blockstudio7/
 ├── blockstudio.php      # Entry point
 ├── includes/            # PHP classes (primary codebase)
-├── package/             # Frontend code
+├── src/                 # Frontend code (TypeScript/React)
+│   ├── blocks/          # Block editor components
+│   │   ├── components/  # React components (fields, editor, etc.)
+│   │   └── hooks/       # Custom hooks (usePopout, useMedia, etc.)
+│   └── types/           # TypeScript types (block.ts, types.ts)
 ├── docs/                # Documentation (OneDocs/Next.js)
+│   └── src/schemas/     # JSON Schema definitions (block, blockstudio, extend)
 ├── .claude/skills/      # Claude Code skills
 ├── readme.txt           # WordPress plugin readme with changelog
 ├── _reference/          # v6 reference (gitignored, for snapshots)
@@ -32,10 +37,24 @@ Use `/feature` when implementing new features. This skill guides the complete wo
 
 1. Research codebase (if needed)
 2. Implement the feature
-3. Add E2E test in `tests/e2e/types/`
-4. Add test block in `tests/blocks/types/`
-5. Update documentation in `docs/content/docs/`
-6. Update changelog in `readme.txt`
+3. Update schema if adding new field properties (`docs/src/schemas/`)
+4. Update TypeScript types (`src/types/block.ts`)
+5. Add E2E test in `tests/e2e/types/`
+6. Add test block in `tests/blocks/types/`
+7. Update documentation in `docs/content/docs/`
+8. Update changelog in `readme.txt`
+
+## Schemas
+
+JSON Schemas are defined in `docs/src/schemas/` and served via Next.js routes:
+
+- `/schema/block` - Block definition schema (extends WordPress block.json)
+- `/schema/blockstudio` - Blockstudio settings schema
+- `/schema/extend` - Block extension schema
+
+When adding new field properties:
+1. Add to `docs/src/schemas/schema.ts` in the appropriate field definition
+2. Add TypeScript type to `src/types/block.ts`
 
 ## Documentation
 
@@ -45,17 +64,11 @@ The `docs/` folder contains the documentation site built with OneDocs (Fumadocs 
 cd docs
 npm install
 npm run dev              # Start dev server on port 9700
-npm run fetch-schemas    # Fetch schemas from API (run once for dev)
-npm run generate         # Generate docs from schemas
-npm run build            # Fetch schemas + generate + build
+npm run generate         # Generate docs from local schemas
+npm run build            # Generate + build
 ```
 
-**Schema-driven docs:** Field types and settings filters are auto-generated from:
-- `https://app.blockstudio.dev/schema/block`
-- `https://app.blockstudio.dev/schema/blockstudio`
-- `https://app.blockstudio.dev/schema/extend`
-
-Generated content is injected between `{/* GENERATED_*_START */}` and `{/* GENERATED_*_END */}` markers in MDX files.
+**Schema-driven docs:** Field types and settings filters are auto-generated from local schemas in `docs/src/schemas/`. Generated content is injected between `{/* GENERATED_*_START */}` and `{/* GENERATED_*_END */}` markers in MDX files.
 
 ## Comment Policy
 
@@ -88,9 +101,8 @@ Generated content is injected between `{/* GENERATED_*_START */}` and `{/* GENER
 | Command | Description |
 |---------|-------------|
 | `npm run dev` | Start docs dev server (port 9700) |
-| `npm run fetch-schemas` | Fetch schemas from API |
-| `npm run generate` | Generate MDX from schemas |
-| `npm run build` | Full build (fetch + generate + next build) |
+| `npm run generate` | Generate MDX from local schemas |
+| `npm run build` | Full build (generate + next build) |
 
 ## Ports
 

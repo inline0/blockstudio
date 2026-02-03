@@ -371,16 +371,9 @@ class Block {
 					$content
 				);
 			} else {
-				// phpcs:disable WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Internal property name.
-				$inner_blocks_content =
-					isset( $block->blockstudioEditor ) &&
-					isset( $block->blockstudio['editor']['innerBlocks'] )
-						? $block->blockstudio['editor']['innerBlocks']
-						: $replace;
-				// phpcs:enable WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase
 				$inner_blocks_content = apply_filters(
 					'blockstudio/blocks/components/innerblocks/render',
-					$inner_blocks_content,
+					$replace,
 					$block
 				);
 				$content              = preg_replace(
@@ -1070,13 +1063,10 @@ class Block {
 		$content = ''
 	) {
 		// phpcs:disable WordPress.Security.NonceVerification.Recommended -- Reading query params for render mode detection.
-		$is_inline_editor =
-			isset( $_GET['blockstudioEditor'] ) &&
-			'true' === $_GET['blockstudioEditor'];
-		$is_editor        =
+		$is_editor  =
 			isset( $_GET['blockstudioMode'] ) &&
 			'editor' === $_GET['blockstudioMode'];
-		$is_preview       =
+		$is_preview =
 			isset( $_GET['blockstudioMode'] ) &&
 			'preview' === $_GET['blockstudioMode'];
 
@@ -1132,9 +1122,6 @@ class Block {
 		}
 
 		$editor = $attributes['blockstudio']['editor'] ?? false;
-		if ( $editor && ( $data->name ?? false ) ) {
-			$data->blockstudioEditor = true; // phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase
-		}
 
 		$block = $attributes;
 		unset( $block['blockstudio'] );
@@ -1259,11 +1246,7 @@ class Block {
 				// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Reading local template file.
 				$template_content = $editor ? $editor : file_get_contents( $path );
 				$compiled_string  = Timber::compile_string(
-					$is_inline_editor
-						? get_transient(
-							'blockstudio_gutenberg_' . $name . '_index.twig'
-						)
-						: $template_content,
+					$template_content,
 					$twig_context
 				);
 			} catch ( Throwable $e ) {
@@ -1324,15 +1307,7 @@ class Block {
 				if ( $is_preview ) {
 					echo Assets::get_preview_assets( $block_data ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
 				}
-				$is_inline_editor
-					? @eval( // phpcs:ignore Squiz.PHP.Eval.Discouraged, WordPress.PHP.NoSilencedErrors.Discouraged
-						' ?>' .
-							get_transient(
-								'blockstudio_gutenberg_' . $name . '_index.php'
-							) .
-							'<?php '
-					)
-					: include $path;
+				include $path;
 				if ( $is_preview ) {
 					echo Assets::get_preview_assets( $block_data, false ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
 				}
