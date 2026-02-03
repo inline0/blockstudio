@@ -96,6 +96,16 @@ Add entry to `readme.txt` under the `== Changelog ==` section:
 * Fix: description of what was fixed
 ```
 
+## CRITICAL: Never Commit Without Testing
+
+**NEVER commit code without running and verifying tests pass.** This is non-negotiable.
+
+1. Run the specific test for your changes
+2. Verify it passes
+3. Only then commit
+
+If tests cannot be run (e.g., environment not available), do NOT commit. Wait until testing is possible.
+
 ## Checklist
 
 Before marking complete, verify:

@@ -65,11 +65,12 @@ Generated content is injected between `{/* GENERATED_*_START */}` and `{/* GENER
 
 ## Key Rules for Claude
 
-1. **Run tests** after changes: `npm run test:v7`
-2. **Never modify `_reference/`** - read-only v6 baseline
-3. **100% WordPress Coding Standards** - no exceptions
-4. **One class at a time** - migrate and test incrementally
-5. **Never use `npx`** - always use `npm run` scripts from package.json
+1. **NEVER COMMIT WITHOUT TESTING** - Always run and verify tests pass before committing. No exceptions.
+2. **Run tests** after changes: `npm run test:v7`
+3. **Never modify `_reference/`** - read-only v6 baseline
+4. **100% WordPress Coding Standards** - no exceptions
+5. **One class at a time** - migrate and test incrementally
+6. **Never use `npx`** - always use `npm run` scripts from package.json
 
 ## Commands
 
