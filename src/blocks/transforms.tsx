@@ -1,5 +1,7 @@
 import { BlockInstance, createBlock } from '@wordpress/blocks';
-import { Any, BlockstudioBlock } from '@/types/types';
+import { BlockstudioBlock } from '@/types/types';
+
+type AttributeType = { type?: string };
 
 const isValidRegex = (value: string) => {
   const match = value.match(/\/(.*)\/(.*)?/);
@@ -24,7 +26,9 @@ const compareAttributeTypes = (
   const commonKeys = keys1.filter((value) => keys2.includes(value));
 
   for (const key of commonKeys) {
-    if ((block2.attributes as Record<string, Any>)?.[key]?.type !== (block1.attributes as Record<string, Any>)?.[key]?.type) {
+    const attrs1 = block1.attributes as Record<string, AttributeType>;
+    const attrs2 = block2.attributes as Record<string, AttributeType>;
+    if (attrs2?.[key]?.type !== attrs1?.[key]?.type) {
       return false;
     }
   }

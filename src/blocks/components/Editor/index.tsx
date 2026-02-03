@@ -10,7 +10,7 @@ import { debounce } from 'lodash-es';
 import { selectors } from '@/blocks/store/selectors';
 import { getAssetId } from '@/blocks/utils/getAssetId';
 import { isCss } from '@/utils/isCss';
-import { Any } from '@/types/types';
+import { BlockstudioEditorBlock } from '@/types/types';
 
 type EditorState = Record<string, string> & { name?: string };
 
@@ -155,7 +155,7 @@ export const Editor = () => {
       Object.keys(files)
         .filter((key) => isCss(key) || key.endsWith('.js'))
         .forEach((key) => {
-          const id = getAssetId(editor as Any, key);
+          const id = getAssetId(editor as unknown as BlockstudioEditorBlock, key);
           const el = document.querySelector(`#${id}`);
           assetsRef.current[id] = el?.textContent || '';
         });

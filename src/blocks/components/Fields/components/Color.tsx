@@ -1,6 +1,5 @@
 import { ColorPalette } from '@wordpress/components';
 import { Base } from '@/blocks/components/Base';
-import { Any } from '@/types/types';
 
 export const Color = ({
   value,
@@ -14,7 +13,8 @@ export const Color = ({
     name: string;
     slug: string;
   }[];
-  [key: string]: Any;
+  onChange?: (value: string | undefined) => void;
+  [key: string]: unknown;
 }) => {
   return (
     <Base>

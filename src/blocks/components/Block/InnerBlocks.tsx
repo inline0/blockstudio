@@ -9,9 +9,8 @@ import { createElement } from '@wordpress/element';
 import styleToObject from 'style-to-object';
 import { getDefaultsFromTemplate } from '@/blocks/utils/getDefaultsFromTemplate';
 import { Block } from '@/types/block';
-import { Any } from '@/types/types';
 
-const blocks = window.blockstudioAdmin.data.blocksNative;
+const blocks = window.blockstudioAdmin.data.blocksNative as unknown as Record<string, Block>;
 
 export const InnerBlocks = ({
   blockResponse,
@@ -44,7 +43,9 @@ export const InnerBlocks = ({
     template: TemplateArray;
     templateInsertUpdatesSelection: boolean;
     templateLock: EditorTemplateLock;
-    [key: string]: Any;
+    class?: string;
+    style?: string;
+    [key: string]: unknown;
   };
   const blockProps = hasOwnBlockProps
     ? useBlockProps()
@@ -65,17 +66,19 @@ export const InnerBlocks = ({
       allowedBlocks,
       orientation,
       prioritizedInserterBlocks,
-      template: (template || []).map((item: Any) => {
+      template: (template || []).map((item) => {
+        const blockName = typeof item === 'string' ? item : item[0];
+        const blockAttrs = typeof item === 'string' ? undefined : item[1];
         try {
-          const defaults = getDefaultsFromTemplate(blocks[item[0]], item);
-          return [item[0], defaults];
+          const defaults = getDefaultsFromTemplate(blocks[blockName], item);
+          return [blockName, defaults];
         } catch {
           const templateBlock = {
-            name: item[0],
-            attributes: item[1],
+            name: blockName,
+            attributes: blockAttrs,
           } as Block;
           const defaults = getDefaultsFromTemplate(templateBlock, item);
-          return [item[0], defaults];
+          return [blockName, defaults];
         }
       }),
       templateInsertUpdatesSelection,

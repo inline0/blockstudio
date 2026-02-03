@@ -1,7 +1,6 @@
 import { GradientPicker } from '@wordpress/components';
 import { Base } from '@/blocks/components/Base';
 import { BlockstudioAttribute } from '@/types/block';
-import { Any } from '@/types/types';
 
 export const Gradient = ({
   value,
@@ -16,7 +15,9 @@ export const Gradient = ({
     name: string;
     slug: string;
   }[];
-  [key: string]: Any;
+  onChange?: (value: string | undefined) => void;
+  options?: unknown;
+  [key: string]: unknown;
 }) => {
   delete rest.options;
 

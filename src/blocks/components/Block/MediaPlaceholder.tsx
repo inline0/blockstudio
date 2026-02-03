@@ -1,6 +1,9 @@
 import { MediaPlaceholder as M } from '@wordpress/block-editor';
 import { BlockstudioAttribute } from '@/types/block';
-import { Any, BlockstudioBlock, BlockstudioBlockAttributes } from '@/types/types';
+import { BlockstudioBlock, BlockstudioBlockAttributes } from '@/types/types';
+
+type MediaItem = { id: number; [k: string]: unknown };
+type MediaValue = MediaItem | MediaItem[];
 
 export const MediaPlaceholder = ({
   attributes,
@@ -13,8 +16,9 @@ export const MediaPlaceholder = ({
   data: BlockstudioAttribute;
   setAttributes: (attributes: BlockstudioBlockAttributes) => void;
 }) => {
-  const addToGallery = (block.attributes as Record<string, Any>)?.[data.attribute]?.addToGallery;
-  const multiple = (block.attributes as Record<string, Any>)?.[data.attribute]?.multiple;
+  const blockAttr = block.attributes as Record<string, Record<string, unknown>>;
+  const addToGallery = blockAttr?.[data.attribute]?.addToGallery;
+  const multiple = blockAttr?.[data.attribute]?.multiple;
   const shouldRender = !attributes.blockstudio.attributes[data.attribute];
 
   if (!shouldRender) return null;
@@ -24,8 +28,8 @@ export const MediaPlaceholder = ({
     <M
       {...data}
       {...{ addToGallery, multiple }}
-      onSelect={(value: Any) => {
-        const currentAttributes = attributes.blockstudio.attributes as unknown as Record<string, Any>;
+      onSelect={(value: MediaValue) => {
+        const currentAttributes = attributes.blockstudio.attributes as unknown as Record<string, unknown>;
         setAttributes({
           ...attributes,
           blockstudio: {
@@ -33,9 +37,9 @@ export const MediaPlaceholder = ({
             attributes: {
               ...currentAttributes,
               [data.attribute]: !multiple
-                ? value.id
-                : value.map((v: { id: string }) => v.id),
-            } as Any,
+                ? (value as MediaItem).id
+                : (value as MediaItem[]).map((v) => v.id),
+            } as { [key: string]: unknown }[],
           },
         });
       }}

@@ -1,14 +1,13 @@
-import { parseFragment, serialize } from 'parse5';
-import { Any } from '@/types/types';
+import { parseFragment, serialize, DefaultTreeAdapterMap } from 'parse5';
 
 export const getInnerHTML = (htmlString: string) => {
   htmlString = htmlString.replace(/<(\w+)([^>]*)\s?\/>/g, '<$1$2></$1>');
 
   const fragment = parseFragment(htmlString).childNodes.filter(
     (node) => node.nodeName !== '#text' && node.nodeName !== '#comment',
-  )[0];
+  )[0] as DefaultTreeAdapterMap['parentNode'];
 
-  let element = serialize(fragment as Any);
+  let element = serialize(fragment);
 
   element = element
     .replaceAll(/<innerblocks([^>]*)>\s*<\/innerblocks>/g, '<InnerBlocks$1 />')

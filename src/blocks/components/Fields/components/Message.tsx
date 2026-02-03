@@ -1,12 +1,14 @@
 import { parseTemplate } from '@/blocks/utils/parseTemplate';
-import { Any } from '@/types/types';
+import { BlockstudioBlock, BlockstudioBlockAttributes } from '@/types/types';
 
 export const Message = ({
   value,
   ...rest
 }: {
   value: string;
-  [key: string]: Any;
+  attributes: BlockstudioBlockAttributes;
+  block: BlockstudioBlock;
+  [key: string]: unknown;
 }) => {
   const parsedValue = parseTemplate(value, {
     attributes: rest.attributes.blockstudio.attributes,

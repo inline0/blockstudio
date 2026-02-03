@@ -1,6 +1,5 @@
 import { ReactNode } from 'react';
 import { BaseControl } from '@wordpress/components';
-import { Any } from '@/types/types';
 import { css } from '@/utils/css';
 
 export const Base = ({
@@ -10,7 +9,7 @@ export const Base = ({
 }: {
   children: ReactNode;
   wrap?: boolean;
-  [key: string]: Any;
+  [key: string]: unknown;
 }) => {
   return wrap ? (
     <BaseControl {...rest} help={false} label={false}>

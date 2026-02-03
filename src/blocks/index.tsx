@@ -20,11 +20,12 @@ import { sendEvents } from '@/blocks/utils/sendEvents';
 import { store as tailwindStore } from '@/tailwind/store';
 import { useTailwind } from '@/tailwind/useTailwind';
 import { useTailwindSaveBlockEditor } from '@/tailwind/useTailwindSaveBlockEditor';
-import { Any, BlockstudioBlockAttributes } from '@/types/types';
+import { BlockstudioAttribute } from '@/types/block';
+import { BlockstudioBlock, BlockstudioBlockAttributes } from '@/types/types';
 import { css } from '@/utils/css';
 import { onSavePost } from '@/utils/onSavePost';
 
-(window as Record<string, Any>)['__@hello-pangea/dnd-disable-dev-warnings'] = true;
+(window as unknown as Record<string, boolean>)['__@hello-pangea/dnd-disable-dev-warnings'] = true;
 register(store);
 register(tailwindStore);
 mediaModal();
@@ -33,8 +34,8 @@ const blocks = window.blockstudioAdmin.data.blocksNative;
 
 const renderedIds: string[] = [];
 
-Object.values(blocks).forEach((block: Any) => {
-  if (!isAllowedToRender(block.blockstudio)) return;
+Object.values(blocks).forEach((block: BlockstudioBlock) => {
+  if (!isAllowedToRender(block.blockstudio as BlockstudioAttribute)) return;
 
   // @ts-ignore
   registerBlockType(block, {
@@ -47,7 +48,7 @@ Object.values(blocks).forEach((block: Any) => {
       : {}),
     apiVersion: 2,
     providesContext: { [block.name]: 'blockstudio' },
-    transforms: transforms(block, blocks as unknown as Record<string, Any>) as Any,
+    transforms: transforms(block, blocks as unknown as Record<string, BlockstudioBlock>),
     usesContext: ['postId', 'postType', ...(block?.usesContext || [])],
     save: () => <InnerBlocks.Content />,
     edit: ({
@@ -58,7 +59,7 @@ Object.values(blocks).forEach((block: Any) => {
     }: {
       attributes: BlockstudioBlockAttributes;
       setAttributes: (attributes: BlockstudioBlockAttributes) => void;
-      context: Any;
+      context: Record<string, unknown>;
       clientId: string;
     }) => {
       const { setRichText } = useDispatch('blockstudio/blocks');
@@ -126,14 +127,14 @@ Object.values(blocks).forEach((block: Any) => {
       useEffect(() => {
         if (renderedIds.includes(clientId)) return;
 
-        const richTexts: Record<string, Any> = {};
-        Object.values(block.attributes as Record<string, Any>)
+        const richTexts: Record<string, string> = {};
+        Object.values(block.attributes as Record<string, BlockstudioAttribute>)
           .filter(
-            (item: Any) => item.field === 'richtext'
+            (item) => item.field === 'richtext'
           )
-          .forEach((attribute: Any) => {
-            richTexts[attribute.id] =
-              (attributes?.blockstudio?.attributes as Record<string, Any>)?.[attribute.id];
+          .forEach((attribute) => {
+            richTexts[attribute.id ?? ''] =
+              (attributes?.blockstudio?.attributes as unknown as Record<string, string>)?.[attribute.id ?? ''];
           });
 
         setRichText({

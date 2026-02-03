@@ -117,17 +117,19 @@ export const Block = ({
       );
       response = response.replace(getRegex('RichText', 'gs'), (match) => {
         const innerAttributes = getAttributes(match, 'RichText');
-        attributeMap[innerAttributes.attribute] = innerAttributes;
+        const attrKey = innerAttributes.attribute as string;
+        attributeMap[attrKey] = innerAttributes;
 
-        return `<div id="blockstudio-replace-richtext" class="${innerAttributes.attribute}"></div>`;
+        return `<div id="blockstudio-replace-richtext" class="${attrKey}"></div>`;
       });
       response = response.replace(
         getRegex('MediaPlaceholder', 'gs'),
         (match) => {
           const innerAttributes = getAttributes(match, 'MediaPlaceholder');
-          attributeMap[innerAttributes.attribute] = innerAttributes;
+          const attrKey = innerAttributes.attribute as string;
+          attributeMap[attrKey] = innerAttributes;
 
-          return `<div id="blockstudio-replace-dropzone" class="${innerAttributes.attribute}"></div>`;
+          return `<div id="blockstudio-replace-dropzone" class="${attrKey}"></div>`;
         }
       );
 

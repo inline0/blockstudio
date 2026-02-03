@@ -1,5 +1,4 @@
 import { TextControl } from '@wordpress/components';
-import { Any } from '@/types/types';
 
 export const Text = ({
   properties,
@@ -9,12 +8,14 @@ export const Text = ({
     max: number;
     min: number;
   };
-  [key: string]: Any;
+  value?: string;
+  onChange?: (value: string) => void;
+  [key: string]: unknown;
 }) => {
   return (
     <TextControl
       {...rest}
-      value={rest.value || undefined}
+      value={rest.value ?? ''}
       onChange={rest.onChange || (() => {})}
       className={`components-base-control`}
       help={false}

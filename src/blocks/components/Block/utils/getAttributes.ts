@@ -1,6 +1,5 @@
 import { parse as nodeParser } from 'node-html-parser';
 import { getRegex } from '@/blocks/components/Block/utils/getRegex';
-import { Any } from '@/types/types';
 
 export const getAttributes = (value: string, elementName: string) => {
   const regex = getRegex(elementName);
@@ -10,7 +9,7 @@ export const getAttributes = (value: string, elementName: string) => {
 
   const root = nodeParser(element);
   const div = root.querySelector('div');
-  const attributes: Record<string, Any> = (div?.attributes as Any) || {};
+  const attributes: Record<string, unknown> = (div?.attributes as unknown as Record<string, unknown>) || {};
 
   [
     'template',
@@ -25,7 +24,7 @@ export const getAttributes = (value: string, elementName: string) => {
     }
 
     try {
-      attributes[key] = JSON.parse(attributes[key]);
+      attributes[key] = JSON.parse(attributes[key] as string);
     } catch {
       attributes[key] = [];
     }
@@ -53,5 +52,5 @@ export const getAttributes = (value: string, elementName: string) => {
     }
   });
 
-  return attributes as Any;
+  return attributes;
 };

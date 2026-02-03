@@ -1,6 +1,5 @@
 import { ToggleControl } from '@wordpress/components';
 import { Label } from '@/blocks/components/Label';
-import { Any } from '@/types/types';
 import { css } from '@/utils/css';
 
 export const Toggle = ({
@@ -12,7 +11,8 @@ export const Toggle = ({
   checked: boolean;
   label: string;
   help: string;
-  [key: string]: Any;
+  onChange?: (value: boolean) => void;
+  [key: string]: unknown;
 }) => {
   return (
     <div

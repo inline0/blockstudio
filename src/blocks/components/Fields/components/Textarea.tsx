@@ -1,5 +1,4 @@
 import { TextareaControl } from '@wordpress/components';
-import { Any } from '@/types/types';
 
 export const Textarea = ({
   properties,
@@ -9,12 +8,14 @@ export const Textarea = ({
     max: number;
     min: number;
   };
-  [key: string]: Any;
+  value?: string;
+  onChange?: (value: string) => void;
+  [key: string]: unknown;
 }) => {
   return (
     <TextareaControl
       {...rest}
-      value={rest.value || undefined}
+      value={rest.value ?? ''}
       onChange={rest.onChange || (() => {})}
       className={`components-base-control`}
       hideLabelFromVision

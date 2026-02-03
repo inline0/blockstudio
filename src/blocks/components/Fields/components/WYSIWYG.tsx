@@ -29,7 +29,6 @@ import prettier from 'prettier/standalone';
 import { Base } from '@/blocks/components/Base';
 import { Code } from '@/blocks/components/Fields/components/Code';
 import { Alignment, BlockstudioAttribute } from '@/types/block';
-import { Any } from '@/types/types';
 import { __ } from '@/utils/__';
 import { css } from '@/utils/css';
 import { LinkModal } from './Link';
@@ -194,7 +193,7 @@ export const WYSIWYG = ({
                         editor.commands.setParagraph();
                       } else {
                         editor.commands.setHeading({
-                          level: Number(val) as Any,
+                          level: Number(val) as 1 | 2 | 3 | 4 | 5 | 6,
                         });
                       }
                     }}

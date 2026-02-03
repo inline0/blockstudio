@@ -1,17 +1,20 @@
 import { useState, useEffect } from 'react';
 import { getCssClasses } from '@/blocks/utils/getCssClasses';
-import { Any } from '@/types/types';
+
+type StyleEntry = {
+  type?: string;
+  src?: string;
+  inline?: string;
+};
 
 const cache: {
   [key: string]: string[];
 } = {};
 
 export const useGetCssClasses = (
-  styles: {
-    [key: string]: Any;
-  } = {},
+  styles: Record<string, StyleEntry> = {},
   allAssets: string[] = [],
-  reload: Any[] = []
+  reload: unknown[] = []
 ) => {
   const [classes, setClasses] = useState(new Set<string>());
 

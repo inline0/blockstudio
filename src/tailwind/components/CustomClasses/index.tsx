@@ -15,9 +15,14 @@ import { Classes as Tailwind } from '@/blocks/components/Fields/components/Class
 import { style } from '@/const/index';
 import { SPACING } from '@/const/spacings';
 import { selectors } from '@/tailwind/store/selectors';
-import { Any, BlockstudioBlockAttributes } from '@/types/types';
+import { BlockstudioBlockAttributes } from '@/types/types';
 import { __ } from '@/utils/__';
 import { css } from '@/utils/css';
+
+type ButtonProps = {
+  variant?: 'link' | 'secondary' | 'primary' | 'tertiary';
+  [key: string]: unknown;
+};
 
 const blockstudio = window.blockstudioAdmin;
 
@@ -27,7 +32,7 @@ export const CustomClasses = ({
   show: externalShow,
   setShow: setExternalShow,
 }: {
-  buttonProps?: Any;
+  buttonProps?: ButtonProps;
   index?: number;
   show?: boolean;
   setShow?: (show: boolean) => void;

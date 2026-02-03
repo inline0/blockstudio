@@ -1,7 +1,6 @@
 import { ReactNode } from 'react';
 import { __experimentalText as Text } from '@wordpress/components';
 import { Label } from '@/blocks/components/Label';
-import { Any } from '@/types/types';
 import { css } from '@/utils/css';
 
 export const Control = ({
@@ -37,7 +36,7 @@ export const Control = ({
   name?: string | null;
   onClick?: () => void;
   type?: string | null;
-  [key: string]: Any;
+  [key: string]: unknown;
 }) => {
   return (
     <div
