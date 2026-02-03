@@ -1,0 +1,19 @@
+{
+  "$schema": "https://app.blockstudio.dev/schema",
+  "name": "blockstudio/type-code-undo",
+  "title": "Native Code Undo",
+  "category": "blockstudio-test-native",
+  "icon": "star-filled",
+  "description": "Native Blockstudio Code block for undo testing.",
+  "blockstudio": {
+    "attributes": [
+      {
+        "id": "code",
+        "type": "code",
+        "label": "Code",
+        "default": ".initial {}",
+        "language": "css"
+      }
+    ]
+  }
+}

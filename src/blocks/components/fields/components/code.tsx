@@ -164,9 +164,21 @@ export const Code = ({
     extensions: getExtensions(),
   };
 
+  // Stop undo/redo from bubbling to Gutenberg so CodeMirror handles its own history
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    const isMac = navigator.platform.toUpperCase().indexOf('MAC') >= 0;
+    const isUndo = (isMac ? e.metaKey : e.ctrlKey) && e.key === 'z' && !e.shiftKey;
+    const isRedo = (isMac ? e.metaKey : e.ctrlKey) && (e.key === 'y' || (e.key === 'z' && e.shiftKey));
+
+    if (isUndo || isRedo) {
+      e.stopPropagation();
+    }
+  };
+
   return (
     <>
       <div
+        onKeyDown={handleKeyDown}
         css={css({
           border: style.border,
           borderRadius: style.borderRadius,
