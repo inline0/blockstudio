@@ -1,14 +1,6 @@
 import { BlockstudioBlockStore } from '@/types/types';
 
 export const selectors = {
-  getEditor(state: BlockstudioBlockStore | null = null) {
-    const { editor } = state || {};
-    return editor;
-  },
-  getEditorFocus(state: BlockstudioBlockStore | null = null) {
-    const { editorFocus } = state || {};
-    return editorFocus;
-  },
   getIcons(state: BlockstudioBlockStore | null = null) {
     const { icons } = state || {};
     return icons;

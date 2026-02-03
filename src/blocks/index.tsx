@@ -5,8 +5,6 @@ import { useEffect, useState, createPortal } from '@wordpress/element';
 import { registerPlugin } from '@wordpress/plugins';
 import parse from 'html-react-parser';
 import { Block } from '@/blocks/components/block';
-import { Editor } from '@/blocks/components/editor';
-import { Button as EditorButton } from '@/blocks/components/editor/button';
 import { Fields } from '@/blocks/components/fields';
 import '@/blocks/filters/custom-class';
 import '@/blocks/filters/default';
@@ -180,7 +178,6 @@ Object.values(blocks).forEach((block: BlockstudioBlock) => {
                 setAttributes,
               }}
             />
-            <EditorButton {...{ block }} />
           </InspectorControls>
           {isLoaded && (
             <Block
@@ -197,10 +194,6 @@ Object.values(blocks).forEach((block: BlockstudioBlock) => {
       );
     },
   });
-});
-
-registerPlugin('blockstudio-editor', {
-  render: () => <Editor />,
 });
 
 registerPlugin('blockstudio-tailwind', {

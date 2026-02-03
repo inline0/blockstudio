@@ -4,8 +4,6 @@ import { selectors } from './selectors';
 import { BlockstudioBlockStore } from '@/types/types';
 
 const DEFAULT_STATE = <BlockstudioBlockStore>{
-  editor: {},
-  editorFocus: 0,
   icons: {},
   initialLoad: {},
   initialLoadRendered: {},
@@ -47,18 +45,6 @@ export const store = createReduxStore('blockstudio/blocks', {
           ...state,
           isLoaded: action.isLoaded,
         };
-      case 'SET_EDITOR': {
-        return {
-          ...state,
-          editor: action.editor,
-        };
-      }
-      case 'SET_EDITOR_FOCUS': {
-        return {
-          ...state,
-          editorFocus: state.editorFocus + 1,
-        };
-      }
       case 'SET_MEDIA':
         return {
           ...state,

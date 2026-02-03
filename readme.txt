@@ -16,8 +16,13 @@ Blockstudio gives you the ultimate developer experience for creating custom, pro
 == Changelog ==
 
 = 7.0.0 (next) =
+* New: Blockstudio is now free and open source
 * New: complete codebase refactor
 * New: Tailwind 4 support
+* Deprecation: Admin Area removed
+* Deprecation: License Key removed
+* Deprecation: Code Editor removed
+* Deprecation: Edit accordion in block inspector removed
 * Fix: conditional fields not respecting default values on first load
 * Fix: optionsPopulate null error in WPML contexts
 * Fix: dollar signs stripped from <RichText /> content on frontend

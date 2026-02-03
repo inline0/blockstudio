@@ -8,8 +8,6 @@ interface BlockstudioBlock extends Block {
 }
 
 type BlockstudioBlockStore = {
-  editor: Record<string, string>;
-  editorFocus: number;
   icons: Record<string, string>;
   initialLoad: Record<string, string>;
   initialLoadRendered: Record<string, string>;
