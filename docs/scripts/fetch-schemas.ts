@@ -1,8 +1,3 @@
-/**
- * Fetches Blockstudio schemas from the API and saves them locally.
- * Run with: npx tsx scripts/fetch-schemas.ts
- */
-
 import { writeFileSync, mkdirSync } from "fs";
 import { dirname, join } from "path";
 import { fileURLToPath } from "url";

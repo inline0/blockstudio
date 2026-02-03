@@ -1,8 +1,3 @@
-/**
- * Generates documentation from Blockstudio schemas.
- * Run with: npx tsx scripts/generate-docs.ts
- */
-
 import { readFileSync, writeFileSync, existsSync } from "fs";
 import { dirname, join } from "path";
 import { fileURLToPath } from "url";
