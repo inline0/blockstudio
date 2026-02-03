@@ -3,7 +3,6 @@
   "pages": [
     "index",
     "getting-started",
-    "activating",
     "settings",
     "registration",
     "templating",
@@ -25,8 +24,6 @@
     "ai",
     "extensions",
     "code-snippets",
-    "editor",
-    "library",
     "composer"
   ]
 }

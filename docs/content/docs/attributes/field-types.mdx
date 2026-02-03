@@ -1,6 +1,6 @@
 ---
 title: Field Types
-description: All available field types in Blockstudio.
+description: All available field types and their properties in Blockstudio.
 ---
 
 # Field Types
@@ -13,13 +13,16 @@ All fields share these common properties:
 
 | Property | Type | Description |
 |----------|------|-------------|
-| `id` | string | Unique identifier |
-| `type` | string | Field type |
-| `label` | string | Display label |
-| `default` | mixed | Default value |
-| `help` | string | Help text |
-| `position` | string | `inspector` or `toolbar` |
-| `conditions` | array | Conditional logic |
+| `id` | string | Unique identifier for the attribute |
+| `type` | string | The field type |
+| `label` | string | Display label shown in the editor |
+| `default` | mixed | Default value for the field |
+| `help` | string | Help text displayed below the field |
+| `position` | string | Where to display: `inspector` (default) or `toolbar` |
+| `conditions` | array | Conditional logic rules |
+| `hidden` | boolean | Hide the field from the UI |
+| `width` | string | Field width: `25`, `33`, `50`, `66`, `75`, or `100` |
+| `returnFormat` | string | Return format: `value`, `label`, or `both` |
 
 ---
 
@@ -41,6 +44,13 @@ A single-line text input field.
 }
 ```
 
+### Properties
+
+| Property | Type | Description |
+|----------|------|-------------|
+| `placeholder` | string | Placeholder text |
+| `maxLength` | number | Maximum character length |
+
 ---
 
 ## Textarea
@@ -60,6 +70,14 @@ A multi-line text input field.
   }
 }
 ```
+
+### Properties
+
+| Property | Type | Description |
+|----------|------|-------------|
+| `placeholder` | string | Placeholder text |
+| `rows` | number | Number of visible rows |
+| `maxLength` | number | Maximum character length |
 
 ---
 
@@ -82,6 +100,15 @@ A numeric input field.
   }
 }
 ```
+
+### Properties
+
+| Property | Type | Description |
+|----------|------|-------------|
+| `min` | number | Minimum value |
+| `max` | number | Maximum value |
+| `step` | number | Step increment |
+| `placeholder` | string | Placeholder text |
 
 ---
 
@@ -129,6 +156,17 @@ A dropdown select field.
 }
 ```
 
+### Properties
+
+| Property | Type | Description |
+|----------|------|-------------|
+| `options` | array | Array of options with `value` and `label` |
+| `multiple` | boolean | Allow multiple selections |
+| `stylisedUi` | boolean | Use enhanced select UI |
+| `placeholder` | string | Placeholder text |
+| `returnFormat` | string | `value`, `label`, or `both` |
+| `populate` | object | Dynamic population config |
+
 ---
 
 ## Radio
@@ -153,6 +191,14 @@ Radio button group.
 }
 ```
 
+### Properties
+
+| Property | Type | Description |
+|----------|------|-------------|
+| `options` | array | Array of options with `value` and `label` |
+| `returnFormat` | string | `value`, `label`, or `both` |
+| `populate` | object | Dynamic population config |
+
 ---
 
 ## Checkbox
@@ -168,14 +214,22 @@ Checkbox group for multiple selections.
         "type": "checkbox",
         "label": "Features",
         "options": [
-          { "value": "feature-1", "label": "Feature 1" },
-          { "value": "feature-2", "label": "Feature 2" }
+          { "value": "option-1", "label": "Option 1" },
+          { "value": "option-2", "label": "Option 2" }
         ]
       }
     ]
   }
 }
 ```
+
+### Properties
+
+| Property | Type | Description |
+|----------|------|-------------|
+| `options` | array | Array of options with `value` and `label` |
+| `returnFormat` | string | `value`, `label`, or `both` |
+| `populate` | object | Dynamic population config |
 
 ---
 
@@ -199,6 +253,17 @@ A slider/range input.
   }
 }
 ```
+
+### Properties
+
+| Property | Type | Description |
+|----------|------|-------------|
+| `min` | number | Minimum value |
+| `max` | number | Maximum value |
+| `step` | number | Step increment |
+| `marks` | array | Custom marks on the slider |
+| `withInputField` | boolean | Show numeric input alongside slider |
+| `resetFallbackValue` | number | Value to reset to |
 
 ---
 
@@ -224,6 +289,16 @@ A color picker field.
 }
 ```
 
+### Properties
+
+| Property | Type | Description |
+|----------|------|-------------|
+| `options` | array | Predefined color palette with `name`, `value`, `slug` |
+| `enableAlpha` | boolean | Enable alpha/opacity selection |
+| `clearable` | boolean | Allow clearing the color |
+| `returnFormat` | string | `value`, `label`, or `both` |
+| `populate` | object | Dynamic population config |
+
 ---
 
 ## Gradient
@@ -240,9 +315,14 @@ A gradient picker field.
         "label": "Gradient",
         "options": [
           {
-            "name": "Sunset",
-            "value": "linear-gradient(135deg, #f093fb 0%, #f5576c 100%)",
-            "slug": "sunset"
+            "name": "JShine",
+            "value": "linear-gradient(135deg,#12c2e9 0%,#c471ed 50%,#f64f59 100%)",
+            "slug": "jshine"
+          },
+          {
+            "name": "Moonlit Asteroid",
+            "value": "linear-gradient(135deg,#0F2027 0%, #203A43 0%, #2c5364 100%)",
+            "slug": "moonlit-asteroid"
           }
         ]
       }
@@ -250,6 +330,14 @@ A gradient picker field.
   }
 }
 ```
+
+### Properties
+
+| Property | Type | Description |
+|----------|------|-------------|
+| `options` | array | Predefined gradients with `name`, `value`, `slug` |
+| `returnFormat` | string | `value`, `label`, or `both` |
+| `populate` | object | Dynamic population config |
 
 ---
 
@@ -277,8 +365,24 @@ Media/file upload field.
 | Property | Type | Description |
 |----------|------|-------------|
 | `multiple` | boolean | Allow multiple files |
-| `allowedTypes` | array | Allowed mime types |
-| `size` | boolean | Show size dropdown |
+| `allowedTypes` | array | Allowed mime types (e.g., `["image"]`) |
+| `size` | boolean | Show image size dropdown |
+
+### Return Value
+
+Returns an object (or array if `multiple: true`) with:
+
+| Property | Type | Description |
+|----------|------|-------------|
+| `ID` | number | Attachment ID |
+| `url` | string | File URL (selected size if using `size`) |
+| `alt` | string | Alt text |
+| `title` | string | File title |
+| `caption` | string | File caption |
+| `width` | number | Image width |
+| `height` | number | Image height |
+| `mime` | string | Mime type |
+| `sizes` | object | Available image sizes |
 
 ---
 
@@ -300,13 +404,22 @@ A link picker field.
 }
 ```
 
-Returns an object with `url`, `title`, `target`, and `rel` properties.
+### Return Value
+
+Returns an object with:
+
+| Property | Type | Description |
+|----------|------|-------------|
+| `url` | string | Link URL |
+| `title` | string | Link title |
+| `target` | string | Target attribute (`_blank`, etc.) |
+| `rel` | string | Rel attribute |
 
 ---
 
 ## Icon
 
-An icon picker field.
+An icon picker field with support for multiple icon libraries.
 
 ```json title="block.json"
 {
@@ -315,30 +428,40 @@ An icon picker field.
       {
         "id": "icon",
         "type": "icon",
-        "label": "Icon"
+        "label": "Icon",
+        "sets": ["heroicons", "feather-icons"]
       }
     ]
   }
 }
 ```
 
+### Properties
+
+| Property | Type | Description |
+|----------|------|-------------|
+| `sets` | array | Limit to specific icon sets |
+| `subsets` | array | Limit to specific subsets |
+
 ### Available Icon Sets
 
-- octicons
-- vscode-icons
-- remix-icons (subsets: design, buildings, development, etc.)
-- tabler-icons
-- simple-icons
-- flat-color-icons
-- bootstrap-icons
-- material-design-icons (subsets: two-tone, outlined, filled, round, sharp)
-- box-icons (subsets: logos, solid, regular)
-- ion-icons
-- heroicons (subsets: solid, outline)
-- feather-icons
-- fontawesome-free (subsets: brands, solid, regular)
-- grommet-icons
-- css-gg
+| Set | Subsets |
+|-----|---------|
+| `octicons` | - |
+| `vscode-icons` | - |
+| `remix-icons` | design, buildings, development, health, business, logos, others, user, document, system, map, finance, device, weather, communication, editor, media |
+| `tabler-icons` | - |
+| `simple-icons` | - |
+| `flat-color-icons` | - |
+| `bootstrap-icons` | - |
+| `material-design-icons` | two-tone, outlined, filled, round, sharp |
+| `box-icons` | logos, solid, regular |
+| `ion-icons` | - |
+| `heroicons` | solid, outline |
+| `feather-icons` | - |
+| `fontawesome-free` | brands, solid, regular |
+| `grommet-icons` | - |
+| `css-gg` | - |
 
 ---
 
@@ -360,6 +483,12 @@ A date picker field.
 }
 ```
 
+### Properties
+
+| Property | Type | Description |
+|----------|------|-------------|
+| `is12Hour` | boolean | Use 12-hour format |
+
 ---
 
 ## Datetime
@@ -379,6 +508,12 @@ A date and time picker field.
   }
 }
 ```
+
+### Properties
+
+| Property | Type | Description |
+|----------|------|-------------|
+| `is12Hour` | boolean | Use 12-hour format |
 
 ---
 
@@ -406,6 +541,15 @@ A number input with unit selector.
 }
 ```
 
+### Properties
+
+| Property | Type | Description |
+|----------|------|-------------|
+| `units` | array | Available units with `value`, `label`, `default` |
+| `min` | number | Minimum value |
+| `max` | number | Maximum value |
+| `step` | number | Step increment |
+
 ---
 
 ## Token
@@ -427,11 +571,18 @@ A token/tag input field.
 }
 ```
 
+### Properties
+
+| Property | Type | Description |
+|----------|------|-------------|
+| `options` | array | Array of string options |
+| `maxLength` | number | Maximum number of tokens |
+
 ---
 
 ## Classes
 
-A class name input with Tailwind CSS support.
+A class name input with optional Tailwind CSS autocomplete.
 
 ```json title="block.json"
 {
@@ -448,11 +599,17 @@ A class name input with Tailwind CSS support.
 }
 ```
 
+### Properties
+
+| Property | Type | Description |
+|----------|------|-------------|
+| `tailwind` | boolean | Enable Tailwind CSS autocomplete |
+
 ---
 
 ## Code
 
-A code editor field.
+A code editor field using Monaco editor.
 
 ```json title="block.json"
 {
@@ -470,11 +627,40 @@ A code editor field.
 }
 ```
 
+### Properties
+
+| Property | Type | Description |
+|----------|------|-------------|
+| `language` | string | Code language: `css`, `javascript`, `html`, `json`, `php` |
+| `asset` | boolean | Automatically render as style/script tag |
+| `height` | number | Editor height in pixels |
+
+---
+
+## RichText
+
+An inline rich text field (use in templates with `<RichText>` component).
+
+```json title="block.json"
+{
+  "blockstudio": {
+    "attributes": [
+      {
+        "id": "content",
+        "type": "richtext"
+      }
+    ]
+  }
+}
+```
+
+See [RichText Component](/docs/components/richtext) for usage details.
+
 ---
 
 ## WYSIWYG
 
-A rich text editor field.
+A full rich text editor field.
 
 ```json title="block.json"
 {
@@ -485,10 +671,23 @@ A rich text editor field.
         "type": "wysiwyg",
         "label": "Content",
         "toolbar": {
+          "tags": {
+            "headings": [1, 2, 3, 4, 5, 6]
+          },
           "formats": {
             "bold": true,
             "italic": true,
-            "link": true
+            "underline": true,
+            "strikethrough": true,
+            "code": true,
+            "orderedList": true,
+            "unorderedList": true,
+            "link": {
+              "opensInNewTab": true,
+              "attributes": {
+                "rel": "nofollow"
+              }
+            }
           }
         }
       }
@@ -497,11 +696,26 @@ A rich text editor field.
 }
 ```
 
+### Properties
+
+| Property | Type | Description |
+|----------|------|-------------|
+| `toolbar` | object | Toolbar configuration |
+| `toolbar.tags.headings` | array | Allowed heading levels |
+| `toolbar.formats.bold` | boolean | Enable bold |
+| `toolbar.formats.italic` | boolean | Enable italic |
+| `toolbar.formats.underline` | boolean | Enable underline |
+| `toolbar.formats.strikethrough` | boolean | Enable strikethrough |
+| `toolbar.formats.code` | boolean | Enable inline code |
+| `toolbar.formats.orderedList` | boolean | Enable ordered lists |
+| `toolbar.formats.unorderedList` | boolean | Enable unordered lists |
+| `toolbar.formats.link` | boolean \| object | Enable links with options |
+
 ---
 
 ## Message
 
-A display-only message field.
+A display-only message field for showing information.
 
 ```json title="block.json"
 {
@@ -510,12 +724,30 @@ A display-only message field.
       {
         "id": "info",
         "type": "message",
-        "value": "The current block title is <strong>{block.title}</strong>"
+        "value": "The block title is <strong>{block.title}</strong> and the value of text is <strong>{attributes.text}</strong>"
+      },
+      {
+        "id": "text",
+        "type": "text",
+        "label": "Text",
+        "default": "Text value"
       }
     ]
   }
 }
 ```
+
+### Properties
+
+| Property | Type | Description |
+|----------|------|-------------|
+| `value` | string | Message content (supports HTML and placeholders) |
+
+### Placeholders
+
+- `{block.title}` - Block title
+- `{block.name}` - Block name
+- `{attributes.fieldId}` - Value of another attribute
 
 ---
 
@@ -549,6 +781,15 @@ A collapsible group of fields.
 }
 ```
 
+### Properties
+
+| Property | Type | Description |
+|----------|------|-------------|
+| `id` | string | Optional ID to prefix inner attributes |
+| `title` | string | Group title |
+| `initialOpen` | boolean | Whether group is open by default |
+| `attributes` | array | Nested attributes |
+
 ### With ID Prefix
 
 When a group has an `id`, all inner attribute IDs are prefixed:
@@ -578,6 +819,7 @@ Access via `$a['settings_title']` or use the helper:
 
 ```php title="index.php"
 <?php
+// bs_get_group($attributes, $groupName)
 $settings = bs_get_group($a, 'settings');
 echo $settings['title'];
 ?>
@@ -623,6 +865,15 @@ Organize fields into tabs.
 }
 ```
 
+### Properties
+
+| Property | Type | Description |
+|----------|------|-------------|
+| `tabs` | array | Array of tab objects |
+| `tabs[].id` | string | Optional tab ID |
+| `tabs[].title` | string | Tab title |
+| `tabs[].attributes` | array | Attributes in this tab |
+
 ---
 
 ## Repeater
@@ -658,8 +909,20 @@ A repeatable group of fields.
 }
 ```
 
+### Properties
+
+| Property | Type | Description |
+|----------|------|-------------|
+| `min` | number | Minimum number of items |
+| `max` | number | Maximum number of items |
+| `textButton` | string | Add button text |
+| `textMinimized` | string \| object | Minimized row label |
+| `attributes` | array | Nested attributes |
+
 ### Rendering
 
+<Tabs items={['PHP', 'Twig']}>
+  <Tab value="PHP">
 ```php title="index.php"
 <?php foreach ($a['items'] as $item): ?>
   <div class="item">
@@ -668,7 +931,8 @@ A repeatable group of fields.
   </div>
 <?php endforeach; ?>
 ```
-
+  </Tab>
+  <Tab value="Twig">
 ```twig title="index.twig"
 {% for item in a.items %}
   <div class="item">
@@ -677,10 +941,12 @@ A repeatable group of fields.
   </div>
 {% endfor %}
 ```
+  </Tab>
+</Tabs>
 
 ### textMinimized
 
-Customize the minimized label:
+Customize the minimized row label:
 
 ```json title="block.json"
 {
@@ -693,14 +959,30 @@ Customize the minimized label:
         "textMinimized": {
           "id": "title",
           "fallback": "Untitled",
-          "prefix": "Item {index}: "
+          "prefix": "Item {index}: ",
+          "suffix": " - end"
         },
-        "attributes": [...]
+        "attributes": [
+          {
+            "id": "title",
+            "type": "text",
+            "label": "Title"
+          }
+        ]
       }
     ]
   }
 }
 ```
+
+| Property | Type | Description |
+|----------|------|-------------|
+| `id` | string | Attribute ID to display |
+| `fallback` | string | Fallback text if empty |
+| `prefix` | string | Text before value |
+| `suffix` | string | Text after value |
+
+Use `{index}` placeholder for the row number.
 
 ---
 
@@ -721,3 +1003,5 @@ HTML attributes field for adding custom data attributes.
   }
 }
 ```
+
+Returns an array of attribute objects with `name` and `value`.

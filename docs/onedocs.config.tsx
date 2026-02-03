@@ -1,5 +1,5 @@
 import { defineConfig } from "onedocs/config";
-import { Blocks, Palette, Code, Zap, Settings, FileJson } from "lucide-react";
+import { Blocks, Palette, Code, Zap, Settings, FileJson, Cpu, Bot } from "lucide-react";
 
 const iconClass = "h-5 w-5 text-fd-primary";
 
@@ -51,6 +51,16 @@ export default defineConfig({
         title: "JSON Schema",
         description: "Full schema validation and autocomplete in your IDE.",
         icon: <FileJson className={iconClass} />,
+      },
+      {
+        title: "Asset Processing",
+        description: "Built-in SCSS compilation, ES modules, and automatic minification.",
+        icon: <Cpu className={iconClass} />,
+      },
+      {
+        title: "AI Integration",
+        description: "Generate context files for AI coding assistants like Cursor.",
+        icon: <Bot className={iconClass} />,
       },
     ],
   },
