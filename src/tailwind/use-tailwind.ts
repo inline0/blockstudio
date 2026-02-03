@@ -111,15 +111,15 @@ export const useTailwind = ({
       doc.head.appendChild(script);
 
       script.onload = () => {
-        const settings = doc.createElement('script');
-        settings.id = settingsId;
-        settings.innerHTML = `tailwind.config = ${JSON.stringify({
-          ...(options?.tailwind?.config || {}),
-          corePlugins: {
-            preflight: false,
-          },
-        })}`;
-        doc.head.appendChild(settings);
+        let settings = doc.getElementById(settingsId) as HTMLStyleElement;
+        if (!settings) {
+          settings = doc.createElement('style');
+          settings.id = settingsId;
+          settings.type = 'text/tailwindcss';
+          doc.head.appendChild(settings);
+        }
+        const configCss = options?.tailwind?.config || '';
+        settings.innerHTML = typeof configCss === 'string' ? configCss : '';
         createCustomClasses();
         template.innerHTML = html || '';
       };
