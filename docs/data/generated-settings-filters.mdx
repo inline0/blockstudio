@@ -1,0 +1,177 @@
+### users/ids
+
+This filter allows you to enable the editor for specific user IDs.
+
+```php title="functions.php"
+add_filter('blockstudio/settings/users/ids', function() {
+  return [1];
+});
+```
+
+### users/roles
+
+This filter allows you to enable the editor for specific user roles.
+
+```php title="functions.php"
+add_filter('blockstudio/settings/users/roles', function() {
+  return ['administrator', 'editor'];
+});
+```
+
+### assets/enqueue
+
+This filter allows you to enable/disable the enqueueing of assets in frontend and editor.
+
+```php title="functions.php"
+add_filter('blockstudio/settings/assets/enqueue', function() {
+  return false;
+});
+```
+
+### assets/minify/css
+
+This filter allows you to enable/disable the minification of CSS.
+
+```php title="functions.php"
+add_filter('blockstudio/settings/assets/minify/css', function() {
+  return true;
+});
+```
+
+### assets/minify/js
+
+This filter allows you to enable/disable the minification of JS.
+
+```php title="functions.php"
+add_filter('blockstudio/settings/assets/minify/js', function() {
+  return true;
+});
+```
+
+### assets/process/scss
+
+This filter allows you to enable/disable the processing of SCSS in .css files.
+
+```php title="functions.php"
+add_filter('blockstudio/settings/assets/process/scss', function() {
+  return true;
+});
+```
+
+### assets/process/scssFiles
+
+This filter allows you to enable/disable the processing of .scss files to CSS.
+
+```php title="functions.php"
+add_filter('blockstudio/settings/assets/process/scssFiles', function() {
+  return true;
+});
+```
+
+### tailwind/enabled
+
+This filter allows you to enable/disable Tailwind.
+
+```php title="functions.php"
+add_filter('blockstudio/settings/tailwind/enabled', function() {
+  return true;
+});
+```
+
+### tailwind/config
+
+This filter allows you to add a custom Tailwind configuration.
+
+```php title="functions.php"
+add_filter('blockstudio/settings/tailwind/config', function() {
+  return [
+  'theme' => [
+    'extend' => [
+      'colors' => [
+        'primary' => 'pink'
+      ]
+    ]
+  ]
+];
+});
+```
+
+### editor/formatOnSave
+
+This filter allows you to enable/disable the formatting of code upon saving.
+
+```php title="functions.php"
+add_filter('blockstudio/settings/editor/formatOnSave', function() {
+  return true;
+});
+```
+
+### editor/assets
+
+This filter allows you to enqueue additional assets in the editor.
+
+```php title="functions.php"
+add_filter('blockstudio/settings/editor/assets', function() {
+  return ['my-stylesheet', 'another-stylesheet'];
+});
+```
+
+### editor/markup
+
+This filter allows you to add additional markup to the end of the editor.
+
+```php title="functions.php"
+add_filter('blockstudio/settings/editor/markup', function() {
+  return '<style>body { background: black; }</style>';
+});
+```
+
+### blockEditor/disableLoading
+
+This filter allows you to disable the loading of blocks inside the Block Editor.
+
+```php title="functions.php"
+add_filter('blockstudio/settings/blockEditor/disableLoading', function() {
+  return true;
+});
+```
+
+### blockEditor/cssClasses
+
+This filter allows you to add stylesheets whose classes should be available for choice in the class field.
+
+```php title="functions.php"
+add_filter('blockstudio/settings/blockEditor/cssClasses', function() {
+  return ['my-stylesheet', 'another-stylesheet'];
+});
+```
+
+### blockEditor/cssVariables
+
+This filter allows you to add stylesheets whose CSS variables should be available for autocompletion in the code field.
+
+```php title="functions.php"
+add_filter('blockstudio/settings/blockEditor/cssVariables', function() {
+  return ['my-stylesheet', 'another-stylesheet'];
+});
+```
+
+### library
+
+This filter allows you to enable the block library.
+
+```php title="functions.php"
+add_filter('blockstudio/settings/library', function() {
+  return true;
+});
+```
+
+### ai/enableContextGeneration
+
+This filter allows you to enable or disable context file generation for LLM tool integration. When enabled, the context file assembles up-to-date block data, Blockstudio settings of the current install, all relevant schemas, and Blockstudio documentation into a single source for use with AI development tools.
+
+```php title="functions.php"
+add_filter('blockstudio/settings/ai/enableContextGeneration', function() {
+  return true;
+});
+```

@@ -1,31 +1,3 @@
----
-title: Field Types
-description: All available field types and their properties in Blockstudio.
----
-
-# Field Types
-
-Blockstudio provides a variety of field types for building block interfaces.
-
-## General Properties
-
-All fields share these common properties:
-
-| Property | Type | Description |
-|----------|------|-------------|
-| `id` | string | Unique identifier for the attribute |
-| `type` | string | The field type |
-| `label` | string | Display label shown in the editor |
-| `description` | string | Description text shown below the label |
-| `default` | mixed | Default value for the field |
-| `fallback` | mixed | Fallback value when field is empty |
-| `help` | string | Help text displayed below the field |
-| `hidden` | boolean | Hide the field from the UI |
-| `switch` | boolean | Show as a toggleable field |
-| `conditions` | array | Conditional logic rules |
-
-{/* GENERATED_FIELD_TYPES_START */}
-
 ## attributes
 
 Renders data attribute inputs.
@@ -610,5 +582,3 @@ Renders a WYSIWYG editor.
 | `default` | `string` | Default value that should be applied when first adding the block. |
 | `fallback` | `string` | Fallback value that that will display when field value is empty. |
 | `toolbar` | `object` | The toolbar configuration for the editor. |
-
-{/* GENERATED_FIELD_TYPES_END */}

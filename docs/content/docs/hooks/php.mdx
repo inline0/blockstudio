@@ -204,6 +204,8 @@ add_filter('blockstudio/settings/path', function() {
 });
 ```
 
+{/* GENERATED_SETTINGS_START */}
+
 ### users/ids
 
 This filter allows you to enable the editor for specific user IDs.
@@ -291,14 +293,14 @@ This filter allows you to add a custom Tailwind configuration.
 ```php title="functions.php"
 add_filter('blockstudio/settings/tailwind/config', function() {
   return [
-    'theme' => [
-      'extend' => [
-        'colors' => [
-          'primary' => 'pink'
-        ]
+  'theme' => [
+    'extend' => [
+      'colors' => [
+        'primary' => 'pink'
       ]
     ]
-  ];
+  ]
+];
 });
 ```
 
@@ -381,6 +383,8 @@ add_filter('blockstudio/settings/ai/enableContextGeneration', function() {
   return true;
 });
 ```
+
+{/* GENERATED_SETTINGS_END */}
 
 ## Assets
 

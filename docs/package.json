@@ -4,8 +4,11 @@
   "private": true,
   "scripts": {
     "dev": "next dev -p 4000",
-    "build": "next build",
-    "start": "next start"
+    "build": "npm run generate && next build",
+    "start": "next start",
+    "fetch-schemas": "tsx scripts/fetch-schemas.ts",
+    "generate": "tsx scripts/generate-docs.ts",
+    "prebuild": "npm run fetch-schemas"
   },
   "dependencies": {
     "@tailwindcss/postcss": "^4.1.18",
@@ -23,6 +26,7 @@
     "@types/node": "^22",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "tsx": "^4.21.0",
     "typescript": "^5"
   }
 }

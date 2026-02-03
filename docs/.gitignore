@@ -1,2 +1,4 @@
 .next
+.source
 node_modules
+data/*.schema.json
