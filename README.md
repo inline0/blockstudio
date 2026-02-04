@@ -65,7 +65,7 @@ theme/
 
 **index.php**
 ```php
-<div <?php echo $useBlockProps; ?>>
+<div useBlockProps>
   <h2><?php echo $title; ?></h2>
 </div>
 ```
