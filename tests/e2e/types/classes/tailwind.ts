@@ -51,7 +51,7 @@ testType('classes-tailwind', '"classes":"text-red-500"', () => {
       testFunction: async (page: Page) => {
         await save(page);
         await delay(2000);
-        await page.goto('http://localhost:8888/native-single');
+        await page.goto('http://localhost:8888/native-single/');
         await delay(1000);
         await checkStyle(
           page,

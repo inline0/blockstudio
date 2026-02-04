@@ -579,11 +579,24 @@ add_action(
 						wp_delete_post( $post_id, true );
 					}
 
+					// ==========================================
+					// ACTIVATE TEST THEME
+					// ==========================================
+					switch_theme( 'theme' );
+
+					// ==========================================
+					// FLUSH REWRITE RULES
+					// ==========================================
+					global $wp_rewrite;
+					$wp_rewrite->set_permalink_structure( '/%postname%/' );
+					$wp_rewrite->flush_rules( true );
+
 					$created = array(
 						'posts' => array(),
 						'media' => array(),
 						'users' => array(),
 						'terms' => array(),
+						'theme' => 'theme',
 					);
 
 					// Helper to create post with specific ID

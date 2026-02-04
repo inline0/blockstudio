@@ -24,7 +24,7 @@ testType('conditions', false, () => {
                   .click();
                 await count(
                   page,
-                  `.blockstudio-fields__field--${item} [aria-label="Text on toggle"]`,
+                  `.blockstudio-fields__field--${item} .blockstudio-fields__field--text:has-text("Text on toggle")`,
                   1
                 );
               },
@@ -33,7 +33,7 @@ testType('conditions', false, () => {
               description: 'text on includes value',
               testFunction: async (page: Page) => {
                 await page.click(
-                  `.blockstudio-fields__field--${item} [aria-label="Text on toggle"] + div input`
+                  `.blockstudio-fields__field--${item} .blockstudio-fields__field--text:has-text("Text on toggle") input`
                 );
                 await page.keyboard.press('t');
                 await page.keyboard.press('e');
@@ -41,7 +41,7 @@ testType('conditions', false, () => {
                 await page.keyboard.press('t');
                 await count(
                   page,
-                  `.blockstudio-fields__field--${item} [aria-label="Text on includes value"]`,
+                  `.blockstudio-fields__field--${item} .blockstudio-fields__field--text:has-text("Text on includes value")`,
                   1
                 );
               },
@@ -50,7 +50,7 @@ testType('conditions', false, () => {
               description: 'number on empty',
               testFunction: async (page: Page) => {
                 await page.click(
-                  `.blockstudio-fields__field--${item} [aria-label="Text on includes value"] + div input`
+                  `.blockstudio-fields__field--${item} .blockstudio-fields__field--text:has-text("Text on includes value") input`
                 );
                 await page.keyboard.press('t');
                 await page.keyboard.press('e');
@@ -58,7 +58,7 @@ testType('conditions', false, () => {
                 await page.keyboard.press('t');
                 await count(
                   page,
-                  `.blockstudio-fields__field--${item} [aria-label="Number on empty"]`,
+                  `.blockstudio-fields__field--${item} .blockstudio-fields__field--number:has-text("Number on empty")`,
                   1
                 );
               },
@@ -67,7 +67,7 @@ testType('conditions', false, () => {
               description: 'number on smaller than',
               testFunction: async (page: Page) => {
                 await page.click(
-                  `.blockstudio-fields__field--${item} [aria-label="Number on empty"] + div input`
+                  `.blockstudio-fields__field--${item} .blockstudio-fields__field--number:has-text("Number on empty") input`
                 );
                 await page.keyboard.press('ArrowUp');
                 await page.keyboard.press('ArrowUp');
@@ -76,13 +76,13 @@ testType('conditions', false, () => {
                 await page.keyboard.press('ArrowUp');
                 await count(
                   page,
-                  `.blockstudio-fields__field--${item} [aria-label="Number on smaller than"]`,
+                  `.blockstudio-fields__field--${item} .blockstudio-fields__field--number:has-text("Number on smaller than")`,
                   0
                 );
                 await page.keyboard.press('ArrowDown');
                 await count(
                   page,
-                  `.blockstudio-fields__field--${item} [aria-label="Number on smaller than"]`,
+                  `.blockstudio-fields__field--${item} .blockstudio-fields__field--number:has-text("Number on smaller than")`,
                   1
                 );
               },
@@ -91,7 +91,7 @@ testType('conditions', false, () => {
               description: 'number on smaller than or even',
               testFunction: async (page: Page) => {
                 await page.click(
-                  `.blockstudio-fields__field--${item} [aria-label="Number on smaller than"] + div input`
+                  `.blockstudio-fields__field--${item} .blockstudio-fields__field--number:has-text("Number on smaller than") input`
                 );
                 await page.keyboard.press('ArrowUp');
                 await page.keyboard.press('ArrowUp');
@@ -101,13 +101,13 @@ testType('conditions', false, () => {
                 await page.keyboard.press('ArrowUp');
                 await count(
                   page,
-                  `.blockstudio-fields__field--${item} [aria-label="=Number on smaller than or even"]`,
+                  `.blockstudio-fields__field--${item} .blockstudio-fields__field--number:has-text("Number on smaller than or even")`,
                   0
                 );
                 await page.keyboard.press('ArrowDown');
                 await count(
                   page,
-                  `.blockstudio-fields__field--${item} [aria-label="Number on smaller than or even"]`,
+                  `.blockstudio-fields__field--${item} .blockstudio-fields__field--number:has-text("Number on smaller than or even")`,
                   1
                 );
               },
@@ -116,7 +116,7 @@ testType('conditions', false, () => {
               description: 'number on bigger than',
               testFunction: async (page: Page) => {
                 await page.click(
-                  `.blockstudio-fields__field--${item} [aria-label="Number on smaller than or even"] + div input`
+                  `.blockstudio-fields__field--${item} .blockstudio-fields__field--number:has-text("Number on smaller than or even") input`
                 );
                 await page.keyboard.press('ArrowUp');
                 await page.keyboard.press('ArrowUp');
@@ -125,13 +125,13 @@ testType('conditions', false, () => {
                 await page.keyboard.press('ArrowUp');
                 await count(
                   page,
-                  `.blockstudio-fields__field--${item} [aria-label="Number on bigger than"]`,
+                  `.blockstudio-fields__field--${item} .blockstudio-fields__field--number:has-text("Number on bigger than")`,
                   0
                 );
                 await page.keyboard.press('ArrowUp');
                 await count(
                   page,
-                  `.blockstudio-fields__field--${item} [aria-label="Number on bigger than"]`,
+                  `.blockstudio-fields__field--${item} .blockstudio-fields__field--number:has-text("Number on bigger than")`,
                   1
                 );
               },
@@ -140,7 +140,7 @@ testType('conditions', false, () => {
               description: 'number on bigger than or even',
               testFunction: async (page: Page) => {
                 await page.click(
-                  `.blockstudio-fields__field--${item} [aria-label="Number on bigger than"] + div input`
+                  `.blockstudio-fields__field--${item} .blockstudio-fields__field--number:has-text("Number on bigger than") input`
                 );
                 await page.keyboard.press('ArrowUp');
                 await page.keyboard.press('ArrowUp');
@@ -148,13 +148,13 @@ testType('conditions', false, () => {
                 await page.keyboard.press('ArrowUp');
                 await count(
                   page,
-                  `.blockstudio-fields__field--${item} [aria-label="Number on bigger than or even"]`,
+                  `.blockstudio-fields__field--${item} .blockstudio-fields__field--number:has-text("Number on bigger than or even")`,
                   0
                 );
                 await page.keyboard.press('ArrowUp');
                 await count(
                   page,
-                  `.blockstudio-fields__field--${item} [aria-label="Number on bigger than or even"]`,
+                  `.blockstudio-fields__field--${item} .blockstudio-fields__field--number:has-text("Number on bigger than or even")`,
                   1
                 );
               },
@@ -163,7 +163,7 @@ testType('conditions', false, () => {
               description: 'select on bigger than or even',
               testFunction: async (page: Page) => {
                 await page.click(
-                  `.blockstudio-fields__field--${item} [aria-label="Number on bigger than or even"] + div input`
+                  `.blockstudio-fields__field--${item} .blockstudio-fields__field--number:has-text("Number on bigger than or even") input`
                 );
                 await page.keyboard.press('ArrowUp');
                 await page.keyboard.press('ArrowUp');
@@ -171,13 +171,13 @@ testType('conditions', false, () => {
                 await page.keyboard.press('ArrowUp');
                 await count(
                   page,
-                  `.blockstudio-fields__field--${item} [aria-label="Select on bigger than or even"]`,
+                  `.blockstudio-fields__field--${item} .blockstudio-fields__field--select:has-text("Select on bigger than or even")`,
                   0
                 );
                 await page.keyboard.press('ArrowUp');
                 await count(
                   page,
-                  `.blockstudio-fields__field--${item} [aria-label="Select on bigger than or even"]`,
+                  `.blockstudio-fields__field--${item} .blockstudio-fields__field--select:has-text("Select on bigger than or even")`,
                   1
                 );
               },
@@ -193,7 +193,7 @@ testType('conditions', false, () => {
                 );
                 await count(
                   page,
-                  `.blockstudio-fields__field--${item} >> text=Final toggle`,
+                  `.blockstudio-fields__field--${item} .blockstudio-fields__field--toggle:has-text("Final toggle")`,
                   1
                 );
               },

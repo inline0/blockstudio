@@ -8,13 +8,19 @@ testType('repeater', false, () => {
       testFunction: async (page: Page) => {
         await page.evaluate(() => window.localStorage.clear());
 
-        await page.click(
-          '[aria-label="Repeater Minimized"] + div .blockstudio-repeater__minimize'
-        );
+        await page
+          .locator('.blockstudio-fields__field--repeater')
+          .filter({ hasText: 'Repeater Minimized' })
+          .locator('.blockstudio-repeater__minimize')
+          .first()
+          .click();
         await count(page, 'text=Prefix: 20 - Suffix', 1);
-        await page.click(
-          '[aria-label="Repeater Minimized"] + div .blockstudio-repeater__minimize'
-        );
+        await page
+          .locator('.blockstudio-fields__field--repeater')
+          .filter({ hasText: 'Repeater Minimized' })
+          .locator('.blockstudio-repeater__minimize')
+          .first()
+          .click();
       },
     },
     {

@@ -38,7 +38,10 @@ testType('files', false, () => {
           await page.click('.media-frame-toolbar button:visible');
           if (index === 0) {
             await page
-              .locator(`[aria-label="Files Multiple"] + div select`)
+              .locator('.blockstudio-fields__field--files')
+              .filter({ hasText: 'Files Multiple' })
+              .locator('select')
+              .first()
               .selectOption({ index: 0 });
             await text(page, '"filesMultiple__size":"thumbnail"');
             await countText(page, '[{"ID":1604', 1);
@@ -64,9 +67,11 @@ testType('files', false, () => {
             await clickFirst();
             await countText(page, '{"ID":1604', 1);
           } else if (index === 1) {
-            await page.focus(
-              '[aria-label="Files - Multiple - ID"] + div [data-rfd-drag-handle-draggable-id="1604"]'
-            );
+            await page
+              .locator('.blockstudio-fields__field--files')
+              .filter({ hasText: 'Files - Multiple - ID' })
+              .locator('[data-rfd-drag-handle-draggable-id="1604"]')
+              .focus();
             await page.keyboard.press('ArrowDown');
             await countText(page, '[1605,1604]', 1);
             await page.keyboard.press('ArrowUp');
