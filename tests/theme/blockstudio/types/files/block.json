@@ -1,0 +1,57 @@
+{
+  "$schema": "https://app.blockstudio.dev/schema",
+  "name": "blockstudio/type-files",
+  "title": "Native Files",
+  "category": "blockstudio-test-native",
+  "icon": "star-filled",
+  "description": "Native Blockstudio Files block.",
+  "keywords": [
+    "files",
+    "native"
+  ],
+  "blockstudio": {
+    "attributes": [
+      {
+        "id": "filesMultiple",
+        "type": "files",
+        "label": "Files Multiple",
+        "max": 3,
+        "multiple": true,
+        "size": true
+      },
+      {
+        "id": "filesMultipleId",
+        "type": "files",
+        "label": "Files - Multiple - ID",
+        "max": 3,
+        "multiple": true,
+        "returnFormat": "id"
+      },
+      {
+        "id": "filesMultipleUrl",
+        "type": "files",
+        "label": "Files - Multiple - URL",
+        "max": 3,
+        "multiple": true,
+        "returnFormat": "url"
+      },
+      {
+        "id": "filesSingle",
+        "type": "files",
+        "label": "Files - Single"
+      },
+      {
+        "id": "filesSingleId",
+        "type": "files",
+        "label": "Files - Single - ID",
+        "returnFormat": "id"
+      },
+      {
+        "id": "filesSingleUrl",
+        "type": "files",
+        "label": "Files - Single - URL",
+        "returnFormat": "url"
+      }
+    ]
+  }
+}

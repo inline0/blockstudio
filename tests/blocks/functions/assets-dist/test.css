@@ -1,9 +1,0 @@
-h1 {
-  color: black;
-}
-
-body:not(.wp-admin) {
-  h1 {
-    color: red;
-  }
-}

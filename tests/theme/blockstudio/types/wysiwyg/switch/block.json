@@ -1,0 +1,59 @@
+{
+  "$schema": "https://app.blockstudio.dev/schema",
+  "name": "blockstudio/type-wysiwyg-switch",
+  "title": "Native WYSIWYG Switch",
+  "category": "blockstudio-test-native",
+  "icon": "star-filled",
+  "description": "Native Blockstudio WYSIWYG switch block.",
+  "keywords": [
+    "wysiwyg",
+    "switch",
+    "native"
+  ],
+  "blockstudio": {
+    "attributes": [
+      {
+        "id": "wysiwyg",
+        "type": "wysiwyg",
+        "label": "WYSIWYG",
+        "default": "Default text",
+        "mode": "both",
+        "toolbar": {
+          "tags": {
+            "headings": [
+              1,
+              2,
+              3,
+              4,
+              5,
+              6
+            ]
+          },
+          "formats": {
+            "bold": true,
+            "italic": true,
+            "orderedList": true,
+            "strikethrough": true,
+            "code": true,
+            "link": {
+              "opensInNewTab": true,
+              "attributes": {
+                "rel": "nofollow"
+              }
+            },
+            "underline": true,
+            "unorderedList": true,
+            "textAlign": {
+              "alignments": [
+                "left",
+                "center",
+                "right",
+                "justify"
+              ]
+            }
+          }
+        }
+      }
+    ]
+  }
+}

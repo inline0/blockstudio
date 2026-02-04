@@ -1,0 +1,28 @@
+{
+  "$schema": "https://app.blockstudio.dev/schema",
+  "name": "blockstudio/type-link",
+  "title": "Native Link",
+  "category": "blockstudio-test-native",
+  "icon": "star-filled",
+  "description": "Native Blockstudio Link block.",
+  "keywords": [
+    "link",
+    "native"
+  ],
+  "blockstudio": {
+    "attributes": [
+      {
+        "id": "link",
+        "type": "link",
+        "label": "link",
+        "opensInNewTab": true,
+        "default": {
+          "id": "google.com",
+          "title": "google.com",
+          "url": "https://google.com",
+          "type": "URL"
+        }
+      }
+    ]
+  }
+}

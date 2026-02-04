@@ -1,0 +1,22 @@
+{
+  "$schema": "https://app.blockstudio.dev/schema",
+  "name": "blockstudio/type-toggle",
+  "title": "Native Toggle",
+  "category": "blockstudio-test-native",
+  "icon": "star-filled",
+  "description": "Native Blockstudio Toggle block.",
+  "keywords": [
+    "toggle",
+    "native"
+  ],
+  "blockstudio": {
+    "attributes": [
+      {
+        "id": "toggle",
+        "type": "toggle",
+        "label": "Toggle",
+        "default": true
+      }
+    ]
+  }
+}

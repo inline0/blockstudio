@@ -1,0 +1,4 @@
+<div class="blockstudio-test__block" id="{{ b.name | replace({'/': '-'}) }}">
+  <h1>ID: {{ b.name | replace({'/': '-'}) }}</h1>
+  <code>Attributes: {{ a | json_encode }}</code>
+</div>

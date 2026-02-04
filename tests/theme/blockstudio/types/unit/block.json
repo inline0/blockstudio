@@ -1,0 +1,39 @@
+{
+  "$schema": "https://app.blockstudio.dev/schema",
+  "name": "blockstudio/type-unit",
+  "title": "Native Unit",
+  "category": "blockstudio-test-native",
+  "icon": "star-filled",
+  "description": "Native Blockstudio Unit block.",
+  "keywords": [
+    "unit",
+    "native"
+  ],
+  "blockstudio": {
+    "attributes": [
+      {
+        "id": "unit",
+        "type": "unit",
+        "label": "Unit",
+        "default": "1rem",
+        "units": [
+          {
+            "value": "px",
+            "label": "px",
+            "default": 0
+          },
+          {
+            "value": "%",
+            "label": "%",
+            "default": 10
+          },
+          {
+            "value": "em",
+            "label": "em",
+            "default": 0
+          }
+        ]
+      }
+    ]
+  }
+}

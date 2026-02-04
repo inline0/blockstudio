@@ -5,12 +5,59 @@ WordPress block framework plugin - v7 modernization with 100% WordPress Coding S
 ## Quick Reference
 
 ```bash
-# Run tests
-npm run playground:v7 && npm run test:v7
+# Run unit tests (snapshot comparison)
+npm run playground:unit && npm run test:unit
+
+# Run E2E tests (browser automation)
+npm run wp-env:start && npx playwright test tests/e2e/types/text.ts --config=playwright.wp-env.config.ts
 
 # Check coding standards
 composer cs
 ```
+
+## Testing - IMPORTANT
+
+There are **TWO separate test systems**. Do not confuse them:
+
+### 1. Unit Tests (WordPress Playground)
+
+**Purpose:** Compare v7 output against v6 reference snapshots.
+
+**Technology:** WordPress Playground (lightweight, runs in browser)
+
+**Commands:**
+```bash
+npm run playground:unit     # Start unit test server (port 9701)
+npm run test:unit           # Run unit tests against playground
+npm run playground:reference # Start v6 reference server (port 9706)
+```
+
+**Test files:** `tests/unit/*.test.ts`
+
+### 2. E2E Tests (wp-env)
+
+**Purpose:** Browser automation tests for UI interactions.
+
+**Technology:** wp-env (full WordPress with Docker)
+
+**Commands:**
+```bash
+npm run wp-env:start        # Start wp-env (port 8888)
+npm run test:e2e            # Run ALL E2E tests
+npx playwright test tests/e2e/types/text.ts --config=playwright.wp-env.config.ts  # Run specific test
+```
+
+**Test files:** `tests/e2e/**/*.ts`
+
+### Key Differences
+
+| | Unit Tests | E2E Tests |
+|---|---|---|
+| Server | WordPress Playground | wp-env (Docker) |
+| Port | 9701 | 8888 |
+| Config | `playwright.config.ts` | `playwright.wp-env.config.ts` |
+| Purpose | Snapshot comparison | UI automation |
+| Speed | Fast | Slower |
 
 ## Project Structure
 
@@ -28,7 +75,14 @@ blockstudio7/
 ├── .claude/skills/      # Claude Code skills
 ├── readme.txt           # WordPress plugin readme with changelog
 ├── _reference/          # v6 reference (gitignored, for snapshots)
-└── tests/               # Test infrastructure
+└── tests/
+    ├── unit/            # Unit test files + playground servers
+    ├── e2e/             # E2E test files
+    ├── theme/           # Test theme (blocks, pages, test-helper)
+    │   ├── blockstudio/ # Test blocks
+    │   ├── pages/       # Test pages
+    │   └── test-helper.php
+    └── wordpress-playground/
 ```
 
 ## Skills
@@ -40,7 +94,7 @@ Use `/feature` when implementing new features. This skill guides the complete wo
 3. Update schema if adding new field properties (`docs/src/schemas/`)
 4. Update TypeScript types (`src/types/block.ts`)
 5. Add E2E test in `tests/e2e/types/`
-6. Add test block in `tests/blocks/types/`
+6. Add test block in `tests/theme/blockstudio/types/`
 7. Update documentation in `docs/content/docs/`
 8. Update changelog in `readme.txt`
 
@@ -80,7 +134,7 @@ npm run build            # Generate + build
 
 1. **NEVER COMMIT WITHOUT TESTING** - Always run and verify tests pass before committing. No exceptions.
 2. **DEBUG UNTIL SOLVED** - When a test fails, debug with temporary logging, screenshots, and other debugging tools until the problem is resolved. Do not give up or move on.
-3. **Run tests** after changes: `npm run test:v7`
+3. **Run tests** after changes: `npm run test:unit`
 4. **Never modify `_reference/`** - read-only v6 baseline
 5. **100% WordPress Coding Standards** - no exceptions
 6. **One class at a time** - migrate and test incrementally
@@ -90,9 +144,11 @@ npm run build            # Generate + build
 
 | Command | Description |
 |---------|-------------|
-| `npm run playground:v7` | Start v7 server (port 9701) |
-| `npm run test:v7` | Run v7 unit/snapshot tests (not E2E) |
-| `npm run playground` | Start v6 reference server (port 9706) |
+| `npm run playground:unit` | Start unit test server (port 9701) |
+| `npm run test:unit` | Run unit/snapshot tests |
+| `npm run playground:reference` | Start v6 reference server (port 9706) |
+| `npm run wp-env:start` | Start wp-env for E2E tests (port 8888) |
+| `npm run test:e2e` | Run all E2E tests |
 | `composer cs` | Check PHPCS |
 | `composer cs:fix` | Auto-fix PHPCS issues |
 
@@ -109,7 +165,6 @@ npm run build            # Generate + build
 | Server | Port |
 |--------|------|
 | Docs | 9700 |
-| v7 Unit Tests | 9701 |
-| v6 Reference | 9706 |
-| v7 E2E | 9711 |
-| v6 E2E | 9710 |
+| Unit Tests (Playground) | 9701 |
+| v6 Reference (Playground) | 9706 |
+| wp-env (E2E) | 8888 |

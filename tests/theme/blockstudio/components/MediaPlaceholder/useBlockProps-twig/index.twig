@@ -1,0 +1,9 @@
+<div useBlockProps class="blockstudio-test__block" id="{{ b.name|replace({'/': '-'}) }}">
+  <MediaPlaceholder
+    attribute="files"
+    labels="{{ {title: 'Test title', instructions: 'Test instructions'}|json_encode|escape('html_attr') }}"
+  />
+  {% for file in a.files %}
+    {{ fn('wp_get_attachment_image', file.ID) }}
+  {% endfor %}
+</div>

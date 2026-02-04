@@ -1,0 +1,72 @@
+{
+  "$schema": "https://app.blockstudio.dev/schema",
+  "name": "blockstudio/type-tabs-nested",
+  "title": "Native Tabs Nested",
+  "category": "blockstudio-test-native",
+  "icon": "star-filled",
+  "description": "Native Blockstudio Tabs Nested block.",
+  "keywords": ["tabs", "nested", "native"],
+  "blockstudio": {
+    "attributes": [
+      {
+        "type": "tabs",
+        "tabs": [
+          {
+            "id": "tab1",
+            "title": "Tab 1",
+            "attributes": [
+              {
+                "id": "toggle",
+                "type": "toggle",
+                "label": "Toggle"
+              },
+              {
+                "id": "toggle2",
+                "type": "toggle",
+                "label": "Toggle 2"
+              },
+              {
+                "type": "tabs",
+                "tabs": [
+                  {
+                    "id": "tab1",
+                    "title": "Tab 1",
+                    "attributes": [
+                      {
+                        "id": "toggle3",
+                        "type": "toggle",
+                        "label": "Toggle 3"
+                      }
+                    ]
+                  },
+                  {
+                    "id": "tab2",
+                    "title": "Tab 2",
+                    "attributes": [
+                      {
+                        "id": "text2",
+                        "type": "text",
+                        "label": "Text 2"
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "id": "tab2",
+            "title": "Tab 2",
+            "attributes": [
+              {
+                "id": "text",
+                "type": "text",
+                "label": "Text"
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  }
+}

@@ -1,0 +1,25 @@
+{
+  "$schema": "https://app.blockstudio.dev/schema",
+  "name": "blockstudio/component-richtext-default",
+  "title": "Native RichText default",
+  "category": "blockstudio-test-native",
+  "icon": "star-filled",
+  "description": "Native Blockstudio RichText default block.",
+  "keywords": [
+    "richtext",
+    "default",
+    "native"
+  ],
+  "blockstudio": {
+    "attributes": [
+      {
+        "id": "richtext",
+        "type": "richtext"
+      },
+      {
+        "id": "richtext2",
+        "type": "richtext"
+      }
+    ]
+  }
+}

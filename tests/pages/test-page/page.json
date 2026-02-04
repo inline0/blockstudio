@@ -1,8 +1,0 @@
-{
-  "name": "blockstudio-e2e-test",
-  "title": "Blockstudio E2E Test Page",
-  "slug": "blockstudio-e2e-test",
-  "postType": "page",
-  "postStatus": "publish",
-  "templateLock": "all"
-}

@@ -1,0 +1,13 @@
+{
+  "$schema": "https://app.blockstudio.dev/schema",
+  "name": "blockstudio/element-inline",
+  "title": "Native Element Inline",
+  "category": "blockstudio-test-native",
+  "icon": "star-filled",
+  "description": "Native Blockstudio element inline block.",
+  "keywords": [
+    "element",
+    "native"
+  ],
+  "blockstudio": true
+}

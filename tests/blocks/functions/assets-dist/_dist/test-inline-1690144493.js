@@ -1,1 +1,0 @@
-import confetti from "./modules/canvas-confetti/1.6.0.js";console.log("hi");console.log(confetti);confetti()

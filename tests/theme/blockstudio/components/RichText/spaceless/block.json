@@ -1,0 +1,25 @@
+{
+  "$schema": "https://app.blockstudio.dev/schema",
+  "name": "blockstudio/component-richtext-spaceless",
+  "title": "Native RichText spaceless",
+  "category": "blockstudio-test-native",
+  "icon": "star-filled",
+  "description": "Native Blockstudio RichText spaceless block.",
+  "keywords": [
+    "richtext",
+    "spaceless",
+    "native"
+  ],
+  "blockstudio": {
+    "attributes": [
+      {
+        "id": "richtext",
+        "type": "richtext"
+      },
+      {
+        "id": "richtext2",
+        "type": "richtext"
+      }
+    ]
+  }
+}

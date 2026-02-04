@@ -1,0 +1,8 @@
+{
+  "name": "blockstudio-sync-test",
+  "title": "Blockstudio Sync Test Page",
+  "slug": "blockstudio-sync-test",
+  "postType": "page",
+  "postStatus": "draft",
+  "templateLock": "insert"
+}

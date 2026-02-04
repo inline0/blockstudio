@@ -1,8 +1,0 @@
-<div class="blockstudio-test__block" id="{{ b.name|replace({'/': '-'}) }}">
-  <InnerBlocks 
-    template="{{ [
-      ['core/heading', { 'placeholder' : 'My title template' }],
-      ['core/paragraph', { 'placeholder' : 'My summary' }]
-    ]|json_encode|escape('html_attr') }}" 
-  />
-</div>

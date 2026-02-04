@@ -1,0 +1,13 @@
+{
+  "$schema": "https://app.blockstudio.dev/schema",
+  "name": "blockstudio/element-script",
+  "title": "Native Element Script",
+  "category": "blockstudio-test-native",
+  "icon": "star-filled",
+  "description": "Native Blockstudio element script block.",
+  "keywords": [
+    "element",
+    "native"
+  ],
+  "blockstudio": true
+}

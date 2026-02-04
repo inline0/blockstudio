@@ -1,0 +1,34 @@
+{
+  "$schema": "https://app.blockstudio.dev/schema",
+  "name": "blockstudio/type-transforms-3",
+  "title": "Native Transforms 3",
+  "category": "blockstudio-test-native",
+  "icon": "star-filled",
+  "description": "Native Blockstudio Transforms 3 block.",
+  "keywords": [
+    "transforms",
+    "native"
+  ],
+  "blockstudio": {
+    "transforms": {
+      "from": [
+        {
+          "type": "enter",
+          "regExp": "/^-{3,}$/"
+        },
+        {
+          "type": "prefix",
+          "prefix": "???"
+        }
+      ]
+    },
+    "attributes": [
+      {
+        "id": "text",
+        "type": "number",
+        "label": "Text",
+        "default": 19
+      }
+    ]
+  }
+}

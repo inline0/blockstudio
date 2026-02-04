@@ -1,0 +1,12 @@
+<div class="conditions-default-test">
+  <p>Background Type: {{ a.backgroundType }}</p>
+  {% if a.backgroundColor %}
+    <p>Color: {{ a.backgroundColor }}</p>
+  {% endif %}
+  {% if a.backgroundGradient %}
+    <p>Gradient: {{ a.backgroundGradient }}</p>
+  {% endif %}
+  {% if a.backgroundImage %}
+    <p>Image: {{ a.backgroundImage|first.url }}</p>
+  {% endif %}
+</div>

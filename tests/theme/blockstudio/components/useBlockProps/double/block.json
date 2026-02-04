@@ -1,0 +1,14 @@
+{
+  "$schema": "https://app.blockstudio.dev/schema",
+  "name": "blockstudio/component-useblockprops-double",
+  "title": "Native useBlockProps double",
+  "category": "blockstudio-test-native",
+  "icon": "star-filled",
+  "description": "Native Blockstudio useBlockProps double block.",
+  "keywords": [
+    "useblockprops",
+    "double",
+    "native"
+  ],
+  "blockstudio": true
+}

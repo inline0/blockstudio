@@ -1,0 +1,37 @@
+{
+  "$schema": "https://app.blockstudio.dev/schema",
+  "name": "blockstudio/type-token",
+  "title": "Native Token",
+  "category": "blockstudio-test-native",
+  "icon": "star-filled",
+  "description": "Native Blockstudio Token block.",
+  "keywords": [
+    "token",
+    "native"
+  ],
+  "blockstudio": {
+    "attributes": [
+      {
+        "id": "token",
+        "type": "token",
+        "label": "Token",
+        "options": [
+          {
+            "value": "one",
+            "label": "One"
+          },
+          {
+            "value": "two",
+            "label": "Two"
+          },
+          {
+            "value": "three",
+            "label": "Three"
+          }
+        ],
+        "default": "three",
+        "returnFormat": "both"
+      }
+    ]
+  }
+}

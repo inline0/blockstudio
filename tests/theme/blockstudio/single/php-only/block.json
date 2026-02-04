@@ -1,0 +1,14 @@
+{
+  "$schema": "https://app.blockstudio.dev/schema",
+  "name": "blockstudio/php-only",
+  "title": "PHP Only",
+  "category": "blockstudio-test-native",
+  "icon": "star-filled",
+  "description": "Native Blockstudio PHP block.",
+  "keywords": [
+    "block",
+    "native",
+    "php"
+  ],
+  "blockstudio": true
+}

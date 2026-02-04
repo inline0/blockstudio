@@ -1,0 +1,25 @@
+{
+  "$schema": "https://app.blockstudio.dev/schema",
+  "name": "blockstudio/context",
+  "title": "Native Context",
+  "category": "blockstudio-test-native",
+  "icon": "star-filled",
+  "description": "Native Blockstudio Context block.",
+  "keywords": [
+    "context",
+    "native"
+  ],
+  "supports": {
+    "anchor": true
+  },
+  "blockstudio": {
+    "attributes": [
+      {
+        "id": "text",
+        "type": "text",
+        "label": "Text",
+        "default": "Default value"
+      }
+    ]
+  }
+}

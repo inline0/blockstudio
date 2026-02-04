@@ -1,9 +1,0 @@
-{
-   "$schema": "https://app.blockstudio.dev/schema",
-   "apiVersion": 2,
-   "name": "blockstudio/assets",
-   "title": "Native Assets",
-   "category": "blockstudio-test-native",
-   "icon": "star-filled",
-   "blockstudio": true
-}

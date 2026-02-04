@@ -1,0 +1,34 @@
+{
+  "$schema": "https://app.blockstudio.dev/schema",
+  "name": "blockstudio/type-storage-meta",
+  "title": "Storage Meta Test",
+  "category": "blockstudio-test-native",
+  "icon": "database",
+  "description": "Test block for post meta storage feature.",
+  "keywords": [
+    "storage",
+    "meta"
+  ],
+  "blockstudio": {
+    "attributes": [
+      {
+        "id": "meta_text",
+        "type": "text",
+        "label": "Meta Text",
+        "storage": {
+          "type": "postMeta",
+          "postMetaKey": "storage_test_meta"
+        }
+      },
+      {
+        "id": "block_and_meta",
+        "type": "text",
+        "label": "Block and Meta",
+        "storage": {
+          "type": ["block", "postMeta"],
+          "postMetaKey": "storage_test_both"
+        }
+      }
+    ]
+  }
+}
