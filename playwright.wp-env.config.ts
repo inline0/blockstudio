@@ -13,6 +13,7 @@ export default defineConfig({
 	testDir: './tests/e2e',
 	testMatch: 'types/**/*.ts',
 	timeout: 60000,
+	outputDir: '.playwright/test-results',
 	expect: {
 		timeout: 15000,
 	},
@@ -22,7 +23,7 @@ export default defineConfig({
 	workers: 1,
 	reporter: [
 		['list'],
-		['html', { open: 'never' }],
+		['html', { outputFolder: '.playwright/playwright-report', open: 'never' }],
 	],
 
 	use: {
