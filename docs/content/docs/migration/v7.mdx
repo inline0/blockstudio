@@ -54,3 +54,41 @@ The `npm:` prefix offers several advantages:
 - **Ecosystem alignment** - Matches Deno's established convention
 - **Clarity** - Makes it immediately clear you're importing from npm
 - **Future-proofing** - The `blockstudio/` prefix may be deprecated in a future major version
+
+## Hook Names
+
+Blockstudio 7 standardizes all PHP hook names to use `snake_case` instead of `camelCase`, aligning with WordPress core conventions.
+
+### Changed Hook Names
+
+| Old Name (v6) | New Name (v7) |
+|---------------|---------------|
+| `blockstudio/blocks/components/useblockprops/render` | `blockstudio/blocks/components/use_block_props/render` |
+| `blockstudio/blocks/components/innerblocks/render` | `blockstudio/blocks/components/inner_blocks/render` |
+| `blockstudio/blocks/components/innerblocks/frontend/wrap` | `blockstudio/blocks/components/inner_blocks/frontend/wrap` |
+| `blockstudio/blocks/components/richtext/render` | `blockstudio/blocks/components/rich_text/render` |
+| `blockstudio/assets/process/scss/importPaths` | `blockstudio/assets/process/scss/import_paths` |
+| `blockstudio/settings/assets/process/scssFiles` | `blockstudio/settings/assets/process/scss_files` |
+| `blockstudio/settings/editor/formatOnSave` | `blockstudio/settings/editor/format_on_save` |
+| `blockstudio/settings/blockEditor/disableLoading` | `blockstudio/settings/block_editor/disable_loading` |
+| `blockstudio/settings/blockEditor/cssClasses` | `blockstudio/settings/block_editor/css_classes` |
+| `blockstudio/settings/blockEditor/cssVariables` | `blockstudio/settings/block_editor/css_variables` |
+| `blockstudio/settings/ai/enableContextGeneration` | `blockstudio/settings/ai/enable_context_generation` |
+
+### Backward Compatibility
+
+The old camelCase hook names are still supported for backward compatibility. Your existing code will continue to work without changes. However, we recommend migrating to the new snake_case names for consistency.
+
+**Example migration:**
+
+```php
+// Before (v6)
+add_filter('blockstudio/settings/blockEditor/cssClasses', function() {
+    return ['my-stylesheet'];
+});
+
+// After (v7)
+add_filter('blockstudio/settings/block_editor/css_classes', function() {
+    return ['my-stylesheet'];
+});
+```

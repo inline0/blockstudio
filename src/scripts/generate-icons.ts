@@ -1,4 +1,4 @@
-import { readFileSync, writeFileSync, readdirSync, rmSync, mkdirSync, statSync, existsSync, copyFileSync } from 'fs';
+import { readFileSync, writeFileSync, readdirSync, rmSync, mkdirSync, statSync, existsSync } from 'fs';
 import { dirname, resolve, join, basename, extname } from 'path';
 import { fileURLToPath } from 'url';
 import { parse } from 'node-html-parser';

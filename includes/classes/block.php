@@ -354,8 +354,14 @@ class Block {
 
 			if ( 'RichText' === $tag ) {
 				$rich_text_content = apply_filters(
-					'blockstudio/blocks/components/richtext/render',
+					'blockstudio/blocks/components/rich_text/render',
 					$attribute,
+					$block
+				);
+				// Backwards compatibility.
+				$rich_text_content = apply_filters(
+					'blockstudio/blocks/components/richtext/render',
+					$rich_text_content,
 					$block
 				);
 
@@ -372,17 +378,30 @@ class Block {
 				);
 			} else {
 				$inner_blocks_content = apply_filters(
-					'blockstudio/blocks/components/innerblocks/render',
+					'blockstudio/blocks/components/inner_blocks/render',
 					$replace,
 					$block
 				);
-				$content              = preg_replace(
+				// Backwards compatibility.
+				$inner_blocks_content = apply_filters(
+					'blockstudio/blocks/components/innerblocks/render',
+					$inner_blocks_content,
+					$block
+				);
+				$wrap                 = apply_filters(
+					'blockstudio/blocks/components/inner_blocks/frontend/wrap',
+					true,
+					$block
+				);
+				// Backwards compatibility.
+				$wrap    = apply_filters(
+					'blockstudio/blocks/components/innerblocks/frontend/wrap',
+					$wrap,
+					$block
+				);
+				$content = preg_replace(
 					$regex,
-					apply_filters(
-						'blockstudio/blocks/components/innerblocks/frontend/wrap',
-						true,
-						$block
-					)
+					$wrap
 						? "<$element_tag $attr>" .
 							$inner_blocks_content .
 							"</$element_tag>"
@@ -542,21 +561,28 @@ class Block {
 						);
 					}
 
-					$attributes = array();
+					$wrapper_attributes = apply_filters(
+						'blockstudio/blocks/components/use_block_props/render',
+						get_block_wrapper_attributes(
+							array(
+								'class' => $classes,
+								'id'    =>
+									$attributes_block['anchor'] ??
+									$element->getAttribute( 'id' ),
+							)
+						),
+						$block
+					);
+					// Backwards compatibility.
+					$wrapper_attributes = apply_filters(
+						'blockstudio/blocks/components/useblockprops/render',
+						$wrapper_attributes,
+						$block
+					);
+					$attributes         = array();
 					preg_match_all(
 						'/(\S+)="([^"]+)"/',
-						apply_filters(
-							'blockstudio/blocks/components/useblockprops/render',
-							get_block_wrapper_attributes(
-								array(
-									'class' => $classes,
-									'id'    =>
-										$attributes_block['anchor'] ??
-										$element->getAttribute( 'id' ),
-								)
-							),
-							$block
-						),
+						$wrapper_attributes,
 						$attributes,
 						PREG_SET_ORDER
 					);

@@ -413,11 +413,38 @@ class Settings {
 			$value = $default;
 		}
 
-		if ( has_filter( 'blockstudio/settings/' . $key ) ) {
-			return apply_filters( 'blockstudio/settings/' . $key, $value );
+		// Convert key to snake_case for new filter name.
+		$snake_key = self::to_snake_case( $key );
+		$value     = apply_filters( 'blockstudio/settings/' . $snake_key, $value );
+
+		// Backwards compatibility: also apply old camelCase filter if different.
+		if ( $snake_key !== $key && has_filter( 'blockstudio/settings/' . $key ) ) {
+			$value = apply_filters( 'blockstudio/settings/' . $key, $value );
 		}
 
 		return $value;
+	}
+
+	/**
+	 * Convert a path string to snake_case.
+	 *
+	 * Converts path segments from camelCase to snake_case while preserving slashes.
+	 * Example: 'blockEditor/cssClasses' -> 'block_editor/css_classes'
+	 *
+	 * @param string $path The path string with forward slashes.
+	 *
+	 * @return string The snake_case path.
+	 */
+	private static function to_snake_case( string $path ): string {
+		$segments = explode( '/', $path );
+		$segments = array_map(
+			function ( $segment ) {
+				// Insert underscore before uppercase letters and convert to lowercase.
+				return strtolower( preg_replace( '/([a-z])([A-Z])/', '$1_$2', $segment ) );
+			},
+			$segments
+		);
+		return implode( '/', $segments );
 	}
 
 	/**

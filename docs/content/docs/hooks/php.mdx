@@ -149,44 +149,44 @@ add_filter('blockstudio/block/attributes/populate', function($options, $attribut
 }, 10, 3);
 ```
 
-### components/useblockprops/render
+### components/use_block_props/render
 
 This filter allows you to adjust the output of the `useBlockProps` content.
 
 ```php title="functions.php"
-add_filter('blockstudio/block/components/useblockprops/render', function($props, $block) {
+add_filter('blockstudio/blocks/components/use_block_props/render', function($props, $block) {
   $props['class'] .= ' my-custom-class';
   return $props;
 }, 10, 2);
 ```
 
-### components/innerblocks/render
+### components/inner_blocks/render
 
 This filter allows you to adjust the output of the `<InnerBlocks />` content.
 
 ```php title="functions.php"
-add_filter('blockstudio/block/components/innerblocks/render', function($content, $block) {
+add_filter('blockstudio/blocks/components/inner_blocks/render', function($content, $block) {
   return '<div class="inner-wrapper">' . $content . '</div>';
 }, 10, 2);
 ```
 
-### components/innerblocks/frontend/wrap
+### components/inner_blocks/frontend/wrap
 
 This filter allows you to remove the `<InnerBlocks />` wrapper from the
 frontend.
 
 ```php title="functions.php"
-add_filter('blockstudio/block/components/innerblocks/frontend/wrap', function($wrap, $block) {
+add_filter('blockstudio/blocks/components/inner_blocks/frontend/wrap', function($wrap, $block) {
   return false; // Remove wrapper
 }, 10, 2);
 ```
 
-### components/richtext/render
+### components/rich_text/render
 
 This filter allows you to adjust the output of the `<RichText />` content.
 
 ```php title="functions.php"
-add_filter('blockstudio/block/components/richtext/render', function($content, $attribute, $block) {
+add_filter('blockstudio/blocks/components/rich_text/render', function($content, $attribute, $block) {
   return wp_kses_post($content);
 }, 10, 3);
 ```
@@ -266,12 +266,12 @@ add_filter('blockstudio/settings/assets/process/scss', function() {
 });
 ```
 
-### assets/process/scssFiles
+### assets/process/scss_files
 
 This filter allows you to enable/disable the processing of .scss files to CSS.
 
 ```php title="functions.php"
-add_filter('blockstudio/settings/assets/process/scssFiles', function() {
+add_filter('blockstudio/settings/assets/process/scss_files', function() {
   return true;
 });
 ```
@@ -304,12 +304,12 @@ add_filter('blockstudio/settings/tailwind/config', function() {
 });
 ```
 
-### editor/formatOnSave
+### editor/format_on_save
 
 This filter allows you to enable/disable the formatting of code upon saving.
 
 ```php title="functions.php"
-add_filter('blockstudio/settings/editor/formatOnSave', function() {
+add_filter('blockstudio/settings/editor/format_on_save', function() {
   return true;
 });
 ```
@@ -334,32 +334,32 @@ add_filter('blockstudio/settings/editor/markup', function() {
 });
 ```
 
-### blockEditor/disableLoading
+### block_editor/disable_loading
 
 This filter allows you to disable the loading of blocks inside the Block Editor.
 
 ```php title="functions.php"
-add_filter('blockstudio/settings/blockEditor/disableLoading', function() {
+add_filter('blockstudio/settings/block_editor/disable_loading', function() {
   return true;
 });
 ```
 
-### blockEditor/cssClasses
+### block_editor/css_classes
 
 This filter allows you to add stylesheets whose classes should be available for choice in the class field.
 
 ```php title="functions.php"
-add_filter('blockstudio/settings/blockEditor/cssClasses', function() {
+add_filter('blockstudio/settings/block_editor/css_classes', function() {
   return ['my-stylesheet', 'another-stylesheet'];
 });
 ```
 
-### blockEditor/cssVariables
+### block_editor/css_variables
 
 This filter allows you to add stylesheets whose CSS variables should be available for autocompletion in the code field.
 
 ```php title="functions.php"
-add_filter('blockstudio/settings/blockEditor/cssVariables', function() {
+add_filter('blockstudio/settings/block_editor/css_variables', function() {
   return ['my-stylesheet', 'another-stylesheet'];
 });
 ```
@@ -374,12 +374,12 @@ add_filter('blockstudio/settings/library', function() {
 });
 ```
 
-### ai/enableContextGeneration
+### ai/enable_context_generation
 
 This filter allows you to enable or disable context file generation for LLM tool integration. When enabled, the context file assembles up-to-date block data, Blockstudio settings of the current install, all relevant schemas, and Blockstudio documentation into a single source for use with AI development tools.
 
 ```php title="functions.php"
-add_filter('blockstudio/settings/ai/enableContextGeneration', function() {
+add_filter('blockstudio/settings/ai/enable_context_generation', function() {
   return true;
 });
 ```
@@ -402,13 +402,13 @@ add_filter('blockstudio/assets/enable', function($enable, $type, $block) {
 }, 10, 3);
 ```
 
-### process/scss/importPaths
+### process/scss/import_paths
 
 This filter allows you to add additional paths to the `@import` statement of the
 SCSS compiler.
 
 ```php title="functions.php"
-add_filter('blockstudio/assets/process/scss/importPaths', function($paths) {
+add_filter('blockstudio/assets/process/scss/import_paths', function($paths) {
   $paths[] = get_stylesheet_directory() . '/scss';
   return $paths;
 });

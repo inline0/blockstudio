@@ -324,8 +324,10 @@ class Assets {
 		$content = file_get_contents( $path );
 		preg_match_all( '/@import\s*([\'"])(.*?)(?<!\\\\)\1/', $content, $matches );
 
-		// phpcs:ignore WordPress.NamingConventions.ValidHookName.NotLowercase -- Public API hook name.
-		foreach ( apply_filters( 'blockstudio/assets/process/scss/importPaths', array() ) as $import_path ) {
+		$import_paths = apply_filters( 'blockstudio/assets/process/scss/import_paths', array() );
+		// Backwards compatibility.
+		$import_paths = apply_filters( 'blockstudio/assets/process/scss/importPaths', $import_paths );
+		foreach ( $import_paths as $import_path ) {
 			if ( file_exists( $import_path ) ) {
 				$mtimes[] = filemtime( $import_path );
 			}
@@ -445,8 +447,10 @@ class Assets {
 			$compiler->setImportPaths( $import_path );
 		}
 
-		// phpcs:ignore WordPress.NamingConventions.ValidHookName.NotLowercase -- Public API hook name.
-		foreach ( apply_filters( 'blockstudio/assets/process/scss/importPaths', array() ) as $i_path ) {
+		$scss_import_paths = apply_filters( 'blockstudio/assets/process/scss/import_paths', array() );
+		// Backwards compatibility.
+		$scss_import_paths = apply_filters( 'blockstudio/assets/process/scss/importPaths', $scss_import_paths );
+		foreach ( $scss_import_paths as $i_path ) {
 			if ( ! is_dir( $i_path ) ) {
 				continue;
 			}
