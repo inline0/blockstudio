@@ -84,7 +84,10 @@ class Page_Sync {
 			return '';
 		}
 
-		if ( ! empty( $page_data['is_twig'] ) && class_exists( 'Timber\Timber' ) ) {
+		if ( ! empty( $page_data['is_blade'] ) && class_exists( 'Jenssegers\Blade\Blade' ) ) {
+			$blade            = new \Jenssegers\Blade\Blade( $page_data['directory'], sys_get_temp_dir() );
+			$template_content = $blade->render( 'index', array() );
+		} elseif ( ! empty( $page_data['is_twig'] ) && class_exists( 'Timber\Timber' ) ) {
 			\Timber\Timber::init();
 			$template_content = \Timber\Timber::compile_string( $template_content, array() );
 		}

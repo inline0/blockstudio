@@ -14,7 +14,7 @@ use RecursiveIteratorIterator;
  * Discovers Blockstudio pages by scanning filesystem directories.
  *
  * This class handles discovering page.json files and their associated
- * template files (index.php or index.twig) for file-based page creation.
+ * template files (index.php, index.twig, or index.blade.php) for file-based page creation.
  *
  * @since 7.0.0
  */
@@ -124,6 +124,7 @@ class Page_Discovery {
 		$page_data['directory']     = $directory;
 		$page_data['source_path']   = str_replace( $base_path . '/', '', $directory );
 		$page_data['is_twig']       = str_ends_with( $template_path, '.twig' );
+		$page_data['is_blade']      = str_ends_with( $template_path, '.blade.php' );
 
 		return $page_data;
 	}
@@ -138,6 +139,7 @@ class Page_Discovery {
 	private function find_template( string $directory ): ?string {
 		$templates = array(
 			$directory . '/index.php',
+			$directory . '/index.blade.php',
 			$directory . '/index.twig',
 		);
 

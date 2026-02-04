@@ -9,7 +9,7 @@ Blockstudio can automatically register WordPress block patterns from file templa
 
 ## Overview
 
-Create a `patterns` folder in your theme directory. Each subfolder containing a `pattern.json` and template file (`index.php` or `index.twig`) will be registered as a block pattern.
+Create a `patterns` folder in your theme directory. Each subfolder containing a `pattern.json` and template file (`index.php`, `index.blade.php`, or `index.twig`) will be registered as a block pattern.
 
 ```
 theme/
@@ -17,7 +17,10 @@ theme/
     ├── hero/
     │   ├── pattern.json
     │   └── index.php
-    └── cta/
+    ├── cta/
+    │   ├── pattern.json
+    │   └── index.blade.php
+    └── banner/
         ├── pattern.json
         └── index.twig
 ```
@@ -175,6 +178,20 @@ If [Timber](https://timber.github.io/docs/) is installed, you can use Twig templ
 ```
 
 Note: Since patterns are registered at initialization time, Twig templates are compiled without context variables. They're useful for Twig's built-in functions and filters rather than dynamic data.
+
+## Blade Support
+
+If [jenssegers/blade](https://github.com/jenssegers/blade) is installed, you can use Blade templates:
+
+**index.blade.php:**
+```blade
+<block name="core/cover" url="https://example.com/hero.jpg">
+  <h1>{{ strtoupper("Welcome") }}</h1>
+  <p>Dynamic content powered by Blade.</p>
+</block>
+```
+
+Note: Like Twig, Blade templates for patterns are compiled without context variables at initialization time. They're useful for Blade's built-in directives and PHP functions rather than dynamic data.
 
 ## Differences from Pages
 

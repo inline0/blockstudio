@@ -1,0 +1,7 @@
+{
+  "name": "test-pattern-blade",
+  "title": "Blockstudio E2E Test Pattern (Blade)",
+  "description": "A test pattern using Blade template",
+  "categories": ["featured"],
+  "keywords": ["test", "blockstudio", "blade"]
+}

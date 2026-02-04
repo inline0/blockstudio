@@ -14,7 +14,7 @@ use RecursiveIteratorIterator;
  * Discovers Blockstudio patterns by scanning filesystem directories.
  *
  * This class handles discovering pattern.json files and their associated
- * template files (index.php or index.twig) for file-based pattern registration.
+ * template files (index.php, index.twig, or index.blade.php) for file-based pattern registration.
  *
  * @since 7.0.0
  */
@@ -117,6 +117,7 @@ class Pattern_Discovery {
 		$pattern_data['directory']     = $directory;
 		$pattern_data['source_path']   = str_replace( $base_path . '/', '', $directory );
 		$pattern_data['is_twig']       = str_ends_with( $template_path, '.twig' );
+		$pattern_data['is_blade']      = str_ends_with( $template_path, '.blade.php' );
 
 		return $pattern_data;
 	}
@@ -131,6 +132,7 @@ class Pattern_Discovery {
 	private function find_template( string $directory ): ?string {
 		$templates = array(
 			$directory . '/index.php',
+			$directory . '/index.blade.php',
 			$directory . '/index.twig',
 		);
 

@@ -7,6 +7,7 @@
 
 namespace Blockstudio;
 
+use Jenssegers\Blade\Blade;
 use Timber\Timber;
 
 /**
@@ -117,7 +118,10 @@ class Patterns {
 			return;
 		}
 
-		if ( $pattern['is_twig'] && class_exists( 'Timber\Timber' ) ) {
+		if ( ! empty( $pattern['is_blade'] ) && class_exists( 'Jenssegers\Blade\Blade' ) ) {
+			$blade    = new Blade( $pattern['directory'], sys_get_temp_dir() );
+			$template = $blade->render( 'index', array() );
+		} elseif ( $pattern['is_twig'] && class_exists( 'Timber\Timber' ) ) {
 			Timber::init();
 			$template = Timber::compile_string( $template, array() );
 		}

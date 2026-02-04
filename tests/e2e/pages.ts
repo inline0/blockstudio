@@ -202,3 +202,45 @@ test.describe('File-based Pages (Twig)', () => {
     await expect(page.locator('.wp-block-heading').first()).toBeVisible();
   });
 });
+
+test.describe('File-based Pages (Blade)', () => {
+  test('blade page exists with correct title', async () => {
+    await page.goto('http://localhost:8888/blockstudio-e2e-test-blade/');
+    await page.waitForLoadState('networkidle');
+
+    await expect(page.getByRole('heading', { name: 'Blade Template Test Page' })).toBeVisible();
+  });
+
+  test('blade template processed correctly', async () => {
+    // Check that strtoupper("Blade") was applied ("BLADE" in uppercase within paragraph)
+    await expect(page.getByText('This page uses a Blade template with BLADE support.')).toBeVisible();
+
+    // Check that date("Y") produces current year
+    const currentYear = new Date().getFullYear().toString();
+    await expect(page.getByText(`Current year: ${currentYear}`)).toBeVisible();
+  });
+
+  test('blade loop generates list items', async () => {
+    await expect(page.getByText('Blade item 1', { exact: true })).toBeVisible();
+    await expect(page.getByText('Blade item 2', { exact: true })).toBeVisible();
+    await expect(page.getByText('Blade item 3', { exact: true })).toBeVisible();
+  });
+
+  test('blade page has block syntax elements', async () => {
+    await expect(page.locator('.wp-block-buttons').first()).toBeVisible();
+    await expect(page.getByText('Blade Button')).toBeVisible();
+    await expect(page.locator('.wp-block-columns').first()).toBeVisible();
+    await expect(page.getByText('Column A')).toBeVisible();
+    await expect(page.getByText('Column B')).toBeVisible();
+  });
+
+  test('blade page editor shows correct blocks', async () => {
+    await page.goto('http://localhost:8888/wp-admin/edit.php?post_type=page');
+    await page.waitForLoadState('networkidle');
+
+    await page.locator('a.row-title:has-text("Blockstudio E2E Test Page (Blade)")').click();
+    await page.waitForSelector('.editor-styles-wrapper', { timeout: 30000 });
+
+    await expect(page.locator('.wp-block-heading').first()).toBeVisible();
+  });
+});

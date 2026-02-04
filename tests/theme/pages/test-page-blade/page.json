@@ -1,0 +1,8 @@
+{
+  "name": "blockstudio-e2e-test-blade",
+  "title": "Blockstudio E2E Test Page (Blade)",
+  "slug": "blockstudio-e2e-test-blade",
+  "postType": "page",
+  "postStatus": "publish",
+  "templateLock": "all"
+}
