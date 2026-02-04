@@ -61,6 +61,27 @@ add_filter(
 );
 
 /**
+ * Configure Blockstudio to find test pages.
+ * This filter tells Blockstudio where to look for file-based pages.
+ */
+add_filter(
+	'blockstudio/pages/paths',
+	function ( $paths ) {
+		if ( defined( 'BLOCKSTUDIO_DIR' ) ) {
+			$test_pages_path = BLOCKSTUDIO_DIR . '/tests/pages';
+
+			if ( is_dir( $test_pages_path ) ) {
+				$paths[] = $test_pages_path;
+			}
+		}
+
+		return $paths;
+	},
+	10,
+	1
+);
+
+/**
  * Provide editor assets for classes autocomplete.
  * This enables the wp-block-library-theme CSS which contains "is-large" etc.
  */

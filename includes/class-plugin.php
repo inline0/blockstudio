@@ -133,6 +133,13 @@ class Plugin {
 		require_once $classes_dir . 'extensions.php';
 		require_once $classes_dir . 'examples.php';
 		require_once $classes_dir . 'register.php';
+
+		// File-based pages system.
+		require_once $classes_dir . 'page-discovery.php';
+		require_once $classes_dir . 'page-registry.php';
+		require_once $classes_dir . 'html-parser.php';
+		require_once $classes_dir . 'page-sync.php';
+		require_once $classes_dir . 'pages.php';
 	}
 
 	/**
@@ -159,6 +166,16 @@ class Plugin {
 				}
 			},
 			PHP_INT_MAX - 1
+		);
+
+		add_action(
+			'init',
+			function () {
+				if ( class_exists( 'Blockstudio\Pages' ) ) {
+					Pages::init();
+				}
+			},
+			PHP_INT_MAX
 		);
 
 		do_action( 'blockstudio_init', $this );

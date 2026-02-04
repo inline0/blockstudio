@@ -21,6 +21,7 @@ Blockstudio gives you the ultimate developer experience for creating custom, pro
 * New: Tailwind 4 support
 * New: code field popout option to open editor in separate window
 * New: storage feature to store field values in post meta or options
+* New: file-based pages - create WordPress pages from file templates with automatic HTML to block parsing
 * Deprecation: Admin Area removed
 * Deprecation: License Key removed
 * Deprecation: Code Editor removed
