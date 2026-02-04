@@ -126,6 +126,17 @@ Pages are synced when:
 
 To prevent a page from being overwritten after manual edits, the sync checks the file modification time and only updates if the file has changed.
 
+## Custom Paths
+
+By default, Blockstudio looks in `{theme}/pages`. Add additional paths with the filter:
+
+```php title="functions.php"
+add_filter('blockstudio/pages/paths', function ($paths) {
+    $paths[] = get_template_directory() . '/custom-pages';
+    return $paths;
+});
+```
+
 ## PHP API
 
 ```php
@@ -166,3 +177,66 @@ Use `templateFor` to set a page as the default template for a post type:
 
 Any new posts of that type will start with the defined block structure.
 
+## Hooks
+
+### blockstudio/pages/paths
+
+Filter the directories scanned for pages.
+
+```php
+add_filter('blockstudio/pages/paths', function ($paths) {
+    $paths[] = MY_PLUGIN_DIR . '/pages';
+    return $paths;
+});
+```
+
+### blockstudio/pages/create_post_data
+
+Filter post data before creating a new page.
+
+```php
+add_filter('blockstudio/pages/create_post_data', function ($postData, $pageData) {
+    $postData['post_author'] = 1;
+    return $postData;
+}, 10, 2);
+```
+
+### blockstudio/pages/update_post_data
+
+Filter post data before updating an existing page.
+
+```php
+add_filter('blockstudio/pages/update_post_data', function ($postData, $post, $pageData) {
+    return $postData;
+}, 10, 3);
+```
+
+### blockstudio/pages/synced
+
+Action fired after all pages have been synced.
+
+```php
+add_action('blockstudio/pages/synced', function ($registry) {
+    // $registry is the Page_Registry instance
+});
+```
+
+### blockstudio/pages/post_created
+
+Action fired after a page post is created.
+
+```php
+add_action('blockstudio/pages/post_created', function ($postId, $pageData) {
+    // Do something after page creation
+}, 10, 2);
+```
+
+### blockstudio/pages/post_updated
+
+Action fired after a page post is updated.
+
+```php
+add_action('blockstudio/pages/post_updated', function ($postId, $pageData) {
+    // Do something after page update
+}, 10, 2);
+```
