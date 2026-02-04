@@ -141,7 +141,7 @@ test.describe('File-based Pages', () => {
     await page.goto('http://localhost:8888/wp-admin/edit.php?post_type=page');
     await page.waitForLoadState('networkidle');
 
-    // Use exact text match to avoid matching the Twig page
+    // Exact match to avoid matching the Twig/Blade page titles
     await page.locator('a.row-title', { hasText: /^Blockstudio E2E Test Page$/ }).click();
     await page.waitForSelector('.editor-styles-wrapper', { timeout: 30000 });
 
@@ -170,10 +170,9 @@ test.describe('File-based Pages (Twig)', () => {
   });
 
   test('twig template processed correctly', async () => {
-    // Check that Twig |upper filter was applied ("TWIG" in uppercase within paragraph)
+    // Verify |upper filter was applied
     await expect(page.getByText('This page uses a Twig template with TWIG support.')).toBeVisible();
 
-    // Check that date filter produces current year
     const currentYear = new Date().getFullYear().toString();
     await expect(page.getByText(`Current year: ${currentYear}`)).toBeVisible();
   });
@@ -212,10 +211,9 @@ test.describe('File-based Pages (Blade)', () => {
   });
 
   test('blade template processed correctly', async () => {
-    // Check that strtoupper("Blade") was applied ("BLADE" in uppercase within paragraph)
+    // Verify strtoupper() was applied
     await expect(page.getByText('This page uses a Blade template with BLADE support.')).toBeVisible();
 
-    // Check that date("Y") produces current year
     const currentYear = new Date().getFullYear().toString();
     await expect(page.getByText(`Current year: ${currentYear}`)).toBeVisible();
   });

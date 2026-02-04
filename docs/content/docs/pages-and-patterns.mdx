@@ -1,0 +1,274 @@
+---
+title: General
+description: Create WordPress pages and block patterns from file templates with automatic block parsing.
+---
+
+# Pages & Patterns
+
+Blockstudio lets you define WordPress pages and block patterns as files in your theme. Write HTML-like templates, and Blockstudio's parser converts them into native WordPress blocks.
+
+- **Pages** are synced to the database as WordPress posts, keeping your file templates and page content in sync.
+- **Patterns** are registered in memory via `register_block_pattern()`, available in the block inserter for users to place anywhere.
+
+Both features share the same HTML parser and block syntax.
+
+## Folder Structure
+
+```
+theme/
+├── pages/
+│   ├── about/
+│   │   ├── page.json
+│   │   └── index.php
+│   └── contact/
+│       ├── page.json
+│       └── index.twig
+└── patterns/
+    ├── hero/
+    │   ├── pattern.json
+    │   └── index.php
+    └── cta/
+        ├── pattern.json
+        └── index.blade.php
+```
+
+Each subfolder contains a JSON config file (`page.json` or `pattern.json`) and a template file.
+
+## Template Engines
+
+Templates can be written in PHP, Twig, or Blade:
+
+| File | Engine | Requirement |
+|------|--------|-------------|
+| `index.php` | PHP | None |
+| `index.twig` | Twig | [Timber](https://timber.github.io/docs/) |
+| `index.blade.php` | Blade | [jenssegers/blade](https://github.com/jenssegers/blade) |
+
+If multiple template files exist, the priority order is: `index.php` > `index.blade.php` > `index.twig`.
+
+Since templates are compiled at initialization time (before any request context), Twig and Blade templates don't have access to dynamic variables. They're useful for built-in functions and filters like `{{ "text"|upper }}` or `{{ strtoupper("text") }}`.
+
+## HTML to Block Mapping
+
+Standard HTML elements are automatically converted to the corresponding WordPress blocks.
+
+### Text
+
+| HTML | Block |
+|------|-------|
+| `<p>` | `core/paragraph` |
+| `<h1>` - `<h6>` | `core/heading` |
+| `<ul>` | `core/list` (unordered) |
+| `<ol>` | `core/list` (ordered) |
+| `<li>` | `core/list-item` |
+| `<blockquote>` | `core/quote` |
+| `<code>` | `core/code` |
+| `<pre>` | `core/preformatted` |
+
+### Media
+
+| HTML | Block |
+|------|-------|
+| `<img>` | `core/image` |
+| `<figure>` | `core/image` (with caption) |
+| `<audio>` | `core/audio` |
+| `<video>` | `core/video` |
+
+### Layout
+
+| HTML | Block |
+|------|-------|
+| `<div>`, `<section>` | `core/group` |
+| `<hr>` | `core/separator` |
+| `<details>` | `core/details` |
+| `<table>` | `core/table` |
+
+## Block Syntax
+
+For blocks that don't have a direct HTML equivalent, use the `<block>` element:
+
+```html
+<block name="core/cover" url="https://example.com/hero.jpg">
+  <h1>Welcome</h1>
+  <p>Content inside the cover block.</p>
+</block>
+```
+
+### Core Blocks
+
+```html
+<!-- Pullquote -->
+<block name="core/pullquote">
+  <p>An important quote.</p>
+</block>
+
+<!-- Verse -->
+<block name="core/verse">Roses are red,
+Violets are blue.</block>
+
+<!-- Cover -->
+<block name="core/cover" url="https://example.com/image.jpg">
+  <h2>Cover Title</h2>
+</block>
+
+<!-- Embed -->
+<block name="core/embed" url="https://youtube.com/watch?v=..." providerNameSlug="youtube" />
+
+<!-- Spacer -->
+<block name="core/spacer" height="50px" />
+
+<!-- Gallery -->
+<block name="core/gallery">
+  <img src="https://example.com/1.jpg" alt="Image 1" />
+  <img src="https://example.com/2.jpg" alt="Image 2" />
+</block>
+
+<!-- Columns -->
+<block name="core/columns">
+  <block name="core/column">
+    <h3>Column 1</h3>
+  </block>
+  <block name="core/column">
+    <h3>Column 2</h3>
+  </block>
+</block>
+
+<!-- Buttons -->
+<block name="core/buttons">
+  <block name="core/button" url="/get-started">Get Started</block>
+</block>
+
+<!-- Row (flex layout) -->
+<block name="core/group" layout='{"type":"flex","flexWrap":"nowrap"}'>
+  <p>Item 1</p>
+  <p>Item 2</p>
+</block>
+```
+
+### Custom Blocks
+
+The same syntax works for any registered block:
+
+```html
+<block name="blockstudio/section">
+  <h1>Welcome</h1>
+</block>
+
+<block name="acf/hero" title="Hero Title" background="dark">
+  <p>Inner content becomes InnerBlocks.</p>
+</block>
+```
+
+### Attributes
+
+HTML attributes on `<block>` elements are passed as block attributes. JSON values are supported:
+
+```html
+<block name="core/heading" level="3">Custom Heading</block>
+
+<block name="core/group" layout='{"type":"flex","orientation":"vertical"}'>
+  <p>Stacked content.</p>
+</block>
+
+<img src="https://example.com/photo.jpg" alt="Photo" width="800" height="400" />
+```
+
+## Custom Block Renderers
+
+The HTML parser uses a registry-based architecture. You can add custom renderers for any block using the `blockstudio/parser/renderers` filter:
+
+```php
+add_filter( 'blockstudio/parser/renderers', function( $renderers, $parser ) {
+    $renderers['acf/hero'] = function( $element, $attrs, $parser ) {
+        $inner_blocks = $parser->parse_children( $element );
+
+        return array(
+            'blockName'    => 'acf/hero',
+            'attrs'        => $attrs,
+            'innerBlocks'  => $inner_blocks,
+            'innerHTML'    => '',
+            'innerContent' => array(),
+        );
+    };
+
+    return $renderers;
+}, 10, 2 );
+```
+
+Then use it in any template:
+
+```html
+<block name="acf/hero" background="dark">
+  <h1>Welcome</h1>
+</block>
+```
+
+You can also override how core blocks are rendered:
+
+```php
+add_filter( 'blockstudio/parser/renderers', function( $renderers, $parser ) {
+    $renderers['core/paragraph'] = function( $element, $attrs, $parser ) {
+        $content = $parser->get_inner_html( $element );
+        $attrs['align'] = $attrs['align'] ?? 'center';
+
+        return array(
+            'blockName'    => 'core/paragraph',
+            'attrs'        => $attrs,
+            'innerBlocks'  => array(),
+            'innerHTML'    => '<p class="has-text-align-center">' . $content . '</p>',
+            'innerContent' => array( '<p class="has-text-align-center">' . $content . '</p>' ),
+        );
+    };
+
+    return $renderers;
+}, 10, 2 );
+```
+
+### Renderer Function Signature
+
+```php
+/**
+ * @param DOMElement    $element The DOM element being parsed.
+ * @param array         $attrs   Attributes from the element.
+ * @param Html_Parser   $parser  The parser instance (for recursive parsing).
+ * @return array|null   WordPress block array or null to skip.
+ */
+function my_renderer( DOMElement $element, array $attrs, $parser ): ?array {}
+```
+
+## Complete Example
+
+A full page template combining multiple block types:
+
+```html title="index.php"
+<div>
+  <h1>Welcome to Our Site</h1>
+  <p>This is an <strong>introduction</strong> with <em>formatting</em>.</p>
+
+  <block name="core/columns">
+    <block name="core/column">
+      <h3>Feature One</h3>
+      <p>First feature description.</p>
+    </block>
+    <block name="core/column">
+      <h3>Feature Two</h3>
+      <p>Second feature description.</p>
+    </block>
+  </block>
+
+  <block name="core/cover" url="https://example.com/hero.jpg">
+    <h2>Our Mission</h2>
+    <p>Building amazing things together.</p>
+  </block>
+
+  <details>
+    <summary>FAQ</summary>
+    <p>Answers to common questions.</p>
+  </details>
+
+  <block name="core/buttons">
+    <block name="core/button" url="/contact">Contact Us</block>
+    <block name="core/button" url="/learn-more">Learn More</block>
+  </block>
+</div>
+```

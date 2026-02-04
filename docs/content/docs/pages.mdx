@@ -1,0 +1,107 @@
+---
+title: Pages
+description: Create WordPress pages from file templates with automatic syncing.
+---
+
+# Pages
+
+Pages are file-based templates that sync to the WordPress database as posts. When you update a template file, Blockstudio detects the change and updates the corresponding page.
+
+## page.json
+
+Each page folder needs a `page.json` configuration file:
+
+```json title="page.json"
+{
+  "name": "about",
+  "title": "About Us",
+  "slug": "about-us",
+  "postType": "page",
+  "postStatus": "publish",
+  "templateLock": "all"
+}
+```
+
+### Properties
+
+| Property | Type | Default | Description |
+|----------|------|---------|-------------|
+| `name` | `string` | *required* | Unique identifier for the page |
+| `title` | `string` | Auto from name | The page title |
+| `slug` | `string` | Same as name | URL slug for the page |
+| `postType` | `string` | `"page"` | WordPress post type |
+| `postStatus` | `string` | `"draft"` | Status for new posts (`publish`, `draft`, `pending`, `private`) |
+| `templateLock` | `string\|false` | `"all"` | Lock mode: `"all"`, `"insert"`, `"contentOnly"`, or `false` |
+| `templateFor` | `string\|null` | `null` | Set as default template for a post type |
+| `sync` | `boolean` | `true` | Whether to sync content when template changes |
+
+## Template Lock
+
+The `templateLock` property controls how users can edit the page in the editor:
+
+| Value | Add/Remove | Move | Edit Content |
+|-------|------------|------|--------------|
+| `"all"` | No | No | No |
+| `"insert"` | No | Yes | Yes |
+| `"contentOnly"` | No | No | Yes |
+| `false` | Yes | Yes | Yes |
+
+When a `templateLock` is set, Blockstudio disables the ability to unlock blocks via the editor UI.
+
+## Sync Behavior
+
+Pages are synced when you visit the WordPress admin. The sync checks the file's modification time and only updates if the file has changed since the last sync.
+
+To prevent a page from being overwritten after manual edits, set `"sync": false` in `page.json`.
+
+## Post Type Templates
+
+Use `templateFor` to set a page as the default template for a post type:
+
+```json title="page.json"
+{
+  "name": "product-template",
+  "title": "Product Template",
+  "templateFor": "product",
+  "templateLock": "insert"
+}
+```
+
+Any new posts of that type will start with the defined block structure.
+
+## Custom Paths
+
+By default, Blockstudio scans `get_template_directory() . '/pages'`. Add additional paths with the filter:
+
+```php
+add_filter( 'blockstudio/pages/paths', function( $paths ) {
+    $paths[] = get_stylesheet_directory() . '/custom-pages';
+    $paths[] = MY_PLUGIN_DIR . '/pages';
+    return $paths;
+} );
+```
+
+## PHP API
+
+```php
+// Get all registered pages
+$pages = Blockstudio\Pages::pages();
+
+// Get a specific page
+$page = Blockstudio\Pages::get_page('about');
+
+// Get the WordPress post ID for a page
+$postId = Blockstudio\Pages::get_post_id('about');
+
+// Force sync a page (ignores modification time)
+Blockstudio\Pages::force_sync('about');
+
+// Force sync all pages
+Blockstudio\Pages::force_sync_all();
+
+// Lock a page to prevent automatic updates
+Blockstudio\Pages::lock('about');
+
+// Unlock a page
+Blockstudio\Pages::unlock('about');
+```

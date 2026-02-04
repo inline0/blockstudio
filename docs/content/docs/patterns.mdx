@@ -1,0 +1,99 @@
+---
+title: Patterns
+description: Create WordPress block patterns from file templates.
+---
+
+# Patterns
+
+Patterns are file-based templates registered as WordPress block patterns. They appear in the block inserter and can be placed anywhere by users.
+
+Unlike [pages](/docs/pages), patterns are registered in memory and don't create database entries.
+
+## pattern.json
+
+Each pattern folder needs a `pattern.json` configuration file:
+
+```json title="pattern.json"
+{
+  "name": "hero-section",
+  "title": "Hero Section",
+  "description": "A hero section with heading and CTA",
+  "categories": ["featured", "header"],
+  "keywords": ["hero", "banner", "cta"]
+}
+```
+
+### Properties
+
+| Property | Type | Default | Description |
+|----------|------|---------|-------------|
+| `name` | `string` | *required* | Unique identifier (prefixed with `blockstudio/`) |
+| `title` | `string` | *required* | Display title in the block inserter |
+| `description` | `string` | `""` | Description shown in the inserter |
+| `categories` | `string[]` | `[]` | Pattern categories (e.g., `featured`, `header`, `footer`) |
+| `keywords` | `string[]` | `[]` | Search keywords for the inserter |
+| `viewportWidth` | `number` | - | Preview width in pixels |
+| `blockTypes` | `string[]` | `[]` | Associated block types |
+| `postTypes` | `string[]` | `[]` | Restrict to specific post types |
+| `inserter` | `boolean` | `true` | Whether to show in the inserter |
+
+## Example
+
+**pattern.json:**
+```json
+{
+  "name": "hero-with-cta",
+  "title": "Hero with CTA",
+  "description": "A full-width hero section with heading and call-to-action buttons",
+  "categories": ["featured", "header"],
+  "keywords": ["hero", "banner", "cta", "landing"],
+  "viewportWidth": 1200
+}
+```
+
+**index.php:**
+```html
+<block name="core/cover" url="https://example.com/hero-bg.jpg" dimRatio="60">
+  <h1>Build Something Amazing</h1>
+  <p>Create beautiful websites with the power of blocks.</p>
+  <block name="core/buttons">
+    <block name="core/button" url="/get-started">Get Started</block>
+    <block name="core/button" url="/learn-more" className="is-style-outline">Learn More</block>
+  </block>
+</block>
+```
+
+## Custom Paths
+
+By default, Blockstudio scans `get_template_directory() . '/patterns'`. Add additional paths with the filter:
+
+```php
+add_filter( 'blockstudio/patterns/paths', function( $paths ) {
+    $paths[] = get_stylesheet_directory() . '/custom-patterns';
+    $paths[] = MY_PLUGIN_PATH . '/patterns';
+    return $paths;
+} );
+```
+
+## PHP API
+
+```php
+// Get all registered patterns
+$patterns = Blockstudio\Patterns::patterns();
+
+// Get a specific pattern
+$pattern = Blockstudio\Patterns::get_pattern('hero-section');
+
+// Get registered paths
+$paths = Blockstudio\Patterns::get_registered_paths();
+```
+
+## Comparison with Pages
+
+| | Pages | Patterns |
+|---|-------|----------|
+| Storage | Synced to database as posts | Registered in memory |
+| Config | `page.json` | `pattern.json` |
+| Sync | Auto-syncs on file change | No sync needed |
+| Template lock | Yes | No |
+| Use case | Predefined page content | Reusable block templates |
