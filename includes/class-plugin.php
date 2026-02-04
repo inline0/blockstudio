@@ -157,7 +157,8 @@ class Plugin {
 						)
 					);
 				}
-			}
+			},
+			PHP_INT_MAX - 1
 		);
 
 		do_action( 'blockstudio_init', $this );

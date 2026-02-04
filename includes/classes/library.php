@@ -45,7 +45,7 @@ class Library {
 	 */
 	public function __construct() {
 		add_filter( 'block_categories_all', array( $this, 'add_block_category' ), 10, 2 );
-		add_action( 'init', array( $this, 'init_library' ) );
+		add_action( 'init', array( $this, 'init_library' ), PHP_INT_MAX - 1 );
 		add_filter( 'blockstudio/blocks/meta', array( $this, 'add_element_icon' ) );
 	}
 

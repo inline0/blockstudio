@@ -27,6 +27,7 @@ Blockstudio gives you the ultimate developer experience for creating custom, pro
 * Deprecation: Edit accordion in block inspector removed
 * Fix: code field undo/redo now works independently without triggering Gutenberg undo
 * Fix: JavaScript syntax highlighting now works without requiring script tags
+* Fix: populate feature now works with taxonomies registered by other plugins
 * Fix: conditional fields not respecting default values on first load
 * Fix: optionsPopulate null error in WPML contexts
 * Fix: dollar signs stripped from <RichText /> content on frontend
