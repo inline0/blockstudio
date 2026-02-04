@@ -173,7 +173,8 @@ class Pages {
 					return $settings;
 				}
 
-				$settings['templateLock'] = $template_lock;
+				$settings['templateLock']  = $template_lock;
+				$settings['canLockBlocks'] = false;
 
 				return $settings;
 			},

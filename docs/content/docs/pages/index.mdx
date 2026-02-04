@@ -113,10 +113,14 @@ For any block (including core blocks), use the generic syntax:
 
 The `templateLock` property controls how users can edit the page in Gutenberg:
 
-- `"all"` - Prevents all modifications (default)
-- `"insert"` - Prevents adding/removing blocks, but allows editing content
-- `"contentOnly"` - Only content is editable
-- `false` - No restrictions
+| Value | Add/Remove | Move | Edit Content |
+|-------|------------|------|--------------|
+| `"all"` | ❌ | ❌ | ❌ |
+| `"insert"` | ❌ | ✅ | ✅ |
+| `"contentOnly"` | ❌ | ❌ | ✅ |
+| `false` | ✅ | ✅ | ✅ |
+
+When a `templateLock` is set, Blockstudio automatically disables the ability to unlock blocks. This means users cannot bypass the lock via the editor UI - the lock is enforced.
 
 ## Sync Behavior
 
