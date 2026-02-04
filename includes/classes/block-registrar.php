@@ -22,6 +22,7 @@ use WP_Block_Type;
  * 4. Configure context (postId, postType, custom contexts)
  * 5. Process variations if defined
  * 6. Build blockstudio metadata for editor
+ * 7. Register storage handlers for fields (post meta, options)
  *
  * Block Types Registered:
  * - Standard blocks: Full blocks with render templates
@@ -66,17 +67,27 @@ class Block_Registrar {
 	private Attribute_Builder $attribute_builder;
 
 	/**
+	 * Storage Registry instance.
+	 *
+	 * @var Storage_Registry
+	 */
+	private Storage_Registry $storage_registry;
+
+	/**
 	 * Constructor.
 	 *
 	 * @param Block_Registry|null    $registry          Optional block registry.
 	 * @param Attribute_Builder|null $attribute_builder Optional attribute builder.
+	 * @param Storage_Registry|null  $storage_registry  Optional storage registry.
 	 */
 	public function __construct(
 		?Block_Registry $registry = null,
-		?Attribute_Builder $attribute_builder = null
+		?Attribute_Builder $attribute_builder = null,
+		?Storage_Registry $storage_registry = null
 	) {
 		$this->registry          = $registry ?? Block_Registry::instance();
 		$this->attribute_builder = $attribute_builder ?? new Attribute_Builder();
+		$this->storage_registry  = $storage_registry ?? Storage_Registry::instance();
 	}
 
 	/**
@@ -118,6 +129,14 @@ class Block_Registrar {
 
 		// Add standard attributes.
 		$attributes = $this->add_standard_attributes( $attributes, $block_json, $is_extend );
+
+		// Register storage handlers for fields.
+		if ( isset( $block_json['blockstudio']['attributes'] ) ) {
+			$this->storage_registry->process_block_fields(
+				$block_json['name'],
+				$block_json['blockstudio']['attributes']
+			);
+		}
 
 		// Create the block type.
 		$block = $this->create_block_type( $block_json, $attributes, $native_path );
