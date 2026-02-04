@@ -141,8 +141,8 @@ test.describe('File-based Pages', () => {
     await page.goto('http://localhost:8888/wp-admin/edit.php?post_type=page');
     await page.waitForLoadState('networkidle');
 
-    // Use specific selector to avoid matching checkbox label
-    await page.locator('a.row-title:has-text("Blockstudio E2E Test Page")').click();
+    // Use exact text match to avoid matching the Twig page
+    await page.locator('a.row-title', { hasText: /^Blockstudio E2E Test Page$/ }).click();
     await page.waitForSelector('.editor-styles-wrapper', { timeout: 30000 });
 
     await expect(page.locator('.wp-block-heading').first()).toBeVisible();
@@ -158,5 +158,47 @@ test.describe('File-based Pages', () => {
       const unlockOption = page.locator('button:has-text("Unlock")');
       await expect(unlockOption).toHaveCount(0);
     }
+  });
+});
+
+test.describe('File-based Pages (Twig)', () => {
+  test('twig page exists with correct title', async () => {
+    await page.goto('http://localhost:8888/blockstudio-e2e-test-twig/');
+    await page.waitForLoadState('networkidle');
+
+    await expect(page.getByRole('heading', { name: 'Twig Template Test Page' })).toBeVisible();
+  });
+
+  test('twig template processed correctly', async () => {
+    // Check that Twig |upper filter was applied ("TWIG" in uppercase within paragraph)
+    await expect(page.getByText('This page uses a Twig template with TWIG support.')).toBeVisible();
+
+    // Check that date filter produces current year
+    const currentYear = new Date().getFullYear().toString();
+    await expect(page.getByText(`Current year: ${currentYear}`)).toBeVisible();
+  });
+
+  test('twig loop generates list items', async () => {
+    await expect(page.getByText('Twig item 1', { exact: true })).toBeVisible();
+    await expect(page.getByText('Twig item 2', { exact: true })).toBeVisible();
+    await expect(page.getByText('Twig item 3', { exact: true })).toBeVisible();
+  });
+
+  test('twig page has block syntax elements', async () => {
+    await expect(page.locator('.wp-block-buttons').first()).toBeVisible();
+    await expect(page.getByText('Twig Button')).toBeVisible();
+    await expect(page.locator('.wp-block-columns').first()).toBeVisible();
+    await expect(page.getByText('Column A')).toBeVisible();
+    await expect(page.getByText('Column B')).toBeVisible();
+  });
+
+  test('twig page editor shows correct blocks', async () => {
+    await page.goto('http://localhost:8888/wp-admin/edit.php?post_type=page');
+    await page.waitForLoadState('networkidle');
+
+    await page.locator('a.row-title:has-text("Blockstudio E2E Test Page (Twig)")').click();
+    await page.waitForSelector('.editor-styles-wrapper', { timeout: 30000 });
+
+    await expect(page.locator('.wp-block-heading').first()).toBeVisible();
   });
 });

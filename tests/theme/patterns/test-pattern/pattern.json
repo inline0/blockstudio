@@ -1,0 +1,7 @@
+{
+  "name": "test-pattern",
+  "title": "Blockstudio E2E Test Pattern",
+  "description": "A test pattern for E2E testing",
+  "categories": ["featured"],
+  "keywords": ["test", "blockstudio"]
+}

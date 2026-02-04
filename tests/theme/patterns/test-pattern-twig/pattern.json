@@ -1,0 +1,7 @@
+{
+  "name": "test-pattern-twig",
+  "title": "Blockstudio E2E Test Pattern (Twig)",
+  "description": "A test pattern using Twig template",
+  "categories": ["featured"],
+  "keywords": ["test", "blockstudio", "twig"]
+}

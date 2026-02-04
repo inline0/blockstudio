@@ -140,6 +140,11 @@ class Plugin {
 		require_once $classes_dir . 'html-parser.php';
 		require_once $classes_dir . 'page-sync.php';
 		require_once $classes_dir . 'pages.php';
+
+		// File-based patterns system.
+		require_once $classes_dir . 'pattern-discovery.php';
+		require_once $classes_dir . 'pattern-registry.php';
+		require_once $classes_dir . 'patterns.php';
 	}
 
 	/**
@@ -173,6 +178,16 @@ class Plugin {
 			function () {
 				if ( class_exists( 'Blockstudio\Pages' ) ) {
 					Pages::init();
+				}
+			},
+			PHP_INT_MAX
+		);
+
+		add_action(
+			'init',
+			function () {
+				if ( class_exists( 'Blockstudio\Patterns' ) ) {
+					Patterns::init();
 				}
 			},
 			PHP_INT_MAX

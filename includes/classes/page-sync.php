@@ -84,6 +84,11 @@ class Page_Sync {
 			return '';
 		}
 
+		if ( ! empty( $page_data['is_twig'] ) && class_exists( 'Timber\Timber' ) ) {
+			\Timber\Timber::init();
+			$template_content = \Timber\Timber::compile_string( $template_content, array() );
+		}
+
 		return $this->parser->parse( $template_content );
 	}
 

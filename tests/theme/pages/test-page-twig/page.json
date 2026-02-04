@@ -1,0 +1,8 @@
+{
+  "name": "blockstudio-e2e-test-twig",
+  "title": "Blockstudio E2E Test Page (Twig)",
+  "slug": "blockstudio-e2e-test-twig",
+  "postType": "page",
+  "postStatus": "publish",
+  "templateLock": "all"
+}
