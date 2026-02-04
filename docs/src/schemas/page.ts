@@ -37,6 +37,13 @@ export const page = {
       enum: ["publish", "draft", "pending", "private"],
       example: "publish",
     },
+    blockEditingMode: {
+      type: "string",
+      enum: ["default", "contentOnly", "disabled"],
+      description:
+        "Controls how blocks can be edited. 'default' allows full editing, 'contentOnly' only allows text editing, 'disabled' prevents all editing.",
+      example: "disabled",
+    },
     templateLock: {
       type: ["string", "boolean"],
       default: "all",

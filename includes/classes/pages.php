@@ -76,6 +76,7 @@ class Pages {
 
 		self::register_template_for_hooks();
 		self::register_template_lock_hooks();
+		self::register_block_editing_mode_hooks();
 
 		self::$initialized = true;
 
@@ -180,6 +181,53 @@ class Pages {
 			},
 			10,
 			2
+		);
+	}
+
+	/**
+	 * Register hooks for block editing mode support.
+	 *
+	 * @return void
+	 */
+	private static function register_block_editing_mode_hooks(): void {
+		add_filter(
+			'block_editor_settings_all',
+			function ( array $settings, \WP_Block_Editor_Context $context ): array {
+				if ( empty( $context->post ) ) {
+					return $settings;
+				}
+
+				$block_editing_mode = get_post_meta( $context->post->ID, '_blockstudio_block_editing_mode', true );
+
+				if ( ! empty( $block_editing_mode ) ) {
+					$settings['blockstudioBlockEditingMode'] = $block_editing_mode;
+				}
+
+				return $settings;
+			},
+			10,
+			2
+		);
+
+		add_action(
+			'enqueue_block_editor_assets',
+			function (): void {
+				$asset_file = BLOCKSTUDIO_DIR . '/includes/admin/assets/pages/index.asset.php';
+
+				if ( ! file_exists( $asset_file ) ) {
+					return;
+				}
+
+				$asset = include $asset_file;
+
+				wp_enqueue_script(
+					'blockstudio-pages',
+					plugin_dir_url( __FILE__ ) . '../admin/assets/pages/index.js',
+					$asset['dependencies'],
+					$asset['version'],
+					true
+				);
+			}
 		);
 	}
 

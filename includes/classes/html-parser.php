@@ -248,7 +248,7 @@ class Html_Parser {
 			'div' => $this->create_group( $element ),
 			'section' => $this->create_group( $element ),
 			'blockquote' => $this->create_quote( $element ),
-			'hr' => $this->create_separator(),
+			'hr' => $this->create_separator( $element ),
 			'figure' => $this->create_figure( $element ),
 			'pre' => $this->create_preformatted( $element ),
 			'code' => $this->create_code( $element ),
@@ -280,6 +280,12 @@ class Html_Parser {
 
 		$attrs = $this->get_element_attributes( $element );
 		unset( $attrs['name'] );
+
+		// DOMDocument lowercases attribute names; remap camelCase attributes.
+		if ( isset( $attrs['blockeditingmode'] ) ) {
+			$attrs['blockEditingMode'] = $attrs['blockeditingmode'];
+			unset( $attrs['blockeditingmode'] );
+		}
 
 		// Check for registered renderer.
 		if ( isset( $this->block_renderers[ $block_name ] ) ) {
@@ -1073,7 +1079,7 @@ class Html_Parser {
 
 		return array(
 			'blockName'    => 'core/paragraph',
-			'attrs'        => array(),
+			'attrs'        => $this->extract_meta_attributes( $element ),
 			'innerBlocks'  => array(),
 			'innerHTML'    => $html,
 			'innerContent' => array( $html ),
@@ -1096,7 +1102,7 @@ class Html_Parser {
 
 		return array(
 			'blockName'    => 'core/heading',
-			'attrs'        => array( 'level' => $level ),
+			'attrs'        => array_merge( array( 'level' => $level ), $this->extract_meta_attributes( $element ) ),
 			'innerBlocks'  => array(),
 			'innerHTML'    => $html,
 			'innerContent' => array( $html ),
@@ -1140,7 +1146,7 @@ class Html_Parser {
 
 		return array(
 			'blockName'    => 'core/list',
-			'attrs'        => array( 'ordered' => $ordered ),
+			'attrs'        => array_merge( array( 'ordered' => $ordered ), $this->extract_meta_attributes( $element ) ),
 			'innerBlocks'  => $inner_blocks,
 			'innerHTML'    => "<{$tag} class=\"wp-block-list\"></{$tag}>",
 			'innerContent' => $content,
@@ -1158,7 +1164,7 @@ class Html_Parser {
 		$src = $element->getAttribute( 'src' );
 		$alt = $element->getAttribute( 'alt' );
 
-		$attrs = array();
+		$attrs = $this->extract_meta_attributes( $element );
 
 		if ( ! empty( $src ) ) {
 			$attrs['url'] = $src;
@@ -1199,7 +1205,7 @@ class Html_Parser {
 
 		return array(
 			'blockName'    => 'core/group',
-			'attrs'        => array(),
+			'attrs'        => $this->extract_meta_attributes( $element ),
 			'innerBlocks'  => $inner_blocks,
 			'innerHTML'    => '<div class="wp-block-group"></div>',
 			'innerContent' => $content,
@@ -1226,7 +1232,7 @@ class Html_Parser {
 
 		return array(
 			'blockName'    => 'core/quote',
-			'attrs'        => array(),
+			'attrs'        => $this->extract_meta_attributes( $element ),
 			'innerBlocks'  => $inner_blocks,
 			'innerHTML'    => '<blockquote class="wp-block-quote"></blockquote>',
 			'innerContent' => $content,
@@ -1236,14 +1242,16 @@ class Html_Parser {
 	/**
 	 * Create a separator block.
 	 *
+	 * @param DOMElement $element The element.
+	 *
 	 * @return array The block array.
 	 */
-	private function create_separator(): array {
+	private function create_separator( DOMElement $element ): array {
 		$html = '<hr class="wp-block-separator has-alpha-channel-opacity"/>';
 
 		return array(
 			'blockName'    => 'core/separator',
-			'attrs'        => array(),
+			'attrs'        => $this->extract_meta_attributes( $element ),
 			'innerBlocks'  => array(),
 			'innerHTML'    => $html,
 			'innerContent' => array( $html ),
@@ -1261,7 +1269,14 @@ class Html_Parser {
 		$img = $element->getElementsByTagName( 'img' )->item( 0 );
 
 		if ( $img instanceof DOMElement ) {
-			return $this->create_image( $img );
+			$block = $this->create_image( $img );
+
+			$meta = $this->extract_meta_attributes( $element );
+			if ( ! empty( $meta ) ) {
+				$block['attrs'] = array_merge( $block['attrs'], $meta );
+			}
+
+			return $block;
 		}
 
 		return $this->create_html_block( $element );
@@ -1280,7 +1295,7 @@ class Html_Parser {
 
 		return array(
 			'blockName'    => 'core/preformatted',
-			'attrs'        => array(),
+			'attrs'        => $this->extract_meta_attributes( $element ),
 			'innerBlocks'  => array(),
 			'innerHTML'    => $html,
 			'innerContent' => array( $html ),
@@ -1300,7 +1315,7 @@ class Html_Parser {
 
 		return array(
 			'blockName'    => 'core/code',
-			'attrs'        => array(),
+			'attrs'        => $this->extract_meta_attributes( $element ),
 			'innerBlocks'  => array(),
 			'innerHTML'    => $html,
 			'innerContent' => array( $html ),
@@ -1319,7 +1334,7 @@ class Html_Parser {
 
 		return array(
 			'blockName'    => 'core/table',
-			'attrs'        => array(),
+			'attrs'        => $this->extract_meta_attributes( $element ),
 			'innerBlocks'  => array(),
 			'innerHTML'    => $html,
 			'innerContent' => array( $html ),
@@ -1336,7 +1351,7 @@ class Html_Parser {
 	private function create_audio( DOMElement $element ): array {
 		$src = $element->getAttribute( 'src' );
 
-		$attrs = array();
+		$attrs = $this->extract_meta_attributes( $element );
 		if ( ! empty( $src ) ) {
 			$attrs['src'] = $src;
 		}
@@ -1362,7 +1377,7 @@ class Html_Parser {
 	private function create_video( DOMElement $element ): array {
 		$src = $element->getAttribute( 'src' );
 
-		$attrs = array();
+		$attrs = $this->extract_meta_attributes( $element );
 		if ( ! empty( $src ) ) {
 			$attrs['src'] = $src;
 		}
@@ -1404,7 +1419,7 @@ class Html_Parser {
 			}
 		}
 
-		$attrs = array();
+		$attrs = $this->extract_meta_attributes( $element );
 		if ( ! empty( $summary ) ) {
 			$attrs['summary'] = $summary;
 		}
@@ -1441,6 +1456,28 @@ class Html_Parser {
 			'innerHTML'    => $html,
 			'innerContent' => array( $html ),
 		);
+	}
+
+	// =========================================================================
+	// Meta Attribute Extraction
+	// =========================================================================
+
+	/**
+	 * Extract meta attributes (like blockEditingMode) from an HTML element.
+	 *
+	 * @param DOMElement $element The element.
+	 *
+	 * @return array The meta attributes found.
+	 */
+	private function extract_meta_attributes( DOMElement $element ): array {
+		$meta = array();
+
+		// DOMDocument lowercases all attribute names.
+		if ( $element->hasAttribute( 'blockeditingmode' ) ) {
+			$meta['blockEditingMode'] = $element->getAttribute( 'blockeditingmode' );
+		}
+
+		return $meta;
 	}
 
 	// =========================================================================

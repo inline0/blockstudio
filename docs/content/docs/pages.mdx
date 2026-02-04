@@ -31,9 +31,39 @@ Each page folder needs a `page.json` configuration file:
 | `slug` | `string` | Same as name | URL slug for the page |
 | `postType` | `string` | `"page"` | WordPress post type |
 | `postStatus` | `string` | `"draft"` | Status for new posts (`publish`, `draft`, `pending`, `private`) |
+| `blockEditingMode` | `string` | — | Block editing mode: `"default"`, `"contentOnly"`, or `"disabled"` |
 | `templateLock` | `string\|false` | `"all"` | Lock mode: `"all"`, `"insert"`, `"contentOnly"`, or `false` |
 | `templateFor` | `string\|null` | `null` | Set as default template for a post type |
 | `sync` | `boolean` | `true` | Whether to sync content when template changes |
+
+## Block Editing Mode
+
+The `blockEditingMode` property controls how blocks can be edited in the editor. Set a page-level default in `page.json` and override per-element in the template:
+
+```json title="page.json"
+{
+  "name": "about",
+  "title": "About Us",
+  "templateLock": "all",
+  "blockEditingMode": "disabled"
+}
+```
+
+```html title="index.php"
+<h1 blockEditingMode="contentOnly">Editable Title</h1>
+<p>This paragraph inherits "disabled" from the page default.</p>
+<block name="core/buttons" blockEditingMode="default">
+  <block name="core/button" url="/contact">Fully editable button</block>
+</block>
+```
+
+| Value | Description |
+|-------|-------------|
+| `"default"` | Full editing — blocks can be selected, moved, and edited |
+| `"contentOnly"` | Text editing only — block text is editable but settings and structure are locked |
+| `"disabled"` | No editing — blocks are completely non-interactive |
+
+Per-element overrides are set as HTML attributes on any element (`<h1>`, `<p>`, `<div>`, etc.) or on `<block>` elements. Ancestor container blocks of overridden elements are automatically set to `contentOnly` so their children remain accessible.
 
 ## Template Lock
 

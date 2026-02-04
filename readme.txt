@@ -22,6 +22,7 @@ Blockstudio gives you the ultimate developer experience for creating custom, pro
 * New: code field popout option to open editor in separate window
 * New: storage feature to store field values in post meta or options
 * New: file-based pages - create WordPress pages from file templates with automatic HTML to block parsing
+* New: blockEditingMode support for file-based pages with page-level defaults and per-element overrides
 * New: file-based patterns - create WordPress block patterns from file templates with automatic HTML to block parsing
 * Change: all PHP hooks now use snake_case naming (old camelCase names still supported)
 * Deprecation: Admin Area removed

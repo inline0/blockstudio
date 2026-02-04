@@ -239,6 +239,10 @@ class Page_Sync {
 		if ( ! empty( $page_data['templateLock'] ) ) {
 			update_post_meta( $post_id, '_blockstudio_template_lock', $page_data['templateLock'] );
 		}
+
+		if ( ! empty( $page_data['blockEditingMode'] ) ) {
+			update_post_meta( $post_id, '_blockstudio_block_editing_mode', $page_data['blockEditingMode'] );
+		}
 	}
 
 	/**
