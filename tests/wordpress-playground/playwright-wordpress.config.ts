@@ -56,6 +56,7 @@ export function createWordPressPlaygroundConfig(
     retries,
     workers,
     reporter: "list" as const,
+    outputDir: ".playwright/test-results",
     timeout,
     testMatch,
     expect: {

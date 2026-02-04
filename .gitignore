@@ -31,8 +31,7 @@ artifacts/
 # Package build (keep compiled assets for now)
 package/node_modules/
 package/.last-run.json
-package/test-results/
-package/playwright-report/
+package/.playwright/
 
 # Test coverage & cache
 coverage/
@@ -55,5 +54,6 @@ yarn-error.log*
 *.swp
 *.swo
 *~
-test-results/
-playwright-report/
+
+# Playwright
+.playwright/
