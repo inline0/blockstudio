@@ -293,7 +293,11 @@ export const WYSIWYG = ({
                   return (
                     <ToolbarButton
                       key={`align-${align}`}
-                      icon={(textAlignMap as Record<string, typeof alignLeft>)[align]}
+                      icon={
+                        (textAlignMap as Record<string, typeof alignLeft>)[
+                          align
+                        ]
+                      }
                       label={__(`Align ${align}`)}
                       onClick={() => editor.commands.setTextAlign(align)}
                       isPressed={editor?.isActive({ textAlign: align })}

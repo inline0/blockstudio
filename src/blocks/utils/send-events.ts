@@ -8,7 +8,8 @@ type EditorBlock = {
 };
 
 export const sendEvents = () => {
-  const blockTypes = window.blockstudioAdmin.data.blocksNative as unknown as Record<string, BlockstudioBlock>;
+  const blockTypes = window.blockstudioAdmin.data
+    .blocksNative as unknown as Record<string, BlockstudioBlock>;
 
   const getAllNestedBlockNames = (): string[] => {
     const getBlockNames = (blocks: EditorBlock[]): string[] => {
@@ -21,7 +22,9 @@ export const sendEvents = () => {
       }, []);
     };
 
-    const topLevelBlocks = select('core/block-editor').getBlocks() as EditorBlock[];
+    const topLevelBlocks = select(
+      'core/block-editor',
+    ).getBlocks() as EditorBlock[];
     const allBlockNames = getBlockNames(topLevelBlocks);
 
     return Array.from(new Set(allBlockNames));

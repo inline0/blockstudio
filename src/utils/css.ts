@@ -23,7 +23,7 @@ const addImportantToEveryRule = (styleObject: CSSObject): CSSObject => {
       styleObject[property] !== null
     ) {
       importantStyleObject[property] = addImportantToEveryRule(
-        styleObject[property] as CSSObject
+        styleObject[property] as CSSObject,
       );
     }
   }

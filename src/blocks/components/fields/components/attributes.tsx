@@ -154,7 +154,8 @@ export const Attribute = ({
                                 document
                                   .querySelectorAll('.media-modal')
                                   .forEach((el) => {
-                                    (el as HTMLElement).style.zIndex = '999999999999';
+                                    (el as HTMLElement).style.zIndex =
+                                      '999999999999';
                                   });
                               }}
                             >
@@ -309,7 +310,8 @@ export const Attributes = ({
         variant="secondary"
         onClick={addAttributePair}
         css={css({
-          marginTop: isArray(attr) && attr?.filter((e) => e).length ? '16px' : undefined,
+          marginTop:
+            isArray(attr) && attr?.filter((e) => e).length ? '16px' : undefined,
         })}
       >
         {__('Add Attribute')}

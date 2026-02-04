@@ -51,21 +51,29 @@ export const Classes = ({
     window.blockstudioAdmin?.styles,
     window.blockstudioAdmin?.cssClasses ?? [],
   );
-  const customClasses = useSelect(
-    (select) =>
-      (
-        select('blockstudio/tailwind') as typeof selectorsTailwind
-      ).getCustomClasses(),
-    [],
-  ) || [];
+  const customClasses =
+    useSelect(
+      (select) =>
+        (
+          select('blockstudio/tailwind') as typeof selectorsTailwind
+        ).getCustomClasses(),
+      [],
+    ) || [];
   const allClasses = [
     ...(tailwind
-      ? [...classes, ...(customClasses || []).map((item: { className: string }) => item.className)]
+      ? [
+          ...classes,
+          ...(customClasses || []).map(
+            (item: { className: string }) => item.className,
+          ),
+        ]
       : []),
     ...settingsCssClasses,
   ] as string[];
   const [showCustomClasses, setShowCustomClasses] = useState(false);
-  const [suggestions, setSuggestions] = useState<string[]>([...classes] as string[]);
+  const [suggestions, setSuggestions] = useState<string[]>([
+    ...classes,
+  ] as string[]);
   const ref = useRef<HTMLDivElement | null>(null);
   const valueRef = useRef(value);
   valueRef.current = value;
@@ -73,17 +81,22 @@ export const Classes = ({
   attributesRef.current = attributes;
 
   const sorted = sortClasses(value.trim());
-  const groupedClasses = sorted.reduce((acc: Record<string, string[]>, className: string) => {
-    const parts = className.split(':');
-    const prefix =
-      parts.length === 2 ? `${parts[0]} (${(screens as Record<string, string>)[parts[0]]})` : __('Base');
-    if (!className) return acc;
-    if (!acc[prefix]) {
-      acc[prefix] = [];
-    }
-    acc[prefix].push(className);
-    return acc;
-  }, {} as Record<string, string[]>);
+  const groupedClasses = sorted.reduce(
+    (acc: Record<string, string[]>, className: string) => {
+      const parts = className.split(':');
+      const prefix =
+        parts.length === 2
+          ? `${parts[0]} (${(screens as Record<string, string>)[parts[0]]})`
+          : __('Base');
+      if (!className) return acc;
+      if (!acc[prefix]) {
+        acc[prefix] = [];
+      }
+      acc[prefix].push(className);
+      return acc;
+    },
+    {} as Record<string, string[]>,
+  );
 
   const handleChange = (val: string, temporaryVal: string) => {
     if (setValue) {
@@ -91,7 +104,9 @@ export const Classes = ({
       return;
     }
 
-    const clone = cloneDeep(attributesRef.current) as BlockstudioBlockAttributes | undefined;
+    const clone = cloneDeep(attributesRef.current) as
+      | BlockstudioBlockAttributes
+      | undefined;
     if (clone) {
       set(clone as object, keyName, val.trim());
     }
@@ -124,10 +139,13 @@ export const Classes = ({
           const selected = ref.current?.querySelector(
             '.components-form-token-field__suggestion[aria-selected="true"]',
           );
-          if (selected) handleChange(valueRef.current, selected.textContent || '');
+          if (selected)
+            handleChange(valueRef.current, selected.textContent || '');
         }
         if (
-          !ref.current?.querySelector('.components-form-token-field__suggestion')
+          !ref.current?.querySelector(
+            '.components-form-token-field__suggestion',
+          )
         ) {
           resetTemporaryValue();
         }
@@ -183,7 +201,10 @@ export const Classes = ({
             {...{ label }}
             suggestions={suggestions.filter((c) => !value.includes(c))}
             onChange={(val) => {
-              handleChange(mergeClassNames(value, (val as string[]).join(' ')), '');
+              handleChange(
+                mergeClassNames(value, (val as string[]).join(' ')),
+                '',
+              );
             }}
             onInputChange={(val) => {
               if (val.includes(':')) {

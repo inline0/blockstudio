@@ -14,7 +14,7 @@ const cache: {
 export const useGetCssVariables = (
   styles: Record<string, StyleEntry> = {},
   allAssets: string[] = [],
-  reload: unknown[] = []
+  reload: unknown[] = [],
 ) => {
   const [variables, setVariables] = useState(new Set<string>());
 

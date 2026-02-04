@@ -29,7 +29,8 @@ export const MediaPlaceholder = ({
       {...data}
       {...{ addToGallery, multiple }}
       onSelect={(value: MediaValue) => {
-        const currentAttributes = attributes.blockstudio.attributes as unknown as Record<string, unknown>;
+        const currentAttributes = attributes.blockstudio
+          .attributes as unknown as Record<string, unknown>;
         setAttributes({
           ...attributes,
           blockstudio: {

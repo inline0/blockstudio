@@ -11,7 +11,9 @@ type BlockData = {
   name: string;
 };
 
-const createNestedBlocks = (blockData: BlockData): ReturnType<typeof createBlock> => {
+const createNestedBlocks = (
+  blockData: BlockData,
+): ReturnType<typeof createBlock> => {
   const { name, attributes, innerBlocks = [] } = blockData;
 
   const defaults = getDefaultsFromTemplate(

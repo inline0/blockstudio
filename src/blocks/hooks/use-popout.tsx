@@ -20,7 +20,7 @@ export const usePopout = (options: PopoutOptions = {}) => {
     const win = window.open(
       '',
       '',
-      `width=${width},height=${height},left=${left},top=${top},resizable=yes`
+      `width=${width},height=${height},left=${left},top=${top},resizable=yes`,
     );
 
     if (win) {
@@ -80,7 +80,7 @@ export const usePopout = (options: PopoutOptions = {}) => {
       if (!isOpen || !containerRef.current) return null;
       return createPortal(children, containerRef.current);
     },
-    [isOpen]
+    [isOpen],
   );
 
   return { isOpen, open, close, Popout };

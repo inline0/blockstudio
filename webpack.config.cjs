@@ -11,6 +11,7 @@ module.exports = {
   output: {
     ...defaultConfig.output,
     path: path.resolve(__dirname, 'includes/admin/assets'),
+    clean: false,
   },
   resolve: {
     ...defaultConfig.resolve,

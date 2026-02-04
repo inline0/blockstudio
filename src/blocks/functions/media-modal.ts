@@ -19,19 +19,23 @@ export const mediaModal = () => {
       if (modal) {
         const classes = modal.classList.value.split(' ');
         const min = Number(
-          classes.find((e) => e.startsWith(`${id}-min`))?.split(`${id}-min-`)[1]
+          classes
+            .find((e) => e.startsWith(`${id}-min`))
+            ?.split(`${id}-min-`)[1],
         );
         const max = Number(
-          classes.find((e) => e.startsWith(`${id}-max`))?.split(`${id}-max-`)[1]
+          classes
+            .find((e) => e.startsWith(`${id}-max`))
+            ?.split(`${id}-max-`)[1],
         );
 
         const all = document.querySelectorAll('.attachment');
         const selected = document.querySelectorAll('.attachment.selected');
         const notSelected = document.querySelectorAll(
-          '.attachment:not(.selected)'
+          '.attachment:not(.selected)',
         );
         const selectButton = document.querySelector(
-          '.media-button-select'
+          '.media-button-select',
         ) as HTMLElement;
 
         if (typeof min === 'number') {
@@ -62,7 +66,7 @@ export const mediaModal = () => {
           }
         }
       }
-    }, 500)
+    }, 500),
   ).observe(document.documentElement, {
     childList: true,
     subtree: true,

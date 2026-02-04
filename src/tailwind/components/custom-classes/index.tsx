@@ -117,7 +117,8 @@ export const CustomClasses = ({
               >
                 {internalClasses?.length
                   ? internalClasses?.map((item, i) => {
-                      const showIndex = (index ?? -1) + 1 && (index ?? -1) + 1 === i + 1;
+                      const showIndex =
+                        (index ?? -1) + 1 && (index ?? -1) + 1 === i + 1;
                       const showItem = !((index ?? -1) + 1) || showIndex;
 
                       return (

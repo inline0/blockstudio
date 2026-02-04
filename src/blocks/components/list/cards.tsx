@@ -8,8 +8,8 @@ import { forwardRef, useState } from '@wordpress/element';
 import { closeSmall, file } from '@wordpress/icons';
 import { isArray } from 'lodash-es';
 import { Control } from '@/blocks/components/control';
-import { Label } from '@/blocks/components/list/label';
 import { List } from '@/blocks/components/list/index';
+import { Label } from '@/blocks/components/list/label';
 import {
   Any,
   BlockstudioBlockAttributes,
@@ -158,7 +158,8 @@ export const Card = forwardRef<
               borderRadius: 'var(--blockstudio-border-radius)',
               marginRight: `${grid * 1.5}px`,
               overflow: 'hidden',
-              border: loaded && (isImage || !media) ? '1px solid #eeeeee' : undefined,
+              border:
+                loaded && (isImage || !media) ? '1px solid #eeeeee' : undefined,
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',

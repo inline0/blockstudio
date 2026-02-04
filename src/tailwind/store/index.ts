@@ -1,12 +1,12 @@
 import { createReduxStore } from '@wordpress/data';
+import { BlockstudioTailwindStore } from '@/types/types';
 import { actions } from './actions';
 import { selectors } from './selectors';
-import { BlockstudioTailwindStore } from '@/types/types';
 
-const DEFAULT_STATE = <BlockstudioTailwindStore>{
+const DEFAULT_STATE = {
   customClasses: window.blockstudioAdmin.options.tailwind.customClasses || {},
   temporaryClasses: {},
-};
+} as BlockstudioTailwindStore;
 
 export const store = createReduxStore('blockstudio/tailwind', {
   reducer(state = DEFAULT_STATE, action) {

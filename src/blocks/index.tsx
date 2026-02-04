@@ -23,7 +23,9 @@ import { BlockstudioBlock, BlockstudioBlockAttributes } from '@/types/types';
 import { css } from '@/utils/css';
 import { onSavePost } from '@/utils/on-save-post';
 
-(window as unknown as Record<string, boolean>)['__@hello-pangea/dnd-disable-dev-warnings'] = true;
+(window as unknown as Record<string, boolean>)[
+  '__@hello-pangea/dnd-disable-dev-warnings'
+] = true;
 register(store);
 register(tailwindStore);
 mediaModal();
@@ -46,7 +48,10 @@ Object.values(blocks).forEach((block: BlockstudioBlock) => {
       : {}),
     apiVersion: 2,
     providesContext: { [block.name]: 'blockstudio' },
-    transforms: transforms(block, blocks as unknown as Record<string, BlockstudioBlock>),
+    transforms: transforms(
+      block,
+      blocks as unknown as Record<string, BlockstudioBlock>,
+    ),
     usesContext: ['postId', 'postType', ...(block?.usesContext || [])],
     save: () => <InnerBlocks.Content />,
     edit: ({
@@ -70,7 +75,7 @@ Object.values(blocks).forEach((block: BlockstudioBlock) => {
       const richText = useSelect(
         (select) =>
           (select('blockstudio/blocks') as typeof selectors).getRichText(),
-        []
+        [],
       );
 
       useEffect(() => {
@@ -96,7 +101,7 @@ Object.values(blocks).forEach((block: BlockstudioBlock) => {
         };
 
         const publishButtons = document.querySelectorAll(
-          '.editor-header__settings .components-button'
+          '.editor-header__settings .components-button',
         );
 
         const keydown = (e: KeyboardEvent) => {
@@ -110,13 +115,13 @@ Object.values(blocks).forEach((block: BlockstudioBlock) => {
         };
 
         publishButtons.forEach((item) =>
-          item?.addEventListener('click', clickSave)
+          item?.addEventListener('click', clickSave),
         );
         document.addEventListener('keydown', keydown);
 
         return () => {
           publishButtons.forEach((item) =>
-            item?.removeEventListener('click', clickSave)
+            item?.removeEventListener('click', clickSave),
           );
           document.removeEventListener('keydown', keydown);
         };
@@ -127,12 +132,14 @@ Object.values(blocks).forEach((block: BlockstudioBlock) => {
 
         const richTexts: Record<string, string> = {};
         Object.values(block.attributes as Record<string, BlockstudioAttribute>)
-          .filter(
-            (item) => item.field === 'richtext'
-          )
+          .filter((item) => item.field === 'richtext')
           .forEach((attribute) => {
-            richTexts[attribute.id ?? ''] =
-              (attributes?.blockstudio?.attributes as unknown as Record<string, string>)?.[attribute.id ?? ''];
+            richTexts[attribute.id ?? ''] = (
+              attributes?.blockstudio?.attributes as unknown as Record<
+                string,
+                string
+              >
+            )?.[attribute.id ?? ''];
           });
 
         setRichText({
@@ -167,7 +174,7 @@ Object.values(blocks).forEach((block: BlockstudioBlock) => {
                 />
                 <style>{`.blockstudio-fields .components-form-toggle__track, .blockstudio-fields .components-form-toggle__thumb { transition: none !important; }`}</style>
               </div>,
-              document.body
+              document.body,
             )}
           <InspectorControls>
             <Fields

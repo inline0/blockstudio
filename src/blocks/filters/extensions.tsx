@@ -60,7 +60,7 @@ export const getMatches = (string: string) => {
 const getAttributes = (
   attributes: BlockstudioBlockAttributes,
   name: string,
-  disabled: string[]
+  disabled: string[],
 ) => {
   const classNames: string[] = [];
   const styles: string[] = [];
@@ -176,7 +176,7 @@ addFilter(
                         />
                         <style>{`.blockstudio-fields .components-form-toggle__track, .blockstudio-fields .components-form-toggle__thumb { transition: none !important; }`}</style>
                       </div>,
-                      document.body
+                      document.body,
                     )}
                     <InspectorControls
                       key={index}
@@ -203,7 +203,7 @@ addFilter(
                     </InspectorControls>
                   </>
                 );
-              }
+              },
             )}
           </>
         );
@@ -215,7 +215,7 @@ addFilter(
         </div>
       );
     };
-  }, 'addCustomControlsToEditorBlock')
+  }, 'addCustomControlsToEditorBlock'),
 );
 
 addFilter(
@@ -240,7 +240,7 @@ addFilter(
           (
             select('blockstudio/tailwind') as typeof selectorsTailwind
           ).getTemporaryClasses(),
-        []
+        [],
       );
 
       const currentTemporaryClasses = Object.entries(temporaryClasses || {})
@@ -252,7 +252,7 @@ addFilter(
       const { styles, classNames, dataAttributes } = getAttributes(
         props.attributes?.blockstudio?.attributes,
         props.name,
-        props.attributes?.blockstudio?.disabled || []
+        props.attributes?.blockstudio?.disabled || [],
       );
 
       const updatedClassNames = [props.className || '', ...classNames]
@@ -286,5 +286,5 @@ addFilter(
         />
       );
     };
-  }, 'addCustomClassNameToEditorBlock')
+  }, 'addCustomClassNameToEditorBlock'),
 );

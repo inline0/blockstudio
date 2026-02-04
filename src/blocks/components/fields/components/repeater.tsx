@@ -25,7 +25,7 @@ let repeaters = {};
 const getItemStyle = (
   isDragging: boolean,
   draggableStyle: object,
-  index: number
+  index: number,
 ) => ({
   userSelect: 'none',
   margin: `0 -16px`,
@@ -117,7 +117,7 @@ const DragElement = ({
             ...(getItemStyle(
               snapshot.isDragging,
               provided.draggableProps.style || {},
-              index
+              index,
             ) as { [key: string]: string }),
           }}
           css={css({
@@ -167,7 +167,7 @@ const DragElement = ({
                   }
                   localStorage.setItem(
                     'blockstudioRepeater',
-                    JSON.stringify(storage)
+                    JSON.stringify(storage),
                   );
                   setIsMinimized(!isMinimized);
                 },
@@ -195,8 +195,8 @@ const DragElement = ({
                     window.confirm(
                       __(
                         item?.textRemove || 'Do you want to delete this row?',
-                        item?.textRemove
-                      )
+                        item?.textRemove,
+                      ),
                     )
                   ) {
                     remove(getId(index));
@@ -259,7 +259,7 @@ const DragElement = ({
               return element(
                 e,
                 `${draggableId}.${e.id}`,
-                transformed?.attributes?.[index] as unknown as boolean
+                transformed?.attributes?.[index] as unknown as boolean,
               );
             })}
           </div>
@@ -318,7 +318,9 @@ export const Repeater = ({
     v.forEach(() => {
       newGroups = [
         ...newGroups,
-        (item.attributes || []).filter((e: { type: string }) => e.type !== 'group'),
+        (item.attributes || []).filter(
+          (e: { type: string }) => e.type !== 'group',
+        ),
       ];
     });
     setGroups(newGroups);
@@ -390,7 +392,7 @@ export const Repeater = ({
       >
         {__(
           item?.textButton || 'Add row',
-          item?.textButton as unknown as boolean
+          item?.textButton as unknown as boolean,
         )}
       </Button>
     </Base>

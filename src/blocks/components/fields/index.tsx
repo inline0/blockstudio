@@ -8,7 +8,6 @@ import { Attributes } from '@/blocks/components/fields/components/attributes';
 import { Checkbox } from '@/blocks/components/fields/components/checkbox';
 import { Classes } from '@/blocks/components/fields/components/classes';
 import { Code, CodeActions } from '@/blocks/components/fields/components/code';
-import { LabelAction } from '@/blocks/components/label';
 import { Color } from '@/blocks/components/fields/components/color';
 import { Date } from '@/blocks/components/fields/components/date';
 import { Datetime } from '@/blocks/components/fields/components/datetime';
@@ -28,6 +27,7 @@ import { Toggle } from '@/blocks/components/fields/components/toggle';
 import { Token } from '@/blocks/components/fields/components/token';
 import { Unit } from '@/blocks/components/fields/components/unit';
 import { WYSIWYG } from '@/blocks/components/fields/components/wysiwyg';
+import { LabelAction } from '@/blocks/components/label';
 import { Styles } from '@/blocks/components/styles';
 import { createBlocks } from '@/blocks/utils/create-blocks';
 import { dispatch } from '@/blocks/utils/dispatch';
@@ -78,7 +78,7 @@ export const Fields = ({
 
   const defaults = useMemo(
     () => getDefaults(Object.values(block?.attributes || {}), attributes),
-    [block?.attributes, attributes]
+    [block?.attributes, attributes],
   );
 
   useEffect(() => {
@@ -145,10 +145,7 @@ export const Fields = ({
       }
     }
 
-    const getValue = (
-      item: Any,
-      value: string | number,
-    ) => {
+    const getValue = (item: Any, value: string | number) => {
       const finder = (innerValue = value) => {
         return transformedOptions?.find(
           (e: { value: string | number }) =>
@@ -220,7 +217,9 @@ export const Fields = ({
           attributes: {
             ...attributes.blockstudio.attributes,
             [key]: (newAttributes.blockstudio.attributes as Any)?.[key]
-              ? (newAttributes.blockstudio.attributes as Any)[key].filter((e: Any) => e)
+              ? (newAttributes.blockstudio.attributes as Any)[key].filter(
+                  (e: Any) => e,
+                )
               : false,
           },
         },
@@ -368,16 +367,8 @@ export const Fields = ({
     const sort: BlockstudioFieldsRepeaterSort = (order, id) => {
       const key = `blockstudio.attributes.${id}`;
       const newAttributes = JSON.parse(JSON.stringify(attributes));
-      const values = (
-        (result(
-          newAttributes,
-          key,
-        ) || []) as Any[]
-      ).map(
-        (
-          e: Any,
-          index: number,
-        ) => {
+      const values = ((result(newAttributes, key) || []) as Any[]).map(
+        (e: Any, index: number) => {
           return {
             ...e,
             __BLOCKSTUDIO_INDEX: index,
@@ -443,10 +434,7 @@ export const Fields = ({
       const outerRepeater = key.replace(/\[\d+\]$/, '');
 
       const filteredAttributes = (
-        (result(
-          newAttributes,
-          outerRepeater,
-        ) || []) as Any[]
+        (result(newAttributes, outerRepeater) || []) as Any[]
       ).filter((e: Any) => e);
 
       set(newAttributes, outerRepeater, filteredAttributes);
@@ -464,10 +452,8 @@ export const Fields = ({
       const attributeToDuplicate = get(newAttributes, key);
       const duplicatedAttribute = cloneDeep(attributeToDuplicate);
       const outerRepeater = key.replace(/\[\d+\]$/, '');
-      const repeaterAttributes = (result(
-        newAttributes,
-        outerRepeater,
-      ) || []) as Any[];
+      const repeaterAttributes = (result(newAttributes, outerRepeater) ||
+        []) as Any[];
       const attributeIndex = repeaterAttributes.findIndex(
         (attr: Any) => attr.id === id,
       );
@@ -687,7 +673,8 @@ export const Fields = ({
       >
         {block.blockstudio?.attributes?.map(
           (item: BlockstudioAttribute, index: number) => {
-            if (!isAllowedToRender(item, attributes, false, defaults)) return false;
+            if (!isAllowedToRender(item, attributes, false, defaults))
+              return false;
             if (item.type === 'tabs' && index !== 0) return null;
 
             return (

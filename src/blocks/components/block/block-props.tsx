@@ -55,6 +55,6 @@ export const BlockProps = ({
   return createElement(
     node.name,
     blockProps,
-    children || domToReact(node.children as DOMNode[])
+    children || domToReact(node.children as DOMNode[]),
   );
 };

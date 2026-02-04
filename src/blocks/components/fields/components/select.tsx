@@ -81,7 +81,8 @@ const AdvancedSelect = ({
     : value;
   const filteredOptions = multiple
     ? allOptions.filter(
-        (option) => !filteredValue.map((e: Any) => e.value).includes(option.value),
+        (option) =>
+          !filteredValue.map((e: Any) => e.value).includes(option.value),
       )
     : allOptions;
 

@@ -59,18 +59,18 @@ export const Block = ({
   const initialLoad = useSelect(
     (select) =>
       (select('blockstudio/blocks') as typeof selectors).getInitialLoad(),
-    []
+    [],
   );
   const initialLoadRendered = useSelect(
     (select) =>
       (
         select('blockstudio/blocks') as typeof selectors
       ).getInitialLoadRendered(),
-    []
+    [],
   );
   const isLoaded = useSelect(
     (select) => (select('blockstudio/blocks') as typeof selectors).isLoaded(),
-    []
+    [],
   );
   const { setInitialLoad, setInitialLoadRendered } =
     useDispatch('blockstudio/blocks');
@@ -78,7 +78,7 @@ export const Block = ({
   const ref = useRef<HTMLDivElement | null>(null);
   const attributesRef = useRef(attributes);
   const [disableLoading, setDisableLoading] = useState(
-    block?.blockstudio?.blockEditor?.disableLoading
+    block?.blockstudio?.blockEditor?.disableLoading,
   );
   const [isInPreview, setIsInPreview] = useState(false);
   const [hasBlockProps, setHasBlockProps] = useState<boolean | null>(false);
@@ -91,7 +91,7 @@ export const Block = ({
   const postType =
     useSelect(
       (select: Any) => select('core/editor')?.getCurrentPostType(),
-      []
+      [],
     ) || false;
 
   const loaded = () => {
@@ -108,7 +108,7 @@ export const Block = ({
     const transform = (response: string) => {
       response = response.replace(
         getRegex('InnerBlocks'),
-        '<div id="blockstudio-replace-innerblocks"></div>'
+        '<div id="blockstudio-replace-innerblocks"></div>',
       );
       response = response.replace(getRegex('RichText', 'gs'), (match) => {
         const innerAttributes = getAttributes(match, 'RichText');
@@ -125,7 +125,7 @@ export const Block = ({
           attributeMap[attrKey] = innerAttributes;
 
           return `<div id="blockstudio-replace-dropzone" class="${attrKey}"></div>`;
-        }
+        },
       );
 
       return response;
@@ -226,7 +226,7 @@ export const Block = ({
   const fetchData = (event: CustomEvent | false = false) => {
     const parameters = {
       blockstudioMode: ref.current?.closest(
-        '.block-editor-block-preview__content-iframe'
+        '.block-editor-block-preview__content-iframe',
       )
         ? 'preview'
         : 'editor',
@@ -322,7 +322,7 @@ export const Block = ({
 
   useEffect(() => {
     const blockAttributes = replaceEmptyStringsWithFalse(
-      cloneDeep(attributes.blockstudio.attributes)
+      cloneDeep(attributes.blockstudio.attributes),
     );
 
     const blockHash = JSON.stringify({
@@ -359,20 +359,20 @@ export const Block = ({
 
   useEffect(() => {
     setIsInPreview(
-      !!ref.current?.closest('.block-editor-block-preview__content-iframe')
+      !!ref.current?.closest('.block-editor-block-preview__content-iframe'),
     );
 
     fetchData();
 
     document.addEventListener(
       `blockstudio/${block.name}/refresh`,
-      debouncedFetchData
+      debouncedFetchData,
     );
 
     return () =>
       document.removeEventListener(
         `blockstudio/${block.name}/refresh`,
-        debouncedFetchData
+        debouncedFetchData,
       );
   }, [disableLoading]);
 
@@ -395,7 +395,7 @@ export const Block = ({
         debouncedFetchData();
       }
     },
-    [attributes]
+    [attributes],
   );
 
   useEffect(
@@ -404,7 +404,7 @@ export const Block = ({
         debouncedFetchData();
       }
     },
-    [context]
+    [context],
   );
 
   useEffect(
@@ -415,14 +415,14 @@ export const Block = ({
         dispatch(false as unknown as BlockstudioBlock, 'rendered');
       });
     },
-    [markup]
+    [markup],
   );
 
   useEffect(
     function onClientIdChange() {
       fetchData();
     },
-    [clientId]
+    [clientId],
   );
 
   return (

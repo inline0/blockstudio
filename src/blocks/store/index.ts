@@ -1,9 +1,9 @@
 import { createReduxStore } from '@wordpress/data';
+import { BlockstudioBlockStore } from '@/types/types';
 import { actions } from './actions';
 import { selectors } from './selectors';
-import { BlockstudioBlockStore } from '@/types/types';
 
-const DEFAULT_STATE = <BlockstudioBlockStore>{
+const DEFAULT_STATE = {
   icons: {},
   initialLoad: {},
   initialLoadRendered: {},
@@ -11,7 +11,7 @@ const DEFAULT_STATE = <BlockstudioBlockStore>{
   media: {},
   repeaters: {},
   richText: {},
-};
+} as BlockstudioBlockStore;
 
 export const store = createReduxStore('blockstudio/blocks', {
   reducer(state = DEFAULT_STATE, action) {

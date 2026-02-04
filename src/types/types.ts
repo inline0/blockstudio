@@ -53,26 +53,26 @@ type BlockstudioFieldsOptions = {
 type BlockstudioFieldsElement = (
   e: BlockstudioAttribute,
   id?: string,
-  transform?: boolean
+  transform?: boolean,
 ) => ReactNode;
 
 type BlockstudioFieldsChange = (
   value: string | any,
   direct?: boolean,
-  suffix?: string
+  suffix?: string,
 ) => void;
 
 type BlockstudioFieldsRepeaterAddRemove = (id: string) => void;
 
 type BlockstudioFieldsRepeaterSort = (
   order: string | string[],
-  id: string
+  id: string,
 ) => void;
 
 type BlockstudioFieldsListMove = (
   index: number,
   droppableId?: string,
-  ref?: string | null
+  ref?: string | null,
 ) => void;
 
 type BlockstudioEditorBlock = {

@@ -8,7 +8,7 @@ export const isAllowedToRender = (
   item: BlockstudioAttribute,
   attributes: BlockstudioBlockAttributes | boolean = false,
   outerAttributes: BlockstudioBlockAttributes | boolean = false,
-  defaults: Record<string, unknown> = {}
+  defaults: Record<string, unknown> = {},
 ) => {
   if (item?.hidden) {
     return false;
@@ -71,21 +71,29 @@ export const isAllowedToRender = (
             : attributes || false;
 
         if (
-          (innerCondition?.type && (blockstudioData as Record<string, unknown>)?.[innerCondition.type]) ||
+          (innerCondition?.type &&
+            (blockstudioData as Record<string, unknown>)?.[
+              innerCondition.type
+            ]) ||
           innerCondition?.id
         ) {
           const conditionId = innerCondition?.id ?? '';
-          const attrValue = attr &&
-            ((attr as unknown as BlockstudioBlock).blockstudio
-              .attributes?.[conditionId as unknown as number]?.value ||
-              (attr as unknown as BlockstudioBlock).blockstudio
-                .attributes?.[conditionId as unknown as number]);
+          const attrValue =
+            attr &&
+            ((attr as unknown as BlockstudioBlock).blockstudio.attributes?.[
+              conditionId as unknown as number
+            ]?.value ||
+              (attr as unknown as BlockstudioBlock).blockstudio.attributes?.[
+                conditionId as unknown as number
+              ]);
           resultsInner.push(
             operators[innerCondition?.operator ?? ''](
-              (blockstudioData as Record<string, unknown>)?.[innerCondition?.type ?? ''] ||
+              (blockstudioData as Record<string, unknown>)?.[
+                innerCondition?.type ?? ''
+              ] ||
                 (attrValue ?? defaults[conditionId]),
-              innerCondition?.value
-            )
+              innerCondition?.value,
+            ),
           );
         }
       });

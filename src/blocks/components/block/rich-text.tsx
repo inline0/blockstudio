@@ -30,7 +30,7 @@ export const RichText = ({
   const richText = useSelect(
     (select) =>
       (select('blockstudio/blocks') as typeof selectors).getRichText(),
-    []
+    [],
   );
 
   const { tag, ...rest } = data;
@@ -75,7 +75,11 @@ export const RichText = ({
   return (
     <WordPressRichText
       {...props}
-      value={(richText?.[clientId] as unknown as Record<string, string>)?.[data?.attribute] || ''}
+      value={
+        (richText?.[clientId] as unknown as Record<string, string>)?.[
+          data?.attribute
+        ] || ''
+      }
       onChange={(value: string) => setter(value)}
     />
   );

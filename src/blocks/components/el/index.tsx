@@ -28,11 +28,19 @@ export const El = ({
   const isAllowedToRenderWithDefaults = (
     item: BlockstudioAttribute,
     attrs: BlockstudioBlockAttributes,
-    outerAttrs: BlockstudioBlockAttributes | boolean = false
+    outerAttrs: BlockstudioBlockAttributes | boolean = false,
   ) => isAllowedToRender(item, attrs, outerAttrs, defaults);
 
   return item.type === 'group' ? (
-    <Panel {...{ item, element, isAllowedToRender: isAllowedToRenderWithDefaults, attributes, portal }} />
+    <Panel
+      {...{
+        item,
+        element,
+        isAllowedToRender: isAllowedToRenderWithDefaults,
+        attributes,
+        portal,
+      }}
+    />
   ) : item.type === 'tabs' ? (
     <div className="blockstudio-fields__field--tabs">
       <PanelBody opened={portal}>
@@ -44,15 +52,13 @@ export const El = ({
                 dispatch(block as BlockstudioBlock, `tabs/${item.key}/change`);
               }
             }}
-            tabs={(item.tabs || []).map(
-              (e: Any, i: number) => {
-                return {
-                  name: `tab-${i}`,
-                  title: e.title,
-                  attributes: e.attributes,
-                };
-              }
-            )}
+            tabs={(item.tabs || []).map((e: Any, i: number) => {
+              return {
+                name: `tab-${i}`,
+                title: e.title,
+                attributes: e.attributes,
+              };
+            })}
           >
             {(tab) =>
               tab.attributes.map(
@@ -67,7 +73,7 @@ export const El = ({
                       {...{ item, element, attributes, defaults }}
                     />
                   );
-                }
+                },
               )
             }
           </TabPanel>

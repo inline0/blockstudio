@@ -9,10 +9,10 @@ import { html } from '@codemirror/lang-html';
 import { javascript } from '@codemirror/lang-javascript';
 import { json } from '@codemirror/lang-json';
 import { php } from '@codemirror/lang-php';
-import { external } from '@wordpress/icons';
 import { githubDark, githubLight } from '@uiw/codemirror-theme-github';
 import CodeMirror from '@uiw/react-codemirror';
 import { useEffect } from '@wordpress/element';
+import { external } from '@wordpress/icons';
 import { LabelAction } from '@/blocks/components/label';
 import { useGetCssVariables } from '@/blocks/hooks/use-get-css-variables';
 import { usePopout } from '@/blocks/hooks/use-popout';
@@ -170,8 +170,11 @@ export const Code = ({
   // Stop undo/redo from bubbling to Gutenberg so CodeMirror handles its own history
   const handleKeyDown = (e: React.KeyboardEvent) => {
     const isMac = navigator.platform.toUpperCase().indexOf('MAC') >= 0;
-    const isUndo = (isMac ? e.metaKey : e.ctrlKey) && e.key === 'z' && !e.shiftKey;
-    const isRedo = (isMac ? e.metaKey : e.ctrlKey) && (e.key === 'y' || (e.key === 'z' && e.shiftKey));
+    const isUndo =
+      (isMac ? e.metaKey : e.ctrlKey) && e.key === 'z' && !e.shiftKey;
+    const isRedo =
+      (isMac ? e.metaKey : e.ctrlKey) &&
+      (e.key === 'y' || (e.key === 'z' && e.shiftKey));
 
     if (isUndo || isRedo) {
       e.stopPropagation();

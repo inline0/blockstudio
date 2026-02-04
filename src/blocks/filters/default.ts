@@ -13,5 +13,5 @@ addFilter(
     }
 
     return getDefaultBlock(block, name);
-  }
+  },
 );

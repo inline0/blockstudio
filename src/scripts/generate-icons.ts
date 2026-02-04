@@ -1,7 +1,15 @@
-import { readFileSync, writeFileSync, readdirSync, rmSync, mkdirSync, statSync, existsSync } from 'fs';
+import {
+  readFileSync,
+  writeFileSync,
+  readdirSync,
+  rmSync,
+  mkdirSync,
+  statSync,
+  existsSync,
+} from 'fs';
+import { parse } from 'node-html-parser';
 import { dirname, resolve, join, basename, extname } from 'path';
 import { fileURLToPath } from 'url';
-import { parse } from 'node-html-parser';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const nodeModulesDir = resolve(__dirname, '../../node_modules');
@@ -14,7 +22,11 @@ interface IconSource {
 }
 
 const iconSources: IconSource[] = [
-  { package: '@fortawesome/fontawesome-free', path: 'svgs', outputName: 'fontawesome-free' },
+  {
+    package: '@fortawesome/fontawesome-free',
+    path: 'svgs',
+    outputName: 'fontawesome-free',
+  },
   { package: 'ionicons', path: 'dist/svg', outputName: 'ion-icons' },
   { package: 'bootstrap-icons', path: 'icons', outputName: 'bootstrap-icons' },
   { package: 'boxicons', path: 'svg', outputName: 'box-icons' },
@@ -23,11 +35,19 @@ const iconSources: IconSource[] = [
   { package: '@primer/octicons', path: 'build/svg', outputName: 'octicons' },
   { package: 'grommet-icons', path: 'img', outputName: 'grommet-icons' },
   { package: 'heroicons', path: '24', outputName: 'heroicons' },
-  { package: '@material-design-icons/svg', path: '', outputName: 'material-design-icons' },
+  {
+    package: '@material-design-icons/svg',
+    path: '',
+    outputName: 'material-design-icons',
+  },
   { package: 'remixicon', path: 'icons', outputName: 'remix-icons' },
   { package: 'simple-icons', path: 'icons', outputName: 'simple-icons' },
   { package: '@tabler/icons', path: 'icons', outputName: 'tabler-icons' },
-  { package: '@vscode/codicons', path: 'src/icons', outputName: 'vscode-icons' },
+  {
+    package: '@vscode/codicons',
+    path: 'src/icons',
+    outputName: 'vscode-icons',
+  },
   { package: 'css.gg', path: 'icons/svg', outputName: 'css-gg' },
 ];
 
@@ -65,7 +85,7 @@ function getAllSvgFiles(dir: string): { path: string; subDir: string }[] {
       } else if (extname(item).toLowerCase() === '.svg') {
         results.push({
           path: fullPath,
-          subDir: relativePath
+          subDir: relativePath,
         });
       }
     }

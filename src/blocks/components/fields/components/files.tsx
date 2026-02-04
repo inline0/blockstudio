@@ -66,7 +66,12 @@ export const Files = ({
           })}
           value={
             (!inRepeater
-              ? (attributes?.blockstudio?.attributes as unknown as Record<string, string>)?.[item.id + '__size']
+              ? (
+                  attributes?.blockstudio?.attributes as unknown as Record<
+                    string,
+                    string
+                  >
+                )?.[item.id + '__size']
               : result(
                   attributes,
                   `blockstudio.attributes.${repeaterId}__size`,

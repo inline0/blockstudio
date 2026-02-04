@@ -29,7 +29,9 @@ export const useTailwind = ({
 
   const blockstudio = useSelect(
     (select) =>
-      (select('blockstudio/editor') as EditorSelectors | undefined)?.getBlockstudio(),
+      (
+        select('blockstudio/editor') as EditorSelectors | undefined
+      )?.getBlockstudio(),
     [],
   );
   const customClasses = useSelect(
@@ -41,7 +43,9 @@ export const useTailwind = ({
   );
   const options = useSelect(
     (select) =>
-      (select('blockstudio/editor') as EditorSelectors | undefined)?.getOptions(),
+      (
+        select('blockstudio/editor') as EditorSelectors | undefined
+      )?.getOptions(),
     [],
   );
   const hasStyle = useRef(false);

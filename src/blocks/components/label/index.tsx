@@ -73,7 +73,14 @@ export const Label = ({
         </div>
       </ConditionalWrapper>
       {actions && actions.length > 0 && (
-        <div css={css({ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '4px' })}>
+        <div
+          css={css({
+            marginLeft: 'auto',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '4px',
+          })}
+        >
           {actions.map((action, index) => (
             <Button
               key={index}

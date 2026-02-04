@@ -77,7 +77,10 @@ export const transforms = (
 
             if (e.type === 'enter' && e.regExp && isValidRegex(e.regExp)) {
               const regExpParts = e.regExp.match(/\/(.*)\/(.*)?/);
-              const regExp = new RegExp(regExpParts?.[1] || '', regExpParts?.[2] || '');
+              const regExp = new RegExp(
+                regExpParts?.[1] || '',
+                regExpParts?.[2] || '',
+              );
 
               return {
                 ...e,
@@ -94,7 +97,8 @@ export const transforms = (
             }
 
             return null;
-          }).filter(Boolean),
+          })
+          .filter(Boolean),
       }
     : [];
 };

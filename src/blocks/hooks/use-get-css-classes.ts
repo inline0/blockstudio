@@ -14,7 +14,7 @@ const cache: {
 export const useGetCssClasses = (
   styles: Record<string, StyleEntry> = {},
   allAssets: string[] = [],
-  reload: unknown[] = []
+  reload: unknown[] = [],
 ) => {
   const [classes, setClasses] = useState(new Set<string>());
 

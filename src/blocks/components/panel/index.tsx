@@ -15,7 +15,7 @@ export const Panel = ({
   isAllowedToRender: (
     item: BlockstudioAttribute,
     attributes: BlockstudioBlockAttributes,
-    outerBlock?: boolean
+    outerBlock?: boolean,
   ) => boolean;
   item: BlockstudioAttribute;
   portal?: boolean;
@@ -50,7 +50,7 @@ export const Panel = ({
               !isAllowedToRender(
                 itemInner as unknown as BlockstudioAttribute,
                 attributes,
-                false
+                false,
               )
             ) {
               return null;

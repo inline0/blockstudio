@@ -26,7 +26,7 @@ export const Checkbox = ({
               typeof item?.toggle === 'string'
                 ? item?.toggle
                 : 'Toggle all options',
-              typeof item?.toggle === 'string'
+              typeof item?.toggle === 'string',
             )}
             onChange={() =>
               v?.length === options.length
@@ -41,7 +41,10 @@ export const Checkbox = ({
               key={itemInner.value}
               onChange={() => change(itemInner.value)}
               checked={
-                v?.length && v.map((e: { value: string }) => e.value).includes(itemInner.value)
+                v?.length &&
+                v
+                  .map((e: { value: string }) => e.value)
+                  .includes(itemInner.value)
               }
               label={itemInner.label}
               className={`components-base-control`}

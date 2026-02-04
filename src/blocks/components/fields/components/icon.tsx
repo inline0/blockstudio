@@ -164,7 +164,8 @@ export const Icon = ({
               };
             })}
             onChange={(icon) =>
-              icon && change(
+              icon &&
+              change(
                 iconData?.[set]?.includes(subSet)
                   ? { set, subSet, icon }
                   : {

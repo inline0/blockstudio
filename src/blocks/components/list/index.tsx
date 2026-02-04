@@ -85,7 +85,7 @@ export const List = ({
       return;
     }
 
-    const data = droppableId ? repeaterData(droppableId) : (ids || []);
+    const data = droppableId ? repeaterData(droppableId) : ids || [];
     const newItems = reorder(data, index, index + offset);
     onChange?.(newItems as string[], droppableId);
 

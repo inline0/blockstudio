@@ -11,7 +11,10 @@ type BlockstudioDefaults = {
   type: string;
 };
 
-export const getDefaults = (block: BlockstudioDefaults[], attributes: Record<string, unknown> = {}) => {
+export const getDefaults = (
+  block: BlockstudioDefaults[],
+  attributes: Record<string, unknown> = {},
+) => {
   const defaults: Record<string, DefaultValue> = {};
 
   if (!block) {
@@ -44,11 +47,15 @@ export const getDefaults = (block: BlockstudioDefaults[], attributes: Record<str
         (item.options
           .map((e: BlockstudioFieldsOptions) => String(e?.value || e))
           .includes(
-            String((item.default as unknown as BlockstudioFieldsOptions)?.value)
+            String(
+              (item.default as unknown as BlockstudioFieldsOptions)?.value,
+            ),
           ) ||
           item.options
             .map((e: BlockstudioFieldsOptions) => String(e?.value || e))
-            .includes(String((item.default as BlockstudioFieldsOptions[])?.[0]?.value)) ||
+            .includes(
+              String((item.default as BlockstudioFieldsOptions[])?.[0]?.value),
+            ) ||
           item.options
             .map((e: BlockstudioFieldsOptions) => String(e?.value || e))
             .includes(String(item.default))))

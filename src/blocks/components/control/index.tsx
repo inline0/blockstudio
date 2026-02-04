@@ -91,7 +91,9 @@ export const Control = ({
           },
         })}
       >
-        {type !== 'toggle' && label && <Label label={label} help={help || ''} actions={actions} />}
+        {type !== 'toggle' && label && (
+          <Label label={label} help={help || ''} actions={actions} />
+        )}
         {children}
         {description && (
           <Text

@@ -1,13 +1,10 @@
-import {
-  unmanagedPrefixes,
-  managedPrefixes,
-} from '@/tailwind/data/prefixes';
+import { unmanagedPrefixes, managedPrefixes } from '@/tailwind/data/prefixes';
 import { screens as defaultScreens } from '@/tailwind/data/screens';
 
 export const mergeClassNames = (
   currentValues: string,
   newValues: string,
-  screens: Record<string, string> = defaultScreens
+  screens: Record<string, string> = defaultScreens,
 ): string => {
   const screenPrefixes = Object.keys(screens).map((key) => `${key}:`);
 
@@ -16,8 +13,8 @@ export const mergeClassNames = (
       (prefix) =>
         className.startsWith(prefix) ||
         screenPrefixes.some((screenPrefix) =>
-          className.startsWith(screenPrefix + prefix)
-        )
+          className.startsWith(screenPrefix + prefix),
+        ),
     );
   };
 
@@ -28,8 +25,8 @@ export const mergeClassNames = (
         (prefix) =>
           className.startsWith(prefix) ||
           screenPrefixes.some((screenPrefix) =>
-            className.startsWith(screenPrefix + prefix)
-          )
+            className.startsWith(screenPrefix + prefix),
+          ),
       )
     );
   };
@@ -47,15 +44,15 @@ export const mergeClassNames = (
             (prefix) =>
               className.startsWith(prefix) ||
               screenPrefixes.some((screenPrefix) =>
-                className.startsWith(screenPrefix + prefix)
-              )
+                className.startsWith(screenPrefix + prefix),
+              ),
           ) + '-'
         : split[0] +
           (split?.[1] === 'x' || split?.[1] === 'y' ? split[1] : '') +
           '-';
 
       const screenAwarePrefix = screenPrefixes.find((prefix) =>
-        className.startsWith(prefix)
+        className.startsWith(prefix),
       )
         ? screenPrefixes.find((prefix) => className.startsWith(prefix)) +
           fullPrefix

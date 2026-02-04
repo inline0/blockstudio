@@ -35,15 +35,20 @@ export const Class = ({
     [],
   );
   const [cssRule, setCssRule] = useState('');
-  const isCustom = customClasses?.map((item) => item.className).includes(text) ?? false;
-  const index = customClasses?.map((item) => item.className).indexOf(text) ?? -1;
+  const isCustom =
+    customClasses?.map((item) => item.className).includes(text) ?? false;
+  const index =
+    customClasses?.map((item) => item.className).indexOf(text) ?? -1;
 
   useEffect(() => {
     const formatCss = async () => {
-      const formatted = await prettier.format(findCssRules(`.${text}`)?.[0] || '', {
-        parser: 'css',
-        plugins: [parserCss],
-      });
+      const formatted = await prettier.format(
+        findCssRules(`.${text}`)?.[0] || '',
+        {
+          parser: 'css',
+          plugins: [parserCss],
+        },
+      );
       setCssRule(formatted.trim().replaceAll('\\:', ':'));
     };
     formatCss();

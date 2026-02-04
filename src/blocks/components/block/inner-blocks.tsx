@@ -10,7 +10,10 @@ import styleToObject from 'style-to-object';
 import { getDefaultsFromTemplate } from '@/blocks/utils/get-defaults-from-template';
 import { Block } from '@/types/block';
 
-const blocks = window.blockstudioAdmin.data.blocksNative as unknown as Record<string, Block>;
+const blocks = window.blockstudioAdmin.data.blocksNative as unknown as Record<
+  string,
+  Block
+>;
 
 export const InnerBlocks = ({
   blockResponse,
@@ -95,7 +98,7 @@ export const InnerBlocks = ({
             },
           }
         : {}),
-    }
+    },
   );
 
   if (rest.class) delete rest.class;

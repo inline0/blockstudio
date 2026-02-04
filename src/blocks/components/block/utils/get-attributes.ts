@@ -9,7 +9,8 @@ export const getAttributes = (value: string, elementName: string) => {
 
   const root = nodeParser(element);
   const div = root.querySelector('div');
-  const attributes: Record<string, unknown> = (div?.attributes as unknown as Record<string, unknown>) || {};
+  const attributes: Record<string, unknown> =
+    (div?.attributes as unknown as Record<string, unknown>) || {};
 
   [
     'template',
