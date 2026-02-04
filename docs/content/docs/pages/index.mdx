@@ -69,44 +69,180 @@ This creates a page with a Group block containing a Heading, Paragraph, and List
 
 ## HTML to Block Mapping
 
+Standard HTML elements are automatically converted to WordPress blocks:
+
+### Text Blocks
+
 | HTML Element | WordPress Block |
 |--------------|-----------------|
 | `<p>` | `core/paragraph` |
 | `<h1>` - `<h6>` | `core/heading` |
-| `<ul>`, `<ol>` | `core/list` |
+| `<ul>` | `core/list` (unordered) |
+| `<ol>` | `core/list` (ordered) |
 | `<li>` | `core/list-item` |
-| `<div>` | `core/group` |
-| `<img>` | `core/image` |
 | `<blockquote>` | `core/quote` |
+| `<code>` | `core/code` |
+| `<pre>` | `core/preformatted` |
+
+### Media Blocks
+
+| HTML Element | WordPress Block |
+|--------------|-----------------|
+| `<img>` | `core/image` |
+| `<figure>` | `core/image` (with caption support) |
+| `<audio>` | `core/audio` |
+| `<video>` | `core/video` |
+
+### Design Blocks
+
+| HTML Element | WordPress Block |
+|--------------|-----------------|
+| `<div>`, `<section>` | `core/group` |
 | `<hr>` | `core/separator` |
-| `<figure>` | `core/image` |
 
-## Custom Blocks
+### Interactive Blocks
 
-Use `blockstudio_*` elements to include Blockstudio blocks:
+| HTML Element | WordPress Block |
+|--------------|-----------------|
+| `<details>` | `core/details` |
+| `<table>` | `core/table` |
+
+For all other blocks (core or custom), use the `<block>` syntax described below.
+
+## Block Syntax
+
+Use the `<block>` element to include any WordPress block that isn't covered by standard HTML mapping:
+
+### Core Blocks
 
 ```html title="index.php"
-<blockstudio_section>
-  <h1>Welcome</h1>
-  <p>Section content here.</p>
-</blockstudio_section>
+<!-- Pullquote -->
+<block name="core/pullquote">
+  <p>This is a pullquote for emphasis.</p>
+</block>
 
-<blockstudio_card title="My Card" variant="primary">
-  <p>Card content becomes InnerBlocks.</p>
-</blockstudio_card>
+<!-- Verse -->
+<block name="core/verse">Roses are red,
+Violets are blue,
+This is a verse block,
+Just for you.</block>
+
+<!-- Cover with background image -->
+<block name="core/cover" url="https://example.com/image.jpg">
+  <h2>Cover Title</h2>
+  <p>Content inside the cover block.</p>
+</block>
+
+<!-- Embed -->
+<block name="core/embed" url="https://youtube.com/watch?v=..." providerNameSlug="youtube" />
+
+<!-- Spacer -->
+<block name="core/spacer" height="50px" />
+
+<!-- Gallery -->
+<block name="core/gallery">
+  <img src="https://example.com/1.jpg" alt="Image 1" />
+  <img src="https://example.com/2.jpg" alt="Image 2" />
+</block>
+
+<!-- Columns -->
+<block name="core/columns">
+  <block name="core/column">
+    <h3>Column 1</h3>
+    <p>First column content.</p>
+  </block>
+  <block name="core/column">
+    <h3>Column 2</h3>
+    <p>Second column content.</p>
+  </block>
+</block>
+
+<!-- Row (flex layout) -->
+<block name="core/group" layout='{"type":"flex","flexWrap":"nowrap"}'>
+  <p>Item 1</p>
+  <p>Item 2</p>
+</block>
+
+<!-- Buttons -->
+<block name="core/buttons">
+  <block name="core/button" url="https://example.com">Click Me</block>
+</block>
 ```
 
-For any block (including core blocks), use the generic syntax:
+### Custom Blocks
+
+The same syntax works for any registered block:
 
 ```html title="index.php"
-<blockstudio name="core/columns">
-  <blockstudio name="core/column">
-    <p>Column 1</p>
-  </blockstudio>
-  <blockstudio name="core/column">
-    <p>Column 2</p>
-  </blockstudio>
-</blockstudio>
+<!-- Blockstudio blocks -->
+<block name="blockstudio/section">
+  <h1>Welcome</h1>
+  <p>Section content here.</p>
+</block>
+
+<!-- ACF blocks -->
+<block name="acf/hero" title="Hero Title" background="dark">
+  <p>Hero content becomes InnerBlocks.</p>
+</block>
+
+<!-- Any custom block -->
+<block name="myplugin/custom-block" attribute="value">
+  <p>Inner content.</p>
+</block>
+```
+
+### Attributes
+
+HTML attributes on the `<block>` element are passed as block attributes:
+
+```html title="index.php"
+<!-- Image with dimensions -->
+<img src="https://example.com/image.jpg" alt="Description" width="800" height="400" />
+
+<!-- Heading with level -->
+<block name="core/heading" level="3">Custom Heading</block>
+
+<!-- JSON attributes -->
+<block name="core/group" layout='{"type":"flex","orientation":"vertical"}'>
+  <p>Stacked content.</p>
+</block>
+```
+
+## Complete Example
+
+Here's a complete page template demonstrating various block types:
+
+```html title="index.php"
+<div>
+  <h1>Welcome to Our Site</h1>
+  <p>This is an <strong>introduction</strong> paragraph with <em>formatting</em>.</p>
+
+  <block name="core/columns">
+    <block name="core/column">
+      <h3>Feature One</h3>
+      <p>Description of the first feature.</p>
+    </block>
+    <block name="core/column">
+      <h3>Feature Two</h3>
+      <p>Description of the second feature.</p>
+    </block>
+  </block>
+
+  <block name="core/cover" url="https://example.com/hero.jpg">
+    <h2>Our Mission</h2>
+    <p>Building amazing things together.</p>
+  </block>
+
+  <details>
+    <summary>Frequently Asked Questions</summary>
+    <p>Here are answers to common questions.</p>
+  </details>
+
+  <block name="core/buttons">
+    <block name="core/button" url="/contact">Contact Us</block>
+    <block name="core/button" url="/learn-more">Learn More</block>
+  </block>
+</div>
 ```
 
 ## Template Lock
@@ -153,6 +289,99 @@ Blockstudio\Pages::lock('about');
 
 // Unlock a page
 Blockstudio\Pages::unlock('about');
+```
+
+## Custom Block Renderers
+
+The HTML parser uses a registry-based architecture. You can add custom renderers for your own blocks using the `blockstudio/parser/renderers` filter.
+
+### Renderer Function Signature
+
+```php
+/**
+ * @param DOMElement    $element The DOM element being parsed.
+ * @param array         $attrs   Attributes from the element.
+ * @param Html_Parser   $parser  The parser instance (for recursive parsing).
+ * @return array|null   WordPress block array or null to skip.
+ */
+function my_renderer( DOMElement $element, array $attrs, $parser ): ?array {
+    // Return a block array
+}
+```
+
+### Adding a Custom Renderer
+
+```php
+add_filter( 'blockstudio/parser/renderers', function( $renderers, $parser ) {
+    // Add renderer for an ACF block
+    $renderers['acf/hero'] = function( $element, $attrs, $parser ) {
+        // Parse child elements as inner blocks
+        $inner_blocks = $parser->parse_children( $element );
+
+        return array(
+            'blockName'    => 'acf/hero',
+            'attrs'        => $attrs,
+            'innerBlocks'  => $inner_blocks,
+            'innerHTML'    => '',
+            'innerContent' => array(),
+        );
+    };
+
+    // Add renderer for a custom block with specific HTML output
+    $renderers['myplugin/callout'] = function( $element, $attrs, $parser ) {
+        $content = $element->textContent;
+        $type    = $attrs['type'] ?? 'info';
+
+        return array(
+            'blockName'    => 'myplugin/callout',
+            'attrs'        => array( 'type' => $type ),
+            'innerBlocks'  => array(),
+            'innerHTML'    => '<div class="callout callout-' . esc_attr( $type ) . '">' . esc_html( $content ) . '</div>',
+            'innerContent' => array( '<div class="callout callout-' . esc_attr( $type ) . '">' . esc_html( $content ) . '</div>' ),
+        );
+    };
+
+    return $renderers;
+}, 10, 2 );
+```
+
+### Usage in Templates
+
+Once registered, use your blocks with the `<block>` syntax:
+
+```html title="index.php"
+<block name="acf/hero" background="dark">
+  <h1>Welcome</h1>
+  <p>Hero content here.</p>
+</block>
+
+<block name="myplugin/callout" type="warning">
+  This is an important notice.
+</block>
+```
+
+### Overriding Core Renderers
+
+You can also override how core blocks are rendered:
+
+```php
+add_filter( 'blockstudio/parser/renderers', function( $renderers, $parser ) {
+    // Custom paragraph renderer with default alignment
+    $renderers['core/paragraph'] = function( $element, $attrs, $parser ) {
+        $content = $parser->get_inner_html( $element );
+        $attrs['align'] = $attrs['align'] ?? 'center';
+
+        return array(
+            'blockName'    => 'core/paragraph',
+            'attrs'        => $attrs,
+            'innerBlocks'  => array(),
+            'innerHTML'    => '<p class="has-text-align-center">' . $content . '</p>',
+            'innerContent' => array( '<p class="has-text-align-center">' . $content . '</p>' ),
+        );
+    };
+
+    return $renderers;
+}, 10, 2 );
 ```
 
 ## Post Type Templates

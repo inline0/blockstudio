@@ -1,5 +1,14 @@
 import { Browser, BrowserContext, expect, Frame, Page, test } from '@playwright/test';
 
+export const login = async (page: Page): Promise<void> => {
+  await page.goto('http://localhost:8888/wp-login.php');
+  await page.waitForLoadState('networkidle');
+  await page.locator('#user_login').fill('admin');
+  await page.locator('#user_pass').fill('password');
+  await page.locator('#wp-submit').click();
+  await page.waitForURL('**/wp-admin/**');
+};
+
 // Shared page - created once, reused by ALL test files
 let sharedPage: Page | null = null;
 let sharedContext: BrowserContext | null = null;
@@ -21,13 +30,7 @@ export const getSharedPage = async (browser: Browser): Promise<Page> => {
     await dialog.accept();
   });
 
-  // Login once
-  await sharedPage.goto('http://localhost:8888/wp-login.php');
-  await sharedPage.waitForLoadState('networkidle');
-  await sharedPage.locator('#user_login').fill('admin');
-  await sharedPage.locator('#user_pass').fill('password');
-  await sharedPage.locator('#wp-submit').click();
-  await sharedPage.waitForURL('**/wp-admin/**');
+  await login(sharedPage);
 
   return sharedPage;
 };
