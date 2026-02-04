@@ -1,19 +1,9 @@
 import { defineConfig, devices } from '@playwright/test';
 
-/**
- * Playwright configuration for E2E tests using wp-env (Docker).
- *
- * This provides a more stable environment than WordPress Playground:
- * - Native PHP execution (no WebAssembly)
- * - Full error logging support
- * - Standard page navigation and reload
- * - No iframe complexity
- */
 export default defineConfig({
 	testDir: './tests/e2e',
 	testMatch: 'types/**/*.ts',
 	timeout: 60000,
-	outputDir: '.playwright/test-results',
 	expect: {
 		timeout: 15000,
 	},
@@ -21,10 +11,7 @@ export default defineConfig({
 	forbidOnly: !!process.env.CI,
 	retries: process.env.CI ? 2 : 1,
 	workers: 1,
-	reporter: [
-		['list'],
-		['html', { outputFolder: '.playwright/playwright-report', open: 'never' }],
-	],
+	reporter: 'list',
 
 	use: {
 		baseURL: 'http://localhost:8888',
@@ -39,6 +26,4 @@ export default defineConfig({
 			use: { ...devices['Desktop Chrome'] },
 		},
 	],
-
-	/* No webServer config - wp-env must be started separately with `npm run wp-env:start` */
 });

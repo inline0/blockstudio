@@ -56,4 +56,5 @@ yarn-error.log*
 *~
 
 # Playwright
-.playwright/
+test-results/
+playwright-report/
