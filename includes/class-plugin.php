@@ -74,6 +74,7 @@ class Plugin {
 		// Interfaces.
 		require_once BLOCKSTUDIO_DIR . '/includes/interfaces/field-handler-interface.php';
 		require_once BLOCKSTUDIO_DIR . '/includes/interfaces/settings-loader-interface.php';
+		require_once BLOCKSTUDIO_DIR . '/includes/interfaces/storage-handler-interface.php';
 
 		// Field handlers.
 		require_once $classes_dir . 'field-handlers/abstract-field-handler.php';
@@ -86,6 +87,13 @@ class Plugin {
 
 		// Attribute builder.
 		require_once $classes_dir . 'attribute-builder.php';
+
+		// Storage system.
+		require_once $classes_dir . 'storage-registry.php';
+		require_once $classes_dir . 'storage-handlers/block-storage.php';
+		require_once $classes_dir . 'storage-handlers/post-meta-storage.php';
+		require_once $classes_dir . 'storage-handlers/option-storage.php';
+		require_once $classes_dir . 'storage-sync.php';
 
 		// Block discovery and registration (Phase 5).
 		require_once $classes_dir . 'file-classifier.php';
@@ -137,6 +145,8 @@ class Plugin {
 			new Assets();
 		}
 
+		$this->init_storage_system();
+
 		add_action(
 			'init',
 			function () {
@@ -151,6 +161,26 @@ class Plugin {
 		);
 
 		do_action( 'blockstudio_init', $this );
+	}
+
+	/**
+	 * Initialize the storage system.
+	 *
+	 * Registers storage handlers and sets up sync hooks.
+	 *
+	 * @return void
+	 */
+	private function init_storage_system(): void {
+		$registry = Storage_Registry::instance();
+
+		// Register storage handlers.
+		$registry->register_handler( new Storage_Handlers\Block_Storage() );
+		$registry->register_handler( new Storage_Handlers\Post_Meta_Storage() );
+		$registry->register_handler( new Storage_Handlers\Option_Storage() );
+
+		// Initialize storage sync.
+		$sync = new Storage_Sync( $registry );
+		$sync->init();
 	}
 
 	/**

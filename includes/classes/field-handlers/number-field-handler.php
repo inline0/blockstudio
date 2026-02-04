@@ -53,6 +53,7 @@ class Number_Field_Handler extends Abstract_Field_Handler {
 			}
 		}
 
+		$this->apply_storage( $field, $attribute );
 		$attribute['id'] = $field_id;
 
 		$attributes[ $field_id ] = $attribute;

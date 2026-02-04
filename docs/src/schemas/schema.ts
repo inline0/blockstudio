@@ -518,7 +518,7 @@ export const schema = async (extensions = false) => {
       value: {
         type: "string",
         description:
-          "The message to display. Block and attribute data is available in bracket syntax, e.g.: The block title is <strong>{block.title}</strong> and the value of text is <strong>{attributes.text}</strong>",
+          "The message to display. Block and attribute data is available in bracket syntax, e.g.: `{block.title}` or `{attributes.text}`",
       },
     },
   };
@@ -907,6 +907,29 @@ export const schema = async (extensions = false) => {
                   type: "boolean",
                   description:
                     "Whether to hide the field UI in the editor. This is handy when using the variations API.",
+                },
+                storage: {
+                  type: "object",
+                  description:
+                    "Configure where the field value should be stored.",
+                  properties: {
+                    type: {
+                      type: ["string", "array"],
+                      description:
+                        "Storage location(s). Can be a single type or array of types.",
+                      enum: ["block", "postMeta", "option"],
+                    },
+                    postMetaKey: {
+                      type: "string",
+                      description:
+                        "Custom meta key for post meta storage. Defaults to {block_name}_{field_id}.",
+                    },
+                    optionKey: {
+                      type: "string",
+                      description:
+                        "Custom option key for options storage. Defaults to {block_name}_{field_id}.",
+                    },
+                  },
                 },
                 ...(extensions
                   ? {

@@ -1,6 +1,7 @@
 import { source } from "@/lib/source";
 import { DocsPage, mdxComponents } from "onedocs";
 import { notFound } from "next/navigation";
+import type { MDXComponents } from "mdx/types";
 
 export default async function Page(props: {
   params: Promise<{ slug?: string[] }>;
@@ -13,7 +14,7 @@ export default async function Page(props: {
 
   return (
     <DocsPage toc={page.data.toc}>
-      <MDX components={mdxComponents} />
+      <MDX components={mdxComponents as MDXComponents} />
     </DocsPage>
   );
 }

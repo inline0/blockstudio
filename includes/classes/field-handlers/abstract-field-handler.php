@@ -136,4 +136,22 @@ abstract class Abstract_Field_Handler implements Field_Handler_Interface {
 		$type = $field['type'] ?? '';
 		return Field_Type_Config::get_default_value( $type );
 	}
+
+	/**
+	 * Apply storage configuration to attribute.
+	 *
+	 * Stores storage config in the attribute for later sync operations.
+	 *
+	 * @param array $field     The field configuration.
+	 * @param array $attribute The attribute array (passed by reference).
+	 *
+	 * @return void
+	 */
+	protected function apply_storage( array $field, array &$attribute ): void {
+		if ( ! isset( $field['storage'] ) ) {
+			return;
+		}
+
+		$attribute['storage'] = $field['storage'];
+	}
 }

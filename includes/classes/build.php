@@ -1082,6 +1082,12 @@ class Build {
 				false,
 				$is_extend
 			);
+
+			// Register storage handlers for fields.
+			Storage_Registry::instance()->process_block_fields(
+				$name,
+				$block_json['blockstudio']['attributes']
+			);
 		}
 
 		$attributes['blockstudio'] = array(

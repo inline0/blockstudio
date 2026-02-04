@@ -45,6 +45,7 @@ class Boolean_Field_Handler extends Abstract_Field_Handler {
 		$attribute = $this->create_base_attribute( $type, 'boolean' );
 
 		$this->apply_defaults( $field, $attribute );
+		$this->apply_storage( $field, $attribute );
 		$attribute['id'] = $field_id;
 
 		$attributes[ $field_id ] = $attribute;

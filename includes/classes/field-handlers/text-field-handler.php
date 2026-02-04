@@ -68,8 +68,9 @@ class Text_Field_Handler extends Abstract_Field_Handler {
 			$attribute['tailwind'] = true;
 		}
 
-		// Apply defaults and set ID.
+		// Apply defaults, storage, and set ID.
 		$this->apply_defaults( $field, $attribute );
+		$this->apply_storage( $field, $attribute );
 		$attribute['id'] = $field_id;
 
 		$attributes[ $field_id ] = $attribute;

@@ -18,6 +18,7 @@
     "context",
     "preview",
     "post-meta",
+    "storage",
     "overrides",
     "loading",
     "hooks",

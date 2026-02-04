@@ -115,6 +115,7 @@ class Select_Field_Handler extends Abstract_Field_Handler {
 
 		// Apply defaults with special handling for options.
 		$this->apply_option_defaults( $field, $attribute, $is_multiple );
+		$this->apply_storage( $field, $attribute );
 
 		$attribute['id'] = $field_id;
 
