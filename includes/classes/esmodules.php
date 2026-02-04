@@ -13,10 +13,16 @@ use Exception;
  * ES Module import resolution and bundling from esm.sh CDN.
  *
  * This class enables importing npm packages directly in block JavaScript
- * using a custom Blockstudio syntax. Packages are fetched from esm.sh
+ * using a special import syntax. Packages are fetched from esm.sh
  * and cached locally in the block's _dist/modules/ directory.
  *
- * Import Syntax:
+ * Import Syntax (recommended):
+ * ```javascript
+ * import lodash from "npm:lodash@4.17.21";
+ * import { motion } from "npm:framer-motion@10.16.4";
+ * ```
+ *
+ * Legacy syntax (still supported):
  * ```javascript
  * import lodash from "blockstudio/lodash@4.17.21";
  * import { motion } from "blockstudio/framer-motion@10.16.4";
@@ -50,12 +56,14 @@ use Exception;
 class ESModules {
 
 	/**
-	 * Get Blockstudio regex pattern for module imports.
+	 * Get regex pattern for module imports.
+	 *
+	 * Supports both npm: (recommended) and blockstudio/ (legacy) prefixes.
 	 *
 	 * @return string The regex pattern.
 	 */
 	public static function get_blockstudio_regex(): string {
-		return '/\bfrom\s*["\']?(blockstudio\/[^"\']*)["\']/';
+		return '/\bfrom\s*["\']?((?:npm:|blockstudio\/)[^"\']*)["\']/';
 	}
 
 	/**
@@ -77,6 +85,8 @@ class ESModules {
 	 */
 	public static function get_module_matches( $str, bool $obj = false ) {
 		$replacer = function ( $str ) {
+			$str = str_replace( 'from"npm:', 'from "npm:', $str );
+			$str = str_replace( "from'npm:", "from 'npm:", $str );
 			$str = str_replace( 'from"blockstudio', 'from "blockstudio', $str );
 
 			return str_replace( "from'blockstudio", "from 'blockstudio", $str );
@@ -84,6 +94,7 @@ class ESModules {
 
 		$getter = function ( $str ) use ( $replacer ) {
 			$name_version = $replacer( trim( $str, "'\"" ) );
+			$name_version = str_replace( 'npm:', '', $name_version );
 			$name_version = str_replace( 'blockstudio/', '', $name_version );
 
 			$last_at_position = strrpos( $name_version, '@' );

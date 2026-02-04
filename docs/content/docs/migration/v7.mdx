@@ -1,0 +1,56 @@
+---
+title: Migrating to v7
+description: Breaking changes and migration steps for Blockstudio 7.
+---
+
+# Migrating to v7
+
+This guide covers the changes you need to make when upgrading from Blockstudio 6 to 7.
+
+## ES Module Imports
+
+### New `npm:` Prefix (Recommended)
+
+Blockstudio 7 introduces a new `npm:` prefix for ES module imports, aligning with [Deno's npm specifier](https://docs.deno.com/runtime/fundamentals/node/#using-npm-packages) convention.
+
+**Before (v6):**
+
+```javascript
+import { h, render } from "blockstudio/preact@10.15.1";
+import htm from "blockstudio/htm@3.1.1";
+import confetti from "blockstudio/canvas-confetti@1.6.0";
+```
+
+**After (v7):**
+
+```javascript
+import { h, render } from "npm:preact@10.15.1";
+import htm from "npm:htm@3.1.1";
+import confetti from "npm:canvas-confetti@1.6.0";
+```
+
+### CSS Imports
+
+The same change applies to CSS imports:
+
+**Before (v6):**
+
+```javascript
+import "blockstudio/swiper@11.0.0/swiper.min.css";
+```
+
+**After (v7):**
+
+```javascript
+import "npm:swiper@11.0.0/swiper.min.css";
+```
+
+### Backward Compatibility
+
+The `blockstudio/` prefix is still supported for backward compatibility. Your existing code will continue to work without changes. However, we recommend migrating to the `npm:` prefix for consistency with the broader JavaScript ecosystem.
+
+The `npm:` prefix offers several advantages:
+
+- **Ecosystem alignment** - Matches Deno's established convention
+- **Clarity** - Makes it immediately clear you're importing from npm
+- **Future-proofing** - The `blockstudio/` prefix may be deprecated in a future major version

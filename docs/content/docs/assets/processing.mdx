@@ -93,13 +93,19 @@ Blockstudio includes a handy way to download ES Modules to the block, eliminatin
 
 ### Setup
 
-To download a module to your block directory, simply swap the CDN url.
+To download a module to your block directory, use the `npm:` prefix followed by the package name and version:
 
 ```javascript title="script.js"
-import { h, render } from "blockstudio/preact@10.15.1";
-import htm from "blockstudio/htm@3.1.1";
-import confetti from "blockstudio/canvas-confetti@1.6.0";
+import { h, render } from "npm:preact@10.15.1";
+import htm from "npm:htm@3.1.1";
+import confetti from "npm:canvas-confetti@1.6.0";
 ```
+
+This syntax aligns with [Deno's npm specifier](https://docs.deno.com/runtime/fundamentals/node/#using-npm-packages) convention.
+
+<Callout>
+The legacy `blockstudio/` prefix (e.g., `blockstudio/preact@10.15.1`) is still supported for backward compatibility, but we recommend using the `npm:` prefix for new projects. See the [migration guide](/docs/migration/v7) for details.
+</Callout>
 
 Blockstudio will automatically check changed .js files for imports and download them to the local block directory. The downloaded files will be placed in a `modules` folder in the block directory.
 
@@ -130,7 +136,7 @@ On top of that, the same module will be requested twice if both blocks are prese
 It is also possible to import CSS files using the same syntax as above.
 
 ```javascript title="script.js"
-import "blockstudio/swiper@11.0.0/swiper.min.css";
+import "npm:swiper@11.0.0/swiper.min.css";
 ```
 
 The CSS file will be downloaded to the `modules` folder and automatically enqueued when the block is used. As long as the version is the same, only a single version of the CSS file will be enqueued, even if it exists in multiple blocks.

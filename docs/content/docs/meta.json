@@ -1,9 +1,11 @@
 {
   "title": "Documentation",
   "pages": [
+    "---General---",
     "index",
     "getting-started",
     "settings",
+    "---Blocks---",
     "registration",
     "templating",
     "schema",
@@ -12,7 +14,6 @@
     "variations",
     "transforms",
     "initialization",
-    "rendering",
     "components",
     "environment",
     "context",
@@ -21,10 +22,14 @@
     "storage",
     "overrides",
     "loading",
+    "rendering",
     "hooks",
-    "ai",
+    "---Other---",
     "extensions",
     "code-snippets",
-    "composer"
+    "---Tooling---",
+    "ai",
+    "composer",
+    "migration"
   ]
 }

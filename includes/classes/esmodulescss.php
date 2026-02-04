@@ -15,7 +15,13 @@ use Exception;
  * This class enables importing CSS files from npm packages directly
  * in block JavaScript, similar to how bundlers handle CSS imports.
  *
- * Import Syntax:
+ * Import Syntax (recommended):
+ * ```javascript
+ * import "npm:swiper@10.0.0/swiper-bundle.min.css";
+ * import "npm:@fancyapps/ui@5.0.0/dist/fancybox.css";
+ * ```
+ *
+ * Legacy syntax (still supported):
  * ```javascript
  * import "blockstudio/swiper@10.0.0/swiper-bundle.min.css";
  * import "blockstudio/@fancyapps/ui@5.0.0/dist/fancybox.css";
@@ -47,12 +53,14 @@ use Exception;
 class ESModulesCSS {
 
 	/**
-	 * Get Blockstudio regex pattern for CSS imports.
+	 * Get regex pattern for CSS imports.
+	 *
+	 * Supports both npm: (recommended) and blockstudio/ (legacy) prefixes.
 	 *
 	 * @return string The regex pattern.
 	 */
 	public static function get_blockstudio_regex(): string {
-		return '/import\s*["\'](blockstudio\/.*\.css)["\']/';
+		return '/import\s*["\']((?:npm:|blockstudio\/).*\.css)["\']/';
 	}
 
 	/**
@@ -82,11 +90,9 @@ class ESModulesCSS {
 
 		foreach ( $matches[1] as $match ) {
 			$last_at_position = strrpos( $match, '@' );
-			$name             = str_replace(
-				'blockstudio/',
-				'',
-				substr( $match, 0, $last_at_position )
-			);
+			$name             = substr( $match, 0, $last_at_position );
+			$name             = str_replace( 'npm:', '', $name );
+			$name             = str_replace( 'blockstudio/', '', $name );
 			$version_and_file = substr( $match, $last_at_position + 1 );
 
 			list( $version, $filename ) = explode( '/', $version_and_file, 2 );
