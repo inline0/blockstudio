@@ -16,9 +16,9 @@ export default defineConfig({
   },
   homepage: {
     hero: {
-      title: "Build WordPress blocks with ease",
+      title: <>The block framework<br />for WordPress</>,
       description:
-        "Blockstudio is a powerful framework for creating custom WordPress blocks using Twig templates and a simple JSON configuration.",
+        "The fastest way to build custom blocks. Write templates in PHP, Twig, or Blade with 25+ field types and zero JavaScript.",
       cta: { label: "Get Started", href: "/docs/getting-started" },
     },
     features: [
