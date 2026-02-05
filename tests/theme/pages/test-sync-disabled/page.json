@@ -1,0 +1,8 @@
+{
+  "name": "blockstudio-sync-disabled-test",
+  "title": "Sync Disabled Test",
+  "slug": "blockstudio-sync-disabled-test",
+  "postType": "page",
+  "postStatus": "draft",
+  "sync": false
+}

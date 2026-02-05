@@ -1,0 +1,9 @@
+{
+  "name": "blockstudio-editing-mode-test",
+  "title": "Editing Mode Test",
+  "slug": "blockstudio-editing-mode-test",
+  "postType": "page",
+  "postStatus": "draft",
+  "templateLock": "all",
+  "blockEditingMode": "disabled"
+}

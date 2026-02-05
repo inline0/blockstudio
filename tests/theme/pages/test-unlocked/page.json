@@ -1,0 +1,8 @@
+{
+  "name": "blockstudio-unlocked-test",
+  "title": "Unlocked Test",
+  "slug": "blockstudio-unlocked-test",
+  "postType": "page",
+  "postStatus": "draft",
+  "templateLock": false
+}

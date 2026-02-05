@@ -1,0 +1,8 @@
+{
+  "name": "blockstudio-content-only-lock-test",
+  "title": "Content Only Lock Test",
+  "slug": "blockstudio-content-only-lock-test",
+  "postType": "page",
+  "postStatus": "draft",
+  "templateLock": "contentOnly"
+}

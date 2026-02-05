@@ -121,31 +121,49 @@ class Pages {
 	private static function register_template_for_hooks(): void {
 		$registry = Page_Registry::instance();
 
-		if ( empty( $registry->get_all_template_for() ) ) {
+		$all_template_for = $registry->get_all_template_for();
+
+		if ( empty( $all_template_for ) ) {
 			return;
 		}
 
+		$parser = Html_Parser::from_settings();
+
+		// Apply to already-registered post types (since Pages::init runs late).
+		foreach ( $all_template_for as $post_type => $template_page ) {
+			$post_type_object = get_post_type_object( $post_type );
+
+			if ( ! $post_type_object ) {
+				continue;
+			}
+
+			$template = self::build_post_type_template( $parser, $template_page );
+
+			if ( ! $template ) {
+				continue;
+			}
+
+			$post_type_object->template      = $template;
+			$post_type_object->template_lock = $template_page['templateLock'];
+		}
+
+		// Also hook for any post types registered after this point.
 		add_filter(
 			'register_post_type_args',
-			function ( array $args, string $post_type ) use ( $registry ): array {
+			function ( array $args, string $post_type ) use ( $registry, $parser ): array {
 				$template_page = $registry->get_template_for( $post_type );
 
 				if ( ! $template_page ) {
 					return $args;
 				}
 
-				$parser = Html_Parser::from_settings();
+				$template = self::build_post_type_template( $parser, $template_page );
 
-				// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Reading local template file.
-				$template_content = file_get_contents( $template_page['template_path'] );
-
-				if ( false === $template_content ) {
+				if ( ! $template ) {
 					return $args;
 				}
 
-				$blocks = $parser->parse_to_array( $template_content );
-
-				$args['template']      = $blocks;
+				$args['template']      = $template;
 				$args['template_lock'] = $template_page['templateLock'];
 
 				return $args;
@@ -153,6 +171,87 @@ class Pages {
 			10,
 			2
 		);
+	}
+
+	/**
+	 * Build a post type template array from a page's template file.
+	 *
+	 * Parses the HTML template and converts parsed blocks to the
+	 * WordPress post type template format: [blockName, attrs, innerBlocks].
+	 *
+	 * @param Html_Parser $parser        The HTML parser instance.
+	 * @param array       $template_page The template page data.
+	 *
+	 * @return array|null The template array or null on failure.
+	 */
+	private static function build_post_type_template( Html_Parser $parser, array $template_page ): ?array {
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Reading local template file.
+		$template_content = file_get_contents( $template_page['template_path'] );
+
+		if ( false === $template_content ) {
+			return null;
+		}
+
+		$blocks = $parser->parse_to_array( $template_content );
+
+		return self::blocks_to_template( $blocks );
+	}
+
+	/**
+	 * Convert parsed blocks to WordPress post type template format.
+	 *
+	 * WordPress expects: [ [blockName, attrs, innerBlocks], ... ]
+	 * parse_to_array returns: [ ['blockName' => ..., 'attrs' => ..., ...], ... ]
+	 *
+	 * Blocks like core/heading and core/paragraph store their text in innerHTML,
+	 * but the template format needs it in attrs['content'].
+	 *
+	 * @param array $blocks Parsed blocks from Html_Parser.
+	 *
+	 * @return array Template-format blocks.
+	 */
+	private static function blocks_to_template( array $blocks ): array {
+		$template = array();
+
+		foreach ( $blocks as $block ) {
+			$attrs = $block['attrs'];
+			$inner = ! empty( $block['innerBlocks'] )
+				? self::blocks_to_template( $block['innerBlocks'] )
+				: array();
+
+			// WordPress template format needs text in attrs['content'], not innerHTML.
+			if ( ! isset( $attrs['content'] ) && ! empty( $block['innerHTML'] ) ) {
+				$content = self::extract_block_content( $block['innerHTML'] );
+
+				if ( '' !== $content ) {
+					$attrs['content'] = $content;
+				}
+			}
+
+			$template[] = array( $block['blockName'], $attrs, $inner );
+		}
+
+		return $template;
+	}
+
+	/**
+	 * Extract inner text content from block innerHTML markup.
+	 *
+	 * Strips the outermost HTML tag wrapper to get the rich-text content.
+	 * E.g. '<h1 class="wp-block-heading">Title</h1>' → 'Title'
+	 *
+	 * @param string $inner_html The block innerHTML.
+	 *
+	 * @return string The extracted content.
+	 */
+	private static function extract_block_content( string $inner_html ): string {
+		$inner_html = trim( $inner_html );
+
+		if ( preg_match( '/^<[^>]+>(.*)<\/[^>]+>$/s', $inner_html, $matches ) ) {
+			return $matches[1];
+		}
+
+		return '';
 	}
 
 	/**

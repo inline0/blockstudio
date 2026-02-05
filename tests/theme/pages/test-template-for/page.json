@@ -1,0 +1,9 @@
+{
+  "name": "blockstudio-template-for-test",
+  "title": "Template For Test",
+  "slug": "blockstudio-template-for-test",
+  "postType": "page",
+  "postStatus": "draft",
+  "templateFor": "blockstudio_test_cpt",
+  "templateLock": "insert"
+}

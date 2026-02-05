@@ -6,7 +6,7 @@ Overview of all page-related E2E test coverage.
 
 | File | Tests | Focus |
 |------|-------|-------|
-| `types/pages/default.ts` | 13 | Page creation, parsing, locking, meta, frontend rendering |
+| `types/pages/default.ts` | 26 | Page creation, parsing, locking, meta, frontend rendering, editing modes, sync, templateFor |
 | `keyed-merge.ts` | 21 | Keyed block merging across all scenarios |
 
 ## Test Pages
@@ -18,6 +18,11 @@ Overview of all page-related E2E test coverage.
 | `test-page-blade` | `blockstudio-e2e-test-blade` | Blade | publish | `all` |
 | `test-sync` | `blockstudio-sync-test` | PHP | draft | `insert` |
 | `test-keyed-merge` | `blockstudio-keyed-merge-test` | PHP | draft | — |
+| `test-block-editing-mode` | `blockstudio-editing-mode-test` | PHP | draft | `all` |
+| `test-content-only-lock` | `blockstudio-content-only-lock-test` | PHP | draft | `contentOnly` |
+| `test-unlocked` | `blockstudio-unlocked-test` | PHP | draft | `false` |
+| `test-sync-disabled` | `blockstudio-sync-disabled-test` | PHP | draft | — |
+| `test-template-for` | `blockstudio-template-for-test` | PHP | draft | `insert` |
 
 ## page.json Properties
 
@@ -30,11 +35,13 @@ Overview of all page-related E2E test coverage.
 | `postStatus` | Yes | `default.ts` — publish + draft pages |
 | `templateLock` `"all"` | Yes | `default.ts` — verifies via editor API |
 | `templateLock` `"insert"` | Yes | `default.ts` — sync test page |
-| `templateLock` `"contentOnly"` | No | |
-| `templateLock` `false` | No | |
-| `blockEditingMode` | No | Documented but no E2E test |
-| `templateFor` | No | |
-| `sync` `false` | No | |
+| `templateLock` `"contentOnly"` | Yes | `default.ts` — content only lock page |
+| `templateLock` `false` | Yes | `default.ts` — unlocked page |
+| `blockEditingMode` (page-level) | Yes | `default.ts` — editing mode test page |
+| `blockEditingMode` (per-element) | Yes | `default.ts` — per-element override |
+| `blockEditingMode` (ancestor cascade) | Yes | `default.ts` — ancestor containers |
+| `templateFor` | Yes | `default.ts` — CPT template test |
+| `sync` `false` | Yes | `default.ts` — sync disabled test |
 
 ## Keyed Block Merging (keyed-merge.ts)
 
@@ -119,17 +126,50 @@ Overview of all page-related E2E test coverage.
 | 12 | Sync page exists as draft | `postStatus: "draft"` honored |
 | 13 | Sync page has insert lock | `templateLock: "insert"` via editor API |
 
+### Content Only Lock
+
+| # | Test | Verifies |
+|---|------|----------|
+| 14 | contentOnly lock applied | `templateLock === "contentOnly"` via editor API |
+| 15 | contentOnly prevents lock UI | `canLockBlocks === false` |
+
+### Unlocked Page
+
+| # | Test | Verifies |
+|---|------|----------|
+| 16 | No template lock | `templateLock` is falsy |
+| 17 | Inserter accessible | Block inserter button visible and enabled |
+
+### Block Editing Mode
+
+| # | Test | Verifies |
+|---|------|----------|
+| 18 | Page-level setting | `blockstudioBlockEditingMode === "disabled"` |
+| 19 | Blocks inherit default | Plain `<p>` has editing mode `"disabled"` |
+| 20 | Per-element override | `<h1 blockEditingMode="contentOnly">` has mode `"contentOnly"` |
+| 21 | Ancestor cascade | Parent `<div>` of overridden `<p>` gets `"contentOnly"` |
+
+### Sync Disabled
+
+| # | Test | Verifies |
+|---|------|----------|
+| 22 | Not auto-created | `sync: false` page does not appear in admin |
+| 23 | Ignores template changes | Force-create, trigger sync with changed template, content unchanged |
+
+### Template For
+
+| # | Test | Verifies |
+|---|------|----------|
+| 24 | CPT template applied | New CPT post has heading + paragraph from template |
+| 25 | CPT template content correct | Heading contains "CPT Template Title" |
+| 26 | CPT template lock applied | `templateLock === "insert"` on new CPT post |
+
 ## Not Covered
 
 Areas with no E2E coverage:
 
 | Feature | Notes |
 |---------|-------|
-| `blockEditingMode` (page-level + per-element) | Documented, not tested |
-| `templateLock: "contentOnly"` | Only `"all"` and `"insert"` tested |
-| `templateLock: false` | No unlocked page test |
-| `templateFor` | Post type template assignment |
-| `sync: false` | One-time scaffold behavior |
 | Template engines (Twig/Blade) | Test pages exist but no dedicated assertions |
 | PHP API (`Pages::lock()`, `Pages::force_sync()`, etc.) | Only tested via REST helpers |
 | Custom paths filter | `blockstudio/pages/paths` |
