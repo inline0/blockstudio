@@ -8,6 +8,7 @@
 	<file>./includes/classes/</file>
 	<file>./includes/functions/</file>
 	<file>./includes/interfaces/</file>
+	<file>./tests/theme/test-helper.php</file>
 
 	<!-- Exclude vendor, node_modules, reference v6 code, and non-PHP assets -->
 	<exclude-pattern>*/vendor/*</exclude-pattern>

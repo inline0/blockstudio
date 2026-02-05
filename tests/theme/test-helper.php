@@ -614,7 +614,8 @@ add_action(
 								$extension = $file->getExtension();
 
 								// Only include CSS and JS files
-								if ( in_array( $extension, array( 'css', 'js' ) ) ) {
+								if ( in_array( $extension, array( 'css', 'js' ), true ) ) {
+									// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Reading local compiled asset.
 									$content = file_get_contents( $path );
 
 									// Normalize the key by removing hashes/timestamps from filename
@@ -679,7 +680,7 @@ add_action(
 					// Helper to create post with specific ID
 					$create_post_with_id = function ( $id, $title, $name, $type = 'post' ) use ( $wpdb, &$created ) {
 						if ( ! get_post( $id ) ) {
-							$wpdb->insert(
+							$wpdb->insert( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery
 								$wpdb->posts,
 								array(
 									'ID'                => $id,
@@ -718,7 +719,7 @@ add_action(
 
 						// Create a simple PNG image
 						$image    = imagecreatetruecolor( $width, $height );
-						$bg_color = imagecolorallocate( $image, rand( 0, 255 ), rand( 0, 255 ), rand( 0, 255 ) );
+						$bg_color = imagecolorallocate( $image, wp_rand( 0, 255 ), wp_rand( 0, 255 ), wp_rand( 0, 255 ) );
 						imagefill( $image, 0, 0, $bg_color );
 						imagepng( $image, $file_path );
 						imagedestroy( $image );
@@ -739,7 +740,7 @@ add_action(
 							wp_mkdir_p( $upload_dir['path'] );
 						}
 
-						// Create minimal MP4 file header (not a real video, but enough for testing)
+						// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents -- Test helper creating dummy video file.
 						file_put_contents( $file_path, str_repeat( "\x00", 1000 ) );
 
 						return array(
@@ -752,7 +753,7 @@ add_action(
 					// Helper to create attachment with specific ID
 					$create_attachment_with_id = function ( $id, $filename, $mime_type, $file_info ) use ( $wpdb, &$created ) {
 						if ( ! get_post( $id ) ) {
-							$wpdb->insert(
+							$wpdb->insert( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery
 								$wpdb->posts,
 								array(
 									'ID'                => $id,
@@ -833,8 +834,8 @@ add_action(
 					$pattern_2643_content = '<!-- wp:blockstudio/type-text /--><!-- wp:blockstudio/type-textarea /-->';
 					$existing_2643        = get_post( 2643 );
 					if ( ! $existing_2643 || $existing_2643->post_type !== 'wp_block' ) {
-						$wpdb->delete( $wpdb->posts, array( 'ID' => 2643 ) );
-						$wpdb->insert(
+						$wpdb->delete( $wpdb->posts, array( 'ID' => 2643 ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching
+						$wpdb->insert( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery
 							$wpdb->posts,
 							array(
 								'ID'                => 2643,
@@ -857,8 +858,8 @@ add_action(
 					$pattern_2644_content = '<!-- wp:blockstudio/type-text /--><!-- wp:blockstudio/type-textarea /-->';
 					$existing_2644        = get_post( 2644 );
 					if ( ! $existing_2644 || $existing_2644->post_type !== 'wp_block' ) {
-						$wpdb->delete( $wpdb->posts, array( 'ID' => 2644 ) );
-						$wpdb->insert(
+						$wpdb->delete( $wpdb->posts, array( 'ID' => 2644 ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching
+						$wpdb->insert( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery
 							$wpdb->posts,
 							array(
 								'ID'                => 2644,
@@ -899,7 +900,7 @@ add_action(
 					// Helper to create user with specific ID
 					$create_user_with_id = function ( $id, $login, $email, $display_name ) use ( $wpdb, &$created ) {
 						if ( ! get_user_by( 'id', $id ) ) {
-							$wpdb->insert(
+							$wpdb->insert( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery
 								$wpdb->users,
 								array(
 									'ID'              => $id,
@@ -1090,7 +1091,7 @@ add_action(
 						file_put_contents( $page_data['template_path'], $template_content );
 					}
 
-					touch( $page_data['template_path'] );
+					touch( $page_data['template_path'] ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_touch -- Updating mtime to trigger sync.
 					clearstatcache( true, $page_data['template_path'] );
 
 					// Reset stored mtime to force sync to detect the change
@@ -1177,7 +1178,7 @@ add_action(
 						file_put_contents( $page_data['template_path'], $template_content );
 					}
 
-					touch( $page_data['template_path'] );
+					touch( $page_data['template_path'] ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_touch -- Updating mtime to trigger sync.
 					clearstatcache( true, $page_data['template_path'] );
 
 					$sync    = new \Blockstudio\Page_Sync();

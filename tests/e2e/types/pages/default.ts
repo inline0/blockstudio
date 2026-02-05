@@ -109,16 +109,13 @@ test.describe('File-based Pages', () => {
 
   test.describe('Post Meta', () => {
     test('page has blockstudio source meta', async () => {
-      const hasMeta = await page.evaluate(async () => {
+      await page.evaluate(async () => {
         const { select } = (window as any).wp.data;
         const postId = select('core/editor').getCurrentPostId();
         const response = await fetch(`/wp-json/wp/v2/pages/${postId}?context=edit`);
         const data = await response.json();
         return data.meta && data.meta._blockstudio_page_source !== undefined;
       });
-
-      // Meta might not be exposed via REST, so we just check the page was created
-      expect(true).toBe(true);
     });
   });
 
