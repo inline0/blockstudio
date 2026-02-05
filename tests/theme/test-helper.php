@@ -1039,6 +1039,224 @@ add_action(
 			)
 		);
 
+		// Trigger page sync (uses keyed merge when available)
+		register_rest_route(
+			'blockstudio-test/v1',
+			'/pages/trigger-sync',
+			array(
+				'methods'             => 'POST',
+				'callback'            => function ( $request ) {
+					$page_name = $request->get_param( 'page_name' );
+
+					if ( empty( $page_name ) ) {
+						return new WP_Error( 'missing_param', 'page_name is required', array( 'status' => 400 ) );
+					}
+
+					if ( ! class_exists( 'Blockstudio\\Page_Registry' ) || ! class_exists( 'Blockstudio\\Page_Sync' ) ) {
+						return new WP_Error( 'not_loaded', 'Blockstudio page classes not loaded', array( 'status' => 500 ) );
+					}
+
+					$registry  = \Blockstudio\Page_Registry::instance();
+					$page_data = $registry->get_page( $page_name );
+
+					// If page not in registry, run discovery to find it
+					if ( ! $page_data && class_exists( 'Blockstudio\\Page_Discovery' ) ) {
+						$discovery = new \Blockstudio\Page_Discovery();
+						$paths     = \Blockstudio\Pages::get_paths();
+						$paths     = apply_filters( 'blockstudio/pages/paths', $paths );
+
+						foreach ( $paths as $path ) {
+							if ( ! is_dir( $path ) ) {
+								continue;
+							}
+							$registry->add_path( $path );
+							$pages = $discovery->discover( $path );
+							foreach ( $pages as $name => $data ) {
+								$registry->register( $name, $data );
+							}
+						}
+
+						$page_data = $registry->get_page( $page_name );
+					}
+
+					if ( ! $page_data ) {
+						return new WP_Error( 'not_found', "Page '{$page_name}' not found in registry", array( 'status' => 404 ) );
+					}
+
+					$template_content = $request->get_param( 'template_content' );
+
+					if ( ! empty( $template_content ) ) {
+						// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents -- Test helper writing template.
+						file_put_contents( $page_data['template_path'], $template_content );
+					}
+
+					touch( $page_data['template_path'] );
+					clearstatcache( true, $page_data['template_path'] );
+
+					// Reset stored mtime to force sync to detect the change
+					$posts = get_posts(
+						array(
+							'meta_key'       => '_blockstudio_page_source', // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_key
+							'meta_value'     => $page_data['source_path'], // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_value
+							'post_type'      => $page_data['postType'],
+							'posts_per_page' => 1,
+							'post_status'    => 'any',
+						)
+					);
+
+					if ( ! empty( $posts ) ) {
+						update_post_meta( $posts[0]->ID, '_blockstudio_page_mtime', 0 );
+					}
+
+					$sync    = new \Blockstudio\Page_Sync();
+					$post_id = $sync->sync( $page_data );
+
+					if ( is_wp_error( $post_id ) ) {
+						return $post_id;
+					}
+
+					$post = get_post( $post_id );
+
+					return array(
+						'post_id'      => $post_id,
+						'post_content' => $post ? $post->post_content : '',
+					);
+				},
+				'permission_callback' => '__return_true',
+			)
+		);
+
+		// Force sync (bypasses keyed merging)
+		register_rest_route(
+			'blockstudio-test/v1',
+			'/pages/force-sync',
+			array(
+				'methods'             => 'POST',
+				'callback'            => function ( $request ) {
+					$page_name = $request->get_param( 'page_name' );
+
+					if ( empty( $page_name ) ) {
+						return new WP_Error( 'missing_param', 'page_name is required', array( 'status' => 400 ) );
+					}
+
+					if ( ! class_exists( 'Blockstudio\\Page_Registry' ) || ! class_exists( 'Blockstudio\\Page_Sync' ) ) {
+						return new WP_Error( 'not_loaded', 'Blockstudio page classes not loaded', array( 'status' => 500 ) );
+					}
+
+					$registry  = \Blockstudio\Page_Registry::instance();
+					$page_data = $registry->get_page( $page_name );
+
+					// If page not in registry, run discovery to find it
+					if ( ! $page_data && class_exists( 'Blockstudio\\Page_Discovery' ) ) {
+						$discovery = new \Blockstudio\Page_Discovery();
+						$paths     = \Blockstudio\Pages::get_paths();
+						$paths     = apply_filters( 'blockstudio/pages/paths', $paths );
+
+						foreach ( $paths as $path ) {
+							if ( ! is_dir( $path ) ) {
+								continue;
+							}
+							$registry->add_path( $path );
+							$pages = $discovery->discover( $path );
+							foreach ( $pages as $name => $data ) {
+								$registry->register( $name, $data );
+							}
+						}
+
+						$page_data = $registry->get_page( $page_name );
+					}
+
+					if ( ! $page_data ) {
+						return new WP_Error( 'not_found', "Page '{$page_name}' not found in registry", array( 'status' => 404 ) );
+					}
+
+					$template_content = $request->get_param( 'template_content' );
+
+					if ( ! empty( $template_content ) ) {
+						// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents -- Test helper writing template.
+						file_put_contents( $page_data['template_path'], $template_content );
+					}
+
+					touch( $page_data['template_path'] );
+					clearstatcache( true, $page_data['template_path'] );
+
+					$sync    = new \Blockstudio\Page_Sync();
+					$post_id = $sync->force_sync( $page_data );
+
+					if ( is_wp_error( $post_id ) ) {
+						return $post_id;
+					}
+
+					$post = get_post( $post_id );
+
+					return array(
+						'post_id'      => $post_id,
+						'post_content' => $post ? $post->post_content : '',
+					);
+				},
+				'permission_callback' => '__return_true',
+			)
+		);
+
+		// Get page content by post ID
+		register_rest_route(
+			'blockstudio-test/v1',
+			'/pages/content/(?P<id>\d+)',
+			array(
+				'methods'             => 'GET',
+				'callback'            => function ( $request ) {
+					$post_id = (int) $request->get_param( 'id' );
+					$post    = get_post( $post_id );
+
+					if ( ! $post ) {
+						return new WP_Error( 'not_found', 'Post not found', array( 'status' => 404 ) );
+					}
+
+					return array(
+						'post_id'      => $post->ID,
+						'post_content' => $post->post_content,
+						'post_status'  => $post->post_status,
+					);
+				},
+				'permission_callback' => '__return_true',
+			)
+		);
+
+		// Update page content by post ID
+		register_rest_route(
+			'blockstudio-test/v1',
+			'/pages/content/(?P<id>\d+)',
+			array(
+				'methods'             => 'POST',
+				'callback'            => function ( $request ) {
+					$post_id = (int) $request->get_param( 'id' );
+					$content = $request->get_param( 'content' );
+
+					if ( null === $content ) {
+						return new WP_Error( 'missing_param', 'content is required', array( 'status' => 400 ) );
+					}
+
+					$result = wp_update_post(
+						array(
+							'ID'           => $post_id,
+							'post_content' => $content,
+						),
+						true
+					);
+
+					if ( is_wp_error( $result ) ) {
+						return $result;
+					}
+
+					return array(
+						'post_id'      => $post_id,
+						'post_content' => get_post( $post_id )->post_content,
+					);
+				},
+				'permission_callback' => '__return_true',
+			)
+		);
+
 		// Get E2E test data IDs (for tests to use dynamic IDs instead of hardcoded)
 		register_rest_route(
 			'blockstudio-test/v1',
