@@ -149,7 +149,31 @@ When a template file changes and the page re-syncs:
 
 ### Combining with Editing Controls
 
-Keys work well with `blockEditingMode` and `templateLock` to create pages where users can only edit specific content areas:
+Keys, `templateLock`, and `blockEditingMode` combine to give you fine-grained control over what clients can and can't do. Here are common workflow patterns.
+
+#### Fully locked page
+
+The developer controls everything. The page is a static layout that clients can't touch at all. Useful for legal pages, terms of service, or any page that should only change through code.
+
+```json title="page.json"
+{
+  "name": "terms",
+  "title": "Terms of Service",
+  "templateLock": "all"
+}
+```
+
+```html title="index.php"
+<h1>Terms of Service</h1>
+<p>Last updated: January 2025</p>
+<p>These terms govern your use of our service...</p>
+```
+
+No keys needed — the template is the single source of truth. Every sync overwrites the page entirely.
+
+#### Locked layout with editable content
+
+The most common pattern. Lock the page structure so clients can't add, remove, or rearrange blocks, but let them edit text in specific places. Keys ensure their edits survive template updates.
 
 ```json title="page.json"
 {
@@ -170,9 +194,63 @@ Keys work well with `blockEditingMode` and `templateLock` to create pages where 
   <h2>Features</h2>
   <p blockEditingMode="contentOnly">Editable feature intro.</p>
 </div>
+
+<block name="core/buttons">
+  <block name="core/button" url="/contact">Contact Us</block>
+</block>
 ```
 
-This gives you a locked-down layout where users can only edit text in designated blocks, and those edits survive template updates. The `key` on the parent protects all content inside it.
+The client can edit the hero title, description, and feature intro — nothing else. The button text, URL, and cover background image are developer-controlled. When the developer updates the template (e.g., adds a second button), keyed sections keep the client's text.
+
+#### Evolving template with preserved content
+
+For pages that grow over time. The developer adds new sections to the template, and each sync adds the new content without touching what the client has already customized.
+
+```html title="index.php (initial)"
+<h1 key="title">Welcome</h1>
+<p key="intro">Our introduction.</p>
+<div key="services">
+  <h2>Our Services</h2>
+  <p>We offer great things.</p>
+</div>
+```
+
+```html title="index.php (updated later)"
+<h1 key="title">Welcome</h1>
+<p key="intro">Our introduction.</p>
+<div key="services">
+  <h2>Our Services</h2>
+  <p>We offer great things.</p>
+</div>
+<div key="testimonials">
+  <h2>Testimonials</h2>
+  <p>What our clients say.</p>
+</div>
+<block name="core/buttons">
+  <block name="core/button" url="/contact">Get in Touch</block>
+</block>
+```
+
+The new testimonials section and button appear on sync. The client's edits to the title, intro, and services are untouched.
+
+#### One-time scaffold
+
+Create a page with a starting structure, then hand it off entirely. Set `sync` to `false` so the template is only used for the initial creation — after that, the client owns the page completely.
+
+```json title="page.json"
+{
+  "name": "blog",
+  "title": "Blog",
+  "sync": false
+}
+```
+
+```html title="index.php"
+<h1>Our Blog</h1>
+<p>Welcome to our blog. Start writing!</p>
+```
+
+The page is created once. After that, the client can add, remove, and rearrange blocks freely. Template changes are ignored.
 
 ## Post Type Templates
 
