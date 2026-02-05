@@ -1,0 +1,139 @@
+# Pages E2E Testing Matrix
+
+Overview of all page-related E2E test coverage.
+
+## Test Files
+
+| File | Tests | Focus |
+|------|-------|-------|
+| `types/pages/default.ts` | 13 | Page creation, parsing, locking, meta, frontend rendering |
+| `keyed-merge.ts` | 21 | Keyed block merging across all scenarios |
+
+## Test Pages
+
+| Page | Config | Template Engine | Status | Lock |
+|------|--------|-----------------|--------|------|
+| `test-page` | `blockstudio-e2e-test` | PHP | publish | `all` |
+| `test-page-twig` | `blockstudio-e2e-test-twig` | Twig | publish | `all` |
+| `test-page-blade` | `blockstudio-e2e-test-blade` | Blade | publish | `all` |
+| `test-sync` | `blockstudio-sync-test` | PHP | draft | `insert` |
+| `test-keyed-merge` | `blockstudio-keyed-merge-test` | PHP | draft | — |
+
+## page.json Properties
+
+| Property | Tested | Where |
+|----------|--------|-------|
+| `name` | Yes | All test pages |
+| `title` | Yes | `default.ts` — page title in admin |
+| `slug` | Yes | `default.ts` — frontend URL |
+| `postType` | Yes | All use `page` |
+| `postStatus` | Yes | `default.ts` — publish + draft pages |
+| `templateLock` `"all"` | Yes | `default.ts` — verifies via editor API |
+| `templateLock` `"insert"` | Yes | `default.ts` — sync test page |
+| `templateLock` `"contentOnly"` | No | |
+| `templateLock` `false` | No | |
+| `blockEditingMode` | No | Documented but no E2E test |
+| `templateFor` | No | |
+| `sync` `false` | No | |
+
+## Keyed Block Merging (keyed-merge.ts)
+
+### Basic Merging
+
+| # | Test | Verifies |
+|---|------|----------|
+| 1 | Initial sync creates page with keyed blocks | `__BLOCKSTUDIO_KEY` attrs present in post content |
+| 2 | Keyed leaf block preserves user text | Single keyed `<p>` keeps user edit after sync |
+| 3 | Multiple keyed blocks preserve independently | Two keyed blocks edited + synced, both preserved |
+| 4 | Unkeyed block is replaced | Unkeyed `<p>` reverts to template default |
+
+### Container Blocks
+
+| # | Test | Verifies |
+|---|------|----------|
+| 5 | Keyed group container preserves inner content | `<div key="...">` children preserved |
+| 6 | Keyed block-syntax container preserves inner content | `<block name="core/cover" key="...">` children preserved |
+
+### Template Changes
+
+| # | Test | Verifies |
+|---|------|----------|
+| 7 | Template attribute update on keyed block | New attrs applied, user content kept |
+| 8 | New keyed block added to template | Block appears with template defaults |
+| 9 | Keyed block removed from template | Block deleted from post |
+| 10 | Block type change (same key) — template wins | `<p>` → `<h2>` replaces entirely |
+
+### Movement & Position
+
+| # | Test | Verifies |
+|---|------|----------|
+| 11 | Cross-nesting: top-level → nested | Key moves into a `<div>`, user content follows |
+| 16 | Reordering keyed blocks in template | Blocks swap positions, user content follows keys |
+| 19 | Nested → top-level | Key moves out of container, user content follows |
+| 20 | Between different containers | Key moves from section-a to section-b, user content follows |
+
+### Sync Behavior
+
+| # | Test | Verifies |
+|---|------|----------|
+| 12 | No keys = full replacement | Keyless template replaces everything |
+| 13 | Force sync ignores keys | `force_sync()` replaces even keyed blocks |
+| 15 | Locked post skips sync entirely | `_blockstudio_page_locked` prevents any update |
+
+### Edge Cases
+
+| # | Test | Verifies |
+|---|------|----------|
+| 14 | Duplicate keys | Second occurrence treated as unkeyed |
+| 17 | Keys only in nested blocks | `blocks_have_keys()` recursion with no top-level keys |
+| 18 | Simultaneous add + remove + edit | One sync: add block, remove block, change attr |
+| 21 | Empty key attribute (`key=""`) | Ignored by parser, treated as unkeyed |
+
+## Page Creation & Rendering (default.ts)
+
+### Editor
+
+| # | Test | Verifies |
+|---|------|----------|
+| 1 | Page exists in WordPress | Page created and listed in admin |
+| 2 | Page has correct slug | URL matches `page.json` slug |
+| 3 | Page loads with parsed blocks | Groups, headings, paragraphs visible in editor |
+| 4 | Page contains list blocks | 2 lists, 6 list items |
+| 5 | Heading has correct content | H1 text matches template |
+| 6 | Paragraph has correct content | First paragraph matches template |
+| 7 | Template lock enabled | `templateLock === "all"` via editor API |
+| 8 | Page has blockstudio source meta | `_blockstudio_page_source` meta exists |
+
+### Frontend
+
+| # | Test | Verifies |
+|---|------|----------|
+| 9 | Page renders correctly | Groups, headings, lists visible |
+| 10 | Frontend heading text | H1 matches template |
+| 11 | Frontend list items | 6 items with correct text |
+
+### Sync Page
+
+| # | Test | Verifies |
+|---|------|----------|
+| 12 | Sync page exists as draft | `postStatus: "draft"` honored |
+| 13 | Sync page has insert lock | `templateLock: "insert"` via editor API |
+
+## Not Covered
+
+Areas with no E2E coverage:
+
+| Feature | Notes |
+|---------|-------|
+| `blockEditingMode` (page-level + per-element) | Documented, not tested |
+| `templateLock: "contentOnly"` | Only `"all"` and `"insert"` tested |
+| `templateLock: false` | No unlocked page test |
+| `templateFor` | Post type template assignment |
+| `sync: false` | One-time scaffold behavior |
+| Template engines (Twig/Blade) | Test pages exist but no dedicated assertions |
+| PHP API (`Pages::lock()`, `Pages::force_sync()`, etc.) | Only tested via REST helpers |
+| Custom paths filter | `blockstudio/pages/paths` |
+| `blockstudio/pages/create_post_data` filter | |
+| `blockstudio/pages/update_post_data` filter | |
+| `blockstudio/pages/post_created` action | |
+| `blockstudio/pages/post_updated` action | |

@@ -335,10 +335,10 @@ class Html_Parser {
 			unset( $attrs['blockeditingmode'] );
 		}
 
-		if ( isset( $attrs['key'] ) ) {
+		if ( ! empty( $attrs['key'] ) ) {
 			$attrs['__BLOCKSTUDIO_KEY'] = $attrs['key'];
-			unset( $attrs['key'] );
 		}
+		unset( $attrs['key'] );
 
 		// Check for registered renderer.
 		if ( isset( $this->block_renderers[ $block_name ] ) ) {
@@ -377,10 +377,10 @@ class Html_Parser {
 
 		$attrs = $this->get_element_attributes( $element );
 
-		if ( isset( $attrs['key'] ) ) {
+		if ( ! empty( $attrs['key'] ) ) {
 			$attrs['__BLOCKSTUDIO_KEY'] = $attrs['key'];
-			unset( $attrs['key'] );
 		}
+		unset( $attrs['key'] );
 
 		$inner_blocks = $this->parse_children( $element );
 
@@ -819,7 +819,7 @@ class Html_Parser {
 			$meta['blockEditingMode'] = $element->getAttribute( 'blockeditingmode' );
 		}
 
-		if ( $element->hasAttribute( 'key' ) ) {
+		if ( $element->hasAttribute( 'key' ) && '' !== $element->getAttribute( 'key' ) ) {
 			$meta['__BLOCKSTUDIO_KEY'] = $element->getAttribute( 'key' );
 		}
 

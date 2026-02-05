@@ -1199,6 +1199,31 @@ add_action(
 			)
 		);
 
+		// Lock/unlock a page post
+		register_rest_route(
+			'blockstudio-test/v1',
+			'/pages/lock/(?P<id>\d+)',
+			array(
+				'methods'             => 'POST',
+				'callback'            => function ( $request ) {
+					$post_id = (int) $request->get_param( 'id' );
+					$lock    = $request->get_param( 'lock' );
+
+					if ( $lock ) {
+						update_post_meta( $post_id, '_blockstudio_page_locked', true );
+					} else {
+						delete_post_meta( $post_id, '_blockstudio_page_locked' );
+					}
+
+					return array(
+						'post_id' => $post_id,
+						'locked'  => (bool) get_post_meta( $post_id, '_blockstudio_page_locked', true ),
+					);
+				},
+				'permission_callback' => '__return_true',
+			)
+		);
+
 		// Get page content by post ID
 		register_rest_route(
 			'blockstudio-test/v1',
