@@ -47,6 +47,11 @@ class Html_Parser {
 	use Buttons_Renderer;
 	use Details_Renderer;
 	use Table_Renderer;
+	use Social_Links_Renderer;
+	use Media_Text_Renderer;
+	use More_Renderer;
+	use Accordion_Renderer;
+	use Query_Renderer;
 
 	/**
 	 * Block renderers registry.
@@ -119,6 +124,27 @@ class Html_Parser {
 		// Interactive blocks.
 		$this->block_renderers['core/details'] = array( $this, 'render_details' );
 		$this->block_renderers['core/table']   = array( $this, 'render_table' );
+
+		// Social blocks.
+		$this->block_renderers['core/social-links'] = array( $this, 'render_social_links' );
+		$this->block_renderers['core/social-link']  = array( $this, 'render_social_link' );
+
+		// Media & text.
+		$this->block_renderers['core/media-text'] = array( $this, 'render_media_text' );
+
+		// Pagination / more blocks.
+		$this->block_renderers['core/more']     = array( $this, 'render_more' );
+		$this->block_renderers['core/nextpage'] = array( $this, 'render_nextpage' );
+
+		// Accordion blocks.
+		$this->block_renderers['core/accordion']         = array( $this, 'render_accordion' );
+		$this->block_renderers['core/accordion-item']    = array( $this, 'render_accordion_item' );
+		$this->block_renderers['core/accordion-heading'] = array( $this, 'render_accordion_heading' );
+		$this->block_renderers['core/accordion-panel']   = array( $this, 'render_accordion_panel' );
+
+		// Query / comments containers.
+		$this->block_renderers['core/query']    = array( $this, 'render_query' );
+		$this->block_renderers['core/comments'] = array( $this, 'render_comments' );
 	}
 
 	/**

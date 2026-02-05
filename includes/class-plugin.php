@@ -160,6 +160,11 @@ class Plugin {
 		require_once $classes_dir . 'html-parser/trait-buttons-renderer.php';
 		require_once $classes_dir . 'html-parser/trait-details-renderer.php';
 		require_once $classes_dir . 'html-parser/trait-table-renderer.php';
+		require_once $classes_dir . 'html-parser/trait-social-links-renderer.php';
+		require_once $classes_dir . 'html-parser/trait-media-text-renderer.php';
+		require_once $classes_dir . 'html-parser/trait-more-renderer.php';
+		require_once $classes_dir . 'html-parser/trait-accordion-renderer.php';
+		require_once $classes_dir . 'html-parser/trait-query-renderer.php';
 
 		require_once $classes_dir . 'html-parser.php';
 		require_once $classes_dir . 'page-sync.php';

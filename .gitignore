@@ -58,3 +58,6 @@ yarn-error.log*
 # Playwright
 test-results/
 playwright-report/
+
+# Generated catalog
+block-catalog.json

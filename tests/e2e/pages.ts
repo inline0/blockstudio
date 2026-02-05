@@ -309,6 +309,75 @@ test.describe('File-based Pages', () => {
       );
     });
 
+    // --- Social Blocks ---
+
+    test('social links with three children', async () => {
+      const socialLinks = page.locator('.wp-block-social-links');
+      await expect(socialLinks).toBeVisible();
+      await expect(socialLinks.locator('.wp-social-link')).toHaveCount(3);
+    });
+
+    // --- Media & Text ---
+
+    test('media text with image and content', async () => {
+      const mediaText = page.locator('.wp-block-media-text');
+      await expect(mediaText).toBeVisible();
+      await expect(
+        mediaText.locator('.wp-block-media-text__media img'),
+      ).toHaveAttribute('src', /picsum\.photos/);
+      await expect(mediaText).toContainText('Media & Text Content');
+      await expect(mediaText).toContainText(
+        'text content next to the media',
+      );
+    });
+
+    // --- Accordion Blocks ---
+
+    test('accordion with two items', async () => {
+      const accordion = page.locator('.wp-block-accordion');
+      await expect(accordion).toBeVisible();
+      await expect(
+        accordion.locator('.wp-block-accordion-item'),
+      ).toHaveCount(2);
+    });
+
+    test('accordion headings with toggle buttons', async () => {
+      await expect(
+        page.locator('.wp-block-accordion-heading__toggle', {
+          hasText: 'First Accordion Item',
+        }),
+      ).toBeVisible();
+      await expect(
+        page.locator('.wp-block-accordion-heading__toggle', {
+          hasText: 'Second Accordion Item',
+        }),
+      ).toBeVisible();
+    });
+
+    test('accordion panels with content', async () => {
+      await expect(
+        page.getByText('Content inside the first accordion panel'),
+      ).toBeAttached();
+      await expect(
+        page.getByText('Content inside the second accordion panel'),
+      ).toBeAttached();
+    });
+
+    // --- Query Blocks ---
+
+    test('query container renders', async () => {
+      const query = page.locator('.wp-block-query');
+      await expect(query).toBeVisible();
+      await expect(query).toContainText('Query loop placeholder content');
+    });
+
+    test('comments block present (dynamic rendering)', async () => {
+      // core/comments is fully dynamic — WordPress replaces save markup
+      // with actual comments. Validated via editor block types instead.
+      const heading = page.getByRole('heading', { name: 'Comments' });
+      await expect(heading).toBeVisible();
+    });
+
     // --- Generic Block Syntax ---
 
     test('generic block syntax paragraph', async () => {
@@ -409,12 +478,17 @@ test.describe('File-based Pages', () => {
       });
 
       const expected = [
+        'core/accordion',
+        'core/accordion-heading',
+        'core/accordion-item',
+        'core/accordion-panel',
         'core/audio',
         'core/button',
         'core/buttons',
         'core/code',
         'core/column',
         'core/columns',
+        'core/comments',
         'core/cover',
         'core/details',
         'core/embed',
@@ -424,11 +498,17 @@ test.describe('File-based Pages', () => {
         'core/image',
         'core/list',
         'core/list-item',
+        'core/media-text',
+        'core/more',
+        'core/nextpage',
         'core/paragraph',
         'core/preformatted',
         'core/pullquote',
+        'core/query',
         'core/quote',
         'core/separator',
+        'core/social-link',
+        'core/social-links',
         'core/spacer',
         'core/table',
         'core/verse',
@@ -655,6 +735,102 @@ test.describe('File-based Pages', () => {
       expect(embed).not.toBeNull();
       expect(embed.providerNameSlug).toBe('youtube');
       expect(embed.url).toContain('youtube.com');
+    });
+
+    test('social-link blocks have service and url attributes', async () => {
+      const socialLinks = await page.evaluate(() => {
+        const blocks = (window as any).wp.data
+          .select('core/block-editor')
+          .getBlocks();
+        const result: { service: string; url: string }[] = [];
+
+        function collect(block: any) {
+          if (block.name === 'core/social-link') {
+            result.push({
+              service: block.attributes.service,
+              url: block.attributes.url,
+            });
+          }
+          if (block.innerBlocks) {
+            for (const inner of block.innerBlocks) {
+              collect(inner);
+            }
+          }
+        }
+
+        for (const block of blocks) {
+          collect(block);
+        }
+
+        return result;
+      });
+
+      expect(socialLinks).toHaveLength(3);
+      expect(socialLinks.map((s: any) => s.service).sort()).toEqual([
+        'github',
+        'twitter',
+        'wordpress',
+      ]);
+    });
+
+    test('media-text block has mediaUrl and mediaType attributes', async () => {
+      const mediaText = await page.evaluate(() => {
+        const blocks = (window as any).wp.data
+          .select('core/block-editor')
+          .getBlocks();
+
+        function find(block: any): any {
+          if (block.name === 'core/media-text') return block.attributes;
+          if (block.innerBlocks) {
+            for (const inner of block.innerBlocks) {
+              const found = find(inner);
+              if (found) return found;
+            }
+          }
+          return null;
+        }
+
+        for (const block of blocks) {
+          const found = find(block);
+          if (found) return found;
+        }
+        return null;
+      });
+
+      expect(mediaText).not.toBeNull();
+      expect(mediaText.mediaUrl).toContain('picsum.photos');
+      expect(mediaText.mediaType).toBe('image');
+    });
+
+    test('accordion block has two accordion-item children', async () => {
+      const itemCount = await page.evaluate(() => {
+        const blocks = (window as any).wp.data
+          .select('core/block-editor')
+          .getBlocks();
+
+        function find(block: any): number | null {
+          if (block.name === 'core/accordion') {
+            return block.innerBlocks.filter(
+              (b: any) => b.name === 'core/accordion-item',
+            ).length;
+          }
+          if (block.innerBlocks) {
+            for (const inner of block.innerBlocks) {
+              const found = find(inner);
+              if (found !== null) return found;
+            }
+          }
+          return null;
+        }
+
+        for (const block of blocks) {
+          const found = find(block);
+          if (found !== null) return found;
+        }
+        return null;
+      });
+
+      expect(itemCount).toBe(2);
     });
 
     test('details block has summary attribute', async () => {

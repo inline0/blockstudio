@@ -159,6 +159,53 @@ Just for you.</block>
     </tbody>
   </table>
 
+  <h2>Social Blocks</h2>
+
+  <h3>Social Links</h3>
+  <block name="core/social-links">
+    <block name="core/social-link" service="wordpress" url="https://wordpress.org" />
+    <block name="core/social-link" service="github" url="https://github.com" />
+    <block name="core/social-link" service="twitter" url="https://twitter.com" />
+  </block>
+
+  <h2>Media & Text</h2>
+
+  <h3>Media Text</h3>
+  <block name="core/media-text" mediaurl="https://picsum.photos/600/400" mediatype="image">
+    <h3>Media & Text Content</h3>
+    <p>This is the text content next to the media.</p>
+  </block>
+
+  <h2>Accordion Blocks</h2>
+
+  <h3>Accordion</h3>
+  <block name="core/accordion">
+    <block name="core/accordion-item">
+      <block name="core/accordion-heading">First Accordion Item</block>
+      <block name="core/accordion-panel">
+        <p>Content inside the first accordion panel.</p>
+      </block>
+    </block>
+    <block name="core/accordion-item">
+      <block name="core/accordion-heading">Second Accordion Item</block>
+      <block name="core/accordion-panel">
+        <p>Content inside the second accordion panel.</p>
+      </block>
+    </block>
+  </block>
+
+  <h2>Query Blocks</h2>
+
+  <h3>Query</h3>
+  <block name="core/query">
+    <p>Query loop placeholder content.</p>
+  </block>
+
+  <h3>Comments</h3>
+  <block name="core/comments">
+    <p>Comments placeholder content.</p>
+  </block>
+
   <h2>Generic Block Syntax</h2>
 
   <h3>Using block element</h3>
@@ -174,4 +221,12 @@ Just for you.</block>
     <p>Nested content inside a generic group block.</p>
     <p>Multiple paragraphs work too.</p>
   </block>
+
+  <h2>Pagination Blocks</h2>
+
+  <h3>More</h3>
+  <block name="core/more" />
+
+  <h3>Page Break</h3>
+  <block name="core/nextpage" />
 </div>
