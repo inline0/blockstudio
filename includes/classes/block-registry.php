@@ -235,10 +235,6 @@ final class Block_Registry {
 		$this->is_tailwind_active  = false;
 	}
 
-	// =========================================================================
-	// Block Getters
-	// =========================================================================
-
 	/**
 	 * Get all registered blocks.
 	 *
@@ -386,10 +382,6 @@ final class Block_Registry {
 		return $this->instances;
 	}
 
-	// =========================================================================
-	// Asset Getters
-	// =========================================================================
-
 	/**
 	 * Get all assets.
 	 *
@@ -434,10 +426,6 @@ final class Block_Registry {
 	public function is_tailwind_active(): bool {
 		return $this->is_tailwind_active;
 	}
-
-	// =========================================================================
-	// Block Setters
-	// =========================================================================
 
 	/**
 	 * Register a block.
@@ -608,10 +596,6 @@ final class Block_Registry {
 		);
 	}
 
-	// =========================================================================
-	// Asset Setters
-	// =========================================================================
-
 	/**
 	 * Set assets.
 	 *
@@ -682,10 +666,6 @@ final class Block_Registry {
 	public function set_tailwind_active( bool $active ): void {
 		$this->is_tailwind_active = $active;
 	}
-
-	// =========================================================================
-	// Utility Methods
-	// =========================================================================
 
 	/**
 	 * Update block data for a specific block.

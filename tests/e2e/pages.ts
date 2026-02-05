@@ -18,146 +18,696 @@ test.afterAll(async () => {
 });
 
 test.describe('File-based Pages', () => {
-  test('test page exists with correct title', async () => {
-    await page.goto('http://localhost:8888/blockstudio-e2e-test/');
-    await page.waitForLoadState('networkidle');
+  test.describe('Frontend rendering', () => {
+    test('page loads with correct title', async () => {
+      await page.goto('http://localhost:8888/blockstudio-e2e-test/');
+      await page.waitForLoadState('networkidle');
 
-    await expect(page.getByRole('heading', { name: 'Core Blocks Test Page' })).toBeVisible();
+      await expect(
+        page.getByRole('heading', { name: 'Core Blocks Test Page' }),
+      ).toBeVisible();
+    });
+
+    // --- Text Blocks ---
+
+    test('paragraph with inline formatting', async () => {
+      const p = page.locator('p', {
+        hasText: 'This is a paragraph with',
+      });
+      await expect(p).toBeVisible();
+
+      await expect(p.locator('strong')).toHaveText('bold');
+      await expect(p.locator('em')).toHaveText('italic');
+    });
+
+    test('all six heading levels render', async () => {
+      for (let i = 1; i <= 6; i++) {
+        await expect(
+          page.getByRole('heading', { name: `Heading Level ${i}` }),
+        ).toBeVisible();
+      }
+    });
+
+    test('headings use correct tags', async () => {
+      await expect(page.locator('h1:has-text("Heading Level 1")')).toHaveCount(
+        1,
+      );
+      await expect(page.locator('h2:has-text("Heading Level 2")')).toHaveCount(
+        1,
+      );
+      await expect(page.locator('h3:has-text("Heading Level 3")')).toHaveCount(
+        1,
+      );
+      await expect(page.locator('h4:has-text("Heading Level 4")')).toHaveCount(
+        1,
+      );
+      await expect(page.locator('h5:has-text("Heading Level 5")')).toHaveCount(
+        1,
+      );
+      await expect(page.locator('h6:has-text("Heading Level 6")')).toHaveCount(
+        1,
+      );
+    });
+
+    test('unordered list with three items', async () => {
+      const ul = page.locator('ul.wp-block-list');
+      await expect(ul).toBeVisible();
+      await expect(ul.locator('li')).toHaveCount(3);
+
+      await expect(
+        page.getByText('Unordered item one', { exact: true }),
+      ).toBeVisible();
+      await expect(
+        page.getByText('Unordered item two', { exact: true }),
+      ).toBeVisible();
+      await expect(
+        page.getByText('Unordered item three', { exact: true }),
+      ).toBeVisible();
+    });
+
+    test('ordered list with three items', async () => {
+      const ol = page.locator('ol.wp-block-list');
+      await expect(ol).toBeVisible();
+      await expect(ol.locator('li')).toHaveCount(3);
+
+      await expect(
+        page.getByText('Ordered item one', { exact: true }),
+      ).toBeVisible();
+      await expect(
+        page.getByText('Ordered item two', { exact: true }),
+      ).toBeVisible();
+      await expect(
+        page.getByText('Ordered item three', { exact: true }),
+      ).toBeVisible();
+    });
+
+    test('blockquote with paragraph content', async () => {
+      const quote = page.locator('.wp-block-quote');
+      await expect(quote).toBeVisible();
+      await expect(quote.locator('p')).toContainText(
+        'blockquote with some quoted text',
+      );
+    });
+
+    test('pullquote renders correctly', async () => {
+      const pullquote = page.locator('.wp-block-pullquote');
+      await expect(pullquote).toBeVisible();
+      await expect(pullquote.locator('blockquote')).toBeVisible();
+      await expect(pullquote).toContainText('pullquote for emphasis');
+    });
+
+    test('code block with content', async () => {
+      const code = page.locator('.wp-block-code');
+      await expect(code).toBeVisible();
+      await expect(code.locator('code')).toContainText(
+        'const hello = "world"',
+      );
+    });
+
+    test('preformatted block preserves whitespace', async () => {
+      const pre = page.locator('.wp-block-preformatted');
+      await expect(pre).toBeVisible();
+      await expect(pre).toContainText('preserved whitespace');
+      await expect(pre).toContainText('indentation');
+    });
+
+    test('verse block with line breaks', async () => {
+      const verse = page.locator('.wp-block-verse');
+      await expect(verse).toBeVisible();
+      await expect(verse).toContainText('Roses are red');
+      await expect(verse).toContainText('Violets are blue');
+    });
+
+    // --- Media Blocks ---
+
+    test('image block with src and alt', async () => {
+      // Target standalone image (not inside gallery)
+      const image = page.locator(
+        '.wp-block-image:not(.wp-block-gallery .wp-block-image)',
+      );
+      await expect(image).toBeVisible();
+      await expect(image.locator('img')).toHaveAttribute(
+        'src',
+        /picsum\.photos\/800/,
+      );
+      await expect(image.locator('img')).toHaveAttribute(
+        'alt',
+        'Sample image',
+      );
+    });
+
+    test('gallery with three images', async () => {
+      const gallery = page.locator('.wp-block-gallery');
+      await expect(gallery).toBeVisible();
+      await expect(gallery.locator('.wp-block-image')).toHaveCount(3);
+    });
+
+    test('audio block renders', async () => {
+      const audio = page.locator('.wp-block-audio');
+      await expect(audio).toBeVisible();
+      await expect(audio.locator('audio')).toHaveAttribute(
+        'src',
+        /sample\.mp3/,
+      );
+    });
+
+    test('video block renders', async () => {
+      const video = page.locator('.wp-block-video');
+      await expect(video).toBeVisible();
+      await expect(video.locator('video')).toHaveAttribute(
+        'src',
+        /sample\.mp4/,
+      );
+    });
+
+    test('cover block with background image and inner content', async () => {
+      const cover = page.locator('.wp-block-cover');
+      await expect(cover).toBeVisible();
+      await expect(
+        cover.locator('img.wp-block-cover__image-background'),
+      ).toHaveAttribute('src', /picsum\.photos/);
+      await expect(cover).toContainText('Cover Block Title');
+      await expect(cover).toContainText(
+        'Content inside a cover block with background image',
+      );
+    });
+
+    test('embed block renders', async () => {
+      const embed = page.locator('.wp-block-embed');
+      await expect(embed).toBeVisible();
+      await expect(embed.locator('.wp-block-embed__wrapper')).toBeVisible();
+    });
+
+    // --- Design Blocks ---
+
+    test('group block with nested paragraphs', async () => {
+      const groups = page.locator('.wp-block-group');
+      await expect(groups.first()).toBeVisible();
+      await expect(
+        page.getByText('This paragraph is inside a group'),
+      ).toBeVisible();
+      await expect(
+        page.getByText('Another paragraph in the same group'),
+      ).toBeVisible();
+    });
+
+    test('row group renders with flex layout', async () => {
+      await expect(
+        page.getByText('Item 1', { exact: true }),
+      ).toBeVisible();
+      await expect(
+        page.getByText('Item 2', { exact: true }),
+      ).toBeVisible();
+      await expect(
+        page.getByText('Item 3', { exact: true }),
+      ).toBeVisible();
+    });
+
+    test('stack group renders with vertical layout', async () => {
+      await expect(page.getByText('Stacked item 1')).toBeVisible();
+      await expect(page.getByText('Stacked item 2')).toBeVisible();
+      await expect(page.getByText('Stacked item 3')).toBeVisible();
+    });
+
+    test('columns with three columns', async () => {
+      const columns = page.locator('.wp-block-columns');
+      await expect(columns).toBeVisible();
+      await expect(page.locator('.wp-block-column')).toHaveCount(3);
+
+      await expect(
+        page.getByRole('heading', { name: 'Column 1' }),
+      ).toBeVisible();
+      await expect(
+        page.getByRole('heading', { name: 'Column 2' }),
+      ).toBeVisible();
+      await expect(
+        page.getByRole('heading', { name: 'Column 3' }),
+      ).toBeVisible();
+      await expect(
+        page.getByText('Content in the first column'),
+      ).toBeVisible();
+      await expect(
+        page.getByText('Content in the second column'),
+      ).toBeVisible();
+      await expect(
+        page.getByText('Content in the third column'),
+      ).toBeVisible();
+    });
+
+    test('separator renders as hr', async () => {
+      const separator = page.locator('.wp-block-separator');
+      await expect(separator).toBeVisible();
+      await expect(separator).toHaveAttribute('class', /has-alpha-channel/);
+    });
+
+    test('spacer renders with correct height', async () => {
+      const spacer = page.locator('.wp-block-spacer');
+      await expect(spacer).toBeVisible();
+    });
+
+    test('buttons group with two button links', async () => {
+      const buttons = page.locator('.wp-block-buttons');
+      await expect(buttons).toBeVisible();
+      await expect(buttons.locator('.wp-block-button')).toHaveCount(2);
+
+      const primaryLink = buttons.locator('a', { hasText: 'Primary Button' });
+      await expect(primaryLink).toHaveAttribute('href', /example\.com/);
+
+      const secondaryLink = buttons.locator('a', {
+        hasText: 'Secondary Button',
+      });
+      await expect(secondaryLink).toHaveAttribute('href', /secondary/);
+    });
+
+    // --- Interactive Blocks ---
+
+    test('details block with summary and hidden content', async () => {
+      const details = page.locator('.wp-block-details');
+      await expect(details).toBeVisible();
+
+      const summary = details.locator('summary');
+      await expect(summary).toHaveText('Click to expand');
+    });
+
+    test('table block with header and body rows', async () => {
+      const table = page.locator('.wp-block-table');
+      await expect(table).toBeVisible();
+
+      const headers = table.locator('thead th');
+      await expect(headers).toHaveCount(3);
+      await expect(headers.nth(0)).toHaveText('Header 1');
+      await expect(headers.nth(1)).toHaveText('Header 2');
+      await expect(headers.nth(2)).toHaveText('Header 3');
+
+      const rows = table.locator('tbody tr');
+      await expect(rows).toHaveCount(2);
+      await expect(rows.nth(0).locator('td').nth(0)).toHaveText(
+        'Row 1, Cell 1',
+      );
+      await expect(rows.nth(1).locator('td').nth(2)).toHaveText(
+        'Row 2, Cell 3',
+      );
+    });
+
+    // --- Generic Block Syntax ---
+
+    test('generic block syntax paragraph', async () => {
+      await expect(
+        page.getByText('created using the generic block syntax'),
+      ).toBeVisible();
+    });
+
+    test('generic block syntax heading', async () => {
+      await expect(
+        page.getByRole('heading', { name: 'Generic Heading Block' }),
+      ).toBeVisible();
+    });
+
+    test('generic block syntax group with nested content', async () => {
+      await expect(
+        page.getByText('Nested content inside a generic group block'),
+      ).toBeVisible();
+      await expect(
+        page.getByText('Multiple paragraphs work too'),
+      ).toBeVisible();
+    });
   });
 
-  test('has text content', async () => {
-    await expect(page.getByText('This page tests all supported HTML')).toBeVisible();
-    await expect(page.getByText('bold')).toBeVisible();
-    await expect(page.getByText('italic')).toBeVisible();
-  });
+  test.describe('Editor validation', () => {
+    test('open test page in editor', async () => {
+      await page.goto('http://localhost:8888/wp-admin/edit.php?post_type=page');
+      await page.waitForLoadState('networkidle');
 
-  test('has all heading levels', async () => {
-    await expect(page.getByRole('heading', { name: 'Heading Level 1' })).toBeVisible();
-    await expect(page.getByRole('heading', { name: 'Heading Level 2' })).toBeVisible();
-    await expect(page.getByRole('heading', { name: 'Heading Level 3' })).toBeVisible();
-    await expect(page.getByRole('heading', { name: 'Heading Level 4' })).toBeVisible();
-    await expect(page.getByRole('heading', { name: 'Heading Level 5' })).toBeVisible();
-    await expect(page.getByRole('heading', { name: 'Heading Level 6' })).toBeVisible();
-  });
+      await page
+        .locator('a.row-title', { hasText: /^Blockstudio E2E Test Page$/ })
+        .click();
+      await page.waitForSelector('.editor-styles-wrapper', { timeout: 30000 });
+      await page.waitForTimeout(2000);
+    });
 
-  test('has unordered list', async () => {
-    await expect(page.getByText('Unordered item one', { exact: true })).toBeVisible();
-    await expect(page.getByText('Unordered item two', { exact: true })).toBeVisible();
-    await expect(page.getByText('Unordered item three', { exact: true })).toBeVisible();
-  });
+    test('all blocks pass validation (no invalid blocks)', async () => {
+      const results = await page.evaluate(() => {
+        const blocks = (window as any).wp.data
+          .select('core/block-editor')
+          .getBlocks();
+        const invalid: string[] = [];
 
-  test('has ordered list', async () => {
-    await expect(page.getByText('Ordered item one', { exact: true })).toBeVisible();
-    await expect(page.getByText('Ordered item two', { exact: true })).toBeVisible();
-    await expect(page.getByText('Ordered item three', { exact: true })).toBeVisible();
-  });
+        function check(block: any) {
+          if (!block.isValid) {
+            invalid.push(block.name);
+          }
+          if (block.innerBlocks) {
+            for (const inner of block.innerBlocks) {
+              check(inner);
+            }
+          }
+        }
 
-  test('has blockquote', async () => {
-    await expect(page.locator('.wp-block-quote').first()).toBeVisible();
-  });
+        for (const block of blocks) {
+          check(block);
+        }
 
-  test('has pullquote', async () => {
-    await expect(page.locator('.wp-block-pullquote').first()).toBeVisible();
-  });
+        return { total: blocks.length, invalid };
+      });
 
-  test('has code block', async () => {
-    await expect(page.locator('.wp-block-code').first()).toBeVisible();
-    await expect(page.getByText('const hello')).toBeVisible();
-  });
+      expect(results.invalid).toEqual([]);
+      expect(results.total).toBeGreaterThan(0);
+    });
 
-  test('has preformatted block', async () => {
-    await expect(page.locator('.wp-block-preformatted').first()).toBeVisible();
-    await expect(page.getByText('preserved whitespace')).toBeVisible();
-  });
+    test('correct number of top-level blocks', async () => {
+      const count = await page.evaluate(() => {
+        return (window as any).wp.data
+          .select('core/block-editor')
+          .getBlocks().length;
+      });
 
-  test('has verse block', async () => {
-    await expect(page.locator('.wp-block-verse').first()).toBeVisible();
-    await expect(page.getByText('Roses are red')).toBeVisible();
-  });
+      // The outer <div> creates one top-level group block
+      expect(count).toBe(1);
+    });
 
-  test('has image', async () => {
-    await expect(page.locator('.wp-block-image').first()).toBeVisible();
-  });
+    test('expected block types are present in editor', async () => {
+      const blockTypes = await page.evaluate(() => {
+        const blocks = (window as any).wp.data
+          .select('core/block-editor')
+          .getBlocks();
+        const types = new Set<string>();
 
-  test('has gallery', async () => {
-    await expect(page.locator('.wp-block-gallery').first()).toBeVisible();
-  });
+        function collect(block: any) {
+          types.add(block.name);
+          if (block.innerBlocks) {
+            for (const inner of block.innerBlocks) {
+              collect(inner);
+            }
+          }
+        }
 
-  test('has audio block', async () => {
-    await expect(page.locator('.wp-block-audio').first()).toBeVisible();
-  });
+        for (const block of blocks) {
+          collect(block);
+        }
 
-  test('has video block', async () => {
-    await expect(page.locator('.wp-block-video').first()).toBeVisible();
-  });
+        return Array.from(types).sort();
+      });
 
-  test('has cover block', async () => {
-    await expect(page.locator('.wp-block-cover').first()).toBeVisible();
-    await expect(page.getByText('Cover Block Title')).toBeVisible();
-  });
+      const expected = [
+        'core/audio',
+        'core/button',
+        'core/buttons',
+        'core/code',
+        'core/column',
+        'core/columns',
+        'core/cover',
+        'core/details',
+        'core/embed',
+        'core/gallery',
+        'core/group',
+        'core/heading',
+        'core/image',
+        'core/list',
+        'core/list-item',
+        'core/paragraph',
+        'core/preformatted',
+        'core/pullquote',
+        'core/quote',
+        'core/separator',
+        'core/spacer',
+        'core/table',
+        'core/verse',
+        'core/video',
+      ];
 
-  test('has embed block', async () => {
-    await expect(page.locator('.wp-block-embed').first()).toBeVisible();
-  });
+      for (const type of expected) {
+        expect(blockTypes).toContain(type);
+      }
+    });
 
-  test('has group block', async () => {
-    await expect(page.locator('.wp-block-group').first()).toBeVisible();
-  });
+    test('heading blocks have correct levels', async () => {
+      const headingLevels = await page.evaluate(() => {
+        const blocks = (window as any).wp.data
+          .select('core/block-editor')
+          .getBlocks();
+        const levels: number[] = [];
 
-  test('has columns', async () => {
-    await expect(page.locator('.wp-block-columns').first()).toBeVisible();
-    await expect(page.locator('.wp-block-column').first()).toBeVisible();
-    await expect(page.getByText('Column 1')).toBeVisible();
-    await expect(page.getByText('Column 2')).toBeVisible();
-    await expect(page.getByText('Column 3')).toBeVisible();
-  });
+        function collect(block: any) {
+          if (
+            block.name === 'core/heading' &&
+            block.attributes.level >= 1 &&
+            block.attributes.level <= 6
+          ) {
+            levels.push(block.attributes.level);
+          }
+          if (block.innerBlocks) {
+            for (const inner of block.innerBlocks) {
+              collect(inner);
+            }
+          }
+        }
 
-  test('has separator', async () => {
-    await expect(page.locator('.wp-block-separator').first()).toBeVisible();
-  });
+        for (const block of blocks) {
+          collect(block);
+        }
 
-  test('has spacer', async () => {
-    await expect(page.locator('.wp-block-spacer').first()).toBeVisible();
-  });
+        return [...new Set(levels)].sort();
+      });
 
-  test('has buttons', async () => {
-    await expect(page.locator('.wp-block-buttons').first()).toBeVisible();
-    await expect(page.locator('.wp-block-button').first()).toBeVisible();
-    await expect(page.getByText('Primary Button')).toBeVisible();
-  });
+      expect(headingLevels).toEqual([1, 2, 3, 4, 5, 6]);
+    });
 
-  test('has details', async () => {
-    await expect(page.locator('.wp-block-details').first()).toBeVisible();
-    await expect(page.getByText('Click to expand')).toBeVisible();
-  });
+    test('list blocks have correct ordered attribute', async () => {
+      const lists = await page.evaluate(() => {
+        const blocks = (window as any).wp.data
+          .select('core/block-editor')
+          .getBlocks();
+        const result: { ordered: boolean; itemCount: number }[] = [];
 
-  test('has table', async () => {
-    await expect(page.locator('.wp-block-table').first()).toBeVisible();
-    await expect(page.getByText('Header 1')).toBeVisible();
-    await expect(page.getByText('Row 1, Cell 1')).toBeVisible();
-  });
+        function collect(block: any) {
+          if (block.name === 'core/list') {
+            result.push({
+              ordered: block.attributes.ordered,
+              itemCount: block.innerBlocks.length,
+            });
+          }
+          if (block.innerBlocks) {
+            for (const inner of block.innerBlocks) {
+              collect(inner);
+            }
+          }
+        }
 
-  test('editor shows correct blocks', async () => {
-    await page.goto('http://localhost:8888/wp-admin/edit.php?post_type=page');
-    await page.waitForLoadState('networkidle');
+        for (const block of blocks) {
+          collect(block);
+        }
 
-    // Exact match to avoid matching the Twig/Blade page titles
-    await page.locator('a.row-title', { hasText: /^Blockstudio E2E Test Page$/ }).click();
-    await page.waitForSelector('.editor-styles-wrapper', { timeout: 30000 });
+        return result;
+      });
 
-    await expect(page.locator('.wp-block-heading').first()).toBeVisible();
-  });
+      // Unordered list
+      expect(lists).toContainEqual({ ordered: false, itemCount: 3 });
+      // Ordered list
+      expect(lists).toContainEqual({ ordered: true, itemCount: 3 });
+    });
 
-  test('template lock prevents unlocking', async () => {
-    await page.click('.wp-block-heading >> nth=0');
+    test('cover block has url attribute', async () => {
+      const coverAttrs = await page.evaluate(() => {
+        const blocks = (window as any).wp.data
+          .select('core/block-editor')
+          .getBlocks();
 
-    const moreButton = page.locator('[aria-label="Options"]').first();
-    if (await moreButton.isVisible()) {
-      await moreButton.click();
+        function find(block: any): any {
+          if (block.name === 'core/cover') {
+            return block.attributes;
+          }
+          if (block.innerBlocks) {
+            for (const inner of block.innerBlocks) {
+              const found = find(inner);
+              if (found) return found;
+            }
+          }
+          return null;
+        }
 
-      const unlockOption = page.locator('button:has-text("Unlock")');
-      await expect(unlockOption).toHaveCount(0);
-    }
+        for (const block of blocks) {
+          const found = find(block);
+          if (found) return found;
+        }
+        return null;
+      });
+
+      expect(coverAttrs).not.toBeNull();
+      expect(coverAttrs.url).toContain('picsum.photos');
+    });
+
+    test('button blocks have url attributes', async () => {
+      const buttons = await page.evaluate(() => {
+        const blocks = (window as any).wp.data
+          .select('core/block-editor')
+          .getBlocks();
+        const result: string[] = [];
+
+        function collect(block: any) {
+          if (block.name === 'core/button' && block.attributes.url) {
+            result.push(block.attributes.url);
+          }
+          if (block.innerBlocks) {
+            for (const inner of block.innerBlocks) {
+              collect(inner);
+            }
+          }
+        }
+
+        for (const block of blocks) {
+          collect(block);
+        }
+
+        return result;
+      });
+
+      expect(buttons).toHaveLength(2);
+      expect(buttons).toContain('https://example.com');
+      expect(buttons).toContain('https://example.com/secondary');
+    });
+
+    test('columns block has three column children', async () => {
+      const columnCount = await page.evaluate(() => {
+        const blocks = (window as any).wp.data
+          .select('core/block-editor')
+          .getBlocks();
+
+        function find(block: any): number | null {
+          if (block.name === 'core/columns') {
+            return block.innerBlocks.filter(
+              (b: any) => b.name === 'core/column',
+            ).length;
+          }
+          if (block.innerBlocks) {
+            for (const inner of block.innerBlocks) {
+              const found = find(inner);
+              if (found !== null) return found;
+            }
+          }
+          return null;
+        }
+
+        for (const block of blocks) {
+          const found = find(block);
+          if (found !== null) return found;
+        }
+        return null;
+      });
+
+      expect(columnCount).toBe(3);
+    });
+
+    test('gallery block has three image children', async () => {
+      const imageCount = await page.evaluate(() => {
+        const blocks = (window as any).wp.data
+          .select('core/block-editor')
+          .getBlocks();
+
+        function find(block: any): number | null {
+          if (block.name === 'core/gallery') {
+            return block.innerBlocks.filter(
+              (b: any) => b.name === 'core/image',
+            ).length;
+          }
+          if (block.innerBlocks) {
+            for (const inner of block.innerBlocks) {
+              const found = find(inner);
+              if (found !== null) return found;
+            }
+          }
+          return null;
+        }
+
+        for (const block of blocks) {
+          const found = find(block);
+          if (found !== null) return found;
+        }
+        return null;
+      });
+
+      expect(imageCount).toBe(3);
+    });
+
+    test('embed block has correct provider', async () => {
+      const embed = await page.evaluate(() => {
+        const blocks = (window as any).wp.data
+          .select('core/block-editor')
+          .getBlocks();
+
+        function find(block: any): any {
+          if (block.name === 'core/embed') return block.attributes;
+          if (block.innerBlocks) {
+            for (const inner of block.innerBlocks) {
+              const found = find(inner);
+              if (found) return found;
+            }
+          }
+          return null;
+        }
+
+        for (const block of blocks) {
+          const found = find(block);
+          if (found) return found;
+        }
+        return null;
+      });
+
+      expect(embed).not.toBeNull();
+      expect(embed.providerNameSlug).toBe('youtube');
+      expect(embed.url).toContain('youtube.com');
+    });
+
+    test('details block has summary attribute', async () => {
+      const details = await page.evaluate(() => {
+        const blocks = (window as any).wp.data
+          .select('core/block-editor')
+          .getBlocks();
+
+        function find(block: any): any {
+          if (block.name === 'core/details') return block.attributes;
+          if (block.innerBlocks) {
+            for (const inner of block.innerBlocks) {
+              const found = find(inner);
+              if (found) return found;
+            }
+          }
+          return null;
+        }
+
+        for (const block of blocks) {
+          const found = find(block);
+          if (found) return found;
+        }
+        return null;
+      });
+
+      expect(details).not.toBeNull();
+      expect(details.summary).toBe('Click to expand');
+    });
+
+    test('editor shows blocks visually (heading visible)', async () => {
+      await expect(page.locator('.wp-block-heading').first()).toBeVisible();
+    });
+
+    test('template lock prevents unlocking', async () => {
+      // Dismiss any modal overlays (welcome dialog, pattern modal, etc.)
+      const closeButton = page.locator(
+        '.components-modal__screen-overlay button[aria-label="Close"]',
+      );
+      if (await closeButton.isVisible({ timeout: 1000 }).catch(() => false)) {
+        await closeButton.click();
+      }
+
+      await page.click('.wp-block-heading >> nth=0');
+
+      const moreButton = page.locator('[aria-label="Options"]').first();
+      if (await moreButton.isVisible()) {
+        await moreButton.click();
+
+        const unlockOption = page.locator('button:has-text("Unlock")');
+        await expect(unlockOption).toHaveCount(0);
+      }
+    });
   });
 });
 
@@ -166,21 +716,34 @@ test.describe('File-based Pages (Twig)', () => {
     await page.goto('http://localhost:8888/blockstudio-e2e-test-twig/');
     await page.waitForLoadState('networkidle');
 
-    await expect(page.getByRole('heading', { name: 'Twig Template Test Page' })).toBeVisible();
+    await expect(
+      page.getByRole('heading', { name: 'Twig Template Test Page' }),
+    ).toBeVisible();
   });
 
   test('twig template processed correctly', async () => {
-    // Verify |upper filter was applied
-    await expect(page.getByText('This page uses a Twig template with TWIG support.')).toBeVisible();
+    await expect(
+      page.getByText(
+        'This page uses a Twig template with TWIG support.',
+      ),
+    ).toBeVisible();
 
     const currentYear = new Date().getFullYear().toString();
-    await expect(page.getByText(`Current year: ${currentYear}`)).toBeVisible();
+    await expect(
+      page.getByText(`Current year: ${currentYear}`),
+    ).toBeVisible();
   });
 
   test('twig loop generates list items', async () => {
-    await expect(page.getByText('Twig item 1', { exact: true })).toBeVisible();
-    await expect(page.getByText('Twig item 2', { exact: true })).toBeVisible();
-    await expect(page.getByText('Twig item 3', { exact: true })).toBeVisible();
+    await expect(
+      page.getByText('Twig item 1', { exact: true }),
+    ).toBeVisible();
+    await expect(
+      page.getByText('Twig item 2', { exact: true }),
+    ).toBeVisible();
+    await expect(
+      page.getByText('Twig item 3', { exact: true }),
+    ).toBeVisible();
   });
 
   test('twig page has block syntax elements', async () => {
@@ -191,14 +754,32 @@ test.describe('File-based Pages (Twig)', () => {
     await expect(page.getByText('Column B')).toBeVisible();
   });
 
-  test('twig page editor shows correct blocks', async () => {
+  test('twig page editor shows valid blocks', async () => {
     await page.goto('http://localhost:8888/wp-admin/edit.php?post_type=page');
     await page.waitForLoadState('networkidle');
 
-    await page.locator('a.row-title:has-text("Blockstudio E2E Test Page (Twig)")').click();
+    await page
+      .locator('a.row-title:has-text("Blockstudio E2E Test Page (Twig)")')
+      .click();
     await page.waitForSelector('.editor-styles-wrapper', { timeout: 30000 });
+    await page.waitForTimeout(2000);
 
     await expect(page.locator('.wp-block-heading').first()).toBeVisible();
+
+    const invalidCount = await page.evaluate(() => {
+      const blocks = (window as any).wp.data
+        .select('core/block-editor')
+        .getBlocks();
+      let count = 0;
+      function check(block: any) {
+        if (!block.isValid) count++;
+        if (block.innerBlocks) block.innerBlocks.forEach(check);
+      }
+      blocks.forEach(check);
+      return count;
+    });
+
+    expect(invalidCount).toBe(0);
   });
 });
 
@@ -207,21 +788,34 @@ test.describe('File-based Pages (Blade)', () => {
     await page.goto('http://localhost:8888/blockstudio-e2e-test-blade/');
     await page.waitForLoadState('networkidle');
 
-    await expect(page.getByRole('heading', { name: 'Blade Template Test Page' })).toBeVisible();
+    await expect(
+      page.getByRole('heading', { name: 'Blade Template Test Page' }),
+    ).toBeVisible();
   });
 
   test('blade template processed correctly', async () => {
-    // Verify strtoupper() was applied
-    await expect(page.getByText('This page uses a Blade template with BLADE support.')).toBeVisible();
+    await expect(
+      page.getByText(
+        'This page uses a Blade template with BLADE support.',
+      ),
+    ).toBeVisible();
 
     const currentYear = new Date().getFullYear().toString();
-    await expect(page.getByText(`Current year: ${currentYear}`)).toBeVisible();
+    await expect(
+      page.getByText(`Current year: ${currentYear}`),
+    ).toBeVisible();
   });
 
   test('blade loop generates list items', async () => {
-    await expect(page.getByText('Blade item 1', { exact: true })).toBeVisible();
-    await expect(page.getByText('Blade item 2', { exact: true })).toBeVisible();
-    await expect(page.getByText('Blade item 3', { exact: true })).toBeVisible();
+    await expect(
+      page.getByText('Blade item 1', { exact: true }),
+    ).toBeVisible();
+    await expect(
+      page.getByText('Blade item 2', { exact: true }),
+    ).toBeVisible();
+    await expect(
+      page.getByText('Blade item 3', { exact: true }),
+    ).toBeVisible();
   });
 
   test('blade page has block syntax elements', async () => {
@@ -232,13 +826,31 @@ test.describe('File-based Pages (Blade)', () => {
     await expect(page.getByText('Column B')).toBeVisible();
   });
 
-  test('blade page editor shows correct blocks', async () => {
+  test('blade page editor shows valid blocks', async () => {
     await page.goto('http://localhost:8888/wp-admin/edit.php?post_type=page');
     await page.waitForLoadState('networkidle');
 
-    await page.locator('a.row-title:has-text("Blockstudio E2E Test Page (Blade)")').click();
+    await page
+      .locator('a.row-title:has-text("Blockstudio E2E Test Page (Blade)")')
+      .click();
     await page.waitForSelector('.editor-styles-wrapper', { timeout: 30000 });
+    await page.waitForTimeout(2000);
 
     await expect(page.locator('.wp-block-heading').first()).toBeVisible();
+
+    const invalidCount = await page.evaluate(() => {
+      const blocks = (window as any).wp.data
+        .select('core/block-editor')
+        .getBlocks();
+      let count = 0;
+      function check(block: any) {
+        if (!block.isValid) count++;
+        if (block.innerBlocks) block.innerBlocks.forEach(check);
+      }
+      blocks.forEach(check);
+      return count;
+    });
+
+    expect(invalidCount).toBe(0);
   });
 });

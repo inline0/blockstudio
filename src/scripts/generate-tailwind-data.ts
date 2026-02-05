@@ -176,7 +176,6 @@ function withPrefixSimple(prefix: string, values: string[]): string[] {
 }
 
 const classes: string[] = [
-  // ===== LAYOUT =====
   // Aspect Ratio
   'aspect-auto',
   'aspect-square',
@@ -399,7 +398,6 @@ const classes: string[] = [
   // Z-Index
   ...withPrefix('z', ['0', '10', '20', '30', '40', '50', 'auto'], true),
 
-  // ===== FLEXBOX & GRID =====
   // Flex Basis
   ...withPrefix('basis', [
     ...spacingScale,
@@ -689,7 +687,6 @@ const classes: string[] = [
   'place-self-center',
   'place-self-stretch',
 
-  // ===== SPACING =====
   // Padding
   ...withPrefix('p', spacingScale),
   ...withPrefix('px', spacingScale),
@@ -718,7 +715,6 @@ const classes: string[] = [
   'space-x-reverse',
   'space-y-reverse',
 
-  // ===== SIZING =====
   // Width
   ...withPrefix('w', [
     ...spacingScale,
@@ -821,7 +817,6 @@ const classes: string[] = [
     'fit',
   ]),
 
-  // ===== TYPOGRAPHY =====
   // Font Family
   'font-sans',
   'font-serif',
@@ -1000,7 +995,6 @@ const classes: string[] = [
   // Content
   'content-none',
 
-  // ===== BACKGROUNDS =====
   // Background Attachment
   'bg-fixed',
   'bg-local',
@@ -1084,7 +1078,6 @@ const classes: string[] = [
     '100%',
   ].flatMap((p) => [`from-${p}`, `via-${p}`, `to-${p}`]),
 
-  // ===== BORDERS =====
   // Border Radius
   ...radiusScale.flatMap((size) => {
     const suffix = size === '' ? '' : `-${size}`;
@@ -1206,7 +1199,6 @@ const classes: string[] = [
   // Ring Offset Color
   ...colors.map((c) => `ring-offset-${c}`),
 
-  // ===== EFFECTS =====
   // Box Shadow
   ...shadowScale.map((s) => (s === '' ? 'shadow' : `shadow-${s}`)),
 
@@ -1254,7 +1246,6 @@ const classes: string[] = [
   'bg-blend-color',
   'bg-blend-luminosity',
 
-  // ===== FILTERS =====
   // Blur
   ...blurScale.map((s) => (s === '' ? 'blur' : `blur-${s}`)),
 
@@ -1349,7 +1340,6 @@ const classes: string[] = [
   'backdrop-sepia-0',
   'backdrop-sepia',
 
-  // ===== TABLES =====
   // Border Collapse
   'border-collapse',
   'border-separate',
@@ -1367,7 +1357,6 @@ const classes: string[] = [
   'caption-top',
   'caption-bottom',
 
-  // ===== TRANSITIONS & ANIMATION =====
   // Transition Property
   'transition-none',
   'transition-all',
@@ -1400,7 +1389,6 @@ const classes: string[] = [
   'animate-pulse',
   'animate-bounce',
 
-  // ===== TRANSFORMS =====
   // Scale
   ...['0', '50', '75', '90', '95', '100', '105', '110', '125', '150'].flatMap(
     (v) => [`scale-${v}`, `scale-x-${v}`, `scale-y-${v}`],
@@ -1449,7 +1437,6 @@ const classes: string[] = [
   'transform-gpu',
   'transform-none',
 
-  // ===== INTERACTIVITY =====
   // Accent Color
   'accent-auto',
   ...colors.map((c) => `accent-${c}`),
@@ -1577,7 +1564,6 @@ const classes: string[] = [
   'will-change-contents',
   'will-change-transform',
 
-  // ===== SVG =====
   // Fill
   'fill-none',
   ...colors.map((c) => `fill-${c}`),
@@ -1591,7 +1577,6 @@ const classes: string[] = [
   'stroke-1',
   'stroke-2',
 
-  // ===== ACCESSIBILITY =====
   // Screen Readers
   'sr-only',
   'not-sr-only',

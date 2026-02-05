@@ -335,10 +335,6 @@ class Html_Parser {
 		);
 	}
 
-	// =========================================================================
-	// Block Renderers - Core Text Blocks
-	// =========================================================================
-
 	/**
 	 * Render core/paragraph block.
 	 *
@@ -587,10 +583,6 @@ class Html_Parser {
 		);
 	}
 
-	// =========================================================================
-	// Block Renderers - Core Media Blocks
-	// =========================================================================
-
 	/**
 	 * Render core/image block.
 	 *
@@ -730,12 +722,12 @@ class Html_Parser {
 			$attrs['dimRatio'] = 50;
 		}
 
-		$style = '';
+		$img = '';
 		if ( ! empty( $url ) ) {
-			$style = ' style="background-image:url(' . esc_attr( $url ) . ')"';
+			$img = '<img class="wp-block-cover__image-background" alt="" src="' . esc_attr( $url ) . '" data-object-fit="cover"/>';
 		}
 
-		$content = array( '<div class="wp-block-cover"' . $style . '><span aria-hidden="true" class="wp-block-cover__background has-background-dim"></span><div class="wp-block-cover__inner-container">' );
+		$content = array( '<div class="wp-block-cover">' . $img . '<span aria-hidden="true" class="wp-block-cover__background has-background-dim"></span><div class="wp-block-cover__inner-container">' );
 		foreach ( $inner_blocks as $block ) {
 			$content[] = null;
 		}
@@ -745,7 +737,7 @@ class Html_Parser {
 			'blockName'    => 'core/cover',
 			'attrs'        => $attrs,
 			'innerBlocks'  => $inner_blocks,
-			'innerHTML'    => '<div class="wp-block-cover"' . $style . '><span aria-hidden="true" class="wp-block-cover__background has-background-dim"></span><div class="wp-block-cover__inner-container"></div></div>',
+			'innerHTML'    => '<div class="wp-block-cover">' . $img . '<span aria-hidden="true" class="wp-block-cover__background has-background-dim"></span><div class="wp-block-cover__inner-container"></div></div>',
 			'innerContent' => $content,
 		);
 	}
@@ -773,10 +765,6 @@ class Html_Parser {
 			'innerContent' => array( $html ),
 		);
 	}
-
-	// =========================================================================
-	// Block Renderers - Core Design Blocks
-	// =========================================================================
 
 	/**
 	 * Render core/group block.
@@ -970,10 +958,6 @@ class Html_Parser {
 		);
 	}
 
-	// =========================================================================
-	// Block Renderers - Core Interactive Blocks
-	// =========================================================================
-
 	/**
 	 * Render core/details block.
 	 *
@@ -1042,10 +1026,6 @@ class Html_Parser {
 			'innerContent' => array( $html ),
 		);
 	}
-
-	// =========================================================================
-	// HTML Element Handlers (for direct HTML like <p>, <h1>, etc.)
-	// =========================================================================
 
 	/**
 	 * Create a paragraph block from text.
@@ -1458,10 +1438,6 @@ class Html_Parser {
 		);
 	}
 
-	// =========================================================================
-	// Meta Attribute Extraction
-	// =========================================================================
-
 	/**
 	 * Extract meta attributes (like blockEditingMode) from an HTML element.
 	 *
@@ -1479,10 +1455,6 @@ class Html_Parser {
 
 		return $meta;
 	}
-
-	// =========================================================================
-	// Helper Methods (Public for use by renderers)
-	// =========================================================================
 
 	/**
 	 * Get element attributes as array.

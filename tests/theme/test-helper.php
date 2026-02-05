@@ -18,10 +18,6 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-// ==========================================================================
-// THEME SETUP
-// ==========================================================================
-
 // Load Composer autoloader.
 if ( file_exists( __DIR__ . '/vendor/autoload.php' ) ) {
 	require_once __DIR__ . '/vendor/autoload.php';
@@ -112,10 +108,6 @@ add_action(
 	}
 );
 
-// ==========================================================================
-// TEST HELPER FUNCTIONS
-// ==========================================================================
-
 /**
  * Custom populate function for populate-function.ts test.
  * Returns options for the valueLabel checkbox field.
@@ -136,10 +128,6 @@ function blockstudioCustomSelect(): array {
 		),
 	);
 }
-
-// ==========================================================================
-// BLOCKSTUDIO FILTERS
-// ==========================================================================
 
 /**
  * Configure Blockstudio to find test blocks in the theme directory.
@@ -342,10 +330,6 @@ add_action(
 	100
 );
 
-// ==========================================================================
-// CUSTOM TAXONOMIES FOR E2E TESTS
-// ==========================================================================
-
 add_action(
 	'init',
 	function () {
@@ -389,17 +373,9 @@ add_action(
 	5
 );
 
-// ==========================================================================
-// REST API ENDPOINTS FOR TESTING
-// ==========================================================================
-
 add_action(
 	'rest_api_init',
 	function () {
-		// ==========================================================================
-		// SNAPSHOT ENDPOINT - Get ALL Build class data at once
-		// Supports both v6 (camelCase) and v7 (snake_case) method names
-		// ==========================================================================
 		register_rest_route(
 			'blockstudio-test/v1',
 			'/snapshot',
@@ -609,9 +585,6 @@ add_action(
 			)
 		);
 
-		// ==========================================================================
-		// COMPILED ASSETS ENDPOINT - Get actual content of compiled _dist files
-		// ==========================================================================
 		register_rest_route(
 			'blockstudio-test/v1',
 			'/compiled-assets',
@@ -669,12 +642,6 @@ add_action(
 			)
 		);
 
-		// ==========================================================================
-		// E2E TEST DATA SETUP - Create ALL dummy data needed for E2E tests
-		// Posts: 1386 (Native), 1388 (Native Render)
-		// Media: 8 (video), 1604 (image), 1605 (image)
-		// User: 644, Term: 6
-		// ==========================================================================
 		register_rest_route(
 			'blockstudio-test/v1',
 			'/e2e/setup',
@@ -683,9 +650,6 @@ add_action(
 				'callback'            => function () {
 					global $wpdb;
 
-					// ==========================================
-					// CLEANUP: Delete all existing posts first
-					// ==========================================
 					$all_posts = get_posts(
 						array(
 							'post_type'   => array( 'post', 'page', 'attachment', 'wp_block' ),
@@ -698,14 +662,8 @@ add_action(
 						wp_delete_post( $post_id, true );
 					}
 
-					// ==========================================
-					// ACTIVATE TEST THEME
-					// ==========================================
 					switch_theme( 'theme' );
 
-					// ==========================================
-					// FLUSH REWRITE RULES
-					// ==========================================
 					global $wp_rewrite;
 					$wp_rewrite->set_permalink_structure( '/%postname%/' );
 					$wp_rewrite->flush_rules( true );
@@ -844,10 +802,6 @@ add_action(
 						return false;
 					};
 
-					// ==========================================
-					// CREATE POSTS
-					// ==========================================
-
 					// Post 1386 - "Native" (used in text.ts for populate)
 					$create_post_with_id( 1386, 'Native', 'native' );
 
@@ -874,11 +828,6 @@ add_action(
 
 					// Post 1099 - "Reusable" for text.ts populate tests (matches extension default)
 					$create_post_with_id( 1099, 'Reusable', 'reusable' );
-
-					// ==========================================
-					// CREATE REUSABLE BLOCK PATTERNS (wp_block)
-					// ==========================================
-					// These are required for reusable.ts test
 
 					// Pattern 2643 - contains type-text block
 					$pattern_2643_content = '<!-- wp:blockstudio/type-text /--><!-- wp:blockstudio/type-textarea /-->';
@@ -931,10 +880,6 @@ add_action(
 					// Note: Removed "Sample Post" loop - those posts interfered with select-fetch test
 					// which expects exactly 9 results when searching for "e"
 
-					// ==========================================
-					// CREATE MEDIA ATTACHMENTS
-					// ==========================================
-
 					// Attachment 8 - gutenbergEdit.mp4 (video)
 					$video_file = $create_dummy_video( 'gutenbergEdit.mp4' );
 					$create_attachment_with_id( 8, 'gutenbergEdit.mp4', 'video/mp4', $video_file );
@@ -950,10 +895,6 @@ add_action(
 					// Attachment 3081 - test image for attributes.ts and tailwind/container.ts
 					$image3_file = $create_dummy_image( 'test-image-3081.png', 200, 200 );
 					$create_attachment_with_id( 3081, 'test-image-3081.png', 'image/png', $image3_file );
-
-					// ==========================================
-					// CREATE USERS
-					// ==========================================
 
 					// Helper to create user with specific ID
 					$create_user_with_id = function ( $id, $login, $email, $display_name ) use ( $wpdb, &$created ) {
@@ -991,11 +932,6 @@ add_action(
 					// User 795 - Vasilii Leitman - for select-multiple user tests
 					$create_user_with_id( 795, '1wpdev', 'help@1wp.dev', 'Vasilii Leitman' );
 
-					// ==========================================
-					// REGISTER CUSTOM TAXONOMIES
-					// ==========================================
-					// These taxonomies are needed for term populate tests
-
 					if ( ! taxonomy_exists( 'blockstudio_theme' ) ) {
 						register_taxonomy(
 							'blockstudio_theme',
@@ -1031,10 +967,6 @@ add_action(
 							)
 						);
 					}
-
-					// ==========================================
-					// CREATE TERMS
-					// ==========================================
 
 					// Helper to create term - uses WP API and accepts any ID
 					$create_term = function ( $name, $slug, $taxonomy ) use ( &$created ) {

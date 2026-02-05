@@ -70,10 +70,6 @@ final class Pattern_Registry {
 		}
 	}
 
-	// =========================================================================
-	// Pattern Getters
-	// =========================================================================
-
 	/**
 	 * Get all registered patterns.
 	 *
@@ -113,10 +109,6 @@ final class Pattern_Registry {
 	public function get_paths(): array {
 		return $this->paths;
 	}
-
-	// =========================================================================
-	// Pattern Setters
-	// =========================================================================
 
 	/**
 	 * Register a pattern.
