@@ -11,7 +11,6 @@ test.beforeAll(async ({ browser }: { browser: Browser }) => {
   page = await context.newPage();
   await page.emulateMedia({ reducedMotion: 'reduce' });
 
-  // Login
   await page.goto('http://localhost:8888/wp-login.php');
   await page.waitForLoadState('networkidle');
   await page.locator('#user_login').fill('admin');
@@ -35,11 +34,9 @@ test.describe('File-based Pages', () => {
     });
 
     test('test page has correct slug', async () => {
-      // Click on the test page to edit it
       await page.locator('a.row-title', { hasText: /^Blockstudio E2E Test Page$/ }).click();
       await page.waitForSelector('.editor-styles-wrapper');
 
-      // Check the URL contains the correct post
       const url = page.url();
       expect(url).toContain('post.php');
       expect(url).toContain('action=edit');
@@ -76,12 +73,8 @@ test.describe('File-based Pages', () => {
 
   test.describe('Template Lock', () => {
     test('page has template lock enabled', async () => {
-      // With templateLock: "all", we shouldn't be able to remove blocks
-      // Try to select a block and verify the remove option behavior
       await page.click('[data-type="core/heading"]');
 
-      // Check that the editor has the template lock applied
-      // The block should be selected but locked
       const isLocked = await page.evaluate(() => {
         const { select } = (window as any).wp.data;
         const settings = select('core/block-editor').getSettings();
@@ -133,12 +126,10 @@ test.describe('File-based Pages', () => {
       await page.goto('http://localhost:8888/wp-admin/edit.php?post_type=page&post_status=draft');
       await page.waitForSelector('.wp-list-table');
 
-      // Check that our sync test page exists in drafts - use specific selector
       await expect(page.locator('a.row-title:has-text("Blockstudio Sync Test Page")')).toBeVisible();
     });
 
     test('sync test page has insert template lock', async () => {
-      // Click on the sync test page to edit it
       await page.locator('a.row-title:has-text("Blockstudio Sync Test Page")').click();
       await page.waitForSelector('.editor-styles-wrapper');
 

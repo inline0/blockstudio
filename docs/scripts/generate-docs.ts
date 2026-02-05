@@ -27,6 +27,10 @@ interface Schema {
   definitions?: Record<string, SchemaProperty>;
 }
 
+function toSnakeCase(str: string): string {
+  return str.replace(/([a-z])([A-Z])/g, "$1_$2").toLowerCase();
+}
+
 function formatExample(value: unknown, type: string | string[]): string {
   if (value === undefined) {
     if (type === "boolean" || (Array.isArray(type) && type.includes("boolean"))) {
@@ -81,7 +85,7 @@ function generateSettingsFilters(schema: Schema): string {
     path: string[],
     parentKey?: string
   ) {
-    const currentPath = path.join("/");
+    const currentPath = path.map(toSnakeCase).join("/");
 
     if (prop.properties) {
       for (const [key, value] of Object.entries(prop.properties)) {

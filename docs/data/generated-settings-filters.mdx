@@ -58,12 +58,12 @@ add_filter('blockstudio/settings/assets/process/scss', function() {
 });
 ```
 
-### assets/process/scssFiles
+### assets/process/scss_files
 
 This filter allows you to enable/disable the processing of .scss files to CSS.
 
 ```php title="functions.php"
-add_filter('blockstudio/settings/assets/process/scssFiles', function() {
+add_filter('blockstudio/settings/assets/process/scss_files', function() {
   return true;
 });
 ```
@@ -96,12 +96,12 @@ add_filter('blockstudio/settings/tailwind/config', function() {
 });
 ```
 
-### editor/formatOnSave
+### editor/format_on_save
 
 This filter allows you to enable/disable the formatting of code upon saving.
 
 ```php title="functions.php"
-add_filter('blockstudio/settings/editor/formatOnSave', function() {
+add_filter('blockstudio/settings/editor/format_on_save', function() {
   return true;
 });
 ```
@@ -126,32 +126,32 @@ add_filter('blockstudio/settings/editor/markup', function() {
 });
 ```
 
-### blockEditor/disableLoading
+### block_editor/disable_loading
 
 This filter allows you to disable the loading of blocks inside the Block Editor.
 
 ```php title="functions.php"
-add_filter('blockstudio/settings/blockEditor/disableLoading', function() {
+add_filter('blockstudio/settings/block_editor/disable_loading', function() {
   return true;
 });
 ```
 
-### blockEditor/cssClasses
+### block_editor/css_classes
 
 This filter allows you to add stylesheets whose classes should be available for choice in the class field.
 
 ```php title="functions.php"
-add_filter('blockstudio/settings/blockEditor/cssClasses', function() {
+add_filter('blockstudio/settings/block_editor/css_classes', function() {
   return ['my-stylesheet', 'another-stylesheet'];
 });
 ```
 
-### blockEditor/cssVariables
+### block_editor/css_variables
 
 This filter allows you to add stylesheets whose CSS variables should be available for autocompletion in the code field.
 
 ```php title="functions.php"
-add_filter('blockstudio/settings/blockEditor/cssVariables', function() {
+add_filter('blockstudio/settings/block_editor/css_variables', function() {
   return ['my-stylesheet', 'another-stylesheet'];
 });
 ```
@@ -166,12 +166,12 @@ add_filter('blockstudio/settings/library', function() {
 });
 ```
 
-### ai/enableContextGeneration
+### ai/enable_context_generation
 
 This filter allows you to enable or disable context file generation for LLM tool integration. When enabled, the context file assembles up-to-date block data, Blockstudio settings of the current install, all relevant schemas, and Blockstudio documentation into a single source for use with AI development tools.
 
 ```php title="functions.php"
-add_filter('blockstudio/settings/ai/enableContextGeneration', function() {
+add_filter('blockstudio/settings/ai/enable_context_generation', function() {
   return true;
 });
 ```
