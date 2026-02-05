@@ -167,6 +167,7 @@ class Plugin {
 		require_once $classes_dir . 'html-parser/trait-query-renderer.php';
 
 		require_once $classes_dir . 'html-parser.php';
+		require_once $classes_dir . 'block-merger.php';
 		require_once $classes_dir . 'page-sync.php';
 		require_once $classes_dir . 'pages.php';
 

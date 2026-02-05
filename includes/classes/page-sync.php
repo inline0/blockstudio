@@ -61,7 +61,17 @@ class Page_Sync {
 				return $existing->ID;
 			}
 
-			$content = $this->get_parsed_content( $page_data );
+			$new_blocks = $this->get_parsed_blocks( $page_data );
+
+			if ( $this->blocks_have_keys( $new_blocks ) ) {
+				$old_blocks = parse_blocks( $existing->post_content );
+				$merger     = new Block_Merger();
+				$merged     = $merger->merge( $new_blocks, $old_blocks );
+				$content    = serialize_blocks( $merged );
+			} else {
+				$content = serialize_blocks( $new_blocks );
+			}
+
 			return $this->update_post( $existing, $page_data, $content, $file_mtime );
 		}
 
@@ -93,6 +103,53 @@ class Page_Sync {
 		}
 
 		return $this->parser->parse( $template_content );
+	}
+
+	/**
+	 * Get parsed blocks as an array from template file.
+	 *
+	 * @param array $page_data The page data.
+	 *
+	 * @return array The parsed block array.
+	 */
+	private function get_parsed_blocks( array $page_data ): array {
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Reading local template file.
+		$template_content = file_get_contents( $page_data['template_path'] );
+
+		if ( false === $template_content ) {
+			return array();
+		}
+
+		if ( ! empty( $page_data['is_blade'] ) && class_exists( 'Jenssegers\Blade\Blade' ) ) {
+			$blade            = new \Jenssegers\Blade\Blade( $page_data['directory'], sys_get_temp_dir() );
+			$template_content = $blade->render( 'index', array() );
+		} elseif ( ! empty( $page_data['is_twig'] ) && class_exists( 'Timber\Timber' ) ) {
+			\Timber\Timber::init();
+			$template_content = \Timber\Timber::compile_string( $template_content, array() );
+		}
+
+		return $this->parser->parse_to_array( $template_content );
+	}
+
+	/**
+	 * Check if any blocks in the tree have a __BLOCKSTUDIO_KEY attribute.
+	 *
+	 * @param array $blocks The blocks to check.
+	 *
+	 * @return bool True if any block has a key.
+	 */
+	private function blocks_have_keys( array $blocks ): bool {
+		foreach ( $blocks as $block ) {
+			if ( ! empty( $block['attrs']['__BLOCKSTUDIO_KEY'] ) ) {
+				return true;
+			}
+
+			if ( ! empty( $block['innerBlocks'] ) && $this->blocks_have_keys( $block['innerBlocks'] ) ) {
+				return true;
+			}
+		}
+
+		return false;
 	}
 
 	/**

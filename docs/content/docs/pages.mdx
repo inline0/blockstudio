@@ -84,6 +84,96 @@ Pages are synced when you visit the WordPress admin. The sync checks the file's 
 
 To prevent a page from being overwritten after manual edits, set `"sync": false` in `page.json`.
 
+## Keyed Block Merging
+
+By default, when a template file changes, Blockstudio replaces the entire post content with the new template. This means any edits made in the WordPress editor are lost.
+
+Add a `key` attribute to blocks to preserve user edits across template syncs. When a template has keyed blocks, Blockstudio merges template changes with the existing post content instead of replacing it.
+
+### Adding Keys
+
+Use the `key` attribute on any HTML element or `<block>` element:
+
+```html title="index.php"
+<h1 key="title">Default Title</h1>
+<p key="intro">Default intro text.</p>
+
+<div key="features">
+  <p>First feature.</p>
+  <p>Second feature.</p>
+</div>
+
+<block name="core/cover" key="hero" url="https://example.com/bg.jpg">
+  <h2>Hero Title</h2>
+  <p>Hero description.</p>
+</block>
+```
+
+Keys must be globally unique across the entire template. A key protects the entire block and all of its content — you don't need to key individual children inside a keyed parent. Keyed blocks can be moved to any position or nesting level between template updates and their user content will still be preserved.
+
+### How Merging Works
+
+When a template file changes and the page re-syncs:
+
+| Block | Behavior |
+|-------|----------|
+| **Keyed block** | User's content is preserved (innerHTML, innerContent, innerBlocks). Template's attributes are applied. |
+| **Unkeyed block** | Replaced entirely with the template version (same as without keys) |
+
+### Examples
+
+**User edits are preserved in keyed blocks:**
+
+1. Template defines `<p key="intro">Default intro.</p>`
+2. User edits the paragraph in the editor to "Custom intro text."
+3. Developer updates the template — adds a new block, changes layout
+4. On sync: the paragraph keeps "Custom intro text." while the new layout is applied
+
+**Attributes from the template still apply:**
+
+1. Template has a cover block with `key="hero"` and a `url` attribute
+2. Developer changes the cover's `url` attribute to a new background image
+3. On sync: the new background image is applied, but user's content edits inside the cover are preserved
+
+### Edge Cases
+
+| Scenario | Behavior |
+|----------|----------|
+| New keyed block added to template | Appears with the template's default content |
+| Keyed block removed from template | Deleted from the post |
+| Block type changes (same key) | Template wins entirely — no content merge |
+| Duplicate keys | Second occurrence is treated as unkeyed |
+| No keys in template | Full replacement (same behavior as without keys) |
+| Force sync | Full replacement — keys are ignored |
+| Locked post | No sync at all |
+
+### Combining with Editing Controls
+
+Keys work well with `blockEditingMode` and `templateLock` to create pages where users can only edit specific content areas:
+
+```json title="page.json"
+{
+  "name": "landing",
+  "title": "Landing Page",
+  "templateLock": "all",
+  "blockEditingMode": "disabled"
+}
+```
+
+```html title="index.php"
+<block name="core/cover" key="hero" url="https://example.com/bg.jpg">
+  <h1 blockEditingMode="contentOnly">Edit This Title</h1>
+  <p blockEditingMode="contentOnly">Edit this description.</p>
+</block>
+
+<div key="features">
+  <h2>Features</h2>
+  <p blockEditingMode="contentOnly">Editable feature intro.</p>
+</div>
+```
+
+This gives you a locked-down layout where users can only edit text in designated blocks, and those edits survive template updates. The `key` on the parent protects all content inside it.
+
 ## Post Type Templates
 
 Use `templateFor` to set a page as the default template for a post type:

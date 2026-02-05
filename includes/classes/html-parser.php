@@ -335,6 +335,11 @@ class Html_Parser {
 			unset( $attrs['blockeditingmode'] );
 		}
 
+		if ( isset( $attrs['key'] ) ) {
+			$attrs['__BLOCKSTUDIO_KEY'] = $attrs['key'];
+			unset( $attrs['key'] );
+		}
+
 		// Check for registered renderer.
 		if ( isset( $this->block_renderers[ $block_name ] ) ) {
 			return call_user_func(
@@ -371,6 +376,11 @@ class Html_Parser {
 		$block_name = 'blockstudio/' . str_replace( '_', '-', $block_name );
 
 		$attrs = $this->get_element_attributes( $element );
+
+		if ( isset( $attrs['key'] ) ) {
+			$attrs['__BLOCKSTUDIO_KEY'] = $attrs['key'];
+			unset( $attrs['key'] );
+		}
 
 		$inner_blocks = $this->parse_children( $element );
 
@@ -807,6 +817,10 @@ class Html_Parser {
 		// DOMDocument lowercases all attribute names.
 		if ( $element->hasAttribute( 'blockeditingmode' ) ) {
 			$meta['blockEditingMode'] = $element->getAttribute( 'blockeditingmode' );
+		}
+
+		if ( $element->hasAttribute( 'key' ) ) {
+			$meta['__BLOCKSTUDIO_KEY'] = $element->getAttribute( 'key' );
 		}
 
 		return $meta;
