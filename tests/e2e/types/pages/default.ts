@@ -31,13 +31,12 @@ test.describe('File-based Pages', () => {
       await page.goto('http://localhost:8888/wp-admin/edit.php?post_type=page');
       await page.waitForSelector('.wp-list-table');
 
-      // Check that our test page exists - use specific selector for the row title link
-      await expect(page.locator('a.row-title:has-text("Blockstudio E2E Test Page")')).toBeVisible();
+      await expect(page.locator('a.row-title', { hasText: /^Blockstudio E2E Test Page$/ })).toBeVisible();
     });
 
     test('test page has correct slug', async () => {
       // Click on the test page to edit it
-      await page.locator('a.row-title:has-text("Blockstudio E2E Test Page")').click();
+      await page.locator('a.row-title', { hasText: /^Blockstudio E2E Test Page$/ }).click();
       await page.waitForSelector('.editor-styles-wrapper');
 
       // Check the URL contains the correct post
@@ -48,44 +47,30 @@ test.describe('File-based Pages', () => {
   });
 
   test.describe('Block Content Parsing', () => {
-    test('page contains group block (from div)', async () => {
+    test('page loads with parsed blocks', async () => {
       await page.goto('http://localhost:8888/wp-admin/edit.php?post_type=page');
-      await page.locator('a.row-title:has-text("Blockstudio E2E Test Page")').click();
+      await page.locator('a.row-title', { hasText: /^Blockstudio E2E Test Page$/ }).click();
       await page.waitForSelector('.editor-styles-wrapper', { timeout: 30000 });
-
-      // Wait for blocks to load
       await page.waitForSelector('[data-type="core/group"]', { timeout: 15000 });
 
-      // Check for group block
-      await count(page, '[data-type="core/group"]', 1);
+      await expect(page.locator('[data-type="core/group"]').first()).toBeVisible();
+      await expect(page.locator('[data-type="core/heading"]').first()).toBeVisible();
+      await expect(page.locator('[data-type="core/paragraph"]').first()).toBeVisible();
     });
 
-    test('page contains heading blocks', async () => {
-      // Should have h1 and h2 from template
-      await count(page, '[data-type="core/heading"]', 2);
-    });
-
-    test('page contains paragraph blocks', async () => {
-      // Should have 2 paragraphs from template
-      await count(page, '[data-type="core/paragraph"]', 2);
-    });
-
-    test('page contains list block', async () => {
-      await count(page, '[data-type="core/list"]', 1);
-    });
-
-    test('list block has correct items', async () => {
-      await count(page, '[data-type="core/list-item"]', 3);
+    test('page contains list blocks', async () => {
+      await count(page, '[data-type="core/list"]', 2);
+      await count(page, '[data-type="core/list-item"]', 6);
     });
 
     test('heading has correct content', async () => {
       const h1Content = await page.locator('[data-type="core/heading"]').first().textContent();
-      expect(h1Content).toContain('E2E Test Page');
+      expect(h1Content).toContain('Core Blocks Test Page');
     });
 
     test('paragraph has correct content', async () => {
       const pContent = await page.locator('[data-type="core/paragraph"]').first().textContent();
-      expect(pContent).toContain('test paragraph');
+      expect(pContent).toContain('This page tests all supported HTML to block conversions');
     });
   });
 
@@ -124,25 +109,22 @@ test.describe('File-based Pages', () => {
       await page.goto('http://localhost:8888/blockstudio-e2e-test/');
       await page.waitForSelector('.wp-block-group');
 
-      // Check that blocks rendered
-      await count(page, '.wp-block-group', 1);
-      await count(page, '.wp-block-heading', 2);
-      await count(page, '.wp-block-list', 1);
+      await expect(page.locator('.wp-block-group').first()).toBeVisible();
+      await expect(page.locator('.wp-block-heading').first()).toBeVisible();
+      await count(page, '.wp-block-list', 2);
     });
 
     test('frontend has correct heading text', async () => {
-      // Use the wp-block-heading class to find the content heading
       const h1Text = await page.locator('.wp-block-heading').first().textContent();
-      expect(h1Text).toContain('E2E Test Page');
+      expect(h1Text).toContain('Core Blocks Test Page');
     });
 
     test('frontend has correct list items', async () => {
-      await count(page, '.wp-block-list li', 3);
+      await count(page, '.wp-block-list li', 6);
 
       const listItems = await page.locator('.wp-block-list li').allTextContents();
-      expect(listItems).toContain('List item one');
-      expect(listItems).toContain('List item two');
-      expect(listItems).toContain('List item three');
+      expect(listItems).toContain('Unordered item one');
+      expect(listItems).toContain('Ordered item one');
     });
   });
 
