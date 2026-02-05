@@ -326,7 +326,7 @@ class Assets {
 
 		$import_paths = apply_filters( 'blockstudio/assets/process/scss/import_paths', array() );
 		// Backwards compatibility.
-		$import_paths = apply_filters( 'blockstudio/assets/process/scss/importPaths', $import_paths );
+		$import_paths = apply_filters( 'blockstudio/assets/process/scss/importPaths', $import_paths ); // phpcs:ignore WordPress.NamingConventions.ValidHookName.NotLowercase -- Deprecated v6 hook.
 		foreach ( $import_paths as $import_path ) {
 			if ( file_exists( $import_path ) ) {
 				$mtimes[] = filemtime( $import_path );
@@ -449,7 +449,7 @@ class Assets {
 
 		$scss_import_paths = apply_filters( 'blockstudio/assets/process/scss/import_paths', array() );
 		// Backwards compatibility.
-		$scss_import_paths = apply_filters( 'blockstudio/assets/process/scss/importPaths', $scss_import_paths );
+		$scss_import_paths = apply_filters( 'blockstudio/assets/process/scss/importPaths', $scss_import_paths ); // phpcs:ignore WordPress.NamingConventions.ValidHookName.NotLowercase -- Deprecated v6 hook.
 		foreach ( $scss_import_paths as $i_path ) {
 			if ( ! is_dir( $i_path ) ) {
 				continue;

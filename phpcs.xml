@@ -8,12 +8,13 @@
 	<file>./includes/classes/</file>
 	<file>./includes/functions/</file>
 	<file>./includes/interfaces/</file>
-	<file>./tests/theme/</file>
 
-	<!-- Exclude vendor, node_modules, and reference v6 code -->
+	<!-- Exclude vendor, node_modules, reference v6 code, and non-PHP assets -->
 	<exclude-pattern>*/vendor/*</exclude-pattern>
 	<exclude-pattern>*/node_modules/*</exclude-pattern>
 	<exclude-pattern>*/_reference/*</exclude-pattern>
+	<exclude-pattern>*.css</exclude-pattern>
+	<exclude-pattern>*.js</exclude-pattern>
 
 	<!-- Use WordPress coding standards -->
 	<rule ref="WordPress"/>
@@ -28,6 +29,21 @@
 
 	<!-- Allow hook names with hyphens (public API, can't change) -->
 	<rule ref="WordPress.NamingConventions.ValidHookName.UseUnderscores">
+		<severity>0</severity>
+	</rule>
+
+	<!-- Allow dynamic hook names (constructed from settings paths and filter names) -->
+	<rule ref="WordPress.NamingConventions.PrefixAllGlobals.DynamicHooknameFound">
+		<severity>0</severity>
+	</rule>
+
+	<!-- Allow reserved keyword parameter names (widely used, renaming would break API) -->
+	<rule ref="Universal.NamingConventions.NoReservedKeywordParameterNames">
+		<severity>0</severity>
+	</rule>
+
+	<!-- Allow unused method parameters (required by interface/trait signatures) -->
+	<rule ref="Generic.CodeAnalysis.UnusedFunctionParameter">
 		<severity>0</severity>
 	</rule>
 

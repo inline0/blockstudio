@@ -230,10 +230,11 @@ class Admin {
 	 * @return void
 	 */
 	public static function capture_frontend_assets(): void {
-		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Reading query param for asset capture.
+		// phpcs:disable WordPress.Security.NonceVerification.Recommended -- Reading query param for asset capture.
 		$special_id = isset( $_GET['blockstudio_editor_capture_assets_id'] )
 			? sanitize_key( $_GET['blockstudio_editor_capture_assets_id'] )
 			: '';
+		// phpcs:enable WordPress.Security.NonceVerification.Recommended
 
 		$expected_id = strtolower(
 			get_transient( 'blockstudio_editor_expected_capture_assets_id' )
