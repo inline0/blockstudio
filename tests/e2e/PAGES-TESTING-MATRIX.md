@@ -164,16 +164,14 @@ Overview of all page-related E2E test coverage.
 | 25 | CPT template content correct | Heading contains "CPT Template Title" |
 | 26 | CPT template lock applied | `templateLock === "insert"` on new CPT post |
 
-## Not Covered
+## Not Covered (by design)
 
-Areas with no E2E coverage:
+Areas not suited for E2E testing — would need PHP unit tests:
 
 | Feature | Notes |
 |---------|-------|
-| Template engines (Twig/Blade) | Test pages exist but no dedicated assertions |
-| PHP API (`Pages::lock()`, `Pages::force_sync()`, etc.) | Only tested via REST helpers |
-| Custom paths filter | `blockstudio/pages/paths` |
-| `blockstudio/pages/create_post_data` filter | |
-| `blockstudio/pages/update_post_data` filter | |
-| `blockstudio/pages/post_created` action | |
-| `blockstudio/pages/post_updated` action | |
+| PHP API (`Pages::lock()`, `Pages::force_sync()`, etc.) | Only tested indirectly via REST helpers |
+| Error paths (missing files, invalid JSON, WP_Error) | Cannot trigger filesystem/DB failures from browser |
+| WordPress filters | `blockstudio/pages/create_post_data`, `blockstudio/pages/update_post_data`, `blockstudio/pages/paths` |
+| WordPress actions | `blockstudio/pages/post_created`, `blockstudio/pages/post_updated`, `blockstudio/pages/synced` |
+| Environmental branches | `is_child_theme()`, `!is_admin()` guard, re-init guard |
