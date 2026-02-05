@@ -31,6 +31,7 @@ Each page folder needs a `page.json` configuration file:
 | `slug` | `string` | Same as name | URL slug for the page |
 | `postType` | `string` | `"page"` | WordPress post type |
 | `postStatus` | `string` | `"draft"` | Status for new posts (`publish`, `draft`, `pending`, `private`) |
+| `postId` | `integer` | — | Pin the page to a specific WordPress post ID |
 | `blockEditingMode` | `string` | — | Block editing mode: `"default"`, `"contentOnly"`, or `"disabled"` |
 | `templateLock` | `string\|false` | `"all"` | Lock mode: `"all"`, `"insert"`, `"contentOnly"`, or `false` |
 | `templateFor` | `string\|null` | `null` | Set as default template for a post type |
@@ -83,6 +84,24 @@ When a `templateLock` is set, Blockstudio disables the ability to unlock blocks 
 Pages are synced when you visit the WordPress admin. The sync checks the file's modification time and only updates if the file has changed since the last sync.
 
 To prevent a page from being overwritten after manual edits, set `"sync": false` in `page.json`.
+
+## Post ID Pinning
+
+By default, WordPress auto-assigns post IDs. If a page is deleted and re-created, the ID changes, breaking external references like menus or hardcoded links.
+
+Use `postId` to pin a page to a specific ID:
+
+```json title="page.json"
+{
+  "name": "about",
+  "title": "About Us",
+  "postId": 42
+}
+```
+
+When creating the page, Blockstudio passes the ID to WordPress via `import_id`. If the ID is available, WordPress uses it exactly. If the ID is already taken by an unrelated post, WordPress silently auto-assigns a new ID.
+
+When looking up existing pages, Blockstudio checks the pinned ID first — before checking meta or slug. This means if a page is deleted and re-synced, it reclaims the same ID.
 
 ## Keyed Block Merging
 

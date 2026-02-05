@@ -160,6 +160,18 @@ class Page_Sync {
 	 * @return WP_Post|null The existing post or null.
 	 */
 	private function find_existing_post( array $page_data ): ?WP_Post {
+		if ( ! empty( $page_data['postId'] ) ) {
+			$post = get_post( (int) $page_data['postId'] );
+
+			if ( $post instanceof WP_Post && $post->post_type === $page_data['postType'] ) {
+				$source = get_post_meta( $post->ID, '_blockstudio_page_source', true );
+
+				if ( empty( $source ) || $source === $page_data['source_path'] ) {
+					return $post;
+				}
+			}
+		}
+
 		$posts = get_posts(
 			array(
 				'meta_key'       => '_blockstudio_page_source', // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_key
@@ -200,6 +212,10 @@ class Page_Sync {
 			'post_type'    => $page_data['postType'],
 			'post_status'  => $page_data['postStatus'],
 		);
+
+		if ( ! empty( $page_data['postId'] ) ) {
+			$post_data['import_id'] = (int) $page_data['postId'];
+		}
 
 		/**
 		 * Filter the post data before creating a page.

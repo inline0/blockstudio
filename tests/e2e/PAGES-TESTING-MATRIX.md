@@ -6,7 +6,7 @@ Overview of all page-related E2E test coverage.
 
 | File | Tests | Focus |
 |------|-------|-------|
-| `types/pages/default.ts` | 26 | Page creation, parsing, locking, meta, frontend rendering, editing modes, sync, templateFor |
+| `types/pages/default.ts` | 29 | Page creation, parsing, locking, meta, frontend rendering, editing modes, sync, templateFor, postId |
 | `keyed-merge.ts` | 21 | Keyed block merging across all scenarios |
 
 ## Test Pages
@@ -23,6 +23,7 @@ Overview of all page-related E2E test coverage.
 | `test-unlocked` | `blockstudio-unlocked-test` | PHP | draft | `false` |
 | `test-sync-disabled` | `blockstudio-sync-disabled-test` | PHP | draft | — |
 | `test-template-for` | `blockstudio-template-for-test` | PHP | draft | `insert` |
+| `test-post-id` | `blockstudio-post-id-test` | PHP | draft | — |
 
 ## page.json Properties
 
@@ -41,6 +42,7 @@ Overview of all page-related E2E test coverage.
 | `blockEditingMode` (per-element) | Yes | `default.ts` — per-element override |
 | `blockEditingMode` (ancestor cascade) | Yes | `default.ts` — ancestor containers |
 | `templateFor` | Yes | `default.ts` — CPT template test |
+| `postId` | Yes | `default.ts` — post ID pinning tests |
 | `sync` `false` | Yes | `default.ts` — sync disabled test |
 
 ## Keyed Block Merging (keyed-merge.ts)
@@ -163,6 +165,14 @@ Overview of all page-related E2E test coverage.
 | 24 | CPT template applied | New CPT post has heading + paragraph from template |
 | 25 | CPT template content correct | Heading contains "CPT Template Title" |
 | 26 | CPT template lock applied | `templateLock === "insert"` on new CPT post |
+
+### Post ID Pinning
+
+| # | Test | Verifies |
+|---|------|----------|
+| 27 | Page with postId created at specified ID | `post=99999` in editor URL |
+| 28 | Page retains ID after delete+re-sync | Delete → force-sync → same ID back |
+| 29 | Page with postId has correct content | Content renders at pinned ID |
 
 ## Not Covered (by design)
 

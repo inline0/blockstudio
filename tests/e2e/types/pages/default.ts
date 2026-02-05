@@ -371,4 +371,49 @@ test.describe('File-based Pages', () => {
       expect(templateLock).toBe('insert');
     });
   });
+
+  // Post ID Pinning
+  test.describe('Post ID Pinning', () => {
+    test('page with postId created at specified ID', async () => {
+      const result = await apiPost(
+        'blockstudio-test/v1/pages/force-sync',
+        { page_name: 'blockstudio-post-id-test' },
+      );
+
+      expect(result.post_id).toBe(99999);
+
+      await page.goto(`${BASE}/wp-admin/post.php?post=99999&action=edit`);
+      await page.waitForSelector('.editor-styles-wrapper', { timeout: 30000 });
+
+      const url = page.url();
+      expect(url).toContain('post=99999');
+    });
+
+    test('page retains ID after delete and re-sync', async () => {
+      // Delete the post
+      await page.evaluate(async (base: string) => {
+        await fetch(`${base}/wp-json/wp/v2/pages/99999?force=true`, {
+          method: 'DELETE',
+          headers: { 'X-WP-Nonce': (window as any).wpApiSettings?.nonce || '' },
+        });
+      }, BASE);
+
+      // Force re-sync — should reclaim the same ID
+      const result = await apiPost(
+        'blockstudio-test/v1/pages/force-sync',
+        { page_name: 'blockstudio-post-id-test' },
+      );
+
+      expect(result.post_id).toBe(99999);
+    });
+
+    test('page with postId has correct content', async () => {
+      const content = await apiGet(
+        'blockstudio-test/v1/pages/content/99999',
+      );
+
+      expect(content.post_content).toContain('Post ID Test');
+      expect(content.post_content).toContain('post ID pinning');
+    });
+  });
 });

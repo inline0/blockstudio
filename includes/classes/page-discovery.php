@@ -104,6 +104,7 @@ class Page_Discovery {
 			'slug'         => '',
 			'postType'     => 'page',
 			'postStatus'   => 'draft',
+			'postId'       => null,
 			'templateLock' => 'all',
 			'templateFor'  => null,
 			'sync'         => true,

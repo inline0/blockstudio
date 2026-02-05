@@ -1,0 +1,8 @@
+{
+  "name": "blockstudio-post-id-test",
+  "title": "Post ID Test",
+  "slug": "blockstudio-post-id-test",
+  "postType": "page",
+  "postStatus": "draft",
+  "postId": 99999
+}

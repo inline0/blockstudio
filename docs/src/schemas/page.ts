@@ -37,6 +37,12 @@ export const page = {
       enum: ["publish", "draft", "pending", "private"],
       example: "publish",
     },
+    postId: {
+      type: "integer",
+      description:
+        "Pin the page to a specific WordPress post ID. Uses import_id during creation to request this ID. If the ID is already taken by an unrelated post, WordPress silently auto-assigns a new ID.",
+      example: 42,
+    },
     blockEditingMode: {
       type: "string",
       enum: ["default", "contentOnly", "disabled"],
