@@ -1,6 +1,7 @@
 import { ReactNode } from 'react';
 import { __experimentalText as Text } from '@wordpress/components';
 import { Label, LabelAction } from '@/blocks/components/label';
+import { __ } from '@/utils/__';
 import { css } from '@/utils/css';
 
 export const Control = ({
@@ -11,14 +12,14 @@ export const Control = ({
   customCss = {},
   customCssInner = {},
   description = null,
-  enabled = true,
+  _enabled = true,
   help = null,
-  inRepeater = false,
+  _inRepeater = false,
   isRepeater = false,
   label = null,
   margin = true,
   name = null,
-  onClick = () => {},
+  _onClick = () => {},
   type = null,
   ...rest
 }: {
@@ -57,6 +58,7 @@ export const Control = ({
       className={className}
       data-id={name}
     >
+      {/* Commented out: left-side toggle bar. May be re-enabled in future.
       {enabled && (
         <div
           className={`blockstudio-fields__field-toggle`}
@@ -80,32 +82,55 @@ export const Control = ({
           })}
         />
       )}
+      */}
       <div
         css={css({
-          opacity: active ? 1 : 0.5,
-          pointerEvents: active ? 'auto' : 'none',
           ...customCssInner,
-
-          '*': {
-            userSelect: active ? 'auto' : 'none',
-          },
         })}
       >
         {type !== 'toggle' && label && (
           <Label label={label} help={help || ''} actions={actions} />
         )}
-        {children}
-        {description && (
-          <Text
-            css={css({
-              marginTop: '4px',
-              display: 'block',
-            })}
-            variant="muted"
-          >
-            {description}
-          </Text>
-        )}
+        <div css={css({ position: 'relative' })}>
+          {children}
+          {description && (
+            <Text
+              css={css({
+                marginTop: '4px',
+                display: 'block',
+              })}
+              variant="muted"
+            >
+              {description}
+            </Text>
+          )}
+          {!active && (
+            <div
+              className="blockstudio-fields__field-disabled"
+              css={css({
+                position: 'absolute',
+                inset: 0,
+                backdropFilter: 'blur(2px)',
+                background: 'rgba(255, 255, 255, 0.6)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                zIndex: 10,
+                borderRadius: '2px',
+                pointerEvents: 'none',
+              })}
+            >
+              <span
+                css={css({
+                  fontSize: '12px',
+                  color: 'rgba(0, 0, 0, 0.4)',
+                })}
+              >
+                {__('This field is disabled')}
+              </span>
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );

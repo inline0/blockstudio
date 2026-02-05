@@ -1,4 +1,4 @@
-import { expect, Page } from '@playwright/test';
+import { Page } from '@playwright/test';
 import { saveAndReload, testType, text } from '../../utils/playwright-utils';
 
 testType(['fields multiple', 'fields-multiple'], '"hero_heading":"Default Heading"', () => {

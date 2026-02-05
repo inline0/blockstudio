@@ -302,7 +302,7 @@ export interface BlockstudioAttribute {
    */
   label?: string;
   /**
-   * Whether to display a switch that disables the field.
+   * Display a toggle that can disable the field. Defaults to false.
    */
   switch?: boolean;
   type: FluffyType | string;
@@ -689,7 +689,7 @@ export interface AttributeAttribute {
    */
   label?: string;
   /**
-   * Whether to display a switch that disables the field.
+   * Display a toggle that can disable the field. Defaults to false.
    */
   switch?: boolean;
   type: PurpleType;
@@ -1090,7 +1090,7 @@ export interface Attribute {
    */
   label?: string;
   /**
-   * Whether to display a switch that disables the field.
+   * Display a toggle that can disable the field. Defaults to false.
    */
   switch?: boolean;
   type: AttributeType;

@@ -28,6 +28,7 @@ import { Token } from '@/blocks/components/fields/components/token';
 import { Unit } from '@/blocks/components/fields/components/unit';
 import { WYSIWYG } from '@/blocks/components/fields/components/wysiwyg';
 import { LabelAction } from '@/blocks/components/label';
+import { seen, unseen } from '@wordpress/icons';
 import { Styles } from '@/blocks/components/styles';
 import { createBlocks } from '@/blocks/utils/create-blocks';
 import { dispatch } from '@/blocks/utils/dispatch';
@@ -522,22 +523,40 @@ export const Fields = ({
     // Get actions wrapper for field types that need it
     const ActionsWrapper = item.type === 'code' ? CodeActions : null;
 
-    const controlContent = (actions?: LabelAction[]) => (
-      <Control
-        active={!attributes.blockstudio?.disabled?.includes(item.id ?? '')}
-        actions={actions}
-        className={`blockstudio-fields__field blockstudio-fields__field--${item.type}`}
-        enabled={item?.switch !== false}
-        help={item.help}
-        inRepeater={repeaterId !== ''}
-        isRepeater={item.type === 'repeater'}
-        label={item.label}
-        name={item.id}
-        description={item.description}
-        onClick={() => disable(item.id ?? '')}
-        remove={() => remove(repeaterId)}
-        type={item.type}
-      >
+    const controlContent = (existingActions?: LabelAction[]) => {
+      const isDisabled = attributes.blockstudio?.disabled?.includes(
+        item.id ?? '',
+      );
+
+      const switchAction: LabelAction[] =
+        item?.switch === true && repeaterId === ''
+          ? [
+              {
+                icon: isDisabled ? unseen : seen,
+                onClick: () => disable(item.id ?? ''),
+                label: isDisabled ? 'Enable field' : 'Disable field',
+              },
+            ]
+          : [];
+
+      const actions = [...(existingActions || []), ...switchAction];
+
+      return (
+        <Control
+          active={!isDisabled}
+          actions={actions.length > 0 ? actions : undefined}
+          className={`blockstudio-fields__field blockstudio-fields__field--${item.type}`}
+          enabled={false}
+          help={item.help}
+          inRepeater={repeaterId !== ''}
+          isRepeater={item.type === 'repeater'}
+          label={item.label}
+          name={item.id}
+          description={item.description}
+          onClick={() => disable(item.id ?? '')}
+          remove={() => remove(repeaterId)}
+          type={item.type}
+        >
         {item.type === 'text' ? (
           <Text {...textProps()} properties={props} />
         ) : item.type === 'textarea' ? (
@@ -646,7 +665,8 @@ export const Fields = ({
           />
         ) : null}
       </Control>
-    );
+      );
+    };
 
     if (ActionsWrapper) {
       return (

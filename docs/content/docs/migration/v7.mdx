@@ -92,3 +92,28 @@ add_filter('blockstudio/settings/block_editor/css_classes', function() {
     return ['my-stylesheet'];
 });
 ```
+
+## Field Switch
+
+The `switch` property now defaults to `false` instead of `true`. In v6, every field had an invisible toggle on the left edge that was enabled by default. In v7, switch is opt-in and uses a visible eye icon in the field label.
+
+### What Changed
+
+- **Default is now `false`** — fields no longer have a switch unless you explicitly set `"switch": true`
+- **Visible eye icon** — instead of a hidden left-side click zone, an eye icon button appears in the label area
+- **Disabled overlay** — when a field is disabled, a blur overlay with "This field is disabled" text is shown instead of just reducing opacity
+
+### Migration
+
+If you relied on the default switch behavior in v6, you need to explicitly enable it:
+
+```json
+{
+  "id": "title",
+  "type": "text",
+  "label": "Title",
+  "switch": true
+}
+```
+
+If you previously set `"switch": false` to disable the toggle, you can remove it since `false` is now the default.

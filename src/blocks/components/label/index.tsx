@@ -30,7 +30,11 @@ export const Label = ({
       css={css({
         display: 'flex',
         alignItems: 'center',
-        marginBottom: !toggle ? '8px' : undefined,
+        marginBottom: !toggle
+          ? actions && actions.length > 0
+            ? '5px'
+            : '8px'
+          : undefined,
       })}
     >
       <ConditionalWrapper

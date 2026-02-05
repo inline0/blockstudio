@@ -1,0 +1,31 @@
+{
+  "$schema": "https://app.blockstudio.dev/schema",
+  "name": "blockstudio/type-switch",
+  "title": "Native Switch",
+  "category": "blockstudio-test-native",
+  "icon": "star-filled",
+  "blockstudio": {
+    "attributes": [
+      {
+        "id": "title",
+        "type": "text",
+        "label": "Title",
+        "default": "Hello",
+        "switch": true
+      },
+      {
+        "id": "content",
+        "type": "textarea",
+        "label": "Content",
+        "default": "World",
+        "switch": true
+      },
+      {
+        "id": "no_switch",
+        "type": "text",
+        "label": "No Switch",
+        "default": "Static"
+      }
+    ]
+  }
+}

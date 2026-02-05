@@ -963,7 +963,8 @@ export const schema = async (extensions = false) => {
                 switch: {
                   type: "boolean",
                   description:
-                    "Whether to display a switch that disables the field.",
+                    "Display a toggle that can disable the field. Shows an eye icon in the field label. Defaults to false.",
+                  default: false,
                 },
                 idStructure: {
                   type: "string",
