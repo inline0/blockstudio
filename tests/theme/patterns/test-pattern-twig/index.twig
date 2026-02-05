@@ -4,4 +4,22 @@
   <block name="core/buttons">
     <block name="core/button" url="#">Twig Pattern Button</block>
   </block>
+  <hr />
+  <ul>
+    {% for i in 1..2 %}
+    <li>Twig pattern item {{ i }}</li>
+    {% endfor %}
+  </ul>
+  <blockquote>
+    <p>Twig pattern quote text.</p>
+  </blockquote>
+  <img src="https://picsum.photos/400/200" alt="Twig pattern image" />
+  <block name="core/columns">
+    <block name="core/column">
+      <p>Twig pattern column A</p>
+    </block>
+    <block name="core/column">
+      <p>Twig pattern column B</p>
+    </block>
+  </block>
 </div>

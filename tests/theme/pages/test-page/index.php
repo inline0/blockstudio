@@ -222,6 +222,32 @@ Just for you.</block>
     <p>Multiple paragraphs work too.</p>
   </block>
 
+  <h2>Additional Parser Paths</h2>
+
+  <h3>Section as Group</h3>
+  <section>
+    <p>This paragraph is inside a section group.</p>
+    <p>Sections map to the same group block as divs.</p>
+  </section>
+
+  <h3>Figure with Image</h3>
+  <figure>
+    <img src="https://picsum.photos/600/300" alt="Figure image" />
+  </figure>
+
+  <h3>Unknown HTML Element</h3>
+  <marquee>This unknown element becomes a raw HTML block.</marquee>
+
+  <h3>Figure without Image</h3>
+  <figure>
+    <figcaption>A figure without an img falls back to raw HTML.</figcaption>
+  </figure>
+
+  <h3>Legacy Shorthand</h3>
+  <blockstudio_type_text></blockstudio_type_text>
+
+  Bare text becomes an auto-wrapped paragraph.
+
   <h2>Pagination Blocks</h2>
 
   <h3>More</h3>

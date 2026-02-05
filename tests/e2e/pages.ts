@@ -141,19 +141,11 @@ test.describe('File-based Pages', () => {
     // --- Media Blocks ---
 
     test('image block with src and alt', async () => {
-      // Target standalone image (not inside gallery)
       const image = page.locator(
-        '.wp-block-image:not(.wp-block-gallery .wp-block-image)',
+        '.wp-block-image img[alt="Sample image"]',
       );
       await expect(image).toBeVisible();
-      await expect(image.locator('img')).toHaveAttribute(
-        'src',
-        /picsum\.photos\/800/,
-      );
-      await expect(image.locator('img')).toHaveAttribute(
-        'alt',
-        'Sample image',
-      );
+      await expect(image).toHaveAttribute('src', /picsum\.photos\/800/);
     });
 
     test('gallery with three images', async () => {
@@ -400,6 +392,48 @@ test.describe('File-based Pages', () => {
         page.getByText('Multiple paragraphs work too'),
       ).toBeVisible();
     });
+
+    // --- Additional Parser Paths ---
+
+    test('section element maps to group block', async () => {
+      await expect(
+        page.getByText('This paragraph is inside a section group'),
+      ).toBeVisible();
+      await expect(
+        page.getByText('Sections map to the same group block as divs'),
+      ).toBeVisible();
+    });
+
+    test('figure with img maps to image block', async () => {
+      const figureImage = page.locator(
+        '.wp-block-image img[alt="Figure image"]',
+      );
+      await expect(figureImage).toBeVisible();
+      await expect(figureImage).toHaveAttribute('src', /picsum\.photos\/600/);
+    });
+
+    test('unknown HTML element falls back to HTML block', async () => {
+      await expect(
+        page.getByText('This unknown element becomes a raw HTML block'),
+      ).toBeVisible();
+    });
+
+    test('figure without img falls back to HTML block', async () => {
+      await expect(
+        page.getByText('A figure without an img falls back to raw HTML'),
+      ).toBeVisible();
+    });
+
+    test('legacy blockstudio shorthand renders block', async () => {
+      const block = page.locator('.blockstudio-test__block');
+      await expect(block).toBeVisible();
+    });
+
+    test('bare text node auto-wraps to paragraph', async () => {
+      await expect(
+        page.getByText('Bare text becomes an auto-wrapped paragraph'),
+      ).toBeVisible();
+    });
   });
 
   test.describe('Editor validation', () => {
@@ -478,6 +512,7 @@ test.describe('File-based Pages', () => {
       });
 
       const expected = [
+        'blockstudio/type-text',
         'core/accordion',
         'core/accordion-heading',
         'core/accordion-item',
@@ -495,6 +530,7 @@ test.describe('File-based Pages', () => {
         'core/gallery',
         'core/group',
         'core/heading',
+        'core/html',
         'core/image',
         'core/list',
         'core/list-item',
@@ -861,6 +897,50 @@ test.describe('File-based Pages', () => {
       expect(details.summary).toBe('Click to expand');
     });
 
+    test('html blocks present for unknown elements', async () => {
+      const htmlBlockCount = await page.evaluate(() => {
+        const blocks = (window as any).wp.data
+          .select('core/block-editor')
+          .getBlocks();
+        let count = 0;
+
+        function collect(block: any) {
+          if (block.name === 'core/html') count++;
+          if (block.innerBlocks) block.innerBlocks.forEach(collect);
+        }
+
+        blocks.forEach(collect);
+        return count;
+      });
+
+      expect(htmlBlockCount).toBeGreaterThanOrEqual(2);
+    });
+
+    test('legacy blockstudio shorthand produces correct block name', async () => {
+      const found = await page.evaluate(() => {
+        const blocks = (window as any).wp.data
+          .select('core/block-editor')
+          .getBlocks();
+
+        function find(block: any): boolean {
+          if (block.name === 'blockstudio/type-text') return true;
+          if (block.innerBlocks) {
+            for (const inner of block.innerBlocks) {
+              if (find(inner)) return true;
+            }
+          }
+          return false;
+        }
+
+        for (const block of blocks) {
+          if (find(block)) return true;
+        }
+        return false;
+      });
+
+      expect(found).toBe(true);
+    });
+
     test('editor shows blocks visually (heading visible)', async () => {
       await expect(page.locator('.wp-block-heading').first()).toBeVisible();
     });
@@ -922,12 +1002,96 @@ test.describe('File-based Pages (Twig)', () => {
     ).toBeVisible();
   });
 
-  test('twig page has block syntax elements', async () => {
+  test('twig headings render all levels', async () => {
+    for (let i = 1; i <= 6; i++) {
+      await expect(
+        page.getByRole('heading', { name: `Twig Heading ${i}` }),
+      ).toBeVisible();
+    }
+  });
+
+  test('twig ordered list renders', async () => {
+    await expect(page.getByText('Twig ordered 1')).toBeVisible();
+    await expect(page.getByText('Twig ordered 3')).toBeVisible();
+  });
+
+  test('twig quote and pullquote render', async () => {
+    await expect(page.getByText('This is a Twig blockquote')).toBeVisible();
+    await expect(
+      page.getByText('Twig pullquote for emphasis'),
+    ).toBeVisible();
+  });
+
+  test('twig code and preformatted blocks render', async () => {
+    await expect(page.locator('.wp-block-code')).toBeVisible();
+    await expect(page.locator('.wp-block-preformatted')).toBeVisible();
+  });
+
+  test('twig verse block renders', async () => {
+    const verse = page.locator('.wp-block-verse');
+    await expect(verse).toBeVisible();
+    await expect(verse).toContainText('Twig roses are red');
+  });
+
+  test('twig media blocks render', async () => {
+    await expect(page.locator('.wp-block-image').first()).toBeVisible();
+    await expect(page.locator('.wp-block-gallery')).toBeVisible();
+    await expect(page.locator('.wp-block-audio')).toBeVisible();
+    await expect(page.locator('.wp-block-video')).toBeVisible();
+    await expect(page.locator('.wp-block-cover')).toBeVisible();
+    await expect(page.locator('.wp-block-embed')).toBeVisible();
+  });
+
+  test('twig design blocks render', async () => {
+    await expect(page.locator('.wp-block-group').first()).toBeVisible();
+    await expect(page.locator('.wp-block-columns').first()).toBeVisible();
+    await expect(page.locator('.wp-block-separator')).toBeVisible();
+    await expect(page.locator('.wp-block-spacer')).toBeVisible();
     await expect(page.locator('.wp-block-buttons').first()).toBeVisible();
     await expect(page.getByText('Twig Button')).toBeVisible();
-    await expect(page.locator('.wp-block-columns').first()).toBeVisible();
-    await expect(page.getByText('Column A')).toBeVisible();
-    await expect(page.getByText('Column B')).toBeVisible();
+  });
+
+  test('twig interactive blocks render', async () => {
+    const details = page.locator('.wp-block-details');
+    await expect(details).toBeVisible();
+    await expect(details.locator('summary')).toHaveText(
+      'Twig expand details',
+    );
+
+    await expect(page.locator('.wp-block-table')).toBeVisible();
+  });
+
+  test('twig social links render', async () => {
+    await expect(page.locator('.wp-block-social-links')).toBeVisible();
+  });
+
+  test('twig media-text renders', async () => {
+    await expect(page.locator('.wp-block-media-text')).toBeVisible();
+    await expect(page.getByText('Twig Media Content')).toBeVisible();
+  });
+
+  test('twig accordion renders', async () => {
+    await expect(page.locator('.wp-block-accordion')).toBeVisible();
+    await expect(
+      page.locator('.wp-block-accordion-heading__toggle', {
+        hasText: 'Twig Accordion Item',
+      }),
+    ).toBeVisible();
+  });
+
+  test('twig additional parser paths render', async () => {
+    await expect(
+      page.getByText('Twig section group paragraph'),
+    ).toBeVisible();
+    await expect(
+      page.locator('.wp-block-image img[alt="Twig figure image"]'),
+    ).toBeVisible();
+    await expect(
+      page.getByText('Twig unknown element becomes HTML block'),
+    ).toBeVisible();
+    await expect(
+      page.getByText('Twig bare text auto-wrapped paragraph'),
+    ).toBeVisible();
   });
 
   test('twig page editor shows valid blocks', async () => {
@@ -994,12 +1158,96 @@ test.describe('File-based Pages (Blade)', () => {
     ).toBeVisible();
   });
 
-  test('blade page has block syntax elements', async () => {
+  test('blade headings render all levels', async () => {
+    for (let i = 1; i <= 6; i++) {
+      await expect(
+        page.getByRole('heading', { name: `Blade Heading ${i}` }),
+      ).toBeVisible();
+    }
+  });
+
+  test('blade ordered list renders', async () => {
+    await expect(page.getByText('Blade ordered 1')).toBeVisible();
+    await expect(page.getByText('Blade ordered 3')).toBeVisible();
+  });
+
+  test('blade quote and pullquote render', async () => {
+    await expect(page.getByText('This is a Blade blockquote')).toBeVisible();
+    await expect(
+      page.getByText('Blade pullquote for emphasis'),
+    ).toBeVisible();
+  });
+
+  test('blade code and preformatted blocks render', async () => {
+    await expect(page.locator('.wp-block-code')).toBeVisible();
+    await expect(page.locator('.wp-block-preformatted')).toBeVisible();
+  });
+
+  test('blade verse block renders', async () => {
+    const verse = page.locator('.wp-block-verse');
+    await expect(verse).toBeVisible();
+    await expect(verse).toContainText('Blade roses are red');
+  });
+
+  test('blade media blocks render', async () => {
+    await expect(page.locator('.wp-block-image').first()).toBeVisible();
+    await expect(page.locator('.wp-block-gallery')).toBeVisible();
+    await expect(page.locator('.wp-block-audio')).toBeVisible();
+    await expect(page.locator('.wp-block-video')).toBeVisible();
+    await expect(page.locator('.wp-block-cover')).toBeVisible();
+    await expect(page.locator('.wp-block-embed')).toBeVisible();
+  });
+
+  test('blade design blocks render', async () => {
+    await expect(page.locator('.wp-block-group').first()).toBeVisible();
+    await expect(page.locator('.wp-block-columns').first()).toBeVisible();
+    await expect(page.locator('.wp-block-separator')).toBeVisible();
+    await expect(page.locator('.wp-block-spacer')).toBeVisible();
     await expect(page.locator('.wp-block-buttons').first()).toBeVisible();
     await expect(page.getByText('Blade Button')).toBeVisible();
-    await expect(page.locator('.wp-block-columns').first()).toBeVisible();
-    await expect(page.getByText('Column A')).toBeVisible();
-    await expect(page.getByText('Column B')).toBeVisible();
+  });
+
+  test('blade interactive blocks render', async () => {
+    const details = page.locator('.wp-block-details');
+    await expect(details).toBeVisible();
+    await expect(details.locator('summary')).toHaveText(
+      'Blade expand details',
+    );
+
+    await expect(page.locator('.wp-block-table')).toBeVisible();
+  });
+
+  test('blade social links render', async () => {
+    await expect(page.locator('.wp-block-social-links')).toBeVisible();
+  });
+
+  test('blade media-text renders', async () => {
+    await expect(page.locator('.wp-block-media-text')).toBeVisible();
+    await expect(page.getByText('Blade Media Content')).toBeVisible();
+  });
+
+  test('blade accordion renders', async () => {
+    await expect(page.locator('.wp-block-accordion')).toBeVisible();
+    await expect(
+      page.locator('.wp-block-accordion-heading__toggle', {
+        hasText: 'Blade Accordion Item',
+      }),
+    ).toBeVisible();
+  });
+
+  test('blade additional parser paths render', async () => {
+    await expect(
+      page.getByText('Blade section group paragraph'),
+    ).toBeVisible();
+    await expect(
+      page.locator('.wp-block-image img[alt="Blade figure image"]'),
+    ).toBeVisible();
+    await expect(
+      page.getByText('Blade unknown element becomes HTML block'),
+    ).toBeVisible();
+    await expect(
+      page.getByText('Blade bare text auto-wrapped paragraph'),
+    ).toBeVisible();
   });
 
   test('blade page editor shows valid blocks', async () => {
