@@ -861,33 +861,42 @@ export const schema = async (extensions = false) => {
                 },
                 type: {
                   type: "string",
-                  enum: [
-                    "attributes",
-                    "checkbox",
-                    "classes",
-                    "code",
-                    "color",
-                    "date",
-                    "datetime",
-                    "files",
-                    "gradient",
-                    g ? "group" : false,
-                    "icon",
-                    "link",
-                    "message",
-                    "number",
-                    "radio",
-                    "range",
-                    "select",
-                    "tabs",
-                    "text",
-                    "textarea",
-                    "toggle",
-                    "repeater",
-                    "richtext",
-                    "unit",
-                    "wysiwyg",
-                  ].filter(Boolean),
+                  anyOf: [
+                    {
+                      enum: [
+                        "attributes",
+                        "checkbox",
+                        "classes",
+                        "code",
+                        "color",
+                        "date",
+                        "datetime",
+                        "files",
+                        "gradient",
+                        g ? "group" : false,
+                        "icon",
+                        "link",
+                        "message",
+                        "number",
+                        "radio",
+                        "range",
+                        "select",
+                        "tabs",
+                        "text",
+                        "textarea",
+                        "toggle",
+                        "repeater",
+                        "richtext",
+                        "unit",
+                        "wysiwyg",
+                      ].filter(Boolean),
+                    },
+                    {
+                      pattern: "^custom/.+$",
+                      description:
+                        "Custom field reference in format 'custom/{name}'.",
+                    },
+                  ],
                 },
                 label: {
                   type: "string",
@@ -956,6 +965,21 @@ export const schema = async (extensions = false) => {
                   description:
                     "Whether to display a switch that disables the field.",
                 },
+                idStructure: {
+                  type: "string",
+                  description:
+                    "ID pattern for expanded custom fields. Use {id} as placeholder for the original field ID.",
+                  default: "{id}",
+                  example: "hero_{id}",
+                },
+                overrides: {
+                  type: "object",
+                  description:
+                    "Per-field property overrides for custom fields. Keys are original field IDs from the field definition.",
+                  additionalProperties: {
+                    type: "object",
+                  },
+                },
                 ...conditions(),
                 ...(attribute
                   ? {
@@ -994,6 +1018,16 @@ export const schema = async (extensions = false) => {
                 { ...richtext },
                 { ...unit },
                 { ...wysiwyg },
+                {
+                  properties: {
+                    type: {
+                      pattern: "^custom/.+$",
+                      description:
+                        "References a reusable custom field definition.",
+                    },
+                  },
+                  required: ["type"],
+                },
               ].filter(Boolean),
             },
       },

@@ -1,0 +1,14 @@
+{
+  "$schema": "https://app.blockstudio.dev/schema",
+  "name": "blockstudio/type-fields-filter",
+  "title": "Native Fields Filter",
+  "category": "blockstudio-test-native",
+  "icon": "star-filled",
+  "blockstudio": {
+    "attributes": [
+      {
+        "type": "custom/cta"
+      }
+    ]
+  }
+}

@@ -25,6 +25,7 @@ Blockstudio gives you the ultimate developer experience for creating custom, pro
 * New: postId option for file-based pages to pin pages to a specific WordPress post ID
 * New: blockEditingMode support for file-based pages with page-level defaults and per-element overrides
 * New: file-based patterns - create WordPress block patterns from file templates with automatic HTML to block parsing
+* New: custom fields - reusable field definitions via file system and PHP filter
 * Change: all PHP hooks now use snake_case naming (old camelCase names still supported)
 * Deprecation: Admin Area removed
 * Deprecation: License Key removed

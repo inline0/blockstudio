@@ -130,6 +130,53 @@ function blockstudioCustomSelect(): array {
 }
 
 /**
+ * Register custom fields via PHP filter for testing.
+ */
+add_filter(
+	'blockstudio/fields',
+	function ( $fields ) {
+		$fields['cta'] = array(
+			'title'      => 'Call to Action',
+			'attributes' => array(
+				array(
+					'id'      => 'text',
+					'type'    => 'text',
+					'label'   => 'Button Text',
+					'default' => 'Click Me',
+				),
+				array(
+					'id'    => 'url',
+					'type'  => 'text',
+					'label' => 'URL',
+				),
+				array(
+					'id'    => 'newTab',
+					'type'  => 'toggle',
+					'label' => 'Open in New Tab',
+				),
+			),
+		);
+		return $fields;
+	}
+);
+
+/**
+ * Register field discovery paths for testing.
+ */
+add_filter(
+	'blockstudio/fields/paths',
+	function ( $paths ) {
+		$theme_fields_path = get_stylesheet_directory() . '/blockstudio/fields';
+
+		if ( is_dir( $theme_fields_path ) ) {
+			$paths[] = $theme_fields_path;
+		}
+
+		return $paths;
+	}
+);
+
+/**
  * Configure Blockstudio to find test blocks in the theme directory.
  */
 add_filter(

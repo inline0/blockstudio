@@ -305,7 +305,15 @@ export interface BlockstudioAttribute {
    * Whether to display a switch that disables the field.
    */
   switch?: boolean;
-  type: FluffyType;
+  type: FluffyType | string;
+  /**
+   * ID pattern for expanded custom fields. Use {id} as placeholder for the original field ID.
+   */
+  idStructure?: string;
+  /**
+   * Per-field property overrides for custom fields. Keys are original field IDs from the field definition.
+   */
+  overrides?: Record<string, Partial<BlockstudioAttribute>>;
   /**
    * Default value that should be applied when first adding the block.
    */

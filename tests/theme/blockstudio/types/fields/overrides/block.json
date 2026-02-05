@@ -1,0 +1,27 @@
+{
+  "$schema": "https://app.blockstudio.dev/schema",
+  "name": "blockstudio/type-fields-overrides",
+  "title": "Native Fields Overrides",
+  "category": "blockstudio-test-native",
+  "icon": "star-filled",
+  "blockstudio": {
+    "attributes": [
+      {
+        "type": "custom/hero",
+        "idStructure": "hero_{id}",
+        "overrides": {
+          "heading": {
+            "default": "Welcome",
+            "label": "Title"
+          },
+          "description": {
+            "label": "Subtitle"
+          },
+          "enabled": {
+            "id": "active"
+          }
+        }
+      }
+    ]
+  }
+}

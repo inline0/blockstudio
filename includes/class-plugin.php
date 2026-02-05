@@ -85,6 +85,10 @@ class Plugin {
 		require_once $classes_dir . 'field-handlers/media-field-handler.php';
 		require_once $classes_dir . 'field-handlers/container-field-handler.php';
 
+		// Custom field system.
+		require_once $classes_dir . 'field-registry.php';
+		require_once $classes_dir . 'field-discovery.php';
+
 		// Attribute builder.
 		require_once $classes_dir . 'attribute-builder.php';
 

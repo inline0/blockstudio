@@ -827,6 +827,56 @@ class Build {
 		}
 		unset( $data ); // Break reference.
 
+		// Phase 2.5: Discover custom fields.
+		$fields_path = $path . '/fields';
+
+		if ( is_dir( $fields_path ) ) {
+			$field_discovery = new Field_Discovery();
+			$field_registry  = Field_Registry::instance();
+			$custom_fields   = $field_discovery->discover( $fields_path );
+
+			foreach ( $custom_fields as $field_name => $definition ) {
+				$field_registry->register( $field_name, $definition );
+			}
+		}
+
+		/**
+		 * Filter additional field discovery paths.
+		 *
+		 * @param array $paths Array of directory paths to scan for custom fields.
+		 */
+		$extra_field_paths = apply_filters( 'blockstudio/fields/paths', array() );
+
+		if ( ! empty( $extra_field_paths ) ) {
+			$field_discovery = $field_discovery ?? new Field_Discovery();
+			$field_registry  = $field_registry ?? Field_Registry::instance();
+
+			foreach ( $extra_field_paths as $extra_path ) {
+				if ( is_dir( $extra_path ) ) {
+					$extra_fields = $field_discovery->discover( $extra_path );
+
+					foreach ( $extra_fields as $field_name => $definition ) {
+						$field_registry->register( $field_name, $definition );
+					}
+				}
+			}
+		}
+
+		/**
+		 * Filter for programmatic custom field registration.
+		 *
+		 * @param array $fields Array of custom field definitions keyed by name.
+		 */
+		$filter_fields = apply_filters( 'blockstudio/fields', array() );
+
+		if ( ! empty( $filter_fields ) ) {
+			$field_registry = $field_registry ?? Field_Registry::instance();
+
+			foreach ( $filter_fields as $field_name => $definition ) {
+				$field_registry->register( $field_name, $definition );
+			}
+		}
+
 		// Phase 3: Register blocks.
 		if ( ! $editor ) {
 			foreach ( $registerable as $name => $item ) {
@@ -1032,6 +1082,85 @@ class Build {
 	}
 
 	/**
+	 * Expand custom field references in an attributes array.
+	 *
+	 * Custom field references use the format "custom/{name}" as their type.
+	 * This method splices the referenced field definitions inline, applying
+	 * idStructure and overrides. Recurses into groups, tabs, and repeaters.
+	 *
+	 * @since 7.0.0
+	 *
+	 * @param array $attributes The attributes array (passed by reference).
+	 *
+	 * @return void
+	 */
+	public static function expand_custom_fields( array &$attributes ): void {
+		$registry = Field_Registry::instance();
+		$expanded = array();
+
+		foreach ( $attributes as $attr ) {
+			$type = $attr['type'] ?? '';
+
+			if ( 'group' === $type && isset( $attr['attributes'] ) ) {
+				self::expand_custom_fields( $attr['attributes'] );
+				$expanded[] = $attr;
+				continue;
+			}
+
+			if ( 'tabs' === $type && isset( $attr['tabs'] ) ) {
+				foreach ( $attr['tabs'] as &$tab ) {
+					if ( isset( $tab['attributes'] ) ) {
+						self::expand_custom_fields( $tab['attributes'] );
+					}
+				}
+				unset( $tab );
+				$expanded[] = $attr;
+				continue;
+			}
+
+			if ( 'repeater' === $type && isset( $attr['attributes'] ) ) {
+				self::expand_custom_fields( $attr['attributes'] );
+				$expanded[] = $attr;
+				continue;
+			}
+
+			if ( ! str_starts_with( $type, 'custom/' ) ) {
+				$expanded[] = $attr;
+				continue;
+			}
+
+			$field_name = substr( $type, 7 );
+			$definition = $registry->get( $field_name );
+
+			if ( ! $definition ) {
+				$expanded[] = $attr;
+				continue;
+			}
+
+			$id_structure = $attr['idStructure'] ?? '{id}';
+			$overrides    = $attr['overrides'] ?? array();
+
+			foreach ( $definition['attributes'] as $field_attr ) {
+				$original_id    = $field_attr['id'] ?? '';
+				$field_override = $overrides[ $original_id ] ?? array();
+
+				if ( isset( $field_override['id'] ) ) {
+					$final_id = $field_override['id'];
+				} else {
+					$final_id = str_replace( '{id}', $original_id, $id_structure );
+				}
+
+				$merged       = array_merge( $field_attr, $field_override );
+				$merged['id'] = $final_id;
+
+				$expanded[] = $merged;
+			}
+		}
+
+		$attributes = $expanded;
+	}
+
+	/**
 	 * Register a block type with WordPress.
 	 *
 	 * @since 7.0.0
@@ -1065,6 +1194,8 @@ class Build {
 		$filtered_attributes = array();
 
 		if ( isset( $block_json['blockstudio']['attributes'] ) ) {
+			self::expand_custom_fields( $block_json['blockstudio']['attributes'] );
+
 			if ( ! $is_override ) {
 				self::filter_attributes(
 					$block_json,

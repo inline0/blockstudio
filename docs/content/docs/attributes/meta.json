@@ -9,6 +9,7 @@
     "populating-options",
     "block-attributes",
     "field-types",
+    "custom-fields",
     "html-utilities"
   ]
 }

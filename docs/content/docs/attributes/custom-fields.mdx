@@ -1,0 +1,151 @@
+---
+title: Custom Fields
+description: Reusable field definitions for Blockstudio blocks.
+---
+
+Custom fields let you define reusable field groups that can be referenced across multiple blocks. Think of them as field templates — define once, use everywhere.
+
+## File System Registration
+
+Create a `field.json` file inside a `fields/` directory in your blockstudio directory:
+
+```
+theme/
+└── blockstudio/
+    └── fields/
+        └── hero/
+            └── field.json
+```
+
+```json title="fields/hero/field.json"
+{
+  "$schema": "https://app.blockstudio.dev/schema/field",
+  "name": "hero",
+  "title": "Hero Section",
+  "attributes": [
+    { "id": "heading", "type": "text", "label": "Heading", "default": "Hello World" },
+    { "id": "description", "type": "textarea", "label": "Description" },
+    { "id": "enabled", "type": "toggle", "label": "Enabled" }
+  ]
+}
+```
+
+## PHP Filter Registration
+
+Register custom fields programmatically using the `blockstudio/fields` filter:
+
+```php
+add_filter('blockstudio/fields', function ($fields) {
+    $fields['cta'] = [
+        'title'      => 'Call to Action',
+        'attributes' => [
+            ['id' => 'text', 'type' => 'text', 'label' => 'Button Text'],
+            ['id' => 'url', 'type' => 'text', 'label' => 'URL'],
+        ],
+    ];
+    return $fields;
+});
+```
+
+## Usage in block.json
+
+Reference a custom field using the `custom/{name}` type:
+
+```json title="block.json"
+{
+  "blockstudio": {
+    "attributes": [
+      { "type": "custom/hero" }
+    ]
+  }
+}
+```
+
+This expands inline to the fields defined in the custom field definition. The expanded fields use their original IDs (`heading`, `description`, `enabled`).
+
+## ID Structure
+
+Use `idStructure` to prefix or transform field IDs. The `{id}` placeholder is replaced with the original field ID:
+
+```json title="block.json"
+{
+  "blockstudio": {
+    "attributes": [
+      { "type": "custom/hero", "idStructure": "hero_{id}" }
+    ]
+  }
+}
+```
+
+This produces fields with IDs: `hero_heading`, `hero_description`, `hero_enabled`.
+
+## Overrides
+
+Customize individual fields per-instance using `overrides`. Keys are the original field IDs from the definition:
+
+```json title="block.json"
+{
+  "blockstudio": {
+    "attributes": [
+      {
+        "type": "custom/hero",
+        "idStructure": "hero_{id}",
+        "overrides": {
+          "heading": { "default": "Welcome", "label": "Title" },
+          "enabled": { "id": "active" }
+        }
+      }
+    ]
+  }
+}
+```
+
+Override properties are merged on top of the original field definition. An `id` override bypasses the `idStructure` pattern — in the example above, `enabled` becomes `active` instead of `hero_enabled`.
+
+## Multiple Custom Fields
+
+You can use multiple custom fields in a single block, alongside regular fields:
+
+```json title="block.json"
+{
+  "blockstudio": {
+    "attributes": [
+      { "id": "intro", "type": "text", "label": "Intro" },
+      { "type": "custom/hero", "idStructure": "hero_{id}" },
+      { "type": "custom/cta", "idStructure": "cta_{id}" }
+    ]
+  }
+}
+```
+
+## Nesting
+
+Custom fields work inside groups, tabs, and repeaters:
+
+```json title="block.json"
+{
+  "blockstudio": {
+    "attributes": [
+      {
+        "type": "group",
+        "id": "content",
+        "title": "Content",
+        "attributes": [
+          { "type": "custom/hero", "idStructure": "hero_{id}" }
+        ]
+      }
+    ]
+  }
+}
+```
+
+## Additional Discovery Paths
+
+Use the `blockstudio/fields/paths` filter to add additional directories for field discovery:
+
+```php
+add_filter('blockstudio/fields/paths', function ($paths) {
+    $paths[] = get_stylesheet_directory() . '/blockstudio/fields';
+    return $paths;
+});
+```

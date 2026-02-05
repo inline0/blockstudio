@@ -1,0 +1,23 @@
+{
+  "$schema": "https://app.blockstudio.dev/schema/field",
+  "name": "card",
+  "title": "Card",
+  "attributes": [
+    {
+      "id": "title",
+      "type": "text",
+      "label": "Title",
+      "default": "Card Title"
+    },
+    {
+      "id": "content",
+      "type": "textarea",
+      "label": "Content"
+    },
+    {
+      "id": "link",
+      "type": "link",
+      "label": "Link"
+    }
+  ]
+}

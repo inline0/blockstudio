@@ -1,0 +1,15 @@
+{
+  "$schema": "https://app.blockstudio.dev/schema",
+  "name": "blockstudio/type-fields-id-structure",
+  "title": "Native Fields ID Structure",
+  "category": "blockstudio-test-native",
+  "icon": "star-filled",
+  "blockstudio": {
+    "attributes": [
+      {
+        "type": "custom/hero",
+        "idStructure": "hero_{id}"
+      }
+    ]
+  }
+}

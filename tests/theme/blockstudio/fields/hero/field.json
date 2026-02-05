@@ -1,0 +1,25 @@
+{
+  "$schema": "https://app.blockstudio.dev/schema/field",
+  "name": "hero",
+  "title": "Hero Section",
+  "attributes": [
+    {
+      "id": "heading",
+      "type": "text",
+      "label": "Heading",
+      "default": "Default Heading"
+    },
+    {
+      "id": "description",
+      "type": "textarea",
+      "label": "Description",
+      "default": "Default description."
+    },
+    {
+      "id": "enabled",
+      "type": "toggle",
+      "label": "Enabled",
+      "default": false
+    }
+  ]
+}
