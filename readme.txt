@@ -28,6 +28,7 @@ Blockstudio gives you the ultimate developer experience for creating custom, pro
 * New: custom fields - reusable field definitions via file system and PHP filter
 * Enhancement: all PHP hooks now use snake_case naming (old camelCase names still supported)
 * Enhancement: field switch is now off by default and uses a visible eye icon with disabled overlay
+* Fix: bs_render_block() no longer triggers a warning from WP_Block_Supports when using useBlockProps
 * Deprecation: Admin Area removed
 * Deprecation: License Key removed
 * Deprecation: Code Editor removed

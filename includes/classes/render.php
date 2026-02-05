@@ -82,8 +82,15 @@ class Render {
 		$editor = $data['_BLOCKSTUDIO_EDITOR_STRING'] ?? false;
 		unset( $data['_BLOCKSTUDIO_EDITOR_STRING'] );
 
+		$parent = \WP_Block_Supports::$block_to_render;
+
+		\WP_Block_Supports::$block_to_render = array(
+			'blockName' => $name,
+			'attrs'     => $data,
+		);
+
 		if ( $editor ) {
-			return Block::render(
+			$result = Block::render(
 				array(
 					'blockstudio' => array(
 						'editor'     => $editor,
@@ -92,6 +99,10 @@ class Render {
 					),
 				)
 			);
+
+			\WP_Block_Supports::$block_to_render = $parent;
+
+			return $result;
 		} else {
 			// phpcs:disable WordPress.Security.EscapeOutput.OutputNotEscaped -- Block render handles escaping.
 			echo Block::render(
@@ -106,6 +117,8 @@ class Render {
 				$content
 			);
 			// phpcs:enable WordPress.Security.EscapeOutput.OutputNotEscaped
+
+			\WP_Block_Supports::$block_to_render = $parent;
 		}
 	}
 }
