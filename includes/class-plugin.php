@@ -137,6 +137,30 @@ class Plugin {
 		// File-based pages system.
 		require_once $classes_dir . 'page-discovery.php';
 		require_once $classes_dir . 'page-registry.php';
+
+		// HTML parser renderer traits.
+		require_once $classes_dir . 'html-parser/trait-paragraph-renderer.php';
+		require_once $classes_dir . 'html-parser/trait-heading-renderer.php';
+		require_once $classes_dir . 'html-parser/trait-list-renderer.php';
+		require_once $classes_dir . 'html-parser/trait-quote-renderer.php';
+		require_once $classes_dir . 'html-parser/trait-pullquote-renderer.php';
+		require_once $classes_dir . 'html-parser/trait-code-renderer.php';
+		require_once $classes_dir . 'html-parser/trait-preformatted-renderer.php';
+		require_once $classes_dir . 'html-parser/trait-verse-renderer.php';
+		require_once $classes_dir . 'html-parser/trait-image-renderer.php';
+		require_once $classes_dir . 'html-parser/trait-gallery-renderer.php';
+		require_once $classes_dir . 'html-parser/trait-audio-renderer.php';
+		require_once $classes_dir . 'html-parser/trait-video-renderer.php';
+		require_once $classes_dir . 'html-parser/trait-cover-renderer.php';
+		require_once $classes_dir . 'html-parser/trait-embed-renderer.php';
+		require_once $classes_dir . 'html-parser/trait-group-renderer.php';
+		require_once $classes_dir . 'html-parser/trait-columns-renderer.php';
+		require_once $classes_dir . 'html-parser/trait-separator-renderer.php';
+		require_once $classes_dir . 'html-parser/trait-spacer-renderer.php';
+		require_once $classes_dir . 'html-parser/trait-buttons-renderer.php';
+		require_once $classes_dir . 'html-parser/trait-details-renderer.php';
+		require_once $classes_dir . 'html-parser/trait-table-renderer.php';
+
 		require_once $classes_dir . 'html-parser.php';
 		require_once $classes_dir . 'page-sync.php';
 		require_once $classes_dir . 'pages.php';

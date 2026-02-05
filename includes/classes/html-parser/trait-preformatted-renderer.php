@@ -1,0 +1,38 @@
+<?php
+/**
+ * Preformatted renderer trait.
+ *
+ * @package Blockstudio
+ */
+
+namespace Blockstudio;
+
+use DOMElement;
+
+/**
+ * Renders core/preformatted blocks.
+ */
+trait Preformatted_Renderer {
+
+	/**
+	 * Render core/preformatted block.
+	 *
+	 * @param DOMElement  $element The element.
+	 * @param array       $attrs   The attributes.
+	 * @param Html_Parser $parser  The parser instance.
+	 *
+	 * @return array The block array.
+	 */
+	public function render_preformatted( DOMElement $element, array $attrs, Html_Parser $parser ): array {
+		$content = $parser->get_inner_html( $element );
+		$html    = '<pre class="wp-block-preformatted">' . $content . '</pre>';
+
+		return array(
+			'blockName'    => 'core/preformatted',
+			'attrs'        => $attrs,
+			'innerBlocks'  => array(),
+			'innerHTML'    => $html,
+			'innerContent' => array( $html ),
+		);
+	}
+}
