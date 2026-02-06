@@ -1,14 +1,28 @@
 import { HomePage, CTASection } from "onedocs";
 import config from "../../onedocs.config";
+import { HowItWorks } from "../components/homepage/how-it-works";
+import { TemplateLanguages } from "../components/homepage/template-languages";
+import { BeyondBlocks } from "../components/homepage/beyond-blocks";
+import { FieldTypes } from "../components/homepage/field-types";
+import { AssetProcessing } from "../components/homepage/asset-processing";
+import { DeveloperExperience } from "../components/homepage/developer-experience";
 
 export default function Home() {
   return (
     <HomePage config={config} packageName="blockstudio">
-      <CTASection
-        title="Ready to build?"
-        description="Get started with Blockstudio in minutes."
-        cta={{ label: "Read the Docs", href: "/docs" }}
-      />
+      <div className="w-full self-stretch">
+        <HowItWorks />
+        <TemplateLanguages />
+        <BeyondBlocks />
+        <FieldTypes />
+        <AssetProcessing />
+        <DeveloperExperience />
+        <CTASection
+          title="Ready to build?"
+          description="Create your first block in under a minute."
+          cta={{ label: "Get Started", href: "/docs/getting-started" }}
+        />
+      </div>
     </HomePage>
   );
 }
