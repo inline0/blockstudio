@@ -78,6 +78,7 @@ export async function HowItWorks() {
     <Section
       title="Three files. One block."
       description="Define your schema, write a template, add styles. Blockstudio handles everything else."
+      border={false}
     >
       <div className="flex flex-col gap-4 px-6 pb-4 lg:px-10">
         {steps.map((step) => (
