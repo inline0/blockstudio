@@ -52,12 +52,9 @@ export function FieldTypes() {
       title="26 field types"
       description="Everything you need to build rich editing experiences, from simple text inputs to nested repeaters."
     >
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 border-t">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8 px-6 pb-4 lg:px-10">
         {categories.map((category) => (
-          <div
-            key={category.name}
-            className="flex flex-col gap-y-3 py-8 px-6 border-b sm:border-r sm:[&:nth-child(2n)]:border-r-0 lg:[&:nth-child(2n)]:border-r lg:[&:nth-child(4n)]:border-r-0 lg:border-b-0"
-          >
+          <div key={category.name} className="flex flex-col gap-y-3">
             <h3 className="text-sm font-medium text-fd-muted-foreground uppercase tracking-wider">
               {category.name}
             </h3>

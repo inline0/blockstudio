@@ -39,8 +39,8 @@ export async function AssetProcessing() {
       title="No build tools. Ever."
       description="SCSS compilation, ES modules, and scoped styles — all by naming convention."
     >
-      <div className="grid grid-cols-1 lg:grid-cols-2 border-t">
-        <div className="py-8 px-6 border-b lg:border-b-0 lg:border-r">
+      <div className="grid grid-cols-1 lg:grid-cols-2 px-6 lg:px-10 gap-8">
+        <div>
           <Tabs items={["ES Modules", "SCSS"]}>
             <Tab>
               <CodeBlock code={esModules.code} lang={esModules.lang} />
@@ -50,7 +50,7 @@ export async function AssetProcessing() {
             </Tab>
           </Tabs>
         </div>
-        <div className="py-8 px-6">
+        <div>
           <h3 className="text-sm font-medium text-fd-muted-foreground uppercase tracking-wider mb-4">
             Naming Convention
           </h3>

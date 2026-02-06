@@ -63,8 +63,8 @@ export async function TemplateLanguages() {
       title="Your language. Your templates."
       description="Write block templates in PHP, Twig, or Blade. Same variables, same output."
     >
-      <div className="grid grid-cols-1 lg:grid-cols-3 border-t">
-        <div className="py-8 px-6 border-b lg:border-b-0 lg:border-r">
+      <div className="grid grid-cols-1 lg:grid-cols-3 px-6 lg:px-10 gap-8">
+        <div>
           <h3 className="text-sm font-medium text-fd-muted-foreground uppercase tracking-wider mb-4">
             Template Variables
           </h3>
@@ -81,7 +81,7 @@ export async function TemplateLanguages() {
             ))}
           </div>
         </div>
-        <div className="lg:col-span-2 py-8 px-6">
+        <div className="lg:col-span-2">
           <Tabs items={["PHP", "Twig", "Blade"]}>
             <Tab>
               <CodeBlock code={templates.php.code} lang={templates.php.lang} />

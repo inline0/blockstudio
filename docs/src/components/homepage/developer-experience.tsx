@@ -6,45 +6,75 @@ import {
   FileJson,
   Share2,
   Sparkles,
+  Layers,
+  Shield,
+  Zap,
 } from "lucide-react";
 import { Section } from "./section";
 
 const features = [
   {
     icon: Database,
-    title: "Storage",
-    description: "Post meta, options, or custom tables. Multi-storage for a single field.",
+    title: "Flexible Storage",
+    description:
+      "Store field values in post meta, options, or custom tables. Assign multiple storage locations to a single field for cross-context access.",
     href: "/docs/storage",
   },
   {
     icon: GitBranch,
     title: "Conditional Logic",
-    description: "10 operators, nested conditions, and global visibility rules.",
+    description:
+      "Show and hide fields based on other field values. 10 comparison operators, nested conditions, and global visibility rules.",
     href: "/docs/attributes/conditional-logic",
   },
   {
     icon: SlidersHorizontal,
-    title: "50+ Hooks",
-    description: "PHP and JavaScript filters for every stage of block rendering.",
+    title: "50+ PHP & JS Hooks",
+    description:
+      "Filters and actions for every stage — block registration, field rendering, asset loading, and template output. Full control without forking.",
     href: "/docs/hooks/php",
   },
   {
     icon: FileJson,
-    title: "JSON Schema",
-    description: "Full IDE autocomplete and validation for all configuration files.",
+    title: "JSON Schema Validation",
+    description:
+      "Every configuration file is backed by a JSON Schema. Get instant autocomplete, inline docs, and validation in VS Code and other editors.",
     href: "/docs/schema",
   },
   {
     icon: Share2,
     title: "Context API",
-    description: "Share data between parent and child blocks without prop drilling.",
+    description:
+      "Share data between parent and child blocks without prop drilling. Define providers and consumers in JSON, access values in any template.",
     href: "/docs/context",
   },
   {
     icon: Sparkles,
     title: "AI Integration",
-    description: "Auto-generated context files for AI coding assistants.",
+    description:
+      "Auto-generated context files describe your entire block library. Works with Cursor, Claude, and other AI coding assistants out of the box.",
     href: "/docs/ai",
+  },
+  {
+    icon: Layers,
+    title: "Nested InnerBlocks",
+    description:
+      "Support multiple InnerBlocks zones, template locking, and allowed block restrictions. Compose complex layouts from simple blocks.",
+    href: "/docs/blocks/inner-blocks",
+  },
+  {
+    icon: Shield,
+    title: "WordPress Native",
+    description:
+      "Blocks are registered through the WordPress block API. No proprietary runtime — your blocks work with any theme, plugin, or page builder.",
+    href: "/docs/getting-started",
+  },
+  {
+    icon: Zap,
+    title: "Zero Config Assets",
+    description:
+      "SCSS compilation, ES module bundling, and automatic minification. Name your files, Blockstudio handles the rest. No webpack, no Vite.",
+    href: "/docs/assets",
   },
 ];
 
@@ -52,22 +82,24 @@ export function DeveloperExperience() {
   return (
     <Section
       title="Built for developers"
-      description="Power features that make complex blocks simple."
+      description="Power features that make complex blocks simple to build and maintain."
     >
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 border-t">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8 sm:gap-10 px-6 pb-4 lg:px-10">
         {features.map((feature) => (
           <Link
             key={feature.title}
             href={feature.href}
-            className="flex flex-col gap-y-2 items-start py-8 px-6 transition-colors hover:bg-fd-secondary/20 border-b sm:border-r sm:[&:nth-child(2n)]:border-r-0 lg:[&:nth-child(2n)]:border-r lg:[&:nth-child(3n)]:border-r-0 lg:[&:nth-last-child(-n+3)]:border-b-0 sm:[&:nth-last-child(-n+2)]:border-b-0 lg:[&:nth-last-child(-n+2)]:border-b sm:[&:last-child]:border-b-0"
+            className="group flex flex-col gap-2 text-sm/7"
           >
-            <div className="bg-fd-primary/10 p-2 rounded-lg mb-1">
-              <feature.icon className="h-5 w-5 text-fd-primary" />
+            <div className="flex items-start gap-3 text-fd-foreground">
+              <div className="flex items-center h-[1lh]">
+                <feature.icon className="h-3.5 w-3.5 text-fd-primary" />
+              </div>
+              <h3 className="font-semibold group-hover:text-fd-primary transition-colors">
+                {feature.title}
+              </h3>
             </div>
-            <h3 className="text-base font-medium text-fd-foreground">
-              {feature.title}
-            </h3>
-            <p className="text-sm text-fd-muted-foreground">
+            <p className="text-fd-muted-foreground text-pretty">
               {feature.description}
             </p>
           </Link>

@@ -1,11 +1,17 @@
+import Link from "next/link";
 import { CodeBlock } from "onedocs";
 import { Files, Folder, File } from "onedocs/components";
+import { Blocks, FileText, LayoutGrid, Puzzle } from "lucide-react";
 import { Section } from "./section";
+import { Placeholder } from "./placeholder";
 
 const items = [
   {
+    icon: Blocks,
     title: "Blocks",
-    description: "JSON schema + template file. No JavaScript required.",
+    description:
+      "Custom blocks from JSON + a template file. Define fields, write markup, ship. No JavaScript, no build step.",
+    href: "/docs/blocks",
     tree: (
       <Files>
         <Folder name="hero" defaultOpen>
@@ -17,8 +23,11 @@ const items = [
     ),
   },
   {
+    icon: FileText,
     title: "Pages",
-    description: "File-based WordPress pages that sync to native blocks.",
+    description:
+      "Full WordPress pages as file-based templates. Define metadata in JSON, write the page in PHP. Pages auto-sync to the editor as native blocks.",
+    href: "/docs/pages",
     tree: (
       <Files>
         <Folder name="pages" defaultOpen>
@@ -27,18 +36,14 @@ const items = [
         </Folder>
       </Files>
     ),
-    code: {
-      lang: "json",
-      code: `{
-  "title": "About",
-  "slug": "about",
-  "status": "publish"
-}`,
-    },
+    placeholder: "WordPress pages list showing synced template page",
   },
   {
+    icon: LayoutGrid,
     title: "Patterns",
-    description: "Template-based patterns registered automatically.",
+    description:
+      "Reusable block patterns from template files. Automatically registered in the block inserter, always in sync with your code.",
+    href: "/docs/patterns",
     tree: (
       <Files>
         <Folder name="patterns" defaultOpen>
@@ -47,17 +52,14 @@ const items = [
         </Folder>
       </Files>
     ),
-    code: {
-      lang: "json",
-      code: `{
-  "title": "Pricing Table",
-  "categories": ["content"]
-}`,
-    },
+    placeholder: "Block inserter showing registered pattern",
   },
   {
+    icon: Puzzle,
     title: "Extensions",
-    description: "Add fields to any block with a single JSON file.",
+    description:
+      "Add custom fields to any block — core, third-party, or your own. Use wildcards to extend entire namespaces at once.",
+    href: "/docs/extensions",
     code: {
       lang: "json",
       code: `{
@@ -80,27 +82,36 @@ export async function BeyondBlocks() {
   return (
     <Section
       title="Beyond blocks"
-      description="A complete framework for blocks, pages, patterns, and extensions."
+      description="A complete framework for blocks, pages, patterns, and extensions — all from template files."
     >
-      <div className="grid grid-cols-1 sm:grid-cols-2 border-t">
+      <div className="grid grid-cols-1 sm:grid-cols-2 border-y">
         {items.map((item) => (
-          <div
+          <Link
             key={item.title}
-            className="flex flex-col gap-y-4 py-8 px-6 border-b sm:border-r sm:[&:nth-child(2n)]:border-r-0 sm:[&:nth-last-child(-n+2)]:border-b-0 [&:last-child]:border-b-0"
+            href={item.href}
+            className="group flex flex-col gap-y-4 py-8 px-6 border-b transition-colors hover:bg-fd-secondary/20 sm:border-r sm:[&:nth-child(2n)]:border-r-0 sm:[&:nth-last-child(-n+2)]:border-b-0 [&:last-child]:border-b-0"
           >
             <div>
-              <h3 className="text-base font-medium text-fd-foreground">
-                {item.title}
-              </h3>
-              <p className="mt-1 text-sm text-fd-muted-foreground">
+              <div className="flex items-center gap-3 mb-2">
+                <div className="bg-fd-primary/10 p-1.5 rounded-lg">
+                  <item.icon className="h-4 w-4 text-fd-primary" />
+                </div>
+                <h3 className="text-base font-medium text-fd-foreground">
+                  {item.title}
+                </h3>
+              </div>
+              <p className="text-sm text-fd-muted-foreground text-pretty">
                 {item.description}
               </p>
             </div>
             {item.tree}
+            {item.placeholder && (
+              <Placeholder label={item.placeholder} aspect="wide" />
+            )}
             {item.code && (
               <CodeBlock code={item.code.code} lang={item.code.lang} />
             )}
-          </div>
+          </Link>
         ))}
       </div>
     </Section>
