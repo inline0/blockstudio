@@ -1,0 +1,53 @@
+---
+title: SEO
+description: How Blockstudio integrates with SEO plugins for real-time content analysis.
+---
+
+# SEO
+
+Blockstudio blocks are dynamic — the `save` function stores attribute data but no visible text in `post_content`. This means SEO plugins that analyze editor content won't see text from Blockstudio fields by default.
+
+Blockstudio automatically detects supported SEO plugins and injects field content into their analysis pipeline. No configuration is needed.
+
+<Callout type="info">
+  Frontend SEO is unaffected. Dynamic blocks render via `render_callback`, so search engine crawlers and server-side meta generation always see the full content.
+</Callout>
+
+## Supported Plugins
+
+### Yoast SEO
+
+Blockstudio registers as a Yoast plugin and uses the `registerModification` API to append field content to the analyzed text. Changes are detected via `wp.data.subscribe` with a 1-second debounce, and Yoast's analysis refreshes automatically when content changes.
+
+### Rank Math
+
+Blockstudio hooks into the `rank_math_content` filter via `wp.hooks.addFilter` to append field content. Content updates follow the same debounced change detection as Yoast.
+
+### SEOPress
+
+SEOPress performs content analysis by rendering the actual frontend page via `wp_remote_get`. Since Blockstudio blocks render server-side through `render_callback`, SEOPress sees the full rendered output automatically. No integration code is needed.
+
+## Other Plugins
+
+**All in One SEO (AIOSEO)** runs its analysis in a Web Worker with no public API for third-party content injection.
+
+**The SEO Framework** and **Slim SEO** focus on meta tag management and do not perform content analysis scoring.
+
+## Analyzed Content
+
+The integration extracts text from the following field types:
+
+| Field Type | Extraction |
+|---|---|
+| `text` | Plain text value |
+| `textarea` | Plain text value |
+| `richtext` | HTML stripped to plain text |
+| `wysiwyg` | HTML stripped to plain text |
+| `link` | The `title` property |
+| `repeater` | Recursively extracts from nested fields |
+
+All other field types (number, color, toggle, files, etc.) are excluded from analysis.
+
+## Disabled Fields
+
+Fields listed in the block's `disabled` array are excluded from SEO analysis, matching frontend rendering behavior. When a field is [disabled](/docs/attributes/disabling), it is neither rendered on the frontend nor included in the SEO content.

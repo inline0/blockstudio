@@ -9,6 +9,7 @@ import { Fields } from '@/blocks/components/fields';
 import '@/blocks/filters/custom-class';
 import '@/blocks/filters/default';
 import '@/blocks/filters/extensions';
+import '@/blocks/integrations/seo';
 import { mediaModal } from '@/blocks/functions/media-modal';
 import { store } from '@/blocks/store';
 import { selectors } from '@/blocks/store/selectors';

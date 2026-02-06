@@ -1,5 +1,5 @@
 import { defineConfig } from "onedocs/config";
-import { Blocks, Palette, Code, Zap, Settings, FileJson, Cpu, Bot } from "lucide-react";
+import { Blocks, FileText, LayoutGrid, Puzzle, FormInput, Cpu, FileJson, Code } from "lucide-react";
 
 const iconClass = "h-5 w-5 text-fd-primary";
 
@@ -23,44 +23,44 @@ export default defineConfig({
     },
     features: [
       {
-        title: "Block Builder",
-        description: "Create custom blocks with a simple JSON schema and Twig templates.",
+        title: "Blocks",
+        description: "Create custom blocks with JSON and PHP, Twig, or Blade templates. 30+ field types, zero JavaScript.",
         icon: <Blocks className={iconClass} />,
       },
       {
-        title: "Tailwind Integration",
-        description: "Built-in Tailwind CSS support with autocomplete and custom classes.",
-        icon: <Palette className={iconClass} />,
+        title: "Pages",
+        description: "Build full WordPress pages as file-based templates that automatically sync to native blocks.",
+        icon: <FileText className={iconClass} />,
       },
       {
-        title: "Developer First",
-        description: "Full TypeScript support and modern development experience.",
-        icon: <Code className={iconClass} />,
+        title: "Patterns",
+        description: "Define reusable block patterns as template files, registered automatically in the inserter.",
+        icon: <LayoutGrid className={iconClass} />,
       },
       {
-        title: "Fast Workflow",
-        description: "Hot reload, live preview, and instant feedback during development.",
-        icon: <Zap className={iconClass} />,
+        title: "Extensions",
+        description: "Add custom fields to any block — core, third-party, or your own — with a single JSON file.",
+        icon: <Puzzle className={iconClass} />,
       },
       {
-        title: "Flexible Config",
-        description: "Configure blocks, fields, and extensions with JSON schemas.",
-        icon: <Settings className={iconClass} />,
-      },
-      {
-        title: "JSON Schema",
-        description: "Full schema validation and autocomplete in your IDE.",
-        icon: <FileJson className={iconClass} />,
+        title: "Field Types",
+        description: "30+ built-in types including repeaters, conditional logic, color pickers, code editors, and media.",
+        icon: <FormInput className={iconClass} />,
       },
       {
         title: "Asset Processing",
-        description: "Built-in SCSS compilation, ES modules, and automatic minification.",
+        description: "SCSS compilation, ES modules, scoped styles, and automatic minification — all by naming convention.",
         icon: <Cpu className={iconClass} />,
       },
       {
-        title: "AI Integration",
-        description: "Generate context files for AI coding assistants like Cursor.",
-        icon: <Bot className={iconClass} />,
+        title: "JSON Schema",
+        description: "Full IDE autocomplete and validation for block, extension, and settings configurations.",
+        icon: <FileJson className={iconClass} />,
+      },
+      {
+        title: "Templating",
+        description: "Write templates in PHP, Twig, or Blade with scoped assets, nested InnerBlocks, and template variables.",
+        icon: <Code className={iconClass} />,
       },
     ],
   },
