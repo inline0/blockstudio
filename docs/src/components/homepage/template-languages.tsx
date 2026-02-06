@@ -54,51 +54,47 @@ const templates = {
 export async function TemplateLanguages() {
   return (
     <Section
-      title="Your language. Your templates."
-      description="Block templates work with PHP, Twig (via Timber), or Blade (via Sage/Acorn). All three share the same variables and components — pick the one your team already uses."
+      title="Write templates in PHP, Twig, or Blade"
+      description="Use the templating language you already know. All three share the same variables, components, and features — no JavaScript required."
     >
       <div className="px-6 lg:px-10">
         <Feature
-          headline="Template variables & components"
+          headline="Shorthand variables & built-in components"
           description={
             <>
               <p>
-                Every block template gets access to shorthand variables:{" "}
+                Access attributes via{" "}
                 <code className="text-fd-foreground font-mono text-sm">
                   $a
-                </code>{" "}
-                for attributes,{" "}
+                </code>
+                , block data via{" "}
                 <code className="text-fd-foreground font-mono text-sm">
                   $b
-                </code>{" "}
-                for block instance data,{" "}
+                </code>
+                , and parent context via{" "}
                 <code className="text-fd-foreground font-mono text-sm">
                   $c
-                </code>{" "}
-                for parent context, and boolean flags like{" "}
+                </code>
+                . Use flags like{" "}
                 <code className="text-fd-foreground font-mono text-sm">
                   $isEditor
                 </code>{" "}
-                and{" "}
-                <code className="text-fd-foreground font-mono text-sm">
-                  $isPreview
-                </code>
-                .
+                to tailor output per environment.
               </p>
               <p>
-                JSX-like components work directly in your templates.{" "}
+                Use features like{" "}
                 <code className="text-fd-foreground font-mono text-sm">
                   {"<InnerBlocks />"}
-                </code>{" "}
-                renders a nested blocks zone,{" "}
+                </code>
+                ,{" "}
                 <code className="text-fd-foreground font-mono text-sm">
                   {"<RichText />"}
-                </code>{" "}
-                adds inline-editable text on the editor canvas, and{" "}
+                </code>
+                , and{" "}
                 <code className="text-fd-foreground font-mono text-sm">
                   {"<MediaPlaceholder />"}
                 </code>{" "}
-                creates drag-and-drop upload areas.
+                directly in your templates — without writing any JavaScript.
               </p>
             </>
           }
