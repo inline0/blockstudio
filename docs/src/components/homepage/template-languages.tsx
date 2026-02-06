@@ -1,7 +1,7 @@
-import { CodeBlock, Button } from "onedocs";
-import { Tabs, Tab } from "onedocs/components";
+import { Button } from "onedocs";
 import { Section } from "./section";
 import { Feature } from "./feature";
+import { CodeTabs } from "./code-tabs";
 
 const templates = {
   php: {
@@ -108,26 +108,13 @@ export async function TemplateLanguages() {
             </Button>
           }
           demo={
-            <Tabs items={["PHP", "Twig", "Blade"]}>
-              <Tab>
-                <CodeBlock
-                  code={templates.php.code}
-                  lang={templates.php.lang}
-                />
-              </Tab>
-              <Tab>
-                <CodeBlock
-                  code={templates.twig.code}
-                  lang={templates.twig.lang}
-                />
-              </Tab>
-              <Tab>
-                <CodeBlock
-                  code={templates.blade.code}
-                  lang={templates.blade.lang}
-                />
-              </Tab>
-            </Tabs>
+            <CodeTabs
+              items={[
+                { label: "PHP", ...templates.php },
+                { label: "Twig", ...templates.twig },
+                { label: "Blade", ...templates.blade },
+              ]}
+            />
           }
         />
       </div>
