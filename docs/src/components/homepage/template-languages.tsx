@@ -15,7 +15,7 @@ const templates = {
     </a>
   <?php endif; ?>
 
-  <?= $innerBlocks ?>
+  <InnerBlocks />
 </section>`,
   },
   twig: {
@@ -30,7 +30,7 @@ const templates = {
     </a>
   {% endif %}
 
-  {{ innerBlocks }}
+  <InnerBlocks />
 </section>`,
   },
   blade: {
@@ -45,7 +45,7 @@ const templates = {
     </a>
   @endif
 
-  {!! $innerBlocks !!}
+  <InnerBlocks />
 </section>`,
   },
 };
@@ -54,7 +54,10 @@ const variables = [
   { name: "$a", description: "Block attributes" },
   { name: "$b", description: "Block instance data" },
   { name: "$isEditor", description: "True in the editor" },
-  { name: "$innerBlocks", description: "Rendered inner blocks" },
+  {
+    name: "<InnerBlocks />",
+    description: "Nested blocks component",
+  },
 ];
 
 export async function TemplateLanguages() {

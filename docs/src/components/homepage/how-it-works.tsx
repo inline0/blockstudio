@@ -36,7 +36,7 @@ const steps = [
     <a href="/contact">Get Started</a>
   <?php endif; ?>
 
-  <?= $innerBlocks ?>
+  <InnerBlocks />
 </section>`,
   },
   {
@@ -63,8 +63,8 @@ const steps = [
 export async function HowItWorks() {
   return (
     <Section
-      title="Three files. One block."
-      description="Define your schema, write a template, add styles. Blockstudio handles everything else."
+      title="JSON + template. That's it."
+      description="Define your fields in block.json, render them in a PHP template. Add a stylesheet if you want. No JavaScript, no build step."
       border={false}
     >
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 px-6 lg:px-10">

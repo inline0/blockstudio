@@ -3,66 +3,68 @@ import { CodeBlock } from "onedocs";
 import { Files, Folder, File } from "onedocs/components";
 import { Section } from "./section";
 
-const templateCode = `<section class="pricing">
-  <div class="pricing__grid">
-    <?php foreach ($a['plans'] as $plan): ?>
-      <div class="pricing__card">
-        <h3><?= $plan['name'] ?></h3>
-        <p class="pricing__price"><?= $plan['price'] ?></p>
-        <a href="<?= $plan['url'] ?>">Get Started</a>
-      </div>
-    <?php endforeach; ?>
-  </div>
-</section>`;
+const templateCode = `<block name="core/columns">
+  <block name="core/column">
+    <h3>Starter</h3>
+    <p>For small teams getting started.</p>
+    <block name="core/button" url="/signup">
+      Get Started
+    </block>
+  </block>
+  <block name="core/column">
+    <h3>Pro</h3>
+    <p>For growing teams that need more.</p>
+    <block name="core/button" url="/signup?plan=pro">
+      Go Pro
+    </block>
+  </block>
+</block>`;
 
 const jsonCode = `{
+  "name": "pricing",
   "title": "Pricing Table",
   "categories": ["content"],
-  "blockstudio": {
-    "attributes": {
-      "plans": {
-        "type": "repeater",
-        "fields": {
-          "name": { "type": "text" },
-          "price": { "type": "text" },
-          "url": { "type": "text" }
-        }
-      }
-    }
-  }
+  "keywords": ["pricing", "plans"]
 }`;
 
 export async function Patterns() {
   return (
     <Section
       title="Template-based patterns"
-      description="Reusable block patterns defined as template files. Registered automatically in the block inserter, always in sync with your code."
+      description="Define reusable block patterns as template files. Same HTML-to-block syntax as pages, registered automatically in the block inserter."
     >
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 px-6 lg:px-10">
         <div className="flex flex-col gap-4">
           <Files>
             <Folder name="patterns" defaultOpen>
-              <File name="pricing.php" />
-              <File name="pricing.json" />
-              <File name="testimonials.php" />
-              <File name="testimonials.json" />
+              <Folder name="pricing" defaultOpen>
+                <File name="pattern.json" />
+                <File name="index.php" />
+              </Folder>
+              <Folder name="testimonials">
+                <File name="pattern.json" />
+                <File name="index.php" />
+              </Folder>
             </Folder>
           </Files>
           <CodeBlock code={jsonCode} lang="json" />
         </div>
         <div className="flex flex-col gap-4">
-          <CodeBlock code={templateCode} lang="php" />
+          <CodeBlock code={templateCode} lang="html" />
           <div className="flex flex-col gap-3 text-sm text-fd-muted-foreground">
             <p>
-              Patterns work like blocks — JSON schema for fields, template
-              file for markup. They show up in the block inserter and can
-              be inserted into any page or post.
+              Patterns use the same HTML parser as pages — standard HTML
+              maps to core blocks, and the{" "}
+              <code className="text-fd-foreground font-mono">
+                &lt;block&gt;
+              </code>{" "}
+              tag handles everything else. Patterns are registered in memory
+              and show up in the inserter immediately.
             </p>
             <p>
-              Unlike WordPress&apos;s built-in pattern registration, Blockstudio
-              patterns support field types, conditional logic, and
-              repeaters. Build complex, editable patterns without
-              hardcoding content.
+              Unlike pages, patterns don&apos;t sync to the database. They&apos;re
+              inserted as editable block content, so users can customize
+              each instance independently.
             </p>
             <Link
               href="/docs/patterns"
