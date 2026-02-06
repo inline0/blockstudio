@@ -26,19 +26,20 @@ Blockstudio gives you the ultimate developer experience for creating custom, pro
 * New: blockEditingMode support for file-based pages with page-level defaults and per-element overrides
 * New: file-based patterns - create WordPress block patterns from file templates with automatic HTML to block parsing
 * New: custom fields - reusable field definitions via file system and PHP filter
+* Enhancement: apiVersion 3 support — blocks now render correctly in the iframed editor (site editor, responsive previews)
 * Enhancement: all PHP hooks now use snake_case naming (old camelCase names still supported)
 * Enhancement: field switch is now off by default and uses a visible eye icon with disabled overlay
 * Fix: bs_render_block() no longer triggers a warning from WP_Block_Supports when using useBlockProps
-* Deprecation: Admin Area removed
-* Deprecation: License Key removed
-* Deprecation: Code Editor removed
-* Deprecation: Edit accordion in block inspector removed
 * Fix: code field undo/redo now works independently without triggering Gutenberg undo
 * Fix: JavaScript syntax highlighting now works without requiring script tags
 * Fix: populate feature now works with taxonomies registered by other plugins
 * Fix: conditional fields not respecting default values on first load
 * Fix: optionsPopulate null error in WPML contexts
 * Fix: dollar signs stripped from <RichText /> content on frontend
+* Deprecation: Admin Area removed
+* Deprecation: License Key removed
+* Deprecation: Code Editor removed
+* Deprecation: Edit accordion in block inspector removed
 
 = 6.0.2 (18.08.2025) =
 * Enhancement: also preload blocks inside site editor

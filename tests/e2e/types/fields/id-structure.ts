@@ -1,4 +1,4 @@
-import { Page } from '@playwright/test';
+import { Page, Frame } from '@playwright/test';
 import { saveAndReload, testType, text } from '../../utils/playwright-utils';
 
 testType(
@@ -8,16 +8,16 @@ testType(
     return [
       {
         description: 'check prefixed attribute IDs',
-        testFunction: async (page: Page) => {
-          await text(page, '"hero_heading":"Default Heading"');
-          await text(page, '"hero_description":"Default description."');
-          await text(page, '"hero_enabled":false');
+        testFunction: async (_page: Page, canvas: Frame) => {
+          await text(canvas, '"hero_heading":"Default Heading"');
+          await text(canvas, '"hero_description":"Default description."');
+          await text(canvas, '"hero_enabled":false');
         },
       },
       {
         description: 'change prefixed field value',
-        testFunction: async (page: Page) => {
-          await page.click('[data-type="blockstudio/type-fields-id-structure"]');
+        testFunction: async (page: Page, canvas: Frame) => {
+          await canvas.click('[data-type="blockstudio/type-fields-id-structure"]');
           const input = page.locator('.blockstudio-fields__field--text input').first();
           await input.fill('Prefixed Heading');
           await saveAndReload(page);
@@ -25,9 +25,9 @@ testType(
       },
       {
         description: 'verify prefixed field persists',
-        testFunction: async (page: Page) => {
-          await page.click('[data-type="blockstudio/type-fields-id-structure"]');
-          await text(page, '"hero_heading":"Prefixed Heading"');
+        testFunction: async (_page: Page, canvas: Frame) => {
+          await canvas.click('[data-type="blockstudio/type-fields-id-structure"]');
+          await text(canvas, '"hero_heading":"Prefixed Heading"');
         },
       },
     ];

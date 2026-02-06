@@ -1,8 +1,9 @@
-import { Page, test } from '@playwright/test';
+import { Frame, Page, test } from '@playwright/test';
 import {
 	addBlock,
 	checkForLeftoverAttributes,
 	count,
+	getEditorCanvas,
 	getSharedPage,
 	openSidebar,
 	resetPageState,
@@ -10,26 +11,28 @@ import {
 } from '../../../utils/playwright-utils';
 
 let page: Page;
+let canvas: Frame;
 
 test.describe.configure({ mode: 'serial' });
 
 test.beforeAll(async ({ browser }) => {
 	page = await getSharedPage(browser);
 	await resetPageState(page);
+	canvas = await getEditorCanvas(page);
 });
 
 test.describe('component-innerblocks-bare', () => {
 	test('add block', async () => {
 		await addBlock(page, 'component-innerblocks-bare');
-		await count(page, '.is-root-container > .wp-block', 1);
+		await count(canvas, '.is-root-container > .wp-block', 1);
 	});
 
 	test('classes in editor', async () => {
-		await count(page, '.blockstudio-test__block.test.test2.test3', 1);
+		await count(canvas, '.blockstudio-test__block.test.test2.test3', 1);
 	});
 
 	test('add content', async () => {
-		await page.click('[aria-label="Block: Heading"]');
+		await canvas.click('[aria-label="Block: Heading"]');
 		await page.keyboard.type('TEST$');
 		await page.keyboard.press('Enter');
 		await page.keyboard.type('TEST$');

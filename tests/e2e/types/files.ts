@@ -1,18 +1,16 @@
-import { Page } from '@playwright/test';
+import { Page, Frame } from '@playwright/test';
 import { countText, delay, testType, text } from '../utils/playwright-utils';
 
 testType('files', false, () => {
   return Array.from({ length: 6 }).map((_, index) => {
     return {
       description: `select files ${index}`,
-      testFunction: async (page: Page) => {
+      testFunction: async (page: Page, canvas: Frame) => {
         async function clickFirst() {
           await page
             .locator('.blockstudio-fields__field--files')
             .nth(index)
-            .locator(
-              '[data-rfd-draggable-context-id] .blockstudio-fields__field-toggle'
-            )
+            .locator('.blockstudio-fields__action')
             .first()
             .click({
               force: true,
@@ -43,13 +41,13 @@ testType('files', false, () => {
               .locator('select')
               .first()
               .selectOption({ index: 0 });
-            await text(page, '"filesMultiple__size":"thumbnail"');
-            await countText(page, '[{"ID":1604', 1);
+            await text(canvas, '"filesMultiple__size":"thumbnail"');
+            await countText(canvas, '[{"ID":1604', 1);
           } else if (index === 1) {
-            await countText(page, '[1604]', 1);
+            await countText(canvas, '[1604]', 1);
           } else {
             await countText(
-              page,
+              canvas,
               '["http:\\/\\/localhost:8888\\/wp-content\\/uploads\\/',
               1
             );
@@ -61,11 +59,11 @@ testType('files', false, () => {
           await delay(1000);
           await page.click('.media-frame-toolbar button:visible');
           if (index === 0) {
-            await countText(page, '{"ID":1604', 1);
+            await countText(canvas, '{"ID":1604', 1);
             await clickFirst();
-            await countText(page, '{"ID":1604', 0);
+            await countText(canvas, '{"ID":1604', 0);
             await clickFirst();
-            await countText(page, '{"ID":1604', 1);
+            await countText(canvas, '{"ID":1604', 1);
           } else if (index === 1) {
             await page
               .locator('.blockstudio-fields__field--files')
@@ -73,19 +71,19 @@ testType('files', false, () => {
               .locator('[data-rfd-drag-handle-draggable-id="1604"]')
               .focus();
             await page.keyboard.press('ArrowDown');
-            await countText(page, '[1605,1604]', 1);
+            await countText(canvas, '[1605,1604]', 1);
             await page.keyboard.press('ArrowUp');
-            await countText(page, '[1604,1605]', 1);
+            await countText(canvas, '[1604,1605]', 1);
             await clickFirst();
-            await countText(page, '[1604,1605]', 0);
+            await countText(canvas, '[1604,1605]', 0);
             await clickFirst();
-            await countText(page, '[1604,1605]', 1);
+            await countText(canvas, '[1604,1605]', 1);
           } else {
-            await countText(page, 'blockstudioEDDRetina.png","http:', 1);
+            await countText(canvas, 'blockstudioEDDRetina.png","http:', 1);
             await clickFirst();
-            await countText(page, 'blockstudioEDDRetina.png","http:', 0);
+            await countText(canvas, 'blockstudioEDDRetina.png","http:', 0);
             await clickFirst();
-            await countText(page, 'blockstudioEDDRetina.png","http:', 1);
+            await countText(canvas, 'blockstudioEDDRetina.png","http:', 1);
           }
           await page.locator(`text=Open Media Library`).nth(index).click();
           await page.locator('#menu-item-browse:visible').click();
@@ -94,11 +92,11 @@ testType('files', false, () => {
           await delay(1000);
           await page.click('.media-frame-toolbar button:visible');
           if (index === 0) {
-            await countText(page, '{"ID":8', 1);
+            await countText(canvas, '{"ID":8', 1);
           } else if (index === 1) {
-            await countText(page, '8]', 1);
+            await countText(canvas, '8]', 1);
           } else {
-            await countText(page, 'gutenbergEdit.mp4"', 1);
+            await countText(canvas, 'gutenbergEdit.mp4"', 1);
           }
           await delMedia(0);
           await page.click('.block-editor-block-card__title');
@@ -112,23 +110,23 @@ testType('files', false, () => {
           await delay(1000);
           await page.click('.media-frame-toolbar button:visible');
           if (index === 3) {
-            await countText(page, '"filesSingle":{"ID":1604', 1);
+            await countText(canvas, '"filesSingle":{"ID":1604', 1);
             await clickFirst();
-            await countText(page, '"filesSingle":false', 1);
+            await countText(canvas, '"filesSingle":false', 1);
             await clickFirst();
-            await countText(page, '"filesSingle":{"ID":1604', 1);
+            await countText(canvas, '"filesSingle":{"ID":1604', 1);
           } else if (index === 4) {
-            await countText(page, '"filesSingleId":1604', 1);
+            await countText(canvas, '"filesSingleId":1604', 1);
             await clickFirst();
-            await countText(page, '"filesSingleId":false', 1);
+            await countText(canvas, '"filesSingleId":false', 1);
             await clickFirst();
-            await countText(page, '"filesSingleId":1604', 1);
+            await countText(canvas, '"filesSingleId":1604', 1);
           } else {
-            await countText(page, '"filesSingleUrl":"http:', 1);
+            await countText(canvas, '"filesSingleUrl":"http:', 1);
             await clickFirst();
-            await countText(page, '"filesSingleUrl":false', 1);
+            await countText(canvas, '"filesSingleUrl":false', 1);
             await clickFirst();
-            await countText(page, '"filesSingleUrl":"http:', 1);
+            await countText(canvas, '"filesSingleUrl":"http:', 1);
           }
           await delMedia(0);
         }

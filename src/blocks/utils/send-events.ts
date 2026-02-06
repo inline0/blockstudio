@@ -39,7 +39,16 @@ export const sendEvents = () => {
       if (isArray(refreshOn) && refreshOn?.includes('save')) {
         setTimeout(() => {
           const RefreshEvent = new CustomEvent(`blockstudio/${item}/refresh`);
-          return document.dispatchEvent(RefreshEvent);
+          document.dispatchEvent(RefreshEvent);
+
+          const iframe = document.querySelector(
+            'iframe[name="editor-canvas"]',
+          ) as HTMLIFrameElement | null;
+          if (iframe?.contentDocument) {
+            iframe.contentDocument.dispatchEvent(
+              new CustomEvent(`blockstudio/${item}/refresh`),
+            );
+          }
         }, 1000);
       }
     }

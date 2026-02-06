@@ -71,11 +71,27 @@ class Assets {
 	public function __construct() {
 		add_action( 'template_redirect', array( $this, 'maybe_buffer_output' ), 3 );
 		add_filter( 'blockstudio/buffer/output', array( $this, 'parse_output' ), 1000000 );
-		add_action(
-			'admin_footer',
-			function () {
-				$this->get_assets();
-			}
+		add_filter(
+			'block_editor_settings_all',
+			function ( $settings ) {
+				ob_start();
+				self::get_assets( 'editor' );
+				$output = ob_get_clean();
+
+				if ( '' === $output || ! isset( $settings['__unstableResolvedAssets'] ) ) {
+					return $settings;
+				}
+
+				preg_match_all( '/<script\b[^>]*>.*?<\/script>/is', $output, $script_matches );
+				$scripts = implode( "\n", $script_matches[0] );
+				$styles  = trim( preg_replace( '/<script\b[^>]*>.*?<\/script>/is', '', $output ) );
+
+				$settings['__unstableResolvedAssets']['styles']  .= $styles;
+				$settings['__unstableResolvedAssets']['scripts'] .= $scripts;
+
+				return $settings;
+			},
+			PHP_INT_MAX
 		);
 		add_action(
 			'customize_preview_init',

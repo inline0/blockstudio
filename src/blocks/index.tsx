@@ -46,7 +46,7 @@ Object.values(blocks).forEach((block: BlockstudioBlock) => {
           },
         }
       : {}),
-    apiVersion: 2,
+    apiVersion: 3,
     providesContext: { [block.name]: 'blockstudio' },
     transforms: transforms(
       block,

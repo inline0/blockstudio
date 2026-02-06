@@ -1,11 +1,17 @@
-import { Page } from '@playwright/test';
-import { count, delay, save, testType } from '../utils/playwright-utils';
+import { Page, Frame } from '@playwright/test';
+import {
+  count,
+  delay,
+  getEditorCanvas,
+  save,
+  testType,
+} from '../utils/playwright-utils';
 
 testType('attributes', false, () => {
   return [
     {
       description: 'add attributes',
-      testFunction: async (page: Page) => {
+      testFunction: async (page: Page, canvas: Frame) => {
         await page.click('text=Add Attribute');
         await page
           .locator('[placeholder="Attribute"]')
@@ -52,13 +58,13 @@ testType('attributes', false, () => {
         await page.click('.media-button-select');
         await count(page, '.blockstudio-fields__field--files-toggle', 1);
 
-        await count(page, '[data-test="test"]', 1);
-        await count(page, '[data-link="https://google.com"]', 1);
+        await count(canvas, '[data-test="test"]', 1);
+        await count(canvas, '[data-link="https://google.com"]', 1);
       },
     },
     {
       description: 'check frontend',
-      testFunction: async (page: Page) => {
+      testFunction: async (page: Page, _canvas: Frame) => {
         await save(page);
         await delay(5000);
         await page.goto('http://localhost:8888/native-single');
@@ -69,7 +75,7 @@ testType('attributes', false, () => {
           `http://localhost:8888/wp-admin/post.php?post=1483&action=edit`
         );
         await page.reload();
-        await count(page, '.editor-styles-wrapper', 1);
+        await getEditorCanvas(page);
       },
     },
   ];

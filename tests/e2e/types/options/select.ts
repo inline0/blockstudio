@@ -1,4 +1,4 @@
-import { expect, Page } from '@playwright/test';
+import { expect, Page, Frame } from '@playwright/test';
 import {
   count,
   delay,
@@ -58,14 +58,14 @@ testType('select', false, () => {
     // Check key default values
     ...defaultChecks.map((check, i) => ({
       description: `check default ${i}`,
-      testFunction: async (page: Page) => {
-        await text(page, check);
+      testFunction: async (_page: Page, canvas: Frame) => {
+        await text(canvas, check);
       },
     })),
     {
       description: 'reset select',
-      testFunction: async (page: Page) => {
-        await page.click('[data-type^="blockstudio/type-select"]');
+      testFunction: async (page: Page, canvas: Frame) => {
+        await canvas.click('[data-type^="blockstudio/type-select"]');
         await openSidebar(page);
         await count(page, 'text=Reset me', 0);
         const el = page
@@ -75,12 +75,12 @@ testType('select', false, () => {
         await count(page, 'text=Reset me', 1);
         await page.click('text=Reset me');
         await count(page, 'text=Reset me', 0);
-        await text(page, `"defaultValueLabel":"Three"`);
+        await text(canvas, `"defaultValueLabel":"Three"`);
       },
     },
     ...valuesSelect.map((item, index) => ({
       description: `default input ${index}`,
-      testFunction: async (page: Page) => {
+      testFunction: async (page: Page, _canvas: Frame) => {
         const el = page
           .locator(`.blockstudio-fields .blockstudio-fields__field--select .components-select-control__input`)
           .nth(index);
@@ -89,7 +89,7 @@ testType('select', false, () => {
     })),
     ...valuesSelect.map((item, index) => ({
       description: `change attribute ${index}`,
-      testFunction: async (page: Page) => {
+      testFunction: async (page: Page, _canvas: Frame) => {
         await delay(500);
         const el = page
           .locator(`.blockstudio-fields .blockstudio-fields__field--select .components-select-control__input`)
@@ -101,21 +101,21 @@ testType('select', false, () => {
     ...valuesSelect.flatMap((item, index) =>
       item.skip ? [] : [{
         description: `check data ${index}`,
-        testFunction: async (page: Page) => {
-          await text(page, item.data);
+        testFunction: async (_page: Page, canvas: Frame) => {
+          await text(canvas, item.data);
         },
       }]
     ),
     {
       description: 'save and reload',
-      testFunction: async (page: Page) => {
+      testFunction: async (page: Page, _canvas: Frame) => {
         await saveAndReload(page);
       },
     },
     {
       description: 'select block after reload',
-      testFunction: async (page: Page) => {
-        await page.click('[data-type^="blockstudio/type-select"]');
+      testFunction: async (page: Page, canvas: Frame) => {
+        await canvas.click('[data-type^="blockstudio/type-select"]');
         await openSidebar(page);
       },
     },
@@ -123,7 +123,7 @@ testType('select', false, () => {
     ...valuesSelect.flatMap((item, index) =>
       item.skip ? [] : [{
         description: `check persisted value ${index}`,
-        testFunction: async (page: Page) => {
+        testFunction: async (page: Page, _canvas: Frame) => {
           const el = page
             .locator(`.blockstudio-fields .blockstudio-fields__field--select .components-select-control__input`)
             .nth(index);
@@ -135,8 +135,8 @@ testType('select', false, () => {
     ...valuesSelect.flatMap((item, index) =>
       item.skip ? [] : [{
         description: `check persisted data ${index}`,
-        testFunction: async (page: Page) => {
-          await text(page, item.data);
+        testFunction: async (_page: Page, canvas: Frame) => {
+          await text(canvas, item.data);
         },
       }]
     ),

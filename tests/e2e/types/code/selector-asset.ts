@@ -1,7 +1,7 @@
-import { Page } from '@playwright/test';
+import { Page, Frame } from '@playwright/test';
 import {
   checkStyle,
-  count,
+  getEditorCanvas,
   saveAndReload,
   testType,
 } from '../../utils/playwright-utils';
@@ -10,14 +10,14 @@ testType('code-selector-asset', false, () => {
   return [
     {
       description: 'check and change code',
-      testFunction: async (page: Page) => {
+      testFunction: async (page: Page, canvas: Frame) => {
         await checkStyle(
-          page,
+          canvas,
           '[data-type="blockstudio/type-code-selector-asset"]',
           'background',
           'rgb(0, 0, 0) none repeat scroll 0% 0% / auto padding-box border-box'
         );
-        await page.click('[data-type="blockstudio/type-code-selector-asset"]');
+        await canvas.click('[data-type="blockstudio/type-code-selector-asset"]');
         await page.click('.cm-line');
         await page.keyboard.press('Meta+A');
         await page.keyboard.press('Backspace');
@@ -25,13 +25,13 @@ testType('code-selector-asset', false, () => {
           '%selector% { background: black; } %selector% h1 { color: yellow !important; }'
         );
         await checkStyle(
-          page,
+          canvas,
           '[data-type="blockstudio/type-code-selector-asset"]',
           'background',
           'rgb(0, 0, 0) none repeat scroll 0% 0% / auto padding-box border-box'
         );
         await checkStyle(
-          page,
+          canvas,
           '[data-type="blockstudio/type-code-selector-asset"] h1',
           'color',
           'rgb(255, 255, 0)'
@@ -41,15 +41,15 @@ testType('code-selector-asset', false, () => {
     },
     {
       description: 'check code',
-      testFunction: async (page: Page) => {
+      testFunction: async (_page: Page, canvas: Frame) => {
         await checkStyle(
-          page,
+          canvas,
           '[data-type="blockstudio/type-code-selector-asset"]',
           'background',
           'rgb(0, 0, 0) none repeat scroll 0% 0% / auto padding-box border-box'
         );
         await checkStyle(
-          page,
+          canvas,
           '[data-type="blockstudio/type-code-selector-asset"] h1',
           'color',
           'rgb(255, 255, 0)'
@@ -58,7 +58,7 @@ testType('code-selector-asset', false, () => {
     },
     {
       description: 'check frontend',
-      testFunction: async (page: Page) => {
+      testFunction: async (page: Page, _canvas: Frame) => {
         await page.goto('http://localhost:8888/native-single');
         await checkStyle(
           page,
@@ -76,7 +76,7 @@ testType('code-selector-asset', false, () => {
           `http://localhost:8888/wp-admin/post.php?post=1483&action=edit`
         );
         await page.reload();
-        await count(page, '.editor-styles-wrapper', 1);
+        await getEditorCanvas(page);
       },
     },
   ];

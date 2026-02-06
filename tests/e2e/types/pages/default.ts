@@ -1,9 +1,10 @@
-import { expect, test, Page, Browser, BrowserContext } from '@playwright/test';
-import { count } from '../../utils/playwright-utils';
+import { expect, test, Page, Frame, Browser, BrowserContext } from '@playwright/test';
+import { count, getEditorCanvas } from '../../utils/playwright-utils';
 
 const BASE = 'http://localhost:8888';
 
 let page: Page;
+let canvas: Frame;
 let context: BrowserContext;
 
 test.describe.configure({ mode: 'serial' });
@@ -32,7 +33,7 @@ async function navigateToPage(title: string, status = 'all') {
   );
   await page.waitForSelector('.wp-list-table');
   await page.locator('a.row-title', { hasText: new RegExp(`^${title}$`) }).click();
-  await page.waitForSelector('.editor-styles-wrapper', { timeout: 30000 });
+  canvas = await getEditorCanvas(page);
 }
 
 async function getEditorSettings() {
@@ -74,7 +75,7 @@ test.describe('File-based Pages', () => {
 
     test('test page has correct slug', async () => {
       await page.locator('a.row-title', { hasText: /^Blockstudio E2E Test Page$/ }).click();
-      await page.waitForSelector('.editor-styles-wrapper');
+      canvas = await getEditorCanvas(page);
 
       const url = page.url();
       expect(url).toContain('post.php');
@@ -86,33 +87,33 @@ test.describe('File-based Pages', () => {
     test('page loads with parsed blocks', async () => {
       await page.goto(`${BASE}/wp-admin/edit.php?post_type=page`);
       await page.locator('a.row-title', { hasText: /^Blockstudio E2E Test Page$/ }).click();
-      await page.waitForSelector('.editor-styles-wrapper', { timeout: 30000 });
-      await page.waitForSelector('[data-type="core/group"]', { timeout: 15000 });
+      canvas = await getEditorCanvas(page);
+      await canvas.waitForSelector('[data-type="core/group"]', { timeout: 15000 });
 
-      await expect(page.locator('[data-type="core/group"]').first()).toBeVisible();
-      await expect(page.locator('[data-type="core/heading"]').first()).toBeVisible();
-      await expect(page.locator('[data-type="core/paragraph"]').first()).toBeVisible();
+      await expect(canvas.locator('[data-type="core/group"]').first()).toBeVisible();
+      await expect(canvas.locator('[data-type="core/heading"]').first()).toBeVisible();
+      await expect(canvas.locator('[data-type="core/paragraph"]').first()).toBeVisible();
     });
 
     test('page contains list blocks', async () => {
-      await count(page, '[data-type="core/list"]', 2);
-      await count(page, '[data-type="core/list-item"]', 6);
+      await count(canvas, '[data-type="core/list"]', 2);
+      await count(canvas, '[data-type="core/list-item"]', 6);
     });
 
     test('heading has correct content', async () => {
-      const h1Content = await page.locator('[data-type="core/heading"]').first().textContent();
+      const h1Content = await canvas.locator('[data-type="core/heading"]').first().textContent();
       expect(h1Content).toContain('Core Blocks Test Page');
     });
 
     test('paragraph has correct content', async () => {
-      const pContent = await page.locator('[data-type="core/paragraph"]').first().textContent();
+      const pContent = await canvas.locator('[data-type="core/paragraph"]').first().textContent();
       expect(pContent).toContain('This page tests all supported HTML to block conversions');
     });
   });
 
   test.describe('Template Lock', () => {
     test('page has template lock enabled', async () => {
-      await page.click('[data-type="core/heading"]');
+      await canvas.click('[data-type="core/heading"]');
 
       const isLocked = await page.evaluate(() => {
         const { select } = (window as any).wp.data;
@@ -170,7 +171,7 @@ test.describe('File-based Pages', () => {
 
     test('sync test page has insert template lock', async () => {
       await page.locator('a.row-title:has-text("Blockstudio Sync Test Page")').click();
-      await page.waitForSelector('.editor-styles-wrapper');
+      canvas = await getEditorCanvas(page);
 
       const templateLock = await page.evaluate(() => {
         const { select } = (window as any).wp.data;
@@ -186,7 +187,7 @@ test.describe('File-based Pages', () => {
   test.describe('Content Only Lock', () => {
     test('contentOnly lock is applied', async () => {
       await navigateToPage('Content Only Lock Test', 'draft');
-      await page.waitForSelector('[data-type="core/heading"]', { timeout: 15000 });
+      await canvas.waitForSelector('[data-type="core/heading"]', { timeout: 15000 });
 
       const settings = await getEditorSettings();
 
@@ -204,7 +205,7 @@ test.describe('File-based Pages', () => {
   test.describe('Unlocked Page', () => {
     test('unlocked page has no template lock', async () => {
       await navigateToPage('Unlocked Test', 'draft');
-      await page.waitForSelector('[data-type="core/heading"]', { timeout: 15000 });
+      await canvas.waitForSelector('[data-type="core/heading"]', { timeout: 15000 });
 
       const settings = await getEditorSettings();
 
@@ -225,7 +226,7 @@ test.describe('File-based Pages', () => {
   test.describe('Block Editing Mode', () => {
     test('page has blockEditingMode setting', async () => {
       await navigateToPage('Editing Mode Test', 'draft');
-      await page.waitForSelector('[data-type="core/heading"]', { timeout: 15000 });
+      await canvas.waitForSelector('[data-type="core/heading"]', { timeout: 15000 });
 
       const mode = await page.evaluate(() => {
         const { select } = (window as any).wp.data;
@@ -346,18 +347,18 @@ test.describe('File-based Pages', () => {
     test('CPT template is applied to new posts', async () => {
       // Navigate to "Add New" for the test CPT — WordPress applies the registered template
       await page.goto(`${BASE}/wp-admin/post-new.php?post_type=blockstudio_test_cpt`);
-      await page.waitForSelector('.editor-styles-wrapper', { timeout: 30000 });
-      await page.waitForSelector('[data-type="core/heading"]', { timeout: 15000 });
+      canvas = await getEditorCanvas(page);
+      await canvas.waitForSelector('[data-type="core/heading"]', { timeout: 15000 });
 
-      await expect(page.locator('[data-type="core/heading"]').first()).toBeVisible();
-      await expect(page.locator('[data-type="core/paragraph"]').first()).toBeVisible();
+      await expect(canvas.locator('[data-type="core/heading"]').first()).toBeVisible();
+      await expect(canvas.locator('[data-type="core/paragraph"]').first()).toBeVisible();
     });
 
     test('CPT template has correct content', async () => {
-      const headingText = await page.locator('[data-type="core/heading"]').first().textContent();
+      const headingText = await canvas.locator('[data-type="core/heading"]').first().textContent();
       expect(headingText).toContain('CPT Template Title');
 
-      const paragraphText = await page.locator('[data-type="core/paragraph"]').first().textContent();
+      const paragraphText = await canvas.locator('[data-type="core/paragraph"]').first().textContent();
       expect(paragraphText).toContain('Default CPT content');
     });
 
@@ -383,7 +384,7 @@ test.describe('File-based Pages', () => {
       expect(result.post_id).toBe(99999);
 
       await page.goto(`${BASE}/wp-admin/post.php?post=99999&action=edit`);
-      await page.waitForSelector('.editor-styles-wrapper', { timeout: 30000 });
+      canvas = await getEditorCanvas(page);
 
       const url = page.url();
       expect(url).toContain('post=99999');

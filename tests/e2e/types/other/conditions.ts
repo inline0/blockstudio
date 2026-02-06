@@ -1,4 +1,4 @@
-import { Page } from '@playwright/test';
+import { Page, Frame } from '@playwright/test';
 import { count, testType } from '../../utils/playwright-utils';
 
 testType('conditions', false, () => {
@@ -11,7 +11,7 @@ testType('conditions', false, () => {
           testCases: [
             {
               description: 'text on toggle',
-              testFunction: async (page: Page) => {
+              testFunction: async (page: Page, _canvas: Frame) => {
                 if (item === 'repeater') {
                   await page.click(`text=Add row`);
                 }
@@ -31,7 +31,7 @@ testType('conditions', false, () => {
             },
             {
               description: 'text on includes value',
-              testFunction: async (page: Page) => {
+              testFunction: async (page: Page, _canvas: Frame) => {
                 await page.click(
                   `.blockstudio-fields__field--${item} .blockstudio-fields__field--text:has-text("Text on toggle") input`
                 );
@@ -48,7 +48,7 @@ testType('conditions', false, () => {
             },
             {
               description: 'number on empty',
-              testFunction: async (page: Page) => {
+              testFunction: async (page: Page, _canvas: Frame) => {
                 await page.click(
                   `.blockstudio-fields__field--${item} .blockstudio-fields__field--text:has-text("Text on includes value") input`
                 );
@@ -65,7 +65,7 @@ testType('conditions', false, () => {
             },
             {
               description: 'number on smaller than',
-              testFunction: async (page: Page) => {
+              testFunction: async (page: Page, _canvas: Frame) => {
                 await page.click(
                   `.blockstudio-fields__field--${item} .blockstudio-fields__field--number:has-text("Number on empty") input`
                 );
@@ -89,7 +89,7 @@ testType('conditions', false, () => {
             },
             {
               description: 'number on smaller than or even',
-              testFunction: async (page: Page) => {
+              testFunction: async (page: Page, _canvas: Frame) => {
                 await page.click(
                   `.blockstudio-fields__field--${item} .blockstudio-fields__field--number:has-text("Number on smaller than") input`
                 );
@@ -114,7 +114,7 @@ testType('conditions', false, () => {
             },
             {
               description: 'number on bigger than',
-              testFunction: async (page: Page) => {
+              testFunction: async (page: Page, _canvas: Frame) => {
                 await page.click(
                   `.blockstudio-fields__field--${item} .blockstudio-fields__field--number:has-text("Number on smaller than or even") input`
                 );
@@ -138,7 +138,7 @@ testType('conditions', false, () => {
             },
             {
               description: 'number on bigger than or even',
-              testFunction: async (page: Page) => {
+              testFunction: async (page: Page, _canvas: Frame) => {
                 await page.click(
                   `.blockstudio-fields__field--${item} .blockstudio-fields__field--number:has-text("Number on bigger than") input`
                 );
@@ -161,7 +161,7 @@ testType('conditions', false, () => {
             },
             {
               description: 'select on bigger than or even',
-              testFunction: async (page: Page) => {
+              testFunction: async (page: Page, _canvas: Frame) => {
                 await page.click(
                   `.blockstudio-fields__field--${item} .blockstudio-fields__field--number:has-text("Number on bigger than or even") input`
                 );
@@ -184,7 +184,7 @@ testType('conditions', false, () => {
             },
             {
               description: 'final toggle',
-              testFunction: async (page: Page) => {
+              testFunction: async (page: Page, _canvas: Frame) => {
                 await page.selectOption(
                   `.blockstudio-fields__field--${item} .blockstudio-fields__field--select select`,
                   {
@@ -207,56 +207,56 @@ testType('conditions', false, () => {
       testCases: [
         {
           description: 'text on toggle',
-          testFunction: async (page: Page) => {
+          testFunction: async (page: Page, _canvas: Frame) => {
             await page.click(`text=Add main`);
             await count(page, `text=Text on toggle`, 3);
           },
         },
         {
           description: 'text on includes value',
-          testFunction: async (page: Page) => {
+          testFunction: async (page: Page, _canvas: Frame) => {
             await count(page, `text=Text on includes value`, 3);
           },
         },
         {
           description: 'number on empty',
-          testFunction: async (page: Page) => {
+          testFunction: async (page: Page, _canvas: Frame) => {
             await count(page, `text=Number on empty`, 3);
           },
         },
         {
           description: 'number on smaller than',
-          testFunction: async (page: Page) => {
+          testFunction: async (page: Page, _canvas: Frame) => {
             await count(page, `text=Number on smaller than`, 6);
           },
         },
         {
           description: 'number on smaller than or even',
-          testFunction: async (page: Page) => {
+          testFunction: async (page: Page, _canvas: Frame) => {
             await count(page, `text=Number on smaller than or even`, 3);
           },
         },
         {
           description: 'number on bigger than',
-          testFunction: async (page: Page) => {
+          testFunction: async (page: Page, _canvas: Frame) => {
             await count(page, `text=Number on bigger than`, 6);
           },
         },
         {
           description: 'number on bigger than or even',
-          testFunction: async (page: Page) => {
+          testFunction: async (page: Page, _canvas: Frame) => {
             await count(page, `text=Number on bigger than or even`, 3);
           },
         },
         {
           description: 'select on bigger than or even',
-          testFunction: async (page: Page) => {
+          testFunction: async (page: Page, _canvas: Frame) => {
             await count(page, `text=Select on bigger than or even`, 3);
           },
         },
         {
           description: 'final toggle',
-          testFunction: async (page: Page) => {
+          testFunction: async (page: Page, _canvas: Frame) => {
             await count(page, `text=Final toggle`, 3);
           },
         },

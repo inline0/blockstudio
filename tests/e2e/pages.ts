@@ -1,7 +1,8 @@
-import { test, expect, Page } from '@playwright/test';
-import { login } from './utils/playwright-utils';
+import { test, expect, Page, Frame } from '@playwright/test';
+import { login, getEditorCanvas } from './utils/playwright-utils';
 
 let page: Page;
+let canvas: Frame;
 
 test.describe.configure({ mode: 'serial' });
 
@@ -444,7 +445,7 @@ test.describe('File-based Pages', () => {
       await page
         .locator('a.row-title', { hasText: /^Blockstudio E2E Test Page$/ })
         .click();
-      await page.waitForSelector('.editor-styles-wrapper', { timeout: 30000 });
+      canvas = await getEditorCanvas(page);
       await page.waitForTimeout(2000);
     });
 
@@ -942,7 +943,7 @@ test.describe('File-based Pages', () => {
     });
 
     test('editor shows blocks visually (heading visible)', async () => {
-      await expect(page.locator('.wp-block-heading').first()).toBeVisible();
+      await expect(canvas.locator('.wp-block-heading').first()).toBeVisible();
     });
 
     test('template lock prevents unlocking', async () => {
@@ -954,7 +955,7 @@ test.describe('File-based Pages', () => {
         await closeButton.click();
       }
 
-      await page.click('.wp-block-heading >> nth=0');
+      await canvas.click('.wp-block-heading >> nth=0');
 
       const moreButton = page.locator('[aria-label="Options"]').first();
       if (await moreButton.isVisible()) {
@@ -1101,10 +1102,10 @@ test.describe('File-based Pages (Twig)', () => {
     await page
       .locator('a.row-title:has-text("Blockstudio E2E Test Page (Twig)")')
       .click();
-    await page.waitForSelector('.editor-styles-wrapper', { timeout: 30000 });
+    canvas = await getEditorCanvas(page);
     await page.waitForTimeout(2000);
 
-    await expect(page.locator('.wp-block-heading').first()).toBeVisible();
+    await expect(canvas.locator('.wp-block-heading').first()).toBeVisible();
 
     const invalidCount = await page.evaluate(() => {
       const blocks = (window as any).wp.data
@@ -1257,10 +1258,10 @@ test.describe('File-based Pages (Blade)', () => {
     await page
       .locator('a.row-title:has-text("Blockstudio E2E Test Page (Blade)")')
       .click();
-    await page.waitForSelector('.editor-styles-wrapper', { timeout: 30000 });
+    canvas = await getEditorCanvas(page);
     await page.waitForTimeout(2000);
 
-    await expect(page.locator('.wp-block-heading').first()).toBeVisible();
+    await expect(canvas.locator('.wp-block-heading').first()).toBeVisible();
 
     const invalidCount = await page.evaluate(() => {
       const blocks = (window as any).wp.data

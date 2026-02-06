@@ -1,19 +1,19 @@
-import { Page } from '@playwright/test';
+import { Page, Frame } from '@playwright/test';
 import { count, testType } from '../utils/playwright-utils';
 
 testType('loading', false, () => {
   return [
     {
       description: 'check loading state',
-      testFunction: async (page: Page) => {
-        await count(page, 'text=blockstudio/type-loading', 1);
+      testFunction: async (_page: Page, canvas: Frame) => {
+        await count(canvas, 'text=blockstudio/type-loading', 1);
       },
     },
     {
       description: 'click element',
-      testFunction: async (page: Page) => {
-        await page.click('text=blockstudio/type-loading');
-        await count(page, '.blockstudio-test__block', 1);
+      testFunction: async (_page: Page, canvas: Frame) => {
+        await canvas.click('text=blockstudio/type-loading');
+        await count(canvas, '.blockstudio-test__block', 1);
       },
     },
   ];

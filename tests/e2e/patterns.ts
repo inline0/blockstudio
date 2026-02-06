@@ -1,11 +1,12 @@
 import { expect, test, Page } from '@playwright/test';
-import { count, pBlocks, delay } from './utils/playwright-utils';
+import { count, pBlocks, delay, getEditorCanvas } from './utils/playwright-utils';
 
 test.describe('Patterns', () => {
   test('pattern appears in block inserter and inserts correct blocks', async ({
     browser,
   }) => {
     const page = await pBlocks(browser);
+    const canvas = await getEditorCanvas(page);
 
     await page.click('.editor-document-tools__inserter-toggle');
     await count(page, '.block-editor-inserter__block-list', 1);
@@ -26,36 +27,36 @@ test.describe('Patterns', () => {
 
     await page.keyboard.press('Escape');
 
-    await count(page, '.wp-block-group', 1);
-    await count(page, '.wp-block-heading', 1);
-    await count(page, '.wp-block-buttons', 1);
-    await count(page, '.wp-block-button', 1);
-    await count(page, '.wp-block-separator', 1);
-    await count(page, '.wp-block-list', 1);
-    await count(page, '.wp-block-quote', 1);
-    await count(page, '.wp-block-image', 1);
-    await count(page, '.wp-block-columns', 1);
-    await count(page, '.wp-block-column', 2);
+    await count(canvas, '.wp-block-group', 1);
+    await count(canvas, '.wp-block-heading', 1);
+    await count(canvas, '.wp-block-buttons', 1);
+    await count(canvas, '.wp-block-button', 1);
+    await count(canvas, '.wp-block-separator', 1);
+    await count(canvas, '.wp-block-list', 1);
+    await count(canvas, '.wp-block-quote', 1);
+    await count(canvas, '.wp-block-image', 1);
+    await count(canvas, '.wp-block-columns', 1);
+    await count(canvas, '.wp-block-column', 2);
 
-    const heading = page.locator('.wp-block-heading');
+    const heading = canvas.locator('.wp-block-heading');
     await expect(heading).toHaveText('Test Pattern Heading');
 
-    const paragraph = page.locator('.wp-block-paragraph').first();
+    const paragraph = canvas.locator('.wp-block-paragraph').first();
     await expect(paragraph).toHaveText('This is a test pattern paragraph.');
 
-    const button = page.locator('.wp-block-button__link');
+    const button = canvas.locator('.wp-block-button__link');
     await expect(button).toHaveText('Test Button');
 
-    await expect(page.getByText('Pattern list item one')).toBeVisible();
-    await expect(page.getByText('Pattern list item two')).toBeVisible();
+    await expect(canvas.getByText('Pattern list item one')).toBeVisible();
+    await expect(canvas.getByText('Pattern list item two')).toBeVisible();
 
-    await expect(page.getByText('Pattern quote text')).toBeVisible();
+    await expect(canvas.getByText('Pattern quote text')).toBeVisible();
 
-    const image = page.locator('.wp-block-image img');
+    const image = canvas.locator('.wp-block-image img');
     await expect(image).toHaveAttribute('alt', 'Pattern image');
 
-    await expect(page.getByText('Pattern column A')).toBeVisible();
-    await expect(page.getByText('Pattern column B')).toBeVisible();
+    await expect(canvas.getByText('Pattern column A')).toBeVisible();
+    await expect(canvas.getByText('Pattern column B')).toBeVisible();
   });
 
   test('pattern can be found by keywords', async ({ browser }) => {
@@ -97,6 +98,7 @@ test.describe('Patterns (Twig)', () => {
     browser,
   }) => {
     const page = await pBlocks(browser);
+    const canvas = await getEditorCanvas(page);
 
     const patternItem = await searchAndFindTwigPattern(page);
     await expect(patternItem).toBeVisible({ timeout: 15000 });
@@ -106,37 +108,37 @@ test.describe('Patterns (Twig)', () => {
 
     await page.keyboard.press('Escape');
 
-    await count(page, '.wp-block-group', 1);
-    await count(page, '.wp-block-heading', 1);
-    await count(page, '.wp-block-buttons', 1);
-    await count(page, '.wp-block-button', 1);
-    await count(page, '.wp-block-separator', 1);
-    await count(page, '.wp-block-list', 1);
-    await count(page, '.wp-block-quote', 1);
-    await count(page, '.wp-block-image', 1);
-    await count(page, '.wp-block-columns', 1);
-    await count(page, '.wp-block-column', 2);
+    await count(canvas, '.wp-block-group', 1);
+    await count(canvas, '.wp-block-heading', 1);
+    await count(canvas, '.wp-block-buttons', 1);
+    await count(canvas, '.wp-block-button', 1);
+    await count(canvas, '.wp-block-separator', 1);
+    await count(canvas, '.wp-block-list', 1);
+    await count(canvas, '.wp-block-quote', 1);
+    await count(canvas, '.wp-block-image', 1);
+    await count(canvas, '.wp-block-columns', 1);
+    await count(canvas, '.wp-block-column', 2);
 
-    const heading = page.locator('.wp-block-heading');
+    const heading = canvas.locator('.wp-block-heading');
     await expect(heading).toHaveText('Twig Pattern Heading');
 
     // Verify |upper filter was applied
-    const paragraph = page.locator('.wp-block-paragraph').first();
+    const paragraph = canvas.locator('.wp-block-paragraph').first();
     await expect(paragraph).toContainText('TWIG');
 
-    const button = page.locator('.wp-block-button__link');
+    const button = canvas.locator('.wp-block-button__link');
     await expect(button).toHaveText('Twig Pattern Button');
 
-    await expect(page.getByText('Twig pattern item 1')).toBeVisible();
-    await expect(page.getByText('Twig pattern item 2')).toBeVisible();
+    await expect(canvas.getByText('Twig pattern item 1')).toBeVisible();
+    await expect(canvas.getByText('Twig pattern item 2')).toBeVisible();
 
-    await expect(page.getByText('Twig pattern quote text')).toBeVisible();
+    await expect(canvas.getByText('Twig pattern quote text')).toBeVisible();
 
-    const image = page.locator('.wp-block-image img');
+    const image = canvas.locator('.wp-block-image img');
     await expect(image).toHaveAttribute('alt', 'Twig pattern image');
 
-    await expect(page.getByText('Twig pattern column A')).toBeVisible();
-    await expect(page.getByText('Twig pattern column B')).toBeVisible();
+    await expect(canvas.getByText('Twig pattern column A')).toBeVisible();
+    await expect(canvas.getByText('Twig pattern column B')).toBeVisible();
   });
 
   test('twig pattern can be found by twig keyword', async ({ browser }) => {
@@ -167,6 +169,7 @@ test.describe('Patterns (Blade)', () => {
     browser,
   }) => {
     const page = await pBlocks(browser);
+    const canvas = await getEditorCanvas(page);
 
     const patternItem = await searchAndFindBladePattern(page);
     await expect(patternItem).toBeVisible({ timeout: 15000 });
@@ -176,37 +179,37 @@ test.describe('Patterns (Blade)', () => {
 
     await page.keyboard.press('Escape');
 
-    await count(page, '.wp-block-group', 1);
-    await count(page, '.wp-block-heading', 1);
-    await count(page, '.wp-block-buttons', 1);
-    await count(page, '.wp-block-button', 1);
-    await count(page, '.wp-block-separator', 1);
-    await count(page, '.wp-block-list', 1);
-    await count(page, '.wp-block-quote', 1);
-    await count(page, '.wp-block-image', 1);
-    await count(page, '.wp-block-columns', 1);
-    await count(page, '.wp-block-column', 2);
+    await count(canvas, '.wp-block-group', 1);
+    await count(canvas, '.wp-block-heading', 1);
+    await count(canvas, '.wp-block-buttons', 1);
+    await count(canvas, '.wp-block-button', 1);
+    await count(canvas, '.wp-block-separator', 1);
+    await count(canvas, '.wp-block-list', 1);
+    await count(canvas, '.wp-block-quote', 1);
+    await count(canvas, '.wp-block-image', 1);
+    await count(canvas, '.wp-block-columns', 1);
+    await count(canvas, '.wp-block-column', 2);
 
-    const heading = page.locator('.wp-block-heading');
+    const heading = canvas.locator('.wp-block-heading');
     await expect(heading).toHaveText('Blade Pattern Heading');
 
     // Verify strtoupper() was applied
-    const paragraph = page.locator('.wp-block-paragraph').first();
+    const paragraph = canvas.locator('.wp-block-paragraph').first();
     await expect(paragraph).toContainText('BLADE');
 
-    const button = page.locator('.wp-block-button__link');
+    const button = canvas.locator('.wp-block-button__link');
     await expect(button).toHaveText('Blade Pattern Button');
 
-    await expect(page.getByText('Blade pattern item 1')).toBeVisible();
-    await expect(page.getByText('Blade pattern item 2')).toBeVisible();
+    await expect(canvas.getByText('Blade pattern item 1')).toBeVisible();
+    await expect(canvas.getByText('Blade pattern item 2')).toBeVisible();
 
-    await expect(page.getByText('Blade pattern quote text')).toBeVisible();
+    await expect(canvas.getByText('Blade pattern quote text')).toBeVisible();
 
-    const image = page.locator('.wp-block-image img');
+    const image = canvas.locator('.wp-block-image img');
     await expect(image).toHaveAttribute('alt', 'Blade pattern image');
 
-    await expect(page.getByText('Blade pattern column A')).toBeVisible();
-    await expect(page.getByText('Blade pattern column B')).toBeVisible();
+    await expect(canvas.getByText('Blade pattern column A')).toBeVisible();
+    await expect(canvas.getByText('Blade pattern column B')).toBeVisible();
   });
 
   test('blade pattern can be found by blade keyword', async ({ browser }) => {

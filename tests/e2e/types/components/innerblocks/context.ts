@@ -1,40 +1,43 @@
-import { Page, test } from '@playwright/test';
+import { Frame, Page, test } from '@playwright/test';
 import {
 	addBlock,
 	count,
+	getEditorCanvas,
 	getSharedPage,
 	openSidebar,
 	resetPageState,
 } from '../../../utils/playwright-utils';
 
 let page: Page;
+let canvas: Frame;
 
 test.describe.configure({ mode: 'serial' });
 
 test.beforeAll(async ({ browser }) => {
 	page = await getSharedPage(browser);
 	await resetPageState(page);
+	canvas = await getEditorCanvas(page);
 });
 
 test.describe('component-innerblocks-context', () => {
 	test('add block', async () => {
 		await addBlock(page, 'component-innerblocks-context');
-		await count(page, '.is-root-container > .wp-block', 1);
+		await count(canvas, '.is-root-container > .wp-block', 1);
 	});
 
 	test('classes in editor', async () => {
-		await count(page, '.blockstudio-test__block.test.test2.test3', 2);
+		await count(canvas, '.blockstudio-test__block.test.test2.test3', 2);
 	});
 
 	test('context working', async () => {
 		await openSidebar(page);
-		await page.click('.wp-block-post-title');
+		await canvas.click('.wp-block-post-title');
 		await page.keyboard.press('ArrowDown');
-		await page.waitForSelector('#blockstudio-component-innerblocks-context-child');
+		await canvas.waitForSelector('#blockstudio-component-innerblocks-context-child');
 		await openSidebar(page);
 		await page.click('.blockstudio-fields__field--text input');
 		await page.keyboard.type('$CONTEXT', { delay: 100 });
-		await count(page, 'text=Text: $CONTEXT', 2);
+		await count(canvas, 'text=Text: $CONTEXT', 2);
 		await page.click('.editor-post-publish-button');
 		await count(page, '.components-snackbar', 1);
 	});

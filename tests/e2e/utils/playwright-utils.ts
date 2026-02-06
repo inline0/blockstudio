@@ -35,10 +35,20 @@ export const getSharedPage = async (browser: Browser): Promise<Page> => {
   return sharedPage;
 };
 
+// Get the editor canvas frame (iframed editor with apiVersion 3)
+export const getEditorCanvas = async (page: Page): Promise<Frame> => {
+  await page.waitForSelector('iframe[name="editor-canvas"]', { timeout: 30000 });
+  const frame = page.frame('editor-canvas');
+  if (!frame) throw new Error('Editor canvas iframe not found');
+  await frame.waitForLoadState('domcontentloaded');
+  return frame;
+};
+
 // Reset page state - navigate to editor and remove all blocks
 export const resetPageState = async (page: Page) => {
   await page.goto('http://localhost:8888/wp-admin/post.php?post=1483&action=edit');
-  await page.waitForSelector('.editor-styles-wrapper', { timeout: 30000 });
+  const canvas = await getEditorCanvas(page);
+  await canvas.waitForSelector('.editor-styles-wrapper', { timeout: 30000 });
 
   // Dismiss welcome modal if present
   const modal = await page.$('text=Welcome to the block editor');
@@ -47,7 +57,7 @@ export const resetPageState = async (page: Page) => {
   }
 
   // Wait for root container and remove all blocks
-  await page.waitForSelector('.is-root-container', { timeout: 10000 });
+  await canvas.waitForSelector('.is-root-container', { timeout: 10000 });
   // Press Escape to dismiss any popovers, then reset blocks via JS
   await page.keyboard.press('Escape');
   await page.evaluate(() => {
@@ -65,7 +75,7 @@ export const count = async (
   ).toHaveCount(count);
 };
 
-export const text = async (page: Page, value: string) => {
+export const text = async (page: Page | Frame, value: string) => {
   const wait = await page.waitForFunction(
     (value: string) => document.documentElement.innerHTML.includes(value),
     value,
@@ -81,7 +91,7 @@ export const text = async (page: Page, value: string) => {
   return expect(val).toBeTruthy();
 };
 
-export const countText = async (page: Page, value: string, count: unknown) => {
+export const countText = async (page: Page | Frame, value: string, count: unknown) => {
   const regexPattern = new RegExp(
     value.replace(/([.*+?^=!:${}()|[\]/\\])/g, '\\$1'),
     'g'
@@ -109,7 +119,7 @@ export const countText = async (page: Page, value: string, count: unknown) => {
 };
 
 export const innerHTML = async (
-  page: Page,
+  page: Page | Frame,
   selector: string,
   content: string,
   first = true
@@ -168,14 +178,15 @@ export const pBlocks = async (
   // Navigate to test post (ID 1483 = "Native Single")
   const postUrl = url || 'http://localhost:8888/wp-admin/post.php?post=1483&action=edit';
   await page.goto(postUrl);
-  await page.locator(wait).waitFor({ state: 'visible' });
+  const canvas = await getEditorCanvas(page);
+  await canvas.locator(wait).waitFor({ state: 'visible' });
   const modal = await page.$('text=Welcome to the block editor');
   if (modal) {
     await page.click(
       '.components-modal__screen-overlay .components-button.has-icon'
     );
   }
-  await count(page, '.is-root-container', 1);
+  await count(canvas, '.is-root-container', 1);
   if (remove) {
     await removeBlocks(page);
   }
@@ -214,7 +225,8 @@ export const pEditor = async (browser: Browser) => {
 };
 
 export const removeBlocks = async (page: Page) => {
-  const root = await page.$('.is-root-container');
+  const canvas = await getEditorCanvas(page);
+  const root = await canvas.$('.is-root-container');
   if (!root) {
     await page.reload({ waitUntil: 'load' });
     await removeBlocks(page);
@@ -238,7 +250,8 @@ export const save = async (page: Page) => {
 export const saveAndReload = async (page: Page) => {
   const reloadAndCheck = async () => {
     await page.reload();
-    if (!(await page.$('.wp-block-post-title'))) {
+    const canvas = await getEditorCanvas(page);
+    if (!(await canvas.$('.wp-block-post-title'))) {
       await reloadAndCheck();
     }
   };
@@ -246,8 +259,9 @@ export const saveAndReload = async (page: Page) => {
   await save(page);
   await reloadAndCheck();
 
-  await page.locator('.wp-block-post-title').waitFor({ state: 'visible' });
-  await count(page, '.is-root-container', 1);
+  const canvas = await getEditorCanvas(page);
+  await canvas.locator('.wp-block-post-title').waitFor({ state: 'visible' });
+  await count(canvas, '.is-root-container', 1);
 };
 
 export const clickEditorToolbar = async (
@@ -304,7 +318,7 @@ export const searchForBlock = async (
   await page.locator(selector).click();
 };
 
-export const checkForLeftoverAttributes = async (page: Page) => {
+export const checkForLeftoverAttributes = async (page: Page | Frame) => {
   for (const item of [
     // General
     'useBlockProps',
@@ -355,12 +369,14 @@ export const testType = async (
       test('add block', async () => {
         await openBlockInserter(page);
         await addBlock(page, `type-${blockName}`);
-        await count(page, '.is-root-container > .wp-block', 1);
+        const canvas = await getEditorCanvas(page);
+        await count(canvas, '.is-root-container > .wp-block', 1);
       });
 
       test('has correct defaults', async () => {
         if (def) {
-          await text(page, `${def}`);
+          const canvas = await getEditorCanvas(page);
+          await text(canvas, `${def}`);
         }
       });
 
@@ -375,15 +391,18 @@ export const testType = async (
           if (type === 'outer') {
             test('add block', async () => {
               await addBlock(page, `type-${blockName}`);
-              await count(page, '.is-root-container > .wp-block', 1);
+              const canvas = await getEditorCanvas(page);
+              await count(canvas, '.is-root-container > .wp-block', 1);
               await openSidebar(page);
             });
           } else {
             test('add InnerBlocks', async () => {
-              await page.click('.wp-block');
+              const canvas = await getEditorCanvas(page);
+              await canvas.click('.wp-block');
               await removeBlocks(page);
               await addBlock(page, 'component-innerblocks-bare-spaceless');
-              await count(page, '.is-root-container > .wp-block', 1);
+              const canvas2 = await getEditorCanvas(page);
+              await count(canvas2, '.is-root-container > .wp-block', 1);
               await page.click(
                 '.editor-document-tools__document-overview-toggle'
               );
@@ -423,7 +442,8 @@ export const testType = async (
                               const { description, testFunction } =
                                 nestedTestCase;
                               test(description, async () => {
-                                await testFunction(page);
+                                const canvas = await getEditorCanvas(page);
+                                await testFunction(page, canvas);
                               });
                             }
                           });
@@ -439,7 +459,8 @@ export const testType = async (
                     for (const testCase of testItem.testCases) {
                       const { description, testFunction } = testCase;
                       test(description, async () => {
-                        await testFunction(page);
+                        const canvas = await getEditorCanvas(page);
+                        await testFunction(page, canvas);
                       });
                     }
                   });
@@ -448,7 +469,8 @@ export const testType = async (
                   typeof testItem.testFunction === 'function'
                 ) {
                   test(testItem.description, async () => {
-                    await testItem.testFunction(page);
+                    const canvas = await getEditorCanvas(page);
+                    await testItem.testFunction(page, canvas);
                   });
                 }
               }

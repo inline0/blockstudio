@@ -1,4 +1,4 @@
-import { Page } from '@playwright/test';
+import { Page, Frame } from '@playwright/test';
 import {
   count,
   saveAndReload,
@@ -13,7 +13,7 @@ testType(
     return [
       {
         description: 'only two tabs',
-        testFunction: async (page: Page) => {
+        testFunction: async (page: Page, _canvas: Frame) => {
           await count(page, 'text=Tab 1', 1);
           await count(page, 'text=Override tab', 1);
           await count(page, 'text=Tab 2', 0);
@@ -21,7 +21,7 @@ testType(
       },
       {
         description: 'change first tab',
-        testFunction: async (page: Page) => {
+        testFunction: async (page: Page, canvas: Frame) => {
           await page
             .locator('.blockstudio-fields__field--text input')
             .nth(0)
@@ -31,19 +31,19 @@ testType(
             .nth(1)
             .fill('test');
           await text(
-            page,
+            canvas,
             '"toggle":false,"toggle2":false,"text":"test","text2":"test","group_text":false,"group_text2":false'
           );
         },
       },
       {
         description: 'toggle',
-        testFunction: async (page: Page) => {
+        testFunction: async (page: Page, canvas: Frame) => {
           await page
             .locator('.blockstudio-fields__field--toggle input')
             .check();
           await text(
-            page,
+            canvas,
             '"toggle":true,"toggle2":false,"text":"test","text2":"test","group_text":false,"group_text2":false'
           );
           await count(page, 'text=Toggle 2', 1);
@@ -51,7 +51,7 @@ testType(
       },
       {
         description: 'change second tab',
-        testFunction: async (page: Page) => {
+        testFunction: async (page: Page, canvas: Frame) => {
           await page.click('text=Override tab');
           await page
             .locator('.blockstudio-fields__field--text input')
@@ -62,7 +62,7 @@ testType(
             .nth(1)
             .fill('test');
           await text(
-            page,
+            canvas,
             '"toggle":true,"toggle2":false,"text":"test","text2":"test","group_text":"test","group_text2":"test"'
           );
           await saveAndReload(page);
@@ -70,9 +70,9 @@ testType(
       },
       {
         description: 'check',
-        testFunction: async (page: Page) => {
+        testFunction: async (_page: Page, canvas: Frame) => {
           await text(
-            page,
+            canvas,
             '"toggle":true,"toggle2":false,"text":"test","text2":"test","group_text":"test","group_text2":"test"'
           );
         },

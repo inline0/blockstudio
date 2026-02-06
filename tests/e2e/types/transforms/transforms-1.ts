@@ -1,12 +1,12 @@
-import { Page } from '@playwright/test';
+import { Page, Frame } from '@playwright/test';
 import { count, testType } from '../../utils/playwright-utils';
 
 testType('transforms-1', '"text":"Default value"', () => {
   return [
     {
       description: 'check transforms',
-      testFunction: async (page: Page) => {
-        await page.click('[data-type="blockstudio/type-transforms-1"]');
+      testFunction: async (page: Page, canvas: Frame) => {
+        await canvas.click('[data-type="blockstudio/type-transforms-1"]');
         await page.click(
           '.block-editor-block-toolbar__block-controls .components-dropdown-menu__toggle'
         );

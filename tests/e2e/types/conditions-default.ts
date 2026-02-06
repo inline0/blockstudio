@@ -1,4 +1,4 @@
-import { Page, expect } from '@playwright/test';
+import { Page, expect, Frame } from '@playwright/test';
 import { count, delay, testType } from '../utils/playwright-utils';
 
 testType('conditions-default', false, () => {
@@ -6,8 +6,8 @@ testType('conditions-default', false, () => {
     {
       description:
         'conditional field should show based on default value on first load',
-      testFunction: async (page: Page) => {
-        await page.click('[data-type="blockstudio/type-conditions-default"]');
+      testFunction: async (page: Page, canvas: Frame) => {
+        await canvas.click('[data-type="blockstudio/type-conditions-default"]');
         await delay(500);
 
         const selectValue = page.locator(
@@ -22,8 +22,8 @@ testType('conditions-default', false, () => {
     },
     {
       description: 'switching select value should show correct conditional field',
-      testFunction: async (page: Page) => {
-        await page.click('[data-type="blockstudio/type-conditions-default"]');
+      testFunction: async (page: Page, canvas: Frame) => {
+        await canvas.click('[data-type="blockstudio/type-conditions-default"]');
         await delay(300);
 
         await page.selectOption(

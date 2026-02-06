@@ -1,14 +1,19 @@
-import { Page, expect } from '@playwright/test';
+import { Page, expect, Frame } from '@playwright/test';
 import { testType } from '../../utils/playwright-utils';
 
-const atLeast = async (page: Page, selector: string, min: number) => {
-	const cnt = await page.locator(selector).count();
+const atLeast = async (context: Page | Frame, selector: string, min: number) => {
+	const cnt = await context.locator(selector).count();
 	expect(cnt).toBeGreaterThanOrEqual(min);
 };
 
-const assetIds = [
+// Assets loaded in parent page (editor bundle)
+const pageAssetIds = [
 	'blockstudio-blocks-js-extra',
 	'blockstudio-blocks-js',
+];
+
+// Block assets loaded in iframe canvas via block_editor_settings_all.
+const canvasAssetIds = [
 	'blockstudio-blockstudio-native-script-inline-js',
 	'blockstudio-blockstudio-native-script-js',
 	'blockstudio-blockstudio-native-style-inline-css',
@@ -91,22 +96,28 @@ const assetIds = [
 
 testType(['assets', 'text'], false, () => {
 	return [
-		...assetIds.map((id) => ({
+		...pageAssetIds.map((id) => ({
 			description: `asset ${id} exists`,
-			testFunction: async (page: Page) => {
+			testFunction: async (page: Page, _canvas: Frame) => {
 				await atLeast(page, `#${id}`, 1);
+			},
+		})),
+		...canvasAssetIds.map((id) => ({
+			description: `asset ${id} exists`,
+			testFunction: async (_page: Page, canvas: Frame) => {
+				await atLeast(canvas, `#${id}`, 1);
 			},
 		})),
 		{
 			description: 'global scripts exist',
-			testFunction: async (page: Page) => {
-				await atLeast(page, '[id*="global-script-js"]', 3);
+			testFunction: async (_page: Page, canvas: Frame) => {
+				await atLeast(canvas, '[id*="global-script"]', 3);
 			},
 		},
 		{
 			description: 'global styles exist',
-			testFunction: async (page: Page) => {
-				await atLeast(page, '[id*="global-style-css"]', 2);
+			testFunction: async (_page: Page, canvas: Frame) => {
+				await atLeast(canvas, '[id*="global-style"]', 2);
 			},
 		},
 	];

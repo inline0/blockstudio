@@ -1,4 +1,4 @@
-import { expect, Page } from '@playwright/test';
+import { expect, Page, Frame } from '@playwright/test';
 import {
   delay,
   openSidebar,
@@ -59,14 +59,14 @@ testType('checkbox', false, () => {
     // Check key default values
     ...defaultChecks.map((check, i) => ({
       description: `check default ${i}`,
-      testFunction: async (page: Page) => {
-        await text(page, check);
+      testFunction: async (_page: Page, canvas: Frame) => {
+        await text(canvas, check);
       },
     })),
     // Change attributes (click checkboxes)
     ...valuesCheckbox.map((item, index) => ({
       description: `change attribute ${index}`,
-      testFunction: async (page: Page) => {
+      testFunction: async (page: Page, _canvas: Frame) => {
         await delay(500);
         for (const checkbox of item.index) {
           await page
@@ -78,21 +78,21 @@ testType('checkbox', false, () => {
     // Check data after changes
     ...valuesCheckbox.map((item, index) => ({
       description: `check data ${index}`,
-      testFunction: async (page: Page) => {
-        await text(page, item.data);
+      testFunction: async (_page: Page, canvas: Frame) => {
+        await text(canvas, item.data);
       },
     })),
     {
       description: 'save and reload',
-      testFunction: async (page: Page) => {
+      testFunction: async (page: Page, _canvas: Frame) => {
         await saveAndReload(page);
       },
     },
     {
       description: 'select block after reload',
-      testFunction: async (page: Page) => {
+      testFunction: async (page: Page, canvas: Frame) => {
         // Click on the block to select it
-        await page.click('[data-type^="blockstudio/type-checkbox"]');
+        await canvas.click('[data-type^="blockstudio/type-checkbox"]');
         await openSidebar(page);
       },
     },
@@ -100,7 +100,7 @@ testType('checkbox', false, () => {
     ...valuesCheckbox.flatMap((item, index) =>
       item.skip ? [] : [{
         description: `check persisted checked ${index}`,
-        testFunction: async (page: Page) => {
+        testFunction: async (page: Page, _canvas: Frame) => {
           const els = page.locator(`.blockstudio-fields .components-panel__body:nth-of-type(${index + 1}) .components-checkbox-control__input:checked`);
           await expect(els).toHaveCount(item.checked);
         },
@@ -110,8 +110,8 @@ testType('checkbox', false, () => {
     ...valuesCheckbox.flatMap((item, index) =>
       item.skip ? [] : [{
         description: `check persisted data ${index}`,
-        testFunction: async (page: Page) => {
-          await text(page, item.data);
+        testFunction: async (_page: Page, canvas: Frame) => {
+          await text(canvas, item.data);
         },
       }]
     ),

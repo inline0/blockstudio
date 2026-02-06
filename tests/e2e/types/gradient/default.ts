@@ -1,4 +1,4 @@
-import { Page } from '@playwright/test';
+import { Page, Frame } from '@playwright/test';
 import { count, saveAndReload, testType } from '../../utils/playwright-utils';
 
 testType(
@@ -8,7 +8,7 @@ testType(
     return [
       {
         description: 'change gradient',
-        testFunction: async (page: Page) => {
+        testFunction: async (page: Page, _canvas: Frame) => {
           await page.click(
             '.blockstudio-fields__field--gradient [aria-label="Gradient: Rastafarie"]'
           );
@@ -17,8 +17,8 @@ testType(
       },
       {
         description: 'check gradient',
-        testFunction: async (page: Page) => {
-          await page.click('[data-type="blockstudio/type-gradient"]');
+        testFunction: async (page: Page, canvas: Frame) => {
+          await canvas.click('[data-type="blockstudio/type-gradient"]');
           await count(
             page,
             '.blockstudio-fields__field--gradient [aria-label="Gradient: Rastafarie"]',

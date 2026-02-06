@@ -17,7 +17,8 @@
         "label": "Files Multiple",
         "max": 3,
         "multiple": true,
-        "size": true
+        "size": true,
+        "switch": true
       },
       {
         "id": "filesMultipleId",
@@ -25,7 +26,8 @@
         "label": "Files - Multiple - ID",
         "max": 3,
         "multiple": true,
-        "returnFormat": "id"
+        "returnFormat": "id",
+        "switch": true
       },
       {
         "id": "filesMultipleUrl",
@@ -33,24 +35,28 @@
         "label": "Files - Multiple - URL",
         "max": 3,
         "multiple": true,
-        "returnFormat": "url"
+        "returnFormat": "url",
+        "switch": true
       },
       {
         "id": "filesSingle",
         "type": "files",
-        "label": "Files - Single"
+        "label": "Files - Single",
+        "switch": true
       },
       {
         "id": "filesSingleId",
         "type": "files",
         "label": "Files - Single - ID",
-        "returnFormat": "id"
+        "returnFormat": "id",
+        "switch": true
       },
       {
         "id": "filesSingleUrl",
         "type": "files",
         "label": "Files - Single - URL",
-        "returnFormat": "url"
+        "returnFormat": "url",
+        "switch": true
       }
     ]
   }

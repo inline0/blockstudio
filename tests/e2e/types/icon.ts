@@ -1,4 +1,4 @@
-import { expect, Page } from '@playwright/test';
+import { expect, Page, Frame } from '@playwright/test';
 import {
   count,
   saveAndReload,
@@ -13,14 +13,14 @@ testType(
     return [
       {
         description: 'two svg',
-        testFunction: async (page: Page) => {
-          await count(page, '#blockstudio-type-icon svg', 2);
+        testFunction: async (_page: Page, canvas: Frame) => {
+          await count(canvas, '#blockstudio-type-icon svg', 2);
         },
       },
       {
         description: 'change icon',
-        testFunction: async (page: Page) => {
-          await page.click('[data-type="blockstudio/type-icon"]');
+        testFunction: async (page: Page, canvas: Frame) => {
+          await canvas.click('[data-type="blockstudio/type-icon"]');
           await page
             .locator(
               '.blockstudio-fields__field--icon .components-combobox-control__input'
@@ -38,14 +38,14 @@ testType(
       },
       {
         description: 'check icon',
-        testFunction: async (page: Page) => {
-          await page.click('[data-type="blockstudio/type-icon"]');
+        testFunction: async (page: Page, canvas: Frame) => {
+          await canvas.click('[data-type="blockstudio/type-icon"]');
           await text(page, 'accessibility-16');
         },
       },
       {
         description: 'check repeater',
-        testFunction: async (page: Page) => {
+        testFunction: async (page: Page, _canvas: Frame) => {
           await page.click('text=Add an Icon');
           await page.click('text=Add an Icon');
           await page

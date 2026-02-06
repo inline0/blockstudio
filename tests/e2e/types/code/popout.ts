@@ -1,20 +1,20 @@
-import { expect, Page } from '@playwright/test';
+import { expect, Page, Frame } from '@playwright/test';
 import { testType } from '../../utils/playwright-utils';
 
 testType('code-popout', '"code":".selector { display: block; }"', () => {
   return [
     {
       description: 'popout button is visible',
-      testFunction: async (page: Page) => {
-        await page.click('[data-type="blockstudio/type-code-popout"]');
+      testFunction: async (page: Page, canvas: Frame) => {
+        await canvas.click('[data-type="blockstudio/type-code-popout"]');
         const popoutButton = page.locator('.blockstudio-fields__action');
         await expect(popoutButton).toBeVisible();
       },
     },
     {
       description: 'popout opens window and syncs changes',
-      testFunction: async (page: Page) => {
-        await page.click('[data-type="blockstudio/type-code-popout"]');
+      testFunction: async (page: Page, canvas: Frame) => {
+        await canvas.click('[data-type="blockstudio/type-code-popout"]');
 
         const [popup] = await Promise.all([
           page.waitForEvent('popup'),

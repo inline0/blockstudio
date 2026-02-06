@@ -1,4 +1,4 @@
-import { Page } from '@playwright/test';
+import { Page, Frame } from '@playwright/test';
 import { count, saveAndReload, testType } from '../utils/playwright-utils';
 
 testType(
@@ -8,8 +8,8 @@ testType(
     return [
       {
         description: 'change link',
-        testFunction: async (page: Page) => {
-          await page.click('[data-type="blockstudio/type-link"]');
+        testFunction: async (page: Page, canvas: Frame) => {
+          await canvas.click('[data-type="blockstudio/type-link"]');
           await page.click(
             '.blockstudio-fields__field--link .components-button'
           );
@@ -29,9 +29,9 @@ testType(
       },
       {
         description: 'check link',
-        testFunction: async (page: Page) => {
-          await page.click('[data-type="blockstudio/type-link"]');
-          await count(page, 'text=blockstudio.dev', 1);
+        testFunction: async (_page: Page, canvas: Frame) => {
+          await canvas.click('[data-type="blockstudio/type-link"]');
+          await count(canvas, 'text=blockstudio.dev', 1);
         },
       },
     ];

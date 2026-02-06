@@ -1,4 +1,4 @@
-import { Page } from '@playwright/test';
+import { Page, Frame } from '@playwright/test';
 import {
 	checkStyle,
 	count,
@@ -11,14 +11,14 @@ testType('override', false, () => {
 	return [
 		{
 			description: 'check placeholder',
-			testFunction: async (page: Page) => {
-				await page.click('[data-type="blockstudio-type/override"]');
-				await count(page, '.blockstudio-element__placeholder', 1);
+			testFunction: async (_page: Page, canvas: Frame) => {
+				await canvas.click('[data-type="blockstudio-type/override"]');
+				await count(canvas, '.blockstudio-element__placeholder', 1);
 			},
 		},
 		{
 			description: 'add images from media library',
-			testFunction: async (page: Page) => {
+			testFunction: async (page: Page, _canvas: Frame) => {
 				await openSidebar(page);
 				await page.locator('text=Open Media Library').click();
 				await page.locator('#menu-item-browse:visible').click();
@@ -32,21 +32,21 @@ testType('override', false, () => {
 		},
 		{
 			description: 'check gallery content',
-			testFunction: async (page: Page) => {
-				await count(page, '.blockstudio-element-gallery__content', 2);
-				await count(page, '[data-test]', 2);
+			testFunction: async (_page: Page, canvas: Frame) => {
+				await count(canvas, '.blockstudio-element-gallery__content', 2);
+				await count(canvas, '[data-test]', 2);
 			},
 		},
 		{
 			description: 'check gallery styles',
-			testFunction: async (page: Page) => {
+			testFunction: async (_page: Page, canvas: Frame) => {
 				await checkStyle(
-					page,
+					canvas,
 					'.blockstudio-element-gallery',
 					'gridAutoRows',
 					'30px'
 				);
-				await checkStyle(page, '.blockstudio-element-gallery', 'margin', '12px');
+				await checkStyle(canvas, '.blockstudio-element-gallery', 'margin', '12px');
 			},
 		},
 	];

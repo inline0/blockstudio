@@ -12,14 +12,14 @@ export const Control = ({
   customCss = {},
   customCssInner = {},
   description = null,
-  _enabled = true,
+  enabled: _enabled = true,
   help = null,
-  _inRepeater = false,
+  inRepeater: _inRepeater = false,
   isRepeater = false,
   label = null,
   margin = true,
   name = null,
-  _onClick = () => {},
+  onClick: _onClick = () => {},
   type = null,
   ...rest
 }: {

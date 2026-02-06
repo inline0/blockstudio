@@ -1,4 +1,4 @@
-import { expect, Page } from '@playwright/test';
+import { expect, Page, Frame } from '@playwright/test';
 import {
   count,
   openSidebar,
@@ -57,14 +57,14 @@ testType('select-stylised', false, () => {
     // Check key default values
     ...defaultChecks.map((check, i) => ({
       description: `check default ${i}`,
-      testFunction: async (page: Page) => {
-        await text(page, check);
+      testFunction: async (_page: Page, canvas: Frame) => {
+        await text(canvas, check);
       },
     })),
     {
       description: 'reset select',
-      testFunction: async (page: Page) => {
-        await page.click('[data-type^="blockstudio/type-select-stylised"]');
+      testFunction: async (page: Page, canvas: Frame) => {
+        await canvas.click('[data-type^="blockstudio/type-select-stylised"]');
         await openSidebar(page);
         await count(page, 'text=Reset me', 0);
         const button = page
@@ -78,14 +78,14 @@ testType('select-stylised', false, () => {
         await count(page, 'text=Reset me', 1);
         await page.click('text=Reset me');
         await count(page, 'text=Reset me', 0);
-        await text(page, `"defaultValueLabel":"Three"`);
+        await text(canvas, `"defaultValueLabel":"Three"`);
       },
     },
     // Check default inputs (skip items with dynamic data)
     ...valuesSelect.flatMap((item, index) =>
       item.skip ? [] : [{
         description: `default input ${index}`,
-        testFunction: async (page: Page) => {
+        testFunction: async (page: Page, _canvas: Frame) => {
           const el = page
             .locator(`.blockstudio-fields .blockstudio-fields__field--select .components-combobox-control__input`)
             .nth(index);
@@ -95,7 +95,7 @@ testType('select-stylised', false, () => {
     ),
     ...valuesSelect.map((item, index) => ({
       description: `change attribute ${index}`,
-      testFunction: async (page: Page) => {
+      testFunction: async (page: Page, _canvas: Frame) => {
         const button = page
           .locator(`.blockstudio-fields .blockstudio-fields__field--select .components-combobox-control__input`)
           .nth(index);
@@ -110,21 +110,21 @@ testType('select-stylised', false, () => {
     ...valuesSelect.flatMap((item, index) =>
       item.skip ? [] : [{
         description: `check data ${index}`,
-        testFunction: async (page: Page) => {
-          await text(page, item.data);
+        testFunction: async (_page: Page, canvas: Frame) => {
+          await text(canvas, item.data);
         },
       }]
     ),
     {
       description: 'save and reload',
-      testFunction: async (page: Page) => {
+      testFunction: async (page: Page, _canvas: Frame) => {
         await saveAndReload(page);
       },
     },
     {
       description: 'select block after reload',
-      testFunction: async (page: Page) => {
-        await page.click('[data-type^="blockstudio/type-select-stylised"]');
+      testFunction: async (page: Page, canvas: Frame) => {
+        await canvas.click('[data-type^="blockstudio/type-select-stylised"]');
         await openSidebar(page);
       },
     },
@@ -132,7 +132,7 @@ testType('select-stylised', false, () => {
     ...valuesSelect.flatMap((item, index) =>
       item.skip ? [] : [{
         description: `check persisted value ${index}`,
-        testFunction: async (page: Page) => {
+        testFunction: async (page: Page, _canvas: Frame) => {
           const el = page
             .locator(`.blockstudio-fields .blockstudio-fields__field--select .components-combobox-control__input`)
             .nth(index);
@@ -144,8 +144,8 @@ testType('select-stylised', false, () => {
     ...valuesSelect.flatMap((item, index) =>
       item.skip ? [] : [{
         description: `check persisted data ${index}`,
-        testFunction: async (page: Page) => {
-          await text(page, item.data);
+        testFunction: async (_page: Page, canvas: Frame) => {
+          await text(canvas, item.data);
         },
       }]
     ),

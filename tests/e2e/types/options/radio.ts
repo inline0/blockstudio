@@ -1,4 +1,4 @@
-import { expect, Page } from '@playwright/test';
+import { expect, Page, Frame } from '@playwright/test';
 import {
   delay,
   openSidebar,
@@ -57,8 +57,8 @@ testType('radio', false, () => {
     // Check key default values
     ...defaultChecks.map((check, i) => ({
       description: `check default ${i}`,
-      testFunction: async (page: Page) => {
-        await text(page, check);
+      testFunction: async (_page: Page, canvas: Frame) => {
+        await text(canvas, check);
       },
     })),
     // Check default radio inputs (starting from index 1 since index 0 has no default checked)
@@ -66,8 +66,8 @@ testType('radio', false, () => {
       const index = i + 1;
       return {
         description: `default input ${index}`,
-        testFunction: async (page: Page) => {
-          await page.click('[data-type^="blockstudio/type-radio"]');
+        testFunction: async (page: Page, canvas: Frame) => {
+          await canvas.click('[data-type^="blockstudio/type-radio"]');
           await openSidebar(page);
           const el = page
             .locator(`.blockstudio-fields .blockstudio-fields__field--radio .components-radio-control__input:checked`)
@@ -79,7 +79,7 @@ testType('radio', false, () => {
     // Change attributes
     ...valuesSelect.map((item, index) => ({
       description: `change attribute ${index}`,
-      testFunction: async (page: Page) => {
+      testFunction: async (page: Page, _canvas: Frame) => {
         await delay(500);
         await page
           .locator(`.blockstudio-fields .components-panel__body:nth-of-type(${index + 1}) .components-radio-control__option:nth-of-type(${item.index === 4 ? 3 : item.index}) .components-radio-control__input`)
@@ -90,21 +90,21 @@ testType('radio', false, () => {
     ...valuesSelect.flatMap((item, index) =>
       item.skip ? [] : [{
         description: `check data ${index}`,
-        testFunction: async (page: Page) => {
-          await text(page, item.data);
+        testFunction: async (_page: Page, canvas: Frame) => {
+          await text(canvas, item.data);
         },
       }]
     ),
     {
       description: 'save and reload',
-      testFunction: async (page: Page) => {
+      testFunction: async (page: Page, _canvas: Frame) => {
         await saveAndReload(page);
       },
     },
     {
       description: 'select block after reload',
-      testFunction: async (page: Page) => {
-        await page.click('[data-type^="blockstudio/type-radio"]');
+      testFunction: async (page: Page, canvas: Frame) => {
+        await canvas.click('[data-type^="blockstudio/type-radio"]');
         await openSidebar(page);
       },
     },
@@ -112,7 +112,7 @@ testType('radio', false, () => {
     ...valuesSelect.flatMap((item, index) =>
       item.skip ? [] : [{
         description: `check persisted value ${index}`,
-        testFunction: async (page: Page) => {
+        testFunction: async (page: Page, _canvas: Frame) => {
           const el = page
             .locator(`.blockstudio-fields .blockstudio-fields__field--radio .components-radio-control__input[checked]`)
             .nth(index);
@@ -124,8 +124,8 @@ testType('radio', false, () => {
     ...valuesSelect.flatMap((item, index) =>
       item.skip ? [] : [{
         description: `check persisted data ${index}`,
-        testFunction: async (page: Page) => {
-          await text(page, item.data);
+        testFunction: async (_page: Page, canvas: Frame) => {
+          await text(canvas, item.data);
         },
       }]
     ),

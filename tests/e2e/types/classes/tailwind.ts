@@ -1,8 +1,9 @@
-import { Page } from '@playwright/test';
+import { Page, Frame } from '@playwright/test';
 import {
   checkStyle,
   count,
   delay,
+  getEditorCanvas,
   save,
   testType,
 } from '../../utils/playwright-utils';
@@ -11,16 +12,16 @@ testType('classes-tailwind', '"classes":"text-red-500"', () => {
   return [
     {
       description: 'add class',
-      testFunction: async (page: Page) => {
-        await page.click('[data-type="blockstudio/type-classes-tailwind"]');
+      testFunction: async (page: Page, canvas: Frame) => {
+        await canvas.click('[data-type="blockstudio/type-classes-tailwind"]');
         await page.fill('.components-form-token-field input', 'bg-');
         await count(page, 'text=bg-amber-100', 1);
       },
     },
     {
       description: 'add bg-blue-500 class',
-      testFunction: async (page: Page) => {
-        await page.click('[data-type="blockstudio/type-classes-tailwind"]');
+      testFunction: async (page: Page, canvas: Frame) => {
+        await canvas.click('[data-type="blockstudio/type-classes-tailwind"]');
         await page.fill('.components-form-token-field input', 'bg-blue-500');
         await page.keyboard.press('Enter');
         await delay(500);
@@ -29,16 +30,16 @@ testType('classes-tailwind', '"classes":"text-red-500"', () => {
     },
     {
       description: 'search for custom class',
-      testFunction: async (page: Page) => {
-        await page.click('[data-type="blockstudio/type-classes-tailwind"]');
+      testFunction: async (page: Page, canvas: Frame) => {
+        await canvas.click('[data-type="blockstudio/type-classes-tailwind"]');
         await page.fill('.components-form-token-field input', 'custom-');
         await count(page, '.components-form-token-field__suggestions-list li', 6);
       },
     },
     {
       description: 'add custom-class-2',
-      testFunction: async (page: Page) => {
-        await page.click('[data-type="blockstudio/type-classes-tailwind"]');
+      testFunction: async (page: Page, canvas: Frame) => {
+        await canvas.click('[data-type="blockstudio/type-classes-tailwind"]');
         await page.keyboard.press('Escape');
         await page.fill('.components-form-token-field input', 'custom-class-2');
         await page.keyboard.press('Enter');
@@ -48,7 +49,7 @@ testType('classes-tailwind', '"classes":"text-red-500"', () => {
     },
     {
       description: 'save and check frontend styles including custom class',
-      testFunction: async (page: Page) => {
+      testFunction: async (page: Page, _canvas: Frame) => {
         await save(page);
         await delay(2000);
         await page.goto('http://localhost:8888/native-single/');
@@ -70,7 +71,7 @@ testType('classes-tailwind', '"classes":"text-red-500"', () => {
           'http://localhost:8888/wp-admin/post.php?post=1483&action=edit'
         );
         await page.reload();
-        await count(page, '.editor-styles-wrapper', 1);
+        await getEditorCanvas(page);
       },
     },
   ];

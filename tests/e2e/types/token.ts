@@ -1,4 +1,4 @@
-import { Page } from '@playwright/test';
+import { Page, Frame } from '@playwright/test';
 import {
   count,
   saveAndReload,
@@ -10,8 +10,8 @@ testType('token', '"token":[{"value":"three","label":"Three"}]', () => {
   return [
     {
       description: 'change tokens',
-      testFunction: async (page: Page) => {
-        await page.click('[data-type="blockstudio/type-token"]');
+      testFunction: async (page: Page, canvas: Frame) => {
+        await canvas.click('[data-type="blockstudio/type-token"]');
         await page.click(
           '.blockstudio-fields__field--token .components-form-token-field__input-container'
         );
@@ -29,15 +29,15 @@ testType('token', '"token":[{"value":"three","label":"Three"}]', () => {
     },
     {
       description: 'check tokens',
-      testFunction: async (page: Page) => {
-        await page.click('[data-type="blockstudio/type-token"]');
+      testFunction: async (page: Page, canvas: Frame) => {
+        await canvas.click('[data-type="blockstudio/type-token"]');
         await count(
           page,
           '.blockstudio-fields__field--token .components-form-token-field__token',
           2
         );
         await text(
-          page,
+            canvas,
           '"token":[{"value":"one","label":"One"},{"value":"two","label":"Two"}]'
         );
       },

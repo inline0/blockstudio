@@ -1,19 +1,19 @@
-import { Page } from '@playwright/test';
+import { Page, Frame } from '@playwright/test';
 import { count, testType } from '../../utils/playwright-utils';
 
 testType('wysiwyg', 'Default text', () => [
   {
     description: 'type text',
-    testFunction: async (page: Page) => {
+    testFunction: async (page: Page, canvas: Frame) => {
       await page.click('.blockstudio-fields .ProseMirror');
       await page.keyboard.type('TEST', { delay: 1000 });
-      await count(page, '#blockstudio-type-wysiwyg p', 1);
+      await count(canvas, '#blockstudio-type-wysiwyg p', 1);
       await page.keyboard.press('Meta+A');
     },
   },
   {
     description: 'toolbar',
-    testFunction: async (page: Page) => {
+    testFunction: async (page: Page, _canvas: Frame) => {
       await count(
         page,
         '.blockstudio-fields__field--wysiwyg .components-select-control__input option',
@@ -34,7 +34,7 @@ testType('wysiwyg', 'Default text', () => [
   ].flatMap((tag) => [
     {
       description: `${tag} exists`,
-      testFunction: async (page: Page) => {
+      testFunction: async (page: Page, _canvas: Frame) => {
         await count(
           page,
           `.blockstudio-fields__field--wysiwyg [aria-label="${tag}"]`,
@@ -44,7 +44,7 @@ testType('wysiwyg', 'Default text', () => [
     },
     {
       description: `${tag} can be pressed`,
-      testFunction: async (page: Page) => {
+      testFunction: async (page: Page, _canvas: Frame) => {
         await page.click(`.blockstudio-fields [aria-label="${tag}"]`);
         await count(
           page,

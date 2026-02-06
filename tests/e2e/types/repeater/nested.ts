@@ -1,4 +1,4 @@
-import { Page } from '@playwright/test';
+import { Page, Frame } from '@playwright/test';
 import { countText, delay, testType } from '../../utils/playwright-utils';
 
 testType(
@@ -9,7 +9,7 @@ testType(
     return Array.from({ length: 9 }).map((_, index) => {
       return {
         description: `add media ${index}`,
-        testFunction: async (page: Page) => {
+        testFunction: async (page: Page, canvas: Frame) => {
           if (
             index === 0 ||
             index === 2 ||
@@ -29,7 +29,7 @@ testType(
           await page.keyboard.up('Meta');
           await delay(1000);
           await page.click('.media-frame-toolbar button:visible');
-          await countText(page, '"ID":1605', index + 1);
+          await countText(canvas, '"ID":1605', index + 1);
         },
       };
     });

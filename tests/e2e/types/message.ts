@@ -1,12 +1,12 @@
-import { Page } from '@playwright/test';
+import { Page, Frame } from '@playwright/test';
 import { count, testType } from '../utils/playwright-utils';
 
 testType('message', '"text":false', () => {
   return [
     {
       description: 'display message',
-      testFunction: async (page: Page) => {
-        await page.click('[data-type="blockstudio/type-message"]');
+      testFunction: async (page: Page, canvas: Frame) => {
+        await canvas.click('[data-type="blockstudio/type-message"]');
         await page.fill('.blockstudio-fields__field--text input', 'test');
         await count(
           page,

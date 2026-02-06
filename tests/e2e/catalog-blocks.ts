@@ -1,5 +1,5 @@
 import { test } from '@playwright/test';
-import { login } from './utils/playwright-utils';
+import { login, getEditorCanvas } from './utils/playwright-utils';
 import * as fs from 'fs';
 import * as path from 'path';
 
@@ -198,7 +198,7 @@ test('catalog all core block save markup', async ({ browser }) => {
 	await login(page);
 
 	await page.goto('http://localhost:8888/wp-admin/post-new.php');
-	await page.waitForSelector('.editor-styles-wrapper', { timeout: 30000 });
+	await getEditorCanvas(page);
 
 	const closeBtn = page.locator(
 		'.components-modal__screen-overlay button[aria-label="Close"]',
