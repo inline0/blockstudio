@@ -84,12 +84,12 @@ export async function BeyondBlocks() {
       title="Beyond blocks"
       description="A complete framework for blocks, pages, patterns, and extensions — all from template files."
     >
-      <div className="grid grid-cols-1 sm:grid-cols-2 border-y">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 px-6 lg:px-10">
         {items.map((item) => (
           <Link
             key={item.title}
             href={item.href}
-            className="group flex flex-col gap-y-4 py-8 px-6 border-b transition-colors hover:bg-fd-secondary/20 sm:border-r sm:[&:nth-child(2n)]:border-r-0 sm:[&:nth-last-child(-n+2)]:border-b-0 [&:last-child]:border-b-0"
+            className="group flex flex-col gap-y-4 rounded-lg p-6 transition-colors hover:bg-fd-secondary/20"
           >
             <div>
               <div className="flex items-center gap-3 mb-2">

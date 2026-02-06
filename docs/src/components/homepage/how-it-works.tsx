@@ -67,12 +67,9 @@ export async function HowItWorks() {
       description="Define your schema, write a template, add styles. Blockstudio handles everything else."
       border={false}
     >
-      <div className="grid grid-cols-1 lg:grid-cols-3">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 px-6 lg:px-10">
         {steps.map((step) => (
-          <div
-            key={step.number}
-            className="flex flex-col gap-y-3 py-8 px-6 border-b lg:border-b-0 lg:border-r lg:[&:last-child]:border-r-0 [&:last-child]:border-b-0"
-          >
+          <div key={step.number} className="flex flex-col gap-y-3">
             <div className="flex items-center gap-3">
               <span className="flex items-center justify-center w-6 h-6 rounded-full bg-fd-primary text-fd-primary-foreground text-xs font-medium">
                 {step.number}
