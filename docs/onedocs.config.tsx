@@ -1,5 +1,6 @@
 import { defineConfig } from "onedocs/config";
 import { Blocks, FileText, LayoutGrid, Puzzle, FormInput, Cpu, FileJson, Code } from "lucide-react";
+import { HeroBlocks } from "./src/components/hero-blocks";
 
 const iconClass = "h-5 w-5 text-fd-primary";
 
@@ -20,6 +21,7 @@ export default defineConfig({
       description:
         "The fastest way to build custom blocks. Write templates in PHP, Twig, or Blade with 25+ field types and zero JavaScript.",
       cta: { label: "Get Started", href: "/docs/getting-started" },
+      right: <HeroBlocks />,
     },
     features: [
       {

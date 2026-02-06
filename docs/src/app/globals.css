@@ -3,3 +3,7 @@
 @source "../**/*.tsx";
 @source "../../../content/**/*.mdx";
 @source "onedocs";
+
+#features p.text-fd-muted-foreground {
+  text-wrap: pretty;
+}
