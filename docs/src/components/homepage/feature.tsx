@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import type { ReactNode } from 'react';
 
 interface FeatureProps {
   headline: ReactNode;
@@ -9,7 +9,7 @@ interface FeatureProps {
 
 export function Feature({ headline, description, cta, demo }: FeatureProps) {
   return (
-    <div className="group grid grid-flow-dense grid-cols-1 gap-2 rounded-lg bg-fd-secondary/30 p-2 lg:grid-cols-2">
+    <div className="group grid grid-flow-dense grid-cols-1 gap-2 rounded-2xl bg-fd-secondary/30 p-2 lg:grid-cols-2">
       <div className="flex flex-col justify-between gap-6 p-6 sm:p-8 lg:group-even:col-start-2">
         <div>
           <h3 className="text-xl font-medium text-fd-foreground sm:text-2xl">

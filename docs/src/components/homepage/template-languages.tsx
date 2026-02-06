@@ -1,5 +1,4 @@
-import Link from "next/link";
-import { CodeBlock } from "onedocs";
+import { CodeBlock, Button } from "onedocs";
 import { Tabs, Tab } from "onedocs/components";
 import { Section } from "./section";
 import { Feature } from "./feature";
@@ -104,12 +103,9 @@ export async function TemplateLanguages() {
             </>
           }
           cta={
-            <Link
-              href="/docs/templating"
-              className="text-fd-primary hover:underline font-medium text-sm"
-            >
+            <Button href="/docs/registration#template" className="w-max">
               Learn more about templating &rarr;
-            </Link>
+            </Button>
           }
           demo={
             <Tabs items={["PHP", "Twig", "Blade"]}>
