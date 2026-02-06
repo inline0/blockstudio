@@ -10,13 +10,17 @@ Blockstudio will automatically enqueue all files ending with `.css`, `.scss` and
 | Pattern | Behavior |
 |---------|----------|
 | `*.(s)css` | Enqueues as a `<link>` tag in the editor and on the frontend |
-| `*-inline.(s)css` | Enqueues contents in an inline `<style>` tag in the editor and on the frontend |
-| `*-editor.(s)css` | Enqueues as a `<link>` tag in the editor only |
-| `*-scoped.(s)css` | Enqueues scoped contents in an inline `<style>` tag in the editor and on the frontend |
+| `*.inline.(s)css` | Enqueues contents in an inline `<style>` tag in the editor and on the frontend |
+| `*.editor.(s)css` | Enqueues as a `<link>` tag in the editor only |
+| `*.scoped.(s)css` | Enqueues scoped contents in an inline `<style>` tag in the editor and on the frontend |
 | `*.js` | Enqueues as a `<script>` tag in the editor and on the frontend |
-| `*-inline.js` | Enqueues contents in an inline `<script>` tag in the editor and on the frontend |
-| `*-editor.js` | Enqueues as a `<script>` tag in the editor only |
-| `*-view.js` | Enqueues as a `<script>` tag on the frontend only |
+| `*.inline.js` | Enqueues contents in an inline `<script>` tag in the editor and on the frontend |
+| `*.editor.js` | Enqueues as a `<script>` tag in the editor only |
+| `*.view.js` | Enqueues as a `<script>` tag on the frontend only |
+
+<Callout>
+The dash notation (`*-inline.css`, `*-editor.css`, etc.) is still supported for backward compatibility but is deprecated. Use dot notation for new blocks.
+</Callout>
 
 ## Inline
 
@@ -37,7 +41,7 @@ Scoped styles are also inlined, but are prefixed with an ID that is unique to ea
 </div>
 ```
 
-```css title="style-scoped.css"
+```css title="style.scoped.css"
 h1 {
   color: red;
 }
@@ -68,13 +72,13 @@ Besides block specific assets, it is also possible to enqueue global assets, whi
 Possible combinations are:
 
 - `global-styles.(s)css`
-- `global-styles-inline.(s)css`
-- `global-styles-editor.(s)css`
-- `global-styles-scoped.(s)css`
+- `global-styles.inline.(s)css`
+- `global-styles.editor.(s)css`
+- `global-styles.scoped.(s)css`
 - `global-scripts.js`
-- `global-scripts-inline.js`
-- `global-scripts-editor.js`
-- `global-scripts-view.js`
+- `global-scripts.inline.js`
+- `global-scripts.editor.js`
+- `global-scripts.view.js`
 
 ## Admin
 

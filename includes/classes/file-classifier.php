@@ -30,9 +30,10 @@ use Exception;
  * - admin-*.css/js: Only loaded in WordPress admin
  * - block-editor-*.css/js: Only loaded in Gutenberg editor
  * - global-*.css/js: Loaded everywhere (frontend + admin)
- * - *-editor.css/js: Only loaded in editor, not frontend
- * - *-inline.css/js: Injected inline rather than enqueued
- * - *-scoped.css/scss: CSS scoped to block's wrapper element
+ * - *.editor.css/js or *-editor.css/js: Only loaded in editor, not frontend
+ * - *.inline.css/js or *-inline.css/js: Injected inline rather than enqueued
+ * - *.scoped.css/scss or *-scoped.css/scss: CSS scoped to block's wrapper element
+ * - *.view.js or *-view.js: Only loaded on frontend, not editor
  *
  * @since 7.0.0
  */
@@ -290,7 +291,12 @@ class File_Classifier {
 	 * @return bool Whether the file is an inline asset.
 	 */
 	public function is_inline_asset( string $filename ): bool {
-		return str_ends_with( $filename, '-inline.css' )
+		return str_ends_with( $filename, '.inline.css' )
+			|| str_ends_with( $filename, '.inline.scss' )
+			|| str_ends_with( $filename, '.inline.js' )
+			|| str_ends_with( $filename, '.scoped.css' )
+			|| str_ends_with( $filename, '.scoped.scss' )
+			|| str_ends_with( $filename, '-inline.css' )
 			|| str_ends_with( $filename, '-inline.scss' )
 			|| str_ends_with( $filename, '-inline.js' )
 			|| str_ends_with( $filename, '-scoped.css' )
@@ -305,7 +311,10 @@ class File_Classifier {
 	 * @return bool Whether the file is an editor-only asset.
 	 */
 	public function is_editor_asset( string $filename ): bool {
-		return str_ends_with( $filename, '-editor.css' )
+		return str_ends_with( $filename, '.editor.css' )
+			|| str_ends_with( $filename, '.editor.scss' )
+			|| str_ends_with( $filename, '.editor.js' )
+			|| str_ends_with( $filename, '-editor.css' )
 			|| str_ends_with( $filename, '-editor.scss' )
 			|| str_ends_with( $filename, '-editor.js' );
 	}

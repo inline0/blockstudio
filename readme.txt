@@ -26,6 +26,7 @@ Blockstudio gives you the ultimate developer experience for creating custom, pro
 * New: blockEditingMode support for file-based pages with page-level defaults and per-element overrides
 * New: file-based patterns - create WordPress block patterns from file templates with automatic HTML to block parsing
 * New: custom fields - reusable field definitions via file system and PHP filter
+* Enhancement: dot notation for asset file suffixes (*.inline.css, *.editor.css, etc.) — dash notation still supported
 * Enhancement: apiVersion 3 support — blocks now render correctly in the iframed editor (site editor, responsive previews)
 * Enhancement: all PHP hooks now use snake_case naming (old camelCase names still supported)
 * Enhancement: field switch is now off by default and uses a visible eye icon with disabled overlay
@@ -36,6 +37,7 @@ Blockstudio gives you the ultimate developer experience for creating custom, pro
 * Fix: conditional fields not respecting default values on first load
 * Fix: optionsPopulate null error in WPML contexts
 * Fix: dollar signs stripped from <RichText /> content on frontend
+* Deprecation: dash notation for asset file suffixes (*-inline.css, *-editor.css, etc.) — use dot notation instead
 * Deprecation: Admin Area removed
 * Deprecation: License Key removed
 * Deprecation: Code Editor removed

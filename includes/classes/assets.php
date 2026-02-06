@@ -377,10 +377,11 @@ class Assets {
 		$dir  = $file['dirname'];
 		$file = $file['filename'];
 
-		$ext = pathinfo( $path, PATHINFO_EXTENSION );
-		$id  = self::get_imported_modification_times(
+		$ext       = pathinfo( $path, PATHINFO_EXTENSION );
+		$is_scoped = str_ends_with( $file, '.scoped' ) || str_ends_with( $file, '-scoped' );
+		$id        = self::get_imported_modification_times(
 			$path,
-			str_ends_with( $file, '-scoped' ) ? $scoped_class : ''
+			$is_scoped ? $scoped_class : ''
 		);
 
 		if ( Settings::get( 'assets/process/scssFiles' ) && 'scss' === $ext ) {
@@ -500,7 +501,7 @@ class Assets {
 					$script .= self::render_tag( $k, $v, $block );
 				}
 			} else {
-				$k = str_replace( '-inline', '', $k );
+				$k = str_replace( array( '.inline', '-inline' ), '', $k );
 
 				if ( false !== strpos( $k, 'style' ) ) {
 					$style .= self::render_inline( $k, $v, $block, true );
@@ -580,7 +581,7 @@ class Assets {
 						continue;
 					}
 
-					if ( preg_match( '/-editor\.(css|scss|js)$/', $k ) ) {
+					if ( preg_match( '/[-.]editor\.(css|scss|js)$/', $k ) ) {
 						$editor_assets[] = array( $k, $v, $block );
 						continue;
 					}
@@ -740,7 +741,7 @@ class Assets {
 
 		$minify_css        = Settings::get( 'assets/minify/css' );
 		$process_scss      = self::should_process_scss( $path );
-		$scope_css         = str_ends_with( $filename, '-scoped' );
+		$scope_css         = str_ends_with( $filename, '.scoped' ) || str_ends_with( $filename, '-scoped' );
 		$compiled_filename = self::get_compiled_filename( $path, $scoped_class );
 
 		if (

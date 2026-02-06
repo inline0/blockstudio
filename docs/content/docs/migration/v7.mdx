@@ -93,6 +93,41 @@ add_filter('blockstudio/settings/block_editor/css_classes', function() {
 });
 ```
 
+## Asset File Naming
+
+Blockstudio 7 introduces dot notation for asset file suffixes, replacing the old dash notation as the recommended convention.
+
+### Changed File Names
+
+| Old Name (v6) | New Name (v7) |
+|---------------|---------------|
+| `*-inline.(s)css` | `*.inline.(s)css` |
+| `*-inline.js` | `*.inline.js` |
+| `*-editor.(s)css` | `*.editor.(s)css` |
+| `*-editor.js` | `*.editor.js` |
+| `*-scoped.(s)css` | `*.scoped.(s)css` |
+| `*-view.js` | `*.view.js` |
+
+### Backward Compatibility
+
+The old dash notation is still supported for backward compatibility. Your existing files will continue to work without renaming. However, we recommend migrating to dot notation for new blocks.
+
+**Example migration:**
+
+```
+my-block/
+├── block.json
+├── index.php
+├── style.css
+├── style-inline.css   →  style.inline.css
+├── style-scoped.css   →  style.scoped.css
+├── style-editor.css   →  style.editor.css
+├── script.js
+├── script-inline.js   →  script.inline.js
+├── script-editor.js   →  script.editor.js
+└── script-view.js     →  script.view.js
+```
+
 ## Field Switch
 
 The `switch` property now defaults to `false` instead of `true`. In v6, every field had an invisible toggle on the left edge that was enabled by default. In v7, switch is opt-in and uses a visible eye icon in the field label.
