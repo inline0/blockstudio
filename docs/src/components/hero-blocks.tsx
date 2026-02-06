@@ -7,11 +7,36 @@ import {
   Environment,
   Lightformer,
   MeshTransmissionMaterial,
-  RoundedBox,
 } from "@react-three/drei";
 
+function InnerCore() {
+  const ref = useRef<THREE.Mesh>(null);
+
+  useFrame(({ clock }) => {
+    if (!ref.current) return;
+    const t = clock.getElapsedTime();
+    ref.current.rotation.x = t * 0.3;
+    ref.current.rotation.z = t * 0.2;
+    const s = 0.45 + Math.sin(t * 0.8) * 0.05;
+    ref.current.scale.setScalar(s);
+  });
+
+  return (
+    <mesh ref={ref}>
+      <boxGeometry args={[1, 1, 1]} />
+      <meshStandardMaterial
+        color="#8b7ba8"
+        emissive="#6d5a8a"
+        emissiveIntensity={1.5}
+        metalness={0.9}
+        roughness={0.1}
+      />
+    </mesh>
+  );
+}
+
 function Block() {
-  const meshRef = useRef<THREE.Mesh>(null);
+  const meshRef = useRef<THREE.Group>(null);
 
   useFrame((_, delta) => {
     if (!meshRef.current) return;
@@ -20,31 +45,30 @@ function Block() {
   });
 
   return (
-    <RoundedBox
-      ref={meshRef}
-      args={[1.5, 1.5, 1.5]}
-      radius={0}
-      rotation={[-0.5, 0.7, 0.15]}
-    >
-      <MeshTransmissionMaterial
-        backside
-        samples={16}
-        resolution={1024}
-        thickness={2}
-        chromaticAberration={0.3}
-        anisotropy={0.5}
-        distortion={0.4}
-        distortionScale={0.5}
-        temporalDistortion={0.2}
-        roughness={0.05}
-        ior={1.5}
-        color="#ffffff"
-        attenuationColor="#ede9fe"
-        attenuationDistance={1.2}
-        envMapIntensity={2.5}
-        transmissionSampler={false}
-      />
-    </RoundedBox>
+    <group ref={meshRef} rotation={[0.4, 0.7, 0.1]}>
+      <mesh>
+        <boxGeometry args={[1.5, 1.5, 1.5]} />
+        <MeshTransmissionMaterial
+          backside
+          samples={32}
+          resolution={2048}
+          thickness={2.5}
+          chromaticAberration={0.15}
+          anisotropy={0.3}
+          distortion={0.1}
+          distortionScale={0.2}
+          temporalDistortion={0.05}
+          roughness={0.02}
+          ior={1.3}
+          color="#ffffff"
+          attenuationColor="#e9d5ff"
+          attenuationDistance={1.5}
+          envMapIntensity={0.8}
+          transmissionSampler={false}
+        />
+      </mesh>
+      <InnerCore />
+    </group>
   );
 }
 
@@ -52,11 +76,30 @@ function ReadySignal({ onReady }: { onReady: () => void }) {
   const frames = useRef(0);
   useFrame(() => {
     frames.current++;
-    if (frames.current === 10) {
+    if (frames.current === 30) {
       onReady();
     }
   });
   return null;
+}
+
+function AnimatedLights() {
+  const groupRef = useRef<THREE.Group>(null);
+
+  useFrame(({ clock }) => {
+    if (!groupRef.current) return;
+    groupRef.current.rotation.y = clock.getElapsedTime() * 0.15;
+    groupRef.current.rotation.x = Math.sin(clock.getElapsedTime() * 0.1) * 0.3;
+  });
+
+  return (
+    <group ref={groupRef}>
+      <Lightformer form="circle" intensity={12} position={[6, 4, -4]} scale={3} color="#c9a0c9" />
+      <Lightformer form="circle" intensity={12} position={[-6, -2, 4]} scale={3} color="#8ba0b8" />
+      <Lightformer form="circle" intensity={8} position={[-4, 6, 2]} scale={3} color="#9a8ab8" />
+      <Lightformer form="circle" intensity={8} position={[4, -6, -2]} scale={3} color="#b89aaa" />
+    </group>
+  );
 }
 
 function Scene({ onReady }: { onReady: () => void }) {
@@ -65,14 +108,11 @@ function Scene({ onReady }: { onReady: () => void }) {
       <Block />
       <ReadySignal onReady={onReady} />
       <Environment resolution={512}>
-        <Lightformer form="rect" intensity={0.8} position={[0, 0, -5]} scale={20} />
-        <Lightformer form="rect" intensity={0.8} position={[0, 0, 5]} scale={20} />
-        <Lightformer form="circle" intensity={15} position={[5, 5, -5]} scale={3} color="#e879f9" />
-        <Lightformer form="circle" intensity={15} position={[-5, -3, 5]} scale={3} color="#7dd3fc" />
-        <Lightformer form="circle" intensity={10} position={[-5, 5, 0]} scale={4} color="#818cf8" />
-        <Lightformer form="circle" intensity={10} position={[5, -5, 0]} scale={4} color="#f0abfc" />
-        <Lightformer form="ring" intensity={8} position={[0, 8, 0]} scale={8} color="#c4b5fd" />
-        <Lightformer form="ring" intensity={6} position={[0, -8, 0]} scale={8} color="#38bdf8" />
+        <Lightformer form="rect" intensity={1} position={[0, 0, -5]} scale={20} />
+        <Lightformer form="rect" intensity={1} position={[0, 0, 5]} scale={20} />
+        <Lightformer form="ring" intensity={6} position={[0, 8, 0]} scale={10} color="#b0a0c0" />
+        <Lightformer form="ring" intensity={5} position={[0, -8, 0]} scale={10} color="#8a9aaa" />
+        <AnimatedLights />
       </Environment>
     </>
   );
