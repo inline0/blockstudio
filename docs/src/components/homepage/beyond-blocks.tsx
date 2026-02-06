@@ -1,118 +1,62 @@
 import Link from "next/link";
 import { CodeBlock } from "onedocs";
-import { Files, Folder, File } from "onedocs/components";
-import { Blocks, FileText, LayoutGrid, Puzzle } from "lucide-react";
 import { Section } from "./section";
-import { Placeholder } from "./placeholder";
 
-const items = [
-  {
-    icon: Blocks,
-    title: "Blocks",
-    description:
-      "Custom blocks from JSON + a template file. Define fields, write markup, ship. No JavaScript, no build step.",
-    href: "/docs/blocks",
-    tree: (
-      <Files>
-        <Folder name="hero" defaultOpen>
-          <File name="block.json" />
-          <File name="index.php" />
-          <File name="style.scss" />
-        </Folder>
-      </Files>
-    ),
-  },
-  {
-    icon: FileText,
-    title: "Pages",
-    description:
-      "Full WordPress pages as file-based templates. Define metadata in JSON, write the page in PHP. Pages auto-sync to the editor as native blocks.",
-    href: "/docs/pages",
-    tree: (
-      <Files>
-        <Folder name="pages" defaultOpen>
-          <File name="about.php" />
-          <File name="about.json" />
-        </Folder>
-      </Files>
-    ),
-    placeholder: "WordPress pages list showing synced template page",
-  },
-  {
-    icon: LayoutGrid,
-    title: "Patterns",
-    description:
-      "Reusable block patterns from template files. Automatically registered in the block inserter, always in sync with your code.",
-    href: "/docs/patterns",
-    tree: (
-      <Files>
-        <Folder name="patterns" defaultOpen>
-          <File name="pricing.php" />
-          <File name="pricing.json" />
-        </Folder>
-      </Files>
-    ),
-    placeholder: "Block inserter showing registered pattern",
-  },
-  {
-    icon: Puzzle,
-    title: "Extensions",
-    description:
-      "Add custom fields to any block — core, third-party, or your own. Use wildcards to extend entire namespaces at once.",
-    href: "/docs/extensions",
-    code: {
-      lang: "json",
-      code: `{
+const extensionCode = `{
   "blockstudio": {
     "extend": "core/*",
     "attributes": {
       "animation": {
         "type": "select",
+        "label": "Animation",
         "set": "style",
-        "options": ["fade", "slide"]
+        "options": ["none", "fade", "slide", "scale"]
+      },
+      "animationDuration": {
+        "type": "range",
+        "label": "Duration",
+        "min": 0.1,
+        "max": 2,
+        "step": 0.1,
+        "condition": {
+          "animation": "!= none"
+        }
       }
     }
   }
-}`,
-    },
-  },
-];
+}`;
 
-export async function BeyondBlocks() {
+export async function Extensions() {
   return (
     <Section
-      title="Beyond blocks"
-      description="A complete framework for blocks, pages, patterns, and extensions — all from template files."
+      title="Extend any block"
+      description="Add custom fields to core blocks, third-party blocks, or your own. Use wildcards to extend entire namespaces at once."
     >
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 px-6 lg:px-10">
-        {items.map((item) => (
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 px-6 lg:px-10">
+        <div>
+          <CodeBlock code={extensionCode} lang="json" />
+        </div>
+        <div className="flex flex-col gap-3 text-sm text-fd-muted-foreground">
+          <p>
+            Extensions let you add fields to any existing block without
+            modifying its source code. Target a single block, a list of
+            blocks, or use <code className="text-fd-foreground font-mono">core/*</code> to
+            extend every core block at once.
+          </p>
+          <p>
+            Fields added via extensions support the same features as block
+            fields — conditional logic, storage, validation, and all 26
+            field types. Values are injected into the
+            block&apos;s <code className="text-fd-foreground font-mono">style</code> or <code className="text-fd-foreground font-mono">class</code> attributes,
+            or stored in post meta.
+          </p>
           <Link
-            key={item.title}
-            href={item.href}
-            className="group flex flex-col gap-y-4 rounded-lg p-6 transition-colors hover:bg-fd-secondary/20"
+            href="/docs/extensions"
+            className="text-fd-primary hover:underline font-medium"
           >
-            <div>
-              <div className="flex items-center gap-3 mb-2">
-                <div className="bg-fd-primary/10 p-1.5 rounded-lg">
-                  <item.icon className="h-4 w-4 text-fd-primary" />
-                </div>
-                <h3 className="text-base font-medium text-fd-foreground">
-                  {item.title}
-                </h3>
-              </div>
-              <p className="text-sm text-fd-muted-foreground text-pretty">
-                {item.description}
-              </p>
-            </div>
-            {item.tree}
-            {item.placeholder && (
-              <Placeholder label={item.placeholder} aspect="wide" />
-            )}
-            {item.code && (
-              <CodeBlock code={item.code.code} lang={item.code.lang} />
-            )}
+            Learn more about extensions &rarr;
           </Link>
-        ))}
+        </div>
       </div>
     </Section>
   );
