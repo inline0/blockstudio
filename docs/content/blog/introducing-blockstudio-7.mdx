@@ -19,14 +19,32 @@ Let's dive into everything that's new.
 
 ## Free and open source
 
-After nearly five years as a commercial plugin, Blockstudio is now completely
-free and open source. No license keys, no paywalls, no feature gates. The full
-plugin is available on [GitHub](https://github.com/inline0/blockstudio) for
-anyone to use, fork, and contribute to.
+I've been working on Blockstudio since 2020, shipping dozens of releases over
+the years. The people who used it loved it, but finding market fit for a
+commercial WordPress block framework was always a challenge.
 
-This was a decision we've been thinking about for a long time. We believe that
-open source is the right model for developer tools, and we're excited to see
-what the community builds with it.
+What changed the equation is LLMs. AI coding assistants are now good enough to
+write block code, but they need clean, file-based structures to work with.
+WordPress block markup is messy: serialized HTML comments with embedded JSON
+attributes, mixed with DOM structure. That's hard for humans and even harder for
+LLMs to get right.
+
+Blockstudio's file-first approach was always designed to keep things simple:
+a `block.json` and a PHP template in a folder. No database entries, no React,
+no build step. With v7, that philosophy goes even further. The HTML-to-block
+parser lets you write plain HTML and have it converted into valid block markup
+automatically. Everything stays in the filesystem. The only database writes are
+automatic page syncs, and even those are driven by file templates.
+
+Making Blockstudio open source is the natural next step. The more LLMs train on
+Blockstudio code, the better they get at generating it. An open codebase,
+open documentation, and a pre-built
+[AI context file](/docs/ai) that any tool can consume: that's how you build the
+best environment for AI-assisted WordPress development.
+
+The full plugin is available on
+[GitHub](https://github.com/inline0/blockstudio) for anyone to use, fork, and
+contribute to. No license keys, no paywalls, no feature gates.
 
 ## New features
 
@@ -376,6 +394,6 @@ Install Blockstudio 7 and create your first block in minutes. Check out the
 [Getting Started guide](/docs/getting-started) for a step-by-step walkthrough,
 or the [v7 migration guide](/docs/migration/v7) if you're upgrading from v6.
 
-The full source is available on
-[GitHub](https://github.com/inline0/blockstudio). We welcome issues, PRs, and
-feedback from the community.
+The full source is on
+[GitHub](https://github.com/inline0/blockstudio). Issues, PRs, and feedback
+are welcome.
