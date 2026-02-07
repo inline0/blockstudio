@@ -1,5 +1,6 @@
-import { CodeBlock } from "onedocs";
-import { Section } from "./section";
+import { Blocks } from "lucide-react";
+import { Section, SectionIcon } from "./section";
+import { CodeCard } from "./code-card";
 
 const steps = [
   {
@@ -29,7 +30,9 @@ const steps = [
     number: 2,
     filename: "index.php",
     lang: "php",
-    code: `<section style="background: <?= $a['background'] ?>">
+    code: `<section
+  style="background: <?= $a['background'] ?>"
+>
   <h1><?= $a['heading'] ?></h1>
 
   <?php if ($a['showCta']): ?>
@@ -63,8 +66,9 @@ const steps = [
 export async function HowItWorks() {
   return (
     <Section
-      title="JSON + template. That's it."
-      description="Define your fields in block.json, render them in a PHP template. Add a stylesheet if you want. No JavaScript, no build step."
+      icon={<SectionIcon><Blocks /></SectionIcon>}
+      title="Custom blocks in 3 files"
+      description="Define fields in block.json, render them in a template, style with CSS or SCSS. No JavaScript, no build step, no boilerplate."
       border={false}
     >
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 px-6 lg:px-10">
@@ -78,7 +82,7 @@ export async function HowItWorks() {
                 {step.filename}
               </span>
             </div>
-            <CodeBlock code={step.code} lang={step.lang} />
+            <CodeCard code={step.code} lang={step.lang} />
           </div>
         ))}
       </div>

@@ -1,5 +1,6 @@
+import { CircleHelp } from "lucide-react";
 import { Accordions, Accordion } from "onedocs/components";
-import { Section } from "./section";
+import { Section, SectionIcon } from "./section";
 
 const faqs = [
   {
@@ -66,7 +67,7 @@ const faqs = [
 
 export function FAQ() {
   return (
-    <Section title="Questions & Answers">
+    <Section icon={<SectionIcon><CircleHelp /></SectionIcon>} title="Questions & Answers">
       <div className="px-6 pb-4 lg:px-10 max-w-3xl">
         <Accordions type="single">
           {faqs.map((faq) => (

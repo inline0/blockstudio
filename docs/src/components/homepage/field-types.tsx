@@ -1,5 +1,6 @@
+import { SlidersHorizontal } from "lucide-react";
 import Link from "next/link";
-import { Section } from "./section";
+import { Section, SectionIcon } from "./section";
 
 const categories = [
   {
@@ -49,6 +50,7 @@ const categories = [
 export function FieldTypes() {
   return (
     <Section
+      icon={<SectionIcon><SlidersHorizontal /></SectionIcon>}
       title="26 field types"
       description="Everything you need to build rich editing experiences, from simple text inputs to nested repeaters."
     >

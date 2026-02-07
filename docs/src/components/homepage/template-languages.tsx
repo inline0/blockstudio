@@ -1,5 +1,6 @@
+import { FileCode } from "lucide-react";
 import { Button } from "onedocs";
-import { Section } from "./section";
+import { Section, SectionIcon } from "./section";
 import { Feature } from "./feature";
 import { CodeTabs } from "./code-tabs";
 
@@ -54,6 +55,7 @@ const templates = {
 export async function TemplateLanguages() {
   return (
     <Section
+      icon={<SectionIcon><FileCode /></SectionIcon>}
       title="Write templates in PHP, Twig, or Blade"
       description="Use the templating language you already know. All three share the same variables, components, and features — no JavaScript required."
     >

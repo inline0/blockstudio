@@ -23,11 +23,13 @@ export default function Home() {
         <AssetProcessing />
         <DeveloperExperience />
         <FAQ />
-        <CTASection
-          title="Ready to build?"
-          description="Create your first block in under a minute."
-          cta={{ label: "Get Started", href: "/docs/getting-started" }}
-        />
+        <div className="border-t">
+          <CTASection
+            title="Ready to build?"
+            description="Create your first block in under a minute."
+            cta={{ label: "Get Started", href: "/docs/getting-started" }}
+          />
+        </div>
       </div>
     </HomePage>
   );

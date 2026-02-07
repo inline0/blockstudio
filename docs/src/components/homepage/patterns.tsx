@@ -1,7 +1,8 @@
-import Link from "next/link";
-import { CodeBlock } from "onedocs";
-import { Files, Folder, File } from "onedocs/components";
-import { Section } from "./section";
+import { LayoutGrid, BookOpen, Layers, Pencil } from "lucide-react";
+import { Button } from "onedocs";
+import { Section, SectionIcon } from "./section";
+import { Feature } from "./feature";
+import { CodeCard } from "./code-card";
 
 const templateCode = `<block name="core/columns">
   <block name="core/column">
@@ -20,59 +21,85 @@ const templateCode = `<block name="core/columns">
   </block>
 </block>`;
 
-const jsonCode = `{
-  "name": "pricing",
-  "title": "Pricing Table",
-  "categories": ["content"],
-  "keywords": ["pricing", "plans"]
-}`;
+const details = [
+  {
+    icon: BookOpen,
+    title: "Same syntax as pages",
+    description:
+      "Patterns use the same HTML parser — standard HTML maps to core blocks, the <block> tag handles everything else.",
+  },
+  {
+    icon: LayoutGrid,
+    title: "Auto-registered",
+    description:
+      "Drop a folder with a template and a pattern.json. Blockstudio registers it and adds it to the inserter automatically.",
+  },
+  {
+    icon: Pencil,
+    title: "Fully editable",
+    description:
+      "Unlike pages, patterns are inserted as editable block content. Users can customize each instance independently.",
+  },
+  {
+    icon: Layers,
+    title: "Categorized & searchable",
+    description:
+      "Add categories and keywords in pattern.json. Users find your patterns instantly in the inserter search.",
+  },
+];
 
 export async function Patterns() {
   return (
     <Section
-      title="Template-based patterns"
-      description="Define reusable block patterns as template files. Same HTML-to-block syntax as pages, registered automatically in the block inserter."
+      icon={<SectionIcon><LayoutGrid /></SectionIcon>}
+      title="Reusable patterns from template files"
+      description="Define block patterns as template files. Same HTML syntax as pages, registered automatically in the block inserter."
     >
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 px-6 lg:px-10">
-        <div className="flex flex-col gap-4">
-          <Files>
-            <Folder name="patterns" defaultOpen>
-              <Folder name="pricing" defaultOpen>
-                <File name="pattern.json" />
-                <File name="index.php" />
-              </Folder>
-              <Folder name="testimonials">
-                <File name="pattern.json" />
-                <File name="index.php" />
-              </Folder>
-            </Folder>
-          </Files>
-          <CodeBlock code={jsonCode} lang="json" />
-        </div>
-        <div className="flex flex-col gap-4">
-          <CodeBlock code={templateCode} lang="html" />
-          <div className="flex flex-col gap-3 text-sm text-fd-muted-foreground">
-            <p>
-              Patterns use the same HTML parser as pages — standard HTML
-              maps to core blocks, and the{" "}
-              <code className="text-fd-foreground font-mono">
-                &lt;block&gt;
-              </code>{" "}
-              tag handles everything else. Patterns are registered in memory
-              and show up in the inserter immediately.
-            </p>
-            <p>
-              Unlike pages, patterns don&apos;t sync to the database. They&apos;re
-              inserted as editable block content, so users can customize
-              each instance independently.
-            </p>
-            <Link
-              href="/docs/patterns"
-              className="text-fd-primary hover:underline font-medium"
-            >
+      <div className="flex flex-col gap-10 px-6 lg:px-10">
+        <Feature
+          headline="Template files, not registration code"
+          description={
+            <>
+              <p>
+                Create a folder with a{" "}
+                <code className="text-fd-foreground font-mono text-sm">
+                  pattern.json
+                </code>{" "}
+                and a template file. Blockstudio registers the pattern
+                automatically — no{" "}
+                <code className="text-fd-foreground font-mono text-sm">
+                  register_block_pattern()
+                </code>{" "}
+                boilerplate.
+              </p>
+              <p>
+                Patterns are inserted as real, editable blocks. Users get a
+                starting layout they can fully customize, while you maintain the
+                templates in version control.
+              </p>
+            </>
+          }
+          cta={
+            <Button href="/docs/patterns" className="w-max">
               Learn more about patterns &rarr;
-            </Link>
-          </div>
+            </Button>
+          }
+          demo={<CodeCard code={templateCode} lang="html" />}
+        />
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8 sm:gap-10">
+          {details.map((detail) => (
+            <div key={detail.title} className="flex flex-col gap-2 text-sm/7">
+              <div className="flex items-start gap-3 text-fd-foreground">
+                <div className="flex items-center h-[1lh]">
+                  <detail.icon className="h-3.5 w-3.5 text-fd-primary" />
+                </div>
+                <h3 className="font-semibold">{detail.title}</h3>
+              </div>
+              <p className="text-fd-muted-foreground text-pretty">
+                {detail.description}
+              </p>
+            </div>
+          ))}
         </div>
       </div>
     </Section>

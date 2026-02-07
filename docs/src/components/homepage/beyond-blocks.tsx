@@ -1,6 +1,7 @@
+import { Puzzle } from "lucide-react";
 import Link from "next/link";
 import { CodeBlock } from "onedocs";
-import { Section } from "./section";
+import { Section, SectionIcon } from "./section";
 
 const extensionCode = `{
   "blockstudio": {
@@ -29,6 +30,7 @@ const extensionCode = `{
 export async function Extensions() {
   return (
     <Section
+      icon={<SectionIcon><Puzzle /></SectionIcon>}
       title="Extend any block"
       description="Add custom fields to core blocks, third-party blocks, or your own. Use wildcards to extend entire namespaces at once."
     >

@@ -1,5 +1,6 @@
 import Link from "next/link";
 import {
+  Code,
   Database,
   GitBranch,
   SlidersHorizontal,
@@ -10,7 +11,7 @@ import {
   Shield,
   Zap,
 } from "lucide-react";
-import { Section } from "./section";
+import { Section, SectionIcon } from "./section";
 
 const features = [
   {
@@ -81,6 +82,7 @@ const features = [
 export function DeveloperExperience() {
   return (
     <Section
+      icon={<SectionIcon><Code /></SectionIcon>}
       title="Built for developers"
       description="Power features that make complex blocks simple to build and maintain."
     >

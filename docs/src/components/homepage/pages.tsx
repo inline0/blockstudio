@@ -1,10 +1,11 @@
-import Link from "next/link";
-import { CodeBlock } from "onedocs";
-import { Files, Folder, File } from "onedocs/components";
-import { Section } from "./section";
+import { FileText, Lock, RefreshCw, Key, GitMerge } from "lucide-react";
+import { Button } from "onedocs";
+import { Section, SectionIcon } from "./section";
+import { Feature } from "./feature";
+import { CodeCard } from "./code-card";
 
-const templateCode = `<block name="core/cover" url="https://example.com/hero.jpg">
-  <h1>About Us</h1>
+const templateCode = `<block name="core/cover">
+  <h1 blockEditingMode="contentOnly">About Us</h1>
   <p>We build tools for WordPress developers.</p>
 </block>
 
@@ -19,62 +20,92 @@ const templateCode = `<block name="core/cover" url="https://example.com/hero.jpg
   </block>
 </block>`;
 
-const jsonCode = `{
-  "name": "about",
-  "title": "About",
-  "slug": "about",
-  "postStatus": "publish",
-  "templateLock": "all"
-}`;
+const details = [
+  {
+    icon: RefreshCw,
+    title: "Automatic sync",
+    description:
+      "Pages sync to WordPress on every admin load. Change your template, the editor updates instantly.",
+  },
+  {
+    icon: Lock,
+    title: "Template locking",
+    description:
+      "Lock the entire page so clients can only edit content, not structure. Perfect for landing pages and marketing sites.",
+  },
+  {
+    icon: Key,
+    title: "Keyed blocks",
+    description:
+      "Assign keys to individual blocks so user edits persist across template updates. Sync structure, keep content.",
+  },
+  {
+    icon: GitMerge,
+    title: "Version controlled",
+    description:
+      "Pages live in your theme or plugin as files. Track changes in Git, deploy across environments, review in PRs.",
+  },
+];
 
 export async function Pages() {
   return (
     <Section
-      title="File-based pages"
-      description="Define full WordPress pages as template files. HTML maps to core blocks automatically — write markup, Blockstudio syncs it to the editor."
+      icon={<SectionIcon><FileText /></SectionIcon>}
+      title="Full pages, defined in code"
+      description="Create complete WordPress pages from template files. HTML maps to core blocks automatically — Blockstudio keeps the editor in sync."
     >
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 px-6 lg:px-10">
-        <div className="flex flex-col gap-4">
-          <Files>
-            <Folder name="pages" defaultOpen>
-              <Folder name="about" defaultOpen>
-                <File name="page.json" />
-                <File name="index.php" />
-              </Folder>
-              <Folder name="contact">
-                <File name="page.json" />
-                <File name="index.php" />
-              </Folder>
-            </Folder>
-          </Files>
-          <CodeBlock code={jsonCode} lang="json" />
-        </div>
-        <div className="flex flex-col gap-4">
-          <CodeBlock code={templateCode} lang="html" />
-          <div className="flex flex-col gap-3 text-sm text-fd-muted-foreground">
-            <p>
-              Standard HTML elements like{" "}
-              <code className="text-fd-foreground font-mono">&lt;h1&gt;</code>,{" "}
-              <code className="text-fd-foreground font-mono">&lt;p&gt;</code>,{" "}
-              <code className="text-fd-foreground font-mono">&lt;ul&gt;</code>{" "}
-              map to core blocks automatically. For everything else, use the{" "}
-              <code className="text-fd-foreground font-mono">
-                &lt;block&gt;
-              </code>{" "}
-              tag.
-            </p>
-            <p>
-              Pages sync to WordPress on admin load. Lock templates to
-              prevent edits, or use keyed blocks to preserve user changes
-              across template updates.
-            </p>
-            <Link
-              href="/docs/pages"
-              className="text-fd-primary hover:underline font-medium"
-            >
+      <div className="flex flex-col gap-10 px-6 lg:px-10">
+        <Feature
+          headline="Write HTML, get blocks"
+          description={
+            <>
+              <p>
+                Standard elements like{" "}
+                <code className="text-fd-foreground font-mono text-sm">
+                  {"<h1>"}
+                </code>
+                ,{" "}
+                <code className="text-fd-foreground font-mono text-sm">
+                  {"<p>"}
+                </code>
+                , and{" "}
+                <code className="text-fd-foreground font-mono text-sm">
+                  {"<ul>"}
+                </code>{" "}
+                map to core blocks automatically. Use the{" "}
+                <code className="text-fd-foreground font-mono text-sm">
+                  {"<block>"}
+                </code>{" "}
+                tag for everything else — any block name, any attributes.
+              </p>
+              <p>
+                Define entire page layouts in your codebase. Blockstudio parses
+                your templates and creates real WordPress pages with real blocks
+                — fully editable in the block editor.
+              </p>
+            </>
+          }
+          cta={
+            <Button href="/docs/pages" className="w-max">
               Learn more about pages &rarr;
-            </Link>
-          </div>
+            </Button>
+          }
+          demo={<CodeCard code={templateCode} lang="html" />}
+        />
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8 sm:gap-10">
+          {details.map((detail) => (
+            <div key={detail.title} className="flex flex-col gap-2 text-sm/7">
+              <div className="flex items-start gap-3 text-fd-foreground">
+                <div className="flex items-center h-[1lh]">
+                  <detail.icon className="h-3.5 w-3.5 text-fd-primary" />
+                </div>
+                <h3 className="font-semibold">{detail.title}</h3>
+              </div>
+              <p className="text-fd-muted-foreground text-pretty">
+                {detail.description}
+              </p>
+            </div>
+          ))}
         </div>
       </div>
     </Section>

@@ -1,6 +1,7 @@
+import { Zap } from "lucide-react";
 import { CodeBlock } from "onedocs";
 import { Tabs, Tab, Files, Folder, File } from "onedocs/components";
-import { Section } from "./section";
+import { Section, SectionIcon } from "./section";
 
 const esModules = {
   lang: "js",
@@ -36,6 +37,7 @@ const scss = {
 export async function AssetProcessing() {
   return (
     <Section
+      icon={<SectionIcon><Zap /></SectionIcon>}
       title="No build tools. Ever."
       description="SCSS compilation, ES modules, and scoped styles — all by naming convention."
     >
