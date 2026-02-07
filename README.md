@@ -37,19 +37,19 @@ Blockstudio removes all of that. You write a JSON config and a PHP template. The
 
 ## Features
 
-**26 field types** including text, repeater, tabs, code, classes, color, files, and more. All configured in JSON with conditions, validation, defaults, and storage options.
-
-**File-based pages and patterns.** Write HTML templates and Blockstudio parses them into native WordPress block content. Pages sync to the database automatically. Patterns register in memory with no database writes.
-
-**HTML-to-block parser.** The parser converts standard HTML into WordPress block markup. Extensible via filters for custom block types and element mappings. This is what powers pages, patterns, and AI-generated content.
-
-**Asset pipeline.** SCSS compilation, ES module imports from npm, automatic minification, and scoped loading. Name your files (`style.scss`, `script.js`, `editor.css`) and everything is handled automatically.
-
-**Tailwind CSS v4.** Server-side compilation via TailwindPHP. No Node.js, no CLI. Compiled CSS is cached to disk based on extracted class names.
-
-**Storage.** Store field values in post meta or site options instead of block attributes. Queryable via `WP_Query`, available through the REST API.
-
-**AI-ready.** A pre-built context file (`blockstudio-llm.txt`) ships with the full documentation and JSON schemas (~48k tokens). Point any LLM tool to the URL and your coding assistant gets complete knowledge of the framework.
+- **26 field types** - text, repeater, tabs, code, classes, color, files, and more, all configured in JSON with conditions, validation, and defaults
+- **PHP, Twig, and Blade** - write templates in your preferred language with the same `$a` variable across all three
+- **File-based pages** - create WordPress pages from HTML templates with automatic syncing, keyed block merging, and editing controls
+- **File-based patterns** - define block patterns as template files, auto-registered without any PHP code
+- **HTML-to-block parser** - converts standard HTML into native WordPress block markup with extensible renderers and element mapping
+- **Extensions** - add custom fields to any core or third-party block via a JSON file
+- **Asset pipeline** - SCSS compilation, ES module imports from npm, automatic minification, and scoped loading by naming convention
+- **Tailwind CSS v4** - server-side compilation via TailwindPHP with candidate-based caching, no Node.js or CLI needed
+- **Storage** - persist field values in post meta or site options, queryable via `WP_Query` and the REST API
+- **Custom fields** - reusable field definitions shared across multiple blocks via filesystem or PHP filter
+- **SEO integration** - block content visible to Yoast SEO and Rank Math for editor analysis
+- **AI-ready** - ships a pre-built context file with full documentation and JSON schemas (~48k tokens) for LLM coding assistants
+- **50+ PHP and JS hooks** - customize every aspect of the framework
 
 ## Quick start
 
@@ -60,6 +60,7 @@ Blockstudio removes all of that. You write a JSON config and a PHP template. The
 **block.json**
 ```json
 {
+  "$schema": "https://app.blockstudio.dev/schema/block",
   "name": "theme/hero",
   "title": "Hero",
   "blockstudio": {
@@ -74,12 +75,12 @@ Blockstudio removes all of that. You write a JSON config and a PHP template. The
 **index.php**
 ```php
 <section useBlockProps class="hero">
-  <h1><?= $heading ?></h1>
-  <p><?= $description ?></p>
+  <h1><?php echo $a['heading']; ?></h1>
+  <p><?php echo $a['description']; ?></p>
 </section>
 ```
 
-That's it. The block appears in the editor with the fields you defined.
+The block appears in the editor with the fields you defined. Add a `style.scss` or `script.js` to the same folder and they get compiled and enqueued automatically.
 
 ## Requirements
 
