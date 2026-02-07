@@ -29,16 +29,16 @@ const templates = {
     code: `<section class="bg-brand px-6 py-20">
   <div class="container-narrow">
     <h2 class="text-4xl font-bold text-white">
-      <?= $attributes['heading'] ?>
+      <?= $a['heading'] ?>
     </h2>
 
     <p class="mt-4 text-lg text-white/80">
-      <?= $attributes['description'] ?>
+      <?= $a['description'] ?>
     </p>
 
-    <a href="<?= $attributes['url'] ?>"
+    <a href="<?= $a['url'] ?>"
       class="mt-6 inline-block rounded-lg bg-white px-6 py-3 font-semibold text-brand">
-      <?= $attributes['buttonText'] ?>
+      <?= $a['buttonText'] ?>
     </a>
   </div>
 </section>`,
@@ -76,12 +76,12 @@ export async function TailwindCSS() {
   return (
     <Section
       icon={<SectionIcon><Wind /></SectionIcon>}
-      title="Tailwind CSS, no build step"
-      description="Full Tailwind CSS v4 support compiled server-side on every request. Write utility classes in your templates and Blockstudio handles the rest."
+      title="Tailwind v4, compiled in PHP"
+      description="Write utility classes in your templates. Blockstudio compiles them server-side via TailwindPHP on every request, with automatic file-based caching."
     >
       <div className="flex flex-col gap-10 px-6 lg:px-10">
         <Feature
-          headline="Enable it, use it"
+          headline="One setting, zero tooling"
           description={
             <>
               <p>
