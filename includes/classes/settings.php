@@ -67,14 +67,11 @@ class Settings {
 	 * @var array
 	 */
 	protected static array $defaults = array(
-		'builderDeprecated' => array(
-			'enabled' => false,
-		),
-		'users'             => array(
+		'users'       => array(
 			'ids'   => array(),
 			'roles' => array(),
 		),
-		'assets'            => array(
+		'assets'      => array(
 			'enqueue' => true,
 			'minify'  => array(
 				'css' => false,
@@ -85,23 +82,23 @@ class Settings {
 				'scssFiles' => true,
 			),
 		),
-		'editor'            => array(
+		'editor'      => array(
 			'formatOnSave' => false,
 			'library'      => false,
 			'assets'       => array(),
 			'markup'       => false,
 		),
-		'tailwind'          => array(
+		'tailwind'    => array(
 			'enabled' => false,
 			'config'  => '',
 		),
-		'blockEditor'       => array(
+		'blockEditor' => array(
 			'disableLoading' => false,
 			'cssClasses'     => array(),
 			'cssVariables'   => array(),
 		),
-		'library'           => false,
-		'ai'                => array(
+		'library'     => false,
+		'ai'          => array(
 			'enableContextGeneration' => false,
 		),
 	);
@@ -192,7 +189,7 @@ class Settings {
 	 *
 	 * @param array $settings The settings array.
 	 *
-	 * @todo Remove in 6.0.0.
+	 * @todo Remove legacy v5 migration.
 	 */
 	protected function migrate_settings_from_old_version( &$settings ): void {
 		if ( has_filter( 'blockstudio/library' ) ) {

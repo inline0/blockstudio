@@ -16,10 +16,12 @@ The [minify](https://github.com/matthiasmullie/minify) library is used for this 
 Minification can be enabled using the `assets/minify` setting:
 
 ```php title="functions.php"
-add_filter('blockstudio/settings', function($settings) {
-  $settings['assets']['minify']['css'] = true;
-  $settings['assets']['minify']['js'] = true;
-  return $settings;
+add_filter('blockstudio/settings/assets/minify/css', function() {
+  return true;
+});
+
+add_filter('blockstudio/settings/assets/minify/js', function() {
+  return true;
 });
 ```
 
@@ -28,9 +30,8 @@ add_filter('blockstudio/settings', function($settings) {
 If you prefer writing your styles in SCSS, you can enable SCSS processing:
 
 ```php title="functions.php"
-add_filter('blockstudio/settings', function($settings) {
-  $settings['assets']['process']['scss'] = true;
-  return $settings;
+add_filter('blockstudio/settings/assets/process/scss', function() {
+  return true;
 });
 ```
 
@@ -46,12 +47,12 @@ When using SCSS, it is possible to import other SCSS files. Imports are relative
 @import "modules.scss";
 ```
 
-Additionally, custom import paths can be defined using the `blockstudio/assets/process/scss/importPaths` filter, so files can be imported from other directories without specifying any folder structure.
+Additionally, custom import paths can be defined using the `blockstudio/assets/process/scss/import_paths` filter, so files can be imported from other directories without specifying any folder structure.
 
 Please note that the `.scss` extension needs to be present for imports to work properly.
 
 ```php title="functions.php"
-add_filter('blockstudio/assets/process/scss/importPaths', function($paths) {
+add_filter('blockstudio/assets/process/scss/import_paths', function($paths) {
   $paths[] = get_template_directory() . '/scss';
   return $paths;
 });

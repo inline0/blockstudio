@@ -16,7 +16,7 @@ to [create a new instance](/docs/registration#instances) for multiple
 source directories.
 
 ```php title="functions.php"
-add_action('blockstudio/path', function() {
+add_filter('blockstudio/path', function() {
   $path = get_stylesheet_directory() . '/blocks';
   return $path;
 });

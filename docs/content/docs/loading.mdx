@@ -31,8 +31,7 @@ Rendering template loading can be disabled by setting the `disableLoading` key i
 Alternatively, block loading can be disabled globally using the `blockEditor/disableLoading` setting:
 
 ```php title="functions.php"
-add_filter('blockstudio/settings', function($settings) {
-  $settings['blockEditor']['disableLoading'] = true;
-  return $settings;
+add_filter('blockstudio/settings/block_editor/disable_loading', function() {
+  return true;
 });
 ```

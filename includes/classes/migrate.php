@@ -170,7 +170,7 @@ class Migrate {
 }
 
 register_activation_hook(
-	BLOCKSTUDIO_DIR . '/blockstudio-v7.php',
+	BLOCKSTUDIO_DIR . '/blockstudio.php',
 	function () {
 		$migrator = new Migrate();
 		$migrator->handle_first_activation();

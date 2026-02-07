@@ -67,7 +67,7 @@ export function FieldTypes() {
   return (
     <Section
       icon={<SectionIcon><SlidersHorizontal /></SectionIcon>}
-      title="25 different field types at your disposal"
+      title="26 different field types at your disposal"
       description="Blockstudio provides a versatile array of field types, from basic text fields to complex structures like repeaters and tabs, as well as DOM-focused fields such as classes and data attributes."
       cta={
         <Button href="/docs/attributes/field-types" className="w-max">

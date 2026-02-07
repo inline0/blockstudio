@@ -6,14 +6,22 @@ import { CodeTabs } from "./code-tabs";
 
 const templates = {
   config: {
-    label: "blockstudio.json",
-    lang: "json",
-    code: `{
-  "tailwind": {
-    "enabled": true,
-    "config": "@theme { --color-brand: #4f46e5; } @layer utilities { .container-narrow { max-width: 48rem; margin-inline: auto; } }"
-  }
-}`,
+    label: "functions.php",
+    lang: "php",
+    code: `add_filter('blockstudio/tailwind/css', function ($css) {
+  return $css . '
+    @theme {
+      --color-brand: #4f46e5;
+    }
+
+    @layer utilities {
+      .container-narrow {
+        max-width: 48rem;
+        margin-inline: auto;
+      }
+    }
+  ';
+});`,
   },
   template: {
     label: "Template",
@@ -23,9 +31,15 @@ const templates = {
     <h2 class="text-4xl font-bold text-white">
       <?= $attributes['heading'] ?>
     </h2>
+
     <p class="mt-4 text-lg text-white/80">
       <?= $attributes['description'] ?>
     </p>
+
+    <a href="<?= $attributes['url'] ?>"
+      class="mt-6 inline-block rounded-lg bg-white px-6 py-3 font-semibold text-brand">
+      <?= $attributes['buttonText'] ?>
+    </a>
   </div>
 </section>`,
   },
@@ -90,9 +104,9 @@ export async function TailwindCSS() {
               <p>
                 Use the{" "}
                 <code className="text-fd-foreground font-mono text-sm">
-                  config
+                  blockstudio/tailwind/css
                 </code>{" "}
-                property to define custom themes, utility classes, and variants
+                filter to define custom themes, utility classes, and variants
                 using Tailwind v4 CSS-first syntax. The{" "}
                 <code className="text-fd-foreground font-mono text-sm">
                   classes

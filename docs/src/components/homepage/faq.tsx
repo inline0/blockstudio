@@ -46,7 +46,7 @@ const faqs = [
   {
     question: "What are the requirements?",
     answer:
-      "WordPress 6.7+ and PHP 8.1+. Blockstudio follows 100% WordPress Coding Standards.",
+      "WordPress 6.7+ and PHP 8.2+. Blockstudio follows 100% WordPress Coding Standards.",
   },
   {
     question: "Is Blockstudio free?",
