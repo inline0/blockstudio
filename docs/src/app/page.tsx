@@ -14,7 +14,7 @@ import { FAQ } from "../components/homepage/faq";
 
 export default function Home() {
   return (
-    <HomePage config={config} packageName="blockstudio">
+    <HomePage config={config}>
       <div className="w-full self-stretch border-b">
         <HowItWorks />
         <Composition />

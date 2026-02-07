@@ -1,6 +1,7 @@
 import { defineConfig } from "onedocs/config";
 import { Blocks, FileText, LayoutGrid, Puzzle, FormInput, Cpu, FileJson, Code } from "lucide-react";
 import { HeroBlocks } from "./src/components/hero-blocks";
+import { HeroLeft } from "./src/components/homepage/hero-left";
 
 const iconClass = "h-5 w-5 text-fd-primary";
 
@@ -21,10 +22,7 @@ export default defineConfig({
   },
   homepage: {
     hero: {
-      title: <>The block framework<br />for WordPress</>,
-      description:
-        "The fastest way to build custom blocks. Write templates in PHP, Twig, or Blade with 25+ field types and zero JavaScript.",
-      cta: { label: "Get Started", href: "/docs/getting-started" },
+      left: <HeroLeft />,
       right: <HeroBlocks />,
     },
     features: [
