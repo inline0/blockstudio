@@ -214,7 +214,35 @@ A new HTML parser powers the pages and patterns systems. It converts standard
 HTML templates into WordPress block markup, handling both container blocks
 (like groups and columns) and leaf blocks (like paragraphs and headings). The
 parser uses a trait-based renderer architecture, making it easy to extend with
-support for additional block types.
+support for additional block types via the `blockstudio/parser/renderers`
+filter:
+
+```php title="functions.php"
+add_filter( 'blockstudio/parser/renderers', function ( $renderers, $parser ) {
+    $renderers['acme/hero'] = function ( $element, $attrs, $parser ) {
+        $content = $parser->get_inner_html( $element );
+        $html    = '<div class="acme-hero">' . $content . '</div>';
+
+        return array(
+            'blockName'    => 'acme/hero',
+            'attrs'        => $attrs,
+            'innerBlocks'  => array(),
+            'innerHTML'    => $html,
+            'innerContent' => array( $html ),
+        );
+    };
+
+    return $renderers;
+}, 10, 2 );
+```
+
+Once registered, you can use the block in any page or pattern template:
+
+```html title="index.php"
+<block name="acme/hero" background="/hero.jpg">
+  <h1>Welcome to our site</h1>
+</block>
+```
 
 ### Modern PHP
 

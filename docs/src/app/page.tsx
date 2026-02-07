@@ -4,6 +4,7 @@ import { HowItWorks } from "../components/homepage/how-it-works";
 import { TemplateLanguages } from "../components/homepage/template-languages";
 import { Pages } from "../components/homepage/pages";
 import { Patterns } from "../components/homepage/patterns";
+import { HtmlParser } from "../components/homepage/html-parser";
 import { Extensions } from "../components/homepage/beyond-blocks";
 import { FieldTypes } from "../components/homepage/field-types";
 import { AssetProcessing } from "../components/homepage/asset-processing";
@@ -20,6 +21,7 @@ export default function Home() {
         <TemplateLanguages />
         <Pages />
         <Patterns />
+        <HtmlParser />
         <Extensions />
         <FieldTypes />
         <AssetProcessing />
