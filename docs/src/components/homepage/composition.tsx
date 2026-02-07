@@ -26,7 +26,7 @@ export async function Composition() {
     <Section
       icon={<SectionIcon><Component /></SectionIcon>}
       title="React features, PHP templates"
-      description="Blockstudio brings the best of both worlds — native WordPress editor components like RichText and InnerBlocks, accessible directly in your PHP templates. No JavaScript, no build step."
+      description="Blockstudio brings the best of both worlds. Native WordPress editor components like RichText and InnerBlocks, accessible directly in your PHP templates. No JavaScript, no build step."
     >
       <div className="px-6 lg:px-10">
         <Feature
@@ -47,7 +47,7 @@ export async function Composition() {
                 <code className="text-fd-foreground font-mono text-sm">
                   useBlockProps
                 </code>{" "}
-                to mark the block wrapper — all from a single template file.
+                to mark the block wrapper. All from a single template file.
               </p>
               <p>
                 Blockstudio handles the editor integration automatically. In the

@@ -31,8 +31,8 @@ Each page folder needs a `page.json` configuration file:
 | `slug` | `string` | Same as name | URL slug for the page |
 | `postType` | `string` | `"page"` | WordPress post type |
 | `postStatus` | `string` | `"draft"` | Status for new posts (`publish`, `draft`, `pending`, `private`) |
-| `postId` | `integer` | — | Pin the page to a specific WordPress post ID |
-| `blockEditingMode` | `string` | — | Block editing mode: `"default"`, `"contentOnly"`, or `"disabled"` |
+| `postId` | `integer` | - | Pin the page to a specific WordPress post ID |
+| `blockEditingMode` | `string` | - | Block editing mode: `"default"`, `"contentOnly"`, or `"disabled"` |
 | `templateLock` | `string\|false` | `"all"` | Lock mode: `"all"`, `"insert"`, `"contentOnly"`, or `false` |
 | `templateFor` | `string\|null` | `null` | Set as default template for a post type |
 | `sync` | `boolean` | `true` | Whether to sync content when template changes |
@@ -60,9 +60,9 @@ The `blockEditingMode` property controls how blocks can be edited in the editor.
 
 | Value | Description |
 |-------|-------------|
-| `"default"` | Full editing — blocks can be selected, moved, and edited |
-| `"contentOnly"` | Text editing only — block text is editable but settings and structure are locked |
-| `"disabled"` | No editing — blocks are completely non-interactive |
+| `"default"` | Full editing. Blocks can be selected, moved, and edited |
+| `"contentOnly"` | Text editing only. Block text is editable but settings and structure are locked |
+| `"disabled"` | No editing. Blocks are completely non-interactive |
 
 Per-element overrides are set as HTML attributes on any element (`<h1>`, `<p>`, `<div>`, etc.) or on `<block>` elements. Ancestor container blocks of overridden elements are automatically set to `contentOnly` so their children remain accessible.
 
@@ -101,7 +101,7 @@ Use `postId` to pin a page to a specific ID:
 
 When creating the page, Blockstudio passes the ID to WordPress via `import_id`. If the ID is available, WordPress uses it exactly. If the ID is already taken by an unrelated post, WordPress silently auto-assigns a new ID.
 
-When looking up existing pages, Blockstudio checks the pinned ID first — before checking meta or slug. This means if a page is deleted and re-synced, it reclaims the same ID.
+When looking up existing pages, Blockstudio checks the pinned ID first, before checking meta or slug. This means if a page is deleted and re-synced, it reclaims the same ID.
 
 ## Keyed Block Merging
 
@@ -128,7 +128,7 @@ Use the `key` attribute on any HTML element or `<block>` element:
 </block>
 ```
 
-Keys must be globally unique across the entire template. A key protects the entire block and all of its content — you don't need to key individual children inside a keyed parent. Keyed blocks can be moved to any position or nesting level between template updates and their user content will still be preserved.
+Keys must be globally unique across the entire template. A key protects the entire block and all of its content. You don't need to key individual children inside a keyed parent. Keyed blocks can be moved to any position or nesting level between template updates and their user content will still be preserved.
 
 ### How Merging Works
 
@@ -145,7 +145,7 @@ When a template file changes and the page re-syncs:
 
 1. Template defines `<p key="intro">Default intro.</p>`
 2. User edits the paragraph in the editor to "Custom intro text."
-3. Developer updates the template — adds a new block, changes layout
+3. Developer updates the template, adds a new block, changes layout
 4. On sync: the paragraph keeps "Custom intro text." while the new layout is applied
 
 **Attributes from the template still apply:**
@@ -160,10 +160,10 @@ When a template file changes and the page re-syncs:
 |----------|----------|
 | New keyed block added to template | Appears with the template's default content |
 | Keyed block removed from template | Deleted from the post |
-| Block type changes (same key) | Template wins entirely — no content merge |
+| Block type changes (same key) | Template wins entirely, no content merge |
 | Duplicate keys | Second occurrence is treated as unkeyed |
 | No keys in template | Full replacement (same behavior as without keys) |
-| Force sync | Full replacement — keys are ignored |
+| Force sync | Full replacement, keys are ignored |
 | Locked post | No sync at all |
 
 ### Combining with Editing Controls
@@ -188,7 +188,7 @@ The developer controls everything. The page is a static layout that clients can'
 <p>These terms govern your use of our service...</p>
 ```
 
-No keys needed — the template is the single source of truth. Every sync overwrites the page entirely.
+No keys needed. The template is the single source of truth. Every sync overwrites the page entirely.
 
 #### Locked layout with editable content
 
@@ -219,7 +219,7 @@ The most common pattern. Lock the page structure so clients can't add, remove, o
 </block>
 ```
 
-The client can edit the hero title, description, and feature intro — nothing else. The button text, URL, and cover background image are developer-controlled. When the developer updates the template (e.g., adds a second button), keyed sections keep the client's text.
+The client can edit the hero title, description, and feature intro. Nothing else. The button text, URL, and cover background image are developer-controlled. When the developer updates the template (e.g., adds a second button), keyed sections keep the client's text.
 
 #### Evolving template with preserved content
 
@@ -254,7 +254,7 @@ The new testimonials section and button appear on sync. The client's edits to th
 
 #### One-time scaffold
 
-Create a page with a starting structure, then hand it off entirely. Set `sync` to `false` so the template is only used for the initial creation — after that, the client owns the page completely.
+Create a page with a starting structure, then hand it off entirely. Set `sync` to `false` so the template is only used for the initial creation. After that, the client owns the page completely.
 
 ```json title="page.json"
 {

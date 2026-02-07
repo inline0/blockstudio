@@ -26,7 +26,7 @@ const details = [
     icon: BookOpen,
     title: "Same syntax as pages",
     description:
-      "Patterns use the same HTML parser — standard HTML maps to core blocks, the <block> tag handles everything else.",
+      "Patterns use the same HTML parser. Standard HTML maps to core blocks, the <block> tag handles everything else.",
   },
   {
     icon: LayoutGrid,
@@ -66,7 +66,7 @@ export async function Patterns() {
                   pattern.json
                 </code>{" "}
                 and a template file. Blockstudio registers the pattern
-                automatically — no{" "}
+                automatically, no{" "}
                 <code className="text-fd-foreground font-mono text-sm">
                   register_block_pattern()
                 </code>{" "}

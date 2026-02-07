@@ -57,7 +57,7 @@ export async function TemplateLanguages() {
     <Section
       icon={<SectionIcon><FileCode /></SectionIcon>}
       title="Write templates in PHP, Twig, or Blade"
-      description="Use the templating language you already know. All three share the same variables, components, and features — no JavaScript required."
+      description="Use the templating language you already know. All three share the same variables, components, and features. No JavaScript required."
     >
       <div className="px-6 lg:px-10">
         <Feature
@@ -96,7 +96,7 @@ export async function TemplateLanguages() {
                 <code className="text-fd-foreground font-mono text-sm">
                   {"<MediaPlaceholder />"}
                 </code>{" "}
-                directly in your templates — without writing any JavaScript.
+                directly in your templates, without writing any JavaScript.
               </p>
             </>
           }

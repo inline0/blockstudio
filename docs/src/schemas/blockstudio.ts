@@ -214,7 +214,7 @@ export const blockstudio = {
           type: "boolean",
           default: false,
           description:
-            "Enables the automatic creation of a comprehensive context file for use with large language model (LLM) tools (e.g., Cursor). This file compiles current installation data: all available block definitions and paths, Blockstudio-specific settings, relevant block schemas, and combined Blockstudio documentation—providing a ready-to-use resource for prompt engineering and AI code development.",
+            "Enables the automatic creation of a comprehensive context file for use with large language model (LLM) tools (e.g., Cursor). This file compiles current installation data: all available block definitions and paths, Blockstudio-specific settings, relevant block schemas, and combined Blockstudio documentation, providing a ready-to-use resource for prompt engineering and AI code development.",
           descriptionFilter:
             "This filter allows you to enable or disable context file generation for LLM tool integration. When enabled, the context file assembles up-to-date block data, Blockstudio settings of the current install, all relevant schemas, and Blockstudio documentation into a single source for use with AI development tools.",
           example: true,

@@ -34,7 +34,7 @@ const features = [
     icon: SlidersHorizontal,
     title: "50+ PHP & JS Hooks",
     description:
-      "Filters and actions for every stage — block registration, field rendering, asset loading, and template output. Full control without forking.",
+      "Filters and actions for every stage: block registration, field rendering, asset loading, and template output. Full control without forking.",
     href: "/docs/hooks/php",
   },
   {
@@ -62,7 +62,7 @@ const features = [
     icon: Search,
     title: "SEO Integration",
     description:
-      "Automatic content injection for Yoast, Rank Math, and SEOPress. Field content is extracted and analyzed — no setup required.",
+      "Automatic content injection for Yoast, Rank Math, and SEOPress. Field content is extracted and analyzed. No setup required.",
     href: "/docs/seo",
   },
   {
@@ -76,7 +76,7 @@ const features = [
     icon: Braces,
     title: "Custom Fields",
     description:
-      "Define reusable field sets as JSON files. Reference them across blocks with the custom field type — update once, apply everywhere.",
+      "Define reusable field sets as JSON files. Reference them across blocks with the custom field type. Update once, apply everywhere.",
     href: "/docs/attributes/custom-fields",
   },
   {

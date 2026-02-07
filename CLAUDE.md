@@ -129,7 +129,8 @@ npm run build            # Generate + build
 - Internal code: no JSDoc; comments only for **why**, not **what**.
 - Public APIs: JSDoc required (description + params/returns/examples).
 - Tests: no redundant comments that restate test names; comment only when setup/assertion is non-obvious.
-- **No banner comments** — never use decorative separator lines like `// ==========`, `// -----`, `// ===== SECTION =====`, etc. Exception: in large test files with many assertions, a single `// Section Name` line is fine to separate groups.
+- **No banner comments**: never use decorative separator lines like `// ==========`, `// -----`, `// ===== SECTION =====`, etc. Exception: in large test files with many assertions, a single `// Section Name` line is fine to separate groups.
+- **No em dashes** (`—`): never use em dashes in code, docs, or copy. Use periods, commas, colons, or restructure the sentence instead.
 
 ## Key Rules for Claude
 

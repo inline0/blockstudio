@@ -6,7 +6,7 @@ const faqs = [
   {
     question: "What is Blockstudio?",
     answer:
-      "A WordPress plugin that lets you build custom blocks with just JSON and a template file. No JavaScript, no build tools, no React — just define your fields and write your markup.",
+      "A WordPress plugin that lets you build custom blocks with just JSON and a template file. No JavaScript, no build tools, no React. Just define your fields and write your markup.",
   },
   {
     question: "Do I need to know JavaScript?",
@@ -21,7 +21,7 @@ const faqs = [
   {
     question: "How is this different from ACF blocks?",
     answer:
-      "Everything is file-based — no admin UI, no PHP registration boilerplate. You also get built-in SCSS compilation, ES modules, scoped assets, and nested InnerBlocks out of the box.",
+      "Everything is file-based. No admin UI, no PHP registration boilerplate. You also get built-in SCSS compilation, ES modules, scoped assets, and nested InnerBlocks out of the box.",
   },
   {
     question: "What template languages are supported?",
@@ -31,12 +31,12 @@ const faqs = [
   {
     question: "Can I extend existing blocks?",
     answer:
-      "Yes. Extensions let you add custom fields to any block — core, third-party, or your own. Use wildcards like core/* to target entire namespaces at once.",
+      "Yes. Extensions let you add custom fields to any block, whether core, third-party, or your own. Use wildcards like core/* to target entire namespaces at once.",
   },
   {
     question: "How does the asset pipeline work?",
     answer:
-      "Name your files following the convention (style.scss, script.js, editor.css) and Blockstudio handles the rest. SCSS compilation, ES modules, minification — zero config.",
+      "Name your files following the convention (style.scss, script.js, editor.css) and Blockstudio handles the rest. SCSS compilation, ES modules, minification. Zero config.",
   },
   {
     question: "Is there IDE support?",
@@ -51,7 +51,7 @@ const faqs = [
   {
     question: "Is Blockstudio free?",
     answer:
-      "Yes. Blockstudio is 100% free and open source. Every feature — extensions, all field types, asset processing, pages, patterns — is included. No paid tiers, no feature gates.",
+      "Yes. Blockstudio is 100% free and open source. Every feature is included: extensions, all field types, asset processing, pages, patterns. No paid tiers, no feature gates.",
   },
 ];
 

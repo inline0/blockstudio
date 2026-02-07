@@ -27,7 +27,6 @@ const templates = {
     label: "ES Modules",
     lang: "js",
     code: `import gsap from "npm:gsap@3.12.5";
-import "npm:swiper@11.0.0/swiper.min.css";
 
 const heading = block.querySelector("h1");
 const cards = block.querySelectorAll(".card");
@@ -55,7 +54,7 @@ const details = [
     icon: FileCode2,
     title: "ES module imports",
     description:
-      "Import npm packages directly in your scripts. Blockstudio downloads and serves them locally — no bundler needed.",
+      "Import npm packages directly in your scripts. Blockstudio downloads and serves them locally. No bundler needed.",
   },
   {
     icon: FileType,
@@ -76,7 +75,7 @@ export async function AssetProcessing() {
     <Section
       icon={<SectionIcon><Zap /></SectionIcon>}
       title="Zero-config asset pipeline"
-      description="SCSS compilation, ES module imports, and automatic minification — all by naming convention. No webpack, no Vite."
+      description="SCSS compilation, ES module imports, and automatic minification, all by naming convention. No webpack, no Vite."
     >
       <div className="flex flex-col gap-10 px-6 lg:px-10">
         <Feature
@@ -93,7 +92,7 @@ export async function AssetProcessing() {
                 <code className="text-fd-foreground font-mono text-sm">
                   script.js
                 </code>{" "}
-                with full ES module support — import from npm, no bundler needed.
+                with full ES module support. Import from npm, no bundler needed.
               </p>
               <p>
                 Assets are scoped per block and only loaded when the block is on

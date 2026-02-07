@@ -33,7 +33,7 @@ const details = [
     icon: Paintbrush,
     title: "The set property",
     description:
-      "Map field values directly to HTML — add classes, inline styles, data attributes, or any HTML attribute. No template needed.",
+      "Map field values directly to HTML. Add classes, inline styles, data attributes, or any HTML attribute. No template needed.",
   },
   {
     icon: Wand2,
@@ -70,7 +70,7 @@ export async function Extensions() {
                 <code className="text-fd-foreground font-mono text-sm">
                   set
                 </code>{" "}
-                property maps field values directly to HTML attributes — classes,
+                property maps field values directly to HTML attributes: classes,
                 styles, data attributes, or anything else.
               </p>
               <p>

@@ -52,7 +52,7 @@ export async function Pages() {
     <Section
       icon={<SectionIcon><FileText /></SectionIcon>}
       title="Full pages, defined in code"
-      description="Create complete WordPress pages from template files. HTML maps to core blocks automatically — Blockstudio keeps the editor in sync."
+      description="Create complete WordPress pages from template files. HTML maps to core blocks automatically. Blockstudio keeps the editor in sync."
     >
       <div className="flex flex-col gap-10 px-6 lg:px-10">
         <Feature
@@ -76,12 +76,12 @@ export async function Pages() {
                 <code className="text-fd-foreground font-mono text-sm">
                   {"<block>"}
                 </code>{" "}
-                tag for everything else — any block name, any attributes.
+                tag for everything else. Any block name, any attributes.
               </p>
               <p>
                 Define entire page layouts in your codebase. Blockstudio parses
                 your templates and creates real WordPress pages with real blocks
-                — fully editable in the block editor.
+                , fully editable in the block editor.
               </p>
             </>
           }
