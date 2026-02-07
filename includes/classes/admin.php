@@ -57,15 +57,6 @@ class Admin {
 	 * Constructor.
 	 */
 	public function __construct() {
-		add_action(
-			'admin_head',
-			function () {
-				echo '<style>.toplevel_page_blockstudio .wp-menu-image.svg { height: 34px !important; }</style>';
-			}
-		);
-
-		add_action( 'admin_head', array( $this, 'output_loading_screen_styles' ) );
-		add_action( 'admin_menu', array( $this, 'register_admin_menu' ) );
 		add_action( 'wp_footer', array( __CLASS__, 'capture_frontend_assets' ) );
 	}
 

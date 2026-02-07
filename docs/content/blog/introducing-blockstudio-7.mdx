@@ -383,10 +383,20 @@ The `blockstudio/` prefix is still supported for backward compatibility.
 
 ### Removed features
 
-- **Admin Area**: the settings page has been removed
-- **License Key**: no longer needed (Blockstudio is now free and open source)
-- **Code Editor**: the global code editor has been removed
-- **Edit accordion**: the block inspector accordion has been removed
+**Admin area and code editor.** The WordPress admin settings page and the
+built-in block code editor have both been removed. All configuration now
+happens through `blockstudio.json` and PHP filters, which means your setup
+lives in version control alongside your blocks.
+
+The code editor was useful in earlier versions, but with Blockstudio
+positioning itself as an LLM-first toolkit it no longer makes sense to maintain
+an editor inside WordPress admin. AI coding assistants work best with real
+files in a real IDE. If you need to edit block code directly, use your editor
+of choice with the AI tools that work there.
+
+**License key.** No longer needed. Blockstudio is free and open source.
+
+**Edit accordion.** The block inspector accordion has been removed.
 
 ## Getting started
 
