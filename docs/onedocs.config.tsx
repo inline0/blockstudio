@@ -13,6 +13,10 @@ export default defineConfig({
   },
   icon: "/icon.png",
   nav: {
+    links: [
+      { label: "Docs", href: "/docs" },
+      { label: "Blog", href: "/blog" },
+    ],
     github: "inline0/blockstudio",
   },
   homepage: {

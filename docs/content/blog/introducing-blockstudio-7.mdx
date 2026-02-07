@@ -1,0 +1,62 @@
+---
+title: Introducing Blockstudio 7
+description: A ground-up rewrite of the WordPress block framework. Open source, zero JavaScript, and more powerful than ever.
+date: 2026-02-07
+author: Dennis
+---
+
+Blockstudio 7 is a complete rewrite of the WordPress block framework. Every line of code has been rebuilt from scratch with a focus on performance, developer experience, and full compliance with WordPress coding standards.
+
+## Why a Rewrite?
+
+Blockstudio started as a simple tool for building custom blocks without JavaScript. Over the years, it grew into a full framework with field types, templating engines, asset processing, and more. But the codebase carried years of incremental additions that made it harder to maintain and extend.
+
+Version 7 is the answer: a clean-room rewrite that keeps everything developers love about Blockstudio while modernizing the foundation.
+
+## What's New
+
+### Zero JavaScript Required
+
+Build fully custom blocks using only JSON configuration and PHP (or Twig, or Blade) templates. The editor UI, field rendering, and block registration are all handled automatically.
+
+### 30+ Field Types
+
+Text, textarea, number, range, toggle, select, radio, checkbox, color, date, time, code, image, gallery, file, link, rich text, repeater, group, message, separator, tab, and more. Each field type works in the editor and exposes its value in your template.
+
+### File-Based Architecture
+
+Blocks, pages, patterns, and extensions are all defined as files in your theme or plugin. Drop a `block.json` and a `template.php` into a folder and you have a working block.
+
+### Asset Processing
+
+Name your files with the right extension and Blockstudio handles the rest. SCSS compilation, ES module bundling, scoped styles, and automatic minification are all built in.
+
+### Full Page Templates
+
+Define entire WordPress pages as template files with native blocks. Pages sync automatically to the database and render with the block editor.
+
+### Block Extensions
+
+Add custom fields to any block (core, third-party, or your own) with a single JSON file. No PHP hooks, no JavaScript filters.
+
+## Under the Hood
+
+### WordPress Coding Standards
+
+Every PHP file passes `phpcs` with zero exceptions. Consistent naming, proper documentation for public APIs, and strict type handling throughout.
+
+### Modern PHP
+
+Blockstudio 7 requires PHP 8.1+ and takes full advantage of enums, readonly properties, fibers, and named arguments.
+
+### HTML Parser
+
+The new HTML parser converts block templates into WordPress block markup at save time. This means your templates produce real, portable block content that works without the plugin installed.
+
+## Getting Started
+
+Install Blockstudio 7 and create your first block in minutes. Check out the [Getting Started guide](/docs/getting-started) for a step-by-step walkthrough.
+
+## What's Next
+
+This is just the beginning. Upcoming releases will bring more field types, improved editor interactions, and deeper integration with WordPress site editing. Follow along on [GitHub](https://github.com/inline0/blockstudio) for the latest updates.
