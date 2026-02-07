@@ -51,7 +51,7 @@ const faqs = [
   {
     question: "Is Blockstudio free?",
     answer:
-      "There is a free tier for basic block development. Pro features like extensions, advanced field types, and priority support require a paid license.",
+      "Yes. Blockstudio is 100% free and open source. Every feature — extensions, all field types, asset processing, pages, patterns — is included. No paid tiers, no feature gates.",
   },
 ];
 

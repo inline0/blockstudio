@@ -50,7 +50,7 @@ const row4 = shuffle(fields, 4);
 function FieldCard({ type, description }: { type: string; description: string }) {
   return (
     <Link
-      href={`/docs/attributes/field-types/${type}`}
+      href="/docs/attributes/field-types"
       className="flex flex-col gap-1 rounded-lg border bg-fd-card px-4 py-3 transition-colors hover:bg-fd-secondary/50 hover:border-fd-primary/30"
     >
       <span className="text-sm font-medium text-fd-foreground font-mono">

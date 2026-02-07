@@ -8,6 +8,7 @@ import { Extensions } from "../components/homepage/beyond-blocks";
 import { FieldTypes } from "../components/homepage/field-types";
 import { AssetProcessing } from "../components/homepage/asset-processing";
 import { DeveloperExperience } from "../components/homepage/developer-experience";
+import { Composition } from "../components/homepage/composition";
 import { FAQ } from "../components/homepage/faq";
 
 export default function Home() {
@@ -15,6 +16,7 @@ export default function Home() {
     <HomePage config={config} packageName="blockstudio">
       <div className="w-full self-stretch border-b">
         <HowItWorks />
+        <Composition />
         <TemplateLanguages />
         <Pages />
         <Patterns />

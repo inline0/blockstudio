@@ -7,9 +7,11 @@ import {
   FileJson,
   Share2,
   Sparkles,
-  Layers,
-  Shield,
-  Zap,
+  Search,
+  Terminal,
+  Repeat,
+  List,
+  Braces,
 } from "lucide-react";
 import { Section, SectionIcon } from "./section";
 
@@ -18,14 +20,14 @@ const features = [
     icon: Database,
     title: "Flexible Storage",
     description:
-      "Store field values in post meta, options, or custom tables. A single field can write to multiple locations at once.",
+      "Store field values in post meta, options, or both at once. Query blocks by meta values, access data via REST API.",
     href: "/docs/storage",
   },
   {
     icon: GitBranch,
     title: "Conditional Logic",
     description:
-      "Show and hide fields based on other field values. 10 comparison operators, nested conditions, and global visibility rules.",
+      "Show and hide fields based on other field values. 10 comparison operators, nested conditions, and global rules for post type or user role.",
     href: "/docs/attributes/conditional-logic",
   },
   {
@@ -37,9 +39,9 @@ const features = [
   },
   {
     icon: FileJson,
-    title: "JSON Schema Validation",
+    title: "JSON Schema",
     description:
-      "Every configuration file is backed by a JSON Schema. Get instant autocomplete, inline docs, and validation in VS Code and other editors.",
+      "Every configuration file is backed by a JSON Schema. Instant autocomplete, inline docs, and validation in VS Code and JetBrains.",
     href: "/docs/schema",
   },
   {
@@ -57,25 +59,46 @@ const features = [
     href: "/docs/ai",
   },
   {
-    icon: Layers,
-    title: "Nested InnerBlocks",
+    icon: Search,
+    title: "SEO Integration",
     description:
-      "Support multiple InnerBlocks zones, template locking, and allowed block restrictions. Compose complex layouts from simple blocks.",
-    href: "/docs/blocks/inner-blocks",
+      "Automatic content injection for Yoast, Rank Math, and SEOPress. Field content is extracted and analyzed — no setup required.",
+    href: "/docs/seo",
   },
   {
-    icon: Shield,
-    title: "WordPress Native",
+    icon: Terminal,
+    title: "Programmatic Rendering",
     description:
-      "Blocks are registered through the WordPress block API. No proprietary runtime — your blocks work with any theme, plugin, or page builder.",
-    href: "/docs/getting-started",
+      "Render any block in PHP with bs_render_block(). Use your blocks as reusable components outside the editor.",
+    href: "/docs/rendering",
   },
   {
-    icon: Zap,
-    title: "Zero Config Assets",
+    icon: Braces,
+    title: "Custom Fields",
     description:
-      "SCSS compilation, ES module imports, and automatic minification. Name your files, Blockstudio handles the rest. No webpack, no Vite.",
-    href: "/docs/assets",
+      "Define reusable field sets as JSON files. Reference them across blocks with the custom field type — update once, apply everywhere.",
+    href: "/docs/attributes/custom-fields",
+  },
+  {
+    icon: Repeat,
+    title: "Block Transforms",
+    description:
+      "Let users transform one block into another. Add enter and prefix shortcuts so blocks can be inserted by typing.",
+    href: "/docs/transforms",
+  },
+  {
+    icon: List,
+    title: "Dynamic Options",
+    description:
+      "Populate select, radio, and checkbox fields from post queries, taxonomies, user lists, or custom PHP functions.",
+    href: "/docs/attributes/populating-options",
+  },
+  {
+    icon: Code,
+    title: "HTML Utilities",
+    description:
+      "Render field values as data attributes or CSS custom properties directly on the block wrapper. One line in your template.",
+    href: "/docs/attributes/html-utilities",
   },
 ];
 
