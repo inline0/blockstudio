@@ -61,7 +61,7 @@ export async function TemplateLanguages() {
     >
       <div className="px-6 lg:px-10">
         <Feature
-          headline="Shorthand variables & built-in components"
+          headline="Same variables, any language"
           description={
             <>
               <p>

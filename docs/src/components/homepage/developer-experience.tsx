@@ -18,7 +18,7 @@ const features = [
     icon: Database,
     title: "Flexible Storage",
     description:
-      "Store field values in post meta, options, or custom tables. Assign multiple storage locations to a single field for cross-context access.",
+      "Store field values in post meta, options, or custom tables. A single field can write to multiple locations at once.",
     href: "/docs/storage",
   },
   {
@@ -46,7 +46,7 @@ const features = [
     icon: Share2,
     title: "Context API",
     description:
-      "Share data between parent and child blocks without prop drilling. Define providers and consumers in JSON, access values in any template.",
+      "Share data between parent and child blocks. Define what a parent provides in JSON and access the values in any nested template.",
     href: "/docs/context",
   },
   {
@@ -74,7 +74,7 @@ const features = [
     icon: Zap,
     title: "Zero Config Assets",
     description:
-      "SCSS compilation, ES module bundling, and automatic minification. Name your files, Blockstudio handles the rest. No webpack, no Vite.",
+      "SCSS compilation, ES module imports, and automatic minification. Name your files, Blockstudio handles the rest. No webpack, no Vite.",
     href: "/docs/assets",
   },
 ];

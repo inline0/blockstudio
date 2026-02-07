@@ -58,7 +58,7 @@ export async function Extensions() {
     >
       <div className="flex flex-col gap-10 px-6 lg:px-10">
         <Feature
-          headline="JSON that modifies HTML"
+          headline="Custom fields, zero templates"
           description={
             <>
               <p>
