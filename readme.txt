@@ -69,7 +69,6 @@ Create custom WordPress blocks by dropping a `block.json` and a PHP template int
 * Deprecation: Admin Area removed
 * Deprecation: License Key removed
 * Deprecation: Code Editor removed
-* Deprecation: Edit accordion in block inspector removed
 
 = 6.0.2 (18.08.2025) =
 * Enhancement: also preload blocks inside site editor
