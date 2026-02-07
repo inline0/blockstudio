@@ -3693,60 +3693,16 @@ There are currently 5 blocks available in the library.
 
 # Composer
 
-Blockstudio can be added to projects using composer with the [private-composer-installer](https://github.com/ffraenz/private-composer-installer) package. It allows you to install packages from private URLs within `composer.json`.
+Blockstudio is available as a Composer package.
 
-## Setup
+## Installation
 
-### .env
-
-It is good practice to store all your credentials and private keys in an `.env` file. If you haven't done so already, create a `.env` file in the root of your project and add your Blockstudio license key
-
-```html
-BLOCKSTUDIO_KEY=your-blockstudio-license-key
+```bash
+composer require blockstudio/blockstudio
 ```
-### composer.json
 
-Below is an example `composer.json` file that uses the private-composer-installer.
+## Embedding in Plugins and Themes
 
-```json
-{
-  "name": "my-company/my-project",
-  "description": "WordPress plugin.",
-  "license": "proprietary",
-  "repositories": [
-    {
-      "type": "package",
-      "package": {
-        "name": "fabrikat/blockstudio",
-        "version": "4.0.2",
-        "type": "vendor",
-        "dist": {
-          "type": "zip",
-          "url": "https://blockstudio.dev/download?v={%VERSION}&k={%BLOCKSTUDIO_KEY}"
-        },
-        "require": {
-          "ffraenz/private-composer-installer": "^5.0.1"
-        }
-      }
-    }
-  ],
-  "config": {
-    "allow-plugins": {
-      "composer/installers": true,
-      "ffraenz/private-composer-installer": true
-    }
-  },
-  "require": {
-    "fabrikat/blockstudio": "^4.0.2"
-  }
-}
-```
-## Embedding Blockstudio (v6.0+)
-
-Starting with Blockstudio version 6.0, the entire plugin, including all its internal libraries and third-party dependencies, has been meticulously namespaced. Furthermore, Blockstudio now employs a robust singleton pattern for its core instantiation.
-
-These significant architectural enhancements ensure that Blockstudio can be seamlessly embedded within other plugins or themes without the risk of class name collisions or conflicts with other WordPress components or libraries. This makes it an ideal and reliable foundation if you're looking to integrate Blockstudio's powerful block-building capabilities into a larger project.
-
-The singleton pattern guarantees that only one instance of Blockstudio's core logic is active, preventing redundant initializations and potential conflicts, while namespacing shields its codebase from interfering with, or being interfered by, other code in the WordPress environment.
+Blockstudio is fully namespaced and uses a singleton pattern, so it can be safely embedded within other plugins or themes without class name collisions. The singleton pattern ensures only one instance runs, even if multiple plugins bundle Blockstudio.
 
 ---

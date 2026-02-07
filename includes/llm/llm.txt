@@ -163,8 +163,8 @@
     <Concept name="Block Library">
       <Summary>Blockstudio includes a library of pre-built elements that can be activated via settings, offering ready-to-use blocks. See Documentation: "Library".</Summary>
     </Concept>
-    <Concept name="Composer and Embedding (v6.0+)">
-      <Summary>Blockstudio can be installed via Composer using `private-composer-installer`. From v6.0+, it is fully namespaced and uses a singleton pattern, allowing safe embedding within other plugins or themes without conflicts. See Documentation: "Composer".</Summary>
+    <Concept name="Composer and Embedding">
+      <Summary>Blockstudio can be installed via Composer with `composer require blockstudio/blockstudio`. It is fully namespaced and uses a singleton pattern, allowing safe embedding within other plugins or themes without conflicts. See Documentation: "Composer".</Summary>
     </Concept>
   </CoreBlockstudioConcepts>
 
