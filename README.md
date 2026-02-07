@@ -19,45 +19,53 @@
 
 ---
 
-Create production-ready WordPress blocks using a filesystem-based approach. Native fields, inline assets, scoped styles, Twig/Blade support, and more.
+Drop a `block.json` and a PHP template into a folder. Blockstudio registers the block, renders the template, and handles fields, assets, and scoped styles. No webpack, no Vite, no React components to write.
+
+```
+theme/blockstudio/hero/
+├── block.json      ← fields, settings, metadata
+├── index.php       ← template (PHP, Twig, or Blade)
+├── style.scss      ← auto-compiled, scoped, minified
+└── script.js       ← ES module imports from npm
+```
+
+## Why Blockstudio
+
+WordPress blocks are powerful but building them is painful. The official approach requires React, JSX, a build toolchain, and hundreds of lines of JavaScript for even a simple block.
+
+Blockstudio removes all of that. You write a JSON config and a PHP template. The framework handles block registration, field rendering, asset compilation, and editor integration. Everything lives in the filesystem, which makes blocks easy to version control, share across projects, and generate with AI coding tools.
 
 ## Features
 
-| Feature | Description |
-|---------|-------------|
-| **Filesystem-based** | Define blocks with `block.json` + template files |
-| **Native fields** | 20+ field types with conditions, validation, and storage options |
-| **Inline assets** | Auto-compiled CSS/JS with scoping and ES module imports |
-| **Template engines** | PHP, Twig, and Blade support out of the box |
-| **Block extensions** | Extend core blocks with custom fields |
-| **File-based pages** | Create WordPress pages from HTML templates |
-| **Tailwind CSS** | Built-in Tailwind v4 integration |
+**26 field types** including text, repeater, tabs, code, classes, color, files, and more. All configured in JSON with conditions, validation, defaults, and storage options.
 
-## Quick Start
+**File-based pages and patterns.** Write HTML templates and Blockstudio parses them into native WordPress block content. Pages sync to the database automatically. Patterns register in memory with no database writes.
 
-1. Create a `blockstudio` folder in your theme
-2. Add a block folder with `block.json` and `index.php`:
+**HTML-to-block parser.** The parser converts standard HTML into WordPress block markup. Extensible via filters for custom block types and element mappings. This is what powers pages, patterns, and AI-generated content.
 
-```
-theme/
-└── blockstudio/
-    └── my-block/
-        ├── block.json
-        └── index.php
-```
+**Asset pipeline.** SCSS compilation, ES module imports from npm, automatic minification, and scoped loading. Name your files (`style.scss`, `script.js`, `editor.css`) and everything is handled automatically.
+
+**Tailwind CSS v4.** Server-side compilation via TailwindPHP. No Node.js, no CLI. Compiled CSS is cached to disk based on extracted class names.
+
+**Storage.** Store field values in post meta or site options instead of block attributes. Queryable via `WP_Query`, available through the REST API.
+
+**AI-ready.** A pre-built context file (`blockstudio-llm.txt`) ships with the full documentation and JSON schemas (~48k tokens). Point any LLM tool to the URL and your coding assistant gets complete knowledge of the framework.
+
+## Quick start
+
+1. Install the plugin
+2. Create a `blockstudio` folder in your theme
+3. Add a block:
 
 **block.json**
 ```json
 {
-  "name": "theme/my-block",
-  "title": "My Block",
+  "name": "theme/hero",
+  "title": "Hero",
   "blockstudio": {
     "attributes": [
-      {
-        "id": "title",
-        "type": "text",
-        "label": "Title"
-      }
+      { "id": "heading", "type": "text", "label": "Heading" },
+      { "id": "description", "type": "textarea", "label": "Description" }
     ]
   }
 }
@@ -65,20 +73,23 @@ theme/
 
 **index.php**
 ```php
-<div useBlockProps>
-  <h2><?php echo $title; ?></h2>
-</div>
+<section useBlockProps class="hero">
+  <h1><?= $heading ?></h1>
+  <p><?= $description ?></p>
+</section>
 ```
 
-## Documentation
-
-Full documentation available at **[blockstudio.dev/docs](https://blockstudio.dev/docs)**
+That's it. The block appears in the editor with the fields you defined.
 
 ## Requirements
 
-- WordPress 6.0+
 - PHP 8.2+
+- WordPress 6.7+
+
+## Documentation
+
+**[blockstudio.dev/docs](https://blockstudio.dev/docs)**
 
 ## License
 
-GPL-2.0
+[GPL-2.0](LICENSE)
