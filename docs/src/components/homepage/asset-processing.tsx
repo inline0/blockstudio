@@ -1,24 +1,14 @@
-import { Zap } from "lucide-react";
-import { CodeBlock } from "onedocs";
-import { Tabs, Tab, Files, Folder, File } from "onedocs/components";
+import { Zap, FileType, FileCode2, Paintbrush, Monitor } from "lucide-react";
+import { Button } from "onedocs";
 import { Section, SectionIcon } from "./section";
+import { Feature } from "./feature";
+import { CodeTabs } from "./code-tabs";
 
-const esModules = {
-  lang: "js",
-  code: `import gsap from "gsap";
-
-const heading = block.querySelector("h1");
-
-gsap.from(heading, {
-  opacity: 0,
-  y: 20,
-  duration: 0.6,
-});`,
-};
-
-const scss = {
-  lang: "scss",
-  code: `$accent: var(--wp--preset--color--primary);
+const templates = {
+  scss: {
+    label: "SCSS",
+    lang: "scss",
+    code: `$accent: var(--wp--preset--color--primary);
 
 .hero {
   padding: 4rem 2rem;
@@ -32,60 +22,116 @@ const scss = {
     background: #0a0a0a;
   }
 }`,
+  },
+  js: {
+    label: "ES Modules",
+    lang: "js",
+    code: `import gsap from "npm:gsap@3.12.5";
+import "npm:swiper@11.0.0/swiper.min.css";
+
+const heading = block.querySelector("h1");
+const cards = block.querySelectorAll(".card");
+
+gsap.from(heading, {
+  opacity: 0,
+  y: 20,
+  duration: 0.6,
+});
+
+gsap.from(cards, {
+  opacity: 0, stagger: 0.1,
+});`,
+  },
 };
+
+const details = [
+  {
+    icon: Paintbrush,
+    title: "SCSS compilation",
+    description:
+      "Write SCSS with nesting, variables, and mixins. Blockstudio compiles and minifies it automatically.",
+  },
+  {
+    icon: FileCode2,
+    title: "ES module imports",
+    description:
+      "Import npm packages directly in your scripts. Blockstudio downloads and serves them locally — no bundler needed.",
+  },
+  {
+    icon: FileType,
+    title: "Naming convention",
+    description:
+      "style.scss for frontend styles, script.js for frontend scripts, editor.css for editor only. Name the file, done.",
+  },
+  {
+    icon: Monitor,
+    title: "Scoped & inlined",
+    description:
+      "Assets load only when the block is on the page. Use *.inline.* to inline scripts and styles directly.",
+  },
+];
 
 export async function AssetProcessing() {
   return (
     <Section
       icon={<SectionIcon><Zap /></SectionIcon>}
-      title="No build tools. Ever."
-      description="SCSS compilation, ES modules, and scoped styles — all by naming convention."
+      title="Zero-config asset pipeline"
+      description="SCSS compilation, ES module bundling, and automatic minification — all by naming convention. No webpack, no Vite."
     >
-      <div className="grid grid-cols-1 lg:grid-cols-2 px-6 lg:px-10 gap-8">
-        <div>
-          <Tabs items={["ES Modules", "SCSS"]}>
-            <Tab>
-              <CodeBlock code={esModules.code} lang={esModules.lang} />
-            </Tab>
-            <Tab>
-              <CodeBlock code={scss.code} lang={scss.lang} />
-            </Tab>
-          </Tabs>
-        </div>
-        <div>
-          <h3 className="text-sm font-medium text-fd-muted-foreground uppercase tracking-wider mb-4">
-            Naming Convention
-          </h3>
-          <Files>
-            <Folder name="hero" defaultOpen>
-              <File name="block.json" />
-              <File name="index.php" />
-              <File name="style.css" />
-              <File name="style.scss" />
-              <File name="script.js" />
-              <File name="script.inline.js" />
-              <File name="editor.css" />
-              <File name="editor.js" />
-            </Folder>
-          </Files>
-          <div className="mt-4 flex flex-col gap-2 text-sm text-fd-muted-foreground">
-            <p>
-              <code className="text-fd-foreground font-mono">style.*</code>{" "}
-              Frontend styles
-            </p>
-            <p>
-              <code className="text-fd-foreground font-mono">script.*</code>{" "}
-              Frontend scripts
-            </p>
-            <p>
-              <code className="text-fd-foreground font-mono">editor.*</code>{" "}
-              Editor only
-            </p>
-            <p>
-              <code className="text-fd-foreground font-mono">*.inline.*</code>{" "}
-              Inlined in page
-            </p>
-          </div>
+      <div className="flex flex-col gap-10 px-6 lg:px-10">
+        <Feature
+          headline="Name your files, Blockstudio handles the rest"
+          description={
+            <>
+              <p>
+                Drop a{" "}
+                <code className="text-fd-foreground font-mono text-sm">
+                  style.scss
+                </code>{" "}
+                next to your block and it gets compiled, minified, and enqueued
+                automatically. Same for{" "}
+                <code className="text-fd-foreground font-mono text-sm">
+                  script.js
+                </code>{" "}
+                with full ES module support — import from npm, no bundler needed.
+              </p>
+              <p>
+                Assets are scoped per block and only loaded when the block is on
+                the page. Use the{" "}
+                <code className="text-fd-foreground font-mono text-sm">
+                  editor.*
+                </code>{" "}
+                prefix for editor-only assets or{" "}
+                <code className="text-fd-foreground font-mono text-sm">
+                  *.inline.*
+                </code>{" "}
+                to inline them directly in the page.
+              </p>
+            </>
+          }
+          cta={
+            <Button href="/docs/assets" className="w-max">
+              Learn more about assets &rarr;
+            </Button>
+          }
+          demo={
+            <CodeTabs items={[templates.scss, templates.js]} />
+          }
+        />
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8 sm:gap-10">
+          {details.map((detail) => (
+            <div key={detail.title} className="flex flex-col gap-2 text-sm/7">
+              <div className="flex items-start gap-3 text-fd-foreground">
+                <div className="flex items-center h-[1lh]">
+                  <detail.icon className="h-3.5 w-3.5 text-fd-primary" />
+                </div>
+                <h3 className="font-semibold">{detail.title}</h3>
+              </div>
+              <p className="text-fd-muted-foreground text-pretty">
+                {detail.description}
+              </p>
+            </div>
+          ))}
         </div>
       </div>
     </Section>

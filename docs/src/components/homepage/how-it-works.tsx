@@ -1,4 +1,5 @@
 import { Blocks } from "lucide-react";
+import { Button } from "onedocs";
 import { Section, SectionIcon } from "./section";
 import { CodeCard } from "./code-card";
 
@@ -70,6 +71,11 @@ export async function HowItWorks() {
       title="Custom blocks in 3 files"
       description="Define fields in block.json, render them in a template, style with CSS or SCSS. No JavaScript, no build step, no boilerplate."
       border={false}
+      cta={
+        <Button href="/docs/getting-started" className="w-max">
+          Get started &rarr;
+        </Button>
+      }
     >
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 px-6 lg:px-10">
         {steps.map((step) => (

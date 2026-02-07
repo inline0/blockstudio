@@ -1,63 +1,105 @@
-import { Puzzle } from "lucide-react";
-import Link from "next/link";
-import { CodeBlock } from "onedocs";
+import { Puzzle, Wand2, Target, Paintbrush, Layers } from "lucide-react";
+import { Button } from "onedocs";
 import { Section, SectionIcon } from "./section";
+import { Feature } from "./feature";
+import { CodeCard } from "./code-card";
 
 const extensionCode = `{
+  "name": "core/*",
   "blockstudio": {
-    "extend": "core/*",
+    "extend": true,
     "attributes": {
       "animation": {
         "type": "select",
         "label": "Animation",
-        "set": "style",
-        "options": ["none", "fade", "slide", "scale"]
-      },
-      "animationDuration": {
-        "type": "range",
-        "label": "Duration",
-        "min": 0.1,
-        "max": 2,
-        "step": 0.1,
-        "condition": {
-          "animation": "!= none"
-        }
+        "options": ["none", "fade", "slide"],
+        "set": [{
+          "attribute": "class",
+          "value": "animate-{attributes.animation}"
+        }]
       }
     }
   }
 }`;
 
+const details = [
+  {
+    icon: Target,
+    title: "Target any block",
+    description:
+      "Extend a single block, a list of blocks, or use wildcards like core/* to target entire namespaces at once.",
+  },
+  {
+    icon: Paintbrush,
+    title: "The set property",
+    description:
+      "Map field values directly to HTML — add classes, inline styles, data attributes, or any HTML attribute. No template needed.",
+  },
+  {
+    icon: Wand2,
+    title: "Conditional fields",
+    description:
+      "Show and hide fields based on other values. In the example, Duration only appears when Animation is set.",
+  },
+  {
+    icon: Layers,
+    title: "Full feature set",
+    description:
+      "Extensions support all 26 field types, conditional logic, populated data sources, and the same field properties as blocks.",
+  },
+];
+
 export async function Extensions() {
   return (
     <Section
       icon={<SectionIcon><Puzzle /></SectionIcon>}
-      title="Extend any block"
-      description="Add custom fields to core blocks, third-party blocks, or your own. Use wildcards to extend entire namespaces at once."
+      title="Add fields to any block"
+      description="Extend core blocks, third-party blocks, or your own with custom fields. Pure JSON, no templates, no code."
     >
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 px-6 lg:px-10">
-        <div>
-          <CodeBlock code={extensionCode} lang="json" />
-        </div>
-        <div className="flex flex-col gap-3 text-sm text-fd-muted-foreground">
-          <p>
-            Extensions let you add fields to any existing block without
-            modifying its source code. Target a single block, a list of
-            blocks, or use <code className="text-fd-foreground font-mono">core/*</code> to
-            extend every core block at once.
-          </p>
-          <p>
-            Fields added via extensions support the same features as block
-            fields — conditional logic, storage, validation, and all 26
-            field types. Values are injected into the
-            block&apos;s <code className="text-fd-foreground font-mono">style</code> or <code className="text-fd-foreground font-mono">class</code> attributes,
-            or stored in post meta.
-          </p>
-          <Link
-            href="/docs/extensions"
-            className="text-fd-primary hover:underline font-medium"
-          >
-            Learn more about extensions &rarr;
-          </Link>
+      <div className="flex flex-col gap-10 px-6 lg:px-10">
+        <Feature
+          headline="JSON that modifies HTML"
+          description={
+            <>
+              <p>
+                Create a JSON file, target a block with{" "}
+                <code className="text-fd-foreground font-mono text-sm">
+                  name
+                </code>
+                , and define your fields. The{" "}
+                <code className="text-fd-foreground font-mono text-sm">
+                  set
+                </code>{" "}
+                property maps field values directly to HTML attributes — classes,
+                styles, data attributes, or anything else.
+              </p>
+              <p>
+                No templates, no render callbacks. Blockstudio handles the
+                output automatically using the WordPress HTML Tag Processor.
+              </p>
+            </>
+          }
+          cta={
+            <Button href="/docs/extensions" className="w-max">
+              Learn more about extensions &rarr;
+            </Button>
+          }
+          demo={<CodeCard code={extensionCode} lang="json" />}
+        />
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8 sm:gap-10">
+          {details.map((detail) => (
+            <div key={detail.title} className="flex flex-col gap-2 text-sm/7">
+              <div className="flex items-start gap-3 text-fd-foreground">
+                <div className="flex items-center h-[1lh]">
+                  <detail.icon className="h-3.5 w-3.5 text-fd-primary" />
+                </div>
+                <h3 className="font-semibold">{detail.title}</h3>
+              </div>
+              <p className="text-fd-muted-foreground text-pretty">
+                {detail.description}
+              </p>
+            </div>
+          ))}
         </div>
       </div>
     </Section>

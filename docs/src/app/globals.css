@@ -7,3 +7,16 @@
 #features p.text-fd-muted-foreground {
   text-wrap: pretty;
 }
+
+@theme inline {
+  --animate-marquee: marquee var(--duration) infinite linear;
+
+  @keyframes marquee {
+    from {
+      transform: translateX(0);
+    }
+    to {
+      transform: translateX(calc(-100% - var(--gap)));
+    }
+  }
+}

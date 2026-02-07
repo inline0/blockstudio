@@ -6,70 +6,75 @@ const faqs = [
   {
     question: "What is Blockstudio?",
     answer:
-      "Blockstudio is a WordPress plugin that lets you create custom blocks, pages, patterns, and extensions using template files. You write JSON for the schema and PHP (or Twig/Blade) for the template — no JavaScript or build tools required.",
+      "A WordPress plugin that lets you build custom blocks with just JSON and a template file. No JavaScript, no build tools, no React — just define your fields and write your markup.",
   },
   {
-    question: "Do I need to know JavaScript or React?",
+    question: "Do I need to know JavaScript?",
     answer:
-      "No. Blockstudio handles all the JavaScript and React internals. You define your block schema in JSON and write templates in PHP, Twig, or Blade. If you can write HTML and basic PHP, you can build blocks.",
+      "Not at all. If you can write HTML and basic PHP, you can build blocks. Blockstudio handles all the editor internals for you.",
   },
   {
-    question: "Does it work with any WordPress theme?",
+    question: "Does it work with my theme?",
     answer:
-      "Yes. Blockstudio registers blocks through the native WordPress block API, so they work with any block-compatible theme. There's no proprietary runtime or framework lock-in.",
+      "Yes. Blocks are registered through the native WordPress block API, so they work with any block-compatible theme. No lock-in.",
   },
   {
-    question: "How are blocks different from ACF or Meta Box blocks?",
+    question: "How is this different from ACF blocks?",
     answer:
-      "Blockstudio blocks are defined entirely in template files — no PHP registration code, no admin UI configuration. You get the simplicity of file-based development with features like SCSS compilation, ES modules, scoped assets, and nested InnerBlocks out of the box.",
-  },
-  {
-    question: "What field types are available?",
-    answer:
-      "26 field types including text, textarea, richtext, WYSIWYG, code editor, number, range, unit, select, radio, checkbox, toggle, color, gradient, icon, group, tabs, repeater, files, link, date, and more. Each supports conditional logic, storage options, and validation.",
-  },
-  {
-    question: "Can I use Blockstudio with existing blocks?",
-    answer:
-      "Yes. Extensions let you add custom fields to any existing block — core WordPress blocks, third-party blocks, or your own. You can even use wildcards like core/* to extend all blocks in a namespace at once.",
-  },
-  {
-    question: "How does the asset pipeline work?",
-    answer:
-      "Name your files following the convention (style.scss, script.js, editor.css) and Blockstudio handles everything: SCSS compilation, ES module resolution, automatic minification, and scoped loading. No webpack, Vite, or any build tools needed.",
+      "Everything is file-based — no admin UI, no PHP registration boilerplate. You also get built-in SCSS compilation, ES modules, scoped assets, and nested InnerBlocks out of the box.",
   },
   {
     question: "What template languages are supported?",
     answer:
-      "PHP (default), Twig (via Timber), and Blade (via Sage/Acorn). All three share the same template variables: $a for attributes, $b for block data, $isEditor for editor context, and $innerBlocks for nested content.",
+      "PHP, Twig (via Timber), and Blade (via Sage/Acorn). All three share the same variables and components.",
   },
   {
-    question: "Can I store field values outside the block markup?",
+    question: "Can I extend existing blocks?",
     answer:
-      "Yes. The storage system lets you save field values to post meta, options, or custom locations. You can assign multiple storage targets to a single field for cross-context access — for example, storing a value both in the block and as post meta.",
+      "Yes. Extensions let you add custom fields to any block — core, third-party, or your own. Use wildcards like core/* to target entire namespaces at once.",
+  },
+  {
+    question: "How does the asset pipeline work?",
+    answer:
+      "Name your files following the convention (style.scss, script.js, editor.css) and Blockstudio handles the rest. SCSS compilation, ES modules, minification — zero config.",
   },
   {
     question: "Is there IDE support?",
     answer:
-      "Full IDE support via JSON Schema. When you add the $schema property to your block.json, you get autocomplete, inline documentation, and validation for all Blockstudio properties in VS Code and other editors.",
+      "Yes. Add a $schema property to your block.json and you get full autocomplete, inline docs, and validation in VS Code.",
   },
   {
-    question: "What WordPress versions are supported?",
+    question: "What are the requirements?",
     answer:
-      "Blockstudio 7 requires WordPress 6.7 or later and PHP 8.1 or later. It follows 100% WordPress Coding Standards and is built for modern WordPress development.",
+      "WordPress 6.7+ and PHP 8.1+. Blockstudio follows 100% WordPress Coding Standards.",
   },
   {
     question: "Is Blockstudio free?",
     answer:
-      "Blockstudio offers a free tier for basic block development. Pro features like advanced field types, extensions, and priority support are available with a paid license.",
+      "There is a free tier for basic block development. Pro features like extensions, advanced field types, and priority support require a paid license.",
   },
 ];
 
 export function FAQ() {
   return (
-    <Section icon={<SectionIcon><CircleHelp /></SectionIcon>} title="Questions & Answers">
-      <div className="px-6 pb-4 lg:px-10 max-w-3xl">
-        <Accordions type="single">
+    <Section border>
+      <div className="grid grid-cols-1 gap-x-2 gap-y-8 lg:grid-cols-2 px-6 pt-16 sm:pt-20 lg:px-10">
+        <div className="flex flex-col gap-4">
+          <SectionIcon>
+            <CircleHelp />
+          </SectionIcon>
+          <h2 className="text-2xl font-semibold tracking-tight text-fd-foreground sm:text-3xl">
+            Questions & Answers
+          </h2>
+          <p className="text-fd-muted-foreground max-w-md text-pretty">
+            Everything you need to know about Blockstudio. Can&apos;t find what
+            you&apos;re looking for? Reach out to our support team.
+          </p>
+        </div>
+        <Accordions
+          type="single"
+          className="rounded-none border-0 bg-transparent divide-y-0"
+        >
           {faqs.map((faq) => (
             <Accordion key={faq.question} title={faq.question}>
               <p className="text-fd-muted-foreground">{faq.answer}</p>
