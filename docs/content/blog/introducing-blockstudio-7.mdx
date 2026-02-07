@@ -242,18 +242,11 @@ Block content is now visible to Yoast SEO and Rank Math in the editor. This
 means SEO plugins can properly analyze your Blockstudio block content for
 keyword density, readability, and other metrics. No configuration needed.
 
-### AI context file
-
-Blockstudio ships a static `blockstudio-llm.txt` containing the full v7
-documentation and all JSON schemas in a single file (~48k tokens). The file is
-pre-built at release time, not generated dynamically. Enable the
-`ai/enableContextGeneration` setting and point any LLM coding assistant to
-`your-site.com/blockstudio-llm.txt`. Works with Cursor, Claude Code, GitHub
-Copilot, or any tool that accepts a URL or text file as context. See the
-[AI documentation](/docs/ai) for details.
-
 ## Enhancements and fixes
 
+- **[AI context file](/docs/ai)**: the `blockstudio-llm.txt` has been rebuilt
+  as a static file assembled from the full v7 documentation and deduplicated
+  JSON schemas (~48k tokens), replacing the dynamic generation from v6
 - **Code field popout**: the code field can now be opened in a separate window,
   with independent undo/redo and JavaScript syntax highlighting
 - **Tailwind v4 server-side compilation**: see below
