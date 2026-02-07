@@ -192,6 +192,47 @@ the same field structure.
 
 See the [Custom Fields documentation](/docs/attributes/custom-fields).
 
+### Tailwind CSS v4
+
+Tailwind support has been completely rebuilt for v4. Instead of compiling
+client-side via the CDN and saving to disk on post save (the v6 approach),
+Blockstudio 7 compiles Tailwind server-side on every frontend request via
+[TailwindPHP](https://github.com/dnnsjsk/tailwindphp). No Node.js, no CLI, no
+build step required.
+
+The compilation uses candidate-based caching: Blockstudio extracts all CSS class
+names from the final HTML, sorts and hashes them together with your CSS config,
+and checks for a cached file. Same classes produce the same cache hit, even when
+the surrounding HTML changes (nonces, timestamps, dynamic content).
+
+Configuration uses Tailwind v4's CSS-first syntax. Define custom themes and
+utility classes directly in your `blockstudio.json` or via the
+`blockstudio/tailwind/css` filter:
+
+```php title="functions.php"
+add_filter('blockstudio/tailwind/css', function ($css) {
+  return $css . '
+    @theme {
+      --color-brand: #4f46e5;
+    }
+
+    @layer utilities {
+      .container-narrow {
+        max-width: 48rem;
+        margin-inline: auto;
+      }
+    }
+  ';
+});
+```
+
+In the block editor, a bundled Tailwind CDN script provides live preview as you
+type. The `classes` field type offers autocomplete for all Tailwind utilities.
+The frontend always uses the server-compiled CSS, injected as an inline style
+tag before `</head>`.
+
+See the [Tailwind documentation](/docs/tailwind) for the full setup.
+
 ### SEO content analysis
 
 Block content is now visible to Yoast SEO and Rank Math in the editor. This
@@ -202,8 +243,7 @@ keyword density, readability, and other metrics. No configuration needed.
 
 - **Code field popout**: the code field can now be opened in a separate window,
   with independent undo/redo and JavaScript syntax highlighting
-- **Tailwind 4 support**: the integrated Tailwind CSS support has been updated
-  to version 4
+- **Tailwind v4 server-side compilation**: see below
 - **API version 3**: blocks now render correctly in the iframed editor,
   including the site editor and responsive previews
 - **Dot notation for assets**: cleaner file naming convention for asset

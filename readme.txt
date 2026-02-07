@@ -11,14 +11,40 @@ The block framework for WordPress.
 
 == Description ==
 
-Blockstudio gives you the ultimate developer experience for creating custom, production-ready PHP blocks using a filesystem-based approach. Native fields, built-in code editor, inline assets, scoped styles, Twig support, and much more. 🦾
+Blockstudio is a filesystem-based block framework for WordPress. Create custom blocks by dropping a `block.json` and a PHP template into a folder. No JavaScript, no React, no build step.
+
+= Features =
+
+* **26 field types** including text, repeater, tabs, classes, color, files, and more
+* **PHP, Twig, and Blade templates** with the same `$a` variable across all languages
+* **File-based pages** that parse HTML templates into native block content with automatic syncing
+* **File-based patterns** registered from template files without any PHP registration code
+* **Extensions** to add custom fields to any core or third-party block via JSON
+* **Tailwind CSS v4** compiled server-side via TailwindPHP with automatic caching
+* **Storage** to persist field values in post meta or site options, queryable via WP_Query and REST API
+* **Asset pipeline** with SCSS compilation, ES module imports from npm, and automatic minification
+* **Scoped styles** that only load when a block is on the page
+* **HTML-to-block parser** with a trait-based renderer architecture and custom element mapping
+* **SEO integration** with Yoast SEO and Rank Math content analysis
+* **50+ PHP and JS hooks** for customizing every aspect of the framework
+
+= Requirements =
+
+* PHP 8.2+
+* WordPress 6.7+
+
+= Links =
+
+* [Documentation](https://app.blockstudio.dev/docs)
+* [GitHub](https://github.com/inline0/blockstudio)
+* [Getting Started](https://app.blockstudio.dev/docs/getting-started)
 
 == Changelog ==
 
 = 7.0.0 (next) =
 * New: Blockstudio is now free and open source
 * New: complete codebase refactor
-* New: Tailwind 4 support
+* New: Tailwind CSS v4 with server-side compilation via TailwindPHP, candidate-based caching, and CSS-first configuration
 * New: code field popout option to open editor in separate window
 * New: storage feature to store field values in post meta or options
 * New: file-based pages - create WordPress pages from file templates with automatic HTML to block parsing
@@ -26,9 +52,9 @@ Blockstudio gives you the ultimate developer experience for creating custom, pro
 * New: blockEditingMode support for file-based pages with page-level defaults and per-element overrides
 * New: file-based patterns - create WordPress block patterns from file templates with automatic HTML to block parsing
 * New: custom fields - reusable field definitions via file system and PHP filter
-* New: SEO content analysis integration — Blockstudio block content is now visible to Yoast SEO and Rank Math editor analysis
-* Enhancement: dot notation for asset file suffixes (*.inline.css, *.editor.css, etc.) — dash notation still supported
-* Enhancement: apiVersion 3 support — blocks now render correctly in the iframed editor (site editor, responsive previews)
+* New: SEO content analysis integration. Blockstudio block content is now visible to Yoast SEO and Rank Math editor analysis
+* Enhancement: dot notation for asset file suffixes (*.inline.css, *.editor.css, etc.). Dash notation still supported
+* Enhancement: apiVersion 3 support. Blocks now render correctly in the iframed editor (site editor, responsive previews)
 * Enhancement: all PHP hooks now use snake_case naming (old camelCase names still supported)
 * Enhancement: field switch is now off by default and uses a visible eye icon with disabled overlay
 * Fix: bs_render_block() no longer triggers a warning from WP_Block_Supports when using useBlockProps
@@ -38,7 +64,7 @@ Blockstudio gives you the ultimate developer experience for creating custom, pro
 * Fix: conditional fields not respecting default values on first load
 * Fix: optionsPopulate null error in WPML contexts
 * Fix: dollar signs stripped from <RichText /> content on frontend
-* Deprecation: dash notation for asset file suffixes (*-inline.css, *-editor.css, etc.) — use dot notation instead
+* Deprecation: dash notation for asset file suffixes (*-inline.css, *-editor.css, etc.). Use dot notation instead
 * Deprecation: Admin Area removed
 * Deprecation: License Key removed
 * Deprecation: Code Editor removed
