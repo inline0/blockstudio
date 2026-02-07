@@ -10,6 +10,7 @@ import { FieldTypes } from "../components/homepage/field-types";
 import { AssetProcessing } from "../components/homepage/asset-processing";
 import { TailwindCSS } from "../components/homepage/tailwind";
 import { DeveloperExperience } from "../components/homepage/developer-experience";
+import { AiContext } from "../components/homepage/ai-context";
 import { Composition } from "../components/homepage/composition";
 import { FAQ } from "../components/homepage/faq";
 
@@ -28,6 +29,7 @@ export default function Home() {
         <AssetProcessing />
         <TailwindCSS />
         <DeveloperExperience />
+        <AiContext />
         <FAQ />
         <div className="border-t">
           <CTASection

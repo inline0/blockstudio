@@ -1,48 +1,45 @@
 ---
 title: AI Integration
-description: AI-assisted development with Blockstudio context generation.
+description: A static context file with full documentation and schemas for LLM coding assistants.
 ---
 
 # AI Integration
 
-AI-assisted coding is rapidly transforming the way developers build software, offering the potential to accelerate development cycles, reduce boilerplate, and even help with complex problem-solving. Large Language Models (LLMs) can write code, explain concepts, and debug issues, but their effectiveness heavily relies on the quality and comprehensiveness of the context they are given.
+Blockstudio ships a pre-built context file designed for LLM coding assistants. The file contains the complete v7 documentation and all JSON schemas in a single `blockstudio-llm.txt` that any AI tool can consume.
 
-Blockstudio's AI Context Generation feature is designed to bridge this gap, providing a seamless way to feed your AI coding assistant a rich, up-to-date understanding of your specific Blockstudio environment.
+## What's included
 
-## Why Blockstudio and AI are a Perfect Match
+The context file combines two sources into roughly 48k tokens:
 
-Blockstudio's philosophy has always centered around a **file-first approach**. Each block, its configuration (`block.json`), template (PHP, Twig, or Blade), styles, and scripts reside together in a dedicated folder. This clear, organized structure is inherently AI-friendly:
+- **Documentation**: every page from the v7 docs, stripped of formatting and navigation, with code examples preserved.
+- **JSON schemas**: the block, settings, page, and extension schemas. Repeated definitions (like field types shared between blocks and extensions) are deduplicated to save tokens.
 
-- **Clarity and Discoverability**: LLMs can more easily understand the components of a block when all its related files are co-located and follow a predictable pattern.
-- **Reduced Ambiguity**: Unlike database-driven block configurations, Blockstudio's file-based system provides a transparent and version-controllable source of truth for your block definitions.
-- **Focused Context**: When an LLM knows the specific files related to a block, it can provide more targeted and relevant assistance.
+## How it's built
 
-## The Power of the Generated Context File
+The file is assembled at build time by `npm run build:llm`, which runs `scripts/build-llm.ts`. The script:
 
-Blockstudio takes its AI-friendliness a step further by automatically generating a comprehensive `blockstudio-llm.txt` context file. This file is specifically designed for use with LLM tools (such as Cursor) and acts as a detailed briefing for the AI on your current Blockstudio setup.
+1. Walks the docs directory tree using each folder's `meta.json` to determine page order.
+2. Strips MDX frontmatter, JSX components, link URLs, and bold/italic markers from each page.
+3. Reads the JSON schemas from `includes/schemas/`, trims the block schema to only the `blockstudio` key, and deduplicates field type definitions shared between the block and extension schemas.
+4. Writes the combined output to `includes/llm/blockstudio-llm.txt`.
 
-The generated context file compiles crucial data from your WordPress installation, including:
+## How to use it
 
-- All available block definitions, their names, and their exact file paths.
-- Current Blockstudio-specific settings, giving the AI insight into how your environment is configured.
-- Relevant block schemas, outlining the structure and attributes of your custom blocks.
-- Combined Blockstudio documentation, providing the AI with official information on Blockstudio APIs and features.
+1. Enable the `ai/enableContextGeneration` setting in your `blockstudio.json`:
 
-This creates a ready-to-use resource that significantly improves prompt engineering. With this detailed context, your AI assistant can:
+```json title="blockstudio.json"
+{
+  "ai": {
+    "enableContextGeneration": true
+  }
+}
+```
 
-- Generate more accurate and relevant code for your custom Blockstudio blocks.
-- Better understand the relationships between different blocks and settings.
-- Help debug issues with a deeper knowledge of your specific implementation.
-- Assist in writing new block templates, scripts, or style sheets that align with your existing project structure.
+2. The context file is now available at `your-site.com/blockstudio-llm.txt`.
 
-## Enabling and Accessing the AI Context
+3. Point your AI tool to that URL:
+   - **Cursor**: add the URL as a doc in your project settings.
+   - **Claude Code**: reference the URL or download the file and add it to your project context.
+   - **GitHub Copilot**: include the file in your repository or reference it in your instructions.
 
-The AI Context Generation feature can be managed from the main Blockstudio settings page within your WordPress admin area.
-
-1. **Toggle AI Feature**: Simply activate the toggle switch next to the "AI" section to enable the context file generation.
-2. **Accessing the Context File**: Once enabled, you have multiple ways to access the `blockstudio-llm.txt` file:
-   - **Download Button**: Click the "Download the compiled .txt file" button to save a copy locally.
-   - **View Link**: Click the "View the compiled .txt file" link to open the context file directly in your browser (opens in a new tab).
-   - **Direct URL**: A dedicated URL is provided (e.g., `https://your-site.com/blockstudio/blockstudio-llm.txt`). This link will always serve the most up-to-date version of the context file, making it ideal for integrations or direct use in LLM tools.
-
-The direct URL ensures that any LLM tool referencing it will always have the latest information about your Blockstudio environment without needing manual updates. By leveraging this feature, you can make your AI coding assistant a more powerful and informed partner in your Blockstudio development workflow.
+Any tool that accepts a URL or text file as context will work. The file is static and does not include site-specific data like your registered blocks or current settings.

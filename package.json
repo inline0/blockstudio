@@ -6,6 +6,7 @@
   "type": "module",
   "scripts": {
     "build": "wp-scripts build --config webpack.config.cjs",
+    "build:llm": "tsx scripts/build-llm.ts",
     "check": "eslint src && tsc --noEmit",
     "fix": "eslint --fix src && prettier --write src",
     "format": "prettier --write src",
