@@ -273,7 +273,7 @@ The page is created once. After that, the client can add, remove, and rearrange 
 
 ## Block Bindings
 
-An alternative to keyed merging is connecting blocks to post meta using WordPress's [Block Bindings API](https://make.wordpress.org/core/2024/03/06/new-feature-the-block-bindings-api/). Instead of preserving content in block markup, the content lives in post meta. Template syncs can freely overwrite the markup because the editor reads from meta, not from innerHTML.
+An alternative to keyed merging is using WordPress core's [Block Bindings API](https://developer.wordpress.org/block-editor/reference-guides/block-api/block-bindings/) to connect blocks to post meta. This is not a Blockstudio feature, it is a native WordPress API. Blockstudio simply passes the `metadata` attribute through to the generated block markup. The content lives in post meta instead of block markup, so template syncs can freely overwrite the markup because the editor reads from meta, not from innerHTML.
 
 Pass the `metadata` attribute on any HTML element or `<block>` element:
 

@@ -24,7 +24,7 @@ export default async function BlogPost(props: {
   return (
     <TOCProvider toc={post.toc}>
       <div className="grid grid-cols-1 xl:grid-cols-[1fr_268px]">
-        <article className="min-w-0 max-w-3xl px-6 pt-8 pb-16 lg:px-10">
+        <article className="min-w-0 max-w-3xl mx-auto px-6 pt-8 pb-16 lg:px-10">
           <Link
             href="/blog"
             className="mb-6 inline-flex items-center gap-1 text-sm text-fd-muted-foreground no-underline transition-colors hover:text-fd-foreground"

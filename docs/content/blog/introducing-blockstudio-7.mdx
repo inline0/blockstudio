@@ -72,10 +72,13 @@ updates. Blocks without keys are replaced entirely.
 
 #### Block bindings
 
-As an alternative to keys, you can connect blocks directly to post meta using
-WordPress's Block Bindings API. Content lives in meta instead of block markup,
-so template syncs never destroy user edits. The data is also queryable via
-`WP_Query` and available through the REST API.
+As an alternative to keys, you can use WordPress core's
+[Block Bindings API](https://developer.wordpress.org/block-editor/reference-guides/block-api/block-bindings/)
+to connect blocks directly to post meta. This is not a Blockstudio feature, it
+is a native WordPress API. Blockstudio simply passes the `metadata` attribute
+through to the generated block markup. Content lives in meta instead of block
+markup, so template syncs never destroy user edits. The data is also queryable
+via `WP_Query` and available through the REST API.
 
 ```html title="index.php"
 <h1 metadata='{"bindings":{"content":{"source":"core/post-meta","args":{"key":"hero_title"}}}}'>

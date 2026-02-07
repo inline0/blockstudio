@@ -11,7 +11,7 @@ The block framework for WordPress.
 
 == Description ==
 
-Blockstudio is a filesystem-based block framework for WordPress. Create custom blocks by dropping a `block.json` and a PHP template into a folder. No JavaScript, no React, no build step.
+Create custom WordPress blocks by dropping a `block.json` and a PHP template into a folder. No JavaScript, no React, no build step.
 
 = Features =
 
