@@ -8,6 +8,7 @@ import { HtmlParser } from "../components/homepage/html-parser";
 import { Extensions } from "../components/homepage/beyond-blocks";
 import { FieldTypes } from "../components/homepage/field-types";
 import { AssetProcessing } from "../components/homepage/asset-processing";
+import { TailwindCSS } from "../components/homepage/tailwind";
 import { DeveloperExperience } from "../components/homepage/developer-experience";
 import { Composition } from "../components/homepage/composition";
 import { FAQ } from "../components/homepage/faq";
@@ -25,6 +26,7 @@ export default function Home() {
         <Extensions />
         <FieldTypes />
         <AssetProcessing />
+        <TailwindCSS />
         <DeveloperExperience />
         <FAQ />
         <div className="border-t">
