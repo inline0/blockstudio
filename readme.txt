@@ -53,7 +53,7 @@ Create custom WordPress blocks by dropping a `block.json` and a PHP template int
 * New: file-based patterns - create WordPress block patterns from file templates with automatic HTML to block parsing
 * New: custom fields - reusable field definitions via file system and PHP filter
 * New: SEO content analysis integration. Blockstudio block content is now visible to Yoast SEO and Rank Math editor analysis
-* New: static AI context file built from documentation and schemas for LLM coding assistants
+* Enhancement: AI context file rebuilt as a static build from documentation and schemas (~48k tokens)
 * Enhancement: dot notation for asset file suffixes (*.inline.css, *.editor.css, etc.). Dash notation still supported
 * Enhancement: apiVersion 3 support. Blocks now render correctly in the iframed editor (site editor, responsive previews)
 * Enhancement: all PHP hooks now use snake_case naming (old camelCase names still supported)
