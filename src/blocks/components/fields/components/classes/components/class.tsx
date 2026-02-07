@@ -1,15 +1,11 @@
 import { css as cssLang } from '@codemirror/lang-css';
 import CodeMirror from '@uiw/react-codemirror';
 import { Button } from '@wordpress/components';
-import { useSelect } from '@wordpress/data';
 import { useEffect, useState } from '@wordpress/element';
-import { pencil } from '@wordpress/icons';
 import { cloneDeep, set } from 'lodash-es';
 import parserCss from 'prettier/plugins/postcss';
 import prettier from 'prettier/standalone';
 import { style } from '@/const/css';
-import { CustomClasses } from '@/tailwind/components/custom-classes';
-import { selectors } from '@/tailwind/store/selectors';
 import { findCssRules } from '@/tailwind/utils/find-css-rules';
 import { BlockstudioBlockAttributes } from '@/types/types';
 import { css } from '@/utils/css';
@@ -29,16 +25,7 @@ export const Class = ({
   text: string;
   value: string;
 }) => {
-  const customClasses = useSelect(
-    (select) =>
-      (select('blockstudio/tailwind') as typeof selectors).getCustomClasses(),
-    [],
-  );
   const [cssRule, setCssRule] = useState('');
-  const isCustom =
-    customClasses?.map((item) => item.className).includes(text) ?? false;
-  const index =
-    customClasses?.map((item) => item.className).indexOf(text) ?? -1;
 
   useEffect(() => {
     const formatCss = async () => {
@@ -60,7 +47,6 @@ export const Class = ({
         display: 'flex',
         position: 'relative',
         border: '1px solid #949494',
-        borderStyle: isCustom ? 'dashed' : undefined,
         borderRadius: '9999px',
       })}
     >
@@ -94,7 +80,7 @@ export const Class = ({
         css={css({
           width: 'max-content',
           paddingLeft: '8px',
-          paddingRight: isCustom ? '0' : '8px',
+          paddingRight: '8px',
           '&:hover': {
             '& + div': {
               opacity: '1',
@@ -106,20 +92,6 @@ export const Class = ({
       >
         {text}
       </Button>
-      {isCustom && (
-        <CustomClasses
-          {...{ index }}
-          buttonProps={{
-            css: css({
-              svg: {
-                width: '16px',
-              },
-            }),
-            icon: pencil,
-            size: 'small',
-          }}
-        />
-      )}
       {cssRule && (
         <div
           tabIndex={-1}

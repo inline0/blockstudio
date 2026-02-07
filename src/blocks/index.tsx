@@ -18,7 +18,6 @@ import { isAllowedToRender } from '@/blocks/utils/is-allowed-to-render';
 import { sendEvents } from '@/blocks/utils/send-events';
 import { store as tailwindStore } from '@/tailwind/store';
 import { useTailwind } from '@/tailwind/use-tailwind';
-import { useTailwindSaveBlockEditor } from '@/tailwind/use-tailwind-save-block-editor';
 import { BlockstudioAttribute } from '@/types/block';
 import { BlockstudioBlock, BlockstudioBlockAttributes } from '@/types/types';
 import { css } from '@/utils/css';
@@ -208,9 +207,6 @@ registerPlugin('blockstudio-tailwind', {
   render: () => {
     if (window.blockstudioAdmin.isTailwindActive === 'false') return;
 
-    const compile = useTailwindSaveBlockEditor();
-
-    useEffect(() => onSavePost(compile), []);
     useTailwind({
       enabled: true,
     });

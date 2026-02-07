@@ -33,7 +33,6 @@ use WP_REST_Response;
  *
  * 2. Settings (POST):
  *    - /editor/options/save: Save plugin options (DB or JSON)
- *    - /editor/tailwind/save: Save compiled Tailwind CSS
  *
  * 3. Gutenberg Integration (POST):
  *    - /gutenberg/block/render/{name}: Server-side block render
@@ -308,28 +307,6 @@ class Rest {
 
 				register_rest_route(
 					'blockstudio/v1',
-					'/editor/tailwind/save',
-					array(
-						'methods'             => 'POST',
-						'callback'            => array( $this, 'editor_tailwind_save' ),
-						'permission_callback' => $permission,
-						'args'                => array(
-							'content' => array(
-								'validate_callback' => function ( $param ) {
-									return is_string( $param );
-								},
-							),
-							'id'      => array(
-								'validate_callback' => function ( $param ) {
-									return is_string( $param );
-								},
-							),
-						),
-					)
-				);
-
-				register_rest_route(
-					'blockstudio/v1',
 					'/attributes/build',
 					array(
 						'methods'             => 'POST',
@@ -566,49 +543,6 @@ class Rest {
 		}
 
 		return $this->response_or_error( $result, $code, $message );
-	}
-
-	/**
-	 * /editor/tailwind/save Endpoint.
-	 *
-	 * @since 5.5.0
-	 *
-	 * @param array $data The request data.
-	 *
-	 * @return WP_Error|WP_REST_Response The response or error.
-	 */
-	public function editor_tailwind_save( $data ) {
-		global $wp_filesystem;
-		if ( ! $this->filesystem() ) {
-			return $this->error( 'rename', 'Unable to initialize WP_Filesystem' );
-		}
-
-		$code    = 'tailwind_add';
-		$message = array(
-			'success' => 'Tailwind compiled',
-			'error'   => 'Tailwind compiling failed',
-		);
-
-		$path = Tailwind::get_css_path( $data['id'] ?? 'editor' );
-		$dir  = dirname( $path );
-
-		try {
-			if ( ! $wp_filesystem->is_dir( $dir ) ) {
-				wp_mkdir_p( $dir );
-			}
-			$wp_filesystem->put_contents( $path, urldecode( $data['content'] ) );
-			clearstatcache();
-
-			return $this->response( $code, $message['success'] );
-		} catch ( Exception $e ) {
-			return $this->error(
-				$code,
-				$message['error'],
-				array(
-					'error' => $e,
-				)
-			);
-		}
 	}
 
 	/**

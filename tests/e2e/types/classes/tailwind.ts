@@ -29,26 +29,7 @@ testType('classes-tailwind', '"classes":"text-red-500"', () => {
       },
     },
     {
-      description: 'search for custom class',
-      testFunction: async (page: Page, canvas: Frame) => {
-        await canvas.click('[data-type="blockstudio/type-classes-tailwind"]');
-        await page.fill('.components-form-token-field input', 'custom-');
-        await count(page, '.components-form-token-field__suggestions-list li', 6);
-      },
-    },
-    {
-      description: 'add custom-class-2',
-      testFunction: async (page: Page, canvas: Frame) => {
-        await canvas.click('[data-type="blockstudio/type-classes-tailwind"]');
-        await page.keyboard.press('Escape');
-        await page.fill('.components-form-token-field input', 'custom-class-2');
-        await page.keyboard.press('Enter');
-        await delay(500);
-        await count(page, 'text=custom-class-2', 1);
-      },
-    },
-    {
-      description: 'save and check frontend styles including custom class',
+      description: 'save and check frontend styles',
       testFunction: async (page: Page, _canvas: Frame) => {
         await save(page);
         await delay(2000);
@@ -58,15 +39,14 @@ testType('classes-tailwind', '"classes":"text-red-500"', () => {
           page,
           '#blockstudio-type-classes-tailwind',
           'color',
-          'rgb(239, 68, 68)'
+          'oklch(0.637 0.237 25.331)'
         );
         await checkStyle(
           page,
           '#blockstudio-type-classes-tailwind',
           'backgroundColor',
-          'rgb(59, 130, 246)'
+          'oklch(0.623 0.214 259.815)'
         );
-        await count(page, '#blockstudio-type-classes-tailwind.custom-class-2', 1);
         await page.goto(
           'http://localhost:8888/wp-admin/post.php?post=1483&action=edit'
         );

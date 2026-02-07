@@ -18,15 +18,7 @@
   },
   "tailwind": {
     "enabled": true,
-    "customClasses": [
-      { "className": "custom-class", "value": "bg-red-500" },
-      { "className": "custom-class-2", "value": "bg-red-600" },
-      { "className": "custom-class-3", "value": "bg-red-700" },
-      { "className": "custom-class-4", "value": "bg-red-800" },
-      { "className": "custom-class-5", "value": "bg-red-900" },
-      { "className": "custom-class-6", "value": "bg-red-950" }
-    ],
-    "config": { "theme": { "extend": { "colors": { "weird": "pink" } } } }
+    "config": "@theme { --color-weird: pink; } @layer utilities { .custom-class { @apply bg-red-500; } .custom-class-2 { @apply bg-red-600; } }"
   },
   "blockEditor": {
     "disableLoading": false,

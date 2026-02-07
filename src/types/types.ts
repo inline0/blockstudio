@@ -135,10 +135,6 @@ type BlockstudioRestResponse = {
 };
 
 type BlockstudioTailwindStore = {
-  customClasses: {
-    className: string;
-    value: string;
-  }[];
   temporaryClasses: {
     [key: string]: string;
   };

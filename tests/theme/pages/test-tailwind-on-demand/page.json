@@ -1,0 +1,8 @@
+{
+  "name": "test-tailwind-on-demand",
+  "title": "Tailwind On-Demand Test",
+  "slug": "test-tailwind-on-demand",
+  "postType": "page",
+  "postStatus": "publish",
+  "templateLock": "all"
+}

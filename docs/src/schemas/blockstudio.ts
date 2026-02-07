@@ -110,21 +110,14 @@ export const blockstudio = {
           example: true,
         },
         config: {
-          type: "object",
-          description: "Tailwind configuration.",
+          type: "string",
+          default: "",
+          description:
+            "Tailwind CSS configuration using v4 CSS-first syntax.",
           descriptionFilter:
-            "This filter allows you to add a custom Tailwind configuration.",
-          help: "Changes will be effective in the editor after reloading.",
-          json: true,
-          example: {
-            theme: {
-              extend: {
-                colors: {
-                  primary: "pink",
-                },
-              },
-            },
-          },
+            "This filter allows you to add a custom Tailwind CSS configuration.",
+          element: "textarea",
+          example: "@theme { --color-primary: pink; }",
         },
       },
       additionalProperties: true,

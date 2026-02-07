@@ -92,8 +92,8 @@ class Settings {
 			'markup'       => false,
 		),
 		'tailwind'          => array(
-			'enabled'       => false,
-			'customClasses' => array(),
+			'enabled' => false,
+			'config'  => '',
 		),
 		'blockEditor'       => array(
 			'disableLoading' => false,

@@ -1,6 +1,5 @@
 import { useSelect } from '@wordpress/data';
 import { useCallback, useEffect, useRef, useState } from '@wordpress/element';
-import { selectors as selectorsTailwind } from '@/tailwind/store/selectors';
 import { BlockstudioAdmin } from '@/types/types';
 
 // Types for blockstudio/editor store selectors
@@ -25,20 +24,12 @@ export const useTailwind = ({
   const templateId = `blockstudio-tailwind-template-${id}`;
   const scriptId = 'blockstudio-tailwind-script';
   const settingsId = 'blockstudio-tailwind-settings';
-  const cssId = 'blockstudio-tailwind-style';
 
   const blockstudio = useSelect(
     (select) =>
       (
         select('blockstudio/editor') as EditorSelectors | undefined
       )?.getBlockstudio(),
-    [],
-  );
-  const customClasses = useSelect(
-    (select) =>
-      (
-        select('blockstudio/tailwind') as typeof selectorsTailwind
-      )?.getCustomClasses(),
     [],
   );
   const options = useSelect(
@@ -67,29 +58,6 @@ export const useTailwind = ({
 
     if (!hasStyle.current) setTimeout(getStyleElement, 100);
   }, [doc, started, styleElement]);
-
-  const createCustomClasses = useCallback(() => {
-    if (!doc) return;
-
-    let template = doc.getElementById(cssId) as HTMLStyleElement;
-    if (!template) {
-      template = doc.createElement('style');
-      template.id = cssId;
-      template.type = 'text/tailwindcss';
-      doc.head.appendChild(template);
-    }
-
-    let classes = '';
-    customClasses?.forEach((item) => {
-      classes += `.${item.className} { @apply ${item.value}; } `;
-    });
-
-    classes = classes.trim();
-
-    template.innerHTML = `@layer utilities { ${classes} }`;
-  }, [doc, customClasses]);
-
-  useEffect(createCustomClasses, [customClasses]);
 
   useEffect(() => {
     if (!doc || !started || (!options?.tailwind?.enabled && !enabled)) {
@@ -124,7 +92,6 @@ export const useTailwind = ({
         }
         const configCss = options?.tailwind?.config || '';
         settings.innerHTML = typeof configCss === 'string' ? configCss : '';
-        createCustomClasses();
         template.innerHTML = html || '';
       };
     }

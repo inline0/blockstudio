@@ -1417,3 +1417,22 @@ add_action(
 		);
 	}
 );
+
+// Inject raw HTML with Tailwind classes on the tailwind on-demand test page.
+// The HTML parser strips custom classes/IDs, so we append them via the_content.
+add_filter(
+	'the_content',
+	function ( $content ) {
+		if ( ! is_page( 'test-tailwind-on-demand' ) ) {
+			return $content;
+		}
+
+		$content .= '<div class="bg-red-500 p-4 text-white" id="tw-test-bg">Background test</div>';
+		$content .= '<div class="text-blue-600 font-bold" id="tw-test-text">Text color test</div>';
+		$content .= '<div class="flex gap-4" id="tw-test-flex"><span>Flex item 1</span><span>Flex item 2</span></div>';
+		$content .= '<div class="custom-class" id="tw-test-custom">Custom class test</div>';
+		$content .= '<div class="bg-weird" id="tw-test-config">Config theme color test</div>';
+
+		return $content;
+	}
+);

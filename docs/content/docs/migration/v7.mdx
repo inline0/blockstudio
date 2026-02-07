@@ -152,3 +152,123 @@ If you relied on the default switch behavior in v6, you need to explicitly enabl
 ```
 
 If you previously set `"switch": false` to disable the toggle, you can remove it since `false` is now the default.
+
+## Tailwind CSS
+
+Blockstudio 7 completely replaces the v6 Tailwind approach. In v6, Tailwind CSS was compiled client-side via the CDN in the editor and saved to disk on post save. In v7, Tailwind CSS is compiled server-side on every frontend request via [TailwindPHP](https://github.com/niclasmattsson/tailwindphp) with automatic file-based caching.
+
+See the [Tailwind CSS documentation](/docs/tailwind) for full details on the new system.
+
+### Always-On Server-Side Compilation
+
+When `tailwind.enabled` is `true`, every frontend request is compiled server-side. The compilation flow:
+
+1. WordPress renders the full page HTML into an output buffer
+2. CSS class candidates are extracted from the HTML (fast regex, no compilation)
+3. Candidates are sorted and hashed with the CSS config to create a cache key
+4. On cache hit: the cached CSS file is read and injected
+5. On cache miss: TailwindPHP compiles the CSS, writes it to `uploads/blockstudio/tailwind/cache/`, and injects it
+
+The compiled CSS is injected as an inline `<style id="blockstudio-tailwind">` tag before `</head>`. This includes Tailwind's preflight and all matched utility classes.
+
+The CDN script remains active in the editor for live preview only. It is never served on the frontend.
+
+### `config` Format Changed
+
+The `config` property changed from a JSON object (Tailwind v3) to a CSS string (Tailwind v4 CSS-first syntax).
+
+**Before (v6):**
+
+```json
+{
+  "tailwind": {
+    "config": {
+      "theme": {
+        "extend": {
+          "colors": {
+            "primary": "pink"
+          }
+        }
+      }
+    }
+  }
+}
+```
+
+**After (v7):**
+
+```json
+{
+  "tailwind": {
+    "config": "@theme { --color-primary: pink; }"
+  }
+}
+```
+
+### `customClasses` Setting Removed
+
+The `customClasses` array setting has been removed. With Tailwind v4's CSS-first approach, custom utility classes are defined directly in the `config` string using `@layer utilities`.
+
+**Before (v6):**
+
+```json
+{
+  "tailwind": {
+    "customClasses": [
+      { "className": "btn", "value": "px-4 py-2 rounded-lg font-medium" },
+      { "className": "card", "value": "bg-white rounded-xl shadow-lg p-6" }
+    ]
+  }
+}
+```
+
+**After (v7):**
+
+```json
+{
+  "tailwind": {
+    "config": "@layer utilities { .btn { @apply px-4 py-2 rounded-lg font-medium; } .card { @apply bg-white rounded-xl shadow-lg p-6; } }"
+  }
+}
+```
+
+Or via the filter for multiline configs:
+
+```php
+add_filter('blockstudio/settings/tailwind/config', function () {
+    return <<<CSS
+@layer utilities {
+    .btn { @apply px-4 py-2 rounded-lg font-medium; }
+    .card { @apply bg-white rounded-xl shadow-lg p-6; }
+}
+CSS;
+});
+```
+
+The `blockstudio/settings/tailwind/custom_classes` filter has also been removed. Use the `blockstudio/tailwind/css` filter instead to append custom CSS rules.
+
+### REST Endpoint Removed
+
+The `POST /blockstudio/v1/editor/tailwind/save` endpoint has been removed. Compiled CSS is no longer saved from the editor. If you had custom code calling this endpoint, it can be safely removed.
+
+### Caching
+
+Blockstudio uses a candidate-based caching strategy. Rather than hashing the entire page HTML (which would bust the cache on every request due to nonces and timestamps), only the CSS class candidates are hashed. This means:
+
+- Two pages with the same CSS classes share the same cached file
+- Dynamic content (nonces, admin bars, timestamps) does not bust the cache
+- The cache only invalidates when the set of CSS classes changes or the config changes
+
+Cache files are stored in `wp-content/uploads/blockstudio/tailwind/cache/`. Clear the directory to force recompilation.
+
+### Filter Changes
+
+| Old Name (v6) | New Name (v7) |
+|---------------|---------------|
+| `blockstudio/tailwind/on_demand/css` | `blockstudio/tailwind/css` |
+| `blockstudio/tailwind/assets/dir` | Removed |
+| `blockstudio/settings/tailwind/custom_classes` | Removed |
+
+### Removed Files and Enqueues
+
+In v6, Tailwind CSS was enqueued as external stylesheets (`blockstudio-tailwind`, `blockstudio-tailwind-preflight`). In v7, all CSS is injected inline via an output buffer. There are no link tags or enqueued stylesheets for Tailwind on the frontend.

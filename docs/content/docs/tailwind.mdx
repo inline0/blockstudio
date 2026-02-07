@@ -1,0 +1,367 @@
+---
+title: Tailwind CSS
+description: Server-side Tailwind CSS compilation with automatic caching.
+---
+
+# Tailwind CSS
+
+Blockstudio includes built-in Tailwind CSS v4 support. When enabled, every frontend page is compiled server-side via [TailwindPHP](https://github.com/niclasmattsson/tailwindphp) with automatic file-based caching. In the block editor, a bundled Tailwind CDN script provides live preview as you edit.
+
+No build step, no CLI, no Node.js required.
+
+## How It Works
+
+Blockstudio uses two separate compilation strategies depending on the context:
+
+### Frontend (Server-Side)
+
+On every frontend request, Blockstudio captures the full page HTML through an output buffer, extracts all CSS class candidates, compiles only the CSS that is actually used, and injects the result as an inline `<style>` tag before `</head>`.
+
+The compilation flow:
+
+1. WordPress renders the full page HTML into an output buffer
+2. `TailwindPHP::extractCandidates()` scans the HTML and extracts all potential CSS class names (fast regex, no compilation)
+3. The sorted candidates are hashed together with the CSS config to create a cache key
+4. On **cache hit**: the compiled CSS is read from disk and injected
+5. On **cache miss**: `TailwindPHP::generate()` compiles the CSS, writes it to the cache directory, and injects it
+
+The compiled CSS is injected as:
+
+```html
+<style id="blockstudio-tailwind">/* compiled CSS */</style>
+```
+
+This includes Tailwind's preflight (CSS reset) and all matched utility classes.
+
+### Editor (Client-Side)
+
+Inside the block editor, a bundled Tailwind CDN script (browser build of Tailwind CSS v4) runs client-side. This provides instant live preview as you type class names, without any server round-trips. The CDN is only loaded in the editor and is never served on the frontend.
+
+## Enabling Tailwind
+
+Add the `tailwind` configuration to your `blockstudio.json`:
+
+```json title="blockstudio.json"
+{
+  "$schema": "https://app.blockstudio.dev/schema/blockstudio",
+  "tailwind": {
+    "enabled": true
+  }
+}
+```
+
+Or enable it via a filter:
+
+```php title="functions.php"
+add_filter('blockstudio/settings/tailwind/enabled', '__return_true');
+```
+
+When `enabled` is `true`, every frontend page will have Tailwind CSS compiled and injected automatically. You can use Tailwind utility classes anywhere: in block templates, theme templates, `the_content` filters, or any HTML that appears in the page output.
+
+## Configuration
+
+Tailwind v4 uses a CSS-first configuration approach. Instead of a JavaScript config file, you write configuration directly as CSS using the `@theme` directive.
+
+```json title="blockstudio.json"
+{
+  "tailwind": {
+    "enabled": true,
+    "config": "@theme { --color-primary: #3b82f6; --color-secondary: #10b981; --font-family-heading: 'Inter', sans-serif; }"
+  }
+}
+```
+
+The `config` value is a CSS string that gets appended after the `@import "tailwindcss"` directive. You can use any valid Tailwind v4 CSS syntax here:
+
+```json title="blockstudio.json"
+{
+  "tailwind": {
+    "enabled": true,
+    "config": "@theme { --color-brand: oklch(0.7 0.15 200); } @layer base { h1 { font-size: var(--text-4xl); } }"
+  }
+}
+```
+
+For multiline configs, the filter approach is more ergonomic:
+
+```php title="functions.php"
+add_filter('blockstudio/settings/tailwind/config', function () {
+    return <<<CSS
+@theme {
+    --color-primary: #3b82f6;
+    --color-secondary: #10b981;
+    --font-family-heading: 'Inter', sans-serif;
+    --breakpoint-xs: 30rem;
+}
+
+@layer base {
+    body {
+        font-family: var(--font-family-sans);
+    }
+}
+
+@layer utilities {
+    .btn { @apply px-4 py-2 rounded-lg font-medium; }
+    .btn-primary { @apply bg-blue-500 text-white hover:bg-blue-600; }
+    .card { @apply bg-white rounded-xl shadow-lg p-6; }
+}
+CSS;
+});
+```
+
+### Custom Utility Classes
+
+To define reusable class aliases, use `@layer utilities` with Tailwind's `@apply` directive directly in your config string:
+
+```json title="blockstudio.json"
+{
+  "tailwind": {
+    "enabled": true,
+    "config": "@theme { --color-brand: #6366f1; } @layer utilities { .btn { @apply px-4 py-2 rounded-lg font-medium; } .section { @apply py-16 px-4 max-w-7xl mx-auto; } }"
+  }
+}
+```
+
+This compiles these classes alongside all standard Tailwind utilities. They work both on the frontend (server-side compilation) and in the editor (CDN preview).
+
+## Classes Field Type
+
+To use Tailwind classes in a block's `classes` field with autocomplete support, set `tailwind: true` on the field:
+
+```json title="block.json"
+{
+  "name": "my-theme/hero",
+  "title": "Hero",
+  "blockstudio": {
+    "attributes": [
+      {
+        "id": "classes",
+        "type": "classes",
+        "label": "Classes",
+        "tailwind": true,
+        "default": "bg-white text-gray-900"
+      }
+    ]
+  }
+}
+```
+
+When `tailwind` is `true`:
+
+- The field provides autocomplete suggestions from the full Tailwind class list
+- The Tailwind CDN script is loaded in the editor for live preview
+- Classes are stored as a space-separated string in the block attributes
+
+Use the classes value in your template:
+
+```php title="index.php"
+<div class="<?php echo $a['classes']; ?>">
+  <!-- block content -->
+</div>
+```
+
+## Settings Reference
+
+| Option | Type | Default | Description |
+|--------|------|---------|-------------|
+| `enabled` | boolean | `false` | Enable Tailwind CSS compilation on the frontend |
+| `config` | string | `""` | Tailwind v4 CSS-first configuration string |
+
+### Setting via JSON
+
+```json title="blockstudio.json"
+{
+  "tailwind": {
+    "enabled": true,
+    "config": "@theme { --color-brand: pink; }"
+  }
+}
+```
+
+### Setting via Filters
+
+```php title="functions.php"
+add_filter('blockstudio/settings/tailwind/enabled', '__return_true');
+
+add_filter('blockstudio/settings/tailwind/config', function () {
+    return '@theme { --color-brand: pink; }';
+});
+```
+
+## Caching
+
+Blockstudio uses a custom caching strategy designed for Tailwind's utility-based architecture.
+
+### How the Cache Works
+
+Rather than hashing the entire page HTML (which would bust the cache on every request due to nonces, timestamps, and other dynamic content), Blockstudio extracts only the CSS class candidates from the HTML. These candidates are sorted and hashed together with the CSS configuration to produce a stable cache key.
+
+This means:
+
+- Two pages that use the same set of Tailwind classes share the same cached CSS file, even if their HTML is completely different
+- Dynamic content like nonces, logged-in user bars, comment counts, and timestamps do not bust the cache
+- The cache only invalidates when the set of CSS classes on a page changes or the Tailwind config changes
+
+### Cache Location
+
+Cache files are stored in:
+
+```
+wp-content/uploads/blockstudio/tailwind/cache/
+```
+
+Each file is named with an MD5 hash: `{hash}.css`.
+
+### Clearing the Cache
+
+Delete the contents of the cache directory to force recompilation:
+
+```php
+// Clear all cached Tailwind CSS
+$cache_dir = wp_upload_dir()['basedir'] . '/blockstudio/tailwind/cache';
+array_map('unlink', glob("$cache_dir/*.css"));
+```
+
+Or via WP-CLI:
+
+```bash
+wp eval "array_map('unlink', glob(wp_upload_dir()['basedir'] . '/blockstudio/tailwind/cache/*.css'));"
+```
+
+The next frontend request will recompile and cache the CSS automatically.
+
+## Filters
+
+### `blockstudio/tailwind/css`
+
+Modify the CSS input before compilation. The CSS input string starts with `@import "tailwindcss";`, followed by any config. Use this filter to add additional CSS directives, custom `@layer` rules, or plugin imports.
+
+```php
+add_filter('blockstudio/tailwind/css', function (string $css): string {
+    // Add a custom utility
+    $css .= "\n@utility container-narrow { max-width: 48rem; margin-inline: auto; }";
+
+    return $css;
+});
+```
+
+The full CSS input that gets compiled looks like this:
+
+```css
+/* Base import */
+@import "tailwindcss";
+
+/* Config from settings (if set) */
+@theme { --color-brand: pink; }
+
+/* Anything added via the blockstudio/tailwind/css filter */
+```
+
+## Output Buffer
+
+Tailwind compilation hooks into Blockstudio's output buffer system. The buffer captures the complete page HTML after WordPress has finished rendering, allowing Tailwind to scan all classes from every source: block templates, theme templates, plugin output, `the_content` filters, and widget areas.
+
+The compilation filter runs at priority `999999` on the `blockstudio/buffer/output` hook, ensuring it processes the final HTML after all other modifications. The buffer is started on the `template_redirect` action, which means it only runs on frontend requests, not in the admin, REST API, or AJAX contexts.
+
+## Architecture
+
+```
+Frontend Request
+  │
+  ├─ WordPress renders HTML into output buffer
+  │
+  ├─ blockstudio/buffer/output filter (priority 999999)
+  │   │
+  │   ├─ Settings::get('tailwind/enabled') → false? Return HTML unchanged
+  │   │
+  │   ├─ build_css_input()
+  │   │   ├─ @import "tailwindcss"
+  │   │   ├─ + tailwind/config setting
+  │   │   └─ + blockstudio/tailwind/css filter
+  │   │
+  │   ├─ TailwindPHP::extractCandidates($html)
+  │   │   └─ Returns array of CSS class names found in HTML
+  │   │
+  │   ├─ Cache key = md5(sorted candidates + css input)
+  │   │
+  │   ├─ Cache hit?
+  │   │   ├─ Yes → Read CSS from uploads/blockstudio/tailwind/cache/{hash}.css
+  │   │   └─ No  → TailwindPHP::generate() → Write to cache file
+  │   │
+  │   └─ Inject <style id="blockstudio-tailwind"> before </head>
+  │
+  └─ Browser receives HTML with compiled CSS
+
+
+Editor Request
+  │
+  ├─ Admin loads block editor
+  │
+  ├─ Block with classes field (tailwind: true) detected
+  │   └─ Block_Registry::set_tailwind_active(true)
+  │
+  ├─ Admin passes isTailwindActive + tailwindUrl to JS
+  │
+  └─ useTailwind() hook
+      ├─ Injects Tailwind CDN script into document
+      ├─ Creates hidden template div with HTML content
+      ├─ Creates style tag for config
+      └─ CDN compiles CSS in-browser for live preview
+```
+
+## Full Example
+
+A complete working setup with custom theme colors and a block that uses them:
+
+```json title="blockstudio.json"
+{
+  "$schema": "https://app.blockstudio.dev/schema/blockstudio",
+  "tailwind": {
+    "enabled": true,
+    "config": "@theme { --color-brand: #6366f1; --color-brand-light: #a5b4fc; --color-surface: #f8fafc; } @layer utilities { .section-padding { @apply py-20 px-6; } .content-width { @apply max-w-5xl mx-auto; } .heading-xl { @apply text-4xl font-bold tracking-tight; } }"
+  }
+}
+```
+
+```json title="hero/block.json"
+{
+  "name": "my-theme/hero",
+  "title": "Hero Section",
+  "blockstudio": {
+    "attributes": [
+      {
+        "id": "title",
+        "type": "text",
+        "label": "Title",
+        "default": "Welcome"
+      },
+      {
+        "id": "wrapperClasses",
+        "type": "classes",
+        "label": "Wrapper Classes",
+        "tailwind": true,
+        "default": "section-padding bg-surface"
+      },
+      {
+        "id": "titleClasses",
+        "type": "classes",
+        "label": "Title Classes",
+        "tailwind": true,
+        "default": "heading-xl text-brand"
+      }
+    ]
+  }
+}
+```
+
+```php title="hero/index.php"
+<section class="<?php echo $a['wrapperClasses']; ?>">
+  <div class="content-width">
+    <h1 class="<?php echo $a['titleClasses']; ?>">
+      <?php echo esc_html($a['title']); ?>
+    </h1>
+  </div>
+</section>
+```
+
+This renders on the frontend with all Tailwind utilities and custom theme colors compiled into a single inline `<style>` tag.

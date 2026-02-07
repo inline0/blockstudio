@@ -146,9 +146,9 @@ export interface Editor {
  */
 export interface Tailwind {
   /**
-   * Tailwind configuration.
+   * Tailwind CSS configuration using v4 CSS-first syntax.
    */
-  config?: { [key: string]: any };
+  config?: string;
   /**
    * Enable Tailwind.
    */
@@ -355,10 +355,6 @@ function o(props: any[], additional: any) {
   return { props, additional };
 }
 
-function m(additional: any) {
-  return { props: [], additional };
-}
-
 function r(name: string) {
   return { ref: name };
 }
@@ -430,7 +426,7 @@ const typeMap: any = {
   ),
   Tailwind: o(
     [
-      { json: 'config', js: 'config', typ: u(undefined, m('any')) },
+      { json: 'config', js: 'config', typ: u(undefined, '') },
       { json: 'enabled', js: 'enabled', typ: u(undefined, true) },
     ],
     'any',

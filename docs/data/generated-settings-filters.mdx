@@ -80,19 +80,11 @@ add_filter('blockstudio/settings/tailwind/enabled', function() {
 
 ### tailwind/config
 
-This filter allows you to add a custom Tailwind configuration.
+This filter allows you to add a custom Tailwind CSS configuration.
 
 ```php title="functions.php"
 add_filter('blockstudio/settings/tailwind/config', function() {
-  return [
-  'theme' => [
-    'extend' => [
-      'colors' => [
-        'primary' => 'pink'
-      ]
-    ]
-  ]
-];
+  return '@theme { --color-primary: pink; }';
 });
 ```
 

@@ -1,0 +1,7 @@
+{
+  "name": "test-pattern-tailwind",
+  "title": "Tailwind Test Pattern",
+  "description": "Pattern with Tailwind classes for on-demand testing",
+  "categories": ["featured"],
+  "keywords": ["test", "tailwind"]
+}

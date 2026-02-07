@@ -1,19 +1,13 @@
 import {
-  DropdownMenu,
   FormTokenField,
-  MenuGroup,
-  MenuItem,
 } from '@wordpress/components';
-import { useDispatch, useSelect } from '@wordpress/data';
+import { useDispatch } from '@wordpress/data';
 import { useEffect, useRef, useState } from '@wordpress/element';
-import { tag, moreHorizontal } from '@wordpress/icons';
 import { cloneDeep, set } from 'lodash-es';
 import { Class } from '@/blocks/components/fields/components/classes/components/class';
 import { useGetCssClasses } from '@/blocks/hooks/use-get-css-classes';
-import { CustomClasses } from '@/tailwind/components/custom-classes';
 import { classes } from '@/tailwind/data/classes';
 import { screens } from '@/tailwind/data/screens';
-import { selectors as selectorsTailwind } from '@/tailwind/store/selectors';
 import { mergeClassNames } from '@/tailwind/utils/merge-class-names';
 import { sortClasses } from '@/tailwind/utils/sort-classes';
 import { BlockstudioBlockAttributes } from '@/types/types';
@@ -24,10 +18,8 @@ export const Classes = ({
   attributeId,
   attributes,
   clientId,
-  fieldOnly = false,
   keyName,
   label,
-  only,
   setAttributes,
   setValue,
   tailwind,
@@ -36,11 +28,9 @@ export const Classes = ({
   attributeId?: string;
   attributes?: BlockstudioBlockAttributes;
   clientId?: string;
-  fieldOnly?: boolean;
   keyName: string;
   label?: string;
   onResetTemporaryValue?: () => void;
-  only?: boolean;
   setAttributes?: (props: BlockstudioBlockAttributes) => void;
   setValue?: (value: string, temporaryValue?: string) => void;
   tailwind?: boolean;
@@ -51,26 +41,10 @@ export const Classes = ({
     window.blockstudioAdmin?.styles,
     window.blockstudioAdmin?.cssClasses ?? [],
   );
-  const customClasses =
-    useSelect(
-      (select) =>
-        (
-          select('blockstudio/tailwind') as typeof selectorsTailwind
-        ).getCustomClasses(),
-      [],
-    ) || [];
   const allClasses = [
-    ...(tailwind
-      ? [
-          ...classes,
-          ...(customClasses || []).map(
-            (item: { className: string }) => item.className,
-          ),
-        ]
-      : []),
+    ...(tailwind ? classes : []),
     ...settingsCssClasses,
   ] as string[];
-  const [showCustomClasses, setShowCustomClasses] = useState(false);
   const [suggestions, setSuggestions] = useState<string[]>([
     ...classes,
   ] as string[]);
@@ -125,7 +99,7 @@ export const Classes = ({
     });
   };
 
-  useEffect(() => setSuggestions(allClasses), [customClasses]);
+  useEffect(() => setSuggestions(allClasses), []);
 
   useEffect(() => {
     if (setValue) return;
@@ -185,156 +159,119 @@ export const Classes = ({
   }, []);
 
   return (
-    <>
-      <div {...{ ref }}>
-        <div
-          css={css({
-            display: 'grid',
-            gridTemplateColumns: '1fr auto',
+    <div {...{ ref }}>
+      <div
+        css={css({
+          display: 'grid',
+          gridTemplateColumns: '1fr',
 
-            '.components-spacer': {
-              display: 'none',
-            },
-          })}
-        >
-          <FormTokenField
-            {...{ label }}
-            suggestions={suggestions.filter((c) => !value.includes(c))}
-            onChange={(val) => {
-              handleChange(
-                mergeClassNames(value, (val as string[]).join(' ')),
-                '',
-              );
-            }}
-            onInputChange={(val) => {
-              if (val.includes(':')) {
-                const prefix = val.substring(0, val.lastIndexOf(':'));
-                setSuggestions(allClasses.map((c) => `${prefix}:${c}`));
-              } else {
-                setSuggestions(allClasses);
-              }
-            }}
-            tokenizeOnBlur
-            __experimentalValidateInput={(token) => {
-              if (token.includes('[') || token.includes(':')) return true;
-              return allClasses.includes(token);
-            }}
-            __experimentalShowHowTo={false}
-          />
-          {!fieldOnly && tailwind && (
-            <DropdownMenu
-              css={css({
-                '.components-button': {
-                  marginTop: only ? '23px' : undefined,
-                  width: '32px',
-                  height: '32px',
-                },
-              })}
-              icon={moreHorizontal}
-              label="More"
-            >
-              {({ onClose }) => (
-                <>
-                  <MenuGroup>
-                    <MenuItem
-                      icon={tag}
-                      onClick={() => {
-                        setShowCustomClasses(true);
-                        onClose();
-                      }}
-                    >
-                      {__('Custom Tailwind Classes')}
-                    </MenuItem>
-                  </MenuGroup>
-                </>
-              )}
-            </DropdownMenu>
-          )}
-        </div>
-        <div
-          css={css({
-            display: 'grid',
-            gap: '12px',
-            marginTop: '12px',
-
-            '&:empty': {
-              display: 'none',
-            },
-          })}
-        >
-          {tailwind ? (
-            Object.entries(groupedClasses).map(([prefix, classes]) => (
-              <div key={prefix}>
-                <h3
-                  css={css({
-                    margin: '0',
-                    marginBottom: '4px',
-                    color: '#1e1e1e',
-                    fontSize: '11px',
-                    fontWeight: '500',
-                    textTransform: 'uppercase',
-                  })}
-                >
-                  {prefix.toUpperCase()}
-                </h3>
-                <div
-                  css={css({
-                    display: 'flex',
-                    flexWrap: 'wrap',
-                    gap: '6px',
-                  })}
-                >
-                  {(classes as string[])
-                    .filter((e) => e)
-                    .map((c) => (
-                      <Class
-                        {...{
-                          attributes,
-                          keyName,
-                          setAttributes,
-                          setValue,
-                          value,
-                        }}
-                        key={c}
-                        text={c}
-                      />
-                    ))}
-                </div>
-              </div>
-            ))
-          ) : (value.split(' ') as string[]).filter((e) => e).length ? (
-            <div
-              css={css({
-                display: 'flex',
-                flexWrap: 'wrap',
-                gap: '6px',
-              })}
-            >
-              {(value.split(' ') as string[])
-                .filter((e) => e)
-                .map((c) => (
-                  <Class
-                    {...{
-                      attributes,
-                      keyName,
-                      setAttributes,
-                      setValue,
-                      value,
-                    }}
-                    key={c}
-                    text={c}
-                  />
-                ))}
-            </div>
-          ) : null}
-        </div>
-      </div>
-      {!fieldOnly && (
-        <CustomClasses
-          show={showCustomClasses}
-          setShow={setShowCustomClasses}
+          '.components-spacer': {
+            display: 'none',
+          },
+        })}
+      >
+        <FormTokenField
+          {...{ label }}
+          suggestions={suggestions.filter((c) => !value.includes(c))}
+          onChange={(val) => {
+            handleChange(
+              mergeClassNames(value, (val as string[]).join(' ')),
+              '',
+            );
+          }}
+          onInputChange={(val) => {
+            if (val.includes(':')) {
+              const prefix = val.substring(0, val.lastIndexOf(':'));
+              setSuggestions(allClasses.map((c) => `${prefix}:${c}`));
+            } else {
+              setSuggestions(allClasses);
+            }
+          }}
+          tokenizeOnBlur
+          __experimentalValidateInput={(token) => {
+            if (token.includes('[') || token.includes(':')) return true;
+            return allClasses.includes(token);
+          }}
+          __experimentalShowHowTo={false}
         />
-      )}
-    </>
+      </div>
+      <div
+        css={css({
+          display: 'grid',
+          gap: '12px',
+          marginTop: '12px',
+
+          '&:empty': {
+            display: 'none',
+          },
+        })}
+      >
+        {tailwind ? (
+          Object.entries(groupedClasses).map(([prefix, classes]) => (
+            <div key={prefix}>
+              <h3
+                css={css({
+                  margin: '0',
+                  marginBottom: '4px',
+                  color: '#1e1e1e',
+                  fontSize: '11px',
+                  fontWeight: '500',
+                  textTransform: 'uppercase',
+                })}
+              >
+                {prefix.toUpperCase()}
+              </h3>
+              <div
+                css={css({
+                  display: 'flex',
+                  flexWrap: 'wrap',
+                  gap: '6px',
+                })}
+              >
+                {(classes as string[])
+                  .filter((e) => e)
+                  .map((c) => (
+                    <Class
+                      {...{
+                        attributes,
+                        keyName,
+                        setAttributes,
+                        setValue,
+                        value,
+                      }}
+                      key={c}
+                      text={c}
+                    />
+                  ))}
+              </div>
+            </div>
+          ))
+        ) : (value.split(' ') as string[]).filter((e) => e).length ? (
+          <div
+            css={css({
+              display: 'flex',
+              flexWrap: 'wrap',
+              gap: '6px',
+            })}
+          >
+            {(value.split(' ') as string[])
+              .filter((e) => e)
+              .map((c) => (
+                <Class
+                  {...{
+                    attributes,
+                    keyName,
+                    setAttributes,
+                    setValue,
+                    value,
+                  }}
+                  key={c}
+                  text={c}
+                />
+              ))}
+          </div>
+        ) : null}
+      </div>
+    </div>
   );
 };
