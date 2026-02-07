@@ -64,6 +64,16 @@ class Html_Parser {
 	private array $block_renderers = array();
 
 	/**
+	 * Element-to-block mapping overrides.
+	 *
+	 * Maps HTML tag names to block names, allowing standard elements
+	 * like `<h1>` to be remapped to custom blocks.
+	 *
+	 * @var array<string, string>
+	 */
+	private array $element_mapping = array();
+
+	/**
 	 * Constructor.
 	 */
 	public function __construct() {
@@ -86,6 +96,19 @@ class Html_Parser {
 		 * @param Html_Parser             $parser    The parser instance.
 		 */
 		$this->block_renderers = apply_filters( 'blockstudio/parser/renderers', $this->block_renderers, $this );
+
+		/**
+		 * Filter to override which block an HTML element maps to.
+		 *
+		 * Allows remapping standard HTML elements to custom blocks.
+		 * For example, mapping `<h1>` to `custom/heading` instead of `core/heading`.
+		 *
+		 * @since 7.0.0
+		 *
+		 * @param array<string, string> $mapping Tag name => block name.
+		 * @param Html_Parser           $parser  The parser instance.
+		 */
+		$this->element_mapping = apply_filters( 'blockstudio/parser/element_mapping', $this->element_mapping, $this );
 	}
 
 	/**
@@ -284,6 +307,11 @@ class Html_Parser {
 		// Legacy blockstudio_* shorthand.
 		if ( str_starts_with( $tag, 'blockstudio_' ) ) {
 			return $this->parse_blockstudio_block( $element );
+		}
+
+		// Check for element mapping overrides.
+		if ( isset( $this->element_mapping[ $tag ] ) ) {
+			return $this->create_mapped_block( $element, $this->element_mapping[ $tag ] );
 		}
 
 		// Standard HTML elements map to core blocks.
@@ -805,6 +833,46 @@ class Html_Parser {
 	}
 
 	/**
+	 * Create a block from a remapped HTML element.
+	 *
+	 * When an element mapping overrides the default tag-to-block mapping,
+	 * this method delegates to the registered renderer for the target block
+	 * or falls back to a generic block structure.
+	 *
+	 * @param DOMElement $element    The HTML element.
+	 * @param string     $block_name The target block name.
+	 *
+	 * @return array|null The block array or null.
+	 */
+	private function create_mapped_block( DOMElement $element, string $block_name ): ?array {
+		$attrs = $this->get_element_attributes( $element );
+
+		if ( ! empty( $attrs['key'] ) ) {
+			$attrs['__BLOCKSTUDIO_KEY'] = $attrs['key'];
+		}
+		unset( $attrs['key'] );
+
+		if ( isset( $this->block_renderers[ $block_name ] ) ) {
+			return call_user_func(
+				$this->block_renderers[ $block_name ],
+				$element,
+				$attrs,
+				$this
+			);
+		}
+
+		$inner_blocks = $this->parse_children( $element );
+
+		return array(
+			'blockName'    => $block_name,
+			'attrs'        => $attrs,
+			'innerBlocks'  => $inner_blocks,
+			'innerHTML'    => '',
+			'innerContent' => array(),
+		);
+	}
+
+	/**
 	 * Extract meta attributes (like blockEditingMode) from an HTML element.
 	 *
 	 * @param DOMElement $element The element.
@@ -821,6 +889,13 @@ class Html_Parser {
 
 		if ( $element->hasAttribute( 'key' ) && '' !== $element->getAttribute( 'key' ) ) {
 			$meta['__BLOCKSTUDIO_KEY'] = $element->getAttribute( 'key' );
+		}
+
+		if ( $element->hasAttribute( 'metadata' ) ) {
+			$decoded = json_decode( $element->getAttribute( 'metadata' ), true );
+			if ( is_array( $decoded ) ) {
+				$meta['metadata'] = $decoded;
+			}
 		}
 
 		return $meta;
@@ -845,6 +920,11 @@ class Html_Parser {
 				$value = false;
 			} elseif ( is_numeric( $value ) ) {
 				$value = str_contains( $value, '.' ) ? (float) $value : (int) $value;
+			} elseif ( is_string( $value ) && '' !== $value && ( '{' === $value[0] || '[' === $value[0] ) ) {
+				$decoded = json_decode( $value, true );
+				if ( null !== $decoded ) {
+					$value = $decoded;
+				}
 			}
 
 			$attrs[ $attr->name ] = $value;

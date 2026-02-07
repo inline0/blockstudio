@@ -17,14 +17,21 @@ const templates = {
     </a>
   <?php endif; ?>
 
+  <?php foreach ($a['features'] as $feature): ?>
+    <div class="feature">
+      <h3><?= esc_html($feature['title']) ?></h3>
+      <p><?= wp_kses_post($feature['text']) ?></p>
+    </div>
+  <?php endforeach; ?>
+
   <InnerBlocks />
 </section>`,
   },
   twig: {
     lang: "twig",
     code: `<section class="hero">
-  <h1>{{ a.heading }}</h1>
-  <p>{{ a.description }}</p>
+  <h1>{{ a.heading|upper }}</h1>
+  <p>{{ a.description|truncate(120) }}</p>
 
   {% if a.showCta %}
     <a href="{{ a.ctaUrl }}">
@@ -32,20 +39,34 @@ const templates = {
     </a>
   {% endif %}
 
+  {% for feature in a.features %}
+    <div class="feature">
+      <h3>{{ feature.title|title }}</h3>
+      <p>{{ feature.text|striptags }}</p>
+    </div>
+  {% endfor %}
+
   <InnerBlocks />
 </section>`,
   },
   blade: {
     lang: "php",
     code: `<section class="hero">
-  <h1>{{ $a['heading'] }}</h1>
-  <p>{{ $a['description'] }}</p>
+  <h1>{{ Str::upper($a['heading']) }}</h1>
+  <p>{{ Str::limit($a['description'], 120) }}</p>
 
   @if($a['showCta'])
     <a href="{{ $a['ctaUrl'] }}">
       {{ $a['ctaLabel'] }}
     </a>
   @endif
+
+  @foreach($a['features'] as $feature)
+    <div class="feature">
+      <h3>{{ $feature['title'] }}</h3>
+      <p>{{ $feature['text'] }}</p>
+    </div>
+  @endforeach
 
   <InnerBlocks />
 </section>`,

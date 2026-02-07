@@ -4,22 +4,30 @@ import { Section, SectionIcon } from "./section";
 import { Feature } from "./feature";
 import { CodeCard } from "./code-card";
 
-const templateCode = `<block name="core/columns">
-  <block name="core/column">
-    <h3>Starter</h3>
-    <p>For small teams getting started.</p>
-    <block name="core/button" url="/signup">
-      Get Started
+const templateCode = `<div>
+  <h2>Pricing</h2>
+  <p>Simple, transparent pricing.</p>
+
+  <block name="core/columns">
+    <block name="core/column">
+      <h3>Starter</h3>
+      <p>For small teams getting started.</p>
+      <block name="core/button" url="/signup">
+        Get Started
+      </block>
+    </block>
+    <block name="core/column">
+      <h3>Pro</h3>
+      <ul>
+        <li>Priority support</li>
+        <li>Custom integrations</li>
+      </ul>
+      <block name="core/button" url="/signup?plan=pro">
+        Go Pro
+      </block>
     </block>
   </block>
-  <block name="core/column">
-    <h3>Pro</h3>
-    <p>For growing teams that need more.</p>
-    <block name="core/button" url="/signup?plan=pro">
-      Go Pro
-    </block>
-  </block>
-</block>`;
+</div>`;
 
 const details = [
   {

@@ -70,6 +70,21 @@ attribute solves this by preserving user content across syncs:
 Blocks with matching keys keep their user-edited content when the template
 updates. Blocks without keys are replaced entirely.
 
+#### Block bindings
+
+As an alternative to keys, you can connect blocks directly to post meta using
+WordPress's Block Bindings API. Content lives in meta instead of block markup,
+so template syncs never destroy user edits. The data is also queryable via
+`WP_Query` and available through the REST API.
+
+```html title="index.php"
+<h1 metadata='{"bindings":{"content":{"source":"core/post-meta","args":{"key":"hero_title"}}}}'>
+  Default Title
+</h1>
+```
+
+Both approaches can be used in the same template.
+
 #### Editing controls
 
 Pages support `blockEditingMode` and `templateLock` to control what users can
@@ -215,7 +230,8 @@ HTML templates into WordPress block markup, handling both container blocks
 (like groups and columns) and leaf blocks (like paragraphs and headings). The
 parser uses a trait-based renderer architecture, making it easy to extend with
 support for additional block types via the `blockstudio/parser/renderers`
-filter:
+filter. You can also remap which block any HTML element maps to using the
+`blockstudio/parser/element_mapping` filter:
 
 ```php title="functions.php"
 add_filter( 'blockstudio/parser/renderers', function ( $renderers, $parser ) {
@@ -246,8 +262,7 @@ Once registered, you can use the block in any page or pattern template:
 
 ### Modern PHP
 
-Blockstudio 7 requires PHP 8.2+ and takes full advantage of enums, readonly
-properties, named arguments, and modern type declarations.
+Blockstudio 7 requires PHP 8.2+ and uses modern type declarations throughout.
 
 ## Breaking changes
 

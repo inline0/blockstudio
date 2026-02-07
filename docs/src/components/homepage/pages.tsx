@@ -4,10 +4,11 @@ import { Section, SectionIcon } from "./section";
 import { Feature } from "./feature";
 import { CodeCard } from "./code-card";
 
-const templateCode = `<block name="core/cover">
+const templateCode = `<div>
   <h1 blockEditingMode="contentOnly">About Us</h1>
   <p>We build tools for WordPress developers.</p>
-</block>
+  <img src="/team.jpg" alt="Our team" />
+</div>
 
 <block name="core/columns">
   <block name="core/column">
@@ -15,8 +16,13 @@ const templateCode = `<block name="core/cover">
     <p>Making block development fast and simple.</p>
   </block>
   <block name="core/column">
-    <h2>Our Stack</h2>
-    <p>PHP, WordPress, and zero JavaScript.</p>
+    <block name="blockstudio/features" layout="grid">
+      <h2>Our Stack</h2>
+      <ul>
+        <li>PHP and WordPress</li>
+        <li>Zero JavaScript</li>
+      </ul>
+    </block>
   </block>
 </block>`;
 

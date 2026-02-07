@@ -271,6 +271,48 @@ Create a page with a starting structure, then hand it off entirely. Set `sync` t
 
 The page is created once. After that, the client can add, remove, and rearrange blocks freely. Template changes are ignored.
 
+## Block Bindings
+
+An alternative to keyed merging is connecting blocks to post meta using WordPress's [Block Bindings API](https://make.wordpress.org/core/2024/03/06/new-feature-the-block-bindings-api/). Instead of preserving content in block markup, the content lives in post meta. Template syncs can freely overwrite the markup because the editor reads from meta, not from innerHTML.
+
+Pass the `metadata` attribute on any HTML element or `<block>` element:
+
+```html title="index.php"
+<h1 metadata='{"bindings":{"content":{"source":"core/post-meta","args":{"key":"hero_title"}}}}'>
+  Default Title
+</h1>
+
+<p metadata='{"bindings":{"content":{"source":"core/post-meta","args":{"key":"hero_description"}}}}'>
+  Default description text.
+</p>
+
+<img metadata='{"bindings":{"url":{"source":"core/post-meta","args":{"key":"hero_image"}},"alt":{"source":"core/post-meta","args":{"key":"hero_image_alt"}}}}' />
+```
+
+The meta keys must be registered with `show_in_rest` enabled:
+
+```php title="functions.php"
+register_post_meta( 'page', 'hero_title', array(
+    'show_in_rest'  => true,
+    'single'        => true,
+    'type'          => 'string',
+    'default'       => 'Default Title',
+) );
+```
+
+### Keys vs. bindings
+
+| | Keys | Bindings |
+|---|---|---|
+| Content stored in | Block markup (`post_content`) | Post meta (`wp_postmeta`) |
+| Survives template sync | Yes (merged by key) | Yes (data lives in meta) |
+| Queryable via `WP_Query` | No | Yes (`meta_query`) |
+| Available in REST API | No | Yes |
+| Requires registration | No | Yes (`register_post_meta`) |
+| User can move blocks | No (template re-imposes structure) | No (template re-imposes structure) |
+
+Both approaches can be used in the same template. Use keys for sections where the block structure matters (e.g., a group with multiple children). Use bindings for individual fields where you also want the data accessible outside the block editor.
+
 ## Post Type Templates
 
 Use `templateFor` to set a page as the default template for a post type:

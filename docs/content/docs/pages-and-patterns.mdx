@@ -236,6 +236,25 @@ add_filter( 'blockstudio/parser/renderers', function( $renderers, $parser ) {
 function my_renderer( DOMElement $element, array $attrs, $parser ): ?array {}
 ```
 
+## Element Mapping
+
+By default, standard HTML elements like `<h1>`, `<p>`, and `<img>` map to core WordPress blocks. You can override this mapping to point any HTML element to a different block using the `blockstudio/parser/element_mapping` filter:
+
+```php
+add_filter( 'blockstudio/parser/element_mapping', function( $mapping ) {
+    $mapping['h1'] = 'custom/heading';
+    $mapping['h2'] = 'custom/heading';
+    $mapping['p']  = 'custom/paragraph';
+    $mapping['img'] = 'custom/image';
+
+    return $mapping;
+}, 10, 2 );
+```
+
+With this filter active, every `<h1>` in your templates will produce a `custom/heading` block instead of `core/heading`. The element's attributes are passed through to the target block. If a renderer is registered for the target block name, it will be used. Otherwise, a generic block structure is created.
+
+This is useful when your theme or plugin provides custom block types that should replace the defaults across all page and pattern templates.
+
 ## Complete Example
 
 A full page template combining multiple block types:
