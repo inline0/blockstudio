@@ -5,58 +5,298 @@ date: 2026-02-07
 author: Dennis
 ---
 
-Blockstudio 7 is a complete rewrite of the WordPress block framework. Every line of code has been rebuilt from scratch with a focus on performance, developer experience, and full compliance with WordPress coding standards.
+Blockstudio 7 is here. This is the biggest release in the history of the
+project: a complete, ground-up rewrite of the entire codebase. Every class,
+every hook, every line of code has been rebuilt from scratch with a focus on
+modern PHP, WordPress coding standards, and long-term maintainability.
 
-## Why a Rewrite?
+But this isn't just a refactor. Blockstudio 7 introduces major new features
+like file-based pages and patterns, a post meta storage system, SEO
+integration, and a brand new HTML-to-block parser that powers it all. On top of
+that, Blockstudio is now completely free and open source.
 
-Blockstudio started as a simple tool for building custom blocks without JavaScript. Over the years, it grew into a full framework with field types, templating engines, asset processing, and more. But the codebase carried years of incremental additions that made it harder to maintain and extend.
+Let's dive into everything that's new.
 
-Version 7 is the answer: a clean-room rewrite that keeps everything developers love about Blockstudio while modernizing the foundation.
+## Free and open source
 
-## What's New
+After nearly five years as a commercial plugin, Blockstudio is now completely
+free and open source. No license keys, no paywalls, no feature gates. The full
+plugin is available on [GitHub](https://github.com/inline0/blockstudio) for
+anyone to use, fork, and contribute to.
 
-### Zero JavaScript Required
+This was a decision we've been thinking about for a long time. We believe that
+open source is the right model for developer tools, and we're excited to see
+what the community builds with it.
 
-Build fully custom blocks using only JSON configuration and PHP (or Twig, or Blade) templates. The editor UI, field rendering, and block registration are all handled automatically.
+## New features
 
-### 30+ Field Types
+### File-based pages
 
-Text, textarea, number, range, toggle, select, radio, checkbox, color, date, time, code, image, gallery, file, link, rich text, repeater, group, message, separator, tab, and more. Each field type works in the editor and exposes its value in your template.
+This is one of the biggest additions in 7.0. You can now define entire
+WordPress pages as file templates that automatically sync to the database as
+native block content.
 
-### File-Based Architecture
+Create a folder with a `page.json` and a template file:
 
-Blocks, pages, patterns, and extensions are all defined as files in your theme or plugin. Drop a `block.json` and a `template.php` into a folder and you have a working block.
+```json title="page.json"
+{
+  "title": "About",
+  "slug": "about",
+  "status": "publish"
+}
+```
 
-### Asset Processing
+```php title="index.php"
+<div class="about-page">
+  <h1>About Us</h1>
+  <p>Welcome to our site.</p>
+</div>
+```
 
-Name your files with the right extension and Blockstudio handles the rest. SCSS compilation, ES module bundling, scoped styles, and automatic minification are all built in.
+Blockstudio parses the HTML into WordPress blocks, creates the page in the
+database, and keeps it in sync whenever the template file changes. The result
+is real, portable block content that works without the plugin installed.
 
-### Full Page Templates
+#### Keyed block merging
 
-Define entire WordPress pages as template files with native blocks. Pages sync automatically to the database and render with the block editor.
+When templates sync, user edits would normally be overwritten. The `key`
+attribute solves this by preserving user content across syncs:
 
-### Block Extensions
+```html title="index.php"
+<h1 key="hero-title">Default Title</h1>
+<p key="hero-description">Default description.</p>
+```
 
-Add custom fields to any block (core, third-party, or your own) with a single JSON file. No PHP hooks, no JavaScript filters.
+Blocks with matching keys keep their user-edited content when the template
+updates. Blocks without keys are replaced entirely.
 
-## Under the Hood
+#### Editing controls
 
-### WordPress Coding Standards
+Pages support `blockEditingMode` and `templateLock` to control what users can
+modify:
 
-Every PHP file passes `phpcs` with zero exceptions. Consistent naming, proper documentation for public APIs, and strict type handling throughout.
+```json title="page.json"
+{
+  "title": "Landing Page",
+  "slug": "landing",
+  "blockEditingMode": "contentOnly",
+  "templateLock": "all"
+}
+```
+
+This locks the page structure while still allowing users to edit text and
+media. Individual elements can override the page-level setting with a
+`data-block-editing-mode` attribute in the template.
+
+#### Pinning to post IDs
+
+Use `postId` to bind a page template to an existing WordPress post, preventing
+duplicate pages and ensuring the template always updates the correct post:
+
+```json title="page.json"
+{
+  "title": "Home",
+  "slug": "home",
+  "postId": 2
+}
+```
+
+For full details, see the [Pages documentation](/docs/pages).
+
+### File-based patterns
+
+Similar to pages, you can now define block patterns as file templates.
+Patterns are registered in memory (no database entries) and appear in the
+block inserter:
+
+```json title="pattern.json"
+{
+  "title": "Hero Section",
+  "categories": ["blockstudio"],
+  "keywords": ["hero", "banner"]
+}
+```
+
+```html title="index.php"
+<div class="hero">
+  <h1>Welcome</h1>
+  <p>Get started today.</p>
+</div>
+```
+
+Unlike pages, patterns don't sync to the database. They're purely
+configuration-based and available for users to insert anywhere. See the
+[Patterns documentation](/docs/patterns).
+
+### Storage
+
+Fields can now store their values in post meta or site options, in addition to
+block attributes. This is a big one:
+
+```json title="block.json"
+{
+  "id": "subtitle",
+  "type": "text",
+  "label": "Subtitle",
+  "storage": {
+    "type": "meta"
+  }
+}
+```
+
+With values in post meta, you can:
+
+- Query posts by field values using `WP_Query` and `meta_query`
+- Access field data through the REST API for headless setups
+- Share data with other plugins like SEO tools and caching layers
+
+You can also store values in the options table for global, site-wide settings:
+
+```json title="block.json"
+{
+  "id": "phone",
+  "type": "text",
+  "label": "Phone Number",
+  "storage": {
+    "type": "option",
+    "key": "company_phone"
+  }
+}
+```
+
+See the [Storage documentation](/docs/storage) for the full API.
+
+### Custom fields
+
+Reusable field definitions can now be shared across multiple blocks. Define a
+set of fields once via the filesystem or a PHP filter, then reference them from
+any block configuration. This eliminates repetition when multiple blocks share
+the same field structure.
+
+See the [Custom Fields documentation](/docs/attributes/custom-fields).
+
+### SEO content analysis
+
+Block content is now visible to Yoast SEO and Rank Math in the editor. This
+means SEO plugins can properly analyze your Blockstudio block content for
+keyword density, readability, and other metrics. No configuration needed.
+
+### Code field popout
+
+The code field can now be opened in a separate window for a full-screen editing
+experience. Combined with independent undo/redo (code changes no longer
+interfere with the Gutenberg undo stack) and JavaScript syntax highlighting
+that works without script tags, the code field is now significantly more
+capable.
+
+## Enhancements
+
+- **Tailwind 4 support**: the integrated Tailwind CSS support has been updated
+  to version 4
+- **API version 3**: blocks now render correctly in the iframed editor,
+  including the site editor and responsive previews
+- **Dot notation for assets**: cleaner file naming convention for asset
+  suffixes (`*.inline.css`, `*.editor.js`, `*.scoped.css`)
+- Fixed `bs_render_block()` warning from `WP_Block_Supports` when using
+  `useBlockProps`
+- Fixed conditional fields not respecting default values on first load
+- Fixed dollar signs being stripped from `<RichText />` content on the frontend
+- Fixed `populate` feature to work with taxonomies registered by other plugins
+- Fixed `optionsPopulate` null error in WPML contexts
+
+## Under the hood
+
+### Complete rewrite
+
+This isn't a refactor or a cleanup. Every class has been rewritten from
+scratch. The result is a cleaner, more modular codebase that's easier to
+maintain and extend.
+
+### 100% WordPress Coding Standards
+
+Every PHP file in the codebase passes `phpcs` with zero exceptions. Consistent
+naming, proper documentation for public APIs, and strict type handling
+throughout.
+
+### HTML-to-block parser
+
+A new HTML parser powers the pages and patterns systems. It converts standard
+HTML templates into WordPress block markup, handling both container blocks
+(like groups and columns) and leaf blocks (like paragraphs and headings). The
+parser uses a trait-based renderer architecture, making it easy to extend with
+support for additional block types.
 
 ### Modern PHP
 
-Blockstudio 7 requires PHP 8.1+ and takes full advantage of enums, readonly properties, fibers, and named arguments.
+Blockstudio 7 requires PHP 8.2+ and takes full advantage of enums, readonly
+properties, named arguments, and modern type declarations.
 
-### HTML Parser
+## Breaking changes
 
-The new HTML parser converts block templates into WordPress block markup at save time. This means your templates produce real, portable block content that works without the plugin installed.
+As a major version update, 7.0 includes several breaking changes. Most have
+backward-compatible fallbacks, but you should review them before upgrading. For
+a complete migration guide, see the [v7 migration docs](/docs/migration/v7).
 
-## Getting Started
+### Hook names now use snake_case
 
-Install Blockstudio 7 and create your first block in minutes. Check out the [Getting Started guide](/docs/getting-started) for a step-by-step walkthrough.
+All PHP hooks have been renamed from camelCase to snake_case, matching WordPress
+core conventions:
 
-## What's Next
+```php title="functions.php"
+// Before (v6)
+add_filter('blockstudio/settings/blockEditor/cssClasses', function() {
+    return ['my-stylesheet'];
+});
 
-This is just the beginning. Upcoming releases will bring more field types, improved editor interactions, and deeper integration with WordPress site editing. Follow along on [GitHub](https://github.com/inline0/blockstudio) for the latest updates.
+// After (v7)
+add_filter('blockstudio/settings/block_editor/css_classes', function() {
+    return ['my-stylesheet'];
+});
+```
+
+The old camelCase names still work, but we recommend updating.
+
+### Field switch defaults to off
+
+The `switch` property now defaults to `false` instead of `true`. In v6, every
+field had an invisible toggle on the left edge that was enabled by default. In
+v7, switch is opt-in and uses a visible eye icon in the field label. If you
+relied on the default switch behavior, add `"switch": true` to your field
+definitions.
+
+### Asset file naming uses dot notation
+
+Asset suffixes now use dots instead of dashes (`style.inline.css` instead of
+`style-inline.css`). The old dash notation still works, but dot notation is the
+recommended convention going forward.
+
+### npm import prefix
+
+ES module imports now use `npm:` instead of `blockstudio/`:
+
+```javascript title="script.js"
+// Before (v6)
+import confetti from "blockstudio/canvas-confetti@1.6.0";
+
+// After (v7)
+import confetti from "npm:canvas-confetti@1.6.0";
+```
+
+The `blockstudio/` prefix is still supported for backward compatibility.
+
+### Removed features
+
+- **Admin Area**: the settings page has been removed
+- **License Key**: no longer needed (Blockstudio is now free and open source)
+- **Code Editor**: the global code editor has been removed
+- **Edit accordion**: the block inspector accordion has been removed
+
+## Getting started
+
+Install Blockstudio 7 and create your first block in minutes. Check out the
+[Getting Started guide](/docs/getting-started) for a step-by-step walkthrough,
+or the [v7 migration guide](/docs/migration/v7) if you're upgrading from v6.
+
+The full source is available on
+[GitHub](https://github.com/inline0/blockstudio). We welcome issues, PRs, and
+feedback from the community.

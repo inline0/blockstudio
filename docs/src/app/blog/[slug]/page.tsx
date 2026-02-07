@@ -1,7 +1,8 @@
 import { blog, blogSlug } from "@/lib/source";
-import { mdxComponents } from "onedocs";
-import { InlineTOC } from "fumadocs-ui/components/inline-toc";
+import { DocsPage, mdxComponents } from "onedocs";
 import { notFound } from "next/navigation";
+import Link from "next/link";
+import { ChevronLeft } from "lucide-react";
 import type { Metadata } from "next";
 import type { MDXComponents } from "mdx/types";
 
@@ -19,14 +20,21 @@ export default async function BlogPost(props: {
   const MDX = post.body;
 
   return (
-    <article className="mx-auto flex w-full max-w-[800px] flex-col px-4 py-8">
+    <DocsPage toc={post.toc}>
+      <Link
+        href="/blog"
+        className="mb-6 inline-flex items-center gap-1 text-sm text-fd-muted-foreground no-underline transition-colors hover:text-fd-foreground"
+      >
+        <ChevronLeft className="size-4" />
+        Back to Blog
+      </Link>
       <div className="mb-8 flex flex-row gap-4 text-sm">
         <div>
-          <p className="mb-1 text-fd-muted-foreground">Written by</p>
+          <p className="text-fd-muted-foreground">Written by</p>
           <p className="font-medium">{post.author}</p>
         </div>
         <div>
-          <p className="mb-1 text-fd-muted-foreground">At</p>
+          <p className="text-fd-muted-foreground">At</p>
           <p className="font-medium">{post.date.toDateString()}</p>
         </div>
       </div>
@@ -36,11 +44,8 @@ export default async function BlogPost(props: {
         <p className="mb-8 text-fd-muted-foreground">{post.description}</p>
       )}
 
-      <div className="prose min-w-0 flex-1">
-        <InlineTOC items={post.toc} />
-        <MDX components={mdxComponents as MDXComponents} />
-      </div>
-    </article>
+      <MDX components={mdxComponents as MDXComponents} />
+    </DocsPage>
   );
 }
 
