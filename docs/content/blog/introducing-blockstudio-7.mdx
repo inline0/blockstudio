@@ -40,9 +40,10 @@ Create a folder with a `page.json` and a template file:
 
 ```json title="page.json"
 {
-  "title": "About",
+  "name": "about",
+  "title": "About Us",
   "slug": "about",
-  "status": "publish"
+  "postStatus": "publish"
 }
 ```
 
@@ -54,8 +55,7 @@ Create a folder with a `page.json` and a template file:
 ```
 
 Blockstudio parses the HTML into WordPress blocks, creates the page in the
-database, and keeps it in sync whenever the template file changes. The result
-is real, portable block content that works without the plugin installed.
+database, and keeps it in sync whenever the template file changes.
 
 #### Keyed block merging
 
@@ -77,8 +77,8 @@ modify:
 
 ```json title="page.json"
 {
+  "name": "landing",
   "title": "Landing Page",
-  "slug": "landing",
   "blockEditingMode": "contentOnly",
   "templateLock": "all"
 }
@@ -86,7 +86,7 @@ modify:
 
 This locks the page structure while still allowing users to edit text and
 media. Individual elements can override the page-level setting with a
-`data-block-editing-mode` attribute in the template.
+`blockEditingMode` attribute in the template.
 
 #### Pinning to post IDs
 
@@ -95,8 +95,8 @@ duplicate pages and ensuring the template always updates the correct post:
 
 ```json title="page.json"
 {
+  "name": "home",
   "title": "Home",
-  "slug": "home",
   "postId": 2
 }
 ```
@@ -105,14 +105,16 @@ For full details, see the [Pages documentation](/docs/pages).
 
 ### File-based patterns
 
-Similar to pages, you can now define block patterns as file templates.
-Patterns are registered in memory (no database entries) and appear in the
-block inserter:
+Similar to pages, you can now define block patterns as file templates. Write
+your pattern in HTML, and Blockstudio parses it into block markup and
+registers it as a native WordPress block pattern. They appear in the block
+inserter and can be placed anywhere by users.
 
 ```json title="pattern.json"
 {
+  "name": "hero-section",
   "title": "Hero Section",
-  "categories": ["blockstudio"],
+  "categories": ["featured"],
   "keywords": ["hero", "banner"]
 }
 ```
@@ -124,8 +126,8 @@ block inserter:
 </div>
 ```
 
-Unlike pages, patterns don't sync to the database. They're purely
-configuration-based and available for users to insert anywhere. See the
+Unlike pages, patterns don't create database entries. They're registered in
+memory on every page load. See the
 [Patterns documentation](/docs/patterns).
 
 ### Storage
@@ -139,7 +141,7 @@ block attributes. This is a big one:
   "type": "text",
   "label": "Subtitle",
   "storage": {
-    "type": "meta"
+    "type": "postMeta"
   }
 }
 ```
@@ -159,7 +161,7 @@ You can also store values in the options table for global, site-wide settings:
   "label": "Phone Number",
   "storage": {
     "type": "option",
-    "key": "company_phone"
+    "optionKey": "company_phone"
   }
 }
 ```
@@ -181,16 +183,10 @@ Block content is now visible to Yoast SEO and Rank Math in the editor. This
 means SEO plugins can properly analyze your Blockstudio block content for
 keyword density, readability, and other metrics. No configuration needed.
 
-### Code field popout
+## Enhancements and fixes
 
-The code field can now be opened in a separate window for a full-screen editing
-experience. Combined with independent undo/redo (code changes no longer
-interfere with the Gutenberg undo stack) and JavaScript syntax highlighting
-that works without script tags, the code field is now significantly more
-capable.
-
-## Enhancements
-
+- **Code field popout**: the code field can now be opened in a separate window,
+  with independent undo/redo and JavaScript syntax highlighting
 - **Tailwind 4 support**: the integrated Tailwind CSS support has been updated
   to version 4
 - **API version 3**: blocks now render correctly in the iframed editor,
@@ -211,12 +207,6 @@ capable.
 This isn't a refactor or a cleanup. Every class has been rewritten from
 scratch. The result is a cleaner, more modular codebase that's easier to
 maintain and extend.
-
-### 100% WordPress Coding Standards
-
-Every PHP file in the codebase passes `phpcs` with zero exceptions. Consistent
-naming, proper documentation for public APIs, and strict type handling
-throughout.
 
 ### HTML-to-block parser
 
