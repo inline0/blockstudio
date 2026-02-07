@@ -4,6 +4,11 @@
 @source "../../../content/**/*.mdx";
 @source "onedocs";
 
+#nd-home-layout {
+  height: auto;
+  min-height: 100%;
+}
+
 #features p.text-fd-muted-foreground {
   text-wrap: pretty;
 }

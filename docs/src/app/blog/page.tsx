@@ -1,5 +1,4 @@
 import { blog, blogSlug } from "@/lib/source";
-import { DocsPage } from "onedocs";
 import Link from "next/link";
 import type { Metadata } from "next";
 
@@ -14,7 +13,7 @@ export default function BlogIndex() {
   );
 
   return (
-    <DocsPage toc={[]}>
+    <div className="px-6 py-16 sm:py-20 lg:px-10">
       <h1 className="mb-2 text-3xl font-semibold">Blog</h1>
       <p className="mb-8 text-fd-muted-foreground">
         News and updates from the Blockstudio team.
@@ -38,6 +37,6 @@ export default function BlogIndex() {
           </Link>
         ))}
       </div>
-    </DocsPage>
+    </div>
   );
 }
