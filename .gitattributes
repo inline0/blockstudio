@@ -11,6 +11,7 @@
 /.wp-env.json export-ignore
 /CLAUDE.md export-ignore
 /_homepage_reference/ export-ignore
+/_reactgrab_reference/ export-ignore
 /_reference/ export-ignore
 /block-catalog.json export-ignore
 /build.sh export-ignore

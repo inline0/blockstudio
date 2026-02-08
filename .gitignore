@@ -24,6 +24,7 @@ vendor/
 # Reference v6 codebase (local only)
 _reference/
 _homepage_reference/
+_reactgrab_reference/
 
 # Build artifacts
 artifacts/

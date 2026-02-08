@@ -1,0 +1,60 @@
+---
+title: Developer Tools
+description: A built-in element inspector for identifying block template files on the frontend.
+---
+
+# Developer Tools
+
+When working with AI coding assistants, you often need to tell them which template file renders a specific element on the page. Blockstudio's developer tools provide a crosshair-style element selector that copies rich element context to your clipboard with a single gesture.
+
+## Activation
+
+The developer tools are gated behind a query parameter. Append `?blockstudio-devtools` to any frontend URL to enable them:
+
+```
+https://example.com/?blockstudio-devtools
+https://example.com/?p=123&blockstudio-devtools
+```
+
+Without the query parameter, no devtools script or data attributes are loaded.
+
+## Usage
+
+1. Visit any frontend page with `?blockstudio-devtools` while logged in as a user with `edit_posts` capability.
+2. Hold **Cmd+C** (Mac) or **Ctrl+C** (Windows) for 100ms to activate the grabber.
+3. A crosshair selector activates with a canvas overlay highlighting Blockstudio blocks as you hover.
+4. Two labels appear: one showing the block's template file path and one showing the HTML element tag name.
+5. Click an element to copy its context to your clipboard.
+6. Paste the result into your AI coding tool.
+
+Press **Escape** or **Cmd+C** again to deactivate without copying. If you release Cmd+C before 100ms, normal copy behavior is preserved.
+
+## Clipboard Format
+
+Clicking an element copies a rich context string designed for AI coding assistants:
+
+```
+@<div>
+
+<div class="my-block">
+  Hello world
+</div>
+  in theme-name/blockstudio/blocks/my-block/index.php
+```
+
+This includes the element tag name, an HTML preview with attributes and content, and the template file path.
+
+## Internals
+
+Blockstudio adds a `data-blockstudio-path` attribute to every block wrapper element that uses `useBlockProps` on the frontend. This attribute contains the absolute path to the template file that renders the block.
+
+A lightweight vanilla TypeScript module (no React, no WordPress dependencies) is enqueued on the frontend for logged-in editors. It uses `document.elementsFromPoint()` to detect both the specific HTML element under the cursor and its parent Blockstudio block, drawing separate highlights for each.
+
+## Security
+
+The `data-blockstudio-path` attribute and devtools script are only rendered when both conditions are met:
+
+- The `?blockstudio-devtools` query parameter is present.
+- The current user has the `edit_posts` capability.
+
+Public visitors never see file paths or the devtools script.

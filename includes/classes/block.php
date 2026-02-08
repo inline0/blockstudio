@@ -590,6 +590,14 @@ class Block {
 					foreach ( $attributes as $attribute ) {
 						$element->setAttribute( $attribute[1], $attribute[2] );
 					}
+
+						// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only feature toggle, no state change.
+					if ( ! $is_editor_or_preview && isset( $_GET['blockstudio-devtools'] ) && current_user_can( 'edit_posts' ) ) {
+						$block_path = $block->blockstudio['data']['path'] ?? '';
+						if ( $block_path ) {
+							$element->setAttribute( 'data-blockstudio-path', $block_path );
+						}
+					}
 				}
 				foreach ( $attributes_to_remove as $attribute ) {
 					$attr = strtolower( $attribute );

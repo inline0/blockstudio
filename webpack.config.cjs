@@ -7,6 +7,7 @@ module.exports = {
   entry: {
     'blocks/index.tsx': path.resolve(__dirname, 'src/blocks/index.tsx'),
     'pages/index': path.resolve(__dirname, 'src/pages/index.ts'),
+    'devtools/index': path.resolve(__dirname, 'src/devtools/index.ts'),
   },
   output: {
     ...defaultConfig.output,
@@ -23,6 +24,7 @@ module.exports = {
       '@/pages': path.resolve(__dirname, 'src/pages'),
       '@/tailwind': path.resolve(__dirname, 'src/tailwind'),
       '@/types': path.resolve(__dirname, 'src/types'),
+      '@/devtools': path.resolve(__dirname, 'src/devtools'),
       '@/utils': path.resolve(__dirname, 'src/utils'),
     },
   },
