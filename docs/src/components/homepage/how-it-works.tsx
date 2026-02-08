@@ -77,7 +77,7 @@ export async function HowItWorks() {
         </Button>
       }
     >
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 px-6 lg:px-10">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {steps.map((step) => (
           <div key={step.number} className="flex flex-col gap-y-3">
             <div className="flex items-center gap-3">

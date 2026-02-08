@@ -28,7 +28,7 @@ export async function Composition() {
       title="React features, PHP templates"
       description="Blockstudio brings the best of both worlds. Native WordPress editor components like RichText and InnerBlocks, accessible directly in your PHP templates. No JavaScript, no build step."
     >
-      <div className="px-6 lg:px-10">
+      <div>
         <Feature
           headline="All inside the same file"
           description={

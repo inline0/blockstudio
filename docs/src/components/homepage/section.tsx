@@ -28,7 +28,7 @@ export function Section({
   return (
     <section className={`pb-16 sm:pb-20 ${border ? "border-t" : ""}`}>
       {title && (
-        <div className="flex flex-wrap items-end justify-between gap-4 px-6 pt-16 pb-6 sm:pt-20 sm:pb-8 lg:px-10">
+        <div className="flex flex-wrap items-end justify-between gap-4 px-6 pt-16 pb-6 sm:pt-20 sm:pb-8 lg:px-16">
           <div>
             {icon}
             <h2 className="text-2xl font-semibold tracking-tight text-fd-foreground sm:text-3xl">
@@ -43,7 +43,7 @@ export function Section({
           {cta}
         </div>
       )}
-      {children}
+      <div className="px-6 lg:px-16">{children}</div>
     </section>
   );
 }

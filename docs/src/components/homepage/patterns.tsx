@@ -63,7 +63,7 @@ export async function Patterns() {
       title="Reusable patterns from template files"
       description="Define block patterns as template files. Same HTML syntax as pages, registered automatically in the block inserter."
     >
-      <div className="flex flex-col gap-10 px-6 lg:px-10">
+      <div className="flex flex-col gap-10">
         <Feature
           headline="Template files, not registration code"
           description={

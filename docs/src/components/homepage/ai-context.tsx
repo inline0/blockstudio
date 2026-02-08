@@ -65,7 +65,7 @@ export async function AiContext() {
       title="AI-ready documentation"
       description="A static context file with the full documentation and schemas, built for LLM coding assistants."
     >
-      <div className="flex flex-col gap-10 px-6 lg:px-10">
+      <div className="flex flex-col gap-10">
         <Feature
           headline="48k tokens of structured context"
           description={

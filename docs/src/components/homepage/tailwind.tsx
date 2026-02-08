@@ -79,7 +79,7 @@ export async function TailwindCSS() {
       title="Tailwind v4, compiled in PHP"
       description="Write utility classes in your templates. Blockstudio compiles them server-side via TailwindPHP on every request, with automatic file-based caching."
     >
-      <div className="flex flex-col gap-10 px-6 lg:px-10">
+      <div className="flex flex-col gap-10">
         <Feature
           headline="One setting, zero tooling"
           description={

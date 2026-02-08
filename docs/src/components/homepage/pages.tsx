@@ -60,7 +60,7 @@ export async function Pages() {
       title="Full pages, defined in code"
       description="Create complete WordPress pages from template files. HTML maps to core blocks automatically. Blockstudio keeps the editor in sync."
     >
-      <div className="flex flex-col gap-10 px-6 lg:px-10">
+      <div className="flex flex-col gap-10">
         <Feature
           headline="Write HTML, get blocks"
           description={

@@ -80,7 +80,7 @@ export async function TemplateLanguages() {
       title="Write templates in PHP, Twig, or Blade"
       description="Use the templating language you already know. All three share the same variables, components, and features. No JavaScript required."
     >
-      <div className="px-6 lg:px-10">
+      <div>
         <Feature
           headline="Same variables, any language"
           description={

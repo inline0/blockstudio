@@ -58,7 +58,7 @@ const faqs = [
 export function FAQ() {
   return (
     <Section border>
-      <div className="grid grid-cols-1 gap-x-2 gap-y-8 lg:grid-cols-2 px-6 pt-16 sm:pt-20 lg:px-10">
+      <div className="grid grid-cols-1 gap-x-2 gap-y-8 lg:grid-cols-2 pt-16 sm:pt-20">
         <div className="flex flex-col gap-4">
           <SectionIcon>
             <CircleHelp />

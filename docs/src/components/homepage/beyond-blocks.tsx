@@ -56,7 +56,7 @@ export async function Extensions() {
       title="Add fields to any block"
       description="Extend core blocks, third-party blocks, or your own with custom fields. Pure JSON, no templates, no code."
     >
-      <div className="flex flex-col gap-10 px-6 lg:px-10">
+      <div className="flex flex-col gap-10">
         <Feature
           headline="Custom fields, zero templates"
           description={

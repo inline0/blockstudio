@@ -77,7 +77,7 @@ export async function AssetProcessing() {
       title="Zero-config asset pipeline"
       description="SCSS compilation, ES module imports, and automatic minification, all by naming convention. No webpack, no Vite."
     >
-      <div className="flex flex-col gap-10 px-6 lg:px-10">
+      <div className="flex flex-col gap-10">
         <Feature
           headline="Name your files, Blockstudio handles the rest"
           description={

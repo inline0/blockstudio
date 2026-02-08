@@ -109,7 +109,7 @@ export function DeveloperExperience() {
       title="Built for developers"
       description="Power features that make complex blocks simple to build and maintain."
     >
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8 sm:gap-10 px-6 pb-4 lg:px-10">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8 sm:gap-10 pb-4">
         {features.map((feature) => (
           <Link
             key={feature.title}

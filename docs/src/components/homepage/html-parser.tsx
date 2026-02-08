@@ -23,7 +23,7 @@ export async function HtmlParser() {
       title="Customizable element mapping"
       description="Override which block any HTML element maps to. Point standard tags like <h1>, <p>, and <img> to your own block types."
     >
-      <div className="px-6 lg:px-10">
+      <div>
         <Feature
           headline="Remap HTML to custom blocks"
           description={
