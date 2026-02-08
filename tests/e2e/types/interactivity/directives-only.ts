@@ -4,10 +4,8 @@ import {
   count,
   getEditorCanvas,
   getSharedPage,
-  removeBlocks,
   resetPageState,
   save,
-  text,
 } from '../../utils/playwright-utils';
 
 let page: Page;
