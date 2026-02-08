@@ -72,6 +72,27 @@ class Build {
 	private static bool $interactivity_api_rendered = false;
 
 	/**
+	 * Check if a block's blockstudio data has interactivity enabled.
+	 *
+	 * @param array $blockstudio_data The blockstudio data array.
+	 *
+	 * @return bool Whether interactivity is enabled.
+	 */
+	public static function has_interactivity( array $blockstudio_data ): bool {
+		$val = $blockstudio_data['interactivity'] ?? false;
+
+		if ( true === $val ) {
+			return true;
+		}
+
+		if ( is_array( $val ) && ! empty( $val['enqueue'] ) ) {
+			return true;
+		}
+
+		return false;
+	}
+
+	/**
 	 * Filter deep array everything but a given string.
 	 *
 	 * @since 3.1.1
@@ -921,6 +942,22 @@ class Build {
 		// Apply overrides.
 		self::apply_overrides( $registry );
 
+		// Enqueue Interactivity API if any block needs it.
+		if ( ! self::$interactivity_api_rendered ) {
+			foreach ( $registry->get_blocks() as $block ) {
+				if ( self::has_interactivity( $block->blockstudio ?? array() ) ) {
+					self::$interactivity_api_rendered = true;
+					add_action(
+						'wp_enqueue_scripts',
+						static function () {
+							wp_enqueue_script_module( '@wordpress/interactivity' );
+						}
+					);
+					break;
+				}
+			}
+		}
+
 		foreach ( $empty_dist_folders as $folder ) {
 			if ( is_dir( $folder ) ) {
 				rmdir( $folder ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_rmdir
@@ -1278,18 +1315,19 @@ class Build {
 			?? ( Settings::get( 'blockEditor/disableLoading' ) ?? false );
 
 		$block->blockstudio = array(
-			'attributes'  => $filtered_attributes,
-			'blockEditor' => array(
+			'attributes'    => $filtered_attributes,
+			'blockEditor'   => array(
 				'disableLoading' => $disable_loading,
 			),
-			'conditions'  => $block->blockstudio['conditions'] ?? true,
-			'editor'      => $block->blockstudio['editor'] ?? false,
-			'extend'      => $block->blockstudio['extend'] ?? false,
-			'group'       => $block->blockstudio['group'] ?? false,
-			'icon'        => $block->blockstudio['icon'] ?? null,
-			'refreshOn'   => $block->blockstudio['refreshOn'] ?? false,
-			'transforms'  => $block->blockstudio['transforms'] ?? false,
-			'variations'  => $block->variations ?? false,
+			'conditions'    => $block->blockstudio['conditions'] ?? true,
+			'editor'        => $block->blockstudio['editor'] ?? false,
+			'extend'        => $block->blockstudio['extend'] ?? false,
+			'group'         => $block->blockstudio['group'] ?? false,
+			'icon'          => $block->blockstudio['icon'] ?? null,
+			'interactivity' => $block->blockstudio['interactivity'] ?? false,
+			'refreshOn'     => $block->blockstudio['refreshOn'] ?? false,
+			'transforms'    => $block->blockstudio['transforms'] ?? false,
+			'variations'    => $block->variations ?? false,
 		);
 
 		if ( $is_override ) {

@@ -1,0 +1,16 @@
+{
+  "$schema": "https://app.blockstudio.dev/schema",
+  "name": "blockstudio/type-interactivity-directives",
+  "title": "Native Interactivity Directives",
+  "category": "blockstudio-test-native",
+  "icon": "star-filled",
+  "description": "Interactivity block using only declarative directives, no script.js.",
+  "keywords": [
+    "native",
+    "interactivity",
+    "directives"
+  ],
+  "blockstudio": {
+    "interactivity": true
+  }
+}

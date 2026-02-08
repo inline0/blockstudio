@@ -79,12 +79,22 @@ class Assets {
 				$output = ob_get_clean();
 
 				if ( '' === $output || ! isset( $settings['__unstableResolvedAssets'] ) ) {
+					// Still check for interactivity even with no other assets.
+					if ( isset( $settings['__unstableResolvedAssets'] ) ) {
+						$interactivity_output = self::get_interactivity_editor_assets();
+						if ( '' !== $interactivity_output ) {
+							$settings['__unstableResolvedAssets']['scripts'] = $interactivity_output . $settings['__unstableResolvedAssets']['scripts'];
+						}
+					}
 					return $settings;
 				}
 
 				preg_match_all( '/<script\b[^>]*>.*?<\/script>/is', $output, $script_matches );
 				$scripts = implode( "\n", $script_matches[0] );
 				$styles  = trim( preg_replace( '/<script\b[^>]*>.*?<\/script>/is', '', $output ) );
+
+				$interactivity_output = self::get_interactivity_editor_assets();
+				$scripts              = $interactivity_output . $scripts;
 
 				$settings['__unstableResolvedAssets']['styles']  .= $styles;
 				$settings['__unstableResolvedAssets']['scripts'] .= $scripts;
@@ -212,6 +222,12 @@ class Assets {
 			}
 		}
 
+		// Inject importmap for blocks using the Interactivity API.
+		$interactivity_importmap = self::get_interactivity_importmap( $blocks_on_page, $html );
+		if ( '' !== $interactivity_importmap ) {
+			$head = $interactivity_importmap . $head;
+		}
+
 		$head   = apply_filters( 'blockstudio/render/head', $head, $blocks_on_page );
 		$footer = apply_filters( 'blockstudio/render/footer', $footer, $blocks_on_page );
 
@@ -238,6 +254,109 @@ class Assets {
 		$path   = plugin_dir_url( __FILE__ ) . '../assets/interactivity';
 
 		return str_replace( '@path', $path, $string );
+	}
+
+	/**
+	 * Get the importmap for blocks using the Interactivity API.
+	 *
+	 * Checks if any block on the page has interactivity enabled and returns
+	 * an importmap script tag that maps the @wordpress/interactivity bare
+	 * specifier to the URL from WordPress's rendered module script tag.
+	 *
+	 * @param array  $blocks_on_page The blocks present on the current page.
+	 * @param string $html           The page HTML to extract the module URL from.
+	 *
+	 * @return string The importmap script tag, or empty string if not needed.
+	 */
+	public static function get_interactivity_importmap( array $blocks_on_page, string $html ): string {
+		$needs_interactivity = false;
+
+		foreach ( $blocks_on_page as $block ) {
+			if ( Build::has_interactivity( $block->blockstudio ?? array() ) ) {
+				$needs_interactivity = true;
+				break;
+			}
+		}
+
+		if ( ! $needs_interactivity ) {
+			return '';
+		}
+
+		// Extract the interactivity module URL from WordPress's rendered script tag.
+		if ( preg_match( '/id=["\']@wordpress\/interactivity-js-module["\'][^>]*src=["\']([^"\']+)["\']/', $html, $matches ) ) {
+			$src = $matches[1];
+		} elseif ( preg_match( '/src=["\']([^"\']+)["\'][^>]*id=["\']@wordpress\/interactivity-js-module["\']/', $html, $matches ) ) {
+			$src = $matches[1];
+		} else {
+			return '';
+		}
+
+		$importmap = array(
+			'imports' => array(
+				'@wordpress/interactivity' => $src,
+			),
+		);
+
+		return '<script type="importmap">' . wp_json_encode( $importmap ) . '</script>';
+	}
+
+	/**
+	 * Get Interactivity API assets for the editor iframe.
+	 *
+	 * Enqueues the Interactivity API script module and returns the module script
+	 * tag plus an importmap for injection into the editor iframe.
+	 *
+	 * @return string The interactivity API script tags, or empty string if not needed.
+	 */
+	public static function get_interactivity_editor_assets(): string {
+		$blocks              = Build::blocks();
+		$needs_interactivity = false;
+
+		foreach ( $blocks as $block ) {
+			if ( Build::has_interactivity( $block->blockstudio ?? array() ) ) {
+				$needs_interactivity = true;
+				break;
+			}
+		}
+
+		if ( ! $needs_interactivity ) {
+			return '';
+		}
+
+		wp_enqueue_script_module( '@wordpress/interactivity' );
+
+		ob_start();
+		wp_script_modules()->print_enqueued_script_modules();
+		$module_output = ob_get_clean();
+
+		// Build an importmap from the rendered module src URL.
+		$importmap = '';
+		if ( preg_match( '/src=["\']([^"\']+)["\'][^>]*id=["\']@wordpress\/interactivity/', $module_output, $matches ) ) {
+			$importmap = '<script type="importmap">' . wp_json_encode(
+				array(
+					'imports' => array(
+						'@wordpress/interactivity' => $matches[1],
+					),
+				)
+			) . '</script>';
+		}
+
+		// In the editor, blocks render asynchronously via ServerSideRender.
+		// The Interactivity API runs init() at module load, before those
+		// elements exist. This observer re-hydrates islands that appear later.
+		$reinit = '<script type="module">'
+			. 'import{privateApis}from"@wordpress/interactivity";'
+			. 'const a=privateApis("I acknowledge that using private APIs means my theme or plugin will inevitably break in the next version of WordPress.");'
+			. 'const{toVdom:v,getRegionRootFragment:f,render:r}=a;'
+			. 'const p=()=>{document.querySelectorAll("[data-wp-interactive]:not([data-wp-processed])").forEach(n=>{'
+			. 'n.dataset.wpProcessed="1";r(v(n),f(n))})};'
+			. 'const o=new MutationObserver(()=>p());'
+			. 'if(document.body){o.observe(document.body,{childList:true,subtree:true});p()}'
+			. 'else{document.addEventListener("DOMContentLoaded",()=>{'
+			. 'o.observe(document.body,{childList:true,subtree:true});p()})}'
+			. '</script>';
+
+		return $importmap . $module_output . $reinit;
 	}
 
 	/**

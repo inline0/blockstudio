@@ -1061,16 +1061,22 @@ export const schema = async (extensions = false) => {
                 },
               },
             },
-            // interactivity: {
-            //   type: "object",
-            //   description: "Interactivity API related options.",
-            //   properties: {
-            //     enqueue: {
-            //       type: "boolean",
-            //       description: "Enqueue the interactivity API.",
-            //     },
-            //   },
-            // },
+            interactivity: {
+              oneOf: [
+                { type: "boolean" },
+                {
+                  type: "object",
+                  properties: {
+                    enqueue: {
+                      type: "boolean",
+                      description: "Enqueue the Interactivity API.",
+                    },
+                  },
+                },
+              ],
+              description:
+                "Enable the WordPress Interactivity API for this block.",
+            },
             ...(extensions
               ? {
                   extend: {

@@ -1,23 +1,16 @@
 import { store, getContext } from '@wordpress/interactivity';
 
-[
-  'DOMContentLoaded',
-  'blockstudio/blockstudio/type-interactivity/rendered',
-].forEach((event) => {
-  document.addEventListener(event, () => {
-    store('blockstudioTest', {
-      actions: {
-        toggle: () => {
-          const context = getContext();
-          context.isOpen = !context.isOpen;
-        },
-      },
-      callbacks: {
-        logIsOpen: () => {
-          const { isOpen } = getContext();
-          console.log(`Is open: ${isOpen}`);
-        },
-      },
-    });
-  });
+store('blockstudioTest', {
+  actions: {
+    toggle: () => {
+      const context = getContext();
+      context.isOpen = !context.isOpen;
+    },
+  },
+  callbacks: {
+    logIsOpen: () => {
+      const { isOpen } = getContext();
+      console.log(`Is open: ${isOpen}`);
+    },
+  },
 });

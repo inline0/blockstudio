@@ -1,0 +1,16 @@
+{
+  "$schema": "https://app.blockstudio.dev/schema",
+  "name": "blockstudio/type-interactivity-server-state",
+  "title": "Native Interactivity Server State",
+  "category": "blockstudio-test-native",
+  "icon": "star-filled",
+  "description": "Interactivity block using server-side state via wp_interactivity_state().",
+  "keywords": [
+    "native",
+    "interactivity",
+    "server-state"
+  ],
+  "blockstudio": {
+    "interactivity": true
+  }
+}

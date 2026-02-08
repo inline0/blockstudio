@@ -1,0 +1,102 @@
+---
+title: Interactivity
+description: Use the WordPress Interactivity API in your blocks for reactive, client-side behavior.
+---
+
+# Interactivity
+
+Blockstudio supports the [WordPress Interactivity API](https://developer.wordpress.org/block-editor/reference-guides/interactivity-api/), which provides a standard way to add reactive, client-side behavior to your blocks. Set `interactivity` in your block.json and Blockstudio handles loading the API on both the frontend and in the editor.
+
+## Configuration
+
+Enable the Interactivity API by adding `interactivity` to the `blockstudio` key in your block.json:
+
+```json title="block.json"
+{
+  "name": "my-theme/interactive-block",
+  "title": "Interactive Block",
+  "category": "text",
+  "icon": "star-filled",
+  "description": "A block with interactive behavior.",
+  "blockstudio": {
+    "interactivity": true
+  }
+}
+```
+
+You can also use the object form:
+
+```json title="block.json"
+{
+  "blockstudio": {
+    "interactivity": {
+      "enqueue": true
+    }
+  }
+}
+```
+
+Both forms are equivalent.
+
+## Template
+
+Add Interactivity API directives to your block template. The `data-wp-interactive` attribute defines the store namespace, and other `data-wp-*` attributes control reactive behavior.
+
+```php title="index.php"
+<div useBlockProps
+     data-wp-interactive="myBlock"
+     data-wp-context='{ "isOpen": false }'>
+  <button data-wp-on--click="actions.toggle"
+          data-wp-bind--aria-expanded="context.isOpen">
+    Toggle
+  </button>
+  <div data-wp-bind--hidden="!context.isOpen">
+    This content is toggled by the button.
+  </div>
+</div>
+```
+
+## Script
+
+Create a `script.js` file in your block folder that imports from `@wordpress/interactivity` and initializes your store. Call `store()` at the module top level:
+
+```js title="script.js"
+import { store, getContext } from '@wordpress/interactivity';
+
+store('myBlock', {
+  actions: {
+    toggle: () => {
+      const context = getContext();
+      context.isOpen = !context.isOpen;
+    },
+  },
+});
+```
+
+Blockstudio loads `script.js` as an ES module and automatically generates the importmap needed to resolve `@wordpress/interactivity`.
+
+A `script.js` is only needed if your block defines custom actions or callbacks. Blocks that only use declarative directives with `data-wp-context` (like `data-wp-bind--hidden` or `data-wp-text`) work without any JavaScript.
+
+## Server-Side State
+
+You can use `wp_interactivity_state()` in your template to initialize state from PHP:
+
+```php title="index.php"
+<?php
+wp_interactivity_state( 'myBlock', array(
+    'message' => 'Hello from the server',
+    'count'   => get_comments_number(),
+) );
+?>
+<div useBlockProps
+     data-wp-interactive="myBlock">
+  <p data-wp-text="state.message">loading...</p>
+  <p data-wp-text="state.count">0</p>
+</div>
+```
+
+Server-side state is available on the frontend only. WordPress serializes the state into a JSON script tag in the page output, which the Interactivity API reads during hydration. In the editor, blocks are rendered via the REST API, so the state data is not included in the response. Use `data-wp-context` for state that needs to work in both the editor and the frontend.
+
+## Editor Support
+
+The Interactivity API is loaded inside the block editor iframe, so interactive directives work in editor previews. This includes `data-wp-context`, `data-wp-bind--*`, `data-wp-on--*`, `data-wp-text`, and custom store actions defined in `script.js`.

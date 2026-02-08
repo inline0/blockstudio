@@ -42,6 +42,7 @@ Create custom WordPress blocks by dropping a `block.json` and a PHP template int
 == Changelog ==
 
 = 7.0.0 (next) =
+* New: Interactivity API support (set `interactivity: true` in blockstudio config)
 * New: devtools grabber for copying block template paths on the frontend (hold Cmd+C)
 * New: Blockstudio is now free and open source
 * New: complete codebase refactor

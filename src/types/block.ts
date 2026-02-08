@@ -268,6 +268,14 @@ export interface BlockstudioClass {
    * Custom block transforms.
    */
   transforms?: BlockstudioTransforms;
+  /**
+   * Enable the WordPress Interactivity API for this block.
+   */
+  interactivity?: boolean | BlockstudioInteractivity;
+}
+
+export interface BlockstudioInteractivity {
+  enqueue?: boolean;
 }
 
 export interface BlockstudioAttribute {
@@ -3465,7 +3473,16 @@ const typeMap: any = {
         js: 'transforms',
         typ: u(undefined, r('BlockstudioTransforms')),
       },
+      {
+        json: 'interactivity',
+        js: 'interactivity',
+        typ: u(undefined, u(true, r('BlockstudioInteractivity'))),
+      },
     ],
+    false,
+  ),
+  BlockstudioInteractivity: o(
+    [{ json: 'enqueue', js: 'enqueue', typ: u(undefined, true) }],
     false,
   ),
   BlockstudioAttribute: o(

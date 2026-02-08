@@ -254,6 +254,22 @@ tag before `</head>`.
 
 See the [Tailwind documentation](/docs/tailwind) for the full setup.
 
+### Interactivity API
+
+Blockstudio now supports the
+[WordPress Interactivity API](https://developer.wordpress.org/block-editor/reference-guides/interactivity-api/).
+Set `interactivity: true` in your block.json, add `data-wp-*` directives to
+your template, and create a `script.js` with your store logic. Blockstudio
+handles the importmap, module loading, and directive processing in both the
+frontend and the block editor.
+
+Blocks that only use declarative directives with `data-wp-context` (like
+`data-wp-bind--hidden` or `data-wp-text`) work without any JavaScript at all.
+Server-side state via `wp_interactivity_state()` is also supported on the
+frontend.
+
+See the [Interactivity documentation](/docs/interactivity) for the full setup.
+
 ### SEO content analysis
 
 Block content is now visible to Yoast SEO and Rank Math in the editor. This
