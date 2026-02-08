@@ -42,23 +42,23 @@ Create custom WordPress blocks by dropping a `block.json` and a PHP template int
 == Changelog ==
 
 = 7.0.0 (next) =
-* New: Interactivity API support (set `interactivity: true` in blockstudio config)
-* New: devtools grabber for copying block template paths on the frontend (hold Cmd+C)
 * New: Blockstudio is now free and open source
 * New: complete codebase refactor
-* New: Tailwind CSS v4 with server-side compilation via TailwindPHP, candidate-based caching, and CSS-first configuration
-* New: code field popout option to open editor in separate window
-* New: storage feature to store field values in post meta or options
 * New: file-based pages - create WordPress pages from file templates with automatic HTML to block parsing
+* New: file-based patterns - create WordPress block patterns from file templates with automatic HTML to block parsing
+* New: storage feature to store field values in post meta or options
+* New: Interactivity API support with editor hydration (set `interactivity: true` in blockstudio config)
+* New: Tailwind CSS v4 with server-side compilation via TailwindPHP, candidate-based caching, and CSS-first configuration
+* New: SEO content analysis integration. Blockstudio block content is now visible to Yoast SEO and Rank Math editor analysis
+* New: custom fields - reusable field definitions via file system and PHP filter
 * New: postId option for file-based pages to pin pages to a specific WordPress post ID
 * New: blockEditingMode support for file-based pages with page-level defaults and per-element overrides
-* New: file-based patterns - create WordPress block patterns from file templates with automatic HTML to block parsing
-* New: custom fields - reusable field definitions via file system and PHP filter
-* New: SEO content analysis integration. Blockstudio block content is now visible to Yoast SEO and Rank Math editor analysis
-* Enhancement: AI context file rebuilt as a static build from documentation and schemas (~48k tokens)
-* Enhancement: dot notation for asset file suffixes (*.inline.css, *.editor.css, etc.). Dash notation still supported
+* New: code field popout option to open editor in separate window
+* New: devtools grabber for copying block template paths on the frontend (hold Cmd+C)
 * Enhancement: apiVersion 3 support. Blocks now render correctly in the iframed editor (site editor, responsive previews)
+* Enhancement: AI context file rebuilt as a static build from documentation and schemas (~48k tokens)
 * Enhancement: all PHP hooks now use snake_case naming (old camelCase names still supported)
+* Enhancement: dot notation for asset file suffixes (*.inline.css, *.editor.css, etc.). Dash notation still supported
 * Enhancement: field switch is now off by default and uses a visible eye icon with disabled overlay
 * Fix: bs_render_block() no longer triggers a warning from WP_Block_Supports when using useBlockProps
 * Fix: code field undo/redo now works independently without triggering Gutenberg undo
@@ -67,10 +67,10 @@ Create custom WordPress blocks by dropping a `block.json` and a PHP template int
 * Fix: conditional fields not respecting default values on first load
 * Fix: optionsPopulate null error in WPML contexts
 * Fix: dollar signs stripped from <RichText /> content on frontend
-* Deprecation: dash notation for asset file suffixes (*-inline.css, *-editor.css, etc.). Use dot notation instead
 * Deprecation: Admin Area removed
-* Deprecation: License Key removed
 * Deprecation: Code Editor removed
+* Deprecation: License Key removed
+* Deprecation: dash notation for asset file suffixes (*-inline.css, *-editor.css, etc.). Use dot notation instead
 
 = 6.0.2 (18.08.2025) =
 * Enhancement: also preload blocks inside site editor
