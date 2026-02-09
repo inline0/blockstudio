@@ -35,7 +35,7 @@ class Canvas {
 	 * @return void
 	 */
 	public function enqueue(): void {
-		if ( ! Settings::get( 'tooling/canvas/enabled' ) ) {
+		if ( ! Settings::get( 'dev/canvas/enabled' ) ) {
 			return;
 		}
 
@@ -70,7 +70,7 @@ class Canvas {
 			array(
 				'pages'    => $this->get_pages(),
 				'settings' => array(
-					'adminBar' => (bool) Settings::get( 'tooling/canvas/adminBar' ),
+					'adminBar' => (bool) Settings::get( 'dev/canvas/adminBar' ),
 				),
 			)
 		);

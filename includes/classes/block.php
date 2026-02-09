@@ -592,7 +592,7 @@ class Block {
 					}
 
 						// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only feature toggle, no state change.
-					if ( ! $is_editor_or_preview && Settings::get( 'tooling/devtools/enabled' ) && isset( $_GET['blockstudio-devtools'] ) && current_user_can( 'edit_posts' ) ) {
+					if ( ! $is_editor_or_preview && Settings::get( 'dev/grab/enabled' ) && isset( $_GET['blockstudio-devtools'] ) && current_user_can( 'edit_posts' ) ) {
 						$block_path = $block->blockstudio['data']['path'] ?? '';
 						if ( $block_path ) {
 							$element->setAttribute( 'data-blockstudio-path', $block_path );

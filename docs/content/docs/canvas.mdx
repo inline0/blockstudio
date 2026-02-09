@@ -24,7 +24,7 @@ Enable the canvas and configure its behavior in your theme's `blockstudio.json`:
 
 ```json title="blockstudio.json"
 {
-  "tooling": {
+  "dev": {
     "canvas": {
       "enabled": true,
       "adminBar": false
@@ -41,8 +41,8 @@ Enable the canvas and configure its behavior in your theme's `blockstudio.json`:
 Both settings are also available as filters:
 
 ```php
-add_filter('blockstudio/settings/tooling/canvas/enabled', '__return_true');
-add_filter('blockstudio/settings/tooling/canvas/admin_bar', '__return_false');
+add_filter('blockstudio/settings/dev/canvas/enabled', '__return_true');
+add_filter('blockstudio/settings/dev/canvas/admin_bar', '__return_false');
 ```
 
 ## Controls
@@ -51,14 +51,13 @@ add_filter('blockstudio/settings/tooling/canvas/admin_bar', '__return_false');
 |--------|-------|
 | Pan | Scroll / trackpad two-finger drag |
 | Zoom | Ctrl+scroll or pinch |
-| Exit | Escape |
 
 ## Security
 
 The canvas script and page data are only loaded when all conditions are met:
 
 - The `?blockstudio-canvas` query parameter is present.
-- The `tooling.canvas.enabled` setting is `true`.
+- The `dev.canvas.enabled` setting is `true`.
 - The current user has the `edit_posts` capability.
 
 Public visitors never see the canvas script or page metadata.

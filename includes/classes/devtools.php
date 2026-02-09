@@ -32,7 +32,7 @@ class Devtools {
 	 * @return void
 	 */
 	public function enqueue(): void {
-		if ( ! Settings::get( 'tooling/devtools/enabled' ) ) {
+		if ( ! Settings::get( 'dev/grab/enabled' ) ) {
 			return;
 		}
 

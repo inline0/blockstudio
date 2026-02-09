@@ -28,8 +28,8 @@ namespace Blockstudio;
  * - editor/formatOnSave: Auto-format code in editor
  * - editor/library: Enable block library panel
  * - tailwind/enabled: Enable Tailwind CSS integration
- * - tooling/devtools/enabled: Enable frontend devtools inspector
- * - tooling/canvas/enabled: Enable the canvas
+ * - dev/grab/enabled: Enable frontend element grabber
+ * - dev/canvas/enabled: Enable the canvas
  * - users/ids: Array of user IDs allowed to use editor
  * - users/roles: Array of user roles allowed to use editor
  *
@@ -103,11 +103,11 @@ class Settings {
 		'ai'          => array(
 			'enableContextGeneration' => false,
 		),
-		'tooling'     => array(
-			'devtools' => array(
+		'dev'         => array(
+			'grab'   => array(
 				'enabled' => false,
 			),
-			'canvas'   => array(
+			'canvas' => array(
 				'enabled'  => false,
 				'adminBar' => true,
 			),

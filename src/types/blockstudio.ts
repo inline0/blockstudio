@@ -33,9 +33,9 @@ export interface Blockstudio {
    */
   tailwind?: Tailwind;
   /**
-   * Settings related to developer tooling.
+   * Settings related to developer tools.
    */
-  tooling?: Tooling;
+  dev?: Dev;
   /**
    * Settings related to allowed users with access to the settings and editor.
    */
@@ -161,24 +161,24 @@ export interface Tailwind {
 }
 
 /**
- * Settings related to developer tooling.
+ * Settings related to developer tools.
  */
-export interface Tooling {
+export interface Dev {
   /**
    * Settings related to the canvas.
    */
-  canvas?: ToolingCanvas;
+  canvas?: DevCanvas;
   /**
-   * Settings related to the frontend devtools inspector.
+   * Settings related to the element grabber.
    */
-  devtools?: ToolingDevtools;
+  grab?: DevGrab;
   [property: string]: any;
 }
 
 /**
  * Settings related to the canvas.
  */
-export interface ToolingCanvas {
+export interface DevCanvas {
   /**
    * Enable the canvas.
    */
@@ -187,11 +187,11 @@ export interface ToolingCanvas {
 }
 
 /**
- * Settings related to the frontend devtools inspector.
+ * Settings related to the element grabber.
  */
-export interface ToolingDevtools {
+export interface DevGrab {
   /**
-   * Enable the frontend devtools inspector.
+   * Enable the element grabber.
    */
   enabled?: boolean;
   [property: string]: any;
@@ -413,7 +413,7 @@ const typeMap: any = {
       { json: 'editor', js: 'editor', typ: u(undefined, r('Editor')) },
       { json: 'library', js: 'library', typ: u(undefined, true) },
       { json: 'tailwind', js: 'tailwind', typ: u(undefined, r('Tailwind')) },
-      { json: 'tooling', js: 'tooling', typ: u(undefined, r('Tooling')) },
+      { json: 'dev', js: 'dev', typ: u(undefined, r('Dev')) },
       { json: 'users', js: 'users', typ: u(undefined, r('Users')) },
     ],
     'any',
@@ -473,22 +473,22 @@ const typeMap: any = {
     ],
     'any',
   ),
-  Tooling: o(
+  Dev: o(
     [
-      { json: 'canvas', js: 'canvas', typ: u(undefined, r('ToolingCanvas')) },
+      { json: 'canvas', js: 'canvas', typ: u(undefined, r('DevCanvas')) },
       {
-        json: 'devtools',
-        js: 'devtools',
-        typ: u(undefined, r('ToolingDevtools')),
+        json: 'grab',
+        js: 'grab',
+        typ: u(undefined, r('DevGrab')),
       },
     ],
     'any',
   ),
-  ToolingCanvas: o(
+  DevCanvas: o(
     [{ json: 'enabled', js: 'enabled', typ: u(undefined, true) }],
     'any',
   ),
-  ToolingDevtools: o(
+  DevGrab: o(
     [{ json: 'enabled', js: 'enabled', typ: u(undefined, true) }],
     'any',
   ),

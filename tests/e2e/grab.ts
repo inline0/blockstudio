@@ -58,7 +58,7 @@ test.afterAll(async () => {
   await page.close();
 });
 
-test.describe('Devtools', () => {
+test.describe('Grab', () => {
   test.describe('query param gating', () => {
     test('data-blockstudio-path present with ?blockstudio-devtools', async () => {
       await page.goto(frontendUrl);

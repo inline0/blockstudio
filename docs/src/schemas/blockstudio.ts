@@ -215,20 +215,20 @@ export const blockstudio = {
       },
       additionalProperties: true,
     },
-    tooling: {
+    dev: {
       type: "object",
-      description: "Settings related to developer tooling.",
+      description: "Settings related to developer tools.",
       properties: {
-        devtools: {
+        grab: {
           type: "object",
-          description: "Settings related to the frontend devtools inspector.",
+          description: "Settings related to the element grabber.",
           properties: {
             enabled: {
               type: "boolean",
               default: false,
-              description: "Enable the frontend devtools inspector.",
+              description: "Enable the element grabber.",
               descriptionFilter:
-                "This filter allows you to enable/disable the frontend devtools inspector.",
+                "This filter allows you to enable/disable the element grabber.",
               example: false,
             },
           },
