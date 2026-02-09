@@ -117,7 +117,7 @@ export async function TailwindCSS() {
             </>
           }
           cta={
-            <Button href="/docs/tailwind" className="w-max">
+            <Button href="/docs/other/tailwind" className="w-max">
               Learn more about Tailwind &rarr;
             </Button>
           }

@@ -72,7 +72,7 @@ export async function HowItWorks() {
       description="Define fields in block.json, render them in a template, style with CSS or SCSS. No JavaScript, no build step, no boilerplate."
       border={false}
       cta={
-        <Button href="/docs/getting-started" className="w-max">
+        <Button href="/docs/general/getting-started" className="w-max">
           Get started &rarr;
         </Button>
       }

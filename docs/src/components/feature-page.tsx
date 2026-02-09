@@ -47,7 +47,7 @@ export async function FeaturePage({ data }: { data: FeaturePageData }) {
   return (
     <div className="w-full self-stretch">
       <div className="relative overflow-hidden">
-        <div className="absolute inset-0 pointer-events-none bg-gradient-to-b from-transparent via-fd-primary/3 to-transparent" />
+        <div className="absolute inset-0 pointer-events-none hidden dark:block bg-gradient-to-b from-transparent via-fd-primary/3 to-transparent" />
         <svg className="absolute inset-0 w-full h-full pointer-events-none opacity-2" aria-hidden="true">
           <filter id="grain">
             <feTurbulence type="fractalNoise" baseFrequency="0.8" numOctaves="4" stitchTiles="stitch" />

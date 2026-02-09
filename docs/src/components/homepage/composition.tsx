@@ -57,7 +57,7 @@ export async function Composition() {
             </>
           }
           cta={
-            <Button href="/docs/components" className="w-max">
+            <Button href="/docs/blocks/components" className="w-max">
               Explore components &rarr;
             </Button>
           }

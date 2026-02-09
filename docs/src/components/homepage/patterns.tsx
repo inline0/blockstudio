@@ -88,7 +88,7 @@ export async function Patterns() {
             </>
           }
           cta={
-            <Button href="/docs/patterns" className="w-max">
+            <Button href="/docs/pages-and-patterns/patterns" className="w-max">
               Learn more about patterns &rarr;
             </Button>
           }

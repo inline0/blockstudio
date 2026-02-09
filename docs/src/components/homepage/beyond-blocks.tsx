@@ -80,7 +80,7 @@ export async function Extensions() {
             </>
           }
           cta={
-            <Button href="/docs/extensions" className="w-max">
+            <Button href="/docs/other/extensions" className="w-max">
               Learn more about extensions &rarr;
             </Button>
           }

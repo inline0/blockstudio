@@ -21,84 +21,84 @@ const features = [
     title: "Flexible Storage",
     description:
       "Store field values in post meta, options, or both at once. Query blocks by meta values, access data via REST API.",
-    href: "/docs/storage",
+    href: "/docs/blocks/storage",
   },
   {
     icon: GitBranch,
     title: "Conditional Logic",
     description:
       "Show and hide fields based on other field values. 10 comparison operators, nested conditions, and global rules for post type or user role.",
-    href: "/docs/attributes/conditional-logic",
+    href: "/docs/blocks/attributes/conditional-logic",
   },
   {
     icon: SlidersHorizontal,
     title: "50+ PHP & JS Hooks",
     description:
       "Filters and actions for every stage: block registration, field rendering, asset loading, and template output. Full control without forking.",
-    href: "/docs/hooks/php",
+    href: "/docs/blocks/hooks/php",
   },
   {
     icon: FileJson,
     title: "JSON Schema",
     description:
       "Every configuration file is backed by a JSON Schema. Instant autocomplete, inline docs, and validation in VS Code and JetBrains.",
-    href: "/docs/schema",
+    href: "/docs/blocks/schema",
   },
   {
     icon: Share2,
     title: "Context API",
     description:
       "Share data between parent and child blocks. Define what a parent provides in JSON and access the values in any nested template.",
-    href: "/docs/context",
+    href: "/docs/blocks/context",
   },
   {
     icon: Sparkles,
     title: "AI Integration",
     description:
       "Auto-generated context files describe your entire block library. Works with Cursor, Claude, and other AI coding assistants out of the box.",
-    href: "/docs/ai",
+    href: "/docs/dev/ai",
   },
   {
     icon: Search,
     title: "SEO Integration",
     description:
       "Automatic content injection for Yoast, Rank Math, and SEOPress. Field content is extracted and analyzed. No setup required.",
-    href: "/docs/seo",
+    href: "/docs/blocks/seo",
   },
   {
     icon: Terminal,
     title: "Programmatic Rendering",
     description:
       "Render any block in PHP with bs_render_block(). Use your blocks as reusable components outside the editor.",
-    href: "/docs/rendering",
+    href: "/docs/blocks/rendering",
   },
   {
     icon: Braces,
     title: "Custom Fields",
     description:
       "Define reusable field sets as JSON files. Reference them across blocks with the custom field type. Update once, apply everywhere.",
-    href: "/docs/attributes/custom-fields",
+    href: "/docs/blocks/attributes/custom-fields",
   },
   {
     icon: Repeat,
     title: "Block Transforms",
     description:
       "Let users transform one block into another. Add enter and prefix shortcuts so blocks can be inserted by typing.",
-    href: "/docs/transforms",
+    href: "/docs/blocks/transforms",
   },
   {
     icon: List,
     title: "Dynamic Options",
     description:
       "Populate select, radio, and checkbox fields from post queries, taxonomies, user lists, or custom PHP functions.",
-    href: "/docs/attributes/populating-options",
+    href: "/docs/blocks/attributes/populating-options",
   },
   {
     icon: Code,
     title: "HTML Utilities",
     description:
       "Render field values as data attributes or CSS custom properties directly on the block wrapper. One line in your template.",
-    href: "/docs/attributes/html-utilities",
+    href: "/docs/blocks/attributes/html-utilities",
   },
 ];
 

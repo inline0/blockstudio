@@ -92,7 +92,7 @@ export async function Pages() {
             </>
           }
           cta={
-            <Button href="/docs/pages" className="w-max">
+            <Button href="/docs/pages-and-patterns/pages" className="w-max">
               Learn more about pages &rarr;
             </Button>
           }

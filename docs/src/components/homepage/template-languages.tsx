@@ -122,7 +122,7 @@ export async function TemplateLanguages() {
             </>
           }
           cta={
-            <Button href="/docs/registration#template" className="w-max">
+            <Button href="/docs/blocks/registration#template" className="w-max">
               Learn more about templating &rarr;
             </Button>
           }

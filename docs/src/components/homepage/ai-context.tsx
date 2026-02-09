@@ -87,7 +87,7 @@ export async function AiContext() {
             </>
           }
           cta={
-            <Button href="/docs/ai" className="w-max">
+            <Button href="/docs/dev/ai" className="w-max">
               Learn more about AI integration &rarr;
             </Button>
           }

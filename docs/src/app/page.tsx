@@ -87,7 +87,7 @@ export default function Home() {
                 <CTASection
                   title="Ready to build?"
                   description="Create your first block in under a minute."
-                  cta={{ label: "Get Started", href: "/docs/getting-started" }}
+                  cta={{ label: "Get Started", href: "/docs/general/getting-started" }}
                 />
               </div>
             </div>

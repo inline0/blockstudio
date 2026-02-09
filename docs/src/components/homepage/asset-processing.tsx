@@ -109,7 +109,7 @@ export async function AssetProcessing() {
             </>
           }
           cta={
-            <Button href="/docs/assets" className="w-max">
+            <Button href="/docs/blocks/assets" className="w-max">
               Learn more about assets &rarr;
             </Button>
           }
