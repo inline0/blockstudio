@@ -7,7 +7,7 @@ testType('classes', '"classes":"class-1 class-2"', () => {
       description: 'blockstudio block',
       testFunction: async (page: Page, canvas: Frame) => {
         await canvas.click('[data-type="blockstudio/type-classes"]');
-        await page.click('text=Advanced');
+        await page.locator('.components-panel__body-toggle:has-text("Advanced")').click();
         await page.getByLabel('HTML Anchor').fill('anchor-test');
         await page.getByLabel('Additional CSS class(es)').fill('class-test');
         await text(canvas, '"anchor":"anchor-test","className":"class-test"');
@@ -34,7 +34,7 @@ testType('classes', '"classes":"class-1 class-2"', () => {
           delay: 100,
         });
         await canvas.click('[data-type="core/heading"]');
-        await page.click('text=Advanced');
+        await page.locator('.components-panel__body-toggle:has-text("Advanced")').click();
         await page.getByLabel('HTML Anchor').fill('anchor-test');
         await page.getByLabel('Additional CSS class(es)').fill('class-test');
         await saveAndReload(page);
@@ -44,7 +44,8 @@ testType('classes', '"classes":"class-1 class-2"', () => {
       description: 'check core block',
       testFunction: async (page: Page, canvas: Frame) => {
         await canvas.click('[data-type="core/heading"]');
-        await page.click('text=Advanced');
+        await page.getByRole('tab', { name: 'Block' }).click();
+        await page.locator('.components-panel__body-toggle:has-text("Advanced")').click();
         await expect(page.getByLabel('HTML Anchor')).toHaveValue('anchor-test');
         await expect(page.getByLabel('Additional CSS class(es)')).toHaveValue(
           'class-test'

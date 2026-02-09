@@ -52,8 +52,7 @@ testType('attributes', false, () => {
           .click();
         await delay(1000);
         await page.click('text=Insert Media');
-        await delay(1000);
-        await page.click('text=Media Library');
+        await page.locator('#menu-item-browse:visible').click();
         await page.click('[data-id="3081"]');
         await page.click('.media-button-select');
         await count(page, '.blockstudio-fields__field--files-toggle', 1);

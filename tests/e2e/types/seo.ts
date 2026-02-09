@@ -101,20 +101,19 @@ test.describe('seo - rank math', () => {
     wpCli('wp plugin deactivate wordpress-seo');
     wpCli('wp plugin activate seo-by-rank-math');
 
-    await page.goto('http://localhost:8888/wp-admin/post.php?post=1483&action=edit');
+    await resetPageState(page);
     const canvas = await getEditorCanvas(page);
     await canvas.waitForSelector('.editor-styles-wrapper', { timeout: 30000 });
   });
 
   test('rank math filter is registered', async () => {
-    await delay(2000);
-
-    const hasFilter = await page.evaluate(() => {
-      const win = window as any;
-      return !!win.wp?.hooks?.hasFilter?.('rank_math_content', 'blockstudio/seo');
-    });
-
-    expect(hasFilter).toBe(true);
+    await page.waitForFunction(
+      () => {
+        const win = window as any;
+        return !!win.wp?.hooks?.hasFilter?.('rank_math_content', 'blockstudio/seo');
+      },
+      { timeout: 15000 },
+    );
   });
 
   test('rank math content filter includes blockstudio text', async () => {

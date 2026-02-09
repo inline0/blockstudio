@@ -1080,6 +1080,10 @@ add_action(
 						$created['terms'][] = $tag['term_id'];
 					}
 
+					// Mark Rank Math setup as completed so it enqueues editor scripts
+					update_option( 'rank_math_wizard_completed', 1 );
+					update_option( 'rank_math_registration_skip', 1 );
+
 					// Clean caches
 					wp_cache_flush();
 
