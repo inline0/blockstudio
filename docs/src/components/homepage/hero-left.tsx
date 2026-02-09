@@ -17,7 +17,7 @@ export async function HeroLeft() {
             className="!my-0"
           />
         </div>
-        <Button href="/docs/getting-started">Get Started</Button>
+        <Button href="/docs">Get Started</Button>
       </div>
     </>
   );
