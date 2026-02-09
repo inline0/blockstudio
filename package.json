@@ -22,7 +22,15 @@
     "types": "quicktype includes/schemas/block.json -s schema -o src/types/block.ts && quicktype includes/schemas/blockstudio.json -s schema -o src/types/blockstudio.ts",
     "wp-env:reset": "wp-env stop; wp-env clean all; wp-env start && wp-env run cli wp theme activate theme && wp-env run cli wp rewrite structure '/%postname%/' --hard && curl -s -X POST http://localhost:8888/wp-json/blockstudio-test/v1/e2e/setup",
     "wp-env:start": "wp-env start && curl -s -X POST http://localhost:8888/wp-json/blockstudio-test/v1/e2e/setup",
-    "wp-env:stop": "wp-env stop"
+    "wp-env:stop": "wp-env stop",
+    "eval": "tsx evals/run.ts",
+    "eval:blocks": "tsx evals/run.ts block-definition",
+    "eval:templates": "tsx evals/run.ts template",
+    "eval:pages": "tsx evals/run.ts page",
+    "eval:patterns": "tsx evals/run.ts pattern",
+    "eval:config": "tsx evals/run.ts configuration",
+    "eval:extensions": "tsx evals/run.ts extension",
+    "eval:hooks": "tsx evals/run.ts hook"
   },
   "dependencies": {
     "@codemirror/autocomplete": "^6.20.0",
@@ -90,6 +98,7 @@
     "@wordpress/dependency-extraction-webpack-plugin": "^6.22.0",
     "@wordpress/env": "^10.39.0",
     "@wordpress/scripts": "^31.4.0",
+    "ajv": "^8.17.1",
     "autoprefixer": "^10.4.19",
     "bootstrap-icons": "^1.10.2",
     "boxicons": "^2.1.4",
