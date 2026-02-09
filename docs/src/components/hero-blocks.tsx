@@ -125,8 +125,8 @@ export function HeroBlocks() {
     <div
       className="h-full w-full transition-all duration-1000 ease-out"
       style={{
-        minHeight: 300,
-        maxHeight: 300,
+        minHeight: 270,
+        maxHeight: 270,
         opacity: ready ? 1 : 0,
         filter: ready ? "blur(0px)" : "blur(12px)",
       }}
