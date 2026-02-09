@@ -2,8 +2,7 @@ import { test, expect, Page } from '@playwright/test';
 import { login } from './utils/playwright-utils';
 
 let page: Page;
-const canvasUrl = 'http://localhost:8888/blockstudio-e2e-test/?blockstudio-canvas';
-const noCanvasUrl = 'http://localhost:8888/blockstudio-e2e-test/';
+const canvasUrl = 'http://localhost:8888/wp-admin/admin.php?page=blockstudio-canvas';
 
 test.describe.configure({ mode: 'serial' });
 
@@ -20,18 +19,16 @@ test.afterAll(async () => {
 });
 
 test.describe('Canvas', () => {
-  test.describe('query param gating', () => {
-    test('canvas script enqueued with ?blockstudio-canvas', async () => {
-      await page.goto(canvasUrl);
-      await page.waitForLoadState('networkidle');
+  test.describe('admin page gating', () => {
+    test('canvas script enqueued on admin page', async () => {
+      await page.goto(canvasUrl, { waitUntil: 'domcontentloaded' });
 
       const script = page.locator('script[id="blockstudio-canvas-js"]');
       await expect(script).toHaveCount(1);
     });
 
-    test('canvas script NOT enqueued without query param', async () => {
-      await page.goto(noCanvasUrl);
-      await page.waitForLoadState('networkidle');
+    test('canvas script NOT enqueued on other admin pages', async () => {
+      await page.goto('http://localhost:8888/wp-admin/', { waitUntil: 'domcontentloaded' });
 
       const script = page.locator('script[id="blockstudio-canvas-js"]');
       await expect(script).toHaveCount(0);
@@ -39,15 +36,13 @@ test.describe('Canvas', () => {
   });
 
   test.describe('logged-out users', () => {
-    test('no canvas script even with query param', async ({ browser }) => {
+    test('redirects to login page', async ({ browser }) => {
       const anonContext = await browser.newContext();
       const anonPage = await anonContext.newPage();
 
-      await anonPage.goto(canvasUrl);
-      await anonPage.waitForLoadState('networkidle');
+      await anonPage.goto(canvasUrl, { waitUntil: 'domcontentloaded' });
 
-      const script = anonPage.locator('script[id="blockstudio-canvas-js"]');
-      await expect(script).toHaveCount(0);
+      expect(anonPage.url()).toContain('wp-login.php');
 
       await anonPage.close();
       await anonContext.close();
@@ -55,11 +50,10 @@ test.describe('Canvas', () => {
   });
 
   test.describe('canvas UI', () => {
-    test('renders canvas root and hides page content', async () => {
-      await page.goto(canvasUrl);
-      await page.waitForLoadState('networkidle');
+    test('renders canvas root element', async () => {
+      await page.goto(canvasUrl, { waitUntil: 'domcontentloaded' });
 
-      const root = page.locator('#blockstudio-canvas-root');
+      const root = page.locator('#blockstudio-canvas');
       await expect(root).toBeVisible();
     });
 
@@ -74,42 +68,40 @@ test.describe('Canvas', () => {
     });
 
     test('shows all published Blockstudio pages as artboards', async () => {
-      const iframes = page.locator('#blockstudio-canvas-root iframe');
+      const iframes = page.locator('#blockstudio-canvas iframe');
+      await expect(iframes.first()).toBeVisible({ timeout: 15000 });
       const count = await iframes.count();
       expect(count).toBeGreaterThanOrEqual(4);
     });
 
     test('artboard titles are visible', async () => {
       await expect(
-        page.locator('#blockstudio-canvas-root', { hasText: 'Blockstudio E2E Test Page' }),
+        page.locator('#blockstudio-canvas', { hasText: 'Blockstudio E2E Test Page' }),
       ).toBeVisible();
       await expect(
-        page.locator('#blockstudio-canvas-root', { hasText: 'Blockstudio E2E Test Page (Blade)' }),
+        page.locator('#blockstudio-canvas', { hasText: 'Blockstudio E2E Test Page (Blade)' }),
       ).toBeVisible();
       await expect(
-        page.locator('#blockstudio-canvas-root', { hasText: 'Blockstudio E2E Test Page (Twig)' }),
+        page.locator('#blockstudio-canvas', { hasText: 'Blockstudio E2E Test Page (Twig)' }),
       ).toBeVisible();
       await expect(
-        page.locator('#blockstudio-canvas-root', { hasText: 'Tailwind On-Demand Test' }),
+        page.locator('#blockstudio-canvas', { hasText: 'Tailwind On-Demand Test' }),
       ).toBeVisible();
     });
 
-    test('iframe src URLs do not include blockstudio-canvas param', async () => {
-      const iframes = page.locator('#blockstudio-canvas-root iframe');
+    test('artboard iframes use blob URLs', async () => {
+      const iframes = page.locator('#blockstudio-canvas iframe');
       const count = await iframes.count();
 
       for (let i = 0; i < count; i++) {
         const src = await iframes.nth(i).getAttribute('src');
-        expect(src).not.toMatch(/[?&]blockstudio-canvas(?!-frame)\b/);
+        expect(src).toMatch(/^blob:/);
       }
     });
 
-    test('iframes have pointerEvents none', async () => {
-      const iframe = page.locator('#blockstudio-canvas-root iframe').first();
-      const pointerEvents = await iframe.evaluate(
-        (el) => window.getComputedStyle(el).pointerEvents,
-      );
-      expect(pointerEvents).toBe('none');
+    test('artboards have pointer events disabled', async () => {
+      const disabled = page.locator('#blockstudio-canvas .components-disabled').first();
+      await expect(disabled).toBeVisible();
     });
 
     test('all artboards are in a single row', async () => {
@@ -118,21 +110,16 @@ test.describe('Canvas', () => {
         (el) => window.getComputedStyle(el).gridTemplateColumns,
       );
       const columnCount = columns.split(' ').length;
-      const iframes = page.locator('#blockstudio-canvas-root iframe');
+      const iframes = page.locator('#blockstudio-canvas iframe');
       const iframeCount = await iframes.count();
       expect(columnCount).toBe(iframeCount);
-    });
-
-    test('admin bar is hidden when adminBar setting is false', async () => {
-      const adminBar = page.locator('#wpadminbar');
-      await expect(adminBar).toBeHidden();
     });
   });
 
   test.describe('interactions', () => {
     test('trackpad scroll pans the canvas', async () => {
-      await page.goto(canvasUrl);
-      await page.waitForLoadState('networkidle');
+      await page.goto(canvasUrl, { waitUntil: 'domcontentloaded' });
+      await page.locator('[data-canvas-surface]').waitFor({ state: 'visible' });
 
       const surface = page.locator('[data-canvas-surface]');
       const before = await surface.evaluate(

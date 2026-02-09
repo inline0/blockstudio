@@ -1,5 +1,11 @@
 import { createRoot } from 'react-dom/client';
 
+import {
+  setDefaultBlockName,
+  setFreeformContentHandlerName,
+  setUnregisteredTypeHandlerName,
+} from '@wordpress/blocks';
+
 import { Canvas } from './canvas';
 
 declare global {
@@ -7,45 +13,43 @@ declare global {
     blockstudioCanvas: {
       pages: Array<{
         title: string;
-        url: string;
         slug: string;
         name: string;
+        content: string;
       }>;
-      settings: {
-        adminBar: boolean;
+      settings: Record<string, unknown>;
+    };
+    wp: {
+      blockLibrary?: {
+        registerCoreBlocks: () => void;
       };
+      [key: string]: unknown;
     };
   }
 }
 
 const init = (): void => {
-  const root = document.createElement('div');
-  root.id = 'blockstudio-canvas-root';
-  root.style.position = 'fixed';
-  root.style.inset = '0';
-  root.style.zIndex = '999999';
+  const root = document.getElementById('blockstudio-canvas');
 
-  Array.from(document.body.children).forEach((child) => {
-    if (child instanceof HTMLElement) {
-      child.style.display = 'none';
-    }
-  });
+  if (!root) {
+    return;
+  }
 
-  document.body.style.margin = '0';
-  document.body.style.overflow = 'hidden';
-  document.body.appendChild(root);
+  const style = document.createElement('style');
+  style.textContent = [
+    '@keyframes blockstudio-canvas-spin { to { transform: rotate(360deg); } }',
+    '[data-canvas-surface] { opacity: 0; transition: opacity 0.4s ease; }',
+    '[data-canvas-label] { opacity: 0; transition: opacity 0.4s ease; }',
+  ].join('\n');
+  document.head.appendChild(style);
+
+  window.wp?.blockLibrary?.registerCoreBlocks();
+  setDefaultBlockName('core/paragraph');
+  setFreeformContentHandlerName('core/freeform');
+  setUnregisteredTypeHandlerName('core/missing');
 
   const pages = window.blockstudioCanvas?.pages ?? [];
-  const settings = window.blockstudioCanvas?.settings ?? {
-    adminBar: true,
-  };
-
-  if (!settings.adminBar) {
-    const style = document.createElement('style');
-    style.textContent =
-      '#wpadminbar { display: none !important; } html { margin-top: 0 !important; }';
-    document.head.appendChild(style);
-  }
+  const settings = window.blockstudioCanvas?.settings ?? {};
 
   createRoot(root).render(<Canvas pages={pages} settings={settings} />);
 };
