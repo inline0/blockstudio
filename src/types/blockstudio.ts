@@ -33,6 +33,10 @@ export interface Blockstudio {
    */
   tailwind?: Tailwind;
   /**
+   * Settings related to developer tooling.
+   */
+  tooling?: Tooling;
+  /**
    * Settings related to allowed users with access to the settings and editor.
    */
   users?: Users;
@@ -151,6 +155,43 @@ export interface Tailwind {
   config?: string;
   /**
    * Enable Tailwind.
+   */
+  enabled?: boolean;
+  [property: string]: any;
+}
+
+/**
+ * Settings related to developer tooling.
+ */
+export interface Tooling {
+  /**
+   * Settings related to the canvas.
+   */
+  canvas?: ToolingCanvas;
+  /**
+   * Settings related to the frontend devtools inspector.
+   */
+  devtools?: ToolingDevtools;
+  [property: string]: any;
+}
+
+/**
+ * Settings related to the canvas.
+ */
+export interface ToolingCanvas {
+  /**
+   * Enable the canvas.
+   */
+  enabled?: boolean;
+  [property: string]: any;
+}
+
+/**
+ * Settings related to the frontend devtools inspector.
+ */
+export interface ToolingDevtools {
+  /**
+   * Enable the frontend devtools inspector.
    */
   enabled?: boolean;
   [property: string]: any;
@@ -372,6 +413,7 @@ const typeMap: any = {
       { json: 'editor', js: 'editor', typ: u(undefined, r('Editor')) },
       { json: 'library', js: 'library', typ: u(undefined, true) },
       { json: 'tailwind', js: 'tailwind', typ: u(undefined, r('Tailwind')) },
+      { json: 'tooling', js: 'tooling', typ: u(undefined, r('Tooling')) },
       { json: 'users', js: 'users', typ: u(undefined, r('Users')) },
     ],
     'any',
@@ -429,6 +471,25 @@ const typeMap: any = {
       { json: 'config', js: 'config', typ: u(undefined, '') },
       { json: 'enabled', js: 'enabled', typ: u(undefined, true) },
     ],
+    'any',
+  ),
+  Tooling: o(
+    [
+      { json: 'canvas', js: 'canvas', typ: u(undefined, r('ToolingCanvas')) },
+      {
+        json: 'devtools',
+        js: 'devtools',
+        typ: u(undefined, r('ToolingDevtools')),
+      },
+    ],
+    'any',
+  ),
+  ToolingCanvas: o(
+    [{ json: 'enabled', js: 'enabled', typ: u(undefined, true) }],
+    'any',
+  ),
+  ToolingDevtools: o(
+    [{ json: 'enabled', js: 'enabled', typ: u(undefined, true) }],
     'any',
   ),
   Users: o(

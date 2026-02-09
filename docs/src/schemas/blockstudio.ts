@@ -215,6 +215,41 @@ export const blockstudio = {
       },
       additionalProperties: true,
     },
+    tooling: {
+      type: "object",
+      description: "Settings related to developer tooling.",
+      properties: {
+        devtools: {
+          type: "object",
+          description: "Settings related to the frontend devtools inspector.",
+          properties: {
+            enabled: {
+              type: "boolean",
+              default: false,
+              description: "Enable the frontend devtools inspector.",
+              descriptionFilter:
+                "This filter allows you to enable/disable the frontend devtools inspector.",
+              example: false,
+            },
+          },
+        },
+        canvas: {
+          type: "object",
+          description: "Settings related to the canvas.",
+          properties: {
+            enabled: {
+              type: "boolean",
+              default: false,
+              description: "Enable the canvas.",
+              descriptionFilter:
+                "This filter allows you to enable/disable the canvas.",
+              example: false,
+            },
+          },
+        },
+      },
+      additionalProperties: true,
+    },
   },
   additionalProperties: true,
 };

@@ -27,5 +27,6 @@
   },
   "library": true,
   "ai": { "enableContextGeneration": true },
+  "tooling": { "devtools": { "enabled": true }, "canvas": { "enabled": true } },
   "$schema": "https://app.blockstudio.dev/schema/blockstudio"
 }

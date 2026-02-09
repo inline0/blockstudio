@@ -32,6 +32,10 @@ class Devtools {
 	 * @return void
 	 */
 	public function enqueue(): void {
+		if ( ! Settings::get( 'tooling/devtools/enabled' ) ) {
+			return;
+		}
+
 		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only feature toggle, no state change.
 		if ( ! isset( $_GET['blockstudio-devtools'] ) ) {
 			return;
