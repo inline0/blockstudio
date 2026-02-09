@@ -3781,6 +3781,104 @@ echo bs_block([
 ]);
 ```
 
+## Interactivity
+
+Blockstudio supports the WordPress Interactivity API, which provides a standard way to add reactive, client-side behavior to your blocks. Set `interactivity` in your block.json and Blockstudio handles loading the API on both the frontend and in the editor.
+
+## Configuration
+
+Enable the Interactivity API by adding `interactivity` to the `blockstudio` key in your block.json:
+
+```json
+{
+  "name": "my-theme/interactive-block",
+  "title": "Interactive Block",
+  "category": "text",
+  "icon": "star-filled",
+  "description": "A block with interactive behavior.",
+  "blockstudio": {
+    "interactivity": true
+  }
+}
+```
+
+You can also use the object form:
+
+```json
+{
+  "blockstudio": {
+    "interactivity": {
+      "enqueue": true
+    }
+  }
+}
+```
+
+Both forms are equivalent.
+
+## Template
+
+Add Interactivity API directives to your block template. The `data-wp-interactive` attribute defines the store namespace, and other `data-wp-` attributes control reactive behavior.
+
+```php
+<div useBlockProps
+     data-wp-interactive="myBlock"
+     data-wp-context='{ "isOpen": false }'>
+  <button data-wp-on--click="actions.toggle"
+          data-wp-bind--aria-expanded="context.isOpen">
+    Toggle
+  </button>
+  <div data-wp-bind--hidden="!context.isOpen">
+    This content is toggled by the button.
+  </div>
+</div>
+```
+
+## Script
+
+Create a `script.js` file in your block folder that imports from `@wordpress/interactivity` and initializes your store. Call `store()` at the module top level:
+
+```js
+import { store, getContext } from '@wordpress/interactivity';
+
+store('myBlock', {
+  actions: {
+    toggle: () => {
+      const context = getContext();
+      context.isOpen = !context.isOpen;
+    },
+  },
+});
+```
+
+Blockstudio loads `script.js` as an ES module and automatically generates the importmap needed to resolve `@wordpress/interactivity`.
+
+A `script.js` is only needed if your block defines custom actions or callbacks. Blocks that only use declarative directives with `data-wp-context` (like `data-wp-bind--hidden` or `data-wp-text`) work without any JavaScript.
+
+## Server-Side State
+
+You can use `wp_interactivity_state()` in your template to initialize state from PHP:
+
+```php
+<?php
+wp_interactivity_state( 'myBlock', array(
+    'message' => 'Hello from the server',
+    'count'   => get_comments_number(),
+) );
+?>
+<div useBlockProps
+     data-wp-interactive="myBlock">
+  <p data-wp-text="state.message">loading...</p>
+  <p data-wp-text="state.count">0</p>
+</div>
+```
+
+Server-side state is available on the frontend only. WordPress serializes the state into a JSON script tag in the page output, which the Interactivity API reads during hydration. In the editor, blocks are rendered via the REST API, so the state data is not included in the response. Use `data-wp-context` for state that needs to work in both the editor and the frontend.
+
+## Editor Support
+
+The Interactivity API is loaded inside the block editor iframe, so interactive directives work in editor previews. This includes `data-wp-context`, `data-wp-bind--`, `data-wp-on--*`, `data-wp-text`, and custom store actions defined in `script.js`.
+
 ## SEO
 
 Blockstudio blocks are dynamic. The `save` function stores attribute data but no visible text in `post_content`. This means SEO plugins that analyze editor content won't see text from Blockstudio fields by default.
@@ -5664,6 +5762,62 @@ add_action('init', function () {
 ```
 
 Now, simply follow the setup instructions to register a code snippet inside the `assets` folder.
+
+## Developer Tools
+
+When working with AI coding assistants, you often need to tell them which template file renders a specific element on the page. Blockstudio's developer tools provide a crosshair-style element selector that copies rich element context to your clipboard with a single gesture.
+
+## Activation
+
+The developer tools are gated behind a query parameter. Append `?blockstudio-devtools` to any frontend URL to enable them:
+
+```
+https://example.com/?blockstudio-devtools
+https://example.com/?p=123&blockstudio-devtools
+```
+
+Without the query parameter, no devtools script or data attributes are loaded.
+
+## Usage
+
+1. Visit any frontend page with `?blockstudio-devtools` while logged in as a user with `edit_posts` capability.
+2. Hold Cmd+C (Mac) or Ctrl+C (Windows) for 100ms to activate the grabber.
+3. A crosshair selector activates with a canvas overlay highlighting Blockstudio blocks as you hover.
+4. Two labels appear: one showing the block's template file path and one showing the HTML element tag name.
+5. Click an element to copy its context to your clipboard.
+6. Paste the result into your AI coding tool.
+
+Press Escape or Cmd+C again to deactivate without copying. If you release Cmd+C before 100ms, normal copy behavior is preserved.
+
+## Clipboard Format
+
+Clicking an element copies a rich context string designed for AI coding assistants:
+
+```
+@<div>
+
+<div class="my-block">
+  Hello world
+</div>
+  in theme-name/blockstudio/blocks/my-block/index.php
+```
+
+This includes the element tag name, an HTML preview with attributes and content, and the template file path.
+
+## Internals
+
+Blockstudio adds a `data-blockstudio-path` attribute to every block wrapper element that uses `useBlockProps` on the frontend. This attribute contains the absolute path to the template file that renders the block.
+
+A lightweight vanilla TypeScript module (no React, no WordPress dependencies) is enqueued on the frontend for logged-in editors. It uses `document.elementsFromPoint()` to detect both the specific HTML element under the cursor and its parent Blockstudio block, drawing separate highlights for each.
+
+## Security
+
+The `data-blockstudio-path` attribute and devtools script are only rendered when both conditions are met:
+
+- The `?blockstudio-devtools` query parameter is present.
+- The current user has the `edit_posts` capability.
+
+Public visitors never see file paths or the devtools script.
 
 ## Composer
 
