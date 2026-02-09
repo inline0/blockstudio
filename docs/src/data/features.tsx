@@ -54,6 +54,7 @@ interface DetailItem {
 }
 
 export interface FeaturePageData {
+  icon: LucideIcon;
   title: string;
   description: string;
   features: FeatureItem[];
@@ -67,6 +68,7 @@ const code = (text: string) => (
 
 export const features: Record<string, FeaturePageData> = {
   blocks: {
+    icon: Blocks,
     title: "Custom blocks in 3 files",
     description:
       "Define fields in block.json, render them in a template, style with CSS or SCSS. No JavaScript, no build step, no boilerplate.",
@@ -345,6 +347,7 @@ el.initialize();`,
   },
 
   pages: {
+    icon: FileText,
     title: "Full pages, defined in code",
     description:
       "Create complete WordPress pages from template files. HTML maps to core blocks automatically. Blockstudio keeps the editor in sync with your codebase.",
@@ -434,7 +437,14 @@ el.initialize();`,
   "title": "About Us",
   "slug": "about",
   "templateLock": "contentOnly"
-}`,
+}
+
+
+
+
+
+
+`,
           },
         ],
         ctaLabel: "Keyed blocks",
@@ -484,7 +494,13 @@ el.initialize();`,
   "slug": "landing",
   "templateLock": "contentOnly",
   "blockEditingMode": "contentOnly"
-}`,
+}
+
+
+
+
+
+`,
           },
         ],
         ctaLabel: "Template locking",
@@ -545,6 +561,7 @@ el.initialize();`,
   },
 
   patterns: {
+    icon: LayoutGrid,
     title: "Reusable patterns from template files",
     description:
       "Define block patterns as template files. Same HTML syntax as pages, registered automatically in the block inserter.",
@@ -678,6 +695,7 @@ el.initialize();`,
   },
 
   extensions: {
+    icon: Puzzle,
     title: "Add fields to any block",
     description:
       "Extend core blocks, third-party blocks, or your own with custom fields. Pure JSON, no templates, no render callbacks.",
@@ -800,7 +818,9 @@ el.initialize();`,
       }
     }
   }
-}`,
+}
+
+`,
           },
           {
             label: "extend-visibility.json",
