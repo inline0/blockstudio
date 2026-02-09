@@ -56,7 +56,7 @@ const details = [
     icon: Gauge,
     title: "Automatic caching",
     description:
-      "Compiled CSS is cached to disk based on extracted class names. Same classes, same cache hit, even with dynamic content.",
+      "Compiled CSS is cached to disk by class names. Same classes, same cache hit, even with dynamic content.",
   },
   {
     icon: Palette,

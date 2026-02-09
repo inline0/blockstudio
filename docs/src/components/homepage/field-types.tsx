@@ -66,6 +66,7 @@ function FieldCard({ type, description }: { type: string; description: string })
 export function FieldTypes() {
   return (
     <Section
+      fullWidth
       icon={<SectionIcon><SlidersHorizontal /></SectionIcon>}
       title="26 different field types at your disposal"
       description="Blockstudio provides a versatile array of field types, from basic text fields to complex structures like repeaters and tabs, as well as DOM-focused fields such as classes and data attributes."
