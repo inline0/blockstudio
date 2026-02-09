@@ -1,0 +1,25 @@
+{
+  "title": "Blocks",
+  "pages": [
+    "registration",
+    "templating",
+    "schema",
+    "assets",
+    "attributes",
+    "variations",
+    "transforms",
+    "initialization",
+    "components",
+    "environment",
+    "context",
+    "preview",
+    "post-meta",
+    "storage",
+    "overrides",
+    "loading",
+    "rendering",
+    "interactivity",
+    "seo",
+    "hooks"
+  ]
+}

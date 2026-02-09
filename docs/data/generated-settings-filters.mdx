@@ -167,3 +167,33 @@ add_filter('blockstudio/settings/ai/enable_context_generation', function() {
   return true;
 });
 ```
+
+### dev/grab/enabled
+
+This filter allows you to enable/disable the element grabber.
+
+```php title="functions.php"
+add_filter('blockstudio/settings/dev/grab/enabled', function() {
+  return false;
+});
+```
+
+### dev/canvas/enabled
+
+This filter allows you to enable/disable the canvas.
+
+```php title="functions.php"
+add_filter('blockstudio/settings/dev/canvas/enabled', function() {
+  return false;
+});
+```
+
+### dev/canvas/admin_bar
+
+This filter allows you to show/hide the WordPress admin bar on the canvas.
+
+```php title="functions.php"
+add_filter('blockstudio/settings/dev/canvas/admin_bar', function() {
+  return true;
+});
+```

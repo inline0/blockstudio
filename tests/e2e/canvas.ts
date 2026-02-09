@@ -167,18 +167,5 @@ test.describe('Canvas', () => {
       expect(after).not.toBe(before);
     });
 
-    test('Escape key navigates away from canvas', async () => {
-      await page.goto(canvasUrl);
-      await page.waitForLoadState('networkidle');
-
-      await expect(page.locator('#blockstudio-canvas-root')).toBeVisible();
-
-      await page.keyboard.press('Escape');
-      await page.waitForURL((url) => !url.search.includes('blockstudio-canvas'));
-      await page.waitForLoadState('networkidle');
-
-      expect(page.url()).not.toContain('blockstudio-canvas');
-      await expect(page.locator('#blockstudio-canvas-root')).toHaveCount(0);
-    });
   });
 });

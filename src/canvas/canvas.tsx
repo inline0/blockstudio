@@ -96,15 +96,6 @@ export const Canvas = ({ pages }: CanvasProps): JSX.Element => {
     return () => container.removeEventListener('wheel', handleWheel);
   }, []);
 
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent): void => {
-      if (e.key === 'Escape') {
-        window.location.href = window.location.pathname;
-      }
-    };
-    document.addEventListener('keydown', handleKeyDown);
-    return () => document.removeEventListener('keydown', handleKeyDown);
-  }, []);
 
   if (pages.length === 0) {
     return (

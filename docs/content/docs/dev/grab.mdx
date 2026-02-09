@@ -1,22 +1,46 @@
 ---
-title: Developer Tools
+title: Element Grabber
 description: A built-in element inspector for identifying block template files on the frontend.
 ---
 
-# Developer Tools
+# Element Grabber
 
-When working with AI coding assistants, you often need to tell them which template file renders a specific element on the page. Blockstudio's developer tools provide a crosshair-style element selector that copies rich element context to your clipboard with a single gesture.
+When working with AI coding assistants, you often need to tell them which template file renders a specific element on the page. The element grabber provides a crosshair-style element selector that copies rich element context to your clipboard with a single gesture.
 
 ## Activation
 
-The developer tools are gated behind a query parameter. Append `?blockstudio-devtools` to any frontend URL to enable them:
+The element grabber is gated behind a query parameter. Append `?blockstudio-devtools` to any frontend URL to enable it:
 
 ```
 https://example.com/?blockstudio-devtools
 https://example.com/?p=123&blockstudio-devtools
 ```
 
-Without the query parameter, no devtools script or data attributes are loaded.
+Without the query parameter, no script or data attributes are loaded.
+
+## Settings
+
+Enable the element grabber in your theme's `blockstudio.json`:
+
+```json title="blockstudio.json"
+{
+  "dev": {
+    "grab": {
+      "enabled": true
+    }
+  }
+}
+```
+
+| Property | Type | Default | Description |
+|----------|------|---------|-------------|
+| `enabled` | `boolean` | `false` | Enable the element grabber. |
+
+The setting is also available as a filter:
+
+```php
+add_filter('blockstudio/settings/dev/grab/enabled', '__return_true');
+```
 
 ## Usage
 
@@ -52,9 +76,10 @@ A lightweight vanilla TypeScript module (no React, no WordPress dependencies) is
 
 ## Security
 
-The `data-blockstudio-path` attribute and devtools script are only rendered when both conditions are met:
+The `data-blockstudio-path` attribute and grabber script are only rendered when all conditions are met:
 
 - The `?blockstudio-devtools` query parameter is present.
+- The `dev.grab.enabled` setting is `true`.
 - The current user has the `edit_posts` capability.
 
-Public visitors never see file paths or the devtools script.
+Public visitors never see file paths or the grabber script.
