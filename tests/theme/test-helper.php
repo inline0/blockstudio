@@ -1419,6 +1419,89 @@ add_action(
 				'permission_callback' => '__return_true',
 			)
 		);
+
+		// Block preloading test endpoint
+		// Replicates the logic from Blocks::enqueue_editor_assets() for testing
+		register_rest_route(
+			'blockstudio-test/v1',
+			'/preload',
+			array(
+				'methods'             => 'POST',
+				'callback'            => function ( $request ) {
+					if ( ! class_exists( 'Blockstudio\\Build' ) || ! class_exists( 'Blockstudio\\Block' ) ) {
+						return new WP_Error( 'not_loaded', 'Blockstudio classes not loaded', array( 'status' => 500 ) );
+					}
+
+					$content = $request->get_param( 'content' );
+					if ( empty( $content ) ) {
+						return new WP_Error( 'missing_content', 'content parameter is required', array( 'status' => 400 ) );
+					}
+
+					$blockstudio_blocks = array();
+					$blocks             = \Blockstudio\Build::blocks();
+					$block_names        = array_keys( $blocks );
+
+					$parser        = new WP_Block_Parser();
+					$parsed_blocks = $parser->parse( $content );
+
+					$block_renderer = function ( $block ) use (
+						&$block_renderer,
+						&$blockstudio_blocks,
+						$block_names,
+						$blocks
+					) {
+						if ( in_array( $block['blockName'], $block_names, true ) ) {
+							$raw_inner = $block['attrs']['blockstudio']['attributes'] ?? array();
+
+							if ( is_array( $raw_inner ) && ! empty( $raw_inner ) ) {
+								array_walk_recursive(
+									$raw_inner,
+									function ( &$value ) {
+										if ( '' === $value ) {
+											$value = false;
+										}
+									}
+								);
+							}
+
+							$block_obj = array(
+								'blockName' => $block['blockName'],
+								'attrs'     => (object) $raw_inner,
+							);
+
+							$id = str_replace(
+								array( '{', '}', '[', ']', '"', '/', ' ', ':', ',', '\\' ),
+								'_',
+								wp_json_encode( $block_obj )
+							);
+							// phpcs:ignore WordPress.Security.NonceVerification.Recommended
+							$_GET['blockstudioMode']   = 'editor';
+							$blockstudio_blocks[ $id ] = array(
+								'rendered' => render_block( $block ),
+								'block'    => $block_obj,
+							);
+						}
+						if ( count( $block['innerBlocks'] ) > 0 ) {
+							foreach ( $block['innerBlocks'] as $inner_block ) {
+								$block_renderer( $inner_block );
+							}
+						}
+					};
+
+					foreach ( $parsed_blocks as $block ) {
+						$block_renderer( $block );
+					}
+
+					return array(
+						'blocks'       => $blockstudio_blocks,
+						'block_count'  => count( $blockstudio_blocks ),
+						'block_names'  => array_keys( $blocks ),
+						'parsed_count' => count( $parsed_blocks ),
+					);
+				},
+				'permission_callback' => '__return_true',
+			)
+		);
 	}
 );
 

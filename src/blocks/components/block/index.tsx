@@ -239,7 +239,8 @@ export const Block = ({
     if (
       !initialLoadRendered?.[clientId] &&
       !event &&
-      !block.blockstudio.blockEditor?.disableLoading
+      !block.blockstudio.blockEditor?.disableLoading &&
+      !firstRenderDone.current
     ) {
       setInitialLoad({
         [clientId]: {
@@ -362,7 +363,9 @@ export const Block = ({
       !!ref.current?.closest('.block-editor-block-preview__content-iframe'),
     );
 
-    fetchData();
+    if (!firstRenderDone.current) {
+      fetchData();
+    }
 
     document.addEventListener(
       `blockstudio/${block.name}/refresh`,
@@ -420,7 +423,9 @@ export const Block = ({
 
   useEffect(
     function onClientIdChange() {
-      fetchData();
+      if (!firstRenderDone.current) {
+        fetchData();
+      }
     },
     [clientId],
   );

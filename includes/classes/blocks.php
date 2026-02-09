@@ -96,20 +96,25 @@ class Blocks {
 			$blocks
 		) {
 			if ( in_array( $block['blockName'], $block_names, true ) ) {
-				$block_attrs = $block['attrs'];
-				Block::transform(
-					$block_attrs,
-					$block,
-					$block['blockName'],
-					false,
-					false,
-					$blocks[ $block['blockName'] ]->attributes
-				);
+				$raw_inner = $block['attrs']['blockstudio']['attributes'] ?? array();
+
+				if ( is_array( $raw_inner ) && ! empty( $raw_inner ) ) {
+					array_walk_recursive(
+						$raw_inner,
+						function ( &$value ) {
+							if ( '' === $value ) {
+								$value = false;
+							}
+						}
+					);
+				}
+
 				$block_obj = array(
 					'blockName' => $block['blockName'],
-					'attrs'     => $block_attrs,
+					'attrs'     => (object) $raw_inner,
 				);
-				$id        = str_replace(
+
+				$id = str_replace(
 					array( '{', '}', '[', ']', '"', '/', ' ', ':', ',', '\\' ),
 					'_',
 					wp_json_encode( $block_obj )
