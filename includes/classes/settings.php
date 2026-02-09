@@ -108,7 +108,8 @@ class Settings {
 				'enabled' => false,
 			),
 			'canvas'   => array(
-				'enabled' => false,
+				'enabled'  => false,
+				'adminBar' => true,
 			),
 		),
 	);

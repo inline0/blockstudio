@@ -245,6 +245,15 @@ export const blockstudio = {
                 "This filter allows you to enable/disable the canvas.",
               example: false,
             },
+            adminBar: {
+              type: "boolean",
+              default: true,
+              description:
+                "Show the WordPress admin bar when viewing the canvas.",
+              descriptionFilter:
+                "This filter allows you to show/hide the WordPress admin bar on the canvas.",
+              example: true,
+            },
           },
         },
       },

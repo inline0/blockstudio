@@ -133,6 +133,7 @@ class Plugin {
 		require_once $classes_dir . 'library.php';
 		require_once $classes_dir . 'admin.php';
 		require_once $classes_dir . 'devtools.php';
+		require_once $classes_dir . 'canvas.php';
 		require_once $classes_dir . 'blocks.php';
 		require_once $classes_dir . 'rest.php';
 		require_once $classes_dir . 'extensions.php';

@@ -1,0 +1,64 @@
+---
+title: Canvas
+description: A Figma-like overview of all Blockstudio pages as artboards.
+---
+
+# Canvas
+
+The canvas provides a zoomed-out, Figma-like overview of all Blockstudio-managed pages. Each page renders as a live iframe artboard in a single horizontal row. Pan with your trackpad, zoom with pinch or Ctrl+scroll, and press Escape to exit.
+
+## Activation
+
+Append `?blockstudio-canvas` to any frontend URL to enter the canvas:
+
+```
+https://example.com/?blockstudio-canvas
+https://example.com/my-page/?blockstudio-canvas
+```
+
+Without the query parameter, no canvas script is loaded.
+
+## Settings
+
+Enable the canvas and configure its behavior in your theme's `blockstudio.json`:
+
+```json title="blockstudio.json"
+{
+  "tooling": {
+    "canvas": {
+      "enabled": true,
+      "adminBar": false
+    }
+  }
+}
+```
+
+| Property | Type | Default | Description |
+|----------|------|---------|-------------|
+| `enabled` | `boolean` | `false` | Enable the canvas feature. |
+| `adminBar` | `boolean` | `true` | Show the WordPress admin bar inside artboard iframes. Set to `false` for a cleaner preview. |
+
+Both settings are also available as filters:
+
+```php
+add_filter('blockstudio/settings/tooling/canvas/enabled', '__return_true');
+add_filter('blockstudio/settings/tooling/canvas/admin_bar', '__return_false');
+```
+
+## Controls
+
+| Action | Input |
+|--------|-------|
+| Pan | Scroll / trackpad two-finger drag |
+| Zoom | Ctrl+scroll or pinch |
+| Exit | Escape |
+
+## Security
+
+The canvas script and page data are only loaded when all conditions are met:
+
+- The `?blockstudio-canvas` query parameter is present.
+- The `tooling.canvas.enabled` setting is `true`.
+- The current user has the `edit_posts` capability.
+
+Public visitors never see the canvas script or page metadata.
