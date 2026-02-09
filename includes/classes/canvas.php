@@ -55,14 +55,19 @@ class Canvas {
 	 * @return void
 	 */
 	public function render_admin_page(): void {
+		echo '<script>document.title = "Blockstudio Canvas";</script>';
 		echo '<style>'
-			. 'html, body, #wpwrap { background: #2c2c2c !important; }'
+			. 'html, body, #wpwrap { background: #2c2c2c !important; overflow: hidden !important; }'
 			. 'html { margin-top: 0 !important; }'
 			. '#adminmenumain, #adminmenuback, #adminmenuwrap, #wpadminbar, #wpfooter { display: none !important; }'
 			. '#wpcontent { margin-left: 0 !important; padding: 0 !important; }'
 			. '.notice, .update-nag, .updated, .error, .is-dismissible { display: none !important; }'
-			. '#blockstudio-canvas { position: fixed; inset: 0; z-index: 999999; }'
+			. '#blockstudio-canvas { position: fixed; inset: 0; z-index: 999999; overflow: hidden; }'
+			. '@keyframes blockstudio-canvas-spin { to { transform: rotate(360deg); } }'
+			. '#blockstudio-canvas-loader { position: fixed; inset: 0; z-index: 9999999; display: flex; align-items: center; justify-content: center; pointer-events: none; }'
+			. '#blockstudio-canvas-loader > div { width: 32px; height: 32px; border: 3px solid rgba(255,255,255,0.1); border-top-color: rgba(255,255,255,0.4); border-radius: 50%; animation: blockstudio-canvas-spin 0.8s linear infinite; }'
 			. '</style>';
+		echo '<div id="blockstudio-canvas-loader"><div></div></div>';
 		echo '<div id="blockstudio-canvas"></div>';
 	}
 

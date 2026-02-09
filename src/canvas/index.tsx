@@ -37,7 +37,6 @@ const init = (): void => {
 
   const style = document.createElement('style');
   style.textContent = [
-    '@keyframes blockstudio-canvas-spin { to { transform: rotate(360deg); } }',
     '[data-canvas-surface] { opacity: 0; transition: opacity 0.4s ease; }',
     '[data-canvas-label] { opacity: 0; transition: opacity 0.4s ease; }',
   ].join('\n');
