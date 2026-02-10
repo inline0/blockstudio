@@ -79,7 +79,9 @@ class Assets {
 		add_action( 'template_redirect', array( $this, 'maybe_buffer_output' ), 3 );
 		add_filter( 'blockstudio/buffer/output', array( $this, 'parse_output' ), 1000000 );
 		add_action( 'wp_enqueue_scripts', array( $this, 'maybe_reset_styles' ), 999 );
+		add_action( 'admin_enqueue_scripts', array( $this, 'maybe_reset_styles' ), 999 );
 		add_action( 'enqueue_block_editor_assets', array( $this, 'maybe_reset_styles' ), 999 );
+		add_filter( 'block_editor_settings_all', array( $this, 'maybe_reset_editor_styles' ) );
 		add_filter( 'block_editor_settings_all', array( $this, 'maybe_fullwidth_editor' ), 10, 2 );
 		add_filter(
 			'block_editor_settings_all',
@@ -158,6 +160,7 @@ class Assets {
 
 		wp_dequeue_style( 'wp-block-library' );
 		wp_dequeue_style( 'wp-block-library-theme' );
+		wp_dequeue_style( 'wp-reset-editor-styles' );
 		wp_dequeue_style( 'global-styles' );
 
 		$styles = wp_styles();
@@ -167,6 +170,33 @@ class Assets {
 				wp_dequeue_style( $handle );
 			}
 		}
+	}
+
+	/**
+	 * Remove WordPress reset styles from the block editor iframe.
+	 *
+	 * @param array $settings Editor settings.
+	 *
+	 * @return array Modified editor settings.
+	 */
+	public function maybe_reset_editor_styles( array $settings ): array {
+		$reset = Settings::get( 'assets/reset' );
+
+		if ( true !== $reset && ! Settings::get( 'assets/reset/enabled' ) ) {
+			return $settings;
+		}
+
+		if ( ! isset( $settings['__unstableResolvedAssets']['styles'] ) ) {
+			return $settings;
+		}
+
+		$settings['__unstableResolvedAssets']['styles'] = preg_replace(
+			'/<link[^>]+(?:reset|common)\.css[^>]*>/',
+			'',
+			$settings['__unstableResolvedAssets']['styles']
+		);
+
+		return $settings;
 	}
 
 	/**
