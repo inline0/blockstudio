@@ -126,7 +126,7 @@ export const Canvas = ({
 
   const isBlocksView = view === 'blocks';
   const artboardWidth = isBlocksView ? BLOCK_ARTBOARD_WIDTH : PAGE_ARTBOARD_WIDTH;
-  const activeItems = isBlocksView ? currentBlocks : currentPages;
+  const activeItems: (Page | BlockItem)[] = isBlocksView ? currentBlocks : currentPages;
   const totalItems = activeItems.length;
 
   const [mountedCount, setMountedCount] = useState(

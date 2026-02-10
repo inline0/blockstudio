@@ -49,6 +49,7 @@ class Tailwind {
 	 */
 	public function __construct() {
 		add_filter( 'blockstudio/buffer/output', array( $this, 'compile' ), 999999 );
+		add_filter( 'block_editor_settings_all', array( $this, 'inject_editor_styles' ), PHP_INT_MAX );
 	}
 
 	/**
@@ -107,6 +108,68 @@ class Tailwind {
 			'<style id="blockstudio-tailwind">' . $compiled . "</style>\n</head>",
 			$html
 		);
+	}
+
+	/**
+	 * Inject compiled Tailwind CSS into the block editor.
+	 *
+	 * Compiles the CSS config (e.g. @apply rules) so custom classes like
+	 * .container work in the editor iframe alongside the CDN.
+	 *
+	 * @param array $settings Editor settings.
+	 *
+	 * @return array Modified editor settings.
+	 */
+	public function inject_editor_styles( array $settings ): array {
+		if ( ! Settings::get( 'tailwind/enabled' ) || ! isset( $settings['__unstableResolvedAssets'] ) ) {
+			return $settings;
+		}
+
+		$content = '';
+		foreach ( Block_Registry::instance()->get_data() as $block ) {
+			foreach ( $block['filesPaths'] ?? array() as $path ) {
+				if ( is_file( $path ) ) {
+					// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Reading block template files for Tailwind candidate extraction.
+					$content .= file_get_contents( $path );
+				}
+			}
+		}
+
+		$css_input  = $this->build_css_input();
+		$candidates = TailwindPHP::extractCandidates( $content );
+		sort( $candidates );
+		$cache_key  = md5( 'editor:' . implode( ',', $candidates ) . $css_input );
+		$cache_path = self::get_cache_dir() . '/' . $cache_key . '.css';
+
+		if ( file_exists( $cache_path ) ) {
+			// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Reading cached CSS file.
+			$compiled = file_get_contents( $cache_path );
+		} else {
+			$compiled = TailwindPHP::generate(
+				array(
+					'content' => $content,
+					'css'     => $css_input,
+					'minify'  => true,
+				)
+			);
+
+			if ( ! empty( $compiled ) ) {
+				$dir = self::get_cache_dir();
+
+				if ( ! is_dir( $dir ) ) {
+					wp_mkdir_p( $dir );
+				}
+
+				// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents -- Writing compiled CSS to cache file.
+				file_put_contents( $cache_path, $compiled );
+			}
+		}
+
+		if ( ! empty( $compiled ) ) {
+			$settings['__unstableResolvedAssets']['styles'] .= '<style id="blockstudio-tailwind-editor">' . $compiled . '</style>';
+		}
+
+		return $settings;
 	}
 
 	/**
