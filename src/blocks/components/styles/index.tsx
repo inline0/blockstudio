@@ -76,6 +76,10 @@ export const Styles = () => {
         '.components-panel__body + .blockstudio-fields__field--tabs': {
           borderTop: 'var(--blockstudio-border) !important',
         },
+        '.components-tab-panel__tab-content > .blockstudio-fields__field--group:first-child':
+          {
+            marginTop: '1px',
+          },
 
         '.wp-block.blockstudio-block': {
           '.block-editor-default-block-appender': {
