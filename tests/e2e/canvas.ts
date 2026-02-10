@@ -589,6 +589,77 @@ test.describe('Canvas', () => {
 
   });
 
+  test.describe('focus mode', () => {
+    test('clicking label enters focus mode', async () => {
+      await page.evaluate(() => localStorage.removeItem('blockstudio-canvas-settings'));
+      await page.goto(canvasUrl, { waitUntil: 'domcontentloaded' });
+
+      await page.waitForFunction(
+        () => {
+          const el = document.querySelector('[data-canvas-surface]');
+          return el && window.getComputedStyle(el).transform !== 'none';
+        },
+        null,
+        { timeout: 15000 },
+      );
+
+      const firstLabel = page.locator('[data-canvas-label]').first();
+      await expect(firstLabel).toBeVisible({ timeout: 15000 });
+      await firstLabel.click();
+
+      await expect(page.locator('[data-canvas-focus]')).toBeVisible();
+    });
+
+    test('focus overlay contains artboard iframe', async () => {
+      const iframe = page.locator('[data-canvas-focus] iframe');
+      await expect(iframe).toBeVisible({ timeout: 15000 });
+    });
+
+    test('focus overlay is scrollable', async () => {
+      const overflowY = await page.locator('[data-canvas-focus]').evaluate(
+        (el) => window.getComputedStyle(el).overflowY,
+      );
+      expect(overflowY).toBe('auto');
+    });
+
+    test('close button visible during focus', async () => {
+      const closeButton = page.locator('.blockstudio-canvas-menu button[aria-label="Close focus mode"]');
+      await expect(closeButton).toBeVisible();
+
+      const dropdownMenu = page.locator('.blockstudio-canvas-menu button[aria-label="Canvas options"]');
+      await expect(dropdownMenu).toHaveCount(0);
+    });
+
+    test('close button exits focus mode', async () => {
+      const closeButton = page.locator('.blockstudio-canvas-menu button[aria-label="Close focus mode"]');
+      await closeButton.click();
+
+      await expect(page.locator('[data-canvas-focus]')).toHaveCount(0);
+    });
+
+    test('escape closes focus mode', async () => {
+      const firstLabel = page.locator('[data-canvas-label]').first();
+      await firstLabel.click();
+      await expect(page.locator('[data-canvas-focus]')).toBeVisible();
+
+      await page.keyboard.press('Escape');
+
+      await expect(page.locator('[data-canvas-focus]')).toHaveCount(0);
+    });
+
+    test('dropdown menu returns after close', async () => {
+      const dropdownMenu = page.locator('.blockstudio-canvas-menu button[aria-label="Canvas options"]');
+      await expect(dropdownMenu).toBeVisible();
+    });
+
+    test('labels have pointer cursor', async () => {
+      const cursor = await page.locator('[data-canvas-label]').first().evaluate(
+        (el) => window.getComputedStyle(el).cursor,
+      );
+      expect(cursor).toBe('pointer');
+    });
+  });
+
   test.describe('blocks view', () => {
     test('blocks data is passed to JS', async () => {
       await page.evaluate(() => localStorage.removeItem('blockstudio-canvas-settings'));

@@ -1,9 +1,9 @@
 import { memo, useCallback, useEffect, useRef, useState } from 'react';
 
 import { BlockEditorProvider } from '@wordpress/block-editor';
-import { DropdownMenu, MenuGroup, MenuItem } from '@wordpress/components';
+import { Button, DropdownMenu, MenuGroup, MenuItem } from '@wordpress/components';
 import { useDispatch, useSelect } from '@wordpress/data';
-import { check, moreHorizontal } from '@wordpress/icons';
+import { check, closeSmall, moreHorizontal } from '@wordpress/icons';
 import apiFetch from '@wordpress/api-fetch';
 
 import { Artboard } from './artboard';
@@ -98,6 +98,10 @@ export const Canvas = ({
     });
     return initial;
   });
+
+  const [focusedSlug, setFocusedSlug] = useState<string | null>(null);
+  const focusedRef = useRef<string | null>(null);
+  focusedRef.current = focusedSlug;
 
   const liveMode = useSelect(
     (select) => select(store).isLiveMode(),
@@ -308,6 +312,8 @@ export const Canvas = ({
     if (!container) return;
 
     const handleWheel = (e: WheelEvent): void => {
+      if (focusedRef.current) return;
+
       e.preventDefault();
 
       const prev = transformRef.current;
@@ -341,10 +347,36 @@ export const Canvas = ({
     return () => container.removeEventListener('wheel', handleWheel);
   }, [applyTransform]);
 
+  const [focusWidth, setFocusWidth] = useState(window.innerWidth);
+
+  useEffect(() => {
+    if (!focusedSlug) return;
+
+    setFocusWidth(window.innerWidth);
+
+    const handleKeyDown = (e: KeyboardEvent): void => {
+      if (e.key === 'Escape') {
+        setFocusedSlug(null);
+      }
+    };
+
+    const handleResize = (): void => {
+      setFocusWidth(window.innerWidth);
+    };
+
+    document.addEventListener('keydown', handleKeyDown);
+    window.addEventListener('resize', handleResize);
+    return () => {
+      document.removeEventListener('keydown', handleKeyDown);
+      window.removeEventListener('resize', handleResize);
+    };
+  }, [focusedSlug]);
+
   const prevViewRef = useRef(view);
   useEffect(() => {
     if (prevViewRef.current !== view) {
       prevViewRef.current = view;
+      setFocusedSlug(null);
       setMountedCount(Math.min(BATCH_SIZE, activeItems.length));
       if (fittedRef.current) {
         requestAnimationFrame(() => fitToView());
@@ -535,6 +567,11 @@ export const Canvas = ({
 
   return (
     <BlockEditorProvider settings={settings}>
+      <style>{`
+        [data-canvas-label] { cursor: pointer; }
+        [data-canvas-label] .canvas-focus-icon { opacity: 0; transition: opacity 0.15s; }
+        [data-canvas-label]:hover .canvas-focus-icon { opacity: 1; }
+      `}</style>
       <div
         ref={containerRef}
         data-canvas-view={view}
@@ -569,6 +606,7 @@ export const Canvas = ({
               <div key={key} style={{ position: 'relative', minHeight: isBlocksView ? BLOCK_ARTBOARD_MIN_HEIGHT : undefined }}>
                 <div
                   data-canvas-label=""
+                  onClick={() => setFocusedSlug(key)}
                   style={{
                     position: 'absolute',
                     bottom: '100%',
@@ -583,7 +621,6 @@ export const Canvas = ({
                     fontSize: 13,
                     fontWeight: 500,
                     userSelect: 'none',
-                    pointerEvents: 'none',
                     whiteSpace: 'nowrap',
                     transform: 'scale(var(--canvas-label-scale, 1))',
                     transformOrigin: '0 100%',
@@ -591,6 +628,17 @@ export const Canvas = ({
                 >
                   {isBlocksView && BLOCK_ICON}
                   {item.title}
+                  <svg
+                    className="canvas-focus-icon"
+                    xmlns="http://www.w3.org/2000/svg"
+                    viewBox="0 0 24 24"
+                    width="12"
+                    height="12"
+                    fill="currentColor"
+                    style={{ marginLeft: 6, verticalAlign: -1 }}
+                  >
+                    <path d="M19.5 4.5h-7V6h4.44l-5.97 5.97 1.06 1.06L18 7.06V11.5h1.5v-7zM4.5 19.5h7V18H7.06l5.97-5.97-1.06-1.06L6 16.94V12.5H4.5v7z" />
+                  </svg>
                 </div>
                 <MemoizedArtboard
                   page={{
@@ -607,61 +655,115 @@ export const Canvas = ({
           })}
         </div>
 
+        {focusedSlug && (() => {
+          const focusedItem = activeItems.find((item) =>
+            'slug' in item ? item.slug === focusedSlug : item.name === focusedSlug,
+          );
+          if (!focusedItem) return null;
+          const focusedKey = 'slug' in focusedItem ? focusedItem.slug : focusedItem.name;
+          const focusedRev = 'slug' in focusedItem
+            ? revisions[focusedItem.slug] || 0
+            : blockRevisions[focusedItem.name] || 0;
+          return (
+            <div
+              data-canvas-focus=""
+              style={{
+                position: 'absolute',
+                inset: 0,
+                zIndex: 10,
+                overflowX: 'hidden',
+                overflowY: 'auto',
+                background: '#2c2c2c',
+              }}
+            >
+              <MemoizedArtboard
+                page={{
+                  title: focusedItem.title,
+                  slug: focusedKey,
+                  name: focusedItem.name,
+                  content: focusedItem.content,
+                }}
+                revision={focusedRev}
+                width={focusWidth}
+              />
+            </div>
+          );
+        })()}
+
         <div
           style={{
             position: 'absolute',
             top: 12,
             right: 12,
+            zIndex: 20,
             display: 'flex',
             alignItems: 'center',
             gap: 8,
           }}
           className="blockstudio-canvas-menu"
         >
-          {liveMode && (
-            <div
+          {focusedSlug ? (
+            <Button
+              icon={closeSmall}
+              label="Close focus mode"
+              onClick={() => setFocusedSlug(null)}
               style={{
-                width: 8,
-                height: 8,
+                background: 'rgba(0, 0, 0, 0.6)',
+                color: '#fff',
                 borderRadius: '50%',
-                background: '#4ade80',
-                animation:
-                  'blockstudio-canvas-pulse 2s ease-in-out infinite',
+                width: 32,
+                height: 32,
+                minWidth: 32,
               }}
             />
+          ) : (
+            <>
+              {liveMode && (
+                <div
+                  style={{
+                    width: 8,
+                    height: 8,
+                    borderRadius: '50%',
+                    background: '#4ade80',
+                    animation:
+                      'blockstudio-canvas-pulse 2s ease-in-out infinite',
+                  }}
+                />
+              )}
+              <DropdownMenu icon={moreHorizontal} label="Canvas options">
+                {() => (
+                  <>
+                    <MenuGroup>
+                      <MenuItem
+                        icon={view === 'pages' ? check : undefined}
+                        onClick={() => setView('pages')}
+                      >
+                        Pages
+                      </MenuItem>
+                      <MenuItem
+                        icon={view === 'blocks' ? check : undefined}
+                        onClick={() => setView('blocks')}
+                      >
+                        Blocks
+                      </MenuItem>
+                    </MenuGroup>
+                    <MenuGroup>
+                      <MenuItem onClick={fitToView}>Fit to view</MenuItem>
+                      <MenuItem onClick={zoomTo100}>Zoom to 100%</MenuItem>
+                    </MenuGroup>
+                    <MenuGroup>
+                      <MenuItem
+                        icon={liveMode ? check : undefined}
+                        onClick={() => setLiveMode(!liveMode)}
+                      >
+                        Live mode
+                      </MenuItem>
+                    </MenuGroup>
+                  </>
+                )}
+              </DropdownMenu>
+            </>
           )}
-          <DropdownMenu icon={moreHorizontal} label="Canvas options">
-            {() => (
-              <>
-                <MenuGroup>
-                  <MenuItem
-                    icon={view === 'pages' ? check : undefined}
-                    onClick={() => setView('pages')}
-                  >
-                    Pages
-                  </MenuItem>
-                  <MenuItem
-                    icon={view === 'blocks' ? check : undefined}
-                    onClick={() => setView('blocks')}
-                  >
-                    Blocks
-                  </MenuItem>
-                </MenuGroup>
-                <MenuGroup>
-                  <MenuItem onClick={fitToView}>Fit to view</MenuItem>
-                  <MenuItem onClick={zoomTo100}>Zoom to 100%</MenuItem>
-                </MenuGroup>
-                <MenuGroup>
-                  <MenuItem
-                    icon={liveMode ? check : undefined}
-                    onClick={() => setLiveMode(!liveMode)}
-                  >
-                    Live mode
-                  </MenuItem>
-                </MenuGroup>
-              </>
-            )}
-          </DropdownMenu>
         </div>
       </div>
     </BlockEditorProvider>
