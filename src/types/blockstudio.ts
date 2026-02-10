@@ -67,7 +67,7 @@ export interface Assets {
    */
   enqueue?: boolean;
   /**
-   * Remove all WordPress core block styles on the frontend.
+   * Remove all WordPress core block styles.
    */
   reset?: boolean;
   /**

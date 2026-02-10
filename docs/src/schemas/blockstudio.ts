@@ -54,7 +54,7 @@ export const blockstudio = {
           type: "boolean",
           default: false,
           description:
-            "Remove all WordPress core block styles on the frontend, giving you complete control over styling.",
+            "Remove all WordPress core block styles on the frontend and in the editor, giving you complete control over styling.",
           descriptionFilter:
             "This filter allows you to enable/disable the removal of WordPress core block styles.",
           example: true,
