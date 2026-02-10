@@ -195,6 +195,8 @@ class Container_Field_Handler extends Abstract_Field_Handler {
 			);
 		}
 
+		$this->apply_defaults( $field, $attribute );
+
 		$attributes[ $field_id ] = $attribute;
 	}
 

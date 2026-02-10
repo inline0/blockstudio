@@ -45,6 +45,40 @@ class Tailwind {
 	private bool $compiled = false;
 
 	/**
+	 * Filter candidates to strings only.
+	 *
+	 * TailwindPHP uses candidates as array keys internally, which causes PHP
+	 * to cast numeric strings (e.g. "0") to integers. This breaks
+	 * parseCandidate() which expects string arguments.
+	 *
+	 * @param string[] $candidates Extracted candidates.
+	 *
+	 * @return string[] Filtered candidates with numeric values removed.
+	 */
+	private function filter_candidates( array $candidates ): array {
+		return array_values(
+			array_filter(
+				$candidates,
+				fn( $c ) => ! is_numeric( $c )
+			)
+		);
+	}
+
+	/**
+	 * Build content string from filtered candidates for TailwindPHP.
+	 *
+	 * TailwindPHP's extractCandidates() only recognizes classes inside HTML
+	 * attributes, so we wrap them in a class attribute.
+	 *
+	 * @param string[] $candidates Filtered candidates.
+	 *
+	 * @return string HTML-like content for TailwindPHP.
+	 */
+	private function candidates_to_content( array $candidates ): string {
+		return '<div class="' . implode( ' ', $candidates ) . '"></div>';
+	}
+
+	/**
 	 * Constructor.
 	 */
 	public function __construct() {
@@ -70,7 +104,7 @@ class Tailwind {
 		$this->compiled = true;
 
 		$css_input  = $this->build_css_input();
-		$candidates = TailwindPHP::extractCandidates( $html );
+		$candidates = $this->filter_candidates( TailwindPHP::extractCandidates( $html ) );
 		sort( $candidates );
 		$cache_key  = md5( implode( ',', $candidates ) . $css_input );
 		$cache_path = self::get_cache_dir() . '/' . $cache_key . '.css';
@@ -81,7 +115,7 @@ class Tailwind {
 		} else {
 			$compiled = TailwindPHP::generate(
 				array(
-					'content' => $html,
+					'content' => $this->candidates_to_content( $candidates ),
 					'css'     => $css_input,
 					'minify'  => true,
 				)
@@ -136,7 +170,7 @@ class Tailwind {
 		}
 
 		$css_input  = $this->build_css_input();
-		$candidates = TailwindPHP::extractCandidates( $content );
+		$candidates = $this->filter_candidates( TailwindPHP::extractCandidates( $content ) );
 		sort( $candidates );
 		$cache_key  = md5( 'editor:' . implode( ',', $candidates ) . $css_input );
 		$cache_path = self::get_cache_dir() . '/' . $cache_key . '.css';
@@ -147,7 +181,7 @@ class Tailwind {
 		} else {
 			$compiled = TailwindPHP::generate(
 				array(
-					'content' => $content,
+					'content' => $this->candidates_to_content( $candidates ),
 					'css'     => $css_input,
 					'minify'  => true,
 				)

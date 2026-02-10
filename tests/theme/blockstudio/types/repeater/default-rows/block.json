@@ -1,0 +1,49 @@
+{
+  "$schema": "https://app.blockstudio.dev/schema",
+  "name": "blockstudio/type-repeater-default-rows",
+  "title": "Native Repeater Default Rows",
+  "category": "blockstudio-test-native",
+  "icon": "star-filled",
+  "description": "Tests repeater with default array of pre-filled rows.",
+  "keywords": ["native", "repeater", "default"],
+  "blockstudio": {
+    "conditions": [
+      [
+        {
+          "type": "postType",
+          "operator": "==",
+          "value": "post"
+        }
+      ]
+    ],
+    "attributes": [
+      {
+        "id": "items",
+        "type": "repeater",
+        "label": "Items",
+        "textButton": "Add item",
+        "default": [
+          { "title": "First Item", "count": 5, "active": true },
+          { "title": "Second Item", "count": 10, "active": false }
+        ],
+        "attributes": [
+          {
+            "id": "title",
+            "type": "text",
+            "label": "Title"
+          },
+          {
+            "id": "count",
+            "type": "number",
+            "label": "Count"
+          },
+          {
+            "id": "active",
+            "type": "toggle",
+            "label": "Active"
+          }
+        ]
+      }
+    ]
+  }
+}

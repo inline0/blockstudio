@@ -55,12 +55,17 @@ Create custom WordPress blocks by dropping a `block.json` and a PHP template int
 * New: blockEditingMode support for file-based pages with page-level defaults and per-element overrides
 * New: code field popout option to open editor in separate window
 * New: devtools grabber for copying block template paths on the frontend (hold Cmd+C)
+* New: repeater default rows - pre-fill repeater fields with a `default` array of row data on block insert
+* New: assets/reset setting to remove WordPress core block styles on the frontend and in the editor
 * New: canvas view with single-row artboard layout, admin bar toggle, and non-scaling labels
 * Enhancement: apiVersion 3 support. Blocks now render correctly in the iframed editor (site editor, responsive previews)
 * Enhancement: AI context file rebuilt as a static build from documentation and schemas (~48k tokens)
 * Enhancement: all PHP hooks now use snake_case naming (old camelCase names still supported)
 * Enhancement: dot notation for asset file suffixes (*.inline.css, *.editor.css, etc.). Dash notation still supported
 * Enhancement: field switch is now off by default and uses a visible eye icon with disabled overlay
+* Enhancement: repeater `min` now generates rows with field-level defaults on both frontend and editor
+* Enhancement: compiled Tailwind CSS now injected into the block editor alongside the CDN
+* Enhancement: Tailwind CSS compilation filters out numeric candidates to prevent TailwindPHP crashes
 * Fix: bs_render_block() no longer triggers a warning from WP_Block_Supports when using useBlockProps
 * Fix: code field undo/redo now works independently without triggering Gutenberg undo
 * Fix: JavaScript syntax highlighting now works without requiring script tags

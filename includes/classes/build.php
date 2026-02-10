@@ -226,6 +226,14 @@ class Build {
 										: array(),
 							);
 
+							if ( isset( $v['default'] ) ) {
+								$attributes[ $field_id ]['default'] = $v['default'];
+							}
+
+							if ( isset( $v['min'] ) ) {
+								$attributes[ $field_id ]['min'] = $v['min'];
+							}
+
 							if (
 								count(
 									$attributes[ $field_id ]['attributes'] ?? array()

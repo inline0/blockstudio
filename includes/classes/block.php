@@ -1003,7 +1003,18 @@ class Block {
 
 		// Defaults.
 		foreach ( $attr as $k => $v ) {
-			$attr[ $k ] = $v['default'] ?? false;
+			if ( 'repeater' === ( $v['field'] ?? '' ) && ! isset( $v['default'] ) && ! empty( $v['min'] ) ) {
+				$row = array();
+				foreach ( $v['attributes'] ?? array() as $inner ) {
+					$id = $inner['id'] ?? null;
+					if ( $id ) {
+						$row[ $id ] = $inner['default'] ?? false;
+					}
+				}
+				$attr[ $k ] = array_fill( 0, (int) $v['min'], $row );
+			} else {
+				$attr[ $k ] = $v['default'] ?? false;
+			}
 		}
 		$attributes = array_merge(
 			$attr ?? array(),

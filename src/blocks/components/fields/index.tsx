@@ -236,39 +236,40 @@ export const Fields = ({
       }
     }
 
-    if (
-      item.type === 'repeater' &&
-      item?.min &&
-      item?.min >= 1 &&
-      !v &&
-      !isDeleting
-    ) {
-      const arr: Any[] = [];
+    if (item.type === 'repeater' && !v && !isDeleting) {
+      if (Array.isArray(item?.default) && item.default.length > 0) {
+        v = item.default;
+      } else if (item?.min && item.min >= 1) {
+        const arr: Any[] = [];
 
-      Array.from({ length: item.min }).forEach(() => {
-        const obj = getDefaults(transformed?.attributes);
-        arr.push(obj);
-      });
+        Array.from({ length: item.min }).forEach(() => {
+          const obj = getDefaults(transformed?.attributes);
+          arr.push(obj);
+        });
 
-      v = [...(v || []), ...arr];
+        v = [...(v || []), ...arr];
+      }
 
-      const key = `blockstudio.attributes.${repeaterId || item.id}`;
-      const newAttributes = JSON.parse(JSON.stringify(attributes));
-      const isNewRepeater = !attributes.blockstudio.attributes;
+      if (v) {
+        const key = `blockstudio.attributes.${repeaterId || item.id}`;
+        const newAttributes = JSON.parse(JSON.stringify(attributes));
+        const isNewRepeater = !attributes.blockstudio.attributes;
 
-      if (!defaultsRepeaters.current) defaultsRepeaters.current = newAttributes;
+        if (!defaultsRepeaters.current)
+          defaultsRepeaters.current = newAttributes;
 
-      const updatedObj = isNewRepeater
-        ? defaultsRepeaters.current
-        : newAttributes;
+        const updatedObj = isNewRepeater
+          ? defaultsRepeaters.current
+          : newAttributes;
 
-      set(updatedObj, key, v);
+        set(updatedObj, key, v);
 
-      if (isNewRepeater) markNextChangeAsNotPersistent();
-      setRepeater(
-        updatedObj,
-        repeaterId ? getRepeaterKey(repeaterId) : item.id,
-      );
+        if (isNewRepeater) markNextChangeAsNotPersistent();
+        setRepeater(
+          updatedObj,
+          repeaterId ? getRepeaterKey(repeaterId) : item.id,
+        );
+      }
     }
 
     const change: BlockstudioFieldsChange = (

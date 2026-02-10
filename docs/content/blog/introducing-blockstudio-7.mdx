@@ -276,8 +276,39 @@ Block content is now visible to Yoast SEO and Rank Math in the editor. This
 means SEO plugins can properly analyze your Blockstudio block content for
 keyword density, readability, and other metrics. No configuration needed.
 
+### Repeater default rows
+
+Repeater fields now support a `default` property with an array of pre-filled
+rows. When a block is inserted, the repeater is populated with the specified
+rows and their values, both in the editor and on the frontend:
+
+```json title="block.json"
+{
+  "id": "features",
+  "type": "repeater",
+  "label": "Features",
+  "default": [
+    { "title": "Fast", "icon": "bolt" },
+    { "title": "Secure", "icon": "shield" }
+  ],
+  "attributes": [
+    { "id": "title", "type": "text", "label": "Title" },
+    { "id": "icon", "type": "text", "label": "Icon" }
+  ]
+}
+```
+
+The `min` property also works with field-level defaults: if a repeater has
+`min: 3` and its inner fields have `default` values, the auto-generated rows
+are pre-filled with those defaults instead of being empty.
+
 ## Enhancements and fixes
 
+- **Repeater `min` with field defaults**: auto-generated min rows now use
+  field-level default values on both frontend and editor
+- **Tailwind editor styles**: compiled Tailwind CSS is now injected into the
+  block editor iframe alongside the CDN, so custom `@apply` rules and theme
+  config work in the editor
 - **[AI context file](/docs/ai)**: the `blockstudio-llm.txt` has been rebuilt
   as a static file assembled from the full v7 documentation and deduplicated
   JSON schemas (~48k tokens), replacing the dynamic generation from v6
