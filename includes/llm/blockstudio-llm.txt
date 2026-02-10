@@ -59,7 +59,7 @@ the rendering function.
 Do you have feature requests or questions? Message
 us.
 
-## Getting Started
+### Getting Started
 
 This guide will help you set up Blockstudio and create your first custom block.
 
@@ -164,7 +164,7 @@ Your block is now ready to use in the WordPress editor. Continue exploring the d
 - Tailwind Integration - Using Tailwind CSS
 - Hooks - Extending functionality with filters and actions
 
-## Settings
+### Settings
 
 Blockstudio includes a powerful settings API, that allows setting options via a `blockstudio.json` file inside your theme folder and/or filters. Additionally, allowed users are able to change the settings visually inside the admin area.
 
@@ -263,7 +263,7 @@ Settings set via filters will be grayed out and disabled inside the admin area.
 |--------|------|---------|-------------|
 | `disableLoading` | boolean | `false` | Disable block loading in editor |
 
-## Registration
+### Registration
 
 Composing your own blocks with Blockstudio is extremely easy. The plugin will
 look for a `blockstudio` folder within your currently activated theme. Inside
@@ -400,7 +400,7 @@ add_filter('blockstudio/block/meta', function ($meta, $block) {
 The example above is being used internally to give all Blockstudio library
 elements the same icon.
 
-### Twig
+#### Twig
 
 Twig is a flexible, fast, and secure template engine for PHP. It allows developers to write concise and readable code in templates, enhancing productivity and maintainability. Twig supports a variety of features designed to make templating both powerful and straightforward, making it ideal for projects that require robust, reusable templates.
 
@@ -445,7 +445,7 @@ To use Twig for your block's template, simply create an `index.twig` file in you
 </div>
 ```
 
-### Blade
+#### Blade
 
 Blade is a templating engine used primarily with the Laravel framework. It enables developers to create expressive, clean templates using a syntax that extends PHP in a simple and intuitive way. Blade templates facilitate common tasks like data display and layout management, helping streamline the development of dynamic web pages.
 
@@ -520,7 +520,7 @@ To use Blade for your block's template, create an `index.blade.php` file in your
 </div>
 ```
 
-## Schema
+### Schema
 
 To improve development with autocomplete and validation in your IDE, Blockstudio introduces its own schema:
 
@@ -581,14 +581,6 @@ PhpStorm and other JetBrains IDEs support JSON Schema via the `$schema` property
 - Documentation: Hover over properties for inline documentation
 - Type Safety**: Ensure correct value types
 
-## Assets
-
-Blockstudio provides a zero-config asset pipeline for your blocks. Drop CSS, SCSS, or JavaScript files next to your block and they get compiled, minified, and enqueued automatically.
-
-- Registering Assets:File naming conventions and enqueue behavior
-- Processing:SCSS compilation, ES module imports, and minification
-- Code Field:Inline code editing via the code field type
-
 ### Assets
 
 Blockstudio provides a zero-config asset pipeline for your blocks. Drop CSS, SCSS, or JavaScript files next to your block and they get compiled, minified, and enqueued automatically.
@@ -597,7 +589,15 @@ Blockstudio provides a zero-config asset pipeline for your blocks. Drop CSS, SCS
 - Processing:SCSS compilation, ES module imports, and minification
 - Code Field:Inline code editing via the code field type
 
-### Registering Assets
+#### Assets
+
+Blockstudio provides a zero-config asset pipeline for your blocks. Drop CSS, SCSS, or JavaScript files next to your block and they get compiled, minified, and enqueued automatically.
+
+- Registering Assets:File naming conventions and enqueue behavior
+- Processing:SCSS compilation, ES module imports, and minification
+- Code Field:Inline code editing via the code field type
+
+#### Registering Assets
 
 Blockstudio will automatically enqueue all files ending with `.css`, `.scss` and `.js` when your block is being used on a page. It is possible to define how assets are being enqueued by using one of the following file names. The `` is a wildcard that can be replaced with any string of your choice.
 
@@ -718,7 +718,7 @@ When a block templates returns nothing, Blockstudio will not enqueue any assets 
 {% endif %}
 ```
 
-### Processing Assets
+#### Processing Assets
 
 ## Minification
 
@@ -853,7 +853,7 @@ import "npm:swiper@11.0.0/swiper.min.css";
 
 The CSS file will be downloaded to the `modules` folder and automatically enqueued when the block is used. As long as the version is the same, only a single version of the CSS file will be enqueued, even if it exists in multiple blocks.
 
-### Code Field Assets
+#### Code Field Assets
 
 Beside static styles and scripts as files, Blockstudio also supports dynamic asset blocks via the code field. Depending on your use case, these can be scoped to the block.
 
@@ -956,7 +956,7 @@ When using code fields inside of extensions, the `asset` attribute is not necess
 
 No additional configuration is needed. The above will show a code field for every `core/` block in the sidebar and automatically render the content as an asset to the page.
 
-### Registering Attributes
+#### Registering Attributes
 
 Attributes are defined within the `blockstudio.attributes` array in your block.json file.
 
@@ -1081,7 +1081,7 @@ Or in Twig:
 <p>{{ a.content }}</p>
 ```
 
-### Rendering Attributes
+#### Rendering Attributes
 
 Inside template files, all attributes can be accessed using the `$attributes` or `$a` variables and the respective ID of the field.
 
@@ -1184,7 +1184,7 @@ Loop through repeater items:
 {% endfor %}
 ```
 
-### Filtering Attributes
+#### Filtering Attributes
 
 Blockstudio provides two methods to filter block attributes.
 
@@ -1242,7 +1242,7 @@ add_filter('blockstudio/block/attributes/render', function($attributes, $block) 
 
 Keep in mind that the above filter will override any values set in the editor.
 
-### Disabling Attributes
+#### Disabling Attributes
 
 Attributes can be deactivated on a per-block basis by hovering over the left side of the UI in the sidebar and clicking when the blue border appears. This is useful when an attribute should be disabled temporarily while leaving the filled content intact.
 
@@ -1290,7 +1290,7 @@ In your templates, you can check if an attribute is disabled:
 
 Blockstudio automatically handles disabled attributes, so in most cases you don't need to check this manually - disabled attributes simply won't render.
 
-### Conditional Logic
+#### Conditional Logic
 
 Fields can be shown or hidden depending on conditions.
 
@@ -1547,7 +1547,7 @@ To check against the toggle outside the repeater, add `"context": "main"` to the
 }
 ```
 
-### Populating Options
+#### Populating Options
 
 Instead of supplying different field types like Posts, Users or Terms, Blockstudio allows for a modular way of populating data right from the `block.json`. This feature works for `select`, `radio`, `checkbox`, `color` and `gradient` field types.
 
@@ -1858,7 +1858,7 @@ Fetch data from an external source:
 
 The search term is appended to `urlSearch`.
 
-### Block Attributes
+#### Block Attributes
 
 The `$attributes` or `$a` variables only give you access to data registered in the blockstudio property. To access standard WordPress block data like alignment or typography, use the `$block` or `$b` variables.
 
@@ -1940,7 +1940,7 @@ Enable WordPress block features via the `supports` property:
 
 See the WordPress Block Supports documentation for all available options.
 
-### Custom Fields
+#### Custom Fields
 
 Custom fields let you define reusable field groups that can be referenced across multiple blocks. Think of them as field templates: define once, use everywhere.
 
@@ -2089,7 +2089,7 @@ add_filter('blockstudio/fields/paths', function ($paths) {
 });
 ```
 
-### HTML Utilities
+#### HTML Utilities
 
 Sometimes you need to use attribute values in your CSS or JS files. Blockstudio provides helper functions to render attributes as data attributes or CSS variables.
 
@@ -2244,7 +2244,7 @@ const color = block.dataset.color;
 const message = block.dataset.message;
 ```
 
-## Variations
+### Variations
 
 The Block Variation API allows you to register custom variations for existing blocks.
 
@@ -2325,7 +2325,7 @@ Attributes will automatically render the appropriate input in the sidebar. Since
 }
 ```
 
-## Transforms
+### Transforms
 
 The Block Transforms API allows you to define ways in how to transform blocks. Blockstudio currently supports three different types:
 
@@ -2415,7 +2415,7 @@ Prefix transforms allow you to insert a block when the user types certain conten
 
 In the example above, the block will be inserted when the user types three question marks (`?`) and then presses `Space`.
 
-## Initialization
+### Initialization
 
 Block templates will only be executed when the block is rendered. This is enough for most blocks; however, sometimes you need to execute code during an earlier stage of execution. For example, you may want to register a new post type or do some other type of setup unrelated to the block.
 
@@ -2439,15 +2439,6 @@ register_post_type('project', [
 ]);
 ```
 
-## Components
-
-Blockstudio provides template components that map to native WordPress editor features. In the editor, they become interactive React components. On the frontend, they render as plain HTML.
-
-- useBlockProps:Mark the block wrapper element
-- InnerBlocks:Allow nested blocks within your block
-- RichText:Inline rich text editing
-- MediaPlaceholder:Media upload and selection
-
 ### Components
 
 Blockstudio provides template components that map to native WordPress editor features. In the editor, they become interactive React components. On the frontend, they render as plain HTML.
@@ -2457,7 +2448,16 @@ Blockstudio provides template components that map to native WordPress editor fea
 - RichText:Inline rich text editing
 - MediaPlaceholder:Media upload and selection
 
-### useBlockProps
+#### Components
+
+Blockstudio provides template components that map to native WordPress editor features. In the editor, they become interactive React components. On the frontend, they render as plain HTML.
+
+- useBlockProps:Mark the block wrapper element
+- InnerBlocks:Allow nested blocks within your block
+- RichText:Inline rich text editing
+- MediaPlaceholder:Media upload and selection
+
+#### useBlockProps
 
 By default, Gutenberg has to create a wrapper around blocks to make them interactive inside the editor. This can become problematic for some block types like containers or columns, since the markup between editor and frontend will be different. The useBlockProps hook makes it possible to mark an element inside the block template as the root element, thus creating markup parity between editor and frontend.
 
@@ -2525,7 +2525,7 @@ To combat this issue, you can use the alternative syntax Alpine.js provides.
 
 The above will work inside Gutenberg and on the frontend.
 
-### InnerBlocks
+#### InnerBlocks
 
 Inner blocks allow you to insert additional blocks to your blocks. Under the
 hood, Blockstudio is using the
@@ -2802,7 +2802,7 @@ To do so, simply add an `innerBlocks` key to the options array with the template
 }
 ```
 
-### RichText
+#### RichText
 
 The `RichText` component allows rendering an editable input inside the editor and a static HTML Element in the frontend. It is based on the RichText component WordPress provides.
 
@@ -2883,7 +2883,7 @@ By default, all formatting controls are present. This setting can be used to rem
 <RichText attribute="myRichText" withoutInteractiveFormatting="true" />
 ```
 
-### MediaPlaceholder
+#### MediaPlaceholder
 
 The `MediaPlaceholder` component provides a placeholder to add media items to a block. The same component is being used in the `core/image` block. It is based on the React component with the same name.
 
@@ -2982,7 +2982,7 @@ An object that can contain a title and instructions properties.
 <MediaPlaceholder labels="{{ {title: 'Custom title', instructions: 'Custom instructions'}|json_encode|escape('html_attr') }}" />
 ```
 
-## Environment
+### Environment
 
 Sometimes it is necessary to show content in your blocks exclusively when it is being rendered inside the Gutenberg editor and not on the frontend. This technique is very useful to provide users with helpful information and placeholders if the necessary data hasn't been input yet.
 
@@ -3024,7 +3024,7 @@ Blockstudio adds another environment variable that will come in handy for block 
 {% endif %}
 ```
 
-## Context
+### Context
 
 When blocks are used inside a loop (for example, a Query block), the block is executed once for each iteration of the loop. Blockstudio provides handy shortcuts for accessing the current loop and outer context.
 
@@ -3098,7 +3098,7 @@ echo $parent['someAttribute'];
 
 See InnerBlocks Context for more details.
 
-## Preview
+### Preview
 
 Gutenberg allows previewing blocks when hovering over the block in the fixed block inserter. To enable the preview of blocks made with Blockstudio, simply set the `example` key to an empty object.
 
@@ -3167,7 +3167,7 @@ If your block relies on `InnerBlocks`, it is possible to provide a template for 
 }
 ```
 
-## Post Meta
+### Post Meta
 
 Since block templates are just normal PHP files, you can use any PHP code you want in them. However, since blocks don't have access to the global `$post` variable inside the editor, get_the_ID() and other functions that depend on the variable will only work on the frontend.
 
@@ -3230,7 +3230,7 @@ By default, blocks won't be refreshed when you save or update a post. Thus, old 
 }
 ```
 
-## Storage
+### Storage
 
 By default, all field values are stored as block attributes within the block comment in the post content. The storage feature allows you to additionally store values in post meta (`wp_postmeta`) or options (`wp_options`), making them accessible outside the block context.
 
@@ -3506,7 +3506,7 @@ The block name is sanitized (slashes replaced with underscores).
 
 Custom keys are recommended for production use. Default keys may change if you rename your block.
 
-## Overrides
+### Overrides
 
 Blockstudio includes the possibility to override blocks on a very granular level. This can be useful for shared block libraries when you want to change the behavior of a block without having to create a new block from scratch.
 
@@ -3652,7 +3652,7 @@ Instead of replacing the whole template, we can use Twig's extends feature to ov
 {% endblock %}
 ```
 
-## Loading
+### Loading
 
 Blockstudio blocks are dynamic, meaning that they must be rendered on the server to be displayed in Gutenberg. This rendering is facilitated by a `fetch` call to the Blockstudio block renderer. Upon first opening the editor, each block fetches its respective template, which results in multiple requests depending on the number of blocks present on the page.
 
@@ -3685,7 +3685,7 @@ add_filter('blockstudio/settings/block_editor/disable_loading', function() {
 });
 ```
 
-## Programmatic Rendering
+### Programmatic Rendering
 
 With Gutenberg becoming the prominent instrument in creating easily editable websites for clients, it makes sense to create all necessary website areas as blocks. While this approach will cater to most, advanced users and specific use cases might need to use those existing blocks outside the editor.
 
@@ -3781,7 +3781,7 @@ echo bs_block([
 ]);
 ```
 
-## Interactivity
+### Interactivity
 
 Blockstudio supports the WordPress Interactivity API, which provides a standard way to add reactive, client-side behavior to your blocks. Set `interactivity` in your block.json and Blockstudio handles loading the API on both the frontend and in the editor.
 
@@ -3879,7 +3879,7 @@ Server-side state is available on the frontend only. WordPress serializes the st
 
 The Interactivity API is loaded inside the block editor iframe, so interactive directives work in editor previews. This includes `data-wp-context`, `data-wp-bind--`, `data-wp-on--*`, `data-wp-text`, and custom store actions defined in `script.js`.
 
-## SEO
+### SEO
 
 Blockstudio blocks are dynamic. The `save` function stores attribute data but no visible text in `post_content`. This means SEO plugins that analyze editor content won't see text from Blockstudio fields by default.
 
@@ -3926,7 +3926,7 @@ All other field types (number, color, toggle, files, etc.) are excluded from ana
 
 Fields listed in the block's `disabled` array are excluded from SEO analysis, matching frontend rendering behavior. When a field is disabled, it is neither rendered on the frontend nor included in the SEO content.
 
-### PHP Hooks
+#### PHP Hooks
 
 Below you'll find a list of all available PHP hooks that can be used to extend
 or adjust the functionality of the plugin.
@@ -4212,7 +4212,7 @@ add_filter('blockstudio/render/footer', function($content) {
 });
 ```
 
-### JavaScript Hooks
+#### JavaScript Hooks
 
 Blockstudio provides JavaScript hooks using the WordPress `@wordpress/hooks` package.
 
@@ -4599,7 +4599,296 @@ A full page template combining multiple block types:
 </div>
 ```
 
-## Pages
+### General
+
+Blockstudio lets you define WordPress pages and block patterns as files in your theme. Write HTML-like templates, and Blockstudio's parser converts them into native WordPress blocks.
+
+- Pages are synced to the database as WordPress posts, keeping your file templates and page content in sync.
+- Patterns are registered in memory via `register_block_pattern()`, available in the block inserter for users to place anywhere.
+
+Both features share the same HTML parser and block syntax.
+
+## Folder Structure
+
+```
+theme/
+├── pages/
+│   ├── about/
+│   │   ├── page.json
+│   │   └── index.php
+│   └── contact/
+│       ├── page.json
+│       └── index.twig
+└── patterns/
+    ├── hero/
+    │   ├── pattern.json
+    │   └── index.php
+    └── cta/
+        ├── pattern.json
+        └── index.blade.php
+```
+
+Each subfolder contains a JSON config file (`page.json` or `pattern.json`) and a template file.
+
+## Template Engines
+
+Templates can be written in PHP, Twig, or Blade:
+
+| File | Engine | Requirement |
+|------|--------|-------------|
+| `index.php` | PHP | None |
+| `index.twig` | Twig | Timber |
+| `index.blade.php` | Blade | jenssegers/blade |
+
+If multiple template files exist, the priority order is: `index.php` > `index.blade.php` > `index.twig`.
+
+Since templates are compiled at initialization time (before any request context), Twig and Blade templates don't have access to dynamic variables. They're useful for built-in functions and filters like `{{ "text"|upper }}` or `{{ strtoupper("text") }}`.
+
+## HTML to Block Mapping
+
+Standard HTML elements are automatically converted to the corresponding WordPress blocks.
+
+### Text
+
+| HTML | Block |
+|------|-------|
+| `<p>` | `core/paragraph` |
+| `<h1>` - `<h6>` | `core/heading` |
+| `<ul>` | `core/list` (unordered) |
+| `<ol>` | `core/list` (ordered) |
+| `<li>` | `core/list-item` |
+| `<blockquote>` | `core/quote` |
+| `<code>` | `core/code` |
+| `<pre>` | `core/preformatted` |
+
+### Media
+
+| HTML | Block |
+|------|-------|
+| `<img>` | `core/image` |
+| `<figure>` | `core/image` (with caption) |
+| `<audio>` | `core/audio` |
+| `<video>` | `core/video` |
+
+### Layout
+
+| HTML | Block |
+|------|-------|
+| `<div>`, `<section>` | `core/group` |
+| `<hr>` | `core/separator` |
+| `<details>` | `core/details` |
+| `<table>` | `core/table` |
+
+## Block Syntax
+
+For blocks that don't have a direct HTML equivalent, use the `<block>` element:
+
+```html
+<block name="core/cover" url="https://example.com/hero.jpg">
+  <h1>Welcome</h1>
+  <p>Content inside the cover block.</p>
+</block>
+```
+
+### Core Blocks
+
+```html
+<!-- Pullquote -->
+<block name="core/pullquote">
+  <p>An important quote.</p>
+</block>
+
+<!-- Verse -->
+<block name="core/verse">Roses are red,
+Violets are blue.</block>
+
+<!-- Cover -->
+<block name="core/cover" url="https://example.com/image.jpg">
+  <h2>Cover Title</h2>
+</block>
+
+<!-- Embed -->
+<block name="core/embed" url="https://youtube.com/watch?v=..." providerNameSlug="youtube" />
+
+<!-- Spacer -->
+<block name="core/spacer" height="50px" />
+
+<!-- Gallery -->
+<block name="core/gallery">
+  <img src="https://example.com/1.jpg" alt="Image 1" />
+  <img src="https://example.com/2.jpg" alt="Image 2" />
+</block>
+
+<!-- Columns -->
+<block name="core/columns">
+  <block name="core/column">
+    <h3>Column 1</h3>
+  </block>
+  <block name="core/column">
+    <h3>Column 2</h3>
+  </block>
+</block>
+
+<!-- Buttons -->
+<block name="core/buttons">
+  <block name="core/button" url="/get-started">Get Started</block>
+</block>
+
+<!-- Row (flex layout) -->
+<block name="core/group" layout='{"type":"flex","flexWrap":"nowrap"}'>
+  <p>Item 1</p>
+  <p>Item 2</p>
+</block>
+```
+
+### Custom Blocks
+
+The same syntax works for any registered block:
+
+```html
+<block name="blockstudio/section">
+  <h1>Welcome</h1>
+</block>
+
+<block name="acf/hero" title="Hero Title" background="dark">
+  <p>Inner content becomes InnerBlocks.</p>
+</block>
+```
+
+### Attributes
+
+HTML attributes on `<block>` elements are passed as block attributes. JSON values are supported:
+
+```html
+<block name="core/heading" level="3">Custom Heading</block>
+
+<block name="core/group" layout='{"type":"flex","orientation":"vertical"}'>
+  <p>Stacked content.</p>
+</block>
+
+<img src="https://example.com/photo.jpg" alt="Photo" width="800" height="400" />
+```
+
+## Custom Block Renderers
+
+The HTML parser uses a registry-based architecture. You can add custom renderers for any block using the `blockstudio/parser/renderers` filter:
+
+```php
+add_filter( 'blockstudio/parser/renderers', function( $renderers, $parser ) {
+    $renderers['acf/hero'] = function( $element, $attrs, $parser ) {
+        $inner_blocks = $parser->parse_children( $element );
+
+        return array(
+            'blockName'    => 'acf/hero',
+            'attrs'        => $attrs,
+            'innerBlocks'  => $inner_blocks,
+            'innerHTML'    => '',
+            'innerContent' => array(),
+        );
+    };
+
+    return $renderers;
+}, 10, 2 );
+```
+
+Then use it in any template:
+
+```html
+<block name="acf/hero" background="dark">
+  <h1>Welcome</h1>
+</block>
+```
+
+You can also override how core blocks are rendered:
+
+```php
+add_filter( 'blockstudio/parser/renderers', function( $renderers, $parser ) {
+    $renderers['core/paragraph'] = function( $element, $attrs, $parser ) {
+        $content = $parser->get_inner_html( $element );
+        $attrs['align'] = $attrs['align'] ?? 'center';
+
+        return array(
+            'blockName'    => 'core/paragraph',
+            'attrs'        => $attrs,
+            'innerBlocks'  => array(),
+            'innerHTML'    => '<p class="has-text-align-center">' . $content . '</p>',
+            'innerContent' => array( '<p class="has-text-align-center">' . $content . '</p>' ),
+        );
+    };
+
+    return $renderers;
+}, 10, 2 );
+```
+
+### Renderer Function Signature
+
+```php
+/*
+  @param DOMElement    $element The DOM element being parsed.
+  @param array         $attrs   Attributes from the element.
+  @param Html_Parser   $parser  The parser instance (for recursive parsing).
+  @return array|null   WordPress block array or null to skip.
+ /
+function my_renderer( DOMElement $element, array $attrs, $parser ): ?array {}
+```
+
+## Element Mapping
+
+By default, standard HTML elements like `<h1>`, `<p>`, and `<img>` map to core WordPress blocks. You can override this mapping to point any HTML element to a different block using the `blockstudio/parser/element_mapping` filter:
+
+```php
+add_filter( 'blockstudio/parser/element_mapping', function( $mapping ) {
+    $mapping['h1'] = 'custom/heading';
+    $mapping['h2'] = 'custom/heading';
+    $mapping['p']  = 'custom/paragraph';
+    $mapping['img'] = 'custom/image';
+
+    return $mapping;
+}, 10, 2 );
+```
+
+With this filter active, every `<h1>` in your templates will produce a `custom/heading` block instead of `core/heading`. The element's attributes are passed through to the target block. If a renderer is registered for the target block name, it will be used. Otherwise, a generic block structure is created.
+
+This is useful when your theme or plugin provides custom block types that should replace the defaults across all page and pattern templates.
+
+## Complete Example
+
+A full page template combining multiple block types:
+
+```html
+<div>
+  <h1>Welcome to Our Site</h1>
+  <p>This is an <strong>introduction</strong> with <em>formatting</em>.</p>
+
+  <block name="core/columns">
+    <block name="core/column">
+      <h3>Feature One</h3>
+      <p>First feature description.</p>
+    </block>
+    <block name="core/column">
+      <h3>Feature Two</h3>
+      <p>Second feature description.</p>
+    </block>
+  </block>
+
+  <block name="core/cover" url="https://example.com/hero.jpg">
+    <h2>Our Mission</h2>
+    <p>Building amazing things together.</p>
+  </block>
+
+  <details>
+    <summary>FAQ</summary>
+    <p>Answers to common questions.</p>
+  </details>
+
+  <block name="core/buttons">
+    <block name="core/button" url="/contact">Contact Us</block>
+    <block name="core/button" url="/learn-more">Learn More</block>
+  </block>
+</div>
+```
+
+### Pages
 
 Pages are file-based templates that sync to the WordPress database as posts. When you update a template file, Blockstudio detects the change and updates the corresponding page.
 
@@ -4961,7 +5250,7 @@ Blockstudio\Pages::lock('about');
 Blockstudio\Pages::unlock('about');
 ```
 
-## Patterns
+### Patterns
 
 Patterns are file-based templates registered as WordPress block patterns. They appear in the block inserter and can be placed anywhere by users.
 
@@ -5056,7 +5345,7 @@ $paths = Blockstudio\Patterns::get_registered_paths();
 | Template lock | Yes | No |
 | Use case | Predefined page content | Reusable block templates |
 
-## Hooks
+### Hooks
 
 Filters and actions available for customizing pages, patterns, and the HTML parser.
 
@@ -5173,7 +5462,7 @@ add_action( 'blockstudio/patterns/registered', function( $registry ) {
 } );
 ```
 
-## Tailwind CSS
+### Tailwind CSS
 
 Blockstudio includes built-in Tailwind CSS v4 support. When enabled, every frontend page is compiled server-side via TailwindPHP with automatic file-based caching. In the block editor, a bundled Tailwind CDN script provides live preview as you edit.
 
@@ -5535,7 +5824,7 @@ A complete working setup with custom theme colors and a block that uses them:
 
 This renders on the frontend with all Tailwind utilities and custom theme colors compiled into a single inline `<style>` tag.
 
-## Extensions
+### Extensions
 
 Extensions allow you to extend any registered block in your WordPress installation using a simple `.json` based API, which is similar to the `block.json` configuration. This includes core, third-party and blocks made with Blockstudio.
 
@@ -5726,7 +6015,7 @@ When using arrays, the `set` property will be applied to every item in the array
 
 When using the `attributes` field, there is no `set` property needed, as the field automatically maps the values to the attribute name and value.
 
-## Code Snippets
+### Code Snippets
 
 Although Blockstudio's main focus is on custom blocks, its file-first approach is also suitable for code snippets.
 
@@ -5763,20 +6052,103 @@ add_action('init', function () {
 
 Now, simply follow the setup instructions to register a code snippet inside the `assets` folder.
 
-## Developer Tools
+### Canvas
 
-When working with AI coding assistants, you often need to tell them which template file renders a specific element on the page. Blockstudio's developer tools provide a crosshair-style element selector that copies rich element context to your clipboard with a single gesture.
+The canvas provides a zoomed-out, Figma-like overview of all Blockstudio-managed pages. Each page renders as a live iframe artboard in a single horizontal row. Pan with your trackpad, zoom with pinch or Ctrl+scroll, and press Escape to exit.
 
 ## Activation
 
-The developer tools are gated behind a query parameter. Append `?blockstudio-devtools` to any frontend URL to enable them:
+Append `?blockstudio-canvas` to any frontend URL to enter the canvas:
+
+```
+https://example.com/?blockstudio-canvas
+https://example.com/my-page/?blockstudio-canvas
+```
+
+Without the query parameter, no canvas script is loaded.
+
+## Settings
+
+Enable the canvas and configure its behavior in your theme's `blockstudio.json`:
+
+```json
+{
+  "dev": {
+    "canvas": {
+      "enabled": true,
+      "adminBar": false
+    }
+  }
+}
+```
+
+| Property | Type | Default | Description |
+|----------|------|---------|-------------|
+| `enabled` | `boolean` | `false` | Enable the canvas feature. |
+| `adminBar` | `boolean` | `true` | Show the WordPress admin bar inside artboard iframes. Set to `false` for a cleaner preview. |
+
+Both settings are also available as filters:
+
+```php
+add_filter('blockstudio/settings/dev/canvas/enabled', '__return_true');
+add_filter('blockstudio/settings/dev/canvas/admin_bar', '__return_false');
+```
+
+## Controls
+
+| Action | Input |
+|--------|-------|
+| Pan | Scroll / trackpad two-finger drag |
+| Zoom | Ctrl+scroll or pinch |
+
+## Security
+
+The canvas script and page data are only loaded when all conditions are met:
+
+- The `?blockstudio-canvas` query parameter is present.
+- The `dev.canvas.enabled` setting is `true`.
+- The current user has the `edit_posts` capability.
+
+Public visitors never see the canvas script or page metadata.
+
+### Element Grabber
+
+When working with AI coding assistants, you often need to tell them which template file renders a specific element on the page. The element grabber provides a crosshair-style element selector that copies rich element context to your clipboard with a single gesture.
+
+## Activation
+
+The element grabber is gated behind a query parameter. Append `?blockstudio-devtools` to any frontend URL to enable it:
 
 ```
 https://example.com/?blockstudio-devtools
 https://example.com/?p=123&blockstudio-devtools
 ```
 
-Without the query parameter, no devtools script or data attributes are loaded.
+Without the query parameter, no script or data attributes are loaded.
+
+## Settings
+
+Enable the element grabber in your theme's `blockstudio.json`:
+
+```json
+{
+  "dev": {
+    "grab": {
+      "enabled": true
+    }
+  }
+}
+```
+
+| Property | Type | Default | Description |
+|----------|------|---------|-------------|
+| `enabled` | `boolean` | `false` | Enable the element grabber. |
+
+The setting is also available as a filter:
+
+```php
+add_filter('blockstudio/settings/dev/grab/enabled', '__return_true');
+```
 
 ## Usage
 
@@ -5812,14 +6184,15 @@ A lightweight vanilla TypeScript module (no React, no WordPress dependencies) is
 
 ## Security
 
-The `data-blockstudio-path` attribute and devtools script are only rendered when both conditions are met:
+The `data-blockstudio-path` attribute and grabber script are only rendered when all conditions are met:
 
 - The `?blockstudio-devtools` query parameter is present.
+- The `dev.grab.enabled` setting is `true`.
 - The current user has the `edit_posts` capability.
 
-Public visitors never see file paths or the devtools script.
+Public visitors never see file paths or the grabber script.
 
-## Composer
+### Composer
 
 Blockstudio is available as a Composer package. This is the recommended way to install it in managed WordPress projects.
 
@@ -5851,13 +6224,13 @@ The singleton pattern ensures only one instance runs, even if multiple plugins b
 ### Block Schema (blockstudio key from block.json)
 
 ```json
-{"definitions":{"Attribute":{"type":"object","required":["type"],"properties":{"id":{"type":"string","description":"A unique identifier for the field, which will be used get the value inside block templates. Must be unique within the current context."},"key":{"type":"string","description":"Another identifier that can be used to uniquely identify fields across different contexts. (inside repeaters etc.)"},"type":{"type":"string","enum":["attributes","checkbox","classes","code","color","date","datetime","files","gradient","icon","link","message","number","radio","range","select","tabs","text","textarea","toggle","repeater","richtext","unit","wysiwyg"]},"label":{"type":"string","description":"The label for the field."},"description":{"type":"string","description":"The description for the field. Will be displayed underneath the field."},"help":{"type":"string","description":"The help text for the field. Will be displayed in a tooltip next to the label."},"hidden":{"type":"boolean","description":"Whether to hide the field UI in the editor. This is handy when using the variations API."},"switch":{"type":"boolean","description":"Whether to display a switch that disables the field."},"conditions":{"type":"array","description":"Conditional logic detailing when the field should be displayed in the editor.","items":{"type":"array","items":{"type":"object","required":["operator"],"properties":{"id":{"type":"string","description":"ID of the field whose value will be used for the conditionally render it."},"operator":{"type":"string","description":"How the values should be compared.","enum":["==","!=","includes","!includes","empty","!empty","<",">","<=",">="]},"type":{"type":"string","description":"Condition type."},"value":{"type":["string","number","boolean"],"description":"Value that will be compared."}}}}}},"anyOf":[{"example":"attributes","description":"Renders data attribute inputs.","properties":{"type":{"const":"attributes"},"default":{"type":"array","description":"Default value that should be applied when first adding the block."},"fallback":{"type":"array","description":"Fallback value that that will display when field value is empty."},"link":{"type":"boolean","description":"Enables link selection from dropdown."},"media":{"type":"boolean","description":"Enables media selection from dropdown."}}},{"example":"option-multiple","description":"Renders a set of checkbox inputs.","properties":{"type":{"const":"checkbox"},"default":{"type":["array","string","number"],"description":"Default value that should be applied when first adding the block."},"fallback":{"type":["array","string","number"],"description":"Fallback value that that will display when field value is empty."},"options":{"type":"array","items":{"type":"object","properties":{"label":{"type":"string"},"value":{"type":["string","number"]}},"required":["value"]},"description":"Options to choose from."},"returnFormat":{"type":"string","description":"Specifies the return format value.","enum":["value","label","both"],"default":"value"},"populate":{"type":"object","properties":{"function":{"type":"string","description":"The function that should be executed."},"type":{"type":"string","enum":["query","function","custom","fetch"]},"query":{"type":"string","enum":["posts","users","terms"],"description":"Type of query that should be used to fetch data."},"arguments":{"type":["object","array"],"description":"Query or fetch arguments.","properties":{"urlSearch":{"type":"string","description":"Search URL when using the \"fetch\" type."}}},"custom":{"type":"string","description":"Custom data ID."},"position":{"type":"string","description":"How the data should be positioned in regards to the default options.","enum":["before","after"],"default":"after"},"returnFormat":{"type":"object","description":"Format of the returning data when using objects.","properties":{"value":{"type":"string"},"label":{"type":"string"}}}}}}},{"example":"single","description":"Renders a field to select CSS classes.","properties":{"type":{"const":"classes"},"default":{"type":["string"],"description":"Default value that should be applied when first adding the block."},"fallback":{"type":["string"],"description":"Fallback value that that will display when field value is empty."},"tailwind":{"type":"boolean","description":"Whether to enable Tailwind classes for this input field."}}},{"example":"single","description":"Renders a code editor.","properties":{"type":{"const":"code"},"default":{"type":"string","description":"Default value that should be applied when first adding the block."},"fallback":{"type":"string","description":"Fallback value that that will display when field value is empty."},"autoCompletion":{"type":"boolean","description":"Whether to enable autocompletion or not."},"foldGutter":{"type":"boolean","description":"Whether to show the fold gutter or not."},"height":{"type":"string","description":"The height of the editor."},"language":{"type":"string","description":"The language to use for syntax highlighting.","enum":["css","html","javascript","json","twig"]},"lineNumbers":{"type":"boolean","description":"Whether to display line numbers or not."},"maxHeight":{"type":"string","description":"The maximum height of the editor."},"minHeight":{"type":"string","description":"The minimum height of the editor."}}},{"example":"option","description":"Renders a color palette and color picker.","properties":{"type":{"const":"color"},"options":{"type":"array","default":{"type":"array","description":"Default value that should be applied when first adding the block."},"fallback":{"type":"array","description":"Fallback value that that will display when field value is empty."},"items":{"type":"object","properties":{"name":{"type":"string"},"value":{"type":"string"},"slug":{"type":"string"}},"description":"Options to choose from."}},"populate":{"type":"object","properties":{"function":{"type":"string","description":"The function that should be executed."},"type":{"type":"string","enum":["function","custom"]},"custom":{"type":"string","description":"Custom data ID."},"position":{"type":"string","description":"How the data should be positioned in regards to the default options.","enum":["before","after"],"default":"after"}}},"clearable":{"type":"boolean","description":"Whether the palette should have a clearing button or not."},"disableCustomColors":{"type":"boolean","description":"Whether to allow custom color or not."}}},{"example":"single","description":"Renders a date picker.","properties":{"type":{"const":"date"},"default":{"type":"string","description":"Default value that should be applied when first adding the block."},"fallback":{"type":"string","description":"Fallback value that that will display when field value is empty."},"startOfWeek":{"type":"number","description":"The day that the week should start on. 0 for Sunday, 1 for Monday, etc."}}},{"example":"single","description":"Renders a date and time picker.","properties":{"type":{"const":"datetime"},"default":{"type":"string","description":"Default value that should be applied when first adding the block."},"fallback":{"type":"string","description":"Fallback value that that will display when field value is empty."},"is12Hour":{"type":"boolean","description":"Whether we use a 12-hour clock. With a 12-hour clock, an AM/PM widget is displayed and the time format is assumed to be MM-DD-YYYY (as opposed to the default format DD-MM-YYYY)."}}},{"example":"files","description":"Renders a button to the media library. Picked items can be reordered inline.","properties":{"type":{"const":"files"},"default":{"type":["array","object","number"],"description":"Default value that should be applied when first adding the block."},"fallback":{"type":["array","object","number"],"description":"Fallback value that that will display when field value is empty."},"addToGallery":{"type":"boolean","description":"If true, the gallery media modal opens directly in the media library where the user can add additional images. If false the gallery media modal opens in the edit mode where the user can edit existing images, by reordering them, remove them, or change their attributes. Only applies if gallery === true."},"allowedTypes":{"type":["array","string"],"description":"Array with the types of the media to upload/select from the media library. Each type is a string that can contain the general mime type e.g: 'image', 'audio', 'text', or the complete mime type e.g: 'audio/mpeg', 'image/gif'. If allowedTypes is unset all mime types should be allowed."},"gallery":{"type":"boolean","description":"If true, the component will initiate all the states required to represent a gallery. By default, the media modal opens in the gallery edit frame, but that can be changed using the addToGalleryflag."},"max":{"type":"number","description":"Maximum amount of files that can be added."},"min":{"type":"number","description":"Minimum amount of files that can be added."},"multiple":{"type":"boolean","description":"Whether to allow multiple selections or not."},"size":{"type":"boolean","description":"Adds a media size dropdown to the field."},"textMediaButton":{"type":"string","description":"Media button text."},"title":{"type":"string","description":"Title displayed in the media modal."},"returnFormat":{"type":"string","description":"Specifies the return format value.","enum":["object","id","url"],"default":"object"},"returnSize":{"type":"string","description":"The media size to return when using the URL return format."}}},{"example":"option","description":"Renders a gradient palette and gradient picker","properties":{"type":{"const":"gradient"},"options":{"type":"array","default":{"type":"array","description":"Default value that should be applied when first adding the block."},"fallback":{"type":"array","description":"Fallback value that that will display when field value is empty."},"items":{"type":"object","properties":{"name":{"type":"string"},"value":{"type":"string"},"slug":{"type":"string"}},"description":"Options to choose from."}},"populate":{"type":"object","properties":{"function":{"type":"string","description":"The function that should be executed."},"type":{"type":"string","enum":["function","custom"]},"custom":{"type":"string","description":"Custom data ID."},"position":{"type":"string","description":"How the data should be positioned in regards to the default options.","enum":["before","after"],"default":"after"}}},"clearable":{"type":"boolean","description":"Whether the palette should have a clearing button or not."},"disableCustomGradients":{"type":"boolean","description":"Whether to allow custom color or not."}}},{"example":"icon","description":"Renders an SVG icon from an icon set.","properties":{"default":{"type":"object","description":"Default value that should be applied when first adding the block."},"fallback":{"type":"object","description":"Fallback value that that will display when field value is empty."},"type":{"const":"icon"},"sets":{"type":["array","string"],"description":"Which icon set to include. Leave empty to include all."},"subSets":{"type":["array","string"],"description":"Which sub icon set to include. Leave empty to include all."},"returnFormat":{"type":"string","description":"The format to return the icon in.","enum":["object","element"]}}},{"example":"link","description":"Renders a link control to choose internal or external links.","properties":{"type":{"const":"link"},"default":{"type":"object","description":"Default value that should be applied when first adding the block."},"fallback":{"type":"object","description":"Fallback value that that will display when field value is empty."},"hasRichPreviews":{"type":"boolean","description":"Whether rich previews should be shown when adding an URL."},"noDirectEntry":{"type":"boolean","description":"Whether to allow turning a URL-like search query directly into a link."},"noURLSuggestion":{"type":"boolean","description":"Whether to add a fallback suggestion which treats the search query as a URL."},"opensInNewTab":{"type":"boolean","description":"Adds a toggle control to the link modal."},"showSuggestions":{"type":"boolean","description":"Whether to present suggestions when typing the URL."},"textButton":{"type":"string","description":"Custom text that should be displayed inside the link button."},"withCreateSuggestion":{"type":"boolean","description":"Whether to allow creation of link value from suggestion."}}},{"description":"Renders a message with custom content.","properties":{"type":{"const":"message"},"default":{"type":"string","description":"Default value that should be applied when first adding the block."},"fallback":{"type":"string","description":"Fallback value that that will display when field value is empty."},"value":{"type":"string","description":"The message to display. Block and attribute data is available in bracket syntax, e.g.: The block title is <strong>{block.title}</strong> and the value of text is <strong>{attributes.text}</strong>"}}},{"example":"single","description":"Renders a number input.","properties":{"type":{"const":"number"},"default":{"type":"number","description":"Default value that should be applied when first adding the block."},"fallback":{"type":"number","description":"Fallback value that that will display when field value is empty."},"dragDirection":{"type":"string","description":"Determines the drag axis to increment/decrement the value.","enum":["n","e","s","w"]},"dragThreshold":{"type":"number","description":"If isDragEnabled is true, this controls the amount of px to have been dragged before the value changes."},"hideHTMLArrows":{"type":"boolean","description":"If true, the default input HTML arrows will be hidden."},"isShiftStepEnabled":{"type":"boolean","description":"If true, enables mouse drag gesture to increment/decrement the number value. Holding SHIFT while dragging will increase the value by the shiftStep."},"max":{"type":"number","description":"The maximum value length."},"min":{"type":"number","description":"Minimum value length."},"required":{"type":"boolean","description":"If true enforces a valid number within the control’s min/max range. If false allows an empty string as a valid value."},"shiftStep":{"type":"number","description":"Amount to increment by when the SHIFT key is held down. This shift value is a multiplier to the step value. For example, if the step value is 5, and shiftStep is 10, each jump would increment/decrement by 50."},"step":{"type":"number","description":"Amount by which the value is changed when incrementing/decrementing. It is also a factor in validation as value must be a multiple of step (offset by min, if specified) to be valid. Accepts the special string value any that voids the validation constraint and causes stepping actions to increment/decrement by 1."}}},{"example":"option","description":"Renders a set of radio inputs.","properties":{"type":{"const":"radio"},"default":{"type":["string","number"],"description":"Default value that should be applied when first adding the block."},"fallback":{"type":["string","number"],"description":"Fallback value that that will display when field value is empty."},"options":{"type":"array","items":{"type":"object","properties":{"label":{"type":"string"},"value":{"type":["string","number"]},"innerBlocks":{"type":"array","items":{"$ref":"#/definitions/Block"}}},"required":["value"]},"description":"Options to choose from."},"returnFormat":{"type":"string","description":"Specifies the return format value.","enum":["value","label","both"],"default":"value"},"populate":{"type":"object","properties":{"function":{"type":"string","description":"The function that should be executed."},"type":{"type":"string","enum":["query","function","custom","fetch"]},"query":{"type":"string","enum":["posts","users","terms"],"description":"Type of query that should be used to fetch data."},"arguments":{"type":["object","array"],"description":"Query or fetch arguments.","properties":{"urlSearch":{"type":"string","description":"Search URL when using the \"fetch\" type."}}},"custom":{"type":"string","description":"Custom data ID."},"position":{"type":"string","description":"How the data should be positioned in regards to the default options.","enum":["before","after"],"default":"after"},"returnFormat":{"type":"object","description":"Format of the returning data when using objects.","properties":{"value":{"type":"string"},"label":{"type":"string"}}}}}}},{"example":"single","description":"Renders a range input to set a numerical value between two points.","properties":{"type":{"const":"range"},"default":{"type":"number","description":"Default value that should be applied when first adding the block."},"fallback":{"type":"number","description":"Fallback value that that will display when field value is empty."},"allowReset":{"type":"boolean","description":"If this property is true, a button to reset the slider is rendered."},"initialPosition":{"type":"number","description":"The slider starting position, used when no value is passed. The initialPosition will be clamped between the provided min and max prop values."},"isShiftStepEnabled":{"type":"boolean","description":"If true, enables mouse drag gesture to increment/decrement the number value. Holding SHIFT while dragging will increase the value by the shiftStep."},"marks":{"type":"array","items":{"type":"object","properties":{"label":{"type":"string"},"value":{"type":"number"}}},"description":"Renders a visual representation of step ticks. Custom mark indicators can be provided by an Array."},"max":{"type":"number","description":"The maximum value length."},"min":{"type":"number","description":"Minimum value length."},"railColor":{"type":"string","description":"CSS color string to customize the rail element’s background."},"resetFallbackValue":{"type":"number","description":"The value to revert to if the Reset button is clicked (enabled by allowReset)"},"separatorType":{"type":"string","description":"Define if separator line under/above control row should be disabled or full width. By default it is placed below excluding underline the control icon.","enum":["none","fullWidth","topFullWidth"]},"shiftStep":{"type":"number","description":"Amount to increment by when the SHIFT key is held down. This shift value is a multiplier to the step value. For example, if the step value is 5, and shiftStep is 10, each jump would increment/decrement by 50."},"showTooltip":{"type":"boolean","description":"Forcing the Tooltip UI to show or hide. This is overridden to false when step is set to the special string value any."},"step":{"type":"number","description":"Amount by which the value is changed when incrementing/decrementing. It is also a factor in validation as value must be a multiple of step (offset by min, if specified) to be valid. Accepts the special string value any that voids the validation constraint and causes stepping actions to increment/decrement by 1."},"trackColor":{"type":"string","description":"CSS color string to customize the track element’s background."},"withInputField":{"type":"boolean","description":"Determines if the input number field will render next to the RangeControl. This is overridden to false when step is set to the special string value any."}}},{"example":["option","option-multiple"],"description":"Renders a select input with support for single or multiple selections.","properties":{"type":{"const":"select"},"default":{"type":["array","string","number"],"description":"Default value that should be applied when first adding the block."},"fallback":{"type":["array","string","number"],"description":"Fallback value that that will display when field value is empty."},"multiple":{"type":"boolean","description":"If true, multiple options can be selected. \"stylisedUi\" will be automatically enabled."},"options":{"type":"array","items":{"type":"object","properties":{"label":{"type":"string"},"value":{"type":["string","number"]},"innerBlocks":{"type":"array","items":{"$ref":"#/definitions/Block"}}},"required":["value"]},"description":"Options to choose from."},"returnFormat":{"type":"string","description":"Specifies the return format value.","enum":["value","label","both"],"default":"value"},"populate":{"type":"object","properties":{"fetch":{"type":"boolean","description":"If true, search value will be used to search through data. Only works with \"query\" type."},"function":{"type":"string","description":"The function that should be executed."},"type":{"type":"string","enum":["query","function","custom","fetch"]},"query":{"type":"string","enum":["posts","users","terms"],"description":"Type of query that should be used to fetch data."},"arguments":{"type":["object","array"],"description":"Query or fetch arguments.","properties":{"urlSearch":{"type":"string","description":"Search URL when using the \"fetch\" type."}}},"custom":{"type":"string","description":"Custom data ID."},"position":{"type":"string","description":"How the data should be positioned in regards to the default options.","enum":["before","after"],"default":"after"},"returnFormat":{"type":"object","description":"Format of the returning data when using objects.","properties":{"value":{"type":"string"},"label":{"type":"string"}}}}},"stylisedUi":{"type":"boolean","description":"Renders a stylised version of a select with the ability to search through items."},"allowNull":{"type":["boolean","string"],"description":"Allows the user to select an empty choice. If true, the label will be empty, otherwise the option will render the specified string."},"allowReset":{"type":"boolean","description":"If this property is true, a button to reset the select is rendered."}}},{"description":"Renders a tabbed interface for grouping fields.","properties":{"type":{"const":"tabs"},"tabs":{"type":"array","description":"The tabs to display.","items":{"type":"object","required":["title"],"properties":{"title":{"type":"string","description":"The title of the tab."},"attributes":{"type":"array","description":"Custom attributes that will be applied to the block.","items":{"$ref":"#/definitions/Attribute"}},"conditions":{"type":"array","description":"Conditional logic detailing when the field should be displayed in the editor.","items":{"type":"array","items":{"type":"object","required":["operator"],"properties":{"id":{"type":"string","description":"ID of the field whose value will be used for the conditionally render it."},"operator":{"type":"string","description":"How the values should be compared.","enum":["==","!=","includes","!includes","empty","!empty","<",">","<=",">="]},"type":{"type":"string","description":"Condition type."},"value":{"type":["string","number","boolean"],"description":"Value that will be compared."}}}}},"blockEditor":{"type":"object","description":"Block specific options for rendering inside the Block Editor.","properties":{"disableLoading":{"type":"boolean","description":"Whether the block should should load inside the Block Editor or show a placeholder."}}},"editor":{"type":"object","description":"Block specific options for the editor.","properties":{"assets":{"type":"array","description":"List of WordPress script or style handles that should be added to the preview.","items":{"type":"string"}}}},"icon":{"type":"string","description":"Custom SVG icon to be displayed inside the editor."},"innerBlocks":{"type":"string","description":"HTML content that will be rendered as the inner blocks."},"override":{"type":"boolean","description":"Whether this block should overwrite another block."},"refreshOn":{"type":"array","description":"When the block should refresh. This is useful when the block relies on external data like custom fields.","items":{"type":"string"}},"transforms":{"type":"object","description":"Custom block transforms.","properties":{"from":{"type":"array","items":{"type":"object","properties":{"type":{"type":"string","enum":["block","enter","prefix"]},"blocks":{"type":"array","items":{"type":"string"}},"regExp":{"type":"string"},"prefix":{"type":"string"}},"required":["type"],"additionalProperties":false}}},"required":["from"],"additionalProperties":false}}}}}},{"example":"single","description":"Renders a single line text input.","properties":{"type":{"const":"text"},"default":{"type":"string","description":"Default value that should be applied when first adding the block."},"fallback":{"type":"string","description":"Fallback value that that will display when field value is empty."},"max":{"type":"number","description":"The maximum value length."},"min":{"type":"number","description":"Minimum value length."}}},{"example":"single","description":"Renders a textarea input.","properties":{"type":{"const":"textarea"},"default":{"type":"string","description":"Default value that should be applied when first adding the block."},"fallback":{"type":"string","description":"Fallback value that that will display when field value is empty."},"max":{"type":"number","description":"The maximum value length."},"min":{"type":"number","description":"Minimum value length."},"rows":{"type":"number","description":"The number of rows the textarea should contain."}}},{"example":"toggle","description":"Renders a true/false toggle.","properties":{"type":{"const":"toggle"},"default":{"type":"boolean","description":"Default value that should be applied when first adding the block."},"fallback":{"type":"boolean","description":"Fallback value that that will display when field value is empty."}}},{"example":"single","description":"Attribute field for RichText fields.","properties":{"type":{"const":"richtext"},"default":{"type":"string","description":"Default value that should be applied when first adding the block."},"fallback":{"type":"string","description":"Fallback value that that will display when field value is empty."}}},{"example":"single","description":"Renders a number input with a unit dropdown.","properties":{"type":{"const":"unit"},"default":{"type":"string","description":"Default value that should be applied when first adding the block."},"fallback":{"type":"string","description":"Fallback value that that will display when field value is empty."},"disableUnits":{"type":"boolean","description":"If true, the unit select field is hidden."},"isPressEnterToChange":{"type":"boolean","description":"If true, the ENTER key press is required in order to trigger an onChange. If enabled, a change is also triggered when tabbing away."},"isResetValueOnUnitChange":{"type":"boolean","description":"If true, and the selected unit provides a default value, this value is set when changing units."},"isUnitSelectTabbable":{"type":"boolean","description":"Determines if the unit select field is tabbable."},"units":{"type":"array","default":{"type":"array","description":"Default value that should be applied when first adding the block."},"fallback":{"type":"array","description":"Fallback value that that will display when field value is empty."},"items":{"type":"object","properties":{"default":{"type":"number"},"label":{"type":"string"},"value":{"type":"string"}}}}}},{"example":"single","description":"Renders a WYSIWYG editor.","properties":{"type":{"const":"wysiwyg"},"default":{"type":"string","description":"Default value that should be applied when first adding the block."},"fallback":{"type":"string","description":"Fallback value that that will display when field value is empty."},"toolbar":{"type":"object","description":"The toolbar configuration for the editor.","properties":{"tags":{"type":"object","description":"Which HTML tags are allowed.","properties":{"headings":{"type":"array","description":"Which HTML headings levels are allowed."}}},"formats":{"type":"object","description":"Which text formats are allowed.","properties":{"bold":{"type":"boolean","description":"Whether bold text format is allowed."},"italic":{"type":"boolean","description":"Whether italic text format is allowed."},"orderedList":{"type":"boolean","description":"Whether ordered list text format is allowed."},"strikethrough":{"type":"boolean","description":"Whether strikethrough text format is allowed."},"underline":{"type":"boolean","description":"Whether underline text format is allowed."},"unorderedList":{"type":"boolean","description":"Whether unordered list text format is allowed."},"textAlign":{"type":"object","description":"Which text alignment formats are allowed.","properties":{"alignments":{"type":"array","description":"Which text alignments are allowed.","items":{"type":"string","enum":["left","center","right","justify"]}}}}}}}}}}]},"Block":{"type":"object","properties":{"name":{"type":"string"},"innerBlocks":{"type":"array","items":{"$ref":"#/definitions/Block"}},"attributes":{"type":"object","additionalProperties":true}},"required":["name"]}},"blockstudio":{"type":["object","boolean"],"description":"Blockstudio specific settings.","properties":{"attributes":{"type":"array","description":"Custom attributes that will be applied to the block.","items":{"_note":"All field types from definitions.Attribute apply here, plus these additional types:","additionalTypes":[{"description":"Renders multiple fields in an (optionally) collapsible container.","properties":{"type":{"const":"group"},"title":{"type":"string","description":"Title text. It shows even when the component is closed."},"opened":{"type":"boolean","description":"When set to true, the component will remain open regardless of the initialOpen prop and the"},"initialOpen":{"type":"boolean","description":"Whether or not the panel will start open."},"scrollAfterOpen":{"type":"boolean","description":"Scrolls the content into view when visible."},"class":{"type":"string","description":"Custom CSS class that will be applied to the group."},"style":{"type":"object","description":"Custom CSS styles that will be applied to the group."},"attributes":{"type":"array","description":"Same field types as the top-level attributes."}}},{"description":"Renders a set of fields that can be repeated.","properties":{"type":{"const":"repeater"},"min":{"type":"number","description":"Minimum amount of rows."},"max":{"type":"number","description":"Maximum amount of rows."},"textButton":{"type":"string","description":"Text for the add button."},"textMinimized":{"type":["string","object"],"description":"Text that will be displayed when rows are minimized.","properties":{"id":{"type":"string","description":"ID of the attribute which should be used as the text."},"fallback":{"type":"string","description":"Fallback text if the attribute is not set."},"prefix":{"type":"string","description":"Prefix for the text."},"suffix":{"type":"string","description":"Suffix for the text."}}},"textRemove":{"type":["string","boolean"],"description":"Text to display in alert when removing repeater row."},"attributes":{"type":"array","description":"Same field types as the top-level attributes."}}}]}},"conditions":{"type":"array","description":"Conditional logic detailing when the field should be displayed in the editor.","items":{"type":"array","items":{"type":"object","required":["operator"],"properties":{"id":{"type":"string","description":"ID of the field whose value will be used for the conditionally render it."},"operator":{"type":"string","description":"How the values should be compared.","enum":["==","!=","includes","!includes","empty","!empty","<",">","<=",">="]},"type":{"type":"string","description":"Condition type."},"value":{"type":["string","number","boolean"],"description":"Value that will be compared."}}}}},"blockEditor":{"type":"object","description":"Block specific options for rendering inside the Block Editor.","properties":{"disableLoading":{"type":"boolean","description":"Whether the block should should load inside the Block Editor or show a placeholder."}}},"editor":{"type":"object","description":"Block specific options for the editor.","properties":{"assets":{"type":"array","description":"List of WordPress script or style handles that should be added to the preview.","items":{"type":"string"}}}},"icon":{"type":"string","description":"Custom SVG icon to be displayed inside the editor."},"innerBlocks":{"type":"string","description":"HTML content that will be rendered as the inner blocks."},"override":{"type":"boolean","description":"Whether this block should overwrite another block."},"refreshOn":{"type":"array","description":"When the block should refresh. This is useful when the block relies on external data like custom fields.","items":{"type":"string"}},"transforms":{"type":"object","description":"Custom block transforms.","properties":{"from":{"type":"array","items":{"type":"object","properties":{"type":{"type":"string","enum":["block","enter","prefix"]},"blocks":{"type":"array","items":{"type":"string"}},"regExp":{"type":"string"},"prefix":{"type":"string"}},"required":["type"],"additionalProperties":false}}},"required":["from"],"additionalProperties":false}},"additionalProperties":false}}
+{"definitions":{"Attribute":{"type":"object","required":["type"],"properties":{"id":{"type":"string","description":"A unique identifier for the field, which will be used get the value inside block templates. Must be unique within the current context."},"key":{"type":"string","description":"Another identifier that can be used to uniquely identify fields across different contexts. (inside repeaters etc.)"},"type":{"type":"string","anyOf":[{"enum":["attributes","checkbox","classes","code","color","date","datetime","files","gradient","icon","link","message","number","radio","range","select","tabs","text","textarea","toggle","repeater","richtext","unit","wysiwyg"]},{"pattern":"^custom/.+$","description":"Custom field reference in format 'custom/{name}'."}]},"label":{"type":"string","description":"The label for the field."},"description":{"type":"string","description":"The description for the field. Will be displayed underneath the field."},"help":{"type":"string","description":"The help text for the field. Will be displayed in a tooltip next to the label."},"hidden":{"type":"boolean","description":"Whether to hide the field UI in the editor. This is handy when using the variations API."},"storage":{"type":"object","description":"Configure where the field value should be stored.","properties":{"type":{"type":["string","array"],"description":"Storage location(s). Can be a single type or array of types.","enum":["block","postMeta","option"]},"postMetaKey":{"type":"string","description":"Custom meta key for post meta storage. Defaults to {block_name}_{field_id}."},"optionKey":{"type":"string","description":"Custom option key for options storage. Defaults to {block_name}_{field_id}."}}},"switch":{"type":"boolean","description":"Display a toggle that can disable the field. Shows an eye icon in the field label. Defaults to false.","default":false},"idStructure":{"type":"string","description":"ID pattern for expanded custom fields. Use {id} as placeholder for the original field ID.","default":"{id}","example":"hero_{id}"},"overrides":{"type":"object","description":"Per-field property overrides for custom fields. Keys are original field IDs from the field definition.","additionalProperties":{"type":"object"}},"conditions":{"type":"array","description":"Conditional logic detailing when the field should be displayed in the editor.","items":{"type":"array","items":{"type":"object","required":["operator"],"properties":{"id":{"type":"string","description":"ID of the field whose value will be used for the conditionally render it."},"operator":{"type":"string","description":"How the values should be compared.","enum":["==","!=","includes","!includes","empty","!empty","<",">","<=",">="]},"type":{"type":"string","description":"Condition type."},"value":{"type":["string","number","boolean"],"description":"Value that will be compared."}}}}}},"anyOf":[{"example":"attributes","description":"Renders data attribute inputs.","properties":{"type":{"const":"attributes"},"default":{"type":"array","description":"Default value that should be applied when first adding the block."},"fallback":{"type":"array","description":"Fallback value that that will display when field value is empty."},"link":{"type":"boolean","description":"Enables link selection from dropdown."},"media":{"type":"boolean","description":"Enables media selection from dropdown."}}},{"example":"option-multiple","description":"Renders a set of checkbox inputs.","properties":{"type":{"const":"checkbox"},"default":{"type":["array","string","number"],"description":"Default value that should be applied when first adding the block."},"fallback":{"type":["array","string","number"],"description":"Fallback value that that will display when field value is empty."},"options":{"type":"array","items":{"type":"object","properties":{"label":{"type":"string"},"value":{"type":["string","number"]}},"required":["value"]},"description":"Options to choose from."},"returnFormat":{"type":"string","description":"Specifies the return format value.","enum":["value","label","both"],"default":"value"},"populate":{"type":"object","properties":{"function":{"type":"string","description":"The function that should be executed."},"type":{"type":"string","enum":["query","function","custom","fetch"]},"query":{"type":"string","enum":["posts","users","terms"],"description":"Type of query that should be used to fetch data."},"arguments":{"type":["object","array"],"description":"Query or fetch arguments.","properties":{"urlSearch":{"type":"string","description":"Search URL when using the \"fetch\" type."}}},"custom":{"type":"string","description":"Custom data ID."},"position":{"type":"string","description":"How the data should be positioned in regards to the default options.","enum":["before","after"],"default":"after"},"returnFormat":{"type":"object","description":"Format of the returning data when using objects.","properties":{"value":{"type":"string"},"label":{"type":"string"}}}}}}},{"example":"single","description":"Renders a field to select CSS classes.","properties":{"type":{"const":"classes"},"default":{"type":["string"],"description":"Default value that should be applied when first adding the block."},"fallback":{"type":["string"],"description":"Fallback value that that will display when field value is empty."},"tailwind":{"type":"boolean","description":"Whether to enable Tailwind classes for this input field."}}},{"example":"single","description":"Renders a code editor.","properties":{"type":{"const":"code"},"default":{"type":"string","description":"Default value that should be applied when first adding the block."},"fallback":{"type":"string","description":"Fallback value that that will display when field value is empty."},"autoCompletion":{"type":"boolean","description":"Whether to enable autocompletion or not."},"foldGutter":{"type":"boolean","description":"Whether to show the fold gutter or not."},"height":{"type":"string","description":"The height of the editor."},"language":{"type":"string","description":"The language to use for syntax highlighting.","enum":["css","html","javascript","json","twig"]},"lineNumbers":{"type":"boolean","description":"Whether to display line numbers or not."},"maxHeight":{"type":"string","description":"The maximum height of the editor."},"minHeight":{"type":"string","description":"The minimum height of the editor."},"popout":{"type":"boolean","description":"Whether to show a button that opens the editor in a popup window."}}},{"example":"option","description":"Renders a color palette and color picker.","properties":{"type":{"const":"color"},"options":{"type":"array","default":{"type":"array","description":"Default value that should be applied when first adding the block."},"fallback":{"type":"array","description":"Fallback value that that will display when field value is empty."},"items":{"type":"object","properties":{"name":{"type":"string"},"value":{"type":"string"},"slug":{"type":"string"}},"description":"Options to choose from."}},"populate":{"type":"object","properties":{"function":{"type":"string","description":"The function that should be executed."},"type":{"type":"string","enum":["function","custom"]},"custom":{"type":"string","description":"Custom data ID."},"position":{"type":"string","description":"How the data should be positioned in regards to the default options.","enum":["before","after"],"default":"after"}}},"clearable":{"type":"boolean","description":"Whether the palette should have a clearing button or not."},"disableCustomColors":{"type":"boolean","description":"Whether to allow custom color or not."}}},{"example":"single","description":"Renders a date picker.","properties":{"type":{"const":"date"},"default":{"type":"string","description":"Default value that should be applied when first adding the block."},"fallback":{"type":"string","description":"Fallback value that that will display when field value is empty."},"startOfWeek":{"type":"number","description":"The day that the week should start on. 0 for Sunday, 1 for Monday, etc."}}},{"example":"single","description":"Renders a date and time picker.","properties":{"type":{"const":"datetime"},"default":{"type":"string","description":"Default value that should be applied when first adding the block."},"fallback":{"type":"string","description":"Fallback value that that will display when field value is empty."},"is12Hour":{"type":"boolean","description":"Whether we use a 12-hour clock. With a 12-hour clock, an AM/PM widget is displayed and the time format is assumed to be MM-DD-YYYY (as opposed to the default format DD-MM-YYYY)."}}},{"example":"files","description":"Renders a button to the media library. Picked items can be reordered inline.","properties":{"type":{"const":"files"},"default":{"type":["array","object","number"],"description":"Default value that should be applied when first adding the block."},"fallback":{"type":["array","object","number"],"description":"Fallback value that that will display when field value is empty."},"addToGallery":{"type":"boolean","description":"If true, the gallery media modal opens directly in the media library where the user can add additional images. If false the gallery media modal opens in the edit mode where the user can edit existing images, by reordering them, remove them, or change their attributes. Only applies if gallery === true."},"allowedTypes":{"type":["array","string"],"description":"Array with the types of the media to upload/select from the media library. Each type is a string that can contain the general mime type e.g: 'image', 'audio', 'text', or the complete mime type e.g: 'audio/mpeg', 'image/gif'. If allowedTypes is unset all mime types should be allowed."},"gallery":{"type":"boolean","description":"If true, the component will initiate all the states required to represent a gallery. By default, the media modal opens in the gallery edit frame, but that can be changed using the addToGalleryflag."},"max":{"type":"number","description":"Maximum amount of files that can be added."},"min":{"type":"number","description":"Minimum amount of files that can be added."},"multiple":{"type":"boolean","description":"Whether to allow multiple selections or not."},"size":{"type":"boolean","description":"Adds a media size dropdown to the field."},"textMediaButton":{"type":"string","description":"Media button text."},"title":{"type":"string","description":"Title displayed in the media modal."},"returnFormat":{"type":"string","description":"Specifies the return format value.","enum":["object","id","url"],"default":"object"},"returnSize":{"type":"string","description":"The media size to return when using the URL return format."}}},{"example":"option","description":"Renders a gradient palette and gradient picker","properties":{"type":{"const":"gradient"},"options":{"type":"array","default":{"type":"array","description":"Default value that should be applied when first adding the block."},"fallback":{"type":"array","description":"Fallback value that that will display when field value is empty."},"items":{"type":"object","properties":{"name":{"type":"string"},"value":{"type":"string"},"slug":{"type":"string"}},"description":"Options to choose from."}},"populate":{"type":"object","properties":{"function":{"type":"string","description":"The function that should be executed."},"type":{"type":"string","enum":["function","custom"]},"custom":{"type":"string","description":"Custom data ID."},"position":{"type":"string","description":"How the data should be positioned in regards to the default options.","enum":["before","after"],"default":"after"}}},"clearable":{"type":"boolean","description":"Whether the palette should have a clearing button or not."},"disableCustomGradients":{"type":"boolean","description":"Whether to allow custom color or not."}}},{"example":"icon","description":"Renders an SVG icon from an icon set.","properties":{"default":{"type":"object","description":"Default value that should be applied when first adding the block."},"fallback":{"type":"object","description":"Fallback value that that will display when field value is empty."},"type":{"const":"icon"},"sets":{"type":["array","string"],"description":"Which icon set to include. Leave empty to include all."},"subSets":{"type":["array","string"],"description":"Which sub icon set to include. Leave empty to include all."},"returnFormat":{"type":"string","description":"The format to return the icon in.","enum":["object","element"]}}},{"example":"link","description":"Renders a link control to choose internal or external links.","properties":{"type":{"const":"link"},"default":{"type":"object","description":"Default value that should be applied when first adding the block."},"fallback":{"type":"object","description":"Fallback value that that will display when field value is empty."},"hasRichPreviews":{"type":"boolean","description":"Whether rich previews should be shown when adding an URL."},"noDirectEntry":{"type":"boolean","description":"Whether to allow turning a URL-like search query directly into a link."},"noURLSuggestion":{"type":"boolean","description":"Whether to add a fallback suggestion which treats the search query as a URL."},"opensInNewTab":{"type":"boolean","description":"Adds a toggle control to the link modal."},"showSuggestions":{"type":"boolean","description":"Whether to present suggestions when typing the URL."},"textButton":{"type":"string","description":"Custom text that should be displayed inside the link button."},"withCreateSuggestion":{"type":"boolean","description":"Whether to allow creation of link value from suggestion."}}},{"description":"Renders a message with custom content.","properties":{"type":{"const":"message"},"default":{"type":"string","description":"Default value that should be applied when first adding the block."},"fallback":{"type":"string","description":"Fallback value that that will display when field value is empty."},"value":{"type":"string","description":"The message to display. Block and attribute data is available in bracket syntax, e.g.: `{block.title}` or `{attributes.text}`"}}},{"example":"single","description":"Renders a number input.","properties":{"type":{"const":"number"},"default":{"type":"number","description":"Default value that should be applied when first adding the block."},"fallback":{"type":"number","description":"Fallback value that that will display when field value is empty."},"dragDirection":{"type":"string","description":"Determines the drag axis to increment/decrement the value.","enum":["n","e","s","w"]},"dragThreshold":{"type":"number","description":"If isDragEnabled is true, this controls the amount of px to have been dragged before the value changes."},"hideHTMLArrows":{"type":"boolean","description":"If true, the default input HTML arrows will be hidden."},"isShiftStepEnabled":{"type":"boolean","description":"If true, enables mouse drag gesture to increment/decrement the number value. Holding SHIFT while dragging will increase the value by the shiftStep."},"max":{"type":"number","description":"The maximum value length."},"min":{"type":"number","description":"Minimum value length."},"required":{"type":"boolean","description":"If true enforces a valid number within the control’s min/max range. If false allows an empty string as a valid value."},"shiftStep":{"type":"number","description":"Amount to increment by when the SHIFT key is held down. This shift value is a multiplier to the step value. For example, if the step value is 5, and shiftStep is 10, each jump would increment/decrement by 50."},"step":{"type":"number","description":"Amount by which the value is changed when incrementing/decrementing. It is also a factor in validation as value must be a multiple of step (offset by min, if specified) to be valid. Accepts the special string value any that voids the validation constraint and causes stepping actions to increment/decrement by 1."}}},{"example":"option","description":"Renders a set of radio inputs.","properties":{"type":{"const":"radio"},"default":{"type":["string","number"],"description":"Default value that should be applied when first adding the block."},"fallback":{"type":["string","number"],"description":"Fallback value that that will display when field value is empty."},"options":{"type":"array","items":{"type":"object","properties":{"label":{"type":"string"},"value":{"type":["string","number"]},"innerBlocks":{"type":"array","items":{"$ref":"#/definitions/Block"}}},"required":["value"]},"description":"Options to choose from."},"returnFormat":{"type":"string","description":"Specifies the return format value.","enum":["value","label","both"],"default":"value"},"populate":{"type":"object","properties":{"function":{"type":"string","description":"The function that should be executed."},"type":{"type":"string","enum":["query","function","custom","fetch"]},"query":{"type":"string","enum":["posts","users","terms"],"description":"Type of query that should be used to fetch data."},"arguments":{"type":["object","array"],"description":"Query or fetch arguments.","properties":{"urlSearch":{"type":"string","description":"Search URL when using the \"fetch\" type."}}},"custom":{"type":"string","description":"Custom data ID."},"position":{"type":"string","description":"How the data should be positioned in regards to the default options.","enum":["before","after"],"default":"after"},"returnFormat":{"type":"object","description":"Format of the returning data when using objects.","properties":{"value":{"type":"string"},"label":{"type":"string"}}}}}}},{"example":"single","description":"Renders a range input to set a numerical value between two points.","properties":{"type":{"const":"range"},"default":{"type":"number","description":"Default value that should be applied when first adding the block."},"fallback":{"type":"number","description":"Fallback value that that will display when field value is empty."},"allowReset":{"type":"boolean","description":"If this property is true, a button to reset the slider is rendered."},"initialPosition":{"type":"number","description":"The slider starting position, used when no value is passed. The initialPosition will be clamped between the provided min and max prop values."},"isShiftStepEnabled":{"type":"boolean","description":"If true, enables mouse drag gesture to increment/decrement the number value. Holding SHIFT while dragging will increase the value by the shiftStep."},"marks":{"type":"array","items":{"type":"object","properties":{"label":{"type":"string"},"value":{"type":"number"}}},"description":"Renders a visual representation of step ticks. Custom mark indicators can be provided by an Array."},"max":{"type":"number","description":"The maximum value length."},"min":{"type":"number","description":"Minimum value length."},"railColor":{"type":"string","description":"CSS color string to customize the rail element’s background."},"resetFallbackValue":{"type":"number","description":"The value to revert to if the Reset button is clicked (enabled by allowReset)"},"separatorType":{"type":"string","description":"Define if separator line under/above control row should be disabled or full width. By default it is placed below excluding underline the control icon.","enum":["none","fullWidth","topFullWidth"]},"shiftStep":{"type":"number","description":"Amount to increment by when the SHIFT key is held down. This shift value is a multiplier to the step value. For example, if the step value is 5, and shiftStep is 10, each jump would increment/decrement by 50."},"showTooltip":{"type":"boolean","description":"Forcing the Tooltip UI to show or hide. This is overridden to false when step is set to the special string value any."},"step":{"type":"number","description":"Amount by which the value is changed when incrementing/decrementing. It is also a factor in validation as value must be a multiple of step (offset by min, if specified) to be valid. Accepts the special string value any that voids the validation constraint and causes stepping actions to increment/decrement by 1."},"trackColor":{"type":"string","description":"CSS color string to customize the track element’s background."},"withInputField":{"type":"boolean","description":"Determines if the input number field will render next to the RangeControl. This is overridden to false when step is set to the special string value any."}}},{"example":["option","option-multiple"],"description":"Renders a select input with support for single or multiple selections.","properties":{"type":{"const":"select"},"default":{"type":["array","string","number"],"description":"Default value that should be applied when first adding the block."},"fallback":{"type":["array","string","number"],"description":"Fallback value that that will display when field value is empty."},"multiple":{"type":"boolean","description":"If true, multiple options can be selected. \"stylisedUi\" will be automatically enabled."},"options":{"type":"array","items":{"type":"object","properties":{"label":{"type":"string"},"value":{"type":["string","number"]},"innerBlocks":{"type":"array","items":{"$ref":"#/definitions/Block"}}},"required":["value"]},"description":"Options to choose from."},"returnFormat":{"type":"string","description":"Specifies the return format value.","enum":["value","label","both"],"default":"value"},"populate":{"type":"object","properties":{"fetch":{"type":"boolean","description":"If true, search value will be used to search through data. Only works with \"query\" type."},"function":{"type":"string","description":"The function that should be executed."},"type":{"type":"string","enum":["query","function","custom","fetch"]},"query":{"type":"string","enum":["posts","users","terms"],"description":"Type of query that should be used to fetch data."},"arguments":{"type":["object","array"],"description":"Query or fetch arguments.","properties":{"urlSearch":{"type":"string","description":"Search URL when using the \"fetch\" type."}}},"custom":{"type":"string","description":"Custom data ID."},"position":{"type":"string","description":"How the data should be positioned in regards to the default options.","enum":["before","after"],"default":"after"},"returnFormat":{"type":"object","description":"Format of the returning data when using objects.","properties":{"value":{"type":"string"},"label":{"type":"string"}}}}},"stylisedUi":{"type":"boolean","description":"Renders a stylised version of a select with the ability to search through items."},"allowNull":{"type":["boolean","string"],"description":"Allows the user to select an empty choice. If true, the label will be empty, otherwise the option will render the specified string."},"allowReset":{"type":"boolean","description":"If this property is true, a button to reset the select is rendered."}}},{"description":"Renders a tabbed interface for grouping fields.","properties":{"type":{"const":"tabs"},"tabs":{"type":"array","description":"The tabs to display.","items":{"type":"object","required":["title"],"properties":{"title":{"type":"string","description":"The title of the tab."},"attributes":{"type":"array","description":"Custom attributes that will be applied to the block.","items":{"$ref":"#/definitions/Attribute"}},"conditions":{"type":"array","description":"Conditional logic detailing when the field should be displayed in the editor.","items":{"type":"array","items":{"type":"object","required":["operator"],"properties":{"id":{"type":"string","description":"ID of the field whose value will be used for the conditionally render it."},"operator":{"type":"string","description":"How the values should be compared.","enum":["==","!=","includes","!includes","empty","!empty","<",">","<=",">="]},"type":{"type":"string","description":"Condition type."},"value":{"type":["string","number","boolean"],"description":"Value that will be compared."}}}}},"blockEditor":{"type":"object","description":"Block specific options for rendering inside the Block Editor.","properties":{"disableLoading":{"type":"boolean","description":"Whether the block should should load inside the Block Editor or show a placeholder."}}},"editor":{"type":"object","description":"Block specific options for the editor.","properties":{"assets":{"type":"array","description":"List of WordPress script or style handles that should be added to the preview.","items":{"type":"string"}}}},"interactivity":{"oneOf":[{"type":"boolean"},{"type":"object","properties":{"enqueue":{"type":"boolean","description":"Enqueue the Interactivity API."}}}],"description":"Enable the WordPress Interactivity API for this block."},"icon":{"type":"string","description":"Custom SVG icon to be displayed inside the editor."},"innerBlocks":{"type":"string","description":"HTML content that will be rendered as the inner blocks."},"override":{"type":"boolean","description":"Whether this block should overwrite another block."},"refreshOn":{"type":"array","description":"When the block should refresh. This is useful when the block relies on external data like custom fields.","items":{"type":"string"}},"transforms":{"type":"object","description":"Custom block transforms.","properties":{"from":{"type":"array","items":{"type":"object","properties":{"type":{"type":"string","enum":["block","enter","prefix"]},"blocks":{"type":"array","items":{"type":"string"}},"regExp":{"type":"string"},"prefix":{"type":"string"}},"required":["type"],"additionalProperties":false}}},"required":["from"],"additionalProperties":false}}}}}},{"example":"single","description":"Renders a single line text input.","properties":{"type":{"const":"text"},"default":{"type":"string","description":"Default value that should be applied when first adding the block."},"fallback":{"type":"string","description":"Fallback value that that will display when field value is empty."},"max":{"type":"number","description":"The maximum value length."},"min":{"type":"number","description":"Minimum value length."}}},{"example":"single","description":"Renders a textarea input.","properties":{"type":{"const":"textarea"},"default":{"type":"string","description":"Default value that should be applied when first adding the block."},"fallback":{"type":"string","description":"Fallback value that that will display when field value is empty."},"max":{"type":"number","description":"The maximum value length."},"min":{"type":"number","description":"Minimum value length."},"rows":{"type":"number","description":"The number of rows the textarea should contain."}}},{"example":"toggle","description":"Renders a true/false toggle.","properties":{"type":{"const":"toggle"},"default":{"type":"boolean","description":"Default value that should be applied when first adding the block."},"fallback":{"type":"boolean","description":"Fallback value that that will display when field value is empty."}}},{"example":"single","description":"Attribute field for RichText fields.","properties":{"type":{"const":"richtext"},"default":{"type":"string","description":"Default value that should be applied when first adding the block."},"fallback":{"type":"string","description":"Fallback value that that will display when field value is empty."}}},{"example":"single","description":"Renders a number input with a unit dropdown.","properties":{"type":{"const":"unit"},"default":{"type":"string","description":"Default value that should be applied when first adding the block."},"fallback":{"type":"string","description":"Fallback value that that will display when field value is empty."},"disableUnits":{"type":"boolean","description":"If true, the unit select field is hidden."},"isPressEnterToChange":{"type":"boolean","description":"If true, the ENTER key press is required in order to trigger an onChange. If enabled, a change is also triggered when tabbing away."},"isResetValueOnUnitChange":{"type":"boolean","description":"If true, and the selected unit provides a default value, this value is set when changing units."},"isUnitSelectTabbable":{"type":"boolean","description":"Determines if the unit select field is tabbable."},"units":{"type":"array","default":{"type":"array","description":"Default value that should be applied when first adding the block."},"fallback":{"type":"array","description":"Fallback value that that will display when field value is empty."},"items":{"type":"object","properties":{"default":{"type":"number"},"label":{"type":"string"},"value":{"type":"string"}}}}}},{"example":"single","description":"Renders a WYSIWYG editor.","properties":{"type":{"const":"wysiwyg"},"default":{"type":"string","description":"Default value that should be applied when first adding the block."},"fallback":{"type":"string","description":"Fallback value that that will display when field value is empty."},"toolbar":{"type":"object","description":"The toolbar configuration for the editor.","properties":{"tags":{"type":"object","description":"Which HTML tags are allowed.","properties":{"headings":{"type":"array","description":"Which HTML headings levels are allowed."}}},"formats":{"type":"object","description":"Which text formats are allowed.","properties":{"bold":{"type":"boolean","description":"Whether bold text format is allowed."},"italic":{"type":"boolean","description":"Whether italic text format is allowed."},"orderedList":{"type":"boolean","description":"Whether ordered list text format is allowed."},"strikethrough":{"type":"boolean","description":"Whether strikethrough text format is allowed."},"underline":{"type":"boolean","description":"Whether underline text format is allowed."},"unorderedList":{"type":"boolean","description":"Whether unordered list text format is allowed."},"textAlign":{"type":"object","description":"Which text alignment formats are allowed.","properties":{"alignments":{"type":"array","description":"Which text alignments are allowed.","items":{"type":"string","enum":["left","center","right","justify"]}}}}}}}}}},{"properties":{"type":{"pattern":"^custom/.+$","description":"References a reusable custom field definition."}},"required":["type"]}]},"Block":{"type":"object","properties":{"name":{"type":"string"},"innerBlocks":{"type":"array","items":{"$ref":"#/definitions/Block"}},"attributes":{"type":"object","additionalProperties":true}},"required":["name"]}},"blockstudio":{"type":["object","boolean"],"description":"Blockstudio specific settings.","properties":{"attributes":{"type":"array","description":"Custom attributes that will be applied to the block.","items":{"_note":"All field types from definitions.Attribute apply here, plus these additional types:","additionalTypes":[{"description":"Renders multiple fields in an (optionally) collapsible container.","properties":{"type":{"const":"group"},"title":{"type":"string","description":"Title text. It shows even when the component is closed."},"opened":{"type":"boolean","description":"When set to true, the component will remain open regardless of the initialOpen prop and the"},"initialOpen":{"type":"boolean","description":"Whether or not the panel will start open."},"scrollAfterOpen":{"type":"boolean","description":"Scrolls the content into view when visible."},"class":{"type":"string","description":"Custom CSS class that will be applied to the group."},"style":{"type":"object","description":"Custom CSS styles that will be applied to the group."},"attributes":{"type":"array","description":"Same field types as the top-level attributes."}}},{"description":"Renders a set of fields that can be repeated.","properties":{"type":{"const":"repeater"},"min":{"type":"number","description":"Minimum amount of rows."},"max":{"type":"number","description":"Maximum amount of rows."},"textButton":{"type":"string","description":"Text for the add button."},"textMinimized":{"type":["string","object"],"description":"Text that will be displayed when rows are minimized.","properties":{"id":{"type":"string","description":"ID of the attribute which should be used as the text."},"fallback":{"type":"string","description":"Fallback text if the attribute is not set."},"prefix":{"type":"string","description":"Prefix for the text."},"suffix":{"type":"string","description":"Suffix for the text."}}},"textRemove":{"type":["string","boolean"],"description":"Text to display in alert when removing repeater row."},"attributes":{"type":"array","description":"Same field types as the top-level attributes."}}}]}},"conditions":{"type":"array","description":"Conditional logic detailing when the field should be displayed in the editor.","items":{"type":"array","items":{"type":"object","required":["operator"],"properties":{"id":{"type":"string","description":"ID of the field whose value will be used for the conditionally render it."},"operator":{"type":"string","description":"How the values should be compared.","enum":["==","!=","includes","!includes","empty","!empty","<",">","<=",">="]},"type":{"type":"string","description":"Condition type."},"value":{"type":["string","number","boolean"],"description":"Value that will be compared."}}}}},"blockEditor":{"type":"object","description":"Block specific options for rendering inside the Block Editor.","properties":{"disableLoading":{"type":"boolean","description":"Whether the block should should load inside the Block Editor or show a placeholder."}}},"editor":{"type":"object","description":"Block specific options for the editor.","properties":{"assets":{"type":"array","description":"List of WordPress script or style handles that should be added to the preview.","items":{"type":"string"}}}},"interactivity":{"oneOf":[{"type":"boolean"},{"type":"object","properties":{"enqueue":{"type":"boolean","description":"Enqueue the Interactivity API."}}}],"description":"Enable the WordPress Interactivity API for this block."},"icon":{"type":"string","description":"Custom SVG icon to be displayed inside the editor."},"innerBlocks":{"type":"string","description":"HTML content that will be rendered as the inner blocks."},"override":{"type":"boolean","description":"Whether this block should overwrite another block."},"refreshOn":{"type":"array","description":"When the block should refresh. This is useful when the block relies on external data like custom fields.","items":{"type":"string"}},"transforms":{"type":"object","description":"Custom block transforms.","properties":{"from":{"type":"array","items":{"type":"object","properties":{"type":{"type":"string","enum":["block","enter","prefix"]},"blocks":{"type":"array","items":{"type":"string"}},"regExp":{"type":"string"},"prefix":{"type":"string"}},"required":["type"],"additionalProperties":false}}},"required":["from"],"additionalProperties":false}},"additionalProperties":false}}
 ```
 
 ### Settings Schema (blockstudio.json)
 
 ```json
-{"title":"JSON schema for Blockstudio settings","$schema":"http://json-schema.org/draft-04/schema#","type":"object","properties":{"users":{"type":"object","description":"Settings related to allowed users with access to the settings and editor.","properties":{"ids":{"id":"userIds","type":"array","default":[],"items":{"type":"integer"},"description":"List of user IDs with access to the settings and editor.","descriptionFilter":"This filter allows you to enable the editor for specific user IDs.","help":"Comma separated list of user IDs. Example: 1,2,3","example":[1]},"roles":{"id":"userRoles","type":"array","default":[],"items":{"type":"string"},"description":"List of user roles with access to the settings and editor.","descriptionFilter":"This filter allows you to enable the editor for specific user roles.","help":"Comma separated list of user roles. Example: administrator,editor","example":["administrator","editor"]}}},"assets":{"type":"object","description":"Settings related to asset management.","properties":{"enqueue":{"type":"boolean","default":true,"description":"Enqueue assets in frontend and editor.","descriptionFilter":"This filter allows you to enable/disable the enqueueing of assets in frontend and editor.","example":false},"minify":{"type":"object","description":"Settings related to asset minification.","properties":{"css":{"type":"boolean","default":false,"description":"Minify CSS.","descriptionFilter":"This filter allows you to enable/disable the minification of CSS.","example":true},"js":{"type":"boolean","default":false,"description":"Minify JS.","descriptionFilter":"This filter allows you to enable/disable the minification of JS.","example":true}}},"process":{"type":"object","description":"Settings related to asset processing.","properties":{"scss":{"type":"boolean","default":false,"description":"Process SCSS in .css files.","descriptionFilter":"This filter allows you to enable/disable the processing of SCSS in .css files.","example":true},"scssFiles":{"type":"boolean","default":true,"description":"Process .scss files to CSS.","descriptionFilter":"This filter allows you to enable/disable the processing of .scss files to CSS.","example":true}}}},"additionalProperties":true},"tailwind":{"type":"object","description":"Settings related to Tailwind.","properties":{"enabled":{"type":"boolean","default":false,"description":"Enable Tailwind.","descriptionFilter":"This filter allows you to enable/disable Tailwind.","example":true},"config":{"type":"string","default":"","description":"Tailwind CSS configuration using v4 CSS-first syntax.","descriptionFilter":"This filter allows you to add a custom Tailwind CSS configuration.","element":"textarea","example":"@theme { --color-primary: pink; }"}},"additionalProperties":true},"editor":{"type":"object","description":"Settings related to the editor.","properties":{"formatOnSave":{"type":"boolean","default":false,"description":"Format code upon saving.","descriptionFilter":"This filter allows you to enable/disable the formatting of code upon saving.","example":true},"assets":{"id":"editorAssets","type":"array","default":[],"description":"Additional asset IDs to be enqueued.","descriptionFilter":"This filter allows you to enqueue additional assets in the editor.","example":["my-stylesheet","another-stylesheet"]},"markup":{"type":["string","boolean"],"element":"textarea","default":"","description":"Additional markup to be added to the end of the editor.","descriptionFilter":"This filter allows you to add additional markup to the end of the editor.","example":"<style>body { background: black; }</style>"}},"additionalProperties":true},"blockEditor":{"type":"object","description":"Settings related to Gutenberg.","properties":{"disableLoading":{"type":"boolean","default":false,"description":"Disable loading of blocks inside the Block Editor.","descriptionFilter":"This filter allows you to disable the loading of blocks inside the Block Editor.","example":true},"cssClasses":{"id":"blockEditorCssClasses","type":"array","default":[],"description":"Stylesheets whose CSS classes should be available for choice in the class field.","descriptionFilter":"This filter allows you to add stylesheets whose classes should be available for choice in the class field.","example":["my-stylesheet","another-stylesheet"]},"cssVariables":{"id":"blockEditorCssVariables","type":"array","default":[],"description":"Stylesheets whose CSS variables should be available for autocompletion in the code field.","descriptionFilter":"This filter allows you to add stylesheets whose CSS variables should be available for autocompletion in the code field.","example":["my-stylesheet","another-stylesheet"]}},"additionalProperties":true},"library":{"type":"boolean","default":false,"description":"Add block library.","descriptionFilter":"This filter allows you to enable the block library.","example":true},"ai":{"id":"aiLlmMd","type":"object","description":"Settings related to AI-powered context generation.","properties":{"enableContextGeneration":{"type":"boolean","default":false,"description":"Enables the automatic creation of a comprehensive context file for use with large language model (LLM) tools (e.g., Cursor). This file compiles current installation data: all available block definitions and paths, Blockstudio-specific settings, relevant block schemas, and combined Blockstudio documentation—providing a ready-to-use resource for prompt engineering and AI code development.","descriptionFilter":"This filter allows you to enable or disable context file generation for LLM tool integration. When enabled, the context file assembles up-to-date block data, Blockstudio settings of the current install, all relevant schemas, and Blockstudio documentation into a single source for use with AI development tools.","example":true}},"additionalProperties":true}},"additionalProperties":true}
+{"title":"JSON schema for Blockstudio settings","$schema":"http://json-schema.org/draft-04/schema#","type":"object","properties":{"users":{"type":"object","description":"Settings related to allowed users with access to the settings and editor.","properties":{"ids":{"id":"userIds","type":"array","default":[],"items":{"type":"integer"},"description":"List of user IDs with access to the settings and editor.","descriptionFilter":"This filter allows you to enable the editor for specific user IDs.","help":"Comma separated list of user IDs. Example: 1,2,3","example":[1]},"roles":{"id":"userRoles","type":"array","default":[],"items":{"type":"string"},"description":"List of user roles with access to the settings and editor.","descriptionFilter":"This filter allows you to enable the editor for specific user roles.","help":"Comma separated list of user roles. Example: administrator,editor","example":["administrator","editor"]}}},"assets":{"type":"object","description":"Settings related to asset management.","properties":{"enqueue":{"type":"boolean","default":true,"description":"Enqueue assets in frontend and editor.","descriptionFilter":"This filter allows you to enable/disable the enqueueing of assets in frontend and editor.","example":false},"reset":{"type":"object","default":{"enabled":false,"fullWidth":[]},"description":"Control removal of WordPress core block styles.","properties":{"enabled":{"type":"boolean","default":false,"description":"Remove all WordPress core block styles on the frontend and in the editor.","descriptionFilter":"This filter allows you to enable/disable the removal of WordPress core block styles.","example":true},"fullWidth":{"type":"array","default":[],"items":{"type":"string"},"description":"Post types where the editor uses full-width layout by removing classic editor constraints.","descriptionFilter":"This filter allows you to control which post types use full-width editing.","example":["page"]}}},"minify":{"type":"object","description":"Settings related to asset minification.","properties":{"css":{"type":"boolean","default":false,"description":"Minify CSS.","descriptionFilter":"This filter allows you to enable/disable the minification of CSS.","example":true},"js":{"type":"boolean","default":false,"description":"Minify JS.","descriptionFilter":"This filter allows you to enable/disable the minification of JS.","example":true}}},"process":{"type":"object","description":"Settings related to asset processing.","properties":{"scss":{"type":"boolean","default":false,"description":"Process SCSS in .css files.","descriptionFilter":"This filter allows you to enable/disable the processing of SCSS in .css files.","example":true},"scssFiles":{"type":"boolean","default":true,"description":"Process .scss files to CSS.","descriptionFilter":"This filter allows you to enable/disable the processing of .scss files to CSS.","example":true}}}},"additionalProperties":true},"tailwind":{"type":"object","description":"Settings related to Tailwind.","properties":{"enabled":{"type":"boolean","default":false,"description":"Enable Tailwind.","descriptionFilter":"This filter allows you to enable/disable Tailwind.","example":true},"config":{"type":"string","default":"","description":"Tailwind CSS configuration using v4 CSS-first syntax.","descriptionFilter":"This filter allows you to add a custom Tailwind CSS configuration.","element":"textarea","example":"@theme { --color-primary: pink; }"}},"additionalProperties":true},"editor":{"type":"object","description":"Settings related to the editor.","properties":{"formatOnSave":{"type":"boolean","default":false,"description":"Format code upon saving.","descriptionFilter":"This filter allows you to enable/disable the formatting of code upon saving.","example":true},"assets":{"id":"editorAssets","type":"array","default":[],"description":"Additional asset IDs to be enqueued.","descriptionFilter":"This filter allows you to enqueue additional assets in the editor.","example":["my-stylesheet","another-stylesheet"]},"markup":{"type":["string","boolean"],"element":"textarea","default":"","description":"Additional markup to be added to the end of the editor.","descriptionFilter":"This filter allows you to add additional markup to the end of the editor.","example":"<style>body { background: black; }</style>"}},"additionalProperties":true},"blockEditor":{"type":"object","description":"Settings related to Gutenberg.","properties":{"disableLoading":{"type":"boolean","default":false,"description":"Disable loading of blocks inside the Block Editor.","descriptionFilter":"This filter allows you to disable the loading of blocks inside the Block Editor.","example":true},"cssClasses":{"id":"blockEditorCssClasses","type":"array","default":[],"description":"Stylesheets whose CSS classes should be available for choice in the class field.","descriptionFilter":"This filter allows you to add stylesheets whose classes should be available for choice in the class field.","example":["my-stylesheet","another-stylesheet"]},"cssVariables":{"id":"blockEditorCssVariables","type":"array","default":[],"description":"Stylesheets whose CSS variables should be available for autocompletion in the code field.","descriptionFilter":"This filter allows you to add stylesheets whose CSS variables should be available for autocompletion in the code field.","example":["my-stylesheet","another-stylesheet"]}},"additionalProperties":true},"library":{"type":"boolean","default":false,"description":"Add block library.","descriptionFilter":"This filter allows you to enable the block library.","example":true},"ai":{"id":"aiLlmMd","type":"object","description":"Settings related to AI-powered context generation.","properties":{"enableContextGeneration":{"type":"boolean","default":false,"description":"Enables the automatic creation of a comprehensive context file for use with large language model (LLM) tools (e.g., Cursor). This file compiles current installation data: all available block definitions and paths, Blockstudio-specific settings, relevant block schemas, and combined Blockstudio documentation, providing a ready-to-use resource for prompt engineering and AI code development.","descriptionFilter":"This filter allows you to enable or disable context file generation for LLM tool integration. When enabled, the context file assembles up-to-date block data, Blockstudio settings of the current install, all relevant schemas, and Blockstudio documentation into a single source for use with AI development tools.","example":true}},"additionalProperties":true},"dev":{"type":"object","description":"Settings related to developer tools.","properties":{"grab":{"type":"object","description":"Settings related to the element grabber.","properties":{"enabled":{"type":"boolean","default":false,"description":"Enable the element grabber.","descriptionFilter":"This filter allows you to enable/disable the element grabber.","example":false}}},"canvas":{"type":"object","description":"Settings related to the canvas.","properties":{"enabled":{"type":"boolean","default":false,"description":"Enable the canvas.","descriptionFilter":"This filter allows you to enable/disable the canvas.","example":false},"adminBar":{"type":"boolean","default":true,"description":"Show the WordPress admin bar when viewing the canvas.","descriptionFilter":"This filter allows you to show/hide the WordPress admin bar on the canvas.","example":true}}}},"additionalProperties":true}},"additionalProperties":true}
 ```
 
 ### Page Schema (page.json)

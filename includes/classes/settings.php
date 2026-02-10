@@ -75,7 +75,10 @@ class Settings {
 		),
 		'assets'      => array(
 			'enqueue' => true,
-			'reset'   => false,
+			'reset'   => array(
+				'enabled'   => false,
+				'fullWidth' => array(),
+			),
 			'minify'  => array(
 				'css' => false,
 				'js'  => false,
@@ -521,18 +524,6 @@ class Settings {
 	 */
 	public static function get_filters_values(): array {
 		return static::$settings_filters_values;
-	}
-
-	/**
-	 * Get schema.
-	 *
-	 * @return array The schema.
-	 */
-	public static function get_schema(): array {
-		return json_decode(
-			file_get_contents( BLOCKSTUDIO_DIR . '/includes/schemas/blockstudio.json' ), // phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Local file.
-			true
-		);
 	}
 }
 

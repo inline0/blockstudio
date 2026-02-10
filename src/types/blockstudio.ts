@@ -67,9 +67,9 @@ export interface Assets {
    */
   enqueue?: boolean;
   /**
-   * Remove all WordPress core block styles.
+   * Control removal of WordPress core block styles.
    */
-  reset?: boolean;
+  reset?: Reset;
   /**
    * Settings related to asset minification.
    */
@@ -78,6 +78,21 @@ export interface Assets {
    * Settings related to asset processing.
    */
   process?: Process;
+  [property: string]: any;
+}
+
+/**
+ * Control removal of WordPress core block styles.
+ */
+export interface Reset {
+  /**
+   * Remove all WordPress core block styles on the frontend and in the editor.
+   */
+  enabled?: boolean;
+  /**
+   * Post types where the editor uses full-width layout by removing classic editor constraints.
+   */
+  fullWidth?: string[];
   [property: string]: any;
 }
 
@@ -435,9 +450,16 @@ const typeMap: any = {
   Assets: o(
     [
       { json: 'enqueue', js: 'enqueue', typ: u(undefined, true) },
-      { json: 'reset', js: 'reset', typ: u(undefined, true) },
+      { json: 'reset', js: 'reset', typ: u(undefined, r('Reset')) },
       { json: 'minify', js: 'minify', typ: u(undefined, r('Minify')) },
       { json: 'process', js: 'process', typ: u(undefined, r('Process')) },
+    ],
+    'any',
+  ),
+  Reset: o(
+    [
+      { json: 'enabled', js: 'enabled', typ: u(undefined, true) },
+      { json: 'fullWidth', js: 'fullWidth', typ: u(undefined, a('')) },
     ],
     'any',
   ),

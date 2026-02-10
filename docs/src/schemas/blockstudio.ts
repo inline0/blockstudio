@@ -51,13 +51,31 @@ export const blockstudio = {
           example: false,
         },
         reset: {
-          type: "boolean",
-          default: false,
+          type: "object",
+          default: { enabled: false, fullWidth: [] },
           description:
-            "Remove all WordPress core block styles on the frontend and in the editor, giving you complete control over styling.",
-          descriptionFilter:
-            "This filter allows you to enable/disable the removal of WordPress core block styles.",
-          example: true,
+            "Control removal of WordPress core block styles.",
+          properties: {
+            enabled: {
+              type: "boolean",
+              default: false,
+              description:
+                "Remove all WordPress core block styles on the frontend and in the editor.",
+              descriptionFilter:
+                "This filter allows you to enable/disable the removal of WordPress core block styles.",
+              example: true,
+            },
+            fullWidth: {
+              type: "array",
+              default: [],
+              items: { type: "string" },
+              description:
+                "Post types where the editor uses full-width layout by removing classic editor constraints.",
+              descriptionFilter:
+                "This filter allows you to control which post types use full-width editing.",
+              example: ["page"],
+            },
+          },
         },
         minify: {
           type: "object",

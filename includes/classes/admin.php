@@ -486,11 +486,6 @@ class Admin {
 				'optionsJson'          => Settings::get_json(),
 				'optionsOptions'       => Settings::get_options(),
 				'optionsRoles'         => array_keys( $wp_roles->roles ),
-				'optionsSchema'        => json_decode(
-					// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Reading local schema file.
-					file_get_contents( BLOCKSTUDIO_DIR . '/includes/schemas/blockstudio.json' ),
-					true
-				),
 				'optionsUsers'         => Settings::get( 'users/ids' )
 					? array_reduce(
 						get_users( array( 'include' => Settings::get( 'users/ids' ) ) ),

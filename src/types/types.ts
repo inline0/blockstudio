@@ -173,7 +173,6 @@ type BlockstudioAdmin = {
   optionsFilters: Any;
   optionsFiltersValues: Any;
   optionsRoles: string[];
-  optionsSchema: string[];
   optionsUsers: string[];
   plugin: {
     currentUrl: string;

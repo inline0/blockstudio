@@ -5,7 +5,6 @@ import { fileURLToPath } from 'url';
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const root = resolve(__dirname, '..');
 const docsDir = resolve(root, 'docs/content/docs');
-const schemasDir = resolve(root, 'includes/schemas');
 const outputPath = resolve(root, 'includes/llm/blockstudio-llm.txt');
 
 interface MetaJson {
@@ -205,18 +204,19 @@ const pageSchema = {
 const rootMeta = readJson(join(docsDir, 'meta.json')) as MetaJson;
 const docs = collectDocs(docsDir, rootMeta, 0);
 
-// Build schemas
-const schemas: { name: string; filename: string; content: string }[] = [];
+(async () => {
+  const schemasDir = resolve(root, 'docs/src/schemas');
+  const { blockstudio: blockstudioSchema } = await import(resolve(schemasDir, 'blockstudio.ts'));
+  const { schema: blockSchemaFn } = await import(resolve(schemasDir, 'schema.ts'));
+  const { extend: extendSchemaFn } = await import(resolve(schemasDir, 'extend.ts'));
 
-// Block schema: only include the blockstudio property + shared definitions
-// Deduplicate: group.attributes is a full copy of all field types, replace with a note
-const blockSchemaPath = join(schemasDir, 'block.json');
-if (existsSync(blockSchemaPath)) {
-  const full = JSON.parse(readFileSync(blockSchemaPath, 'utf-8'));
+  const schemas: { name: string; filename: string; content: string }[] = [];
+
+  // Block schema: only include the blockstudio property + shared definitions
+  // Deduplicate: group.attributes is a full copy of all field types, replace with a note
+  const full = await blockSchemaFn() as Record<string, any>;
   const bs = full.properties.blockstudio;
 
-  // The blockstudio.attributes.items duplicates definitions.Attribute with extras (group, repeater).
-  // Keep only the extras and reference the shared definition.
   const bsFieldTypes = bs.properties?.attributes?.items?.anyOf;
   const defFieldTypes = full.definitions?.Attribute?.anyOf;
   if (bsFieldTypes && defFieldTypes) {
@@ -225,7 +225,6 @@ if (existsSync(blockSchemaPath)) {
       const t = (v.properties as Record<string, Record<string, string>>)?.type?.const;
       return !defTypeNames.has(t);
     });
-    // Deduplicate nested attributes in group/tabs
     for (const variant of extras) {
       const props = variant.properties as Record<string, unknown>;
       if (props?.attributes && typeof props.attributes === 'object' && (props.attributes as Record<string, unknown>).items) {
@@ -240,70 +239,63 @@ if (existsSync(blockSchemaPath)) {
 
   const trimmed = { definitions: full.definitions, blockstudio: bs };
   schemas.push({ name: 'Block Schema (blockstudio key from block.json)', filename: 'block.json', content: JSON.stringify(trimmed) });
-}
 
-// Settings schema
-const settingsPath = join(schemasDir, 'blockstudio.json');
-if (existsSync(settingsPath)) {
-  schemas.push({ name: 'Settings Schema (blockstudio.json)', filename: 'blockstudio.json', content: JSON.stringify(JSON.parse(readFileSync(settingsPath, 'utf-8'))) });
-}
+  // Settings schema
+  schemas.push({ name: 'Settings Schema (blockstudio.json)', filename: 'blockstudio.json', content: JSON.stringify(blockstudioSchema) });
 
-// Extensions schema: nearly identical to block schema, only include the unique "extend" property
-const extPath = join(schemasDir, 'extensions.json');
-if (existsSync(extPath)) {
-  const ext = JSON.parse(readFileSync(extPath, 'utf-8'));
+  // Extensions schema: nearly identical to block schema, only include the unique "extend" property
+  const ext = await extendSchemaFn() as Record<string, any>;
   const extendProp = ext.properties?.blockstudio?.properties?.extend;
   const trimmedExt = {
     _note: 'Extension schema is identical to the block schema above, plus this additional "extend" property on blockstudio.',
     extend: extendProp,
   };
   schemas.push({ name: 'Extension Schema (extensions.json)', filename: 'extensions.json', content: JSON.stringify(trimmedExt) });
-}
 
-schemas.splice(2, 0, {
-  name: 'Page Schema (page.json)',
-  filename: 'page.json',
-  content: JSON.stringify(pageSchema),
-});
+  schemas.splice(2, 0, {
+    name: 'Page Schema (page.json)',
+    filename: 'page.json',
+    content: JSON.stringify(pageSchema),
+  });
 
-// Assemble output
-const parts: string[] = [];
+  // Assemble output
+  const parts: string[] = [];
 
-parts.push('# Blockstudio');
-parts.push('Context about the Blockstudio WordPress block framework for LLM coding assistants.');
-parts.push('');
-parts.push('## Documentation');
-parts.push('');
-
-for (const doc of docs) {
-  parts.push(buildHeading(doc.title, doc.depth));
+  parts.push('# Blockstudio');
+  parts.push('Context about the Blockstudio WordPress block framework for LLM coding assistants.');
   parts.push('');
-  parts.push(doc.content);
+  parts.push('## Documentation');
   parts.push('');
-}
 
-parts.push('## Schemas');
-parts.push('');
+  for (const doc of docs) {
+    parts.push(buildHeading(doc.title, doc.depth));
+    parts.push('');
+    parts.push(doc.content);
+    parts.push('');
+  }
 
-for (const schema of schemas) {
-  parts.push(`### ${schema.name}`);
+  parts.push('## Schemas');
   parts.push('');
-  parts.push('```json');
-  parts.push(schema.content);
-  parts.push('```');
-  parts.push('');
-}
 
-let output = parts.join('\n');
-// Collapse 3+ newlines to 2
-output = output.replace(/\n{3,}/g, '\n\n');
-output = output.trimEnd() + '\n';
+  for (const schema of schemas) {
+    parts.push(`### ${schema.name}`);
+    parts.push('');
+    parts.push('```json');
+    parts.push(schema.content);
+    parts.push('```');
+    parts.push('');
+  }
 
-writeFileSync(outputPath, output, 'utf-8');
+  let output = parts.join('\n');
+  output = output.replace(/\n{3,}/g, '\n\n');
+  output = output.trimEnd() + '\n';
 
-const docCount = docs.length;
-const schemaCount = schemas.length;
-const sizeKb = Math.round(Buffer.byteLength(output, 'utf-8') / 1024);
-console.log(
-  `Built ${outputPath}\n  ${docCount} docs, ${schemaCount} schemas, ${sizeKb}KB`,
-);
+  writeFileSync(outputPath, output, 'utf-8');
+
+  const docCount = docs.length;
+  const schemaCount = schemas.length;
+  const sizeKb = Math.round(Buffer.byteLength(output, 'utf-8') / 1024);
+  console.log(
+    `Built ${outputPath}\n  ${docCount} docs, ${schemaCount} schemas, ${sizeKb}KB`,
+  );
+})();

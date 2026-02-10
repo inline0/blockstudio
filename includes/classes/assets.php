@@ -80,6 +80,7 @@ class Assets {
 		add_filter( 'blockstudio/buffer/output', array( $this, 'parse_output' ), 1000000 );
 		add_action( 'wp_enqueue_scripts', array( $this, 'maybe_reset_styles' ), 999 );
 		add_action( 'enqueue_block_editor_assets', array( $this, 'maybe_reset_styles' ), 999 );
+		add_filter( 'block_editor_settings_all', array( $this, 'maybe_fullwidth_editor' ), 10, 2 );
 		add_filter(
 			'block_editor_settings_all',
 			function ( $settings ) {
@@ -149,7 +150,9 @@ class Assets {
 	 * @return void
 	 */
 	public function maybe_reset_styles(): void {
-		if ( ! Settings::get( 'assets/reset' ) ) {
+		$reset = Settings::get( 'assets/reset' );
+
+		if ( true !== $reset && ! Settings::get( 'assets/reset/enabled' ) ) {
 			return;
 		}
 
@@ -164,6 +167,36 @@ class Assets {
 				wp_dequeue_style( $handle );
 			}
 		}
+	}
+
+	/**
+	 * Remove classic editor layout styles for full-width post types.
+	 *
+	 * @param array                    $settings Editor settings.
+	 * @param \WP_Block_Editor_Context $context  Block editor context.
+	 *
+	 * @return array Modified editor settings.
+	 */
+	public function maybe_fullwidth_editor( array $settings, $context ): array {
+		$post_types = Settings::get( 'assets/reset/fullWidth' );
+
+		if ( empty( $post_types ) || ! is_array( $post_types ) ) {
+			return $settings;
+		}
+
+		$post_type = $context->post->post_type ?? '';
+
+		if ( ! in_array( $post_type, $post_types, true ) ) {
+			return $settings;
+		}
+
+		$settings['__unstableResolvedAssets']['styles'] = preg_replace(
+			'/<link[^>]+classic\.css[^>]*>/',
+			'',
+			$settings['__unstableResolvedAssets']['styles'] ?? ''
+		);
+
+		return $settings;
 	}
 
 	/**

@@ -19,7 +19,7 @@
     "test:unit": "PLAYGROUND_PORT=9701 playwright test",
     "test:e2e": "playwright test --config=playwright.wp-env.config.ts; npm run wp-env:reset",
     "catalog:blocks": "playwright test tests/e2e/catalog-blocks.ts --config=playwright.wp-env.config.ts",
-    "types": "quicktype includes/schemas/block.json -s schema -o src/types/block.ts && quicktype includes/schemas/blockstudio.json -s schema -o src/types/blockstudio.ts",
+    "types": "tsx scripts/generate-types.ts",
     "wp-env:reset": "wp-env stop; wp-env clean all; wp-env start && wp-env run cli wp theme activate theme && wp-env run cli wp rewrite structure '/%postname%/' --hard && curl -s -X POST http://localhost:8888/wp-json/blockstudio-test/v1/e2e/setup",
     "wp-env:start": "wp-env start && curl -s -X POST http://localhost:8888/wp-json/blockstudio-test/v1/e2e/setup",
     "wp-env:stop": "wp-env stop",

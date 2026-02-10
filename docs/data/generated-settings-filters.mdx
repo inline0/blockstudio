@@ -28,6 +28,26 @@ add_filter('blockstudio/settings/assets/enqueue', function() {
 });
 ```
 
+### assets/reset/enabled
+
+This filter allows you to enable/disable the removal of WordPress core block styles.
+
+```php title="functions.php"
+add_filter('blockstudio/settings/assets/reset/enabled', function() {
+  return true;
+});
+```
+
+### assets/reset/full_width
+
+This filter allows you to control which post types use full-width editing.
+
+```php title="functions.php"
+add_filter('blockstudio/settings/assets/reset/full_width', function() {
+  return ['page'];
+});
+```
+
 ### assets/minify/css
 
 This filter allows you to enable/disable the minification of CSS.
