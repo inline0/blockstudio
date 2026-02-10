@@ -50,6 +50,15 @@ export const blockstudio = {
             "This filter allows you to enable/disable the enqueueing of assets in frontend and editor.",
           example: false,
         },
+        reset: {
+          type: "boolean",
+          default: false,
+          description:
+            "Remove all WordPress core block styles on the frontend, giving you complete control over styling.",
+          descriptionFilter:
+            "This filter allows you to enable/disable the removal of WordPress core block styles.",
+          example: true,
+        },
         minify: {
           type: "object",
           description: "Settings related to asset minification.",

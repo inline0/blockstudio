@@ -78,6 +78,8 @@ class Assets {
 	public function __construct() {
 		add_action( 'template_redirect', array( $this, 'maybe_buffer_output' ), 3 );
 		add_filter( 'blockstudio/buffer/output', array( $this, 'parse_output' ), 1000000 );
+		add_action( 'wp_enqueue_scripts', array( $this, 'maybe_reset_styles' ), 999 );
+		add_action( 'enqueue_block_editor_assets', array( $this, 'maybe_reset_styles' ), 999 );
 		add_filter(
 			'block_editor_settings_all',
 			function ( $settings ) {
@@ -139,6 +141,29 @@ class Assets {
 		}
 
 		ob_start( array( $this, 'return_buffer' ) );
+	}
+
+	/**
+	 * Remove all WordPress core block styles when reset is enabled.
+	 *
+	 * @return void
+	 */
+	public function maybe_reset_styles(): void {
+		if ( ! Settings::get( 'assets/reset' ) ) {
+			return;
+		}
+
+		wp_dequeue_style( 'wp-block-library' );
+		wp_dequeue_style( 'wp-block-library-theme' );
+		wp_dequeue_style( 'global-styles' );
+
+		$styles = wp_styles();
+
+		foreach ( $styles->registered as $handle => $style ) {
+			if ( str_starts_with( $handle, 'wp-block-' ) ) {
+				wp_dequeue_style( $handle );
+			}
+		}
 	}
 
 	/**

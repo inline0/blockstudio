@@ -75,6 +75,7 @@ class Settings {
 		),
 		'assets'      => array(
 			'enqueue' => true,
+			'reset'   => false,
 			'minify'  => array(
 				'css' => false,
 				'js'  => false,

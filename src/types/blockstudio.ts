@@ -67,6 +67,10 @@ export interface Assets {
    */
   enqueue?: boolean;
   /**
+   * Remove all WordPress core block styles on the frontend.
+   */
+  reset?: boolean;
+  /**
    * Settings related to asset minification.
    */
   minify?: Minify;
@@ -431,6 +435,7 @@ const typeMap: any = {
   Assets: o(
     [
       { json: 'enqueue', js: 'enqueue', typ: u(undefined, true) },
+      { json: 'reset', js: 'reset', typ: u(undefined, true) },
       { json: 'minify', js: 'minify', typ: u(undefined, r('Minify')) },
       { json: 'process', js: 'process', typ: u(undefined, r('Process')) },
     ],
