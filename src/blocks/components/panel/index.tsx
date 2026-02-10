@@ -1,4 +1,4 @@
-import { ReactNode } from 'react';
+import { Fragment, ReactNode } from 'react';
 import { Panel as P, PanelBody } from '@wordpress/components';
 import { BlockstudioAttribute } from '@/types/block';
 import { BlockstudioBlockAttributes } from '@/types/types';
@@ -56,7 +56,7 @@ export const Panel = ({
               return null;
             }
 
-            return element(itemInnerProps);
+            return <Fragment key={itemInnerProps.id}>{element(itemInnerProps)}</Fragment>;
           })}
         </div>
       </PanelBody>

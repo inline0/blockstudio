@@ -1,6 +1,6 @@
 import { Draggable } from '@hello-pangea/dnd';
 import { Button } from '@wordpress/components';
-import { useEffect, useState } from '@wordpress/element';
+import { Fragment, useEffect, useState } from '@wordpress/element';
 import { Icon, closeSmall, chevronDown, create } from '@wordpress/icons';
 import { result } from 'lodash-es';
 import { Base } from '@/blocks/components/base';
@@ -256,10 +256,14 @@ const DragElement = ({
                 };
               }
 
-              return element(
-                e,
-                `${draggableId}.${e.id}`,
-                transformed?.attributes?.[index] as unknown as boolean,
+              return (
+                <Fragment key={`${draggableId}.${e.id}`}>
+                  {element(
+                    e,
+                    `${draggableId}.${e.id}`,
+                    transformed?.attributes?.[index] as unknown as boolean,
+                  )}
+                </Fragment>
               );
             })}
           </div>

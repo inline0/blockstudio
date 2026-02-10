@@ -295,6 +295,7 @@ export const Fields = ({
 
         updatedAttributes = newAttributes;
 
+        markNextChangeAsNotPersistent();
         setRepeater(newAttributes, objectKey);
       } else {
         updatedAttributes = {
@@ -302,6 +303,7 @@ export const Fields = ({
           [item.id + suffix]: newValue,
         };
 
+        markNextChangeAsNotPersistent();
         setAttributes({
           ...attributes,
           blockstudio: {
@@ -472,13 +474,9 @@ export const Fields = ({
     } as Any;
 
     const textProps = () => {
-      const { min, max, ...rest } = allProps;
+      const { min: _min, max: _max, ...rest } = allProps;
 
-      return {
-        ...rest,
-        maxlength: max,
-        minlength: min,
-      };
+      return rest;
     };
 
     const optionSetter = () => {

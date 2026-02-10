@@ -23,6 +23,7 @@ export const Toggle = ({
     >
       <ToggleControl
         {...{ ...rest, checked }}
+        __nextHasNoMarginBottom
         onChange={rest.onChange || (() => {})}
         className={`components-base-control`}
         help={false}

@@ -20,6 +20,7 @@ export const Control = ({
   margin = true,
   name = null,
   onClick: _onClick = () => {},
+  remove: _remove = null,
   type = null,
   ...rest
 }: {
@@ -38,6 +39,7 @@ export const Control = ({
   margin?: boolean;
   name?: string | null;
   onClick?: () => void;
+  remove?: (() => void) | null;
   type?: string | null;
   [key: string]: unknown;
 }) => {
