@@ -66,6 +66,13 @@ class Assets {
 	private static array $modules = array();
 
 	/**
+	 * When true, is_editor_screen() returns true regardless of current screen.
+	 *
+	 * @var bool
+	 */
+	public static bool $force_editor_screen = false;
+
+	/**
 	 * Constructor.
 	 */
 	public function __construct() {
@@ -746,6 +753,10 @@ class Assets {
 	 * @return bool Whether the editor screen is active.
 	 */
 	public static function is_editor_screen(): bool {
+		if ( self::$force_editor_screen ) {
+			return true;
+		}
+
 		global $current_screen;
 
 		if ( function_exists( 'get_current_screen' ) ) {

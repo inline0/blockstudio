@@ -256,3 +256,4 @@ Just for you.</block>
   <h3>Page Break</h3>
   <block name="core/nextpage" />
 </div>
+<\!-- test -->

@@ -7,8 +7,11 @@
 
 namespace Blockstudio;
 
+use RecursiveDirectoryIterator;
+use RecursiveIteratorIterator;
 use WP_Block_Editor_Context;
 use WP_Block_Parser;
+use WP_REST_Response;
 
 /**
  * Figma-like canvas view showing all Blockstudio pages using BlockPreview.
@@ -22,11 +25,19 @@ use WP_Block_Parser;
 class Canvas {
 
 	/**
+	 * File extensions to monitor for changes.
+	 *
+	 * @var array<string>
+	 */
+	private const WATCHED_EXTENSIONS = array( 'php', 'json', 'css', 'scss', 'js', 'twig', 'html' );
+
+	/**
 	 * Constructor.
 	 */
 	public function __construct() {
 		add_action( 'admin_menu', array( $this, 'register_admin_page' ) );
 		add_action( 'admin_enqueue_scripts', array( $this, 'enqueue_admin_assets' ) );
+		add_action( 'rest_api_init', array( $this, 'register_endpoints' ) );
 	}
 
 	/**
@@ -116,10 +127,14 @@ class Canvas {
 			true
 		);
 
+		Assets::$force_editor_screen = true;
+
 		$editor_settings = get_block_editor_settings(
 			array(),
 			new WP_Block_Editor_Context( array( 'name' => 'core/edit-post' ) )
 		);
+
+		Assets::$force_editor_screen = false;
 
 		wp_localize_script(
 			'blockstudio-canvas',
@@ -233,6 +248,143 @@ class Canvas {
 		}
 
 		return $blockstudio_blocks;
+	}
+
+	/**
+	 * Register REST API endpoints for live mode.
+	 *
+	 * @return void
+	 */
+	public function register_endpoints(): void {
+		$permission = function () {
+			return current_user_can( 'edit_posts' );
+		};
+
+		register_rest_route(
+			'blockstudio/v1',
+			'/canvas/poll',
+			array(
+				'methods'             => 'GET',
+				'callback'            => array( $this, 'poll' ),
+				'permission_callback' => $permission,
+			)
+		);
+
+		register_rest_route(
+			'blockstudio/v1',
+			'/canvas/refresh',
+			array(
+				'methods'             => 'GET',
+				'callback'            => array( $this, 'refresh' ),
+				'permission_callback' => $permission,
+			)
+		);
+	}
+
+	/**
+	 * Lightweight endpoint returning a fingerprint of all watched files.
+	 *
+	 * @return WP_REST_Response
+	 */
+	public function poll(): WP_REST_Response {
+		return new WP_REST_Response(
+			array(
+				'fingerprint' => $this->compute_fingerprint(),
+			)
+		);
+	}
+
+	/**
+	 * Re-sync pages and return fresh page content with preloaded blocks.
+	 *
+	 * @return WP_REST_Response
+	 */
+	public function refresh(): WP_REST_Response {
+		$page_paths = Pages::get_paths();
+		$discovery  = new Page_Discovery();
+		$sync       = new Page_Sync();
+
+		foreach ( $page_paths as $path ) {
+			if ( ! is_dir( $path ) ) {
+				continue;
+			}
+
+			$discovered = $discovery->discover( $path );
+
+			foreach ( $discovered as $page_data ) {
+				$sync->sync( $page_data );
+			}
+		}
+
+		$pages              = $this->get_pages_with_content();
+		$blockstudio_blocks = $this->preload_all_blocks( $pages );
+
+		return new WP_REST_Response(
+			array(
+				'pages'             => $pages,
+				'blockstudioBlocks' => $blockstudio_blocks,
+			)
+		);
+	}
+
+	/**
+	 * Compute an MD5 fingerprint of all watched file modification times.
+	 *
+	 * @return string The fingerprint hash, or empty string if no files found.
+	 */
+	private function compute_fingerprint(): string {
+		$mtimes = array();
+
+		foreach ( Build::paths() as $path_info ) {
+			$this->collect_file_mtimes( $path_info['path'], $mtimes );
+		}
+
+		foreach ( Pages::get_paths() as $path ) {
+			$this->collect_file_mtimes( $path, $mtimes );
+		}
+
+		if ( empty( $mtimes ) ) {
+			return '';
+		}
+
+		ksort( $mtimes );
+
+		return md5( wp_json_encode( $mtimes ) );
+	}
+
+	/**
+	 * Recursively collect file modification times from a directory.
+	 *
+	 * @param string                   $directory The directory to scan.
+	 * @param array<string, int|false> $mtimes    Reference to the mtimes array.
+	 * @return void
+	 */
+	private function collect_file_mtimes( string $directory, array &$mtimes ): void {
+		if ( ! is_dir( $directory ) ) {
+			return;
+		}
+
+		$iterator = new RecursiveIteratorIterator(
+			new RecursiveDirectoryIterator( $directory, RecursiveDirectoryIterator::SKIP_DOTS )
+		);
+
+		foreach ( $iterator as $file ) {
+			if ( ! $file->isFile() ) {
+				continue;
+			}
+
+			$pathname = $file->getPathname();
+
+			if ( str_contains( $pathname, '/_dist/' ) || str_contains( $pathname, '/node_modules/' ) ) {
+				continue;
+			}
+
+			if ( ! in_array( $file->getExtension(), self::WATCHED_EXTENSIONS, true ) ) {
+				continue;
+			}
+
+			$mtimes[ $pathname ] = $file->getMTime();
+		}
 	}
 }
 

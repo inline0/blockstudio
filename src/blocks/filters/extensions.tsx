@@ -249,6 +249,8 @@ addFilter(
         .join(' ')
         .trim();
 
+      const markerRef = useRef<HTMLSpanElement>(null);
+
       const { styles, classNames, dataAttributes } = getAttributes(
         props.attributes?.blockstudio?.attributes,
         props.name,
@@ -261,29 +263,39 @@ addFilter(
         .trim();
 
       useEffect(() => {
+        const doc =
+          markerRef.current?.ownerDocument ?? getEditorDocument();
         const id = `blockstudio-${props.clientId}`;
-        const doc = getEditorDocument();
 
-        let element = doc.getElementById(id);
+        let element = doc.getElementById(id) as HTMLStyleElement | null;
         if (!element) {
           element = doc.createElement('style');
           element.id = id;
           doc.head.appendChild(element);
         }
 
-        element.innerHTML = `.editor-styles-wrapper [data-block="${
-          props.clientId
-        }"] {${styles.join(';')}`;
-      }, [styles]);
+        element.textContent = `.editor-styles-wrapper [data-block="${props.clientId}"] {${styles.join(';')}}`;
+
+        return () => {
+          element?.remove();
+        };
+      }, [styles, props.clientId]);
 
       return (
-        <BlockListBlock
-          {...props}
-          wrapperProps={{ ...dataAttributes }}
-          className={`${updatedClassNames}${
-            currentTemporaryClasses ? ' ' + currentTemporaryClasses : ''
-          }`}
-        />
+        <>
+          <span
+            ref={markerRef}
+            data-blockstudio-style-marker=""
+            style={{ display: 'none' }}
+          />
+          <BlockListBlock
+            {...props}
+            wrapperProps={{ ...dataAttributes }}
+            className={`${updatedClassNames}${
+              currentTemporaryClasses ? ' ' + currentTemporaryClasses : ''
+            }`}
+          />
+        </>
       );
     };
   }, 'addCustomClassNameToEditorBlock'),

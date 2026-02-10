@@ -2,9 +2,12 @@ import { memo, useCallback, useEffect, useRef, useState } from 'react';
 
 import { BlockEditorProvider } from '@wordpress/block-editor';
 import { DropdownMenu, MenuGroup, MenuItem } from '@wordpress/components';
-import { moreHorizontal } from '@wordpress/icons';
+import { useDispatch, useSelect } from '@wordpress/data';
+import { check, moreHorizontal } from '@wordpress/icons';
+import apiFetch from '@wordpress/api-fetch';
 
 import { Artboard } from './artboard';
+import { STORE_NAME, store } from './store';
 
 interface Page {
   title: string;
@@ -24,6 +27,15 @@ interface Transform {
   scale: number;
 }
 
+interface PollResponse {
+  fingerprint: string;
+}
+
+interface RefreshResponse {
+  pages: Page[];
+  blockstudioBlocks: Record<string, unknown>;
+}
+
 const ARTBOARD_WIDTH = 1440;
 const GAP = 80;
 const LABEL_OFFSET = 28;
@@ -33,14 +45,43 @@ const MAX_SCALE = 2;
 
 const MemoizedArtboard = memo(Artboard);
 
-export const Canvas = ({ pages, settings }: CanvasProps): JSX.Element => {
+export const Canvas = ({
+  pages: initialPages,
+  settings,
+}: CanvasProps): JSX.Element => {
   const containerRef = useRef<HTMLDivElement>(null);
   const surfaceRef = useRef<HTMLDivElement>(null);
   const transformRef = useRef<Transform | null>(null);
   const [ready, setReady] = useState(false);
   const fittedRef = useRef(false);
 
-  const columns = pages.length;
+  const [currentPages, setCurrentPages] = useState(initialPages);
+  const [revisions, setRevisions] = useState<Record<string, number>>(() => {
+    const initial: Record<string, number> = {};
+    initialPages.forEach((p) => {
+      initial[p.slug] = 0;
+    });
+    return initial;
+  });
+
+  const liveMode = useSelect(
+    (select) => select(store).isLiveMode(),
+    [],
+  );
+  const pollInterval = useSelect(
+    (select) => select(store).getPollInterval(),
+    [],
+  );
+  const { setLiveMode, setFingerprint } = useDispatch(STORE_NAME);
+  const fingerprintRef = useRef('');
+
+  const fingerprint = useSelect(
+    (select) => select(store).getFingerprint(),
+    [],
+  );
+  fingerprintRef.current = fingerprint;
+
+  const columns = currentPages.length;
 
   // Bypass React to avoid re-rendering BlockPreview iframes during pan/zoom.
   const applyTransform = useCallback((): void => {
@@ -63,15 +104,53 @@ export const Canvas = ({ pages, settings }: CanvasProps): JSX.Element => {
     });
   }, []);
 
+  const fitToView = useCallback((): void => {
+    const surface = surfaceRef.current;
+    if (!surface) return;
+
+    const contentWidth = surface.offsetWidth;
+    const contentHeight = surface.offsetHeight;
+    const vw = window.innerWidth;
+    const vh = window.innerHeight;
+    const scaleX = (vw - PADDING * 2) / contentWidth;
+    const scaleY = (vh - PADDING * 2) / contentHeight;
+    const scale = Math.min(scaleX, scaleY, 1);
+
+    transformRef.current = {
+      x: (vw - contentWidth * scale) / 2,
+      y: (vh - contentHeight * scale) / 2,
+      scale,
+    };
+
+    applyTransform();
+  }, [applyTransform]);
+
+  const zoomTo100 = useCallback((): void => {
+    const surface = surfaceRef.current;
+    if (!surface) return;
+
+    const contentWidth = surface.offsetWidth;
+    const contentHeight = surface.offsetHeight;
+    const vw = window.innerWidth;
+    const vh = window.innerHeight;
+
+    transformRef.current = {
+      x: (vw - contentWidth) / 2,
+      y: (vh - contentHeight) / 2,
+      scale: 1,
+    };
+
+    applyTransform();
+  }, [applyTransform]);
+
   useEffect(() => {
     const surface = surfaceRef.current;
-    if (!surface || ready || pages.length === 0) return;
+    if (!surface || ready || currentPages.length === 0) return;
     let cancelled = false;
 
     const waitForMedia = async (
       iframes: NodeListOf<HTMLIFrameElement>,
     ): Promise<void> => {
-      // Wait for all iframe documents to finish loading.
       await Promise.all(
         Array.from(iframes).map((iframe) => {
           if (iframe.contentDocument?.readyState === 'complete') {
@@ -125,7 +204,7 @@ export const Canvas = ({ pages, settings }: CanvasProps): JSX.Element => {
 
     const check = (): void => {
       const iframes = surface.querySelectorAll('iframe');
-      if (iframes.length < pages.length) return;
+      if (iframes.length < currentPages.length) return;
 
       observer.disconnect();
       waitForMedia(iframes).then(() => {
@@ -141,14 +220,14 @@ export const Canvas = ({ pages, settings }: CanvasProps): JSX.Element => {
       cancelled = true;
       observer.disconnect();
     };
-  }, [pages.length, ready]);
+  }, [currentPages.length, ready]);
 
   // Fallback timeout in case iframes never appear.
   useEffect(() => {
-    if (ready || pages.length === 0) return;
+    if (ready || currentPages.length === 0) return;
     const timeout = setTimeout(() => setReady(true), 10000);
     return () => clearTimeout(timeout);
-  }, [ready, pages.length]);
+  }, [ready, currentPages.length]);
 
   // Wait for surface dimensions to stabilize before fitting to view.
   // The max-height removal in artboards causes async resizing.
@@ -159,43 +238,29 @@ export const Canvas = ({ pages, settings }: CanvasProps): JSX.Element => {
     let timeout: number;
     let done = false;
 
-    const fitToView = (): void => {
+    const initialFit = (): void => {
       if (done) return;
       done = true;
       resizeObserver.disconnect();
 
-      const contentWidth = surface.offsetWidth;
-      const contentHeight = surface.offsetHeight;
-      const vw = window.innerWidth;
-      const vh = window.innerHeight;
-      const scaleX = (vw - PADDING * 2) / contentWidth;
-      const scaleY = (vh - PADDING * 2) / contentHeight;
-      const scale = Math.min(scaleX, scaleY, 1);
-
-      transformRef.current = {
-        x: (vw - contentWidth * scale) / 2,
-        y: (vh - contentHeight * scale) / 2,
-        scale,
-      };
-
+      fitToView();
       document.getElementById('blockstudio-canvas-loader')?.remove();
-      applyTransform();
       fittedRef.current = true;
     };
 
     const resizeObserver = new ResizeObserver(() => {
       clearTimeout(timeout);
-      timeout = window.setTimeout(fitToView, 500);
+      timeout = window.setTimeout(initialFit, 500);
     });
 
     resizeObserver.observe(surface);
-    timeout = window.setTimeout(fitToView, 500);
+    timeout = window.setTimeout(initialFit, 500);
 
     return () => {
       resizeObserver.disconnect();
       clearTimeout(timeout);
     };
-  }, [ready, applyTransform]);
+  }, [ready, fitToView]);
 
   useEffect(() => {
     const container = containerRef.current;
@@ -235,7 +300,122 @@ export const Canvas = ({ pages, settings }: CanvasProps): JSX.Element => {
     return () => container.removeEventListener('wheel', handleWheel);
   }, [applyTransform]);
 
-  if (pages.length === 0) {
+  // Re-apply label positions when pages change (new labels start at opacity 0).
+  useEffect(() => {
+    if (fittedRef.current) {
+      applyTransform();
+    }
+  }, [currentPages, applyTransform]);
+
+  useEffect(() => {
+    if (!liveMode || !ready) return;
+
+    let active = true;
+
+    const poll = async (): Promise<void> => {
+      try {
+        const result = await apiFetch<PollResponse>({
+          path: '/blockstudio/v1/canvas/poll',
+        });
+
+        if (!active || !result.fingerprint) return;
+
+        if (fingerprintRef.current === '') {
+          setFingerprint(result.fingerprint);
+          return;
+        }
+
+        if (result.fingerprint === fingerprintRef.current) return;
+
+        const data = await apiFetch<RefreshResponse>({
+          path: '/blockstudio/v1/canvas/refresh',
+        });
+
+        if (!active) return;
+
+        const currentBlocks = (window as any).blockstudio
+          ?.blockstudioBlocks || {};
+        const newBlocks = data.blockstudioBlocks as Record<
+          string,
+          { rendered: string; block: { blockName: string } }
+        >;
+
+        // Compare individual block entries to find which block types changed.
+        const changedBlockNames = new Set<string>();
+        for (const [key, entry] of Object.entries(newBlocks)) {
+          const old = currentBlocks[key] as
+            | { rendered: string }
+            | undefined;
+          if (!old || old.rendered !== entry.rendered) {
+            changedBlockNames.add(entry.block.blockName);
+          }
+        }
+        for (const [key, entry] of Object.entries(
+          currentBlocks as Record<
+            string,
+            { block: { blockName: string } }
+          >,
+        )) {
+          if (!(key in newBlocks)) {
+            changedBlockNames.add(entry.block.blockName);
+          }
+        }
+
+        (window as any).blockstudio.blockstudioBlocks =
+          data.blockstudioBlocks;
+
+        const changedSlugs = new Set<string>();
+        setCurrentPages((prevPages) => {
+          return data.pages.map((newPage) => {
+            const existing = prevPages.find(
+              (p) => p.slug === newPage.slug,
+            );
+
+            if (!existing || existing.content !== newPage.content) {
+              changedSlugs.add(newPage.slug);
+              return newPage;
+            }
+
+            if (changedBlockNames.size > 0) {
+              const usesChangedBlock = Array.from(
+                changedBlockNames,
+              ).some((name) => newPage.content.includes(name));
+              if (usesChangedBlock) {
+                changedSlugs.add(newPage.slug);
+                return { ...newPage };
+              }
+            }
+
+            return existing;
+          });
+        });
+
+        if (changedSlugs.size > 0) {
+          setRevisions((prev) => {
+            const next = { ...prev };
+            changedSlugs.forEach((slug) => {
+              next[slug] = (next[slug] || 0) + 1;
+            });
+            return next;
+          });
+        }
+
+        setFingerprint(result.fingerprint);
+      } catch {
+        // Silently ignore poll errors.
+      }
+    };
+
+    poll();
+    const interval = setInterval(poll, pollInterval * 1000);
+
+    return () => {
+      active = false;
+      clearInterval(interval);
+    };
+  }, [liveMode, pollInterval, ready, setFingerprint]);
+
+  if (currentPages.length === 0) {
     return (
       <div
         style={{
@@ -282,12 +462,16 @@ export const Canvas = ({ pages, settings }: CanvasProps): JSX.Element => {
             left: 0,
           }}
         >
-          {pages.map((page) => (
-            <MemoizedArtboard key={page.slug} page={page} />
+          {currentPages.map((page) => (
+            <MemoizedArtboard
+              key={page.slug}
+              page={page}
+              revision={revisions[page.slug] || 0}
+            />
           ))}
         </div>
 
-        {pages.map((page) => (
+        {currentPages.map((page) => (
           <div
             key={page.slug}
             data-canvas-label=""
@@ -310,19 +494,42 @@ export const Canvas = ({ pages, settings }: CanvasProps): JSX.Element => {
         ))}
 
         <div
-          style={{ position: 'absolute', top: 12, right: 12 }}
+          style={{
+            position: 'absolute',
+            top: 12,
+            right: 12,
+            display: 'flex',
+            alignItems: 'center',
+            gap: 8,
+          }}
           className="blockstudio-canvas-menu"
         >
+          {liveMode && (
+            <div
+              style={{
+                width: 8,
+                height: 8,
+                borderRadius: '50%',
+                background: '#4ade80',
+                animation:
+                  'blockstudio-canvas-pulse 2s ease-in-out infinite',
+              }}
+            />
+          )}
           <DropdownMenu icon={moreHorizontal} label="Canvas options">
             {() => (
               <>
                 <MenuGroup>
-                  <MenuItem onClick={() => {}}>Fit to view</MenuItem>
-                  <MenuItem onClick={() => {}}>Zoom to 100%</MenuItem>
+                  <MenuItem onClick={fitToView}>Fit to view</MenuItem>
+                  <MenuItem onClick={zoomTo100}>Zoom to 100%</MenuItem>
                 </MenuGroup>
                 <MenuGroup>
-                  <MenuItem onClick={() => {}}>Export as image</MenuItem>
-                  <MenuItem onClick={() => {}}>Settings</MenuItem>
+                  <MenuItem
+                    icon={liveMode ? check : undefined}
+                    onClick={() => setLiveMode(!liveMode)}
+                  >
+                    Live mode
+                  </MenuItem>
                 </MenuGroup>
               </>
             )}

@@ -7,6 +7,7 @@ import {
 } from '@wordpress/blocks';
 
 import { Canvas } from './canvas';
+import './store';
 
 declare global {
   interface Window {
@@ -41,6 +42,7 @@ const init = (): void => {
     '[data-canvas-label] { opacity: 0; transition: opacity 0.4s ease; }',
     '.blockstudio-canvas-menu .components-button { color: rgba(255,255,255,0.6); border-radius: 4px; }',
     '.blockstudio-canvas-menu .components-button:hover, .blockstudio-canvas-menu .components-button:focus { color: #fff; background: rgba(255,255,255,0.1); }',
+    '@keyframes blockstudio-canvas-pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }',
   ].join('\n');
   document.head.appendChild(style);
 
