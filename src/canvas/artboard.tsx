@@ -16,6 +16,7 @@ interface Page {
 interface ArtboardProps {
   page: Page;
   revision: number;
+  width?: number;
 }
 
 interface Layer {
@@ -23,9 +24,9 @@ interface Layer {
   blocks: ReturnType<typeof parse>;
 }
 
-const ARTBOARD_WIDTH = 1440;
+const DEFAULT_WIDTH = 1440;
 
-export const Artboard = ({ page, revision }: ArtboardProps): JSX.Element => {
+export const Artboard = ({ page, revision, width = DEFAULT_WIDTH }: ArtboardProps): JSX.Element => {
   const wrapperRef = useRef<HTMLDivElement>(null);
   const pendingRef = useRef<HTMLDivElement>(null);
 
@@ -130,7 +131,7 @@ export const Artboard = ({ page, revision }: ArtboardProps): JSX.Element => {
       data-canvas-revision={revision}
       style={{
         position: 'relative',
-        width: ARTBOARD_WIDTH,
+        width,
         background: '#fff',
         boxShadow: '0 2px 8px rgba(0,0,0,0.3)',
         backfaceVisibility: 'hidden',
@@ -158,7 +159,7 @@ export const Artboard = ({ page, revision }: ArtboardProps): JSX.Element => {
                   }
             }
           >
-            <BlockPreview blocks={layer.blocks} viewportWidth={ARTBOARD_WIDTH} />
+            <BlockPreview blocks={layer.blocks} viewportWidth={width} />
           </div>
         );
       })}

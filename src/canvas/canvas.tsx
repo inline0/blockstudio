@@ -8,6 +8,7 @@ import apiFetch from '@wordpress/api-fetch';
 
 import { Artboard } from './artboard';
 import { STORE_NAME, store } from './store';
+import type { CanvasView } from './store';
 
 interface Page {
   title: string;
@@ -16,8 +17,15 @@ interface Page {
   content: string;
 }
 
+interface BlockItem {
+  title: string;
+  name: string;
+  content: string;
+}
+
 interface CanvasProps {
   pages: Page[];
+  blocks: BlockItem[];
   settings: Record<string, unknown>;
 }
 
@@ -33,20 +41,37 @@ interface PollResponse {
 
 interface RefreshResponse {
   pages: Page[];
+  blocks: BlockItem[];
   blockstudioBlocks: Record<string, unknown>;
 }
 
-const ARTBOARD_WIDTH = 1440;
+const PAGE_ARTBOARD_WIDTH = 1440;
+const BLOCK_ARTBOARD_WIDTH = 800;
+const BATCH_SIZE = 8;
 const GAP = 80;
 const LABEL_OFFSET = 28;
 const PADDING = 120;
 const MIN_SCALE = 0.02;
 const MAX_SCALE = 2;
 
+const BLOCK_ICON = (
+  <svg
+    xmlns="http://www.w3.org/2000/svg"
+    viewBox="0 0 24 24"
+    width="12"
+    height="12"
+    fill="currentColor"
+    style={{ marginRight: 4, verticalAlign: -1 }}
+  >
+    <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" />
+  </svg>
+);
+
 const MemoizedArtboard = memo(Artboard);
 
 export const Canvas = ({
   pages: initialPages,
+  blocks: initialBlocks,
   settings,
 }: CanvasProps): JSX.Element => {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -56,10 +81,20 @@ export const Canvas = ({
   const fittedRef = useRef(false);
 
   const [currentPages, setCurrentPages] = useState(initialPages);
+  const [currentBlocks, setCurrentBlocks] = useState(initialBlocks);
   const [revisions, setRevisions] = useState<Record<string, number>>(() => {
     const initial: Record<string, number> = {};
     initialPages.forEach((p) => {
       initial[p.slug] = 0;
+    });
+    return initial;
+  });
+  const [blockRevisions, setBlockRevisions] = useState<
+    Record<string, number>
+  >(() => {
+    const initial: Record<string, number> = {};
+    initialBlocks.forEach((b) => {
+      initial[b.name] = 0;
     });
     return initial;
   });
@@ -72,7 +107,11 @@ export const Canvas = ({
     (select) => select(store).getPollInterval(),
     [],
   );
-  const { setLiveMode, setFingerprint } = useDispatch(STORE_NAME);
+  const view = useSelect(
+    (select) => select(store).getView(),
+    [],
+  ) as CanvasView;
+  const { setLiveMode, setView, setFingerprint } = useDispatch(STORE_NAME);
   const fingerprintRef = useRef('');
 
   const fingerprint = useSelect(
@@ -81,9 +120,20 @@ export const Canvas = ({
   );
   fingerprintRef.current = fingerprint;
 
-  const columns = currentPages.length;
+  const isBlocksView = view === 'blocks';
+  const artboardWidth = isBlocksView ? BLOCK_ARTBOARD_WIDTH : PAGE_ARTBOARD_WIDTH;
+  const activeItems = isBlocksView ? currentBlocks : currentPages;
+  const totalItems = activeItems.length;
 
-  // Bypass React to avoid re-rendering BlockPreview iframes during pan/zoom.
+  const [mountedCount, setMountedCount] = useState(
+    Math.min(BATCH_SIZE, totalItems),
+  );
+  const visibleItems = activeItems.slice(0, mountedCount);
+
+  const columns = isBlocksView
+    ? Math.ceil(Math.sqrt(currentBlocks.length)) || 1
+    : currentPages.length;
+
   const applyTransform = useCallback((): void => {
     const t = transformRef.current;
     const surface = surfaceRef.current;
@@ -93,16 +143,43 @@ export const Canvas = ({
     surface.style.transform = `translate(${t.x}px, ${t.y}px) scale(${t.scale})`;
     surface.style.opacity = '1';
 
+    const width = isBlocksView ? BLOCK_ARTBOARD_WIDTH : PAGE_ARTBOARD_WIDTH;
+    const cols = isBlocksView
+      ? Math.ceil(Math.sqrt(currentBlocks.length)) || 1
+      : currentPages.length;
+
     const labels = container.querySelectorAll<HTMLElement>(
       '[data-canvas-label]',
     );
     labels.forEach((label, i) => {
-      label.style.left = `${t.x + i * (ARTBOARD_WIDTH + GAP) * t.scale}px`;
-      label.style.top = `${t.y - LABEL_OFFSET}px`;
-      label.style.maxWidth = `${(ARTBOARD_WIDTH + GAP) * t.scale - 16}px`;
+      const col = i % cols;
+      const row = Math.floor(i / cols);
+      const rowOffset = label.closest('[data-canvas-surface]')
+        ? 0
+        : (() => {
+            const items = container.querySelectorAll('[data-canvas-slug]');
+            let offset = 0;
+            for (let r = 0; r < row; r++) {
+              let maxH = 0;
+              for (let c = 0; c < cols; c++) {
+                const idx = r * cols + c;
+                if (idx < items.length) {
+                  maxH = Math.max(maxH, items[idx].getBoundingClientRect().height / t.scale);
+                }
+              }
+              offset += maxH + GAP;
+            }
+            return offset;
+          })();
+
+      label.style.left = `${t.x + col * (width + GAP) * t.scale}px`;
+      label.style.top = isBlocksView
+        ? `${t.y + rowOffset * t.scale - LABEL_OFFSET}px`
+        : `${t.y - LABEL_OFFSET}px`;
+      label.style.maxWidth = `${(width + GAP) * t.scale - 16}px`;
       label.style.opacity = '1';
     });
-  }, []);
+  }, [isBlocksView, currentBlocks.length, currentPages.length]);
 
   const fitToView = useCallback((): void => {
     const surface = surfaceRef.current;
@@ -143,9 +220,11 @@ export const Canvas = ({
     applyTransform();
   }, [applyTransform]);
 
+  const expectedIframeCount = Math.min(BATCH_SIZE, totalItems);
+
   useEffect(() => {
     const surface = surfaceRef.current;
-    if (!surface || ready || currentPages.length === 0) return;
+    if (!surface || ready || expectedIframeCount === 0) return;
     let cancelled = false;
 
     const waitForMedia = async (
@@ -204,7 +283,7 @@ export const Canvas = ({
 
     const check = (): void => {
       const iframes = surface.querySelectorAll('iframe');
-      if (iframes.length < currentPages.length) return;
+      if (iframes.length < expectedIframeCount) return;
 
       observer.disconnect();
       waitForMedia(iframes).then(() => {
@@ -220,14 +299,14 @@ export const Canvas = ({
       cancelled = true;
       observer.disconnect();
     };
-  }, [currentPages.length, ready]);
+  }, [expectedIframeCount, ready]);
 
   // Fallback timeout in case iframes never appear.
   useEffect(() => {
-    if (ready || currentPages.length === 0) return;
+    if (ready || expectedIframeCount === 0) return;
     const timeout = setTimeout(() => setReady(true), 10000);
     return () => clearTimeout(timeout);
-  }, [ready, currentPages.length]);
+  }, [ready, expectedIframeCount]);
 
   // Wait for surface dimensions to stabilize before fitting to view.
   // The max-height removal in artboards causes async resizing.
@@ -300,12 +379,40 @@ export const Canvas = ({
     return () => container.removeEventListener('wheel', handleWheel);
   }, [applyTransform]);
 
-  // Re-apply label positions when pages change (new labels start at opacity 0).
+  // Re-apply label positions when items change (new labels start at opacity 0).
   useEffect(() => {
     if (fittedRef.current) {
       applyTransform();
     }
-  }, [currentPages, applyTransform]);
+  }, [currentPages, currentBlocks, applyTransform]);
+
+  const prevViewRef = useRef(view);
+  useEffect(() => {
+    if (prevViewRef.current !== view) {
+      prevViewRef.current = view;
+      setMountedCount(Math.min(BATCH_SIZE, activeItems.length));
+      if (fittedRef.current) {
+        requestAnimationFrame(() => fitToView());
+      }
+    }
+  }, [view, fitToView, activeItems.length]);
+
+  useEffect(() => {
+    if (!ready) return;
+    if (mountedCount >= totalItems) return;
+
+    const timer = setTimeout(() => {
+      setMountedCount((prev) => Math.min(prev + BATCH_SIZE, totalItems));
+    }, 200);
+
+    return () => clearTimeout(timer);
+  }, [ready, mountedCount, totalItems]);
+
+  useEffect(() => {
+    if (fittedRef.current) {
+      applyTransform();
+    }
+  }, [mountedCount, applyTransform]);
 
   useEffect(() => {
     if (!liveMode || !ready) return;
@@ -333,17 +440,17 @@ export const Canvas = ({
 
         if (!active) return;
 
-        const currentBlocks = (window as any).blockstudio
+        const currentPreloaded = (window as any).blockstudio
           ?.blockstudioBlocks || {};
-        const newBlocks = data.blockstudioBlocks as Record<
+        const newPreloaded = data.blockstudioBlocks as Record<
           string,
           { rendered: string; block: { blockName: string } }
         >;
 
         // Compare individual block entries to find which block types changed.
         const changedBlockNames = new Set<string>();
-        for (const [key, entry] of Object.entries(newBlocks)) {
-          const old = currentBlocks[key] as
+        for (const [key, entry] of Object.entries(newPreloaded)) {
+          const old = currentPreloaded[key] as
             | { rendered: string }
             | undefined;
           if (!old || old.rendered !== entry.rendered) {
@@ -351,12 +458,12 @@ export const Canvas = ({
           }
         }
         for (const [key, entry] of Object.entries(
-          currentBlocks as Record<
+          currentPreloaded as Record<
             string,
             { block: { blockName: string } }
           >,
         )) {
-          if (!(key in newBlocks)) {
+          if (!(key in newPreloaded)) {
             changedBlockNames.add(entry.block.blockName);
           }
         }
@@ -364,6 +471,7 @@ export const Canvas = ({
         (window as any).blockstudio.blockstudioBlocks =
           data.blockstudioBlocks;
 
+        // Update pages.
         const changedSlugs = new Set<string>();
         setCurrentPages((prevPages) => {
           return data.pages.map((newPage) => {
@@ -400,6 +508,38 @@ export const Canvas = ({
           });
         }
 
+        // Update blocks.
+        const changedBlockItems = new Set<string>();
+        setCurrentBlocks((prevBlocks) => {
+          return data.blocks.map((newBlock) => {
+            const existing = prevBlocks.find(
+              (b) => b.name === newBlock.name,
+            );
+
+            if (!existing || existing.content !== newBlock.content) {
+              changedBlockItems.add(newBlock.name);
+              return newBlock;
+            }
+
+            if (changedBlockNames.has(newBlock.name)) {
+              changedBlockItems.add(newBlock.name);
+              return { ...newBlock };
+            }
+
+            return existing;
+          });
+        });
+
+        if (changedBlockItems.size > 0) {
+          setBlockRevisions((prev) => {
+            const next = { ...prev };
+            changedBlockItems.forEach((name) => {
+              next[name] = (next[name] || 0) + 1;
+            });
+            return next;
+          });
+        }
+
         setFingerprint(result.fingerprint);
       } catch {
         // Silently ignore poll errors.
@@ -415,7 +555,11 @@ export const Canvas = ({
     };
   }, [liveMode, pollInterval, ready, setFingerprint]);
 
-  if (currentPages.length === 0) {
+  const hasContent =
+    (view === 'pages' && currentPages.length > 0) ||
+    (view === 'blocks' && currentBlocks.length > 0);
+
+  if (!hasContent) {
     return (
       <div
         style={{
@@ -431,15 +575,20 @@ export const Canvas = ({
           fontSize: 16,
         }}
       >
-        No Blockstudio pages found.
+        {view === 'pages'
+          ? 'No Blockstudio pages found.'
+          : 'No Blockstudio blocks found.'}
       </div>
     );
   }
+
+  const labelColor = isBlocksView ? '#a855f7' : '#999';
 
   return (
     <BlockEditorProvider settings={settings}>
       <div
         ref={containerRef}
+        data-canvas-view={view}
         style={{
           position: 'fixed',
           inset: 0,
@@ -454,7 +603,7 @@ export const Canvas = ({
             transformOrigin: '0 0',
             willChange: 'transform',
             display: 'grid',
-            gridTemplateColumns: `repeat(${columns}, ${ARTBOARD_WIDTH}px)`,
+            gridTemplateColumns: `repeat(${columns}, ${artboardWidth}px)`,
             alignItems: 'start',
             gap: GAP,
             position: 'absolute',
@@ -462,24 +611,36 @@ export const Canvas = ({
             left: 0,
           }}
         >
-          {currentPages.map((page) => (
-            <MemoizedArtboard
-              key={page.slug}
-              page={page}
-              revision={revisions[page.slug] || 0}
-            />
-          ))}
+          {visibleItems.map((item) => {
+            const key = 'slug' in item ? item.slug : item.name;
+            const rev = 'slug' in item
+              ? revisions[item.slug] || 0
+              : blockRevisions[item.name] || 0;
+            return (
+              <MemoizedArtboard
+                key={key}
+                page={{
+                  title: item.title,
+                  slug: key,
+                  name: item.name,
+                  content: item.content,
+                }}
+                revision={rev}
+                width={artboardWidth}
+              />
+            );
+          })}
         </div>
 
-        {currentPages.map((page) => (
+        {visibleItems.map((item) => (
           <div
-            key={page.slug}
+            key={'slug' in item ? item.slug : item.name}
             data-canvas-label=""
             style={{
               position: 'absolute',
               overflow: 'hidden',
               textOverflow: 'ellipsis',
-              color: '#999',
+              color: labelColor,
               fontFamily:
                 '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
               fontSize: 13,
@@ -487,9 +648,12 @@ export const Canvas = ({
               userSelect: 'none',
               pointerEvents: 'none',
               whiteSpace: 'nowrap',
+              display: 'flex',
+              alignItems: 'center',
             }}
           >
-            {page.title}
+            {isBlocksView && BLOCK_ICON}
+            {item.title}
           </div>
         ))}
 
@@ -519,6 +683,20 @@ export const Canvas = ({
           <DropdownMenu icon={moreHorizontal} label="Canvas options">
             {() => (
               <>
+                <MenuGroup>
+                  <MenuItem
+                    icon={view === 'pages' ? check : undefined}
+                    onClick={() => setView('pages')}
+                  >
+                    Pages
+                  </MenuItem>
+                  <MenuItem
+                    icon={view === 'blocks' ? check : undefined}
+                    onClick={() => setView('blocks')}
+                  >
+                    Blocks
+                  </MenuItem>
+                </MenuGroup>
                 <MenuGroup>
                   <MenuItem onClick={fitToView}>Fit to view</MenuItem>
                   <MenuItem onClick={zoomTo100}>Zoom to 100%</MenuItem>

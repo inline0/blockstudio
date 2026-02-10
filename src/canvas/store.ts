@@ -2,10 +2,13 @@ import { createReduxStore, register } from '@wordpress/data';
 
 const STORAGE_KEY = 'blockstudio-canvas-settings';
 
+export type CanvasView = 'pages' | 'blocks';
+
 interface CanvasState {
   liveMode: boolean;
   pollInterval: number;
   fingerprint: string;
+  view: CanvasView;
 }
 
 interface CanvasAction {
@@ -30,6 +33,7 @@ function saveSettings(state: CanvasState): void {
       JSON.stringify({
         liveMode: state.liveMode,
         pollInterval: state.pollInterval,
+        view: state.view,
       }),
     );
   } catch {
@@ -43,6 +47,7 @@ const DEFAULT_STATE: CanvasState = {
   liveMode: persisted.liveMode ?? false,
   pollInterval: persisted.pollInterval ?? 2,
   fingerprint: '',
+  view: (persisted as any).view === 'blocks' ? 'blocks' : 'pages',
 };
 
 export const STORE_NAME = 'blockstudio/canvas';
@@ -57,6 +62,9 @@ export const store = createReduxStore(STORE_NAME, {
         break;
       case 'SET_POLL_INTERVAL':
         next = { ...state, pollInterval: action.value as number };
+        break;
+      case 'SET_VIEW':
+        next = { ...state, view: action.value as CanvasView };
         break;
       case 'SET_FINGERPRINT':
         return { ...state, fingerprint: action.value as string };
@@ -75,6 +83,9 @@ export const store = createReduxStore(STORE_NAME, {
     setPollInterval(value: number) {
       return { type: 'SET_POLL_INTERVAL' as const, value };
     },
+    setView(value: CanvasView) {
+      return { type: 'SET_VIEW' as const, value };
+    },
     setFingerprint(value: string) {
       return { type: 'SET_FINGERPRINT' as const, value };
     },
@@ -86,6 +97,9 @@ export const store = createReduxStore(STORE_NAME, {
     },
     getPollInterval(state: CanvasState) {
       return state.pollInterval;
+    },
+    getView(state: CanvasState) {
+      return state.view;
     },
     getFingerprint(state: CanvasState) {
       return state.fingerprint;

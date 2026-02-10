@@ -588,4 +588,149 @@ test.describe('Canvas', () => {
     });
 
   });
+
+  test.describe('blocks view', () => {
+    test('blocks data is passed to JS', async () => {
+      await page.evaluate(() => localStorage.removeItem('blockstudio-canvas-settings'));
+      await page.goto(canvasUrl, { waitUntil: 'domcontentloaded' });
+
+      const blocks = await page.evaluate(() => (window as any).blockstudioCanvas?.blocks);
+
+      expect(Array.isArray(blocks)).toBe(true);
+      expect(blocks.length).toBeGreaterThan(0);
+
+      const first = blocks[0];
+      expect(first).toHaveProperty('title');
+      expect(first).toHaveProperty('name');
+      expect(first).toHaveProperty('content');
+    });
+
+    test('switching to blocks view shows block artboards', async () => {
+      await page.goto(canvasUrl, { waitUntil: 'domcontentloaded' });
+
+      await page.waitForFunction(
+        () => {
+          const el = document.querySelector('[data-canvas-surface]');
+          return el && window.getComputedStyle(el).transform !== 'none';
+        },
+        null,
+        { timeout: 15000 },
+      );
+
+      const menuButton = page.locator('.blockstudio-canvas-menu .components-button').first();
+      await menuButton.click();
+      await expect(page.locator('role=menu')).toBeVisible({ timeout: 5000 });
+      await page.locator('role=menuitem', { hasText: 'Blocks' }).click();
+      await page.waitForTimeout(300);
+
+      await expect(page.locator('[data-canvas-view="blocks"]')).toBeVisible();
+
+      const artboards = page.locator('[data-canvas-slug]');
+      await expect(artboards.first()).toBeVisible({ timeout: 15000 });
+      const count = await artboards.count();
+      expect(count).toBeGreaterThan(0);
+    });
+
+    test('block labels have violet color', async () => {
+      const labels = page.locator('[data-canvas-label]');
+      await expect(labels.first()).toBeVisible({ timeout: 5000 });
+
+      const color = await labels.first().evaluate(
+        (el) => window.getComputedStyle(el).color,
+      );
+      expect(color).toBe('rgb(168, 85, 247)');
+    });
+
+    test('blocks view uses multi-column grid', async () => {
+      const surface = page.locator('[data-canvas-surface]');
+      const columns = await surface.evaluate(
+        (el) => window.getComputedStyle(el).gridTemplateColumns,
+      );
+      const columnCount = columns.split(' ').length;
+      expect(columnCount).toBeGreaterThan(1);
+    });
+
+    test('blocks artboard width is 800px', async () => {
+      const artboard = page.locator('[data-canvas-slug]').first();
+      const width = await artboard.evaluate((el) => (el as HTMLElement).offsetWidth);
+      expect(width).toBe(800);
+    });
+
+    test('switching back to pages view restores page artboards', async () => {
+      await page.keyboard.press('Escape');
+      await page.waitForTimeout(300);
+
+      const menuButton = page.locator('.blockstudio-canvas-menu .components-button').first();
+      await menuButton.click();
+      await expect(page.locator('role=menu')).toBeVisible({ timeout: 5000 });
+      await page.locator('role=menuitem', { hasText: 'Pages' }).click();
+      await page.waitForTimeout(300);
+
+      await expect(page.locator('[data-canvas-view="pages"]')).toBeVisible();
+
+      const artboards = page.locator('[data-canvas-slug]');
+      await expect(artboards.first()).toBeVisible({ timeout: 15000 });
+
+      const width = await artboards.first().evaluate((el) => (el as HTMLElement).offsetWidth);
+      expect(width).toBe(1440);
+    });
+
+    test('view state persists in localStorage', async () => {
+      await page.evaluate(() => {
+        const dispatch = (window as any).wp?.data?.dispatch;
+        if (dispatch) dispatch('blockstudio/canvas').setView('blocks');
+      });
+      await page.waitForTimeout(300);
+
+      const stored = await page.evaluate(() => {
+        const raw = localStorage.getItem('blockstudio-canvas-settings');
+        return raw ? JSON.parse(raw) : null;
+      });
+
+      expect(stored).toBeTruthy();
+      expect(stored.view).toBe('blocks');
+    });
+
+    test('refresh endpoint returns blocks data', async () => {
+      const result = await page.evaluate(async () => {
+        const apiFetch = (window as any).wp.apiFetch;
+        return apiFetch({ path: '/blockstudio/v1/canvas/refresh' });
+      });
+
+      expect(result).toHaveProperty('blocks');
+      expect(Array.isArray(result.blocks)).toBe(true);
+      expect(result.blocks.length).toBeGreaterThan(0);
+
+      const first = result.blocks[0];
+      expect(first).toHaveProperty('title');
+      expect(first).toHaveProperty('name');
+      expect(first).toHaveProperty('content');
+    });
+
+    test('Pages menu item shows check icon in pages view', async () => {
+      await page.evaluate(() => localStorage.removeItem('blockstudio-canvas-settings'));
+      await page.goto(canvasUrl, { waitUntil: 'domcontentloaded' });
+
+      await page.waitForFunction(
+        () => {
+          const el = document.querySelector('[data-canvas-surface]');
+          return el && window.getComputedStyle(el).transform !== 'none';
+        },
+        null,
+        { timeout: 15000 },
+      );
+
+      const menuButton = page.locator('.blockstudio-canvas-menu .components-button').first();
+      await menuButton.click();
+      await expect(page.locator('role=menu')).toBeVisible({ timeout: 5000 });
+
+      const pagesItem = page.locator('role=menuitem', { hasText: 'Pages' });
+      const icon = pagesItem.locator('svg');
+      await expect(icon).toBeVisible();
+
+      const blocksItem = page.locator('role=menuitem', { hasText: 'Blocks' });
+      const blocksIcon = blocksItem.locator('svg');
+      await expect(blocksIcon).toHaveCount(0);
+    });
+  });
 });

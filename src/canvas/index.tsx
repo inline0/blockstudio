@@ -18,6 +18,11 @@ declare global {
         name: string;
         content: string;
       }>;
+      blocks: Array<{
+        title: string;
+        name: string;
+        content: string;
+      }>;
       settings: Record<string, unknown>;
     };
     wp: {
@@ -52,9 +57,12 @@ const init = (): void => {
   setUnregisteredTypeHandlerName('core/missing');
 
   const pages = window.blockstudioCanvas?.pages ?? [];
+  const blocks = window.blockstudioCanvas?.blocks ?? [];
   const settings = window.blockstudioCanvas?.settings ?? {};
 
-  createRoot(root).render(<Canvas pages={pages} settings={settings} />);
+  createRoot(root).render(
+    <Canvas pages={pages} blocks={blocks} settings={settings} />,
+  );
 };
 
 if (document.readyState === 'loading') {

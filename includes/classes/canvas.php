@@ -111,7 +111,10 @@ class Canvas {
 		$asset = require $asset_file;
 
 		$pages              = $this->get_pages_with_content();
+		$blocks             = $this->get_blocks_with_content();
 		$blockstudio_blocks = $this->preload_all_blocks( $pages );
+		$block_preloads     = $this->preload_block_items( $blocks );
+		$blockstudio_blocks = array_merge( $blockstudio_blocks, $block_preloads );
 
 		wp_add_inline_script(
 			'blockstudio-blocks',
@@ -141,6 +144,7 @@ class Canvas {
 			'blockstudioCanvas',
 			array(
 				'pages'    => $pages,
+				'blocks'   => $blocks,
 				'settings' => $editor_settings,
 			)
 		);
@@ -177,6 +181,119 @@ class Canvas {
 		}
 
 		return $pages;
+	}
+
+	/**
+	 * Get all registered Blockstudio blocks with default attribute content.
+	 *
+	 * @return array<int, array{title: string, name: string, content: string}>
+	 */
+	private function get_blocks_with_content(): array {
+		$blocks = Build::blocks();
+		$items  = array();
+
+		foreach ( $blocks as $name => $block ) {
+			$attributes = $block->blockstudio['attributes'] ?? array();
+			$defaults   = array();
+
+			foreach ( $attributes as $id => $attr ) {
+				if ( ! isset( $attr['default'] ) ) {
+					continue;
+				}
+
+				$defaults[ $id ] = $attr['default'];
+			}
+
+			$attrs_json = wp_json_encode(
+				array(
+					'blockstudio' => array(
+						'attributes' => $defaults,
+					),
+				)
+			);
+
+			$content = '<!-- wp:' . $name . ' ' . $attrs_json . ' /-->';
+
+			$items[] = array(
+				'title'   => $block->title ?? $name,
+				'name'    => $name,
+				'content' => $content,
+			);
+		}
+
+		usort(
+			$items,
+			function ( $a, $b ) {
+				return strcasecmp( $a['title'], $b['title'] );
+			}
+		);
+
+		return $items;
+	}
+
+	/**
+	 * Pre-render blocks from the blocks view items.
+	 *
+	 * @param array $block_items Block items from get_blocks_with_content().
+	 * @return array<string, array{rendered: string, block: array}> Preloaded block data keyed by hash.
+	 */
+	private function preload_block_items( array $block_items ): array {
+		$blockstudio_blocks = array();
+		$blocks             = Build::blocks();
+		$block_names        = array_keys( $blocks );
+		$parser             = new WP_Block_Parser();
+
+		foreach ( $block_items as $item ) {
+			$parsed_blocks = $parser->parse( $item['content'] );
+
+			foreach ( $parsed_blocks as $block ) {
+				if ( ! in_array( $block['blockName'], $block_names, true ) ) {
+					continue;
+				}
+
+				$raw_inner = $block['attrs']['blockstudio']['attributes'] ?? array();
+
+				if ( is_array( $raw_inner ) && ! empty( $raw_inner ) ) {
+					array_walk_recursive(
+						$raw_inner,
+						function ( &$value ) {
+							if ( '' === $value ) {
+								$value = false;
+							}
+						}
+					);
+				}
+
+				$block_obj = array(
+					'blockName' => $block['blockName'],
+					'attrs'     => (object) $raw_inner,
+				);
+
+				$id = str_replace(
+					array( '{', '}', '[', ']', '"', '/', ' ', ':', ',', '\\' ),
+					'_',
+					wp_json_encode( $block_obj )
+				);
+
+				if ( ! isset( $blockstudio_blocks[ $id ] ) ) {
+					// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Setting mode for rendering.
+					$_GET['blockstudioMode'] = 'editor';
+
+					try {
+						$rendered = render_block( $block );
+					} catch ( \Throwable $e ) {
+						$rendered = '';
+					}
+
+					$blockstudio_blocks[ $id ] = array(
+						'rendered' => $rendered,
+						'block'    => $block_obj,
+					);
+				}
+			}
+		}
+
+		return $blockstudio_blocks;
 	}
 
 	/**
@@ -317,11 +434,15 @@ class Canvas {
 		}
 
 		$pages              = $this->get_pages_with_content();
+		$blocks             = $this->get_blocks_with_content();
 		$blockstudio_blocks = $this->preload_all_blocks( $pages );
+		$block_preloads     = $this->preload_block_items( $blocks );
+		$blockstudio_blocks = array_merge( $blockstudio_blocks, $block_preloads );
 
 		return new WP_REST_Response(
 			array(
 				'pages'             => $pages,
+				'blocks'            => $blocks,
 				'blockstudioBlocks' => $blockstudio_blocks,
 			)
 		);
