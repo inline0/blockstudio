@@ -56,7 +56,7 @@ Create custom WordPress blocks by dropping a `block.json` and a PHP template int
 * New: code field popout option to open editor in separate window
 * New: devtools grabber for copying block template paths on the frontend (hold Cmd+C)
 * New: repeater default rows - pre-fill repeater fields with a `default` array of row data on block insert
-* New: assets/reset setting to remove WordPress core block styles on the frontend and in the editor. Also strips reset.css and common.css from the editor iframe
+* New: assets/reset setting to remove WordPress core block styles on the frontend and in the editor
 * New: canvas view with single-row artboard layout, admin bar toggle, and non-scaling labels
 * Enhancement: apiVersion 3 support. Blocks now render correctly in the iframed editor (site editor, responsive previews)
 * Enhancement: AI context file rebuilt as a static build from documentation and schemas (~48k tokens)
