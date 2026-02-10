@@ -47,9 +47,9 @@ interface RefreshResponse {
 
 const PAGE_ARTBOARD_WIDTH = 1440;
 const BLOCK_ARTBOARD_WIDTH = 800;
+const BLOCK_ARTBOARD_MIN_HEIGHT = 200;
 const BATCH_SIZE = 8;
 const GAP = 80;
-const LABEL_OFFSET = 28;
 const PADDING = 120;
 const MIN_SCALE = 0.02;
 const MAX_SCALE = 2;
@@ -135,51 +135,13 @@ export const Canvas = ({
     : currentPages.length;
 
   const applyTransform = useCallback((): void => {
-    const t = transformRef.current;
     const surface = surfaceRef.current;
-    const container = containerRef.current;
-    if (!t || !surface || !container) return;
-
+    if (!transformRef.current || !surface) return;
+    const t = transformRef.current;
     surface.style.transform = `translate(${t.x}px, ${t.y}px) scale(${t.scale})`;
+    surface.style.setProperty('--canvas-label-scale', String(1 / t.scale));
     surface.style.opacity = '1';
-
-    const width = isBlocksView ? BLOCK_ARTBOARD_WIDTH : PAGE_ARTBOARD_WIDTH;
-    const cols = isBlocksView
-      ? Math.ceil(Math.sqrt(currentBlocks.length)) || 1
-      : currentPages.length;
-
-    const labels = container.querySelectorAll<HTMLElement>(
-      '[data-canvas-label]',
-    );
-    labels.forEach((label, i) => {
-      const col = i % cols;
-      const row = Math.floor(i / cols);
-      const rowOffset = label.closest('[data-canvas-surface]')
-        ? 0
-        : (() => {
-            const items = container.querySelectorAll('[data-canvas-slug]');
-            let offset = 0;
-            for (let r = 0; r < row; r++) {
-              let maxH = 0;
-              for (let c = 0; c < cols; c++) {
-                const idx = r * cols + c;
-                if (idx < items.length) {
-                  maxH = Math.max(maxH, items[idx].getBoundingClientRect().height / t.scale);
-                }
-              }
-              offset += maxH + GAP;
-            }
-            return offset;
-          })();
-
-      label.style.left = `${t.x + col * (width + GAP) * t.scale}px`;
-      label.style.top = isBlocksView
-        ? `${t.y + rowOffset * t.scale - LABEL_OFFSET}px`
-        : `${t.y - LABEL_OFFSET}px`;
-      label.style.maxWidth = `${(width + GAP) * t.scale - 16}px`;
-      label.style.opacity = '1';
-    });
-  }, [isBlocksView, currentBlocks.length, currentPages.length]);
+  }, []);
 
   const fitToView = useCallback((): void => {
     const surface = surfaceRef.current;
@@ -379,13 +341,6 @@ export const Canvas = ({
     return () => container.removeEventListener('wheel', handleWheel);
   }, [applyTransform]);
 
-  // Re-apply label positions when items change (new labels start at opacity 0).
-  useEffect(() => {
-    if (fittedRef.current) {
-      applyTransform();
-    }
-  }, [currentPages, currentBlocks, applyTransform]);
-
   const prevViewRef = useRef(view);
   useEffect(() => {
     if (prevViewRef.current !== view) {
@@ -407,12 +362,6 @@ export const Canvas = ({
 
     return () => clearTimeout(timer);
   }, [ready, mountedCount, totalItems]);
-
-  useEffect(() => {
-    if (fittedRef.current) {
-      applyTransform();
-    }
-  }, [mountedCount, applyTransform]);
 
   useEffect(() => {
     if (!liveMode || !ready) return;
@@ -617,45 +566,46 @@ export const Canvas = ({
               ? revisions[item.slug] || 0
               : blockRevisions[item.name] || 0;
             return (
-              <MemoizedArtboard
-                key={key}
-                page={{
-                  title: item.title,
-                  slug: key,
-                  name: item.name,
-                  content: item.content,
-                }}
-                revision={rev}
-                width={artboardWidth}
-              />
+              <div key={key} style={{ position: 'relative', minHeight: isBlocksView ? BLOCK_ARTBOARD_MIN_HEIGHT : undefined }}>
+                <div
+                  data-canvas-label=""
+                  style={{
+                    position: 'absolute',
+                    bottom: '100%',
+                    left: 0,
+                    paddingBottom: 8,
+                    maxWidth: `calc(${artboardWidth}px / var(--canvas-label-scale, 1))`,
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis',
+                    color: labelColor,
+                    fontFamily:
+                      '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+                    fontSize: 13,
+                    fontWeight: 500,
+                    userSelect: 'none',
+                    pointerEvents: 'none',
+                    whiteSpace: 'nowrap',
+                    transform: 'scale(var(--canvas-label-scale, 1))',
+                    transformOrigin: '0 100%',
+                  }}
+                >
+                  {isBlocksView && BLOCK_ICON}
+                  {item.title}
+                </div>
+                <MemoizedArtboard
+                  page={{
+                    title: item.title,
+                    slug: key,
+                    name: item.name,
+                    content: item.content,
+                  }}
+                  revision={rev}
+                  width={artboardWidth}
+                />
+              </div>
             );
           })}
         </div>
-
-        {visibleItems.map((item) => (
-          <div
-            key={'slug' in item ? item.slug : item.name}
-            data-canvas-label=""
-            style={{
-              position: 'absolute',
-              overflow: 'hidden',
-              textOverflow: 'ellipsis',
-              color: labelColor,
-              fontFamily:
-                '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
-              fontSize: 13,
-              fontWeight: 500,
-              userSelect: 'none',
-              pointerEvents: 'none',
-              whiteSpace: 'nowrap',
-              display: 'flex',
-              alignItems: 'center',
-            }}
-          >
-            {isBlocksView && BLOCK_ICON}
-            {item.title}
-          </div>
-        ))}
 
         <div
           style={{
