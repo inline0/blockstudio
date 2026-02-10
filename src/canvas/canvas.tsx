@@ -1,6 +1,8 @@
 import { memo, useCallback, useEffect, useRef, useState } from 'react';
 
 import { BlockEditorProvider } from '@wordpress/block-editor';
+import { DropdownMenu, MenuGroup, MenuItem } from '@wordpress/components';
+import { moreHorizontal } from '@wordpress/icons';
 
 import { Artboard } from './artboard';
 
@@ -306,6 +308,26 @@ export const Canvas = ({ pages, settings }: CanvasProps): JSX.Element => {
             {page.title}
           </div>
         ))}
+
+        <div
+          style={{ position: 'absolute', top: 12, right: 12 }}
+          className="blockstudio-canvas-menu"
+        >
+          <DropdownMenu icon={moreHorizontal} label="Canvas options">
+            {() => (
+              <>
+                <MenuGroup>
+                  <MenuItem onClick={() => {}}>Fit to view</MenuItem>
+                  <MenuItem onClick={() => {}}>Zoom to 100%</MenuItem>
+                </MenuGroup>
+                <MenuGroup>
+                  <MenuItem onClick={() => {}}>Export as image</MenuItem>
+                  <MenuItem onClick={() => {}}>Settings</MenuItem>
+                </MenuGroup>
+              </>
+            )}
+          </DropdownMenu>
+        </div>
       </div>
     </BlockEditorProvider>
   );
