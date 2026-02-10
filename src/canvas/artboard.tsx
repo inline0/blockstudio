@@ -1,8 +1,10 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 // @ts-expect-error No types for BlockPreview
 import { BlockPreview } from '@wordpress/block-editor';
 import { parse } from '@wordpress/blocks';
+
+import { waitForIframeReady } from './wait-for-iframe';
 
 interface Page {
   title: string;
@@ -18,26 +20,32 @@ interface ArtboardProps {
 
 interface Layer {
   id: number;
+  blocks: ReturnType<typeof parse>;
 }
 
 const ARTBOARD_WIDTH = 1440;
 
 export const Artboard = ({ page, revision }: ArtboardProps): JSX.Element => {
-  const blocks = useMemo(() => parse(page.content), [page.content]);
   const wrapperRef = useRef<HTMLDivElement>(null);
   const pendingRef = useRef<HTMLDivElement>(null);
 
-  const [layers, setLayers] = useState<Layer[]>([{ id: revision }]);
+  const [layers, setLayers] = useState<Layer[]>(() => [
+    { id: revision, blocks: parse(page.content) },
+  ]);
   const [activeId, setActiveId] = useState(revision);
+  const [readyId, setReadyId] = useState<number | null>(null);
 
   useEffect(() => {
     if (revision === activeId) return;
 
+    const newBlocks = parse(page.content);
     setLayers((prev) => {
       const active = prev.find((l) => l.id === activeId);
-      return active ? [active, { id: revision }] : [{ id: revision }];
+      return active
+        ? [active, { id: revision, blocks: newBlocks }]
+        : [{ id: revision, blocks: newBlocks }];
     });
-  }, [revision, activeId]);
+  }, [revision, activeId, page.content]);
 
   useEffect(() => {
     const pending = layers.find((l) => l.id !== activeId);
@@ -46,38 +54,36 @@ export const Artboard = ({ page, revision }: ArtboardProps): JSX.Element => {
     const container = pendingRef.current;
     if (!container) return;
 
-    let cancelled = false;
-
-    const swap = (): void => {
-      if (cancelled) return;
-      const newId = pending.id;
-      setActiveId(newId);
-      setLayers([{ id: newId }]);
+    let resolved = false;
+    const promote = (): void => {
+      if (resolved) return;
+      resolved = true;
+      setReadyId(pending.id);
     };
 
-    const checkIframe = (): boolean => {
-      const iframe = container.querySelector('iframe');
-      if (!iframe) return false;
-      if (iframe.contentDocument?.readyState === 'complete') {
-        swap();
-        return true;
-      }
-      iframe.addEventListener('load', swap, { once: true });
-      return true;
-    };
+    const controller = new AbortController();
+    waitForIframeReady(container, controller.signal)
+      .then(promote)
+      .catch(() => {});
 
-    if (checkIframe()) return () => { cancelled = true; };
-
-    const observer = new MutationObserver(() => {
-      if (checkIframe()) observer.disconnect();
-    });
-    observer.observe(container, { childList: true, subtree: true });
+    // Fallback: swap even if content detection hangs.
+    const timeout = setTimeout(promote, 5000);
 
     return () => {
-      cancelled = true;
-      observer.disconnect();
+      controller.abort();
+      clearTimeout(timeout);
     };
   }, [layers, activeId]);
+
+  useEffect(() => {
+    if (readyId === null) return;
+    const ready = layers.find((l) => l.id === readyId);
+    if (!ready) return;
+
+    setActiveId(readyId);
+    setLayers([ready]);
+    setReadyId(null);
+  }, [readyId, layers]);
 
   // BlockPreview hardcodes MAX_HEIGHT = 2000 on both the iframe and its
   // wrapper. Remove those limits so artboards show full page content.
@@ -132,6 +138,7 @@ export const Artboard = ({ page, revision }: ArtboardProps): JSX.Element => {
     >
       {layers.map((layer) => {
         const isActive = layer.id === activeId;
+        const isReady = layer.id === readyId;
         return (
           <div
             key={layer.id}
@@ -144,11 +151,14 @@ export const Artboard = ({ page, revision }: ArtboardProps): JSX.Element => {
                     top: 0,
                     left: 0,
                     width: '100%',
-                    visibility: 'hidden' as const,
+                    zIndex: isReady ? 1 : undefined,
+                    visibility: isReady
+                      ? ('visible' as const)
+                      : ('hidden' as const),
                   }
             }
           >
-            <BlockPreview blocks={blocks} viewportWidth={ARTBOARD_WIDTH} />
+            <BlockPreview blocks={layer.blocks} viewportWidth={ARTBOARD_WIDTH} />
           </div>
         );
       })}
