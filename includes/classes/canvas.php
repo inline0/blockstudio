@@ -139,6 +139,22 @@ class Canvas {
 
 		Assets::$force_editor_screen = false;
 
+		$reset = Settings::get( 'assets/reset' );
+
+		if ( true === $reset || Settings::get( 'assets/reset/enabled' ) ) {
+			if ( isset( $editor_settings['__unstableResolvedAssets']['styles'] ) ) {
+				$editor_settings['__unstableResolvedAssets']['styles'] = preg_replace(
+					array(
+						'/<link[^>]+(?:classic|content)\.css[^>]*>/',
+						'/<link[^>]+id="wp-block-[^"]*-css"[^>]*>/',
+						'/<style[^>]+id="global-styles-inline-css"[^>]*>.*?<\/style>/s',
+					),
+					'',
+					$editor_settings['__unstableResolvedAssets']['styles']
+				);
+			}
+		}
+
 		wp_localize_script(
 			'blockstudio-canvas',
 			'blockstudioCanvas',
