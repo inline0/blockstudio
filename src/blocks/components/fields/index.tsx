@@ -1,5 +1,6 @@
 import { useDispatch } from '@wordpress/data';
 import { useEffect, useMemo, useRef } from '@wordpress/element';
+import { seen, unseen } from '@wordpress/icons';
 import { set, unset, result, isNumber, cloneDeep, get } from 'lodash-es';
 import { Base } from '@/blocks/components/base';
 import { Control } from '@/blocks/components/control';
@@ -28,7 +29,6 @@ import { Token } from '@/blocks/components/fields/components/token';
 import { Unit } from '@/blocks/components/fields/components/unit';
 import { WYSIWYG } from '@/blocks/components/fields/components/wysiwyg';
 import { LabelAction } from '@/blocks/components/label';
-import { seen, unseen } from '@wordpress/icons';
 import { Styles } from '@/blocks/components/styles';
 import { createBlocks } from '@/blocks/utils/create-blocks';
 import { dispatch } from '@/blocks/utils/dispatch';
@@ -295,7 +295,6 @@ export const Fields = ({
 
         updatedAttributes = newAttributes;
 
-        // markNextChangeAsNotPersistent();
         setRepeater(newAttributes, objectKey);
       } else {
         updatedAttributes = {
@@ -303,7 +302,6 @@ export const Fields = ({
           [item.id + suffix]: newValue,
         };
 
-        // markNextChangeAsNotPersistent();
         setAttributes({
           ...attributes,
           blockstudio: {
@@ -556,114 +554,114 @@ export const Fields = ({
           remove={() => remove(repeaterId)}
           type={item.type}
         >
-        {item.type === 'text' ? (
-          <Text {...textProps()} properties={props} />
-        ) : item.type === 'textarea' ? (
-          <Textarea {...textProps()} properties={props} />
-        ) : item.type === 'number' ? (
-          <NumberField {...allProps} />
-        ) : item.type === 'unit' ? (
-          <Unit {...allProps} />
-        ) : item.type === 'toggle' ? (
-          <Toggle {...allProps} checked={v} />
-        ) : item.type === 'range' ? (
-          <Range {...allProps} />
-        ) : item.type === 'select' ? (
-          <Select
-            {...{
-              ...optionProps(),
-              attributes,
-              change,
-              disable,
-              item,
-              v,
-            }}
-            value={val}
-            inRepeater={repeaterId !== ''}
-          />
-        ) : item.type === 'checkbox' ? (
-          <Checkbox {...{ ...optionSetter(), item, change, v }} />
-        ) : item.type === 'radio' ? (
-          <Radio {...{ ...props, ...optionSetter(), item, val, change }} />
-        ) : // @ts-ignore
-        item.type === 'token' ? (
-          <Token {...{ ...allProps, item, transformedOptions }} />
-        ) : item.type === 'color' ? (
-          <Color {...{ ...allProps, item, transformedOptions }} value={val} />
-        ) : item.type === 'gradient' ? (
-          <Gradient
-            {...{ ...allProps, item, transformedOptions }}
-            value={val}
-          />
-        ) : item.type === 'files' ? (
-          <Files
-            {...{
-              ...props,
-              attributes,
-              change,
-              config,
-              disable,
-              item,
-              repeaterId,
-              transformed,
-              v,
-            }}
-            inRepeater={repeaterId !== ''}
-          />
-        ) : item.type === 'date' ? (
-          <Date {...{ item, v, change }} />
-        ) : item.type === 'datetime' ? (
-          <Datetime {...{ ...props, item, v, change }} />
-        ) : item.type === 'link' ? (
-          <Base>
-            <Link {...{ ...props, item, change }} value={v} />
-          </Base>
-        ) : item.type === 'icon' ? (
-          <Icon {...({ item, change } as Any)} value={v} />
-        ) : item.type === 'repeater' ? (
-          <Repeater
-            {...{
-              add,
-              attributes,
-              block,
-              duplicate,
-              element,
-              item,
-              remove,
-              sort,
-              transformed,
-              v,
-            }}
-            id={repeaterId}
-            context={repeaterId === ''}
-          />
-        ) : item.type === 'wysiwyg' ? (
-          <WYSIWYG {...textProps()} properties={props} item={item} />
-        ) : item.type === 'code' ? (
-          <Code
-            {...textProps()}
-            {...{ clientId, extensions, repeaterId }}
-            item={item}
-            inRepeater={repeaterId !== ''}
-          />
-        ) : item.type === 'classes' ? (
-          <Classes
-            {...{ attributes, setAttributes, clientId }}
-            attributeId={item.id}
-            keyName={`${key}${item.id}`}
-            label=""
-            tailwind={item.tailwind}
-            value={v || ''}
-          />
-        ) : item.type === 'attributes' ? (
-          <Attributes
-            {...{ attributes, setAttributes }}
-            keyName={`${key}${item.id}`}
-            link={item.link ?? false}
-            media={item.media ?? false}
-          />
-        ) : null}
-      </Control>
+          {item.type === 'text' ? (
+            <Text {...textProps()} properties={props} />
+          ) : item.type === 'textarea' ? (
+            <Textarea {...textProps()} properties={props} />
+          ) : item.type === 'number' ? (
+            <NumberField {...allProps} />
+          ) : item.type === 'unit' ? (
+            <Unit {...allProps} />
+          ) : item.type === 'toggle' ? (
+            <Toggle {...allProps} checked={v} />
+          ) : item.type === 'range' ? (
+            <Range {...allProps} />
+          ) : item.type === 'select' ? (
+            <Select
+              {...{
+                ...optionProps(),
+                attributes,
+                change,
+                disable,
+                item,
+                v,
+              }}
+              value={val}
+              inRepeater={repeaterId !== ''}
+            />
+          ) : item.type === 'checkbox' ? (
+            <Checkbox {...{ ...optionSetter(), item, change, v }} />
+          ) : item.type === 'radio' ? (
+            <Radio {...{ ...props, ...optionSetter(), item, val, change }} />
+          ) : // @ts-ignore
+          item.type === 'token' ? (
+            <Token {...{ ...allProps, item, transformedOptions }} />
+          ) : item.type === 'color' ? (
+            <Color {...{ ...allProps, item, transformedOptions }} value={val} />
+          ) : item.type === 'gradient' ? (
+            <Gradient
+              {...{ ...allProps, item, transformedOptions }}
+              value={val}
+            />
+          ) : item.type === 'files' ? (
+            <Files
+              {...{
+                ...props,
+                attributes,
+                change,
+                config,
+                disable,
+                item,
+                repeaterId,
+                transformed,
+                v,
+              }}
+              inRepeater={repeaterId !== ''}
+            />
+          ) : item.type === 'date' ? (
+            <Date {...{ item, v, change }} />
+          ) : item.type === 'datetime' ? (
+            <Datetime {...{ ...props, item, v, change }} />
+          ) : item.type === 'link' ? (
+            <Base>
+              <Link {...{ ...props, item, change }} value={v} />
+            </Base>
+          ) : item.type === 'icon' ? (
+            <Icon {...({ item, change } as Any)} value={v} />
+          ) : item.type === 'repeater' ? (
+            <Repeater
+              {...{
+                add,
+                attributes,
+                block,
+                duplicate,
+                element,
+                item,
+                remove,
+                sort,
+                transformed,
+                v,
+              }}
+              id={repeaterId}
+              context={repeaterId === ''}
+            />
+          ) : item.type === 'wysiwyg' ? (
+            <WYSIWYG {...textProps()} properties={props} item={item} />
+          ) : item.type === 'code' ? (
+            <Code
+              {...textProps()}
+              {...{ clientId, extensions, repeaterId }}
+              item={item}
+              inRepeater={repeaterId !== ''}
+            />
+          ) : item.type === 'classes' ? (
+            <Classes
+              {...{ attributes, setAttributes, clientId }}
+              attributeId={item.id}
+              keyName={`${key}${item.id}`}
+              label=""
+              tailwind={item.tailwind}
+              value={v || ''}
+            />
+          ) : item.type === 'attributes' ? (
+            <Attributes
+              {...{ attributes, setAttributes }}
+              keyName={`${key}${item.id}`}
+              link={item.link ?? false}
+              media={item.media ?? false}
+            />
+          ) : null}
+        </Control>
       );
     };
 
