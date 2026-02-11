@@ -1,0 +1,30 @@
+{
+  "$schema": "https://app.blockstudio.dev/schema",
+  "name": "blockstudio/type-preload-simple",
+  "title": "Preload Simple",
+  "category": "blockstudio-test-native",
+  "icon": "star-filled",
+  "description": "Preload test block with defaults.",
+  "keywords": ["preload", "simple"],
+  "blockstudio": {
+    "attributes": [
+      {
+        "id": "title",
+        "type": "text",
+        "label": "Title",
+        "default": "Hello"
+      },
+      {
+        "id": "count",
+        "type": "number",
+        "label": "Count",
+        "default": 5
+      },
+      {
+        "id": "active",
+        "type": "toggle",
+        "label": "Active"
+      }
+    ]
+  }
+}

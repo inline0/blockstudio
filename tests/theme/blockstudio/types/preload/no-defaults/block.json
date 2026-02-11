@@ -1,0 +1,28 @@
+{
+  "$schema": "https://app.blockstudio.dev/schema",
+  "name": "blockstudio/type-preload-no-defaults",
+  "title": "Preload No Defaults",
+  "category": "blockstudio-test-native",
+  "icon": "star-filled",
+  "description": "Preload test block with no defaults.",
+  "keywords": ["preload", "no-defaults"],
+  "blockstudio": {
+    "attributes": [
+      {
+        "id": "title",
+        "type": "text",
+        "label": "Title"
+      },
+      {
+        "id": "count",
+        "type": "number",
+        "label": "Count"
+      },
+      {
+        "id": "active",
+        "type": "toggle",
+        "label": "Active"
+      }
+    ]
+  }
+}

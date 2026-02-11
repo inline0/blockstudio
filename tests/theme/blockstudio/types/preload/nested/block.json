@@ -1,0 +1,36 @@
+{
+  "$schema": "https://app.blockstudio.dev/schema",
+  "name": "blockstudio/type-preload-nested",
+  "title": "Preload Nested",
+  "category": "blockstudio-test-native",
+  "icon": "star-filled",
+  "description": "Preload test block with nested group.",
+  "keywords": ["preload", "nested"],
+  "blockstudio": {
+    "attributes": [
+      {
+        "id": "label",
+        "type": "text",
+        "label": "Label"
+      },
+      {
+        "id": "group",
+        "type": "group",
+        "label": "Group",
+        "attributes": [
+          {
+            "id": "sublabel",
+            "type": "text",
+            "label": "Sub Label"
+          },
+          {
+            "id": "value",
+            "type": "number",
+            "label": "Value",
+            "default": 0
+          }
+        ]
+      }
+    ]
+  }
+}

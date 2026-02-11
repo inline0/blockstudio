@@ -1,0 +1,37 @@
+{
+  "$schema": "https://app.blockstudio.dev/schema",
+  "name": "blockstudio/type-preload-repeater",
+  "title": "Preload Repeater",
+  "category": "blockstudio-test-native",
+  "icon": "star-filled",
+  "description": "Preload test block with repeater fields.",
+  "keywords": ["preload", "repeater"],
+  "blockstudio": {
+    "attributes": [
+      {
+        "id": "heading",
+        "type": "text",
+        "label": "Heading",
+        "default": "Heading"
+      },
+      {
+        "id": "items",
+        "type": "repeater",
+        "label": "Items",
+        "min": 1,
+        "attributes": [
+          {
+            "id": "text",
+            "type": "text",
+            "label": "Text"
+          },
+          {
+            "id": "number",
+            "type": "number",
+            "label": "Number"
+          }
+        ]
+      }
+    ]
+  }
+}
