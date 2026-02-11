@@ -13,6 +13,7 @@ import { AssetProcessing } from "@/components/homepage/asset-processing";
 import { TailwindCSS } from "@/components/homepage/tailwind";
 import { DeveloperExperience } from "@/components/homepage/developer-experience";
 import { AiContext } from "@/components/homepage/ai-context";
+import { DevTools } from "@/components/homepage/dev-tools";
 import { Composition } from "@/components/homepage/composition";
 import { FAQ } from "@/components/homepage/faq";
 import config from "../../onedocs.config";
@@ -97,6 +98,7 @@ export default function Home() {
               <AssetProcessing />
               <TailwindCSS />
               <DeveloperExperience />
+              <DevTools />
               <AiContext />
               <FAQ />
               <div className="border-t">
