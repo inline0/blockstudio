@@ -43,40 +43,40 @@ Create custom WordPress blocks by dropping a `block.json` and a PHP template int
 
 = 7.0.0 (next) =
 * New: Blockstudio is now free and open source
-* New: complete codebase refactor
 * New: file-based pages - create WordPress pages from file templates with automatic HTML to block parsing
 * New: file-based patterns - create WordPress block patterns from file templates with automatic HTML to block parsing
 * New: storage feature to store field values in post meta or options
-* New: Interactivity API support with editor hydration (set `interactivity: true` in blockstudio config)
 * New: Tailwind CSS v4 with server-side compilation via TailwindPHP, candidate-based caching, and CSS-first configuration
-* New: SEO content analysis integration. Blockstudio block content is now visible to Yoast SEO and Rank Math editor analysis
+* New: Interactivity API support with editor hydration (set `interactivity: true` in blockstudio config)
 * New: custom fields - reusable field definitions via file system and PHP filter
-* New: postId option for file-based pages to pin pages to a specific WordPress post ID
+* New: SEO content analysis integration. Blockstudio block content is now visible to Yoast SEO and Rank Math editor analysis
+* New: complete codebase refactor
+* New: repeater default rows - pre-fill repeater fields with a `default` array of row data on block insert
 * New: blockEditingMode support for file-based pages with page-level defaults and per-element overrides
+* New: postId option for file-based pages to pin pages to a specific WordPress post ID
+* New: canvas view with single-row artboard layout, admin bar toggle, and non-scaling labels
 * New: code field popout option to open editor in separate window
 * New: devtools grabber for copying block template paths on the frontend (hold Cmd+C)
-* New: repeater default rows - pre-fill repeater fields with a `default` array of row data on block insert
 * New: assets/reset setting to remove WordPress core block styles on the frontend and in the editor
-* New: canvas view with single-row artboard layout, admin bar toggle, and non-scaling labels
 * Enhancement: apiVersion 3 support. Blocks now render correctly in the iframed editor (site editor, responsive previews)
-* Enhancement: AI context file rebuilt as a static build from documentation and schemas (~48k tokens)
 * Enhancement: all PHP hooks now use snake_case naming (old camelCase names still supported)
-* Enhancement: dot notation for asset file suffixes (*.inline.css, *.editor.css, etc.). Dash notation still supported
-* Enhancement: field switch is now off by default and uses a visible eye icon with disabled overlay
-* Enhancement: repeater `min` now generates rows with field-level defaults on both frontend and editor
 * Enhancement: compiled Tailwind CSS now injected into the block editor alongside the CDN
+* Enhancement: repeater `min` now generates rows with field-level defaults on both frontend and editor
+* Enhancement: field switch is now off by default and uses a visible eye icon with disabled overlay
+* Enhancement: dot notation for asset file suffixes (*.inline.css, *.editor.css, etc.). Dash notation still supported
+* Enhancement: AI context file rebuilt as a static build from documentation and schemas (~48k tokens)
 * Enhancement: Tailwind CSS compilation filters out numeric candidates to prevent TailwindPHP crashes
-* Fix: bs_render_block() no longer triggers a warning from WP_Block_Supports when using useBlockProps
-* Fix: field changes no longer create individual undo checkpoints, preventing full block reload on undo
-* Fix: code field undo/redo now works independently without triggering Gutenberg undo
-* Fix: block preloading now uses index-based matching instead of hash-based, fixing cache misses from custom field defaults
 * Fix: undo no longer triggers API calls or spinners on any blocks (render cache persists across remounts)
+* Fix: field changes no longer create individual undo checkpoints, preventing full block reload on undo
+* Fix: block preloading now uses index-based matching instead of hash-based, fixing cache misses from custom field defaults
 * Fix: context changes on mount no longer trigger unnecessary refetches
-* Fix: JavaScript syntax highlighting now works without requiring script tags
-* Fix: populate feature now works with taxonomies registered by other plugins
+* Fix: code field undo/redo now works independently without triggering Gutenberg undo
+* Fix: bs_render_block() no longer triggers a warning from WP_Block_Supports when using useBlockProps
 * Fix: conditional fields not respecting default values on first load
-* Fix: optionsPopulate null error in WPML contexts
 * Fix: dollar signs stripped from <RichText /> content on frontend
+* Fix: populate feature now works with taxonomies registered by other plugins
+* Fix: optionsPopulate null error in WPML contexts
+* Fix: JavaScript syntax highlighting now works without requiring script tags
 * Deprecation: Admin Area removed
 * Deprecation: Code Editor removed
 * Deprecation: License Key removed
