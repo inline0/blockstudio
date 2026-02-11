@@ -53,7 +53,12 @@ Blockstudio removes all of that. You write a JSON config and a PHP template. The
 
 ## Quick start
 
-1. Install the plugin
+1. Install via Composer:
+
+```bash
+composer require blockstudio/blockstudio
+```
+
 2. Create a `blockstudio` folder in your theme
 3. Add a block:
 
