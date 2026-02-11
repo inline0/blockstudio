@@ -194,17 +194,10 @@ SVG,
 SVG,
 		'portrait'  => <<<'SVG'
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 1000" preserveAspectRatio="xMidYMid slice" style="display:block;width:100%;height:100%;color:var(--color-accent)">
-<ellipse cx="400" cy="310" rx="115" ry="135" fill="rgba(255,255,255,0.05)" stroke="rgba(255,255,255,0.08)" stroke-width="1.5"/>
-<path d="M285 280 C285 175 335 135 400 135 C465 135 515 175 515 280" fill="rgba(255,255,255,0.04)" stroke="rgba(255,255,255,0.06)" stroke-width="1.5"/>
-<ellipse cx="365" cy="295" rx="15" ry="9" fill="rgba(255,255,255,0.04)"/>
-<ellipse cx="435" cy="295" rx="15" ry="9" fill="rgba(255,255,255,0.04)"/>
-<line x1="390" y1="340" x2="410" y2="340" stroke="rgba(255,255,255,0.06)" stroke-width="1.5" stroke-linecap="round"/>
-<rect x="375" y="440" width="50" height="55" fill="rgba(255,255,255,0.03)"/>
-<path d="M210 700 C210 580 270 500 400 500 C530 500 590 580 590 700 L610 950 L190 950 Z" fill="rgba(255,255,255,0.04)" stroke="rgba(255,255,255,0.06)" stroke-width="1.5"/>
-<path d="M345 500 L400 555 L455 500" fill="none" stroke="currentColor" stroke-opacity="0.3" stroke-width="2"/>
-<line x1="400" y1="555" x2="400" y2="700" stroke="rgba(255,255,255,0.04)" stroke-width="1"/>
-<circle cx="180" cy="180" r="100" fill="currentColor" fill-opacity="0.03"/>
-<circle cx="620" cy="850" r="140" fill="currentColor" fill-opacity="0.02"/>
+<circle cx="400" cy="300" r="115" fill="rgba(255,255,255,0.06)" stroke="rgba(255,255,255,0.08)" stroke-width="1.5"/>
+<path d="M175 750 C175 590 265 510 400 510 C535 510 625 590 625 750 L625 1000 L175 1000 Z" fill="rgba(255,255,255,0.05)" stroke="rgba(255,255,255,0.08)" stroke-width="1.5"/>
+<circle cx="400" cy="300" r="115" fill="none" stroke="currentColor" stroke-opacity="0.08" stroke-width="1.5"/>
+<path d="M175 750 C175 590 265 510 400 510 C535 510 625 590 625 750" fill="none" stroke="currentColor" stroke-opacity="0.08" stroke-width="1.5"/>
 </svg>
 SVG,
 		'space'     => <<<'SVG'
@@ -373,17 +366,10 @@ SVG,
 SVG,
 		'portrait'  => <<<'SVG'
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 1000" preserveAspectRatio="xMidYMid slice" style="display:block;width:100%;height:100%;color:var(--color-accent)">
-<ellipse cx="400" cy="310" rx="115" ry="135" fill="rgba(0,0,0,0.04)" stroke="rgba(0,0,0,0.08)" stroke-width="1.5"/>
-<path d="M285 280 C285 175 335 135 400 135 C465 135 515 175 515 280" fill="rgba(0,0,0,0.03)" stroke="rgba(0,0,0,0.06)" stroke-width="1.5"/>
-<ellipse cx="365" cy="295" rx="15" ry="9" fill="rgba(0,0,0,0.04)"/>
-<ellipse cx="435" cy="295" rx="15" ry="9" fill="rgba(0,0,0,0.04)"/>
-<line x1="390" y1="340" x2="410" y2="340" stroke="rgba(0,0,0,0.06)" stroke-width="1.5" stroke-linecap="round"/>
-<rect x="375" y="440" width="50" height="55" fill="rgba(0,0,0,0.02)"/>
-<path d="M210 700 C210 580 270 500 400 500 C530 500 590 580 590 700 L610 950 L190 950 Z" fill="rgba(0,0,0,0.03)" stroke="rgba(0,0,0,0.06)" stroke-width="1.5"/>
-<path d="M345 500 L400 555 L455 500" fill="none" stroke="currentColor" stroke-opacity="0.3" stroke-width="2"/>
-<line x1="400" y1="555" x2="400" y2="700" stroke="rgba(0,0,0,0.04)" stroke-width="1"/>
-<circle cx="180" cy="180" r="100" fill="currentColor" fill-opacity="0.03"/>
-<circle cx="620" cy="850" r="140" fill="currentColor" fill-opacity="0.02"/>
+<circle cx="400" cy="300" r="115" fill="rgba(0,0,0,0.05)" stroke="rgba(0,0,0,0.08)" stroke-width="1.5"/>
+<path d="M175 750 C175 590 265 510 400 510 C535 510 625 590 625 750 L625 1000 L175 1000 Z" fill="rgba(0,0,0,0.04)" stroke="rgba(0,0,0,0.08)" stroke-width="1.5"/>
+<circle cx="400" cy="300" r="115" fill="none" stroke="currentColor" stroke-opacity="0.06" stroke-width="1.5"/>
+<path d="M175 750 C175 590 265 510 400 510 C535 510 625 590 625 750" fill="none" stroke="currentColor" stroke-opacity="0.06" stroke-width="1.5"/>
 </svg>
 SVG,
 		'space'     => <<<'SVG'
