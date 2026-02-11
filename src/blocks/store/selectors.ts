@@ -5,14 +5,6 @@ export const selectors = {
     const { icons } = state || {};
     return icons;
   },
-  getInitialLoad(state: BlockstudioBlockStore | null = null) {
-    const { initialLoad } = state || {};
-    return initialLoad;
-  },
-  getInitialLoadRendered(state: BlockstudioBlockStore | null = null) {
-    const { initialLoadRendered } = state || {};
-    return initialLoadRendered;
-  },
   getMedia(state: BlockstudioBlockStore | null = null) {
     const { media } = state || {};
     return media;
@@ -20,9 +12,5 @@ export const selectors = {
   getRichText(state: BlockstudioBlockStore | null = null) {
     const { richText } = state || {};
     return richText;
-  },
-  isLoaded(state: BlockstudioBlockStore | null = null) {
-    const { isLoaded } = state || {};
-    return isLoaded;
   },
 };

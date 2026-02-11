@@ -425,9 +425,24 @@ test.describe('File-based Pages', () => {
       ).toBeVisible();
     });
 
-    test('legacy blockstudio shorthand renders block', async () => {
-      const block = page.locator('.blockstudio-test__block');
-      await expect(block).toBeVisible();
+    test('blockstudio block with defaults renders', async () => {
+      const block = page.locator('.preload-simple').first();
+      await expect(block.locator('.preload-title')).toHaveText('Hello');
+      await expect(block.locator('.preload-count')).toHaveText('5');
+    });
+
+    test('blockstudio block with values renders correctly', async () => {
+      const block = page.locator('.preload-simple').nth(1);
+      await expect(block.locator('.preload-title')).toHaveText('Page Value');
+      await expect(block.locator('.preload-count')).toHaveText('99');
+      await expect(block.locator('.preload-active')).toHaveText('true');
+    });
+
+    test('blockstudio block with no defaults renders explicit values', async () => {
+      const block = page.locator('.preload-no-defaults');
+      await expect(block.locator('.preload-title')).toHaveText('Explicit');
+      await expect(block.locator('.preload-count')).toHaveText('42');
+      await expect(block.locator('.preload-active')).toHaveText('false');
     });
 
     test('bare text node auto-wraps to paragraph', async () => {
@@ -485,8 +500,8 @@ test.describe('File-based Pages', () => {
           .getBlocks().length;
       });
 
-      // The outer <div> creates one top-level group block
-      expect(count).toBe(1);
+      // The outer <div> creates one top-level group block + <!-- test --> comment becomes a paragraph
+      expect(count).toBe(2);
     });
 
     test('expected block types are present in editor', async () => {
@@ -513,7 +528,8 @@ test.describe('File-based Pages', () => {
       });
 
       const expected = [
-        'blockstudio/type-text',
+        'blockstudio/type-preload-no-defaults',
+        'blockstudio/type-preload-simple',
         'core/accordion',
         'core/accordion-heading',
         'core/accordion-item',
@@ -917,29 +933,31 @@ test.describe('File-based Pages', () => {
       expect(htmlBlockCount).toBeGreaterThanOrEqual(2);
     });
 
-    test('legacy blockstudio shorthand produces correct block name', async () => {
+    test('blockstudio blocks produce correct block names', async () => {
       const found = await page.evaluate(() => {
         const blocks = (window as any).wp.data
           .select('core/block-editor')
           .getBlocks();
 
-        function find(block: any): boolean {
-          if (block.name === 'blockstudio/type-text') return true;
-          if (block.innerBlocks) {
-            for (const inner of block.innerBlocks) {
-              if (find(inner)) return true;
-            }
-          }
-          return false;
+        const targets = new Set([
+          'blockstudio/type-preload-simple',
+          'blockstudio/type-preload-no-defaults',
+        ]);
+        const found = new Set<string>();
+
+        function collect(block: any) {
+          if (targets.has(block.name)) found.add(block.name);
+          if (block.innerBlocks) block.innerBlocks.forEach(collect);
         }
 
-        for (const block of blocks) {
-          if (find(block)) return true;
-        }
-        return false;
+        blocks.forEach(collect);
+        return Array.from(found).sort();
       });
 
-      expect(found).toBe(true);
+      expect(found).toEqual([
+        'blockstudio/type-preload-no-defaults',
+        'blockstudio/type-preload-simple',
+      ]);
     });
 
     test('editor shows blocks visually (heading visible)', async () => {

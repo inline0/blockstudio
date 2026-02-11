@@ -5,6 +5,7 @@ import { useEffect, useState, createPortal } from '@wordpress/element';
 import { registerPlugin } from '@wordpress/plugins';
 import parse from 'html-react-parser';
 import { Block } from '@/blocks/components/block';
+import { renderCache } from '@/blocks/components/block/render-cache';
 import { Fields } from '@/blocks/components/fields';
 import '@/blocks/filters/custom-class';
 import '@/blocks/filters/default';
@@ -28,6 +29,7 @@ import { onSavePost } from '@/utils/on-save-post';
 ] = true;
 register(store);
 register(tailwindStore);
+renderCache.initFromPreload();
 mediaModal();
 
 const blocks = window.blockstudioAdmin.data.blocksNative;
@@ -153,10 +155,6 @@ Object.values(blocks).forEach((block: BlockstudioBlock) => {
       useEffect(() => {
         setTimeout(() => setIsLoaded(true), 100);
       }, []);
-
-      // useEffect(() => {
-      //   console.log('attributes', attributes);
-      // }, [attributes]);
 
       return (
         <>

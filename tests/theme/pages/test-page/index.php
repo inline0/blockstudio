@@ -243,8 +243,14 @@ Just for you.</block>
     <figcaption>A figure without an img falls back to raw HTML.</figcaption>
   </figure>
 
-  <h3>Legacy Shorthand</h3>
-  <blockstudio_type_text></blockstudio_type_text>
+  <h3>Blockstudio Block with Defaults</h3>
+  <block name="blockstudio/type-preload-simple" />
+
+  <h3>Blockstudio Block with Values</h3>
+  <block name="blockstudio/type-preload-simple" title="Page Value" count="99" active="true" />
+
+  <h3>Blockstudio Block No Defaults</h3>
+  <block name="blockstudio/type-preload-no-defaults" title="Explicit" count="42" active="false" />
 
   Bare text becomes an auto-wrapped paragraph.
 

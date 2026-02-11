@@ -69,6 +69,9 @@ Create custom WordPress blocks by dropping a `block.json` and a PHP template int
 * Fix: bs_render_block() no longer triggers a warning from WP_Block_Supports when using useBlockProps
 * Fix: field changes no longer create individual undo checkpoints, preventing full block reload on undo
 * Fix: code field undo/redo now works independently without triggering Gutenberg undo
+* Fix: block preloading now uses index-based matching instead of hash-based, fixing cache misses from custom field defaults
+* Fix: undo no longer triggers API calls or spinners on any blocks (render cache persists across remounts)
+* Fix: context changes on mount no longer trigger unnecessary refetches
 * Fix: JavaScript syntax highlighting now works without requiring script tags
 * Fix: populate feature now works with taxonomies registered by other plugins
 * Fix: conditional fields not respecting default values on first load

@@ -37,7 +37,7 @@ use WP_Block_Parser;
  * - nonce: AJAX nonce
  * - nonceRest: REST API nonce
  * - rest: REST API base URL
- * - blockstudioBlocks: Pre-rendered block data keyed by serialized attrs
+ * - blockstudioBlocks: Pre-rendered block data as ordered array
  *
  * window.blockstudioAdmin:
  * - All data from Admin::data(false)
@@ -92,38 +92,15 @@ class Blocks {
 		$block_renderer = function ( $block ) use (
 			&$block_renderer,
 			&$blockstudio_blocks,
-			$block_names,
-			$blocks
+			$block_names
 		) {
 			if ( in_array( $block['blockName'], $block_names, true ) ) {
-				$raw_inner = $block['attrs']['blockstudio']['attributes'] ?? array();
-
-				if ( is_array( $raw_inner ) && ! empty( $raw_inner ) ) {
-					array_walk_recursive(
-						$raw_inner,
-						function ( &$value ) {
-							if ( '' === $value ) {
-								$value = false;
-							}
-						}
-					);
-				}
-
-				$block_obj = array(
-					'blockName' => $block['blockName'],
-					'attrs'     => (object) $raw_inner,
-				);
-
-				$id = str_replace(
-					array( '{', '}', '[', ']', '"', '/', ' ', ':', ',', '\\' ),
-					'_',
-					wp_json_encode( $block_obj )
-				);
 				// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Setting mode for rendering.
-				$_GET['blockstudioMode']   = 'editor';
-				$blockstudio_blocks[ $id ] = array(
-					'rendered' => render_block( $block ),
-					'block'    => $block_obj,
+				$_GET['blockstudioMode'] = 'editor';
+
+				$blockstudio_blocks[] = array(
+					'rendered'  => render_block( $block ),
+					'blockName' => $block['blockName'],
 				);
 			}
 			if ( count( $block['innerBlocks'] ) > 0 ) {

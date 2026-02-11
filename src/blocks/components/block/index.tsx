@@ -3,7 +3,7 @@ import apiFetch from '@wordpress/api-fetch';
 import { useBlockProps } from '@wordpress/block-editor';
 import { Spinner } from '@wordpress/components';
 import { useDebounce } from '@wordpress/compose';
-import { useDispatch, useSelect } from '@wordpress/data';
+import { useSelect } from '@wordpress/data';
 import { useEffect, useRef, useState } from '@wordpress/element';
 import parse from 'html-react-parser';
 import { DomElement } from 'htmlparser2';
@@ -14,17 +14,17 @@ import { getAttributes } from '@/blocks/components/block/utils/get-attributes';
 import { getInnerHTML as getFirstElementContent } from '@/blocks/components/block/utils/get-first-element-content';
 import { getRegex } from '@/blocks/components/block/utils/get-regex';
 import { Placeholder } from '@/blocks/components/placeholder';
-import { selectors } from '@/blocks/store/selectors';
 import { dispatch } from '@/blocks/utils/dispatch';
-import { replaceEmptyStringsWithFalse } from '@/blocks/utils/replace-empty-strings-with-false';
 import {
   Any,
   BlockstudioBlock,
   BlockstudioBlockAttributes,
 } from '@/types/types';
 import { css } from '@/utils/css';
+import { batchFetcher } from './batch-fetcher';
 import { BlockProps } from './block-props';
 import { InnerBlocks } from './inner-blocks';
+import { computeHash, renderCache } from './render-cache';
 import { RichText } from './rich-text';
 
 interface CustomEventDetail {
@@ -35,8 +35,11 @@ interface CustomEvent extends Event {
   detail?: CustomEventDetail;
 }
 
-let GLOBAL_INITIAL_LOAD_TIMEOUT: NodeJS.Timeout | null = null;
-let LAST_BATCH_SIZE = 0;
+interface RenderState {
+  markup: Any;
+  hasMarkup: boolean;
+  hasBlockProps: boolean | null;
+}
 
 export const Block = ({
   attributes,
@@ -56,83 +59,32 @@ export const Block = ({
     rendered: string;
   } | null;
 }) => {
-  const initialLoad = useSelect(
-    (select) =>
-      (select('blockstudio/blocks') as typeof selectors).getInitialLoad(),
-    [],
-  );
-  const initialLoadRendered = useSelect(
-    (select) =>
-      (
-        select('blockstudio/blocks') as typeof selectors
-      ).getInitialLoadRendered(),
-    [],
-  );
-  const isLoaded = useSelect(
-    (select) => (select('blockstudio/blocks') as typeof selectors).isLoaded(),
-    [],
-  );
-  const { setInitialLoad, setInitialLoadRendered } =
-    useDispatch('blockstudio/blocks');
-  const firstRenderDone = useRef<boolean | null>(null);
-  const ref = useRef<HTMLDivElement | null>(null);
-  const attributesRef = useRef(attributes);
-  const [disableLoading, setDisableLoading] = useState(
-    block?.blockstudio?.blockEditor?.disableLoading,
-  );
-  const [isInPreview, setIsInPreview] = useState(false);
-  const [hasBlockProps, setHasBlockProps] = useState<boolean | null>(false);
-  const [hasMarkup, setHasMarkup] = useState(false);
-  const [markup, setMarkup] = useState<Any>(null);
-  const blockProps = useBlockProps();
-  const postId =
-    useSelect((select: Any) => select('core/editor')?.getCurrentPostId(), []) ||
-    false;
-  const postType =
-    useSelect(
-      (select: Any) => select('core/editor')?.getCurrentPostType(),
-      [],
-    ) || false;
-
-  const loaded = () => {
-    setTimeout(() => {
-      dispatch(block, 'loaded');
-      dispatch(false as unknown as BlockstudioBlock, 'loaded');
-      if (!firstRenderDone.current) {
-        firstRenderDone.current = true;
-      }
-    });
-  };
-
-  const parseBlock = (response: { rendered: string }) => {
-    const transform = (response: string) => {
-      response = response.replace(
+  function computeRender(rendered: string): RenderState {
+    const transform = (input: string) => {
+      input = input.replace(
         getRegex('InnerBlocks'),
         '<div id="blockstudio-replace-innerblocks"></div>',
       );
-      response = response.replace(getRegex('RichText', 'gs'), (match) => {
+      input = input.replace(getRegex('RichText', 'gs'), (match) => {
         const innerAttributes = getAttributes(match, 'RichText');
         const attrKey = innerAttributes.attribute as string;
         attributeMap[attrKey] = innerAttributes;
 
         return `<div id="blockstudio-replace-richtext" class="${attrKey}"></div>`;
       });
-      response = response.replace(
-        getRegex('MediaPlaceholder', 'gs'),
-        (match) => {
-          const innerAttributes = getAttributes(match, 'MediaPlaceholder');
-          const attrKey = innerAttributes.attribute as string;
-          attributeMap[attrKey] = innerAttributes;
+      input = input.replace(getRegex('MediaPlaceholder', 'gs'), (match) => {
+        const innerAttributes = getAttributes(match, 'MediaPlaceholder');
+        const attrKey = innerAttributes.attribute as string;
+        attributeMap[attrKey] = innerAttributes;
 
-          return `<div id="blockstudio-replace-dropzone" class="${attrKey}"></div>`;
-        },
-      );
+        return `<div id="blockstudio-replace-dropzone" class="${attrKey}"></div>`;
+      });
 
-      return response;
+      return input;
     };
 
-    const parser = (response: string) => {
-      return parse(response, {
+    const parser = (input: string) => {
+      return parse(input, {
         replace: (domNode) => {
           const node = domNode as {
             attribs: Record<string, string>;
@@ -187,18 +139,14 @@ export const Block = ({
     };
 
     const attributeMap: Record<string, Any> = {};
-    const blockResponse = (
-      response as unknown as {
-        rendered: string;
-      }
-    ).rendered;
+    const blockResponse = rendered;
     const transformBlockResponse = transform(blockResponse);
-    const hasBlockProps = checkForBlockProps(blockResponse);
+    const blockPropsCheck = checkForBlockProps(blockResponse);
     const hasComponentBlockProps = checkForBlockProps(blockResponse, true);
 
     let m: NonNullable<unknown>;
 
-    if (hasBlockProps) {
+    if (blockPropsCheck) {
       m = parse(blockResponse, {
         replace: (domNode) => {
           const node = domNode as DomElement;
@@ -218,44 +166,88 @@ export const Block = ({
       m = parser(transformBlockResponse);
     }
 
-    setMarkup(m);
-    setHasMarkup(true);
-    setHasBlockProps(hasBlockProps || hasComponentBlockProps || null);
-  };
-
-  const fetchData = (event: CustomEvent | false = false) => {
-    const parameters = {
-      blockstudioMode: ref.current?.closest(
-        '.block-editor-block-preview__content-iframe',
-      )
-        ? 'preview'
-        : 'editor',
-      postId,
-      contextPostId: attributes.blockstudio?.contextBlock?.postId || postId,
-      contextPostType:
-        attributes.blockstudio?.contextBlock?.postType || postType,
+    return {
+      markup: m,
+      hasMarkup: true,
+      hasBlockProps: blockPropsCheck || hasComponentBlockProps || null,
     };
+  }
 
-    if (
-      !initialLoadRendered?.[clientId] &&
-      !event &&
-      !block.blockstudio.blockEditor?.disableLoading &&
-      !firstRenderDone.current
-    ) {
-      setInitialLoad({
-        [clientId]: {
-          clientId,
-          attributes,
-          context,
-          name: block.name,
-          post: parameters,
-        },
-      });
-      return;
+  const firstRenderDone = useRef<boolean | null>(null);
+  const ref = useRef<HTMLDivElement | null>(null);
+  const attributesRef = useRef(attributes);
+  const prevContextRef = useRef(JSON.stringify(context));
+  const [disableLoading, setDisableLoading] = useState(
+    block?.blockstudio?.blockEditor?.disableLoading,
+  );
+  const [isInPreview, setIsInPreview] = useState(false);
+  const blockProps = useBlockProps();
+  const postId =
+    useSelect((select: Any) => select('core/editor')?.getCurrentPostId(), []) ||
+    false;
+  const postType =
+    useSelect(
+      (select: Any) => select('core/editor')?.getCurrentPostType(),
+      [],
+    ) || false;
+
+  const [renderState, setRenderState] = useState<RenderState>(() => {
+    if (block?.blockstudio?.blockEditor?.disableLoading) {
+      return { markup: null, hasMarkup: false, hasBlockProps: null };
     }
 
+    const hash = computeHash(
+      block.name,
+      attributes?.blockstudio?.attributes || {},
+    );
+
+    const cached = renderCache.get(hash);
+    if (cached) {
+      firstRenderDone.current = true;
+      return computeRender(cached);
+    }
+
+    const preloaded = renderCache.claimPreloaded(block.name);
+    if (preloaded) {
+      renderCache.set(hash, preloaded);
+      firstRenderDone.current = true;
+      return computeRender(preloaded);
+    }
+
+    return { markup: null, hasMarkup: false, hasBlockProps: null };
+  });
+
+  const loaded = () => {
+    setTimeout(() => {
+      dispatch(block, 'loaded');
+      dispatch(false as unknown as BlockstudioBlock, 'loaded');
+      if (!firstRenderDone.current) {
+        firstRenderDone.current = true;
+      }
+    });
+  };
+
+  const updateRender = (rendered: string) => {
+    setRenderState(computeRender(rendered));
+  };
+
+  const getPostParams = () => ({
+    blockstudioMode: ref.current?.closest(
+      '.block-editor-block-preview__content-iframe',
+    )
+      ? 'preview'
+      : 'editor',
+    postId,
+    contextPostId: attributes.blockstudio?.contextBlock?.postId || postId,
+    contextPostType:
+      attributes.blockstudio?.contextBlock?.postType || postType,
+  });
+
+  const fetchSingle = (event: CustomEvent | false = false) => {
+    if (event) {
+    }
     const params = new URLSearchParams({
-      ...parameters,
+      ...getPostParams(),
     }).toString();
 
     apiFetch({
@@ -266,121 +258,55 @@ export const Block = ({
         context,
       },
     })
-      .then((response) => parseBlock(response as { rendered: string }))
+      .then((response) => {
+        const res = response as { rendered: string };
+        const hash = computeHash(
+          block.name,
+          attributes?.blockstudio?.attributes || {},
+        );
+        renderCache.set(hash, res.rendered);
+        updateRender(res.rendered);
+      })
       .then(() => {
         loaded();
       });
   };
-  const debouncedFetchData = useDebounce(fetchData, 500);
 
-  useEffect(() => {
-    const keysRendered = Object.keys(initialLoadRendered || {});
-    const keysLoaded = Object.keys(initialLoad || {});
-    const currentBatchSize = keysRendered.length;
+  const debouncedFetchSingle = useDebounce(fetchSingle, 500);
 
-    if (keysLoaded.length === keysRendered.length) {
-      return;
-    }
-
-    if (LAST_BATCH_SIZE === currentBatchSize && LAST_BATCH_SIZE !== 0) {
-      return;
-    }
-
-    LAST_BATCH_SIZE = currentBatchSize;
-
-    if (GLOBAL_INITIAL_LOAD_TIMEOUT) {
-      clearTimeout(GLOBAL_INITIAL_LOAD_TIMEOUT);
-    }
-
-    GLOBAL_INITIAL_LOAD_TIMEOUT = setTimeout(() => {
-      const unloadedBlocks: Record<string, Any> = {};
-
-      Object.entries(initialLoad || {}).forEach(([key, value]) => {
-        if (!initialLoadRendered?.[key]) {
-          unloadedBlocks[key] = value;
-        }
-      });
-
-      if (Object.keys(unloadedBlocks).length === 0) {
-        return;
-      }
-
-      apiFetch({
-        path: `/blockstudio/v1/gutenberg/block/render/all`,
-        method: 'POST',
-        data: {
-          data: unloadedBlocks,
-        },
-      })
-        .then((response) => {
-          setInitialLoadRendered(response as { [key: string]: string });
-        })
-        .finally(() => {
-          GLOBAL_INITIAL_LOAD_TIMEOUT = null;
-        });
-    }, 500);
-  }, [initialLoad, initialLoadRendered]);
-
-  useEffect(() => {
-    const blockAttributes = replaceEmptyStringsWithFalse(
-      cloneDeep(attributes.blockstudio.attributes),
-    );
-
-    const blockHash = JSON.stringify({
-      blockName: block.name,
-      attrs: blockAttributes,
-    })
-      .replaceAll('{', '_')
-      .replaceAll('}', '_')
-      .replaceAll('[', '_')
-      .replaceAll(']', '_')
-      .replaceAll('"', '_')
-      .replaceAll('/', '__')
-      .replaceAll(' ', '_')
-      .replaceAll(',', '_')
-      .replaceAll(':', '_');
-    const renderedData = window.blockstudio.blockstudioBlocks?.[blockHash];
-    if (renderedData) {
-      parseBlock({
-        rendered: renderedData.rendered,
-      });
-      loaded();
-      firstRenderDone.current = true;
-      return;
-    }
-    if (firstRenderDone.current) return;
-    if (initialLoadRendered?.[clientId]) {
-      parseBlock({
-        rendered: initialLoadRendered[clientId],
-      });
-      loaded();
-      firstRenderDone.current = true;
-    }
-  }, [initialLoadRendered, isLoaded, clientId]);
-
-  useEffect(() => {
+  useEffect(function onMount() {
     setIsInPreview(
       !!ref.current?.closest('.block-editor-block-preview__content-iframe'),
     );
 
-    if (!firstRenderDone.current) {
-      fetchData();
+    if (disableLoading) return;
+
+    if (firstRenderDone.current && renderState.hasMarkup) {
+      loaded();
+      return;
     }
 
-    document.addEventListener(
-      `blockstudio/${block.name}/refresh`,
-      debouncedFetchData,
-    );
+    if (block.blockstudio.blockEditor?.disableLoading) return;
 
-    return () =>
-      document.removeEventListener(
-        `blockstudio/${block.name}/refresh`,
-        debouncedFetchData,
-      );
+    batchFetcher
+      .requestRender(
+        clientId,
+        block.name,
+        attributes,
+        context,
+        getPostParams(),
+      )
+      .then((rendered) => {
+        updateRender(rendered);
+        loaded();
+        firstRenderDone.current = true;
+      })
+      .catch(() => {
+      });
   }, [disableLoading]);
 
   useEffect(
-    function onAttributeChange() {
+    function onAttributeOrContextChange() {
       const newAttributes = cloneDeep(attributes) as Record<string, Any>;
       Object.keys(attributes).forEach((key) => {
         if (key.startsWith('BLOCKSTUDIO_RICH_TEXT')) {
@@ -394,21 +320,53 @@ export const Block = ({
         return;
       }
       attributesRef.current = newAttributes as BlockstudioBlockAttributes;
-      if (firstRenderDone.current) {
-        debouncedFetchData();
+
+      if (!firstRenderDone.current) return;
+
+      const hash = computeHash(
+        block.name,
+        (newAttributes as BlockstudioBlockAttributes)?.blockstudio
+          ?.attributes || {},
+      );
+      const cached = renderCache.get(hash);
+
+      if (cached) {
+        updateRender(cached);
+        loaded();
+        return;
       }
+
+      debouncedFetchSingle();
     },
     [attributes],
   );
 
   useEffect(
     function onContextChange() {
+      const contextStr = JSON.stringify(context);
+      if (prevContextRef.current === contextStr) {
+        return;
+      }
+      prevContextRef.current = contextStr;
       if (firstRenderDone.current) {
-        debouncedFetchData();
+        debouncedFetchSingle();
       }
     },
     [context],
   );
+
+  useEffect(function onRefreshEvent() {
+    document.addEventListener(
+      `blockstudio/${block.name}/refresh`,
+      debouncedFetchSingle,
+    );
+
+    return () =>
+      document.removeEventListener(
+        `blockstudio/${block.name}/refresh`,
+        debouncedFetchSingle,
+      );
+  }, [disableLoading]);
 
   useEffect(
     function onMarkupChange() {
@@ -418,16 +376,7 @@ export const Block = ({
         dispatch(false as unknown as BlockstudioBlock, 'rendered');
       });
     },
-    [markup],
-  );
-
-  useEffect(
-    function onClientIdChange() {
-      if (!firstRenderDone.current) {
-        fetchData();
-      }
-    },
-    [clientId],
+    [renderState.markup],
   );
 
   return (
@@ -443,11 +392,11 @@ export const Block = ({
         >
           <Placeholder name={block.name} />
         </div>
-      ) : hasMarkup ? (
-        hasBlockProps ? (
-          markup
+      ) : renderState.hasMarkup ? (
+        renderState.hasBlockProps ? (
+          renderState.markup
         ) : (
-          <div {...blockProps}>{markup}</div>
+          <div {...blockProps}>{renderState.markup}</div>
         )
       ) : (
         <div

@@ -5,9 +5,6 @@ import { selectors } from './selectors';
 
 const DEFAULT_STATE = {
   icons: {},
-  initialLoad: {},
-  initialLoadRendered: {},
-  isLoaded: false,
   media: {},
   repeaters: {},
   richText: {},
@@ -23,27 +20,6 @@ export const store = createReduxStore('blockstudio/blocks', {
             ...state.icons,
             ...action.icons,
           },
-        };
-      case 'SET_INITIAL_LOAD':
-        return {
-          ...state,
-          initialLoad: {
-            ...state.initialLoad,
-            ...action.initialLoad,
-          },
-        };
-      case 'SET_INITIAL_LOAD_RENDERED':
-        return {
-          ...state,
-          initialLoadRendered: {
-            ...state.initialLoadRendered,
-            ...action.initialLoadRendered,
-          },
-        };
-      case 'SET_IS_LOADED':
-        return {
-          ...state,
-          isLoaded: action.isLoaded,
         };
       case 'SET_MEDIA':
         return {

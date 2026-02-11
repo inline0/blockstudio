@@ -9,9 +9,6 @@ interface BlockstudioBlock extends Block {
 
 type BlockstudioBlockStore = {
   icons: Record<string, string>;
-  initialLoad: Record<string, string>;
-  initialLoadRendered: Record<string, string>;
-  isLoaded: boolean;
   media: Record<
     string,
     {
@@ -202,11 +199,18 @@ type BlockstudioAdmin = {
 declare global {
   interface Window {
     blockstudio: {
-      blockstudioBlocks: {
-        [key: string]: {
-          rendered: string;
-        };
-      };
+      blockstudioBlocks:
+        | {
+            rendered: string;
+            blockName: string;
+          }[]
+        | Record<
+            string,
+            {
+              rendered: string;
+              blockName: string;
+            }
+          >;
     };
     blockstudioAdmin: BlockstudioAdmin;
     pagenow?: string;

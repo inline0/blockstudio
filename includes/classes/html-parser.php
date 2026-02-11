@@ -304,11 +304,6 @@ class Html_Parser {
 			return $this->parse_block_element( $element );
 		}
 
-		// Legacy blockstudio_* shorthand.
-		if ( str_starts_with( $tag, 'blockstudio_' ) ) {
-			return $this->parse_blockstudio_block( $element );
-		}
-
 		// Check for element mapping overrides.
 		if ( isset( $this->element_mapping[ $tag ] ) ) {
 			return $this->create_mapped_block( $element, $this->element_mapping[ $tag ] );
@@ -379,37 +374,6 @@ class Html_Parser {
 		}
 
 		// Fallback: generic block structure (works for dynamic blocks).
-		$inner_blocks = $this->parse_children( $element );
-
-		return array(
-			'blockName'    => $block_name,
-			'attrs'        => $attrs,
-			'innerBlocks'  => $inner_blocks,
-			'innerHTML'    => '',
-			'innerContent' => array(),
-		);
-	}
-
-	/**
-	 * Parse a blockstudio_* custom element (legacy shorthand).
-	 *
-	 * @param DOMElement $element The element.
-	 *
-	 * @return array The block array.
-	 */
-	private function parse_blockstudio_block( DOMElement $element ): array {
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Native PHP DOM property.
-		$tag        = strtolower( $element->tagName );
-		$block_name = str_replace( 'blockstudio_', '', $tag );
-		$block_name = 'blockstudio/' . str_replace( '_', '-', $block_name );
-
-		$attrs = $this->get_element_attributes( $element );
-
-		if ( ! empty( $attrs['key'] ) ) {
-			$attrs['__BLOCKSTUDIO_KEY'] = $attrs['key'];
-		}
-		unset( $attrs['key'] );
-
 		$inner_blocks = $this->parse_children( $element );
 
 		return array(
