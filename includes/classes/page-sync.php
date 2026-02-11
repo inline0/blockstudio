@@ -102,7 +102,10 @@ class Page_Sync {
 			$template_content = \Timber\Timber::compile_string( $template_content, array() );
 		}
 
-		return $this->parser->parse( $template_content );
+		$blocks = $this->parser->parse_to_array( $template_content );
+		$blocks = $this->apply_template_overrides( $blocks );
+
+		return serialize_blocks( $blocks );
 	}
 
 	/**
@@ -128,7 +131,64 @@ class Page_Sync {
 			$template_content = \Timber\Timber::compile_string( $template_content, array() );
 		}
 
-		return $this->parser->parse_to_array( $template_content );
+		$blocks = $this->parser->parse_to_array( $template_content );
+
+		return $this->apply_template_overrides( $blocks );
+	}
+
+	/**
+	 * Move top-level template attributes into blockstudio.attributes for Blockstudio blocks.
+	 *
+	 * When a page template uses `<block name="drift/cta" heading="Custom">`, the parser
+	 * puts "heading" at the top level of attrs. Blockstudio expects field values inside
+	 * attrs.blockstudio.attributes. This method bridges the two.
+	 *
+	 * @param array $blocks The parsed blocks.
+	 *
+	 * @return array The blocks with overrides applied.
+	 */
+	private function apply_template_overrides( array $blocks ): array {
+		$registered = Build::blocks();
+
+		foreach ( $blocks as &$block ) {
+			$name = $block['blockName'] ?? '';
+
+			if ( $name && isset( $registered[ $name ] ) && isset( $registered[ $name ]->attributes['blockstudio'] ) && ! empty( $block['attrs'] ) ) {
+				$field_keys = array();
+
+				foreach ( $registered[ $name ]->attributes as $key => $def ) {
+					if ( isset( $def['field'] ) ) {
+						$field_keys[] = $key;
+					}
+				}
+
+				$overrides = array();
+
+				foreach ( $field_keys as $key ) {
+					if ( array_key_exists( $key, $block['attrs'] ) ) {
+						$overrides[ $key ] = $block['attrs'][ $key ];
+						unset( $block['attrs'][ $key ] );
+					}
+				}
+
+				if ( ! empty( $overrides ) ) {
+					if ( ! isset( $block['attrs']['blockstudio'] ) ) {
+						$block['attrs']['blockstudio'] = array();
+					}
+
+					$block['attrs']['blockstudio']['attributes'] = array_merge(
+						$block['attrs']['blockstudio']['attributes'] ?? array(),
+						$overrides
+					);
+				}
+			}
+
+			if ( ! empty( $block['innerBlocks'] ) ) {
+				$block['innerBlocks'] = $this->apply_template_overrides( $block['innerBlocks'] );
+			}
+		}
+
+		return $blocks;
 	}
 
 	/**
