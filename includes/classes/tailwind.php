@@ -159,19 +159,26 @@ class Tailwind {
 			return $settings;
 		}
 
-		$content = '';
+		$candidates = array();
+
 		foreach ( Block_Registry::instance()->get_data() as $block ) {
 			foreach ( $block['filesPaths'] ?? array() as $path ) {
 				if ( is_file( $path ) ) {
 					// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Reading block template files for Tailwind candidate extraction.
-					$content .= file_get_contents( $path );
+					$raw = file_get_contents( $path );
+
+					// Match candidate tokens including arbitrary value brackets like [calc(50%-10px)].
+					preg_match_all( '/[!@-]?[a-zA-Z_][\w:.\/-]*(?:\[[^\]]*\])?/', $raw, $matches );
+					$candidates = array_merge( $candidates, $matches[0] );
 				}
 			}
 		}
 
-		$css_input  = $this->build_css_input();
-		$candidates = $this->filter_candidates( TailwindPHP::extractCandidates( $content ) );
+		$candidates = array_unique( $candidates );
+		$candidates = $this->filter_candidates( $candidates );
 		sort( $candidates );
+
+		$css_input  = $this->build_css_input();
 		$cache_key  = md5( 'editor:' . implode( ',', $candidates ) . $css_input );
 		$cache_path = self::get_cache_dir() . '/' . $cache_key . '.css';
 
@@ -179,16 +186,12 @@ class Tailwind {
 			// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Reading cached CSS file.
 			$compiled = file_get_contents( $cache_path );
 		} else {
-			$compiled = TailwindPHP::generate(
-				array(
-					'content' => $this->candidates_to_content( $candidates ),
-					'css'     => $css_input,
-					'minify'  => true,
-				)
-			);
+			$compiler = TailwindPHP::compile( $css_input );
+			$compiled = $compiler->css( $candidates );
 
 			if ( ! empty( $compiled ) ) {
-				$dir = self::get_cache_dir();
+				$compiled = TailwindPHP::minify( $compiled );
+				$dir      = self::get_cache_dir();
 
 				if ( ! is_dir( $dir ) ) {
 					wp_mkdir_p( $dir );
