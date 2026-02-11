@@ -23,7 +23,7 @@ testType('unit', '"unit":"1rem"', () => {
           .locator('.blockstudio-fields__field--unit select')
           .selectOption({ index: 1 });
         await page.fill('.blockstudio-fields__field--unit input', '10');
-        await text(canvas, '"unit":"1rem"');
+        await text(canvas, '"unit":"10px"');
         await saveAndReload(page);
       },
     },

@@ -18,12 +18,17 @@ const sortedStringify = (value: unknown): string => {
 
 export const computeHash = (
   blockName: string,
-  blockstudioAttributes: unknown,
+  attributes: unknown,
 ): string => {
+  const cloned = cloneDeep(attributes) as Record<string, unknown>;
+  Object.keys(cloned).forEach((key) => {
+    if (key.startsWith('BLOCKSTUDIO_RICH_TEXT')) {
+      delete cloned[key];
+    }
+  });
+
   const attrs = replaceEmptyStringsWithFalse(
-    cloneDeep(blockstudioAttributes) as Parameters<
-      typeof replaceEmptyStringsWithFalse
-    >[0],
+    cloned as Parameters<typeof replaceEmptyStringsWithFalse>[0],
   );
 
   return sortedStringify({ blockName, attrs })

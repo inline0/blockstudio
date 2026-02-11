@@ -47,10 +47,7 @@ const flush = () => {
       batch.forEach((req) => {
         const html = rendered[req.clientId];
         if (html) {
-          const hash = computeHash(
-            req.name,
-            req.attributes?.blockstudio?.attributes || {},
-          );
+          const hash = computeHash(req.name, req.attributes);
           renderCache.set(hash, html);
           req.resolve(html);
         } else {

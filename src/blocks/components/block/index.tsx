@@ -196,10 +196,7 @@ export const Block = ({
       return { markup: null, hasMarkup: false, hasBlockProps: null };
     }
 
-    const hash = computeHash(
-      block.name,
-      attributes?.blockstudio?.attributes || {},
-    );
+    const hash = computeHash(block.name, attributes);
 
     const cached = renderCache.get(hash);
     if (cached) {
@@ -260,10 +257,7 @@ export const Block = ({
     })
       .then((response) => {
         const res = response as { rendered: string };
-        const hash = computeHash(
-          block.name,
-          attributes?.blockstudio?.attributes || {},
-        );
+        const hash = computeHash(block.name, attributes);
         renderCache.set(hash, res.rendered);
         updateRender(res.rendered);
       })
@@ -285,8 +279,6 @@ export const Block = ({
       loaded();
       return;
     }
-
-    if (block.blockstudio.blockEditor?.disableLoading) return;
 
     batchFetcher
       .requestRender(
@@ -323,11 +315,7 @@ export const Block = ({
 
       if (!firstRenderDone.current) return;
 
-      const hash = computeHash(
-        block.name,
-        (newAttributes as BlockstudioBlockAttributes)?.blockstudio
-          ?.attributes || {},
-      );
+      const hash = computeHash(block.name, newAttributes);
       const cached = renderCache.get(hash);
 
       if (cached) {

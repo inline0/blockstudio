@@ -207,9 +207,37 @@ See the [Storage documentation](/docs/storage) for the full API.
 ### Custom fields
 
 Reusable field definitions can now be shared across multiple blocks. Define a
-set of fields once via the filesystem or a PHP filter, then reference them from
-any block configuration. This eliminates repetition when multiple blocks share
-the same field structure.
+set of fields once, then reference them from any block. This eliminates
+repetition when multiple blocks share the same field structure.
+
+Create a `field.json` in your blockstudio directory:
+
+```json title="fields/hero/field.json"
+{
+  "name": "hero",
+  "title": "Hero Section",
+  "attributes": [
+    { "id": "heading", "type": "text", "label": "Heading", "default": "Hello World" },
+    { "id": "description", "type": "textarea", "label": "Description" }
+  ]
+}
+```
+
+Then reference it from any block using the `custom/` prefix:
+
+```json title="block.json"
+{
+  "blockstudio": {
+    "attributes": [
+      { "type": "custom/hero", "idStructure": "hero_{id}" }
+    ]
+  }
+}
+```
+
+The `idStructure` property prefixes each field ID, so `heading` becomes
+`hero_heading`. You can also override individual field properties per-instance
+with the `overrides` key.
 
 See the [Custom Fields documentation](/docs/attributes/custom-fields).
 
@@ -258,23 +286,64 @@ See the [Tailwind documentation](/docs/tailwind) for the full setup.
 
 Blockstudio now supports the
 [WordPress Interactivity API](https://developer.wordpress.org/block-editor/reference-guides/interactivity-api/).
-Set `interactivity: true` in your block.json, add `data-wp-*` directives to
-your template, and create a `script.js` with your store logic. Blockstudio
-handles the importmap, module loading, and directive processing in both the
-frontend and the block editor.
+Enable it in your block.json:
 
-Blocks that only use declarative directives with `data-wp-context` (like
-`data-wp-bind--hidden` or `data-wp-text`) work without any JavaScript at all.
-Server-side state via `wp_interactivity_state()` is also supported on the
-frontend.
+```json title="block.json"
+{
+  "blockstudio": {
+    "interactivity": true
+  }
+}
+```
+
+Add `data-wp-*` directives to your template:
+
+```php title="index.php"
+<div useBlockProps
+     data-wp-interactive="myBlock"
+     data-wp-context='{ "isOpen": false }'>
+  <button data-wp-on--click="actions.toggle"
+          data-wp-bind--aria-expanded="context.isOpen">
+    Toggle
+  </button>
+  <div data-wp-bind--hidden="!context.isOpen">
+    This content is toggled by the button.
+  </div>
+</div>
+```
+
+And create a `script.js` with your store logic:
+
+```javascript title="script.js"
+import { store, getContext } from '@wordpress/interactivity';
+
+store('myBlock', {
+  actions: {
+    toggle: () => {
+      const context = getContext();
+      context.isOpen = !context.isOpen;
+    },
+  },
+});
+```
+
+Blockstudio handles the importmap, module loading, and directive processing in
+both the frontend and the block editor. Blocks that only use declarative
+directives with `data-wp-context` (like `data-wp-bind--hidden` or
+`data-wp-text`) work without any JavaScript at all. Server-side state via
+`wp_interactivity_state()` is also supported on the frontend.
 
 See the [Interactivity documentation](/docs/interactivity) for the full setup.
 
 ### SEO content analysis
 
-Block content is now visible to Yoast SEO and Rank Math in the editor. This
-means SEO plugins can properly analyze your Blockstudio block content for
-keyword density, readability, and other metrics. No configuration needed.
+Blockstudio blocks are dynamic, so their field content is invisible to SEO
+plugins by default. Blockstudio 7 fixes this with automatic integrations for
+Yoast SEO, Rank Math, and SEOPress. Text values from `text`, `textarea`,
+`richtext`, `wysiwyg`, and `link` fields (including nested repeater rows) are
+extracted and fed into each plugin's content analysis. SEO plugins can now
+properly analyze your block content for keyword density, readability, and other
+metrics. No configuration needed.
 
 ### Repeater default rows
 
@@ -314,7 +383,8 @@ are pre-filled with those defaults instead of being empty.
   JSON schemas (~48k tokens), replacing the dynamic generation from v6
 - **Code field popout**: the code field can now be opened in a separate window,
   with independent undo/redo and JavaScript syntax highlighting
-- **Tailwind v4 server-side compilation**: see below
+- **Tailwind v4 server-side compilation**: see the
+  [Tailwind section](#tailwind-css-v4) above
 - **API version 3**: blocks now render correctly in the iframed editor,
   including the site editor and responsive previews
 - **Dot notation for assets**: cleaner file naming convention for asset
