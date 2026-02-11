@@ -164,7 +164,6 @@ export const Card = forwardRef<
               alignItems: 'center',
               justifyContent: 'center',
               flexShrink: '0',
-              zIndex: 50,
               position: 'relative',
               cursor: showDelete ? 'pointer' : undefined,
 
