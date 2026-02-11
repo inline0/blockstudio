@@ -7,6 +7,33 @@ export const metadata: Metadata = {
   description: "News and updates from the Blockstudio team.",
 };
 
+function BlogImage({ title }: { title: string }) {
+  const repeated = `${title}  `.repeat(20);
+
+  return (
+    <div className="relative aspect-[16/9] overflow-hidden rounded-lg bg-fd-secondary/50">
+      <div
+        className="absolute inset-0 flex flex-col justify-center gap-1.5 -rotate-12 scale-125"
+        aria-hidden
+      >
+        {Array.from({ length: 8 }).map((_, i) => (
+          <p
+            key={i}
+            className="whitespace-nowrap text-2xl font-bold"
+            style={{
+              color: "transparent",
+              WebkitTextStroke: "0.5px color-mix(in srgb, var(--color-fd-primary) 8%, transparent)",
+              marginLeft: `${(i % 3) * -40}px`,
+            }}
+          >
+            {repeated}
+          </p>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 export default function BlogIndex() {
   const posts = [...blog].sort(
     (a, b) => b.date.getTime() - a.date.getTime(),
@@ -25,9 +52,10 @@ export default function BlogIndex() {
             href={`/blog/${blogSlug(post.info.path)}`}
             className="flex flex-col rounded-2xl border bg-fd-card p-4 shadow-sm transition-colors hover:bg-fd-accent hover:text-fd-accent-foreground no-underline"
           >
-            <p className="font-medium">{post.title}</p>
+            <BlogImage title={post.title} />
+            <p className="mt-4 font-medium text-pretty">{post.title}</p>
             {post.description && (
-              <p className="mt-1 text-sm text-fd-muted-foreground">
+              <p className="mt-1 text-sm text-fd-muted-foreground text-pretty">
                 {post.description}
               </p>
             )}
