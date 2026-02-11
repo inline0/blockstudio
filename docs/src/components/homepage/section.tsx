@@ -24,7 +24,7 @@ export function Section({
   description,
   cta,
   children,
-  border = true,
+  border = false,
   fullWidth = false,
 }: SectionProps) {
   return (

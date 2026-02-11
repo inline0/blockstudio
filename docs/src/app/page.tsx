@@ -69,10 +69,10 @@ export default function Home() {
             )}
           </div>
 
-          <section id="catchphrase" className="border-b">
-            <div className="px-6 py-16 lg:px-16 xl:px-20 lg:py-24 flex flex-col items-center gap-6">
+          <section id="catchphrase">
+            <div className="px-6 py-16 lg:px-16 xl:px-20 lg:py-24 flex flex-col gap-6">
               <p
-                className="text-2xl sm:text-3xl lg:text-4xl font-medium leading-snug text-balance text-center max-w-3xl bg-clip-text text-transparent"
+                className="text-2xl sm:text-3xl lg:text-4xl font-medium leading-snug text-balance max-w-3xl bg-clip-text text-transparent"
                 style={{
                   backgroundImage:
                     "linear-gradient(180deg, var(--color-fd-foreground) 0%, color-mix(in srgb, var(--color-fd-foreground) 60%, var(--color-fd-muted-foreground)) 100%)",

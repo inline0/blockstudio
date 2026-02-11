@@ -166,6 +166,42 @@ Unlike pages, patterns don't create database entries. They're registered in
 memory on every page load. See the
 [Patterns documentation](/docs/patterns).
 
+### HTML-to-block parser
+
+Both pages and patterns are powered by a new HTML parser that converts standard
+HTML templates into WordPress block markup. It handles container blocks
+(like groups and columns) and leaf blocks (like paragraphs and headings)
+automatically. The parser uses a trait-based renderer architecture, making it
+easy to extend with support for additional block types via the
+`blockstudio/parser/renderers` filter:
+
+```php title="functions.php"
+add_filter( 'blockstudio/parser/renderers', function ( $renderers, $parser ) {
+    $renderers['acme/hero'] = function ( $element, $attrs, $parser ) {
+        $content = $parser->get_inner_html( $element );
+        $html    = '<div class="acme-hero">' . $content . '</div>';
+
+        return array(
+            'blockName'    => 'acme/hero',
+            'attrs'        => $attrs,
+            'innerBlocks'  => array(),
+            'innerHTML'    => $html,
+            'innerContent' => array( $html ),
+        );
+    };
+
+    return $renderers;
+}, 10, 2 );
+```
+
+Once registered, you can use the block in any page or pattern template:
+
+```html title="index.php"
+<block name="acme/hero" background="/hero.jpg">
+  <h1>Welcome to our site</h1>
+</block>
+```
+
 ### Storage
 
 Fields can now store their values in post meta or site options, in addition to
@@ -403,43 +439,6 @@ are pre-filled with those defaults instead of being empty.
 This isn't a refactor or a cleanup. Every class has been rewritten from
 scratch. The result is a cleaner, more modular codebase that's easier to
 maintain and extend.
-
-### HTML-to-block parser
-
-A new HTML parser powers the pages and patterns systems. It converts standard
-HTML templates into WordPress block markup, handling both container blocks
-(like groups and columns) and leaf blocks (like paragraphs and headings). The
-parser uses a trait-based renderer architecture, making it easy to extend with
-support for additional block types via the `blockstudio/parser/renderers`
-filter. You can also remap which block any HTML element maps to using the
-`blockstudio/parser/element_mapping` filter:
-
-```php title="functions.php"
-add_filter( 'blockstudio/parser/renderers', function ( $renderers, $parser ) {
-    $renderers['acme/hero'] = function ( $element, $attrs, $parser ) {
-        $content = $parser->get_inner_html( $element );
-        $html    = '<div class="acme-hero">' . $content . '</div>';
-
-        return array(
-            'blockName'    => 'acme/hero',
-            'attrs'        => $attrs,
-            'innerBlocks'  => array(),
-            'innerHTML'    => $html,
-            'innerContent' => array( $html ),
-        );
-    };
-
-    return $renderers;
-}, 10, 2 );
-```
-
-Once registered, you can use the block in any page or pattern template:
-
-```html title="index.php"
-<block name="acme/hero" background="/hero.jpg">
-  <h1>Welcome to our site</h1>
-</block>
-```
 
 ### Modern PHP
 

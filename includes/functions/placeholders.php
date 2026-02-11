@@ -60,7 +60,8 @@ function blockstudio_placeholder_dark( string $variant = 'dashboard' ): string {
 <rect x="904" y="588" width="200" height="6" rx="3" fill="rgba(255,255,255,0.04)"/>
 <rect x="904" y="608" width="180" height="6" rx="3" fill="rgba(255,255,255,0.04)"/>
 </svg>
-SVG,
+SVG
+		,
 		'chart'     => <<<'SVG'
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 800" preserveAspectRatio="xMidYMid slice" style="display:block;width:100%;height:100%;color:var(--color-accent)"><rect width="1200" height="48" fill="rgba(255,255,255,0.04)"/>
 <circle cx="28" cy="24" r="5" fill="rgba(255,255,255,0.15)"/>
@@ -104,7 +105,8 @@ SVG,
 <circle cx="500" cy="590" r="3" fill="rgba(255,255,255,0.15)"/>
 <circle cx="860" cy="520" r="3" fill="rgba(255,255,255,0.15)"/>
 </svg>
-SVG,
+SVG
+		,
 		'code'      => <<<'SVG'
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 800" preserveAspectRatio="xMidYMid slice" style="display:block;width:100%;height:100%;color:var(--color-accent)"><rect width="1200" height="48" fill="rgba(255,255,255,0.04)"/>
 <circle cx="28" cy="24" r="5" fill="rgba(255,255,255,0.15)"/>
@@ -191,7 +193,8 @@ SVG,
 <rect x="76" y="630" width="40" height="6" rx="3" fill="rgba(255,255,255,0.06)"/>
 <rect x="76" y="246" width="0" height="6" rx="3" fill="transparent"/>
 </svg>
-SVG,
+SVG
+		,
 		'portrait'  => <<<'SVG'
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 1000" preserveAspectRatio="xMidYMid slice" style="display:block;width:100%;height:100%;color:var(--color-accent)">
 <circle cx="400" cy="300" r="115" fill="rgba(255,255,255,0.06)" stroke="rgba(255,255,255,0.08)" stroke-width="1.5"/>
@@ -199,7 +202,8 @@ SVG,
 <circle cx="400" cy="300" r="115" fill="none" stroke="currentColor" stroke-opacity="0.08" stroke-width="1.5"/>
 <path d="M175 750 C175 590 265 510 400 510 C535 510 625 590 625 750" fill="none" stroke="currentColor" stroke-opacity="0.08" stroke-width="1.5"/>
 </svg>
-SVG,
+SVG
+		,
 		'space'     => <<<'SVG'
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 800" preserveAspectRatio="xMidYMid slice" style="display:block;width:100%;height:100%;color:var(--color-accent)">
 <path d="M0 500 L600 380 L1200 500 L1200 800 L0 800 Z" fill="rgba(255,255,255,0.02)" stroke="rgba(255,255,255,0.04)" stroke-width="1"/>
@@ -226,7 +230,8 @@ SVG,
 <path d="M900 72 L840 380 L960 380 Z" fill="rgba(255,255,255,0.015)"/>
 <rect x="180" y="120" width="840" height="260" rx="4" fill="rgba(255,255,255,0.02)" stroke="rgba(255,255,255,0.04)" stroke-width="1"/>
 </svg>
-SVG,
+SVG
+		,
 		'project'   => <<<'SVG'
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 800" preserveAspectRatio="xMidYMid slice" style="display:block;width:100%;height:100%;color:var(--color-accent)">
 <rect x="200" y="80" width="800" height="640" fill="rgba(255,255,255,0.03)" stroke="rgba(255,255,255,0.06)" stroke-width="1.5"/>
@@ -253,7 +258,8 @@ SVG,
 <line x1="600" y1="600" x2="600" y2="720" stroke="currentColor" stroke-opacity="0.15"/>
 <line x1="200" y1="80" x2="1000" y2="80" stroke="currentColor" stroke-opacity="0.25" stroke-width="2"/>
 </svg>
-SVG,
+SVG
+		,
 		'product'   => <<<'SVG'
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 800" preserveAspectRatio="xMidYMid slice" style="display:block;width:100%;height:100%;color:var(--color-accent)">
 <line x1="100" y1="620" x2="1100" y2="620" stroke="rgba(255,255,255,0.06)" stroke-width="1"/>
@@ -271,7 +277,8 @@ SVG,
 <ellipse cx="860" cy="560" rx="10" ry="6" fill="rgba(255,255,255,0.03)" transform="rotate(20 860 560)"/>
 <ellipse cx="900" cy="590" rx="12" ry="8" fill="rgba(255,255,255,0.04)" transform="rotate(-15 900 590)"/>
 </svg>
-SVG,
+SVG
+		,
 	);
 
 	return $svgs[ $variant ] ?? $svgs['dashboard'];
@@ -312,7 +319,8 @@ function blockstudio_placeholder_light( string $variant = 'dashboard' ): string 
 <rect x="564" y="536" width="296" height="180" rx="12" fill="white" stroke="rgba(0,0,0,0.08)"/>
 <rect x="876" y="536" width="292" height="180" rx="12" fill="white" stroke="rgba(0,0,0,0.08)"/>
 </svg>
-SVG,
+SVG
+		,
 		'chart'     => <<<'SVG'
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 800" preserveAspectRatio="xMidYMid slice" style="display:block;width:100%;height:100%;color:var(--color-accent)"><rect width="1200" height="48" fill="rgba(0,0,0,0.04)"/>
 <circle cx="28" cy="24" r="5" fill="rgba(0,0,0,0.12)"/>
@@ -333,7 +341,8 @@ SVG,
 <circle cx="700" cy="360" r="4" fill="currentColor"/>
 <circle cx="1000" cy="280" r="4" fill="currentColor"/>
 </svg>
-SVG,
+SVG
+		,
 		'code'      => <<<'SVG'
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 800" preserveAspectRatio="xMidYMid slice" style="display:block;width:100%;height:100%;color:var(--color-accent)"><rect width="1200" height="48" fill="rgba(0,0,0,0.04)"/>
 <circle cx="28" cy="24" r="5" fill="rgba(0,0,0,0.12)"/>
@@ -363,7 +372,8 @@ SVG,
 <rect x="96" y="414" width="60" height="6" rx="3" fill="currentColor" fill-opacity="0.3"/>
 <rect x="164" y="414" width="180" height="6" rx="3" fill="rgba(0,0,0,0.1)"/>
 </svg>
-SVG,
+SVG
+		,
 		'portrait'  => <<<'SVG'
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 1000" preserveAspectRatio="xMidYMid slice" style="display:block;width:100%;height:100%;color:var(--color-accent)">
 <circle cx="400" cy="300" r="115" fill="rgba(0,0,0,0.05)" stroke="rgba(0,0,0,0.08)" stroke-width="1.5"/>
@@ -371,7 +381,8 @@ SVG,
 <circle cx="400" cy="300" r="115" fill="none" stroke="currentColor" stroke-opacity="0.06" stroke-width="1.5"/>
 <path d="M175 750 C175 590 265 510 400 510 C535 510 625 590 625 750" fill="none" stroke="currentColor" stroke-opacity="0.06" stroke-width="1.5"/>
 </svg>
-SVG,
+SVG
+		,
 		'space'     => <<<'SVG'
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 800" preserveAspectRatio="xMidYMid slice" style="display:block;width:100%;height:100%;color:var(--color-accent)">
 <path d="M0 500 L600 380 L1200 500 L1200 800 L0 800 Z" fill="rgba(0,0,0,0.02)" stroke="rgba(0,0,0,0.04)" stroke-width="1"/>
@@ -401,7 +412,8 @@ SVG,
 <line x1="810" y1="240" x2="950" y2="240" stroke="currentColor" stroke-opacity="0.08"/>
 <rect x="180" y="120" width="840" height="260" rx="4" fill="rgba(0,0,0,0.01)" stroke="rgba(0,0,0,0.04)" stroke-width="1"/>
 </svg>
-SVG,
+SVG
+		,
 		'project'   => <<<'SVG'
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 800" preserveAspectRatio="xMidYMid slice" style="display:block;width:100%;height:100%;color:var(--color-accent)">
 <rect x="200" y="80" width="800" height="640" fill="rgba(0,0,0,0.02)" stroke="rgba(0,0,0,0.06)" stroke-width="1.5"/>
@@ -428,7 +440,8 @@ SVG,
 <line x1="600" y1="600" x2="600" y2="720" stroke="currentColor" stroke-opacity="0.12"/>
 <line x1="200" y1="80" x2="1000" y2="80" stroke="currentColor" stroke-opacity="0.2" stroke-width="2"/>
 </svg>
-SVG,
+SVG
+		,
 		'product'   => <<<'SVG'
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 800" preserveAspectRatio="xMidYMid slice" style="display:block;width:100%;height:100%;color:var(--color-accent)">
 <line x1="100" y1="620" x2="1100" y2="620" stroke="rgba(0,0,0,0.06)" stroke-width="1"/>
@@ -446,7 +459,8 @@ SVG,
 <ellipse cx="860" cy="560" rx="10" ry="6" fill="rgba(0,0,0,0.03)" transform="rotate(20 860 560)"/>
 <ellipse cx="900" cy="590" rx="12" ry="8" fill="rgba(0,0,0,0.04)" transform="rotate(-15 900 590)"/>
 </svg>
-SVG,
+SVG
+		,
 	);
 
 	return $svgs[ $variant ] ?? $svgs['dashboard'];
