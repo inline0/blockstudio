@@ -11,7 +11,7 @@
 /**
  * Returns a dark placeholder image as an inline SVG string.
  *
- * @param string $variant The placeholder variant: dashboard, chart, code, portrait, space, project, or product.
+ * @param string $variant The placeholder variant: dashboard, chart, code, portrait, space, project, product, or nature.
  * @return string Inline SVG markup.
  */
 function blockstudio_placeholder_dark( string $variant = 'dashboard' ): string {
@@ -197,10 +197,9 @@ SVG
 		,
 		'portrait'  => <<<'SVG'
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 1000" preserveAspectRatio="xMidYMid slice" style="display:block;width:100%;height:100%;color:var(--color-accent)">
-<circle cx="400" cy="300" r="115" fill="rgba(255,255,255,0.06)" stroke="rgba(255,255,255,0.08)" stroke-width="1.5"/>
-<path d="M175 750 C175 590 265 510 400 510 C535 510 625 590 625 750 L625 1000 L175 1000 Z" fill="rgba(255,255,255,0.05)" stroke="rgba(255,255,255,0.08)" stroke-width="1.5"/>
-<circle cx="400" cy="300" r="115" fill="none" stroke="currentColor" stroke-opacity="0.08" stroke-width="1.5"/>
-<path d="M175 750 C175 590 265 510 400 510 C535 510 625 590 625 750" fill="none" stroke="currentColor" stroke-opacity="0.08" stroke-width="1.5"/>
+<rect width="800" height="1000" fill="rgba(255,255,255,0.03)"/>
+<circle cx="400" cy="440" r="40" fill="none" stroke="rgba(255,255,255,0.1)" stroke-width="1.5"/>
+<path d="M340 560 C340 525 365 505 400 505 C435 505 460 525 460 560" fill="none" stroke="rgba(255,255,255,0.1)" stroke-width="1.5" stroke-linecap="round"/>
 </svg>
 SVG
 		,
@@ -279,6 +278,15 @@ SVG
 </svg>
 SVG
 		,
+		'nature'    => <<<'SVG'
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 800" preserveAspectRatio="xMidYMid slice" style="display:block;width:100%;height:100%;color:var(--color-accent)">
+<rect width="1200" height="800" fill="rgba(255,255,255,0.03)"/>
+<rect x="540" y="340" width="120" height="120" rx="8" fill="none" stroke="rgba(255,255,255,0.1)" stroke-width="1.5"/>
+<circle cx="575" cy="375" r="10" fill="rgba(255,255,255,0.1)"/>
+<path d="M545 440 L580 405 L610 430 L635 410 L655 440" fill="none" stroke="rgba(255,255,255,0.12)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>
+SVG
+		,
 	);
 
 	return $svgs[ $variant ] ?? $svgs['dashboard'];
@@ -287,7 +295,7 @@ SVG
 /**
  * Returns a light placeholder image as an inline SVG string.
  *
- * @param string $variant The placeholder variant: dashboard, chart, code, portrait, space, project, or product.
+ * @param string $variant The placeholder variant: dashboard, chart, code, portrait, space, project, product, or nature.
  * @return string Inline SVG markup.
  */
 function blockstudio_placeholder_light( string $variant = 'dashboard' ): string {
@@ -376,10 +384,9 @@ SVG
 		,
 		'portrait'  => <<<'SVG'
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 1000" preserveAspectRatio="xMidYMid slice" style="display:block;width:100%;height:100%;color:var(--color-accent)">
-<circle cx="400" cy="300" r="115" fill="rgba(0,0,0,0.05)" stroke="rgba(0,0,0,0.08)" stroke-width="1.5"/>
-<path d="M175 750 C175 590 265 510 400 510 C535 510 625 590 625 750 L625 1000 L175 1000 Z" fill="rgba(0,0,0,0.04)" stroke="rgba(0,0,0,0.08)" stroke-width="1.5"/>
-<circle cx="400" cy="300" r="115" fill="none" stroke="currentColor" stroke-opacity="0.06" stroke-width="1.5"/>
-<path d="M175 750 C175 590 265 510 400 510 C535 510 625 590 625 750" fill="none" stroke="currentColor" stroke-opacity="0.06" stroke-width="1.5"/>
+<rect width="800" height="1000" fill="rgba(0,0,0,0.03)"/>
+<circle cx="400" cy="440" r="40" fill="none" stroke="rgba(0,0,0,0.1)" stroke-width="1.5"/>
+<path d="M340 560 C340 525 365 505 400 505 C435 505 460 525 460 560" fill="none" stroke="rgba(0,0,0,0.1)" stroke-width="1.5" stroke-linecap="round"/>
 </svg>
 SVG
 		,
@@ -458,6 +465,15 @@ SVG
 <ellipse cx="320" cy="580" rx="12" ry="8" fill="rgba(0,0,0,0.04)" transform="rotate(-30 320 580)"/>
 <ellipse cx="860" cy="560" rx="10" ry="6" fill="rgba(0,0,0,0.03)" transform="rotate(20 860 560)"/>
 <ellipse cx="900" cy="590" rx="12" ry="8" fill="rgba(0,0,0,0.04)" transform="rotate(-15 900 590)"/>
+</svg>
+SVG
+		,
+		'nature'    => <<<'SVG'
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 800" preserveAspectRatio="xMidYMid slice" style="display:block;width:100%;height:100%;color:var(--color-accent)">
+<rect width="1200" height="800" fill="rgba(0,0,0,0.03)"/>
+<rect x="540" y="340" width="120" height="120" rx="8" fill="none" stroke="rgba(0,0,0,0.1)" stroke-width="1.5"/>
+<circle cx="575" cy="375" r="10" fill="rgba(0,0,0,0.08)"/>
+<path d="M545 440 L580 405 L610 430 L635 410 L655 440" fill="none" stroke="rgba(0,0,0,0.1)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
 </svg>
 SVG
 		,
