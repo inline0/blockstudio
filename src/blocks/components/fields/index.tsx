@@ -295,7 +295,7 @@ export const Fields = ({
 
         updatedAttributes = newAttributes;
 
-        markNextChangeAsNotPersistent();
+        // markNextChangeAsNotPersistent();
         setRepeater(newAttributes, objectKey);
       } else {
         updatedAttributes = {
@@ -303,7 +303,7 @@ export const Fields = ({
           [item.id + suffix]: newValue,
         };
 
-        markNextChangeAsNotPersistent();
+        // markNextChangeAsNotPersistent();
         setAttributes({
           ...attributes,
           blockstudio: {
