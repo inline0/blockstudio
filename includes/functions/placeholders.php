@@ -11,11 +11,20 @@
 /**
  * Returns a dark placeholder image as an inline SVG string.
  *
- * @param string $variant The placeholder variant: dashboard, chart, code, portrait, space, project, product, or nature.
+ * @param string $variant The placeholder variant: default, dashboard, chart, code, portrait, space, project, or product.
  * @return string Inline SVG markup.
  */
-function blockstudio_placeholder_dark( string $variant = 'dashboard' ): string {
+function blockstudio_placeholder_dark( string $variant = 'default' ): string {
 	$svgs = array(
+		'default'   => <<<'SVG'
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 800" preserveAspectRatio="xMidYMid slice" style="display:block;width:100%;height:100%;color:var(--color-accent)">
+<rect width="1200" height="800" fill="rgba(255,255,255,0.03)"/>
+<rect x="540" y="340" width="120" height="120" rx="8" fill="none" stroke="rgba(255,255,255,0.1)" stroke-width="1.5"/>
+<circle cx="575" cy="375" r="10" fill="rgba(255,255,255,0.1)"/>
+<path d="M545 440 L580 405 L610 430 L635 410 L655 440" fill="none" stroke="rgba(255,255,255,0.12)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>
+SVG
+		,
 		'dashboard' => <<<'SVG'
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 800" preserveAspectRatio="xMidYMid slice" style="display:block;width:100%;height:100%;color:var(--color-accent)"><rect width="1200" height="48" fill="rgba(255,255,255,0.04)"/>
 <circle cx="28" cy="24" r="5" fill="rgba(255,255,255,0.15)"/>
@@ -278,28 +287,28 @@ SVG
 </svg>
 SVG
 		,
-		'nature'    => <<<'SVG'
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 800" preserveAspectRatio="xMidYMid slice" style="display:block;width:100%;height:100%;color:var(--color-accent)">
-<rect width="1200" height="800" fill="rgba(255,255,255,0.03)"/>
-<rect x="540" y="340" width="120" height="120" rx="8" fill="none" stroke="rgba(255,255,255,0.1)" stroke-width="1.5"/>
-<circle cx="575" cy="375" r="10" fill="rgba(255,255,255,0.1)"/>
-<path d="M545 440 L580 405 L610 430 L635 410 L655 440" fill="none" stroke="rgba(255,255,255,0.12)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
-</svg>
-SVG
-		,
 	);
 
-	return $svgs[ $variant ] ?? $svgs['dashboard'];
+	return $svgs[ $variant ] ?? $svgs['default'];
 }
 
 /**
  * Returns a light placeholder image as an inline SVG string.
  *
- * @param string $variant The placeholder variant: dashboard, chart, code, portrait, space, project, product, or nature.
+ * @param string $variant The placeholder variant: default, dashboard, chart, code, portrait, space, project, or product.
  * @return string Inline SVG markup.
  */
-function blockstudio_placeholder_light( string $variant = 'dashboard' ): string {
+function blockstudio_placeholder_light( string $variant = 'default' ): string {
 	$svgs = array(
+		'default'   => <<<'SVG'
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 800" preserveAspectRatio="xMidYMid slice" style="display:block;width:100%;height:100%;color:var(--color-accent)">
+<rect width="1200" height="800" fill="rgba(0,0,0,0.03)"/>
+<rect x="540" y="340" width="120" height="120" rx="8" fill="none" stroke="rgba(0,0,0,0.1)" stroke-width="1.5"/>
+<circle cx="575" cy="375" r="10" fill="rgba(0,0,0,0.08)"/>
+<path d="M545 440 L580 405 L610 430 L635 410 L655 440" fill="none" stroke="rgba(0,0,0,0.1)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>
+SVG
+		,
 		'dashboard' => <<<'SVG'
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 800" preserveAspectRatio="xMidYMid slice" style="display:block;width:100%;height:100%;color:var(--color-accent)"><rect width="1200" height="48" fill="rgba(0,0,0,0.04)"/>
 <circle cx="28" cy="24" r="5" fill="rgba(0,0,0,0.12)"/>
@@ -468,16 +477,7 @@ SVG
 </svg>
 SVG
 		,
-		'nature'    => <<<'SVG'
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 800" preserveAspectRatio="xMidYMid slice" style="display:block;width:100%;height:100%;color:var(--color-accent)">
-<rect width="1200" height="800" fill="rgba(0,0,0,0.03)"/>
-<rect x="540" y="340" width="120" height="120" rx="8" fill="none" stroke="rgba(0,0,0,0.1)" stroke-width="1.5"/>
-<circle cx="575" cy="375" r="10" fill="rgba(0,0,0,0.08)"/>
-<path d="M545 440 L580 405 L610 430 L635 410 L655 440" fill="none" stroke="rgba(0,0,0,0.1)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
-</svg>
-SVG
-		,
 	);
 
-	return $svgs[ $variant ] ?? $svgs['dashboard'];
+	return $svgs[ $variant ] ?? $svgs['default'];
 }
