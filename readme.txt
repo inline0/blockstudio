@@ -54,8 +54,8 @@ Download the latest release zip from [GitHub Releases](https://github.com/inline
 == Changelog ==
 
 = 7.0.0 (next) =
-* New: automatic update notifications via GitHub releases (disabled when installed via Composer)
 * New: Blockstudio is now free and open source
+* New: automatic update notifications via GitHub releases (disabled when installed via Composer)
 * New: file-based pages - create WordPress pages from file templates with automatic HTML to block parsing
 * New: file-based patterns - create WordPress block patterns from file templates with automatic HTML to block parsing
 * New: storage feature to store field values in post meta or options
