@@ -204,7 +204,7 @@ SVG
 </svg>
 SVG
 		,
-		'user'  => <<<'SVG'
+		'user'      => <<<'SVG'
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 1000" preserveAspectRatio="xMidYMid slice" style="display:block;width:100%;height:100%;color:var(--color-accent)">
 <rect width="800" height="1000" fill="rgba(255,255,255,0.03)"/>
 <circle cx="400" cy="440" r="40" fill="none" stroke="rgba(255,255,255,0.1)" stroke-width="1.5"/>
@@ -391,7 +391,7 @@ SVG
 </svg>
 SVG
 		,
-		'user'  => <<<'SVG'
+		'user'      => <<<'SVG'
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 1000" preserveAspectRatio="xMidYMid slice" style="display:block;width:100%;height:100%;color:var(--color-accent)">
 <rect width="800" height="1000" fill="rgba(0,0,0,0.03)"/>
 <circle cx="400" cy="440" r="40" fill="none" stroke="rgba(0,0,0,0.1)" stroke-width="1.5"/>
