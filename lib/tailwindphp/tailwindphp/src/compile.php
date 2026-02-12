@@ -16,7 +16,7 @@ use function BlockstudioVendor\TailwindPHP\Walk\walk;
  * Port of: packages/tailwindcss/src/compile.ts
  *
  * @port-deviation:bigint TypeScript uses BigInt for variant order bitmask allowing >64 variants.
- * PHP uses regular integers (limited to 64 bits but sufficient for current variant count).
+ * PHP uses sorted order arrays instead of bitmasks to avoid 64-bit integer overflow.
  *
  * @port-deviation:sorting TypeScript uses Map<AstNode, ...> for nodeSorting.
  * PHP embeds sorting info directly in nodes via '__sorting' key (removed after sorting)
@@ -28,15 +28,6 @@ use function BlockstudioVendor\TailwindPHP\Walk\walk;
 // CompileAstFlags
 const COMPILE_FLAG_NONE = 0;
 const COMPILE_FLAG_RESPECT_IMPORTANT = 1 << 0;
-/**
- * Cache for variant order bitmasks.
- *
- * @port-deviation:performance Pre-computed bitmasks for variant ordering.
- * Avoids repeated `1 << $order` calculations for the same variant roots.
- *
- * @var array<string, int>
- */
-$_variantMaskCache = [];
 /**
  * Compile multiple candidates into AST nodes.
  *
@@ -90,26 +81,15 @@ function compileCandidates(iterable $rawCandidates, object $designSystem, array 
                 }
                 $node = $ruleInfo['node'];
                 $propertySort = $ruleInfo['propertySort'];
-                // Track the variant order (uses cached bitmasks)
-                global $_variantMaskCache;
-                $variantOrder = 0;
+                // Collect variant orders as sorted array (avoids bitmask overflow for 64+ variants)
+                $variantOrders = [];
                 foreach ($candidate['variants'] as $variant) {
-                    // Arbitrary variants get order 0, named variants use their root
                     $root = $variant['root'] ?? null;
-                    if ($root === null) {
-                        $variantOrder |= 1;
-                        // 1 << 0
-                    } elseif (isset($_variantMaskCache[$root])) {
-                        $variantOrder |= $_variantMaskCache[$root];
-                    } else {
-                        $order = $variantOrderMap[$root] ?? 0;
-                        $mask = 1 << $order;
-                        $_variantMaskCache[$root] = $mask;
-                        $variantOrder |= $mask;
-                    }
+                    $variantOrders[] = $root !== null ? $variantOrderMap[$root] ?? 0 : 0;
                 }
+                sort($variantOrders);
                 // Store sorting info with the node itself so it survives array operations
-                $node['__sorting'] = ['properties' => $propertySort, 'variants' => $variantOrder, 'candidate' => $rawCandidate];
+                $node['__sorting'] = ['properties' => $propertySort, 'variants' => $variantOrders, 'candidate' => $rawCandidate];
                 $astNodes[] = $node;
             }
         }
@@ -125,9 +105,24 @@ function compileCandidates(iterable $rawCandidates, object $designSystem, array 
         if ($aSorting === null || $zSorting === null) {
             return 0;
         }
-        // Sort by variant order first
-        if ($aSorting['variants'] !== $zSorting['variants']) {
-            return $aSorting['variants'] - $zSorting['variants'];
+        // Sort by variant order: max order first (responsive > non-responsive),
+        // then by count (compound variants after single), then lexicographic
+        $aVariants = $aSorting['variants'];
+        $zVariants = $zSorting['variants'];
+        $aMax = empty($aVariants) ? -1 : max($aVariants);
+        $zMax = empty($zVariants) ? -1 : max($zVariants);
+        if ($aMax !== $zMax) {
+            return $aMax - $zMax;
+        }
+        $aCount = count($aVariants);
+        $zCount = count($zVariants);
+        if ($aCount !== $zCount) {
+            return $aCount - $zCount;
+        }
+        for ($i = 0; $i < $aCount; $i++) {
+            if ($aVariants[$i] !== $zVariants[$i]) {
+                return $aVariants[$i] - $zVariants[$i];
+            }
         }
         // Get property orders, defaulting to empty arrays
         $aPropsOrder = $aSorting['properties']['order'] ?? [];

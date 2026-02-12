@@ -105,7 +105,7 @@ These are necessary adaptations due to language differences:
 | `async/await` | Synchronous | PHP lacks native async |
 | `Map<K, V>` | Associative array | PHP has no Map type |
 | `Set<T>` | `array` with keys | PHP has no Set type |
-| `BigInt` | `int` (64-bit) | Sufficient for variant bitmasks |
+| `BigInt` | Sorted order arrays | Avoids 64-bit integer overflow |
 | TypeScript types | PHPDoc annotations | Static typing approach |
 | `enum` | `const` flags | PHP 8.1 compatibility |
 | ES Modules | `require_once` | Module system |
@@ -169,7 +169,7 @@ PHP (src/)
 
 ### Port Deviation Categories
 
-All deviations from the TypeScript source are documented with `@port-deviation` markers. There are **89 documented deviations** across the codebase:
+All deviations from the TypeScript source are documented with `@port-deviation` markers. There are **88 documented deviations** across the codebase:
 
 #### `@port-deviation:none`
 Direct 1:1 port with no significant changes.
@@ -232,12 +232,14 @@ const THEME_OPTION_REFERENCE = 1 << 1;
 ```
 
 #### `@port-deviation:bigint`
-Regular integers instead of BigInt.
+Sorted order arrays instead of BigInt bitmasks.
 
 ```php
-// TypeScript: bigint allows unlimited variant combinations
-// PHP: 64-bit int limits to 64 variants (sufficient for current use)
-$variantOrder |= 1 << $order;
+// TypeScript: BigInt bitmask for variant order (unlimited precision)
+// PHP: Sorted arrays of variant orders (avoids 64-bit overflow)
+$variantOrders = [];
+foreach ($candidate['variants'] as $variant) { ... }
+sort($variantOrders);
 ```
 
 #### `@port-deviation:performance`
@@ -289,7 +291,7 @@ Entire module not applicable to PHP port.
 | `index.php` | 6 | async, sourcemaps, modules, plugins, lightningcss, performance |
 | `css-parser.php` | 4 | sourcemaps, stack, bom, performance |
 | `theme.php` | 4 | storage, sourcemaps, enum, performance |
-| `compile.php` | 4 | bigint, sorting, variant-result, performance |
+| `compile.php` | 3 | bigint, sorting, variant-result |
 | `design-system.php` | 4 | structure, invalidCandidates, intellisense, substitution |
 | `candidate.php` | 3 | caching, node-filtering, types |
 | `ast.php` | 5 | structure, sourcemaps, types, performance, location |
@@ -903,16 +905,7 @@ $this->parsedCandidates = new DefaultMap(function ($candidate) {
 
 Candidates are parsed once and cached by their raw string.
 
-### 4. Variant Mask Cache
-
-```php
-// src/compile.php
-$_variantMaskCache = [];
-```
-
-Pre-computed bitmasks for variant ordering.
-
-### 5. Regex Pattern Constants
+### 4. Regex Pattern Constants
 
 ```php
 // src/index.php

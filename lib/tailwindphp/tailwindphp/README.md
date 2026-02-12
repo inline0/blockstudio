@@ -1,17 +1,24 @@
-# TailwindPHP
+<div align="center">
+
+# 🐘 TailwindPHP
+
+**A 1:1 port of TailwindCSS 4.x to PHP**
+
+Generate Tailwind CSS using pure PHP — no Node.js required.
 
 [![TailwindCSS](https://img.shields.io/badge/TailwindCSS-v4.1.17-38bdf8?logo=tailwindcss&logoColor=white)](https://github.com/tailwindlabs/tailwindcss)
-[![Tests](https://img.shields.io/badge/Tests-4,013%20passing-brightgreen)](https://github.com/dnnsjsk/tailwindphp)
 [![PHP](https://img.shields.io/badge/PHP-8.2+-777BB4?logo=php&logoColor=white)](https://php.net)
+[![Tests](https://github.com/dnnsjsk/tailwindphp/actions/workflows/tests.yml/badge.svg)](https://github.com/dnnsjsk/tailwindphp/actions/workflows/tests.yml)
+[![Code Quality](https://github.com/dnnsjsk/tailwindphp/actions/workflows/code-quality.yml/badge.svg)](https://github.com/dnnsjsk/tailwindphp/actions/workflows/code-quality.yml)
 
 [![clsx](https://img.shields.io/badge/clsx-v2.1.1-blue)](https://github.com/lukeed/clsx)
 [![tailwind-merge](https://img.shields.io/badge/tailwind--merge-v3.4.0-blue)](https://github.com/dcastil/tailwind-merge)
 [![cva](https://img.shields.io/badge/cva-v1.0.0--beta.4-blue)](https://github.com/joe-bell/cva)
 [![tw-animate-css](https://img.shields.io/badge/tw--animate--css-v1.4.0-blue)](https://github.com/Wombosvideo/tw-animate-css)
 
-A 1:1 port of TailwindCSS 4.x to PHP. Generate Tailwind CSS using pure PHP — no Node.js required.
+</div>
 
-> **Built with AI** — This entire codebase (57,000+ lines, 4,002 tests) was generated using [Claude Code](https://claude.ai/code). No manual coding was done.
+> **Built with AI** — This entire codebase (57,000+ lines, 4,000+ tests) was generated using [Claude Code](https://claude.ai/code). No manual coding was done.
 
 ## Why This Exists
 

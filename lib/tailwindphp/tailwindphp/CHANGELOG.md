@@ -5,6 +5,30 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.2.4] - 2026-02-12
+
+### Fixed
+
+- Fixed responsive breakpoint ordering: replaced bitmask-based variant sorting (`1 << order`) with sorted order arrays to avoid PHP 64-bit integer overflow. With 64+ registered variants, the bitmask overflowed to 0, causing all responsive breakpoints to sort alphabetically (`lg:` before `sm:`) instead of mobile-first.
+
+### Added
+
+- Test for responsive breakpoint mobile-first ordering
+
+### Changed
+
+- Test suite expanded to 4,014 tests (+1 from v1.2.3)
+
+## [1.2.3] - 2026-02-11
+
+### Fixed
+
+- Fixed responsive breakpoint ordering: variants within a group (e.g. `sm`, `md`, `lg`) now get unique incrementing sort orders instead of sharing the same order. Previously, `sm:` rules could appear after `lg:` rules in compiled CSS, breaking the mobile-first cascade.
+
+### Added
+
+- `autoload.php` standalone autoloader for environments that don't use Composer's autoloader (e.g. WordPress plugins with vendor prefixing).
+
 ## [1.2.2] - 2025-12-06
 
 ### Fixed
@@ -166,6 +190,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - No external runtime dependencies
 - Zero Node.js requirement
 
+[1.2.4]: https://github.com/dnnsjsk/tailwindphp/releases/tag/v1.2.4
+[1.2.3]: https://github.com/dnnsjsk/tailwindphp/releases/tag/v1.2.3
 [1.2.2]: https://github.com/dnnsjsk/tailwindphp/releases/tag/v1.2.2
 [1.2.1]: https://github.com/dnnsjsk/tailwindphp/releases/tag/v1.2.1
 [1.2.0]: https://github.com/dnnsjsk/tailwindphp/releases/tag/v1.2.0
