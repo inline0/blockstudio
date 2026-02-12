@@ -31,3 +31,8 @@
 /src/ export-ignore
 /test-results/ export-ignore
 /tests/ export-ignore
+/tsconfig.json export-ignore
+/ui/ export-ignore
+/webpack.config.cjs export-ignore
+/composer.json export-ignore
+/evals/ export-ignore

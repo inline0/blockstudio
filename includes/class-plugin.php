@@ -139,6 +139,7 @@ class Plugin {
 		require_once $classes_dir . 'extensions.php';
 		require_once $classes_dir . 'examples.php';
 		require_once $classes_dir . 'register.php';
+		require_once $classes_dir . 'github-updater.php';
 
 		// File-based pages system.
 		require_once $classes_dir . 'page-discovery.php';
@@ -228,6 +229,10 @@ class Plugin {
 			},
 			PHP_INT_MAX
 		);
+
+		if ( ! class_exists( 'Composer\InstalledVersions' ) ) {
+			new Github_Updater();
+		}
 
 		do_action( 'blockstudio_init', $this );
 	}

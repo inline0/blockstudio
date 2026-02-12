@@ -1,0 +1,23 @@
+name: Release
+
+on:
+  release:
+    types: [published]
+
+permissions:
+  contents: write
+
+jobs:
+  release-zip:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Create release zip
+        run: git archive --format=zip --prefix=blockstudio/ HEAD -o blockstudio.zip
+
+      - name: Upload release asset
+        run: gh release upload "${{ github.event.release.tag_name }}" blockstudio.zip --clobber
+        env:
+          GH_TOKEN: ${{ github.token }}
