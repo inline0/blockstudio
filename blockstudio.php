@@ -5,6 +5,7 @@
  * Description: The block framework for WordPress.
  * Author: Blockstudio
  * Version: 7.0.0
+ * Requires at least: 6.7
  * Requires PHP: 8.2
  * License: GPL2+
  * License URI: https://www.gnu.org/licenses/gpl-2.0.txt

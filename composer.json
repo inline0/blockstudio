@@ -1,5 +1,6 @@
 {
   "name": "blockstudio/blockstudio",
+  "type": "wordpress-plugin",
   "description": "The block framework for WordPress.",
   "minimum-stability": "stable",
   "license": "GPL-2.0-or-later",
