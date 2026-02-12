@@ -28,6 +28,18 @@ Create custom WordPress blocks by dropping a `block.json` and a PHP template int
 * **SEO integration** with Yoast SEO and Rank Math content analysis
 * **50+ PHP and JS hooks** for customizing every aspect of the framework
 
+= Installation =
+
+**Composer (recommended):**
+
+`composer require blockstudio/blockstudio`
+
+Composer installations receive updates through Composer. The built-in updater is automatically disabled.
+
+**Manual:**
+
+Download the latest release zip from [GitHub Releases](https://github.com/inline0/blockstudio/releases), upload to your plugins directory, and activate. Manual installations receive automatic update notifications in the WordPress dashboard.
+
 = Requirements =
 
 * PHP 8.2+
@@ -42,6 +54,7 @@ Create custom WordPress blocks by dropping a `block.json` and a PHP template int
 == Changelog ==
 
 = 7.0.0 (next) =
+* New: automatic update notifications via GitHub releases (disabled when installed via Composer)
 * New: Blockstudio is now free and open source
 * New: file-based pages - create WordPress pages from file templates with automatic HTML to block parsing
 * New: file-based patterns - create WordPress block patterns from file templates with automatic HTML to block parsing
