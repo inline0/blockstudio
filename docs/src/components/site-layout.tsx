@@ -4,12 +4,19 @@ import { Blocks, FileText, LayoutGrid, Puzzle } from "lucide-react";
 import type { ReactNode } from "react";
 import type { LinkItemType } from "@fumadocs/ui/link-item";
 import { FeaturesMenu } from "./features-menu";
+import { PlusBadge } from "./plus-badge";
 import config from "../../onedocs.config";
 
 const featuresMenuDesktop: LinkItemType = {
   type: "custom",
   on: "nav",
   children: <FeaturesMenu />,
+};
+
+const plusBadgeNav: LinkItemType = {
+  type: "custom",
+  on: "nav",
+  children: <PlusBadge />,
 };
 
 const featuresMenuMobile: LinkItemType = {
@@ -44,7 +51,7 @@ function getLayoutOptions() {
   const base = createBaseOptions(config);
   return {
     ...base,
-    links: [featuresMenuDesktop, featuresMenuMobile, ...(base.links ?? [])],
+    links: [featuresMenuDesktop, featuresMenuMobile, ...(base.links ?? []), plusBadgeNav],
   };
 }
 
