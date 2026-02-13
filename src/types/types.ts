@@ -88,7 +88,6 @@ type BlockstudioEditorBlock = {
   instance: string;
   instancePath: string;
   level: number;
-  library: boolean;
   name: string;
   nameAlt?: string;
   path: string;
@@ -118,7 +117,6 @@ type BlockstudioEditorBlock = {
 type BlockstudioEditorFileStructure = {
   children: BlockstudioEditorFileStructure[];
   instance: string;
-  library: boolean;
   path: string;
 };
 

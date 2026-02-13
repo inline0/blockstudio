@@ -176,10 +176,9 @@ final class Block_Registry {
 	/**
 	 * Registered block source instances.
 	 *
-	 * Tracks each location where Build::init() was called, including
-	 * whether it's a library (shared blocks) or regular blocks.
+	 * Tracks each location where Build::init() was called.
 	 *
-	 * @var array<array{path: string, library: bool}>
+	 * @var array<array{path: string}>
 	 */
 	private array $instances = array();
 
@@ -376,7 +375,7 @@ final class Block_Registry {
 	/**
 	 * Get all instances.
 	 *
-	 * @return array<array{path: string, library: bool}> The instances.
+	 * @return array<array{path: string}> The instances.
 	 */
 	public function get_instances(): array {
 		return $this->instances;
@@ -584,15 +583,13 @@ final class Block_Registry {
 	/**
 	 * Add an instance.
 	 *
-	 * @param string $path    The path.
-	 * @param bool   $library Whether it's a library.
+	 * @param string $path The path.
 	 *
 	 * @return void
 	 */
-	public function add_instance( string $path, bool $library ): void {
+	public function add_instance( string $path ): void {
 		$this->instances[] = array(
-			'path'    => $path,
-			'library' => $library,
+			'path' => $path,
 		);
 	}
 

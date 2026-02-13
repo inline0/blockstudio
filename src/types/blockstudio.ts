@@ -25,10 +25,6 @@ export interface Blockstudio {
    */
   editor?: Editor;
   /**
-   * Add block library.
-   */
-  library?: boolean;
-  /**
    * Settings related to Tailwind.
    */
   tailwind?: Tailwind;
@@ -430,7 +426,6 @@ const typeMap: any = {
         typ: u(undefined, r('BlockEditor')),
       },
       { json: 'editor', js: 'editor', typ: u(undefined, r('Editor')) },
-      { json: 'library', js: 'library', typ: u(undefined, true) },
       { json: 'tailwind', js: 'tailwind', typ: u(undefined, r('Tailwind')) },
       { json: 'dev', js: 'dev', typ: u(undefined, r('Dev')) },
       { json: 'users', js: 'users', typ: u(undefined, r('Users')) },

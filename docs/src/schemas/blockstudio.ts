@@ -218,13 +218,6 @@ export const blockstudio = {
       },
       additionalProperties: true,
     },
-    library: {
-      type: "boolean",
-      default: false,
-      description: "Add block library.",
-      descriptionFilter: "This filter allows you to enable the block library.",
-      example: true,
-    },
     ai: {
       id: "aiLlmMd",
       type: "object",

@@ -26,7 +26,6 @@ namespace Blockstudio;
  * - assets/process/scss: Enable inline SCSS compilation
  * - assets/process/scssFiles: Enable .scss file compilation
  * - editor/formatOnSave: Auto-format code in editor
- * - editor/library: Enable block library panel
  * - tailwind/enabled: Enable Tailwind CSS integration
  * - dev/grab/enabled: Enable frontend element grabber
  * - dev/canvas/enabled: Enable the canvas
@@ -90,7 +89,6 @@ class Settings {
 		),
 		'editor'      => array(
 			'formatOnSave' => false,
-			'library'      => false,
 			'assets'       => array(),
 			'markup'       => false,
 		),
@@ -103,7 +101,6 @@ class Settings {
 			'cssClasses'     => array(),
 			'cssVariables'   => array(),
 		),
-		'library'     => false,
 		'ai'          => array(
 			'enableContextGeneration' => false,
 		),
@@ -207,19 +204,9 @@ class Settings {
 	 * @todo Remove legacy v5 migration.
 	 */
 	protected function migrate_settings_from_old_version( &$settings ): void {
-		if ( has_filter( 'blockstudio/library' ) ) {
-			$library             = apply_filters( 'blockstudio/library', false );
-			$settings['library'] = $library;
-		}
-
 		if ( has_filter( 'blockstudio/assets' ) ) {
 			$assets                        = apply_filters( 'blockstudio/assets', true );
 			$settings['assets']['enqueue'] = $assets;
-		}
-
-		if ( has_filter( 'blockstudio/editor/library' ) ) {
-			$editor_library                = apply_filters( 'blockstudio/editor/library', false );
-			$settings['editor']['library'] = $editor_library;
 		}
 
 		if ( has_filter( 'blockstudio/editor/assets' ) ) {

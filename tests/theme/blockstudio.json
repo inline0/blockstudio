@@ -8,7 +8,6 @@
   },
   "editor": {
     "formatOnSave": true,
-    "library": true,
     "assets": [
       "blockstudio-editor-test",
       "wp-block-library-theme",
@@ -25,7 +24,6 @@
     "cssClasses": ["wp-block-library-theme"],
     "cssVariables": ["global-styles-css-custom-properties"]
   },
-  "library": true,
   "ai": { "enableContextGeneration": true },
   "dev": { "grab": { "enabled": true }, "canvas": { "enabled": true, "adminBar": false } },
   "$schema": "https://app.blockstudio.dev/schema/blockstudio"

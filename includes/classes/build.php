@@ -55,9 +55,8 @@ use WP_Block_Type;
  *
  *   // Register blocks with options
  *   Build::init([
- *       'dir'     => '/path/to/blocks',
- *       'library' => true,  // Shared block library
- *       'editor'  => false, // Normal mode (not editor)
+ *       'dir'    => '/path/to/blocks',
+ *       'editor' => false, // Normal mode (not editor)
  *   ]);
  *
  * @since 1.0.0
@@ -754,8 +753,7 @@ class Build {
 	 * @throws SassException When SCSS compilation fails.
 	 */
 	public static function init( $args = false ) {
-		$editor  = $args['editor'] ?? false;
-		$library = $args['library'] ?? false;
+		$editor = $args['editor'] ?? false;
 		if ( is_array( $args ) ) {
 			$p    = $args;
 			$args = $p['dir'] ?? false;
@@ -769,14 +767,12 @@ class Build {
 			return;
 		}
 
-		$registry->add_instance( $path, $library );
+		$registry->add_instance( $path );
 
 		$path     = wp_normalize_path( $path );
 		$instance = self::get_instance_name( $path );
 
-		if ( ! $library && ! Settings::get( 'editor/library' ) ) {
-			$registry->add_path( $instance, $path );
-		}
+		$registry->add_path( $instance, $path );
 
 		do_action( 'blockstudio/init/before' );
 		do_action( "blockstudio/init/before/$instance" );
@@ -785,7 +781,7 @@ class Build {
 
 		// Phase 1: Discover blocks using Block_Discovery.
 		$discovery = new Block_Discovery();
-		$results   = $discovery->discover( $path, $instance, $library, $editor );
+		$results   = $discovery->discover( $path, $instance, $editor );
 
 		$store        = $results['store'];
 		$registerable = $results['registerable'];
@@ -1505,12 +1501,7 @@ class Build {
 		$sorted = array();
 
 		foreach ( $files as $d ) {
-			if ( $d['library'] && ! Settings::get( 'editor/library' ) ) {
-				continue;
-			}
-
 			$sorted[ $d['instance'] ]['instance'] = $d['instance'];
-			$sorted[ $d['instance'] ]['library']  = $d['library'];
 			$sorted[ $d['instance'] ]['path']     = $d['instancePath'];
 
 			self::path_to_array(
@@ -1573,9 +1564,8 @@ class Build {
 		foreach ( $registry->get_instances() as $instance ) {
 			self::init(
 				array(
-					'dir'     => $instance['path'],
-					'library' => $instance['library'],
-					'editor'  => true,
+					'dir'    => $instance['path'],
+					'editor' => true,
 				)
 			);
 		}

@@ -112,10 +112,9 @@ class Block_Discovery {
 	 * Editor mode: Processes ALL files for the code editor feature.
 	 * Every file gets an entry in the store, keyed by file path.
 	 *
-	 * @param string $base_path  Absolute path to scan for blocks.
-	 * @param string $instance   Instance identifier (e.g., 'themes/mytheme/blockstudio').
-	 * @param bool   $is_library Whether this is a shared library (affects visibility).
-	 * @param bool   $is_editor  Whether running in editor mode (discovers all files).
+	 * @param string $base_path Absolute path to scan for blocks.
+	 * @param string $instance  Instance identifier (e.g., 'themes/mytheme/blockstudio').
+	 * @param bool   $is_editor Whether running in editor mode (discovers all files).
 	 *
 	 * @return array{
 	 *     store: array<string, array>,
@@ -125,7 +124,7 @@ class Block_Discovery {
 	 *     overrides: array<string, array>
 	 * } Discovery results for Build::init() to process.
 	 */
-	public function discover( string $base_path, string $instance, bool $is_library = false, bool $is_editor = false ): array {
+	public function discover( string $base_path, string $instance, bool $is_editor = false ): array {
 		$this->store           = array();
 		$this->registerable    = array();
 		$this->blade_templates = array();
@@ -152,7 +151,6 @@ class Block_Discovery {
 				$filename,
 				$base_path,
 				$instance,
-				$is_library,
 				$is_editor
 			);
 		}
@@ -163,12 +161,11 @@ class Block_Discovery {
 	/**
 	 * Process a single file.
 	 *
-	 * @param string $file_path   The file path.
-	 * @param string $filename    The filename from iterator.
-	 * @param string $base_path   The base path.
-	 * @param string $instance    The instance name.
-	 * @param bool   $is_library  Whether this is a library path.
-	 * @param bool   $is_editor   Whether in editor mode.
+	 * @param string $file_path  The file path.
+	 * @param string $filename   The filename from iterator.
+	 * @param string $base_path  The base path.
+	 * @param string $instance   The instance name.
+	 * @param bool   $is_editor  Whether in editor mode.
 	 *
 	 * @return void
 	 */
@@ -177,7 +174,6 @@ class Block_Discovery {
 		string $filename,
 		string $base_path,
 		string $instance,
-		bool $is_library,
 		bool $is_editor
 	): void {
 		$file_dir  = dirname( $file_path );
@@ -258,7 +254,6 @@ class Block_Discovery {
 			'instance'       => $instance,
 			'instancePath'   => $base_path,
 			'level'          => substr_count( $level, '/' ),
-			'library'        => $is_library,
 			'name'           => false !== $name_file ? $name_file : $name,
 			'path'           => $block_json_path,
 			'previewAssets'  => $block_json['blockstudio']['editor']['assets'] ?? array(),

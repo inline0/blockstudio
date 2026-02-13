@@ -93,6 +93,7 @@ Download the latest release zip from [GitHub Releases](https://github.com/inline
 * Deprecation: Admin Area removed
 * Deprecation: Code Editor removed
 * Deprecation: License Key removed
+* Deprecation: Block library removed. The built-in element blocks (Gallery, Slider, Image Comparison, Code, Icon) are no longer included
 * Deprecation: dash notation for asset file suffixes (*-inline.css, *-editor.css, etc.). Use dot notation instead
 
 = 6.0.2 (18.08.2025) =

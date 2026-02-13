@@ -272,3 +272,9 @@ Cache files are stored in `wp-content/uploads/blockstudio/tailwind/cache/`. Clea
 ### Removed Files and Enqueues
 
 In v6, Tailwind CSS was enqueued as external stylesheets (`blockstudio-tailwind`, `blockstudio-tailwind-preflight`). In v7, all CSS is injected inline via an output buffer. There are no link tags or enqueued stylesheets for Tailwind on the frontend.
+
+## Block Library
+
+The built-in "Blockstudio Elements" library has been removed. The `library` setting in `blockstudio.json` and the `blockstudio/settings/library` filter no longer have any effect.
+
+If you were using the library blocks (Gallery, Slider, Image Comparison, Code, Icon), copy the block folders from your v6 installation's `includes/library/blockstudio-element/` directory into your theme's blockstudio directory and update their `block.json` files with new names and categories.
