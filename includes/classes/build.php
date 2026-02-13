@@ -973,6 +973,83 @@ class Build {
 	}
 
 	/**
+	 * Re-discover blocks for all registered instances.
+	 *
+	 * Finds new blocks added to the filesystem and removes blocks whose
+	 * directories have been deleted. Existing blocks are left untouched.
+	 *
+	 * @since 7.0.0
+	 *
+	 * @return void
+	 */
+	public static function refresh_blocks(): void {
+		$registry             = Block_Registry::instance();
+		$existing_block_names = array_keys( $registry->get_blocks() );
+		$discovered_names     = array();
+
+		foreach ( $registry->get_instances() as $instance_data ) {
+			$path     = wp_normalize_path( $instance_data['path'] );
+			$instance = self::get_instance_name( $path );
+
+			if ( ! is_dir( $path ) ) {
+				continue;
+			}
+
+			$discovery = new Block_Discovery();
+			$results   = $discovery->discover( $path, $instance, false );
+
+			foreach ( $results['registerable'] as $name => $item ) {
+				$discovered_names[] = $name;
+
+				if ( in_array( $name, $existing_block_names, true ) ) {
+					continue;
+				}
+
+				if ( Settings::get( 'assets/enqueue' ) ) {
+					self::process_block_assets(
+						$item['data'],
+						$name,
+						$instance,
+						false,
+						$registry
+					);
+				}
+
+				self::register_block_type(
+					$item['data'],
+					$item['block_json'],
+					$item['classification'],
+					$item['contents'],
+					$name,
+					$registry
+				);
+
+				$block = $registry->get_block( $name );
+				if ( $block ) {
+					\register_block_type(
+						apply_filters( 'blockstudio/blocks/meta', $block )
+					);
+				}
+			}
+
+			$new_store = array_diff_key( $results['store'], array_flip( $existing_block_names ) );
+			if ( ! empty( $new_store ) ) {
+				$registry->merge_data( $new_store );
+			}
+		}
+
+		foreach ( $existing_block_names as $name ) {
+			if ( ! in_array( $name, $discovered_names, true ) ) {
+				$registry->remove_block( $name );
+
+				if ( \WP_Block_Type_Registry::get_instance()->is_registered( $name ) ) {
+					\WP_Block_Type_Registry::get_instance()->unregister( $name );
+				}
+			}
+		}
+	}
+
+	/**
 	 * Process assets for a block.
 	 *
 	 * @since 7.0.0

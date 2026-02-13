@@ -274,6 +274,16 @@ export const blockstudio = {
                 "This filter allows you to show/hide the WordPress admin bar on the canvas.",
               example: true,
             },
+            updateMethod: {
+              type: "string",
+              enum: ["sse", "polling"],
+              default: "sse",
+              description:
+                "Method used for live updates. SSE keeps a persistent connection for instant updates. Polling checks for changes at a fixed interval.",
+              descriptionFilter:
+                "This filter allows you to change the canvas update method.",
+              example: "sse",
+            },
           },
         },
       },

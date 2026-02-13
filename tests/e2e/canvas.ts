@@ -297,6 +297,58 @@ test.describe('Canvas', () => {
       expect(firstPage).toHaveProperty('content');
     });
 
+    test('targeted refresh with empty blocks skips block data entirely', async () => {
+      const result = await page.evaluate(async () => {
+        const apiFetch = (window as any).wp.apiFetch;
+        return apiFetch({ path: '/blockstudio/v1/canvas/refresh?blocks=' });
+      });
+
+      expect(result).toHaveProperty('pages');
+      expect(result).toHaveProperty('blockstudioBlocks');
+      expect(result.blockstudioBlocks).toEqual([]);
+      expect(result.pages.length).toBeGreaterThanOrEqual(4);
+      expect(result.blocks).toEqual([]);
+    });
+
+    test('targeted refresh with specific block only renders that block', async () => {
+      const result = await page.evaluate(async () => {
+        const apiFetch = (window as any).wp.apiFetch;
+        return apiFetch({ path: '/blockstudio/v1/canvas/refresh?blocks=blockstudio/init' });
+      });
+
+      expect(result.blockstudioBlocks.length).toBeGreaterThan(0);
+      for (const entry of result.blockstudioBlocks) {
+        expect(entry.blockName).toBe('blockstudio/init');
+      }
+      expect(result.changedBlocks).toEqual(['blockstudio/init']);
+
+      expect(result.blocks.length).toBe(1);
+      expect(result.blocks[0].name).toBe('blockstudio/init');
+    });
+
+    test('targeted refresh with specific page only returns that page', async () => {
+      const result = await page.evaluate(async () => {
+        const apiFetch = (window as any).wp.apiFetch;
+        return apiFetch({ path: '/blockstudio/v1/canvas/refresh?blocks=&pages=test-page' });
+      });
+
+      expect(result.pages.length).toBe(1);
+      expect(result.pages[0].name).toBe('blockstudio-e2e-test');
+      expect(result.blocks).toEqual([]);
+      expect(result.blockstudioBlocks).toEqual([]);
+    });
+
+    test('targeted refresh with empty pages returns no pages', async () => {
+      const result = await page.evaluate(async () => {
+        const apiFetch = (window as any).wp.apiFetch;
+        return apiFetch({ path: '/blockstudio/v1/canvas/refresh?blocks=blockstudio/init&pages=' });
+      });
+
+      expect(result.pages).toEqual([]);
+      expect(result.blocks.length).toBe(1);
+      expect(result.blocks[0].name).toBe('blockstudio/init');
+    });
+
     test('poll endpoint requires authentication', async ({ browser }) => {
       const anonContext = await browser.newContext();
       const anonPage = await anonContext.newPage();
@@ -349,15 +401,82 @@ test.describe('Canvas', () => {
       }
     });
 
+    test('SSE stream sends targeted change data on page edit', async () => {
+      originalContent = fs.readFileSync(templatePath, 'utf-8');
+
+      await page.goto(canvasUrl, { waitUntil: 'domcontentloaded' });
+      await page.waitForFunction(
+        () => {
+          const el = document.querySelector('[data-canvas-surface]');
+          return el && window.getComputedStyle(el).transform !== 'none';
+        },
+        null,
+        { timeout: 15000 },
+      );
+
+      await page.evaluate(() => {
+        const canvasData = (window as any).blockstudioCanvas;
+        const url =
+          canvasData.restRoot +
+          'blockstudio/v1/canvas/stream?_wpnonce=' +
+          encodeURIComponent(canvasData.restNonce);
+
+        const es = new EventSource(url);
+        (window as any).__sseTestPromise = new Promise<void>((resolve) => {
+          es.addEventListener('fingerprint', () => resolve());
+        });
+        (window as any).__sseTestChangedPromise = new Promise<Record<string, unknown>>(
+          (resolve) => {
+            es.addEventListener('changed', (e: MessageEvent) => {
+              es.close();
+              resolve(JSON.parse(e.data));
+            });
+          },
+        );
+        (window as any).__sseTestES = es;
+      });
+
+      await page.evaluate(() => (window as any).__sseTestPromise);
+
+      fs.writeFileSync(
+        templatePath,
+        originalContent + '\n<!-- sse-targeted-test -->',
+      );
+
+      const sseData = await page.evaluate(
+        () => (window as any).__sseTestChangedPromise,
+      );
+
+      fs.writeFileSync(templatePath, originalContent);
+
+      expect(sseData).toHaveProperty('fingerprint');
+      expect(sseData).toHaveProperty('changedBlocks');
+      expect(sseData).toHaveProperty('changedPages');
+      expect(sseData.changedBlocks).toEqual([]);
+      expect(sseData.changedPages).toEqual(['test-page']);
+    });
+
     test('only changed page revision increments after live refresh', async () => {
       originalContent = fs.readFileSync(templatePath, 'utf-8');
+
+      // Navigate fresh to avoid stale state from previous tests.
+      await page.evaluate(() => localStorage.removeItem('blockstudio-canvas-settings'));
+      await page.goto(canvasUrl, { waitUntil: 'domcontentloaded' });
+
+      await page.waitForFunction(
+        () => {
+          const el = document.querySelector('[data-canvas-surface]');
+          return el && window.getComputedStyle(el).transform !== 'none';
+        },
+        null,
+        { timeout: 15000 },
+      );
 
       const menuButton = page.locator('.blockstudio-canvas-menu .components-button').first();
       await menuButton.click();
       await expect(page.locator('role=menu')).toBeVisible({ timeout: 5000 });
       await page.locator('role=menuitem', { hasText: 'Live mode' }).click();
 
-      // Wait for the initial fingerprint to be stored by the first poll.
       await page.waitForFunction(
         () => {
           const select = (window as any).wp?.data?.select;

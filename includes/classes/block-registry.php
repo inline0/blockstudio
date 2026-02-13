@@ -665,6 +665,18 @@ final class Block_Registry {
 	}
 
 	/**
+	 * Remove a block and its data from the registry.
+	 *
+	 * @param string $name The block name.
+	 *
+	 * @return void
+	 */
+	public function remove_block( string $name ): void {
+		unset( $this->blocks[ $name ] );
+		unset( $this->data[ $name ] );
+	}
+
+	/**
 	 * Update block data for a specific block.
 	 *
 	 * @param string $name The block name.

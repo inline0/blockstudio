@@ -118,7 +118,7 @@ class Canvas {
 
 		wp_add_inline_script(
 			'blockstudio-blocks',
-			'window.blockstudio.blockstudioBlocks = Object.assign(window.blockstudio.blockstudioBlocks || {}, ' . wp_json_encode( $blockstudio_blocks ) . ');',
+			'window.blockstudio.blockstudioBlocks = (window.blockstudio.blockstudioBlocks || []).concat(' . wp_json_encode( $blockstudio_blocks ) . ');',
 			'after'
 		);
 
@@ -159,30 +159,44 @@ class Canvas {
 			'blockstudio-canvas',
 			'blockstudioCanvas',
 			array(
-				'pages'    => $pages,
-				'blocks'   => $blocks,
-				'settings' => $editor_settings,
+				'pages'        => $pages,
+				'blocks'       => $blocks,
+				'settings'     => $editor_settings,
+				'updateMethod' => Settings::get( 'dev/canvas/updateMethod' ) ?? 'sse',
+				'restRoot'     => esc_url_raw( rest_url() ),
+				'restNonce'    => wp_create_nonce( 'wp_rest' ),
 			)
 		);
 	}
 
 	/**
-	 * Get all Blockstudio-managed pages with their post content.
+	 * Get Blockstudio-managed pages with their post content.
 	 *
+	 * @param array<string> $only_sources If non-empty, only return pages matching these source paths.
 	 * @return array<int, array{title: string, slug: string, name: string, content: string}>
 	 */
-	private function get_pages_with_content(): array {
-		$posts = get_posts(
-			array(
-				'meta_key'       => '_blockstudio_page_source', // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_key
-				'post_type'      => 'any',
-				'posts_per_page' => -1,
-				'post_status'    => 'publish',
-				'orderby'        => 'title',
-				'order'          => 'ASC',
-			)
+	private function get_pages_with_content( array $only_sources = array() ): array {
+		$args = array(
+			'post_type'      => 'any',
+			'posts_per_page' => -1,
+			'post_status'    => 'publish',
+			'orderby'        => 'title',
+			'order'          => 'ASC',
 		);
 
+		if ( ! empty( $only_sources ) ) {
+			$args['meta_query'] = array( // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query
+				array(
+					'key'     => '_blockstudio_page_source',
+					'value'   => $only_sources,
+					'compare' => 'IN',
+				),
+			);
+		} else {
+			$args['meta_key'] = '_blockstudio_page_source'; // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_key
+		}
+
+		$posts = get_posts( $args );
 		$pages = array();
 
 		foreach ( $posts as $post ) {
@@ -250,10 +264,11 @@ class Canvas {
 	/**
 	 * Pre-render blocks from the blocks view items.
 	 *
-	 * @param array $block_items Block items from get_blocks_with_content().
-	 * @return array<string, array{rendered: string, block: array}> Preloaded block data keyed by hash.
+	 * @param array         $block_items  Block items from get_blocks_with_content().
+	 * @param array<string> $only_blocks  If non-empty, only render these block names.
+	 * @return array<int, array{rendered: string, blockName: string}> Preloaded block data as ordered array.
 	 */
-	private function preload_block_items( array $block_items ): array {
+	private function preload_block_items( array $block_items, array $only_blocks = array() ): array {
 		$blockstudio_blocks = array();
 		$blocks             = Build::blocks();
 		$block_names        = array_keys( $blocks );
@@ -267,45 +282,23 @@ class Canvas {
 					continue;
 				}
 
-				$raw_inner = $block['attrs']['blockstudio']['attributes'] ?? array();
-
-				if ( is_array( $raw_inner ) && ! empty( $raw_inner ) ) {
-					array_walk_recursive(
-						$raw_inner,
-						function ( &$value ) {
-							if ( '' === $value ) {
-								$value = false;
-							}
-						}
-					);
+				if ( ! empty( $only_blocks ) && ! in_array( $block['blockName'], $only_blocks, true ) ) {
+					continue;
 				}
 
-				$block_obj = array(
+				// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Setting mode for rendering.
+				$_GET['blockstudioMode'] = 'editor';
+
+				try {
+					$rendered = render_block( $block );
+				} catch ( \Throwable $e ) {
+					$rendered = '';
+				}
+
+				$blockstudio_blocks[] = array(
+					'rendered'  => $rendered,
 					'blockName' => $block['blockName'],
-					'attrs'     => (object) $raw_inner,
 				);
-
-				$id = str_replace(
-					array( '{', '}', '[', ']', '"', '/', ' ', ':', ',', '\\' ),
-					'_',
-					wp_json_encode( $block_obj )
-				);
-
-				if ( ! isset( $blockstudio_blocks[ $id ] ) ) {
-					// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Setting mode for rendering.
-					$_GET['blockstudioMode'] = 'editor';
-
-					try {
-						$rendered = render_block( $block );
-					} catch ( \Throwable $e ) {
-						$rendered = '';
-					}
-
-					$blockstudio_blocks[ $id ] = array(
-						'rendered' => $rendered,
-						'block'    => $block_obj,
-					);
-				}
 			}
 		}
 
@@ -315,10 +308,11 @@ class Canvas {
 	/**
 	 * Pre-render all Blockstudio blocks across all pages.
 	 *
-	 * @param array $pages Pages with content from get_pages_with_content().
-	 * @return array<string, array{rendered: string, block: array}> Preloaded block data keyed by hash.
+	 * @param array         $pages        Pages with content from get_pages_with_content().
+	 * @param array<string> $only_blocks  If non-empty, only render these block names.
+	 * @return array<int, array{rendered: string, blockName: string}> Preloaded block data as ordered array.
 	 */
-	private function preload_all_blocks( array $pages ): array {
+	private function preload_all_blocks( array $pages, array $only_blocks = array() ): array {
 		$blockstudio_blocks = array();
 		$blocks             = Build::blocks();
 		$block_names        = array_keys( $blocks );
@@ -328,39 +322,16 @@ class Canvas {
 			&$block_renderer,
 			&$blockstudio_blocks,
 			$block_names,
-			$blocks
+			$only_blocks
 		) {
 			if ( in_array( $block['blockName'], $block_names, true ) ) {
-				$raw_inner = $block['attrs']['blockstudio']['attributes'] ?? array();
-
-				if ( is_array( $raw_inner ) && ! empty( $raw_inner ) ) {
-					array_walk_recursive(
-						$raw_inner,
-						function ( &$value ) {
-							if ( '' === $value ) {
-								$value = false;
-							}
-						}
-					);
-				}
-
-				$block_obj = array(
-					'blockName' => $block['blockName'],
-					'attrs'     => (object) $raw_inner,
-				);
-
-				$id = str_replace(
-					array( '{', '}', '[', ']', '"', '/', ' ', ':', ',', '\\' ),
-					'_',
-					wp_json_encode( $block_obj )
-				);
-
-				if ( ! isset( $blockstudio_blocks[ $id ] ) ) {
+				if ( empty( $only_blocks ) || in_array( $block['blockName'], $only_blocks, true ) ) {
 					// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Setting mode for rendering.
-					$_GET['blockstudioMode']   = 'editor';
-					$blockstudio_blocks[ $id ] = array(
-						'rendered' => render_block( $block ),
-						'block'    => $block_obj,
+					$_GET['blockstudioMode'] = 'editor';
+
+					$blockstudio_blocks[] = array(
+						'rendered'  => render_block( $block ),
+						'blockName' => $block['blockName'],
 					);
 				}
 			}
@@ -410,6 +381,28 @@ class Canvas {
 				'methods'             => 'GET',
 				'callback'            => array( $this, 'refresh' ),
 				'permission_callback' => $permission,
+				'args'                => array(
+					'blocks' => array(
+						'type'              => 'string',
+						'default'           => '',
+						'sanitize_callback' => 'sanitize_text_field',
+					),
+					'pages'  => array(
+						'type'              => 'string',
+						'default'           => '',
+						'sanitize_callback' => 'sanitize_text_field',
+					),
+				),
+			)
+		);
+
+		register_rest_route(
+			'blockstudio/v1',
+			'/canvas/stream',
+			array(
+				'methods'             => 'GET',
+				'callback'            => array( $this, 'stream' ),
+				'permission_callback' => $permission,
 			)
 		);
 	}
@@ -430,14 +423,191 @@ class Canvas {
 	/**
 	 * Re-sync pages and return fresh page content with preloaded blocks.
 	 *
+	 * Accepts an optional `blocks` query param (comma-separated block names)
+	 * to only re-render specific blocks instead of everything.
+	 *
+	 * @param \WP_REST_Request $request The REST request.
 	 * @return WP_REST_Response
 	 */
-	public function refresh(): WP_REST_Response {
-		$page_paths = Pages::get_paths();
-		$discovery  = new Page_Discovery();
-		$sync       = new Page_Sync();
+	public function refresh( \WP_REST_Request $request ): WP_REST_Response {
+		$query_params    = $request->get_query_params();
+		$blocks_targeted = array_key_exists( 'blocks', $query_params );
+		$blocks_param    = $blocks_targeted ? $request->get_param( 'blocks' ) : '';
+		$only_blocks     = ! empty( $blocks_param ) ? explode( ',', $blocks_param ) : array();
+		$pages_targeted  = array_key_exists( 'pages', $query_params );
+		$pages_param     = $pages_targeted ? $request->get_param( 'pages' ) : '';
+		$only_pages      = ! empty( $pages_param ) ? explode( ',', $pages_param ) : array();
 
-		foreach ( $page_paths as $path ) {
+		if ( ! $pages_targeted || ! empty( $only_pages ) ) {
+			$page_paths = Pages::get_paths();
+			$discovery  = new Page_Discovery();
+			$sync       = new Page_Sync();
+
+			foreach ( $page_paths as $path ) {
+				if ( ! is_dir( $path ) ) {
+					continue;
+				}
+
+				$discovered = $discovery->discover( $path );
+
+				foreach ( $discovered as $page_data ) {
+					if ( empty( $only_pages ) || in_array( $page_data['source_path'], $only_pages, true ) ) {
+						$sync->sync( $page_data );
+					}
+				}
+			}
+		}
+
+		if ( $pages_targeted && empty( $only_pages ) ) {
+			$response_pages = array();
+		} elseif ( ! empty( $only_pages ) ) {
+			$response_pages = $this->get_pages_with_content( $only_pages );
+		} else {
+			$response_pages = $this->get_pages_with_content();
+		}
+
+		if ( $blocks_targeted && empty( $only_blocks ) ) {
+			return new WP_REST_Response(
+				array(
+					'pages'             => $response_pages,
+					'blocks'            => array(),
+					'blockstudioBlocks' => array(),
+					'changedBlocks'     => array(),
+				)
+			);
+		}
+
+		Build::refresh_blocks();
+
+		$all_blocks = $this->get_blocks_with_content();
+
+		if ( $blocks_targeted ) {
+			$blocks = array_values(
+				array_filter(
+					$all_blocks,
+					function ( $block ) use ( $only_blocks ) {
+						return in_array( $block['name'], $only_blocks, true );
+					}
+				)
+			);
+		} else {
+			$blocks = $all_blocks;
+		}
+
+		// Preloading needs all pages to find block usage across all content.
+		$preload_pages      = $pages_targeted ? $this->get_pages_with_content() : $response_pages;
+		$blockstudio_blocks = $this->preload_all_blocks( $preload_pages, $only_blocks );
+		$block_preloads     = $this->preload_block_items( $all_blocks, $only_blocks );
+		$blockstudio_blocks = array_merge( $blockstudio_blocks, $block_preloads );
+
+		return new WP_REST_Response(
+			array(
+				'pages'             => $response_pages,
+				'blocks'            => $blocks,
+				'blockstudioBlocks' => $blockstudio_blocks,
+				'changedBlocks'     => $only_blocks,
+			)
+		);
+	}
+
+	/**
+	 * SSE stream that pushes fingerprint changes to the client.
+	 *
+	 * Tracks file modification times to detect which specific blocks
+	 * and pages changed, so the client can request a targeted refresh.
+	 *
+	 * @return void
+	 */
+	public function stream(): void {
+		header( 'Content-Type: text/event-stream' );
+		header( 'Cache-Control: no-cache' );
+		header( 'X-Accel-Buffering: no' );
+
+		set_time_limit( 0 ); // phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged
+		ignore_user_abort( false );
+
+		// Release session lock so subsequent requests are not blocked.
+		if ( function_exists( 'session_write_close' ) && session_status() === PHP_SESSION_ACTIVE ) {
+			session_write_close();
+		}
+
+		while ( ob_get_level() ) {
+			ob_end_clean();
+		}
+
+		$prev_mtimes = array();
+		$fingerprint = $this->compute_fingerprint_with_mtimes( $prev_mtimes );
+
+		$dir_to_blocks = $this->build_dir_to_blocks_map();
+		$dir_to_pages  = $this->build_dir_to_pages_map();
+
+		echo "event: fingerprint\n";
+		echo 'data: ' . wp_json_encode( array( 'fingerprint' => $fingerprint ) ) . "\n\n";
+		flush();
+
+		$interval = 1;
+
+		// phpcs:ignore WordPress.CodeAnalysis.AssignmentInCondition.FoundInWhileCondition
+		while ( ! connection_aborted() ) {
+			sleep( $interval );
+
+			clearstatcache();
+
+			$new_mtimes      = array();
+			$new_fingerprint = $this->compute_fingerprint_with_mtimes( $new_mtimes );
+
+			if ( $new_fingerprint !== $fingerprint ) {
+				$changed_blocks = $this->detect_changed_blocks( $prev_mtimes, $new_mtimes, $dir_to_blocks );
+				$changed_pages  = $this->detect_changed_pages( $prev_mtimes, $new_mtimes, $dir_to_pages );
+
+				$fingerprint = $new_fingerprint;
+				$prev_mtimes = $new_mtimes;
+
+				$data = array(
+					'fingerprint'   => $fingerprint,
+					'changedBlocks' => array_values( array_unique( $changed_blocks ) ),
+					'changedPages'  => $changed_pages,
+				);
+
+				echo "event: changed\n";
+				echo 'data: ' . wp_json_encode( $data ) . "\n\n";
+				flush();
+			} else {
+				echo ": heartbeat\n\n";
+				flush();
+			}
+		}
+
+		exit;
+	}
+
+	/**
+	 * Build a mapping from block directories to block names.
+	 *
+	 * @return array<string, string> Directory path => block name.
+	 */
+	private function build_dir_to_blocks_map(): array {
+		$map = array();
+
+		foreach ( Build::blocks() as $name => $block ) {
+			if ( ! empty( $block->path ) ) {
+				$map[ dirname( $block->path ) ] = $name;
+			}
+		}
+
+		return $map;
+	}
+
+	/**
+	 * Build a mapping from page directories to source paths.
+	 *
+	 * @return array<string, string> Directory path => page source path.
+	 */
+	private function build_dir_to_pages_map(): array {
+		$map       = array();
+		$discovery = new Page_Discovery();
+
+		foreach ( Pages::get_paths() as $path ) {
 			if ( ! is_dir( $path ) ) {
 				continue;
 			}
@@ -445,23 +615,86 @@ class Canvas {
 			$discovered = $discovery->discover( $path );
 
 			foreach ( $discovered as $page_data ) {
-				$sync->sync( $page_data );
+				if ( ! empty( $page_data['directory'] ) && isset( $page_data['source_path'] ) ) {
+					$map[ $page_data['directory'] ] = $page_data['source_path'];
+				}
 			}
 		}
 
-		$pages              = $this->get_pages_with_content();
-		$blocks             = $this->get_blocks_with_content();
-		$blockstudio_blocks = $this->preload_all_blocks( $pages );
-		$block_preloads     = $this->preload_block_items( $blocks );
-		$blockstudio_blocks = array_merge( $blockstudio_blocks, $block_preloads );
+		return $map;
+	}
 
-		return new WP_REST_Response(
-			array(
-				'pages'             => $pages,
-				'blocks'            => $blocks,
-				'blockstudioBlocks' => $blockstudio_blocks,
-			)
-		);
+	/**
+	 * Detect which block names were affected by file changes.
+	 *
+	 * @param array<string, int|false> $old_mtimes     Previous mtimes.
+	 * @param array<string, int|false> $new_mtimes     Current mtimes.
+	 * @param array<string, string>    $dir_to_blocks  Directory-to-block-name map.
+	 * @return array<string> Affected block names.
+	 */
+	private function detect_changed_blocks( array $old_mtimes, array $new_mtimes, array $dir_to_blocks ): array {
+		$changed_files = $this->diff_mtimes( $old_mtimes, $new_mtimes );
+		$blocks        = array();
+
+		foreach ( $changed_files as $file ) {
+			foreach ( $dir_to_blocks as $dir => $name ) {
+				if ( str_starts_with( $file, $dir . '/' ) ) {
+					$blocks[] = $name;
+					break;
+				}
+			}
+		}
+
+		return $blocks;
+	}
+
+	/**
+	 * Detect which page source paths were affected by file changes.
+	 *
+	 * @param array<string, int|false> $old_mtimes     Previous mtimes.
+	 * @param array<string, int|false> $new_mtimes     Current mtimes.
+	 * @param array<string, string>    $dir_to_pages   Directory-to-source-path map.
+	 * @return array<string> Affected page source paths.
+	 */
+	private function detect_changed_pages( array $old_mtimes, array $new_mtimes, array $dir_to_pages ): array {
+		$changed_files = $this->diff_mtimes( $old_mtimes, $new_mtimes );
+		$pages         = array();
+
+		foreach ( $changed_files as $file ) {
+			foreach ( $dir_to_pages as $dir => $source_path ) {
+				if ( str_starts_with( $file, $dir . '/' ) ) {
+					$pages[] = $source_path;
+					break;
+				}
+			}
+		}
+
+		return array_values( array_unique( $pages ) );
+	}
+
+	/**
+	 * Get file paths that changed between two mtime snapshots.
+	 *
+	 * @param array<string, int|false> $old_mtimes Previous mtimes.
+	 * @param array<string, int|false> $new_mtimes Current mtimes.
+	 * @return array<string> Changed file paths.
+	 */
+	private function diff_mtimes( array $old_mtimes, array $new_mtimes ): array {
+		$changed = array();
+
+		foreach ( $new_mtimes as $file => $mtime ) {
+			if ( ! isset( $old_mtimes[ $file ] ) || $old_mtimes[ $file ] !== $mtime ) {
+				$changed[] = $file;
+			}
+		}
+
+		foreach ( $old_mtimes as $file => $mtime ) {
+			if ( ! isset( $new_mtimes[ $file ] ) ) {
+				$changed[] = $file;
+			}
+		}
+
+		return $changed;
 	}
 
 	/**
@@ -470,6 +703,17 @@ class Canvas {
 	 * @return string The fingerprint hash, or empty string if no files found.
 	 */
 	private function compute_fingerprint(): string {
+		$mtimes = array();
+		return $this->compute_fingerprint_with_mtimes( $mtimes );
+	}
+
+	/**
+	 * Compute fingerprint and populate the mtimes array for diffing.
+	 *
+	 * @param array<string, int|false> $mtimes Reference to populate with file mtimes.
+	 * @return string The fingerprint hash, or empty string if no files found.
+	 */
+	private function compute_fingerprint_with_mtimes( array &$mtimes ): string {
 		$mtimes = array();
 
 		foreach ( Build::paths() as $path_info ) {

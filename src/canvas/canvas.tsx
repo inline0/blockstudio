@@ -39,10 +39,22 @@ interface PollResponse {
   fingerprint: string;
 }
 
+interface PreloadEntry {
+  rendered: string;
+  blockName: string;
+}
+
 interface RefreshResponse {
   pages: Page[];
   blocks: BlockItem[];
-  blockstudioBlocks: Record<string, unknown>;
+  blockstudioBlocks: PreloadEntry[];
+  changedBlocks: string[];
+}
+
+interface SSEChangedData {
+  fingerprint: string;
+  changedBlocks?: string[];
+  changedPages?: string[];
 }
 
 const PAGE_ARTBOARD_WIDTH = 1440;
@@ -395,66 +407,72 @@ export const Canvas = ({
     return () => clearTimeout(timer);
   }, [ready, mountedCount, totalItems]);
 
-  useEffect(() => {
-    if (!liveMode || !ready) return;
+  const handleRefreshData = useCallback(
+    async (
+      newFingerprint: string,
+      changedBlocks?: string[],
+      changedPages?: string[],
+    ): Promise<void> => {
+      const isTargeted = changedBlocks !== undefined;
+      const blocksParam = isTargeted ? (changedBlocks || []).join(',') : '';
 
-    let active = true;
-
-    const poll = async (): Promise<void> => {
-      try {
-        const result = await apiFetch<PollResponse>({
-          path: '/blockstudio/v1/canvas/poll',
-        });
-
-        if (!active || !result.fingerprint) return;
-
-        if (fingerprintRef.current === '') {
-          setFingerprint(result.fingerprint);
-          return;
+      let path = '/blockstudio/v1/canvas/refresh';
+      if (isTargeted) {
+        path += `?blocks=${encodeURIComponent(blocksParam)}`;
+        if (changedPages !== undefined) {
+          path += `&pages=${encodeURIComponent((changedPages || []).join(','))}`;
         }
+      }
 
-        if (result.fingerprint === fingerprintRef.current) return;
+      const data = await apiFetch<RefreshResponse>({ path });
 
-        const data = await apiFetch<RefreshResponse>({
-          path: '/blockstudio/v1/canvas/refresh',
-        });
+      const changedBlockNames = new Set<string>(
+        data.changedBlocks || [],
+      );
 
-        if (!active) return;
+      const currentPreloaded: PreloadEntry[] =
+        (window as any).blockstudio?.blockstudioBlocks || [];
 
-        const currentPreloaded = (window as any).blockstudio
-          ?.blockstudioBlocks || {};
-        const newPreloaded = data.blockstudioBlocks as Record<
-          string,
-          { rendered: string; block: { blockName: string } }
-        >;
-
-        // Compare individual block entries to find which block types changed.
-        const changedBlockNames = new Set<string>();
-        for (const [key, entry] of Object.entries(newPreloaded)) {
-          const old = currentPreloaded[key] as
-            | { rendered: string }
-            | undefined;
-          if (!old || old.rendered !== entry.rendered) {
-            changedBlockNames.add(entry.block.blockName);
-          }
-        }
-        for (const [key, entry] of Object.entries(
-          currentPreloaded as Record<
-            string,
-            { block: { blockName: string } }
-          >,
-        )) {
-          if (!(key in newPreloaded)) {
-            changedBlockNames.add(entry.block.blockName);
-          }
-        }
-
+      if (changedBlockNames.size > 0) {
+        const kept = currentPreloaded.filter(
+          (e) => !changedBlockNames.has(e.blockName),
+        );
+        (window as any).blockstudio.blockstudioBlocks = [
+          ...kept,
+          ...data.blockstudioBlocks,
+        ];
+      } else {
         (window as any).blockstudio.blockstudioBlocks =
           data.blockstudioBlocks;
+      }
 
-        // Update pages.
-        const changedSlugs = new Set<string>();
+      const changedSlugs = new Set<string>();
+
+      if (data.pages.length > 0) {
         setCurrentPages((prevPages) => {
+          if (changedPages && changedPages.length > 0) {
+            const updatedMap = new Map(
+              data.pages.map((p) => [p.slug, p]),
+            );
+            const merged = prevPages.map((existing) => {
+              const updated = updatedMap.get(existing.slug);
+              if (updated) {
+                updatedMap.delete(existing.slug);
+                if (existing.content !== updated.content) {
+                  changedSlugs.add(updated.slug);
+                  return updated;
+                }
+                return existing;
+              }
+              return existing;
+            });
+            updatedMap.forEach((newPage) => {
+              changedSlugs.add(newPage.slug);
+              merged.push(newPage);
+            });
+            return merged;
+          }
+
           return data.pages.map((newPage) => {
             const existing = prevPages.find(
               (p) => p.slug === newPage.slug,
@@ -478,37 +496,60 @@ export const Canvas = ({
             return existing;
           });
         });
-
-        if (changedSlugs.size > 0) {
-          setRevisions((prev) => {
-            const next = { ...prev };
-            changedSlugs.forEach((slug) => {
-              next[slug] = (next[slug] || 0) + 1;
-            });
-            return next;
-          });
-        }
-
-        // Update blocks.
-        const changedBlockItems = new Set<string>();
-        setCurrentBlocks((prevBlocks) => {
-          return data.blocks.map((newBlock) => {
-            const existing = prevBlocks.find(
-              (b) => b.name === newBlock.name,
+      } else if (changedBlockNames.size > 0) {
+        setCurrentPages((prevPages) => {
+          return prevPages.map((page) => {
+            const usesChangedBlock = Array.from(changedBlockNames).some(
+              (name) => page.content.includes(name),
             );
+            if (usesChangedBlock) {
+              changedSlugs.add(page.slug);
+              return { ...page };
+            }
+            return page;
+          });
+        });
+      }
 
-            if (!existing || existing.content !== newBlock.content) {
-              changedBlockItems.add(newBlock.name);
-              return newBlock;
+      if (changedSlugs.size > 0) {
+        setRevisions((prev) => {
+          const next = { ...prev };
+          changedSlugs.forEach((slug) => {
+            next[slug] = (next[slug] || 0) + 1;
+          });
+          return next;
+        });
+      }
+
+      if (data.blocks.length > 0) {
+        const changedBlockItems = new Set<string>();
+
+        setCurrentBlocks((prevBlocks) => {
+          const merged = prevBlocks.map((existing) => {
+            const updated = data.blocks.find(
+              (b) => b.name === existing.name,
+            );
+            if (!updated) return existing;
+
+            if (existing.content !== updated.content) {
+              changedBlockItems.add(updated.name);
+              return updated;
             }
 
-            if (changedBlockNames.has(newBlock.name)) {
-              changedBlockItems.add(newBlock.name);
-              return { ...newBlock };
+            if (changedBlockNames.has(existing.name)) {
+              changedBlockItems.add(existing.name);
+              return { ...updated };
             }
 
             return existing;
           });
+
+          const newBlocks = data.blocks.filter(
+            (b) => !prevBlocks.some((p) => p.name === b.name),
+          );
+          newBlocks.forEach((b) => changedBlockItems.add(b.name));
+
+          return [...merged, ...newBlocks];
         });
 
         if (changedBlockItems.size > 0) {
@@ -520,8 +561,83 @@ export const Canvas = ({
             return next;
           });
         }
+      }
 
-        setFingerprint(result.fingerprint);
+      setFingerprint(newFingerprint);
+    },
+    [setFingerprint],
+  );
+
+  useEffect(() => {
+    if (!liveMode || !ready) return;
+
+    const updateMethod =
+      ((window as any).blockstudioCanvas?.updateMethod as string) ?? 'sse';
+
+    if (updateMethod === 'sse') {
+      const canvasData = (window as any).blockstudioCanvas as
+        | { restRoot?: string; restNonce?: string }
+        | undefined;
+      if (!canvasData?.restRoot || !canvasData?.restNonce) return;
+
+      const url =
+        canvasData.restRoot +
+        'blockstudio/v1/canvas/stream?_wpnonce=' +
+        encodeURIComponent(canvasData.restNonce);
+      const eventSource = new EventSource(url);
+
+      eventSource.addEventListener(
+        'fingerprint',
+        (e: MessageEvent) => {
+          try {
+            const parsed = JSON.parse(e.data);
+            if (parsed.fingerprint) {
+              setFingerprint(parsed.fingerprint);
+            }
+          } catch {
+            // Ignore parse errors.
+          }
+        },
+      );
+
+      eventSource.addEventListener('changed', (e: MessageEvent) => {
+        try {
+          const parsed = JSON.parse(e.data) as SSEChangedData;
+          if (parsed.fingerprint) {
+            handleRefreshData(
+              parsed.fingerprint,
+              parsed.changedBlocks,
+              parsed.changedPages,
+            ).catch(() => {});
+          }
+        } catch {
+          // Ignore parse errors.
+        }
+      });
+
+      return () => {
+        eventSource.close();
+      };
+    }
+
+    let active = true;
+
+    const poll = async (): Promise<void> => {
+      try {
+        const result = await apiFetch<PollResponse>({
+          path: '/blockstudio/v1/canvas/poll',
+        });
+
+        if (!active || !result.fingerprint) return;
+
+        if (fingerprintRef.current === '') {
+          setFingerprint(result.fingerprint);
+          return;
+        }
+
+        if (result.fingerprint === fingerprintRef.current) return;
+
+        await handleRefreshData(result.fingerprint);
       } catch {
         // Silently ignore poll errors.
       }
@@ -534,7 +650,7 @@ export const Canvas = ({
       active = false;
       clearInterval(interval);
     };
-  }, [liveMode, pollInterval, ready, setFingerprint]);
+  }, [liveMode, pollInterval, ready, setFingerprint, handleRefreshData]);
 
   const hasContent =
     (view === 'pages' && currentPages.length > 0) ||
