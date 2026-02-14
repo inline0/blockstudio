@@ -1,13 +1,13 @@
-import { Blocks } from "lucide-react";
-import { Button } from "onedocs";
-import { Section, SectionIcon } from "./section";
-import { CodeCard } from "./code-card";
+import { Blocks } from 'lucide-react';
+import { Button } from 'onedocs';
+import { CodeCard } from './code-card';
+import { Section, SectionIcon } from './section';
 
 const steps = [
   {
     number: 1,
-    filename: "block.json",
-    lang: "json",
+    filename: 'block.json',
+    lang: 'json',
     code: `{
   "name": "starter/hero",
   "title": "Hero",
@@ -29,8 +29,8 @@ const steps = [
   },
   {
     number: 2,
-    filename: "index.php",
-    lang: "php",
+    filename: 'index.php',
+    lang: 'php',
     code: `<section
   style="background: <?= $a['background'] ?>"
 >
@@ -45,8 +45,8 @@ const steps = [
   },
   {
     number: 3,
-    filename: "style.scss",
-    lang: "scss",
+    filename: 'style.scss',
+    lang: 'scss',
     code: `section {
   padding: 4rem 2rem;
 
@@ -67,7 +67,11 @@ const steps = [
 export async function HowItWorks() {
   return (
     <Section
-      icon={<SectionIcon><Blocks /></SectionIcon>}
+      icon={
+        <SectionIcon>
+          <Blocks />
+        </SectionIcon>
+      }
       title="Custom blocks in 3 files"
       description="Define fields in block.json, render them in a template, style with CSS or SCSS. No JavaScript, no build step, no boilerplate."
       border={false}

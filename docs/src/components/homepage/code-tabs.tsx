@@ -1,5 +1,5 @@
-import { CodeBlock } from "onedocs";
-import { Tabs, Tab } from "onedocs/components";
+import { CodeBlock } from 'onedocs';
+import { Tabs, Tab } from 'onedocs/components';
 
 interface CodeTabsItem {
   label: string;

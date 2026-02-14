@@ -1,7 +1,7 @@
-import { features } from "@/data/features";
-import { FeaturePage } from "@/components/feature-page";
-import { notFound } from "next/navigation";
-import type { Metadata } from "next";
+import type { Metadata } from 'next';
+import { notFound } from 'next/navigation';
+import { FeaturePage } from '@/components/feature-page';
+import { features } from '@/data/features';
 
 const slugs = Object.keys(features);
 

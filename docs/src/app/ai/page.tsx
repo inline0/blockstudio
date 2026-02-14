@@ -1,8 +1,8 @@
-import type { Metadata } from "next";
-import { AiPage } from "@/components/ai-page";
+import type { Metadata } from 'next';
+import { AiPage } from '@/components/ai-page';
 
 export const metadata: Metadata = {
-  title: "Build with AI",
+  title: 'Build with AI',
   description:
     "Blockstudio's file-based architecture is built for AI coding agents. Describe a block, get a block.",
 };

@@ -1,10 +1,10 @@
-import { blog, blogSlug } from "@/lib/source";
-import Link from "next/link";
-import type { Metadata } from "next";
+import type { Metadata } from 'next';
+import Link from 'next/link';
+import { blog, blogSlug } from '@/lib/source';
 
 export const metadata: Metadata = {
-  title: "Blog",
-  description: "News and updates from the Blockstudio team.",
+  title: 'Blog',
+  description: 'News and updates from the Blockstudio team.',
 };
 
 function BlogImage({ title }: { title: string }) {
@@ -21,8 +21,9 @@ function BlogImage({ title }: { title: string }) {
             key={i}
             className="whitespace-nowrap text-2xl font-bold"
             style={{
-              color: "transparent",
-              WebkitTextStroke: "0.5px color-mix(in srgb, var(--color-fd-primary) 8%, transparent)",
+              color: 'transparent',
+              WebkitTextStroke:
+                '0.5px color-mix(in srgb, var(--color-fd-primary) 8%, transparent)',
               marginLeft: `${(i % 3) * -40}px`,
             }}
           >
@@ -35,9 +36,7 @@ function BlogImage({ title }: { title: string }) {
 }
 
 export default function BlogIndex() {
-  const posts = [...blog].sort(
-    (a, b) => b.date.getTime() - a.date.getTime(),
-  );
+  const posts = [...blog].sort((a, b) => b.date.getTime() - a.date.getTime());
 
   return (
     <div className="px-6 py-16 sm:py-20 lg:px-10">

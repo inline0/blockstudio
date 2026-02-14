@@ -1,12 +1,12 @@
-import { blog, blogSlug } from "@/lib/source";
-import { mdxComponents } from "onedocs";
-import { notFound } from "next/navigation";
-import Link from "next/link";
-import { ChevronLeft } from "lucide-react";
-import { TOCProvider, TOCScrollArea } from "fumadocs-ui/components/toc/index";
-import { TOCItems } from "fumadocs-ui/components/toc/default";
-import type { Metadata } from "next";
-import type { MDXComponents } from "mdx/types";
+import { TOCItems } from 'fumadocs-ui/components/toc/default';
+import { TOCProvider, TOCScrollArea } from 'fumadocs-ui/components/toc/index';
+import { ChevronLeft } from 'lucide-react';
+import type { MDXComponents } from 'mdx/types';
+import type { Metadata } from 'next';
+import Link from 'next/link';
+import { notFound } from 'next/navigation';
+import { mdxComponents } from 'onedocs';
+import { blog, blogSlug } from '@/lib/source';
 
 function getPost(slug: string) {
   return blog.find((post) => blogSlug(post.info.path) === slug);
@@ -45,9 +45,7 @@ export default async function BlogPost(props: {
 
           <h1 className="mb-4 text-3xl font-semibold">{post.title}</h1>
           {post.description && (
-            <p className="mb-8 text-fd-muted-foreground">
-              {post.description}
-            </p>
+            <p className="mb-8 text-fd-muted-foreground">{post.description}</p>
           )}
 
           <div className="prose prose-fd">

@@ -1,8 +1,8 @@
-import { LayoutGrid, BookOpen, Layers, Pencil } from "lucide-react";
-import { Button } from "onedocs";
-import { Section, SectionIcon } from "./section";
-import { Feature } from "./feature";
-import { CodeCard } from "./code-card";
+import { LayoutGrid, BookOpen, Layers, Pencil } from 'lucide-react';
+import { Button } from 'onedocs';
+import { CodeCard } from './code-card';
+import { Feature } from './feature';
+import { Section, SectionIcon } from './section';
 
 const templateCode = `<div>
   <h2>Pricing</h2>
@@ -32,34 +32,38 @@ const templateCode = `<div>
 const details = [
   {
     icon: BookOpen,
-    title: "Same syntax as pages",
+    title: 'Same syntax as pages',
     description:
-      "Patterns use the same HTML parser. Standard HTML maps to core blocks, the <block> tag handles everything else.",
+      'Patterns use the same HTML parser. Standard HTML maps to core blocks, the <block> tag handles everything else.',
   },
   {
     icon: LayoutGrid,
-    title: "Auto-registered",
+    title: 'Auto-registered',
     description:
-      "Drop a folder with a template and a pattern.json. Blockstudio registers it and adds it to the inserter automatically.",
+      'Drop a folder with a template and a pattern.json. Blockstudio registers it and adds it to the inserter automatically.',
   },
   {
     icon: Pencil,
-    title: "Fully editable",
+    title: 'Fully editable',
     description:
-      "Unlike pages, patterns are inserted as editable block content. Users can customize each instance independently.",
+      'Unlike pages, patterns are inserted as editable block content. Users can customize each instance independently.',
   },
   {
     icon: Layers,
-    title: "Categorized & searchable",
+    title: 'Categorized & searchable',
     description:
-      "Add categories and keywords in pattern.json. Users find your patterns instantly in the inserter search.",
+      'Add categories and keywords in pattern.json. Users find your patterns instantly in the inserter search.',
   },
 ];
 
 export async function Patterns() {
   return (
     <Section
-      icon={<SectionIcon><LayoutGrid /></SectionIcon>}
+      icon={
+        <SectionIcon>
+          <LayoutGrid />
+        </SectionIcon>
+      }
       title="Reusable patterns from template files"
       description="Define block patterns as template files. Same HTML syntax as pages, registered automatically in the block inserter."
     >
@@ -69,15 +73,15 @@ export async function Patterns() {
           description={
             <>
               <p>
-                Create a folder with a{" "}
+                Create a folder with a{' '}
                 <code className="text-fd-foreground font-mono text-sm">
                   pattern.json
-                </code>{" "}
+                </code>{' '}
                 and a template file. Blockstudio registers the pattern
-                automatically, no{" "}
+                automatically, no{' '}
                 <code className="text-fd-foreground font-mono text-sm">
                   register_block_pattern()
-                </code>{" "}
+                </code>{' '}
                 boilerplate.
               </p>
               <p>

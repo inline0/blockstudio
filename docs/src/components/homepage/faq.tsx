@@ -1,57 +1,57 @@
-import { CircleHelp } from "lucide-react";
-import { Accordions, Accordion } from "onedocs/components";
-import { Section, SectionIcon } from "./section";
+import { CircleHelp } from 'lucide-react';
+import { Accordions, Accordion } from 'onedocs/components';
+import { Section, SectionIcon } from './section';
 
 const faqs = [
   {
-    question: "What is Blockstudio?",
+    question: 'What is Blockstudio?',
     answer:
-      "A WordPress plugin that lets you build custom blocks with just JSON and a template file. No JavaScript, no build tools, no React. Just define your fields and write your markup.",
+      'A WordPress plugin that lets you build custom blocks with just JSON and a template file. No JavaScript, no build tools, no React. Just define your fields and write your markup.',
   },
   {
-    question: "Do I need to know JavaScript?",
+    question: 'Do I need to know JavaScript?',
     answer:
-      "Not at all. If you can write HTML and basic PHP, you can build blocks. Blockstudio handles all the editor internals for you.",
+      'Not at all. If you can write HTML and basic PHP, you can build blocks. Blockstudio handles all the editor internals for you.',
   },
   {
-    question: "Does it work with my theme?",
+    question: 'Does it work with my theme?',
     answer:
-      "Yes. Blocks are registered through the native WordPress block API, so they work with any block-compatible theme. No lock-in.",
+      'Yes. Blocks are registered through the native WordPress block API, so they work with any block-compatible theme. No lock-in.',
   },
   {
-    question: "How is this different from ACF blocks?",
+    question: 'How is this different from ACF blocks?',
     answer:
-      "Everything is file-based. No admin UI, no PHP registration boilerplate. You also get built-in SCSS compilation, ES modules, scoped assets, and nested InnerBlocks out of the box.",
+      'Everything is file-based. No admin UI, no PHP registration boilerplate. You also get built-in SCSS compilation, ES modules, scoped assets, and nested InnerBlocks out of the box.',
   },
   {
-    question: "What template languages are supported?",
+    question: 'What template languages are supported?',
     answer:
-      "PHP, Twig (via Timber), and Blade (via Sage/Acorn). All three share the same variables and components.",
+      'PHP, Twig (via Timber), and Blade (via Sage/Acorn). All three share the same variables and components.',
   },
   {
-    question: "Can I extend existing blocks?",
+    question: 'Can I extend existing blocks?',
     answer:
-      "Yes. Extensions let you add custom fields to any block, whether core, third-party, or your own. Use wildcards like core/* to target entire namespaces at once.",
+      'Yes. Extensions let you add custom fields to any block, whether core, third-party, or your own. Use wildcards like core/* to target entire namespaces at once.',
   },
   {
-    question: "How does the asset pipeline work?",
+    question: 'How does the asset pipeline work?',
     answer:
-      "Name your files following the convention (style.scss, script.js, editor.css) and Blockstudio handles the rest. SCSS compilation, ES modules, minification. Zero config.",
+      'Name your files following the convention (style.scss, script.js, editor.css) and Blockstudio handles the rest. SCSS compilation, ES modules, minification. Zero config.',
   },
   {
-    question: "Is there IDE support?",
+    question: 'Is there IDE support?',
     answer:
-      "Yes. Add a $schema property to your block.json and you get full autocomplete, inline docs, and validation in VS Code.",
+      'Yes. Add a $schema property to your block.json and you get full autocomplete, inline docs, and validation in VS Code.',
   },
   {
-    question: "What are the requirements?",
+    question: 'What are the requirements?',
     answer:
-      "WordPress 6.7+ and PHP 8.2+. Blockstudio follows 100% WordPress Coding Standards.",
+      'WordPress 6.7+ and PHP 8.2+. Blockstudio follows 100% WordPress Coding Standards.',
   },
   {
-    question: "Is Blockstudio free?",
+    question: 'Is Blockstudio free?',
     answer:
-      "Yes. Blockstudio is 100% free and open source. Every feature is included: extensions, all field types, asset processing, pages, patterns. No paid tiers, no feature gates.",
+      'Yes. Blockstudio is 100% free and open source. Every feature is included: extensions, all field types, asset processing, pages, patterns. No paid tiers, no feature gates.',
   },
 ];
 

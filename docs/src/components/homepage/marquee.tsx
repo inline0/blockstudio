@@ -1,8 +1,9 @@
-"use client";
+'use client';
 
-import type { ComponentPropsWithoutRef } from "react";
+import type { ComponentPropsWithoutRef } from 'react';
+import { cn } from '@/lib/cn';
 
-interface MarqueeProps extends ComponentPropsWithoutRef<"div"> {
+interface MarqueeProps extends ComponentPropsWithoutRef<'div'> {
   reverse?: boolean;
   pauseOnHover?: boolean;
   children: React.ReactNode;
@@ -10,7 +11,7 @@ interface MarqueeProps extends ComponentPropsWithoutRef<"div"> {
 }
 
 export function Marquee({
-  className = "",
+  className = '',
   reverse = false,
   pauseOnHover = false,
   children,
@@ -20,16 +21,21 @@ export function Marquee({
   return (
     <div
       {...props}
-      className={`group flex flex-row [gap:var(--gap)] overflow-hidden p-2 [--duration:240s] [--gap:1rem] ${className}`}
+      className={cn(
+        'group flex flex-row [gap:var(--gap)] overflow-hidden p-2 [--duration:240s] [--gap:1rem]',
+        className,
+      )}
     >
       {Array(repeat)
         .fill(0)
         .map((_, i) => (
           <div
             key={i}
-            className={`flex shrink-0 flex-row justify-around [gap:var(--gap)] animate-marquee ${
-              pauseOnHover ? "group-hover:[animation-play-state:paused]" : ""
-            } ${reverse ? "[animation-direction:reverse]" : ""}`}
+            className={cn(
+              'flex shrink-0 flex-row justify-around [gap:var(--gap)] animate-marquee',
+              pauseOnHover && 'group-hover:[animation-play-state:paused]',
+              reverse && '[animation-direction:reverse]',
+            )}
           >
             {children}
           </div>

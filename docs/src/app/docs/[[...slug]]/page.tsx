@@ -1,7 +1,7 @@
-import { source } from "@/lib/source";
-import { DocsPage, mdxComponents } from "onedocs";
-import { notFound } from "next/navigation";
-import type { MDXComponents } from "mdx/types";
+import type { MDXComponents } from 'mdx/types';
+import { notFound } from 'next/navigation';
+import { DocsPage, mdxComponents } from 'onedocs';
+import { source } from '@/lib/source';
 
 export default async function Page(props: {
   params: Promise<{ slug?: string[] }>;
@@ -31,8 +31,8 @@ export async function generateMetadata(props: {
   if (!page) notFound();
 
   const ogImageUrl = params.slug
-    ? `/docs/og/${params.slug.join("/")}`
-    : "/docs/opengraph-image";
+    ? `/docs/og/${params.slug.join('/')}`
+    : '/docs/opengraph-image';
 
   return {
     title: page.data.title,
@@ -43,7 +43,7 @@ export async function generateMetadata(props: {
       images: [ogImageUrl],
     },
     twitter: {
-      card: "summary_large_image",
+      card: 'summary_large_image',
       title: page.data.title,
       description: page.data.description,
       images: [ogImageUrl],

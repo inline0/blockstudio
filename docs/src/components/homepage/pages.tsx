@@ -1,8 +1,8 @@
-import { FileText, Lock, RefreshCw, Key, GitMerge } from "lucide-react";
-import { Button } from "onedocs";
-import { Section, SectionIcon } from "./section";
-import { Feature } from "./feature";
-import { CodeCard } from "./code-card";
+import { FileText, Lock, RefreshCw, Key, GitMerge } from 'lucide-react';
+import { Button } from 'onedocs';
+import { CodeCard } from './code-card';
+import { Feature } from './feature';
+import { Section, SectionIcon } from './section';
 
 const templateCode = `<div>
   <h1 blockEditingMode="contentOnly">About Us</h1>
@@ -29,34 +29,38 @@ const templateCode = `<div>
 const details = [
   {
     icon: RefreshCw,
-    title: "Automatic sync",
+    title: 'Automatic sync',
     description:
-      "Pages sync to WordPress on every admin load. Change your template, the editor updates instantly.",
+      'Pages sync to WordPress on every admin load. Change your template, the editor updates instantly.',
   },
   {
     icon: Lock,
-    title: "Template locking",
+    title: 'Template locking',
     description:
-      "Lock the entire page so clients can only edit content, not structure. Perfect for landing pages and marketing sites.",
+      'Lock the entire page so clients can only edit content, not structure. Perfect for landing pages and marketing sites.',
   },
   {
     icon: Key,
-    title: "Keyed blocks",
+    title: 'Keyed blocks',
     description:
-      "Assign keys to individual blocks so user edits persist across template updates. Sync structure, keep content.",
+      'Assign keys to individual blocks so user edits persist across template updates. Sync structure, keep content.',
   },
   {
     icon: GitMerge,
-    title: "Version controlled",
+    title: 'Version controlled',
     description:
-      "Pages live in your theme or plugin as files. Track changes in Git, deploy across environments, review in PRs.",
+      'Pages live in your theme or plugin as files. Track changes in Git, deploy across environments, review in PRs.',
   },
 ];
 
 export async function Pages() {
   return (
     <Section
-      icon={<SectionIcon><FileText /></SectionIcon>}
+      icon={
+        <SectionIcon>
+          <FileText />
+        </SectionIcon>
+      }
       title="Full pages, defined in code"
       description="Create complete WordPress pages from template files. HTML maps to core blocks automatically. Blockstudio keeps the editor in sync."
     >
@@ -66,22 +70,22 @@ export async function Pages() {
           description={
             <>
               <p>
-                Standard elements like{" "}
+                Standard elements like{' '}
                 <code className="text-fd-foreground font-mono text-sm">
-                  {"<h1>"}
+                  {'<h1>'}
                 </code>
-                ,{" "}
+                ,{' '}
                 <code className="text-fd-foreground font-mono text-sm">
-                  {"<p>"}
+                  {'<p>'}
                 </code>
-                , and{" "}
+                , and{' '}
                 <code className="text-fd-foreground font-mono text-sm">
-                  {"<ul>"}
-                </code>{" "}
-                map to core blocks automatically. Use the{" "}
+                  {'<ul>'}
+                </code>{' '}
+                map to core blocks automatically. Use the{' '}
                 <code className="text-fd-foreground font-mono text-sm">
-                  {"<block>"}
-                </code>{" "}
+                  {'<block>'}
+                </code>{' '}
                 tag for everything else. Any block name, any attributes.
               </p>
               <p>

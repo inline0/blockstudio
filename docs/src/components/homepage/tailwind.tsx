@@ -1,13 +1,13 @@
-import { Wind, Server, Gauge, Palette, MonitorSmartphone } from "lucide-react";
-import { Button } from "onedocs";
-import { Section, SectionIcon } from "./section";
-import { Feature } from "./feature";
-import { CodeTabs } from "./code-tabs";
+import { Wind, Server, Gauge, Palette, MonitorSmartphone } from 'lucide-react';
+import { Button } from 'onedocs';
+import { CodeTabs } from './code-tabs';
+import { Feature } from './feature';
+import { Section, SectionIcon } from './section';
 
 const templates = {
   config: {
-    label: "functions.php",
-    lang: "php",
+    label: 'functions.php',
+    lang: 'php',
     code: `add_filter('blockstudio/tailwind/css', function ($css) {
   return $css . '
     @theme {
@@ -24,8 +24,8 @@ const templates = {
 });`,
   },
   template: {
-    label: "Template",
-    lang: "php",
+    label: 'Template',
+    lang: 'php',
     code: `<section class="bg-brand px-6 py-20">
   <div class="container-narrow">
     <h2 class="text-4xl font-bold text-white">
@@ -48,34 +48,38 @@ const templates = {
 const details = [
   {
     icon: Server,
-    title: "Server-side compilation",
+    title: 'Server-side compilation',
     description:
-      "Every frontend request is compiled via TailwindPHP. No Node.js, no CLI, no build step required.",
+      'Every frontend request is compiled via TailwindPHP. No Node.js, no CLI, no build step required.',
   },
   {
     icon: Gauge,
-    title: "Automatic caching",
+    title: 'Automatic caching',
     description:
-      "Compiled CSS is cached to disk by class names. Same classes, same cache hit, even with dynamic content.",
+      'Compiled CSS is cached to disk by class names. Same classes, same cache hit, even with dynamic content.',
   },
   {
     icon: Palette,
-    title: "CSS-first config",
+    title: 'CSS-first config',
     description:
-      "Tailwind v4 CSS-first configuration. Define custom themes, utilities, and variants directly in your settings.",
+      'Tailwind v4 CSS-first configuration. Define custom themes, utilities, and variants directly in your settings.',
   },
   {
     icon: MonitorSmartphone,
-    title: "Live editor preview",
+    title: 'Live editor preview',
     description:
-      "A bundled Tailwind CDN script provides instant preview in the block editor. The frontend always uses compiled CSS.",
+      'A bundled Tailwind CDN script provides instant preview in the block editor. The frontend always uses compiled CSS.',
   },
 ];
 
 export async function TailwindCSS() {
   return (
     <Section
-      icon={<SectionIcon><Wind /></SectionIcon>}
+      icon={
+        <SectionIcon>
+          <Wind />
+        </SectionIcon>
+      }
       title="Tailwind v4, compiled in PHP"
       description="Write utility classes in your templates. Blockstudio compiles them server-side via TailwindPHP on every request, with automatic file-based caching."
     >
@@ -85,32 +89,32 @@ export async function TailwindCSS() {
           description={
             <>
               <p>
-                Set{" "}
+                Set{' '}
                 <code className="text-fd-foreground font-mono text-sm">
                   tailwind.enabled
-                </code>{" "}
-                to{" "}
+                </code>{' '}
+                to{' '}
                 <code className="text-fd-foreground font-mono text-sm">
                   true
-                </code>{" "}
-                in your{" "}
+                </code>{' '}
+                in your{' '}
                 <code className="text-fd-foreground font-mono text-sm">
                   blockstudio.json
-                </code>{" "}
+                </code>{' '}
                 and start writing utility classes. Blockstudio compiles the CSS
                 server-side, caches it to disk, and injects it as an inline
                 style tag. No Node.js, no CLI, no build step.
               </p>
               <p>
-                Use the{" "}
+                Use the{' '}
                 <code className="text-fd-foreground font-mono text-sm">
                   blockstudio/tailwind/css
-                </code>{" "}
+                </code>{' '}
                 filter to define custom themes, utility classes, and variants
-                using Tailwind v4 CSS-first syntax. The{" "}
+                using Tailwind v4 CSS-first syntax. The{' '}
                 <code className="text-fd-foreground font-mono text-sm">
                   classes
-                </code>{" "}
+                </code>{' '}
                 field type provides autocomplete for all Tailwind utilities in
                 the editor.
               </p>
@@ -121,9 +125,7 @@ export async function TailwindCSS() {
               Learn more about Tailwind &rarr;
             </Button>
           }
-          demo={
-            <CodeTabs items={[templates.config, templates.template]} />
-          }
+          demo={<CodeTabs items={[templates.config, templates.template]} />}
         />
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8 sm:gap-10">
           {details.map((detail) => (

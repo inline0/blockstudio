@@ -1,13 +1,17 @@
-import { Button } from "onedocs";
-import { PlusSection } from "./plus-section";
-import { Feature } from "./homepage/feature";
-import { CodeCard } from "./homepage/code-card";
-import { CodeTabs } from "./homepage/code-tabs";
-import { SectionIcon } from "./homepage/section";
-import type { FeaturePageData } from "../data/features";
-import config from "../../onedocs.config";
+import { Button } from 'onedocs';
+import config from '../../onedocs.config';
+import type { FeaturePageData } from '../data/features';
+import { CodeCard } from './homepage/code-card';
+import { CodeTabs } from './homepage/code-tabs';
+import { Feature } from './homepage/feature';
+import { SectionIcon } from './homepage/section';
+import { PlusSection } from './plus-section';
 
-function FeatureDemo({ feature }: { feature: FeaturePageData["features"][number] }) {
+function FeatureDemo({
+  feature,
+}: {
+  feature: FeaturePageData['features'][number];
+}) {
   return Array.isArray(feature.code) ? (
     <CodeTabs items={feature.code} />
   ) : (
@@ -15,7 +19,7 @@ function FeatureDemo({ feature }: { feature: FeaturePageData["features"][number]
   );
 }
 
-function DetailGrid({ details }: { details: FeaturePageData["details"] }) {
+function DetailGrid({ details }: { details: FeaturePageData['details'] }) {
   return (
     <section className="border-t">
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 [&>*]:border-b [&>*:nth-last-child(-n+1)]:border-b-0 sm:[&>*:nth-last-child(-n+2)]:border-b-0 lg:[&>*:nth-last-child(-n+4)]:border-b-0">
@@ -49,9 +53,17 @@ export async function FeaturePage({ data }: { data: FeaturePageData }) {
     <div className="w-full self-stretch">
       <div className="relative overflow-hidden">
         <div className="absolute inset-0 pointer-events-none hidden dark:block bg-gradient-to-b from-transparent via-fd-primary/3 to-transparent" />
-        <svg className="absolute inset-0 w-full h-full pointer-events-none opacity-2" aria-hidden="true">
+        <svg
+          className="absolute inset-0 w-full h-full pointer-events-none opacity-2"
+          aria-hidden="true"
+        >
           <filter id="grain">
-            <feTurbulence type="fractalNoise" baseFrequency="0.8" numOctaves="4" stitchTiles="stitch" />
+            <feTurbulence
+              type="fractalNoise"
+              baseFrequency="0.8"
+              numOctaves="4"
+              stitchTiles="stitch"
+            />
           </filter>
           <rect width="100%" height="100%" filter="url(#grain)" />
         </svg>
@@ -71,15 +83,15 @@ export async function FeaturePage({ data }: { data: FeaturePageData }) {
         {spotlight && (
           <section className="relative px-6 pb-12 sm:pb-16 lg:px-16 xl:px-20">
             <Feature
-            headline={spotlight.headline}
-            description={spotlight.description}
-            cta={
-              <Button href={spotlight.ctaHref} className="w-max">
-                {spotlight.ctaLabel} &rarr;
-              </Button>
-            }
-            demo={<FeatureDemo feature={spotlight} />}
-          />
+              headline={spotlight.headline}
+              description={spotlight.description}
+              cta={
+                <Button href={spotlight.ctaHref} className="w-max">
+                  {spotlight.ctaLabel} &rarr;
+                </Button>
+              }
+              demo={<FeatureDemo feature={spotlight} />}
+            />
           </section>
         )}
       </div>

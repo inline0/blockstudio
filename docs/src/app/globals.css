@@ -1,4 +1,4 @@
-@import "onedocs/css/preset.css";
+@import 'onedocs/css/preset.css';
 
 @source "../**/*.tsx";
 @source "../../../content/**/*.mdx";
@@ -11,6 +11,15 @@
 
 #features p.text-fd-muted-foreground {
   text-wrap: pretty;
+}
+
+:root {
+  --color-plus: oklch(0.72 0.18 85);
+  --color-plus-button: oklch(0.85 0.18 85);
+}
+
+.dark {
+  --color-plus: oklch(0.85 0.18 85);
 }
 
 @theme inline {

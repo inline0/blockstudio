@@ -1,30 +1,34 @@
-import Link from "next/link";
-import { Crosshair, LayoutGrid } from "lucide-react";
-import { Section, SectionIcon } from "./section";
+import { Crosshair, LayoutGrid } from 'lucide-react';
+import Link from 'next/link';
+import { Section, SectionIcon } from './section';
 
 const tools = [
   {
     icon: LayoutGrid,
-    title: "Canvas",
+    title: 'Canvas',
     description:
-      "A Figma-like overview of all your managed pages. Pan, zoom, and inspect your site in a single view.",
-    href: "/docs/dev/canvas",
-    shortcut: "?blockstudio-canvas",
+      'A Figma-like overview of all your managed pages. Pan, zoom, and inspect your site in a single view.',
+    href: '/docs/dev/canvas',
+    shortcut: '?blockstudio-canvas',
   },
   {
     icon: Crosshair,
-    title: "Element Grabber",
+    title: 'Element Grabber',
     description:
-      "Hold Cmd+C on any element to copy its block template path. Built for pasting context straight into your AI editor.",
-    href: "/docs/dev/grab",
-    shortcut: "?blockstudio-devtools",
+      'Hold Cmd+C on any element to copy its block template path. Built for pasting context straight into your AI editor.',
+    href: '/docs/dev/grab',
+    shortcut: '?blockstudio-devtools',
   },
 ];
 
 export function DevTools() {
   return (
     <Section
-      icon={<SectionIcon><Crosshair /></SectionIcon>}
+      icon={
+        <SectionIcon>
+          <Crosshair />
+        </SectionIcon>
+      }
       title="Dev tools"
       description="Built-in tooling for inspecting, debugging, and building with AI."
     >

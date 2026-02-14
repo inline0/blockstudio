@@ -1,6 +1,6 @@
-import { SiteLayout } from "@/components/site-layout";
-import { SiteFooter } from "@/components/site-footer";
-import type { ReactNode } from "react";
+import type { ReactNode } from 'react';
+import { SiteFooter } from '@/components/site-footer';
+import { SiteLayout } from '@/components/site-layout';
 
 export default function AiLayout({ children }: { children: ReactNode }) {
   return (

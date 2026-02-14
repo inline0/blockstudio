@@ -1,8 +1,8 @@
-import { Component } from "lucide-react";
-import { Button } from "onedocs";
-import { Section, SectionIcon } from "./section";
-import { Feature } from "./feature";
-import { CodeCard } from "./code-card";
+import { Component } from 'lucide-react';
+import { Button } from 'onedocs';
+import { CodeCard } from './code-card';
+import { Feature } from './feature';
+import { Section, SectionIcon } from './section';
 
 const templateCode = `<div useBlockProps class="container">
   <RichText
@@ -24,7 +24,11 @@ const templateCode = `<div useBlockProps class="container">
 export async function Composition() {
   return (
     <Section
-      icon={<SectionIcon><Component /></SectionIcon>}
+      icon={
+        <SectionIcon>
+          <Component />
+        </SectionIcon>
+      }
       title="React features, PHP templates"
       description="Blockstudio brings the best of both worlds. Native WordPress editor components like RichText and InnerBlocks, accessible directly in your PHP templates. No JavaScript, no build step."
     >
@@ -34,19 +38,19 @@ export async function Composition() {
           description={
             <>
               <p>
-                Use{" "}
+                Use{' '}
                 <code className="text-fd-foreground font-mono text-sm">
-                  {"<RichText />"}
-                </code>{" "}
+                  {'<RichText />'}
+                </code>{' '}
                 for inline editing in the block editor and static HTML on the
-                frontend.{" "}
+                frontend.{' '}
                 <code className="text-fd-foreground font-mono text-sm">
-                  {"<InnerBlocks />"}
-                </code>{" "}
-                for nested child blocks. And{" "}
+                  {'<InnerBlocks />'}
+                </code>{' '}
+                for nested child blocks. And{' '}
                 <code className="text-fd-foreground font-mono text-sm">
                   useBlockProps
-                </code>{" "}
+                </code>{' '}
                 to mark the block wrapper. All from a single template file.
               </p>
               <p>

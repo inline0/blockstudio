@@ -6,7 +6,8 @@
     "dev": "next dev -p 9700",
     "build": "npm run generate && next build",
     "start": "next start",
-    "generate": "tsx scripts/generate-docs.ts"
+    "generate": "tsx scripts/generate-docs.ts",
+    "lint": "../node_modules/.bin/eslint src/ && ../node_modules/.bin/prettier --write \"src/**/*.{ts,tsx,css}\""
   },
   "dependencies": {
     "@react-three/drei": "^10.7.7",
@@ -14,6 +15,7 @@
     "@react-three/postprocessing": "^3.0.4",
     "@react-three/rapier": "^2.2.0",
     "@tailwindcss/postcss": "^4.1.18",
+    "clsx": "^2.1.1",
     "fumadocs-core": "^16.4.7",
     "fumadocs-mdx": "^14.2.6",
     "fumadocs-ui": "^16.4.7",
@@ -24,6 +26,7 @@
     "postprocessing": "^6.38.2",
     "react": "^19.2.3",
     "react-dom": "^19.2.3",
+    "tailwind-merge": "^3.4.0",
     "tailwindcss": "^4.1.18",
     "three": "^0.182.0"
   },

@@ -1,8 +1,8 @@
-import { Puzzle, Wand2, Target, Paintbrush, Layers } from "lucide-react";
-import { Button } from "onedocs";
-import { Section, SectionIcon } from "./section";
-import { Feature } from "./feature";
-import { CodeCard } from "./code-card";
+import { Puzzle, Wand2, Target, Paintbrush, Layers } from 'lucide-react';
+import { Button } from 'onedocs';
+import { CodeCard } from './code-card';
+import { Feature } from './feature';
+import { Section, SectionIcon } from './section';
 
 const extensionCode = `{
   "name": "core/*",
@@ -25,34 +25,38 @@ const extensionCode = `{
 const details = [
   {
     icon: Target,
-    title: "Target any block",
+    title: 'Target any block',
     description:
-      "Extend a single block, a list of blocks, or use wildcards like core/* to target entire namespaces at once.",
+      'Extend a single block, a list of blocks, or use wildcards like core/* to target entire namespaces at once.',
   },
   {
     icon: Paintbrush,
-    title: "The set property",
+    title: 'The set property',
     description:
-      "Map field values directly to HTML. Add classes, inline styles, data attributes, or any HTML attribute. No template needed.",
+      'Map field values directly to HTML. Add classes, inline styles, data attributes, or any HTML attribute. No template needed.',
   },
   {
     icon: Wand2,
-    title: "Conditional fields",
+    title: 'Conditional fields',
     description:
-      "Show and hide fields based on other values. In the example, Duration only appears when Animation is set.",
+      'Show and hide fields based on other values. In the example, Duration only appears when Animation is set.',
   },
   {
     icon: Layers,
-    title: "Full feature set",
+    title: 'Full feature set',
     description:
-      "Extensions support all 26 field types, conditional logic, populated data sources, and the same field properties as blocks.",
+      'Extensions support all 26 field types, conditional logic, populated data sources, and the same field properties as blocks.',
   },
 ];
 
 export async function Extensions() {
   return (
     <Section
-      icon={<SectionIcon><Puzzle /></SectionIcon>}
+      icon={
+        <SectionIcon>
+          <Puzzle />
+        </SectionIcon>
+      }
       title="Add fields to any block"
       description="Extend core blocks, third-party blocks, or your own with custom fields. Pure JSON, no templates, no code."
     >
@@ -62,14 +66,14 @@ export async function Extensions() {
           description={
             <>
               <p>
-                Create a JSON file, target a block with{" "}
+                Create a JSON file, target a block with{' '}
                 <code className="text-fd-foreground font-mono text-sm">
                   name
                 </code>
-                , and define your fields. The{" "}
+                , and define your fields. The{' '}
                 <code className="text-fd-foreground font-mono text-sm">
                   set
-                </code>{" "}
+                </code>{' '}
                 property maps field values directly to HTML attributes: classes,
                 styles, data attributes, or anything else.
               </p>

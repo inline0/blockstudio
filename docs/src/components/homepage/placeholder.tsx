@@ -1,23 +1,29 @@
+import { cn } from '@/lib/cn';
+
 interface PlaceholderProps {
   label?: string;
-  aspect?: "video" | "wide" | "square";
+  aspect?: 'video' | 'wide' | 'square';
   className?: string;
 }
 
 export function Placeholder({
   label,
-  aspect = "video",
-  className = "",
+  aspect = 'video',
+  className = '',
 }: PlaceholderProps) {
   const aspectClass = {
-    video: "aspect-video",
-    wide: "aspect-[2/1]",
-    square: "aspect-square",
+    video: 'aspect-video',
+    wide: 'aspect-[2/1]',
+    square: 'aspect-square',
   }[aspect];
 
   return (
     <div
-      className={`relative ${aspectClass} w-full overflow-hidden rounded-lg bg-fd-secondary/50 ${className}`}
+      className={cn(
+        'relative w-full overflow-hidden rounded-lg bg-fd-secondary/50',
+        aspectClass,
+        className,
+      )}
     >
       <svg
         className="absolute inset-0 h-full w-full"

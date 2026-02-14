@@ -1,4 +1,4 @@
-import { ExternalLink } from "lucide-react";
+import { ExternalLink } from 'lucide-react';
 
 export function PlusBadge() {
   return (
@@ -6,7 +6,7 @@ export function PlusBadge() {
       href="https://plus.blockstudio.dev"
       target="_blank"
       rel="noopener noreferrer"
-      className="ml-3 hidden lg:inline-flex items-center gap-1.5 rounded border border-[oklch(0.85_0.18_85/0.4)] bg-[oklch(0.85_0.18_85/0.1)] px-1.5 py-0.5 text-xs font-semibold uppercase tracking-tight text-[oklch(0.85_0.18_85)] transition-colors hover:border-[oklch(0.85_0.18_85/0.6)] hover:bg-[oklch(0.85_0.18_85/0.15)]"
+      className="ml-3 hidden lg:inline-flex items-center gap-1.5 rounded-full bg-[var(--color-plus-button)] px-2.5 py-1.5 text-xs font-semibold uppercase tracking-tight text-black transition-colors hover:bg-[var(--color-plus-button)]/80"
     >
       Plus
       <ExternalLink className="size-3" />

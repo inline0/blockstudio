@@ -1,6 +1,6 @@
-import { createLLMsSource, generateLLMsText } from "onedocs/llms";
-import { source } from "@/lib/source";
-import config from "../../../onedocs.config";
+import { createLLMsSource, generateLLMsText } from 'onedocs/llms';
+import { source } from '@/lib/source';
+import config from '../../../onedocs.config';
 
 export async function GET() {
   const llmsSource = createLLMsSource(source);
@@ -11,7 +11,7 @@ export async function GET() {
 
   return new Response(text, {
     headers: {
-      "Content-Type": "text/plain; charset=utf-8",
+      'Content-Type': 'text/plain; charset=utf-8',
     },
   });
 }

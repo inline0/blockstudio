@@ -1,23 +1,23 @@
-import { SiteLayout } from "@/components/site-layout";
-import { PlusSection } from "@/components/plus-section";
-import { HeroLeft } from "@/components/homepage/hero-left";
-import { HeroBlocks } from "@/components/hero-blocks";
-import { HowItWorks } from "@/components/homepage/how-it-works";
-import { TemplateLanguages } from "@/components/homepage/template-languages";
-import { Pages } from "@/components/homepage/pages";
-import { Patterns } from "@/components/homepage/patterns";
-import { HtmlParser } from "@/components/homepage/html-parser";
-import { Extensions } from "@/components/homepage/beyond-blocks";
-import { FieldTypes } from "@/components/homepage/field-types";
-import { AssetProcessing } from "@/components/homepage/asset-processing";
-import { TailwindCSS } from "@/components/homepage/tailwind";
-import { DeveloperExperience } from "@/components/homepage/developer-experience";
-import { AiContext } from "@/components/homepage/ai-context";
-import { DevTools } from "@/components/homepage/dev-tools";
-import { Composition } from "@/components/homepage/composition";
-import { FAQ } from "@/components/homepage/faq";
-import { SiteFooter } from "@/components/site-footer";
-import config from "../../onedocs.config";
+import { HeroBlocks } from '@/components/hero-blocks';
+import { AiContext } from '@/components/homepage/ai-context';
+import { AssetProcessing } from '@/components/homepage/asset-processing';
+import { Extensions } from '@/components/homepage/beyond-blocks';
+import { Composition } from '@/components/homepage/composition';
+import { DevTools } from '@/components/homepage/dev-tools';
+import { DeveloperExperience } from '@/components/homepage/developer-experience';
+import { FAQ } from '@/components/homepage/faq';
+import { FieldTypes } from '@/components/homepage/field-types';
+import { HeroLeft } from '@/components/homepage/hero-left';
+import { HowItWorks } from '@/components/homepage/how-it-works';
+import { HtmlParser } from '@/components/homepage/html-parser';
+import { Pages } from '@/components/homepage/pages';
+import { Patterns } from '@/components/homepage/patterns';
+import { TailwindCSS } from '@/components/homepage/tailwind';
+import { TemplateLanguages } from '@/components/homepage/template-languages';
+import { PlusSection } from '@/components/plus-section';
+import { SiteFooter } from '@/components/site-footer';
+import { SiteLayout } from '@/components/site-layout';
+import config from '../../onedocs.config';
 
 const { homepage } = config;
 const features = homepage?.features ?? [];
@@ -76,7 +76,7 @@ export default function Home() {
                 className="text-2xl sm:text-3xl lg:text-4xl font-medium leading-snug text-balance max-w-3xl bg-clip-text text-transparent"
                 style={{
                   backgroundImage:
-                    "linear-gradient(180deg, var(--color-fd-foreground) 0%, color-mix(in srgb, var(--color-fd-foreground) 60%, var(--color-fd-muted-foreground)) 100%)",
+                    'linear-gradient(180deg, var(--color-fd-foreground) 0%, color-mix(in srgb, var(--color-fd-foreground) 60%, var(--color-fd-muted-foreground)) 100%)',
                 }}
               >
                 Blockstudio combines the flexibility of PHP templates with the

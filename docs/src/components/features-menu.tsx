@@ -1,39 +1,54 @@
-"use client";
+'use client';
 
+import Link from 'fumadocs-core/link';
 import {
   NavigationMenuContent,
   NavigationMenuItem,
   NavigationMenuLink,
   NavigationMenuTrigger,
-} from "fumadocs-ui/components/ui/navigation-menu";
-import Link from "fumadocs-core/link";
-import { Blocks, ChevronDown, FileText, LayoutGrid, Puzzle } from "lucide-react";
-import type { LucideIcon } from "lucide-react";
+} from 'fumadocs-ui/components/ui/navigation-menu';
+import {
+  Blocks,
+  ChevronDown,
+  FileText,
+  LayoutGrid,
+  Puzzle,
+} from 'lucide-react';
+import type { LucideIcon } from 'lucide-react';
 
-const items: { icon: LucideIcon; title: string; description: string; href: string }[] = [
+const items: {
+  icon: LucideIcon;
+  title: string;
+  description: string;
+  href: string;
+}[] = [
   {
     icon: Blocks,
-    title: "Blocks",
-    description: "Custom blocks with JSON and PHP templates. 26 field types, zero JavaScript.",
-    href: "/features/blocks",
+    title: 'Blocks',
+    description:
+      'Custom blocks with JSON and PHP templates. 26 field types, zero JavaScript.',
+    href: '/features/blocks',
   },
   {
     icon: FileText,
-    title: "Pages",
-    description: "Full WordPress pages from template files, synced automatically to the editor.",
-    href: "/features/pages",
+    title: 'Pages',
+    description:
+      'Full WordPress pages from template files, synced automatically to the editor.',
+    href: '/features/pages',
   },
   {
     icon: LayoutGrid,
-    title: "Patterns",
-    description: "Reusable block patterns as template files, registered in the inserter.",
-    href: "/features/patterns",
+    title: 'Patterns',
+    description:
+      'Reusable block patterns as template files, registered in the inserter.',
+    href: '/features/patterns',
   },
   {
     icon: Puzzle,
-    title: "Extensions",
-    description: "Add custom fields to any block with a single JSON file. No templates needed.",
-    href: "/features/extensions",
+    title: 'Extensions',
+    description:
+      'Add custom fields to any block with a single JSON file. No templates needed.',
+    href: '/features/extensions',
   },
 ];
 

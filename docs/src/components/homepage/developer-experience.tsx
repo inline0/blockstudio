@@ -1,4 +1,3 @@
-import Link from "next/link";
 import {
   Code,
   Database,
@@ -12,100 +11,105 @@ import {
   Repeat,
   List,
   Braces,
-} from "lucide-react";
-import { Section, SectionIcon } from "./section";
+} from 'lucide-react';
+import Link from 'next/link';
+import { Section, SectionIcon } from './section';
 
 const features = [
   {
     icon: Database,
-    title: "Flexible Storage",
+    title: 'Flexible Storage',
     description:
-      "Store field values in post meta, options, or both at once. Query blocks by meta values, access data via REST API.",
-    href: "/docs/blocks/storage",
+      'Store field values in post meta, options, or both at once. Query blocks by meta values, access data via REST API.',
+    href: '/docs/blocks/storage',
   },
   {
     icon: GitBranch,
-    title: "Conditional Logic",
+    title: 'Conditional Logic',
     description:
-      "Show and hide fields based on other field values. 10 comparison operators, nested conditions, and global rules for post type or user role.",
-    href: "/docs/blocks/attributes/conditional-logic",
+      'Show and hide fields based on other field values. 10 comparison operators, nested conditions, and global rules for post type or user role.',
+    href: '/docs/blocks/attributes/conditional-logic',
   },
   {
     icon: SlidersHorizontal,
-    title: "50+ PHP & JS Hooks",
+    title: '50+ PHP & JS Hooks',
     description:
-      "Filters and actions for every stage: block registration, field rendering, asset loading, and template output. Full control without forking.",
-    href: "/docs/blocks/hooks/php",
+      'Filters and actions for every stage: block registration, field rendering, asset loading, and template output. Full control without forking.',
+    href: '/docs/blocks/hooks/php',
   },
   {
     icon: FileJson,
-    title: "JSON Schema",
+    title: 'JSON Schema',
     description:
-      "Every configuration file is backed by a JSON Schema. Instant autocomplete, inline docs, and validation in VS Code and JetBrains.",
-    href: "/docs/blocks/schema",
+      'Every configuration file is backed by a JSON Schema. Instant autocomplete, inline docs, and validation in VS Code and JetBrains.',
+    href: '/docs/blocks/schema',
   },
   {
     icon: Share2,
-    title: "Context API",
+    title: 'Context API',
     description:
-      "Share data between parent and child blocks. Define what a parent provides in JSON and access the values in any nested template.",
-    href: "/docs/blocks/context",
+      'Share data between parent and child blocks. Define what a parent provides in JSON and access the values in any nested template.',
+    href: '/docs/blocks/context',
   },
   {
     icon: Sparkles,
-    title: "AI Integration",
+    title: 'AI Integration',
     description:
-      "Auto-generated context files describe your entire block library. Works with Cursor, Claude, and other AI coding assistants out of the box.",
-    href: "/docs/dev/ai",
+      'Auto-generated context files describe your entire block library. Works with Cursor, Claude, and other AI coding assistants out of the box.',
+    href: '/docs/dev/ai',
   },
   {
     icon: Search,
-    title: "SEO Integration",
+    title: 'SEO Integration',
     description:
-      "Automatic content injection for Yoast, Rank Math, and SEOPress. Field content is extracted and analyzed. No setup required.",
-    href: "/docs/blocks/seo",
+      'Automatic content injection for Yoast, Rank Math, and SEOPress. Field content is extracted and analyzed. No setup required.',
+    href: '/docs/blocks/seo',
   },
   {
     icon: Terminal,
-    title: "Programmatic Rendering",
+    title: 'Programmatic Rendering',
     description:
-      "Render any block in PHP with bs_render_block(). Use your blocks as reusable components outside the editor.",
-    href: "/docs/blocks/rendering",
+      'Render any block in PHP with bs_render_block(). Use your blocks as reusable components outside the editor.',
+    href: '/docs/blocks/rendering',
   },
   {
     icon: Braces,
-    title: "Custom Fields",
+    title: 'Custom Fields',
     description:
-      "Define reusable field sets as JSON files. Reference them across blocks with the custom field type. Update once, apply everywhere.",
-    href: "/docs/blocks/attributes/custom-fields",
+      'Define reusable field sets as JSON files. Reference them across blocks with the custom field type. Update once, apply everywhere.',
+    href: '/docs/blocks/attributes/custom-fields',
   },
   {
     icon: Repeat,
-    title: "Block Transforms",
+    title: 'Block Transforms',
     description:
-      "Let users transform one block into another. Add enter and prefix shortcuts so blocks can be inserted by typing.",
-    href: "/docs/blocks/transforms",
+      'Let users transform one block into another. Add enter and prefix shortcuts so blocks can be inserted by typing.',
+    href: '/docs/blocks/transforms',
   },
   {
     icon: List,
-    title: "Dynamic Options",
+    title: 'Dynamic Options',
     description:
-      "Populate select, radio, and checkbox fields from post queries, taxonomies, user lists, or custom PHP functions.",
-    href: "/docs/blocks/attributes/populating-options",
+      'Populate select, radio, and checkbox fields from post queries, taxonomies, user lists, or custom PHP functions.',
+    href: '/docs/blocks/attributes/populating-options',
   },
   {
     icon: Code,
-    title: "HTML Utilities",
+    title: 'HTML Utilities',
     description:
-      "Render field values as data attributes or CSS custom properties directly on the block wrapper. One line in your template.",
-    href: "/docs/blocks/attributes/html-utilities",
+      'Render field values as data attributes or CSS custom properties directly on the block wrapper. One line in your template.',
+    href: '/docs/blocks/attributes/html-utilities',
   },
 ];
 
 export function DeveloperExperience() {
   return (
     <Section
-      icon={<SectionIcon><Code /></SectionIcon>}
+      icon={
+        <SectionIcon>
+          <Code />
+        </SectionIcon>
+      }
       title="Built for developers"
       description="Power features that make complex blocks simple to build and maintain."
     >

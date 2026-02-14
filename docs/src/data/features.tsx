@@ -1,5 +1,5 @@
-import type { ReactNode } from "react";
-import type { LucideIcon } from "lucide-react";
+import type { ReactNode } from 'react';
+import type { LucideIcon } from 'lucide-react';
 import {
   Blocks,
   BookOpen,
@@ -29,7 +29,7 @@ import {
   ToggleRight,
   Wand2,
   Zap,
-} from "lucide-react";
+} from 'lucide-react';
 
 interface CodeTab {
   label: string;
@@ -68,20 +68,20 @@ const code = (text: string) => (
 export const features: Record<string, FeaturePageData> = {
   blocks: {
     icon: Blocks,
-    title: "Custom blocks in 3 files",
+    title: 'Custom blocks in 3 files',
     description:
-      "Define fields in block.json, render them in a template, style with CSS or SCSS. No JavaScript, no build step, no boilerplate.",
+      'Define fields in block.json, render them in a template, style with CSS or SCSS. No JavaScript, no build step, no boilerplate.',
     features: [
       {
-        headline: "Define fields in JSON",
+        headline: 'Define fields in JSON',
         description: (
           <>
             <p>
-              Add a {code("blockstudio")} key to your block.json. Define
-              attributes with types like {code("text")}, {code("toggle")}, and{" "}
-              {code("color")}. Blockstudio generates the editor UI
-              automatically. 26 field types available, from simple text inputs to
-              repeaters and code editors.
+              Add a {code('blockstudio')} key to your block.json. Define
+              attributes with types like {code('text')}, {code('toggle')}, and{' '}
+              {code('color')}. Blockstudio generates the editor UI
+              automatically. 26 field types available, from simple text inputs
+              to repeaters and code editors.
             </p>
             <p>
               Full JSON Schema support gives you autocomplete and validation in
@@ -107,18 +107,18 @@ export const features: Record<string, FeaturePageData> = {
     }
   }
 }`,
-        lang: "json",
-        ctaLabel: "Field types reference",
-        ctaHref: "/docs/blocks/attributes/field-types",
+        lang: 'json',
+        ctaLabel: 'Field types reference',
+        ctaHref: '/docs/blocks/attributes/field-types',
       },
       {
-        headline: "React components in PHP templates",
+        headline: 'React components in PHP templates',
         description: (
           <>
             <p>
-              Use {code("<RichText />")} for inline editing in the block editor
-              and static HTML on the frontend. {code("<InnerBlocks />")} for
-              nested child blocks. And {code("useBlockProps")} to mark the block
+              Use {code('<RichText />')} for inline editing in the block editor
+              and static HTML on the frontend. {code('<InnerBlocks />')} for
+              nested child blocks. And {code('useBlockProps')} to mark the block
               wrapper. All from a single template file.
             </p>
             <p>
@@ -144,12 +144,12 @@ export const features: Record<string, FeaturePageData> = {
 
   <InnerBlocks class="mt-4 p-4 border" />
 </div>`,
-        lang: "php",
-        ctaLabel: "Explore components",
-        ctaHref: "/docs/blocks/components",
+        lang: 'php',
+        ctaLabel: 'Explore components',
+        ctaHref: '/docs/blocks/components',
       },
       {
-        headline: "Write in PHP, Twig, or Blade",
+        headline: 'Write in PHP, Twig, or Blade',
         description: (
           <>
             <p>
@@ -158,8 +158,8 @@ export const features: Record<string, FeaturePageData> = {
               Same variables, same components, same behavior.
             </p>
             <p>
-              Template variables {code("$a")} (attributes), {code("$b")}{" "}
-              (block), {code("$c")} (context), and {code("$innerBlocks")} are
+              Template variables {code('$a')} (attributes), {code('$b')}{' '}
+              (block), {code('$c')} (context), and {code('$innerBlocks')} are
               available in all three languages.
             </p>
           </>
@@ -181,17 +181,17 @@ export const features: Record<string, FeaturePageData> = {
 
   <InnerBlocks allowedBlocks='["core/button"]' />
 </div>`,
-        lang: "twig",
-        ctaLabel: "Template languages",
-        ctaHref: "/docs/blocks/templating/twig",
+        lang: 'twig',
+        ctaLabel: 'Template languages',
+        ctaHref: '/docs/blocks/templating/twig',
       },
       {
-        headline: "Conditional logic and dynamic options",
+        headline: 'Conditional logic and dynamic options',
         description: (
           <>
             <p>
-              Show and hide fields based on other values. Operators include{" "}
-              {code("==")}, {code("!=")}, {code("includes")}, {code("empty")},
+              Show and hide fields based on other values. Operators include{' '}
+              {code('==')}, {code('!=')}, {code('includes')}, {code('empty')},
               and comparison operators. Combine multiple conditions with OR
               logic.
             </p>
@@ -228,17 +228,17 @@ export const features: Record<string, FeaturePageData> = {
     }
   }
 }`,
-        lang: "json",
-        ctaLabel: "Conditional logic",
-        ctaHref: "/docs/blocks/attributes/conditional-logic",
+        lang: 'json',
+        ctaLabel: 'Conditional logic',
+        ctaHref: '/docs/blocks/attributes/conditional-logic',
       },
       {
-        headline: "ES modules without a build step",
+        headline: 'ES modules without a build step',
         description: (
           <>
             <p>
-              Add a {code("script.js")} and it loads as an ES module. Use{" "}
-              {code("import")} syntax natively. Pull packages from npm with the{" "}
+              Add a {code('script.js')} and it loads as an ES module. Use{' '}
+              {code('import')} syntax natively. Pull packages from npm with the{' '}
               {code('npm:')} prefix and Blockstudio downloads them locally for
               production. No bundler, no config.
             </p>
@@ -263,102 +263,102 @@ Object.assign(el, {
   loop: true,
 });
 el.initialize();`,
-        lang: "js",
-        ctaLabel: "Asset processing",
-        ctaHref: "/docs/blocks/assets",
+        lang: 'js',
+        ctaLabel: 'Asset processing',
+        ctaHref: '/docs/blocks/assets',
       },
     ],
     details: [
       {
         icon: Blocks,
-        title: "3-file workflow",
+        title: '3-file workflow',
         description:
-          "block.json for fields, a template for markup, an optional stylesheet. No boilerplate, no build step.",
+          'block.json for fields, a template for markup, an optional stylesheet. No boilerplate, no build step.',
       },
       {
         icon: Component,
-        title: "React in PHP",
+        title: 'React in PHP',
         description:
-          "RichText, InnerBlocks, and useBlockProps work directly in PHP, Twig, or Blade templates.",
+          'RichText, InnerBlocks, and useBlockProps work directly in PHP, Twig, or Blade templates.',
       },
       {
         icon: Paintbrush,
-        title: "SCSS and Tailwind",
+        title: 'SCSS and Tailwind',
         description:
-          "Use plain CSS, SCSS, or Tailwind CSS. Blockstudio compiles and minifies assets automatically.",
+          'Use plain CSS, SCSS, or Tailwind CSS. Blockstudio compiles and minifies assets automatically.',
       },
       {
         icon: Wand2,
-        title: "26 field types",
+        title: '26 field types',
         description:
-          "Text, color, image, repeater, select, code editor, and more. All configured in JSON.",
+          'Text, color, image, repeater, select, code editor, and more. All configured in JSON.',
       },
       {
         icon: FileJson,
-        title: "JSON Schema",
+        title: 'JSON Schema',
         description:
-          "Full autocomplete and validation in VS Code, PhpStorm, and any editor with JSON Schema support.",
+          'Full autocomplete and validation in VS Code, PhpStorm, and any editor with JSON Schema support.',
       },
       {
         icon: Code,
-        title: "Three template languages",
+        title: 'Three template languages',
         description:
-          "PHP out of the box. Twig via Timber. Blade via jenssegers/blade. Same variables, same components.",
+          'PHP out of the box. Twig via Timber. Blade via jenssegers/blade. Same variables, same components.',
       },
       {
         icon: Package,
-        title: "npm imports",
+        title: 'npm imports',
         description:
-          "Import npm packages directly in script.js. Downloaded locally for production, CDN in the editor.",
+          'Import npm packages directly in script.js. Downloaded locally for production, CDN in the editor.',
       },
       {
         icon: Zap,
-        title: "Interactivity API",
+        title: 'Interactivity API',
         description:
-          "Enable WordPress Interactivity API with a single flag. Works in both the editor and frontend.",
+          'Enable WordPress Interactivity API with a single flag. Works in both the editor and frontend.',
       },
       {
         icon: Database,
-        title: "Post meta and options storage",
+        title: 'Post meta and options storage',
         description:
-          "Store field values in post meta or site options alongside block attributes. Queryable via WP_Query.",
+          'Store field values in post meta or site options alongside block attributes. Queryable via WP_Query.',
       },
       {
         icon: Filter,
-        title: "Conditional logic",
+        title: 'Conditional logic',
         description:
-          "Show and hide fields based on other values with operators like ==, !=, includes, empty, and comparisons.",
+          'Show and hide fields based on other values with operators like ==, !=, includes, empty, and comparisons.',
       },
       {
         icon: Search,
-        title: "Dynamic populations",
+        title: 'Dynamic populations',
         description:
-          "Populate select options from posts, users, terms, functions, or external APIs.",
+          'Populate select options from posts, users, terms, functions, or external APIs.',
       },
       {
         icon: Layers,
-        title: "Variations and overrides",
+        title: 'Variations and overrides',
         description:
           "Register block variations with different defaults. Override any existing block's attributes, assets, or templates.",
       },
     ],
-    docsHref: "/docs/general/getting-started",
+    docsHref: '/docs/general/getting-started',
   },
 
   pages: {
     icon: FileText,
-    title: "Full pages, defined in code",
+    title: 'Full pages, defined in code',
     description:
-      "Create complete WordPress pages from template files. HTML maps to core blocks automatically. Blockstudio keeps the editor in sync with your codebase.",
+      'Create complete WordPress pages from template files. HTML maps to core blocks automatically. Blockstudio keeps the editor in sync with your codebase.',
     features: [
       {
-        headline: "Write HTML, get blocks",
+        headline: 'Write HTML, get blocks',
         description: (
           <>
             <p>
-              Standard elements like {code("<h1>")}, {code("<p>")}, and{" "}
-              {code("<ul>")} map to core blocks automatically. Use the{" "}
-              {code("<block>")} tag for everything else. Any block name, any
+              Standard elements like {code('<h1>')}, {code('<p>')}, and{' '}
+              {code('<ul>')} map to core blocks automatically. Use the{' '}
+              {code('<block>')} tag for everything else. Any block name, any
               attributes, any nesting level.
             </p>
             <p>
@@ -389,12 +389,12 @@ el.initialize();`,
     </block>
   </block>
 </block>`,
-        lang: "html",
-        ctaLabel: "Page syntax reference",
-        ctaHref: "/docs/pages-and-patterns/pages",
+        lang: 'html',
+        ctaLabel: 'Page syntax reference',
+        ctaHref: '/docs/pages-and-patterns/pages',
       },
       {
-        headline: "Keyed blocks preserve content",
+        headline: 'Keyed blocks preserve content',
         description: (
           <>
             <p>
@@ -412,8 +412,8 @@ el.initialize();`,
         ),
         code: [
           {
-            label: "index.php",
-            lang: "html",
+            label: 'index.php',
+            lang: 'html',
             code: `<h1 key="title">About Us</h1>
 
 <block name="core/cover" key="hero"
@@ -429,8 +429,8 @@ el.initialize();`,
 </block>`,
           },
           {
-            label: "page.json",
-            lang: "json",
+            label: 'page.json',
+            lang: 'json',
             code: `{
   "name": "about",
   "title": "About Us",
@@ -446,30 +446,31 @@ el.initialize();`,
 `,
           },
         ],
-        ctaLabel: "Keyed blocks",
-        ctaHref: "/docs/pages-and-patterns/pages#keys",
+        ctaLabel: 'Keyed blocks',
+        ctaHref: '/docs/pages-and-patterns/pages#keys',
       },
       {
-        headline: "Template locking and editing modes",
+        headline: 'Template locking and editing modes',
         description: (
           <>
             <p>
-              Control exactly what clients can do. {code('"templateLock": "all"')}{" "}
-              prevents any changes. {code('"contentOnly"')} locks structure but
-              allows text editing. {code('"insert"')} lets users edit and
-              reorder but not add or remove blocks.
+              Control exactly what clients can do.{' '}
+              {code('"templateLock": "all"')} prevents any changes.{' '}
+              {code('"contentOnly"')} locks structure but allows text editing.{' '}
+              {code('"insert"')} lets users edit and reorder but not add or
+              remove blocks.
             </p>
             <p>
-              Override per element with the {code("blockEditingMode")} attribute.
-              Lock the page but make specific sections editable, or disable
-              editing on individual blocks entirely.
+              Override per element with the {code('blockEditingMode')}{' '}
+              attribute. Lock the page but make specific sections editable, or
+              disable editing on individual blocks entirely.
             </p>
           </>
         ),
         code: [
           {
-            label: "index.php",
-            lang: "html",
+            label: 'index.php',
+            lang: 'html',
             code: `<h1>Welcome to Our Product</h1>
 <p>The best solution for your needs.</p>
 
@@ -485,8 +486,8 @@ el.initialize();`,
 </block>`,
           },
           {
-            label: "page.json",
-            lang: "json",
+            label: 'page.json',
+            lang: 'json',
             code: `{
   "name": "landing",
   "title": "Landing Page",
@@ -502,77 +503,77 @@ el.initialize();`,
 `,
           },
         ],
-        ctaLabel: "Template locking",
-        ctaHref: "/docs/pages-and-patterns/pages#template-locking",
+        ctaLabel: 'Template locking',
+        ctaHref: '/docs/pages-and-patterns/pages#template-locking',
       },
     ],
     details: [
       {
         icon: RefreshCw,
-        title: "Automatic sync",
+        title: 'Automatic sync',
         description:
-          "Pages sync to WordPress on every admin load. Change your template, the editor updates instantly.",
+          'Pages sync to WordPress on every admin load. Change your template, the editor updates instantly.',
       },
       {
         icon: Lock,
-        title: "Template locking",
+        title: 'Template locking',
         description:
-          "Lock the entire page or individual blocks. contentOnly, all, insert, or full freedom.",
+          'Lock the entire page or individual blocks. contentOnly, all, insert, or full freedom.',
       },
       {
         icon: Key,
-        title: "Keyed blocks",
+        title: 'Keyed blocks',
         description:
-          "Assign keys so user edits persist across template updates. Sync structure, keep content.",
+          'Assign keys so user edits persist across template updates. Sync structure, keep content.',
       },
       {
         icon: GitMerge,
-        title: "Version controlled",
+        title: 'Version controlled',
         description:
-          "Pages live as files in your theme or plugin. Track changes in Git, deploy across environments.",
+          'Pages live as files in your theme or plugin. Track changes in Git, deploy across environments.',
       },
       {
         icon: FileText,
-        title: "Any post type",
+        title: 'Any post type',
         description:
-          "Pages default to the page post type, but you can target any custom post type in page.json.",
+          'Pages default to the page post type, but you can target any custom post type in page.json.',
       },
       {
         icon: Split,
-        title: "Editing modes",
+        title: 'Editing modes',
         description:
-          "Set page-level defaults and override per element. Disabled, contentOnly, or default editing.",
+          'Set page-level defaults and override per element. Disabled, contentOnly, or default editing.',
       },
       {
         icon: Database,
-        title: "Block Bindings",
+        title: 'Block Bindings',
         description:
-          "Connect blocks to post meta via the WordPress Block Bindings API. Content lives in meta, survives syncs.",
+          'Connect blocks to post meta via the WordPress Block Bindings API. Content lives in meta, survives syncs.',
       },
       {
         icon: Settings,
-        title: "PHP API",
+        title: 'PHP API',
         description:
-          "Programmatic access: force sync, lock/unlock pages, get post IDs, and query registered pages.",
+          'Programmatic access: force sync, lock/unlock pages, get post IDs, and query registered pages.',
       },
     ],
-    docsHref: "/docs/pages-and-patterns/pages",
+    docsHref: '/docs/pages-and-patterns/pages',
   },
 
   patterns: {
     icon: LayoutGrid,
-    title: "Reusable patterns from template files",
+    title: 'Reusable patterns from template files',
     description:
-      "Define block patterns as template files. Same HTML syntax as pages, registered automatically in the block inserter.",
+      'Define block patterns as template files. Same HTML syntax as pages, registered automatically in the block inserter.',
     features: [
       {
-        headline: "Template files, not registration code",
+        headline: 'Template files, not registration code',
         description: (
           <>
             <p>
-              Create a folder with a {code("pattern.json")} and a template
-              file. Blockstudio registers the pattern automatically, no{" "}
-              {code("register_block_pattern()")} boilerplate.
+              Create a folder with a {code('pattern.json')} and a template file.
+              Blockstudio registers the pattern automatically, no{' '}
+              {code('register_block_pattern()')} boilerplate.
             </p>
             <p>
               Patterns are inserted as real, editable blocks. Users get a
@@ -605,17 +606,17 @@ el.initialize();`,
     </block>
   </block>
 </div>`,
-        lang: "html",
-        ctaLabel: "Pattern syntax",
-        ctaHref: "/docs/pages-and-patterns/patterns",
+        lang: 'html',
+        ctaLabel: 'Pattern syntax',
+        ctaHref: '/docs/pages-and-patterns/patterns',
       },
       {
-        headline: "Configure with pattern.json",
+        headline: 'Configure with pattern.json',
         description: (
           <>
             <p>
               Set the title, description, categories, keywords, and viewport
-              width in {code("pattern.json")}. Restrict patterns to specific
+              width in {code('pattern.json')}. Restrict patterns to specific
               post types or block types. Control inserter visibility.
             </p>
             <p>
@@ -635,79 +636,79 @@ el.initialize();`,
   "blockTypes": ["core/group"],
   "postTypes": ["page", "landing"]
 }`,
-        lang: "json",
-        ctaLabel: "Pattern configuration",
-        ctaHref: "/docs/pages-and-patterns/patterns",
+        lang: 'json',
+        ctaLabel: 'Pattern configuration',
+        ctaHref: '/docs/pages-and-patterns/patterns',
       },
     ],
     details: [
       {
         icon: BookOpen,
-        title: "Same syntax as pages",
+        title: 'Same syntax as pages',
         description:
-          "Patterns use the same HTML parser. Standard HTML maps to core blocks, the <block> tag handles the rest.",
+          'Patterns use the same HTML parser. Standard HTML maps to core blocks, the <block> tag handles the rest.',
       },
       {
         icon: LayoutGrid,
-        title: "Auto-registered",
+        title: 'Auto-registered',
         description:
-          "Drop a folder with a template and a pattern.json. Blockstudio registers it in the inserter automatically.",
+          'Drop a folder with a template and a pattern.json. Blockstudio registers it in the inserter automatically.',
       },
       {
         icon: Pencil,
-        title: "Fully editable",
+        title: 'Fully editable',
         description:
-          "Unlike pages, patterns are inserted as editable block content. Users can customize each instance.",
+          'Unlike pages, patterns are inserted as editable block content. Users can customize each instance.',
       },
       {
         icon: Layers,
-        title: "Categorized and searchable",
+        title: 'Categorized and searchable',
         description:
-          "Add categories and keywords in pattern.json. Users find your patterns instantly in the inserter.",
+          'Add categories and keywords in pattern.json. Users find your patterns instantly in the inserter.',
       },
       {
         icon: FileCode,
-        title: "Any block, any nesting",
+        title: 'Any block, any nesting',
         description:
-          "Use core blocks, custom blocks, or Blockstudio blocks. Nest as deep as you need.",
+          'Use core blocks, custom blocks, or Blockstudio blocks. Nest as deep as you need.',
       },
       {
         icon: Target,
-        title: "Post type restrictions",
+        title: 'Post type restrictions',
         description:
-          "Limit patterns to specific post types. Show pricing patterns only on landing pages.",
+          'Limit patterns to specific post types. Show pricing patterns only on landing pages.',
       },
       {
         icon: Braces,
-        title: "Block type associations",
+        title: 'Block type associations',
         description:
-          "Associate patterns with specific block types. They appear as suggestions when that block is inserted.",
+          'Associate patterns with specific block types. They appear as suggestions when that block is inserted.',
       },
       {
         icon: GitMerge,
-        title: "Version controlled",
+        title: 'Version controlled',
         description:
-          "Patterns live as files in your theme or plugin. Track changes in Git, deploy across environments.",
+          'Patterns live as files in your theme or plugin. Track changes in Git, deploy across environments.',
       },
     ],
-    docsHref: "/docs/pages-and-patterns/patterns",
+    docsHref: '/docs/pages-and-patterns/patterns',
   },
 
   extensions: {
     icon: Puzzle,
-    title: "Add fields to any block",
+    title: 'Add fields to any block',
     description:
-      "Extend core blocks, third-party blocks, or your own with custom fields. Pure JSON, no templates, no render callbacks.",
+      'Extend core blocks, third-party blocks, or your own with custom fields. Pure JSON, no templates, no render callbacks.',
     features: [
       {
-        headline: "Custom fields, zero templates",
+        headline: 'Custom fields, zero templates',
         description: (
           <>
             <p>
-              Create a JSON file, target a block with {code("name")}, and
-              define your fields. The {code("set")} property maps field values
-              directly to HTML attributes: classes, styles, data attributes, or
-              anything else.
+              Create a JSON file, target a block with {code('name')}, and define
+              your fields. The {code('set')} property maps field values directly
+              to HTML attributes: classes, styles, data attributes, or anything
+              else.
             </p>
             <p>
               No templates, no render callbacks. Blockstudio handles the output
@@ -732,23 +733,22 @@ el.initialize();`,
     }
   }
 }`,
-        lang: "json",
-        ctaLabel: "Extension basics",
-        ctaHref: "/docs/other/extensions",
+        lang: 'json',
+        ctaLabel: 'Extension basics',
+        ctaHref: '/docs/other/extensions',
       },
       {
-        headline: "Map values to HTML with set",
+        headline: 'Map values to HTML with set',
         description: (
           <>
             <p>
-              The {code("set")} property is the core of extensions. Map field
+              The {code('set')} property is the core of extensions. Map field
               values to classes, inline styles, data attributes, or any HTML
-              attribute using dot notation like{" "}
-              {code("{attributes.fieldId}")}.
+              attribute using dot notation like {code('{attributes.fieldId}')}.
             </p>
             <p>
               Access nested values from fields that return objects. Apply values
-              conditionally. Multiple {code("set")} entries per field let you
+              conditionally. Multiple {code('set')} entries per field let you
               output to different attributes from a single input.
             </p>
           </>
@@ -776,17 +776,17 @@ el.initialize();`,
     }
   }
 }`,
-        lang: "json",
-        ctaLabel: "The set property",
-        ctaHref: "/docs/other/extensions#set",
+        lang: 'json',
+        ctaLabel: 'The set property',
+        ctaHref: '/docs/other/extensions#set',
       },
       {
-        headline: "Target one block or thousands",
+        headline: 'Target one block or thousands',
         description: (
           <>
             <p>
               Target a single block by name: {code('"core/paragraph"')}. Target
-              multiple blocks with an array:{" "}
+              multiple blocks with an array:{' '}
               {code('["core/paragraph", "core/heading"]')}. Or use wildcards
               like {code('"core/*"')} to extend every block in a namespace.
             </p>
@@ -799,8 +799,8 @@ el.initialize();`,
         ),
         code: [
           {
-            label: "extend-animation.json",
-            lang: "json",
+            label: 'extend-animation.json',
+            lang: 'json',
             code: `{
   "name": "core/*",
   "blockstudio": {
@@ -822,8 +822,8 @@ el.initialize();`,
 `,
           },
           {
-            label: "extend-visibility.json",
-            lang: "json",
+            label: 'extend-visibility.json',
+            lang: 'json',
             code: `{
   "name": ["core/group", "core/cover"],
   "blockstudio": {
@@ -845,60 +845,60 @@ el.initialize();`,
 }`,
           },
         ],
-        ctaLabel: "Targeting blocks",
-        ctaHref: "/docs/other/extensions",
+        ctaLabel: 'Targeting blocks',
+        ctaHref: '/docs/other/extensions',
       },
     ],
     details: [
       {
         icon: Target,
-        title: "Target any block",
+        title: 'Target any block',
         description:
-          "Extend a single block, a list of blocks, or use wildcards like core/* to target entire namespaces.",
+          'Extend a single block, a list of blocks, or use wildcards like core/* to target entire namespaces.',
       },
       {
         icon: Paintbrush,
-        title: "The set property",
+        title: 'The set property',
         description:
-          "Map field values to classes, styles, data attributes, or any HTML attribute. Dot notation for nested values.",
+          'Map field values to classes, styles, data attributes, or any HTML attribute. Dot notation for nested values.',
       },
       {
         icon: Wand2,
-        title: "Conditional fields",
+        title: 'Conditional fields',
         description:
-          "Show and hide fields based on other values. Same conditional logic operators as blocks.",
+          'Show and hide fields based on other values. Same conditional logic operators as blocks.',
       },
       {
         icon: Layers,
-        title: "Full feature set",
+        title: 'Full feature set',
         description:
-          "All 26 field types, conditional logic, populated data sources, and the same field properties as blocks.",
+          'All 26 field types, conditional logic, populated data sources, and the same field properties as blocks.',
       },
       {
         icon: Settings,
-        title: "Inspector positioning",
+        title: 'Inspector positioning',
         description:
-          "Place fields in the settings, styles, or advanced tab. Control exactly where your fields appear.",
+          'Place fields in the settings, styles, or advanced tab. Control exactly where your fields appear.',
       },
       {
         icon: ToggleRight,
-        title: "Priority ordering",
+        title: 'Priority ordering',
         description:
-          "Multiple extensions can target the same block. Priority controls the order they appear in the inspector.",
+          'Multiple extensions can target the same block. Priority controls the order they appear in the inspector.',
       },
       {
         icon: Sparkles,
-        title: "No render callbacks",
+        title: 'No render callbacks',
         description:
-          "Blockstudio applies set values using the WordPress HTML Tag Processor. No PHP templates needed.",
+          'Blockstudio applies set values using the WordPress HTML Tag Processor. No PHP templates needed.',
       },
       {
         icon: FileJson,
-        title: "JSON Schema",
+        title: 'JSON Schema',
         description:
-          "Dedicated extension schema for full autocomplete and validation in your editor.",
+          'Dedicated extension schema for full autocomplete and validation in your editor.',
       },
     ],
-    docsHref: "/docs/other/extensions",
+    docsHref: '/docs/other/extensions',
   },
 };

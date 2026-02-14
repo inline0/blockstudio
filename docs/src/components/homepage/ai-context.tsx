@@ -1,8 +1,8 @@
-import { Bot, FileText, Braces, Zap, Wrench } from "lucide-react";
-import { Button } from "onedocs";
-import { Section, SectionIcon } from "./section";
-import { Feature } from "./feature";
-import { CodeCard } from "./code-card";
+import { Bot, FileText, Braces, Zap, Wrench } from 'lucide-react';
+import { Button } from 'onedocs';
+import { CodeCard } from './code-card';
+import { Feature } from './feature';
+import { Section, SectionIcon } from './section';
 
 const preview = `# Blockstudio
 Context about the Blockstudio WordPress block framework
@@ -34,34 +34,38 @@ Fields are defined in the blockstudio key of block.json...
 const details = [
   {
     icon: FileText,
-    title: "Full documentation",
+    title: 'Full documentation',
     description:
-      "All docs pages compiled into a single file, with code examples preserved and formatting stripped.",
+      'All docs pages compiled into a single file, with code examples preserved and formatting stripped.',
   },
   {
     icon: Braces,
-    title: "JSON schemas",
+    title: 'JSON schemas',
     description:
-      "Block, settings, page, and extension schemas with deduplication of shared definitions.",
+      'Block, settings, page, and extension schemas with deduplication of shared definitions.',
   },
   {
     icon: Zap,
-    title: "Optimized for tokens",
+    title: 'Optimized for tokens',
     description:
-      "~48k tokens. Fits comfortably in modern context windows alongside your own code.",
+      '~48k tokens. Fits comfortably in modern context windows alongside your own code.',
   },
   {
     icon: Wrench,
-    title: "Works everywhere",
+    title: 'Works everywhere',
     description:
-      "Cursor, Claude Code, GitHub Copilot, or any LLM tool that accepts a URL or text file.",
+      'Cursor, Claude Code, GitHub Copilot, or any LLM tool that accepts a URL or text file.',
   },
 ];
 
 export async function AiContext() {
   return (
     <Section
-      icon={<SectionIcon><Bot /></SectionIcon>}
+      icon={
+        <SectionIcon>
+          <Bot />
+        </SectionIcon>
+      }
       title="AI-ready documentation"
       description="A static context file with the full documentation and schemas, built for LLM coding assistants."
     >
@@ -71,10 +75,10 @@ export async function AiContext() {
           description={
             <>
               <p>
-                Blockstudio ships a pre-built{" "}
+                Blockstudio ships a pre-built{' '}
                 <code className="text-fd-foreground font-mono text-sm">
                   blockstudio-llm.txt
-                </code>{" "}
+                </code>{' '}
                 file containing the complete documentation and all JSON schemas.
                 The file is assembled at build time, with repeated definitions
                 deduplicated to keep the token count low.
@@ -91,9 +95,7 @@ export async function AiContext() {
               Learn more about AI integration &rarr;
             </Button>
           }
-          demo={
-            <CodeCard code={preview} lang="markdown" />
-          }
+          demo={<CodeCard code={preview} lang="markdown" />}
         />
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8 sm:gap-10">
           {details.map((detail) => (

@@ -1,4 +1,4 @@
-import { CodeBlock } from "onedocs";
+import { CodeBlock } from 'onedocs';
 
 interface CodeCardProps {
   code: string;

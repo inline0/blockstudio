@@ -1,5 +1,5 @@
-import { CodeBlock, Button } from "onedocs";
-import Link from "next/link";
+import Link from 'next/link';
+import { CodeBlock, Button } from 'onedocs';
 
 export async function HeroLeft() {
   return (
@@ -11,13 +11,18 @@ export async function HeroLeft() {
         <span className="rounded-full bg-fd-primary px-1.5 py-0.5 text-xs font-medium text-fd-primary-foreground">
           New
         </span>
-        <span className="px-3">Introducing Blockstudio 7, now free and open source</span>
+        <span className="px-3">
+          Introducing Blockstudio 7, now free and open source
+        </span>
       </Link>
       <h1 className="text-left text-4xl font-medium leading-tight text-fd-foreground sm:text-5xl">
-        The block framework<br />for WordPress
+        The block framework
+        <br />
+        for WordPress
       </h1>
       <p className="text-left max-w-xl leading-normal text-fd-muted-foreground sm:text-lg sm:leading-normal text-balance mt-4">
-        The fastest way to build custom blocks. Write templates in PHP, Twig, or Blade with 25+ field types and zero JavaScript.
+        The fastest way to build custom blocks. Write templates in PHP, Twig, or
+        Blade with 25+ field types and zero JavaScript.
       </p>
       <div className="flex flex-wrap items-end gap-x-8 gap-y-6 mt-8 w-full">
         <div className="flex-1">

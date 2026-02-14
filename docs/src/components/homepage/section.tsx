@@ -1,4 +1,5 @@
-import type { ReactNode } from "react";
+import type { ReactNode } from 'react';
+import { cn } from '@/lib/cn';
 
 interface SectionProps {
   icon?: ReactNode;
@@ -28,7 +29,7 @@ export function Section({
   fullWidth = false,
 }: SectionProps) {
   return (
-    <section className={`pb-16 sm:pb-20 ${border ? "border-t" : ""}`}>
+    <section className={cn('pb-16 sm:pb-20', border && 'border-t')}>
       {title && (
         <div className="flex flex-wrap items-end justify-between gap-4 px-6 pt-16 pb-6 sm:pt-20 sm:pb-8 lg:px-16 xl:px-20">
           <div>
@@ -45,7 +46,9 @@ export function Section({
           {cta}
         </div>
       )}
-      <div className={fullWidth ? "" : "px-6 lg:px-16 xl:px-20"}>{children}</div>
+      <div className={cn(!fullWidth && 'px-6 lg:px-16 xl:px-20')}>
+        {children}
+      </div>
     </section>
   );
 }
