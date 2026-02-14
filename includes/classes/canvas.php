@@ -159,12 +159,11 @@ class Canvas {
 			'blockstudio-canvas',
 			'blockstudioCanvas',
 			array(
-				'pages'        => $pages,
-				'blocks'       => $blocks,
-				'settings'     => $editor_settings,
-				'updateMethod' => Settings::get( 'dev/canvas/updateMethod' ) ?? 'sse',
-				'restRoot'     => esc_url_raw( rest_url() ),
-				'restNonce'    => wp_create_nonce( 'wp_rest' ),
+				'pages'     => $pages,
+				'blocks'    => $blocks,
+				'settings'  => $editor_settings,
+				'restRoot'  => esc_url_raw( rest_url() ),
+				'restNonce' => wp_create_nonce( 'wp_rest' ),
 			)
 		);
 	}
@@ -366,16 +365,6 @@ class Canvas {
 
 		register_rest_route(
 			'blockstudio/v1',
-			'/canvas/poll',
-			array(
-				'methods'             => 'GET',
-				'callback'            => array( $this, 'poll' ),
-				'permission_callback' => $permission,
-			)
-		);
-
-		register_rest_route(
-			'blockstudio/v1',
 			'/canvas/refresh',
 			array(
 				'methods'             => 'GET',
@@ -403,19 +392,6 @@ class Canvas {
 				'methods'             => 'GET',
 				'callback'            => array( $this, 'stream' ),
 				'permission_callback' => $permission,
-			)
-		);
-	}
-
-	/**
-	 * Lightweight endpoint returning a fingerprint of all watched files.
-	 *
-	 * @return WP_REST_Response
-	 */
-	public function poll(): WP_REST_Response {
-		return new WP_REST_Response(
-			array(
-				'fingerprint' => $this->compute_fingerprint(),
 			)
 		);
 	}
@@ -557,16 +533,21 @@ class Canvas {
 			$new_fingerprint = $this->compute_fingerprint_with_mtimes( $new_mtimes );
 
 			if ( $new_fingerprint !== $fingerprint ) {
-				$changed_blocks = $this->detect_changed_blocks( $prev_mtimes, $new_mtimes, $dir_to_blocks );
+				$changed_blocks = array_values( array_unique( $this->detect_changed_blocks( $prev_mtimes, $new_mtimes, $dir_to_blocks ) ) );
 				$changed_pages  = $this->detect_changed_pages( $prev_mtimes, $new_mtimes, $dir_to_pages );
 
 				$fingerprint = $new_fingerprint;
 				$prev_mtimes = $new_mtimes;
 
+				$refresh = $this->compute_refresh_data( $changed_blocks, $changed_pages );
+
 				$data = array(
-					'fingerprint'   => $fingerprint,
-					'changedBlocks' => array_values( array_unique( $changed_blocks ) ),
-					'changedPages'  => $changed_pages,
+					'fingerprint'       => $fingerprint,
+					'changedBlocks'     => $changed_blocks,
+					'changedPages'      => $changed_pages,
+					'pages'             => $refresh['pages'],
+					'blocks'            => $refresh['blocks'],
+					'blockstudioBlocks' => $refresh['blockstudioBlocks'],
 				);
 
 				echo "event: changed\n";
@@ -673,6 +654,75 @@ class Canvas {
 	}
 
 	/**
+	 * Compute refresh data for changed blocks and pages.
+	 *
+	 * Used by the SSE stream to include refresh data inline,
+	 * avoiding a separate HTTP request and its bootstrap overhead.
+	 *
+	 * @param array<string> $changed_blocks Block names that changed.
+	 * @param array<string> $changed_pages  Page source paths that changed.
+	 * @return array{pages: array, blocks: array, blockstudioBlocks: array, changedBlocks: array<string>}
+	 */
+	private function compute_refresh_data( array $changed_blocks, array $changed_pages ): array {
+		if ( ! empty( $changed_pages ) ) {
+			$page_paths = Pages::get_paths();
+			$discovery  = new Page_Discovery();
+			$sync       = new Page_Sync();
+
+			foreach ( $page_paths as $path ) {
+				if ( ! is_dir( $path ) ) {
+					continue;
+				}
+
+				$discovered = $discovery->discover( $path );
+
+				foreach ( $discovered as $page_data ) {
+					if ( in_array( $page_data['source_path'], $changed_pages, true ) ) {
+						$sync->sync( $page_data );
+					}
+				}
+			}
+		}
+
+		$response_pages = ! empty( $changed_pages )
+			? $this->get_pages_with_content( $changed_pages )
+			: array();
+
+		if ( empty( $changed_blocks ) ) {
+			return array(
+				'pages'             => $response_pages,
+				'blocks'            => array(),
+				'blockstudioBlocks' => array(),
+				'changedBlocks'     => array(),
+			);
+		}
+
+		Build::refresh_blocks();
+
+		$all_blocks = $this->get_blocks_with_content();
+		$blocks     = array_values(
+			array_filter(
+				$all_blocks,
+				function ( $block ) use ( $changed_blocks ) {
+					return in_array( $block['name'], $changed_blocks, true );
+				}
+			)
+		);
+
+		$preload_pages      = $this->get_pages_with_content();
+		$blockstudio_blocks = $this->preload_all_blocks( $preload_pages, $changed_blocks );
+		$block_preloads     = $this->preload_block_items( $all_blocks, $changed_blocks );
+		$blockstudio_blocks = array_merge( $blockstudio_blocks, $block_preloads );
+
+		return array(
+			'pages'             => $response_pages,
+			'blocks'            => $blocks,
+			'blockstudioBlocks' => $blockstudio_blocks,
+			'changedBlocks'     => $changed_blocks,
+		);
+	}
+
+	/**
 	 * Get file paths that changed between two mtime snapshots.
 	 *
 	 * @param array<string, int|false> $old_mtimes Previous mtimes.
@@ -695,16 +745,6 @@ class Canvas {
 		}
 
 		return $changed;
-	}
-
-	/**
-	 * Compute an MD5 fingerprint of all watched file modification times.
-	 *
-	 * @return string The fingerprint hash, or empty string if no files found.
-	 */
-	private function compute_fingerprint(): string {
-		$mtimes = array();
-		return $this->compute_fingerprint_with_mtimes( $mtimes );
 	}
 
 	/**

@@ -67,7 +67,7 @@ Download the latest release zip from [GitHub Releases](https://github.com/inline
 * New: repeater default rows - pre-fill repeater fields with a `default` array of row data on block insert
 * New: blockEditingMode support for file-based pages with page-level defaults and per-element overrides
 * New: postId option for file-based pages to pin pages to a specific WordPress post ID
-* New: canvas view with single-row artboard layout, admin bar toggle, and non-scaling labels
+* New: canvas view with live mode, focus mode, blocks view, and SSE-based instant file change detection
 * New: code field popout option to open editor in separate window
 * New: devtools grabber for copying block template paths on the frontend (hold Cmd+C)
 * New: assets/reset setting to remove WordPress core block styles on the frontend and in the editor

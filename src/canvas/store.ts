@@ -6,7 +6,6 @@ export type CanvasView = 'pages' | 'blocks';
 
 interface CanvasState {
   liveMode: boolean;
-  pollInterval: number;
   fingerprint: string;
   view: CanvasView;
 }
@@ -32,7 +31,6 @@ function saveSettings(state: CanvasState): void {
       STORAGE_KEY,
       JSON.stringify({
         liveMode: state.liveMode,
-        pollInterval: state.pollInterval,
         view: state.view,
       }),
     );
@@ -45,7 +43,6 @@ const persisted = loadSettings();
 
 const DEFAULT_STATE: CanvasState = {
   liveMode: persisted.liveMode ?? false,
-  pollInterval: persisted.pollInterval ?? 2,
   fingerprint: '',
   view: (persisted as any).view === 'blocks' ? 'blocks' : 'pages',
 };
@@ -59,9 +56,6 @@ export const store = createReduxStore(STORE_NAME, {
     switch (action.type) {
       case 'SET_LIVE_MODE':
         next = { ...state, liveMode: action.value as boolean };
-        break;
-      case 'SET_POLL_INTERVAL':
-        next = { ...state, pollInterval: action.value as number };
         break;
       case 'SET_VIEW':
         next = { ...state, view: action.value as CanvasView };
@@ -80,9 +74,6 @@ export const store = createReduxStore(STORE_NAME, {
     setLiveMode(value: boolean) {
       return { type: 'SET_LIVE_MODE' as const, value };
     },
-    setPollInterval(value: number) {
-      return { type: 'SET_POLL_INTERVAL' as const, value };
-    },
     setView(value: CanvasView) {
       return { type: 'SET_VIEW' as const, value };
     },
@@ -94,9 +85,6 @@ export const store = createReduxStore(STORE_NAME, {
   selectors: {
     isLiveMode(state: CanvasState) {
       return state.liveMode;
-    },
-    getPollInterval(state: CanvasState) {
-      return state.pollInterval;
     },
     getView(state: CanvasState) {
       return state.view;

@@ -268,17 +268,6 @@ test.describe('Canvas', () => {
   });
 
   test.describe('REST endpoints', () => {
-    test('poll endpoint returns fingerprint', async () => {
-      const result = await page.evaluate(async () => {
-        const apiFetch = (window as any).wp.apiFetch;
-        return apiFetch({ path: '/blockstudio/v1/canvas/poll' });
-      });
-
-      expect(result).toHaveProperty('fingerprint');
-      expect(typeof result.fingerprint).toBe('string');
-      expect(result.fingerprint.length).toBeGreaterThan(0);
-    });
-
     test('refresh endpoint returns pages and blocks', async () => {
       const result = await page.evaluate(async () => {
         const apiFetch = (window as any).wp.apiFetch;
@@ -349,12 +338,12 @@ test.describe('Canvas', () => {
       expect(result.blocks[0].name).toBe('blockstudio/init');
     });
 
-    test('poll endpoint requires authentication', async ({ browser }) => {
+    test('stream endpoint requires authentication', async ({ browser }) => {
       const anonContext = await browser.newContext();
       const anonPage = await anonContext.newPage();
 
       const response = await anonPage.evaluate(async () => {
-        const res = await fetch('http://localhost:8888/wp-json/blockstudio/v1/canvas/poll');
+        const res = await fetch('http://localhost:8888/wp-json/blockstudio/v1/canvas/stream');
         return { status: res.status };
       });
 
@@ -454,6 +443,15 @@ test.describe('Canvas', () => {
       expect(sseData).toHaveProperty('changedPages');
       expect(sseData.changedBlocks).toEqual([]);
       expect(sseData.changedPages).toEqual(['test-page']);
+
+      expect(sseData).toHaveProperty('pages');
+      expect(sseData).toHaveProperty('blocks');
+      expect(sseData).toHaveProperty('blockstudioBlocks');
+      expect(Array.isArray(sseData.pages)).toBe(true);
+      expect((sseData.pages as any[]).length).toBe(1);
+      expect((sseData.pages as any[])[0].name).toBe('blockstudio-e2e-test');
+      expect(sseData.blocks).toEqual([]);
+      expect(sseData.blockstudioBlocks).toEqual([]);
     });
 
     test('only changed page revision increments after live refresh', async () => {

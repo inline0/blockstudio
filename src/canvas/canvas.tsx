@@ -4,8 +4,6 @@ import { BlockEditorProvider } from '@wordpress/block-editor';
 import { Button, DropdownMenu, MenuGroup, MenuItem } from '@wordpress/components';
 import { useDispatch, useSelect } from '@wordpress/data';
 import { check, closeSmall, moreHorizontal } from '@wordpress/icons';
-import apiFetch from '@wordpress/api-fetch';
-
 import { Artboard } from './artboard';
 import { STORE_NAME, store } from './store';
 import type { CanvasView } from './store';
@@ -35,10 +33,6 @@ interface Transform {
   scale: number;
 }
 
-interface PollResponse {
-  fingerprint: string;
-}
-
 interface PreloadEntry {
   rendered: string;
   blockName: string;
@@ -55,6 +49,9 @@ interface SSEChangedData {
   fingerprint: string;
   changedBlocks?: string[];
   changedPages?: string[];
+  pages?: Page[];
+  blocks?: BlockItem[];
+  blockstudioBlocks?: PreloadEntry[];
 }
 
 const PAGE_ARTBOARD_WIDTH = 1440;
@@ -119,22 +116,11 @@ export const Canvas = ({
     (select) => select(store).isLiveMode(),
     [],
   );
-  const pollInterval = useSelect(
-    (select) => select(store).getPollInterval(),
-    [],
-  );
   const view = useSelect(
     (select) => select(store).getView(),
     [],
   ) as CanvasView;
   const { setLiveMode, setView, setFingerprint } = useDispatch(STORE_NAME);
-  const fingerprintRef = useRef('');
-
-  const fingerprint = useSelect(
-    (select) => select(store).getFingerprint(),
-    [],
-  );
-  fingerprintRef.current = fingerprint;
 
   const isBlocksView = view === 'blocks';
   const artboardWidth = isBlocksView ? BLOCK_ARTBOARD_WIDTH : PAGE_ARTBOARD_WIDTH;
@@ -407,25 +393,12 @@ export const Canvas = ({
     return () => clearTimeout(timer);
   }, [ready, mountedCount, totalItems]);
 
-  const handleRefreshData = useCallback(
-    async (
+  const processRefreshData = useCallback(
+    (
+      data: RefreshResponse,
       newFingerprint: string,
-      changedBlocks?: string[],
       changedPages?: string[],
-    ): Promise<void> => {
-      const isTargeted = changedBlocks !== undefined;
-      const blocksParam = isTargeted ? (changedBlocks || []).join(',') : '';
-
-      let path = '/blockstudio/v1/canvas/refresh';
-      if (isTargeted) {
-        path += `?blocks=${encodeURIComponent(blocksParam)}`;
-        if (changedPages !== undefined) {
-          path += `&pages=${encodeURIComponent((changedPages || []).join(','))}`;
-        }
-      }
-
-      const data = await apiFetch<RefreshResponse>({ path });
-
+    ): void => {
       const changedBlockNames = new Set<string>(
         data.changedBlocks || [],
       );
@@ -571,86 +544,52 @@ export const Canvas = ({
   useEffect(() => {
     if (!liveMode || !ready) return;
 
-    const updateMethod =
-      ((window as any).blockstudioCanvas?.updateMethod as string) ?? 'sse';
+    const canvasData = (window as any).blockstudioCanvas as
+      | { restRoot?: string; restNonce?: string }
+      | undefined;
+    if (!canvasData?.restRoot || !canvasData?.restNonce) return;
 
-    if (updateMethod === 'sse') {
-      const canvasData = (window as any).blockstudioCanvas as
-        | { restRoot?: string; restNonce?: string }
-        | undefined;
-      if (!canvasData?.restRoot || !canvasData?.restNonce) return;
+    const url =
+      canvasData.restRoot +
+      'blockstudio/v1/canvas/stream?_wpnonce=' +
+      encodeURIComponent(canvasData.restNonce);
+    const eventSource = new EventSource(url);
 
-      const url =
-        canvasData.restRoot +
-        'blockstudio/v1/canvas/stream?_wpnonce=' +
-        encodeURIComponent(canvasData.restNonce);
-      const eventSource = new EventSource(url);
-
-      eventSource.addEventListener(
-        'fingerprint',
-        (e: MessageEvent) => {
-          try {
-            const parsed = JSON.parse(e.data);
-            if (parsed.fingerprint) {
-              setFingerprint(parsed.fingerprint);
-            }
-          } catch {
-            // Ignore parse errors.
-          }
-        },
-      );
-
-      eventSource.addEventListener('changed', (e: MessageEvent) => {
-        try {
-          const parsed = JSON.parse(e.data) as SSEChangedData;
-          if (parsed.fingerprint) {
-            handleRefreshData(
-              parsed.fingerprint,
-              parsed.changedBlocks,
-              parsed.changedPages,
-            ).catch(() => {});
-          }
-        } catch {
-          // Ignore parse errors.
-        }
-      });
-
-      return () => {
-        eventSource.close();
-      };
-    }
-
-    let active = true;
-
-    const poll = async (): Promise<void> => {
+    eventSource.addEventListener('fingerprint', (e: MessageEvent) => {
       try {
-        const result = await apiFetch<PollResponse>({
-          path: '/blockstudio/v1/canvas/poll',
-        });
-
-        if (!active || !result.fingerprint) return;
-
-        if (fingerprintRef.current === '') {
-          setFingerprint(result.fingerprint);
-          return;
+        const parsed = JSON.parse(e.data);
+        if (parsed.fingerprint) {
+          setFingerprint(parsed.fingerprint);
         }
-
-        if (result.fingerprint === fingerprintRef.current) return;
-
-        await handleRefreshData(result.fingerprint);
       } catch {
-        // Silently ignore poll errors.
+        // Ignore parse errors.
       }
-    };
+    });
 
-    poll();
-    const interval = setInterval(poll, pollInterval * 1000);
+    eventSource.addEventListener('changed', (e: MessageEvent) => {
+      try {
+        const parsed = JSON.parse(e.data) as SSEChangedData;
+        if (parsed.fingerprint && parsed.blockstudioBlocks) {
+          processRefreshData(
+            {
+              pages: parsed.pages || [],
+              blocks: parsed.blocks || [],
+              blockstudioBlocks: parsed.blockstudioBlocks,
+              changedBlocks: parsed.changedBlocks || [],
+            },
+            parsed.fingerprint,
+            parsed.changedPages,
+          );
+        }
+      } catch {
+        // Ignore parse errors.
+      }
+    });
 
     return () => {
-      active = false;
-      clearInterval(interval);
+      eventSource.close();
     };
-  }, [liveMode, pollInterval, ready, setFingerprint, handleRefreshData]);
+  }, [liveMode, ready, setFingerprint, processRefreshData]);
 
   const hasContent =
     (view === 'pages' && currentPages.length > 0) ||
