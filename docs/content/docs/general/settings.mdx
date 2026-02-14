@@ -51,12 +51,6 @@ add_filter('blockstudio/settings/library', '__return_true');
 
 Options set via the `blockstudio/settings/${setting}` filter will override the ones set via the `blockstudio.json` file. Both methods can be used together.
 
-## Via Admin
-
-Allowed users from the `blockstudio/settings/users/ids` and `blockstudio/settings/users/roles` filters are able to change the settings visually inside the admin area. If the `Save as JSON` checkbox is checked, the settings will be saved to the JSON file, otherwise they will be saved to the database into the `options` table.
-
-Settings set via filters will be grayed out and disabled inside the admin area.
-
 ## Available Settings
 
 ### users
