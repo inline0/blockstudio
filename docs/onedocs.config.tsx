@@ -16,6 +16,7 @@ export default defineConfig({
   nav: {
     links: [
       { label: "Docs", href: "/docs" },
+      { label: "AI", href: "/ai" },
       { label: "Blog", href: "/blog" },
     ],
     github: "inline0/blockstudio",
