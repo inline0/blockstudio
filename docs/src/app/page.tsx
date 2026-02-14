@@ -1,5 +1,5 @@
-import { CTASection } from "onedocs";
 import { SiteLayout } from "@/components/site-layout";
+import { PlusSection } from "@/components/plus-section";
 import { HeroLeft } from "@/components/homepage/hero-left";
 import { HeroBlocks } from "@/components/hero-blocks";
 import { HowItWorks } from "@/components/homepage/how-it-works";
@@ -103,11 +103,7 @@ export default function Home() {
               <AiContext />
               <FAQ />
               <div className="border-t">
-                <CTASection
-                  title="Ready to build?"
-                  description="Create your first block in under a minute."
-                  cta={{ label: "Get Started", href: "/docs/general/getting-started" }}
-                />
+                <PlusSection />
               </div>
             </div>
           </div>

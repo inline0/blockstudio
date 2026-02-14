@@ -1,4 +1,5 @@
-import { Button, CTASection } from "onedocs";
+import { Button } from "onedocs";
+import { PlusSection } from "./plus-section";
 import { Feature } from "./homepage/feature";
 import { CodeCard } from "./homepage/code-card";
 import { CodeTabs } from "./homepage/code-tabs";
@@ -108,11 +109,7 @@ export async function FeaturePage({ data }: { data: FeaturePageData }) {
       {detailsRest.length > 0 && <DetailGrid details={detailsRest} />}
 
       <div className="border-t">
-        <CTASection
-          title="Ready to build?"
-          description="Create your first block in under a minute."
-          cta={{ label: "Get Started", href: data.docsHref }}
-        />
+        <PlusSection />
       </div>
 
       <footer className="border-t px-6 py-4 flex items-center justify-between gap-4">

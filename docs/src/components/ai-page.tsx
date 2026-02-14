@@ -17,7 +17,8 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import type { ReactNode } from "react";
-import { CTASection, Button } from "onedocs";
+import { Button } from "onedocs";
+import { PlusSection } from "./plus-section";
 import { Section, SectionIcon } from "./homepage/section";
 import { Feature } from "./homepage/feature";
 import { CodeCard } from "./homepage/code-card";
@@ -562,11 +563,7 @@ export async function AiPage() {
       </Section>
 
       <div className="border-t">
-        <CTASection
-          title="Ready to build with AI?"
-          description="Create your first block in under a minute."
-          cta={{ label: "Get Started", href: "/docs/general/getting-started" }}
-        />
+        <PlusSection />
       </div>
     </div>
   );
