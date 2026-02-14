@@ -148,13 +148,13 @@ const benefits = [
     icon: ArrowDownRight,
     title: 'Less output to generate',
     description:
-      'No comment delimiters, no duplicated class names, no wrapper markup. The agent writes what it means.',
+      'Agents write plain HTML without comment delimiters, duplicated classes, or wrapper markup. The parser handles the rest.',
   },
   {
     icon: ShieldCheck,
     title: 'Less to get wrong',
     description:
-      'WordPress block validation fails on a single mismatched class or missing attribute. HTML has no such constraint.',
+      'Block validation fails on a single mismatched attribute. With HTML input, the parser guarantees valid output every time.',
   },
   {
     icon: Zap,
@@ -173,13 +173,13 @@ export function TokenComparison() {
         </SectionIcon>
       }
       title="3x fewer tokens per page"
-      description="WordPress stores blocks as serialized comments with duplicated markup and class names. Blockstudio pages are plain HTML. Agents generate less, get it right more often."
+      description="Agents write plain HTML. Blockstudio's parser automatically converts it to serialized WordPress block markup on sync. Less to generate, less to get wrong."
     >
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
         <div className="flex flex-col gap-3">
           <ComparisonHeader
             title="Blockstudio"
-            subtitle="Plain HTML template"
+            subtitle="What agents write"
             tokens="~370 tokens"
             highlight
           />
@@ -191,7 +191,7 @@ export function TokenComparison() {
         <div className="flex flex-col gap-3">
           <ComparisonHeader
             title="WordPress"
-            subtitle="Serialized block markup"
+            subtitle="What the parser generates"
             tokens="~1,100 tokens"
           />
           <ExpandableCode>
