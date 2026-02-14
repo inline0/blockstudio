@@ -1,6 +1,6 @@
 import { HomeLayout as FumaHomeLayout } from "fumadocs-ui/layouts/home";
 import { createBaseOptions } from "onedocs";
-import { Blocks, FileText, LayoutGrid, Puzzle } from "lucide-react";
+import { Blocks, BookOpen, FileText, LayoutGrid, Newspaper, Puzzle } from "lucide-react";
 import type { ReactNode } from "react";
 import type { LinkItemType } from "@fumadocs/ui/link-item";
 import { FeaturesMenu } from "./features-menu";
@@ -51,7 +51,13 @@ function getLayoutOptions() {
   const base = createBaseOptions(config);
   return {
     ...base,
-    links: [featuresMenuDesktop, featuresMenuMobile, ...(base.links ?? []), plusBadgeNav],
+    links: [
+      featuresMenuDesktop,
+      featuresMenuMobile,
+      { text: "Docs", url: "/docs", icon: <BookOpen /> },
+      { text: "Blog", url: "/blog", icon: <Newspaper /> },
+      plusBadgeNav,
+    ],
   };
 }
 
