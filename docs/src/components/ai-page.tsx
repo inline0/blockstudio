@@ -3,11 +3,10 @@ import {
   FileJson,
   FormInput,
   Code,
-  FlaskConical,
   Monitor,
+  MousePointerClick,
   Paintbrush,
   LayoutGrid,
-  Puzzle,
   Braces,
   Database,
 } from "lucide-react";
@@ -65,10 +64,10 @@ const whyFilesystem = [
 
 const detailCards = [
   {
-    icon: FileJson,
-    title: "JSON Schema autocomplete",
+    icon: Code,
+    title: "Two files per block",
     description:
-      "Every config file is backed by a schema. Agents get validated output and editors get autocomplete.",
+      "A JSON config and a template. That's the entire block. Small surface area means agents get it right on the first try.",
   },
   {
     icon: FormInput,
@@ -77,22 +76,22 @@ const detailCards = [
       "Text, image, repeater, color, date, relationship, and more. All defined in JSON, all available as template variables.",
   },
   {
-    icon: Code,
+    icon: LayoutGrid,
     title: "Three template engines",
     description:
       "PHP, Twig, or Blade. Agents pick the syntax that fits the project. No lock-in.",
   },
   {
-    icon: FlaskConical,
-    title: "Eval suite",
+    icon: FolderTree,
+    title: "Auto-registration",
     description:
-      "Automated snapshot tests compare AI-generated blocks against reference output. Verify correctness at scale.",
+      "Drop files in a directory and blocks register themselves. No manual registration, no config files to update.",
   },
   {
     icon: Monitor,
     title: "Canvas live preview",
     description:
-      "Blocks render in a live preview canvas inside the editor. Agents can verify their work visually.",
+      "Blocks render in a live preview canvas inside the editor. See the result the moment files are saved.",
   },
   {
     icon: Paintbrush,
@@ -101,16 +100,16 @@ const detailCards = [
       "Tailwind v4 compiles per-block with zero config. Agents write utility classes and styles just work.",
   },
   {
-    icon: LayoutGrid,
-    title: "File-based patterns",
+    icon: MousePointerClick,
+    title: "Element Grabber",
     description:
-      "Reusable block patterns are template files. Agents compose pages from existing patterns instantly.",
+      "Cmd+click any element on the frontend to copy its HTML and file path. Paste it into your AI chat as instant context.",
   },
   {
-    icon: Puzzle,
-    title: "Extension system",
+    icon: FileJson,
+    title: "HTML to blocks",
     description:
-      "Add fields to any core or third-party block with a JSON file. No PHP, no JavaScript, no templates.",
+      "Pages and patterns are plain HTML files. Blockstudio converts them to native WordPress blocks automatically.",
   },
 ];
 
