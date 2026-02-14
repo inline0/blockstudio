@@ -168,16 +168,6 @@ add_filter('blockstudio/settings/block_editor/css_variables', function() {
 });
 ```
 
-### library
-
-This filter allows you to enable the block library.
-
-```php title="functions.php"
-add_filter('blockstudio/settings/library', function() {
-  return true;
-});
-```
-
 ### ai/enable_context_generation
 
 This filter allows you to enable or disable context file generation for LLM tool integration. When enabled, the context file assembles up-to-date block data, Blockstudio settings of the current install, all relevant schemas, and Blockstudio documentation into a single source for use with AI development tools.
