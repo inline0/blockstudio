@@ -1,4 +1,5 @@
 import { SiteLayout } from "@/components/site-layout";
+import { SiteFooter } from "@/components/site-footer";
 import type { ReactNode } from "react";
 
 export default function AiLayout({ children }: { children: ReactNode }) {
@@ -8,6 +9,7 @@ export default function AiLayout({ children }: { children: ReactNode }) {
         <div className="absolute inset-0 border-x pointer-events-none" />
         <div className="relative">{children}</div>
       </main>
+      <SiteFooter />
     </SiteLayout>
   );
 }

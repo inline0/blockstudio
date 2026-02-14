@@ -16,6 +16,7 @@ import { AiContext } from "@/components/homepage/ai-context";
 import { DevTools } from "@/components/homepage/dev-tools";
 import { Composition } from "@/components/homepage/composition";
 import { FAQ } from "@/components/homepage/faq";
+import { SiteFooter } from "@/components/site-footer";
 import config from "../../onedocs.config";
 
 const { homepage } = config;
@@ -112,13 +113,7 @@ export default function Home() {
           </div>
         </div>
 
-        <footer className="relative mx-auto w-full max-w-(--fd-layout-width)">
-          <div className="border-x border-t px-6 py-4 flex items-center justify-between gap-4">
-            <p className="text-sm text-fd-muted-foreground">
-              &copy; {new Date().getFullYear()} {config.title}
-            </p>
-          </div>
-        </footer>
+        <SiteFooter />
       </main>
     </SiteLayout>
   );
