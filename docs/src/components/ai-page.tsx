@@ -331,7 +331,7 @@ const detailCards = [
 
 function TerminalGraphic() {
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
+    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
       <Panel className="p-5 sm:p-6 font-mono text-[13px] leading-relaxed">
         <div className="flex items-center gap-2 mb-4">
           <div className="size-3 rounded-full bg-fd-muted-foreground/20" />
@@ -459,21 +459,20 @@ export async function AiPage() {
   return (
     <div className="flex flex-col">
       <section className="px-6 pt-16 pb-12 sm:pt-24 sm:pb-16 lg:px-16 xl:px-20">
-        <div className="max-w-2xl">
-          <span className="inline-flex items-center gap-1.5 rounded-full border border-fd-border bg-fd-secondary/50 pl-1 pr-1 py-1 text-xs text-fd-muted-foreground mb-6">
-            <span className="rounded-full bg-fd-primary/5 px-1.5 py-0.5 text-xs font-medium text-fd-primary">
-              Build with AI
+        <div className="grid grid-cols-1 xl:grid-cols-[3fr_7fr] gap-12 xl:gap-16 xl:items-start">
+          <div>
+            <span className="inline-flex items-center gap-1.5 rounded-full border border-fd-border bg-fd-secondary/50 pl-1 pr-1 py-1 text-xs text-fd-muted-foreground mb-6">
+              <span className="rounded-full bg-fd-primary/5 px-1.5 py-0.5 text-xs font-medium text-fd-primary">
+                Build with AI
+              </span>
             </span>
-          </span>
-          <h1 className="text-4xl font-medium leading-tight text-fd-foreground sm:text-5xl text-balance">
-            AI-native block development
-          </h1>
-          <p className="mt-4 text-fd-muted-foreground sm:text-lg sm:leading-normal text-balance">
-            Blockstudio's file-based architecture means AI coding agents can scaffold blocks, pages, and patterns from a single prompt. No GUI, no database, just files.
-          </p>
-        </div>
-
-        <div className="mt-12">
+            <h1 className="text-4xl font-medium leading-tight text-fd-foreground sm:text-5xl text-balance">
+              AI-native block development
+            </h1>
+            <p className="mt-4 text-fd-muted-foreground sm:text-lg sm:leading-normal text-balance">
+              Blockstudio's file-based architecture means AI coding agents can scaffold blocks, pages, and patterns from a single prompt. No GUI, no database, just files.
+            </p>
+          </div>
           <TerminalGraphic />
         </div>
       </section>
