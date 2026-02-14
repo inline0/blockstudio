@@ -23,8 +23,6 @@ import { Feature } from "./homepage/feature";
 import { CodeCard } from "./homepage/code-card";
 import { ExpandableCode } from "./expandable-code";
 
-const sectionPadding = "px-6 py-16 sm:py-20 lg:px-16 xl:px-20";
-
 function IconBox({
   children,
   size = "md",
@@ -53,30 +51,6 @@ function Panel({
   return (
     <div className={`rounded-2xl bg-fd-secondary/50${className ? ` ${className}` : ""}`}>
       {children}
-    </div>
-  );
-}
-
-function SectionHeader({
-  icon,
-  title,
-  description,
-  className,
-}: {
-  icon: ReactNode;
-  title: string;
-  description: string;
-  className?: string;
-}) {
-  return (
-    <div className={`mb-10${className ? ` ${className}` : ""}`}>
-      <SectionIcon>{icon}</SectionIcon>
-      <h2 className="text-2xl font-semibold tracking-tight text-fd-foreground sm:text-3xl">
-        {title}
-      </h2>
-      <p className="mt-3 text-fd-muted-foreground text-balance">
-        {description}
-      </p>
     </div>
   );
 }
@@ -477,22 +451,19 @@ export async function AiPage() {
         </div>
       </section>
 
-      <section className={sectionPadding}>
+      <Section>
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-10 sm:gap-8">
           {whyFilesystem.map((item) => (
             <InfoCard key={item.title} {...item} />
           ))}
         </div>
-      </section>
+      </Section>
 
-      <section className={sectionPadding}>
-        <SectionHeader
-          icon={<Gauge />}
-          title="3x fewer tokens per page"
-          description="WordPress stores blocks as serialized comments with duplicated markup and class names. Blockstudio pages are plain HTML. Agents generate less, get it right more often."
-          className="max-w-2xl"
-        />
-
+      <Section
+        icon={<SectionIcon><Gauge /></SectionIcon>}
+        title="3x fewer tokens per page"
+        description="WordPress stores blocks as serialized comments with duplicated markup and class names. Blockstudio pages are plain HTML. Agents generate less, get it right more often."
+      >
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
           <div className="flex flex-col gap-3">
             <ComparisonHeader title="Blockstudio" subtitle="Plain HTML template" tokens="~370 tokens" highlight />
@@ -530,7 +501,7 @@ export async function AiPage() {
             </div>
           ))}
         </div>
-      </section>
+      </Section>
 
       <Section
         icon={<SectionIcon><Braces /></SectionIcon>}
@@ -568,12 +539,11 @@ export async function AiPage() {
         />
       </Section>
 
-      <section className={sectionPadding}>
-        <SectionHeader
-          icon={<Wrench />}
-          title="Built for the AI workflow"
-          description="Every feature in Blockstudio is a file an agent can read, write, or modify. No clicks required."
-        />
+      <Section
+        icon={<SectionIcon><Wrench /></SectionIcon>}
+        title="Built for the AI workflow"
+        description="Every feature in Blockstudio is a file an agent can read, write, or modify. No clicks required."
+      >
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8 sm:gap-10">
           {detailCards.map((card) => (
             <div key={card.title} className="flex flex-col gap-2 text-sm/7">
@@ -589,7 +559,7 @@ export async function AiPage() {
             </div>
           ))}
         </div>
-      </section>
+      </Section>
 
       <div className="border-t">
         <CTASection
