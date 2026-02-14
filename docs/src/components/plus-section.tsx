@@ -9,55 +9,55 @@ const includes = [
 
 function PlusGraphic() {
   return (
-    <div className="relative flex h-full min-h-[320px] overflow-hidden rounded-2xl border border-[oklch(0.85_0.18_85/0.12)] bg-[oklch(0.85_0.18_85/0.03)]">
-      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_70%_20%,oklch(0.85_0.18_85/0.08),transparent_60%)]" />
+    <div className="relative flex h-full min-h-[320px] overflow-hidden rounded-2xl border border-[oklch(0.85_0.18_85/0.08)] bg-[oklch(0.85_0.18_85/0.02)]">
+      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_70%_20%,oklch(0.85_0.18_85/0.05),transparent_60%)]" />
 
       <div className="relative grid w-full grid-cols-2 gap-2.5 p-5 sm:p-6">
-        <div className="col-span-2 flex flex-col gap-3 rounded-xl border border-[oklch(0.85_0.18_85/0.15)] bg-[oklch(0.85_0.18_85/0.04)] p-4">
+        <div className="col-span-2 flex flex-col gap-3 rounded-xl border border-[oklch(0.85_0.18_85/0.03)] bg-[oklch(0.85_0.18_85/0.005)] p-4">
           <div className="flex items-center gap-2">
-            <div className="size-2.5 rounded-full bg-[oklch(0.85_0.18_85/0.5)]" />
-            <span className="font-mono text-xs text-[oklch(0.85_0.18_85/0.5)]">block.json</span>
+            <div className="size-2.5 rounded-full bg-[oklch(0.85_0.18_85/0.3)]" />
+            <span className="font-mono text-xs text-[oklch(0.85_0.18_85)]">block.json</span>
           </div>
           <div className="flex flex-col gap-1.5 font-mono text-xs leading-relaxed">
-            <span className="text-fd-muted-foreground">{"{"}</span>
-            <span className="pl-4 text-fd-muted-foreground">
+            <span className="text-fd-muted-foreground/60">{"{"}</span>
+            <span className="pl-4 text-fd-muted-foreground/60">
               &quot;name&quot;: <span className="text-[oklch(0.85_0.18_85)]">&quot;starter/hero&quot;</span>,
             </span>
-            <span className="pl-4 text-fd-muted-foreground">
+            <span className="pl-4 text-fd-muted-foreground/60">
               &quot;title&quot;: <span className="text-[oklch(0.85_0.18_85)]">&quot;Hero&quot;</span>,
             </span>
-            <span className="pl-4 text-fd-muted-foreground">&quot;blockstudio&quot;: {"{ ... }"}</span>
-            <span className="text-fd-muted-foreground">{"}"}</span>
+            <span className="pl-4 text-fd-muted-foreground/60">&quot;blockstudio&quot;: {"{ ... }"}</span>
+            <span className="text-fd-muted-foreground/60">{"}"}</span>
           </div>
         </div>
 
-        <div className="flex flex-col gap-3 rounded-xl border border-[oklch(0.85_0.18_85/0.1)] bg-[oklch(0.85_0.18_85/0.03)] p-4">
+        <div className="flex flex-col gap-3 rounded-xl border border-[oklch(0.85_0.18_85/0.02)] bg-[oklch(0.85_0.18_85/0.003)] p-4">
           <div className="flex items-center gap-2">
-            <div className="size-2.5 rounded-full bg-[oklch(0.85_0.18_85/0.35)]" />
-            <span className="font-mono text-xs text-[oklch(0.85_0.18_85/0.4)]">index.php</span>
+            <div className="size-2.5 rounded-full bg-[oklch(0.85_0.18_85/0.2)]" />
+            <span className="font-mono text-xs text-[oklch(0.85_0.18_85)]">index.php</span>
           </div>
           <div className="flex flex-col gap-1">
-            <div className="h-2 w-3/4 rounded-full bg-[oklch(0.85_0.18_85/0.08)]" />
-            <div className="h-2 w-full rounded-full bg-[oklch(0.85_0.18_85/0.06)]" />
-            <div className="h-2 w-1/2 rounded-full bg-[oklch(0.85_0.18_85/0.04)]" />
+            <div className="h-2 w-3/4 rounded-full bg-[oklch(0.85_0.18_85/0.05)]" />
+            <div className="h-2 w-full rounded-full bg-[oklch(0.85_0.18_85/0.04)]" />
+            <div className="h-2 w-1/2 rounded-full bg-[oklch(0.85_0.18_85/0.03)]" />
           </div>
         </div>
 
-        <div className="flex flex-col gap-3 rounded-xl border border-[oklch(0.85_0.18_85/0.1)] bg-[oklch(0.85_0.18_85/0.03)] p-4">
+        <div className="flex flex-col gap-3 rounded-xl border border-[oklch(0.85_0.18_85/0.02)] bg-[oklch(0.85_0.18_85/0.003)] p-4">
           <div className="flex items-center gap-2">
-            <div className="size-2.5 rounded-full bg-[oklch(0.85_0.18_85/0.35)]" />
-            <span className="font-mono text-xs text-[oklch(0.85_0.18_85/0.4)]">style.css</span>
+            <div className="size-2.5 rounded-full bg-[oklch(0.85_0.18_85/0.2)]" />
+            <span className="font-mono text-xs text-[oklch(0.85_0.18_85)]">style.css</span>
           </div>
           <div className="flex flex-col gap-1">
-            <div className="h-2 w-full rounded-full bg-[oklch(0.85_0.18_85/0.08)]" />
-            <div className="h-2 w-2/3 rounded-full bg-[oklch(0.85_0.18_85/0.06)]" />
-            <div className="h-2 w-5/6 rounded-full bg-[oklch(0.85_0.18_85/0.04)]" />
+            <div className="h-2 w-full rounded-full bg-[oklch(0.85_0.18_85/0.05)]" />
+            <div className="h-2 w-2/3 rounded-full bg-[oklch(0.85_0.18_85/0.04)]" />
+            <div className="h-2 w-5/6 rounded-full bg-[oklch(0.85_0.18_85/0.03)]" />
           </div>
         </div>
 
-        <div className="col-span-2 flex items-center justify-between rounded-xl border border-[oklch(0.85_0.18_85/0.2)] bg-[oklch(0.85_0.18_85/0.06)] px-4 py-3">
-          <span className="text-xs font-medium text-[oklch(0.85_0.18_85/0.7)]">150+ templates included</span>
-          <span className="rounded-full bg-[oklch(0.85_0.18_85/0.15)] px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-[oklch(0.85_0.18_85)]">Plus</span>
+        <div className="col-span-2 flex items-center justify-between rounded-xl border border-[oklch(0.85_0.18_85/0.03)] bg-[oklch(0.85_0.18_85/0.005)] px-4 py-3">
+          <span className="text-xs font-medium text-[oklch(0.85_0.18_85)]">150+ templates included</span>
+          <span className="rounded-full bg-[oklch(0.85_0.18_85/0.08)] px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-[oklch(0.85_0.18_85)]">Plus</span>
         </div>
       </div>
     </div>

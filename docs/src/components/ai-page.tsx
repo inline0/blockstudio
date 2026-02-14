@@ -268,9 +268,9 @@ const detailCards = [
   },
   {
     icon: LayoutGrid,
-    title: "Three template engines",
+    title: "JSON Schema validation",
     description:
-      "PHP, Twig, or Blade. Agents pick the syntax that fits the project. No lock-in.",
+      "Every config file has a JSON Schema. Agents are great at following schema rules, so blocks come out valid on the first try.",
   },
   {
     icon: FolderTree,
@@ -543,7 +543,7 @@ export async function AiPage() {
       <Section
         icon={<SectionIcon><Wrench /></SectionIcon>}
         title="Built for the AI workflow"
-        description="Every feature in Blockstudio is a file an agent can read, write, or modify. No clicks required."
+        description="Blocks, pages, patterns, settings. Everything is a file an agent can read, write, and modify."
       >
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8 sm:gap-10">
           {detailCards.map((card) => (
