@@ -49,7 +49,7 @@ export default function BlogIndex() {
           <Link
             key={post.info.path}
             href={`/blog/${blogSlug(post.info.path)}`}
-            className="flex flex-col rounded-2xl border bg-fd-card p-4 shadow-sm transition-colors hover:bg-fd-accent hover:text-fd-accent-foreground no-underline"
+            className="flex flex-col rounded-2xl border bg-fd-card p-4 shadow-sm transition-colors hover:bg-fd-secondary/50 no-underline"
           >
             <BlogImage title={post.title} />
             <p className="mt-4 font-medium text-pretty">{post.title}</p>
