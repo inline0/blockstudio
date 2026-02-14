@@ -9,11 +9,17 @@ import {
   LayoutGrid,
   Braces,
   Database,
+  ArrowDownRight,
+  ShieldCheck,
+  Zap,
+  Gauge,
+  Wrench,
 } from "lucide-react";
 import { CTASection, Button } from "onedocs";
 import { Section, SectionIcon } from "./homepage/section";
 import { Feature } from "./homepage/feature";
 import { CodeCard } from "./homepage/code-card";
+import { ExpandableCode } from "./expandable-code";
 
 const llmPreview = `# Blockstudio
 Context for LLM coding assistants.
@@ -40,6 +46,99 @@ All field values are available as top-level
 variables: $text, $image, $repeater, etc.
 
 ~48,000 tokens — fits in any modern context.`;
+
+const blockstudioPageCode = `<h1>Build Websites That Convert</h1>
+<p>The all-in-one platform for creating
+beautiful, high-performance landing pages.</p>
+
+<block name="core/columns">
+  <block name="core/column">
+    <h3>Lightning Fast</h3>
+    <p>Pages load in under one second.</p>
+  </block>
+  <block name="core/column">
+    <h3>Easy to Use</h3>
+    <p>No technical skills required.</p>
+  </block>
+  <block name="core/column">
+    <h3>SEO Optimized</h3>
+    <p>Built-in best practices from day one.</p>
+  </block>
+</block>
+
+<img src="/dashboard.jpg" alt="Dashboard" />
+
+<ul>
+  <li>Drag-and-drop editor</li>
+  <li>A/B testing built in</li>
+  <li>Analytics dashboard</li>
+</ul>`;
+
+const wordpressPageCode = `<!-- wp:heading {"level":1} -->
+<h1 class="wp-block-heading">Build Websites
+That Convert</h1>
+<!-- /wp:heading -->
+
+<!-- wp:paragraph -->
+<p>The all-in-one platform for creating
+beautiful, high-performance landing pages.</p>
+<!-- /wp:paragraph -->
+
+<!-- wp:columns -->
+<div class="wp-block-columns">
+<!-- wp:column -->
+<div class="wp-block-column">
+<!-- wp:heading {"level":3} -->
+<h3 class="wp-block-heading">Lightning Fast</h3>
+<!-- /wp:heading -->
+<!-- wp:paragraph -->
+<p>Pages load in under one second.</p>
+<!-- /wp:paragraph -->
+</div>
+<!-- /wp:column -->
+<!-- wp:column -->
+<div class="wp-block-column">
+<!-- wp:heading {"level":3} -->
+<h3 class="wp-block-heading">Easy to Use</h3>
+<!-- /wp:heading -->
+<!-- wp:paragraph -->
+<p>No technical skills required.</p>
+<!-- /wp:paragraph -->
+</div>
+<!-- /wp:column -->
+<!-- wp:column -->
+<div class="wp-block-column">
+<!-- wp:heading {"level":3} -->
+<h3 class="wp-block-heading">SEO Optimized</h3>
+<!-- /wp:heading -->
+<!-- wp:paragraph -->
+<p>Built-in best practices from day one.</p>
+<!-- /wp:paragraph -->
+</div>
+<!-- /wp:column -->
+</div>
+<!-- /wp:columns -->
+
+<!-- wp:image {"url":"/dashboard.jpg",
+"alt":"Dashboard"} -->
+<figure class="wp-block-image">
+<img src="/dashboard.jpg" alt="Dashboard"/>
+</figure>
+<!-- /wp:image -->
+
+<!-- wp:list {"ordered":false} -->
+<ul class="wp-block-list">
+<!-- wp:list-item -->
+<li>Drag-and-drop editor</li>
+<!-- /wp:list-item -->
+<!-- wp:list-item -->
+<li>A/B testing built in</li>
+<!-- /wp:list-item -->
+<!-- wp:list-item -->
+<li>Analytics dashboard</li>
+<!-- /wp:list-item -->
+</ul>
+<!-- /wp:list -->`;
 
 const whyFilesystem = [
   {
@@ -245,7 +344,7 @@ export async function AiPage() {
       <section className="px-6 pt-16 pb-12 sm:pt-24 sm:pb-16 lg:px-16 xl:px-20">
         <div className="mx-auto max-w-4xl text-center flex flex-col items-center">
           <span className="inline-flex items-center gap-1.5 rounded-full border border-fd-border bg-fd-secondary/50 pl-1 pr-1 py-1 text-xs text-fd-muted-foreground mb-6">
-            <span className="rounded-full bg-fd-primary px-1.5 py-0.5 text-xs font-medium text-fd-primary-foreground">
+            <span className="rounded-full bg-fd-primary/5 px-1.5 py-0.5 text-xs font-medium text-fd-primary">
               Build with AI
             </span>
           </span>
@@ -277,6 +376,93 @@ export async function AiPage() {
               </p>
             </div>
           ))}
+        </div>
+      </section>
+
+      <section className="px-6 py-16 sm:py-20 lg:px-16 xl:px-20">
+        <div className="mb-10 max-w-2xl">
+          <SectionIcon><Gauge /></SectionIcon>
+          <h2 className="text-2xl font-semibold tracking-tight text-fd-foreground sm:text-3xl">
+            3x fewer tokens per page
+          </h2>
+          <p className="mt-3 text-fd-muted-foreground text-balance">
+            WordPress stores blocks as serialized comments with duplicated
+            markup and class names. Blockstudio pages are plain HTML. Agents
+            generate less, get it right more often.
+          </p>
+        </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
+          <div className="flex flex-col gap-3">
+            <div className="flex items-center justify-between px-1">
+              <div className="flex items-center gap-3">
+                <div className="flex size-8 items-center justify-center rounded-lg border bg-fd-secondary text-fd-primary [&_svg]:size-4">
+                  <Code />
+                </div>
+                <div>
+                  <h3 className="text-sm font-semibold text-fd-foreground">Blockstudio</h3>
+                  <p className="text-xs text-fd-muted-foreground">Plain HTML template</p>
+                </div>
+              </div>
+              <span className="rounded-full bg-emerald-400/15 px-2.5 py-1 text-xs font-medium text-emerald-400">~370 tokens</span>
+            </div>
+            <div className="rounded-2xl bg-fd-secondary/50 overflow-hidden">
+              <CodeCard code={blockstudioPageCode} lang="html" />
+            </div>
+          </div>
+
+          <div className="flex flex-col gap-3">
+            <div className="flex items-center justify-between px-1">
+              <div className="flex items-center gap-3">
+                <div className="flex size-8 items-center justify-center rounded-lg border bg-fd-secondary text-fd-muted-foreground [&_svg]:size-4">
+                  <Code />
+                </div>
+                <div>
+                  <h3 className="text-sm font-semibold text-fd-foreground">WordPress</h3>
+                  <p className="text-xs text-fd-muted-foreground">Serialized block markup</p>
+                </div>
+              </div>
+              <span className="rounded-full bg-fd-muted-foreground/15 px-2.5 py-1 text-xs font-medium text-fd-muted-foreground">~1,100 tokens</span>
+            </div>
+            <ExpandableCode>
+              <div className="rounded-2xl bg-fd-secondary/50 overflow-hidden">
+                <CodeCard code={wordpressPageCode} lang="html" />
+              </div>
+            </ExpandableCode>
+          </div>
+        </div>
+
+        <div className="mt-8 grid grid-cols-1 sm:grid-cols-3 gap-6 sm:gap-8">
+          <div className="flex flex-col gap-3 text-sm">
+            <div className="flex size-10 items-center justify-center rounded-lg border bg-fd-secondary text-fd-primary [&_svg]:size-5">
+              <ArrowDownRight />
+            </div>
+            <span className="font-semibold text-fd-foreground">Less output to generate</span>
+            <span className="text-fd-muted-foreground text-pretty">
+              No comment delimiters, no duplicated class names, no wrapper
+              markup. The agent writes what it means.
+            </span>
+          </div>
+          <div className="flex flex-col gap-3 text-sm">
+            <div className="flex size-10 items-center justify-center rounded-lg border bg-fd-secondary text-fd-primary [&_svg]:size-5">
+              <ShieldCheck />
+            </div>
+            <span className="font-semibold text-fd-foreground">Less to get wrong</span>
+            <span className="text-fd-muted-foreground text-pretty">
+              WordPress block validation fails on a single mismatched class or
+              missing attribute. HTML has no such constraint.
+            </span>
+          </div>
+          <div className="flex flex-col gap-3 text-sm">
+            <div className="flex size-10 items-center justify-center rounded-lg border bg-fd-secondary text-fd-primary [&_svg]:size-5">
+              <Zap />
+            </div>
+            <span className="font-semibold text-fd-foreground">Faster and cheaper</span>
+            <span className="text-fd-muted-foreground text-pretty">
+              Fewer output tokens means faster responses and lower API costs
+              across every model and provider.
+            </span>
+          </div>
         </div>
       </section>
 
@@ -318,6 +504,7 @@ export async function AiPage() {
 
       <section className="px-6 py-16 sm:py-20 lg:px-16 xl:px-20">
         <div className="mb-10">
+          <SectionIcon><Wrench /></SectionIcon>
           <h2 className="text-2xl font-semibold tracking-tight text-fd-foreground sm:text-3xl">
             Built for the AI workflow
           </h2>

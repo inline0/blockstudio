@@ -2,7 +2,7 @@ import { DocsLayout as FumaDocsLayout } from "fumadocs-ui/layouts/docs";
 import { createBaseOptions } from "onedocs";
 import type { ReactNode } from "react";
 import type { LinkItemType } from "@fumadocs/ui/link-item";
-import { BookOpen, Bot, Newspaper } from "lucide-react";
+import { BookOpen, Newspaper } from "lucide-react";
 import { source } from "@/lib/source";
 import { PlusBadge } from "@/components/plus-badge";
 import config from "../../../onedocs.config";
@@ -19,7 +19,6 @@ function getLayoutOptions() {
     ...base,
     links: [
       { text: "Docs", url: "/docs", icon: <BookOpen /> },
-      { text: "Build with AI", url: "/ai", icon: <Bot /> },
       { text: "Blog", url: "/blog", icon: <Newspaper /> },
       plusBadgeNav,
     ],

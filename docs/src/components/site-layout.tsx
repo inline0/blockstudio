@@ -54,8 +54,8 @@ function getLayoutOptions() {
     links: [
       featuresMenuDesktop,
       featuresMenuMobile,
-      { text: "Docs", url: "/docs", icon: <BookOpen /> },
       { text: "Build with AI", url: "/ai", icon: <Bot /> },
+      { text: "Docs", url: "/docs", icon: <BookOpen /> },
       { text: "Blog", url: "/blog", icon: <Newspaper /> },
       plusBadgeNav,
     ],
