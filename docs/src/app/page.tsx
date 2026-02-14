@@ -81,7 +81,7 @@ export default function Home() {
               >
                 Blockstudio combines the flexibility of PHP templates with the
                 structure of the block editor, ready for the agents that will
-                build what's next.
+                build what&apos;s next.
               </p>
             </div>
           </section>

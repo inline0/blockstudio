@@ -6,7 +6,6 @@ import {
   Braces,
   Code,
   Component,
-  Cpu,
   Database,
   FileCode,
   FileJson,
@@ -401,7 +400,7 @@ el.initialize();`,
             <p>
               Add a {code('key')} attribute to any block. When the template
               changes and Blockstudio re-syncs, keyed blocks merge the new
-              template attributes with the user's existing content. Unkeyed
+              template attributes with the user&apos;s existing content. Unkeyed
               blocks get fully replaced.
             </p>
             <p>

@@ -445,7 +445,7 @@ export async function AiPage() {
               AI-native block development
             </h1>
             <p className="mt-4 text-fd-muted-foreground sm:text-lg sm:leading-normal text-balance">
-              Blockstudio's file-based architecture means AI coding agents can scaffold blocks, pages, and patterns from a single prompt. No GUI, no database, just files.
+              Blockstudio&apos;s file-based architecture means AI coding agents can scaffold blocks, pages, and patterns from a single prompt. No GUI, no database, just files.
             </p>
           </div>
           <TerminalGraphic />
