@@ -157,8 +157,8 @@ function TerminalGraphic() {
 export function AiHero() {
   return (
     <section className="px-6 pt-16 pb-12 sm:pt-24 sm:pb-16 lg:px-16 xl:px-20">
-      <div className="grid grid-cols-1 xl:grid-cols-[3fr_7fr] gap-12 xl:gap-16 xl:items-start">
-        <div className="flex flex-col justify-between gap-8">
+      <div className="grid grid-cols-1 xl:grid-cols-[3fr_7fr] gap-12 xl:gap-16">
+        <div className="flex h-full flex-col justify-between gap-8">
           <div>
             <h1 className="text-4xl font-medium leading-tight text-fd-foreground sm:text-5xl text-balance">
               AI-native block development

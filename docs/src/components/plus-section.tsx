@@ -9,13 +9,13 @@ const includes = [
 
 function PlusGraphic() {
   return (
-    <div className="relative flex h-full min-h-[320px] overflow-hidden rounded-2xl border border-[var(--color-plus)]/8 bg-[var(--color-plus-button)]/2">
+    <div className="relative flex h-full min-h-[320px] overflow-hidden rounded-2xl border border-[var(--color-plus)]/10 bg-[var(--color-plus-graphic)]/4">
       <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_70%_20%,var(--color-plus)_5%,transparent_60%)] opacity-10" />
 
       <div className="relative grid w-full grid-cols-2 gap-2.5 p-5 sm:p-6">
-        <div className="col-span-2 flex flex-col gap-3 rounded-xl border border-[var(--color-plus)]/3 bg-[var(--color-plus-button)]/[0.005] p-4">
+        <div className="col-span-2 flex flex-col gap-3 rounded-xl border border-[var(--color-plus)]/8 bg-[var(--color-plus-graphic)]/3 p-4">
           <div className="flex items-center gap-2">
-            <div className="size-2.5 rounded-full bg-[var(--color-plus-button)]/30" />
+            <div className="size-2.5 rounded-full bg-[var(--color-plus-graphic)]/40" />
             <span className="font-mono text-xs text-[var(--color-plus)]">
               block.json
             </span>
@@ -41,39 +41,39 @@ function PlusGraphic() {
           </div>
         </div>
 
-        <div className="flex flex-col gap-3 rounded-xl border border-[var(--color-plus)]/2 bg-[var(--color-plus-button)]/[0.003] p-4">
+        <div className="flex flex-col gap-3 rounded-xl border border-[var(--color-plus)]/6 bg-[var(--color-plus-graphic)]/3 p-4">
           <div className="flex items-center gap-2">
-            <div className="size-2.5 rounded-full bg-[var(--color-plus-button)]/20" />
+            <div className="size-2.5 rounded-full bg-[var(--color-plus-graphic)]/40" />
             <span className="font-mono text-xs text-[var(--color-plus)]">
               index.php
             </span>
           </div>
           <div className="flex flex-col gap-1">
-            <div className="h-2 w-3/4 rounded-full bg-[var(--color-plus-button)]/5" />
-            <div className="h-2 w-full rounded-full bg-[var(--color-plus-button)]/4" />
-            <div className="h-2 w-1/2 rounded-full bg-[var(--color-plus-button)]/3" />
+            <div className="h-2 w-3/4 rounded-full bg-[var(--color-plus-graphic)]/15" />
+            <div className="h-2 w-full rounded-full bg-[var(--color-plus-graphic)]/12" />
+            <div className="h-2 w-1/2 rounded-full bg-[var(--color-plus-graphic)]/10" />
           </div>
         </div>
 
-        <div className="flex flex-col gap-3 rounded-xl border border-[var(--color-plus)]/2 bg-[var(--color-plus-button)]/[0.003] p-4">
+        <div className="flex flex-col gap-3 rounded-xl border border-[var(--color-plus)]/6 bg-[var(--color-plus-graphic)]/3 p-4">
           <div className="flex items-center gap-2">
-            <div className="size-2.5 rounded-full bg-[var(--color-plus-button)]/20" />
+            <div className="size-2.5 rounded-full bg-[var(--color-plus-graphic)]/40" />
             <span className="font-mono text-xs text-[var(--color-plus)]">
               style.css
             </span>
           </div>
           <div className="flex flex-col gap-1">
-            <div className="h-2 w-full rounded-full bg-[var(--color-plus-button)]/5" />
-            <div className="h-2 w-2/3 rounded-full bg-[var(--color-plus-button)]/4" />
-            <div className="h-2 w-5/6 rounded-full bg-[var(--color-plus-button)]/3" />
+            <div className="h-2 w-full rounded-full bg-[var(--color-plus-graphic)]/15" />
+            <div className="h-2 w-2/3 rounded-full bg-[var(--color-plus-graphic)]/12" />
+            <div className="h-2 w-5/6 rounded-full bg-[var(--color-plus-graphic)]/10" />
           </div>
         </div>
 
-        <div className="col-span-2 flex items-center justify-between rounded-xl border border-[var(--color-plus)]/3 bg-[var(--color-plus-button)]/[0.005] px-4 py-3">
+        <div className="col-span-2 flex items-center justify-between rounded-xl border border-[var(--color-plus)]/8 bg-[var(--color-plus-graphic)]/3 px-4 py-3">
           <span className="text-xs font-medium text-[var(--color-plus)]">
             150+ templates included
           </span>
-          <span className="rounded-full bg-[var(--color-plus-button)]/8 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-[var(--color-plus)]">
+          <span className="rounded-full bg-[var(--color-plus-graphic)]/15 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-[var(--color-plus)]">
             Plus
           </span>
         </div>
@@ -87,7 +87,7 @@ export function PlusSection() {
     <section className="px-6 py-16 sm:py-20 lg:px-16 xl:px-20">
       <div className="grid grid-cols-1 gap-8 lg:grid-cols-2 lg:gap-12 xl:gap-16">
         <div className="flex flex-col justify-center gap-6">
-          <span className="inline-flex w-fit items-center rounded-full border border-[var(--color-plus)]/40 bg-[var(--color-plus-button)]/10 px-3 py-1 text-xs font-semibold uppercase tracking-tight text-[var(--color-plus)]">
+          <span className="inline-flex w-fit items-center rounded-full border border-[var(--color-plus)]/40 bg-[var(--color-plus)]/10 px-3 py-1 text-xs font-semibold uppercase tracking-tight text-[var(--color-plus)]">
             Plus
           </span>
 
