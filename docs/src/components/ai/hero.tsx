@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react';
+import { Button } from 'onedocs';
 import { cn } from '@/lib/cn';
 
 function Panel({
@@ -157,20 +158,20 @@ export function AiHero() {
   return (
     <section className="px-6 pt-16 pb-12 sm:pt-24 sm:pb-16 lg:px-16 xl:px-20">
       <div className="grid grid-cols-1 xl:grid-cols-[3fr_7fr] gap-12 xl:gap-16 xl:items-start">
-        <div>
-          <span className="inline-flex items-center gap-1.5 rounded-full border border-fd-border bg-fd-secondary/50 pl-1 pr-1 py-1 text-xs text-fd-muted-foreground mb-6">
-            <span className="rounded-full bg-fd-primary/5 px-1.5 py-0.5 text-xs font-medium text-fd-primary">
-              Build with AI
-            </span>
-          </span>
-          <h1 className="text-4xl font-medium leading-tight text-fd-foreground sm:text-5xl text-balance">
-            AI-native block development
-          </h1>
-          <p className="mt-4 text-fd-muted-foreground sm:text-lg sm:leading-normal text-balance">
-            Blockstudio&apos;s file-based architecture means AI coding agents
-            can scaffold blocks, pages, and patterns from a single prompt. No
-            GUI, no database, just files.
-          </p>
+        <div className="flex flex-col justify-between gap-8">
+          <div>
+            <h1 className="text-4xl font-medium leading-tight text-fd-foreground sm:text-5xl text-balance">
+              AI-native block development
+            </h1>
+            <p className="mt-4 text-fd-muted-foreground sm:text-lg sm:leading-normal text-balance">
+              Blockstudio&apos;s file-based architecture means AI coding agents
+              can scaffold blocks, pages, and patterns from a single prompt. No
+              GUI, no database, just files.
+            </p>
+          </div>
+          <Button href="/docs/ai" className="w-max">
+            Read the docs &rarr;
+          </Button>
         </div>
         <TerminalGraphic />
       </div>
