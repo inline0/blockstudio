@@ -201,8 +201,16 @@ function TerminalGraphic() {
             <span className="text-fd-foreground">style.css</span>
           </div>
           <div className="pl-4">
-            {"└── "}hero/
-
+            {"├── "}hero/
+          </div>
+          <div className="pl-8">
+            {"├── "}block.json
+          </div>
+          <div className="pl-8">
+            {"└── "}index.php
+          </div>
+          <div className="pl-4">
+            {"└── "}testimonials/
           </div>
 
           <div className="mt-4">pages/</div>
@@ -220,7 +228,10 @@ function TerminalGraphic() {
             <span className="text-fd-foreground">pricing.php</span>
           </div>
           <div className="pl-4">
-            {"└── "}about/
+            {"├── "}about/
+          </div>
+          <div className="pl-4">
+            {"└── "}contact/
           </div>
         </div>
       </div>
@@ -231,7 +242,6 @@ function TerminalGraphic() {
 export async function AiPage() {
   return (
     <div className="flex flex-col">
-      {/* Hero */}
       <section className="px-6 pt-16 pb-12 sm:pt-24 sm:pb-16 lg:px-16 xl:px-20">
         <div className="mx-auto max-w-4xl text-center flex flex-col items-center">
           <span className="inline-flex items-center gap-1.5 rounded-full border border-fd-border bg-fd-secondary/50 pl-1 pr-1 py-1 text-xs text-fd-muted-foreground mb-6">
@@ -252,8 +262,7 @@ export async function AiPage() {
         </div>
       </section>
 
-      {/* Why filesystem */}
-      <section className="border-t px-6 py-16 sm:py-20 lg:px-16 xl:px-20">
+      <section className="px-6 py-16 sm:py-20 lg:px-16 xl:px-20">
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-10 sm:gap-8">
           {whyFilesystem.map((item) => (
             <div key={item.title} className="flex flex-col gap-3">
@@ -271,9 +280,7 @@ export async function AiPage() {
         </div>
       </section>
 
-      {/* Context file */}
       <Section
-        border
         icon={<SectionIcon><Braces /></SectionIcon>}
         title="48k tokens of structured context"
         description="A single file with the complete documentation and all JSON schemas, built for LLM coding assistants."
@@ -309,8 +316,7 @@ export async function AiPage() {
         />
       </Section>
 
-      {/* Detail grid */}
-      <section className="border-t px-6 py-16 sm:py-20 lg:px-16 xl:px-20">
+      <section className="px-6 py-16 sm:py-20 lg:px-16 xl:px-20">
         <div className="mb-10">
           <h2 className="text-2xl font-semibold tracking-tight text-fd-foreground sm:text-3xl">
             Built for the AI workflow
@@ -337,7 +343,6 @@ export async function AiPage() {
         </div>
       </section>
 
-      {/* CTA */}
       <div className="border-t">
         <CTASection
           title="Ready to build with AI?"

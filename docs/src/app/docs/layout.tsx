@@ -19,7 +19,7 @@ function getLayoutOptions() {
     ...base,
     links: [
       { text: "Docs", url: "/docs", icon: <BookOpen /> },
-      { text: "AI", url: "/ai", icon: <Bot /> },
+      { text: "Build with AI", url: "/ai", icon: <Bot /> },
       { text: "Blog", url: "/blog", icon: <Newspaper /> },
       plusBadgeNav,
     ],
