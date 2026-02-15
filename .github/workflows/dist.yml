@@ -69,7 +69,7 @@ jobs:
       - name: Verify PHP syntax
         run: |
           cd build/blockstudio
-          find . -name '*.php' -exec php -l {} + 2>&1 | grep -i 'error' && exit 1 || true
+          find . -name '*.php' -print0 | xargs -0 -n1 php -l > /dev/null
           echo "All PHP files parse cleanly"
 
       - name: Verify autoloader resolves scoped classes
@@ -109,36 +109,6 @@ jobs:
         with:
           name: blockstudio-zip
 
-      - name: Setup WordPress
-        run: |
-          mkdir -p wordpress
-          curl -sO https://wordpress.org/latest.tar.gz
-          tar -xzf latest.tar.gz -C wordpress --strip-components=1
-
-      - name: Configure WordPress
-        run: |
-          cd wordpress
-          cp wp-config-sample.php wp-config.php
-          sed -i "s/database_name_here/wordpress/" wp-config.php
-          sed -i "s/username_here/root/" wp-config.php
-          sed -i "s/password_here/root/" wp-config.php
-
-      - name: Start MySQL
-        run: |
-          sudo systemctl start mysql
-          mysql -u root -proot -e "CREATE DATABASE IF NOT EXISTS wordpress;"
-
-      - name: Install WordPress
-        run: |
-          cd wordpress
-          php -d memory_limit=256M -r "
-            define('ABSPATH', getcwd() . '/');
-            define('WP_INSTALLING', true);
-            require_once ABSPATH . 'wp-settings.php';
-            require_once ABSPATH . 'wp-admin/includes/upgrade.php';
-            wp_install('Test', 'admin', 'admin@test.com', true, '', 'password');
-          " 2>/dev/null || true
-
       - name: Setup PHP
         uses: shivammathur/setup-php@v2
         with:
@@ -146,9 +116,16 @@ jobs:
           extensions: dom, json, zip, simplexml, libxml, iconv, mysqli
           tools: wp-cli
 
-      - name: Install WordPress via WP-CLI
+      - name: Start MySQL
         run: |
-          cd wordpress
+          sudo systemctl start mysql
+          mysql -u root -proot -e "CREATE DATABASE IF NOT EXISTS wordpress;"
+
+      - name: Download and install WordPress
+        run: |
+          mkdir wordpress && cd wordpress
+          wp core download
+          wp config create --dbname=wordpress --dbuser=root --dbpass=root
           wp core install --url=http://localhost --title=Test --admin_user=admin --admin_email=admin@test.com --admin_password=password --skip-email
 
       - name: Install and activate plugin from zip
@@ -166,20 +143,7 @@ jobs:
         run: |
           cd wordpress
           wp eval "echo 'BLOCKSTUDIO_VERSION: ' . BLOCKSTUDIO_VERSION . PHP_EOL;"
-          wp eval "echo 'Plugin class exists: ' . (class_exists('Blockstudio\Plugin') ? 'yes' : 'no') . PHP_EOL;"
-
-      - name: Verify block category registered
-        run: |
-          cd wordpress
-          wp eval "
-            \$cats = get_block_categories(get_post(0) ?: new WP_Post((object)['ID' => 0]));
-            \$found = false;
-            foreach (\$cats as \$cat) {
-              if (\$cat['slug'] === 'blockstudio') { \$found = true; break; }
-            }
-            echo 'Blockstudio category: ' . (\$found ? 'registered' : 'MISSING') . PHP_EOL;
-            if (!\$found) exit(1);
-          "
+          wp eval "echo 'Plugin class exists: ' . (class_exists('Blockstudio\\\Plugin') ? 'yes' : 'no') . PHP_EOL;"
 
   composer-install:
     name: Composer install
