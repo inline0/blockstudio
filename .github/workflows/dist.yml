@@ -248,6 +248,8 @@ jobs:
           wp config create --dbname=wordpress --dbuser=root --dbpass=root
           wp core install --url=http://localhost --title=Test --admin_user=admin --admin_email=admin@test.com --admin_password=password --skip-email
           ln -s $GITHUB_WORKSPACE/test-project/vendor/blockstudio/blockstudio wp-content/plugins/blockstudio
+          mkdir -p $GITHUB_WORKSPACE/test-project/vendor/blockstudio/blockstudio/vendor
+          ln -s ../../../autoload.php $GITHUB_WORKSPACE/test-project/vendor/blockstudio/blockstudio/vendor/autoload.php
           wp plugin activate blockstudio
 
       - name: Install test theme and verify block detection
