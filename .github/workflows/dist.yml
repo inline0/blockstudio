@@ -104,6 +104,11 @@ jobs:
     needs: zip-integrity
     runs-on: ubuntu-latest
     steps:
+      - name: Checkout (for test theme)
+        uses: actions/checkout@v4
+        with:
+          path: repo
+
       - name: Download zip artifact
         uses: actions/download-artifact@v4
         with:
@@ -133,6 +138,12 @@ jobs:
           cd wordpress
           wp plugin install ../blockstudio.zip --activate
 
+      - name: Install test theme
+        run: |
+          cp -r repo/tests/theme wordpress/wp-content/themes/blockstudio-test
+          cd wordpress
+          wp theme activate blockstudio-test
+
       - name: Verify plugin is active
         run: |
           cd wordpress
@@ -144,6 +155,20 @@ jobs:
           cd wordpress
           wp eval "echo 'BLOCKSTUDIO_VERSION: ' . BLOCKSTUDIO_VERSION . PHP_EOL;"
           wp eval "echo 'Plugin class exists: ' . (class_exists('Blockstudio\\\Plugin') ? 'yes' : 'no') . PHP_EOL;"
+
+      - name: Verify block detection
+        run: |
+          cd wordpress
+          wp eval "
+            \$registry = WP_Block_Type_Registry::get_instance();
+            \$block = \$registry->get_registered('blockstudio/type-number');
+            if (!\$block) {
+              echo \"FAIL: blockstudio/type-number not registered\n\";
+              exit(1);
+            }
+            echo \"Block registered: \" . \$block->name . \"\n\";
+            echo \"Title: \" . \$block->title . \"\n\";
+          "
 
   composer-install:
     name: Composer install
