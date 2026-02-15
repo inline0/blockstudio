@@ -174,11 +174,17 @@ jobs:
     name: Composer install
     runs-on: ubuntu-latest
     steps:
+      - name: Checkout (for test theme)
+        uses: actions/checkout@v4
+        with:
+          path: repo
+
       - name: Setup PHP
         uses: shivammathur/setup-php@v2
         with:
           php-version: "8.4"
-          extensions: dom, json, zip, simplexml, libxml, iconv
+          extensions: dom, json, zip, simplexml, libxml, iconv, mysqli
+          tools: wp-cli
 
       - name: Create test project
         run: |
@@ -228,4 +234,34 @@ jobs:
               exit(1);
             }
             echo \"Composer install: classes resolve\n\";
+          "
+
+      - name: Start MySQL
+        run: |
+          sudo systemctl start mysql
+          mysql -u root -proot -e "CREATE DATABASE IF NOT EXISTS wordpress;"
+
+      - name: Set up WordPress with Composer-installed plugin
+        run: |
+          mkdir wordpress && cd wordpress
+          wp core download
+          wp config create --dbname=wordpress --dbuser=root --dbpass=root
+          wp core install --url=http://localhost --title=Test --admin_user=admin --admin_email=admin@test.com --admin_password=password --skip-email
+          ln -s $GITHUB_WORKSPACE/test-project/vendor/blockstudio/blockstudio wp-content/plugins/blockstudio
+          wp plugin activate blockstudio
+
+      - name: Install test theme and verify block detection
+        run: |
+          cp -r repo/tests/theme wordpress/wp-content/themes/blockstudio-test
+          cd wordpress
+          wp theme activate blockstudio-test
+          wp eval "
+            \$registry = WP_Block_Type_Registry::get_instance();
+            \$block = \$registry->get_registered('blockstudio/type-number');
+            if (!\$block) {
+              echo \"FAIL: blockstudio/type-number not registered\n\";
+              exit(1);
+            }
+            echo \"Block registered: \" . \$block->name . \"\n\";
+            echo \"Title: \" . \$block->title . \"\n\";
           "
