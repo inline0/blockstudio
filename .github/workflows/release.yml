@@ -25,13 +25,13 @@ jobs:
       - name: Create release zip
         run: |
           mkdir -p build/blockstudio
-          rsync -a --exclude='.git' --exclude='node_modules' --exclude='tests' --exclude='docs' \
-            --exclude='evals' --exclude='src' --exclude='.github' --exclude='_reference' \
+          rsync -a --exclude='.git' --exclude='node_modules' --exclude='/tests' --exclude='/docs' \
+            --exclude='/evals' --exclude='/src' --exclude='.github' --exclude='_reference' \
             --exclude='.env*' --exclude='*.config.*' --exclude='tsconfig*' \
             --exclude='package.json' --exclude='package-lock.json' --exclude='.npmrc' \
             --exclude='.gitignore' --exclude='.prettierrc*' --exclude='eslint*' \
             --exclude='phpcs.xml*' --exclude='scoper.inc.php' --exclude='build.sh' \
-            --exclude='CLAUDE.md' --exclude='.claude' --exclude='build' \
+            --exclude='CLAUDE.md' --exclude='.claude' --exclude='/build' \
             . build/blockstudio/
           cd build && zip -r ../blockstudio.zip blockstudio/
 
