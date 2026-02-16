@@ -1,5 +1,4 @@
 import { Button } from 'onedocs';
-import config from '../../onedocs.config';
 import type { FeaturePageData } from '../data/features';
 import { CodeCard } from './homepage/code-card';
 import { CodeTabs } from './homepage/code-tabs';
@@ -123,12 +122,6 @@ export async function FeaturePage({ data }: { data: FeaturePageData }) {
       <div className="border-t">
         <PlusSection />
       </div>
-
-      <footer className="border-t px-6 py-4 flex items-center justify-between gap-4">
-        <p className="text-sm text-fd-muted-foreground">
-          &copy; {new Date().getFullYear()} {config.title}
-        </p>
-      </footer>
     </div>
   );
 }

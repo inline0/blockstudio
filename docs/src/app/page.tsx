@@ -70,18 +70,18 @@ export default function Home() {
             )}
           </div>
 
-          <section id="catchphrase">
-            <div className="px-6 py-16 lg:px-16 xl:px-20 lg:py-24 flex flex-col gap-6">
+          <section id="catchphrase" className="border-b">
+            <div className="px-6 py-16 lg:px-16 xl:px-20 lg:py-24 flex flex-col items-center">
               <p
-                className="text-2xl sm:text-3xl lg:text-4xl font-medium leading-snug text-balance max-w-3xl bg-clip-text text-transparent"
+                className="text-2xl sm:text-3xl lg:text-4xl font-medium leading-snug text-balance text-center max-w-5xl bg-clip-text text-transparent"
                 style={{
                   backgroundImage:
-                    'linear-gradient(180deg, var(--color-fd-foreground) 0%, color-mix(in srgb, var(--color-fd-foreground) 60%, var(--color-fd-muted-foreground)) 100%)',
+                    'linear-gradient(135deg, var(--color-fd-foreground) 0%, var(--color-fd-primary) 50%, var(--color-fd-foreground) 100%)',
                 }}
               >
-                Blockstudio combines the flexibility of PHP templates with the
-                structure of the block editor, ready for the agents that will
-                build what&apos;s next.
+                Blockstudio deeply extends the core way of building blocks. JSON
+                definitions, PHP templates, scoped assets. Nothing more than
+                files, ready for the agents that will build what&apos;s next.
               </p>
             </div>
           </section>

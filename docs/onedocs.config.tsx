@@ -29,7 +29,7 @@ export default defineConfig({
     features: [
       {
         title: "Blocks",
-        description: "Create custom blocks with JSON and PHP, Twig, or Blade templates. 30+ field types, zero JavaScript.",
+        description: "Create custom blocks with JSON and PHP, Twig, or Blade templates. 30+ field types, no build step.",
         icon: <Blocks className={iconClass} />,
       },
       {

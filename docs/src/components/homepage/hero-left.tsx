@@ -21,8 +21,8 @@ export async function HeroLeft() {
         for WordPress
       </h1>
       <p className="text-left max-w-xl leading-normal text-fd-muted-foreground sm:text-lg sm:leading-normal text-balance mt-4">
-        The fastest way to build custom blocks. Write templates in PHP, Twig, or
-        Blade with 25+ field types and zero JavaScript.
+        The fastest way to build custom blocks. Define fields in JSON, write
+        templates in PHP, Twig, or Blade. No build step required.
       </p>
       <div className="flex flex-wrap items-end gap-x-8 gap-y-6 mt-8 w-full">
         <div className="flex-1">
