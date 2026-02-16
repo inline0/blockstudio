@@ -595,28 +595,11 @@ export const Canvas = ({
     (view === 'pages' && currentPages.length > 0) ||
     (view === 'blocks' && currentBlocks.length > 0);
 
-  if (!hasContent) {
-    return (
-      <div
-        style={{
-          position: 'fixed',
-          inset: 0,
-          background: '#2c2c2c',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          color: '#999',
-          fontFamily:
-            '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
-          fontSize: 16,
-        }}
-      >
-        {view === 'pages'
-          ? 'No Blockstudio pages found.'
-          : 'No Blockstudio blocks found.'}
-      </div>
-    );
-  }
+  useEffect(() => {
+    if (!hasContent) {
+      document.getElementById('blockstudio-canvas-loader')?.remove();
+    }
+  }, [hasContent]);
 
   const labelColor = isBlocksView ? '#a855f7' : '#999';
 
@@ -637,6 +620,25 @@ export const Canvas = ({
           overflow: 'hidden',
         }}
       >
+        {!hasContent && (
+          <div
+            style={{
+              position: 'absolute',
+              inset: 0,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              color: '#999',
+              fontFamily:
+                '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+              fontSize: 16,
+            }}
+          >
+            {view === 'pages'
+              ? 'No Blockstudio pages found.'
+              : 'No Blockstudio blocks found.'}
+          </div>
+        )}
         <div
           ref={surfaceRef}
           data-canvas-surface=""

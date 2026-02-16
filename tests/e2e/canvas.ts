@@ -523,6 +523,180 @@ test.describe('Canvas', () => {
     });
   });
 
+  test.describe('new page detection in live mode', () => {
+    const newPageDir = path.join(
+      process.cwd(),
+      'tests/theme/pages/test-canvas-new-page',
+    );
+
+    const cleanupNewPage = async (): Promise<void> => {
+      if (fs.existsSync(newPageDir)) {
+        fs.rmSync(newPageDir, { recursive: true });
+      }
+
+      await page.evaluate(async () => {
+        const apiFetch = (window as any).wp?.apiFetch;
+        if (!apiFetch) return;
+        try {
+          const pages = await apiFetch({
+            path: '/wp/v2/pages?slug=canvas-new-page-test&status=any&per_page=100',
+          });
+          for (const p of pages) {
+            await apiFetch({ path: `/wp/v2/pages/${p.id}?force=true`, method: 'DELETE' });
+          }
+        } catch {
+          // Post may not exist.
+        }
+      });
+    };
+
+    test.afterAll(async () => {
+      await cleanupNewPage();
+    });
+
+    test('new page appears as artboard during live session', async () => {
+      await page.evaluate(() => localStorage.removeItem('blockstudio-canvas-settings'));
+      await page.goto(canvasUrl, { waitUntil: 'domcontentloaded' });
+
+      await cleanupNewPage();
+      await page.goto(canvasUrl, { waitUntil: 'domcontentloaded' });
+
+      await page.waitForFunction(
+        () => {
+          const el = document.querySelector('[data-canvas-surface]');
+          return el && window.getComputedStyle(el).transform !== 'none';
+        },
+        null,
+        { timeout: 15000 },
+      );
+
+      const initialCount = await page.locator('[data-canvas-slug]').count();
+
+      const menuButton = page.locator('.blockstudio-canvas-menu .components-button').first();
+      await menuButton.click();
+      await expect(page.locator('role=menu')).toBeVisible({ timeout: 5000 });
+      await page.locator('role=menuitem', { hasText: 'Live mode' }).click();
+
+      await page.waitForFunction(
+        () => {
+          const select = (window as any).wp?.data?.select;
+          if (!select) return false;
+          const store = select('blockstudio/canvas');
+          return store && store.getFingerprint() !== '';
+        },
+        null,
+        { timeout: 10000 },
+      );
+
+      fs.mkdirSync(newPageDir, { recursive: true });
+      fs.writeFileSync(
+        path.join(newPageDir, 'page.json'),
+        JSON.stringify({
+          name: 'canvas-new-page-test',
+          title: 'Canvas New Page Test',
+          slug: 'canvas-new-page-test',
+          postType: 'page',
+          postStatus: 'publish',
+          templateLock: 'all',
+        }),
+      );
+      fs.writeFileSync(
+        path.join(newPageDir, 'index.php'),
+        '<p>New page detected by live mode.</p>',
+      );
+
+      await page.waitForFunction(
+        (prevCount: number) => {
+          return document.querySelectorAll('[data-canvas-slug]').length > prevCount;
+        },
+        initialCount,
+        { timeout: 20000 },
+      );
+
+      await expect(
+        page.locator('[data-canvas-slug="canvas-new-page-test"]'),
+      ).toBeVisible({ timeout: 5000 });
+
+      await expect(
+        page.locator('#blockstudio-canvas', { hasText: 'Canvas New Page Test' }),
+      ).toBeVisible();
+    });
+
+    test('SSE changed event includes new page in changedPages', async () => {
+      await page.evaluate(() => localStorage.removeItem('blockstudio-canvas-settings'));
+      await page.goto(canvasUrl, { waitUntil: 'domcontentloaded' });
+
+      await cleanupNewPage();
+
+      await page.goto(canvasUrl, { waitUntil: 'domcontentloaded' });
+
+      await page.waitForFunction(
+        () => {
+          const el = document.querySelector('[data-canvas-surface]');
+          return el && window.getComputedStyle(el).transform !== 'none';
+        },
+        null,
+        { timeout: 15000 },
+      );
+
+      await page.evaluate(() => {
+        const canvasData = (window as any).blockstudioCanvas;
+        const url =
+          canvasData.restRoot +
+          'blockstudio/v1/canvas/stream?_wpnonce=' +
+          encodeURIComponent(canvasData.restNonce);
+
+        const es = new EventSource(url);
+        (window as any).__sseNewPagePromise = new Promise<void>((resolve) => {
+          es.addEventListener('fingerprint', () => resolve());
+        });
+        (window as any).__sseNewPageChangedPromise = new Promise<Record<string, unknown>>(
+          (resolve) => {
+            es.addEventListener('changed', (e: MessageEvent) => {
+              es.close();
+              resolve(JSON.parse(e.data));
+            });
+          },
+        );
+        (window as any).__sseNewPageES = es;
+      });
+
+      await page.evaluate(() => (window as any).__sseNewPagePromise);
+
+      fs.mkdirSync(newPageDir, { recursive: true });
+      fs.writeFileSync(
+        path.join(newPageDir, 'page.json'),
+        JSON.stringify({
+          name: 'canvas-new-page-test',
+          title: 'Canvas New Page Test',
+          slug: 'canvas-new-page-test',
+          postType: 'page',
+          postStatus: 'publish',
+          templateLock: 'all',
+        }),
+      );
+      fs.writeFileSync(
+        path.join(newPageDir, 'index.php'),
+        '<p>SSE new page detection test.</p>',
+      );
+
+      const sseData = await page.evaluate(
+        () => (window as any).__sseNewPageChangedPromise,
+      );
+
+      expect(sseData).toHaveProperty('changedPages');
+      expect((sseData.changedPages as string[]).length).toBeGreaterThan(0);
+      expect(sseData).toHaveProperty('pages');
+      expect((sseData.pages as any[]).length).toBeGreaterThan(0);
+
+      const newPage = (sseData.pages as any[]).find(
+        (p: any) => p.name === 'canvas-new-page-test',
+      );
+      expect(newPage).toBeTruthy();
+      expect(newPage.title).toBe('Canvas New Page Test');
+    });
+  });
+
   test.describe('block styles in iframes', () => {
     test('BlockPreview iframes contain blockstudio CSS', async () => {
       await page.goto(canvasUrl, { waitUntil: 'domcontentloaded' });

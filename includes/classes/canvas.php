@@ -533,11 +533,30 @@ class Canvas {
 			$new_fingerprint = $this->compute_fingerprint_with_mtimes( $new_mtimes );
 
 			if ( $new_fingerprint !== $fingerprint ) {
+				$new_dir_to_blocks = $this->build_dir_to_blocks_map();
+				$new_dir_to_pages  = $this->build_dir_to_pages_map();
+
 				$changed_blocks = array_values( array_unique( $this->detect_changed_blocks( $prev_mtimes, $new_mtimes, $dir_to_blocks ) ) );
 				$changed_pages  = $this->detect_changed_pages( $prev_mtimes, $new_mtimes, $dir_to_pages );
 
-				$fingerprint = $new_fingerprint;
-				$prev_mtimes = $new_mtimes;
+				foreach ( $new_dir_to_blocks as $dir => $name ) {
+					if ( ! isset( $dir_to_blocks[ $dir ] ) ) {
+						$changed_blocks[] = $name;
+					}
+				}
+				$changed_blocks = array_values( array_unique( $changed_blocks ) );
+
+				foreach ( $new_dir_to_pages as $dir => $source ) {
+					if ( ! isset( $dir_to_pages[ $dir ] ) ) {
+						$changed_pages[] = $source;
+					}
+				}
+				$changed_pages = array_values( array_unique( $changed_pages ) );
+
+				$fingerprint   = $new_fingerprint;
+				$prev_mtimes   = $new_mtimes;
+				$dir_to_blocks = $new_dir_to_blocks;
+				$dir_to_pages  = $new_dir_to_pages;
 
 				$refresh = $this->compute_refresh_data( $changed_blocks, $changed_pages );
 
