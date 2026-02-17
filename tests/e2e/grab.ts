@@ -137,10 +137,9 @@ test.describe('Grab', () => {
 
       await page.keyboard.down(modKey);
       await page.keyboard.down('c');
-      await page.waitForTimeout(200);
 
       const overlay = page.locator('[data-blockstudio-devtools="overlay"]');
-      await expect(overlay).toBeVisible();
+      await expect(overlay).toBeVisible({ timeout: 5000 });
 
       // Deactivate with Escape
       await page.keyboard.up('c');
