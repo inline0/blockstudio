@@ -24,7 +24,7 @@ async function captureCompiledAssets() {
   await page.goto(`http://localhost:${port}`, { timeout: 60000 });
 
   console.log("Waiting for Playground to initialize...");
-  await page.waitForFunction("window.playgroundReady === true", {
+  await page.waitForFunction("window.playgroundReady === true", null, {
     timeout: 120000,
   });
 
