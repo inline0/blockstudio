@@ -1,6 +1,8 @@
 import { Page, Frame } from '@playwright/test';
 import { countText, delay, testType } from '../../utils/playwright-utils';
 
+const modKey = process.platform === 'darwin' ? 'Meta' : 'Control';
+
 testType(
   'repeater-nested',
   false,
@@ -23,10 +25,10 @@ testType(
           await delay(1000);
           await page.locator(`text=Open Media Library`).nth(index).click();
           await page.locator('#menu-item-browse:visible').click();
-          await page.keyboard.down('Meta');
+          await page.keyboard.down(modKey);
           await page.click('li[data-id="1604"]:visible');
           await page.click('li[data-id="1605"]:visible');
-          await page.keyboard.up('Meta');
+          await page.keyboard.up(modKey);
           await delay(1000);
           await page.click('.media-frame-toolbar button:visible');
           await countText(canvas, '"ID":1605', index + 1);

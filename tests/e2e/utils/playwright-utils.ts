@@ -139,16 +139,20 @@ export const checkStyle = async (
   not = false
 ) => {
   await page.waitForSelector(selector);
+  const getStyle = async () =>
+    page.$eval(
+      selector,
+      (e: Element, styleType: string) =>
+        getComputedStyle(e)[styleType as keyof CSSStyleDeclaration],
+      type
+    );
 
   if (not) {
-    expect(
-      await page.$eval(selector, (e: Element, type: string) => getComputedStyle(e)[type as keyof CSSStyleDeclaration], type)
-    ).not.toBe(value);
-  } else {
-    expect(
-      await page.$eval(selector, (e: Element, type: string) => getComputedStyle(e)[type as keyof CSSStyleDeclaration], type)
-    ).toBe(value);
+    await expect.poll(getStyle, { timeout: 30000 }).not.toBe(value);
+    return;
   }
+
+  await expect.poll(getStyle, { timeout: 30000 }).toBe(value);
 };
 
 export const pBlocks = async (

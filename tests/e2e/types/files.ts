@@ -1,6 +1,8 @@
 import { Page, Frame } from '@playwright/test';
 import { countText, delay, testType, text } from '../utils/playwright-utils';
 
+const modKey = process.platform === 'darwin' ? 'Meta' : 'Control';
+
 testType('files', false, () => {
   return Array.from({ length: 6 }).map((_, index) => {
     return {
@@ -29,9 +31,9 @@ testType('files', false, () => {
         await page.locator(`text=Open Media Library`).nth(index).click();
         await page.locator('#menu-item-browse:visible').click();
         if (index === 0 || index === 1 || index === 2) {
-          await page.keyboard.down('Meta');
+          await page.keyboard.down(modKey);
           await page.click('li[data-id="1604"]:visible');
-          await page.keyboard.up('Meta');
+          await page.keyboard.up(modKey);
           await delay(1000);
           await page.click('.media-frame-toolbar button:visible');
           if (index === 0) {
@@ -54,8 +56,9 @@ testType('files', false, () => {
           }
           await page.locator(`text=Open Media Library`).nth(index).click();
           await page.locator('#menu-item-browse:visible').click();
-          await page.keyboard.down('Meta');
+          await page.keyboard.down(modKey);
           await page.click('li[data-id="1605"]:visible');
+          await page.keyboard.up(modKey);
           await delay(1000);
           await page.click('.media-frame-toolbar button:visible');
           if (index === 0) {
@@ -87,8 +90,9 @@ testType('files', false, () => {
           }
           await page.locator(`text=Open Media Library`).nth(index).click();
           await page.locator('#menu-item-browse:visible').click();
-          await page.keyboard.down('Meta');
+          await page.keyboard.down(modKey);
           await page.click('li[data-id="8"]:visible');
+          await page.keyboard.up(modKey);
           await delay(1000);
           await page.click('.media-frame-toolbar button:visible');
           if (index === 0) {
@@ -103,10 +107,10 @@ testType('files', false, () => {
           await delMedia(0);
         }
         if (index === 3 || index === 4 || index === 5) {
-          await page.keyboard.down('Meta');
+          await page.keyboard.down(modKey);
           await page.click('li[data-id="1605"]:visible');
           await page.click('li[data-id="1604"]:visible');
-          await page.keyboard.up('Meta');
+          await page.keyboard.up(modKey);
           await delay(1000);
           await page.click('.media-frame-toolbar button:visible');
           if (index === 3) {

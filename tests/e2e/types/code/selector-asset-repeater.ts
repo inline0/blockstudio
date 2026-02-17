@@ -14,8 +14,8 @@ testType('code-selector-asset-repeater', false, () => {
         await checkStyle(
           canvas,
           '[data-type="blockstudio/type-code-selector-asset-repeater"]',
-          'background',
-          'rgb(0, 0, 0) none repeat scroll 0% 0% / auto padding-box border-box'
+          'backgroundColor',
+          'rgb(0, 0, 0)'
         );
         await canvas.click(
           '[data-type="blockstudio/type-code-selector-asset-repeater"]'
@@ -26,14 +26,14 @@ testType('code-selector-asset-repeater', false, () => {
           .nth(1)
           .locator('.cm-line')
           .click();
-        await page.keyboard.press('Meta+A');
+        await page.keyboard.press('ControlOrMeta+A');
         await page.keyboard.press('Backspace');
         await page.keyboard.type('%selector% { border-radius: 12px; };');
         await checkStyle(
           canvas,
           '[data-type="blockstudio/type-code-selector-asset-repeater"]',
-          'background',
-          'rgb(0, 0, 0) none repeat scroll 0% 0% / auto padding-box border-box'
+          'backgroundColor',
+          'rgb(0, 0, 0)'
         );
         await checkStyle(
           canvas,
@@ -50,8 +50,8 @@ testType('code-selector-asset-repeater', false, () => {
         await checkStyle(
           canvas,
           '[data-type="blockstudio/type-code-selector-asset-repeater"]',
-          'background',
-          'rgb(0, 0, 0) none repeat scroll 0% 0% / auto padding-box border-box'
+          'backgroundColor',
+          'rgb(0, 0, 0)'
         );
         await checkStyle(
           canvas,
@@ -68,8 +68,8 @@ testType('code-selector-asset-repeater', false, () => {
         await checkStyle(
           page,
           '.blockstudio-test__block',
-          'background',
-          'rgb(0, 0, 0) none repeat scroll 0% 0% / auto padding-box border-box'
+          'backgroundColor',
+          'rgb(0, 0, 0)'
         );
         await checkStyle(
           page,

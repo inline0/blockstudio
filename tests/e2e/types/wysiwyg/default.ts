@@ -8,7 +8,7 @@ testType('wysiwyg', 'Default text', () => [
       await page.click('.blockstudio-fields .ProseMirror');
       await page.keyboard.type('TEST', { delay: 1000 });
       await count(canvas, '#blockstudio-type-wysiwyg p', 1);
-      await page.keyboard.press('Meta+A');
+      await page.keyboard.press('ControlOrMeta+A');
     },
   },
   {

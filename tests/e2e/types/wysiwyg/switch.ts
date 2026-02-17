@@ -7,7 +7,7 @@ testType('wysiwyg-switch', 'Default text', () => [
     testFunction: async (page: Page, canvas: Frame) => {
       await page.click('text=Switch to Code');
       await page.click('.cm-line');
-      await page.keyboard.press('Meta+A');
+      await page.keyboard.press('ControlOrMeta+A');
       await page.keyboard.press('Backspace');
       await page.keyboard.type('<h1>Switch Test</h1>');
       await count(page, 'text=Switch Test', 1);

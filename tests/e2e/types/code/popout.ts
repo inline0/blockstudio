@@ -22,8 +22,8 @@ testType('code-popout', '"code":".selector { display: block; }"', () => {
         ]);
 
         await popup.waitForLoadState();
-        await popup.click('.cm-line');
-        await popup.keyboard.press('Meta+A');
+        await popup.locator('.cm-line').first().click();
+        await popup.keyboard.press('ControlOrMeta+A');
         await popup.keyboard.press('Backspace');
         await popup.keyboard.type('.changed { color: red; }');
 

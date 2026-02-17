@@ -89,7 +89,7 @@ testType(
           await page.click('text=Option 1');
           await page.click('text=Option 2');
           await page.locator('.cm-line').nth(1).click();
-          await page.keyboard.press('Meta+A');
+          await page.keyboard.press('ControlOrMeta+A');
           await page.keyboard.press('Backspace');
           await page.keyboard.type(
             '%selector% { text-decoration: underline; }'

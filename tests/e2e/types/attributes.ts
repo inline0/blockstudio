@@ -12,13 +12,22 @@ testType('attributes', false, () => {
     {
       description: 'add attributes',
       testFunction: async (page: Page, canvas: Frame) => {
+        const clickVisibleMenuItem = async (label: string) => {
+          const item = page
+            .locator('.components-popover:visible [role="menuitem"]')
+            .filter({ hasText: label })
+            .last();
+          await item.waitFor({ state: 'visible', timeout: 10000 });
+          await item.click();
+        };
+
         await page.click('text=Add Attribute');
         await page
           .locator('[placeholder="Attribute"]')
           .nth(0)
           .fill('data-test');
         await page.locator('.cm-activeLine.cm-line').nth(0).click();
-        await page.keyboard.press('Meta+A');
+        await page.keyboard.press('ControlOrMeta+A');
         await page.keyboard.press('Backspace');
         await page.keyboard.type('test');
 
@@ -32,7 +41,7 @@ testType('attributes', false, () => {
           .locator('.blockstudio-fields [aria-label="More"]')
           .nth(1)
           .click();
-        await page.click('text=Insert Link');
+        await clickVisibleMenuItem('Insert Link');
         await page.fill(
           '[placeholder="Search or type URL"]',
           'https://google.com'
@@ -50,12 +59,30 @@ testType('attributes', false, () => {
           .locator('.blockstudio-fields [aria-label="More"]')
           .nth(2)
           .click();
-        await delay(2000);
-        await page.click('text=Insert Media');
-        await page.locator('#menu-item-browse').waitFor({ state: 'visible', timeout: 30000 });
-        await page.locator('#menu-item-browse').click();
-        await page.click('[data-id="3081"]');
-        await page.click('.media-button-select');
+        await clickVisibleMenuItem('Insert Media');
+        await page.locator('.media-modal:visible').waitFor({
+          state: 'visible',
+          timeout: 30000,
+        });
+        const browseTab = page.locator('#menu-item-browse');
+        if (
+          await browseTab
+            .isVisible({ timeout: 5000 })
+            .catch(() => false)
+        ) {
+          await browseTab.click();
+        }
+        await page.locator('.attachments-browser').waitFor({
+          state: 'visible',
+          timeout: 30000,
+        });
+        const preferredAttachment = page.locator('[data-id="3081"]:visible').first();
+        if (await preferredAttachment.count()) {
+          await preferredAttachment.click();
+        } else {
+          await page.locator('.attachments .attachment:visible').first().click();
+        }
+        await page.click('.media-button-select:visible');
         await count(page, '.blockstudio-fields__field--files-toggle', 1);
 
         await count(canvas, '[data-test="test"]', 1);
