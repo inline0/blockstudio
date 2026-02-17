@@ -526,7 +526,6 @@ class Admin {
 			$editor_only
 		);
 	}
-
 }
 
 new Admin();

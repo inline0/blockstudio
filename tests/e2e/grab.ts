@@ -11,6 +11,7 @@ let canvas: Frame;
 const POST_URL = 'http://localhost:8888/wp-admin/post.php?post=1483&action=edit';
 const frontendUrl = 'http://localhost:8888/?p=1483&blockstudio-devtools';
 const frontendUrlNoDevtools = 'http://localhost:8888/?p=1483';
+const modKey = process.platform === 'darwin' ? 'Meta' : 'Control';
 
 test.describe.configure({ mode: 'serial' });
 
@@ -134,7 +135,7 @@ test.describe('Grab', () => {
       await page.goto(frontendUrl);
       await page.waitForLoadState('networkidle');
 
-      await page.keyboard.down('Meta');
+      await page.keyboard.down(modKey);
       await page.keyboard.down('c');
       await page.waitForTimeout(200);
 
@@ -143,7 +144,7 @@ test.describe('Grab', () => {
 
       // Deactivate with Escape
       await page.keyboard.up('c');
-      await page.keyboard.up('Meta');
+      await page.keyboard.up(modKey);
       await page.keyboard.press('Escape');
       await page.waitForTimeout(100);
     });
@@ -152,11 +153,11 @@ test.describe('Grab', () => {
       await page.goto(frontendUrl);
       await page.waitForLoadState('networkidle');
 
-      await page.keyboard.down('Meta');
+      await page.keyboard.down(modKey);
       await page.keyboard.down('c');
       await page.waitForTimeout(30);
       await page.keyboard.up('c');
-      await page.keyboard.up('Meta');
+      await page.keyboard.up(modKey);
 
       await page.waitForTimeout(100);
 
@@ -175,7 +176,7 @@ test.describe('Grab', () => {
       const box = await block.boundingBox();
       if (!box) throw new Error('Block not found on page');
 
-      await page.keyboard.down('Meta');
+      await page.keyboard.down(modKey);
       await page.keyboard.down('c');
       await page.waitForTimeout(200);
 
@@ -190,7 +191,7 @@ test.describe('Grab', () => {
 
       // Deactivate
       await page.keyboard.up('c');
-      await page.keyboard.up('Meta');
+      await page.keyboard.up(modKey);
       await page.keyboard.press('Escape');
       await page.waitForTimeout(100);
     });
@@ -209,11 +210,11 @@ test.describe('Grab', () => {
       if (!box) throw new Error('Block not found on page');
 
       // Activate
-      await page.keyboard.down('Meta');
+      await page.keyboard.down(modKey);
       await page.keyboard.down('c');
       await page.waitForTimeout(200);
       await page.keyboard.up('c');
-      await page.keyboard.up('Meta');
+      await page.keyboard.up(modKey);
 
       // Hover over block
       await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
