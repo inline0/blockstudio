@@ -61,6 +61,7 @@ jobs:
 
       - run: npm ci
       - run: composer install --no-interaction
+      - run: composer install --no-interaction --working-dir=tests/theme
 
       - name: Install Playwright browsers
         run: npx playwright install --with-deps chromium
