@@ -49,12 +49,17 @@ jobs:
           node-version: 20
           cache: npm
 
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: "8.4"
+
       - name: Configure npm registries
         run: |
           echo "@fortawesome:registry=https://npm.fontawesome.com/" >> .npmrc
           echo "//npm.fontawesome.com/:_authToken=${{ secrets.FONTAWESOME_TOKEN }}" >> .npmrc
 
       - run: npm ci
+      - run: composer install --no-interaction
 
       - name: Install Playwright browsers
         run: npx playwright install --with-deps chromium
