@@ -103,6 +103,8 @@ class Canvas {
 			return;
 		}
 
+		Build::refresh_blocks();
+
 		wp_enqueue_style( 'wp-block-library' );
 		wp_enqueue_script( 'wp-block-library' );
 
@@ -476,22 +478,13 @@ class Canvas {
 		$block_preloads     = $this->preload_block_items( $all_blocks, $only_blocks );
 		$blockstudio_blocks = array_merge( $blockstudio_blocks, $block_preloads );
 
-		$all_block_types = Build::blocks();
-		$blocks_native   = array();
-
-		foreach ( $blocks as $block_item ) {
-			if ( isset( $all_block_types[ $block_item['name'] ] ) ) {
-				$blocks_native[ $block_item['name'] ] = $all_block_types[ $block_item['name'] ];
-			}
-		}
-
 		return new WP_REST_Response(
 			array(
 				'pages'             => $response_pages,
 				'blocks'            => $blocks,
 				'blockstudioBlocks' => $blockstudio_blocks,
 				'changedBlocks'     => $only_blocks,
-				'blocksNative'      => $blocks_native,
+				'blocksNative'      => Build::blocks(),
 			)
 		);
 	}
@@ -723,6 +716,9 @@ class Canvas {
 			? $this->get_pages_with_content( $changed_pages )
 			: array();
 
+		$all_block_types = Build::blocks();
+		$blocks_native   = $all_block_types;
+
 		if ( empty( $changed_blocks ) ) {
 			$blockstudio_blocks = ! empty( $response_pages )
 				? $this->preload_all_blocks( $response_pages )
@@ -733,6 +729,7 @@ class Canvas {
 				'blocks'            => array(),
 				'blockstudioBlocks' => $blockstudio_blocks,
 				'changedBlocks'     => array(),
+				'blocksNative'      => $blocks_native,
 				'tailwindCss'       => '',
 			);
 		}
@@ -746,15 +743,6 @@ class Canvas {
 				}
 			)
 		);
-
-		$all_block_types = Build::blocks();
-		$blocks_native   = array();
-
-		foreach ( $changed_blocks as $block_name ) {
-			if ( isset( $all_block_types[ $block_name ] ) ) {
-				$blocks_native[ $block_name ] = $all_block_types[ $block_name ];
-			}
-		}
 
 		$preload_pages      = $this->get_pages_with_content();
 		$blockstudio_blocks = $this->preload_all_blocks( $preload_pages, $changed_blocks );
