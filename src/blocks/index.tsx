@@ -36,7 +36,7 @@ const blocks = window.blockstudioAdmin.data.blocksNative;
 
 const renderedIds: string[] = [];
 
-Object.values(blocks).forEach((block: BlockstudioBlock) => {
+const registerSingleBlock = (block: BlockstudioBlock) => {
   if (!isAllowedToRender(block.blockstudio as BlockstudioAttribute)) return;
 
   // @ts-ignore
@@ -199,7 +199,22 @@ Object.values(blocks).forEach((block: BlockstudioBlock) => {
       );
     },
   });
+};
+
+Object.values(blocks).forEach((block: BlockstudioBlock) => {
+  registerSingleBlock(block);
 });
+
+window.blockstudio.registerBlock = (block: BlockstudioBlock) => {
+  (blocks as any)[block.name] = block;
+  registerSingleBlock(block);
+};
+
+window.blockstudio.addPreloads = (
+  entries: Array<{ rendered: string; blockName: string }>,
+) => {
+  renderCache.addPreloads(entries);
+};
 
 registerPlugin('blockstudio-tailwind', {
   render: () => {

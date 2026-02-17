@@ -75,4 +75,14 @@ export const renderCache = {
   set(hash: string, rendered: string) {
     cache.set(hash, rendered);
   },
+
+  addPreloads(entries: Array<{ rendered: string; blockName: string }>) {
+    entries.forEach((data) => {
+      if (data.rendered && data.blockName) {
+        const queue = preloadQueues.get(data.blockName) || [];
+        queue.push(data.rendered);
+        preloadQueues.set(data.blockName, queue);
+      }
+    });
+  },
 };

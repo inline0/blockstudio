@@ -1,6 +1,7 @@
 import { memo, useCallback, useEffect, useRef, useState } from 'react';
 
 import { BlockEditorProvider } from '@wordpress/block-editor';
+import { getBlockType } from '@wordpress/blocks';
 import { Button, DropdownMenu, MenuGroup, MenuItem } from '@wordpress/components';
 import { useDispatch, useSelect } from '@wordpress/data';
 import { check, closeSmall, moreHorizontal } from '@wordpress/icons';
@@ -43,6 +44,7 @@ interface RefreshResponse {
   blocks: BlockItem[];
   blockstudioBlocks: PreloadEntry[];
   changedBlocks: string[];
+  blocksNative?: Record<string, unknown>;
 }
 
 interface SSEChangedData {
@@ -52,6 +54,7 @@ interface SSEChangedData {
   pages?: Page[];
   blocks?: BlockItem[];
   blockstudioBlocks?: PreloadEntry[];
+  blocksNative?: Record<string, unknown>;
 }
 
 const PAGE_ARTBOARD_WIDTH = 1440;
@@ -399,6 +402,21 @@ export const Canvas = ({
       newFingerprint: string,
       changedPages?: string[],
     ): void => {
+      if (data.blocksNative) {
+        const registerBlock = window.blockstudio?.registerBlock;
+        if (registerBlock) {
+          Object.values(data.blocksNative).forEach((blockData: any) => {
+            if (blockData?.name && !getBlockType(blockData.name)) {
+              registerBlock(blockData);
+            }
+          });
+        }
+      }
+
+      if (data.blockstudioBlocks.length > 0) {
+        window.blockstudio?.addPreloads?.(data.blockstudioBlocks);
+      }
+
       const changedBlockNames = new Set<string>(
         data.changedBlocks || [],
       );
@@ -421,10 +439,11 @@ export const Canvas = ({
         ];
       }
 
-      const changedSlugs = new Set<string>();
-
       if (data.pages.length > 0) {
         setCurrentPages((prevPages) => {
+          const changedSlugs = new Set<string>();
+          let nextPages: typeof prevPages;
+
           if (changedPages && changedPages.length > 0) {
             const updatedMap = new Map(
               data.pages.map((p) => [p.slug, p]),
@@ -445,35 +464,48 @@ export const Canvas = ({
               changedSlugs.add(newPage.slug);
               merged.push(newPage);
             });
-            return merged;
+            nextPages = merged;
+          } else {
+            nextPages = data.pages.map((newPage) => {
+              const existing = prevPages.find(
+                (p) => p.slug === newPage.slug,
+              );
+
+              if (!existing || existing.content !== newPage.content) {
+                changedSlugs.add(newPage.slug);
+                return newPage;
+              }
+
+              if (changedBlockNames.size > 0) {
+                const usesChangedBlock = Array.from(
+                  changedBlockNames,
+                ).some((name) => newPage.content.includes(name));
+                if (usesChangedBlock) {
+                  changedSlugs.add(newPage.slug);
+                  return { ...newPage };
+                }
+              }
+
+              return existing;
+            });
           }
 
-          return data.pages.map((newPage) => {
-            const existing = prevPages.find(
-              (p) => p.slug === newPage.slug,
-            );
+          if (changedSlugs.size > 0) {
+            setRevisions((prev) => {
+              const next = { ...prev };
+              changedSlugs.forEach((slug) => {
+                next[slug] = (next[slug] || 0) + 1;
+              });
+              return next;
+            });
+          }
 
-            if (!existing || existing.content !== newPage.content) {
-              changedSlugs.add(newPage.slug);
-              return newPage;
-            }
-
-            if (changedBlockNames.size > 0) {
-              const usesChangedBlock = Array.from(
-                changedBlockNames,
-              ).some((name) => newPage.content.includes(name));
-              if (usesChangedBlock) {
-                changedSlugs.add(newPage.slug);
-                return { ...newPage };
-              }
-            }
-
-            return existing;
-          });
+          return nextPages;
         });
       } else if (changedBlockNames.size > 0) {
         setCurrentPages((prevPages) => {
-          return prevPages.map((page) => {
+          const changedSlugs = new Set<string>();
+          const nextPages = prevPages.map((page) => {
             const usesChangedBlock = Array.from(changedBlockNames).some(
               (name) => page.content.includes(name),
             );
@@ -483,23 +515,25 @@ export const Canvas = ({
             }
             return page;
           });
-        });
-      }
 
-      if (changedSlugs.size > 0) {
-        setRevisions((prev) => {
-          const next = { ...prev };
-          changedSlugs.forEach((slug) => {
-            next[slug] = (next[slug] || 0) + 1;
-          });
-          return next;
+          if (changedSlugs.size > 0) {
+            setRevisions((prev) => {
+              const next = { ...prev };
+              changedSlugs.forEach((slug) => {
+                next[slug] = (next[slug] || 0) + 1;
+              });
+              return next;
+            });
+          }
+
+          return nextPages;
         });
       }
 
       if (data.blocks.length > 0) {
-        const changedBlockItems = new Set<string>();
-
         setCurrentBlocks((prevBlocks) => {
+          const changedBlockItems = new Set<string>();
+
           const merged = prevBlocks.map((existing) => {
             const updated = data.blocks.find(
               (b) => b.name === existing.name,
@@ -524,18 +558,18 @@ export const Canvas = ({
           );
           newBlocks.forEach((b) => changedBlockItems.add(b.name));
 
+          if (changedBlockItems.size > 0) {
+            setBlockRevisions((prev) => {
+              const next = { ...prev };
+              changedBlockItems.forEach((name) => {
+                next[name] = (next[name] || 0) + 1;
+              });
+              return next;
+            });
+          }
+
           return [...merged, ...newBlocks];
         });
-
-        if (changedBlockItems.size > 0) {
-          setBlockRevisions((prev) => {
-            const next = { ...prev };
-            changedBlockItems.forEach((name) => {
-              next[name] = (next[name] || 0) + 1;
-            });
-            return next;
-          });
-        }
       }
 
       setFingerprint(newFingerprint);
@@ -578,6 +612,7 @@ export const Canvas = ({
               blocks: parsed.blocks || [],
               blockstudioBlocks: parsed.blockstudioBlocks,
               changedBlocks: parsed.changedBlocks || [],
+              blocksNative: parsed.blocksNative,
             },
             parsed.fingerprint,
             parsed.changedPages,

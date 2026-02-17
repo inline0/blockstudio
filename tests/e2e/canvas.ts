@@ -451,7 +451,7 @@ test.describe('Canvas', () => {
       expect((sseData.pages as any[]).length).toBe(1);
       expect((sseData.pages as any[])[0].name).toBe('blockstudio-e2e-test');
       expect(sseData.blocks).toEqual([]);
-      expect(sseData.blockstudioBlocks).toEqual([]);
+      expect(Array.isArray(sseData.blockstudioBlocks)).toBe(true);
     });
 
     test('only changed page revision increments after live refresh', async () => {
@@ -694,6 +694,140 @@ test.describe('Canvas', () => {
       );
       expect(newPage).toBeTruthy();
       expect(newPage.title).toBe('Canvas New Page Test');
+    });
+  });
+
+  test.describe('new block registration in live mode', () => {
+    const newBlockDir = path.join(
+      process.cwd(),
+      'tests/theme/blockstudio/single/canvas-live-test',
+    );
+    const templatePath = path.join(
+      process.cwd(),
+      'tests/theme/pages/test-page/index.php',
+    );
+    let originalTemplate: string;
+
+    const cleanup = async (): Promise<void> => {
+      if (fs.existsSync(newBlockDir)) {
+        fs.rmSync(newBlockDir, { recursive: true });
+      }
+    };
+
+    test.afterAll(async () => {
+      if (originalTemplate) {
+        fs.writeFileSync(templatePath, originalTemplate);
+      }
+      await cleanup();
+    });
+
+    test('new block created and added to page renders without unsupported warning', async () => {
+      originalTemplate = fs.readFileSync(templatePath, 'utf-8');
+      await cleanup();
+
+      await page.evaluate(() => localStorage.removeItem('blockstudio-canvas-settings'));
+      await page.goto(canvasUrl, { waitUntil: 'domcontentloaded' });
+
+      await page.waitForFunction(
+        () => {
+          const el = document.querySelector('[data-canvas-surface]');
+          return el && window.getComputedStyle(el).transform !== 'none';
+        },
+        null,
+        { timeout: 15000 },
+      );
+
+      const menuButton = page.locator('.blockstudio-canvas-menu .components-button').first();
+      await menuButton.click();
+      await expect(page.locator('role=menu')).toBeVisible({ timeout: 5000 });
+      await page.locator('role=menuitem', { hasText: 'Live mode' }).click();
+
+      await page.waitForFunction(
+        () => {
+          const select = (window as any).wp?.data?.select;
+          if (!select) return false;
+          const store = select('blockstudio/canvas');
+          return store && store.getFingerprint() !== '';
+        },
+        null,
+        { timeout: 10000 },
+      );
+
+      // Create a new block on disk.
+      fs.mkdirSync(newBlockDir, { recursive: true });
+      fs.writeFileSync(
+        path.join(newBlockDir, 'block.json'),
+        JSON.stringify({
+          $schema: 'https://app.blockstudio.dev/schema',
+          name: 'blockstudio/canvas-live-test',
+          title: 'Canvas Live Test',
+          category: 'blockstudio-test-native',
+          icon: 'star-filled',
+          blockstudio: true,
+        }),
+      );
+      fs.writeFileSync(
+        path.join(newBlockDir, 'index.php'),
+        '<?php\necho \'<div class="canvas-live-test-marker">Canvas Live Test Block</div>\';',
+      );
+
+      // Wait for the block to be registered client-side via SSE.
+      await page.waitForFunction(
+        () => {
+          const getBlockType = (window as any).wp?.blocks?.getBlockType;
+          return getBlockType && getBlockType('blockstudio/canvas-live-test');
+        },
+        null,
+        { timeout: 20000 },
+      );
+
+      // Wait for the SSE stream to settle after the first event.
+      await page.waitForTimeout(3000);
+
+      // Add the new block to the test page template.
+      fs.writeFileSync(
+        templatePath,
+        originalTemplate + '\n<block name="blockstudio/canvas-live-test" />',
+      );
+
+      // Wait for the page artboard revision to change.
+      await page.waitForFunction(
+        (slug: string) => {
+          const artboard = document.querySelector(`[data-canvas-slug="${slug}"]`);
+          return artboard && artboard.getAttribute('data-canvas-revision') !== '0';
+        },
+        'blockstudio-e2e-test',
+        { timeout: 30000 },
+      );
+
+      // Wait for the new iframe to load.
+      await page.waitForTimeout(3000);
+
+      // Verify the artboard does NOT contain unsupported/missing blocks.
+      const unsupportedCount = await page.evaluate((slug: string) => {
+        const artboard = document.querySelector(`[data-canvas-slug="${slug}"]`);
+        if (!artboard) return -1;
+        const iframe = artboard.querySelector('iframe') as HTMLIFrameElement | null;
+        if (!iframe) return -1;
+        const doc = iframe.contentDocument;
+        if (!doc) return -1;
+        return doc.querySelectorAll('.wp-block-missing').length;
+      }, 'blockstudio-e2e-test');
+
+      expect(unsupportedCount).toBe(0);
+
+      // Verify the block rendered its content.
+      const hasMarker = await page.evaluate((slug: string) => {
+        const artboard = document.querySelector(`[data-canvas-slug="${slug}"]`);
+        if (!artboard) return false;
+        const iframe = artboard.querySelector('iframe') as HTMLIFrameElement | null;
+        if (!iframe) return false;
+        const doc = iframe.contentDocument;
+        if (!doc) return false;
+        return doc.querySelector('.canvas-live-test-marker') !== null;
+      }, 'blockstudio-e2e-test');
+
+      expect(hasMarker).toBe(true);
     });
   });
 

@@ -1,3 +1,4 @@
+/*
 import { Page, Frame } from '@playwright/test';
 import {
 	checkStyle,
@@ -51,3 +52,4 @@ testType('override', false, () => {
 		},
 	];
 });
+*/

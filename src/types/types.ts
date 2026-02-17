@@ -209,6 +209,10 @@ declare global {
               blockName: string;
             }
           >;
+      registerBlock?: (block: BlockstudioBlock) => void;
+      addPreloads?: (
+        entries: Array<{ rendered: string; blockName: string }>,
+      ) => void;
     };
     blockstudioAdmin: BlockstudioAdmin;
     pagenow?: string;

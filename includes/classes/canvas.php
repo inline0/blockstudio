@@ -533,6 +533,8 @@ class Canvas {
 			$new_fingerprint = $this->compute_fingerprint_with_mtimes( $new_mtimes );
 
 			if ( $new_fingerprint !== $fingerprint ) {
+				Build::refresh_blocks();
+
 				$new_dir_to_blocks = $this->build_dir_to_blocks_map();
 				$new_dir_to_pages  = $this->build_dir_to_pages_map();
 
@@ -567,6 +569,7 @@ class Canvas {
 					'pages'             => $refresh['pages'],
 					'blocks'            => $refresh['blocks'],
 					'blockstudioBlocks' => $refresh['blockstudioBlocks'],
+					'blocksNative'      => $refresh['blocksNative'] ?? array(),
 				);
 
 				echo "event: changed\n";
@@ -732,6 +735,15 @@ class Canvas {
 			)
 		);
 
+		$all_block_types = Build::blocks();
+		$blocks_native   = array();
+
+		foreach ( $changed_blocks as $block_name ) {
+			if ( isset( $all_block_types[ $block_name ] ) ) {
+				$blocks_native[ $block_name ] = $all_block_types[ $block_name ];
+			}
+		}
+
 		$preload_pages      = $this->get_pages_with_content();
 		$blockstudio_blocks = $this->preload_all_blocks( $preload_pages, $changed_blocks );
 		$block_preloads     = $this->preload_block_items( $all_blocks, $changed_blocks );
@@ -742,6 +754,7 @@ class Canvas {
 			'blocks'            => $blocks,
 			'blockstudioBlocks' => $blockstudio_blocks,
 			'changedBlocks'     => $changed_blocks,
+			'blocksNative'      => $blocks_native,
 		);
 	}
 
