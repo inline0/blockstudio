@@ -69,6 +69,11 @@ jobs:
       - name: Start wp-env
         run: npm run wp-env:reset
 
+      - name: Install SEO plugins for E2E
+        run: |
+          npx wp-env run cli -- wp plugin is-installed wordpress-seo || npx wp-env run cli -- wp plugin install wordpress-seo
+          npx wp-env run cli -- wp plugin is-installed seo-by-rank-math || npx wp-env run cli -- wp plugin install seo-by-rank-math
+
       - name: Run E2E tests
         run: npx playwright test --config=playwright.wp-env.config.ts
 

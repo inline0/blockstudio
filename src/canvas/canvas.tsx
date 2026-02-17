@@ -414,9 +414,11 @@ export const Canvas = ({
           ...kept,
           ...data.blockstudioBlocks,
         ];
-      } else {
-        (window as any).blockstudio.blockstudioBlocks =
-          data.blockstudioBlocks;
+      } else if (data.blockstudioBlocks.length > 0) {
+        (window as any).blockstudio.blockstudioBlocks = [
+          ...currentPreloaded,
+          ...data.blockstudioBlocks,
+        ];
       }
 
       const changedSlugs = new Set<string>();

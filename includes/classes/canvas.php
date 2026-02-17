@@ -708,10 +708,14 @@ class Canvas {
 			: array();
 
 		if ( empty( $changed_blocks ) ) {
+			$blockstudio_blocks = ! empty( $response_pages )
+				? $this->preload_all_blocks( $response_pages )
+				: array();
+
 			return array(
 				'pages'             => $response_pages,
 				'blocks'            => array(),
-				'blockstudioBlocks' => array(),
+				'blockstudioBlocks' => $blockstudio_blocks,
 				'changedBlocks'     => array(),
 			);
 		}
