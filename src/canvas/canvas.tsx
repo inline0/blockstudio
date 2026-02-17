@@ -45,6 +45,7 @@ interface RefreshResponse {
   blockstudioBlocks: PreloadEntry[];
   changedBlocks: string[];
   blocksNative?: Record<string, unknown>;
+  tailwindCss?: string;
 }
 
 interface SSEChangedData {
@@ -55,6 +56,7 @@ interface SSEChangedData {
   blocks?: BlockItem[];
   blockstudioBlocks?: PreloadEntry[];
   blocksNative?: Record<string, unknown>;
+  tailwindCss?: string;
 }
 
 const PAGE_ARTBOARD_WIDTH = 1440;
@@ -92,6 +94,7 @@ export const Canvas = ({
   const [ready, setReady] = useState(false);
   const fittedRef = useRef(false);
 
+  const [currentSettings, setCurrentSettings] = useState(settings);
   const [currentPages, setCurrentPages] = useState(initialPages);
   const [currentBlocks, setCurrentBlocks] = useState(initialBlocks);
   const [revisions, setRevisions] = useState<Record<string, number>>(() => {
@@ -572,6 +575,42 @@ export const Canvas = ({
         });
       }
 
+      if (data.tailwindCss) {
+        setCurrentSettings((prev) => {
+          const assets = (prev as any).__unstableResolvedAssets;
+          if (!assets?.styles) return prev;
+
+          const tag = '<style id="blockstudio-tailwind-editor">';
+          const existingIndex = assets.styles.indexOf(tag);
+          let newStyles: string;
+
+          if (existingIndex !== -1) {
+            const endTag = '</style>';
+            const endIndex = assets.styles.indexOf(
+              endTag,
+              existingIndex,
+            );
+            newStyles =
+              assets.styles.substring(0, existingIndex) +
+              tag +
+              data.tailwindCss +
+              endTag +
+              assets.styles.substring(endIndex + endTag.length);
+          } else {
+            newStyles =
+              assets.styles + tag + data.tailwindCss + '</style>';
+          }
+
+          return {
+            ...prev,
+            __unstableResolvedAssets: {
+              ...assets,
+              styles: newStyles,
+            },
+          };
+        });
+      }
+
       setFingerprint(newFingerprint);
     },
     [setFingerprint],
@@ -613,6 +652,7 @@ export const Canvas = ({
               blockstudioBlocks: parsed.blockstudioBlocks,
               changedBlocks: parsed.changedBlocks || [],
               blocksNative: parsed.blocksNative,
+              tailwindCss: parsed.tailwindCss,
             },
             parsed.fingerprint,
             parsed.changedPages,
@@ -641,7 +681,7 @@ export const Canvas = ({
   const labelColor = isBlocksView ? '#a855f7' : '#999';
 
   return (
-    <BlockEditorProvider settings={settings}>
+    <BlockEditorProvider settings={currentSettings}>
       <style>{`
         [data-canvas-label] { cursor: pointer; }
         [data-canvas-label] .canvas-focus-icon { opacity: 0; transition: opacity 0.15s; }

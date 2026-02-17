@@ -263,3 +263,5 @@ Just for you.</block>
   <block name="core/nextpage" />
 </div>
 <\!-- test -->
+
+<p>extension style persistence marker</p>

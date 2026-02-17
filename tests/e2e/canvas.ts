@@ -123,6 +123,74 @@ test.describe('Canvas', () => {
     });
   });
 
+  test.describe('block content rendering', () => {
+    test('artboard iframes contain no unsupported block warnings', async () => {
+      await page.goto(canvasUrl, { waitUntil: 'domcontentloaded' });
+
+      await page.waitForFunction(
+        () => {
+          const el = document.querySelector('[data-canvas-surface]');
+          return el && window.getComputedStyle(el).transform !== 'none';
+        },
+        null,
+        { timeout: 15000 },
+      );
+
+      // Wait for BlockPreview iframes to finish rendering.
+      await page.waitForTimeout(5000);
+
+      const result = await page.evaluate(() => {
+        const iframes = document.querySelectorAll('#blockstudio-canvas iframe');
+        const warnings: string[] = [];
+
+        iframes.forEach((f) => {
+          const doc = (f as HTMLIFrameElement).contentDocument;
+          if (!doc) return;
+
+          doc.querySelectorAll('.wp-block-missing').forEach((el) => {
+            const text = el.textContent || '';
+            const match = text.match(/"([^"]+)"/);
+            if (match) {
+              warnings.push(match[1]);
+            }
+          });
+        });
+
+        return warnings;
+      });
+
+      expect(result).toEqual([]);
+    });
+
+    test('blockstudio blocks render PHP output in artboard iframe', async () => {
+      const result = await page.evaluate(() => {
+        const artboard = document.querySelector(
+          '[data-canvas-slug="blockstudio-e2e-test"]',
+        );
+        if (!artboard) return { error: 'artboard not found' };
+
+        const iframe = artboard.querySelector('iframe') as HTMLIFrameElement | null;
+        if (!iframe) return { error: 'iframe not found' };
+
+        const doc = iframe.contentDocument;
+        if (!doc) return { error: 'contentDocument not accessible' };
+
+        const preloadSimple = doc.querySelector('.preload-simple');
+        const preloadTitle = doc.querySelector('.preload-simple .preload-title');
+
+        return {
+          hasPreloadSimple: preloadSimple !== null,
+          preloadTitleText: preloadTitle?.textContent || null,
+          bodyText: doc.body?.textContent?.substring(0, 500) || null,
+        };
+      });
+
+      expect(result).not.toHaveProperty('error');
+      expect((result as any).hasPreloadSimple).toBe(true);
+      expect((result as any).preloadTitleText).toBeTruthy();
+    });
+  });
+
   test.describe('dropdown menu', () => {
     test('opens menu when clicking the button', async () => {
       await page.goto(canvasUrl, { waitUntil: 'domcontentloaded' });
@@ -803,31 +871,40 @@ test.describe('Canvas', () => {
       // Wait for the new iframe to load.
       await page.waitForTimeout(3000);
 
-      // Verify the artboard does NOT contain unsupported/missing blocks.
-      const unsupportedCount = await page.evaluate((slug: string) => {
+      // Verify the artboard rendered the block's PHP output and has no unsupported warnings.
+      const result = await page.evaluate((slug: string) => {
         const artboard = document.querySelector(`[data-canvas-slug="${slug}"]`);
-        if (!artboard) return -1;
+        if (!artboard) return { error: 'artboard not found' };
         const iframe = artboard.querySelector('iframe') as HTMLIFrameElement | null;
-        if (!iframe) return -1;
+        if (!iframe) return { error: 'iframe not found' };
         const doc = iframe.contentDocument;
-        if (!doc) return -1;
-        return doc.querySelectorAll('.wp-block-missing').length;
+        if (!doc) return { error: 'contentDocument not accessible' };
+
+        const bodyText = doc.body?.textContent || '';
+        const missingBlocks: string[] = [];
+        doc.querySelectorAll('.wp-block-missing').forEach((el) => {
+          missingBlocks.push(el.textContent || '');
+        });
+
+        return {
+          hasMarkerElement: doc.querySelector('.canvas-live-test-marker') !== null,
+          hasMarkerText: bodyText.includes('Canvas Live Test Block'),
+          missingBlocks,
+          hasUnsupportedText: bodyText.includes("doesn't include support"),
+        };
       }, 'blockstudio-e2e-test');
 
-      expect(unsupportedCount).toBe(0);
-
-      // Verify the block rendered its content.
-      const hasMarker = await page.evaluate((slug: string) => {
-        const artboard = document.querySelector(`[data-canvas-slug="${slug}"]`);
-        if (!artboard) return false;
-        const iframe = artboard.querySelector('iframe') as HTMLIFrameElement | null;
-        if (!iframe) return false;
-        const doc = iframe.contentDocument;
-        if (!doc) return false;
-        return doc.querySelector('.canvas-live-test-marker') !== null;
-      }, 'blockstudio-e2e-test');
-
-      expect(hasMarker).toBe(true);
+      expect(result).not.toHaveProperty('error');
+      const r = result as {
+        hasMarkerElement: boolean;
+        hasMarkerText: boolean;
+        missingBlocks: string[];
+        hasUnsupportedText: boolean;
+      };
+      expect(r.missingBlocks).toEqual([]);
+      expect(r.hasUnsupportedText).toBe(false);
+      expect(r.hasMarkerElement).toBe(true);
+      expect(r.hasMarkerText).toBe(true);
     });
   });
 
@@ -962,6 +1039,130 @@ test.describe('Canvas', () => {
         if (original) {
           fs.writeFileSync(tplPath, original);
         }
+      }
+    });
+  });
+
+  test.describe('tailwind CSS in live mode', () => {
+    const blockTemplatePath = path.join(
+      process.cwd(),
+      'tests/theme/blockstudio/types/preload/simple/index.php',
+    );
+    let originalBlockTemplate: string;
+
+    test.afterAll(async () => {
+      if (originalBlockTemplate) {
+        fs.writeFileSync(blockTemplatePath, originalBlockTemplate);
+      }
+    });
+
+    test('SSE includes recompiled tailwind CSS when block template gains new classes', async () => {
+      originalBlockTemplate = fs.readFileSync(blockTemplatePath, 'utf-8');
+
+      try {
+        await page.goto(canvasUrl, { waitUntil: 'domcontentloaded' });
+
+        await page.waitForFunction(
+          () => {
+            const el = document.querySelector('[data-canvas-surface]');
+            return el && window.getComputedStyle(el).transform !== 'none';
+          },
+          null,
+          { timeout: 15000 },
+        );
+
+        await page.evaluate(() => {
+          const canvasData = (window as any).blockstudioCanvas;
+          const url =
+            canvasData.restRoot +
+            'blockstudio/v1/canvas/stream?_wpnonce=' +
+            encodeURIComponent(canvasData.restNonce);
+
+          const es = new EventSource(url);
+          (window as any).__twSSEFingerprintPromise = new Promise<void>((resolve) => {
+            es.addEventListener('fingerprint', () => resolve());
+          });
+          (window as any).__twSSEChangedPromise = new Promise<Record<string, unknown>>(
+            (resolve) => {
+              es.addEventListener('changed', (e: MessageEvent) => {
+                es.close();
+                resolve(JSON.parse(e.data));
+              });
+            },
+          );
+        });
+
+        await page.evaluate(() => (window as any).__twSSEFingerprintPromise);
+
+        fs.writeFileSync(
+          blockTemplatePath,
+          originalBlockTemplate.replace(
+            'class="preload-simple"',
+            'class="preload-simple bg-fuchsia-700"',
+          ),
+        );
+
+        const sseData: any = await page.evaluate(
+          () => (window as any).__twSSEChangedPromise,
+        );
+
+        expect(sseData).toHaveProperty('tailwindCss');
+        expect(typeof sseData.tailwindCss).toBe('string');
+        expect(sseData.tailwindCss.length).toBeGreaterThan(0);
+        expect(sseData.tailwindCss).toContain('fuchsia');
+      } finally {
+        fs.writeFileSync(blockTemplatePath, originalBlockTemplate);
+      }
+    });
+
+    test('recompiled tailwind CSS applies styles in artboard iframe', async () => {
+      originalBlockTemplate = fs.readFileSync(blockTemplatePath, 'utf-8');
+
+      // Write the modified template BEFORE navigating so the initial page load
+      // picks it up (avoids OPcache staleness in long-running SSE processes).
+      fs.writeFileSync(
+        blockTemplatePath,
+        originalBlockTemplate.replace(
+          'class="preload-simple"',
+          'class="preload-simple bg-fuchsia-700"',
+        ),
+      );
+
+      try {
+        await page.goto(canvasUrl, { waitUntil: 'domcontentloaded' });
+
+        await page.waitForFunction(
+          () => {
+            const el = document.querySelector('[data-canvas-surface]');
+            return el && window.getComputedStyle(el).transform !== 'none';
+          },
+          null,
+          { timeout: 15000 },
+        );
+
+        await page.waitForTimeout(5000);
+
+        const result = await page.evaluate(() => {
+          const artboard = document.querySelector('[data-canvas-slug="blockstudio-e2e-test"]');
+          if (!artboard) return { error: 'artboard not found' };
+          const iframe = artboard.querySelector('iframe') as HTMLIFrameElement | null;
+          if (!iframe) return { error: 'iframe not found' };
+          const doc = iframe.contentDocument;
+          if (!doc) return { error: 'contentDocument not accessible' };
+
+          const el = doc.querySelector('.bg-fuchsia-700');
+          if (!el) return { error: 'element with bg-fuchsia-700 not found' };
+
+          const bg = iframe.contentWindow!.getComputedStyle(el).backgroundColor;
+
+          return { backgroundColor: bg };
+        });
+
+        expect(result).not.toHaveProperty('error');
+        // Tailwind v4 uses oklch color format.
+        expect((result as any).backgroundColor).toContain('oklch');
+      } finally {
+        fs.writeFileSync(blockTemplatePath, originalBlockTemplate);
       }
     });
   });

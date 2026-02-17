@@ -414,6 +414,8 @@ class Canvas {
 		$pages_param     = $pages_targeted ? $request->get_param( 'pages' ) : '';
 		$only_pages      = ! empty( $pages_param ) ? explode( ',', $pages_param ) : array();
 
+		Build::refresh_blocks();
+
 		if ( ! $pages_targeted || ! empty( $only_pages ) ) {
 			$page_paths = Pages::get_paths();
 			$discovery  = new Page_Discovery();
@@ -453,8 +455,6 @@ class Canvas {
 			);
 		}
 
-		Build::refresh_blocks();
-
 		$all_blocks = $this->get_blocks_with_content();
 
 		if ( $blocks_targeted ) {
@@ -476,12 +476,22 @@ class Canvas {
 		$block_preloads     = $this->preload_block_items( $all_blocks, $only_blocks );
 		$blockstudio_blocks = array_merge( $blockstudio_blocks, $block_preloads );
 
+		$all_block_types = Build::blocks();
+		$blocks_native   = array();
+
+		foreach ( $blocks as $block_item ) {
+			if ( isset( $all_block_types[ $block_item['name'] ] ) ) {
+				$blocks_native[ $block_item['name'] ] = $all_block_types[ $block_item['name'] ];
+			}
+		}
+
 		return new WP_REST_Response(
 			array(
 				'pages'             => $response_pages,
 				'blocks'            => $blocks,
 				'blockstudioBlocks' => $blockstudio_blocks,
 				'changedBlocks'     => $only_blocks,
+				'blocksNative'      => $blocks_native,
 			)
 		);
 	}
@@ -570,6 +580,7 @@ class Canvas {
 					'blocks'            => $refresh['blocks'],
 					'blockstudioBlocks' => $refresh['blockstudioBlocks'],
 					'blocksNative'      => $refresh['blocksNative'] ?? array(),
+					'tailwindCss'       => $refresh['tailwindCss'] ?? '',
 				);
 
 				echo "event: changed\n";
@@ -683,9 +694,11 @@ class Canvas {
 	 *
 	 * @param array<string> $changed_blocks Block names that changed.
 	 * @param array<string> $changed_pages  Page source paths that changed.
-	 * @return array{pages: array, blocks: array, blockstudioBlocks: array, changedBlocks: array<string>}
+	 * @return array{pages: array, blocks: array, blockstudioBlocks: array, changedBlocks: array<string>, tailwindCss: string}
 	 */
 	private function compute_refresh_data( array $changed_blocks, array $changed_pages ): array {
+		Build::refresh_blocks();
+
 		if ( ! empty( $changed_pages ) ) {
 			$page_paths = Pages::get_paths();
 			$discovery  = new Page_Discovery();
@@ -720,10 +733,9 @@ class Canvas {
 				'blocks'            => array(),
 				'blockstudioBlocks' => $blockstudio_blocks,
 				'changedBlocks'     => array(),
+				'tailwindCss'       => '',
 			);
 		}
-
-		Build::refresh_blocks();
 
 		$all_blocks = $this->get_blocks_with_content();
 		$blocks     = array_values(
@@ -755,6 +767,7 @@ class Canvas {
 			'blockstudioBlocks' => $blockstudio_blocks,
 			'changedBlocks'     => $changed_blocks,
 			'blocksNative'      => $blocks_native,
+			'tailwindCss'       => Tailwind::compile_editor_css(),
 		);
 	}
 

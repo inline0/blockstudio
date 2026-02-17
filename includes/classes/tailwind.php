@@ -55,7 +55,7 @@ class Tailwind {
 	 *
 	 * @return string[] Filtered candidates with numeric values removed.
 	 */
-	private function filter_candidates( array $candidates ): array {
+	private static function filter_candidates( array $candidates ): array {
 		return array_values(
 			array_filter(
 				$candidates,
@@ -74,7 +74,7 @@ class Tailwind {
 	 *
 	 * @return string HTML-like content for TailwindPHP.
 	 */
-	private function candidates_to_content( array $candidates ): string {
+	private static function candidates_to_content( array $candidates ): string {
 		return '<div class="' . implode( ' ', $candidates ) . '"></div>';
 	}
 
@@ -103,8 +103,8 @@ class Tailwind {
 
 		$this->compiled = true;
 
-		$css_input  = $this->build_css_input();
-		$candidates = $this->filter_candidates( TailwindPHP::extractCandidates( $html ) );
+		$css_input  = self::build_css_input();
+		$candidates = self::filter_candidates( TailwindPHP::extractCandidates( $html ) );
 		sort( $candidates );
 		$cache_key  = md5( implode( ',', $candidates ) . $css_input );
 		$cache_path = self::get_cache_dir() . '/' . $cache_key . '.css';
@@ -115,7 +115,7 @@ class Tailwind {
 		} else {
 			$compiled = TailwindPHP::generate(
 				array(
-					'content' => $this->candidates_to_content( $candidates ),
+					'content' => self::candidates_to_content( $candidates ),
 					'css'     => $css_input,
 					'minify'  => true,
 				)
@@ -145,18 +145,16 @@ class Tailwind {
 	}
 
 	/**
-	 * Inject compiled Tailwind CSS into the block editor.
+	 * Compile Tailwind CSS for the editor from all block template files.
 	 *
-	 * Compiles the CSS config (e.g. @apply rules) so custom classes like
-	 * .container work in the editor iframe alongside the CDN.
+	 * Extracts candidates from registered block templates, compiles via
+	 * TailwindPHP with file-based caching, and returns the CSS string.
 	 *
-	 * @param array $settings Editor settings.
-	 *
-	 * @return array Modified editor settings.
+	 * @return string Compiled CSS, or empty string if Tailwind is disabled or no candidates found.
 	 */
-	public function inject_editor_styles( array $settings ): array {
-		if ( ! Settings::get( 'tailwind/enabled' ) || ! isset( $settings['__unstableResolvedAssets'] ) ) {
-			return $settings;
+	public static function compile_editor_css(): string {
+		if ( ! Settings::get( 'tailwind/enabled' ) ) {
+			return '';
 		}
 
 		$candidates = array();
@@ -175,10 +173,10 @@ class Tailwind {
 		}
 
 		$candidates = array_unique( $candidates );
-		$candidates = $this->filter_candidates( $candidates );
+		$candidates = self::filter_candidates( $candidates );
 		sort( $candidates );
 
-		$css_input  = $this->build_css_input();
+		$css_input  = self::build_css_input();
 		$cache_key  = md5( 'editor:' . implode( ',', $candidates ) . $css_input );
 		$cache_path = self::get_cache_dir() . '/' . $cache_key . '.css';
 
@@ -202,6 +200,26 @@ class Tailwind {
 			}
 		}
 
+		return ! empty( $compiled ) ? $compiled : '';
+	}
+
+	/**
+	 * Inject compiled Tailwind CSS into the block editor.
+	 *
+	 * Compiles the CSS config (e.g. @apply rules) so custom classes like
+	 * .container work in the editor iframe alongside the CDN.
+	 *
+	 * @param array $settings Editor settings.
+	 *
+	 * @return array Modified editor settings.
+	 */
+	public function inject_editor_styles( array $settings ): array {
+		if ( ! Settings::get( 'tailwind/enabled' ) || ! isset( $settings['__unstableResolvedAssets'] ) ) {
+			return $settings;
+		}
+
+		$compiled = self::compile_editor_css();
+
 		if ( ! empty( $compiled ) ) {
 			$settings['__unstableResolvedAssets']['styles'] .= '<style id="blockstudio-tailwind-editor">' . $compiled . '</style>';
 		}
@@ -214,7 +232,7 @@ class Tailwind {
 	 *
 	 * @return string The CSS input with imports and config.
 	 */
-	private function build_css_input(): string {
+	private static function build_css_input(): string {
 		$css = '@import "tailwindcss";';
 
 		$config = Settings::get( 'tailwind/config' );
