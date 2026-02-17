@@ -106,7 +106,7 @@ add_filter('blockstudio/path', function () {
 
 // Custom path within a plugin.
 add_filter('blockstudio/path', function () {
-    return plugins_url() . '/my-custom-plugin/blocks';
+    return WP_PLUGIN_DIR . '/my-custom-plugin/blocks';
 });
 ```
 
@@ -126,10 +126,10 @@ add_action('init', function () {
 ## Filter metadata
 
 Metadata can be filtered before the block is being registered using the
-`blockstudio/block/meta` filter:
+`blockstudio/blocks/meta` filter:
 
 ```php title="functions.php"
-add_filter('blockstudio/block/meta', function ($meta, $block) {
+add_filter('blockstudio/blocks/meta', function ($meta, $block) {
     if (str_starts_with($block['name'], 'marketing')) {
         $meta['icon'] = 'megaphone';
     }

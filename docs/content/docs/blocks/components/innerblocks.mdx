@@ -187,10 +187,10 @@ editor if parent data changes.
 
 `InnerBlocks` has to render a wrapper element around its children inside the
 editor, however, it can be removed from the frontend by using the
-`blockstudio/blocks/components/innerblocks/frontend/wrap` filter.
+`blockstudio/blocks/components/inner_blocks/frontend/wrap` filter.
 
 ```php title="functions.php"
-add_filter('blockstudio/block/components/innerblocks/frontend/wrap', function($wrap, $block) {
+add_filter('blockstudio/blocks/components/inner_blocks/frontend/wrap', function($wrap, $block) {
   return false; // Remove wrapper
 }, 10, 2);
 ```

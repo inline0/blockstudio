@@ -254,7 +254,7 @@ Mixing options and populate data is not supported when using **fetch** mode.
 Create reusable datasets with the `blockstudio/blocks/populate` filter:
 
 ```php title="functions.php"
-add_filter('blockstudio/block/attributes/populate', function($options, $attribute, $block) {
+add_filter('blockstudio/blocks/attributes/populate', function($options, $attribute, $block) {
   if ($attribute['populate']['custom'] === 'customData') {
     return [
       ['value' => '1', 'label' => 'Option 1'],

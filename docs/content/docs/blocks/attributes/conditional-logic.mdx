@@ -109,7 +109,7 @@ The text attribute will show if (**post ID is 1386** AND **post type is post**) 
 Custom conditions can be added using the `blockstudio/blocks/conditions` filter:
 
 ```php title="functions.php"
-add_filter('blockstudio/block/conditions', function($conditions) {
+add_filter('blockstudio/blocks/conditions', function($conditions) {
   $conditions['purchasedProduct'] = function($condition) {
     // Check if user purchased the product
     return user_has_purchased($condition['value']);

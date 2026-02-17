@@ -5,7 +5,9 @@
     "general",
     "blocks",
     "pages-and-patterns",
-    "other",
+    "tailwind",
+    "extensions",
+    "code-snippets",
     "dev"
   ]
 }

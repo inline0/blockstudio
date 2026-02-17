@@ -12,7 +12,7 @@ Blockstudio provides two methods to filter block attributes.
 The first method filters the attributes in the editor. This is useful if you want to adjust the default value of an attribute or its conditions.
 
 ```php title="functions.php"
-add_filter('blockstudio/block/attributes', function($attributes, $block) {
+add_filter('blockstudio/blocks/attributes', function($attributes, $block) {
   if ($block['name'] === 'my-theme/code-block') {
     foreach ($attributes as &$attribute) {
       // Set default value
@@ -47,7 +47,7 @@ Keep in mind that this filter is only evaluated when inserting blocks in the edi
 The second method filters the attributes on the frontend. This is useful if you want to adjust the attributes before they are passed to the block template.
 
 ```php title="functions.php"
-add_filter('blockstudio/block/attributes/render', function($attributes, $block) {
+add_filter('blockstudio/blocks/attributes/render', function($attributes, $block) {
   if ($block['name'] === 'my-theme/code-block') {
     // Override attribute value
     $attributes['lineNumbers'] = true;

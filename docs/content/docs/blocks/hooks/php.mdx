@@ -38,11 +38,13 @@ add_action('blockstudio/init', function($blocks) {
 
 This action fires after the plugin has registered all blocks of a specific
 instance.
+The `$instance` segment is the instance path relative to `wp-content`.
 
 ```php title="functions.php"
-add_action('blockstudio/init/instance', function($blocks, $instance) {
+$instance = 'themes/my-theme/client-blocks';
+add_action("blockstudio/init/$instance", function() {
   // All blocks of this instance have been registered
-}, 10, 2);
+});
 ```
 
 ### global/before
@@ -55,13 +57,14 @@ add_action('blockstudio/init/before', function() {
 });
 ```
 
-### global/before/instance
+### global/before/$instance
 
 This action fires before the plugin has registered all blocks of a specific
 instance.
 
 ```php title="functions.php"
-add_action('blockstudio/init/before/instance', function($instance) {
+$instance = 'themes/my-theme/client-blocks';
+add_action("blockstudio/init/before/$instance", function() {
   // Before blocks of this instance are registered
 });
 ```
@@ -73,7 +76,7 @@ add_action('blockstudio/init/before/instance', function($instance) {
 This filter allows you to adjust the output of a block before it is rendered.
 
 ```php title="functions.php"
-add_filter('blockstudio/block/render', function($content, $block, $attributes) {
+add_filter('blockstudio/blocks/render', function($content, $block, $attributes) {
   // Modify the block content
   return $content;
 }, 10, 3);
@@ -85,7 +88,7 @@ This filter allows you to adjust the data of the block.json file before it is
 registered.
 
 ```php title="functions.php"
-add_filter('blockstudio/block/meta', function($meta, $block) {
+add_filter('blockstudio/blocks/meta', function($meta, $block) {
   if (str_starts_with($block['name'], 'marketing')) {
     $meta['icon'] = 'megaphone';
   }
@@ -100,7 +103,7 @@ The above code would change the icon of all blocks starting with **marketing**.
 This filter allows you to add custom conditions which can be used within blocks.
 
 ```php title="functions.php"
-add_filter('blockstudio/block/conditions', function($conditions) {
+add_filter('blockstudio/blocks/conditions', function($conditions) {
   $conditions['myCustomCondition'] = function($condition) {
     return $condition['value'] === 'expected';
   };
@@ -114,7 +117,7 @@ This filter allows you to adjust the attributes of a block before the block is
 registered. See [Filtering](/docs/blocks/attributes/filtering) for more information.
 
 ```php title="functions.php"
-add_filter('blockstudio/block/attributes', function($attributes, $block) {
+add_filter('blockstudio/blocks/attributes', function($attributes, $block) {
   // Modify attributes before registration
   return $attributes;
 }, 10, 2);
@@ -126,7 +129,7 @@ This filter allows you to adjust the attributes of a block before it is
 rendered. See [Filtering](/docs/blocks/attributes/filtering) for more information.
 
 ```php title="functions.php"
-add_filter('blockstudio/block/attributes/render', function($attributes, $block) {
+add_filter('blockstudio/blocks/attributes/render', function($attributes, $block) {
   // Modify attributes before rendering
   return $attributes;
 }, 10, 2);
@@ -138,7 +141,7 @@ This filter allows you to add custom data to the options of a `checkbox`,
 `select` or `radio` field. See [Populating options](/docs/blocks/attributes/populating-options) for more information.
 
 ```php title="functions.php"
-add_filter('blockstudio/block/attributes/populate', function($options, $attribute, $block) {
+add_filter('blockstudio/blocks/attributes/populate', function($options, $attribute, $block) {
   if ($attribute['populate'] === 'myCustomOptions') {
     return [
       ['value' => '1', 'label' => 'Option 1'],

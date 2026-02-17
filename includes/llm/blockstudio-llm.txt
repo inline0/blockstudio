@@ -71,11 +71,15 @@ This guide will help you set up Blockstudio and create your first custom block.
 composer require blockstudio/blockstudio
 ```
 
+Composer installations receive updates through Composer. The built-in GitHub updater is automatically disabled.
+
 ### Manual Installation
 
-1. Download the latest release from GitHub
+1. Download the latest release zip from GitHub Releases
 2. Upload to your WordPress plugins directory
 3. Activate the plugin
+
+Manual installations receive automatic update notifications in the WordPress dashboard via the built-in GitHub updater.
 
 ## Creating Your First Block
 
@@ -211,12 +215,6 @@ add_filter('blockstudio/settings/library', '__return_true');
 ```
 
 Options set via the `blockstudio/settings/${setting}` filter will override the ones set via the `blockstudio.json` file. Both methods can be used together.
-
-## Via Admin
-
-Allowed users from the `blockstudio/settings/users/ids` and `blockstudio/settings/users/roles` filters are able to change the settings visually inside the admin area. If the `Save as JSON` checkbox is checked, the settings will be saved to the JSON file, otherwise they will be saved to the database into the `options` table.
-
-Settings set via filters will be grayed out and disabled inside the admin area.
 
 ## Available Settings
 
@@ -366,7 +364,7 @@ add_filter('blockstudio/path', function () {
 
 // Custom path within a plugin.
 add_filter('blockstudio/path', function () {
-    return plugins_url() . '/my-custom-plugin/blocks';
+    return WP_PLUGIN_DIR . '/my-custom-plugin/blocks';
 });
 ```
 
@@ -386,10 +384,10 @@ add_action('init', function () {
 ## Filter metadata
 
 Metadata can be filtered before the block is being registered using the
-`blockstudio/block/meta` filter:
+`blockstudio/blocks/meta` filter:
 
 ```php
-add_filter('blockstudio/block/meta', function ($meta, $block) {
+add_filter('blockstudio/blocks/meta', function ($meta, $block) {
     if (str_starts_with($block['name'], 'marketing')) {
         $meta['icon'] = 'megaphone';
     }
@@ -1193,7 +1191,7 @@ Blockstudio provides two methods to filter block attributes.
 The first method filters the attributes in the editor. This is useful if you want to adjust the default value of an attribute or its conditions.
 
 ```php
-add_filter('blockstudio/block/attributes', function($attributes, $block) {
+add_filter('blockstudio/blocks/attributes', function($attributes, $block) {
   if ($block['name'] === 'my-theme/code-block') {
     foreach ($attributes as &$attribute) {
       // Set default value
@@ -1228,7 +1226,7 @@ Keep in mind that this filter is only evaluated when inserting blocks in the edi
 The second method filters the attributes on the frontend. This is useful if you want to adjust the attributes before they are passed to the block template.
 
 ```php
-add_filter('blockstudio/block/attributes/render', function($attributes, $block) {
+add_filter('blockstudio/blocks/attributes/render', function($attributes, $block) {
   if ($block['name'] === 'my-theme/code-block') {
     // Override attribute value
     $attributes['lineNumbers'] = true;
@@ -1396,7 +1394,7 @@ The text attribute will show if (post ID is 1386 AND post type is post) OR (post
 Custom conditions can be added using the `blockstudio/blocks/conditions` filter:
 
 ```php
-add_filter('blockstudio/block/conditions', function($conditions) {
+add_filter('blockstudio/blocks/conditions', function($conditions) {
   $conditions['purchasedProduct'] = function($condition) {
     // Check if user purchased the product
     return user_has_purchased($condition['value']);
@@ -1796,7 +1794,7 @@ Mixing options and populate data is not supported when using fetch mode.
 Create reusable datasets with the `blockstudio/blocks/populate` filter:
 
 ```php
-add_filter('blockstudio/block/attributes/populate', function($options, $attribute, $block) {
+add_filter('blockstudio/blocks/attributes/populate', function($options, $attribute, $block) {
   if ($attribute['populate']['custom'] === 'customData') {
     return [
       ['value' => '1', 'label' => 'Option 1'],
@@ -2694,10 +2692,10 @@ editor if parent data changes.
 
 `InnerBlocks` has to render a wrapper element around its children inside the
 editor, however, it can be removed from the frontend by using the
-`blockstudio/blocks/components/innerblocks/frontend/wrap` filter.
+`blockstudio/blocks/components/inner_blocks/frontend/wrap` filter.
 
 ```php
-add_filter('blockstudio/block/components/innerblocks/frontend/wrap', function($wrap, $block) {
+add_filter('blockstudio/blocks/components/inner_blocks/frontend/wrap', function($wrap, $block) {
   return false; // Remove wrapper
 }, 10, 2);
 ```
@@ -3961,11 +3959,13 @@ add_action('blockstudio/init', function($blocks) {
 
 This action fires after the plugin has registered all blocks of a specific
 instance.
+The `$instance` segment is the instance path relative to `wp-content`.
 
 ```php
-add_action('blockstudio/init/instance', function($blocks, $instance) {
+$instance = 'themes/my-theme/client-blocks';
+add_action("blockstudio/init/$instance", function() {
   // All blocks of this instance have been registered
-}, 10, 2);
+});
 ```
 
 ### global/before
@@ -3978,13 +3978,14 @@ add_action('blockstudio/init/before', function() {
 });
 ```
 
-### global/before/instance
+### global/before/$instance
 
 This action fires before the plugin has registered all blocks of a specific
 instance.
 
 ```php
-add_action('blockstudio/init/before/instance', function($instance) {
+$instance = 'themes/my-theme/client-blocks';
+add_action("blockstudio/init/before/$instance", function() {
   // Before blocks of this instance are registered
 });
 ```
@@ -3996,7 +3997,7 @@ add_action('blockstudio/init/before/instance', function($instance) {
 This filter allows you to adjust the output of a block before it is rendered.
 
 ```php
-add_filter('blockstudio/block/render', function($content, $block, $attributes) {
+add_filter('blockstudio/blocks/render', function($content, $block, $attributes) {
   // Modify the block content
   return $content;
 }, 10, 3);
@@ -4008,7 +4009,7 @@ This filter allows you to adjust the data of the block.json file before it is
 registered.
 
 ```php
-add_filter('blockstudio/block/meta', function($meta, $block) {
+add_filter('blockstudio/blocks/meta', function($meta, $block) {
   if (str_starts_with($block['name'], 'marketing')) {
     $meta['icon'] = 'megaphone';
   }
@@ -4023,7 +4024,7 @@ The above code would change the icon of all blocks starting with marketing.
 This filter allows you to add custom conditions which can be used within blocks.
 
 ```php
-add_filter('blockstudio/block/conditions', function($conditions) {
+add_filter('blockstudio/blocks/conditions', function($conditions) {
   $conditions['myCustomCondition'] = function($condition) {
     return $condition['value'] === 'expected';
   };
@@ -4037,7 +4038,7 @@ This filter allows you to adjust the attributes of a block before the block is
 registered. See Filtering for more information.
 
 ```php
-add_filter('blockstudio/block/attributes', function($attributes, $block) {
+add_filter('blockstudio/blocks/attributes', function($attributes, $block) {
   // Modify attributes before registration
   return $attributes;
 }, 10, 2);
@@ -4049,7 +4050,7 @@ This filter allows you to adjust the attributes of a block before it is
 rendered. See Filtering for more information.
 
 ```php
-add_filter('blockstudio/block/attributes/render', function($attributes, $block) {
+add_filter('blockstudio/blocks/attributes/render', function($attributes, $block) {
   // Modify attributes before rendering
   return $attributes;
 }, 10, 2);
@@ -4061,7 +4062,7 @@ This filter allows you to add custom data to the options of a `checkbox`,
 `select` or `radio` field. See Populating options for more information.
 
 ```php
-add_filter('blockstudio/block/attributes/populate', function($options, $attribute, $block) {
+add_filter('blockstudio/blocks/attributes/populate', function($options, $attribute, $block) {
   if ($attribute['populate'] === 'myCustomOptions') {
     return [
       ['value' => '1', 'label' => 'Option 1'],
@@ -5462,7 +5463,7 @@ add_action( 'blockstudio/patterns/registered', function( $registry ) {
 } );
 ```
 
-### Tailwind CSS
+## Tailwind CSS
 
 Blockstudio includes built-in Tailwind CSS v4 support. When enabled, every frontend page is compiled server-side via TailwindPHP with automatic file-based caching. In the block editor, a bundled Tailwind CDN script provides live preview as you edit.
 
@@ -5824,7 +5825,7 @@ A complete working setup with custom theme colors and a block that uses them:
 
 This renders on the frontend with all Tailwind utilities and custom theme colors compiled into a single inline `<style>` tag.
 
-### Extensions
+## Extensions
 
 Extensions allow you to extend any registered block in your WordPress installation using a simple `.json` based API, which is similar to the `block.json` configuration. This includes core, third-party and blocks made with Blockstudio.
 
@@ -6015,7 +6016,7 @@ When using arrays, the `set` property will be applied to every item in the array
 
 When using the `attributes` field, there is no `set` property needed, as the field automatically maps the values to the attribute name and value.
 
-### Code Snippets
+## Code Snippets
 
 Although Blockstudio's main focus is on custom blocks, its file-first approach is also suitable for code snippets.
 
@@ -6054,18 +6055,17 @@ Now, simply follow the setup instructions to register a code snippet inside the 
 
 ### Canvas
 
-The canvas provides a zoomed-out, Figma-like overview of all Blockstudio-managed pages. Each page renders as a live iframe artboard in a single horizontal row. Pan with your trackpad, zoom with pinch or Ctrl+scroll, and press Escape to exit.
+The canvas provides a zoomed-out, Figma-like overview of all Blockstudio-managed pages. Each page renders as a live iframe artboard in a single horizontal row. Pan with your trackpad, zoom with pinch or Ctrl+scroll.
 
 ## Activation
 
-Append `?blockstudio-canvas` to any frontend URL to enter the canvas:
+The canvas is available as a hidden admin page. Navigate to:
 
 ```
-https://example.com/?blockstudio-canvas
-https://example.com/my-page/?blockstudio-canvas
+/wp-admin/admin.php?page=blockstudio-canvas
 ```
 
-Without the query parameter, no canvas script is loaded.
+The page is only accessible when `dev.canvas.enabled` is `true` and the current user has the `edit_posts` capability.
 
 ## Settings
 
@@ -6094,18 +6094,40 @@ add_filter('blockstudio/settings/dev/canvas/enabled', '__return_true');
 add_filter('blockstudio/settings/dev/canvas/admin_bar', '__return_false');
 ```
 
+## Views
+
+Switch between views using the dropdown menu in the top-right corner.
+
+- Pages: All Blockstudio-managed pages as full-width artboards in a single row.
+- Blocks: All registered Blockstudio blocks in a grid layout, each rendered with its default attribute values.
+
+## Live Mode
+
+Live mode uses Server-Sent Events (SSE) to detect file changes and update the canvas in real-time. When you edit a block template, page template, or stylesheet, the affected artboards refresh automatically within about one second.
+
+Toggle live mode from the dropdown menu. A green pulsing indicator appears when active. The setting persists across sessions via localStorage.
+
+Live mode tracks changes to `.php`, `.json`, `.css`, `.scss`, `.js`, `.twig`, and `.html` files inside block and page directories. Only changed blocks and pages are refreshed, keeping updates fast even with many artboards.
+
+## Focus Mode
+
+Click any artboard label to enter focus mode. The selected artboard fills the viewport at full width with vertical scrolling. Press Escape or click the close button to return to the overview.
+
 ## Controls
 
 | Action | Input |
 |--------|-------|
 | Pan | Scroll / trackpad two-finger drag |
 | Zoom | Ctrl+scroll or pinch |
+| Fit to view | Dropdown menu |
+| Zoom to 100% | Dropdown menu |
+| Focus artboard | Click artboard label |
+| Exit focus | Escape / close button |
 
 ## Security
 
 The canvas script and page data are only loaded when all conditions are met:
 
-- The `?blockstudio-canvas` query parameter is present.
 - The `dev.canvas.enabled` setting is `true`.
 - The current user has the `edit_posts` capability.
 
@@ -6230,7 +6252,7 @@ The singleton pattern ensures only one instance runs, even if multiple plugins b
 ### Settings Schema (blockstudio.json)
 
 ```json
-{"title":"JSON schema for Blockstudio settings","$schema":"http://json-schema.org/draft-04/schema#","type":"object","properties":{"users":{"type":"object","description":"Settings related to allowed users with access to the settings and editor.","properties":{"ids":{"id":"userIds","type":"array","default":[],"items":{"type":"integer"},"description":"List of user IDs with access to the settings and editor.","descriptionFilter":"This filter allows you to enable the editor for specific user IDs.","help":"Comma separated list of user IDs. Example: 1,2,3","example":[1]},"roles":{"id":"userRoles","type":"array","default":[],"items":{"type":"string"},"description":"List of user roles with access to the settings and editor.","descriptionFilter":"This filter allows you to enable the editor for specific user roles.","help":"Comma separated list of user roles. Example: administrator,editor","example":["administrator","editor"]}}},"assets":{"type":"object","description":"Settings related to asset management.","properties":{"enqueue":{"type":"boolean","default":true,"description":"Enqueue assets in frontend and editor.","descriptionFilter":"This filter allows you to enable/disable the enqueueing of assets in frontend and editor.","example":false},"reset":{"type":"object","default":{"enabled":false,"fullWidth":[]},"description":"Control removal of WordPress core block styles.","properties":{"enabled":{"type":"boolean","default":false,"description":"Remove all WordPress core block styles on the frontend and in the editor.","descriptionFilter":"This filter allows you to enable/disable the removal of WordPress core block styles.","example":true},"fullWidth":{"type":"array","default":[],"items":{"type":"string"},"description":"Post types where the editor uses full-width layout by removing classic editor constraints.","descriptionFilter":"This filter allows you to control which post types use full-width editing.","example":["page"]}}},"minify":{"type":"object","description":"Settings related to asset minification.","properties":{"css":{"type":"boolean","default":false,"description":"Minify CSS.","descriptionFilter":"This filter allows you to enable/disable the minification of CSS.","example":true},"js":{"type":"boolean","default":false,"description":"Minify JS.","descriptionFilter":"This filter allows you to enable/disable the minification of JS.","example":true}}},"process":{"type":"object","description":"Settings related to asset processing.","properties":{"scss":{"type":"boolean","default":false,"description":"Process SCSS in .css files.","descriptionFilter":"This filter allows you to enable/disable the processing of SCSS in .css files.","example":true},"scssFiles":{"type":"boolean","default":true,"description":"Process .scss files to CSS.","descriptionFilter":"This filter allows you to enable/disable the processing of .scss files to CSS.","example":true}}}},"additionalProperties":true},"tailwind":{"type":"object","description":"Settings related to Tailwind.","properties":{"enabled":{"type":"boolean","default":false,"description":"Enable Tailwind.","descriptionFilter":"This filter allows you to enable/disable Tailwind.","example":true},"config":{"type":"string","default":"","description":"Tailwind CSS configuration using v4 CSS-first syntax.","descriptionFilter":"This filter allows you to add a custom Tailwind CSS configuration.","element":"textarea","example":"@theme { --color-primary: pink; }"}},"additionalProperties":true},"editor":{"type":"object","description":"Settings related to the editor.","properties":{"formatOnSave":{"type":"boolean","default":false,"description":"Format code upon saving.","descriptionFilter":"This filter allows you to enable/disable the formatting of code upon saving.","example":true},"assets":{"id":"editorAssets","type":"array","default":[],"description":"Additional asset IDs to be enqueued.","descriptionFilter":"This filter allows you to enqueue additional assets in the editor.","example":["my-stylesheet","another-stylesheet"]},"markup":{"type":["string","boolean"],"element":"textarea","default":"","description":"Additional markup to be added to the end of the editor.","descriptionFilter":"This filter allows you to add additional markup to the end of the editor.","example":"<style>body { background: black; }</style>"}},"additionalProperties":true},"blockEditor":{"type":"object","description":"Settings related to Gutenberg.","properties":{"disableLoading":{"type":"boolean","default":false,"description":"Disable loading of blocks inside the Block Editor.","descriptionFilter":"This filter allows you to disable the loading of blocks inside the Block Editor.","example":true},"cssClasses":{"id":"blockEditorCssClasses","type":"array","default":[],"description":"Stylesheets whose CSS classes should be available for choice in the class field.","descriptionFilter":"This filter allows you to add stylesheets whose classes should be available for choice in the class field.","example":["my-stylesheet","another-stylesheet"]},"cssVariables":{"id":"blockEditorCssVariables","type":"array","default":[],"description":"Stylesheets whose CSS variables should be available for autocompletion in the code field.","descriptionFilter":"This filter allows you to add stylesheets whose CSS variables should be available for autocompletion in the code field.","example":["my-stylesheet","another-stylesheet"]}},"additionalProperties":true},"library":{"type":"boolean","default":false,"description":"Add block library.","descriptionFilter":"This filter allows you to enable the block library.","example":true},"ai":{"id":"aiLlmMd","type":"object","description":"Settings related to AI-powered context generation.","properties":{"enableContextGeneration":{"type":"boolean","default":false,"description":"Enables the automatic creation of a comprehensive context file for use with large language model (LLM) tools (e.g., Cursor). This file compiles current installation data: all available block definitions and paths, Blockstudio-specific settings, relevant block schemas, and combined Blockstudio documentation, providing a ready-to-use resource for prompt engineering and AI code development.","descriptionFilter":"This filter allows you to enable or disable context file generation for LLM tool integration. When enabled, the context file assembles up-to-date block data, Blockstudio settings of the current install, all relevant schemas, and Blockstudio documentation into a single source for use with AI development tools.","example":true}},"additionalProperties":true},"dev":{"type":"object","description":"Settings related to developer tools.","properties":{"grab":{"type":"object","description":"Settings related to the element grabber.","properties":{"enabled":{"type":"boolean","default":false,"description":"Enable the element grabber.","descriptionFilter":"This filter allows you to enable/disable the element grabber.","example":false}}},"canvas":{"type":"object","description":"Settings related to the canvas.","properties":{"enabled":{"type":"boolean","default":false,"description":"Enable the canvas.","descriptionFilter":"This filter allows you to enable/disable the canvas.","example":false},"adminBar":{"type":"boolean","default":true,"description":"Show the WordPress admin bar when viewing the canvas.","descriptionFilter":"This filter allows you to show/hide the WordPress admin bar on the canvas.","example":true}}}},"additionalProperties":true}},"additionalProperties":true}
+{"title":"JSON schema for Blockstudio settings","$schema":"http://json-schema.org/draft-04/schema#","type":"object","properties":{"users":{"type":"object","description":"Settings related to allowed users with access to the settings and editor.","properties":{"ids":{"id":"userIds","type":"array","default":[],"items":{"type":"integer"},"description":"List of user IDs with access to the settings and editor.","descriptionFilter":"This filter allows you to enable the editor for specific user IDs.","help":"Comma separated list of user IDs. Example: 1,2,3","example":[1]},"roles":{"id":"userRoles","type":"array","default":[],"items":{"type":"string"},"description":"List of user roles with access to the settings and editor.","descriptionFilter":"This filter allows you to enable the editor for specific user roles.","help":"Comma separated list of user roles. Example: administrator,editor","example":["administrator","editor"]}}},"assets":{"type":"object","description":"Settings related to asset management.","properties":{"enqueue":{"type":"boolean","default":true,"description":"Enqueue assets in frontend and editor.","descriptionFilter":"This filter allows you to enable/disable the enqueueing of assets in frontend and editor.","example":false},"reset":{"type":"object","default":{"enabled":false,"fullWidth":[]},"description":"Control removal of WordPress core block styles.","properties":{"enabled":{"type":"boolean","default":false,"description":"Remove all WordPress core block styles on the frontend and in the editor.","descriptionFilter":"This filter allows you to enable/disable the removal of WordPress core block styles.","example":true},"fullWidth":{"type":"array","default":[],"items":{"type":"string"},"description":"Post types where the editor uses full-width layout by removing classic editor constraints.","descriptionFilter":"This filter allows you to control which post types use full-width editing.","example":["page"]}}},"minify":{"type":"object","description":"Settings related to asset minification.","properties":{"css":{"type":"boolean","default":false,"description":"Minify CSS.","descriptionFilter":"This filter allows you to enable/disable the minification of CSS.","example":true},"js":{"type":"boolean","default":false,"description":"Minify JS.","descriptionFilter":"This filter allows you to enable/disable the minification of JS.","example":true}}},"process":{"type":"object","description":"Settings related to asset processing.","properties":{"scss":{"type":"boolean","default":false,"description":"Process SCSS in .css files.","descriptionFilter":"This filter allows you to enable/disable the processing of SCSS in .css files.","example":true},"scssFiles":{"type":"boolean","default":true,"description":"Process .scss files to CSS.","descriptionFilter":"This filter allows you to enable/disable the processing of .scss files to CSS.","example":true}}}},"additionalProperties":true},"tailwind":{"type":"object","description":"Settings related to Tailwind.","properties":{"enabled":{"type":"boolean","default":false,"description":"Enable Tailwind.","descriptionFilter":"This filter allows you to enable/disable Tailwind.","example":true},"config":{"type":"string","default":"","description":"Tailwind CSS configuration using v4 CSS-first syntax.","descriptionFilter":"This filter allows you to add a custom Tailwind CSS configuration.","element":"textarea","example":"@theme { --color-primary: pink; }"}},"additionalProperties":true},"editor":{"type":"object","description":"Settings related to the editor.","properties":{"formatOnSave":{"type":"boolean","default":false,"description":"Format code upon saving.","descriptionFilter":"This filter allows you to enable/disable the formatting of code upon saving.","example":true},"assets":{"id":"editorAssets","type":"array","default":[],"description":"Additional asset IDs to be enqueued.","descriptionFilter":"This filter allows you to enqueue additional assets in the editor.","example":["my-stylesheet","another-stylesheet"]},"markup":{"type":["string","boolean"],"element":"textarea","default":"","description":"Additional markup to be added to the end of the editor.","descriptionFilter":"This filter allows you to add additional markup to the end of the editor.","example":"<style>body { background: black; }</style>"}},"additionalProperties":true},"blockEditor":{"type":"object","description":"Settings related to Gutenberg.","properties":{"disableLoading":{"type":"boolean","default":false,"description":"Disable loading of blocks inside the Block Editor.","descriptionFilter":"This filter allows you to disable the loading of blocks inside the Block Editor.","example":true},"cssClasses":{"id":"blockEditorCssClasses","type":"array","default":[],"description":"Stylesheets whose CSS classes should be available for choice in the class field.","descriptionFilter":"This filter allows you to add stylesheets whose classes should be available for choice in the class field.","example":["my-stylesheet","another-stylesheet"]},"cssVariables":{"id":"blockEditorCssVariables","type":"array","default":[],"description":"Stylesheets whose CSS variables should be available for autocompletion in the code field.","descriptionFilter":"This filter allows you to add stylesheets whose CSS variables should be available for autocompletion in the code field.","example":["my-stylesheet","another-stylesheet"]}},"additionalProperties":true},"ai":{"id":"aiLlmMd","type":"object","description":"Settings related to AI-powered context generation.","properties":{"enableContextGeneration":{"type":"boolean","default":false,"description":"Enables the automatic creation of a comprehensive context file for use with large language model (LLM) tools (e.g., Cursor). This file compiles current installation data: all available block definitions and paths, Blockstudio-specific settings, relevant block schemas, and combined Blockstudio documentation, providing a ready-to-use resource for prompt engineering and AI code development.","descriptionFilter":"This filter allows you to enable or disable context file generation for LLM tool integration. When enabled, the context file assembles up-to-date block data, Blockstudio settings of the current install, all relevant schemas, and Blockstudio documentation into a single source for use with AI development tools.","example":true}},"additionalProperties":true},"dev":{"type":"object","description":"Settings related to developer tools.","properties":{"grab":{"type":"object","description":"Settings related to the element grabber.","properties":{"enabled":{"type":"boolean","default":false,"description":"Enable the element grabber.","descriptionFilter":"This filter allows you to enable/disable the element grabber.","example":false}}},"canvas":{"type":"object","description":"Settings related to the canvas.","properties":{"enabled":{"type":"boolean","default":false,"description":"Enable the canvas.","descriptionFilter":"This filter allows you to enable/disable the canvas.","example":false},"adminBar":{"type":"boolean","default":true,"description":"Show the WordPress admin bar when viewing the canvas.","descriptionFilter":"This filter allows you to show/hide the WordPress admin bar on the canvas.","example":true}}}},"additionalProperties":true}},"additionalProperties":true}
 ```
 
 ### Page Schema (page.json)

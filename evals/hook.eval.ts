@@ -55,39 +55,39 @@ const suite: EvalSuite = {
       ],
     },
     {
-      name: "blockstudio/block/render filter",
+      name: "blockstudio/blocks/render filter",
       prompt:
-        'Write PHP code that uses the blockstudio/block/render filter to modify the HTML output of a rendered block. The filter should wrap the output of "acme/card" blocks in an additional div with class "card-wrapper". Show the complete PHP code.',
+        'Write PHP code that uses the blockstudio/blocks/render filter to modify the HTML output of a rendered block. The filter should wrap the output of "acme/card" blocks in an additional div with class "card-wrapper". Show the complete PHP code.',
       scorers: [
         hasPhpCode(),
-        hookPresence("add_filter", "blockstudio/block/render"),
+        hookPresence("add_filter", "blockstudio/blocks/render"),
       ],
     },
     {
-      name: "blockstudio/block/meta filter",
+      name: "blockstudio/blocks/meta filter",
       prompt:
-        'Write PHP code that uses the blockstudio/block/meta filter to modify block metadata before registration. The filter should add a custom "supports" key to all blocks. Show the complete PHP code.',
+        'Write PHP code that uses the blockstudio/blocks/meta filter to modify block metadata before registration. The filter should add a custom "supports" key to all blocks. Show the complete PHP code.',
       scorers: [
         hasPhpCode(),
-        hookPresence("add_filter", "blockstudio/block/meta"),
+        hookPresence("add_filter", "blockstudio/blocks/meta"),
       ],
     },
     {
-      name: "blockstudio/block/attributes filter",
+      name: "blockstudio/blocks/attributes filter",
       prompt:
-        'Write a single PHP code snippet that uses the blockstudio/block/attributes filter to modify block attributes before they are passed to the template. The filter should add a computed "fullName" attribute by combining first and last name fields. Show only the PHP code in one code block.',
+        'Write a single PHP code snippet that uses the blockstudio/blocks/attributes filter to modify block attributes before they are passed to the template. The filter should add a computed "fullName" attribute by combining first and last name fields. Show only the PHP code in one code block.',
       scorers: [
         hasPhpCode(),
-        hookPresence("add_filter", "blockstudio/block/attributes"),
+        hookPresence("add_filter", "blockstudio/blocks/attributes"),
       ],
     },
     {
-      name: "blockstudio/block/conditions filter",
+      name: "blockstudio/blocks/conditions filter",
       prompt:
-        'Write PHP code that uses the blockstudio/block/conditions filter to register a custom condition type called "user_role" that checks the current user role. Show the complete PHP code with add_filter.',
+        'Write PHP code that uses the blockstudio/blocks/conditions filter to register a custom condition type called "user_role" that checks the current user role. Show the complete PHP code with add_filter.',
       scorers: [
         hasPhpCode(),
-        hookPresence("add_filter", "blockstudio/block/conditions"),
+        hookPresence("add_filter", "blockstudio/blocks/conditions"),
       ],
     },
     {
@@ -120,14 +120,14 @@ const suite: EvalSuite = {
     {
       name: "Component render filters",
       prompt:
-        'Write PHP code that uses the blockstudio/render/use_block_props filter to add custom props, the blockstudio/render/inner_blocks filter to modify inner blocks output, and the blockstudio/render/rich_text filter to modify RichText rendering. Show the complete PHP code.',
+        'Write PHP code that uses the blockstudio/blocks/components/use_block_props/render filter to add custom props, the blockstudio/blocks/components/inner_blocks/render filter to modify inner blocks output, and the blockstudio/blocks/components/rich_text/render filter to modify RichText rendering. Show the complete PHP code.',
       scorers: [
         hasPhpCode(),
         hookPresence(
           "add_filter",
-          "blockstudio/render/use_block_props",
-          "blockstudio/render/inner_blocks",
-          "blockstudio/render/rich_text"
+          "blockstudio/blocks/components/use_block_props/render",
+          "blockstudio/blocks/components/inner_blocks/render",
+          "blockstudio/blocks/components/rich_text/render"
         ),
       ],
     },
