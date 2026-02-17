@@ -1,3 +1,5 @@
+const STABLE_MS = 500;
+
 export const waitForIframeReady = (
   container: HTMLElement,
   signal?: AbortSignal,
@@ -25,12 +27,12 @@ export const waitForIframeReady = (
       cleanups.push(() => signal.removeEventListener('abort', abort));
     }
 
-    const onContent = (doc: Document): void => {
+    const waitForMedia = (doc: Document): Promise<void> => {
       const mediaEls = Array.from(
         doc.querySelectorAll<HTMLElement>('img, video, iframe'),
       );
 
-      Promise.all(
+      return Promise.all(
         mediaEls.map((el) => {
           if (el instanceof HTMLImageElement) {
             if (el.complete) return Promise.resolve();
@@ -61,7 +63,34 @@ export const waitForIframeReady = (
           }
           return Promise.resolve();
         }),
-      ).then(done);
+      ).then(() => {});
+    };
+
+    const waitForStable = (doc: Document): void => {
+      let timer: number;
+
+      const settle = (): void => {
+        observer.disconnect();
+        waitForMedia(doc).then(done);
+      };
+
+      const restart = (): void => {
+        clearTimeout(timer);
+        timer = window.setTimeout(settle, STABLE_MS);
+      };
+
+      const observer = new MutationObserver(restart);
+      observer.observe(doc.documentElement, {
+        childList: true,
+        subtree: true,
+        attributes: true,
+      });
+      cleanups.push(() => {
+        observer.disconnect();
+        clearTimeout(timer);
+      });
+
+      restart();
     };
 
     // BlockPreview renders content into the iframe via React portal after load.
@@ -78,14 +107,14 @@ export const waitForIframeReady = (
       };
 
       if (hasContent()) {
-        onContent(doc);
+        waitForStable(doc);
         return;
       }
 
       const observer = new MutationObserver(() => {
         if (hasContent()) {
           observer.disconnect();
-          onContent(doc);
+          waitForStable(doc);
         }
       });
       observer.observe(doc.documentElement, {
