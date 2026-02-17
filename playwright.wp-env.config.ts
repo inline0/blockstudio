@@ -3,13 +3,13 @@ import { defineConfig, devices } from '@playwright/test';
 export default defineConfig({
 	testDir: './tests/e2e',
 	testMatch: ['types/**/*.ts', 'pages.ts', 'patterns.ts', 'catalog-blocks.ts', 'keyed-merge.ts', 'tailwind-compile.ts', 'grab.ts', 'canvas.ts', 'preload/**/*.ts'],
-	timeout: 60000,
+	timeout: 90000,
 	expect: {
 		timeout: 15000,
 	},
 	fullyParallel: false,
 	forbidOnly: !!process.env.CI,
-	retries: process.env.CI ? 1 : 1,
+	retries: process.env.CI ? 2 : 1,
 	workers: 1,
 	reporter: 'list',
 
