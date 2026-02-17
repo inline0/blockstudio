@@ -69,7 +69,7 @@ jobs:
         run: npm run wp-env:reset
 
       - name: Run E2E tests
-        run: npx playwright test --config=playwright.wp-env.config.ts
+        run: npx playwright test --config=playwright.wp-env.config.ts -x
 
       - name: Upload test artifacts
         if: failure()
