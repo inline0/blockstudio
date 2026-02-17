@@ -169,7 +169,7 @@ export function AiHero() {
               GUI, no database, just files.
             </p>
           </div>
-          <Button href="/docs/ai" className="w-max">
+          <Button href="/docs/dev/ai" className="w-max">
             Read the docs &rarr;
           </Button>
         </div>

@@ -9,11 +9,11 @@ Although Blockstudio's main focus is on custom blocks, its file-first approach i
 
 ## Setup
 
-To create a new code snippet, simply create a new folder and place an `init.php` file in it. Blockstudio will always execute that file. For more information on the init file, check the [Initialization](/docs/initialization) page.
+To create a new code snippet, simply create a new folder and place an `init.php` file in it. Blockstudio will always execute that file. For more information on the init file, check the [Initialization](/docs/blocks/initialization) page.
 
 ## Styles and Scripts
 
-Folders marked as code snippets will also process and enqueue styles and scripts. To enqueue global styles and scripts, use the `global` [prefix for the asset name](/docs/assets/registering#global).
+Folders marked as code snippets will also process and enqueue styles and scripts. To enqueue global styles and scripts, use the `global` [prefix for the asset name](/docs/blocks/assets/registering#global).
 
 Example folder structure:
 
@@ -24,7 +24,7 @@ assets/
 └── global-scripts.js
 ```
 
-Assets inside code snippet folders also support all [processing](/docs/assets/processing).
+Assets inside code snippet folders also support all [processing](/docs/blocks/assets/processing).
 
 ## Custom Directories
 

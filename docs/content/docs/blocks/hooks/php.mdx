@@ -12,7 +12,7 @@ or adjust the functionality of the plugin.
 
 This filter allows you to adjust the path of the block folder. By default, this
 is `blockstudio` inside the currently active theme. Alternatively it is possible
-to [create a new instance](/docs/registration#instances) for multiple
+to [create a new instance](/docs/blocks/registration#instances) for multiple
 source directories.
 
 ```php title="functions.php"
@@ -111,7 +111,7 @@ add_filter('blockstudio/block/conditions', function($conditions) {
 ### attributes
 
 This filter allows you to adjust the attributes of a block before the block is
-registered. See [Filtering](/docs/attributes/filtering) for more information.
+registered. See [Filtering](/docs/blocks/attributes/filtering) for more information.
 
 ```php title="functions.php"
 add_filter('blockstudio/block/attributes', function($attributes, $block) {
@@ -123,7 +123,7 @@ add_filter('blockstudio/block/attributes', function($attributes, $block) {
 ### attributes/render
 
 This filter allows you to adjust the attributes of a block before it is
-rendered. See [Filtering](/docs/attributes/filtering) for more information.
+rendered. See [Filtering](/docs/blocks/attributes/filtering) for more information.
 
 ```php title="functions.php"
 add_filter('blockstudio/block/attributes/render', function($attributes, $block) {
@@ -135,7 +135,7 @@ add_filter('blockstudio/block/attributes/render', function($attributes, $block) 
 ### attributes/populate
 
 This filter allows you to add custom data to the options of a `checkbox`,
-`select` or `radio` field. See [Populating options](/docs/attributes/populating-options) for more information.
+`select` or `radio` field. See [Populating options](/docs/blocks/attributes/populating-options) for more information.
 
 ```php title="functions.php"
 add_filter('blockstudio/block/attributes/populate', function($options, $attribute, $block) {

@@ -5,7 +5,7 @@ description: Dynamic asset blocks via the code field.
 
 # Code Field Assets
 
-Beside static styles and scripts as files, Blockstudio also supports dynamic asset blocks via the [code field](/docs/attributes/field-types#code). Depending on your use case, these can be scoped to the block.
+Beside static styles and scripts as files, Blockstudio also supports dynamic asset blocks via the [code field](/docs/blocks/attributes/field-types#code). Depending on your use case, these can be scoped to the block.
 
 ## Basic Usage
 
@@ -32,7 +32,7 @@ At the most basic level, you can manually render the code field content in your 
 
 ## Scoped Selector
 
-To avoid conflicts with other blocks, you can use the `%selector%` variable inside the code field alongside [useBlockProps](/docs/components/useblockprops) in your rendering template.
+To avoid conflicts with other blocks, you can use the `%selector%` variable inside the code field alongside [useBlockProps](/docs/blocks/components/useblockprops) in your rendering template.
 
 ### Example
 
@@ -87,7 +87,7 @@ This will automatically create `style` tags for code blocks marked as `css` and 
 
 ## In Extensions
 
-When using code fields inside of [extensions](/docs/extensions), the `asset` attribute is not necessary. Blockstudio will automatically render the code field content as an asset if the language is `css` or `javascript`.
+When using code fields inside of [extensions](/docs/other/extensions), the `asset` attribute is not necessary. Blockstudio will automatically render the code field content as an asset if the language is `css` or `javascript`.
 
 ### Example
 

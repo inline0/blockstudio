@@ -39,7 +39,7 @@ automatic page syncs, and even those are driven by file templates.
 Making Blockstudio open source is the natural next step. The more LLMs train on
 Blockstudio code, the better they get at generating it. An open codebase,
 open documentation, and a pre-built
-[AI context file](/docs/ai) that any tool can consume: that's how you build the
+[AI context file](/docs/dev/ai) that any tool can consume: that's how you build the
 best environment for AI-assisted WordPress development.
 
 The full plugin is available on
@@ -137,7 +137,7 @@ duplicate pages and ensuring the template always updates the correct post:
 }
 ```
 
-For full details, see the [Pages documentation](/docs/pages).
+For full details, see the [Pages documentation](/docs/pages-and-patterns/pages).
 
 ### File-based patterns
 
@@ -164,7 +164,7 @@ inserter and can be placed anywhere by users.
 
 Unlike pages, patterns don't create database entries. They're registered in
 memory on every page load. See the
-[Patterns documentation](/docs/patterns).
+[Patterns documentation](/docs/pages-and-patterns/patterns).
 
 ### HTML-to-block parser
 
@@ -238,7 +238,7 @@ You can also store values in the options table for global, site-wide settings:
 }
 ```
 
-See the [Storage documentation](/docs/storage) for the full API.
+See the [Storage documentation](/docs/blocks/storage) for the full API.
 
 ### Custom fields
 
@@ -275,7 +275,7 @@ The `idStructure` property prefixes each field ID, so `heading` becomes
 `hero_heading`. You can also override individual field properties per-instance
 with the `overrides` key.
 
-See the [Custom Fields documentation](/docs/attributes/custom-fields).
+See the [Custom Fields documentation](/docs/blocks/attributes/custom-fields).
 
 ### Tailwind CSS v4
 
@@ -316,7 +316,7 @@ type. The `classes` field type offers autocomplete for all Tailwind utilities.
 The frontend always uses the server-compiled CSS, injected as an inline style
 tag before `</head>`.
 
-See the [Tailwind documentation](/docs/tailwind) for the full setup.
+See the [Tailwind documentation](/docs/other/tailwind) for the full setup.
 
 ### Interactivity API
 
@@ -369,7 +369,7 @@ directives with `data-wp-context` (like `data-wp-bind--hidden` or
 `data-wp-text`) work without any JavaScript at all. Server-side state via
 `wp_interactivity_state()` is also supported on the frontend.
 
-See the [Interactivity documentation](/docs/interactivity) for the full setup.
+See the [Interactivity documentation](/docs/blocks/interactivity) for the full setup.
 
 ### SEO content analysis
 
@@ -414,7 +414,7 @@ are pre-filled with those defaults instead of being empty.
 - **Tailwind editor styles**: compiled Tailwind CSS is now injected into the
   block editor iframe alongside the CDN, so custom `@apply` rules and theme
   config work in the editor
-- **[AI context file](/docs/ai)**: the `blockstudio-llm.txt` has been rebuilt
+- **[AI context file](/docs/dev/ai)**: the `blockstudio-llm.txt` has been rebuilt
   as a static file assembled from the full v7 documentation and deduplicated
   JSON schemas (~48k tokens), replacing the dynamic generation from v6
 - **Code field popout**: the code field can now be opened in a separate window,
@@ -448,7 +448,7 @@ Blockstudio 7 requires PHP 8.2+ and uses modern type declarations throughout.
 
 As a major version update, 7.0 includes several breaking changes. Most have
 backward-compatible fallbacks, but you should review them before upgrading. For
-a complete migration guide, see the [v7 migration docs](/docs/migration/v7).
+a complete migration guide, see the [v7 migration docs](/docs/dev/migration/v7).
 
 ### Hook names now use snake_case
 
@@ -520,8 +520,8 @@ folders from v6 into your theme's blockstudio directory.
 ## Getting started
 
 Install Blockstudio 7 and create your first block in minutes. Check out the
-[Getting Started guide](/docs/getting-started) for a step-by-step walkthrough,
-or the [v7 migration guide](/docs/migration/v7) if you're upgrading from v6.
+[Getting Started guide](/docs/general/getting-started) for a step-by-step walkthrough,
+or the [v7 migration guide](/docs/dev/migration/v7) if you're upgrading from v6.
 
 The full source is on
 [GitHub](https://github.com/inline0/blockstudio). Issues, PRs, and feedback

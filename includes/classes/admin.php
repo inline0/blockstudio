@@ -15,11 +15,6 @@ use stdClass;
  *
  * This class manages the Blockstudio admin experience including:
  *
- * Admin Menu:
- * - Registers top-level "Blockstudio" menu page
- * - Displays loading screen while React app initializes
- * - Enqueues editor scripts and provides localized data
- *
  * Editor Data (blockstudioAdmin):
  * The React editor receives comprehensive data via wp_localize_script:
  * - blocks: All registered block definitions (WP_Block_Type objects)
@@ -161,28 +156,6 @@ class Admin {
 			});
 		</script>
 		<?php
-	}
-
-	/**
-	 * Register admin menu.
-	 *
-	 * @return void
-	 */
-	public function register_admin_menu(): void {
-		$icon_base64   = 'PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIzMjAiIGhlaWdodD0iMzIwIiB2aWV3Qm94PSIwIDAgMzIwIDMyMCI+PGcgZmlsbD0iI0E3QUFBRCIgZmlsbC1ydWxlPSJldmVub2RkIj48cGF0aCBkPSJNMTYwLDAgQzI4OC4wMTI1OTMsMCAzMjAsMzEuOTg3NDA2NSAzMjAsMTYwIEMzMjAsMjg4LjAxMjU5MyAyODguMDEyNTkzLDMyMCAxNjAsMzIwIEMzMS45ODc0MDY1LDMyMCAwLDI4OC4wMTI1OTMgMCwxNjAgQzAsMzEuOTg3NDA2NSAzMS45ODc0MDY1LDAgMTYwLDAgWiBNNTQuODE4Mzg1MywxMzIuNDQ4NjcxIEMzMi4zNzYzNjAzLDIxNi4yMDM0NDggNDcuNjk3MDA4NywyNDIuNzM5NTkgMTMxLjQ1MTc4NiwyNjUuMTgxNjE1IEMyMTUuMjA2NTY0LDI4Ny42MjM2NCAyNDEuNzQyNzA1LDI3Mi4zMDI5OTEgMjY0LjE4NDczLDE4OC41NDgyMTQgQzI4Ni42MjY3NTUsMTA0Ljc5MzQzNiAyNzEuMzA2MTA3LDc4LjI1NzI5NSAxODcuNTUxMzI5LDU1LjgxNTI3IEMxMDMuNzk2NTUyLDMzLjM3MzI0NTEgNzcuMjYwNDEwMyw0OC42OTM4OTM1IDU0LjgxODM4NTMsMTMyLjQ0ODY3MSBaIi8+PHBhdGggZD0iTTE1OS41MDE1NTgsMTA2LjMxMDQ0NSBDMTE2LjE0Njg5NSwxMDYuMzEwNDQ1IDEwNS4zMTM1NiwxMTcuMTQzNzc5IDEwNS4zMTM1NiwxNjAuNDk4NDQyIEMxMDUuMzEzNTYsMjAzLjg1MzEwNSAxMTYuMTQ2ODk1LDIxNC42ODY0NCAxNTkuNTAxNTU4LDIxNC42ODY0NCBDMjAyLjg1NjIyMSwyMTQuNjg2NDQgMjEzLjY4OTU1NSwyMDMuODUzMTA1IDIxMy42ODk1NTUsMTYwLjQ5ODQ0MiBDMjEzLjY4OTU1NSwxMTcuMTQzNzc5IDIwMi44NTYyMjEsMTA2LjMxMDQ0NSAxNTkuNTAxNTU4LDEwNi4zMTA0NDUgWiIgdHJhbnNmb3JtPSJyb3RhdGUoLTQ1IDE1OS41MDIgMTYwLjQ5OCkiLz48L2c+PC9zdmc+';
-		$icon_data_uri = 'data:image/svg+xml;base64,' . $icon_base64;
-
-		$hook_suffix = add_menu_page(
-			'Blockstudio',
-			'Blockstudio',
-			'manage_options',
-			'blockstudio',
-			array( __CLASS__, 'page' ),
-			$icon_data_uri,
-			99999
-		);
-
-		add_action( "load-{$hook_suffix}", array( __CLASS__, 'get_all_assets' ) );
 	}
 
 	/**
@@ -554,44 +527,6 @@ class Admin {
 		);
 	}
 
-	/**
-	 * Render the admin page.
-	 *
-	 * @return void
-	 */
-	public static function page(): void {
-		wp_enqueue_style( 'wp-components' );
-
-		$all_assets  = self::get_all_assets();
-		$blocks      = Build::blocks();
-		$data        = Build::data();
-		$data_sorted = Build::data_sorted();
-		$extensions  = Build::extensions();
-		$files       = Build::files();
-		$overrides   = Build::overrides();
-		$paths       = Build::paths();
-		$scripts     = $all_assets['scripts'];
-		$styles      = $all_assets['styles'];
-		$templates   = Files::get_folder_structure_with_contents(
-			BLOCKSTUDIO_DIR . '/includes/templates'
-		);
-		?>
-		<script>
-			console.log('data: ', <?php echo wp_json_encode( $data ); ?>);
-			console.log('dataSorted: ', <?php echo wp_json_encode( $data_sorted ); ?>);
-			console.log('extends: ', <?php echo wp_json_encode( $extensions ); ?>);
-			console.log('files: ', <?php echo wp_json_encode( $files ); ?>);
-			console.log('native: ', <?php echo wp_json_encode( $blocks ); ?>);
-			console.log('overrides: ', <?php echo wp_json_encode( $overrides ); ?>);
-			console.log('paths:', <?php echo wp_json_encode( $paths ); ?>);
-			console.log('scripts: ', <?php echo wp_json_encode( $scripts ); ?>);
-			console.log('styles: ', <?php echo wp_json_encode( $styles ); ?>);
-			console.log('templates: ', <?php echo wp_json_encode( $templates ); ?>);
-		</script>
-		<div id="blockstudio">
-		</div>
-		<?php
-	}
 }
 
 new Admin();
