@@ -39,9 +39,14 @@ jobs:
         run: composer cs
 
   e2e:
-    name: E2E Tests
+    name: E2E Tests (Shard ${{ matrix.shard }}/${{ matrix.total_shards }})
     runs-on: ubuntu-latest
     timeout-minutes: 120
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3, 4]
+        total_shards: [4]
     steps:
       - uses: actions/checkout@v4
 
@@ -67,7 +72,7 @@ jobs:
         run: npx playwright install --with-deps chromium
 
       - name: Start wp-env
-        run: npm run wp-env:reset
+        run: npm run wp-env:start
 
       - name: Install SEO plugins for E2E
         run: |
@@ -75,12 +80,12 @@ jobs:
           npx wp-env run cli -- wp plugin is-installed seo-by-rank-math || npx wp-env run cli -- wp plugin install seo-by-rank-math
 
       - name: Run E2E tests
-        run: npx playwright test --config=playwright.wp-env.config.ts
+        run: npx playwright test --config=playwright.wp-env.config.ts --shard=${{ matrix.shard }}/${{ matrix.total_shards }}
 
       - name: Upload test artifacts
         if: failure()
         uses: actions/upload-artifact@v4
         with:
-          name: e2e-test-results
+          name: e2e-test-results-shard-${{ matrix.shard }}
           path: test-results/
           retention-days: 7
