@@ -1,0 +1,14 @@
+{
+  "users": { "ids": [1], "roles": [] },
+  "assets": {
+    "enqueue": true,
+    "minify": { "css": true, "js": true },
+    "process": { "scss": true, "scssFiles": true }
+  },
+  "tailwind": {
+    "enabled": true,
+    "config": ""
+  },
+  "dev": { "grab": { "enabled": true }, "canvas": { "enabled": true, "adminBar": false } },
+  "$schema": "https://app.blockstudio.dev/schema/blockstudio"
+}

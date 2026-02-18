@@ -1,7 +1,7 @@
 import { Browser, BrowserContext, expect, Frame, Page, test } from '@playwright/test';
 
-export const login = async (page: Page): Promise<void> => {
-  await page.goto('http://localhost:8888/wp-login.php');
+export const login = async (page: Page, baseURL = 'http://localhost:8888'): Promise<void> => {
+  await page.goto(`${baseURL}/wp-login.php`);
   await page.waitForLoadState('networkidle');
   await page.locator('#user_login').fill('admin');
   await page.locator('#user_pass').fill('password');

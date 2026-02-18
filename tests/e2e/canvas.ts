@@ -774,23 +774,20 @@ test.describe('Canvas', () => {
       process.cwd(),
       'tests/theme/pages/test-page/index.php',
     );
-    let originalTemplate: string;
+    const originalTemplate = fs.readFileSync(templatePath, 'utf-8');
 
     const cleanup = async (): Promise<void> => {
       if (fs.existsSync(newBlockDir)) {
         fs.rmSync(newBlockDir, { recursive: true });
       }
+      fs.writeFileSync(templatePath, originalTemplate);
     };
 
     test.afterAll(async () => {
-      if (originalTemplate) {
-        fs.writeFileSync(templatePath, originalTemplate);
-      }
       await cleanup();
     });
 
     test('new block created and added to page renders without unsupported warning', async () => {
-      originalTemplate = fs.readFileSync(templatePath, 'utf-8');
       await cleanup();
 
       await page.evaluate(() => localStorage.removeItem('blockstudio-canvas-settings'));
@@ -905,6 +902,138 @@ test.describe('Canvas', () => {
       expect(r.hasUnsupportedText).toBe(false);
       expect(r.hasMarkerElement).toBe(true);
       expect(r.hasMarkerText).toBe(true);
+    });
+
+    test('block.json written before index.php still registers after template appears', async () => {
+      await cleanup();
+
+      const staggeredBlockDir = path.join(
+        process.cwd(),
+        'tests/theme/blockstudio/single/canvas-staggered-test',
+      );
+      if (fs.existsSync(staggeredBlockDir)) {
+        fs.rmSync(staggeredBlockDir, { recursive: true });
+      }
+
+      try {
+        await page.evaluate(() => localStorage.removeItem('blockstudio-canvas-settings'));
+        await page.goto(canvasUrl, { waitUntil: 'domcontentloaded' });
+
+        await page.waitForFunction(
+          () => {
+            const el = document.querySelector('[data-canvas-surface]');
+            return el && window.getComputedStyle(el).transform !== 'none';
+          },
+          null,
+          { timeout: 15000 },
+        );
+
+        const menuButton = page.locator('.blockstudio-canvas-menu .components-button').first();
+        await menuButton.click();
+        await expect(page.locator('role=menu')).toBeVisible({ timeout: 5000 });
+        await page.locator('role=menuitem', { hasText: 'Live mode' }).click();
+
+        await page.waitForFunction(
+          () => {
+            const select = (window as any).wp?.data?.select;
+            if (!select) return false;
+            const store = select('blockstudio/canvas');
+            return store && store.getFingerprint() !== '';
+          },
+          null,
+          { timeout: 10000 },
+        );
+
+        // Write block.json FIRST, without index.php.
+        fs.mkdirSync(staggeredBlockDir, { recursive: true });
+        fs.writeFileSync(
+          path.join(staggeredBlockDir, 'block.json'),
+          JSON.stringify({
+            $schema: 'https://app.blockstudio.dev/schema',
+            name: 'blockstudio/canvas-staggered-test',
+            title: 'Canvas Staggered Test',
+            category: 'blockstudio-test-native',
+            icon: 'star-filled',
+            blockstudio: true,
+          }),
+        );
+
+        // Wait for SSE to detect the partial block (at least 2 poll cycles).
+        await page.waitForTimeout(3000);
+
+        // Now write the template file.
+        fs.writeFileSync(
+          path.join(staggeredBlockDir, 'index.php'),
+          '<?php\necho \'<div class="canvas-staggered-marker">Staggered Block</div>\';',
+        );
+
+        // Block should register client-side once the template appears.
+        await page.waitForFunction(
+          () => {
+            const getBlockType = (window as any).wp?.blocks?.getBlockType;
+            return getBlockType && getBlockType('blockstudio/canvas-staggered-test');
+          },
+          null,
+          { timeout: 20000 },
+        );
+
+        await page.waitForTimeout(3000);
+
+        // Add the block to the test page.
+        fs.writeFileSync(
+          templatePath,
+          originalTemplate + '\n<block name="blockstudio/canvas-staggered-test" />',
+        );
+
+        await page.waitForFunction(
+          (slug: string) => {
+            const artboard = document.querySelector(`[data-canvas-slug="${slug}"]`);
+            return artboard && artboard.getAttribute('data-canvas-revision') !== '0';
+          },
+          'blockstudio-e2e-test',
+          { timeout: 30000 },
+        );
+
+        await page.waitForTimeout(3000);
+
+        const result = await page.evaluate((slug: string) => {
+          const artboard = document.querySelector(`[data-canvas-slug="${slug}"]`);
+          if (!artboard) return { error: 'artboard not found' };
+          const iframe = artboard.querySelector('iframe') as HTMLIFrameElement | null;
+          if (!iframe) return { error: 'iframe not found' };
+          const doc = iframe.contentDocument;
+          if (!doc) return { error: 'contentDocument not accessible' };
+
+          const bodyText = doc.body?.textContent || '';
+          const missingBlocks: string[] = [];
+          doc.querySelectorAll('.wp-block-missing').forEach((el) => {
+            missingBlocks.push(el.textContent || '');
+          });
+
+          return {
+            hasMarkerElement: doc.querySelector('.canvas-staggered-marker') !== null,
+            hasMarkerText: bodyText.includes('Staggered Block'),
+            missingBlocks,
+            hasUnsupportedText: bodyText.includes("doesn't include support"),
+          };
+        }, 'blockstudio-e2e-test');
+
+        expect(result).not.toHaveProperty('error');
+        const r = result as {
+          hasMarkerElement: boolean;
+          hasMarkerText: boolean;
+          missingBlocks: string[];
+          hasUnsupportedText: boolean;
+        };
+        expect(r.missingBlocks).toEqual([]);
+        expect(r.hasUnsupportedText).toBe(false);
+        expect(r.hasMarkerElement).toBe(true);
+        expect(r.hasMarkerText).toBe(true);
+      } finally {
+        if (fs.existsSync(staggeredBlockDir)) {
+          fs.rmSync(staggeredBlockDir, { recursive: true });
+        }
+      }
     });
   });
 

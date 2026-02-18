@@ -192,6 +192,13 @@ export const Canvas = ({
 
   const expectedIframeCount = Math.min(BATCH_SIZE, totalItems);
 
+  // Nothing to wait for: mark ready immediately so SSE can connect.
+  useEffect(() => {
+    if (!ready && expectedIframeCount === 0) {
+      setReady(true);
+    }
+  }, [ready, expectedIframeCount]);
+
   useEffect(() => {
     const surface = surfaceRef.current;
     if (!surface || ready || expectedIframeCount === 0) return;
@@ -633,7 +640,7 @@ export const Canvas = ({
     eventSource.addEventListener('fingerprint', (e: MessageEvent) => {
       try {
         const parsed = JSON.parse(e.data);
-        if (parsed.fingerprint) {
+        if (typeof parsed.fingerprint === 'string') {
           setFingerprint(parsed.fingerprint);
         }
       } catch {

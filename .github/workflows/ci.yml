@@ -76,11 +76,18 @@ jobs:
 
       - name: Install SEO plugins for E2E
         run: |
+          cd tests/wp-env
           npx wp-env run cli -- wp plugin is-installed wordpress-seo || npx wp-env run cli -- wp plugin install wordpress-seo
           npx wp-env run cli -- wp plugin is-installed seo-by-rank-math || npx wp-env run cli -- wp plugin install seo-by-rank-math
 
       - name: Run E2E tests
         run: npx playwright test --config=playwright.wp-env.config.ts --shard=${{ matrix.shard }}/${{ matrix.total_shards }}
+
+      - name: Start empty wp-env
+        run: npm run wp-env:empty:start
+
+      - name: Run empty theme E2E tests
+        run: npm run test:e2e:empty
 
       - name: Upload test artifacts
         if: failure()
