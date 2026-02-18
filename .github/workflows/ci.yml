@@ -72,7 +72,7 @@ jobs:
         run: npx playwright install --with-deps chromium
 
       - name: Start wp-env
-        run: npm run wp-env:start
+        run: npm run wp-env:reset
 
       - name: Install SEO plugins for E2E
         run: |
