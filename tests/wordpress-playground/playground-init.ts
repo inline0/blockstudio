@@ -10,7 +10,7 @@ export interface PlaygroundServerOptions {
   testBlocksPath?: string;
   testHelperPluginPath?: string;
   additionalPlugins?: string[];
-  /** Path to a custom test theme directory (relative to pluginPath) */
+  // Path to a custom test theme directory (relative to pluginPath).
   testThemePath?: string;
   title?: string;
   excludeDirs?: string[];

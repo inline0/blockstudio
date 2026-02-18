@@ -1,8 +1,5 @@
-/**
- * Build Class Snapshot Tests.
- * Verifies Build class output matches snapshot exactly to catch migration regressions.
- * Dynamic values (scope URLs, mtimes, generated IDs) are normalized before comparison.
- */
+// Build class snapshot tests.
+// Dynamic values are normalized before comparison.
 
 import { test, expect } from "../wordpress-playground/fixtures";
 import { readFileSync } from "fs";
@@ -15,7 +12,7 @@ const __dirname = dirname(__filename);
 const snapshotPath = join(__dirname, "snapshots", "build-snapshot.json");
 const snapshot = JSON.parse(readFileSync(snapshotPath, "utf-8"));
 
-/** Normalizes dynamic values (scope URLs, timestamps, hashes) for comparison. */
+// Normalize dynamic values for stable snapshot comparisons.
 function normalizeString(str: string): string {
   return str
     .replace(/scope:[0-9.]+/g, "scope:NORMALIZED")

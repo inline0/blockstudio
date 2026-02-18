@@ -517,7 +517,6 @@ export const Fields = ({
       return null;
     }
 
-    // Get actions wrapper for field types that need it
     const ActionsWrapper = item.type === 'code' ? CodeActions : null;
 
     const controlContent = (existingActions?: LabelAction[]) => {

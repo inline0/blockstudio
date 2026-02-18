@@ -44,13 +44,11 @@ const cssVariablesCompletion = (
   };
 };
 
-// Context for sharing popout state between CodeActions and Code
 const CodePopoutContext = createContext<{
   isOpen: boolean;
   Popout: ({ children }: { children: ReactNode }) => ReactNode;
 } | null>(null);
 
-// Actions component - wraps content and provides actions via render prop
 export const CodeActions = ({
   item,
   children,

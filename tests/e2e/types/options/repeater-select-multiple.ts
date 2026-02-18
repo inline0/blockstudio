@@ -7,8 +7,6 @@ import {
   testType,
   text,
 } from '../../utils/playwright-utils';
-
-// Key default values to check
 const defaultChecks = [
   `"defaultNumberBothWrongDefault":false`,
   `"defaultValueLabel":["Three"]`,
@@ -22,39 +20,24 @@ const defaultChecks = [
 ];
 
 const valuesSelect = [
-  // 0 - defaultNumberBothWrongDefault
   { defaultMultiple: [], data: `"defaultNumberBothWrongDefault":[{"value":1,"label":"One"}]` },
-  // 1 - defaultValueLabel
   { defaultMultiple: ['Three'], data: `"defaultValueLabel":["Three","One"]` },
-  // 2 - defaultNumberArray
   { defaultMultiple: ['3'], data: `"defaultNumberArray":["3","1"]` },
-  // 3 - defaultNumberArrayBoth
   { defaultMultiple: ['1', '3'], data: `"defaultNumberArrayBoth":[{"value":"1","label":"1"},{"value":"3","label":"3"},{"value":"2","label":"2"}]` },
-  // 4 - defaultValueStringNumber
   { defaultMultiple: ['Two'], data: `"defaultValueStringNumber":["2","1"]` },
-  // 5 - defaultValueStringNumberBoth
   { defaultMultiple: ['3'], data: `"defaultValueStringNumberBoth":[{"value":"3","label":"3"},{"value":"1","label":"1"}]` },
-  // 6 - populateQuery
   { defaultMultiple: ['Native Render'], data: `"populateQuery":[{"ID":1388` },
-  // 7 - populateQueryIdBefore
   { defaultMultiple: ['native-render'], data: `"populateQueryIdBefore":[1388,1483]` },
-  // 8 - populateCustom
   { defaultMultiple: ['Three'], data: `"populateCustom":["three","one"]` },
-  // 9 - populateCustomArrayBeforeBoth
   { defaultMultiple: ['three'], data: `"populateCustomArrayBeforeBoth":[{"value":"three","label":"three"},{"value":"custom-1","label":"custom-1"}]` },
-  // 10 - populateCustomOnly
   { defaultMultiple: ['custom-1'], data: `"populateCustomOnly":["custom-1","custom-2"]` },
-  // 11 - populateOnlyQuery
   { defaultMultiple: ['Native Render'], data: `"populateOnlyQuery":[{"ID":1388` },
-  // 12 - populateOnlyQueryUser (default is admin, click to add first option)
   { defaultMultiple: ['admin'], data: `"populateOnlyQueryUser":[{"data":{"ID":"1"`, skip: true },
-  // 13 - populateOnlyQueryTerm (terms vary by install)
   { defaultMultiple: ['Test Category 6'], data: `"populateOnlyQueryTerm":[{"term_id":`, skip: true },
 ];
 
 testType('repeater-select-multiple', false, () => {
   return [
-    // Check key default values
     ...defaultChecks.map((check, i) => ({
       description: `check default ${i}`,
       testFunction: async (_page: Page, canvas: Frame) => {
@@ -82,7 +65,6 @@ testType('repeater-select-multiple', false, () => {
         await text(canvas, `"defaultValueLabel":["Three"]`);
       },
     },
-    // Check default inputs (skip items with dynamic data)
     ...valuesSelect.flatMap((item, index) =>
       item.skip ? [] : [{
         description: `default input ${index}`,
@@ -98,7 +80,6 @@ testType('repeater-select-multiple', false, () => {
         },
       }]
     ),
-    // Change attributes (skip items with dynamic data)
     ...valuesSelect.flatMap((item, index) =>
       item.skip ? [] : [{
         description: `change attribute ${index}`,
@@ -115,7 +96,6 @@ testType('repeater-select-multiple', false, () => {
         },
       }]
     ),
-    // Check data (skip items with dynamic data)
     ...valuesSelect.flatMap((item, index) =>
       item.skip ? [] : [{
         description: `check data ${index}`,
@@ -137,7 +117,6 @@ testType('repeater-select-multiple', false, () => {
         await openSidebar(page);
       },
     },
-    // Check persisted cards (skip items with dynamic data)
     ...valuesSelect.flatMap((item, index) =>
       item.skip ? [] : [{
         description: `check persisted cards ${index}`,
@@ -150,7 +129,6 @@ testType('repeater-select-multiple', false, () => {
         },
       }]
     ),
-    // Check persisted data (skip items with dynamic data)
     ...valuesSelect.flatMap((item, index) =>
       item.skip ? [] : [{
         description: `check persisted data ${index}`,

@@ -1,11 +1,3 @@
-// To parse this data:
-//
-//   import { Convert, Blockstudio } from "./file";
-//
-//   const blockstudio = Convert.toBlockstudio(json);
-//
-// These functions will throw an error if the JSON doesn't
-// match the expected interface, even if the JSON is valid.
 
 export interface Blockstudio {
   /**
@@ -47,7 +39,7 @@ export interface AI {
    * Enables the automatic creation of a comprehensive context file for use with large
    * language model (LLM) tools (e.g., Cursor). This file compiles current installation data:
    * all available block definitions and paths, Blockstudio-specific settings, relevant block
-   * schemas, and combined Blockstudio documentation—providing a ready-to-use resource for
+   * schemas, and combined Blockstudio documentation, providing a ready-to-use resource for
    * prompt engineering and AI code development.
    */
   enableContextGeneration?: boolean;
@@ -226,9 +218,6 @@ export interface Users {
   roles?: string[];
   [property: string]: any;
 }
-
-// Converts JSON strings to/from your types
-// and asserts the results of JSON.parse at runtime
 export class Convert {
   public static toBlockstudio(json: string): Blockstudio {
     return cast(JSON.parse(json), r('Blockstudio'));
@@ -297,7 +286,6 @@ function transform(
   }
 
   function transformUnion(typs: any[], val: any): any {
-    // val must validate against one typ in typs
     const l = typs.length;
     for (let i = 0; i < l; i++) {
       const typ = typs[i];
@@ -321,7 +309,6 @@ function transform(
   }
 
   function transformArray(typ: any, val: any): any {
-    // val must be an array with no invalid elements
     if (!Array.isArray(val)) return invalidValue(l('array'), val, key, parent);
     return val.map((el) => transform(el, typ, getProps));
   }
@@ -382,7 +369,6 @@ function transform(
           ? transformObject(getProps(typ), typ.additional, val)
           : invalidValue(typ, val, key, parent);
   }
-  // Numbers can be parsed by Date but shouldn't be.
   if (typ === Date && typeof val !== 'number') return transformDate(val);
   return transformPrimitive(typ, val);
 }

@@ -1,4 +1,3 @@
-// Augment React types for Emotion css prop
 import type { Interpolation, Theme } from '@emotion/react';
 
 declare module 'react' {
@@ -7,13 +6,11 @@ declare module 'react' {
   }
 }
 
-// Augment htmlparser2 to export DomElement
 declare module 'htmlparser2' {
   import type { Element as DomHandlerElement } from 'domhandler';
   export type DomElement = DomHandlerElement;
 }
 
-// Declare prettier modules (v3)
 declare module 'prettier/plugins/postcss' {
   const parser: unknown;
   export default parser;

@@ -1,7 +1,5 @@
-/**
- * Capture snapshot of all Build class data.
- * Run with: npx tsx tests/capture-snapshot.ts
- */
+// Capture snapshot of all Build class data.
+// Run with: npx tsx tests/capture-snapshot.ts
 
 import { chromium } from "@playwright/test";
 import { writeFileSync } from "fs";
@@ -52,7 +50,6 @@ async function captureSnapshot() {
   console.log("assets count:", Object.keys(snapshot.assets || {}).length);
   console.log("blade count:", Object.keys(snapshot.blade || {}).length);
 
-  // Save to file
   const snapshotPath = join(__dirname, "snapshots", "build-snapshot.json");
   writeFileSync(snapshotPath, JSON.stringify(snapshot, null, 2));
   console.log(`\nSnapshot saved to: ${snapshotPath}`);

@@ -31,19 +31,14 @@ function stripGeneratedBlocks(content: string): string {
 }
 
 function compactCodeBlocks(content: string): string {
-  // Strip title attributes from code fences, keep the fences and formatting
   content = content.replace(/^(```\w*)\s+title="[^"]+"/gm, '$1');
   return content;
 }
 
 function compactMarkdown(content: string): string {
-  // Strip JSX component tags
   content = content.replace(/^\s*<\/?(Tabs|Tab|Steps|Step|Callout|Card|Cards|Accordions|Accordion)\b[^>]*>\s*$/gm, '');
-  // Strip MDX comments
   content = content.replace(/\{\/\*[\s\S]*?\*\/\}/g, '');
-  // Strip link URLs: [text](url) → text
   content = content.replace(/\[([^\]]+)\]\([^)]+\)/g, '$1');
-  // Strip bold/italic markers
   content = content.replace(/\*\*([^*]+)\*\*/g, '$1');
   content = content.replace(/\*([^*]+)\*/g, '$1');
   return content;
@@ -52,13 +47,10 @@ function compactMarkdown(content: string): string {
 function cleanMdx(content: string): string {
   content = stripFrontmatter(content);
   content = stripGeneratedBlocks(content);
-  // Remove first H1 (title is in section heading)
   content = content.replace(/^# .+\n*/, '');
   content = compactCodeBlocks(content);
   content = compactMarkdown(content);
-  // Collapse 3+ newlines to 2
   content = content.replace(/\n{3,}/g, '\n\n');
-  // Trim trailing whitespace per line
   content = content.replace(/[ \t]+$/gm, '');
   return content.trim();
 }
@@ -199,8 +191,6 @@ const pageSchema = {
   },
   additionalProperties: true,
 };
-
-// Build documentation
 const rootMeta = readJson(join(docsDir, 'meta.json')) as MetaJson;
 const docs = collectDocs(docsDir, rootMeta, 0);
 
@@ -211,9 +201,6 @@ const docs = collectDocs(docsDir, rootMeta, 0);
   const { extend: extendSchemaFn } = await import(resolve(schemasDir, 'extend.ts'));
 
   const schemas: { name: string; filename: string; content: string }[] = [];
-
-  // Block schema: only include the blockstudio property + shared definitions
-  // Deduplicate: group.attributes is a full copy of all field types, replace with a note
   const full = await blockSchemaFn() as Record<string, any>;
   const bs = full.properties.blockstudio;
 
@@ -239,11 +226,7 @@ const docs = collectDocs(docsDir, rootMeta, 0);
 
   const trimmed = { definitions: full.definitions, blockstudio: bs };
   schemas.push({ name: 'Block Schema (blockstudio key from block.json)', filename: 'block.json', content: JSON.stringify(trimmed) });
-
-  // Settings schema
   schemas.push({ name: 'Settings Schema (blockstudio.json)', filename: 'blockstudio.json', content: JSON.stringify(blockstudioSchema) });
-
-  // Extensions schema: nearly identical to block schema, only include the unique "extend" property
   const ext = await extendSchemaFn() as Record<string, any>;
   const extendProp = ext.properties?.blockstudio?.properties?.extend;
   const trimmedExt = {
@@ -257,8 +240,6 @@ const docs = collectDocs(docsDir, rootMeta, 0);
     filename: 'page.json',
     content: JSON.stringify(pageSchema),
   });
-
-  // Assemble output
   const parts: string[] = [];
 
   parts.push('# Blockstudio');

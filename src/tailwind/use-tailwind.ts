@@ -2,7 +2,6 @@ import { useSelect } from '@wordpress/data';
 import { useCallback, useEffect, useRef, useState } from '@wordpress/element';
 import { BlockstudioAdmin } from '@/types/types';
 
-// Types for blockstudio/editor store selectors
 type EditorSelectors = {
   getBlockstudio: () => BlockstudioAdmin | undefined;
   getOptions: () => BlockstudioAdmin['options'] | undefined;

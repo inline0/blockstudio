@@ -244,7 +244,7 @@ test.describe('File-based Pages', () => {
       const paragraphMode = await page.evaluate(() => {
         const { select } = (window as any).wp.data;
         const blocks = select('core/block-editor').getBlocks();
-        // The plain <p> is the second block (index 1) — no blockEditingMode override
+        // The plain <p> is the second block (index 1) with no blockEditingMode override.
         const paragraph = blocks[1];
         if (!paragraph) return null;
         return select('core/block-editor').getBlockEditingMode(paragraph.clientId);
@@ -270,7 +270,7 @@ test.describe('File-based Pages', () => {
       const groupMode = await page.evaluate(() => {
         const { select } = (window as any).wp.data;
         const blocks = select('core/block-editor').getBlocks();
-        // The <div> is the third block (index 2) — contains a child with override
+        // The <div> is the third block (index 2) and contains a child with an override.
         const group = blocks[2];
         if (!group) return null;
         return select('core/block-editor').getBlockEditingMode(group.clientId);
@@ -299,7 +299,7 @@ test.describe('File-based Pages', () => {
         }
       }, BASE);
 
-      // Trigger normal sync — should NOT create the page since sync: false
+      // Trigger normal sync. It should not create the page because sync is false.
       const result = await apiPost(
         'blockstudio-test/v1/pages/trigger-sync',
         { page_name: 'blockstudio-sync-disabled-test' },
@@ -320,7 +320,7 @@ test.describe('File-based Pages', () => {
       const originalContent = createResult.post_content;
       expect(originalContent).toContain('Original Title');
 
-      // Trigger normal sync with changed template — should be a no-op since sync: false
+      // Trigger normal sync with changed template. This should be a no-op because sync is false.
       const syncResult = await apiPost(
         'blockstudio-test/v1/pages/trigger-sync',
         {
@@ -345,7 +345,6 @@ test.describe('File-based Pages', () => {
   // Template For
   test.describe('Template For', () => {
     test('CPT template is applied to new posts', async () => {
-      // Navigate to "Add New" for the test CPT — WordPress applies the registered template
       await page.goto(`${BASE}/wp-admin/post-new.php?post_type=blockstudio_test_cpt`);
       canvas = await getEditorCanvas(page);
       await canvas.waitForSelector('[data-type="core/heading"]', { timeout: 15000 });
@@ -399,7 +398,7 @@ test.describe('File-based Pages', () => {
         });
       }, BASE);
 
-      // Force re-sync — should reclaim the same ID
+      // Force re-sync. It should reclaim the same ID.
       const result = await apiPost(
         'blockstudio-test/v1/pages/force-sync',
         { page_name: 'blockstudio-post-id-test' },

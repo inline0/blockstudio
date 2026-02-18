@@ -29,7 +29,7 @@ test.describe('File-based Pages', () => {
       ).toBeVisible();
     });
 
-    // --- Text Blocks ---
+    // Text Blocks
 
     test('paragraph with inline formatting', async () => {
       const p = page.locator('p', {
@@ -139,7 +139,7 @@ test.describe('File-based Pages', () => {
       await expect(verse).toContainText('Violets are blue');
     });
 
-    // --- Media Blocks ---
+    // Media Blocks
 
     test('image block with src and alt', async () => {
       const image = page.locator(
@@ -191,7 +191,7 @@ test.describe('File-based Pages', () => {
       await expect(embed.locator('.wp-block-embed__wrapper')).toBeVisible();
     });
 
-    // --- Design Blocks ---
+    // Design Blocks
 
     test('group block with nested paragraphs', async () => {
       const groups = page.locator('.wp-block-group');
@@ -272,7 +272,7 @@ test.describe('File-based Pages', () => {
       await expect(secondaryLink).toHaveAttribute('href', /secondary/);
     });
 
-    // --- Interactive Blocks ---
+    // Interactive Blocks
 
     test('details block with summary and hidden content', async () => {
       const details = page.locator('.wp-block-details');
@@ -302,7 +302,7 @@ test.describe('File-based Pages', () => {
       );
     });
 
-    // --- Social Blocks ---
+    // Social Blocks
 
     test('social links with three children', async () => {
       const socialLinks = page.locator('.wp-block-social-links');
@@ -310,7 +310,7 @@ test.describe('File-based Pages', () => {
       await expect(socialLinks.locator('.wp-social-link')).toHaveCount(3);
     });
 
-    // --- Media & Text ---
+    // Media & Text
 
     test('media text with image and content', async () => {
       const mediaText = page.locator('.wp-block-media-text');
@@ -324,7 +324,7 @@ test.describe('File-based Pages', () => {
       );
     });
 
-    // --- Accordion Blocks ---
+    // Accordion Blocks
 
     test('accordion with two items', async () => {
       const accordion = page.locator('.wp-block-accordion');
@@ -356,7 +356,7 @@ test.describe('File-based Pages', () => {
       ).toBeAttached();
     });
 
-    // --- Query Blocks ---
+    // Query Blocks
 
     test('query container renders', async () => {
       const query = page.locator('.wp-block-query');
@@ -365,13 +365,13 @@ test.describe('File-based Pages', () => {
     });
 
     test('comments block present (dynamic rendering)', async () => {
-      // core/comments is fully dynamic — WordPress replaces save markup
+      // core/comments is fully dynamic. WordPress replaces save markup
       // with actual comments. Validated via editor block types instead.
       const heading = page.getByRole('heading', { name: 'Comments' });
       await expect(heading).toBeVisible();
     });
 
-    // --- Generic Block Syntax ---
+    // Generic Block Syntax
 
     test('generic block syntax paragraph', async () => {
       await expect(
@@ -394,7 +394,7 @@ test.describe('File-based Pages', () => {
       ).toBeVisible();
     });
 
-    // --- Additional Parser Paths ---
+    // Additional Parser Paths
 
     test('section element maps to group block', async () => {
       await expect(
@@ -634,9 +634,7 @@ test.describe('File-based Pages', () => {
         return result;
       });
 
-      // Unordered list
       expect(lists).toContainEqual({ ordered: false, itemCount: 3 });
-      // Ordered list
       expect(lists).toContainEqual({ ordered: true, itemCount: 3 });
     });
 

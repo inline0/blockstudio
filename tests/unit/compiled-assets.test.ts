@@ -1,7 +1,5 @@
-/**
- * Compiled Assets Snapshot Tests.
- * Verifies SCSS compilation produces identical output to catch migration regressions.
- */
+// Compiled Assets Snapshot Tests.
+// Verifies SCSS compilation output remains stable.
 
 import { test, expect } from "../wordpress-playground/fixtures";
 import { readFileSync, existsSync } from "fs";

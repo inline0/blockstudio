@@ -248,7 +248,7 @@ test.describe('Keyed Block Merging', () => {
       expect(after).not.toContain('Default outro text.');
     });
 
-    test('block type change (same key) — template wins', async ({
+    test('block type change (same key), template wins', async ({
       request,
     }) => {
       await forceSync(request, ORIGINAL_TEMPLATE);
@@ -336,7 +336,7 @@ test.describe('Keyed Block Merging', () => {
       expect(after).not.toContain('User intro.');
     });
 
-    test('duplicate keys — old key map only stores first occurrence', async ({
+    test('duplicate keys, old key map only stores first occurrence', async ({
       request,
     }) => {
       const dupTemplate = `<p key="intro">First intro.</p>
@@ -466,7 +466,6 @@ test.describe('Keyed Block Merging', () => {
         .replace('Default outro text.', 'User outro.');
       await updatePostContent(request, edited);
 
-      // Remove "outro", add "cta", change cover url — all at once
       const combinedTemplate = `<h1 key="title">Default Title</h1>
 <p key="intro">Default intro text.</p>
 <p>Unkeyed paragraph content.</p>

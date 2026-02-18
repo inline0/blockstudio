@@ -44,7 +44,7 @@ export default defineConfig({
       },
       {
         title: "Extensions",
-        description: "Add custom fields to any block — core, third-party, or your own — with a single JSON file.",
+        description: "Add custom fields to any block, core, third-party, or your own, with a single JSON file.",
         icon: <Puzzle className={iconClass} />,
       },
       {
@@ -54,7 +54,7 @@ export default defineConfig({
       },
       {
         title: "Asset Processing",
-        description: "SCSS compilation, ES modules, scoped styles, and automatic minification — all by naming convention.",
+        description: "SCSS compilation, ES modules, scoped styles, and automatic minification, all by naming convention.",
         icon: <Cpu className={iconClass} />,
       },
       {

@@ -141,7 +141,6 @@ test.describe('Grab', () => {
       const overlay = page.locator('[data-blockstudio-devtools="overlay"]');
       await expect(overlay).toBeVisible({ timeout: 5000 });
 
-      // Deactivate with Escape
       await page.keyboard.up('c');
       await page.keyboard.up(modKey);
       await page.keyboard.press('Escape');
@@ -188,7 +187,6 @@ test.describe('Grab', () => {
       const labelText = await label.textContent();
       expect(labelText).toBeTruthy();
 
-      // Deactivate
       await page.keyboard.up('c');
       await page.keyboard.up(modKey);
       await page.keyboard.press('Escape');
@@ -208,18 +206,15 @@ test.describe('Grab', () => {
       const box = await block.boundingBox();
       if (!box) throw new Error('Block not found on page');
 
-      // Activate
       await page.keyboard.down(modKey);
       await page.keyboard.down('c');
       await page.waitForTimeout(200);
       await page.keyboard.up('c');
       await page.keyboard.up(modKey);
 
-      // Hover over block
       await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
       await page.waitForTimeout(200);
 
-      // Click to copy
       await page.mouse.click(box.x + box.width / 2, box.y + box.height / 2);
       await page.waitForTimeout(200);
 

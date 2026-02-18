@@ -6,8 +6,6 @@ import {
   testType,
   text,
 } from '../../utils/playwright-utils';
-
-// Key default values to check (without timestamps/full objects)
 const defaultChecks = [
   `"defaultNumberBothWrongDefault":false`,
   `"defaultValueLabel":"Three"`,
@@ -22,39 +20,24 @@ const defaultChecks = [
 ];
 
 const valuesSelect = [
-  // 0 - defaultNumberBothWrongDefault
   { defaultValue: '', indexStylised: 2, valueAfter: 'Three', data: `"defaultNumberBothWrongDefault":{"value":3,"label":"Three"}` },
-  // 1 - defaultValueLabel
   { defaultValue: 'Three', indexStylised: 1, valueAfter: 'Two', data: `"defaultValueLabel":"Two"` },
-  // 2 - defaultNumberArray
   { defaultValue: '3', indexStylised: 1, valueAfter: '2', data: `"defaultNumberArray":"2"` },
-  // 3 - defaultNumberArrayBoth
   { defaultValue: '3', indexStylised: 1, valueAfter: '2', data: `"defaultNumberArrayBoth":{"value":"2","label":"2"}` },
-  // 4 - defaultValueStringNumber
   { defaultValue: 'Two', indexStylised: 1, valueAfter: 'Two', data: `"defaultValueStringNumber":"2"` },
-  // 5 - defaultValueStringNumberBoth
   { defaultValue: '3', indexStylised: 2, valueAfter: '3', data: `"defaultValueStringNumberBoth":{"value":"3","label":"3"}` },
-  // 6 - populateQuery
   { defaultValue: 'Native Render', indexStylised: 0, valueAfter: 'One', data: `"populateQuery":"one"` },
-  // 7 - populateQueryIdBefore
   { defaultValue: 'native-render', indexStylised: 0, valueAfter: 'native-single', data: `"populateQueryIdBefore":1483` },
-  // 8 - populateCustom
   { defaultValue: 'Three', indexStylised: 4, valueAfter: 'Custom 2', data: `"populateCustom":"custom-2"` },
-  // 9 - populateCustomArrayBeforeBoth
   { defaultValue: 'three', indexStylised: 4, valueAfter: 'two', data: `"populateCustomArrayBeforeBoth":{"value":"two","label":"two"}` },
-  // 10 - populateCustomOnly
   { defaultValue: 'custom-1', indexStylised: 1, valueAfter: 'custom-2', data: `"populateCustomOnly":"custom-2"` },
-  // 11 - populateOnlyQuery
   { defaultValue: 'Native Render', indexStylised: 1, valueAfter: 'Native Render', data: `"populateOnlyQuery":{"ID":1388` },
-  // 12 - populateOnlyQueryUser (default is Test User 644, select Aaron Kessler/704)
   { defaultValue: 'Test User 644', indexStylised: 1, valueAfter: 'Aaron Kessler', data: `"populateOnlyQueryUser":{"data":{"ID":"704"`, skip: true },
-  // 13 - populateOnlyQueryTerm (terms vary by install)
   { defaultValue: 'Test Category 6', indexStylised: 2, valueAfter: 'fabrikat', data: `"populateOnlyQueryTerm":{"term_id":`, skip: true },
 ];
 
 testType('select-stylised', false, () => {
   return [
-    // Check key default values
     ...defaultChecks.map((check, i) => ({
       description: `check default ${i}`,
       testFunction: async (_page: Page, canvas: Frame) => {
@@ -81,7 +64,6 @@ testType('select-stylised', false, () => {
         await text(canvas, `"defaultValueLabel":"Three"`);
       },
     },
-    // Check default inputs (skip items with dynamic data)
     ...valuesSelect.flatMap((item, index) =>
       item.skip ? [] : [{
         description: `default input ${index}`,
@@ -106,7 +88,6 @@ testType('select-stylised', false, () => {
           .click();
       },
     })),
-    // Check data (skip items with dynamic data)
     ...valuesSelect.flatMap((item, index) =>
       item.skip ? [] : [{
         description: `check data ${index}`,
@@ -128,7 +109,6 @@ testType('select-stylised', false, () => {
         await openSidebar(page);
       },
     },
-    // Check persisted values (skip items with dynamic data)
     ...valuesSelect.flatMap((item, index) =>
       item.skip ? [] : [{
         description: `check persisted value ${index}`,
@@ -140,7 +120,6 @@ testType('select-stylised', false, () => {
         },
       }]
     ),
-    // Check persisted data (skip items with dynamic data)
     ...valuesSelect.flatMap((item, index) =>
       item.skip ? [] : [{
         description: `check persisted data ${index}`,

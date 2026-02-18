@@ -1,9 +1,6 @@
-/**
- * Capture snapshot of compiled assets (_dist files).
- * Run with: npx tsx tests/capture-compiled-assets.ts
- *
- * Requires Playground to be running: npm run playground
- */
+// Capture snapshot of compiled assets (_dist files).
+// Run with: npx tsx tests/capture-compiled-assets.ts
+// Requires Playground to be running.
 
 import { chromium } from "@playwright/test";
 import { writeFileSync } from "fs";
@@ -58,7 +55,6 @@ async function captureCompiledAssets() {
     console.log(`  ${k} (${asset.size} bytes)`);
   });
 
-  // Save to file
   const snapshotPath = join(__dirname, "snapshots", "compiled-assets.json");
   writeFileSync(snapshotPath, JSON.stringify(compiledAssets, null, 2));
   console.log(`\nSnapshot saved to: ${snapshotPath}`);

@@ -122,7 +122,6 @@ test.describe('Patterns (Twig)', () => {
     const heading = canvas.locator('.wp-block-heading');
     await expect(heading).toHaveText('Twig Pattern Heading');
 
-    // Verify |upper filter was applied
     const paragraph = canvas.locator('.wp-block-paragraph').first();
     await expect(paragraph).toContainText('TWIG');
 
@@ -193,7 +192,6 @@ test.describe('Patterns (Blade)', () => {
     const heading = canvas.locator('.wp-block-heading');
     await expect(heading).toHaveText('Blade Pattern Heading');
 
-    // Verify strtoupper() was applied
     const paragraph = canvas.locator('.wp-block-paragraph').first();
     await expect(paragraph).toContainText('BLADE');
 

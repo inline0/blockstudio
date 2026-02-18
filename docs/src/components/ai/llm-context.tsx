@@ -28,7 +28,7 @@ relationship, taxonomy, user, post_object ...
 All field values are available as top-level
 variables: $text, $image, $repeater, etc.
 
-~48,000 tokens — fits in any modern context.`;
+~48,000 tokens, fits in any modern context.`;
 
 export function LlmContext() {
   return (

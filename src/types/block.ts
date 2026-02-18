@@ -1,11 +1,3 @@
-// To parse this data:
-//
-//   import { Convert, Block } from "./file";
-//
-//   const block = Convert.toBlock(json);
-//
-// These functions will throw an error if the JSON doesn't
-// match the expected interface, even if the JSON is valid.
 
 export interface Block {
   $schema?: string;
@@ -3173,9 +3165,6 @@ export enum Scope {
   Inserter = 'inserter',
   Transform = 'transform',
 }
-
-// Converts JSON strings to/from your types
-// and asserts the results of JSON.parse at runtime
 export class Convert {
   public static toBlock(json: string): Block {
     return cast(JSON.parse(json), r('Block'));
@@ -3244,7 +3233,6 @@ function transform(
   }
 
   function transformUnion(typs: any[], val: any): any {
-    // val must validate against one typ in typs
     const l = typs.length;
     for (let i = 0; i < l; i++) {
       const typ = typs[i];
@@ -3268,7 +3256,6 @@ function transform(
   }
 
   function transformArray(typ: any, val: any): any {
-    // val must be an array with no invalid elements
     if (!Array.isArray(val)) return invalidValue(l('array'), val, key, parent);
     return val.map((el) => transform(el, typ, getProps));
   }
@@ -3329,7 +3316,6 @@ function transform(
           ? transformObject(getProps(typ), typ.additional, val)
           : invalidValue(typ, val, key, parent);
   }
-  // Numbers can be parsed by Date but shouldn't be.
   if (typ === Date && typeof val !== 'number') return transformDate(val);
   return transformPrimitive(typ, val);
 }

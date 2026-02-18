@@ -332,7 +332,6 @@ function writeLogFile(
     lines.push(`Average: ${plainScore(suiteAvg)}`);
     lines.push("");
 
-    // Failure details
     const failures = results.filter((r) => r.scores.some((s) => s.score < 1));
     if (failures.length > 0) {
       lines.push("Failure Details:");
@@ -351,7 +350,6 @@ function writeLogFile(
     }
   }
 
-  // Raw outputs
   lines.push("=".repeat(80));
   lines.push("RAW LLM OUTPUTS");
   lines.push("=".repeat(80));
