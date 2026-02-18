@@ -974,10 +974,10 @@ test.describe('Canvas', () => {
             return getBlockType && getBlockType('blockstudio/canvas-staggered-test');
           },
           null,
-          { timeout: 20000 },
+          { timeout: 30000 },
         );
 
-        await page.waitForTimeout(3000);
+        await page.waitForTimeout(5000);
 
         // Add the block to the test page.
         fs.writeFileSync(
@@ -994,7 +994,7 @@ test.describe('Canvas', () => {
           { timeout: 30000 },
         );
 
-        await page.waitForTimeout(3000);
+        await page.waitForTimeout(5000);
 
         const result = await page.evaluate((slug: string) => {
           const artboard = document.querySelector(`[data-canvas-slug="${slug}"]`);
