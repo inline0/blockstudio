@@ -1,15 +1,12 @@
 # Blockstudio 7
 
-WordPress block framework plugin - v7 modernization with 100% WordPress Coding Standards.
+WordPress block framework plugin. v7 modernization with 100% WordPress Coding Standards.
 
 ## Quick Reference
 
 ```bash
-# Run unit tests (snapshot comparison)
-npm run playground:unit && npm run test:unit
-
 # Run E2E tests (browser automation)
-npm run wp-env:start && npx playwright test tests/e2e/types/text.ts --config=playwright.wp-env.config.ts
+npm run wp-env:start && npm run test:e2e
 
 # Check coding standards
 composer cs
@@ -17,24 +14,9 @@ composer cs
 
 ## Testing - IMPORTANT
 
-There are **TWO separate test systems**. Do not confuse them:
+There is one active test system:
 
-### 1. Unit Tests (WordPress Playground)
-
-**Purpose:** Compare v7 output against v6 reference snapshots.
-
-**Technology:** WordPress Playground (lightweight, runs in browser)
-
-**Commands:**
-```bash
-npm run playground:unit     # Start unit test server (port 9701)
-npm run test:unit           # Run unit tests against playground
-npm run playground:reference # Start v6 reference server (port 9706)
-```
-
-**Test files:** `tests/unit/*.test.ts`
-
-### 2. E2E Tests (wp-env)
+### E2E Tests (wp-env)
 
 **Purpose:** Browser automation tests for UI interactions.
 
@@ -43,21 +25,12 @@ npm run playground:reference # Start v6 reference server (port 9706)
 **Commands:**
 ```bash
 npm run wp-env:start        # Start wp-env (port 8888)
-npm run test:e2e            # Run ALL E2E tests
-npx playwright test tests/e2e/types/text.ts --config=playwright.wp-env.config.ts  # Run specific test
+npm run test:e2e            # Run all E2E tests
+npm run catalog:blocks      # Run catalog block generation test
+npx playwright test tests/e2e/types/text.ts --config=playwright.wp-env.config.ts  # Run a specific test
 ```
 
 **Test files:** `tests/e2e/**/*.ts`
-
-### Key Differences
-
-| | Unit Tests | E2E Tests |
-|---|---|---|
-| Server | WordPress Playground | wp-env (Docker) |
-| Port | 9701 | 8888 |
-| Config | `playwright.config.ts` | `playwright.wp-env.config.ts` |
-| Purpose | Snapshot comparison | UI automation |
-| Speed | Fast | Slower |
 
 ## Project Structure
 
@@ -74,15 +47,13 @@ blockstudio7/
 │   └── src/schemas/     # JSON Schema definitions (block, blockstudio, extend)
 ├── .claude/skills/      # Claude Code skills
 ├── readme.txt           # WordPress plugin readme with changelog
-├── _reference/          # v6 reference (gitignored, for snapshots)
+├── _reference/          # Legacy reference code (read-only)
 └── tests/
-    ├── unit/            # Unit test files + playground servers
     ├── e2e/             # E2E test files
-    ├── theme/           # Test theme (blocks, pages, test-helper)
-    │   ├── blockstudio/ # Test blocks
-    │   ├── pages/       # Test pages
-    │   └── test-helper.php
-    └── wordpress-playground/
+    └── theme/           # Test theme (blocks, pages, test-helper)
+        ├── blockstudio/ # Test blocks
+        ├── pages/       # Test pages
+        └── test-helper.php
 ```
 
 ## Skills
@@ -126,31 +97,31 @@ npm run build            # Generate + build
 
 ## Comment Policy
 
-- Internal code: no JSDoc; comments only for **why**, not **what**.
+- Internal code: no JSDoc. Comments only for why, not what.
 - Public APIs: JSDoc required (description + params/returns/examples).
-- Tests: no redundant comments that restate test names; comment only when setup/assertion is non-obvious.
+- Tests: no redundant comments that restate test names. Comment only when setup/assertion is non-obvious.
 - **No banner comments**: never use decorative separator lines like `// ==========`, `// -----`, `// ===== SECTION =====`, etc. Exception: in large test files with many assertions, a single `// Section Name` line is fine to separate groups.
-- **No em dashes** (`—`): never use em dashes in code, docs, or copy. Use periods, commas, colons, or restructure the sentence instead.
+- **No em dashes**: never use em dashes in code, docs, or copy. Use periods, commas, colons, or rewrite the sentence.
 
 ## Key Rules for Claude
 
-1. **NEVER COMMIT WITHOUT TESTING** - Always run and verify tests pass before committing. No exceptions.
-2. **DEBUG UNTIL SOLVED** - When a test fails, debug with temporary logging, screenshots, and other debugging tools until the problem is resolved. Do not give up or move on.
-3. **Run tests** after changes: `npm run test:unit`
-4. **Never modify `_reference/`** - read-only v6 baseline
+1. **NEVER COMMIT WITHOUT TESTING** - Always run and verify tests pass before committing, unless explicitly instructed otherwise.
+2. **DEBUG UNTIL SOLVED** - When a test fails, debug with temporary logging, screenshots, and other debugging tools until the problem is resolved.
+3. **Run tests** after changes: `npm run test:e2e`
+4. **Never modify `_reference/`** - read-only legacy baseline
 5. **100% WordPress Coding Standards** - no exceptions
 6. **One class at a time** - migrate and test incrementally
-7. **Never use `npx`** - always use `npm run` scripts from package.json
+7. **Avoid direct `npx` for routine flows** - prefer `npm run` scripts from package.json
 
 ## Commands
 
 | Command | Description |
 |---------|-------------|
-| `npm run playground:unit` | Start unit test server (port 9701) |
-| `npm run test:unit` | Run unit/snapshot tests |
-| `npm run playground:reference` | Start v6 reference server (port 9706) |
 | `npm run wp-env:start` | Start wp-env for E2E tests (port 8888) |
+| `npm run wp-env:stop` | Stop wp-env |
+| `npm run wp-env:reset` | Reset wp-env + seed test data |
 | `npm run test:e2e` | Run all E2E tests |
+| `npm run catalog:blocks` | Run catalog block test |
 | `composer cs` | Check PHPCS |
 | `composer cs:fix` | Auto-fix PHPCS issues |
 
@@ -167,6 +138,4 @@ npm run build            # Generate + build
 | Server | Port |
 |--------|------|
 | Docs | 9700 |
-| Unit Tests (Playground) | 9701 |
-| v6 Reference (Playground) | 9706 |
 | wp-env (E2E) | 8888 |

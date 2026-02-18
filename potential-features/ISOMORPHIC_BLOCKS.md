@@ -368,6 +368,4 @@ npx playwright test tests/e2e/isomorphic.ts --config=playwright.wp-env.config.ts
 # Run all E2E tests (regression)
 npm run test:e2e
 
-# Run unit tests (snapshot — may need refresh after adding test block)
-npm run playground:unit && npm run test:unit
 ```

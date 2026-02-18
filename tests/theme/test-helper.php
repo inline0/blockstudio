@@ -435,58 +435,6 @@ add_action(
 add_action(
 	'rest_api_init',
 	function () {
-		register_rest_route(
-			'blockstudio-test/v1',
-			'/snapshot',
-			array(
-				'methods'             => 'GET',
-				'callback'            => function () {
-					try {
-						if ( ! class_exists( 'Blockstudio\\Build' ) ) {
-							return new WP_Error( 'not_loaded', 'Blockstudio Build class not loaded', array( 'status' => 500 ) );
-						}
-
-						// Detect v6 vs v7 by checking method names
-						$is_v7 = method_exists( 'Blockstudio\\Build', 'assets_admin' );
-
-						if ( $is_v7 ) {
-							return array(
-								'blocks'            => \Blockstudio\Build::blocks(),
-								'data'              => \Blockstudio\Build::data(),
-								'extensions'        => \Blockstudio\Build::extensions(),
-								'files'             => \Blockstudio\Build::files(),
-								'assetsAdmin'       => \Blockstudio\Build::assets_admin(),
-								'assetsBlockEditor' => \Blockstudio\Build::assets_block_editor(),
-								'assetsGlobal'      => \Blockstudio\Build::assets_global(),
-								'paths'             => \Blockstudio\Build::paths(),
-								'overrides'         => \Blockstudio\Build::overrides(),
-								'assets'            => \Blockstudio\Build::assets(),
-								'blade'             => \Blockstudio\Build::blade(),
-							);
-						} else {
-							// v6 uses camelCase
-							return array(
-								'blocks'            => \Blockstudio\Build::blocks(),
-								'data'              => \Blockstudio\Build::data(),
-								'extensions'        => \Blockstudio\Build::extensions(),
-								'files'             => \Blockstudio\Build::files(),
-								'assetsAdmin'       => \Blockstudio\Build::assetsAdmin(),
-								'assetsBlockEditor' => \Blockstudio\Build::assetsBlockEditor(),
-								'assetsGlobal'      => \Blockstudio\Build::assetsGlobal(),
-								'paths'             => \Blockstudio\Build::paths(),
-								'overrides'         => \Blockstudio\Build::overrides(),
-								'assets'            => \Blockstudio\Build::assets(),
-								'blade'             => \Blockstudio\Build::blade(),
-							);
-						}
-					} catch ( \Throwable $e ) {
-						return new WP_Error( 'php_error', $e->getMessage() . ' in ' . $e->getFile() . ':' . $e->getLine(), array( 'status' => 500 ) );
-					}
-				},
-				'permission_callback' => '__return_true',
-			)
-		);
-
 		// Get all blocks from Build class
 		register_rest_route(
 			'blockstudio-test/v1',
@@ -639,64 +587,6 @@ add_action(
 						'php_version'        => PHP_VERSION,
 						'wp_version'         => get_bloginfo( 'version' ),
 					);
-				},
-				'permission_callback' => '__return_true',
-			)
-		);
-
-		register_rest_route(
-			'blockstudio-test/v1',
-			'/compiled-assets',
-			array(
-				'methods'             => 'GET',
-				'callback'            => function () {
-					$theme_blockstudio_path = get_stylesheet_directory() . '/blockstudio';
-					$compiled               = array();
-
-					if ( ! is_dir( $theme_blockstudio_path ) ) {
-						return new WP_Error( 'not_found', 'Blockstudio theme directory not found', array( 'status' => 404 ) );
-					}
-
-					// Find all _dist directories recursively
-					$iterator = new RecursiveIteratorIterator(
-						new RecursiveDirectoryIterator( $theme_blockstudio_path, RecursiveDirectoryIterator::SKIP_DOTS ),
-						RecursiveIteratorIterator::SELF_FIRST
-					);
-
-					foreach ( $iterator as $file ) {
-						if ( $file->isFile() ) {
-							$path         = $file->getPathname();
-							$relativePath = str_replace( $theme_blockstudio_path . '/', '', $path );
-
-							// Only include files in _dist directories
-							if ( strpos( $relativePath, '_dist/' ) !== false ) {
-								$extension = $file->getExtension();
-
-								// Only include CSS and JS files
-								if ( in_array( $extension, array( 'css', 'js' ), true ) ) {
-									// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Reading local compiled asset.
-									$content = file_get_contents( $path );
-
-									// Normalize the key by removing hashes/timestamps from filename
-									// style-8c61297c7ad6a7f39af80a70d8992118.css -> style.css
-									// script-1746475334.js -> script.js
-									$normalizedFilename = preg_replace( '/-[a-f0-9]{32}\./', '.', $file->getBasename() );
-									$normalizedFilename = preg_replace( '/-\d{10,}\./', '.', $normalizedFilename );
-
-									$normalizedKey = dirname( $relativePath ) . '/' . $normalizedFilename;
-
-									$compiled[ $normalizedKey ] = array(
-										'content'   => $content,
-										'size'      => strlen( $content ),
-										'extension' => $extension,
-									);
-								}
-							}
-						}
-					}
-
-					ksort( $compiled );
-					return $compiled;
 				},
 				'permission_callback' => '__return_true',
 			)

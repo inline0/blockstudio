@@ -29,6 +29,6 @@
     "useDefineForClassFields": true,
     "types": ["node", "@emotion/react/types/css-prop"]
   },
-  "include": ["./src", "./tests/**/*.ts", "./playwright.config.ts"],
+  "include": ["./src", "./tests/**/*.ts"],
   "exclude": ["node_modules", "dist"]
 }
