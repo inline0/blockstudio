@@ -1,4 +1,6 @@
 import { execSync } from 'child_process';
+import * as path from 'path';
+
 import { Page, expect, test } from '@playwright/test';
 import {
   addBlock,
@@ -10,8 +12,9 @@ import {
   resetPageState,
 } from '../utils/playwright-utils';
 
+const wpEnvDir = path.join(process.cwd(), 'tests/wp-env');
 const wpCli = (command: string) =>
-  execSync(`npx wp-env run cli -- ${command}`, { encoding: 'utf-8', timeout: 30000 });
+  execSync(`npx wp-env run cli -- ${command}`, { cwd: wpEnvDir, encoding: 'utf-8', timeout: 30000 });
 
 let page: Page;
 
