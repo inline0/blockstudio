@@ -83,7 +83,7 @@ testType('attributes', false, () => {
           await page.locator('.attachments .attachment:visible').first().click();
         }
         await page.click('.media-button-select:visible');
-        await count(page, '.blockstudio-fields__field--files-toggle', 1);
+        await count(canvas, '[data-image]', 1);
 
         await count(canvas, '[data-test="test"]', 1);
         await count(canvas, '[data-link="https://google.com"]', 1);
