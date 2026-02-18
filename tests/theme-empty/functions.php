@@ -46,3 +46,34 @@ add_filter(
 	10,
 	1
 );
+
+add_action(
+	'rest_api_init',
+	function () {
+		register_rest_route(
+			'blockstudio-test/v1',
+			'/cleanup',
+			array(
+				'methods'             => 'POST',
+				'callback'            => function () {
+					$posts   = get_posts(
+						array(
+							'post_type'   => 'any',
+							'post_status' => 'any',
+							'numberposts' => -1,
+							'fields'      => 'ids',
+							'meta_key'    => '_blockstudio_page_source', // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_key
+						)
+					);
+					$deleted = 0;
+					foreach ( $posts as $post_id ) {
+						wp_delete_post( $post_id, true );
+						++$deleted;
+					}
+					return array( 'deleted' => $deleted );
+				},
+				'permission_callback' => '__return_true',
+			)
+		);
+	}
+);

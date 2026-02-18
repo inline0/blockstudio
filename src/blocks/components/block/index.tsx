@@ -206,7 +206,7 @@ export const Block = ({
 
     const preloaded = renderCache.claimPreloaded(block.name);
     if (preloaded) {
-      renderCache.set(hash, preloaded);
+      renderCache.set(hash, preloaded, block.name);
       firstRenderDone.current = true;
       return computeRender(preloaded);
     }
@@ -258,7 +258,7 @@ export const Block = ({
       .then((response) => {
         const res = response as { rendered: string };
         const hash = computeHash(block.name, attributes);
-        renderCache.set(hash, res.rendered);
+        renderCache.set(hash, res.rendered, block.name);
         updateRender(res.rendered);
       })
       .then(() => {

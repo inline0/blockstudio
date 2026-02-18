@@ -17,6 +17,7 @@ interface ArtboardProps {
   page: Page;
   revision: number;
   width?: number;
+  onSwapComplete?: (slug: string) => void;
 }
 
 interface Layer {
@@ -26,9 +27,12 @@ interface Layer {
 
 const DEFAULT_WIDTH = 1440;
 
-export const Artboard = ({ page, revision, width = DEFAULT_WIDTH }: ArtboardProps): JSX.Element => {
+export const Artboard = ({ page, revision, width = DEFAULT_WIDTH, onSwapComplete }: ArtboardProps): JSX.Element => {
   const wrapperRef = useRef<HTMLDivElement>(null);
   const pendingRef = useRef<HTMLDivElement>(null);
+  const prevRevisionRef = useRef(revision);
+  const onSwapCompleteRef = useRef(onSwapComplete);
+  onSwapCompleteRef.current = onSwapComplete;
 
   const [layers, setLayers] = useState<Layer[]>(() => [
     { id: revision, blocks: parse(page.content) },
@@ -37,7 +41,14 @@ export const Artboard = ({ page, revision, width = DEFAULT_WIDTH }: ArtboardProp
   const [readyId, setReadyId] = useState<number | null>(null);
 
   useEffect(() => {
-    if (revision === activeId) return;
+    if (revision === activeId) {
+      if (prevRevisionRef.current !== revision) {
+        prevRevisionRef.current = revision;
+        onSwapCompleteRef.current?.(page.slug);
+      }
+      return;
+    }
+    prevRevisionRef.current = revision;
 
     const newBlocks = parse(page.content);
     setLayers((prev) => {
@@ -46,7 +57,7 @@ export const Artboard = ({ page, revision, width = DEFAULT_WIDTH }: ArtboardProp
         ? [active, { id: revision, blocks: newBlocks }]
         : [{ id: revision, blocks: newBlocks }];
     });
-  }, [revision, activeId, page.content]);
+  }, [revision, activeId, page.content, page.slug]);
 
   useEffect(() => {
     const pending = layers.find((l) => l.id !== activeId);
@@ -84,7 +95,8 @@ export const Artboard = ({ page, revision, width = DEFAULT_WIDTH }: ArtboardProp
     setActiveId(readyId);
     setLayers([ready]);
     setReadyId(null);
-  }, [readyId, layers]);
+    onSwapCompleteRef.current?.(page.slug);
+  }, [readyId, layers, page.slug]);
 
   // BlockPreview hardcodes MAX_HEIGHT = 2000 on both the iframe and its
   // wrapper. Remove those limits so artboards show full page content.

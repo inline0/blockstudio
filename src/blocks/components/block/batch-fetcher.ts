@@ -48,7 +48,7 @@ const flush = () => {
         const html = rendered[req.clientId];
         if (html) {
           const hash = computeHash(req.name, req.attributes);
-          renderCache.set(hash, html);
+          renderCache.set(hash, html, req.name);
           req.resolve(html);
         } else {
           req.reject(new Error(`No render for ${req.clientId}`));

@@ -34,6 +34,10 @@ test.beforeAll(async ({ browser }) => {
   await login(page, 'http://localhost:8890');
 
   cleanupDynamicFiles();
+
+  await fetch('http://localhost:8890/wp-json/blockstudio-test/v1/cleanup', {
+    method: 'POST',
+  });
 });
 
 test.afterAll(async () => {

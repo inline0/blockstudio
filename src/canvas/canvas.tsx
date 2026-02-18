@@ -8,6 +8,8 @@ import { check, closeSmall, moreHorizontal } from '@wordpress/icons';
 import { Artboard } from './artboard';
 import { STORE_NAME, store } from './store';
 import type { CanvasView } from './store';
+import { createUpdateQueue } from './update-queue';
+import type { QueueEntry } from './update-queue';
 
 interface Page {
   title: string;
@@ -37,15 +39,6 @@ interface Transform {
 interface PreloadEntry {
   rendered: string;
   blockName: string;
-}
-
-interface RefreshResponse {
-  pages: Page[];
-  blocks: BlockItem[];
-  blockstudioBlocks: PreloadEntry[];
-  changedBlocks: string[];
-  blocksNative?: Record<string, unknown>;
-  tailwindCss?: string;
 }
 
 interface SSEChangedData {
@@ -117,6 +110,11 @@ export const Canvas = ({
   const [focusedSlug, setFocusedSlug] = useState<string | null>(null);
   const focusedRef = useRef<string | null>(null);
   focusedRef.current = focusedSlug;
+
+  const currentPagesRef = useRef(currentPages);
+  currentPagesRef.current = currentPages;
+  const currentBlocksRef = useRef(currentBlocks);
+  currentBlocksRef.current = currentBlocks;
 
   const liveMode = useSelect(
     (select) => select(store).isLiveMode(),
@@ -406,42 +404,63 @@ export const Canvas = ({
     return () => clearTimeout(timer);
   }, [ready, mountedCount, totalItems]);
 
-  const processRefreshData = useCallback(
-    (
-      data: RefreshResponse,
-      newFingerprint: string,
-      changedPages?: string[],
-    ): void => {
-      const newlyRegistered: string[] = [];
+  const setFingerprintRef = useRef(setFingerprint);
+  setFingerprintRef.current = setFingerprint;
+
+  const applyTailwindCss = useCallback((css: string): void => {
+    setCurrentSettings((prev) => {
+      const assets = (prev as any).__unstableResolvedAssets;
+      if (!assets?.styles) return prev;
+
+      const tag = '<style id="blockstudio-tailwind-editor">';
+      const existingIndex = assets.styles.indexOf(tag);
+      let newStyles: string;
+
+      if (existingIndex !== -1) {
+        const endTag = '</style>';
+        const endIndex = assets.styles.indexOf(endTag, existingIndex);
+        newStyles =
+          assets.styles.substring(0, existingIndex) +
+          tag +
+          css +
+          endTag +
+          assets.styles.substring(endIndex + endTag.length);
+      } else {
+        newStyles = assets.styles + tag + css + '</style>';
+      }
+
+      return {
+        ...prev,
+        __unstableResolvedAssets: {
+          ...assets,
+          styles: newStyles,
+        },
+      };
+    });
+  }, []);
+
+  const processQueueEntry = useCallback(
+    (data: QueueEntry, pendingSwaps: Set<string>): void => {
       if (data.blocksNative) {
         const registerBlock = window.blockstudio?.registerBlock;
-        console.log('[canvas:refresh] blocksNative keys:', Object.keys(data.blocksNative));
-        console.log('[canvas:refresh] registerBlock available:', !!registerBlock);
         if (registerBlock) {
           Object.values(data.blocksNative).forEach((blockData: any) => {
             if (blockData?.name && !getBlockType(blockData.name)) {
-              console.log('[canvas:refresh] registering NEW block:', blockData.name);
               try {
                 registerBlock(blockData);
-                newlyRegistered.push(blockData.name);
-                console.log('[canvas:refresh] registered OK:', blockData.name, '-> getBlockType:', !!getBlockType(blockData.name));
               } catch (err) {
-                console.error('[canvas:refresh] registerBlock FAILED:', blockData.name, err);
+                console.error('[canvas:queue] registerBlock FAILED:', blockData.name, err);
               }
             }
           });
         }
-      } else {
-        console.warn('[canvas:refresh] blocksNative is falsy:', data.blocksNative);
       }
 
       if (data.blockstudioBlocks.length > 0) {
-        window.blockstudio?.addPreloads?.(data.blockstudioBlocks);
+        window.blockstudio?.replacePreloads?.(data.blockstudioBlocks);
       }
 
-      const changedBlockNames = new Set<string>(
-        data.changedBlocks || [],
-      );
+      const changedBlockNames = new Set<string>(data.changedBlocks);
 
       const currentPreloaded: PreloadEntry[] =
         (window as any).blockstudio?.blockstudioBlocks || [];
@@ -461,18 +480,69 @@ export const Canvas = ({
         ];
       }
 
-      console.log('[canvas:refresh] pages:', data.pages.length, 'changedBlocks:', [...changedBlockNames], 'newlyRegistered:', newlyRegistered);
+      const prevPages = currentPagesRef.current;
+      const prevBlocks = currentBlocksRef.current;
 
       if (data.pages.length > 0) {
-        setCurrentPages((prevPages) => {
-          const changedSlugs = new Set<string>();
-          let nextPages: typeof prevPages;
+        if (data.changedPages.length > 0) {
+          const updatedMap = new Map(data.pages.map((p) => [p.slug, p]));
+          for (const existing of prevPages) {
+            const updated = updatedMap.get(existing.slug);
+            if (updated && existing.content !== updated.content) {
+              pendingSwaps.add(updated.slug);
+            }
+          }
+        } else {
+          for (const newPage of data.pages) {
+            const existing = prevPages.find((p) => p.slug === newPage.slug);
+            if (!existing) continue;
+            if (existing.content !== newPage.content) {
+              pendingSwaps.add(newPage.slug);
+            } else if (
+              changedBlockNames.size > 0 &&
+              Array.from(changedBlockNames).some((name) =>
+                newPage.content.includes(name),
+              )
+            ) {
+              pendingSwaps.add(newPage.slug);
+            }
+          }
+        }
+      } else if (changedBlockNames.size > 0) {
+        for (const pg of prevPages) {
+          if (
+            Array.from(changedBlockNames).some((name) =>
+              pg.content.includes(name),
+            )
+          ) {
+            pendingSwaps.add(pg.slug);
+          }
+        }
+      }
 
-          if (changedPages && changedPages.length > 0) {
+      if (data.blocks.length > 0) {
+        for (const newBlock of data.blocks) {
+          const existing = prevBlocks.find((b) => b.name === newBlock.name);
+          if (!existing) continue;
+          if (
+            existing.content !== newBlock.content ||
+            changedBlockNames.has(newBlock.name)
+          ) {
+            pendingSwaps.add(newBlock.name);
+          }
+        }
+      }
+
+      if (data.pages.length > 0) {
+        setCurrentPages((prevPg) => {
+          const changedSlugs = new Set<string>();
+          let nextPages: typeof prevPg;
+
+          if (data.changedPages.length > 0) {
             const updatedMap = new Map(
               data.pages.map((p) => [p.slug, p]),
             );
-            const merged = prevPages.map((existing) => {
+            const merged = prevPg.map((existing) => {
               const updated = updatedMap.get(existing.slug);
               if (updated) {
                 updatedMap.delete(existing.slug);
@@ -491,7 +561,7 @@ export const Canvas = ({
             nextPages = merged;
           } else {
             nextPages = data.pages.map((newPage) => {
-              const existing = prevPages.find(
+              const existing = prevPg.find(
                 (p) => p.slug === newPage.slug,
               );
 
@@ -527,17 +597,17 @@ export const Canvas = ({
           return nextPages;
         });
       } else if (changedBlockNames.size > 0) {
-        setCurrentPages((prevPages) => {
+        setCurrentPages((prevPg) => {
           const changedSlugs = new Set<string>();
-          const nextPages = prevPages.map((page) => {
+          const nextPages = prevPg.map((pg) => {
             const usesChangedBlock = Array.from(changedBlockNames).some(
-              (name) => page.content.includes(name),
+              (name) => pg.content.includes(name),
             );
             if (usesChangedBlock) {
-              changedSlugs.add(page.slug);
-              return { ...page };
+              changedSlugs.add(pg.slug);
+              return { ...pg };
             }
-            return page;
+            return pg;
           });
 
           if (changedSlugs.size > 0) {
@@ -554,11 +624,15 @@ export const Canvas = ({
         });
       }
 
+      if (data.tailwindCss) {
+        applyTailwindCss(data.tailwindCss);
+      }
+
       if (data.blocks.length > 0) {
-        setCurrentBlocks((prevBlocks) => {
+        setCurrentBlocks((prevBl) => {
           const changedBlockItems = new Set<string>();
 
-          const merged = prevBlocks.map((existing) => {
+          const merged = prevBl.map((existing) => {
             const updated = data.blocks.find(
               (b) => b.name === existing.name,
             );
@@ -578,7 +652,7 @@ export const Canvas = ({
           });
 
           const newBlocks = data.blocks.filter(
-            (b) => !prevBlocks.some((p) => p.name === b.name),
+            (b) => !prevBl.some((p) => p.name === b.name),
           );
           newBlocks.forEach((b) => changedBlockItems.add(b.name));
 
@@ -595,47 +669,29 @@ export const Canvas = ({
           return [...merged, ...newBlocks];
         });
       }
-
-      if (data.tailwindCss) {
-        setCurrentSettings((prev) => {
-          const assets = (prev as any).__unstableResolvedAssets;
-          if (!assets?.styles) return prev;
-
-          const tag = '<style id="blockstudio-tailwind-editor">';
-          const existingIndex = assets.styles.indexOf(tag);
-          let newStyles: string;
-
-          if (existingIndex !== -1) {
-            const endTag = '</style>';
-            const endIndex = assets.styles.indexOf(
-              endTag,
-              existingIndex,
-            );
-            newStyles =
-              assets.styles.substring(0, existingIndex) +
-              tag +
-              data.tailwindCss +
-              endTag +
-              assets.styles.substring(endIndex + endTag.length);
-          } else {
-            newStyles =
-              assets.styles + tag + data.tailwindCss + '</style>';
-          }
-
-          return {
-            ...prev,
-            __unstableResolvedAssets: {
-              ...assets,
-              styles: newStyles,
-            },
-          };
-        });
-      }
-
-      setFingerprint(newFingerprint);
     },
-    [setFingerprint],
+    [],
   );
+
+  const queueRef = useRef<ReturnType<typeof createUpdateQueue> | null>(null);
+  if (!queueRef.current) {
+    queueRef.current = createUpdateQueue({
+      onFlush: processQueueEntry,
+      onAllSwapsComplete(entry) {
+        setFingerprintRef.current(entry.fingerprint);
+      },
+    });
+  }
+
+  useEffect(() => {
+    return () => {
+      queueRef.current?.destroy();
+    };
+  }, []);
+
+  const handleSwapComplete = useCallback((slug: string): void => {
+    queueRef.current?.reportSwapComplete(slug);
+  }, []);
 
   useEffect(() => {
     if (!liveMode || !ready) return;
@@ -654,9 +710,8 @@ export const Canvas = ({
     eventSource.addEventListener('fingerprint', (e: MessageEvent) => {
       try {
         const parsed = JSON.parse(e.data);
-        console.log('[canvas:sse] fingerprint event:', parsed.fingerprint);
         if (typeof parsed.fingerprint === 'string') {
-          setFingerprint(parsed.fingerprint);
+          setFingerprintRef.current(parsed.fingerprint);
         }
       } catch {
         // Ignore parse errors.
@@ -666,33 +721,16 @@ export const Canvas = ({
     eventSource.addEventListener('changed', (e: MessageEvent) => {
       try {
         const parsed = JSON.parse(e.data) as SSEChangedData;
-        const nativeKeys = parsed.blocksNative ? Object.keys(parsed.blocksNative) : [];
-        console.log('[canvas:sse] changed event:', {
-          fingerprint: parsed.fingerprint,
-          changedBlocks: parsed.changedBlocks,
-          changedPages: parsed.changedPages,
-          pagesCount: (parsed.pages || []).length,
-          blocksNativeCount: nativeKeys.length,
-          blockstudioBlocksCount: (parsed.blockstudioBlocks || []).length,
-          blocksNativeNames: nativeKeys,
-        });
         if (typeof parsed.fingerprint === 'string' && parsed.blockstudioBlocks) {
-          processRefreshData(
-            {
-              pages: parsed.pages || [],
-              blocks: parsed.blocks || [],
-              blockstudioBlocks: parsed.blockstudioBlocks,
-              changedBlocks: parsed.changedBlocks || [],
-              blocksNative: parsed.blocksNative,
-              tailwindCss: parsed.tailwindCss,
-            },
-            parsed.fingerprint,
-            parsed.changedPages,
-          );
-        } else {
-          console.warn('[canvas:sse] changed event DROPPED:', {
-            fingerprintType: typeof parsed.fingerprint,
-            hasBlockstudioBlocks: !!parsed.blockstudioBlocks,
+          queueRef.current?.enqueue({
+            fingerprint: parsed.fingerprint,
+            pages: parsed.pages || [],
+            blocks: parsed.blocks || [],
+            blockstudioBlocks: parsed.blockstudioBlocks,
+            changedBlocks: parsed.changedBlocks || [],
+            changedPages: parsed.changedPages || [],
+            blocksNative: parsed.blocksNative,
+            tailwindCss: parsed.tailwindCss,
           });
         }
       } catch (err) {
@@ -703,7 +741,7 @@ export const Canvas = ({
     return () => {
       eventSource.close();
     };
-  }, [liveMode, ready, setFingerprint, processRefreshData]);
+  }, [liveMode, ready]);
 
   const hasContent =
     (view === 'pages' && currentPages.length > 0) ||
@@ -820,6 +858,7 @@ export const Canvas = ({
                   }}
                   revision={rev}
                   width={artboardWidth}
+                  onSwapComplete={handleSwapComplete}
                 />
               </div>
             );
@@ -856,6 +895,7 @@ export const Canvas = ({
                 }}
                 revision={focusedRev}
                 width={focusWidth}
+                onSwapComplete={handleSwapComplete}
               />
             </div>
           );

@@ -216,6 +216,12 @@ window.blockstudio.addPreloads = (
   renderCache.addPreloads(entries);
 };
 
+window.blockstudio.replacePreloads = (
+  entries: Array<{ rendered: string; blockName: string }>,
+) => {
+  renderCache.replacePreloads(entries);
+};
+
 registerPlugin('blockstudio-tailwind', {
   render: () => {
     if (window.blockstudioAdmin.isTailwindActive === 'false') return;

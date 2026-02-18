@@ -213,6 +213,9 @@ declare global {
       addPreloads?: (
         entries: Array<{ rendered: string; blockName: string }>,
       ) => void;
+      replacePreloads?: (
+        entries: Array<{ rendered: string; blockName: string }>,
+      ) => void;
     };
     blockstudioAdmin: BlockstudioAdmin;
     pagenow?: string;

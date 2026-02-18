@@ -2,6 +2,7 @@ import { cloneDeep } from 'lodash-es';
 import { replaceEmptyStringsWithFalse } from '@/blocks/utils/replace-empty-strings-with-false';
 
 const cache = new Map<string, string>();
+const cacheByBlock = new Map<string, Set<string>>();
 const preloadQueues = new Map<string, string[]>();
 
 const sortedStringify = (value: unknown): string => {
@@ -72,11 +73,41 @@ export const renderCache = {
     return cache.get(hash);
   },
 
-  set(hash: string, rendered: string) {
+  set(hash: string, rendered: string, blockName?: string) {
     cache.set(hash, rendered);
+    if (blockName) {
+      const hashes = cacheByBlock.get(blockName) || new Set();
+      hashes.add(hash);
+      cacheByBlock.set(blockName, hashes);
+    }
   },
 
   addPreloads(entries: Array<{ rendered: string; blockName: string }>) {
+    entries.forEach((data) => {
+      if (data.rendered && data.blockName) {
+        const queue = preloadQueues.get(data.blockName) || [];
+        queue.push(data.rendered);
+        preloadQueues.set(data.blockName, queue);
+      }
+    });
+  },
+
+  replacePreloads(entries: Array<{ rendered: string; blockName: string }>) {
+    const affectedTypes = new Set<string>();
+    entries.forEach((data) => {
+      if (data.blockName) affectedTypes.add(data.blockName);
+    });
+
+    for (const blockName of affectedTypes) {
+      preloadQueues.delete(blockName);
+
+      const hashes = cacheByBlock.get(blockName);
+      if (hashes) {
+        for (const hash of hashes) cache.delete(hash);
+        cacheByBlock.delete(blockName);
+      }
+    }
+
     entries.forEach((data) => {
       if (data.rendered && data.blockName) {
         const queue = preloadQueues.get(data.blockName) || [];
