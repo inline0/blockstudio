@@ -412,15 +412,27 @@ export const Canvas = ({
       newFingerprint: string,
       changedPages?: string[],
     ): void => {
+      const newlyRegistered: string[] = [];
       if (data.blocksNative) {
         const registerBlock = window.blockstudio?.registerBlock;
+        console.log('[canvas:refresh] blocksNative keys:', Object.keys(data.blocksNative));
+        console.log('[canvas:refresh] registerBlock available:', !!registerBlock);
         if (registerBlock) {
           Object.values(data.blocksNative).forEach((blockData: any) => {
             if (blockData?.name && !getBlockType(blockData.name)) {
-              registerBlock(blockData);
+              console.log('[canvas:refresh] registering NEW block:', blockData.name);
+              try {
+                registerBlock(blockData);
+                newlyRegistered.push(blockData.name);
+                console.log('[canvas:refresh] registered OK:', blockData.name, '-> getBlockType:', !!getBlockType(blockData.name));
+              } catch (err) {
+                console.error('[canvas:refresh] registerBlock FAILED:', blockData.name, err);
+              }
             }
           });
         }
+      } else {
+        console.warn('[canvas:refresh] blocksNative is falsy:', data.blocksNative);
       }
 
       if (data.blockstudioBlocks.length > 0) {
@@ -448,6 +460,8 @@ export const Canvas = ({
           ...data.blockstudioBlocks,
         ];
       }
+
+      console.log('[canvas:refresh] pages:', data.pages.length, 'changedBlocks:', [...changedBlockNames], 'newlyRegistered:', newlyRegistered);
 
       if (data.pages.length > 0) {
         setCurrentPages((prevPages) => {
@@ -640,6 +654,7 @@ export const Canvas = ({
     eventSource.addEventListener('fingerprint', (e: MessageEvent) => {
       try {
         const parsed = JSON.parse(e.data);
+        console.log('[canvas:sse] fingerprint event:', parsed.fingerprint);
         if (typeof parsed.fingerprint === 'string') {
           setFingerprint(parsed.fingerprint);
         }
@@ -651,7 +666,17 @@ export const Canvas = ({
     eventSource.addEventListener('changed', (e: MessageEvent) => {
       try {
         const parsed = JSON.parse(e.data) as SSEChangedData;
-        if (parsed.fingerprint && parsed.blockstudioBlocks) {
+        const nativeKeys = parsed.blocksNative ? Object.keys(parsed.blocksNative) : [];
+        console.log('[canvas:sse] changed event:', {
+          fingerprint: parsed.fingerprint,
+          changedBlocks: parsed.changedBlocks,
+          changedPages: parsed.changedPages,
+          pagesCount: (parsed.pages || []).length,
+          blocksNativeCount: nativeKeys.length,
+          blockstudioBlocksCount: (parsed.blockstudioBlocks || []).length,
+          blocksNativeNames: nativeKeys,
+        });
+        if (typeof parsed.fingerprint === 'string' && parsed.blockstudioBlocks) {
           processRefreshData(
             {
               pages: parsed.pages || [],
@@ -664,9 +689,14 @@ export const Canvas = ({
             parsed.fingerprint,
             parsed.changedPages,
           );
+        } else {
+          console.warn('[canvas:sse] changed event DROPPED:', {
+            fingerprintType: typeof parsed.fingerprint,
+            hasBlockstudioBlocks: !!parsed.blockstudioBlocks,
+          });
         }
-      } catch {
-        // Ignore parse errors.
+      } catch (err) {
+        console.error('[canvas:sse] changed event ERROR:', err);
       }
     });
 

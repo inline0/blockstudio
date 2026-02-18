@@ -904,6 +904,133 @@ test.describe('Canvas', () => {
       expect(r.hasMarkerText).toBe(true);
     });
 
+    test('simultaneous block creation and page update renders without unsupported warning', async () => {
+      await cleanup();
+
+      const simultaneousBlockDir = path.join(
+        process.cwd(),
+        'tests/theme/blockstudio/single/canvas-simultaneous-test',
+      );
+      if (fs.existsSync(simultaneousBlockDir)) {
+        fs.rmSync(simultaneousBlockDir, { recursive: true });
+      }
+
+      try {
+        await page.evaluate(() => localStorage.removeItem('blockstudio-canvas-settings'));
+        await page.goto(canvasUrl, { waitUntil: 'domcontentloaded' });
+
+        await page.waitForFunction(
+          () => {
+            const el = document.querySelector('[data-canvas-surface]');
+            return el && window.getComputedStyle(el).transform !== 'none';
+          },
+          null,
+          { timeout: 15000 },
+        );
+
+        const menuButton = page.locator('.blockstudio-canvas-menu .components-button').first();
+        await menuButton.click();
+        await expect(page.locator('role=menu')).toBeVisible({ timeout: 5000 });
+        await page.locator('role=menuitem', { hasText: 'Live mode' }).click();
+
+        await page.waitForFunction(
+          () => {
+            const select = (window as any).wp?.data?.select;
+            if (!select) return false;
+            const store = select('blockstudio/canvas');
+            return store && store.getFingerprint() !== '';
+          },
+          null,
+          { timeout: 10000 },
+        );
+
+        // Create block AND update page template simultaneously (no delay).
+        fs.mkdirSync(simultaneousBlockDir, { recursive: true });
+        fs.writeFileSync(
+          path.join(simultaneousBlockDir, 'block.json'),
+          JSON.stringify({
+            $schema: 'https://app.blockstudio.dev/schema',
+            name: 'blockstudio/canvas-simultaneous-test',
+            title: 'Canvas Simultaneous Test',
+            category: 'blockstudio-test-native',
+            icon: 'star-filled',
+            blockstudio: true,
+          }),
+        );
+        fs.writeFileSync(
+          path.join(simultaneousBlockDir, 'index.php'),
+          '<?php\necho \'<div class="canvas-simultaneous-marker">Simultaneous Block Works</div>\';',
+        );
+        fs.writeFileSync(
+          templatePath,
+          originalTemplate + '\n<block name="blockstudio/canvas-simultaneous-test" />',
+        );
+
+        // Wait for the block to be registered client-side.
+        await page.waitForFunction(
+          () => {
+            const getBlockType = (window as any).wp?.blocks?.getBlockType;
+            return getBlockType && getBlockType('blockstudio/canvas-simultaneous-test');
+          },
+          null,
+          { timeout: 30000 },
+        );
+
+        // Wait for the page artboard revision to change.
+        await page.waitForFunction(
+          (slug: string) => {
+            const artboard = document.querySelector(`[data-canvas-slug="${slug}"]`);
+            return artboard && artboard.getAttribute('data-canvas-revision') !== '0';
+          },
+          'blockstudio-e2e-test',
+          { timeout: 30000 },
+        );
+
+        // Wait for the iframe to finish rendering.
+        await page.waitForTimeout(5000);
+
+        // Verify the block rendered correctly with no unsupported warnings.
+        const result = await page.evaluate((slug: string) => {
+          const artboard = document.querySelector(`[data-canvas-slug="${slug}"]`);
+          if (!artboard) return { error: 'artboard not found' };
+          const iframe = artboard.querySelector('iframe') as HTMLIFrameElement | null;
+          if (!iframe) return { error: 'iframe not found' };
+          const doc = iframe.contentDocument;
+          if (!doc) return { error: 'contentDocument not accessible' };
+
+          const bodyText = doc.body?.textContent || '';
+          const missingBlocks: string[] = [];
+          doc.querySelectorAll('.wp-block-missing').forEach((el) => {
+            missingBlocks.push(el.textContent || '');
+          });
+
+          return {
+            hasMarkerElement: doc.querySelector('.canvas-simultaneous-marker') !== null,
+            hasMarkerText: bodyText.includes('Simultaneous Block Works'),
+            missingBlocks,
+            hasUnsupportedText: bodyText.includes("doesn't include support"),
+          };
+        }, 'blockstudio-e2e-test');
+
+        expect(result).not.toHaveProperty('error');
+        const r = result as {
+          hasMarkerElement: boolean;
+          hasMarkerText: boolean;
+          missingBlocks: string[];
+          hasUnsupportedText: boolean;
+        };
+        expect(r.missingBlocks).toEqual([]);
+        expect(r.hasUnsupportedText).toBe(false);
+        expect(r.hasMarkerElement).toBe(true);
+        expect(r.hasMarkerText).toBe(true);
+      } finally {
+        if (fs.existsSync(simultaneousBlockDir)) {
+          fs.rmSync(simultaneousBlockDir, { recursive: true });
+        }
+        fs.writeFileSync(templatePath, originalTemplate);
+      }
+    });
+
     test('block.json written before index.php still registers after template appears', async () => {
       await cleanup();
 

@@ -983,7 +983,26 @@ class Build {
 	 * @return void
 	 */
 	public static function refresh_blocks(): void {
-		$registry             = Block_Registry::instance();
+		$registry = Block_Registry::instance();
+
+		// If the default build dir was created after init (e.g. during a live
+		// canvas session), register it now so we can discover its blocks.
+		$default_path       = wp_normalize_path( self::get_build_dir() );
+		$default_registered = false;
+
+		foreach ( $registry->get_instances() as $inst ) {
+			if ( wp_normalize_path( $inst['path'] ) === $default_path ) {
+				$default_registered = true;
+				break;
+			}
+		}
+
+		if ( ! $default_registered && is_dir( $default_path ) ) {
+			$instance = self::get_instance_name( $default_path );
+			$registry->add_instance( $default_path );
+			$registry->add_path( $instance, $default_path );
+		}
+
 		$existing_block_names = array_keys( $registry->get_blocks() );
 		$discovered_names     = array();
 
