@@ -65,8 +65,6 @@ Download the latest release zip from [GitHub Releases](https://github.com/inline
 * New: SEO content analysis integration. Blockstudio block content is now visible to Yoast SEO and Rank Math editor analysis
 * New: complete codebase refactor
 * New: repeater default rows - pre-fill repeater fields with a `default` array of row data on block insert
-* New: blockEditingMode support for file-based pages with page-level defaults and per-element overrides
-* New: postId option for file-based pages to pin pages to a specific WordPress post ID
 * New: canvas view with live mode, focus mode, blocks view, and SSE-based instant file change detection
 * New: code field popout option to open editor in separate window
 * New: devtools grabber for copying block template paths on the frontend (hold Cmd+C)
@@ -94,7 +92,6 @@ Download the latest release zip from [GitHub Releases](https://github.com/inline
 * Deprecation: Code Editor removed
 * Deprecation: License Key removed
 * Deprecation: Block library removed. The built-in element blocks (Gallery, Slider, Image Comparison, Code, Icon) are no longer included
-* Deprecation: dash notation for asset file suffixes (*-inline.css, *-editor.css, etc.). Use dot notation instead
 
 = 6.0.2 (18.08.2025) =
 * Enhancement: also preload blocks inside site editor
