@@ -62,7 +62,7 @@ const MIN_SCALE = 0.02;
 const MAX_SCALE = 2;
 const READY_IFRAME_MAX_MS = 2000;
 const READY_MEDIA_MAX_MS = 2000;
-const BLOCK_REFRESH_RECONCILE_DELAY_MS = 1500;
+const BLOCK_REFRESH_RECONCILE_DELAYS_MS = [0, 1500, 5000] as const;
 
 const BLOCK_ICON = (
   <svg
@@ -810,7 +810,16 @@ export const Canvas = ({
       encodeURIComponent(restNonce);
     const eventSource = new EventSource(url);
     let active = true;
-    let blockRefreshTimer: number | null = null;
+    const blockRefreshTimers: number[] = [];
+
+    const clearBlockRefreshTimers = (): void => {
+      while (blockRefreshTimers.length > 0) {
+        const timer = blockRefreshTimers.pop();
+        if (timer !== undefined) {
+          clearTimeout(timer);
+        }
+      }
+    };
 
     const enqueueChanged = (
       parsed: SSEChangedData,
@@ -837,47 +846,54 @@ export const Canvas = ({
     };
 
     const reconcileBlockChange = (parsed: SSEChangedData): void => {
-      let baselineSerialized: string | null = null;
+      let lastSerialized: string | null = null;
+      let enqueuedFallback = false;
+      const changedBlockList = parsed.changedBlocks || [];
 
-      const applyRefreshed = (
-        refreshed: Partial<SSEChangedData> | null,
-        delayed: boolean,
-      ): void => {
+      const applyRefreshed = (refreshed: Partial<SSEChangedData> | null): void => {
         if (!active) return;
 
         if (!refreshed) {
-          if (!delayed) {
+          if (!enqueuedFallback) {
             enqueueChanged(parsed);
+            enqueuedFallback = true;
           }
           return;
         }
 
-        const serialized = JSON.stringify(refreshed);
+        const reconciledPages = Array.isArray(refreshed.pages)
+          ? refreshed.pages.filter((page) =>
+              changedBlockList.some((name) => page.content.includes(name)),
+            )
+          : refreshed.pages;
+        const reconciledRefresh = {
+          ...refreshed,
+          pages: reconciledPages,
+        };
 
-        if (baselineSerialized === null) {
-          baselineSerialized = serialized;
-          enqueueChanged(parsed, refreshed);
+        const serialized = JSON.stringify(reconciledRefresh);
+
+        if (serialized === lastSerialized) {
           return;
         }
 
-        if (serialized !== baselineSerialized) {
-          enqueueChanged(parsed, refreshed);
-        }
+        lastSerialized = serialized;
+        enqueueChanged(parsed, reconciledRefresh);
       };
 
-      void fetchRefresh().then((refreshed) => {
-        applyRefreshed(refreshed, false);
+      clearBlockRefreshTimers();
+
+      BLOCK_REFRESH_RECONCILE_DELAYS_MS.forEach((delay) => {
+        if (delay === 0) {
+          void fetchRefresh().then(applyRefreshed);
+          return;
+        }
+
+        const timer = window.setTimeout(() => {
+          void fetchRefresh().then(applyRefreshed);
+        }, delay);
+        blockRefreshTimers.push(timer);
       });
-
-      if (blockRefreshTimer !== null) {
-        clearTimeout(blockRefreshTimer);
-      }
-
-      blockRefreshTimer = window.setTimeout(() => {
-        void fetchRefresh().then((refreshed) => {
-          applyRefreshed(refreshed, true);
-        });
-      }, BLOCK_REFRESH_RECONCILE_DELAY_MS);
     };
 
     eventSource.addEventListener('fingerprint', (e: MessageEvent) => {
@@ -914,9 +930,7 @@ export const Canvas = ({
 
     return () => {
       active = false;
-      if (blockRefreshTimer !== null) {
-        clearTimeout(blockRefreshTimer);
-      }
+      clearBlockRefreshTimers();
       eventSource.close();
     };
   }, [liveMode]);
