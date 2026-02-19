@@ -161,11 +161,12 @@ class Canvas {
 			'blockstudio-canvas',
 			'blockstudioCanvas',
 			array(
-				'pages'     => $pages,
-				'blocks'    => $blocks,
-				'settings'  => $editor_settings,
-				'restRoot'  => esc_url_raw( rest_url() ),
-				'restNonce' => wp_create_nonce( 'wp_rest' ),
+				'pages'         => $pages,
+				'blocks'        => $blocks,
+				'settings'      => $editor_settings,
+				'restRoot'      => esc_url_raw( rest_url() ),
+				'restNonce'     => wp_create_nonce( 'wp_rest' ),
+				'canvasVersion' => $asset['version'] ?? BLOCKSTUDIO_VERSION,
 			)
 		);
 	}
@@ -534,12 +535,18 @@ class Canvas {
 
 			$new_mtimes      = array();
 			$new_fingerprint = $this->compute_fingerprint_with_mtimes( $new_mtimes );
+			Build::refresh_blocks();
+			$new_dir_to_blocks  = $this->build_dir_to_blocks_map();
+			$new_dir_to_pages   = $this->build_dir_to_pages_map();
+			$blocks_map_changed = ! empty( array_diff_assoc( $new_dir_to_blocks, $dir_to_blocks ) )
+				|| ! empty( array_diff_assoc( $dir_to_blocks, $new_dir_to_blocks ) );
+			$pages_map_changed  = ! empty( array_diff_assoc( $new_dir_to_pages, $dir_to_pages ) )
+				|| ! empty( array_diff_assoc( $dir_to_pages, $new_dir_to_pages ) );
+			$dir_maps_changed   = $blocks_map_changed || $pages_map_changed;
 
-			if ( $new_fingerprint !== $fingerprint ) {
-				Build::refresh_blocks();
-
-				$new_dir_to_blocks = $this->build_dir_to_blocks_map();
-				$new_dir_to_pages  = $this->build_dir_to_pages_map();
+			if ( $new_fingerprint !== $fingerprint || $dir_maps_changed ) {
+				// Directory map changes can lag behind mtime-based fingerprint updates
+				// when files are written in quick batches. Flush once maps catch up.
 
 				$changed_blocks = array_values( array_unique( $this->detect_changed_blocks( $prev_mtimes, $new_mtimes, $dir_to_blocks ) ) );
 				$changed_pages  = $this->detect_changed_pages( $prev_mtimes, $new_mtimes, $dir_to_pages );

@@ -1,4 +1,5 @@
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 
 // @ts-expect-error No types for BlockPreview
 import { BlockPreview } from '@wordpress/block-editor';
@@ -20,95 +21,142 @@ interface ArtboardProps {
   onSwapComplete?: (slug: string) => void;
 }
 
-interface Layer {
+interface StagingLayer {
   id: number;
+  revision: number;
+  width: number;
   blocks: ReturnType<typeof parse>;
 }
 
-const DEFAULT_WIDTH = 1440;
+interface DisplayLayer {
+  id: number;
+  revision: number;
+  width: number;
+  src: string;
+  height: number;
+}
 
-export const Artboard = ({ page, revision, width = DEFAULT_WIDTH, onSwapComplete }: ArtboardProps): JSX.Element => {
-  const wrapperRef = useRef<HTMLDivElement>(null);
-  const pendingRef = useRef<HTMLDivElement>(null);
-  const prevRevisionRef = useRef(revision);
+const DEFAULT_WIDTH = 1440;
+const SNAPSHOT_FALLBACK_MS = 8000;
+const INITIAL_SPINNER_GRACE_MS = 2500;
+
+const getDisplayHeight = (iframe: HTMLIFrameElement): number => {
+  const explicitHeight = Number.parseFloat(iframe.style.height || '');
+  if (Number.isFinite(explicitHeight) && explicitHeight > 0) {
+    return Math.max(1, Math.ceil(explicitHeight));
+  }
+
+  const measuredHeight = iframe.getBoundingClientRect().height;
+  if (Number.isFinite(measuredHeight) && measuredHeight > 0) {
+    return Math.max(1, Math.ceil(measuredHeight));
+  }
+
+  return 1;
+};
+
+export const Artboard = ({
+  page,
+  revision,
+  width = DEFAULT_WIDTH,
+  onSwapComplete,
+}: ArtboardProps): JSX.Element => {
+  const stagingRef = useRef<HTMLDivElement>(null);
+  const [stagingHost, setStagingHost] = useState<HTMLDivElement | null>(null);
+  const stagingIdRef = useRef(1);
   const onSwapCompleteRef = useRef(onSwapComplete);
+  const acknowledgedRevisionRef = useRef(revision);
+  const renderedTargetRef = useRef<{ revision: number; width: number } | null>(
+    null,
+  );
+  const activeDisplayRef = useRef<DisplayLayer | null>(null);
+  const pendingDisplayIdRef = useRef<number | null>(null);
+  const blobUrlsRef = useRef<Set<string>>(new Set());
   onSwapCompleteRef.current = onSwapComplete;
 
-  const [layers, setLayers] = useState<Layer[]>(() => [
-    { id: revision, blocks: parse(page.content) },
-  ]);
-  const [activeId, setActiveId] = useState(revision);
-  const [readyId, setReadyId] = useState<number | null>(null);
+  const [stagingLayer, setStagingLayer] = useState<StagingLayer | null>(() => ({
+    id: stagingIdRef.current,
+    revision,
+    width,
+    blocks: parse(page.content),
+  }));
+
+  const [displayLayers, setDisplayLayers] = useState<DisplayLayer[]>([]);
+  const [activeDisplayId, setActiveDisplayId] = useState<number | null>(null);
+  const [pendingDisplayId, setPendingDisplayId] = useState<number | null>(null);
+  const [readyDisplayId, setReadyDisplayId] = useState<number | null>(null);
+
+  const activeDisplay = activeDisplayId
+    ? displayLayers.find((layer) => layer.id === activeDisplayId) || null
+    : null;
+
+  activeDisplayRef.current = activeDisplay;
+  pendingDisplayIdRef.current = pendingDisplayId;
+
+  const setDisplayIframeRef = useCallback((node: HTMLIFrameElement | null): void => {
+    if (!node) return;
+    (node as HTMLIFrameElement & { _load?: () => void })._load = () => {};
+  }, []);
+
+  const handlePendingLoad = useCallback((id: number): void => {
+    if (pendingDisplayIdRef.current !== id) return;
+    setReadyDisplayId(id);
+  }, []);
 
   useEffect(() => {
-    if (revision === activeId) {
-      if (prevRevisionRef.current !== revision) {
-        prevRevisionRef.current = revision;
-        onSwapCompleteRef.current?.(page.slug);
-      }
-      return;
-    }
-    prevRevisionRef.current = revision;
-
-    const newBlocks = parse(page.content);
-    setLayers((prev) => {
-      const active = prev.find((l) => l.id === activeId);
-      return active
-        ? [active, { id: revision, blocks: newBlocks }]
-        : [{ id: revision, blocks: newBlocks }];
-    });
-  }, [revision, activeId, page.content, page.slug]);
-
-  useEffect(() => {
-    const pending = layers.find((l) => l.id !== activeId);
-    if (!pending) return;
-
-    const container = pendingRef.current;
-    if (!container) return;
-
-    let resolved = false;
-    const promote = (): void => {
-      if (resolved) return;
-      resolved = true;
-      setReadyId(pending.id);
-    };
-
-    const controller = new AbortController();
-    waitForIframeReady(container, controller.signal)
-      .then(promote)
-      .catch(() => {});
-
-    // Fallback: swap even if content detection hangs.
-    const timeout = setTimeout(promote, 5000);
+    const host = document.createElement('div');
+    host.dataset.canvasStagingHost = page.slug;
+    host.style.position = 'fixed';
+    host.style.left = '0';
+    host.style.top = '0';
+    host.style.opacity = '0';
+    host.style.pointerEvents = 'none';
+    host.style.zIndex = '-1';
+    host.style.width = `${width}px`;
+    document.body.appendChild(host);
+    setStagingHost(host);
 
     return () => {
-      controller.abort();
-      clearTimeout(timeout);
+      setStagingHost(null);
+      host.remove();
     };
-  }, [layers, activeId]);
+  }, [page.slug]);
 
   useEffect(() => {
-    if (readyId === null) return;
-    const ready = layers.find((l) => l.id === readyId);
-    if (!ready) return;
+    stagingHost?.style.setProperty('width', `${width}px`);
+  }, [stagingHost, width]);
 
-    setActiveId(readyId);
-    setLayers([ready]);
-    setReadyId(null);
-    onSwapCompleteRef.current?.(page.slug);
-  }, [readyId, layers, page.slug]);
-
-  // BlockPreview hardcodes MAX_HEIGHT = 2000 on both the iframe and its
-  // wrapper. Remove those limits so artboards show full page content.
   useEffect(() => {
-    const wrapper = wrapperRef.current;
-    if (!wrapper) return;
+    const rendered = renderedTargetRef.current;
+    if (rendered && rendered.revision === revision && rendered.width === width) {
+      return;
+    }
+
+    setStagingLayer((current) => {
+      if (current && current.revision === revision && current.width === width) {
+        return current;
+      }
+
+      return {
+        id: ++stagingIdRef.current,
+        revision,
+        width,
+        blocks: parse(page.content),
+      };
+    });
+  }, [revision, width, page.content]);
+
+  useEffect(() => {
+    if (!stagingLayer) return;
+
+    const staging = stagingRef.current;
+    if (!staging) return;
 
     const clearHeightLimits = (): void => {
-      wrapper.querySelectorAll('iframe').forEach((iframe) => {
+      staging.querySelectorAll('iframe').forEach((iframe) => {
         iframe.style.setProperty('max-height', 'none', 'important');
       });
-      wrapper
+
+      staging
         .querySelectorAll('.block-editor-block-preview__content')
         .forEach((el) => {
           (el as HTMLElement).style.setProperty(
@@ -125,7 +173,7 @@ export const Artboard = ({ page, revision, width = DEFAULT_WIDTH, onSwapComplete
     };
 
     const observer = new MutationObserver(clearHeightLimits);
-    observer.observe(wrapper, {
+    observer.observe(staging, {
       childList: true,
       subtree: true,
       attributes: true,
@@ -134,11 +182,145 @@ export const Artboard = ({ page, revision, width = DEFAULT_WIDTH, onSwapComplete
     clearHeightLimits();
 
     return () => observer.disconnect();
+  }, [stagingLayer?.id, stagingHost]);
+
+  useEffect(() => {
+    if (!stagingLayer) return;
+
+    const staging = stagingRef.current;
+    if (!staging) return;
+
+    let cancelled = false;
+    let captured = false;
+    const controller = new AbortController();
+    const startedAt = performance.now();
+
+    const captureSnapshot = (force = false): void => {
+      if (cancelled || captured) return;
+
+      const iframe = staging.querySelector('iframe') as HTMLIFrameElement | null;
+      const doc = iframe?.contentDocument;
+      const html = iframe?.contentDocument?.documentElement?.outerHTML;
+      if (!iframe || !html) return;
+      const hasSpinner = !!doc?.querySelector('.blockstudio-block__inner-spinner');
+      const hasUnsupportedBlock = !!doc?.querySelector('.wp-block-missing');
+      const hasActiveDisplay = !!activeDisplayRef.current;
+      const spinnerGraceElapsed =
+        performance.now() - startedAt >= INITIAL_SPINNER_GRACE_MS;
+      const bodyText = (doc?.body?.textContent || '').trim();
+      const hasMeaningfulText =
+        bodyText.length > 0 && !/^loading(?:\.\.\.)?$/i.test(bodyText);
+
+      if (!force && !hasActiveDisplay && hasSpinner && !hasUnsupportedBlock) {
+        if (!spinnerGraceElapsed) {
+          return;
+        }
+        // Avoid freezing the first visible frame as "spinner only".
+        if (!hasMeaningfulText) {
+          return;
+        }
+      }
+      captured = true;
+
+      const src = URL.createObjectURL(
+        new window.Blob([html], { type: 'text/html' }),
+      );
+      blobUrlsRef.current.add(src);
+
+      const snapshot: DisplayLayer = {
+        id: stagingLayer.id,
+        revision: stagingLayer.revision,
+        width: stagingLayer.width,
+        src,
+        height: getDisplayHeight(iframe),
+      };
+
+      renderedTargetRef.current = {
+        revision: stagingLayer.revision,
+        width: stagingLayer.width,
+      };
+
+      const active = activeDisplayRef.current;
+      if (!active) {
+        setDisplayLayers([snapshot]);
+        setPendingDisplayId(snapshot.id);
+        setReadyDisplayId(null);
+        return;
+      }
+
+      setDisplayLayers([active, snapshot]);
+      setPendingDisplayId(snapshot.id);
+      setReadyDisplayId(null);
+    };
+
+    waitForIframeReady(staging, controller.signal)
+      .then(() => {
+        captureSnapshot();
+      })
+      .catch(() => {});
+
+    const pollTimer =
+      activeDisplayRef.current !== null
+        ? window.setInterval(() => {
+            captureSnapshot();
+          }, 500)
+        : null;
+
+    const fallbackTimer = window.setTimeout(
+      () => captureSnapshot(true),
+      SNAPSHOT_FALLBACK_MS,
+    );
+
+    return () => {
+      cancelled = true;
+      if (pollTimer !== null) {
+        clearInterval(pollTimer);
+      }
+      clearTimeout(fallbackTimer);
+      controller.abort();
+    };
+  }, [stagingLayer, stagingHost]);
+
+  useEffect(() => {
+    const currentSrc = new Set(displayLayers.map((layer) => layer.src));
+    blobUrlsRef.current.forEach((url) => {
+      if (!currentSrc.has(url)) {
+        URL.revokeObjectURL(url);
+        blobUrlsRef.current.delete(url);
+      }
+    });
+  }, [displayLayers]);
+
+  useEffect(() => {
+    return () => {
+      blobUrlsRef.current.forEach((url) => URL.revokeObjectURL(url));
+      blobUrlsRef.current.clear();
+    };
   }, []);
+
+  useEffect(() => {
+    if (readyDisplayId === null) return;
+
+    const readyLayer = displayLayers.find((layer) => layer.id === readyDisplayId);
+    if (!readyLayer) return;
+
+    const previousRevision =
+      activeDisplayRef.current?.revision ?? acknowledgedRevisionRef.current;
+
+    setActiveDisplayId(readyLayer.id);
+    setDisplayLayers([readyLayer]);
+    setPendingDisplayId(null);
+    setReadyDisplayId(null);
+    setStagingLayer(null);
+
+    if (readyLayer.revision !== previousRevision) {
+      acknowledgedRevisionRef.current = readyLayer.revision;
+      onSwapCompleteRef.current?.(page.slug);
+    }
+  }, [readyDisplayId, displayLayers, page.slug]);
 
   return (
     <div
-      ref={wrapperRef}
       data-canvas-slug={page.slug}
       data-canvas-revision={revision}
       style={{
@@ -149,32 +331,67 @@ export const Artboard = ({ page, revision, width = DEFAULT_WIDTH, onSwapComplete
         backfaceVisibility: 'hidden',
       }}
     >
-      {layers.map((layer) => {
-        const isActive = layer.id === activeId;
-        const isReady = layer.id === readyId;
+      {displayLayers.map((layer) => {
+        const isActive = layer.id === activeDisplayId;
+        const isPending = layer.id === pendingDisplayId;
+        const isReady = layer.id === readyDisplayId;
+
         return (
           <div
             key={layer.id}
-            ref={isActive ? undefined : pendingRef}
+            className="components-disabled"
             style={
               isActive
-                ? undefined
+                ? {
+                    display: 'block',
+                    width: '100%',
+                    height: layer.height,
+                    pointerEvents: 'none',
+                    background: '#fff',
+                  }
                 : {
-                    position: 'absolute' as const,
+                    position: 'absolute',
                     top: 0,
                     left: 0,
                     width: '100%',
-                    zIndex: isReady ? 1 : undefined,
-                    visibility: isReady
-                      ? ('visible' as const)
-                      : ('hidden' as const),
+                    height: layer.height,
+                    zIndex: isReady ? 2 : 1,
+                    visibility: isReady ? ('visible' as const) : ('hidden' as const),
+                    pointerEvents: 'none',
+                    background: '#fff',
                   }
             }
           >
-            <BlockPreview blocks={layer.blocks} viewportWidth={width} />
+            <iframe
+              ref={setDisplayIframeRef}
+              data-canvas-display-layer={isActive ? 'active' : 'pending'}
+              src={layer.src}
+              aria-hidden
+              tabIndex={-1}
+              onLoad={isPending ? () => handlePendingLoad(layer.id) : undefined}
+              style={{
+                display: 'block',
+                width: '100%',
+                height: '100%',
+                border: 0,
+                pointerEvents: 'none',
+                background: '#fff',
+              }}
+            />
           </div>
         );
       })}
+
+      {stagingLayer &&
+        stagingHost &&
+        createPortal(
+          <div ref={stagingRef} data-canvas-staging="" style={{ width }}>
+            <div data-canvas-layer-active="true">
+              <BlockPreview blocks={stagingLayer.blocks} viewportWidth={width} />
+            </div>
+          </div>,
+          stagingHost,
+        )}
     </div>
   );
 };

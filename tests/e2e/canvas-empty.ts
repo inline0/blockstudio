@@ -417,14 +417,24 @@ test.describe('Canvas - empty theme', () => {
         '<block name="blockstudio/no-dir-test-block" />',
       );
 
-      // Wait for the artboard.
+      // Wait for the specific new artboard and its rendered block content.
       await page.waitForFunction(
-        () => document.querySelectorAll('[data-canvas-slug]').length > 0,
+        () => {
+          const artboard = document.querySelector(
+            '[data-canvas-slug="no-dir-test-page"]',
+          );
+          if (!artboard) return false;
+          const iframe = artboard.querySelector(
+            'iframe',
+          ) as HTMLIFrameElement | null;
+          if (!iframe) return false;
+          const doc = iframe.contentDocument;
+          if (!doc || !doc.body) return false;
+          return (doc.body.textContent || '').includes('No Dir Block Works');
+        },
         null,
         { timeout: 30000 },
       );
-
-      await page.waitForTimeout(5000);
 
       const result = await page.evaluate(() => {
         const artboard = document.querySelector(
@@ -474,6 +484,293 @@ test.describe('Canvas - empty theme', () => {
       if (fs.existsSync(pageDir)) {
         fs.rmSync(pageDir, { recursive: true });
       }
+    }
+  });
+
+  test('creating an unused block template does not visibly flash existing artboard', async () => {
+    const baseBlockDir = path.join(emptyThemePath, 'blockstudio/flash-base-block');
+    const unusedBlockDir = path.join(emptyThemePath, 'blockstudio/unused-flash-block');
+    const pageDirA = path.join(emptyThemePath, 'pages/flash-existing-page-a');
+    const pageDirB = path.join(emptyThemePath, 'pages/flash-existing-page-b');
+
+    const cleanup = (): void => {
+      if (fs.existsSync(baseBlockDir)) {
+        fs.rmSync(baseBlockDir, { recursive: true });
+      }
+      if (fs.existsSync(unusedBlockDir)) {
+        fs.rmSync(unusedBlockDir, { recursive: true });
+      }
+      if (fs.existsSync(pageDirA)) {
+        fs.rmSync(pageDirA, { recursive: true });
+      }
+      if (fs.existsSync(pageDirB)) {
+        fs.rmSync(pageDirB, { recursive: true });
+      }
+    };
+
+    cleanup();
+
+    try {
+      fs.mkdirSync(baseBlockDir, { recursive: true });
+      fs.writeFileSync(
+        path.join(baseBlockDir, 'block.json'),
+        JSON.stringify({
+          $schema: 'https://app.blockstudio.dev/schema',
+          name: 'blockstudio/flash-base-block',
+          title: 'Flash Base Block',
+          category: 'text',
+          icon: 'star-filled',
+          blockstudio: true,
+        }),
+      );
+      fs.writeFileSync(
+        path.join(baseBlockDir, 'index.php'),
+        "<?php\necho '<div class=\"flash-base-marker\">Flash Base Block</div>';",
+      );
+
+      fs.mkdirSync(pageDirA, { recursive: true });
+      fs.mkdirSync(pageDirB, { recursive: true });
+      fs.writeFileSync(
+        path.join(pageDirA, 'page.json'),
+        JSON.stringify({
+          name: 'flash-existing-page-a',
+          title: 'Flash Existing Page A',
+          slug: 'flash-existing-page-a',
+          postType: 'page',
+          postStatus: 'publish',
+          templateLock: 'all',
+        }),
+      );
+      fs.writeFileSync(
+        path.join(pageDirA, 'index.php'),
+        '<block name="blockstudio/flash-base-block" />',
+      );
+      fs.writeFileSync(
+        path.join(pageDirB, 'page.json'),
+        JSON.stringify({
+          name: 'flash-existing-page-b',
+          title: 'Flash Existing Page B',
+          slug: 'flash-existing-page-b',
+          postType: 'page',
+          postStatus: 'publish',
+          templateLock: 'all',
+        }),
+      );
+      fs.writeFileSync(
+        path.join(pageDirB, 'index.php'),
+        '<block name="blockstudio/flash-base-block" /><p>Second artboard</p>',
+      );
+
+      await page.evaluate(() =>
+        localStorage.removeItem('blockstudio-canvas-settings'),
+      );
+      await page.goto(canvasUrl, { waitUntil: 'domcontentloaded' });
+
+      const root = page.locator('#blockstudio-canvas');
+      await expect(root).toBeVisible({ timeout: 15000 });
+
+      await page.waitForFunction(
+        () => {
+          const el = document.querySelector('[data-canvas-surface]');
+          return el && window.getComputedStyle(el).transform !== 'none';
+        },
+        null,
+        { timeout: 15000 },
+      );
+
+      await page.waitForFunction(
+        () => {
+          const slugs = ['flash-existing-page-a', 'flash-existing-page-b'];
+          for (const slug of slugs) {
+            const artboard = document.querySelector(
+              `[data-canvas-slug="${slug}"]`,
+            );
+            if (!artboard) return false;
+            const iframe = artboard.querySelector('iframe') as HTMLIFrameElement | null;
+            if (!iframe) return false;
+            const doc = iframe.contentDocument;
+            if (!doc || !doc.body) return false;
+            const text = doc.body.textContent || '';
+            if (!text.includes('Flash Base Block')) return false;
+          }
+          return true;
+        },
+        null,
+        { timeout: 30000 },
+      );
+
+      const menuButton = page
+        .locator('.blockstudio-canvas-menu .components-button')
+        .first();
+      await menuButton.click();
+      await expect(page.locator('role=menu')).toBeVisible({ timeout: 5000 });
+      await page.locator('role=menuitem', { hasText: 'Live mode' }).click();
+
+      await page.waitForFunction(
+        () => {
+          const select = (window as any).wp?.data?.select;
+          if (!select) return false;
+          const store = select('blockstudio/canvas');
+          return store && store.getFingerprint() !== '';
+        },
+        null,
+        { timeout: 10000 },
+      );
+
+      // Let the initial live sync settle before starting the probe.
+      await page.waitForTimeout(1200);
+
+      await page.evaluate(() => {
+        const trackedSlugs = new Set([
+          'flash-existing-page-a',
+          'flash-existing-page-b',
+        ]);
+
+        (window as any).__unusedFlashProbe = {
+          done: false,
+          frames: 0,
+          flashDetected: false,
+          emptyBodyDetected: false,
+          nullDocDetected: false,
+          contentDropDetected: false,
+          replacedVisibleIframeDetected: false,
+          srcChangedVisibleIframeDetected: false,
+          trackedSlugs: Array.from(trackedSlugs),
+          maxBodyLengthBySlug: {} as Record<string, number>,
+          minBodyLengthBySlug: {} as Record<string, number>,
+          iframeBySlug: {} as Record<string, HTMLIFrameElement>,
+          srcBySlug: {} as Record<string, string | null>,
+        };
+
+        const tick = (): void => {
+          const probe = (window as any).__unusedFlashProbe;
+          if (!probe || probe.done) return;
+          probe.frames += 1;
+
+          const artboards = document.querySelectorAll('[data-canvas-slug]');
+          artboards.forEach((artboard) => {
+            const slug = artboard.getAttribute('data-canvas-slug') || '';
+            if (!trackedSlugs.has(slug)) return;
+            const iframe = artboard.querySelector('iframe') as HTMLIFrameElement | null;
+
+            if (!iframe) {
+              probe.flashDetected = true;
+              probe.nullDocDetected = true;
+              return;
+            }
+
+            const style = window.getComputedStyle(iframe);
+            const isVisible =
+              style.visibility !== 'hidden' && style.display !== 'none';
+            if (!isVisible) return;
+
+            if (
+              probe.iframeBySlug[slug] &&
+              probe.iframeBySlug[slug] !== iframe
+            ) {
+              probe.flashDetected = true;
+              probe.replacedVisibleIframeDetected = true;
+            }
+            probe.iframeBySlug[slug] = iframe;
+
+            const src = iframe.getAttribute('src');
+            if (
+              probe.srcBySlug[slug] !== undefined &&
+              probe.srcBySlug[slug] !== src
+            ) {
+              probe.flashDetected = true;
+              probe.srcChangedVisibleIframeDetected = true;
+            }
+            probe.srcBySlug[slug] = src;
+
+            const doc = iframe.contentDocument;
+            if (!doc || !doc.body) {
+              probe.flashDetected = true;
+              probe.nullDocDetected = true;
+              return;
+            }
+
+            const bodyLength = doc.body.innerHTML.length;
+            const maxBodyLength = Math.max(
+              probe.maxBodyLengthBySlug[slug] || 0,
+              bodyLength,
+            );
+            const minBodyLength = Math.min(
+              probe.minBodyLengthBySlug[slug] ?? Number.MAX_SAFE_INTEGER,
+              bodyLength,
+            );
+            probe.maxBodyLengthBySlug[slug] = maxBodyLength;
+            probe.minBodyLengthBySlug[slug] = minBodyLength;
+
+            if (doc.body.children.length === 0) {
+              probe.flashDetected = true;
+              probe.emptyBodyDetected = true;
+            }
+
+            const dropThreshold = Math.max(30, Math.floor(maxBodyLength * 0.2));
+            if (maxBodyLength > 60 && bodyLength < dropThreshold) {
+              probe.flashDetected = true;
+              probe.contentDropDetected = true;
+            }
+
+            if (!doc.body.textContent?.includes('Flash Base Block')) {
+              const overlay = document.querySelector(
+                '[data-canvas-freeze-overlay]',
+              );
+              if (!overlay) {
+                probe.flashDetected = true;
+              }
+            }
+          });
+
+          requestAnimationFrame(tick);
+        };
+
+        requestAnimationFrame(tick);
+      });
+
+      // Create a brand-new block template on disk, but do not add it to the page.
+      fs.mkdirSync(unusedBlockDir, { recursive: true });
+      fs.writeFileSync(
+        path.join(unusedBlockDir, 'block.json'),
+        JSON.stringify({
+          $schema: 'https://app.blockstudio.dev/schema',
+          name: 'blockstudio/unused-flash-block',
+          title: 'Unused Flash Block',
+          category: 'text',
+          icon: 'star-filled',
+          blockstudio: true,
+        }),
+      );
+      fs.writeFileSync(
+        path.join(unusedBlockDir, 'index.php'),
+        "<?php\necho '<div class=\"unused-flash-block-marker\">Unused Flash Block</div>';",
+      );
+
+      await page.waitForFunction(
+        () => {
+          const getBlockType = (window as any).wp?.blocks?.getBlockType;
+          return getBlockType && getBlockType('blockstudio/unused-flash-block');
+        },
+        null,
+        { timeout: 30000 },
+      );
+
+      await page.waitForTimeout(2000);
+
+      const probe = await page.evaluate(() => {
+        const state = (window as any).__unusedFlashProbe;
+        if (state) {
+          state.done = true;
+        }
+        return state;
+      });
+
+      expect(probe).toBeTruthy();
+      expect((probe as any).frames).toBeGreaterThan(20);
+      expect((probe as any).flashDetected).toBe(false);
+    } finally {
+      cleanup();
     }
   });
 });

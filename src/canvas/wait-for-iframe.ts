@@ -1,4 +1,7 @@
 const STABLE_MS = 500;
+const STABLE_MAX_MS = 2500;
+const MEDIA_MAX_MS = 2000;
+const BLOCKSTUDIO_SETTLE_TIMEOUT_MS = 8000;
 
 export const waitForIframeReady = (
   container: HTMLElement,
@@ -28,50 +31,116 @@ export const waitForIframeReady = (
     }
 
     const waitForMedia = (doc: Document): Promise<void> => {
-      const mediaEls = Array.from(
-        doc.querySelectorAll<HTMLElement>('img, video, iframe'),
-      );
+      const mediaEls = Array.from(doc.querySelectorAll<HTMLElement>('img, video'));
 
-      return Promise.all(
-        mediaEls.map((el) => {
-          if (el instanceof HTMLImageElement) {
-            if (el.complete) return Promise.resolve();
-            return new Promise<void>((r) => {
-              el.addEventListener('load', () => r(), { once: true });
-              el.addEventListener('error', () => r(), { once: true });
-            });
-          }
-          if (el instanceof HTMLVideoElement) {
-            if (el.readyState >= 1) return Promise.resolve();
-            return new Promise<void>((r) => {
-              el.addEventListener('loadedmetadata', () => r(), { once: true });
-              el.addEventListener('error', () => r(), { once: true });
-            });
-          }
-          if (el instanceof HTMLIFrameElement) {
-            try {
-              if (el.contentDocument?.readyState === 'complete') {
-                return Promise.resolve();
-              }
-            } catch {
-              return Promise.resolve();
+      return new Promise<void>((resolve) => {
+        let settled = false;
+        const finish = (): void => {
+          if (settled) return;
+          settled = true;
+          clearTimeout(timeout);
+          resolve();
+        };
+
+        const timeout = window.setTimeout(finish, MEDIA_MAX_MS);
+        cleanups.push(() => clearTimeout(timeout));
+
+        Promise.all(
+          mediaEls.map((el) => {
+            if (el instanceof HTMLImageElement) {
+              if (el.complete) return Promise.resolve();
+              return new Promise<void>((r) => {
+                el.addEventListener('load', () => r(), { once: true });
+                el.addEventListener('error', () => r(), { once: true });
+              });
             }
-            return new Promise<void>((r) => {
-              el.addEventListener('load', () => r(), { once: true });
-              el.addEventListener('error', () => r(), { once: true });
-            });
+            if (el instanceof HTMLVideoElement) {
+              if (el.readyState >= 1) return Promise.resolve();
+              return new Promise<void>((r) => {
+                el.addEventListener('loadedmetadata', () => r(), { once: true });
+                el.addEventListener('error', () => r(), { once: true });
+              });
+            }
+            return Promise.resolve();
+          }),
+        )
+          .then(finish)
+          .catch(finish);
+      });
+    };
+
+    const waitForBlockstudioRender = (doc: Document): Promise<void> => {
+      const hasPendingBlockstudioSpinner = (): boolean =>
+        !!doc.querySelector('.blockstudio-block__inner-spinner');
+
+      if (!hasPendingBlockstudioSpinner()) {
+        return Promise.resolve();
+      }
+
+      return new Promise<void>((resolve) => {
+        let settleTimer: number | null = null;
+
+        const finish = (): void => {
+          observer.disconnect();
+          if (settleTimer !== null) {
+            clearTimeout(settleTimer);
           }
-          return Promise.resolve();
-        }),
-      ).then(() => {});
+          clearTimeout(maxTimer);
+          resolve();
+        };
+
+        const scheduleSettle = (): void => {
+          if (hasPendingBlockstudioSpinner()) {
+            if (settleTimer !== null) {
+              clearTimeout(settleTimer);
+              settleTimer = null;
+            }
+            return;
+          }
+
+          if (settleTimer !== null) {
+            clearTimeout(settleTimer);
+          }
+          settleTimer = window.setTimeout(finish, STABLE_MS);
+        };
+
+        const observer = new MutationObserver(scheduleSettle);
+        observer.observe(doc.documentElement, {
+          childList: true,
+          subtree: true,
+          attributes: true,
+        });
+
+        const maxTimer = window.setTimeout(
+          finish,
+          BLOCKSTUDIO_SETTLE_TIMEOUT_MS,
+        );
+
+        cleanups.push(() => {
+          observer.disconnect();
+          if (settleTimer !== null) {
+            clearTimeout(settleTimer);
+          }
+          clearTimeout(maxTimer);
+        });
+
+        scheduleSettle();
+      });
     };
 
     const waitForStable = (doc: Document): void => {
       let timer: number;
+      let settled = false;
 
       const settle = (): void => {
+        if (settled) return;
+        settled = true;
         observer.disconnect();
-        waitForMedia(doc).then(done);
+        clearTimeout(timer);
+        clearTimeout(maxTimer);
+        waitForMedia(doc).then(() => {
+          waitForBlockstudioRender(doc).then(done);
+        });
       };
 
       const restart = (): void => {
@@ -85,9 +154,11 @@ export const waitForIframeReady = (
         subtree: true,
         attributes: true,
       });
+      const maxTimer = window.setTimeout(settle, STABLE_MAX_MS);
       cleanups.push(() => {
         observer.disconnect();
         clearTimeout(timer);
+        clearTimeout(maxTimer);
       });
 
       restart();
@@ -124,15 +195,18 @@ export const waitForIframeReady = (
       cleanups.push(() => observer.disconnect());
     };
 
-    // The iframe starts on about:blank (readyState 'complete') before the
-    // blob URL loads. Always wait for the load event unless the real
-    // document is already present.
     const onIframeFound = (iframe: HTMLIFrameElement): void => {
       const doc = iframe.contentDocument;
-      const isRealDoc = doc && doc.URL !== 'about:blank';
-
-      if (isRealDoc && doc.readyState === 'complete') {
+      if (doc && doc.readyState === 'complete') {
         onLoaded(iframe);
+
+        // Some previews remain on about:blank and portal content in.
+        // Others navigate after about:blank. Handle both paths.
+        if (doc.URL === 'about:blank') {
+          iframe.addEventListener('load', () => onLoaded(iframe), {
+            once: true,
+          });
+        }
       } else {
         iframe.addEventListener('load', () => onLoaded(iframe), {
           once: true,

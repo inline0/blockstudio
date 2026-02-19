@@ -24,6 +24,7 @@ declare global {
         content: string;
       }>;
       settings: Record<string, unknown>;
+      canvasVersion?: string;
     };
     wp: {
       blockLibrary?: {
@@ -58,6 +59,9 @@ const init = (): void => {
   const pages = window.blockstudioCanvas?.pages ?? [];
   const blocks = window.blockstudioCanvas?.blocks ?? [];
   const settings = window.blockstudioCanvas?.settings ?? {};
+  const canvasVersion = window.blockstudioCanvas?.canvasVersion ?? 'unknown';
+
+  console.log('[Blockstudio Canvas] version:', canvasVersion);
 
   createRoot(root).render(
     <Canvas pages={pages} blocks={blocks} settings={settings} />,

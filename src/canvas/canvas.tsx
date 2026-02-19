@@ -60,6 +60,8 @@ const GAP = 80;
 const PADDING = 120;
 const MIN_SCALE = 0.02;
 const MAX_SCALE = 2;
+const READY_IFRAME_MAX_MS = 2000;
+const READY_MEDIA_MAX_MS = 2000;
 
 const BLOCK_ICON = (
   <svg
@@ -74,7 +76,17 @@ const BLOCK_ICON = (
   </svg>
 );
 
-const MemoizedArtboard = memo(Artboard);
+const MemoizedArtboard = memo(
+  Artboard,
+  (prevProps, nextProps) =>
+    prevProps.revision === nextProps.revision &&
+    prevProps.width === nextProps.width &&
+    prevProps.onSwapComplete === nextProps.onSwapComplete &&
+    prevProps.page.slug === nextProps.page.slug &&
+    prevProps.page.name === nextProps.page.name &&
+    prevProps.page.title === nextProps.page.title &&
+    prevProps.page.content === nextProps.page.content,
+);
 
 export const Canvas = ({
   pages: initialPages,
@@ -205,16 +217,30 @@ export const Canvas = ({
     const waitForMedia = async (
       iframes: NodeListOf<HTMLIFrameElement>,
     ): Promise<void> => {
-      await Promise.all(
-        Array.from(iframes).map((iframe) => {
-          if (iframe.contentDocument?.readyState === 'complete') {
-            return Promise.resolve();
-          }
-          return new Promise<void>((resolve) =>
-            iframe.addEventListener('load', () => resolve(), { once: true }),
-          );
-        }),
-      );
+      await new Promise<void>((resolve) => {
+        let settled = false;
+        const finish = (): void => {
+          if (settled) return;
+          settled = true;
+          clearTimeout(timeout);
+          resolve();
+        };
+
+        const timeout = window.setTimeout(finish, READY_IFRAME_MAX_MS);
+
+        Promise.all(
+          Array.from(iframes).map((iframe) => {
+            if (iframe.contentDocument?.readyState === 'complete') {
+              return Promise.resolve();
+            }
+            return new Promise<void>((r) =>
+              iframe.addEventListener('load', () => r(), { once: true }),
+            );
+          }),
+        )
+          .then(finish)
+          .catch(finish);
+      });
 
       const mediaElements: HTMLElement[] = [];
       iframes.forEach((iframe) => {
@@ -222,38 +248,44 @@ export const Canvas = ({
         if (!doc) return;
         mediaElements.push(
           ...Array.from(
-            doc.querySelectorAll<HTMLElement>('img, video, iframe'),
+            doc.querySelectorAll<HTMLElement>('img, video'),
           ),
         );
       });
 
-      await Promise.all(
-        mediaElements.map((el) => {
-          if (el instanceof HTMLImageElement) {
-            if (el.complete) return Promise.resolve();
-            return new Promise<void>((resolve) => {
-              el.addEventListener('load', () => resolve(), { once: true });
-              el.addEventListener('error', () => resolve(), { once: true });
-            });
-          }
-          if (el instanceof HTMLVideoElement) {
-            if (el.readyState >= 1) return Promise.resolve();
-            return new Promise<void>((resolve) => {
-              el.addEventListener('loadedmetadata', () => resolve(), {
-                once: true,
+      await new Promise<void>((resolve) => {
+        let settled = false;
+        const finish = (): void => {
+          if (settled) return;
+          settled = true;
+          clearTimeout(timeout);
+          resolve();
+        };
+
+        const timeout = window.setTimeout(finish, READY_MEDIA_MAX_MS);
+
+        Promise.all(
+          mediaElements.map((el) => {
+            if (el instanceof HTMLImageElement) {
+              if (el.complete) return Promise.resolve();
+              return new Promise<void>((r) => {
+                el.addEventListener('load', () => r(), { once: true });
+                el.addEventListener('error', () => r(), { once: true });
               });
-              el.addEventListener('error', () => resolve(), { once: true });
-            });
-          }
-          if (el instanceof HTMLIFrameElement) {
-            return new Promise<void>((resolve) => {
-              el.addEventListener('load', () => resolve(), { once: true });
-              el.addEventListener('error', () => resolve(), { once: true });
-            });
-          }
-          return Promise.resolve();
-        }),
-      );
+            }
+            if (el instanceof HTMLVideoElement) {
+              if (el.readyState >= 1) return Promise.resolve();
+              return new Promise<void>((r) => {
+                el.addEventListener('loadedmetadata', () => r(), { once: true });
+                el.addEventListener('error', () => r(), { once: true });
+              });
+            }
+            return Promise.resolve();
+          }),
+        )
+          .then(finish)
+          .catch(finish);
+      });
     };
 
     const check = (): void => {
@@ -419,6 +451,13 @@ export const Canvas = ({
       if (existingIndex !== -1) {
         const endTag = '</style>';
         const endIndex = assets.styles.indexOf(endTag, existingIndex);
+        const existingCss = assets.styles.substring(
+          existingIndex + tag.length,
+          endIndex,
+        );
+        if (existingCss === css) {
+          return prev;
+        }
         newStyles =
           assets.styles.substring(0, existingIndex) +
           tag +
@@ -427,6 +466,10 @@ export const Canvas = ({
           assets.styles.substring(endIndex + endTag.length);
       } else {
         newStyles = assets.styles + tag + css + '</style>';
+      }
+
+      if (newStyles === assets.styles) {
+        return prev;
       }
 
       return {
@@ -441,26 +484,8 @@ export const Canvas = ({
 
   const processQueueEntry = useCallback(
     (data: QueueEntry, pendingSwaps: Set<string>): void => {
-      if (data.blocksNative) {
-        const registerBlock = window.blockstudio?.registerBlock;
-        if (registerBlock) {
-          Object.values(data.blocksNative).forEach((blockData: any) => {
-            if (blockData?.name && !getBlockType(blockData.name)) {
-              try {
-                registerBlock(blockData);
-              } catch (err) {
-                console.error('[canvas:queue] registerBlock FAILED:', blockData.name, err);
-              }
-            }
-          });
-        }
-      }
-
-      if (data.blockstudioBlocks.length > 0) {
-        window.blockstudio?.replacePreloads?.(data.blockstudioBlocks);
-      }
-
       const changedBlockNames = new Set<string>(data.changedBlocks);
+      const changedBlockList = Array.from(changedBlockNames);
 
       const currentPreloaded: PreloadEntry[] =
         (window as any).blockstudio?.blockstudioBlocks || [];
@@ -500,9 +525,7 @@ export const Canvas = ({
               pendingSwaps.add(newPage.slug);
             } else if (
               changedBlockNames.size > 0 &&
-              Array.from(changedBlockNames).some((name) =>
-                newPage.content.includes(name),
-              )
+              changedBlockList.some((name) => newPage.content.includes(name))
             ) {
               pendingSwaps.add(newPage.slug);
             }
@@ -510,11 +533,7 @@ export const Canvas = ({
         }
       } else if (changedBlockNames.size > 0) {
         for (const pg of prevPages) {
-          if (
-            Array.from(changedBlockNames).some((name) =>
-              pg.content.includes(name),
-            )
-          ) {
+          if (changedBlockList.some((name) => pg.content.includes(name))) {
             pendingSwaps.add(pg.slug);
           }
         }
@@ -531,6 +550,25 @@ export const Canvas = ({
             pendingSwaps.add(newBlock.name);
           }
         }
+      }
+
+      if (data.blocksNative) {
+        const registerBlock = window.blockstudio?.registerBlock;
+        if (registerBlock) {
+          Object.values(data.blocksNative).forEach((blockData: any) => {
+            if (blockData?.name && !getBlockType(blockData.name)) {
+              try {
+                registerBlock(blockData);
+              } catch (err) {
+                console.error('[canvas:queue] registerBlock FAILED:', blockData.name, err);
+              }
+            }
+          });
+        }
+      }
+
+      if (data.blockstudioBlocks.length > 0) {
+        window.blockstudio?.replacePreloads?.(data.blockstudioBlocks);
       }
 
       if (data.pages.length > 0) {
@@ -571,9 +609,9 @@ export const Canvas = ({
               }
 
               if (changedBlockNames.size > 0) {
-                const usesChangedBlock = Array.from(
-                  changedBlockNames,
-                ).some((name) => newPage.content.includes(name));
+                const usesChangedBlock = changedBlockList.some((name) =>
+                  newPage.content.includes(name),
+                );
                 if (usesChangedBlock) {
                   changedSlugs.add(newPage.slug);
                   return { ...newPage };
@@ -594,14 +632,22 @@ export const Canvas = ({
             });
           }
 
+          if (
+            changedSlugs.size === 0 &&
+            nextPages.length === prevPg.length &&
+            nextPages.every((page, index) => page === prevPg[index])
+          ) {
+            return prevPg;
+          }
+
           return nextPages;
         });
       } else if (changedBlockNames.size > 0) {
         setCurrentPages((prevPg) => {
           const changedSlugs = new Set<string>();
           const nextPages = prevPg.map((pg) => {
-            const usesChangedBlock = Array.from(changedBlockNames).some(
-              (name) => pg.content.includes(name),
+            const usesChangedBlock = changedBlockList.some((name) =>
+              pg.content.includes(name),
             );
             if (usesChangedBlock) {
               changedSlugs.add(pg.slug);
@@ -618,6 +664,10 @@ export const Canvas = ({
               });
               return next;
             });
+          }
+
+          if (changedSlugs.size === 0) {
+            return prevPg;
           }
 
           return nextPages;
@@ -666,6 +716,10 @@ export const Canvas = ({
             });
           }
 
+          if (changedBlockItems.size === 0 && newBlocks.length === 0) {
+            return prevBl;
+          }
+
           return [...merged, ...newBlocks];
         });
       }
@@ -694,18 +748,38 @@ export const Canvas = ({
   }, []);
 
   useEffect(() => {
-    if (!liveMode || !ready) return;
+    if (!liveMode) return;
 
     const canvasData = (window as any).blockstudioCanvas as
       | { restRoot?: string; restNonce?: string }
       | undefined;
-    if (!canvasData?.restRoot || !canvasData?.restNonce) return;
+    const restRoot = canvasData?.restRoot;
+    const restNonce = canvasData?.restNonce;
+    if (!restRoot || !restNonce) return;
 
     const url =
-      canvasData.restRoot +
+      restRoot +
       'blockstudio/v1/canvas/stream?_wpnonce=' +
-      encodeURIComponent(canvasData.restNonce);
+      encodeURIComponent(restNonce);
     const eventSource = new EventSource(url);
+    let active = true;
+
+    const enqueueChanged = (
+      parsed: SSEChangedData,
+      override?: Partial<SSEChangedData>,
+    ): void => {
+      const merged = override ? { ...parsed, ...override } : parsed;
+      queueRef.current?.enqueue({
+        fingerprint: parsed.fingerprint,
+        pages: merged.pages || [],
+        blocks: merged.blocks || [],
+        blockstudioBlocks: merged.blockstudioBlocks || [],
+        changedBlocks: parsed.changedBlocks || [],
+        changedPages: parsed.changedPages || [],
+        blocksNative: merged.blocksNative,
+        tailwindCss: parsed.tailwindCss,
+      });
+    };
 
     eventSource.addEventListener('fingerprint', (e: MessageEvent) => {
       try {
@@ -721,27 +795,52 @@ export const Canvas = ({
     eventSource.addEventListener('changed', (e: MessageEvent) => {
       try {
         const parsed = JSON.parse(e.data) as SSEChangedData;
-        if (typeof parsed.fingerprint === 'string' && parsed.blockstudioBlocks) {
-          queueRef.current?.enqueue({
-            fingerprint: parsed.fingerprint,
-            pages: parsed.pages || [],
-            blocks: parsed.blocks || [],
-            blockstudioBlocks: parsed.blockstudioBlocks,
-            changedBlocks: parsed.changedBlocks || [],
-            changedPages: parsed.changedPages || [],
-            blocksNative: parsed.blocksNative,
-            tailwindCss: parsed.tailwindCss,
-          });
+        if (
+          typeof parsed.fingerprint !== 'string' ||
+          !Array.isArray(parsed.blockstudioBlocks)
+        ) {
+          return;
         }
+
+        const needsRefreshFallback =
+          (parsed.changedBlocks?.length || 0) > 0 &&
+          (parsed.pages?.length || 0) === 0;
+
+        if (needsRefreshFallback) {
+          const refreshUrl =
+            restRoot +
+            'blockstudio/v1/canvas/refresh?_wpnonce=' +
+            encodeURIComponent(restNonce);
+
+          void window
+            .fetch(refreshUrl, { credentials: 'same-origin' })
+            .then((response) => (response.ok ? response.json() : null))
+            .then((refreshed) => {
+              if (!active) return;
+              if (!refreshed) {
+                enqueueChanged(parsed);
+                return;
+              }
+              enqueueChanged(parsed, refreshed as Partial<SSEChangedData>);
+            })
+            .catch(() => {
+              if (!active) return;
+              enqueueChanged(parsed);
+            });
+          return;
+        }
+
+        enqueueChanged(parsed);
       } catch {
         // Ignore parse errors.
       }
     });
 
     return () => {
+      active = false;
       eventSource.close();
     };
-  }, [liveMode, ready]);
+  }, [liveMode]);
 
   const hasContent =
     (view === 'pages' && currentPages.length > 0) ||
