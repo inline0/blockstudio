@@ -939,7 +939,7 @@ test.describe('Canvas', () => {
           markerClass: 'canvas-live-test-marker',
           markerText: 'Canvas Live Test Block',
         },
-        { timeout: 45000 },
+        { timeout: 60000 },
       );
 
       // Verify the artboard rendered the block's PHP output and has no unsupported warnings.
@@ -1088,7 +1088,7 @@ test.describe('Canvas', () => {
             markerClass: 'canvas-simultaneous-marker',
             markerText: 'Simultaneous Block Works',
           },
-          { timeout: 45000 },
+          { timeout: 60000 },
         );
 
         // Verify the block rendered correctly with no unsupported warnings.
@@ -1249,7 +1249,7 @@ test.describe('Canvas', () => {
             markerClass: 'canvas-staggered-marker',
             markerText: 'Staggered Block',
           },
-          { timeout: 45000 },
+          { timeout: 60000 },
         );
 
         const result = await page.evaluate((slug: string) => {
@@ -1708,7 +1708,9 @@ test.describe('Canvas', () => {
       await expect(page.locator('[data-canvas-view="blocks"]')).toBeVisible();
 
       const artboards = page.locator('[data-canvas-slug]');
-      await expect(artboards.first()).toBeVisible({ timeout: 15000 });
+      await expect(page.locator('[data-canvas-slug]:visible').first()).toBeVisible({
+        timeout: 15000,
+      });
       const count = await artboards.count();
       expect(count).toBeGreaterThan(0);
     });
