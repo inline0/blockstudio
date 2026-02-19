@@ -62,6 +62,7 @@ const MIN_SCALE = 0.02;
 const MAX_SCALE = 2;
 const READY_IFRAME_MAX_MS = 2000;
 const READY_MEDIA_MAX_MS = 2000;
+const BLOCK_REFRESH_RECONCILE_DELAY_MS = 1500;
 
 const BLOCK_ICON = (
   <svg
@@ -598,29 +599,71 @@ export const Canvas = ({
             });
             nextPages = merged;
           } else {
-            nextPages = data.pages.map((newPage) => {
-              const existing = prevPg.find(
-                (p) => p.slug === newPage.slug,
-              );
+            // Keep current artboard order stable in live mode updates and
+            // append only newly discovered pages at the end.
+            const updatedMap = new Map(
+              data.pages.map((p) => [p.slug, p]),
+            );
+            const merged = prevPg.map((existing) => {
+              const updated = updatedMap.get(existing.slug);
 
-              if (!existing || existing.content !== newPage.content) {
-                changedSlugs.add(newPage.slug);
-                return newPage;
+              if (!updated) {
+                return existing;
+              }
+
+              updatedMap.delete(existing.slug);
+
+              if (existing.content !== updated.content) {
+                changedSlugs.add(updated.slug);
+                return updated;
               }
 
               if (changedBlockNames.size > 0) {
                 const usesChangedBlock = changedBlockList.some((name) =>
-                  newPage.content.includes(name),
+                  updated.content.includes(name),
                 );
                 if (usesChangedBlock) {
-                  changedSlugs.add(newPage.slug);
-                  return { ...newPage };
+                  changedSlugs.add(updated.slug);
+                  return { ...updated };
                 }
               }
 
               return existing;
             });
+
+            updatedMap.forEach((newPage) => {
+              changedSlugs.add(newPage.slug);
+              merged.push(newPage);
+            });
+
+            nextPages = merged;
           }
+
+          // Enforce stable live-mode ordering: keep existing pages in their
+          // current order and append only genuinely new pages.
+          const nextBySlug = new Map(
+            nextPages.map((page) => [page.slug, page]),
+          );
+          const stabilized: typeof prevPg = [];
+
+          for (const existing of prevPg) {
+            const candidate = nextBySlug.get(existing.slug);
+            if (!candidate) {
+              continue;
+            }
+            stabilized.push(candidate);
+            nextBySlug.delete(existing.slug);
+          }
+
+          for (const candidate of nextPages) {
+            if (!nextBySlug.has(candidate.slug)) {
+              continue;
+            }
+            stabilized.push(candidate);
+            nextBySlug.delete(candidate.slug);
+          }
+
+          nextPages = stabilized;
 
           if (changedSlugs.size > 0) {
             setRevisions((prev) => {
@@ -761,8 +804,13 @@ export const Canvas = ({
       restRoot +
       'blockstudio/v1/canvas/stream?_wpnonce=' +
       encodeURIComponent(restNonce);
+    const refreshUrl =
+      restRoot +
+      'blockstudio/v1/canvas/refresh?_wpnonce=' +
+      encodeURIComponent(restNonce);
     const eventSource = new EventSource(url);
     let active = true;
+    let blockRefreshTimer: number | null = null;
 
     const enqueueChanged = (
       parsed: SSEChangedData,
@@ -779,6 +827,57 @@ export const Canvas = ({
         blocksNative: merged.blocksNative,
         tailwindCss: parsed.tailwindCss,
       });
+    };
+
+    const fetchRefresh = (): Promise<Partial<SSEChangedData> | null> => {
+      return window
+        .fetch(refreshUrl, { credentials: 'same-origin' })
+        .then((response) => (response.ok ? response.json() : null))
+        .catch(() => null);
+    };
+
+    const reconcileBlockChange = (parsed: SSEChangedData): void => {
+      let baselineSerialized: string | null = null;
+
+      const applyRefreshed = (
+        refreshed: Partial<SSEChangedData> | null,
+        delayed: boolean,
+      ): void => {
+        if (!active) return;
+
+        if (!refreshed) {
+          if (!delayed) {
+            enqueueChanged(parsed);
+          }
+          return;
+        }
+
+        const serialized = JSON.stringify(refreshed);
+
+        if (baselineSerialized === null) {
+          baselineSerialized = serialized;
+          enqueueChanged(parsed, refreshed);
+          return;
+        }
+
+        if (serialized !== baselineSerialized) {
+          enqueueChanged(parsed, refreshed);
+        }
+      };
+
+      void fetchRefresh().then((refreshed) => {
+        applyRefreshed(refreshed, false);
+      });
+
+      if (blockRefreshTimer !== null) {
+        clearTimeout(blockRefreshTimer);
+      }
+
+      blockRefreshTimer = window.setTimeout(() => {
+        void fetchRefresh().then((refreshed) => {
+          applyRefreshed(refreshed, true);
+        });
+      }, BLOCK_REFRESH_RECONCILE_DELAY_MS);
     };
 
     eventSource.addEventListener('fingerprint', (e: MessageEvent) => {
@@ -802,31 +901,8 @@ export const Canvas = ({
           return;
         }
 
-        const needsRefreshFallback =
-          (parsed.changedBlocks?.length || 0) > 0 &&
-          (parsed.pages?.length || 0) === 0;
-
-        if (needsRefreshFallback) {
-          const refreshUrl =
-            restRoot +
-            'blockstudio/v1/canvas/refresh?_wpnonce=' +
-            encodeURIComponent(restNonce);
-
-          void window
-            .fetch(refreshUrl, { credentials: 'same-origin' })
-            .then((response) => (response.ok ? response.json() : null))
-            .then((refreshed) => {
-              if (!active) return;
-              if (!refreshed) {
-                enqueueChanged(parsed);
-                return;
-              }
-              enqueueChanged(parsed, refreshed as Partial<SSEChangedData>);
-            })
-            .catch(() => {
-              if (!active) return;
-              enqueueChanged(parsed);
-            });
+        if ((parsed.changedBlocks?.length || 0) > 0) {
+          reconcileBlockChange(parsed);
           return;
         }
 
@@ -838,6 +914,9 @@ export const Canvas = ({
 
     return () => {
       active = false;
+      if (blockRefreshTimer !== null) {
+        clearTimeout(blockRefreshTimer);
+      }
       eventSource.close();
     };
   }, [liveMode]);

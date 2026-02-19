@@ -596,10 +596,17 @@ test.describe('Canvas', () => {
       process.cwd(),
       'tests/theme/pages/test-canvas-new-page',
     );
+    const orderStabilityBlockDir = path.join(
+      process.cwd(),
+      'tests/theme/blockstudio/single/canvas-order-stability-test',
+    );
 
     const cleanupNewPage = async (): Promise<void> => {
       if (fs.existsSync(newPageDir)) {
         fs.rmSync(newPageDir, { recursive: true });
+      }
+      if (fs.existsSync(orderStabilityBlockDir)) {
+        fs.rmSync(orderStabilityBlockDir, { recursive: true });
       }
 
       await page.evaluate(async () => {
@@ -688,6 +695,45 @@ test.describe('Canvas', () => {
       await expect(
         page.locator('#blockstudio-canvas', { hasText: 'Canvas New Page Test' }),
       ).toBeVisible();
+
+      const slugs = await page.locator('[data-canvas-slug]').evaluateAll((nodes) =>
+        nodes.map((node) => node.getAttribute('data-canvas-slug')),
+      );
+      expect(slugs[slugs.length - 1]).toBe('canvas-new-page-test');
+
+      // Trigger a block-only refresh and ensure page order does not re-sort.
+      fs.mkdirSync(orderStabilityBlockDir, { recursive: true });
+      fs.writeFileSync(
+        path.join(orderStabilityBlockDir, 'block.json'),
+        JSON.stringify({
+          $schema: 'https://app.blockstudio.dev/schema',
+          name: 'blockstudio/canvas-order-stability-test',
+          title: 'Canvas Order Stability Test',
+          category: 'blockstudio-test-native',
+          icon: 'star-filled',
+          blockstudio: true,
+        }),
+      );
+      fs.writeFileSync(
+        path.join(orderStabilityBlockDir, 'index.php'),
+        '<?php\necho \'<div class="canvas-order-stability-marker">Canvas Order Stability Test</div>\';',
+      );
+
+      await page.waitForFunction(
+        () => {
+          const getBlockType = (window as any).wp?.blocks?.getBlockType;
+          return getBlockType && getBlockType('blockstudio/canvas-order-stability-test');
+        },
+        null,
+        { timeout: 30000 },
+      );
+
+      await page.waitForTimeout(2000);
+
+      const slugsAfterBlockRefresh = await page.locator('[data-canvas-slug]').evaluateAll(
+        (nodes) => nodes.map((node) => node.getAttribute('data-canvas-slug')),
+      );
+      expect(slugsAfterBlockRefresh).toEqual(slugs);
     });
 
     test('SSE changed event includes new page in changedPages', async () => {
@@ -865,8 +911,36 @@ test.describe('Canvas', () => {
         { timeout: 30000 },
       );
 
-      // Wait for the new iframe to load.
-      await page.waitForTimeout(3000);
+      // Wait until the new block render is actually present in the artboard iframe.
+      await page.waitForFunction(
+        ({ slug, markerClass, markerText }) => {
+          const artboard = document.querySelector(
+            `[data-canvas-slug="${slug}"]`,
+          );
+          if (!artboard) return false;
+          const iframe = artboard.querySelector(
+            'iframe',
+          ) as HTMLIFrameElement | null;
+          if (!iframe) return false;
+          const doc = iframe.contentDocument;
+          if (!doc || !doc.body) return false;
+
+          const bodyText = doc.body.textContent || '';
+          const missingBlocks = doc.querySelectorAll('.wp-block-missing').length;
+          const hasUnsupportedText = bodyText.includes("doesn't include support");
+          const hasMarker =
+            doc.querySelector(`.${markerClass}`) !== null ||
+            bodyText.includes(markerText);
+
+          return missingBlocks === 0 && !hasUnsupportedText && hasMarker;
+        },
+        {
+          slug: 'blockstudio-e2e-test',
+          markerClass: 'canvas-live-test-marker',
+          markerText: 'Canvas Live Test Block',
+        },
+        { timeout: 45000 },
+      );
 
       // Verify the artboard rendered the block's PHP output and has no unsupported warnings.
       const result = await page.evaluate((slug: string) => {
@@ -986,8 +1060,36 @@ test.describe('Canvas', () => {
           { timeout: 30000 },
         );
 
-        // Wait for the iframe to finish rendering.
-        await page.waitForTimeout(5000);
+        // Wait until the new block render is actually present in the artboard iframe.
+        await page.waitForFunction(
+          ({ slug, markerClass, markerText }) => {
+            const artboard = document.querySelector(
+              `[data-canvas-slug="${slug}"]`,
+            );
+            if (!artboard) return false;
+            const iframe = artboard.querySelector(
+              'iframe',
+            ) as HTMLIFrameElement | null;
+            if (!iframe) return false;
+            const doc = iframe.contentDocument;
+            if (!doc || !doc.body) return false;
+
+            const bodyText = doc.body.textContent || '';
+            const missingBlocks = doc.querySelectorAll('.wp-block-missing').length;
+            const hasUnsupportedText = bodyText.includes("doesn't include support");
+            const hasMarker =
+              doc.querySelector(`.${markerClass}`) !== null ||
+              bodyText.includes(markerText);
+
+            return missingBlocks === 0 && !hasUnsupportedText && hasMarker;
+          },
+          {
+            slug: 'blockstudio-e2e-test',
+            markerClass: 'canvas-simultaneous-marker',
+            markerText: 'Simultaneous Block Works',
+          },
+          { timeout: 45000 },
+        );
 
         // Verify the block rendered correctly with no unsupported warnings.
         const result = await page.evaluate((slug: string) => {
@@ -1104,8 +1206,6 @@ test.describe('Canvas', () => {
           { timeout: 30000 },
         );
 
-        await page.waitForTimeout(5000);
-
         // Add the block to the test page.
         fs.writeFileSync(
           templatePath,
@@ -1121,7 +1221,36 @@ test.describe('Canvas', () => {
           { timeout: 30000 },
         );
 
-        await page.waitForTimeout(5000);
+        // Wait until the new block render is actually present in the artboard iframe.
+        await page.waitForFunction(
+          ({ slug, markerClass, markerText }) => {
+            const artboard = document.querySelector(
+              `[data-canvas-slug="${slug}"]`,
+            );
+            if (!artboard) return false;
+            const iframe = artboard.querySelector(
+              'iframe',
+            ) as HTMLIFrameElement | null;
+            if (!iframe) return false;
+            const doc = iframe.contentDocument;
+            if (!doc || !doc.body) return false;
+
+            const bodyText = doc.body.textContent || '';
+            const missingBlocks = doc.querySelectorAll('.wp-block-missing').length;
+            const hasUnsupportedText = bodyText.includes("doesn't include support");
+            const hasMarker =
+              doc.querySelector(`.${markerClass}`) !== null ||
+              bodyText.includes(markerText);
+
+            return missingBlocks === 0 && !hasUnsupportedText && hasMarker;
+          },
+          {
+            slug: 'blockstudio-e2e-test',
+            markerClass: 'canvas-staggered-marker',
+            markerText: 'Staggered Block',
+          },
+          { timeout: 45000 },
+        );
 
         const result = await page.evaluate((slug: string) => {
           const artboard = document.querySelector(`[data-canvas-slug="${slug}"]`);
