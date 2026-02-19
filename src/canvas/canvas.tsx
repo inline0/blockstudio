@@ -733,8 +733,8 @@ export const Canvas = ({
             tailwindCss: parsed.tailwindCss,
           });
         }
-      } catch (err) {
-        console.error('[canvas:sse] changed event ERROR:', err);
+      } catch {
+        // Ignore parse errors.
       }
     });
 

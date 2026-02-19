@@ -692,11 +692,18 @@ class Canvas {
 	private function compute_refresh_data( array $changed_blocks, array $changed_pages ): array {
 		Build::refresh_blocks();
 
-		if ( ! empty( $changed_pages ) ) {
-			$page_paths = Pages::get_paths();
-			$discovery  = new Page_Discovery();
-			$sync       = new Page_Sync();
+		// When new blocks appear, page templates may also have been updated in
+		// the same write batch. Re-sync ALL pages so the database content is
+		// fresh, and include every page in the response. This avoids a race
+		// where detect_changed_pages() misses a page whose mtime was already
+		// captured in prev_mtimes by the time the SSE polled.
+		$sync_all_pages = ! empty( $changed_blocks ) && empty( $changed_pages );
 
+		$page_paths = Pages::get_paths();
+		$discovery  = new Page_Discovery();
+		$sync       = new Page_Sync();
+
+		if ( $sync_all_pages || ! empty( $changed_pages ) ) {
 			foreach ( $page_paths as $path ) {
 				if ( ! is_dir( $path ) ) {
 					continue;
@@ -705,15 +712,15 @@ class Canvas {
 				$discovered = $discovery->discover( $path );
 
 				foreach ( $discovered as $page_data ) {
-					if ( in_array( $page_data['source_path'], $changed_pages, true ) ) {
+					if ( $sync_all_pages || in_array( $page_data['source_path'], $changed_pages, true ) ) {
 						$sync->sync( $page_data );
 					}
 				}
 			}
 		}
 
-		$response_pages = ! empty( $changed_pages )
-			? $this->get_pages_with_content( $changed_pages )
+		$response_pages = ( ! empty( $changed_pages ) || $sync_all_pages )
+			? $this->get_pages_with_content( $sync_all_pages ? array() : $changed_pages )
 			: array();
 
 		$all_block_types = Build::blocks();
@@ -793,8 +800,20 @@ class Canvas {
 	private function compute_fingerprint_with_mtimes( array &$mtimes ): string {
 		$mtimes = array();
 
+		$scanned_paths = array();
+
 		foreach ( Build::paths() as $path_info ) {
+			$normalized                   = wp_normalize_path( $path_info['path'] );
+			$scanned_paths[ $normalized ] = true;
 			$this->collect_file_mtimes( $path_info['path'], $mtimes );
+		}
+
+		// Always scan the default build dir even if not yet registered, so we
+		// detect when a blockstudio directory is created during a live session.
+		$default_build_dir = wp_normalize_path( Build::get_build_dir() );
+
+		if ( ! isset( $scanned_paths[ $default_build_dir ] ) ) {
+			$this->collect_file_mtimes( $default_build_dir, $mtimes );
 		}
 
 		foreach ( Pages::get_paths() as $path ) {

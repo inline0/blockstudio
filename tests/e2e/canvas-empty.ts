@@ -201,6 +201,141 @@ test.describe('Canvas - empty theme', () => {
     expect(r.hasMarkerText).toBe(true);
   });
 
+  test('existing page updated to use a brand new block renders without second edit', async () => {
+    const blockstudioDir = path.join(emptyThemePath, 'blockstudio');
+    const blockDir = path.join(blockstudioDir, 'replace-test-block');
+    const pageDir = path.join(emptyThemePath, 'pages/replace-test-page');
+
+    if (fs.existsSync(blockstudioDir)) {
+      fs.rmSync(blockstudioDir, { recursive: true });
+    }
+
+    try {
+      // Create a page with plain HTML first.
+      fs.mkdirSync(pageDir, { recursive: true });
+      fs.writeFileSync(
+        path.join(pageDir, 'page.json'),
+        JSON.stringify({
+          name: 'replace-test-page',
+          title: 'Replace Test Page',
+          slug: 'replace-test-page',
+          postType: 'page',
+          postStatus: 'publish',
+          templateLock: 'all',
+        }),
+      );
+      fs.writeFileSync(
+        path.join(pageDir, 'index.php'),
+        '<h1>Hello World</h1>',
+      );
+
+      await page.evaluate(() =>
+        localStorage.removeItem('blockstudio-canvas-settings'),
+      );
+      await page.goto(canvasUrl, { waitUntil: 'domcontentloaded' });
+
+      const root = page.locator('#blockstudio-canvas');
+      await expect(root).toBeVisible({ timeout: 15000 });
+
+      await page.waitForFunction(
+        () => {
+          const ab = document.querySelector('[data-canvas-slug="replace-test-page"]');
+          if (!ab) return false;
+          const iframe = ab.querySelector('iframe') as HTMLIFrameElement | null;
+          if (!iframe) return false;
+          const doc = iframe.contentDocument;
+          if (!doc) return false;
+          return (doc.body?.textContent || '').includes('Hello World');
+        },
+        null,
+        { timeout: 30000 },
+      );
+
+      const menuButton = page
+        .locator('.blockstudio-canvas-menu .components-button')
+        .first();
+      await menuButton.click();
+      await expect(page.locator('role=menu')).toBeVisible({ timeout: 5000 });
+      await page.locator('role=menuitem', { hasText: 'Live mode' }).click();
+
+      await page.evaluate(() => {
+        const canvasData = (window as any).blockstudioCanvas;
+        const url =
+          canvasData.restRoot +
+          'blockstudio/v1/canvas/stream?_wpnonce=' +
+          encodeURIComponent(canvasData.restNonce);
+
+        const es = new EventSource(url);
+        (window as any).__replaceTestFpPromise = new Promise<void>(
+          (resolve) => {
+            es.addEventListener('fingerprint', () => resolve());
+          },
+        );
+        (window as any).__replaceTestES = es;
+      });
+
+      await page.evaluate(() => (window as any).__replaceTestFpPromise);
+
+      // Simulate a real agent: write block.json first (SSE may poll and see
+      // an incomplete block), then after a delay write index.php and the page
+      // update back-to-back. The SSE poll that picks up the complete block may
+      // miss the page change if prev_mtimes already captured the new page mtime.
+      fs.mkdirSync(blockDir, { recursive: true });
+      fs.writeFileSync(
+        path.join(blockDir, 'block.json'),
+        JSON.stringify({
+          $schema: 'https://app.blockstudio.dev/schema',
+          name: 'blockstudio/replace-test-block',
+          title: 'Replace Test Block',
+          category: 'text',
+          icon: 'star-filled',
+          blockstudio: true,
+        }),
+      );
+
+      // Wait for the SSE to poll and see block.json (incomplete block).
+      await page.waitForTimeout(1500);
+
+      // Write index.php and page update back-to-back (same write batch).
+      fs.writeFileSync(
+        path.join(blockDir, 'index.php'),
+        '<?php\necho \'<div class="replace-test-marker">Replaced Content Works</div>\';',
+      );
+      fs.writeFileSync(
+        path.join(pageDir, 'index.php'),
+        '<block name="blockstudio/replace-test-block" />',
+      );
+
+      // The block should register AND the page should update.
+      await page.waitForFunction(
+        () => {
+          const ab = document.querySelector(
+            '[data-canvas-slug="replace-test-page"]',
+          );
+          if (!ab) return false;
+          const iframe = ab.querySelector('iframe') as HTMLIFrameElement | null;
+          if (!iframe) return false;
+          const doc = iframe.contentDocument;
+          if (!doc) return false;
+          return (doc.body?.textContent || '').includes(
+            'Replaced Content Works',
+          );
+        },
+        null,
+        { timeout: 30000 },
+      );
+    } finally {
+      if (!fs.existsSync(blockstudioDir)) {
+        fs.mkdirSync(blockstudioDir, { recursive: true });
+      }
+      fs.writeFileSync(path.join(blockstudioDir, '.gitkeep'), '');
+
+      if (fs.existsSync(pageDir)) {
+        fs.rmSync(pageDir, { recursive: true });
+      }
+    }
+  });
+
   test('block created from scratch with no prior blockstudio dir renders without unsupported warning', async () => {
     const blockstudioDir = path.join(emptyThemePath, 'blockstudio');
     const pagesDir = path.join(emptyThemePath, 'pages');
