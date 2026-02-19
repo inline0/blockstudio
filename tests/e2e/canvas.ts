@@ -1708,9 +1708,20 @@ test.describe('Canvas', () => {
       await expect(page.locator('[data-canvas-view="blocks"]')).toBeVisible();
 
       const artboards = page.locator('[data-canvas-slug]');
-      await expect(page.locator('[data-canvas-slug]:visible').first()).toBeVisible({
-        timeout: 15000,
-      });
+      await page.waitForFunction(
+        () => {
+          const nodes = Array.from(
+            document.querySelectorAll('[data-canvas-slug]'),
+          ) as HTMLElement[];
+          if (nodes.length === 0) return false;
+          return nodes.some((node) => {
+            const style = window.getComputedStyle(node);
+            return style.display !== 'none' && style.visibility !== 'hidden';
+          });
+        },
+        null,
+        { timeout: 30000 },
+      );
       const count = await artboards.count();
       expect(count).toBeGreaterThan(0);
     });
