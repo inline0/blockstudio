@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react';
 import { Button } from 'onedocs';
 import { cn } from '@/lib/cn';
+import { ClickToPlayVideo } from './click-to-play-video';
 
 function Panel({
   children,
@@ -156,25 +157,46 @@ function TerminalGraphic() {
 
 export function AiHero() {
   return (
-    <section className="px-6 pt-16 pb-12 sm:pt-24 sm:pb-16 lg:px-16 xl:px-20">
-      <div className="grid grid-cols-1 xl:grid-cols-[3fr_7fr] gap-12 xl:gap-16">
-        <div className="flex h-full flex-col justify-between gap-8">
-          <div>
+    <>
+      <section className="px-6 pt-16 pb-12 sm:pt-24 sm:pb-16 lg:px-16 xl:px-20">
+        <div className="flex flex-wrap items-end justify-between gap-6">
+          <div className="max-w-2xl">
             <h1 className="text-4xl font-medium leading-tight text-fd-foreground sm:text-5xl text-balance">
               AI-native block development
             </h1>
             <p className="mt-4 text-fd-muted-foreground sm:text-lg sm:leading-normal text-balance">
-              Blockstudio&apos;s file-based architecture means AI coding agents
-              can scaffold blocks, pages, and patterns from a single prompt. No
-              GUI, no database, just files.
+              Blockstudio&apos;s file-based architecture and zero build tooling
+              create the ideal environment for AI coding agents. The video
+              below shows a complete WordPress site with 10 custom blocks and 6
+              pages built from a single prompt.
             </p>
           </div>
-          <Button href="/docs/dev/ai" className="w-max">
+          <Button href="/docs/dev/ai" className="w-max shrink-0">
             Read the docs &rarr;
           </Button>
         </div>
-        <TerminalGraphic />
-      </div>
-    </section>
+        <div className="mt-10 overflow-hidden rounded-2xl border border-fd-border bg-fd-secondary">
+          <ClickToPlayVideo src="https://blockstudio-cdn.hi-3dc.workers.dev/blockstudio7_v1_web.mp4" />
+        </div>
+      </section>
+
+      <section className="px-6 pb-12 sm:pb-16 lg:px-16 xl:px-20">
+        <div className="grid grid-cols-1 xl:grid-cols-[3fr_7fr] gap-12 xl:gap-16">
+          <div className="flex h-full flex-col justify-between gap-8">
+            <div>
+              <h2 className="text-2xl font-semibold tracking-tight text-fd-foreground sm:text-3xl text-balance">
+                Describe a block, get a block
+              </h2>
+              <p className="mt-4 text-fd-muted-foreground sm:text-lg sm:leading-normal text-balance">
+                Blockstudio&apos;s file-based architecture means AI coding
+                agents can scaffold blocks, pages, and patterns from a single
+                prompt. No GUI, no database, just files.
+              </p>
+            </div>
+          </div>
+          <TerminalGraphic />
+        </div>
+      </section>
+    </>
   );
 }
