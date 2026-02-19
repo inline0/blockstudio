@@ -3,7 +3,13 @@
 import { useRef, useState } from 'react';
 import { Play } from 'lucide-react';
 
-export function ClickToPlayVideo({ src }: { src: string }) {
+export function ClickToPlayVideo({
+  src,
+  poster,
+}: {
+  src: string;
+  poster?: string;
+}) {
   const [playing, setPlaying] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
 
@@ -23,7 +29,8 @@ export function ClickToPlayVideo({ src }: { src: string }) {
         muted
         loop
         playsInline
-        preload="metadata"
+        preload="none"
+        poster={poster}
         src={src}
       />
       {!playing && (

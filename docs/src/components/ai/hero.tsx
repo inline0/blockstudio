@@ -176,7 +176,10 @@ export function AiHero() {
           </Button>
         </div>
         <div className="mt-10 overflow-hidden rounded-2xl border border-fd-border bg-fd-secondary">
-          <ClickToPlayVideo src="https://blockstudio-cdn.hi-3dc.workers.dev/blockstudio7_v1_web.mp4" />
+          <ClickToPlayVideo
+            src="https://blockstudio-cdn.hi-3dc.workers.dev/blockstudio7_v1_web.mp4"
+            poster="https://blockstudio-cdn.hi-3dc.workers.dev/blockstudio7_v1_web_poster.jpg"
+          />
         </div>
       </section>
 
