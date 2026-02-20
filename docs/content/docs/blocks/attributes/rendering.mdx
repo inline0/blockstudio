@@ -104,6 +104,33 @@ The link field returns an object with URL and attributes:
   </Tab>
 </Tabs>
 
+### Icon
+
+The icon field returns an object with `set`, `subSet`, and `icon` keys. Use the `bs_render_icon()` and `bs_icon()` helper functions to output the SVG:
+
+<Tabs items={['PHP', 'Twig']}>
+  <Tab value="PHP">
+```php title="index.php"
+<?php if ($a['icon']) : ?>
+  <div class="icon">
+    <?php bs_render_icon($a['icon']); ?>
+  </div>
+<?php endif; ?>
+```
+  </Tab>
+  <Tab value="Twig">
+```twig title="index.twig"
+{% if a.icon %}
+  <div class="icon">
+    {{ bs_icon(a.icon) }}
+  </div>
+{% endif %}
+```
+  </Tab>
+</Tabs>
+
+`bs_render_icon()` echoes the SVG directly. `bs_icon()` returns it as a string.
+
 ### Repeater
 
 Loop through repeater items:
