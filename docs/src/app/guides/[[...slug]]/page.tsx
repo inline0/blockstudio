@@ -9,11 +9,11 @@ function GuidesIndex() {
 
   return (
     <DocsPage>
-      <h1>Guides</h1>
-      <p className="text-fd-muted-foreground">
+      <h1 className="mb-2 text-3xl font-semibold">Guides</h1>
+      <p className="mb-8 text-fd-muted-foreground">
         In-depth guides for building with Blockstudio.
       </p>
-      <div className="mt-6 grid grid-cols-1 gap-2 sm:grid-cols-2">
+      <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
         {pages.map((page) => (
           <ArchiveCard
             key={page.url}

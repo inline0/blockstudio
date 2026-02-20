@@ -10,7 +10,7 @@ function ArchiveCardImage({ title }: { title: string }) {
         aria-hidden
       >
         {Array.from({ length: 8 }).map((_, i) => (
-          <p
+          <span
             key={i}
             className="whitespace-nowrap text-2xl font-bold"
             style={{
@@ -21,7 +21,7 @@ function ArchiveCardImage({ title }: { title: string }) {
             }}
           >
             {repeated}
-          </p>
+          </span>
         ))}
       </div>
     </div>
@@ -45,16 +45,16 @@ export function ArchiveCard({
       className="flex flex-col rounded-2xl border bg-fd-card p-4 shadow-sm transition-colors hover:bg-fd-secondary/50 no-underline"
     >
       <ArchiveCardImage title={title} />
-      <p className="mt-4 font-medium text-pretty">{title}</p>
+      <span className="mt-4 font-medium text-pretty">{title}</span>
       {description && (
-        <p className="mt-1 text-sm text-fd-muted-foreground text-pretty">
+        <span className="mt-2 text-sm text-fd-muted-foreground text-pretty">
           {description}
-        </p>
+        </span>
       )}
       {date && (
-        <p className="mt-auto pt-4 text-xs text-fd-primary">
+        <span className="mt-auto pt-4 text-xs text-fd-primary">
           {date.toDateString()}
-        </p>
+        </span>
       )}
     </Link>
   );
