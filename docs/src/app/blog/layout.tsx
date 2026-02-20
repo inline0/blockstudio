@@ -1,15 +1,34 @@
 import type { ReactNode } from 'react';
-import { SiteFooter } from '@/components/site-footer';
-import { SiteLayout } from '@/components/site-layout';
+import type { LinkItemType } from '@fumadocs/ui/link-item';
+import { DocsLayout as FumaDocsLayout } from 'fumadocs-ui/layouts/docs';
+import { BookOpen, Compass, Newspaper } from 'lucide-react';
+import { createBaseOptions } from 'onedocs';
+import { PlusBadge } from '@/components/plus-badge';
+import config from '../../../onedocs.config';
+
+const plusBadgeNav: LinkItemType = {
+  type: 'custom',
+  on: 'nav',
+  children: <PlusBadge />,
+};
+
+function getLayoutOptions() {
+  const base = createBaseOptions(config);
+  return {
+    ...base,
+    links: [
+      { text: 'Docs', url: '/docs', icon: <BookOpen /> },
+      { text: 'Guides', url: '/guides', icon: <Compass /> },
+      { text: 'Blog', url: '/blog', icon: <Newspaper /> },
+      plusBadgeNav,
+    ],
+  };
+}
 
 export default function BlogLayout({ children }: { children: ReactNode }) {
   return (
-    <SiteLayout>
-      <main className="relative mx-auto w-full flex-1 max-w-(--fd-layout-width)">
-        <div className="absolute inset-0 border-x pointer-events-none" />
-        <div className="relative">{children}</div>
-      </main>
-      <SiteFooter />
-    </SiteLayout>
+    <FumaDocsLayout {...getLayoutOptions()} tree={{ name: '', children: [] }}>
+      {children}
+    </FumaDocsLayout>
   );
 }

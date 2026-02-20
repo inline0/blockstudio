@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import { DocsPage } from 'onedocs';
 import { ArchiveCard } from '@/components/archive-card';
 import { blog, blogSlug } from '@/lib/source';
 
@@ -11,7 +12,7 @@ export default function BlogIndex() {
   const posts = [...blog].sort((a, b) => b.date.getTime() - a.date.getTime());
 
   return (
-    <div className="px-6 py-16 sm:py-20 lg:px-10">
+    <DocsPage full>
       <h1 className="mb-2 text-3xl font-semibold">Blog</h1>
       <p className="mb-8 text-fd-muted-foreground">
         News and updates from the Blockstudio team.
@@ -27,6 +28,6 @@ export default function BlogIndex() {
           />
         ))}
       </div>
-    </div>
+    </DocsPage>
   );
 }

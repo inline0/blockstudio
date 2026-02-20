@@ -166,9 +166,9 @@ export function AiHero() {
             </h1>
             <p className="mt-4 text-fd-muted-foreground sm:text-lg sm:leading-normal text-balance">
               Blockstudio&apos;s file-based architecture and zero build tooling
-              create the ideal environment for AI coding agents. The video
-              below shows a complete WordPress site with 10 custom blocks and 6
-              pages built from a single prompt.
+              create the ideal environment for AI coding agents. The video below
+              shows a complete WordPress site with 10 custom blocks and 6 pages
+              built from a single prompt.
             </p>
           </div>
           <Button href="/docs/dev/ai" className="w-max shrink-0">

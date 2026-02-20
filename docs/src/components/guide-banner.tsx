@@ -1,5 +1,5 @@
-import Link from 'next/link';
 import { BookOpenIcon, ArrowRightIcon } from 'lucide-react';
+import Link from 'next/link';
 
 export function GuideBanner({
   href,
