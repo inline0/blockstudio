@@ -84,6 +84,9 @@ jobs:
       - name: Run E2E tests
         run: npx playwright test --config=playwright.wp-env.config.ts --shard=${{ matrix.shard }}/${{ matrix.total_shards }}
 
+      - name: Stop main wp-env
+        run: npm run wp-env:stop
+
       - name: Start empty wp-env
         run: npm run wp-env:empty:start
 

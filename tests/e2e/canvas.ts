@@ -895,21 +895,32 @@ test.describe('Canvas', () => {
       // Wait for the SSE stream to settle after the first event.
       await page.waitForTimeout(3000);
 
+      // Capture the current revision before changing the template.
+      const revisionBefore = await page.evaluate((slug: string) => {
+        const artboard = document.querySelector(`[data-canvas-slug="${slug}"]`);
+        return artboard ? artboard.getAttribute('data-canvas-revision') : '0';
+      }, 'blockstudio-e2e-test');
+
       // Add the new block to the test page template.
       fs.writeFileSync(
         templatePath,
         originalTemplate + '\n<block name="blockstudio/canvas-live-test" />',
       );
 
-      // Wait for the page artboard revision to change.
+      // Wait for the page artboard revision to increase beyond its pre-change value.
       await page.waitForFunction(
-        (slug: string) => {
+        ({ slug, prev }) => {
           const artboard = document.querySelector(`[data-canvas-slug="${slug}"]`);
-          return artboard && artboard.getAttribute('data-canvas-revision') !== '0';
+          if (!artboard) return false;
+          const current = Number(artboard.getAttribute('data-canvas-revision') ?? '0');
+          return current > Number(prev);
         },
-        'blockstudio-e2e-test',
+        { slug: 'blockstudio-e2e-test', prev: revisionBefore },
         { timeout: 30000 },
       );
+
+      // Give the iframe time to start loading after revision change.
+      await page.waitForTimeout(2000);
 
       // Wait until the new block render is actually present in the artboard iframe.
       await page.waitForFunction(
@@ -922,24 +933,29 @@ test.describe('Canvas', () => {
             'iframe',
           ) as HTMLIFrameElement | null;
           if (!iframe) return false;
-          const doc = iframe.contentDocument;
-          if (!doc || !doc.body) return false;
+          try {
+            const doc = iframe.contentDocument;
+            if (!doc || !doc.body) return false;
 
-          const bodyText = doc.body.textContent || '';
-          const missingBlocks = doc.querySelectorAll('.wp-block-missing').length;
-          const hasUnsupportedText = bodyText.includes("doesn't include support");
-          const hasMarker =
-            doc.querySelector(`.${markerClass}`) !== null ||
-            bodyText.includes(markerText);
+            const bodyText = doc.body.textContent || '';
+            const missingBlocks = doc.querySelectorAll('.wp-block-missing').length;
+            const hasUnsupportedText = bodyText.includes("doesn't include support");
+            const hasMarker =
+              doc.querySelector(`.${markerClass}`) !== null ||
+              bodyText.includes(markerText);
 
-          return missingBlocks === 0 && !hasUnsupportedText && hasMarker;
+            return missingBlocks === 0 && !hasUnsupportedText && hasMarker;
+          } catch {
+            // Cross-origin or loading iframe, retry.
+            return false;
+          }
         },
         {
           slug: 'blockstudio-e2e-test',
           markerClass: 'canvas-live-test-marker',
           markerText: 'Canvas Live Test Block',
         },
-        { timeout: 60000 },
+        { timeout: 90000 },
       );
 
       // Verify the artboard rendered the block's PHP output and has no unsupported warnings.
