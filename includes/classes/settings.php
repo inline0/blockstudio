@@ -209,43 +209,6 @@ class Settings {
 			$settings['assets']['enqueue'] = $assets;
 		}
 
-		if ( has_filter( 'blockstudio/editor/assets' ) ) {
-			$editor_assets                = apply_filters( 'blockstudio/editor/assets', false );
-			$settings['editor']['assets'] = $editor_assets;
-		}
-
-		if ( has_filter( 'blockstudio/editor/markup' ) ) {
-			$editor_markup                = apply_filters( 'blockstudio/editor/markup', false );
-			$settings['editor']['markup'] = $editor_markup;
-		}
-
-		if ( has_filter( 'blockstudio/editor/users' ) ) {
-			$editor_user_ids          = apply_filters( 'blockstudio/editor/users', false );
-			$settings['users']['ids'] = $editor_user_ids;
-		}
-
-		if ( has_filter( 'blockstudio/editor/users/roles' ) ) {
-			$editor_user_roles          = apply_filters( 'blockstudio/editor/users/roles', false );
-			$settings['users']['roles'] = $editor_user_roles;
-		}
-
-		if ( has_filter( 'blockstudio/editor/options' ) ) {
-			$editor_options    = apply_filters( 'blockstudio/editor/options', false );
-			$format_on_save    = $editor_options['formatOnSave'] ?? false;
-			$processor_scss    = $editor_options['processorScss'] ?? false;
-			$processor_esbuild = $editor_options['processorEsbuild'] ?? false;
-
-			if ( $format_on_save ) {
-				$settings['editor']['formatOnSave'] = $format_on_save;
-			}
-			if ( $processor_scss ) {
-				$settings['assets']['minify']['css']   = $processor_scss;
-				$settings['assets']['process']['scss'] = $processor_scss;
-			}
-			if ( $processor_esbuild ) {
-				$settings['assets']['minify']['js'] = $processor_esbuild;
-			}
-		}
 	}
 
 	/**
