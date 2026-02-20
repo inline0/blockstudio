@@ -17,6 +17,7 @@ export default defineConfig({
     links: [
       { label: "Build with AI", href: "/ai" },
       { label: "Docs", href: "/docs" },
+      { label: "Guides", href: "/guides" },
       { label: "Blog", href: "/blog" },
     ],
     github: "inline0/blockstudio",
