@@ -4,6 +4,34 @@ import { notFound } from 'next/navigation';
 import { DocsPage, mdxComponents } from 'onedocs';
 import { guidesSource } from '@/lib/source';
 
+function GuideImage({ title }: { title: string }) {
+  const repeated = `${title}  `.repeat(20);
+
+  return (
+    <div className="relative aspect-[16/9] overflow-hidden rounded-lg bg-fd-secondary/50">
+      <div
+        className="absolute inset-0 flex flex-col justify-center gap-1.5 -rotate-12 scale-125"
+        aria-hidden
+      >
+        {Array.from({ length: 8 }).map((_, i) => (
+          <p
+            key={i}
+            className="whitespace-nowrap text-2xl font-bold"
+            style={{
+              color: 'transparent',
+              WebkitTextStroke:
+                '0.5px color-mix(in srgb, var(--color-fd-primary) 8%, transparent)',
+              marginLeft: `${(i % 3) * -40}px`,
+            }}
+          >
+            {repeated}
+          </p>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 function GuidesIndex() {
   const pages = guidesSource.getPages().filter((p) => p.slugs.length > 0);
 
@@ -13,16 +41,17 @@ function GuidesIndex() {
       <p className="text-fd-muted-foreground">
         In-depth guides for building with Blockstudio.
       </p>
-      <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2">
+      <div className="mt-6 grid grid-cols-1 gap-2 sm:grid-cols-2">
         {pages.map((page) => (
           <Link
             key={page.url}
             href={page.url}
-            className="flex flex-col rounded-lg border bg-fd-card p-4 transition-colors hover:bg-fd-accent no-underline"
+            className="flex flex-col rounded-2xl border bg-fd-card p-4 shadow-sm transition-colors hover:bg-fd-secondary/50 no-underline"
           >
-            <p className="font-medium">{page.data.title}</p>
+            <GuideImage title={page.data.title} />
+            <p className="mt-4 font-medium text-pretty">{page.data.title}</p>
             {page.data.description && (
-              <p className="mt-1 text-sm text-fd-muted-foreground">
+              <p className="mt-1 text-sm text-fd-muted-foreground text-pretty">
                 {page.data.description}
               </p>
             )}
