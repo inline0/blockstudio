@@ -1,0 +1,720 @@
+---
+title: Building a Block Library
+description: Build a complete set of section blocks with Tailwind CSS. Project setup, design tokens, the section pattern, repeaters, images, and page composition.
+---
+
+# Building a Block Library
+
+A block library is a set of self-contained section blocks that compose into full pages. Each block owns its schema, template, and styling. Blockstudio provides the framework: Tailwind CSS processing, attribute registration, and page syncing. You provide the blocks.
+
+This guide walks through building a library from scratch, following the same architecture used across hundreds of production themes. By the end you will have a working theme with a hero, features grid, and a composed home page.
+
+## Folder Structure
+
+Every Blockstudio theme follows the same layout:
+
+```
+my-theme/
+├── style.css                           # WordPress header + Tailwind v4 config
+├── blockstudio.json                    # Blockstudio settings
+├── functions.php                       # Section helper + Tailwind filter
+├── index.php                           # Main WordPress template
+├── blockstudio/
+│   ├── fields/
+│   │   └── section/
+│   │       └── field.json              # Shared section controls
+│   └── sections/
+│       ├── hero/
+│       │   ├── block.json
+│       │   └── index.php
+│       └── features/
+│           ├── block.json
+│           └── index.php
+└── pages/
+    └── home/
+        ├── page.json
+        └── index.php
+```
+
+Blocks live in `blockstudio/sections/`. Each block is a folder with a `block.json` schema and an `index.php` template. Pages live in `pages/` and compose blocks using the `<block>` syntax.
+
+## Foundation Files
+
+### blockstudio.json
+
+This file configures how Blockstudio processes your theme. The configuration is the same for every theme:
+
+```json title="blockstudio.json"
+{
+	"assets": {
+		"enqueue": true,
+		"reset": {
+			"enabled": true,
+			"fullWidth": ["page"]
+		},
+		"minify": { "css": true, "js": true },
+		"process": { "scss": false, "scssFiles": true }
+	},
+	"tailwind": {
+		"enabled": true,
+		"config": ""
+	},
+	"dev": {
+		"canvas": { "enabled": true }
+	},
+	"$schema": "https://app.blockstudio.dev/schema/blockstudio"
+}
+```
+
+`reset` removes default WordPress block styles. `fullWidth` makes `page` post types stretch to full width. `canvas` enables the editor canvas mode for a cleaner editing experience.
+
+The `tailwind.config` field is intentionally empty. With Tailwind v4, all configuration lives in `style.css` using the CSS-first approach.
+
+### index.php
+
+The main WordPress template. This is standard WordPress, nothing Blockstudio-specific:
+
+```php title="index.php"
+<!DOCTYPE html>
+<html <?php language_attributes(); ?>>
+<head>
+	<meta charset="<?php bloginfo( 'charset' ); ?>">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<?php wp_head(); ?>
+</head>
+<body <?php body_class(); ?>>
+<?php wp_body_open(); ?>
+
+<main>
+<?php
+if ( have_posts() ) {
+	while ( have_posts() ) {
+		the_post();
+		the_content();
+	}
+}
+?>
+</main>
+
+<?php wp_footer(); ?>
+</body>
+</html>
+```
+
+Add a `header.php` and `footer.php` when you need navigation. For now, a minimal template is enough to render blocks.
+
+## Design Tokens
+
+All theming happens in `style.css` using Tailwind v4's `@theme` directive. This is the heart of your design system.
+
+```css title="style.css"
+/*
+Theme Name: My Theme
+Theme URI: https://example.com
+Description: A clean theme built with Blockstudio.
+Version: 1.0.0
+Requires at least: 6.0
+Requires PHP: 8.2
+Author: Your Name
+Text Domain: my-theme
+*/
+
+@theme {
+	--font-sans: 'Inter', ui-sans-serif, system-ui, sans-serif;
+	--color-bg: #050505;
+	--color-elevated: #111111;
+	--color-subtle: rgb(255 255 255 / 0.06);
+	--color-muted: #888888;
+	--color-accent: #6366f1;
+	--color-accent-hover: #4f46e5;
+}
+```
+
+Every theme needs at minimum:
+
+| Token | Purpose |
+|-------|---------|
+| `--font-sans` or `--font-serif` | Primary typeface |
+| `--color-bg` | Page background |
+| `--color-elevated` | Card/surface background |
+| `--color-subtle` | Borders, dividers |
+| `--color-muted` | Secondary text |
+| `--color-accent` | Primary brand color |
+
+These tokens generate Tailwind utilities automatically. `--color-accent` becomes `bg-accent`, `text-accent`, `border-accent`, and so on.
+
+For a light theme, flip the values:
+
+```css title="style.css (light theme)"
+@theme {
+	--font-serif: 'Zilla Slab', serif;
+	--font-sans: 'DM Sans', sans-serif;
+	--color-bg: #f5f0e8;
+	--color-elevated: #ece6da;
+	--color-heading: #2c1810;
+	--color-body: #6b5c4f;
+	--color-muted: #9a8b7d;
+	--color-accent: #2d5016;
+	--color-subtle: #d9d1c4;
+}
+```
+
+## Base Styles and Utilities
+
+Below the `@theme` block, add body styles, base layer defaults, and custom utilities.
+
+**Body styles must be outside `@layer`** so the WordPress editor picks them up:
+
+```css title="style.css"
+body {
+	@apply bg-bg font-sans text-white antialiased;
+}
+```
+
+**Base layer** for element defaults:
+
+```css title="style.css"
+@layer base {
+	section {
+		@apply relative overflow-hidden;
+	}
+
+	h1, h2, h3 {
+		text-wrap: balance;
+	}
+
+	p {
+		text-wrap: pretty;
+	}
+}
+```
+
+**Custom utilities** for reusable patterns. Every theme defines a `container` utility for consistent section spacing, and typically `card`, `badge`, and button utilities:
+
+```css title="style.css"
+@utility container-px {
+	@apply mx-auto max-w-5xl px-6;
+}
+
+@utility container {
+	@apply container-px py-24 sm:py-32;
+}
+
+@utility container-no-pb {
+	@apply pb-0 sm:pb-0;
+}
+
+@utility card {
+	@apply rounded-2xl border border-subtle bg-elevated/80 p-8 transition-all duration-300;
+
+	&:hover {
+		border-color: rgb(255 255 255 / 0.1);
+	}
+}
+
+@utility badge {
+	@apply inline-flex items-center gap-2 rounded-full border border-subtle bg-white/5 px-3.5 py-1.5 text-sm text-muted;
+}
+
+@utility btn-primary {
+	@apply inline-flex items-center gap-2 rounded-full bg-accent px-6 py-3 text-sm font-medium text-white transition-colors;
+
+	&:hover {
+		@apply bg-accent-hover;
+	}
+}
+
+@utility btn-secondary {
+	@apply inline-flex items-center gap-2 rounded-full border border-subtle px-6 py-3 text-sm font-medium text-white transition-all;
+
+	&:hover {
+		border-color: rgb(255 255 255 / 0.15);
+		background: rgb(255 255 255 / 0.04);
+	}
+}
+```
+
+Pseudo-selectors go inside the `@utility` block using CSS nesting (`&:hover`). Never put them in the utility name. `@utility btn-primary:hover {}` is invalid and will be rejected by Tailwind.
+
+### @source inline
+
+Blockstudio scans your block templates for Tailwind classes automatically. But classes used outside block templates (in `functions.php`, `header.php`, `index.php`) are not scanned. Declare them with `@source inline`:
+
+```css title="style.css"
+@source inline("bg-bg bg-accent-tint container container-px container-no-pb");
+```
+
+This tells Tailwind to include these classes in the output even though they only appear in PHP files that are not scanned.
+
+## The Section Pattern
+
+The section pattern is the most important convention in a Blockstudio block library. It gives every block consistent spacing, background toggling, and padding control through two shared mechanisms: a custom field and a PHP helper.
+
+### The Section Field
+
+Create a shared field definition that every block can reference:
+
+```json title="blockstudio/fields/section/field.json"
+{
+	"$schema": "https://app.blockstudio.dev/schema/field",
+	"name": "section",
+	"title": "Section",
+	"attributes": [
+		{
+			"type": "group",
+			"attributes": [
+				{
+					"id": "removeBottomPadding",
+					"type": "toggle",
+					"label": "Remove bottom padding"
+				},
+				{
+					"id": "accentBg",
+					"type": "toggle",
+					"label": "Accent background"
+				}
+			]
+		}
+	]
+}
+```
+
+This field appears in every block's inspector under a "Section" tab. Clients get two controls: toggle an accent background, and remove bottom padding (useful for stacking sections without gaps).
+
+### The Section Helper
+
+In `functions.php`, create a helper that converts these attributes into CSS classes:
+
+```php title="functions.php"
+<?php
+/**
+ * My Theme functions.
+ *
+ * @package My_Theme
+ */
+
+/**
+ * Returns section and container class strings based on block attributes.
+ *
+ * @param array  $a               Block attributes.
+ * @param string $extra_section   Additional classes for the section element.
+ * @param string $extra_container Additional classes for the container element.
+ * @return array Array of [ section_classes, container_classes ].
+ */
+function mytheme_section_classes( array $a, string $extra_section = '', string $extra_container = '' ): array {
+	$section   = ! empty( $a['accentBg'] ) ? 'bg-accent-tint' : 'bg-bg';
+	$container = 'container';
+
+	if ( ! empty( $a['removeBottomPadding'] ) ) {
+		$container .= ' container-no-pb';
+	}
+
+	if ( $extra_section ) {
+		$section .= ' ' . $extra_section;
+	}
+
+	if ( $extra_container ) {
+		$container .= ' ' . $extra_container;
+	}
+
+	return array( $section, $container );
+}
+```
+
+Every block template calls this helper as its first line. The helper returns two class strings: one for the outer `<section>` element and one for the inner `<div>` container.
+
+### Tailwind Configuration Filter
+
+Also in `functions.php`, add the filter that feeds your `style.css` to Blockstudio's Tailwind processor:
+
+```php title="functions.php"
+add_filter(
+	'blockstudio/settings/tailwind/config',
+	function () {
+		$style = get_stylesheet_directory() . '/style.css';
+
+		if ( file_exists( $style ) ) {
+			// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Reading local theme file.
+			return file_get_contents( $style );
+		}
+
+		return '';
+	}
+);
+```
+
+This tells Blockstudio to use your `style.css` as the Tailwind v4 configuration source. Without it, your `@theme` tokens and `@utility` definitions would not be available in block templates.
+
+## Your First Block: Hero
+
+A hero section demonstrates the complete block pattern. Start with the schema:
+
+```json title="blockstudio/sections/hero/block.json"
+{
+	"$schema": "https://app.blockstudio.dev/schema",
+	"name": "my-theme/hero",
+	"title": "Hero",
+	"category": "my-theme",
+	"icon": "star-filled",
+	"description": "Full-width hero section with heading, description, and buttons.",
+	"blockstudio": {
+		"attributes": [
+			{
+				"type": "tabs",
+				"tabs": [
+					{
+						"title": "Content",
+						"attributes": [
+							{
+								"type": "group",
+								"attributes": [
+									{
+										"id": "heading",
+										"type": "text",
+										"label": "Heading",
+										"default": "Build beautiful websites without the complexity"
+									},
+									{
+										"id": "description",
+										"type": "textarea",
+										"label": "Description",
+										"default": "A powerful framework that lets you create stunning designs using the WordPress editor."
+									}
+								]
+							},
+							{
+								"type": "group",
+								"attributes": [
+									{
+										"id": "primaryButton",
+										"type": "link",
+										"label": "Primary Button",
+										"default": {
+											"title": "Get Started",
+											"url": "#"
+										}
+									},
+									{
+										"id": "secondaryButton",
+										"type": "link",
+										"label": "Secondary Button",
+										"default": {
+											"title": "Learn More",
+											"url": "#"
+										}
+									}
+								]
+							}
+						]
+					},
+					{
+						"title": "Section",
+						"attributes": [
+							{ "type": "custom/section" }
+						]
+					}
+				]
+			}
+		]
+	}
+}
+```
+
+**Key patterns to notice:**
+
+The `tabs` wrapper creates a two-tab inspector: "Content" for the block's fields and "Section" for the shared section controls. Every block uses this structure.
+
+Fields are organized into `group` containers. Groups visually separate related fields in the inspector. The first group holds text fields, the second holds link fields.
+
+Default values provide meaningful content so the block looks complete the moment it is inserted. This is critical for page composition, where blocks are added with no user interaction.
+
+Now the template:
+
+```php title="blockstudio/sections/hero/index.php"
+<?php list( $section_classes, $container_classes ) = mytheme_section_classes( $a, '', 'text-center' ); ?>
+
+<section useBlockProps class="<?php echo esc_attr( $section_classes ); ?>">
+	<div class="<?php echo esc_attr( $container_classes ); ?>">
+		<h1 class="text-5xl font-medium tracking-tight sm:text-6xl lg:text-7xl">
+			<?php echo esc_html( $a['heading'] ); ?>
+		</h1>
+
+		<?php if ( ! empty( $a['description'] ) ) : ?>
+			<p class="mt-6 text-lg leading-relaxed text-muted max-w-xl mx-auto">
+				<?php echo esc_html( $a['description'] ); ?>
+			</p>
+		<?php endif; ?>
+
+		<div class="mt-10 flex items-center justify-center gap-x-4">
+			<?php if ( ! empty( $a['primaryButton']['url'] ) ) : ?>
+				<a href="<?php echo esc_url( $a['primaryButton']['url'] ); ?>" class="btn-primary">
+					<?php echo esc_html( $a['primaryButton']['title'] ); ?>
+				</a>
+			<?php endif; ?>
+
+			<?php if ( ! empty( $a['secondaryButton']['url'] ) ) : ?>
+				<a href="<?php echo esc_url( $a['secondaryButton']['url'] ); ?>" class="btn-secondary">
+					<?php echo esc_html( $a['secondaryButton']['title'] ); ?>
+				</a>
+			<?php endif; ?>
+		</div>
+	</div>
+</section>
+```
+
+The template follows a consistent pattern:
+
+1. Call the section helper to get CSS classes
+2. Outer `<section>` with `useBlockProps` and section classes
+3. Inner `<div>` with container classes
+4. Content rendered from `$a` (the attributes shorthand)
+5. Conditional rendering for optional fields
+6. Proper escaping: `esc_html()` for text, `esc_url()` for URLs, `esc_attr()` for attributes
+
+## Adding Repeaters: Features Grid
+
+Repeaters let clients add, remove, and reorder items. A features grid is the classic example:
+
+```json title="blockstudio/sections/features/block.json"
+{
+	"$schema": "https://app.blockstudio.dev/schema",
+	"name": "my-theme/features",
+	"title": "Features",
+	"category": "my-theme",
+	"icon": "grid-view",
+	"description": "Feature grid with titles and descriptions.",
+	"blockstudio": {
+		"attributes": [
+			{
+				"type": "tabs",
+				"tabs": [
+					{
+						"title": "Content",
+						"attributes": [
+							{
+								"type": "group",
+								"attributes": [
+									{
+										"id": "heading",
+										"type": "text",
+										"label": "Heading",
+										"default": "Everything you need"
+									},
+									{
+										"id": "description",
+										"type": "textarea",
+										"label": "Description",
+										"default": "Our toolkit gives you the building blocks to go from idea to production."
+									}
+								]
+							},
+							{
+								"type": "group",
+								"attributes": [
+									{
+										"id": "features",
+										"type": "repeater",
+										"label": "Features",
+										"textMinimized": {
+											"id": "title",
+											"fallback": "Feature"
+										},
+										"default": [
+											{
+												"title": "Lightning Fast",
+												"description": "Optimized for performance with minimal overhead."
+											},
+											{
+												"title": "Fully Responsive",
+												"description": "Every component adapts across all screen sizes."
+											},
+											{
+												"title": "Easy to Customize",
+												"description": "Adjust every detail to match your brand."
+											}
+										],
+										"attributes": [
+											{
+												"id": "title",
+												"type": "text",
+												"label": "Title"
+											},
+											{
+												"id": "description",
+												"type": "textarea",
+												"label": "Description"
+											}
+										]
+									}
+								]
+							}
+						]
+					},
+					{
+						"title": "Section",
+						"attributes": [
+							{ "type": "custom/section" }
+						]
+					}
+				]
+			}
+		]
+	}
+}
+```
+
+The `textMinimized` property controls what text shows when a repeater row is collapsed. It reads the `title` field value, falling back to "Feature" when empty. This makes the inspector usable when you have many items.
+
+The `default` array provides initial items. These appear when the block is first inserted. Always provide realistic defaults so the block looks complete immediately.
+
+```php title="blockstudio/sections/features/index.php"
+<?php list( $section_classes, $container_classes ) = mytheme_section_classes( $a ); ?>
+
+<section useBlockProps class="<?php echo esc_attr( $section_classes ); ?>">
+	<div class="<?php echo esc_attr( $container_classes ); ?>">
+		<?php if ( ! empty( $a['heading'] ) ) : ?>
+			<div class="text-center max-w-2xl mx-auto">
+				<h2 class="text-3xl font-medium tracking-tight sm:text-4xl">
+					<?php echo esc_html( $a['heading'] ); ?>
+				</h2>
+
+				<?php if ( ! empty( $a['description'] ) ) : ?>
+					<p class="mt-4 text-base leading-relaxed text-muted">
+						<?php echo esc_html( $a['description'] ); ?>
+					</p>
+				<?php endif; ?>
+			</div>
+		<?php endif; ?>
+
+		<?php if ( ! empty( $a['features'] ) ) : ?>
+			<div class="mt-16 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+				<?php foreach ( $a['features'] as $feature ) : ?>
+					<div class="card">
+						<h3 class="text-sm font-medium">
+							<?php echo esc_html( $feature['title'] ); ?>
+						</h3>
+						<p class="mt-2 text-sm leading-relaxed text-muted">
+							<?php echo esc_html( $feature['description'] ); ?>
+						</p>
+					</div>
+				<?php endforeach; ?>
+			</div>
+		<?php endif; ?>
+	</div>
+</section>
+```
+
+Repeater items are accessed as a plain PHP array. Loop with `foreach`, access each item's fields by their `id`.
+
+## Images and Placeholders
+
+For blocks with images, use the `files` field type and the `MediaPlaceholder` component. The placeholder shows a drag-and-drop zone in the editor:
+
+```json title="block.json (partial)"
+{
+	"id": "image",
+	"type": "files",
+	"label": "Image"
+}
+```
+
+In the template, render the image with `wp_get_attachment_image()` and show a placeholder SVG when no image is selected:
+
+```php title="index.php (partial)"
+<div class="overflow-hidden rounded-2xl bg-elevated">
+	<MediaPlaceholder attribute="image" allowedTypes="<?php echo esc_attr( wp_json_encode( array( 'image' ) ) ); ?>" />
+	<?php if ( ! empty( $a['image'] ) ) : ?>
+		<?php echo wp_get_attachment_image( $a['image'][0]['ID'], 'full', false, array( 'class' => 'block w-full' ) ); ?>
+	<?php else : ?>
+		<?php echo blockstudio_placeholder_dark(); ?>
+	<?php endif; ?>
+</div>
+```
+
+`blockstudio_placeholder_dark()` returns an inline SVG that uses `currentColor` with the `--color-accent` variable, so it adapts to your theme automatically. For light themes, use `blockstudio_placeholder_light()`. Both accept a variant argument:
+
+```php
+blockstudio_placeholder_dark( 'dashboard' )  // Dashboard mockup
+blockstudio_placeholder_dark( 'chart' )      // Chart illustration
+blockstudio_placeholder_dark( 'product' )    // Product shot
+```
+
+## Composing Pages
+
+Pages compose blocks into full layouts using the `<block>` syntax. Create a home page:
+
+```json title="pages/home/page.json"
+{
+	"name": "home",
+	"title": "Home",
+	"slug": "home",
+	"postType": "page",
+	"postStatus": "publish",
+	"templateLock": "all"
+}
+```
+
+```php title="pages/home/index.php"
+<block name="my-theme/hero"></block>
+<block name="my-theme/features"></block>
+```
+
+That's it. Each `<block>` element inserts the block with its default attribute values. The page syncs to WordPress automatically.
+
+To override defaults for a specific page, pass attributes directly:
+
+```php title="pages/about/index.php"
+<block name="my-theme/hero" heading="About Us" description="Our story and mission."></block>
+<block name="my-theme/features" heading="Our Values"></block>
+```
+
+With `templateLock` set to `"all"`, clients cannot add, remove, or rearrange blocks. The page structure is locked to your template. See [Pages](/docs/pages-and-patterns/pages) for other lock modes and editing controls.
+
+## Scaling Up
+
+A minimal library starts with 3-5 blocks. A comprehensive library has 8-14. Here are the common block types, roughly in order of how often they appear:
+
+| Block | Description | Key Fields |
+|-------|-------------|------------|
+| **Hero** | Large heading with CTAs | heading, description, links |
+| **Features** | Grid of benefits | heading, repeater with title + description |
+| **CTA** | Call-to-action banner | heading, description, link |
+| **Pricing** | Plan comparison | heading, repeater with name + price + features |
+| **Testimonials** | Customer quotes | repeater with quote + name + role |
+| **FAQ** | Accordion of questions | heading, repeater with question + answer |
+| **Logos** | Client logo cloud | heading (logos are typically hardcoded SVGs) |
+| **Content** | Alternating text + image rows | repeater with heading + description + image |
+| **Showcase** | Full-width image with caption | heading, description, image |
+| **Team** | Team member grid | heading, repeater with name + role + image |
+| **Stats** | Key metrics | repeater with number + label |
+
+Each block follows the same pattern: tabs (Content + Section), groups for organization, repeaters for lists, and the section helper for consistent spacing. Once you have built two or three blocks, adding more is mechanical.
+
+### Adding More Pages
+
+As your library grows, compose different pages from the same blocks:
+
+```php title="pages/pricing/index.php"
+<block name="my-theme/hero" heading="Simple, Transparent Pricing" description="Choose the plan that fits."></block>
+<block name="my-theme/pricing"></block>
+<block name="my-theme/faq" heading="Pricing FAQ"></block>
+<block name="my-theme/cta"></block>
+```
+
+```php title="pages/about/index.php"
+<block name="my-theme/hero" heading="About Us" description="Our story."></block>
+<block name="my-theme/team"></block>
+<block name="my-theme/testimonials"></block>
+<block name="my-theme/cta" heading="Join Our Team"></block>
+```
+
+The same blocks serve multiple pages, each with different defaults. This is the power of the library approach: build blocks once, compose them into as many pages as you need.
+
+## Next Steps
+
+- [Registering Attributes](/docs/blocks/attributes/registering): Full reference for field types and properties
+- [Field Types](/docs/blocks/attributes/field-types): All available field types
+- [Field Patterns Cookbook](/guides/field-patterns): Conditional groups, smart selects, and repeater recipes
+- [Pages](/docs/pages-and-patterns/pages): Template locking, editing modes, and keyed merging
+- [Building File-Based Pages](/guides/file-based-pages): Practical walkthrough of page templates and syncing
+- [Interactivity](/docs/blocks/interactivity): Adding client-side behavior to blocks
