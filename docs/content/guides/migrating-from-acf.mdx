@@ -449,7 +449,9 @@ The `<InnerBlocks />` tag is replaced with the React component in the editor and
 
 ## Post meta storage
 
-In ACF, field values are stored in post meta by default. In Blockstudio, field values are stored as block attributes in the post content. If you need values in post meta (for `WP_Query`, REST API access, etc.), add the `storage` property:
+Both ACF Blocks and Blockstudio store field values as block attributes in the post content by default, not in post meta. This means field values are not queryable with `WP_Query` or accessible via the REST API unless you opt in to meta storage.
+
+ACF added opt-in post meta storage for blocks in ACF 6.3 via `usePostMeta: true`. Blockstudio has a similar opt-in mechanism using the `storage` property on individual fields:
 
 ```json
 {
