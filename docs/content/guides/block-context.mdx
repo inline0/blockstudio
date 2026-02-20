@@ -1,0 +1,562 @@
+---
+title: Block Context and Communication
+description: Pass data between parent and child blocks. Build section wrappers, card grids, pricing tables, and other component patterns where blocks need to talk to each other.
+---
+
+# Block Context and Communication
+
+Most blocks are self-contained. They have their own fields, their own template, and they do not care what is around them. But some components are naturally hierarchical: a card grid where the parent controls column count and gap, a pricing table where the parent sets the currency, a section wrapper that tells its children whether to use a light or dark theme.
+
+WordPress provides a [block context API](https://developer.wordpress.org/block-editor/reference-guides/block-api/block-context/) for this. A parent block exposes some of its data, and child blocks subscribe to it. When the parent changes, the children update automatically. Blockstudio simplifies this significantly: you do not need to configure `providesContext` at all. Every Blockstudio block automatically provides all of its attributes as context. Child blocks just need one line in their `block.json` to subscribe.
+
+This guide builds four real-world component patterns that use context, each demonstrating a different communication need.
+
+## How Context Works in Blockstudio
+
+In standard WordPress, you must explicitly map each parent attribute to a context key in `providesContext`, then list those keys in the child's `usesContext`. Blockstudio removes the first step entirely.
+
+**Parent block:** No configuration needed. Every Blockstudio block automatically provides all its attributes under its block name.
+
+**Child block:** Add `usesContext` with the parent block name:
+
+```json title="child/block.json"
+{
+  "usesContext": ["my-theme/parent-block"]
+}
+```
+
+**Child template:** Access parent attributes via `$context` (or the shorthand `$c`):
+
+```php title="child/index.php"
+<?php $parent = $context['my-theme/parent-block']; ?>
+<p>Parent says: <?php echo esc_html( $parent['message'] ); ?></p>
+```
+
+That is the entire setup. No `providesContext` in the parent, no attribute mapping, no registration code. The child receives all of the parent's transformed attributes, meaning media fields are resolved to attachment data, select fields respect `returnFormat`, and repeaters are fully expanded.
+
+### Two kinds of context
+
+Blockstudio provides two context variables in templates, and they serve different purposes:
+
+| Variable | Contains | Use case |
+|----------|----------|----------|
+| `$context` / `$c` | Parent block attributes (via `usesContext`) | Component communication |
+| `$block['context']` / `$b['context']` | WordPress loop data (`postId`, `postType`) | Query block loops |
+
+The first is for blocks talking to their parents. The second is for blocks inside a Query loop that need to know which post they are rendering. This guide focuses on the first kind.
+
+### Editor support
+
+Context updates are reactive in the editor. When a user changes a parent block's field value, all child blocks that subscribe to that parent's context automatically re-render with the new value. There is no manual refresh needed.
+
+## Section Wrapper
+
+The most common context pattern: a wrapper block that provides theme settings to its children. The parent has fields for background color, text color, and padding. Children read these values to style themselves consistently.
+
+### Parent: Section
+
+```json title="blockstudio/section/block.json"
+{
+  "name": "my-theme/section",
+  "title": "Section",
+  "category": "design",
+  "icon": "align-wide",
+  "description": "Section wrapper with theme settings.",
+  "blockstudio": {
+    "attributes": [
+      {
+        "id": "theme",
+        "type": "select",
+        "label": "Theme",
+        "default": "light",
+        "options": [
+          { "value": "light", "label": "Light" },
+          { "value": "dark", "label": "Dark" },
+          { "value": "accent", "label": "Accent" }
+        ]
+      },
+      {
+        "id": "spacing",
+        "type": "select",
+        "label": "Spacing",
+        "default": "md",
+        "options": [
+          { "value": "sm", "label": "Small" },
+          { "value": "md", "label": "Medium" },
+          { "value": "lg", "label": "Large" }
+        ]
+      }
+    ]
+  }
+}
+```
+
+```php title="blockstudio/section/index.php"
+<?php
+$theme_classes = array(
+	'light'  => 'bg-white text-gray-900',
+	'dark'   => 'bg-gray-900 text-white',
+	'accent' => 'bg-indigo-600 text-white',
+);
+$spacing_classes = array(
+	'sm' => 'py-8',
+	'md' => 'py-16',
+	'lg' => 'py-24',
+);
+$classes = ( $theme_classes[ $a['theme'] ] ?? '' ) . ' ' . ( $spacing_classes[ $a['spacing'] ] ?? '' );
+?>
+<div useBlockProps class="<?php echo esc_attr( $classes ); ?>">
+  <InnerBlocks
+    allowedBlocks='<?php echo esc_attr( wp_json_encode( array( 'my-theme/section-heading', 'my-theme/section-text', 'core/columns', 'core/group' ) ) ); ?>'
+  />
+</div>
+```
+
+### Child: Section Heading
+
+```json title="blockstudio/section-heading/block.json"
+{
+  "name": "my-theme/section-heading",
+  "title": "Section Heading",
+  "category": "design",
+  "icon": "heading",
+  "description": "Heading that adapts to section theme.",
+  "usesContext": ["my-theme/section"],
+  "parent": ["my-theme/section"],
+  "blockstudio": {
+    "attributes": [
+      { "id": "text", "type": "text", "label": "Heading", "default": "Section Title" },
+      {
+        "id": "size",
+        "type": "select",
+        "label": "Size",
+        "default": "lg",
+        "options": [
+          { "value": "sm", "label": "Small" },
+          { "value": "lg", "label": "Large" },
+          { "value": "xl", "label": "Extra Large" }
+        ]
+      }
+    ]
+  }
+}
+```
+
+```php title="blockstudio/section-heading/index.php"
+<?php
+$section = $context['my-theme/section'] ?? array();
+$theme   = $section['theme'] ?? 'light';
+
+$color_class = match ( $theme ) {
+	'light'  => 'text-gray-900',
+	'dark'   => 'text-white',
+	'accent' => 'text-white',
+	default  => 'text-gray-900',
+};
+
+$size_class = match ( $a['size'] ) {
+	'sm' => 'text-2xl',
+	'lg' => 'text-4xl',
+	'xl' => 'text-6xl',
+	default => 'text-4xl',
+};
+?>
+<h2 useBlockProps class="<?php echo esc_attr( "$color_class $size_class font-bold" ); ?>">
+  <?php echo esc_html( $a['text'] ); ?>
+</h2>
+```
+
+**What this demonstrates:** The heading does not have its own color field. It reads the section's `theme` value from context and adapts. When the user switches the section from "Light" to "Dark" in the editor, the heading text color updates immediately.
+
+The `parent` property in the child's block.json restricts where the block can be inserted. It only appears in the inserter when the user is inside a `my-theme/section` block. This is optional but recommended for blocks that only make sense inside a specific parent.
+
+### Child: Section Text
+
+```json title="blockstudio/section-text/block.json"
+{
+  "name": "my-theme/section-text",
+  "title": "Section Text",
+  "category": "design",
+  "icon": "text",
+  "description": "Body text that adapts to section theme.",
+  "usesContext": ["my-theme/section"],
+  "parent": ["my-theme/section"],
+  "blockstudio": {
+    "attributes": [
+      { "id": "text", "type": "textarea", "label": "Text", "default": "Section body text." }
+    ]
+  }
+}
+```
+
+```php title="blockstudio/section-text/index.php"
+<?php
+$section = $context['my-theme/section'] ?? array();
+$theme   = $section['theme'] ?? 'light';
+
+$color_class = match ( $theme ) {
+	'dark', 'accent' => 'text-white/80',
+	default          => 'text-gray-600',
+};
+?>
+<p useBlockProps class="<?php echo esc_attr( "$color_class text-lg leading-relaxed" ); ?>">
+  <?php echo esc_html( $a['text'] ); ?>
+</p>
+```
+
+Now both the heading and the text respond to the section's theme. The user picks a theme once on the parent, and every child adapts.
+
+## Card Grid
+
+A grid parent that controls layout settings for its card children. The parent defines columns and gap. Children use these values to understand their layout context and adjust their styling accordingly.
+
+### Parent: Card Grid
+
+```json title="blockstudio/card-grid/block.json"
+{
+  "name": "my-theme/card-grid",
+  "title": "Card Grid",
+  "category": "design",
+  "icon": "grid-view",
+  "description": "Responsive card grid with configurable columns.",
+  "blockstudio": {
+    "attributes": [
+      {
+        "id": "columns",
+        "type": "range",
+        "label": "Columns",
+        "default": 3,
+        "min": 1,
+        "max": 4,
+        "step": 1
+      },
+      {
+        "id": "gap",
+        "type": "select",
+        "label": "Gap",
+        "default": "md",
+        "options": [
+          { "value": "sm", "label": "Small" },
+          { "value": "md", "label": "Medium" },
+          { "value": "lg", "label": "Large" }
+        ]
+      },
+      {
+        "id": "cardStyle",
+        "type": "select",
+        "label": "Card Style",
+        "default": "elevated",
+        "options": [
+          { "value": "elevated", "label": "Elevated (shadow)" },
+          { "value": "outlined", "label": "Outlined (border)" },
+          { "value": "flat", "label": "Flat (no decoration)" }
+        ]
+      }
+    ]
+  }
+}
+```
+
+```php title="blockstudio/card-grid/index.php"
+<?php
+$gap_class = match ( $a['gap'] ) {
+	'sm' => 'gap-4',
+	'md' => 'gap-6',
+	'lg' => 'gap-8',
+	default => 'gap-6',
+};
+?>
+<div useBlockProps class="grid grid-cols-<?php echo esc_attr( $a['columns'] ); ?> <?php echo esc_attr( $gap_class ); ?>">
+  <InnerBlocks
+    allowedBlocks='<?php echo esc_attr( wp_json_encode( array( 'my-theme/card' ) ) ); ?>'
+    template='<?php echo esc_attr( wp_json_encode( array(
+      array( 'my-theme/card', array() ),
+      array( 'my-theme/card', array() ),
+      array( 'my-theme/card', array() ),
+    ) ) ); ?>'
+  />
+</div>
+```
+
+### Child: Card
+
+```json title="blockstudio/card/block.json"
+{
+  "name": "my-theme/card",
+  "title": "Card",
+  "category": "design",
+  "icon": "cover-image",
+  "description": "Card that inherits style from its grid parent.",
+  "usesContext": ["my-theme/card-grid"],
+  "parent": ["my-theme/card-grid"],
+  "blockstudio": {
+    "attributes": [
+      { "id": "image", "type": "files", "label": "Image", "multiple": false },
+      { "id": "title", "type": "text", "label": "Title", "default": "Card Title" },
+      { "id": "description", "type": "textarea", "label": "Description", "default": "Card description goes here." },
+      { "id": "url", "type": "link", "label": "Link" }
+    ]
+  }
+}
+```
+
+```php title="blockstudio/card/index.php"
+<?php
+$grid      = $context['my-theme/card-grid'] ?? array();
+$card_style = $grid['cardStyle'] ?? 'elevated';
+
+$style_class = match ( $card_style ) {
+	'elevated' => 'bg-white rounded-xl shadow-md',
+	'outlined' => 'bg-white rounded-xl border border-gray-200',
+	'flat'     => 'bg-gray-50 rounded-xl',
+	default    => 'bg-white rounded-xl shadow-md',
+};
+?>
+<div useBlockProps class="<?php echo esc_attr( "$style_class overflow-hidden" ); ?>">
+  <?php if ( $a['image'] ) : ?>
+    <img
+      src="<?php echo esc_url( $a['image']['url'] ); ?>"
+      alt="<?php echo esc_attr( $a['image']['alt'] ); ?>"
+      class="w-full aspect-video object-cover" />
+  <?php endif; ?>
+  <div class="p-6">
+    <h3 class="text-lg font-semibold"><?php echo esc_html( $a['title'] ); ?></h3>
+    <p class="mt-2 text-gray-600"><?php echo esc_html( $a['description'] ); ?></p>
+    <?php if ( $a['url'] ) : ?>
+      <a href="<?php echo esc_url( $a['url']['url'] ); ?>" class="mt-4 inline-block text-indigo-600 font-medium">
+        <?php echo esc_html( $a['url']['title'] ?: 'Learn more' ); ?>
+      </a>
+    <?php endif; ?>
+  </div>
+</div>
+```
+
+**What this demonstrates:** The card has no style field of its own. It reads `cardStyle` from the grid parent. When the user switches the grid from "Elevated" to "Outlined", every card in the grid updates at once. This keeps the cards visually consistent without forcing the user to update each one individually.
+
+The `template` attribute on `<InnerBlocks>` pre-populates the grid with three cards, giving the user a starting point.
+
+## Pricing Table
+
+A more advanced pattern where the parent provides shared business logic (currency, billing period) that children use in their display. This avoids duplicating the same fields across every pricing tier.
+
+### Parent: Pricing Table
+
+```json title="blockstudio/pricing-table/block.json"
+{
+  "name": "my-theme/pricing-table",
+  "title": "Pricing Table",
+  "category": "text",
+  "icon": "money-alt",
+  "description": "Pricing comparison with shared currency and billing settings.",
+  "blockstudio": {
+    "attributes": [
+      {
+        "id": "currency",
+        "type": "select",
+        "label": "Currency",
+        "default": "usd",
+        "options": [
+          { "value": "usd", "label": "USD ($)" },
+          { "value": "eur", "label": "EUR (\u20ac)" },
+          { "value": "gbp", "label": "GBP (\u00a3)" }
+        ]
+      },
+      {
+        "id": "period",
+        "type": "select",
+        "label": "Billing Period",
+        "default": "month",
+        "options": [
+          { "value": "month", "label": "Monthly" },
+          { "value": "year", "label": "Yearly" }
+        ]
+      }
+    ]
+  }
+}
+```
+
+```php title="blockstudio/pricing-table/index.php"
+<div useBlockProps class="grid grid-cols-3 gap-6 items-start">
+  <InnerBlocks
+    allowedBlocks='<?php echo esc_attr( wp_json_encode( array( 'my-theme/pricing-tier' ) ) ); ?>'
+    template='<?php echo esc_attr( wp_json_encode( array(
+      array( 'my-theme/pricing-tier', array( 'name' => 'Starter', 'price' => 9 ) ),
+      array( 'my-theme/pricing-tier', array( 'name' => 'Pro', 'price' => 29, 'highlighted' => true ) ),
+      array( 'my-theme/pricing-tier', array( 'name' => 'Enterprise', 'price' => 99 ) ),
+    ) ) ); ?>'
+  />
+</div>
+```
+
+### Child: Pricing Tier
+
+```json title="blockstudio/pricing-tier/block.json"
+{
+  "name": "my-theme/pricing-tier",
+  "title": "Pricing Tier",
+  "category": "text",
+  "icon": "tag",
+  "description": "Single pricing tier that reads currency from parent.",
+  "usesContext": ["my-theme/pricing-table"],
+  "parent": ["my-theme/pricing-table"],
+  "blockstudio": {
+    "attributes": [
+      { "id": "name", "type": "text", "label": "Tier Name", "default": "Plan" },
+      { "id": "price", "type": "number", "label": "Price", "default": 0 },
+      { "id": "highlighted", "type": "toggle", "label": "Highlighted", "default": false },
+      {
+        "id": "features",
+        "type": "repeater",
+        "label": "Features",
+        "attributes": [
+          { "id": "text", "type": "text", "label": "Feature" }
+        ]
+      }
+    ]
+  }
+}
+```
+
+```php title="blockstudio/pricing-tier/index.php"
+<?php
+$table    = $context['my-theme/pricing-table'] ?? array();
+$currency = $table['currency'] ?? 'usd';
+$period   = $table['period'] ?? 'month';
+
+$symbols = array(
+	'usd' => '$',
+	'eur' => "\u{20AC}",
+	'gbp' => "\u{00A3}",
+);
+$symbol = $symbols[ $currency ] ?? '$';
+
+$period_label = $period === 'year' ? '/year' : '/month';
+
+$border_class = $a['highlighted'] ? 'border-2 border-indigo-600' : 'border border-gray-200';
+?>
+<div useBlockProps class="<?php echo esc_attr( "rounded-xl p-8 $border_class" ); ?>">
+  <h3 class="text-lg font-semibold"><?php echo esc_html( $a['name'] ); ?></h3>
+  <div class="mt-4">
+    <span class="text-4xl font-bold"><?php echo esc_html( $symbol . $a['price'] ); ?></span>
+    <span class="text-gray-500"><?php echo esc_html( $period_label ); ?></span>
+  </div>
+  <?php if ( ! empty( $a['features'] ) ) : ?>
+    <ul class="mt-6 space-y-3">
+      <?php foreach ( $a['features'] as $feature ) : ?>
+        <li class="flex items-center gap-2">
+          <span class="text-indigo-600">&#10003;</span>
+          <?php echo esc_html( $feature['text'] ); ?>
+        </li>
+      <?php endforeach; ?>
+    </ul>
+  <?php endif; ?>
+</div>
+```
+
+**What this demonstrates:** The currency symbol and billing period are defined once on the pricing table and inherited by every tier. When the user switches from USD to EUR, all three tiers update their currency symbol simultaneously. Without context, you would need to duplicate the currency field on every tier and keep them in sync manually.
+
+## Query Loop Context
+
+There is a separate kind of context that WordPress provides inside Query block loops. When a block renders inside a loop, `$block['context']` (or `$b['context']`) contains the current iteration's post data:
+
+```php title="index.php"
+<?php
+$loop_post_id   = $block['context']['postId'];
+$loop_post_type = $block['context']['postType'];
+?>
+<article useBlockProps>
+  <h2><?php echo esc_html( get_the_title( $loop_post_id ) ); ?></h2>
+  <p><?php echo esc_html( get_the_excerpt( $loop_post_id ) ); ?></p>
+  <a href="<?php echo esc_url( get_permalink( $loop_post_id ) ); ?>">Read more</a>
+</article>
+```
+
+This is different from parent block context (`$context` / `$c`). Loop context is provided by WordPress core and contains only `postId` and `postType`. You do not need `usesContext` in your block.json for this. Blockstudio automatically subscribes every block to `postId` and `postType`.
+
+**Where loop context is useful:** Custom post cards inside Query blocks, blocks that display post meta, or any block that needs to render differently per post in a loop.
+
+You can also access the outer page's post data, regardless of loop context:
+
+```php
+$outer_post_id   = $block['postId'];   // always the current page
+$loop_post_id    = $block['context']['postId'];  // current loop iteration
+```
+
+## Nested Context
+
+Context flows through the entire block tree, not just one level. If block A contains block B, which contains block C, then C can subscribe to A's context. This works because WordPress propagates context through every level of InnerBlocks.
+
+```
+my-theme/section (theme: "dark")
+└── core/columns
+    └── core/column
+        └── my-theme/section-heading (reads section context)
+```
+
+The heading does not need to be a direct child of the section. It can be nested inside core blocks (columns, groups, etc.) and still receive the section's context. The `usesContext` subscription works at any depth.
+
+### Multiple parents
+
+A child can subscribe to multiple parents:
+
+```json title="block.json"
+{
+  "usesContext": ["my-theme/section", "my-theme/card-grid"]
+}
+```
+
+```php title="index.php"
+<?php
+$section = $context['my-theme/section'] ?? array();
+$grid    = $context['my-theme/card-grid'] ?? array();
+
+$theme     = $section['theme'] ?? 'light';
+$cardStyle = $grid['cardStyle'] ?? 'elevated';
+?>
+```
+
+If a parent is not found in the ancestor tree, its key will be absent from `$context`. Always use the null coalescing operator (`??`) or check `isset()` when reading context values, in case the block is used outside its expected parent.
+
+## Defensive Coding
+
+Blocks that use context should always handle the case where the parent is missing. A user might insert the block outside of its intended parent, or the parent block might not have a value set for a particular field.
+
+```php title="index.php"
+<?php
+// Always provide defaults
+$section = $context['my-theme/section'] ?? array();
+$theme   = $section['theme'] ?? 'light';
+$spacing = $section['spacing'] ?? 'md';
+?>
+```
+
+If you want to enforce that a child only appears inside its parent, add the `parent` property:
+
+```json title="block.json"
+{
+  "parent": ["my-theme/section"]
+}
+```
+
+This removes the block from the inserter when the user is not inside a `my-theme/section` block. Without `parent`, the block shows up everywhere, and it is your template's responsibility to handle missing context gracefully.
+
+Use `parent` for blocks that are meaningless outside their container (pricing tiers, card grid items). Skip it for blocks that work standalone but gain extra styling from a parent (section headings that could also be used independently).
+
+## Tips
+
+**Context is read-only.** Children cannot modify the parent's attributes through context. Data flows down, never up. If a child needs to communicate something to its parent, you need a different approach (like shared server state via the Interactivity API, or post meta).
+
+**All attributes are provided.** Blockstudio provides every attribute of the parent block, not just the ones you select. This means the child can access any field the parent defines. If the parent later adds a new field, children automatically have access to it without any configuration change.
+
+**Transformed values.** Context values go through Blockstudio's attribute transformation pipeline. Files fields contain the full attachment data (url, alt, width, height), select fields respect `returnFormat`, and repeaters are recursively expanded. You get the same data structure as `$a` in the parent template.
+
+**Editor reactivity.** When a user changes a parent field in the editor, child blocks re-render automatically. This uses WordPress's built-in context propagation with a React `useEffect` that detects context changes and triggers a server-side re-render of the child.
+
+**Keep context lean.** While Blockstudio provides all parent attributes automatically, children should only read the values they actually need. This is not a performance concern (the data is already there), but a code clarity concern. Document which parent fields a child depends on, so future developers know the relationship.
+
+## Next Steps
+
+- [Context reference](/docs/blocks/context): template variables, loop context, and the `$block` data structure.
+- [InnerBlocks](/docs/blocks/components/innerblocks): the `<InnerBlocks />` component, `allowedBlocks`, templates, and the frontend wrapper filter.
+- [Interactivity guide](/guides/interactive-components): for client-side reactivity between blocks (the Interactivity API handles what context cannot: communication from child to parent, cross-block state, and user-triggered updates).

@@ -4,6 +4,7 @@
     "vibecoding",
     "migrating-from-acf",
     "interactive-components",
-    "file-based-pages"
+    "file-based-pages",
+    "block-context"
   ]
 }
