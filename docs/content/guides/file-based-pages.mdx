@@ -1,0 +1,591 @@
+---
+title: Building File-Based Pages
+description: Create WordPress pages from code. A practical guide to template locking, block editing modes, keyed merging, and controlling exactly what clients can edit.
+---
+
+# Building File-Based Pages
+
+Traditional WordPress page building happens in the block editor: dragging blocks, configuring settings, clicking save. This works for clients building their own pages, but for developers building structured, version-controlled pages, it creates problems. The page layout lives in the database, not in code. You cannot review it in a pull request, roll it back with git, or reproduce it on a fresh install.
+
+Blockstudio's file-based pages solve this. You define pages as files in your theme, write HTML templates that convert to WordPress blocks, and control exactly what clients can and cannot edit. The pages sync to the database automatically, and your templates remain the source of truth.
+
+This guide walks through building pages from scratch, with a deep focus on the locking and editing controls that make file-based pages practical for client projects.
+
+## Your First Page
+
+Create a `pages` folder in your theme, then add a subfolder with two files:
+
+```
+theme/
+└── pages/
+    └── about/
+        ├── page.json
+        └── index.php
+```
+
+```json title="page.json"
+{
+  "name": "about",
+  "title": "About Us",
+  "postStatus": "publish"
+}
+```
+
+```html title="index.php"
+<h1>About Us</h1>
+<p>We build things for the web.</p>
+```
+
+Visit the WordPress admin. Blockstudio detects the new files, parses the HTML into WordPress blocks, and creates a page called "About Us" with the slug `about`. Open it in the editor and you will see a heading and a paragraph, exactly as if you had added them manually.
+
+Edit `index.php`, change the text, and reload the editor. The page updates. This is the core loop: write HTML, get blocks.
+
+## The Template Language
+
+Blockstudio's HTML parser converts standard HTML elements into WordPress blocks. Write a `<p>` and you get a paragraph block. Write an `<h2>` and you get a heading block. The mapping is intuitive:
+
+| HTML | Block |
+|------|-------|
+| `<p>` | Paragraph |
+| `<h1>` through `<h6>` | Heading (level matches tag) |
+| `<ul>`, `<ol>` | List |
+| `<blockquote>` | Quote |
+| `<img>` | Image |
+| `<div>`, `<section>` | Group |
+| `<hr>` | Separator |
+| `<details>` | Details |
+| `<table>` | Table |
+
+For blocks without a direct HTML equivalent, use the `<block>` element with a `name` attribute:
+
+```html
+<block name="core/cover" url="https://example.com/hero.jpg">
+  <h2>Hero Title</h2>
+  <p>Content over the background image.</p>
+</block>
+
+<block name="core/spacer" height="80px" />
+
+<block name="core/buttons">
+  <block name="core/button" url="/contact">Get in Touch</block>
+  <block name="core/button" url="/work">See Our Work</block>
+</block>
+```
+
+Attributes on `<block>` elements are passed as block attributes. Values are coerced automatically: `"true"` becomes a boolean, `"3"` becomes an integer, and JSON strings like `'{"type":"flex"}'` are decoded into objects.
+
+### Layouts
+
+Groups support different layout modes through the `layout` attribute:
+
+```html
+<!-- Default group (stacked) -->
+<div>
+  <p>Stacked by default.</p>
+</div>
+
+<!-- Row (horizontal flex) -->
+<block name="core/group" layout='{"type":"flex","flexWrap":"nowrap"}'>
+  <p>Side</p>
+  <p>by side</p>
+</block>
+
+<!-- Stack (vertical flex) -->
+<block name="core/group" layout='{"type":"flex","orientation":"vertical"}'>
+  <p>Stacked</p>
+  <p>with flex</p>
+</block>
+
+<!-- Columns -->
+<block name="core/columns">
+  <block name="core/column">
+    <p>Left column.</p>
+  </block>
+  <block name="core/column">
+    <p>Right column.</p>
+  </block>
+</block>
+```
+
+### Custom blocks
+
+The `<block>` syntax works for any registered block, including your own Blockstudio blocks:
+
+```html
+<block name="my-theme/hero" title="Welcome" background="dark" />
+<block name="my-theme/testimonial" quote="Great product." author="Jane" />
+```
+
+Attributes are mapped to the block's Blockstudio field values automatically.
+
+## Building a Landing Page
+
+Here is a complete landing page that uses core blocks for structure and layout:
+
+```json title="pages/landing/page.json"
+{
+  "name": "landing",
+  "title": "Landing Page",
+  "slug": "landing",
+  "postStatus": "publish",
+  "templateLock": "all"
+}
+```
+
+```html title="pages/landing/index.php"
+<block name="core/cover" url="https://images.unsplash.com/photo-1497366216548-37526070297c?w=1600">
+  <h1>Build faster with Blockstudio</h1>
+  <p>File-based blocks. Zero build step. Full editor integration.</p>
+  <block name="core/buttons">
+    <block name="core/button" url="/get-started">Get Started</block>
+    <block name="core/button" url="/docs">Documentation</block>
+  </block>
+</block>
+
+<div>
+  <h2>Why developers love it</h2>
+  <block name="core/columns">
+    <block name="core/column">
+      <h3>No build step</h3>
+      <p>Write PHP, CSS, and JavaScript. No webpack, no bundler, no transpiler.</p>
+    </block>
+    <block name="core/column">
+      <h3>File-based</h3>
+      <p>Every block is a folder. Every page is a template. Version control everything.</p>
+    </block>
+    <block name="core/column">
+      <h3>Full editor support</h3>
+      <p>Fields, previews, and InnerBlocks work in the block editor out of the box.</p>
+    </block>
+  </block>
+</div>
+
+<block name="core/media-text" mediaurl="https://images.unsplash.com/photo-1460925895917-afdab827c52f?w=800" mediatype="image">
+  <h2>Ship entire sites from your IDE</h2>
+  <p>Define pages, blocks, and patterns as files. Blockstudio handles the rest.</p>
+</block>
+
+<div>
+  <h2>Frequently asked questions</h2>
+  <details>
+    <summary>Do I need to learn React?</summary>
+    <p>No. Templates are PHP. Fields are JSON. Interactivity is optional.</p>
+  </details>
+  <details>
+    <summary>Does it work with my existing theme?</summary>
+    <p>Yes. Drop a blockstudio folder into any theme and start creating blocks.</p>
+  </details>
+</div>
+
+<div>
+  <block name="core/buttons">
+    <block name="core/button" url="/get-started">Start Building</block>
+  </block>
+</div>
+```
+
+This page has a cover hero, a three-column feature grid, a media-text section, FAQ accordions, and a CTA. All from one HTML file. The `templateLock: "all"` in `page.json` means the client cannot change anything. The next section explains how to loosen that.
+
+## Controlling the Editor
+
+This is where file-based pages become truly powerful. Blockstudio gives you two independent controls: **template lock** and **block editing mode**. Together, they let you define exactly which parts of a page clients can modify. Lock the structure but let them edit text. Freeze some sections while leaving others fully open. Create a page where the only thing a client can do is type into three specific headings.
+
+### Template Lock
+
+The `templateLock` property in `page.json` controls structural editing: whether blocks can be added, removed, or rearranged.
+
+#### `"all"` (default)
+
+```json title="page.json"
+{
+  "name": "terms",
+  "templateLock": "all"
+}
+```
+
+The strictest lock. Clients cannot add, remove, or move blocks. They also cannot edit block content (unless combined with `blockEditingMode`). This is the default when you do not specify a value.
+
+**When to use it:** Legal pages, terms of service, privacy policies. Any page where the content should only change through code.
+
+#### `"insert"`
+
+```json title="page.json"
+{
+  "name": "about",
+  "templateLock": "insert"
+}
+```
+
+Clients cannot add or remove blocks, but they can move existing blocks around and edit their content. The block count stays fixed, but the order is flexible.
+
+**When to use it:** Pages where you want a fixed set of sections but the client should be able to reorder them. A portfolio page where the number of sections is predetermined but the client decides the order.
+
+#### `"contentOnly"`
+
+```json title="page.json"
+{
+  "name": "homepage",
+  "templateLock": "contentOnly"
+}
+```
+
+Clients can edit text content but cannot add, remove, or move blocks. The difference from `"all"` is that `"all"` also prevents content editing, while `"contentOnly"` explicitly allows it.
+
+**When to use it:** The most common choice for client-facing pages. The developer controls the layout. The client fills in the text.
+
+#### `false`
+
+```json title="page.json"
+{
+  "name": "blog",
+  "templateLock": false
+}
+```
+
+No lock at all. Clients have full control: add, remove, move, and edit any block. The template provides a starting structure, but the client owns it from there.
+
+**When to use it:** Blog index pages, freeform content pages, or any page where the client should have full editorial freedom.
+
+### Block Editing Mode
+
+While `templateLock` controls structure (add, remove, move), `blockEditingMode` controls interaction at the individual block level: whether blocks can be selected, configured, or edited at all.
+
+Set a page-level default in `page.json`:
+
+```json title="page.json"
+{
+  "name": "landing",
+  "templateLock": "all",
+  "blockEditingMode": "disabled"
+}
+```
+
+#### `"default"`
+
+Full editing. Blocks can be selected, their settings can be changed, and content can be edited. This is the normal editor experience.
+
+#### `"contentOnly"`
+
+Blocks are editable, but only their text content. You cannot open block settings, change colors, adjust padding, or modify any non-content attribute. The block toolbar shows only text formatting options.
+
+#### `"disabled"`
+
+Blocks are completely non-interactive. They render in the editor but cannot be clicked, selected, or modified in any way. The client sees the content but cannot touch it.
+
+### Per-Element Overrides
+
+Here is where it gets interesting. The page-level `blockEditingMode` sets a default for every block on the page, but you can override it on individual elements in the template:
+
+```json title="page.json"
+{
+  "name": "landing",
+  "templateLock": "all",
+  "blockEditingMode": "disabled"
+}
+```
+
+```html title="index.php"
+<block name="core/cover" url="https://example.com/hero.jpg">
+  <h1 blockEditingMode="contentOnly">Edit This Heading</h1>
+  <p blockEditingMode="contentOnly">Edit this paragraph too.</p>
+</block>
+
+<div>
+  <h2>Features</h2>
+  <p>This paragraph cannot be edited (inherits "disabled").</p>
+  <p blockEditingMode="contentOnly">But this one can.</p>
+</div>
+
+<block name="core/buttons">
+  <block name="core/button" url="/contact">This button is frozen</block>
+</block>
+```
+
+The page default is `"disabled"`, so every block starts non-interactive. Then specific elements opt in to `"contentOnly"`, making just their text editable. The result: a page where the client can type into exactly two text fields (the hero heading and paragraph) and one feature paragraph. Everything else is locked.
+
+This works on any HTML element (`<h1>`, `<p>`, `<div>`, etc.) and on `<block>` elements. You can also set `blockEditingMode="default"` on specific elements to give full editing access:
+
+```html
+<block name="core/buttons" blockEditingMode="default">
+  <block name="core/button" url="/contact">Fully editable button</block>
+</block>
+```
+
+Now the client can change the button text, URL, styles, and any other setting. Everything else on the page remains frozen.
+
+### The Ancestor Cascade
+
+There is an important detail about how per-element overrides interact with container blocks. If a page default is `"disabled"` and you set `blockEditingMode="contentOnly"` on a heading inside a group, the heading needs to be reachable. But its parent group is `"disabled"`, which means it cannot be entered at all.
+
+Blockstudio handles this automatically. When a child block has an editing mode override, all of its ancestor blocks are set to `"contentOnly"` so the child remains accessible. You do not need to manually set modes on parent containers. Just set the override on the block you want to be editable, and the path to it opens up.
+
+```html title="index.php"
+<!-- page default: "disabled" -->
+<div>
+  <!-- this group is auto-set to "contentOnly" because it contains an override -->
+  <div>
+    <!-- this group is also auto-set to "contentOnly" -->
+    <p blockEditingMode="contentOnly">Deeply nested but still editable.</p>
+  </div>
+</div>
+```
+
+The ancestor cascade only elevates containers to `"contentOnly"`, never to `"default"`. This means ancestor groups become navigable (you can enter them) but not fully editable (you cannot change their settings).
+
+### The Decision Matrix
+
+Combining `templateLock` and `blockEditingMode` gives you a spectrum of control. Here are the most useful combinations:
+
+#### Developer controls everything
+
+```json title="page.json"
+{ "templateLock": "all" }
+```
+
+No `blockEditingMode` needed. The default `templateLock: "all"` prevents all changes. Use this for pages managed entirely through code.
+
+#### Client edits all text
+
+```json title="page.json"
+{ "templateLock": "contentOnly" }
+```
+
+The client can edit text in any block but cannot change the page structure. Simple and permissive.
+
+#### Client edits specific text only
+
+```json title="page.json"
+{
+  "templateLock": "all",
+  "blockEditingMode": "disabled"
+}
+```
+
+Combined with `blockEditingMode="contentOnly"` on specific elements in the template. This is the most precise option: the client can only edit exactly the blocks you mark.
+
+#### Client reorders fixed sections
+
+```json title="page.json"
+{ "templateLock": "insert" }
+```
+
+The client can rearrange sections and edit content but cannot add or delete blocks. Good for pages with a fixed set of sections in a flexible order.
+
+#### Client has full control
+
+```json title="page.json"
+{ "templateLock": false }
+```
+
+The template is a starting point. The client can do anything from there.
+
+## Preserving Client Edits
+
+By default, when you update a template file, Blockstudio replaces the entire page content. If the client edited a heading in the editor, that edit is gone after the next sync. This is fine for developer-controlled pages, but for pages where clients contribute content, you need a way to preserve their work.
+
+### Keys
+
+Add a `key` attribute to any element to mark it for merging instead of replacement:
+
+```html title="index.php"
+<block name="core/cover" key="hero" url="https://example.com/hero.jpg">
+  <h1>Default Hero Title</h1>
+  <p>Default hero description.</p>
+</block>
+
+<div key="features">
+  <h2>Features</h2>
+  <p>Feature introduction text.</p>
+</div>
+
+<div>
+  <h2>Unkeyed Section</h2>
+  <p>This gets replaced on every sync.</p>
+</div>
+```
+
+When the template changes and the page re-syncs:
+
+- **Keyed blocks** keep the client's content (text, inner blocks, formatting). The template's structural attributes (like the cover's `url`) still update.
+- **Unkeyed blocks** are replaced entirely with the template version.
+
+A key protects the entire block and all of its children. You do not need to key individual paragraphs inside a keyed group. The group's key covers everything within it.
+
+### Keys must be unique
+
+Keys are globally unique across the entire template. If two elements share the same key, the second one is treated as unkeyed (and a PHP warning is emitted). Use descriptive names: `"hero"`, `"features"`, `"cta"`, `"testimonial-section"`.
+
+### Evolving templates
+
+Keys let you add new sections to a template without disturbing existing client content:
+
+```html title="index.php (version 1)"
+<h1 key="title">Welcome</h1>
+<div key="services">
+  <h2>Our Services</h2>
+  <p>We do great work.</p>
+</div>
+```
+
+```html title="index.php (version 2, added later)"
+<h1 key="title">Welcome</h1>
+<div key="services">
+  <h2>Our Services</h2>
+  <p>We do great work.</p>
+</div>
+<div key="testimonials">
+  <h2>What Clients Say</h2>
+  <p>Default testimonial text.</p>
+</div>
+```
+
+On sync, the title and services keep the client's edits. The new testimonials section appears with the template's default content. If you later remove a keyed block from the template, it is deleted from the page.
+
+### The complete client workflow
+
+Putting it all together for a real project:
+
+```json title="pages/homepage/page.json"
+{
+  "name": "homepage",
+  "title": "Home",
+  "slug": "home",
+  "postStatus": "publish",
+  "templateLock": "all",
+  "blockEditingMode": "disabled"
+}
+```
+
+```html title="pages/homepage/index.php"
+<block name="core/cover" key="hero" url="https://example.com/hero.jpg">
+  <h1 blockEditingMode="contentOnly">Your Company Name</h1>
+  <p blockEditingMode="contentOnly">Your tagline goes here.</p>
+  <block name="core/buttons">
+    <block name="core/button" url="/contact">Contact Us</block>
+  </block>
+</block>
+
+<div key="features">
+  <h2 blockEditingMode="contentOnly">What We Do</h2>
+  <block name="core/columns">
+    <block name="core/column">
+      <h3 blockEditingMode="contentOnly">Service One</h3>
+      <p blockEditingMode="contentOnly">Describe this service.</p>
+    </block>
+    <block name="core/column">
+      <h3 blockEditingMode="contentOnly">Service Two</h3>
+      <p blockEditingMode="contentOnly">Describe this service.</p>
+    </block>
+    <block name="core/column">
+      <h3 blockEditingMode="contentOnly">Service Three</h3>
+      <p blockEditingMode="contentOnly">Describe this service.</p>
+    </block>
+  </block>
+</div>
+
+<block name="core/media-text" key="about" mediaurl="https://example.com/team.jpg" mediatype="image">
+  <h2 blockEditingMode="contentOnly">About Us</h2>
+  <p blockEditingMode="contentOnly">Tell your story here.</p>
+</block>
+
+<div key="cta">
+  <h2 blockEditingMode="contentOnly">Ready to get started?</h2>
+  <block name="core/buttons">
+    <block name="core/button" url="/contact">Get in Touch</block>
+  </block>
+</div>
+```
+
+This page has four keyed sections. The client can edit headings and paragraphs marked with `blockEditingMode="contentOnly"`, and those edits survive template updates. The developer controls the layout, images, button URLs, and overall structure. If the developer later adds a testimonials section between "about" and "cta", it appears on the next sync without disturbing any of the client's text.
+
+## Block Bindings: An Alternative to Keys
+
+WordPress 6.5 introduced the [Block Bindings API](https://developer.wordpress.org/block-editor/reference-guides/block-api/block-bindings/), which connects block attributes to post meta. Instead of storing editable content in the block markup (where keys protect it), the content lives in `wp_postmeta` (where template syncs cannot touch it).
+
+```html title="index.php"
+<h1 metadata='{"bindings":{"content":{"source":"core/post-meta","args":{"key":"hero_title"}}}}'>
+  Default Title
+</h1>
+
+<p metadata='{"bindings":{"content":{"source":"core/post-meta","args":{"key":"hero_description"}}}}'>
+  Default description.
+</p>
+```
+
+The meta keys must be registered in PHP:
+
+```php title="functions.php"
+register_post_meta( 'page', 'hero_title', array(
+    'show_in_rest' => true,
+    'single'       => true,
+    'type'         => 'string',
+    'default'      => 'Default Title',
+) );
+```
+
+Block bindings have two advantages over keys: the data is queryable with `WP_Query` via `meta_query`, and it is available in the REST API. The tradeoff is that you need to register each meta key in PHP, and bindings only work on individual block attributes (not complex nested content).
+
+Use keys for rich content sections where the block structure matters (a group with headings, paragraphs, and images). Use bindings for individual text values that you also need to query or display elsewhere.
+
+## Post Type Templates
+
+Use `templateFor` to set a default block structure for all new posts of a given type:
+
+```json title="pages/product-template/page.json"
+{
+  "name": "product-template",
+  "title": "Product Template",
+  "templateFor": "product",
+  "templateLock": "insert"
+}
+```
+
+```html title="pages/product-template/index.php"
+<h1>Product Name</h1>
+
+<block name="core/columns">
+  <block name="core/column">
+    <img src="" alt="Product image" />
+  </block>
+  <block name="core/column">
+    <p>Product description goes here.</p>
+    <block name="core/buttons">
+      <block name="core/button" url="#">Buy Now</block>
+    </block>
+  </block>
+</block>
+
+<div>
+  <h2>Specifications</h2>
+  <table>
+    <thead>
+      <tr><th>Feature</th><th>Value</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>Weight</td><td>1.2 kg</td></tr>
+    </tbody>
+  </table>
+</div>
+```
+
+Every new "product" post starts with this structure. The `templateLock: "insert"` lets editors rearrange sections and edit content but not add or remove blocks.
+
+## Tips
+
+**Sync only runs in admin.** Pages sync when you (or the client) visit the WordPress admin dashboard. If you deploy a template change but nobody logs in, the page does not update until the next admin visit. For automated deployments, call `Blockstudio\Pages::force_sync_all()` from a WP-CLI command or a deploy hook.
+
+**Pin important post IDs.** Use `postId` in `page.json` for pages referenced by menus, hardcoded links, or external systems. Without pinning, a deleted-and-recreated page gets a new ID, breaking those references.
+
+**Use `sync: false` for scaffolds.** If you want to create a page once and then hand it off entirely to the client, set `"sync": false`. The template creates the initial structure, and after that, template changes are ignored.
+
+**Lock and unlock via PHP.** Call `Blockstudio\Pages::lock('about')` to prevent a specific page from syncing (useful during client editing sprints). Call `Blockstudio\Pages::unlock('about')` to re-enable syncing.
+
+**Template engines.** Besides PHP, templates can be written in Twig (requires [Timber](https://timber.github.io/docs/)) or Blade (requires [jenssegers/blade](https://github.com/jenssegers/blade)). This is useful for loops and filters, but since templates are compiled at initialization time, there is no request context available. Stick with PHP if you need dynamic data.
+
+**Force sync ignores keys.** Calling `Pages::force_sync('about')` replaces the entire page content, ignoring keys and modification time checks. Use it when you intentionally want to reset a page to the template state.
+
+## Next Steps
+
+- [Pages reference](/docs/pages-and-patterns/pages): all `page.json` properties, the PHP API, and the keyed merging algorithm in detail.
+- [Pages & Patterns overview](/docs/pages-and-patterns): the HTML parser, block syntax reference, custom renderers, and element mapping.
+- [Patterns](/docs/pages-and-patterns/patterns): the same template syntax for reusable block patterns instead of pages.

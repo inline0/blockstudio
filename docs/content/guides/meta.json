@@ -3,6 +3,7 @@
   "pages": [
     "vibecoding",
     "migrating-from-acf",
-    "interactive-components"
+    "interactive-components",
+    "file-based-pages"
   ]
 }
