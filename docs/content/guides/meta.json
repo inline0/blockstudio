@@ -2,6 +2,7 @@
   "title": "Guides",
   "pages": [
     "vibecoding",
-    "migrating-from-acf"
+    "migrating-from-acf",
+    "interactive-components"
   ]
 }

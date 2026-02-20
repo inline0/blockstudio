@@ -1,0 +1,423 @@
+---
+title: Building Interactive Components
+description: Build accordions, tabs, modals, and like buttons with the WordPress Interactivity API. Complete examples with no build step required.
+---
+
+# Building Interactive Components
+
+WordPress blocks are static by default. The editor saves HTML to the database, the frontend renders it, and that is the end of the story. For many blocks this is exactly right. But some components need to respond to user interaction: toggling content, switching tabs, opening dialogs, updating counters.
+
+The [WordPress Interactivity API](https://developer.wordpress.org/block-editor/reference-guides/interactivity-api/) adds reactive, client-side behavior to blocks using HTML attributes called directives. You write `data-wp-on--click` instead of `addEventListener`, `data-wp-bind--hidden` instead of `element.hidden = true`. The API handles reactivity, context isolation, and hydration automatically.
+
+Blockstudio handles the wiring. Set `"interactivity": true` in your block.json and Blockstudio generates the importmap, loads the API in both the editor and frontend, and resolves your ES module imports. No build step, no bundler, no webpack config. See the [Interactivity reference](/docs/blocks/interactivity) for configuration details.
+
+This guide walks through four complete components, each introducing new concepts. By the end, you will have working patterns for the most common interactive UI elements.
+
+## How It Works
+
+### Directives
+
+Directives are `data-wp-*` attributes that declare reactive behavior directly in your HTML. The most commonly used ones:
+
+| Directive | Purpose | Example |
+|-----------|---------|---------|
+| `data-wp-interactive` | Define the store namespace | `data-wp-interactive="myBlock"` |
+| `data-wp-context` | Local reactive state per instance | `data-wp-context='{ "isOpen": false }'` |
+| `data-wp-on--[event]` | Event handler | `data-wp-on--click="actions.toggle"` |
+| `data-wp-bind--[attr]` | Bind an HTML attribute | `data-wp-bind--hidden="!context.isOpen"` |
+| `data-wp-class--[name]` | Toggle a CSS class | `data-wp-class--is-active="context.isActive"` |
+| `data-wp-text` | Set text content | `data-wp-text="state.count"` |
+| `data-wp-style--[prop]` | Set an inline style | `data-wp-style--opacity="context.opacity"` |
+| `data-wp-on-document--[event]` | Global document event | `data-wp-on-document--keydown="actions.onKeydown"` |
+| `data-wp-watch` | Run callback when state changes | `data-wp-watch="callbacks.log"` |
+| `data-wp-each` | Loop over an array | `data-wp-each="state.items"` |
+
+### The Store
+
+Every interactive block has a store, created by calling `store()` with a namespace and an object containing `actions`, `callbacks`, and optionally `state`:
+
+```js
+import { store, getContext } from '@wordpress/interactivity';
+
+store('myBlock', {
+  actions: {
+    toggle: () => {
+      const context = getContext();
+      context.isOpen = !context.isOpen;
+    },
+  },
+});
+```
+
+Inside actions, `getContext()` returns the nearest `data-wp-context` object up the DOM tree. `getElement()` returns a reference to the DOM element that triggered the action, useful for reading `data-*` attributes.
+
+### Context vs. State
+
+**Context** (`data-wp-context`) is local to each block instance. If you place three accordions on a page, each one has its own `isOpen` value. Toggling one does not affect the others.
+
+**State** (`wp_interactivity_state()`) is global and shared across all instances of a block. Use it for data that comes from the server (like a comment count) or values that should be the same everywhere.
+
+Context works in both the editor and the frontend. State is frontend-only because WordPress serializes it into a script tag that is not included in editor REST API responses.
+
+## Accordion
+
+The simplest interactive pattern: click a button, toggle some content. This example needs only three directives and a few lines of JavaScript.
+
+```json title="block.json"
+{
+  "name": "my-theme/accordion",
+  "title": "Accordion",
+  "category": "text",
+  "icon": "arrow-down-alt2",
+  "description": "Expandable content section.",
+  "blockstudio": {
+    "interactivity": true,
+    "attributes": [
+      { "id": "heading", "type": "text", "label": "Heading", "default": "Accordion heading" },
+      { "id": "body", "type": "textarea", "label": "Body", "default": "Accordion content goes here." }
+    ]
+  }
+}
+```
+
+```php title="index.php"
+<div useBlockProps
+     data-wp-interactive="myTheme/accordion"
+     data-wp-context='{ "isOpen": false }'>
+  <button
+    data-wp-on--click="actions.toggle"
+    data-wp-bind--aria-expanded="context.isOpen"
+    aria-controls="accordion-panel"
+    style="all: unset; cursor: pointer; display: flex; justify-content: space-between; align-items: center; width: 100%; padding: 1rem; font-weight: 600; font-size: 1.125rem;">
+    <?php echo esc_html( $a['heading'] ); ?>
+    <span aria-hidden="true" data-wp-text="context.isOpen ? '−' : '+'">+</span>
+  </button>
+  <div
+    id="accordion-panel"
+    role="region"
+    data-wp-bind--hidden="!context.isOpen"
+    style="padding: 0 1rem 1rem;">
+    <p><?php echo esc_html( $a['body'] ); ?></p>
+  </div>
+</div>
+```
+
+```js title="script.js"
+import { store, getContext } from '@wordpress/interactivity';
+
+store('myTheme/accordion', {
+  actions: {
+    toggle: () => {
+      const context = getContext();
+      context.isOpen = !context.isOpen;
+    },
+  },
+});
+```
+
+**How it works:**
+
+1. `data-wp-context='{ "isOpen": false }'` creates a local boolean for this instance.
+2. Clicking the button calls `actions.toggle`, which flips `context.isOpen`.
+3. `data-wp-bind--hidden="!context.isOpen"` hides or shows the panel.
+4. `data-wp-bind--aria-expanded` and `data-wp-text` update the button state for accessibility and the visual indicator.
+
+Because each block instance gets its own context, placing multiple accordions on a page works out of the box. They toggle independently.
+
+## Tabs
+
+Tabs introduce two new concepts: `data-wp-class--*` for toggling CSS classes, and `getElement()` for reading data attributes from the element that triggered an action.
+
+This example uses a repeater field so editors can add as many tabs as they need.
+
+```json title="block.json"
+{
+  "name": "my-theme/tabs",
+  "title": "Tabs",
+  "category": "text",
+  "icon": "table-row-after",
+  "description": "Tabbed content switcher.",
+  "blockstudio": {
+    "interactivity": true,
+    "attributes": [
+      {
+        "id": "tabs",
+        "type": "repeater",
+        "label": "Tabs",
+        "min": 1,
+        "max": 8,
+        "attributes": [
+          { "id": "label", "type": "text", "label": "Tab Label", "default": "Tab" },
+          { "id": "content", "type": "textarea", "label": "Content", "default": "Tab content goes here." }
+        ]
+      }
+    ]
+  }
+}
+```
+
+```php title="index.php"
+<div useBlockProps
+     data-wp-interactive="myTheme/tabs"
+     data-wp-context='{ "activeTab": 0 }'>
+  <div role="tablist" style="display: flex; gap: 0; border-bottom: 2px solid #e5e7eb;">
+    <?php foreach ( $a['tabs'] as $i => $tab ) : ?>
+      <button
+        role="tab"
+        data-index="<?php echo esc_attr( $i ); ?>"
+        data-wp-on--click="actions.selectTab"
+        data-wp-class--is-active-tab="callbacks.isActiveTab"
+        data-wp-bind--aria-selected="callbacks.isActiveTab"
+        style="padding: 0.75rem 1.5rem; background: none; border: none; cursor: pointer; font-weight: 500; border-bottom: 2px solid transparent; margin-bottom: -2px;">
+        <?php echo esc_html( $tab['label'] ); ?>
+      </button>
+    <?php endforeach; ?>
+  </div>
+  <?php foreach ( $a['tabs'] as $i => $tab ) : ?>
+    <div
+      role="tabpanel"
+      data-index="<?php echo esc_attr( $i ); ?>"
+      data-wp-bind--hidden="!callbacks.isActiveTab"
+      style="padding: 1.5rem 0;">
+      <p><?php echo esc_html( $tab['content'] ); ?></p>
+    </div>
+  <?php endforeach; ?>
+</div>
+```
+
+```js title="script.js"
+import { store, getContext, getElement } from '@wordpress/interactivity';
+
+store('myTheme/tabs', {
+  actions: {
+    selectTab: () => {
+      const context = getContext();
+      const { ref } = getElement();
+      context.activeTab = parseInt(ref.dataset.index, 10);
+    },
+  },
+  callbacks: {
+    isActiveTab: () => {
+      const context = getContext();
+      const { ref } = getElement();
+      return context.activeTab === parseInt(ref.dataset.index, 10);
+    },
+  },
+});
+```
+
+```css title="style.css"
+.is-active-tab {
+  border-bottom-color: currentColor !important;
+  color: var(--wp--preset--color--primary, #111);
+}
+```
+
+**What is new here:**
+
+- **`getElement()`** returns `{ ref }` where `ref` is the DOM element. We read `data-index` to know which tab was clicked. This avoids creating a separate action for each tab.
+- **`callbacks`** are derived values that re-evaluate when context changes. Both the tab buttons and panels use `callbacks.isActiveTab` to check if their index matches `context.activeTab`.
+- **`data-wp-class--is-active-tab`** adds or removes the `is-active-tab` class based on the callback return value.
+
+## Modal
+
+The modal introduces document-level event handling with `data-wp-on-document--keydown` for closing on Escape, and backdrop click-to-close. It also demonstrates proper dialog accessibility attributes.
+
+```json title="block.json"
+{
+  "name": "my-theme/modal",
+  "title": "Modal",
+  "category": "text",
+  "icon": "external",
+  "description": "Button that opens a modal dialog.",
+  "blockstudio": {
+    "interactivity": true,
+    "attributes": [
+      { "id": "buttonText", "type": "text", "label": "Button Text", "default": "Open Modal" },
+      { "id": "title", "type": "text", "label": "Modal Title", "default": "Modal Title" },
+      { "id": "body", "type": "textarea", "label": "Modal Body", "default": "Modal content goes here." }
+    ]
+  }
+}
+```
+
+```php title="index.php"
+<div useBlockProps
+     data-wp-interactive="myTheme/modal"
+     data-wp-context='{ "isOpen": false }'>
+  <button
+    data-wp-on--click="actions.open"
+    style="padding: 0.75rem 1.5rem; background: #111; color: #fff; border: none; border-radius: 6px; cursor: pointer; font-size: 1rem;">
+    <?php echo esc_html( $a['buttonText'] ); ?>
+  </button>
+
+  <div
+    data-wp-bind--hidden="!context.isOpen"
+    data-wp-on--click="actions.backdropClick"
+    data-wp-on-document--keydown="actions.onKeydown"
+    style="position: fixed; inset: 0; z-index: 9999; display: flex; align-items: center; justify-content: center; background: rgba(0,0,0,0.5);">
+    <div
+      role="dialog"
+      aria-modal="true"
+      data-wp-bind--aria-label="context.isOpen ? '<?php echo esc_attr( $a['title'] ); ?>' : false"
+      data-wp-on--click="actions.stopPropagation"
+      style="background: #fff; border-radius: 12px; padding: 2rem; max-width: 32rem; width: 100%; margin: 1rem; position: relative;">
+      <h2 style="margin: 0 0 1rem; font-size: 1.25rem;"><?php echo esc_html( $a['title'] ); ?></h2>
+      <p style="margin: 0 0 1.5rem; color: #555;"><?php echo esc_html( $a['body'] ); ?></p>
+      <button
+        data-wp-on--click="actions.close"
+        style="padding: 0.5rem 1rem; background: #f3f4f6; border: none; border-radius: 6px; cursor: pointer;">
+        Close
+      </button>
+    </div>
+  </div>
+</div>
+```
+
+```js title="script.js"
+import { store, getContext } from '@wordpress/interactivity';
+
+store('myTheme/modal', {
+  actions: {
+    open: () => {
+      const context = getContext();
+      context.isOpen = true;
+    },
+    close: () => {
+      const context = getContext();
+      context.isOpen = false;
+    },
+    backdropClick: () => {
+      const context = getContext();
+      context.isOpen = false;
+    },
+    stopPropagation: (event) => {
+      event.stopPropagation();
+    },
+    onKeydown: (event) => {
+      if (event.key === 'Escape') {
+        const context = getContext();
+        context.isOpen = false;
+      }
+    },
+  },
+});
+```
+
+**What is new here:**
+
+- **`data-wp-on-document--keydown`** listens on the `document` instead of the element itself. The handler fires regardless of which element has focus, so Escape works from anywhere.
+- **Backdrop click-to-close** uses two layers: the overlay div calls `actions.backdropClick`, while the inner dialog calls `actions.stopPropagation` to prevent clicks inside the dialog from closing it.
+- **`role="dialog"` and `aria-modal="true"`** tell screen readers that this is a modal dialog. The `aria-label` is bound so it only applies when the modal is visible.
+- The `hidden` attribute on the overlay both hides the modal and prevents the document keydown listener from firing when the modal is closed, because directives on hidden elements are paused.
+
+## Like Button with Server State
+
+This example combines server-side state with client-side actions. The like count is initialized from PHP using `wp_interactivity_state()`, and the button updates it on click.
+
+```json title="block.json"
+{
+  "name": "my-theme/like-button",
+  "title": "Like Button",
+  "category": "text",
+  "icon": "heart",
+  "description": "A like button with a count.",
+  "blockstudio": {
+    "interactivity": true,
+    "attributes": [
+      { "id": "itemId", "type": "text", "label": "Item ID", "default": "post-1" }
+    ]
+  }
+}
+```
+
+```php title="index.php"
+<?php
+$item_id = $a['itemId'];
+$count   = (int) get_option( "likes_{$item_id}", 0 );
+
+wp_interactivity_state( 'myTheme/likeButton', array(
+	'count' => $count,
+) );
+?>
+<div useBlockProps
+     data-wp-interactive="myTheme/likeButton"
+     data-wp-context='{ "liked": false }'>
+  <button
+    data-wp-on--click="actions.like"
+    data-wp-class--is-liked="context.liked"
+    style="display: inline-flex; align-items: center; gap: 0.5rem; padding: 0.5rem 1rem; border: 2px solid #e5e7eb; border-radius: 999px; background: none; cursor: pointer; font-size: 1rem; transition: all 0.2s;">
+    <span data-wp-text="context.liked ? '❤️' : '🤍'">🤍</span>
+    <span data-wp-text="state.count"><?php echo esc_html( $count ); ?></span>
+  </button>
+</div>
+```
+
+```js title="script.js"
+import { store, getContext } from '@wordpress/interactivity';
+
+const { state } = store('myTheme/likeButton', {
+  actions: {
+    like: () => {
+      const context = getContext();
+      if (context.liked) {
+        context.liked = false;
+        state.count--;
+      } else {
+        context.liked = true;
+        state.count++;
+      }
+    },
+  },
+});
+```
+
+```css title="style.css"
+.is-liked {
+  border-color: #ef4444 !important;
+  background: #fef2f2 !important;
+}
+```
+
+**What is new here:**
+
+- **`wp_interactivity_state()`** initializes the count from PHP. The value is serialized into the page HTML and available as `state.count` in directives and JavaScript.
+- **`state` vs `context`**: the count is in `state` (global, shared) while `liked` is in `context` (per-instance). If you had multiple like buttons for the same item, they would share the count but each could track its own liked status.
+- **Destructuring from `store()`**: the `store()` call returns a reactive `state` object that you can reference in your actions.
+
+**Important caveat:** Server state is frontend-only. In the editor, the block renders via the REST API, so `wp_interactivity_state()` is not included. The PHP-rendered fallback text (`<?php echo esc_html( $count ); ?>`) shows as the initial value in the editor preview. For editor-interactive state, use `data-wp-context` instead.
+
+## Tips and Patterns
+
+**Namespace conventions.** Use your theme or plugin name as a prefix: `myTheme/accordion`, `myPlugin/tabs`. This prevents collisions when multiple blocks on the same page use the Interactivity API.
+
+**No build step required.** Blockstudio loads `script.js` as a native ES module and generates the importmap for `@wordpress/interactivity` automatically. You write standard JavaScript with `import` statements and it works immediately.
+
+**Directives-only blocks.** If your block only uses `data-wp-context` with `data-wp-bind--hidden` or `data-wp-text`, you do not need a `script.js` at all. The Interactivity API handles these declaratively. The accordion example above could work without JavaScript if you used a checkbox hack, but the script approach is cleaner.
+
+**Debugging with `data-wp-watch`.** Add a watch callback to log context changes during development:
+
+```js
+store('myBlock', {
+  callbacks: {
+    debug: () => {
+      const context = getContext();
+      console.log('context changed:', { ...context });
+    },
+  },
+});
+```
+
+```html
+<div data-wp-watch="callbacks.debug" ...>
+```
+
+Remove it before shipping.
+
+**Keep context minimal.** Only put values in `data-wp-context` that actually change. Static data like labels and content should stay in PHP. The context JSON is serialized into every instance of the block, so large objects add weight to the page.
+
+## Next Steps
+
+- [Interactivity reference](/docs/blocks/interactivity): configuration options, editor support details, and the object form of the `interactivity` setting.
+- [Assets](/docs/blocks/assets): how Blockstudio loads `script.js`, `style.css`, and other block assets.
+- [WordPress Interactivity API docs](https://developer.wordpress.org/block-editor/reference-guides/interactivity-api/): the full API reference, including `data-wp-each`, `data-wp-init`, `data-wp-run`, and other directives not covered in this guide.
