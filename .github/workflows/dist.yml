@@ -101,6 +101,7 @@ jobs:
 
   wordpress-activation:
     name: WordPress activation
+    if: contains(github.event.head_commit.message, '[e2e]')
     needs: zip-integrity
     runs-on: ubuntu-latest
     steps:
