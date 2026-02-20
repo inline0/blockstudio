@@ -6,6 +6,7 @@
     "interactive-components",
     "file-based-pages",
     "block-context",
-    "field-patterns"
+    "field-patterns",
+    "block-library"
   ]
 }

@@ -16,7 +16,7 @@ export default function BlogIndex() {
       <p className="mb-8 text-fd-muted-foreground">
         News and updates from the Blockstudio team.
       </p>
-      <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
         {posts.map((post) => (
           <ArchiveCard
             key={post.info.path}

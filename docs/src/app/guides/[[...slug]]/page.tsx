@@ -14,7 +14,7 @@ function GuidesIndex() {
       <p className="mb-8 text-fd-muted-foreground">
         In-depth guides for building with Blockstudio.
       </p>
-      <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
         {pages.map((page) => (
           <ArchiveCard
             key={page.url}
