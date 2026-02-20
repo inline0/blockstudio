@@ -504,11 +504,12 @@ built-in block code editor have both been removed. All configuration now
 happens through `blockstudio.json` and PHP filters, which means your setup
 lives in version control alongside your blocks.
 
-The code editor was useful in earlier versions, but with Blockstudio
-positioning itself as an LLM-first toolkit it no longer makes sense to maintain
-an editor inside WordPress admin. AI coding assistants work best with real
-files in a real IDE. If you need to edit block code directly, use your editor
-of choice with the AI tools that work there.
+The code editor was useful in earlier versions for previewing blocks, but it
+never reached full parity with a real development environment. Several plugin
+features were held back over the years because they couldn't be supported
+inside the standalone editor. It was also never going to be a replacement for
+a full IDE. Removing it allows the plugin to focus entirely on file-based
+development without compromise.
 
 **License key.** No longer needed. Blockstudio is free and open source.
 
