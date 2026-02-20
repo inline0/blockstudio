@@ -397,6 +397,18 @@ add_filter('blockstudio/assets/enable', function($enable, $type, $block) {
 }, 10, 3);
 ```
 
+### disable
+
+This filter allows you to disable specific assets by their ID. Assets matching
+an ID in the returned array will not be rendered on the frontend.
+
+```php title="functions.php"
+add_filter('blockstudio/assets/disable', function($disabled) {
+  $disabled[] = 'my-block-style';
+  return $disabled;
+});
+```
+
 ### process/scss/import_paths
 
 This filter allows you to add additional paths to the `@import` statement of the
@@ -464,4 +476,29 @@ rendered.
 add_filter('blockstudio/render/footer', function($content) {
   return $content . '<script>console.log("loaded")</script>';
 });
+```
+
+## Error Handling
+
+### error/logged
+
+Action fired after an error is logged. Use this to send errors to external
+logging services.
+
+```php title="functions.php"
+add_action('blockstudio/error/logged', function($message, $level, $context) {
+  if ($level === 'error') {
+    my_external_logger($message, $context);
+  }
+}, 10, 3);
+```
+
+### error/exception
+
+Action fired after an exception is handled.
+
+```php title="functions.php"
+add_action('blockstudio/error/exception', function($exception, $context) {
+  my_error_tracker($exception);
+}, 10, 2);
 ```

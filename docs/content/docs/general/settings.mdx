@@ -35,7 +35,12 @@ The following properties are available:
     "assets": [],
     "markup": false
   },
-  "library": false
+  "library": false,
+  "blockEditor": {
+    "disableLoading": false,
+    "cssClasses": [],
+    "cssVariables": []
+  }
 }
 ```
 
@@ -95,3 +100,5 @@ Options set via the `blockstudio/settings/${setting}` filter will override the o
 | Option | Type | Default | Description |
 |--------|------|---------|-------------|
 | `disableLoading` | boolean | `false` | Disable block loading in editor |
+| `cssClasses` | array | `[]` | Stylesheet URLs to extract CSS classes from for the classes field autocomplete |
+| `cssVariables` | array | `[]` | Stylesheet URLs to extract CSS variables from for the code field autocomplete |

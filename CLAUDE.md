@@ -103,6 +103,11 @@ npm run build            # Generate + build
 - **No banner comments**: never use decorative separator lines like `// ==========`, `// -----`, `// ===== SECTION =====`, etc. Exception: in large test files with many assertions, a single `// Section Name` line is fine to separate groups.
 - **No em dashes**: never use em dashes in code, docs, or copy. Use periods, commas, colons, or rewrite the sentence.
 
+## CI
+
+- Lint (TSC + PHPCS) runs on every push to `main`.
+- E2E tests only run when the commit message contains `[e2e]`. Include `[e2e]` in the commit message when changes affect plugin functionality (PHP, TypeScript, tests). Skip it for docs-only, UI copy, or config changes.
+
 ## Key Rules for Claude
 
 1. **NEVER COMMIT WITHOUT TESTING** - Always run and verify tests pass before committing, unless explicitly instructed otherwise.
@@ -112,6 +117,7 @@ npm run build            # Generate + build
 5. **100% WordPress Coding Standards** - no exceptions
 6. **One class at a time** - migrate and test incrementally
 7. **Avoid direct `npx` for routine flows** - prefer `npm run` scripts from package.json
+8. **E2E CI gate** - Add `[e2e]` to commit messages when changes affect plugin functionality. Omit for docs/UI-only changes.
 
 ## Commands
 

@@ -31,6 +31,21 @@ add_filter( 'blockstudio/parser/renderers', function( $renderers, $parser ) {
 }, 10, 2 );
 ```
 
+### blockstudio/parser/element_mapping
+
+Override the default HTML element to block mapping. By default, standard HTML elements like `<h1>`, `<p>`, and `<img>` map to core WordPress blocks. Use this filter to point any element to a different block.
+
+```php
+add_filter( 'blockstudio/parser/element_mapping', function( $mapping ) {
+    $mapping['h1']  = 'custom/heading';
+    $mapping['h2']  = 'custom/heading';
+    $mapping['p']   = 'custom/paragraph';
+    $mapping['img'] = 'custom/image';
+
+    return $mapping;
+}, 10, 2 );
+```
+
 ## Pages
 
 ### blockstudio/pages/paths
