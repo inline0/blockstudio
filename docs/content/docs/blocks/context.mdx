@@ -80,4 +80,12 @@ echo $parent['someAttribute'];
 ?>
 ```
 
+Blockstudio handles `providesContext` automatically. You only need to add `usesContext` to the child block. There is no need to manually declare `providesContext` in the parent block's block.json, as Blockstudio registers it for all attributes.
+
 See [InnerBlocks Context](/docs/blocks/components/innerblocks#context) for more details.
+
+<GuideBanner
+  href="/guides/block-context"
+  title="Block Context and Communication"
+  description="Practical patterns: card grids, pricing tables, and section wrappers where blocks need to share data."
+/>

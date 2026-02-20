@@ -97,6 +97,30 @@ wp_interactivity_state( 'myBlock', array(
 
 Server-side state is available on the frontend only. WordPress serializes the state into a JSON script tag in the page output, which the Interactivity API reads during hydration. In the editor, blocks are rendered via the REST API, so the state data is not included in the response. Use `data-wp-context` for state that needs to work in both the editor and the frontend.
 
+## Callbacks vs. Actions
+
+Actions are triggered by user interactions (like `data-wp-on--click`). Callbacks are triggered reactively when state or context changes, using the `data-wp-watch` directive. Inside callbacks, you can call `getElement()` to access the underlying DOM element:
+
+```js title="script.js"
+import { store, getContext, getElement } from '@wordpress/interactivity';
+
+store('myBlock', {
+  callbacks: {
+    updateWidth: () => {
+      const { ref } = getElement();
+      const { isOpen } = getContext();
+      ref.style.width = isOpen ? '100%' : '0';
+    },
+  },
+});
+```
+
 ## Editor Support
 
 The Interactivity API is loaded inside the block editor iframe, so interactive directives work in editor previews. This includes `data-wp-context`, `data-wp-bind--*`, `data-wp-on--*`, `data-wp-text`, and custom store actions defined in `script.js`.
+
+<GuideBanner
+  href="/guides/interactive-components"
+  title="Building Interactive Components"
+  description="Complete examples with accordions, tabs, modals, and like buttons."
+/>

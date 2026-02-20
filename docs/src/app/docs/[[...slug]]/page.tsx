@@ -1,6 +1,7 @@
 import type { MDXComponents } from 'mdx/types';
 import { notFound } from 'next/navigation';
 import { DocsPage, mdxComponents } from 'onedocs';
+import { GuideBanner } from '@/components/guide-banner';
 import { source } from '@/lib/source';
 
 export default async function Page(props: {
@@ -14,7 +15,7 @@ export default async function Page(props: {
 
   return (
     <DocsPage toc={page.data.toc}>
-      <MDX components={mdxComponents as MDXComponents} />
+      <MDX components={{ ...mdxComponents, GuideBanner } as MDXComponents} />
     </DocsPage>
   );
 }

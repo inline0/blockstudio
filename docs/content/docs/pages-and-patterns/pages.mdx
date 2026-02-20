@@ -64,7 +64,7 @@ The `blockEditingMode` property controls how blocks can be edited in the editor.
 | `"contentOnly"` | Text editing only. Block text is editable but settings and structure are locked |
 | `"disabled"` | No editing. Blocks are completely non-interactive |
 
-Per-element overrides are set as HTML attributes on any element (`<h1>`, `<p>`, `<div>`, etc.) or on `<block>` elements. Ancestor container blocks of overridden elements are automatically set to `contentOnly` so their children remain accessible.
+Per-element overrides are set as HTML attributes on any element (`<h1>`, `<p>`, `<div>`, etc.) or on `<block>` elements. Ancestor container blocks of overridden elements are automatically set to `contentOnly` so their children remain accessible. This cascade walks up from the overridden element to the page root, so you only need to set `blockEditingMode` on the elements you want to make editable.
 
 ## Template Lock
 
@@ -364,3 +364,9 @@ Blockstudio\Pages::lock('about');
 // Unlock a page
 Blockstudio\Pages::unlock('about');
 ```
+
+<GuideBanner
+  href="/guides/file-based-pages"
+  title="Building File-Based Pages"
+  description="Template locking, block editing modes, keyed merging, and controlling what clients can edit."
+/>
