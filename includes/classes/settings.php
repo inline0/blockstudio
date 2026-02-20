@@ -208,7 +208,6 @@ class Settings {
 			$assets                        = apply_filters( 'blockstudio/assets', true );
 			$settings['assets']['enqueue'] = $assets;
 		}
-
 	}
 
 	/**
