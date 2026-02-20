@@ -32,6 +32,7 @@ _reactgrab_reference/
 # Build artifacts
 artifacts/
 .last-run.json
+*.tsbuildinfo
 
 # Package build (keep compiled assets for now)
 package/node_modules/
