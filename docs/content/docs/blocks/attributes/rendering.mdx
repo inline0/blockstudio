@@ -131,6 +131,52 @@ The icon field returns an object with `set`, `subSet`, and `icon` keys. Use the 
 
 `bs_render_icon()` echoes the SVG directly. `bs_icon()` returns it as a string.
 
+### Attributes
+
+The attributes field type returns an array of `{attribute, value}` pairs for rendering as HTML attributes. Use `bs_render_data_attributes()` to output them:
+
+<Tabs items={['PHP', 'Twig']}>
+  <Tab value="PHP">
+```php title="index.php"
+<div <?php bs_render_data_attributes($a['attributes']); ?>>
+  Content
+</div>
+```
+  </Tab>
+  <Tab value="Twig">
+```twig title="index.twig"
+<div {{ fn('bs_render_data_attributes', a.attributes) }}>
+  Content
+</div>
+```
+  </Tab>
+</Tabs>
+
+`bs_render_data_attributes()` echoes the attributes directly. `bs_data_attributes()` returns the string.
+
+### Group
+
+Group fields prefix their child attribute IDs with the group name. Use `bs_get_group()` to extract group fields into a clean array:
+
+<Tabs items={['PHP', 'Twig']}>
+  <Tab value="PHP">
+```php title="index.php"
+<?php $group = bs_get_group($a, 'settings'); ?>
+<h1><?php echo $group['title']; ?></h1>
+<p><?php echo $group['description']; ?></p>
+```
+  </Tab>
+  <Tab value="Twig">
+```twig title="index.twig"
+{% set group = fn('bs_get_group', a, 'settings') %}
+<h1>{{ group.title }}</h1>
+<p>{{ group.description }}</p>
+```
+  </Tab>
+</Tabs>
+
+This strips the group prefix from attribute keys. For example, `$a['settings_title']` becomes `$group['title']`.
+
 ### Repeater
 
 Loop through repeater items:
