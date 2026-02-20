@@ -133,52 +133,11 @@ All of these tools can create and edit files in a Blockstudio project directory.
 
 ## Setting up your project for AI agents
 
-### Context files
-
-Most AI coding agents read a project-level context file that tells them about the codebase. The convention varies by tool:
-
-| File | Tool |
-|------|------|
-| `CLAUDE.md` | Claude Code |
-| `AGENTS.md` | Codex CLI, Gemini CLI, Copilot CLI, and others |
-| `.cursor/rules/*.mdc` | Cursor |
-| `.github/copilot-instructions.md` | GitHub Copilot |
-
-A good context file for a Blockstudio project should include:
-
-1. **Project structure**: where blocks, pages, and patterns live
-2. **Commands**: how to run tests, start the dev server, check coding standards
-3. **Conventions**: naming patterns, file organization, coding style
-4. **Boundaries**: what the agent should not touch
-
-Here is a minimal example:
-
-```markdown title="CLAUDE.md"
-# My WordPress Site
-
-Built with Blockstudio 7. File-based blocks with Tailwind CSS.
-
-## Structure
-
-- `blockstudio/` - Custom blocks (block.json + index.php + style.css)
-- `pages/` - File-based pages (page.json + index.php)
-- `patterns/` - Block patterns (pattern.json + index.php)
-- `blockstudio.json` - Plugin settings
-
-## Block pattern
-
-Every block has a `block.json` with field definitions and an `index.php`
-template. Use Tailwind utility classes for styling. Use `$a['fieldId']`
-to access field values in templates.
-
-## Commands
-
-- `wp server` - Start local development server
-```
-
 ### The LLM context file
 
-Blockstudio can generate a comprehensive context file at `your-site.com/blockstudio-llm.txt` that contains the full framework documentation and JSON schemas (~48k tokens). Enable it in your `blockstudio.json`:
+Blockstudio ships a pre-built context file that contains the complete framework documentation and all JSON schemas in a single file (~48k tokens). This is not a summary or a cheat sheet. It is the full reference: every field type, every template variable, every hook, every configuration option, plus the block.json, page.json, settings, and extension schemas.
+
+Enable it in your `blockstudio.json`:
 
 ```json title="blockstudio.json"
 {
@@ -188,7 +147,47 @@ Blockstudio can generate a comprehensive context file at `your-site.com/blockstu
 }
 ```
 
-Point your AI tool to this URL so it understands the full Blockstudio API. See the [AI integration docs](/docs/dev/ai) for tool-specific instructions.
+The file is now available at `your-site.com/blockstudio-llm.txt`. Point your AI tool to this URL and it will understand the entire Blockstudio API without any additional instruction. See the [AI integration docs](/docs/dev/ai) for tool-specific setup.
+
+This single file replaces the need to write framework-specific instructions yourself. An agent with access to `blockstudio-llm.txt` knows how to create blocks, define fields, write templates, configure Tailwind, set up pages, and use every hook Blockstudio provides.
+
+### Project-specific context files
+
+Most AI coding agents also read a project-level context file for instructions specific to your codebase. The convention varies by tool:
+
+| File | Tool |
+|------|------|
+| `CLAUDE.md` | Claude Code |
+| `AGENTS.md` | Codex CLI, Gemini CLI, Copilot CLI, and others |
+| `.cursor/rules/*.mdc` | Cursor |
+| `.github/copilot-instructions.md` | GitHub Copilot |
+
+Since `blockstudio-llm.txt` already covers the framework, your project context file only needs to describe what is unique to your project: directory layout, naming conventions, commands, and boundaries.
+
+```markdown title="CLAUDE.md"
+# My WordPress Site
+
+Built with Blockstudio 7. File-based blocks with Tailwind CSS.
+
+Fetch https://example.com/blockstudio-llm.txt for full framework docs.
+
+## Structure
+
+- `blockstudio/` - Custom blocks (block.json + index.php)
+- `pages/` - File-based pages (page.json + index.php)
+- `patterns/` - Block patterns (pattern.json + index.php)
+- `blockstudio.json` - Plugin settings
+
+## Conventions
+
+- Use Tailwind utility classes for all styling
+- Keep blocks small and focused: one component per block
+- Use `$a['fieldId']` to access field values in templates
+
+## Commands
+
+- `wp server` - Start local development server
+```
 
 ## Developer tools for AI workflows
 
