@@ -1,0 +1,514 @@
+---
+title: Migrating from ACF Blocks
+description: A practical guide for moving your custom blocks from Advanced Custom Fields to Blockstudio. Side-by-side comparisons, field mappings, and step-by-step migration patterns.
+---
+
+# Migrating from ACF Blocks
+
+If you have been building custom WordPress blocks with ACF (Advanced Custom Fields), migrating to Blockstudio is straightforward. The concepts are similar: you define fields, write a template, and the block appears in the editor. The difference is that Blockstudio removes the PHP registration boilerplate and moves everything into JSON and template files.
+
+This guide walks through the migration step by step, with side-by-side comparisons of ACF and Blockstudio patterns.
+
+## The core difference
+
+ACF blocks require PHP code to register the block, define fields, and connect a render template. Blockstudio replaces all of that with file-based auto-discovery: create a folder with a `block.json` and an `index.php`, and the block is registered automatically.
+
+**ACF:**
+
+```php
+acf_register_block_type([
+  'name'            => 'hero',
+  'title'           => 'Hero',
+  'render_template' => 'blocks/hero/template.php',
+]);
+
+acf_add_local_field_group([
+  'key'      => 'group_hero',
+  'title'    => 'Hero Fields',
+  'fields'   => [
+    ['key' => 'field_title', 'name' => 'title', 'type' => 'text', 'label' => 'Title'],
+    ['key' => 'field_image', 'name' => 'image', 'type' => 'image', 'label' => 'Background', 'return_format' => 'array'],
+  ],
+  'location' => [[['param' => 'block', 'operator' => '==', 'value' => 'acf/hero']]],
+]);
+```
+
+```php title="blocks/hero/template.php"
+<?php
+$title = get_field('title');
+$image = get_field('image');
+?>
+<div class="hero" <?php if ($image) : ?>style="background-image: url(<?php echo esc_url($image['url']); ?>)"<?php endif; ?>>
+  <h1><?php echo esc_html($title); ?></h1>
+</div>
+```
+
+**Blockstudio:**
+
+```json title="blockstudio/hero/block.json"
+{
+  "name": "my-theme/hero",
+  "title": "Hero",
+  "blockstudio": {
+    "attributes": [
+      { "id": "title", "type": "text", "label": "Title" },
+      { "id": "image", "type": "files", "label": "Background", "multiple": false }
+    ]
+  }
+}
+```
+
+```php title="blockstudio/hero/index.php"
+<div useBlockProps class="hero" <?php if ($a['image']) : ?>style="background-image: url(<?php echo esc_url($a['image']['url']); ?>)"<?php endif; ?>>
+  <h1><?php echo esc_html($a['title']); ?></h1>
+</div>
+```
+
+No registration function. No field group. No render callback. The folder structure is the registration.
+
+## Block registration
+
+### ACF
+
+ACF blocks are registered with `acf_register_block_type()` in PHP, typically in `functions.php` or a plugin file. Each block needs a name, title, render template path, and optionally supports, icon, and category.
+
+### Blockstudio
+
+Create a folder in your theme's `blockstudio/` directory (or `blocks/` if you prefer). Add a `block.json` with the standard WordPress block metadata plus a `blockstudio` key. That is it.
+
+```
+theme/
+└── blockstudio/
+    └── hero/
+        ├── block.json
+        └── index.php
+```
+
+The `block.json` uses the standard [WordPress block.json format](https://developer.wordpress.org/block-editor/reference-guides/block-api/block-metadata/) with the `blockstudio` key for fields and configuration:
+
+```json title="block.json"
+{
+  "name": "my-theme/hero",
+  "title": "Hero",
+  "category": "theme",
+  "icon": "cover-image",
+  "description": "Full-width hero section with background image.",
+  "blockstudio": {
+    "attributes": []
+  }
+}
+```
+
+## Accessing field values
+
+This is the most common change you will make during migration.
+
+| ACF | Blockstudio |
+|-----|-------------|
+| `get_field('title')` | `$a['title']` |
+| `get_field('title', $post_id)` | `$a['title']` (always available) |
+| `the_field('title')` | `<?php echo $a['title']; ?>` |
+| `have_rows('items')` / `the_row()` | `foreach ($a['items'] as $item)` |
+| `get_sub_field('name')` | `$item['name']` |
+
+The `$a` variable is a shorthand for `$attributes` and contains all field values for the current block. It is always available in the template, both in the editor and on the frontend.
+
+### Template variables
+
+Blockstudio provides several variables in every template:
+
+| Variable | Shorthand | Description |
+|----------|-----------|-------------|
+| `$attributes` | `$a` | All field values |
+| `$block` | `$b` | Block metadata (name, title, dir, url, postId) |
+| `$context` | `$c` | Parent block context |
+| `$content` | | InnerBlocks content |
+| `$post_id` / `$postId` | | Current post ID (works in editor and frontend) |
+
+## Field type mapping
+
+Most ACF field types have a direct equivalent in Blockstudio. The JSON syntax is different, but the concepts map cleanly.
+
+### Text and content fields
+
+**ACF:**
+
+```php
+['name' => 'title', 'type' => 'text', 'label' => 'Title', 'default_value' => 'Hello']
+['name' => 'bio', 'type' => 'textarea', 'label' => 'Bio', 'rows' => 4]
+['name' => 'content', 'type' => 'wysiwyg', 'label' => 'Content']
+```
+
+**Blockstudio:**
+
+```json
+{ "id": "title", "type": "text", "label": "Title", "default": "Hello" }
+{ "id": "bio", "type": "textarea", "label": "Bio", "rows": 4 }
+{ "id": "content", "type": "wysiwyg", "label": "Content" }
+```
+
+For editable text in the block editor (not just a text input), use the `richtext` type with the `<RichText />` component:
+
+```json
+{ "id": "heading", "type": "richtext" }
+```
+
+```php title="index.php"
+<RichText attribute="heading" tag="h1" placeholder="Enter heading" />
+```
+
+### Image and file fields
+
+ACF's `image` and `file` fields map to Blockstudio's `files` type:
+
+**ACF:**
+
+```php
+['name' => 'photo', 'type' => 'image', 'return_format' => 'array']
+['name' => 'gallery', 'type' => 'gallery', 'return_format' => 'array']
+['name' => 'document', 'type' => 'file', 'return_format' => 'array']
+```
+
+**Blockstudio:**
+
+```json
+{ "id": "photo", "type": "files", "label": "Photo", "multiple": false }
+{ "id": "gallery", "type": "files", "label": "Gallery", "multiple": true }
+{ "id": "document", "type": "files", "label": "Document", "multiple": false, "allowedTypes": ["application/pdf"] }
+```
+
+The returned object structure is similar:
+
+```php
+// ACF
+$image = get_field('photo');
+echo $image['url'];
+echo $image['alt'];
+
+// Blockstudio
+echo $a['photo']['url'];
+echo $a['photo']['alt'];
+```
+
+Available properties: `url`, `id`, `alt`, `width`, `height`, `mime`, `type`, `size`.
+
+### Select, radio, and checkbox
+
+**ACF:**
+
+```php
+[
+  'name' => 'color',
+  'type' => 'select',
+  'choices' => ['red' => 'Red', 'blue' => 'Blue'],
+  'return_format' => 'value',
+]
+```
+
+**Blockstudio:**
+
+```json
+{
+  "id": "color",
+  "type": "select",
+  "label": "Color",
+  "options": [
+    { "value": "red", "label": "Red" },
+    { "value": "blue", "label": "Blue" }
+  ]
+}
+```
+
+Use `"returnFormat": "both"` to get both value and label:
+
+```php
+echo $a['color']['value'];  // "red"
+echo $a['color']['label'];  // "Red"
+```
+
+The same pattern applies to `radio` and `checkbox` types.
+
+### Toggle and true/false
+
+**ACF:**
+
+```php
+['name' => 'show_cta', 'type' => 'true_false', 'label' => 'Show CTA']
+```
+
+**Blockstudio:**
+
+```json
+{ "id": "showCta", "type": "toggle", "label": "Show CTA" }
+```
+
+### Link field
+
+**ACF:**
+
+```php
+['name' => 'cta', 'type' => 'link', 'return_format' => 'array']
+
+// Template
+$link = get_field('cta');
+echo $link['url'];
+echo $link['title'];
+echo $link['target'];
+```
+
+**Blockstudio:**
+
+```json
+{ "id": "cta", "type": "link", "label": "CTA", "opensInNewTab": true }
+```
+
+```php
+echo $a['cta']['url'];
+echo $a['cta']['title'];
+echo $a['cta']['target'];
+```
+
+### Color and gradient
+
+**ACF:**
+
+```php
+['name' => 'bgColor', 'type' => 'color_picker', 'label' => 'Background']
+```
+
+**Blockstudio:**
+
+```json
+{ "id": "bgColor", "type": "color", "label": "Background" }
+{ "id": "bgGradient", "type": "gradient", "label": "Background Gradient" }
+```
+
+The `color` type integrates with the WordPress color palette. The `gradient` type provides a gradient picker.
+
+### Number, range, and date
+
+**ACF:**
+
+```php
+['name' => 'count', 'type' => 'number', 'min' => 1, 'max' => 10]
+['name' => 'opacity', 'type' => 'range', 'min' => 0, 'max' => 100, 'step' => 5]
+['name' => 'eventDate', 'type' => 'date_picker']
+```
+
+**Blockstudio:**
+
+```json
+{ "id": "count", "type": "number", "label": "Count", "min": 1, "max": 10 }
+{ "id": "opacity", "type": "range", "label": "Opacity", "min": 0, "max": 100, "step": 5 }
+{ "id": "eventDate", "type": "date", "label": "Event Date" }
+```
+
+## Repeaters
+
+ACF's repeater field maps directly to Blockstudio's `repeater` type. The main difference is syntax: ACF uses `have_rows()` / `the_row()` / `get_sub_field()`, while Blockstudio returns a plain PHP array.
+
+**ACF:**
+
+```php
+['name' => 'features', 'type' => 'repeater', 'sub_fields' => [
+  ['name' => 'title', 'type' => 'text'],
+  ['name' => 'description', 'type' => 'textarea'],
+]]
+
+// Template
+if (have_rows('features')) :
+  while (have_rows('features')) : the_row();
+    echo get_sub_field('title');
+    echo get_sub_field('description');
+  endwhile;
+endif;
+```
+
+**Blockstudio:**
+
+```json
+{
+  "id": "features",
+  "type": "repeater",
+  "label": "Features",
+  "min": 1,
+  "max": 10,
+  "attributes": [
+    { "id": "title", "type": "text", "label": "Title" },
+    { "id": "description", "type": "textarea", "label": "Description" }
+  ]
+}
+```
+
+```php
+<?php foreach ($a['features'] as $feature) : ?>
+  <h3><?php echo esc_html($feature['title']); ?></h3>
+  <p><?php echo esc_html($feature['description']); ?></p>
+<?php endforeach; ?>
+```
+
+Blockstudio repeaters support nesting (repeater inside repeater) up to 3 levels.
+
+## Groups
+
+ACF's group field maps to Blockstudio's `group` type. Field IDs inside groups are prefixed with the group ID.
+
+**ACF:**
+
+```php
+['name' => 'author', 'type' => 'group', 'sub_fields' => [
+  ['name' => 'name', 'type' => 'text'],
+  ['name' => 'role', 'type' => 'text'],
+]]
+
+// Template
+$author = get_field('author');
+echo $author['name'];
+echo $author['role'];
+```
+
+**Blockstudio:**
+
+```json
+{
+  "id": "author",
+  "type": "group",
+  "title": "Author",
+  "attributes": [
+    { "id": "name", "type": "text", "label": "Name" },
+    { "id": "role", "type": "text", "label": "Role" }
+  ]
+}
+```
+
+```php
+<?php $author = bs_get_group($a, 'author'); ?>
+<p><?php echo esc_html($author['name']); ?></p>
+<p><?php echo esc_html($author['role']); ?></p>
+```
+
+The `bs_get_group()` helper strips the group prefix from field IDs, giving you clean access. Without it, you would access fields as `$a['author_name']` and `$a['author_role']`.
+
+## Conditional logic
+
+Both ACF and Blockstudio support conditional logic for showing and hiding fields based on other field values.
+
+**ACF:**
+
+```php
+['name' => 'showSubtitle', 'type' => 'true_false'],
+[
+  'name' => 'subtitle',
+  'type' => 'text',
+  'conditional_logic' => [[['field' => 'field_showSubtitle', 'operator' => '==', 'value' => '1']]]
+]
+```
+
+**Blockstudio:**
+
+```json
+{ "id": "showSubtitle", "type": "toggle", "label": "Show Subtitle" },
+{
+  "id": "subtitle",
+  "type": "text",
+  "label": "Subtitle",
+  "conditions": [[{ "id": "showSubtitle", "operator": "==", "value": true }]]
+}
+```
+
+Blockstudio conditions reference field IDs directly (not field keys). Available operators: `==`, `!=`, `includes`, `!includes`, `empty`, `!empty`, `<`, `>`, `<=`, `>=`.
+
+Blockstudio also supports global conditions based on post type, post ID, user role, and user ID:
+
+```json
+{
+  "conditions": [[{ "type": "postType", "operator": "==", "value": "page" }]]
+}
+```
+
+## InnerBlocks
+
+Both ACF and Blockstudio support InnerBlocks for nesting other blocks inside your custom block. The syntax in Blockstudio templates is more concise.
+
+**Blockstudio:**
+
+```php title="index.php"
+<div useBlockProps class="my-wrapper">
+  <InnerBlocks
+    allowedBlocks='<?php echo esc_attr(wp_json_encode(["core/heading", "core/paragraph", "core/image"])); ?>'
+    template='<?php echo esc_attr(wp_json_encode([
+      ["core/heading", ["placeholder" => "Section title"]],
+      ["core/paragraph", ["placeholder" => "Section content"]]
+    ])); ?>'
+    templateLock="insert"
+  />
+</div>
+```
+
+The `<InnerBlocks />` tag is replaced with the React component in the editor and with the rendered block content on the frontend.
+
+## Post meta storage
+
+In ACF, field values are stored in post meta by default. In Blockstudio, field values are stored as block attributes in the post content. If you need values in post meta (for `WP_Query`, REST API access, etc.), add the `storage` property:
+
+```json
+{
+  "id": "featured",
+  "type": "toggle",
+  "label": "Featured",
+  "storage": {
+    "type": "postMeta",
+    "postMetaKey": "is_featured"
+  }
+}
+```
+
+The meta key is auto-registered with `show_in_rest`. Access it anywhere with `get_post_meta($post_id, 'is_featured', true)`.
+
+For site-wide values (like ACF options pages), use option storage:
+
+```json
+{
+  "storage": {
+    "type": "option",
+    "optionKey": "site_company_name"
+  }
+}
+```
+
+## Extending existing blocks
+
+ACF lets you add fields to existing blocks using field groups with block location rules. Blockstudio has a dedicated extension system using `extend.json` files.
+
+Create an extension file in your blockstudio directory:
+
+```json title="blockstudio/extend-headings.json"
+{
+  "name": "core/heading",
+  "blockstudio": {
+    "extend": true,
+    "attributes": [
+      {
+        "id": "accentColor",
+        "type": "color",
+        "label": "Accent Color",
+        "set": [{ "attribute": "style", "value": "color: {attributes.accentColor}" }]
+      }
+    ]
+  }
+}
+```
+
+The `set` property automatically applies the field value to the block's HTML. Use wildcards to extend multiple blocks at once: `"name": "core/*"`.
+
+## Migration checklist
+
+1. **Create the block folder** in `theme/blockstudio/{block-name}/` with `block.json` and `index.php`.
+2. **Move field definitions** from `acf_add_local_field_group()` to the `blockstudio.attributes` array in `block.json`. Change `name` to `id`, remove `key`, and adjust type names as needed.
+3. **Update template access** from `get_field('name')` to `$a['name']`. Replace `have_rows()` loops with `foreach ($a['repeater'] as $item)`.
+4. **Replace `get_sub_field()`** with direct array access: `$item['fieldId']`.
+5. **Add `useBlockProps`** to the outermost element in your template for proper editor integration.
+6. **Move conditional logic** from ACF's `conditional_logic` to Blockstudio's `conditions`, referencing field IDs instead of field keys.
+7. **Add storage** for any fields that were previously queried via `get_post_meta()` or used in `WP_Query`.
+8. **Remove ACF registration code** (`acf_register_block_type`, `acf_add_local_field_group`, and any location rules for the migrated blocks).
+9. **Test in the editor** to verify fields appear correctly, then check the frontend output.
