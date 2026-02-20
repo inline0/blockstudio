@@ -32,6 +32,35 @@ my-block/
 
 This consistency means an agent that has built one block can build a hundred. There are no surprises, no special cases, no hidden configuration. The same pattern applies to pages (`page.json` + template), patterns (`pattern.json` + template), and extensions (`extend.json`).
 
+### Full pages as files
+
+Traditional WordPress page building requires the block editor: dragging blocks, configuring settings, saving through the admin. AI agents cannot do any of that. They need files.
+
+Blockstudio's [file-based pages](/docs/pages-and-patterns/pages) solve this completely. A `page.json` defines the page metadata, and an `index.php` template defines the block structure using HTML:
+
+```
+pages/about/
+├── page.json     # Title, slug, post type, template lock
+└── index.php     # Block structure as HTML
+```
+
+```html title="index.php"
+<block name="core/cover" key="hero" url="https://example.com/bg.jpg">
+  <h1 blockEditingMode="contentOnly">About Us</h1>
+  <p blockEditingMode="contentOnly">Our story.</p>
+</block>
+
+<div key="team">
+  <h2>The Team</h2>
+  <block name="my/team-member" />
+  <block name="my/team-member" />
+</div>
+```
+
+An agent can scaffold an entire WordPress page, complete with core blocks, custom blocks, template locking, and editing controls, all by writing two files. The page syncs to the database automatically when you visit the admin.
+
+This is one of the most powerful features for AI-assisted development. Instead of describing a page layout and manually assembling it in the editor, you describe it to an agent and it writes the template. The result is version-controlled, reproducible, and can be iterated on in seconds.
+
 ### No build step
 
 There is nothing to compile, bundle, or transpile. An agent creates a file, and it works immediately. SCSS is compiled server-side. ES modules are resolved at runtime. Tailwind CSS is compiled on every frontend request. The feedback loop between "agent writes code" and "code runs in the browser" is as short as it gets.
@@ -161,6 +190,60 @@ Blockstudio can generate a comprehensive context file at `your-site.com/blockstu
 
 Point your AI tool to this URL so it understands the full Blockstudio API. See the [AI integration docs](/docs/dev/ai) for tool-specific instructions.
 
+## Developer tools for AI workflows
+
+Blockstudio includes two developer tools designed specifically for AI-assisted development.
+
+### Canvas
+
+The [canvas](/docs/dev/canvas) is a Figma-like overview of all your Blockstudio pages, rendered as live iframe artboards in a single view. Pan with your trackpad, zoom with pinch or Ctrl+scroll.
+
+This is useful when working with AI agents because it gives you a visual overview of every page without switching tabs or navigating the WordPress admin. When an agent modifies a page template, you can see the result immediately. Enable live mode and the canvas refreshes automatically when files change.
+
+Enable it in `blockstudio.json`:
+
+```json title="blockstudio.json"
+{
+  "dev": {
+    "canvas": {
+      "enabled": true,
+      "adminBar": false
+    }
+  }
+}
+```
+
+Then navigate to `/wp-admin/admin.php?page=blockstudio-canvas`. Switch between a pages view (full-width artboards) and a blocks view (grid of all registered blocks with default values).
+
+### Element Grabber
+
+The [element grabber](/docs/dev/grab) solves a common problem in AI workflows: telling the agent which file renders a specific element on the page.
+
+Append `?blockstudio-devtools` to any frontend URL, then hold Cmd+C (Mac) or Ctrl+C (Windows) for 100ms. A crosshair selector activates and highlights Blockstudio blocks as you hover. Click an element to copy its context to the clipboard:
+
+```
+@<div>
+
+<div class="my-block">
+  Hello world
+</div>
+  in theme-name/blockstudio/blocks/my-block/index.php
+```
+
+Paste this into your AI coding tool and the agent immediately knows the file path, the HTML structure, and the element you are pointing at. No more manually looking up template file paths.
+
+Enable it in `blockstudio.json`:
+
+```json title="blockstudio.json"
+{
+  "dev": {
+    "grab": {
+      "enabled": true
+    }
+  }
+}
+```
+
 ## Practical patterns
 
 ### Building a single block
@@ -184,15 +267,24 @@ blockstudio/testimonial/
 
 ### Building a full page
 
-Blockstudio's file-based pages let an agent scaffold an entire WordPress page as a template:
+Blockstudio's [file-based pages](/docs/pages-and-patterns/pages) let an agent scaffold an entire WordPress page as a template. This is where the real leverage is: instead of building blocks one at a time, the agent creates the complete page structure with all its blocks in one pass.
 
 **Prompt:**
 
 > Create an "About" page with a hero section, team grid, and contact form
 > placeholder. Use existing blocks where possible, write new ones where
-> needed. Pin it to post ID 2.
+> needed. Pin it to post ID 2. Lock the template but make headings and
+> paragraphs content-editable.
 
-The agent creates the page template and any blocks it references, all as files.
+The agent creates:
+
+```
+pages/about/
+├── page.json     # postId: 2, templateLock: "all"
+└── index.php     # Full block structure with core + custom blocks
+```
+
+Plus any custom blocks it references (e.g., `blockstudio/team-member/`). The page syncs to WordPress automatically, complete with template locking and editing controls. The entire page is version-controlled and reproducible.
 
 ### Building a full site
 
