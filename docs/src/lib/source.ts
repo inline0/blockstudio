@@ -6,12 +6,13 @@ export const source = loader({
   source: docs.toFumadocsSource(),
 });
 
-export { blog, guides };
+export const guidesSource = loader({
+  baseUrl: '/guides',
+  source: guides.toFumadocsSource(),
+});
+
+export { blog };
 
 export function blogSlug(path: string): string {
-  return path.replace(/\.mdx?$/, '');
-}
-
-export function guideSlug(path: string): string {
   return path.replace(/\.mdx?$/, '');
 }

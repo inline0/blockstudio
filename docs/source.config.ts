@@ -5,13 +5,8 @@ export const docs = defineDocs({
   dir: "content/docs",
 });
 
-export const guides = defineCollections({
-  type: "doc",
+export const guides = defineDocs({
   dir: "content/guides",
-  schema: frontmatterSchema.extend({
-    date: z.date(),
-    author: z.string(),
-  }),
 });
 
 export const blog = defineCollections({

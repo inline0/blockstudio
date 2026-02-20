@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react';
 import type { LinkItemType } from '@fumadocs/ui/link-item';
 import { DocsLayout as FumaDocsLayout } from 'fumadocs-ui/layouts/docs';
-import { BookOpen, Newspaper } from 'lucide-react';
+import { BookOpen, Compass, Newspaper } from 'lucide-react';
 import { createBaseOptions } from 'onedocs';
 import { PlusBadge } from '@/components/plus-badge';
 import { source } from '@/lib/source';
@@ -19,6 +19,7 @@ function getLayoutOptions() {
     ...base,
     links: [
       { text: 'Docs', url: '/docs', icon: <BookOpen /> },
+      { text: 'Guides', url: '/guides', icon: <Compass /> },
       { text: 'Blog', url: '/blog', icon: <Newspaper /> },
       plusBadgeNav,
     ],

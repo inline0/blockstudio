@@ -7,6 +7,7 @@ import {
   Bot,
   FileText,
   LayoutGrid,
+  Compass,
   Newspaper,
   Puzzle,
 } from 'lucide-react';
@@ -64,6 +65,7 @@ function getLayoutOptions() {
       featuresMenuMobile,
       { text: 'Build with AI', url: '/ai', icon: <Bot /> },
       { text: 'Docs', url: '/docs', icon: <BookOpen /> },
+      { text: 'Guides', url: '/guides', icon: <Compass /> },
       { text: 'Blog', url: '/blog', icon: <Newspaper /> },
       plusBadgeNav,
     ],
