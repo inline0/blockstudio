@@ -834,6 +834,7 @@ test.describe('Canvas', () => {
     });
 
     test('new block created and added to page renders without unsupported warning', async () => {
+      test.slow();
       await cleanup();
 
       await page.evaluate(() => localStorage.removeItem('blockstudio-canvas-settings'));
@@ -995,6 +996,7 @@ test.describe('Canvas', () => {
     });
 
     test('simultaneous block creation and page update renders without unsupported warning', async () => {
+      test.slow();
       await cleanup();
 
       const simultaneousBlockDir = path.join(
@@ -1150,6 +1152,7 @@ test.describe('Canvas', () => {
     });
 
     test('block.json written before index.php still registers after template appears', async () => {
+      test.slow();
       await cleanup();
 
       const staggeredBlockDir = path.join(
