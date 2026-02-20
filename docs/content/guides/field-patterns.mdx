@@ -1,0 +1,967 @@
+---
+title: Field Patterns Cookbook
+description: Practical recipes for common field combinations. Conditional groups, smart selects, rich repeaters, organized settings, media patterns, queryable storage, and reusable field definitions.
+---
+
+# Field Patterns Cookbook
+
+Blockstudio's field system is simple in isolation: add a field to `blockstudio.attributes`, access it via `$a` in your template. But real blocks rarely have just one field. They have groups of related settings, fields that show or hide based on other fields, repeaters with complex row structures, and data that needs to be queryable outside the block editor.
+
+This guide collects practical recipes for common field patterns. Each recipe shows the `block.json` configuration and the corresponding template code. Copy them directly into your blocks and adapt as needed.
+
+## Conditional Fields
+
+The most common pattern: showing or hiding fields based on another field's value. This keeps the editor clean by only presenting relevant options.
+
+### Toggle to reveal options
+
+A CTA block where additional settings appear when the user enables a button:
+
+```json title="block.json"
+{
+  "name": "my-theme/cta",
+  "title": "Call to Action",
+  "blockstudio": {
+    "attributes": [
+      { "id": "heading", "type": "text", "label": "Heading", "default": "Ready to get started?" },
+      { "id": "description", "type": "textarea", "label": "Description" },
+      { "id": "showButton", "type": "toggle", "label": "Show Button", "default": true },
+      {
+        "id": "buttonText",
+        "type": "text",
+        "label": "Button Text",
+        "default": "Get Started",
+        "conditions": [[{ "id": "showButton", "operator": "==", "value": true }]]
+      },
+      {
+        "id": "buttonUrl",
+        "type": "link",
+        "label": "Button Link",
+        "conditions": [[{ "id": "showButton", "operator": "==", "value": true }]]
+      }
+    ]
+  }
+}
+```
+
+The button text and link fields only appear when the toggle is on. In the template, check the toggle before rendering:
+
+```php title="index.php"
+<div useBlockProps>
+  <h2><?php echo esc_html( $a['heading'] ); ?></h2>
+  <?php if ( $a['description'] ) : ?>
+    <p><?php echo esc_html( $a['description'] ); ?></p>
+  <?php endif; ?>
+  <?php if ( $a['showButton'] && $a['buttonUrl'] ) : ?>
+    <a href="<?php echo esc_url( $a['buttonUrl']['url'] ); ?>">
+      <?php echo esc_html( $a['buttonText'] ); ?>
+    </a>
+  <?php endif; ?>
+</div>
+```
+
+### Select to switch field sets
+
+A hero block where the background type determines which fields appear:
+
+```json title="block.json"
+{
+  "name": "my-theme/hero",
+  "title": "Hero",
+  "blockstudio": {
+    "attributes": [
+      { "id": "heading", "type": "text", "label": "Heading" },
+      {
+        "id": "bgType",
+        "type": "select",
+        "label": "Background Type",
+        "default": "color",
+        "options": [
+          { "value": "color", "label": "Solid Color" },
+          { "value": "gradient", "label": "Gradient" },
+          { "value": "image", "label": "Image" },
+          { "value": "video", "label": "Video" }
+        ]
+      },
+      {
+        "id": "bgColor",
+        "type": "color",
+        "label": "Background Color",
+        "conditions": [[{ "id": "bgType", "operator": "==", "value": "color" }]]
+      },
+      {
+        "id": "bgGradient",
+        "type": "gradient",
+        "label": "Background Gradient",
+        "conditions": [[{ "id": "bgType", "operator": "==", "value": "gradient" }]]
+      },
+      {
+        "id": "bgImage",
+        "type": "files",
+        "label": "Background Image",
+        "multiple": false,
+        "conditions": [[{ "id": "bgType", "operator": "==", "value": "image" }]]
+      },
+      {
+        "id": "bgVideo",
+        "type": "files",
+        "label": "Background Video",
+        "multiple": false,
+        "allowedTypes": ["video"],
+        "conditions": [[{ "id": "bgType", "operator": "==", "value": "video" }]]
+      },
+      {
+        "id": "overlay",
+        "type": "range",
+        "label": "Overlay Opacity",
+        "default": 50,
+        "min": 0,
+        "max": 100,
+        "conditions": [[{ "id": "bgType", "operator": "!=", "value": "color" }]]
+      }
+    ]
+  }
+}
+```
+
+The overlay opacity field uses `!=` to appear for everything except solid color. Only one background field shows at a time. In the template:
+
+```php title="index.php"
+<?php
+$bg_style = match ( $a['bgType'] ) {
+	'color'    => $a['bgColor'] ? "background-color: {$a['bgColor']}" : '',
+	'gradient' => $a['bgGradient'] ? "background: {$a['bgGradient']}" : '',
+	'image'    => $a['bgImage'] ? "background-image: url({$a['bgImage']['url']})" : '',
+	default    => '',
+};
+?>
+<div useBlockProps style="<?php echo esc_attr( $bg_style ); ?>">
+  <?php if ( $a['bgType'] === 'video' && $a['bgVideo'] ) : ?>
+    <video autoplay muted loop playsinline>
+      <source src="<?php echo esc_url( $a['bgVideo']['url'] ); ?>" />
+    </video>
+  <?php endif; ?>
+  <h1><?php echo esc_html( $a['heading'] ); ?></h1>
+</div>
+```
+
+### OR conditions
+
+Show a field when any of several conditions are true. Each inner array is an AND group; the outer array combines them with OR:
+
+```json
+{
+  "id": "caption",
+  "type": "text",
+  "label": "Caption",
+  "conditions": [
+    [{ "id": "bgType", "operator": "==", "value": "image" }],
+    [{ "id": "bgType", "operator": "==", "value": "video" }]
+  ]
+}
+```
+
+This shows the caption field when bgType is "image" OR "video".
+
+### Chained conditions
+
+Multiple conditions in the same inner array use AND logic:
+
+```json
+{
+  "id": "altText",
+  "type": "text",
+  "label": "Alt Text",
+  "conditions": [[
+    { "id": "bgType", "operator": "==", "value": "image" },
+    { "id": "bgImage", "operator": "!empty" }
+  ]]
+}
+```
+
+The alt text field only appears when bgType is "image" AND an image has been selected.
+
+### Global conditions
+
+Show fields based on post type, post ID, or user role instead of other field values:
+
+```json
+{
+  "id": "seoTitle",
+  "type": "text",
+  "label": "SEO Title",
+  "conditions": [[{ "type": "postType", "operator": "==", "value": "page" }]]
+}
+```
+
+Available global condition types: `postType`, `postId`, `userRole`, `userId`.
+
+## Organized Settings
+
+As blocks grow complex, organizing fields into logical groups keeps the inspector manageable.
+
+### Groups for visual organization
+
+Groups create collapsible sections in the inspector. An anonymous group (no `id`) is purely visual; its fields are accessed with their bare IDs:
+
+```json title="block.json"
+{
+  "name": "my-theme/card",
+  "title": "Card",
+  "blockstudio": {
+    "attributes": [
+      {
+        "type": "group",
+        "title": "Content",
+        "attributes": [
+          { "id": "title", "type": "text", "label": "Title" },
+          { "id": "description", "type": "textarea", "label": "Description" },
+          { "id": "image", "type": "files", "label": "Image", "multiple": false }
+        ]
+      },
+      {
+        "type": "group",
+        "title": "Link",
+        "attributes": [
+          { "id": "url", "type": "link", "label": "URL" },
+          { "id": "openInNewTab", "type": "toggle", "label": "Open in New Tab" }
+        ]
+      },
+      {
+        "type": "group",
+        "title": "Appearance",
+        "attributes": [
+          {
+            "id": "style",
+            "type": "select",
+            "label": "Style",
+            "default": "elevated",
+            "options": [
+              { "value": "elevated", "label": "Elevated" },
+              { "value": "outlined", "label": "Outlined" },
+              { "value": "flat", "label": "Flat" }
+            ]
+          },
+          { "id": "accentColor", "type": "color", "label": "Accent Color" }
+        ]
+      }
+    ]
+  }
+}
+```
+
+```php title="index.php"
+<div useBlockProps>
+  <h3><?php echo esc_html( $a['title'] ); ?></h3>
+  <p><?php echo esc_html( $a['description'] ); ?></p>
+</div>
+```
+
+Fields are accessed directly: `$a['title']`, `$a['style']`, `$a['accentColor']`. The groups only affect the inspector layout.
+
+### Named groups with bs_get_group
+
+When a group has an `id`, its child field IDs get prefixed. Use `bs_get_group()` to strip the prefix:
+
+```json title="block.json (partial)"
+{
+  "id": "author",
+  "type": "group",
+  "title": "Author",
+  "attributes": [
+    { "id": "name", "type": "text", "label": "Name" },
+    { "id": "role", "type": "text", "label": "Role" },
+    { "id": "avatar", "type": "files", "label": "Avatar", "multiple": false }
+  ]
+}
+```
+
+Without the helper, fields are accessed as `$a['author_name']`, `$a['author_role']`, `$a['author_avatar']`. With the helper:
+
+```php title="index.php"
+<?php $author = bs_get_group( $a, 'author' ); ?>
+<div class="author">
+  <?php if ( $author['avatar'] ) : ?>
+    <img src="<?php echo esc_url( $author['avatar']['url'] ); ?>" alt="" />
+  <?php endif; ?>
+  <p><?php echo esc_html( $author['name'] ); ?></p>
+  <p><?php echo esc_html( $author['role'] ); ?></p>
+</div>
+```
+
+Named groups are useful when the same field names appear in multiple groups (e.g., `author_name` and `company_name`) or when you want to pass the group as a unit to a partial template.
+
+### Grid layout in groups
+
+Use the `style` property to arrange group children side by side:
+
+```json
+{
+  "type": "group",
+  "title": "Dimensions",
+  "style": {
+    "display": "grid",
+    "grid-template-columns": "1fr 1fr",
+    "grid-gap": "16px"
+  },
+  "attributes": [
+    { "id": "width", "type": "unit", "label": "Width", "default": "100%", "switch": false },
+    { "id": "height", "type": "unit", "label": "Height", "default": "auto", "switch": false }
+  ]
+}
+```
+
+The two unit fields render side by side in the inspector instead of stacked. This works well for dimension pairs, margin/padding values, or any two fields that are conceptually paired.
+
+### Tabs for major sections
+
+When a block has many settings, tabs provide a cleaner organization than a long list of groups:
+
+```json title="block.json (partial)"
+{
+  "type": "tabs",
+  "attributes": [
+    {
+      "type": "group",
+      "title": "Content",
+      "attributes": [
+        { "id": "title", "type": "text", "label": "Title" },
+        { "id": "body", "type": "wysiwyg", "label": "Body" }
+      ]
+    },
+    {
+      "type": "group",
+      "title": "Media",
+      "attributes": [
+        { "id": "image", "type": "files", "label": "Image", "multiple": false },
+        { "id": "video", "type": "files", "label": "Video", "multiple": false, "allowedTypes": ["video"] }
+      ]
+    },
+    {
+      "type": "group",
+      "title": "Settings",
+      "attributes": [
+        { "id": "layout", "type": "select", "label": "Layout", "options": [
+          { "value": "left", "label": "Media Left" },
+          { "value": "right", "label": "Media Right" }
+        ]},
+        { "id": "fullWidth", "type": "toggle", "label": "Full Width" }
+      ]
+    }
+  ]
+}
+```
+
+Each tab's group children are accessed the same as anonymous groups: `$a['title']`, `$a['image']`, `$a['layout']`. Tabs are purely a UI container.
+
+## Repeater Patterns
+
+Repeaters let users add multiple rows of fields. They are essential for lists, grids, timelines, and any component with a variable number of items.
+
+### Basic repeater with constraints
+
+A features list with 1 to 6 items:
+
+```json title="block.json (partial)"
+{
+  "id": "features",
+  "type": "repeater",
+  "label": "Features",
+  "min": 1,
+  "max": 6,
+  "textButton": "Add Feature",
+  "attributes": [
+    { "id": "icon", "type": "icon", "label": "Icon" },
+    { "id": "title", "type": "text", "label": "Title", "default": "Feature" },
+    { "id": "description", "type": "textarea", "label": "Description" }
+  ]
+}
+```
+
+```php title="index.php"
+<div useBlockProps class="grid grid-cols-3 gap-8">
+  <?php foreach ( $a['features'] as $feature ) : ?>
+    <div>
+      <?php if ( $feature['icon'] ) : ?>
+        <?php bs_render_icon( $feature['icon'] ); ?>
+      <?php endif; ?>
+      <h3><?php echo esc_html( $feature['title'] ); ?></h3>
+      <p><?php echo esc_html( $feature['description'] ); ?></p>
+    </div>
+  <?php endforeach; ?>
+</div>
+```
+
+### Custom row labels
+
+By default, minimized repeater rows show a generic label. Use `textMinimized` to show a field value instead:
+
+```json
+{
+  "id": "team",
+  "type": "repeater",
+  "label": "Team Members",
+  "textMinimized": { "id": "name", "fallback": "Team Member" },
+  "attributes": [
+    { "id": "name", "type": "text", "label": "Name" },
+    { "id": "role", "type": "text", "label": "Role" },
+    { "id": "photo", "type": "files", "label": "Photo", "multiple": false }
+  ]
+}
+```
+
+When a row is collapsed, it shows the person's name instead of "Row 1". The `fallback` is used when the name field is empty. You can also add `prefix` and `suffix` strings.
+
+### Conditionals inside repeaters
+
+Fields inside a repeater can reference other fields in the same row using their bare `id` (no prefix needed):
+
+```json
+{
+  "id": "links",
+  "type": "repeater",
+  "label": "Links",
+  "attributes": [
+    { "id": "label", "type": "text", "label": "Label" },
+    { "id": "url", "type": "link", "label": "URL" },
+    {
+      "id": "isExternal",
+      "type": "toggle",
+      "label": "External Link"
+    },
+    {
+      "id": "externalNote",
+      "type": "message",
+      "label": "Note",
+      "description": "External links open in a new tab with rel=\"noopener\".",
+      "conditions": [[{ "id": "isExternal", "operator": "==", "value": true }]]
+    }
+  ]
+}
+```
+
+### Referencing outer fields from inside a repeater
+
+When a condition inside a repeater needs to check a field outside the repeater, add `"context": "main"`:
+
+```json title="block.json (partial)"
+{
+  "id": "showDescriptions",
+  "type": "toggle",
+  "label": "Show Descriptions",
+  "default": true
+},
+{
+  "id": "items",
+  "type": "repeater",
+  "label": "Items",
+  "attributes": [
+    { "id": "title", "type": "text", "label": "Title" },
+    {
+      "id": "description",
+      "type": "textarea",
+      "label": "Description",
+      "conditions": [[{
+        "id": "showDescriptions",
+        "operator": "==",
+        "value": true,
+        "context": "main"
+      }]]
+    }
+  ]
+}
+```
+
+Without `"context": "main"`, the condition would look for a `showDescriptions` field inside the repeater row. With it, the condition checks the root-level toggle.
+
+### Repeater with tabs inside
+
+Tabs work inside repeaters to organize complex row content:
+
+```json
+{
+  "id": "slides",
+  "type": "repeater",
+  "label": "Slides",
+  "textMinimized": { "id": "title", "fallback": "Slide" },
+  "attributes": [
+    {
+      "type": "tabs",
+      "attributes": [
+        {
+          "type": "group",
+          "title": "Content",
+          "attributes": [
+            { "id": "title", "type": "text", "label": "Title" },
+            { "id": "body", "type": "textarea", "label": "Body" }
+          ]
+        },
+        {
+          "type": "group",
+          "title": "Media",
+          "attributes": [
+            { "id": "image", "type": "files", "label": "Image", "multiple": false }
+          ]
+        }
+      ]
+    }
+  ]
+}
+```
+
+Each slide row has its own tabbed interface with Content and Media tabs.
+
+## Media Patterns
+
+### Single image with fallback
+
+```json title="block.json (partial)"
+{
+  "id": "image",
+  "type": "files",
+  "label": "Image",
+  "multiple": false
+}
+```
+
+```php title="index.php"
+<?php if ( $a['image'] ) : ?>
+  <img
+    src="<?php echo esc_url( $a['image']['url'] ); ?>"
+    alt="<?php echo esc_attr( $a['image']['alt'] ); ?>"
+    width="<?php echo esc_attr( $a['image']['width'] ); ?>"
+    height="<?php echo esc_attr( $a['image']['height'] ); ?>" />
+<?php endif; ?>
+```
+
+The default `returnFormat` is `"object"`, which provides `url`, `alt`, `width`, `height`, `id`, `mime`, `type`, and `size`.
+
+### Gallery with limit
+
+```json title="block.json (partial)"
+{
+  "id": "gallery",
+  "type": "files",
+  "label": "Gallery",
+  "multiple": true,
+  "max": 6,
+  "allowedTypes": ["image"]
+}
+```
+
+```php title="index.php"
+<?php if ( $a['gallery'] ) : ?>
+  <div class="grid grid-cols-3 gap-4">
+    <?php foreach ( $a['gallery'] as $image ) : ?>
+      <img
+        src="<?php echo esc_url( $image['url'] ); ?>"
+        alt="<?php echo esc_attr( $image['alt'] ); ?>" />
+    <?php endforeach; ?>
+  </div>
+<?php endif; ?>
+```
+
+### Disableable image with switch
+
+The `switch` property adds an eye icon that lets users disable the field without deleting the value:
+
+```json
+{
+  "id": "logo",
+  "type": "files",
+  "label": "Logo",
+  "multiple": false,
+  "switch": true
+}
+```
+
+```php title="index.php"
+<?php
+$is_disabled = ! empty( $a['_disabled'] ) && in_array( 'logo', $a['_disabled'], true );
+if ( $a['logo'] && ! $is_disabled ) : ?>
+  <img src="<?php echo esc_url( $a['logo']['url'] ); ?>" alt="" />
+<?php endif; ?>
+```
+
+The user can toggle the logo off without removing the uploaded file. Re-enabling brings the same file back.
+
+### Return format variations
+
+Control what the files field returns:
+
+```json
+// Full object (default)
+{ "id": "photo", "type": "files", "returnFormat": "object", "multiple": false }
+// $a['photo']['url'], $a['photo']['alt'], $a['photo']['width'], etc.
+
+// Just the ID
+{ "id": "photo", "type": "files", "returnFormat": "id", "multiple": false }
+// $a['photo'] = 42
+
+// Just the URL
+{ "id": "photo", "type": "files", "returnFormat": "url", "multiple": false }
+// $a['photo'] = "https://example.com/photo.jpg"
+```
+
+Use `"id"` when you need to call `wp_get_attachment_image()` yourself. Use `"url"` for simple background images. Use `"object"` (the default) for everything else.
+
+## Dynamic Options
+
+### Populate from posts
+
+A select field that lists all published pages:
+
+```json
+{
+  "id": "linkedPage",
+  "type": "select",
+  "label": "Linked Page",
+  "stylisedUi": true,
+  "populate": {
+    "type": "query",
+    "query": "posts",
+    "arguments": {
+      "post_type": "page",
+      "post_status": "publish",
+      "posts_per_page": -1
+    }
+  }
+}
+```
+
+The field automatically populates with page titles as labels and post IDs as values. Use `returnFormat` in the populate config to customize the mapping:
+
+```json
+"populate": {
+  "type": "query",
+  "query": "posts",
+  "arguments": { "post_type": "page" },
+  "returnFormat": { "value": "ID", "label": "post_title" }
+}
+```
+
+### Populate from taxonomy terms
+
+```json
+{
+  "id": "category",
+  "type": "select",
+  "label": "Category",
+  "stylisedUi": true,
+  "populate": {
+    "type": "query",
+    "query": "terms",
+    "arguments": {
+      "taxonomy": "category",
+      "hide_empty": true
+    }
+  }
+}
+```
+
+### Populate from a PHP function
+
+```json
+{
+  "id": "postType",
+  "type": "select",
+  "label": "Post Type",
+  "populate": {
+    "type": "function",
+    "function": "get_post_types",
+    "arguments": { "public": true }
+  }
+}
+```
+
+### Static options with populated additions
+
+Combine hardcoded options with dynamic ones. Use `position` to control where the populated options appear:
+
+```json
+{
+  "id": "source",
+  "type": "select",
+  "label": "Source",
+  "options": [
+    { "value": "manual", "label": "Manual Entry" },
+    { "value": "latest", "label": "Latest Posts" }
+  ],
+  "populate": {
+    "type": "query",
+    "query": "posts",
+    "arguments": { "post_type": "page" },
+    "position": "after"
+  }
+}
+```
+
+The static options appear first, followed by the dynamically populated pages.
+
+## Storing Data for Queries
+
+By default, field values live in block attributes inside `post_content`. They are not queryable with `WP_Query`. When you need to filter or sort posts by a field value, use storage.
+
+### Post meta for queryable fields
+
+```json title="block.json (partial)"
+{
+  "id": "featured",
+  "type": "toggle",
+  "label": "Featured",
+  "storage": {
+    "type": "postMeta",
+    "postMetaKey": "is_featured"
+  }
+},
+{
+  "id": "priority",
+  "type": "number",
+  "label": "Priority",
+  "default": 0,
+  "min": 0,
+  "max": 100,
+  "storage": {
+    "type": "postMeta",
+    "postMetaKey": "priority_score"
+  }
+}
+```
+
+Now you can query for featured posts:
+
+```php
+$featured = new WP_Query( array(
+    'meta_query' => array(
+        array(
+            'key'   => 'is_featured',
+            'value' => '1',
+        ),
+    ),
+    'orderby'  => 'meta_value_num',
+    'meta_key' => 'priority_score',
+    'order'    => 'DESC',
+) );
+```
+
+The meta keys are auto-registered with `show_in_rest`, so they are also available in the REST API.
+
+### Dual storage
+
+Store in both block attributes and post meta. The block attribute keeps the value available in templates via `$a`, while the post meta makes it queryable:
+
+```json
+{
+  "id": "eventDate",
+  "type": "date",
+  "label": "Event Date",
+  "storage": {
+    "type": ["block", "postMeta"],
+    "postMetaKey": "event_date"
+  }
+}
+```
+
+### Option storage for global values
+
+For site-wide settings that should be the same everywhere, use option storage:
+
+```json
+{
+  "id": "companyName",
+  "type": "text",
+  "label": "Company Name",
+  "storage": {
+    "type": "option",
+    "optionKey": "site_company_name"
+  }
+}
+```
+
+The value is stored in `wp_options` and accessible anywhere with `get_option('site_company_name')`. When the user edits this field in any block instance, the value updates globally.
+
+## Reusable Field Definitions
+
+When multiple blocks share the same field structure, define it once as a custom field and reference it everywhere.
+
+### Creating a custom field
+
+Create a `field.json` in your theme's `blockstudio/fields/` directory:
+
+```
+theme/
+└── blockstudio/
+    └── fields/
+        └── cta/
+            └── field.json
+```
+
+```json title="blockstudio/fields/cta/field.json"
+{
+  "name": "cta",
+  "title": "Call to Action",
+  "attributes": [
+    { "id": "label", "type": "text", "label": "Button Label", "default": "Learn More" },
+    { "id": "url", "type": "link", "label": "Button URL" },
+    { "id": "style", "type": "select", "label": "Button Style", "default": "primary", "options": [
+      { "value": "primary", "label": "Primary" },
+      { "value": "secondary", "label": "Secondary" },
+      { "value": "outline", "label": "Outline" }
+    ]}
+  ]
+}
+```
+
+### Using the custom field
+
+Reference it in any block with `"type": "custom/cta"`:
+
+```json title="block.json (partial)"
+{
+  "blockstudio": {
+    "attributes": [
+      { "id": "heading", "type": "text", "label": "Heading" },
+      { "type": "custom/cta" }
+    ]
+  }
+}
+```
+
+The CTA fields are inlined into the block. Access them directly: `$a['label']`, `$a['url']`, `$a['style']`.
+
+### Prefixed custom fields with idStructure
+
+When using the same custom field multiple times, add `idStructure` to prefix the IDs:
+
+```json title="block.json (partial)"
+{
+  "blockstudio": {
+    "attributes": [
+      { "type": "custom/cta", "idStructure": "primary_{id}" },
+      { "type": "custom/cta", "idStructure": "secondary_{id}" }
+    ]
+  }
+}
+```
+
+The first CTA's fields become `primary_label`, `primary_url`, `primary_style`. The second becomes `secondary_label`, etc.
+
+### Overriding defaults
+
+Customize specific fields when referencing a custom field:
+
+```json
+{
+  "type": "custom/cta",
+  "idStructure": "hero_{id}",
+  "overrides": {
+    "label": { "default": "Get Started", "label": "CTA Label" },
+    "style": { "default": "primary" }
+  }
+}
+```
+
+Overrides merge on top of the original definition. You can change defaults, labels, conditions, or any other property.
+
+## Rendering Patterns
+
+### Empty value checks
+
+Most field types return `false` when empty. Always check before rendering:
+
+```php
+<?php if ( $a['title'] ) : ?>
+  <h2><?php echo esc_html( $a['title'] ); ?></h2>
+<?php endif; ?>
+```
+
+For numbers, `0` is a valid value. Use strict comparison if you need to distinguish between "empty" and "zero":
+
+```php
+<?php if ( $a['count'] !== 0 || $a['count'] !== false ) : ?>
+  <span><?php echo esc_html( $a['count'] ); ?></span>
+<?php endif; ?>
+```
+
+### Select with returnFormat: both
+
+When you need both the value (for logic) and the label (for display):
+
+```json
+{
+  "id": "status",
+  "type": "select",
+  "label": "Status",
+  "returnFormat": "both",
+  "options": [
+    { "value": "active", "label": "Active" },
+    { "value": "paused", "label": "On Hold" },
+    { "value": "closed", "label": "Closed" }
+  ]
+}
+```
+
+```php title="index.php"
+<?php if ( $a['status'] ) : ?>
+  <span class="badge badge--<?php echo esc_attr( $a['status']['value'] ); ?>">
+    <?php echo esc_html( $a['status']['label'] ); ?>
+  </span>
+<?php endif; ?>
+```
+
+### Data attributes from the attributes field
+
+The `attributes` field type lets users add custom data attributes:
+
+```json
+{
+  "id": "dataAttrs",
+  "type": "attributes",
+  "label": "Data Attributes",
+  "link": true,
+  "media": true
+}
+```
+
+```php title="index.php"
+<div useBlockProps <?php bs_render_data_attributes( $a['dataAttrs'] ); ?>>
+  Content here.
+</div>
+```
+
+### CSS variables from field values
+
+Generate CSS custom properties from selected fields:
+
+```json title="block.json (partial)"
+{
+  "id": "textColor", "type": "color", "label": "Text Color"
+},
+{
+  "id": "fontSize", "type": "unit", "label": "Font Size", "default": "1rem"
+}
+```
+
+```php title="index.php"
+<div useBlockProps style="<?php bs_render_variables( $a, array( 'textColor', 'fontSize' ) ); ?>">
+  <p>Styled content.</p>
+</div>
+```
+
+This outputs `style="--text-color: #333; --font-size: 1rem;"` (field IDs are converted to kebab-case). Use the variables in your CSS:
+
+```css title="style.css"
+p {
+  color: var(--text-color);
+  font-size: var(--font-size);
+}
+```
+
+## Next Steps
+
+- [Registering attributes](/docs/blocks/attributes/registering): the `id`, `type`, `label`, `default`, `help`, `position`, and `conditions` properties.
+- [Field types reference](/docs/blocks/attributes/field-types): auto-generated reference with every property for every field type.
+- [Conditional logic](/docs/blocks/attributes/conditional-logic): operators, global conditions, custom condition filters, and repeater context.
+- [Populating options](/docs/blocks/attributes/populating-options): query, function, custom, and fetch modes for dynamic option fields.
+- [Custom fields](/docs/blocks/attributes/custom-fields): `field.json`, discovery paths, the `blockstudio/fields` filter, and advanced `idStructure` patterns.
+- [Rendering](/docs/blocks/attributes/rendering): `$a`, `$b`, `$c`, empty values, and helper functions.

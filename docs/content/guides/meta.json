@@ -5,6 +5,7 @@
     "migrating-from-acf",
     "interactive-components",
     "file-based-pages",
-    "block-context"
+    "block-context",
+    "field-patterns"
   ]
 }
