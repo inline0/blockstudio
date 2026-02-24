@@ -920,44 +920,57 @@ test.describe('Canvas', () => {
         { timeout: 30000 },
       );
 
-      // Give the iframe time to start loading after revision change.
+      // Wait until the new block render is present in the artboard iframe.
+      // In CI (Docker), the SSE-triggered iframe reload can be missed due to
+      // file-system event latency. Retry by re-writing the template to force
+      // another file-change event if the marker doesn't appear in time.
+      const waitForMarker = (timeout: number) =>
+        page.waitForFunction(
+          ({ slug, markerClass, markerText }) => {
+            const artboard = document.querySelector(
+              `[data-canvas-slug="${slug}"]`,
+            );
+            if (!artboard) return false;
+            const iframe = artboard.querySelector(
+              'iframe',
+            ) as HTMLIFrameElement | null;
+            if (!iframe) return false;
+            try {
+              const doc = iframe.contentDocument;
+              if (!doc || !doc.body) return false;
+
+              const bodyText = doc.body.textContent || '';
+              const missingBlocks = doc.querySelectorAll('.wp-block-missing').length;
+              const hasUnsupportedText = bodyText.includes("doesn't include support");
+              const hasMarker =
+                doc.querySelector(`.${markerClass}`) !== null ||
+                bodyText.includes(markerText);
+
+              return missingBlocks === 0 && !hasUnsupportedText && hasMarker;
+            } catch {
+              return false;
+            }
+          },
+          {
+            slug: 'blockstudio-e2e-test',
+            markerClass: 'canvas-live-test-marker',
+            markerText: 'Canvas Live Test Block',
+          },
+          { timeout },
+        );
+
       await page.waitForTimeout(2000);
 
-      // Wait until the new block render is actually present in the artboard iframe.
-      await page.waitForFunction(
-        ({ slug, markerClass, markerText }) => {
-          const artboard = document.querySelector(
-            `[data-canvas-slug="${slug}"]`,
-          );
-          if (!artboard) return false;
-          const iframe = artboard.querySelector(
-            'iframe',
-          ) as HTMLIFrameElement | null;
-          if (!iframe) return false;
-          try {
-            const doc = iframe.contentDocument;
-            if (!doc || !doc.body) return false;
-
-            const bodyText = doc.body.textContent || '';
-            const missingBlocks = doc.querySelectorAll('.wp-block-missing').length;
-            const hasUnsupportedText = bodyText.includes("doesn't include support");
-            const hasMarker =
-              doc.querySelector(`.${markerClass}`) !== null ||
-              bodyText.includes(markerText);
-
-            return missingBlocks === 0 && !hasUnsupportedText && hasMarker;
-          } catch {
-            // Cross-origin or loading iframe, retry.
-            return false;
-          }
-        },
-        {
-          slug: 'blockstudio-e2e-test',
-          markerClass: 'canvas-live-test-marker',
-          markerText: 'Canvas Live Test Block',
-        },
-        { timeout: 90000 },
-      );
+      try {
+        await waitForMarker(45000);
+      } catch {
+        fs.writeFileSync(
+          templatePath,
+          originalTemplate + '\n<block name="blockstudio/canvas-live-test" />',
+        );
+        await page.waitForTimeout(3000);
+        await waitForMarker(45000);
+      }
 
       // Verify the artboard rendered the block's PHP output and has no unsupported warnings.
       const result = await page.evaluate((slug: string) => {
