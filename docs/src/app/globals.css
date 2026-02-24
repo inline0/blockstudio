@@ -15,6 +15,7 @@
 
 article#nd-page[data-full='true'] {
   max-width: none;
+  grid-column: 2 / -1;
 }
 
 :root {
