@@ -124,7 +124,7 @@ if (!class_exists(Package::class, \false)) {
                 $this->updateChecker->triggerError(sprintf("Can't to read the plugin header for '%s'. The file does not exist.", $this->updateChecker->pluginFile), \E_USER_WARNING);
                 return array();
             }
-            if (!function_exists('BlockstudioVendor\get_plugin_data')) {
+            if (!function_exists('get_plugin_data')) {
                 require_once ABSPATH . '/wp-admin/includes/plugin.php';
             }
             return get_plugin_data($this->pluginAbsolutePath, \false, \false);

@@ -67,7 +67,7 @@ if (!class_exists(InstalledPackage::class, \false)) {
                 $success = preg_match('/^[ \t\/*#@]*' . preg_quote($name, '/') . ':(.*)$/mi', $content, $matches);
                 if ($success === 1 && $matches[1]) {
                     $value = $matches[1];
-                    if (function_exists('BlockstudioVendor\_cleanup_header_comment')) {
+                    if (function_exists('_cleanup_header_comment')) {
                         $value = _cleanup_header_comment($value);
                     }
                     $results[$field] = $value;

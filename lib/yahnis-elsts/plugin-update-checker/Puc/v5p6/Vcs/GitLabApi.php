@@ -220,7 +220,7 @@ if (!class_exists(GitLabApi::class, \false)) {
             if ($code === 200) {
                 return json_decode($body);
             }
-            $error = new \BlockstudioVendor\WP_Error('puc-gitlab-http-error', sprintf('GitLab API error. URL: "%s",  HTTP status code: %d.', $baseUrl, $code));
+            $error = new \WP_Error('puc-gitlab-http-error', sprintf('GitLab API error. URL: "%s",  HTTP status code: %d.', $baseUrl, $code));
             do_action('puc_api_error', $error, $response, $url, $this->slug);
             return $error;
         }

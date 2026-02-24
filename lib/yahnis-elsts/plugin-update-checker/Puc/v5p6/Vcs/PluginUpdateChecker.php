@@ -55,7 +55,7 @@ if (!class_exists(PluginUpdateChecker::class, \false)) {
                 }
             } else {
                 //There's probably a network problem or an authentication error.
-                do_action('puc_api_error', new \BlockstudioVendor\WP_Error('puc-no-update-source', 'Could not retrieve version information from the repository. ' . 'This usually means that the update checker either can\'t connect ' . 'to the repository or it\'s configured incorrectly.'), null, null, $this->slug);
+                do_action('puc_api_error', new \WP_Error('puc-no-update-source', 'Could not retrieve version information from the repository. ' . 'This usually means that the update checker either can\'t connect ' . 'to the repository or it\'s configured incorrectly.'), null, null, $this->slug);
                 return null;
             }
             //Get headers from the main plugin file in this branch/tag. Its "Version" header and other metadata
@@ -70,7 +70,7 @@ if (!class_exists(PluginUpdateChecker::class, \false)) {
             //This can happen when we're using a branch, and we either fail to retrieve the main plugin
             //file or the file doesn't have a "Version" header.
             if (empty($info->version)) {
-                do_action('puc_api_error', new \BlockstudioVendor\WP_Error('puc-no-plugin-version', 'Could not find the version number in the repository.'), null, null, $this->slug);
+                do_action('puc_api_error', new \WP_Error('puc-no-plugin-version', 'Could not find the version number in the repository.'), null, null, $this->slug);
                 return null;
             }
             //Try parsing readme.txt. If it's formatted according to WordPress.org standards, it will contain

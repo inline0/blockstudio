@@ -3,7 +3,7 @@
 namespace BlockstudioVendor\YahnisElsts\PluginUpdateChecker\v5p6;
 
 use stdClass;
-use BlockstudioVendor\WP_Error;
+use WP_Error;
 if (!class_exists(UpdateChecker::class, \false)) {
     abstract class UpdateChecker
     {
@@ -114,7 +114,7 @@ if (!class_exists(UpdateChecker::class, \false)) {
             //We're not using load_plugin_textdomain() or its siblings because figuring out where
             //the library is located (plugin, mu-plugin, theme, custom wp-content paths) is messy.
             $domain = 'plugin-update-checker';
-            $locale = apply_filters('plugin_locale', is_admin() && function_exists('BlockstudioVendor\get_user_locale') ? get_user_locale() : get_locale(), $domain);
+            $locale = apply_filters('plugin_locale', is_admin() && function_exists('get_user_locale') ? get_user_locale() : get_locale(), $domain);
             $moFile = $domain . '-' . $locale . '.mo';
             $path = realpath(dirname(__FILE__) . '/../../languages');
             if ($path && file_exists($path)) {
@@ -395,7 +395,7 @@ if (!class_exists(UpdateChecker::class, \false)) {
             }
             $actualWpVersions = array();
             $wpVersion = $GLOBALS['wp_version'];
-            if (function_exists('BlockstudioVendor\get_core_updates')) {
+            if (function_exists('get_core_updates')) {
                 $coreUpdates = get_core_updates();
                 if (is_array($coreUpdates)) {
                     foreach ($coreUpdates as $coreUpdate) {
@@ -736,7 +736,7 @@ if (!class_exists(UpdateChecker::class, \false)) {
          */
         protected function getInstalledTranslations()
         {
-            if (!function_exists('BlockstudioVendor\wp_get_installed_translations')) {
+            if (!function_exists('wp_get_installed_translations')) {
                 return array();
             }
             $installedTranslations = wp_get_installed_translations($this->translationType . 's');

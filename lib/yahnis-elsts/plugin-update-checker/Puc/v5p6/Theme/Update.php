@@ -59,7 +59,7 @@ if (!class_exists(Update::class, \false)) {
             $required = array('version', 'details_url');
             foreach ($required as $key) {
                 if (!isset($apiResponse->{$key}) || empty($apiResponse->{$key})) {
-                    return new \BlockstudioVendor\WP_Error('tuc-invalid-metadata', sprintf('The theme metadata is missing the required "%s" key.', $key));
+                    return new \WP_Error('tuc-invalid-metadata', sprintf('The theme metadata is missing the required "%s" key.', $key));
                 }
             }
             return \true;

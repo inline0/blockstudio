@@ -66,7 +66,7 @@ if (!class_exists(PluginInfo::class, \false)) {
         protected function validateMetadata($apiResponse)
         {
             if (!isset($apiResponse->name, $apiResponse->version) || empty($apiResponse->name) || empty($apiResponse->version)) {
-                return new \BlockstudioVendor\WP_Error('puc-invalid-metadata', "The plugin metadata file does not contain the required 'name' and/or 'version' keys.");
+                return new \WP_Error('puc-invalid-metadata', "The plugin metadata file does not contain the required 'name' and/or 'version' keys.");
             }
             return \true;
         }

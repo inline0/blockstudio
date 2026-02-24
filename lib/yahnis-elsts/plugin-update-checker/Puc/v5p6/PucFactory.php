@@ -113,7 +113,7 @@ if (!class_exists(PucFactory::class, \false)) {
          */
         public static function normalizePath($path)
         {
-            if (function_exists('BlockstudioVendor\wp_normalize_path')) {
+            if (function_exists('wp_normalize_path')) {
                 return wp_normalize_path($path);
             }
             $path = str_replace('\\', '/', $path);
@@ -143,7 +143,7 @@ if (!class_exists(PucFactory::class, \false)) {
             }
             //Does it have a valid plugin header?
             //This is a last-ditch check for plugins symlinked from outside the WP root.
-            if (function_exists('BlockstudioVendor\get_file_data')) {
+            if (function_exists('get_file_data')) {
                 $headers = get_file_data($absolutePath, array('Name' => 'Plugin Name'), 'plugin');
                 return !empty($headers['Name']);
             }

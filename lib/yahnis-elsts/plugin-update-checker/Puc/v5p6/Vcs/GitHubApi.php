@@ -209,7 +209,7 @@ if (!class_exists(GitHubApi::class, \false)) {
                 $document = json_decode($body);
                 return $document;
             }
-            $error = new \BlockstudioVendor\WP_Error('puc-github-http-error', sprintf('GitHub API error. Base URL: "%s",  HTTP status code: %d.', $baseUrl, $code));
+            $error = new \WP_Error('puc-github-http-error', sprintf('GitHub API error. Base URL: "%s",  HTTP status code: %d.', $baseUrl, $code));
             do_action('puc_api_error', $error, $response, $url, $this->slug);
             return $error;
         }

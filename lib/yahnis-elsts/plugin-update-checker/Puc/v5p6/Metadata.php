@@ -4,7 +4,7 @@ namespace BlockstudioVendor\YahnisElsts\PluginUpdateChecker\v5p6;
 
 use LogicException;
 use stdClass;
-use BlockstudioVendor\WP_Error;
+use WP_Error;
 if (!class_exists(Metadata::class, \false)) {
     /**
      * A base container for holding information about updates and plugin metadata.

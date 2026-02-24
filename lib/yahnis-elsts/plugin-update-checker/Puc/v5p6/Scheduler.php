@@ -50,7 +50,7 @@ if (!class_exists(Scheduler::class, \false)) {
                     //Randomly offset the schedule to help prevent update server traffic spikes. Without this
                     //most checks may happen during times of day when people are most likely to install new plugins.
                     $upperLimit = max($this->checkPeriod * 3600 - 15 * 60, 1);
-                    if (function_exists('BlockstudioVendor\wp_rand')) {
+                    if (function_exists('wp_rand')) {
                         $randomOffset = wp_rand(0, $upperLimit);
                     } else {
                         //This constructor may be called before wp_rand() is available.

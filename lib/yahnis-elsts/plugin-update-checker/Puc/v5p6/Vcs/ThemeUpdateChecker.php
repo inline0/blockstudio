@@ -37,7 +37,7 @@ if (!class_exists(ThemeUpdateChecker::class, \false)) {
                 $ref = $updateSource->name;
                 $update->download_url = $updateSource->downloadUrl;
             } else {
-                do_action('puc_api_error', new \BlockstudioVendor\WP_Error('puc-no-update-source', 'Could not retrieve version information from the repository. ' . 'This usually means that the update checker either can\'t connect ' . 'to the repository or it\'s configured incorrectly.'), null, null, $this->slug);
+                do_action('puc_api_error', new \WP_Error('puc-no-update-source', 'Could not retrieve version information from the repository. ' . 'This usually means that the update checker either can\'t connect ' . 'to the repository or it\'s configured incorrectly.'), null, null, $this->slug);
                 $ref = $this->branch;
             }
             //Get headers from the main stylesheet in this branch/tag. Its "Version" header and other metadata

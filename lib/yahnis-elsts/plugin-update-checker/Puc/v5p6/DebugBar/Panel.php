@@ -62,7 +62,7 @@ if (!class_exists(Panel::class, \false) && class_exists('BlockstudioVendor\Debug
             echo '<table class="puc-debug-data">';
             $state = $this->updateChecker->getUpdateState();
             $checkButtonId = $this->updateChecker->getUniqueName('check-now-button');
-            if (function_exists('BlockstudioVendor\get_submit_button')) {
+            if (function_exists('get_submit_button')) {
                 $checkNowButton = get_submit_button('Check Now', 'secondary', 'puc-check-now-button', \false, array('id' => $checkButtonId));
             } else {
                 //get_submit_button() is not available in the frontend. Make a button directly.

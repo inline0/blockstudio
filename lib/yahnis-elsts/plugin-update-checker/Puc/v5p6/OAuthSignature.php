@@ -75,7 +75,7 @@ if (!class_exists(OAuthSignature::class, \false)) {
             }
             if ($rand === null) {
                 //phpcs:ignore WordPress.WP.AlternativeFunctions.rand_mt_rand
-                $rand = function_exists('BlockstudioVendor\wp_rand') ? wp_rand() : mt_rand();
+                $rand = function_exists('wp_rand') ? wp_rand() : mt_rand();
             }
             return md5($mt . '_' . $rand);
         }

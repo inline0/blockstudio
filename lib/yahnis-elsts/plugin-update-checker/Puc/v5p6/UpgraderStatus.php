@@ -123,7 +123,7 @@ if (!class_exists(UpgraderStatus::class, \false)) {
          */
         private function identifyPluginByHeaders($searchHeaders)
         {
-            if (!function_exists('BlockstudioVendor\get_plugins')) {
+            if (!function_exists('get_plugins')) {
                 require_once ABSPATH . '/wp-admin/includes/plugin.php';
             }
             $installedPlugins = get_plugins();
