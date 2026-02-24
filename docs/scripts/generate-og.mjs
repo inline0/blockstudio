@@ -1,0 +1,50 @@
+import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
+import sharp from "sharp";
+
+const root = resolve(import.meta.dirname, "..");
+const logoPath = resolve(root, "public/logo-light.svg");
+
+const width = 1200;
+const height = 630;
+const bg = "hsl(0, 0%, 7%)";
+
+const logoSvg = readFileSync(logoPath, "utf-8");
+const logoInner = logoSvg
+  .replace(/<svg[^>]*>/, "")
+  .replace("</svg>", "")
+  .replace(/fill="#000"/g, 'fill="#fff"')
+  .replace(/fill-rule="evenodd"/g, 'fill="#fff" fill-rule="evenodd"');
+
+const fullLogoWidth = 680;
+const fullScale = fullLogoWidth / 875;
+const fullLogoHeight = 128 * fullScale;
+const fullX = (width - fullLogoWidth) / 2;
+const fullY = (height - fullLogoHeight) / 2;
+
+const fullComposite = `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}">
+  <rect width="${width}" height="${height}" fill="${bg}"/>
+  <g transform="translate(${fullX}, ${fullY}) scale(${fullScale})">
+    ${logoInner}
+  </g>
+</svg>`;
+
+const iconSize = fullLogoHeight;
+const iconScale = iconSize / 128;
+const iconX = (width - iconSize) / 2;
+const iconY = (height - iconSize) / 2;
+
+const iconComposite = `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}">
+  <rect width="${width}" height="${height}" fill="${bg}"/>
+  <g transform="translate(${iconX}, ${iconY}) scale(${iconScale})">
+    <path fill="#fff" fill-rule="evenodd" d="M128,0 L128,128 L0,128 L0,0 L128,0 Z M28.5691481,9.44127259 L9.44127259,99.4308519 L99.4308519,118.558727 L118.558727,28.5691481 L28.5691481,9.44127259 Z"/>
+    <rect fill="#fff" width="56" height="56" x="36" y="36" transform="rotate(45 64 64)"/>
+  </g>
+</svg>`;
+
+await Promise.all([
+  sharp(Buffer.from(fullComposite)).png().toFile(resolve(root, "public/og.png")),
+  sharp(Buffer.from(iconComposite)).png().toFile(resolve(root, "public/og-icon.png")),
+]);
+
+console.log("Generated og.png and og-icon.png");
