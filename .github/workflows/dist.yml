@@ -79,7 +79,7 @@ jobs:
             require 'vendor/autoload.php';
             require 'lib/tailwindphp-autoload.php';
             \$classes = [
-              'BlockstudioVendor\\\YahnisElsts\\\PluginUpdateChecker\\\v5\\\PucFactory',
+              'YahnisElsts\\\PluginUpdateChecker\\\v5\\\PucFactory',
               'BlockstudioVendor\\\MatthiasMullie\\\Minify\\\CSS',
               'BlockstudioVendor\\\ScssPhp\\\ScssPhp\\\Compiler',
               'BlockstudioVendor\\\League\\\Uri\\\Uri',
@@ -230,7 +230,7 @@ jobs:
           php -r "
             require 'vendor/autoload.php';
             require 'vendor/blockstudio/blockstudio/lib/tailwindphp-autoload.php';
-            if (!class_exists('BlockstudioVendor\\\YahnisElsts\\\PluginUpdateChecker\\\v5\\\PucFactory')) {
+            if (!class_exists('YahnisElsts\\\PluginUpdateChecker\\\v5\\\PucFactory')) {
               echo \"PucFactory not found\n\";
               exit(1);
             }
