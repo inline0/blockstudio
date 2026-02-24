@@ -27,5 +27,14 @@ class Github_Updater {
 		);
 
 		$update_checker->getVcsApi()->enableReleaseAssets();
+
+		$update_checker->addResultFilter(
+			function ( $info ) {
+				$info->icons = array(
+					'svg' => plugins_url( 'assets/icon.svg', BLOCKSTUDIO_FILE ),
+				);
+				return $info;
+			}
+		);
 	}
 }
