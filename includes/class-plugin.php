@@ -229,7 +229,7 @@ class Plugin {
 			PHP_INT_MAX
 		);
 
-		if ( ! class_exists( 'Composer\InstalledVersions' ) ) {
+		if ( ! str_contains( BLOCKSTUDIO_DIR, '/vendor/' ) ) {
 			new Github_Updater();
 		}
 
