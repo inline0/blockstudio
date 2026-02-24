@@ -3,7 +3,7 @@ Contributors: dnnsjsk
 Requires at least: 5.0
 Tested up to: 7.0.0
 Requires PHP: 8.2
-Stable tag: 7.0.3
+Stable tag: 7.0.4
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -52,6 +52,10 @@ Download the latest release zip from [GitHub Releases](https://github.com/inline
 * [Getting Started](https://blockstudio.dev/docs/getting-started)
 
 == Changelog ==
+
+= 7.0.4 =
+* Fix: GitHub updater fully working with unscoped plugin-update-checker
+* Fix: removed broken php-scoper prefixing of PUC library
 
 = 7.0.3 =
 * Fix: GitHub updater not initializing due to bundled Composer autoloader
