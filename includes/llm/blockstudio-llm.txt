@@ -101,7 +101,7 @@ Create `block.json` with your block configuration:
 
 ```json
 {
-  "$schema": "https://app.blockstudio.dev/schema",
+  "$schema": "https://blockstudio.dev/schema/block",
   "name": "my-theme/my-first-block",
   "title": "My First Block",
   "category": "common",
@@ -180,7 +180,7 @@ The following properties are available:
 
 ```json
 {
-  "$schema": "https://app.blockstudio.dev/schema/blockstudio",
+  "$schema": "https://blockstudio.dev/schema/blockstudio",
   "users": {
     "ids": [],
     "roles": []
@@ -528,11 +528,11 @@ The Blockstudio schema is an (always up-to-date) copy of the WordPress core bloc
 
 ## Add to JSON
 
-Simply add a `$schema` key with a value of https://app.blockstudio.dev/schema to your block.json and your IDE should start to give you hints about Blockstudio specific properties.
+Simply add a `$schema` key with a value of https://blockstudio.dev/schema/block to your block.json and your IDE should start to give you hints about Blockstudio specific properties.
 
 ```json
 {
-  "$schema": "https://app.blockstudio.dev/schema",
+  "$schema": "https://blockstudio.dev/schema/block",
   "name": "blockstudio/native",
   "title": "Native Block",
   "category": "text",
@@ -555,7 +555,7 @@ For workspace-wide settings, add to `.vscode/settings.json`:
   "json.schemas": [
     {
       "fileMatch": ["/block.json"],
-      "url": "https://app.blockstudio.dev/schema"
+      "url": "https://blockstudio.dev/schema/block"
     }
   ]
 }
@@ -569,8 +569,8 @@ PhpStorm and other JetBrains IDEs support JSON Schema via the `$schema` property
 
 | Schema | URL |
 |--------|-----|
-| Block Schema | `https://app.blockstudio.dev/schema` |
-| Extension Schema | `https://app.blockstudio.dev/schema/extend` |
+| Block Schema | `https://blockstudio.dev/schema/block` |
+| Extension Schema | `https://blockstudio.dev/schema/extend` |
 
 ## Benefits
 
@@ -936,7 +936,7 @@ When using code fields inside of extensions, the `asset` attribute is not necess
 
 ```json
 {
-  "$schema": "https://app.blockstudio.dev/schema/extend",
+  "$schema": "https://blockstudio.dev/schema/extend",
   "name": "core/",
   "blockstudio": {
     "extend": true,
@@ -1315,7 +1315,7 @@ By default, Blockstudio comes with 4 global conditions: post type, post ID, user
 
 ```json
 {
-  "$schema": "https://app.blockstudio.dev/schema",
+  "$schema": "https://blockstudio.dev/schema/block",
   "name": "blockstudio/native",
   "title": "Native Block",
   "blockstudio": {
@@ -1562,7 +1562,7 @@ When choosing query mode, Posts, Users or Terms can be populated.
 
 ```json
 {
-  "$schema": "https://app.blockstudio.dev/schema",
+  "$schema": "https://blockstudio.dev/schema/block",
   "name": "blockstudio/native",
   "title": "Native Block",
   "blockstudio": {
@@ -1878,7 +1878,7 @@ To set a default value for WordPress properties like `align`, add a `default` ke
 
 ```json
 {
-  "$schema": "https://app.blockstudio.dev/schema",
+  "$schema": "https://blockstudio.dev/schema/block",
   "name": "blockstudio/block",
   "title": "Native Block",
   "icon": "star-filled",
@@ -1956,7 +1956,7 @@ theme/
 
 ```json
 {
-  "$schema": "https://app.blockstudio.dev/schema/field",
+  "$schema": "https://blockstudio.dev/schema/field",
   "name": "hero",
   "title": "Hero Section",
   "attributes": [
@@ -2250,7 +2250,7 @@ Let's imagine a block that should have two different variations depending on the
 
 ```json
 {
-  "$schema": "https://app.blockstudio.dev/schema",
+  "$schema": "https://blockstudio.dev/schema/block",
   "name": "blockstudio/variations",
   "title": "Native Variation",
   "description": "Native Blockstudio Variation block.",
@@ -2337,7 +2337,7 @@ Block to block transforms allow you to transform a block into another block.
 
 ```json
 {
-  "$schema": "https://app.blockstudio.dev/schema",
+  "$schema": "https://blockstudio.dev/schema/block",
   "name": "blockstudio/transforms",
   "title": "Native Transforms",
   "icon": "star-filled",
@@ -2627,7 +2627,7 @@ Let's say you have a container block setup like so:
 
 ```json
 {
-  "$schema": "https://app.blockstudio.dev/schema",
+  "$schema": "https://blockstudio.dev/schema/block",
   "name": "blockstudio/container",
   "title": "Container",
   "category": "design",
@@ -2650,7 +2650,7 @@ block name to gain access to all parent attributes in your block template.
 
 ```json
 {
-  "$schema": "https://app.blockstudio.dev/schema",
+  "$schema": "https://blockstudio.dev/schema/block",
   "name": "blockstudio/element",
   "title": "Element",
   "category": "design",
@@ -2728,7 +2728,7 @@ To do so, simply add an `innerBlocks` key to the options array with the template
 
 ```json
 {
-  "$schema": "https://app.blockstudio.dev/schema",
+  "$schema": "https://blockstudio.dev/schema/block",
   "name": "blockstudio/dynamic-layout",
   "title": "Dynamic Layout",
   "blockstudio": {
@@ -2812,7 +2812,7 @@ To use `RichText` in its most basic form, you need to add the appropriate attrib
 
 ```json
 {
-  "$schema": "https://app.blockstudio.dev/schema",
+  "$schema": "https://blockstudio.dev/schema/block",
   "name": "blockstudio/rich-text",
   "title": "Native Block",
   "category": "text",
@@ -2893,7 +2893,7 @@ To use `MediaPlaceholder` in its most basic form, you need to add the appropriat
 
 ```json
 {
-  "$schema": "https://app.blockstudio.dev/schema",
+  "$schema": "https://blockstudio.dev/schema/block",
   "name": "blockstudio/media-placeholder",
   "title": "Native Block",
   "category": "text",
@@ -5503,7 +5503,7 @@ Add the `tailwind` configuration to your `blockstudio.json`:
 
 ```json
 {
-  "$schema": "https://app.blockstudio.dev/schema/blockstudio",
+  "$schema": "https://blockstudio.dev/schema/blockstudio",
   "tailwind": {
     "enabled": true
   }
@@ -5774,7 +5774,7 @@ A complete working setup with custom theme colors and a block that uses them:
 
 ```json
 {
-  "$schema": "https://app.blockstudio.dev/schema/blockstudio",
+  "$schema": "https://blockstudio.dev/schema/blockstudio",
   "tailwind": {
     "enabled": true,
     "config": "@theme { --color-brand: #6366f1; --color-brand-light: #a5b4fc; --color-surface: #f8fafc; } @layer utilities { .section-padding { @apply py-20 px-6; } .content-width { @apply max-w-5xl mx-auto; } .heading-xl { @apply text-4xl font-bold tracking-tight; } }"
@@ -5846,7 +5846,7 @@ Imagine the following scenario: you want to add a custom class `select` field to
 
 ```json
 {
-  "$schema": "https://app.blockstudio.dev/schema/extend",
+  "$schema": "https://blockstudio.dev/schema/extend",
   "name": "core/",
   "priority": 10,
   "blockstudio": {
@@ -5912,7 +5912,7 @@ By default, extensions will render in its own tab in the block inspector. If you
 
 ```json
 {
-  "$schema": "https://app.blockstudio.dev/schema/extend",
+  "$schema": "https://blockstudio.dev/schema/extend",
   "name": "core/",
   "blockstudio": {
     "extend": true,
@@ -5934,7 +5934,7 @@ The only thing you need to know about attributes inside extensions is the `set` 
 
 ```json
 {
-  "$schema": "https://app.blockstudio.dev/schema/extend",
+  "$schema": "https://blockstudio.dev/schema/extend",
   "name": "core/",
   "blockstudio": {
     "extend": true,

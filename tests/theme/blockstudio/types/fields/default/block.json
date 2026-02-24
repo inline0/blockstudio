@@ -1,5 +1,5 @@
 {
-  "$schema": "https://app.blockstudio.dev/schema",
+  "$schema": "https://blockstudio.dev/schema/block",
   "name": "blockstudio/type-fields-default",
   "title": "Native Fields Default",
   "category": "blockstudio-test-native",

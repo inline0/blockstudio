@@ -1,5 +1,5 @@
 {
-  "$schema": "https://app.blockstudio.dev/schema",
+  "$schema": "https://blockstudio.dev/schema/block",
   "name": "blockstudio/type-code-selector-asset-repeater",
   "title": "Native Code Selector Asset Repeater",
   "category": "blockstudio-test-native",

@@ -1,5 +1,5 @@
 {
-  "$schema": "https://app.blockstudio.dev/schema",
+  "$schema": "https://blockstudio.dev/schema/block",
   "name": "blockstudio/type-post-meta",
   "title": "Native Post Meta",
   "category": "blockstudio-test-native",

@@ -10,5 +10,5 @@
     "config": ""
   },
   "dev": { "grab": { "enabled": true }, "canvas": { "enabled": true, "adminBar": false } },
-  "$schema": "https://app.blockstudio.dev/schema/blockstudio"
+  "$schema": "https://blockstudio.dev/schema/blockstudio"
 }

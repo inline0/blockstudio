@@ -263,7 +263,7 @@ isomorphic: {
 **`tests/theme/blockstudio/isomorphic/default/block.json`:**
 ```json
 {
-  "$schema": "https://app.blockstudio.dev/schema",
+  "$schema": "https://blockstudio.dev/schema/block",
   "name": "blockstudio/isomorphic-default",
   "title": "Isomorphic Default",
   "category": "blockstudio-test-native",

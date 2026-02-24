@@ -1,5 +1,5 @@
 {
-  "$schema": "https://app.blockstudio.dev/schema",
+  "$schema": "https://blockstudio.dev/schema/block",
   "name": "blockstudio/component-useblockprops-innerblocks-outer-twig",
   "title": "Native useBlockProps InnerBlocks Outer Twig",
   "category": "blockstudio-test-native",

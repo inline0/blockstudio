@@ -47,9 +47,9 @@ Download the latest release zip from [GitHub Releases](https://github.com/inline
 
 = Links =
 
-* [Documentation](https://app.blockstudio.dev/docs)
+* [Documentation](https://blockstudio.dev/docs)
 * [GitHub](https://github.com/inline0/blockstudio)
-* [Getting Started](https://app.blockstudio.dev/docs/getting-started)
+* [Getting Started](https://blockstudio.dev/docs/getting-started)
 
 == Changelog ==
 

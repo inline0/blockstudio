@@ -1,5 +1,5 @@
 {
-  "$schema": "https://app.blockstudio.dev/schema",
+  "$schema": "https://blockstudio.dev/schema/block",
   "name": "blockstudio/type-repeater-min-rows",
   "title": "Native Repeater Min Rows",
   "category": "blockstudio-test-native",

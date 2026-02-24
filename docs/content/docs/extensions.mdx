@@ -24,7 +24,7 @@ Imagine the following scenario: you want to add a custom class `select` field to
 
 ```json title="core.json"
 {
-  "$schema": "https://app.blockstudio.dev/schema/extend",
+  "$schema": "https://blockstudio.dev/schema/extend",
   "name": "core/*",
   "priority": 10,
   "blockstudio": {
@@ -66,7 +66,7 @@ Since there is no rendering template, an extension doesn't need a matching `inde
 
 Blockstudio provides a custom JSON schema for extension configurations:
 
-[View Extension schema](https://app.blockstudio.dev/schema/extend)
+[View Extension schema](https://blockstudio.dev/schema/extend)
 
 ### Name
 
@@ -90,7 +90,7 @@ By default, extensions will render in its own tab in the block inspector. If you
 
 ```json title="core.json"
 {
-  "$schema": "https://app.blockstudio.dev/schema/extend",
+  "$schema": "https://blockstudio.dev/schema/extend",
   "name": "core/*",
   "blockstudio": {
     "extend": true,
@@ -112,7 +112,7 @@ The only thing you need to know about attributes inside extensions is the `set` 
 
 ```json title="core.json"
 {
-  "$schema": "https://app.blockstudio.dev/schema/extend",
+  "$schema": "https://blockstudio.dev/schema/extend",
   "name": "core/*",
   "blockstudio": {
     "extend": true,

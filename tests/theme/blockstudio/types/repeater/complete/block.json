@@ -1,5 +1,5 @@
 {
-  "$schema": "https://app.blockstudio.dev/schema",
+  "$schema": "https://blockstudio.dev/schema/block",
   "name": "blockstudio/type-repeater-complete",
   "title": "Native Repeater Complete",
   "category": "blockstudio-test-native",

@@ -7,17 +7,17 @@ description: JSON Schema support for Blockstudio blocks.
 
 To improve development with autocomplete and validation in your IDE, Blockstudio introduces its own schema:
 
-[View Blockstudio schema](https://app.blockstudio.dev/schema)
+[View Blockstudio schema](https://blockstudio.dev/schema/block)
 
 The Blockstudio schema is an (always up-to-date) copy of the WordPress core block.json schema with an additional `blockstudio` property that houses all plugin features like field schemas without interfering with potential future core properties.
 
 ## Add to JSON
 
-Simply add a `$schema` key with a value of **https://app.blockstudio.dev/schema** to your block.json and your IDE should start to give you hints about Blockstudio specific properties.
+Simply add a `$schema` key with a value of **https://blockstudio.dev/schema/block** to your block.json and your IDE should start to give you hints about Blockstudio specific properties.
 
 ```json title="block.json"
 {
-  "$schema": "https://app.blockstudio.dev/schema",
+  "$schema": "https://blockstudio.dev/schema/block",
   "name": "blockstudio/native",
   "title": "Native Block",
   "category": "text",
@@ -40,7 +40,7 @@ For workspace-wide settings, add to `.vscode/settings.json`:
   "json.schemas": [
     {
       "fileMatch": ["**/block.json"],
-      "url": "https://app.blockstudio.dev/schema"
+      "url": "https://blockstudio.dev/schema/block"
     }
   ]
 }
@@ -54,8 +54,8 @@ PhpStorm and other JetBrains IDEs support JSON Schema via the `$schema` property
 
 | Schema | URL |
 |--------|-----|
-| Block Schema | `https://app.blockstudio.dev/schema` |
-| Extension Schema | `https://app.blockstudio.dev/schema/extend` |
+| Block Schema | `https://blockstudio.dev/schema/block` |
+| Extension Schema | `https://blockstudio.dev/schema/extend` |
 
 ## Benefits
 

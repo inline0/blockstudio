@@ -1,5 +1,5 @@
 {
-  "$schema": "https://app.blockstudio.dev/schema",
+  "$schema": "https://blockstudio.dev/schema/block",
   "name": "blockstudio/type-repeater-outside",
   "title": "Native Repeater Outside",
   "category": "blockstudio-test-native",

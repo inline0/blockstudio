@@ -1,5 +1,5 @@
 {
-  "$schema": "https://app.blockstudio.dev/schema",
+  "$schema": "https://blockstudio.dev/schema/block",
   "name": "blockstudio/component-useblockprops-innerblocks-default",
   "title": "Native useBlockProps InnerBlocks default",
   "category": "blockstudio-test-native",

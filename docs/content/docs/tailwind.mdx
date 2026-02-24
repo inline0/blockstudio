@@ -43,7 +43,7 @@ Add the `tailwind` configuration to your `blockstudio.json`:
 
 ```json title="blockstudio.json"
 {
-  "$schema": "https://app.blockstudio.dev/schema/blockstudio",
+  "$schema": "https://blockstudio.dev/schema/blockstudio",
   "tailwind": {
     "enabled": true
   }
@@ -315,7 +315,7 @@ A complete working setup with custom theme colors and a block that uses them:
 
 ```json title="blockstudio.json"
 {
-  "$schema": "https://app.blockstudio.dev/schema/blockstudio",
+  "$schema": "https://blockstudio.dev/schema/blockstudio",
   "tailwind": {
     "enabled": true,
     "config": "@theme { --color-brand: #6366f1; --color-brand-light: #a5b4fc; --color-surface: #f8fafc; } @layer utilities { .section-padding { @apply py-20 px-6; } .content-width { @apply max-w-5xl mx-auto; } .heading-xl { @apply text-4xl font-bold tracking-tight; } }"

@@ -62,7 +62,7 @@ This file configures how Blockstudio processes your theme. The configuration is 
 	"dev": {
 		"canvas": { "enabled": true }
 	},
-	"$schema": "https://app.blockstudio.dev/schema/blockstudio"
+	"$schema": "https://blockstudio.dev/schema/blockstudio"
 }
 ```
 
@@ -256,7 +256,7 @@ Create a shared field definition that every block can reference:
 
 ```json title="blockstudio/fields/section/field.json"
 {
-	"$schema": "https://app.blockstudio.dev/schema/field",
+	"$schema": "https://blockstudio.dev/schema/field",
 	"name": "section",
 	"title": "Section",
 	"attributes": [
@@ -351,7 +351,7 @@ A hero section demonstrates the complete block pattern. Start with the schema:
 
 ```json title="blockstudio/sections/hero/block.json"
 {
-	"$schema": "https://app.blockstudio.dev/schema",
+	"$schema": "https://blockstudio.dev/schema/block",
 	"name": "my-theme/hero",
 	"title": "Hero",
 	"category": "my-theme",
@@ -477,7 +477,7 @@ Repeaters let clients add, remove, and reorder items. A features grid is the cla
 
 ```json title="blockstudio/sections/features/block.json"
 {
-	"$schema": "https://app.blockstudio.dev/schema",
+	"$schema": "https://blockstudio.dev/schema/block",
 	"name": "my-theme/features",
 	"title": "Features",
 	"category": "my-theme",

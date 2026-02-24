@@ -706,7 +706,7 @@ test.describe('Canvas', () => {
       fs.writeFileSync(
         path.join(orderStabilityBlockDir, 'block.json'),
         JSON.stringify({
-          $schema: 'https://app.blockstudio.dev/schema',
+          $schema: 'https://blockstudio.dev/schema/block',
           name: 'blockstudio/canvas-order-stability-test',
           title: 'Canvas Order Stability Test',
           category: 'blockstudio-test-native',
@@ -870,7 +870,7 @@ test.describe('Canvas', () => {
       fs.writeFileSync(
         path.join(newBlockDir, 'block.json'),
         JSON.stringify({
-          $schema: 'https://app.blockstudio.dev/schema',
+          $schema: 'https://blockstudio.dev/schema/block',
           name: 'blockstudio/canvas-live-test',
           title: 'Canvas Live Test',
           category: 'blockstudio-test-native',
@@ -1041,7 +1041,7 @@ test.describe('Canvas', () => {
         fs.writeFileSync(
           path.join(simultaneousBlockDir, 'block.json'),
           JSON.stringify({
-            $schema: 'https://app.blockstudio.dev/schema',
+            $schema: 'https://blockstudio.dev/schema/block',
             name: 'blockstudio/canvas-simultaneous-test',
             title: 'Canvas Simultaneous Test',
             category: 'blockstudio-test-native',
@@ -1197,7 +1197,7 @@ test.describe('Canvas', () => {
         fs.writeFileSync(
           path.join(staggeredBlockDir, 'block.json'),
           JSON.stringify({
-            $schema: 'https://app.blockstudio.dev/schema',
+            $schema: 'https://blockstudio.dev/schema/block',
             name: 'blockstudio/canvas-staggered-test',
             title: 'Canvas Staggered Test',
             category: 'blockstudio-test-native',

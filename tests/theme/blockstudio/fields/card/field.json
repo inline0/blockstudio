@@ -1,5 +1,5 @@
 {
-  "$schema": "https://app.blockstudio.dev/schema/field",
+  "$schema": "https://blockstudio.dev/schema/field",
   "name": "card",
   "title": "Card",
   "attributes": [

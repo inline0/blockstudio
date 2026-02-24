@@ -1,5 +1,5 @@
 {
-  "$schema": "https://app.blockstudio.dev/schema",
+  "$schema": "https://blockstudio.dev/schema/block",
   "name": "blockstudio/component-innerblocks-bare",
   "title": "Native InnerBlocks bare",
   "category": "blockstudio-test-native",

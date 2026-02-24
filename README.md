@@ -65,7 +65,7 @@ composer require blockstudio/blockstudio
 **block.json**
 ```json
 {
-  "$schema": "https://app.blockstudio.dev/schema/block",
+  "$schema": "https://blockstudio.dev/schema/block",
   "name": "theme/hero",
   "title": "Hero",
   "blockstudio": {

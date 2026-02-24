@@ -1,5 +1,5 @@
 {
-  "$schema": "https://app.blockstudio.dev/schema",
+  "$schema": "https://blockstudio.dev/schema/block",
   "name": "blockstudio/type-interactivity-server-state",
   "title": "Native Interactivity Server State",
   "category": "blockstudio-test-native",

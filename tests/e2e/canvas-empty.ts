@@ -104,7 +104,7 @@ test.describe('Canvas - empty theme', () => {
     fs.writeFileSync(
       path.join(blockDir, 'block.json'),
       JSON.stringify({
-        $schema: 'https://app.blockstudio.dev/schema',
+        $schema: 'https://blockstudio.dev/schema/block',
         name: 'blockstudio/empty-test-block',
         title: 'Empty Test Block',
         category: 'text',
@@ -284,7 +284,7 @@ test.describe('Canvas - empty theme', () => {
       fs.writeFileSync(
         path.join(blockDir, 'block.json'),
         JSON.stringify({
-          $schema: 'https://app.blockstudio.dev/schema',
+          $schema: 'https://blockstudio.dev/schema/block',
           name: 'blockstudio/replace-test-block',
           title: 'Replace Test Block',
           category: 'text',
@@ -387,7 +387,7 @@ test.describe('Canvas - empty theme', () => {
       fs.writeFileSync(
         path.join(blockDir, 'block.json'),
         JSON.stringify({
-          $schema: 'https://app.blockstudio.dev/schema',
+          $schema: 'https://blockstudio.dev/schema/block',
           name: 'blockstudio/no-dir-test-block',
           title: 'No Dir Test Block',
           category: 'text',
@@ -515,7 +515,7 @@ test.describe('Canvas - empty theme', () => {
       fs.writeFileSync(
         path.join(baseBlockDir, 'block.json'),
         JSON.stringify({
-          $schema: 'https://app.blockstudio.dev/schema',
+          $schema: 'https://blockstudio.dev/schema/block',
           name: 'blockstudio/flash-base-block',
           title: 'Flash Base Block',
           category: 'text',
@@ -734,7 +734,7 @@ test.describe('Canvas - empty theme', () => {
       fs.writeFileSync(
         path.join(unusedBlockDir, 'block.json'),
         JSON.stringify({
-          $schema: 'https://app.blockstudio.dev/schema',
+          $schema: 'https://blockstudio.dev/schema/block',
           name: 'blockstudio/unused-flash-block',
           title: 'Unused Flash Block',
           category: 'text',

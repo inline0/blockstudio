@@ -117,7 +117,7 @@ Let's say you have a container block setup like so:
 
 ```json title="container/block.json"
 {
-  "$schema": "https://app.blockstudio.dev/schema",
+  "$schema": "https://blockstudio.dev/schema/block",
   "name": "blockstudio/container",
   "title": "Container",
   "category": "design",
@@ -140,7 +140,7 @@ block name to gain access to all parent attributes in your block template.
 
 ```json title="element/block.json"
 {
-  "$schema": "https://app.blockstudio.dev/schema",
+  "$schema": "https://blockstudio.dev/schema/block",
   "name": "blockstudio/element",
   "title": "Element",
   "category": "design",
@@ -223,7 +223,7 @@ To do so, simply add an `innerBlocks` key to the options array with the template
 
 ```json title="block.json"
 {
-  "$schema": "https://app.blockstudio.dev/schema",
+  "$schema": "https://blockstudio.dev/schema/block",
   "name": "blockstudio/dynamic-layout",
   "title": "Dynamic Layout",
   "blockstudio": {
