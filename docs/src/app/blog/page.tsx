@@ -12,7 +12,7 @@ export default function BlogIndex() {
   const posts = [...blog].sort((a, b) => b.date.getTime() - a.date.getTime());
 
   return (
-    <DocsPage full>
+    <DocsPage className="archive-page">
       <h1 className="mb-2 text-3xl font-semibold">Blog</h1>
       <p className="mb-8 text-fd-muted-foreground">
         News and updates from the Blockstudio team.

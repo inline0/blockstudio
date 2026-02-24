@@ -13,9 +13,10 @@
   text-wrap: pretty;
 }
 
-article#nd-page[data-full='true'] {
-  max-width: none;
+article#nd-page.archive-page {
+  max-width: 1200px;
   grid-column: 2 / -1;
+  margin-inline: 0;
 }
 
 :root {
