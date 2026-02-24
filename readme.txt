@@ -3,7 +3,7 @@ Contributors: dnnsjsk
 Requires at least: 5.0
 Tested up to: 7.0.0
 Requires PHP: 8.2
-Stable tag: 7.0.0
+Stable tag: 7.0.1
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -53,7 +53,10 @@ Download the latest release zip from [GitHub Releases](https://github.com/inline
 
 == Changelog ==
 
-= 7.0.0 (next) =
+= 7.0.1 =
+* Fix: test release for GitHub updater verification
+
+= 7.0.0 =
 * New: Blockstudio is now free and open source
 * New: automatic update notifications via GitHub releases (disabled when installed via Composer)
 * New: file-based pages - create WordPress pages from file templates with automatic HTML to block parsing
