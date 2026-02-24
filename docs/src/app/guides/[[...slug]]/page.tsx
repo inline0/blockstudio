@@ -9,7 +9,7 @@ function GuidesIndex() {
   const pages = guidesSource.getPages().filter((p) => p.slugs.length > 0);
 
   return (
-    <DocsPage full className="max-w-full">
+    <DocsPage full>
       <h1 className="mb-2 text-3xl font-semibold">Guides</h1>
       <p className="mb-8 text-fd-muted-foreground">
         In-depth guides for building with Blockstudio.
