@@ -1,7 +1,24 @@
 import Link from 'next/link';
+import { Download } from 'lucide-react';
 import { CodeBlock, Button } from 'onedocs';
 
+async function getLatestVersion(): Promise<string | null> {
+  try {
+    const res = await fetch(
+      'https://api.github.com/repos/inline0/blockstudio/releases/latest',
+      { next: { revalidate: 3600 } },
+    );
+    if (!res.ok) return null;
+    const data = await res.json();
+    return data.tag_name ?? null;
+  } catch {
+    return null;
+  }
+}
+
 export async function HeroLeft() {
+  const version = await getLatestVersion();
+
   return (
     <>
       <Link
@@ -24,15 +41,24 @@ export async function HeroLeft() {
         The fastest way to build custom blocks. Define fields in JSON, write
         templates in PHP, Twig, or Blade. No build step required.
       </p>
-      <div className="flex flex-wrap items-end gap-x-8 gap-y-6 mt-8 w-full">
-        <div className="flex-1">
-          <CodeBlock
-            lang="bash"
-            code="composer require blockstudio/blockstudio"
-            className="!my-0"
-          />
+      <div className="mt-8 w-full">
+        <CodeBlock
+          lang="bash"
+          code="composer require blockstudio/blockstudio"
+          className="!my-0"
+        />
+        <div className="flex items-center gap-3 mt-4">
+          <Button href="/docs">Get Started</Button>
+          <a
+            href="https://github.com/inline0/blockstudio/releases"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center justify-center gap-2 rounded-full border border-fd-border px-4 py-2 text-sm font-medium text-fd-foreground transition-colors hover:bg-fd-secondary whitespace-nowrap"
+          >
+            <Download className="size-4" />
+            Download{version ? ` ${version}` : ''}
+          </a>
         </div>
-        <Button href="/docs">Get Started</Button>
       </div>
     </>
   );
