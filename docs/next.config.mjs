@@ -4,6 +4,9 @@ const withMDX = createMDX();
 
 /** @type {import('next').NextConfig} */
 const config = {
+  outputFileTracingIncludes: {
+    '/docs/og/*': ['./public/**/*'],
+  },
   async redirects() {
     return [
       // Documentation root
