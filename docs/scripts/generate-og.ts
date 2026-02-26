@@ -42,6 +42,19 @@ const iconComposite = `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" 
   </g>
 </svg>`;
 
+const og2LogoWidth = 480;
+const og2Scale = og2LogoWidth / 875;
+const og2LogoHeight = 128 * og2Scale;
+const og2X = (width - og2LogoWidth) / 2;
+const og2Y = (height - og2LogoHeight) / 2;
+
+const og2Composite = `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}">
+  <rect width="${width}" height="${height}" fill="${bg}"/>
+  <g transform="translate(${og2X}, ${og2Y}) scale(${og2Scale})">
+    ${logoInner}
+  </g>
+</svg>`;
+
 const twitterSize = 400;
 const twitterIconSize = 150;
 const twitterIconScale = twitterIconSize / 128;
@@ -62,9 +75,10 @@ const twitterCover = `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" h
 
 await Promise.all([
   sharp(Buffer.from(fullComposite)).png().toFile(resolve(root, "public/asset-og.png")),
+  sharp(Buffer.from(og2Composite)).png().toFile(resolve(root, "public/asset-og-2.png")),
   sharp(Buffer.from(iconComposite)).png().toFile(resolve(root, "public/asset-og-icon.png")),
   sharp(Buffer.from(twitterLogoComposite)).png().toFile(resolve(root, "public/asset-twitter.png")),
   sharp(Buffer.from(twitterCover)).png().toFile(resolve(root, "public/asset-twitter-cover.png")),
 ]);
 
-console.log("Generated asset-og.png, asset-og-icon.png, asset-twitter.png, asset-twitter-cover.png");
+console.log("Generated asset-og.png, asset-og-2.png, asset-og-icon.png, asset-twitter.png, asset-twitter-cover.png");
