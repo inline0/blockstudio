@@ -69,7 +69,7 @@ const icon2Composite = `<svg xmlns="http://www.w3.org/2000/svg" width="${width}"
 </svg>`;
 
 const twitterSize = 400;
-const twitterIconSize = 150;
+const twitterIconSize = 200;
 const twitterIconScale = twitterIconSize / 128;
 const twitterIconX = (twitterSize - twitterIconSize) / 2;
 const twitterIconY = (twitterSize - twitterIconSize) / 2;
