@@ -2,7 +2,7 @@ name: Distribution
 
 on:
   push:
-    branches: [main, ci/packagist-install-test]
+    branches: [main]
 
 concurrency:
   group: dist-${{ github.ref }}
