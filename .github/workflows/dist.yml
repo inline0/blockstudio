@@ -2,7 +2,7 @@ name: Distribution
 
 on:
   push:
-    branches: [main, fix/composer-autoload-fatal]
+    branches: [main]
 
 concurrency:
   group: dist-${{ github.ref }}
