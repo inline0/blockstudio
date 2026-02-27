@@ -171,6 +171,80 @@ jobs:
             echo \"Title: \" . \$block->title . \"\n\";
           "
 
+  packagist-install:
+    name: Packagist install
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout (for test theme)
+        uses: actions/checkout@v4
+        with:
+          path: repo
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: "8.4"
+          extensions: dom, json, zip, simplexml, libxml, iconv, mysqli
+          tools: wp-cli
+
+      - name: Install via Composer from Packagist
+        run: |
+          mkdir -p test-project && cd test-project
+          composer init --no-interaction --name=test/blockstudio-packagist
+          composer config allow-plugins.composer/installers true
+          composer require blockstudio/blockstudio --no-interaction
+
+      - name: Verify package installed
+        run: |
+          cd test-project
+          test -f vendor/blockstudio/blockstudio/blockstudio.php
+          echo "Plugin files installed from Packagist"
+
+      - name: Verify autoloader resolves classes
+        run: |
+          cd test-project
+          php -r "
+            require 'vendor/autoload.php';
+            require 'vendor/blockstudio/blockstudio/lib/tailwindphp-autoload.php';
+            if (!class_exists('YahnisElsts\\\PluginUpdateChecker\\\v5\\\PucFactory')) {
+              echo \"PucFactory not found\n\";
+              exit(1);
+            }
+            echo \"Packagist install: classes resolve\n\";
+          "
+
+      - name: Start MySQL
+        run: |
+          sudo systemctl start mysql
+          mysql -u root -proot -e "CREATE DATABASE IF NOT EXISTS wordpress;"
+
+      - name: Set up WordPress with Packagist-installed plugin
+        run: |
+          mkdir wordpress && cd wordpress
+          wp core download
+          wp config create --dbname=wordpress --dbuser=root --dbpass=root
+          wp core install --url=http://localhost --title=Test --admin_user=admin --admin_email=admin@test.com --admin_password=password --skip-email
+          ln -s $GITHUB_WORKSPACE/test-project/vendor/blockstudio/blockstudio wp-content/plugins/blockstudio
+          mkdir -p $GITHUB_WORKSPACE/test-project/vendor/blockstudio/blockstudio/vendor
+          ln -s ../../../autoload.php $GITHUB_WORKSPACE/test-project/vendor/blockstudio/blockstudio/vendor/autoload.php
+          wp plugin activate blockstudio
+
+      - name: Install test theme and verify block detection
+        run: |
+          cp -r repo/tests/theme wordpress/wp-content/themes/blockstudio-test
+          cd wordpress
+          wp theme activate blockstudio-test
+          wp eval "
+            \$registry = WP_Block_Type_Registry::get_instance();
+            \$block = \$registry->get_registered('blockstudio/type-number');
+            if (!\$block) {
+              echo \"FAIL: blockstudio/type-number not registered\n\";
+              exit(1);
+            }
+            echo \"Block registered: \" . \$block->name . \"\n\";
+            echo \"Title: \" . \$block->title . \"\n\";
+          "
+
   composer-install:
     name: Composer install
     runs-on: ubuntu-latest
