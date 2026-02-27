@@ -47,17 +47,11 @@ spl_autoload_register(
 if ( file_exists( BLOCKSTUDIO_DIR . '/vendor/autoload.php' ) ) {
 	require_once BLOCKSTUDIO_DIR . '/vendor/autoload.php';
 } else {
-	// Composer install: walk up from plugin dir to find the root autoloader.
-	( static function () {
-		$dir = BLOCKSTUDIO_DIR;
-		for ( $i = 0; $i < 5; $i++ ) {
-			$dir = dirname( $dir );
-			if ( file_exists( $dir . '/autoload.php' ) ) {
-				require_once $dir . '/autoload.php';
-				break;
-			}
-		}
-	} )();
+	// Composer install: autoloader is at vendor/autoload.php (two levels up).
+	$blockstudio_autoloader = dirname( __DIR__, 2 ) . '/autoload.php';
+	if ( file_exists( $blockstudio_autoloader ) ) {
+		require_once $blockstudio_autoloader;
+	}
 }
 require_once BLOCKSTUDIO_DIR . '/lib/tailwindphp-autoload.php';
 require_once __DIR__ . '/includes/class-plugin.php';
