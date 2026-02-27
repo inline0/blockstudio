@@ -32,6 +32,9 @@
   "autoload": {
     "classmap": [
       "lib/"
+    ],
+    "files": [
+      "lib/tailwindphp-autoload.php"
     ]
   },
   "scripts": {
