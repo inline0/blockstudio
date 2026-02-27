@@ -44,7 +44,9 @@ spl_autoload_register(
 	}
 );
 
-require_once BLOCKSTUDIO_DIR . '/vendor/autoload.php';
+if ( file_exists( BLOCKSTUDIO_DIR . '/vendor/autoload.php' ) ) {
+	require_once BLOCKSTUDIO_DIR . '/vendor/autoload.php';
+}
 require_once BLOCKSTUDIO_DIR . '/lib/tailwindphp-autoload.php';
 require_once __DIR__ . '/includes/class-plugin.php';
 require_once __DIR__ . '/includes/functions/functions.php';
