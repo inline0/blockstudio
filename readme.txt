@@ -3,7 +3,7 @@ Contributors: dnnsjsk
 Requires at least: 5.0
 Tested up to: 7.0.0
 Requires PHP: 8.2
-Stable tag: 7.0.9
+Stable tag: 7.0.10
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -52,6 +52,10 @@ Download the latest release zip from [GitHub Releases](https://github.com/inline
 * [Getting Started](https://blockstudio.dev/docs/getting-started)
 
 == Changelog ==
+
+= 7.0.10 =
+* Fix: deduplicate global assets in code-snippet directories
+* Fix: support dot-notation for inline CSS files (e.g. global-style.inline.css)
 
 = 7.0.9 =
 * Fix: simplify Composer autoloader lookup
