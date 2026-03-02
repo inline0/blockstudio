@@ -1178,6 +1178,11 @@ class Build {
 
 			$data['assets'][ $id ] = array(
 				'type'     =>
+					str_ends_with( $asset, '.inline.css' ) ||
+					str_ends_with( $asset, '.inline.scss' ) ||
+					str_ends_with( $asset, '.inline.js' ) ||
+					str_ends_with( $asset, '.scoped.css' ) ||
+					str_ends_with( $asset, '.scoped.scss' ) ||
 					str_ends_with( $asset, '-inline.css' ) ||
 					str_ends_with( $asset, '-inline.scss' ) ||
 					str_ends_with( $asset, '-inline.js' ) ||

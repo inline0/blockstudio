@@ -66,6 +66,15 @@ class Assets {
 	private static array $modules = array();
 
 	/**
+	 * Asset IDs already rendered by parse_output().
+	 *
+	 * Static so deduplication persists across multiple ob_start callback flushes.
+	 *
+	 * @var array
+	 */
+	private static array $parsed_asset_ids = array();
+
+	/**
 	 * When true, is_editor_screen() returns true regardless of current screen.
 	 *
 	 * @var bool
@@ -241,7 +250,7 @@ class Assets {
 		$blocks_native  = Build::blocks();
 		$ids            = array();
 		$blocks_on_page = array();
-		$asset_ids      = array();
+		$asset_ids      = &self::$parsed_asset_ids;
 
 		$style_pattern  = '/<style[^>]+data-blockstudio-asset[^>]*>(.*?)<\/style>/is';
 		$script_pattern = '/<script[^>]+data-blockstudio-asset[^>]*>(.*?)<\/script>/is';
