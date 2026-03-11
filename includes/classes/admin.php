@@ -508,7 +508,7 @@ class Admin {
 					),
 					$editor_only_data
 				),
-				'isTailwindActive' => Build::is_tailwind_active() ? 'true' : 'false',
+				'isTailwindActive' => ( Settings::get( 'tailwind/enabled' ) && Build::is_tailwind_active() ) ? 'true' : 'false',
 				'llmTxtUrl'        => LLM::get_txt_url(),
 				'loader'           => plugin_dir_url( BLOCKSTUDIO_FILE ) . 'includes/editor/vs',
 				'logo'             => plugins_url( 'includes/admin/assets/fabrikatLogo.svg', BLOCKSTUDIO_FILE ),

@@ -769,7 +769,7 @@ class Canvas {
 			'blockstudioBlocks' => $blockstudio_blocks,
 			'changedBlocks'     => $changed_blocks,
 			'blocksNative'      => $blocks_native,
-			'tailwindCss'       => Tailwind::compile_editor_css(),
+			'tailwindCss'       => Settings::get( 'tailwind/enabled' ) ? Tailwind::compile_editor_css() : '',
 		);
 	}
 

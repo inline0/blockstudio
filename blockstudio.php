@@ -53,7 +53,6 @@ if ( file_exists( BLOCKSTUDIO_DIR . '/vendor/autoload.php' ) ) {
 		require_once $blockstudio_autoloader;
 	}
 }
-require_once BLOCKSTUDIO_DIR . '/lib/tailwindphp-autoload.php';
 require_once __DIR__ . '/includes/class-plugin.php';
 require_once __DIR__ . '/includes/functions/functions.php';
 require_once __DIR__ . '/includes/functions/placeholders.php';

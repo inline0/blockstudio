@@ -82,6 +82,12 @@ class Tailwind {
 	 * Constructor.
 	 */
 	public function __construct() {
+		if ( ! Settings::get( 'tailwind/enabled' ) ) {
+			return;
+		}
+
+		require_once BLOCKSTUDIO_DIR . '/lib/tailwindphp-autoload.php';
+
 		add_filter( 'blockstudio/buffer/output', array( $this, 'compile' ), 999999 );
 		add_filter( 'block_editor_settings_all', array( $this, 'inject_editor_styles' ), PHP_INT_MAX );
 	}
@@ -266,6 +272,10 @@ class Tailwind {
 	 * @return string The CDN URL.
 	 */
 	public static function get_cdn_url(): string {
+		if ( ! Settings::get( 'tailwind/enabled' ) ) {
+			return '';
+		}
+
 		$path = BLOCKSTUDIO_DIR . '/includes/admin/assets/tailwind/cdn.js';
 
 		return Files::get_relative_url( $path );
