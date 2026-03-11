@@ -16,6 +16,7 @@ import {
 import { css } from '@/utils/css';
 
 const extensions = window.blockstudioAdmin.data.extensions;
+const isCanvas = !!(window as any).blockstudioCanvas;
 
 const matchFound = (name: string, string: string) => {
   if (typeof name === 'string' && name.endsWith('*')) {
@@ -263,8 +264,9 @@ addFilter(
         .trim();
 
       useEffect(() => {
-        const doc =
-          markerRef.current?.ownerDocument ?? getEditorDocument();
+        const doc = isCanvas
+          ? (markerRef.current?.ownerDocument ?? getEditorDocument())
+          : getEditorDocument();
         const id = `blockstudio-${props.clientId}`;
 
         let element = doc.getElementById(id) as HTMLStyleElement | null;
@@ -281,21 +283,33 @@ addFilter(
         };
       }, [styles, props.clientId]);
 
+      if (isCanvas) {
+        return (
+          <>
+            <span
+              ref={markerRef}
+              data-blockstudio-style-marker=""
+              style={{ display: 'none' }}
+            />
+            <BlockListBlock
+              {...props}
+              wrapperProps={{ ...dataAttributes }}
+              className={`${updatedClassNames}${
+                currentTemporaryClasses ? ' ' + currentTemporaryClasses : ''
+              }`}
+            />
+          </>
+        );
+      }
+
       return (
-        <>
-          <span
-            ref={markerRef}
-            data-blockstudio-style-marker=""
-            style={{ display: 'none' }}
-          />
-          <BlockListBlock
-            {...props}
-            wrapperProps={{ ...dataAttributes }}
-            className={`${updatedClassNames}${
-              currentTemporaryClasses ? ' ' + currentTemporaryClasses : ''
-            }`}
-          />
-        </>
+        <BlockListBlock
+          {...props}
+          wrapperProps={{ ...dataAttributes }}
+          className={`${updatedClassNames}${
+            currentTemporaryClasses ? ' ' + currentTemporaryClasses : ''
+          }`}
+        />
       );
     };
   }, 'addCustomClassNameToEditorBlock'),
