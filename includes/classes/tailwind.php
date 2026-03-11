@@ -82,14 +82,22 @@ class Tailwind {
 	 * Constructor.
 	 */
 	public function __construct() {
-		if ( ! Settings::get( 'tailwind/enabled' ) ) {
-			return;
-		}
-
-		require_once BLOCKSTUDIO_DIR . '/lib/tailwindphp-autoload.php';
-
 		add_filter( 'blockstudio/buffer/output', array( $this, 'compile' ), 999999 );
 		add_filter( 'block_editor_settings_all', array( $this, 'inject_editor_styles' ), PHP_INT_MAX );
+	}
+
+	/**
+	 * Load the TailwindPHP autoloader if not already loaded.
+	 *
+	 * @return void
+	 */
+	private static function load_autoloader(): void {
+		static $loaded = false;
+
+		if ( ! $loaded ) {
+			$loaded = true;
+			require_once BLOCKSTUDIO_DIR . '/lib/tailwindphp-autoload.php';
+		}
 	}
 
 	/**
@@ -108,6 +116,8 @@ class Tailwind {
 		}
 
 		$this->compiled = true;
+
+		self::load_autoloader();
 
 		$css_input  = self::build_css_input();
 		$candidates = self::filter_candidates( TailwindPHP::extractCandidates( $html ) );
@@ -162,6 +172,8 @@ class Tailwind {
 		if ( ! Settings::get( 'tailwind/enabled' ) ) {
 			return '';
 		}
+
+		self::load_autoloader();
 
 		$candidates = array();
 
