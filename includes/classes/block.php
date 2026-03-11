@@ -1346,7 +1346,8 @@ class Block {
 				@eval( ' ?>' . $editor . '<?php ' ); // phpcs:ignore Squiz.PHP.Eval.Discouraged, WordPress.PHP.NoSilencedErrors.Discouraged
 			} else {
 				ob_start();
-				$render = trim( include $path );
+				$render = include $path;
+				$render = trim( (string) $render );
 				ob_end_clean();
 
 				if ( $is_preview ) {
