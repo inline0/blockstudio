@@ -6,7 +6,7 @@
     "process": { "scss": true, "scssFiles": true }
   },
   "tailwind": {
-    "enabled": true,
+    "enabled": false,
     "config": ""
   },
   "dev": { "grab": { "enabled": true }, "canvas": { "enabled": true, "adminBar": false } },

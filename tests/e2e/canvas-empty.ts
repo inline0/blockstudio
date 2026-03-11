@@ -45,6 +45,16 @@ test.afterAll(async () => {
   await page.close();
 });
 
+test.describe('Tailwind disabled', () => {
+  test('TailwindPHP autoloader is not loaded when tailwind/enabled is false', async () => {
+    const res = await fetch(
+      'http://localhost:8890/wp-json/blockstudio-test/v1/class-exists?class=BlockstudioVendor%5CTailwindPHP%5CTailwind',
+    );
+    const data = await res.json();
+    expect(data.exists).toBe(false);
+  });
+});
+
 test.describe('Canvas - empty theme', () => {
   test('canvas loads with no artboards on empty theme', async () => {
     await page.goto(canvasUrl, { waitUntil: 'domcontentloaded' });

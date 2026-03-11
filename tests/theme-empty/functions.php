@@ -52,6 +52,26 @@ add_action(
 	function () {
 		register_rest_route(
 			'blockstudio-test/v1',
+			'/class-exists',
+			array(
+				'methods'             => 'GET',
+				'callback'            => function ( $request ) {
+					$class = $request->get_param( 'class' );
+					return array( 'exists' => class_exists( $class, false ) );
+				},
+				'permission_callback' => '__return_true',
+				'args'                => array(
+					'class' => array(
+						'required'          => true,
+						'type'              => 'string',
+						'sanitize_callback' => 'sanitize_text_field',
+					),
+				),
+			)
+		);
+
+		register_rest_route(
+			'blockstudio-test/v1',
 			'/cleanup',
 			array(
 				'methods'             => 'POST',
