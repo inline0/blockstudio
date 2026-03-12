@@ -1,0 +1,21 @@
+{
+  "name": "blockstudio",
+  "version": "0.0.1",
+  "description": "CLI for adding WordPress blocks from the Blockstudio registry.",
+  "license": "MIT",
+  "bin": {
+    "blockstudio": "./dist/index.js"
+  },
+  "type": "module",
+  "scripts": {
+    "build": "tsup",
+    "dev": "tsup --watch"
+  },
+  "devDependencies": {
+    "tsup": "^8.0.0",
+    "typescript": "^5.0.0"
+  },
+  "dependencies": {
+    "commander": "^13.0.0"
+  }
+}
