@@ -26,7 +26,7 @@ function blockstudio_placeholder_dark( string $variant = 'default' ): string {
 SVG
 		,
 		'dashboard' => <<<'SVG'
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 800" preserveAspectRatio="xMidYMid slice" style="display:block;width:100%;height:100%;color:var(--color-accent)"><rect width="1200" height="48" fill="rgba(255,255,255,0.04)"/>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 800" preserveAspectRatio="xMidYMid slice" style="display:block;width:100%;height:100%;color:var(--color-accent)"><rect width="1200" height="800" fill="rgba(255,255,255,0.03)"/><rect width="1200" height="48" fill="rgba(255,255,255,0.04)"/>
 <circle cx="28" cy="24" r="5" fill="rgba(255,255,255,0.15)"/>
 <circle cx="48" cy="24" r="5" fill="rgba(255,255,255,0.15)"/>
 <circle cx="68" cy="24" r="5" fill="rgba(255,255,255,0.15)"/>
@@ -72,7 +72,7 @@ SVG
 SVG
 		,
 		'chart'     => <<<'SVG'
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 800" preserveAspectRatio="xMidYMid slice" style="display:block;width:100%;height:100%;color:var(--color-accent)"><rect width="1200" height="48" fill="rgba(255,255,255,0.04)"/>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 800" preserveAspectRatio="xMidYMid slice" style="display:block;width:100%;height:100%;color:var(--color-accent)"><rect width="1200" height="800" fill="rgba(255,255,255,0.03)"/><rect width="1200" height="48" fill="rgba(255,255,255,0.04)"/>
 <circle cx="28" cy="24" r="5" fill="rgba(255,255,255,0.15)"/>
 <circle cx="48" cy="24" r="5" fill="rgba(255,255,255,0.15)"/>
 <circle cx="68" cy="24" r="5" fill="rgba(255,255,255,0.15)"/>
@@ -117,13 +117,10 @@ SVG
 SVG
 		,
 		'code'      => <<<'SVG'
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 800" preserveAspectRatio="xMidYMid slice" style="display:block;width:100%;height:100%;color:var(--color-accent)"><rect width="1200" height="48" fill="rgba(255,255,255,0.04)"/>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 800" preserveAspectRatio="xMidYMid slice" style="display:block;width:100%;height:100%;color:var(--color-accent)"><rect width="1200" height="800" fill="rgba(255,255,255,0.03)"/><rect width="1200" height="48" fill="rgba(255,255,255,0.04)"/>
 <circle cx="28" cy="24" r="5" fill="rgba(255,255,255,0.15)"/>
 <circle cx="48" cy="24" r="5" fill="rgba(255,255,255,0.15)"/>
 <circle cx="68" cy="24" r="5" fill="rgba(255,255,255,0.15)"/>
-<rect x="100" y="12" width="80" height="26" rx="6" fill="rgba(255,255,255,0.06)"/>
-<rect x="188" y="12" width="80" height="26" rx="6" fill="rgba(255,255,255,0.02)"/>
-<rect x="276" y="12" width="80" height="26" rx="6" fill="rgba(255,255,255,0.02)"/>
 <rect y="48" width="56" height="752" fill="rgba(255,255,255,0.015)"/>
 <line x1="56" y1="48" x2="56" y2="800" stroke="rgba(255,255,255,0.04)"/>
 <rect x="1140" y="48" width="60" height="752" fill="rgba(255,255,255,0.015)"/>
@@ -214,6 +211,7 @@ SVG
 		,
 		'space'     => <<<'SVG'
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 800" preserveAspectRatio="xMidYMid slice" style="display:block;width:100%;height:100%;color:var(--color-accent)">
+<rect width="1200" height="800" fill="rgba(255,255,255,0.03)"/>
 <path d="M0 500 L600 380 L1200 500 L1200 800 L0 800 Z" fill="rgba(255,255,255,0.02)" stroke="rgba(255,255,255,0.04)" stroke-width="1"/>
 <line x1="0" y1="580" x2="1200" y2="580" stroke="rgba(255,255,255,0.03)"/>
 <line x1="0" y1="660" x2="1200" y2="660" stroke="rgba(255,255,255,0.03)"/>
@@ -242,6 +240,7 @@ SVG
 		,
 		'project'   => <<<'SVG'
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 800" preserveAspectRatio="xMidYMid slice" style="display:block;width:100%;height:100%;color:var(--color-accent)">
+<rect width="1200" height="800" fill="rgba(255,255,255,0.03)"/>
 <rect x="200" y="80" width="800" height="640" fill="rgba(255,255,255,0.03)" stroke="rgba(255,255,255,0.06)" stroke-width="1.5"/>
 <line x1="0" y1="720" x2="1200" y2="720" stroke="rgba(255,255,255,0.06)" stroke-width="1"/>
 <line x1="200" y1="240" x2="1000" y2="240" stroke="rgba(255,255,255,0.04)"/>
@@ -270,6 +269,7 @@ SVG
 		,
 		'product'   => <<<'SVG'
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 800" preserveAspectRatio="xMidYMid slice" style="display:block;width:100%;height:100%;color:var(--color-accent)">
+<rect width="1200" height="800" fill="rgba(255,255,255,0.03)"/>
 <line x1="100" y1="620" x2="1100" y2="620" stroke="rgba(255,255,255,0.06)" stroke-width="1"/>
 <ellipse cx="600" cy="620" rx="200" ry="20" fill="rgba(255,255,255,0.03)"/>
 <path d="M440 620 C440 620 430 380 450 300 C460 260 480 240 520 230 L680 230 C720 240 740 260 750 300 C770 380 760 620 760 620 Z" fill="rgba(255,255,255,0.04)" stroke="rgba(255,255,255,0.08)" stroke-width="1.5"/>
@@ -310,7 +310,7 @@ function blockstudio_placeholder_light( string $variant = 'default' ): string {
 SVG
 		,
 		'dashboard' => <<<'SVG'
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 800" preserveAspectRatio="xMidYMid slice" style="display:block;width:100%;height:100%;color:var(--color-accent)"><rect width="1200" height="48" fill="rgba(0,0,0,0.04)"/>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 800" preserveAspectRatio="xMidYMid slice" style="display:block;width:100%;height:100%;color:var(--color-accent)"><rect width="1200" height="800" fill="rgba(0,0,0,0.03)"/><rect width="1200" height="48" fill="rgba(0,0,0,0.04)"/>
 <circle cx="28" cy="24" r="5" fill="rgba(0,0,0,0.12)"/>
 <circle cx="48" cy="24" r="5" fill="rgba(0,0,0,0.12)"/>
 <circle cx="68" cy="24" r="5" fill="rgba(0,0,0,0.12)"/>
@@ -339,7 +339,7 @@ SVG
 SVG
 		,
 		'chart'     => <<<'SVG'
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 800" preserveAspectRatio="xMidYMid slice" style="display:block;width:100%;height:100%;color:var(--color-accent)"><rect width="1200" height="48" fill="rgba(0,0,0,0.04)"/>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 800" preserveAspectRatio="xMidYMid slice" style="display:block;width:100%;height:100%;color:var(--color-accent)"><rect width="1200" height="800" fill="rgba(0,0,0,0.03)"/><rect width="1200" height="48" fill="rgba(0,0,0,0.04)"/>
 <circle cx="28" cy="24" r="5" fill="rgba(0,0,0,0.12)"/>
 <circle cx="48" cy="24" r="5" fill="rgba(0,0,0,0.12)"/>
 <circle cx="68" cy="24" r="5" fill="rgba(0,0,0,0.12)"/>
@@ -361,12 +361,10 @@ SVG
 SVG
 		,
 		'code'      => <<<'SVG'
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 800" preserveAspectRatio="xMidYMid slice" style="display:block;width:100%;height:100%;color:var(--color-accent)"><rect width="1200" height="48" fill="rgba(0,0,0,0.04)"/>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 800" preserveAspectRatio="xMidYMid slice" style="display:block;width:100%;height:100%;color:var(--color-accent)"><rect width="1200" height="800" fill="rgba(0,0,0,0.03)"/><rect width="1200" height="48" fill="rgba(0,0,0,0.04)"/>
 <circle cx="28" cy="24" r="5" fill="rgba(0,0,0,0.12)"/>
 <circle cx="48" cy="24" r="5" fill="rgba(0,0,0,0.12)"/>
 <circle cx="68" cy="24" r="5" fill="rgba(0,0,0,0.12)"/>
-<rect x="100" y="12" width="80" height="26" rx="6" fill="rgba(0,0,0,0.06)"/>
-<rect x="188" y="12" width="80" height="26" rx="6" fill="rgba(0,0,0,0.02)"/>
 <rect y="48" width="56" height="752" fill="rgba(0,0,0,0.02)"/>
 <rect x="76" y="78" width="80" height="6" rx="3" fill="currentColor" fill-opacity="0.35"/>
 <rect x="164" y="78" width="200" height="6" rx="3" fill="rgba(0,0,0,0.1)"/>
@@ -401,6 +399,7 @@ SVG
 		,
 		'space'     => <<<'SVG'
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 800" preserveAspectRatio="xMidYMid slice" style="display:block;width:100%;height:100%;color:var(--color-accent)">
+<rect width="1200" height="800" fill="rgba(0,0,0,0.03)"/>
 <path d="M0 500 L600 380 L1200 500 L1200 800 L0 800 Z" fill="rgba(0,0,0,0.02)" stroke="rgba(0,0,0,0.04)" stroke-width="1"/>
 <line x1="0" y1="580" x2="1200" y2="580" stroke="rgba(0,0,0,0.03)"/>
 <line x1="0" y1="660" x2="1200" y2="660" stroke="rgba(0,0,0,0.03)"/>
@@ -432,6 +431,7 @@ SVG
 		,
 		'project'   => <<<'SVG'
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 800" preserveAspectRatio="xMidYMid slice" style="display:block;width:100%;height:100%;color:var(--color-accent)">
+<rect width="1200" height="800" fill="rgba(0,0,0,0.03)"/>
 <rect x="200" y="80" width="800" height="640" fill="rgba(0,0,0,0.02)" stroke="rgba(0,0,0,0.06)" stroke-width="1.5"/>
 <line x1="0" y1="720" x2="1200" y2="720" stroke="rgba(0,0,0,0.06)" stroke-width="1"/>
 <line x1="200" y1="240" x2="1000" y2="240" stroke="rgba(0,0,0,0.04)"/>
@@ -460,6 +460,7 @@ SVG
 		,
 		'product'   => <<<'SVG'
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 800" preserveAspectRatio="xMidYMid slice" style="display:block;width:100%;height:100%;color:var(--color-accent)">
+<rect width="1200" height="800" fill="rgba(0,0,0,0.03)"/>
 <line x1="100" y1="620" x2="1100" y2="620" stroke="rgba(0,0,0,0.06)" stroke-width="1"/>
 <ellipse cx="600" cy="620" rx="200" ry="20" fill="rgba(0,0,0,0.02)"/>
 <path d="M440 620 C440 620 430 380 450 300 C460 260 480 240 520 230 L680 230 C720 240 740 260 750 300 C770 380 760 620 760 620 Z" fill="rgba(0,0,0,0.03)" stroke="rgba(0,0,0,0.08)" stroke-width="1.5"/>
