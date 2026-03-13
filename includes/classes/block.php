@@ -1336,9 +1336,11 @@ class Block {
 			remove_filter( 'timber/locations', $add_custom_path );
 		} else {
 			ob_start();
-			$a = $attributes;
-			$b = $block;
-			$c = $context;
+			$a         = $attributes;
+			$b         = $block;
+			$c         = $context;
+			$isEditor  = $is_editor; // phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- backward-compatible template alias.
+			$isPreview = $is_preview; // phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- backward-compatible template alias.
 
 			$render = true;
 
