@@ -3,7 +3,7 @@ Contributors: dnnsjsk
 Requires at least: 5.0
 Tested up to: 7.0.0
 Requires PHP: 8.2
-Stable tag: 7.0.10
+Stable tag: 7.0.11
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -52,6 +52,14 @@ Download the latest release zip from [GitHub Releases](https://github.com/inline
 * [Getting Started](https://blockstudio.dev/docs/getting-started)
 
 == Changelog ==
+
+= 7.0.11 =
+* Fix: restore $isEditor and $isPreview aliases in PHP block templates
+* Fix: make TailwindPHP fully optional when tailwind/enabled is false
+* Fix: only render style marker span in canvas mode to prevent layout interference
+* Fix: cast include return to string before trim() for PHP 8.2+
+* Refactor: unify placeholder SVGs with currentColor and refined opacities
+* Fix: field docs description and help property descriptions
 
 = 7.0.10 =
 * Fix: deduplicate global assets in code-snippet directories
