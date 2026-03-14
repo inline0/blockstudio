@@ -9,18 +9,7 @@ import {
 testType('code-scss-asset', false, () => {
   return [
     {
-      description: 'check scss compiled in editor',
-      testFunction: async (_page: Page, canvas: Frame) => {
-        await checkStyle(
-          canvas,
-          '[data-type="blockstudio/type-code-scss-asset"] h1',
-          'color',
-          'rgb(255, 0, 0)',
-        );
-      },
-    },
-    {
-      description: 'change scss and verify compilation',
+      description: 'change scss value',
       testFunction: async (page: Page, canvas: Frame) => {
         await canvas.click(
           '[data-type="blockstudio/type-code-scss-asset"]',

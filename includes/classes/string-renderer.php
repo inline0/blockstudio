@@ -28,7 +28,8 @@ class String_Renderer {
 			return;
 		}
 
-		add_filter( 'blockstudio/buffer/output', array( __CLASS__, 'render' ), 1 );
+		add_filter( 'the_content', array( __CLASS__, 'render' ), 5 );
+		add_filter( 'widget_text', array( __CLASS__, 'render' ), 5 );
 		add_filter( 'blockstudio/string_renderer/render', array( __CLASS__, 'render' ) );
 	}
 
@@ -58,8 +59,8 @@ class String_Renderer {
 			return $content;
 		}
 
-		$content = self::replace_paired_tags( $content, $blocks );
 		$content = self::replace_self_closing_tags( $content, $blocks );
+		$content = self::replace_paired_tags( $content, $blocks );
 
 		return $content;
 	}

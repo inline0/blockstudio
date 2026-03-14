@@ -38,35 +38,57 @@ class Functions {
 	 */
 	public static function init(): void {
 		add_action( 'rest_api_init', array( __CLASS__, 'register_endpoint' ) );
-		add_filter( 'blockstudio/buffer/output', array( __CLASS__, 'inject_client' ), 2 );
+		add_filter( 'blockstudio/buffer/output', array( __CLASS__, 'inject_frontend_client' ), 2 );
+		add_action( 'enqueue_block_editor_assets', array( __CLASS__, 'inject_editor_client' ) );
 	}
 
 	/**
-	 * Inject the bs.fn() client script into the page if any blocks have functions.
+	 * Get the bs.fn() client script body (without wrapping tags).
+	 *
+	 * @return string The JavaScript client code.
+	 */
+	private static function get_client_script(): string {
+		$rest_url = esc_url_raw( rest_url( 'blockstudio/v1/fn/' ) );
+		$nonce    = wp_create_nonce( 'wp_rest' );
+
+		return 'window.bs=window.bs||{};'
+			. 'bs.fn=function(n,p,b){'
+			. 'var u="' . $rest_url . '"+(b||"")+"/"+n;'
+			. 'return fetch(u,{method:"POST",headers:{"Content-Type":"application/json","X-WP-Nonce":"' . $nonce . '"},body:JSON.stringify({params:p||{}})}).then(function(r){return r.json()});'
+			. '};';
+	}
+
+	/**
+	 * Inject the bs.fn() client into the frontend output buffer.
 	 *
 	 * @param string $html The page HTML.
 	 *
 	 * @return string The HTML with client script injected.
 	 */
-	public static function inject_client( string $html ): string {
-		if ( empty( self::$functions ) && ! self::has_any_functions() ) {
+	public static function inject_frontend_client( string $html ): string {
+		if ( ! self::has_any_functions() ) {
 			return $html;
 		}
 
-		$rest_url = esc_url_raw( rest_url( 'blockstudio/v1/fn/' ) );
-		$nonce    = wp_create_nonce( 'wp_rest' );
-
-		$script = '<script id="blockstudio-fn">'
-			. 'window.bs=window.bs||{};'
-			. 'bs.fn=function(n,p,b){'
-			. 'var u="' . $rest_url . '"+(b||document.currentScript?.closest("[data-bs-block]")?.dataset.bsBlock||"")+"/"+n;'
-			. 'return fetch(u,{method:"POST",headers:{"Content-Type":"application/json","X-WP-Nonce":"' . $nonce . '"},body:JSON.stringify({params:p||{}})}).then(function(r){return r.json()});'
-			. '};'
-			. '</script>';
-
-		$html = str_replace( '</head>', $script . '</head>', $html );
+		$script = '<script id="blockstudio-fn">' . self::get_client_script() . '</script>';
+		$html   = str_replace( '</head>', $script . '</head>', $html );
 
 		return $html;
+	}
+
+	/**
+	 * Inject the bs.fn() client into the block editor.
+	 *
+	 * @return void
+	 */
+	public static function inject_editor_client(): void {
+		if ( ! self::has_any_functions() ) {
+			return;
+		}
+
+		wp_register_script( 'blockstudio-fn', false, array(), BLOCKSTUDIO_VERSION, false );
+		wp_enqueue_script( 'blockstudio-fn' );
+		wp_add_inline_script( 'blockstudio-fn', self::get_client_script() );
 	}
 
 	/**

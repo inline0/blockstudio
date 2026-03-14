@@ -779,6 +779,33 @@ add_action(
 					// Post 1099 - "Reusable" for text.ts populate tests (matches extension default)
 					$create_post_with_id( 1099, 'Reusable', 'reusable' );
 
+					// String renderer test page with raw bs: tags in content
+					$sr_content = '<bs:type-string-renderer title="Self Closing" count=42 />'
+						. '<bs:type-string-renderer title="Paired Tag" count=7></bs:type-string-renderer>'
+						. '<bs:type-string-renderer />'
+						. '<bs:type-string-renderer title="First" count=1 />'
+						. '<bs:type-string-renderer title="Second" count=2 />'
+						. '<bs:blockstudio--type-string-renderer title="Namespaced" count=99 />'
+						. '<p>Unknown tag: <bs:nonexistent-block title="Nope" /></p>';
+					if ( ! get_post( 3100 ) ) {
+						$wpdb->insert( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery
+							$wpdb->posts,
+							array(
+								'ID'            => 3100,
+								'post_author'   => 1,
+								'post_date'     => current_time( 'mysql' ),
+								'post_date_gmt' => current_time( 'mysql', 1 ),
+								'post_content'  => $sr_content,
+								'post_title'    => 'String Renderer Test',
+								'post_status'   => 'publish',
+								'post_name'     => 'string-renderer-test',
+								'post_type'     => 'page',
+								'guid'          => home_url( '/?p=3100' ),
+							)
+						);
+						$created['posts'][] = 3100;
+					}
+
 					// Pattern 2643 - contains type-text block
 					$pattern_2643_content = '<!-- wp:blockstudio/type-text /--><!-- wp:blockstudio/type-textarea /-->';
 					$existing_2643        = get_post( 2643 );
