@@ -68,11 +68,11 @@ class Settings {
 	 * @var array
 	 */
 	protected static array $defaults = array(
-		'users'       => array(
+		'users'          => array(
 			'ids'   => array(),
 			'roles' => array(),
 		),
-		'assets'      => array(
+		'assets'         => array(
 			'enqueue' => true,
 			'reset'   => array(
 				'enabled'   => false,
@@ -87,24 +87,27 @@ class Settings {
 				'scssFiles' => true,
 			),
 		),
-		'editor'      => array(
+		'editor'         => array(
 			'formatOnSave' => false,
 			'assets'       => array(),
 			'markup'       => false,
 		),
-		'tailwind'    => array(
+		'tailwind'       => array(
 			'enabled' => false,
 			'config'  => '',
 		),
-		'blockEditor' => array(
+		'blockEditor'    => array(
 			'disableLoading' => false,
 			'cssClasses'     => array(),
 			'cssVariables'   => array(),
 		),
-		'ai'          => array(
+		'ai'             => array(
 			'enableContextGeneration' => false,
 		),
-		'dev'         => array(
+		'stringRenderer' => array(
+			'enabled' => false,
+		),
+		'dev'            => array(
 			'grab'   => array(
 				'enabled' => false,
 			),

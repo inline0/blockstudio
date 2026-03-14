@@ -25,6 +25,7 @@
     "cssVariables": ["global-styles-css-custom-properties"]
   },
   "ai": { "enableContextGeneration": true },
+  "stringRenderer": { "enabled": true },
   "dev": { "grab": { "enabled": true }, "canvas": { "enabled": true, "adminBar": false } },
   "$schema": "https://blockstudio.dev/schema/blockstudio"
 }

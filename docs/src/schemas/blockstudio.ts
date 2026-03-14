@@ -233,6 +233,23 @@ export const blockstudio = {
       },
       additionalProperties: true,
     },
+    stringRenderer: {
+      type: 'object',
+      description:
+        'Settings related to the string renderer, which replaces bs: tags in post content with rendered Blockstudio blocks.',
+      properties: {
+        enabled: {
+          type: 'boolean',
+          default: false,
+          description:
+            'Enable the string renderer to parse and render bs: tags in post content.',
+          descriptionFilter:
+            'This filter allows you to enable/disable the string renderer.',
+          example: true,
+        },
+      },
+      additionalProperties: true,
+    },
     dev: {
       type: 'object',
       description: 'Settings related to developer tools.',

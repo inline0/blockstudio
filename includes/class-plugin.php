@@ -138,6 +138,7 @@ class Plugin {
 		require_once $classes_dir . 'extensions.php';
 		require_once $classes_dir . 'examples.php';
 		require_once $classes_dir . 'register.php';
+		require_once $classes_dir . 'string-renderer.php';
 		require_once $classes_dir . 'github-updater.php';
 
 		// File-based pages system.
@@ -214,6 +215,16 @@ class Plugin {
 			function () {
 				if ( class_exists( 'Blockstudio\Pages' ) ) {
 					Pages::init();
+				}
+			},
+			PHP_INT_MAX
+		);
+
+		add_action(
+			'init',
+			function () {
+				if ( class_exists( 'Blockstudio\String_Renderer' ) ) {
+					String_Renderer::init();
 				}
 			},
 			PHP_INT_MAX
