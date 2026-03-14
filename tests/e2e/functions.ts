@@ -100,6 +100,6 @@ test.describe('Block Functions (RPC)', () => {
     const hasBsFn = await page.evaluate(() => typeof (window as any).bs?.fn === 'function');
     expect(hasBsFn).toBe(true);
     await page.goto(POST_URL);
-    canvas = await getEditorCanvas(page);
+    await getEditorCanvas(page);
   });
 });
