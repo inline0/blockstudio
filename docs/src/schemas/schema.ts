@@ -301,7 +301,7 @@ export const schema = async (extensions = false) => {
       language: {
         type: 'string',
         description: 'The language to use for syntax highlighting.',
-        enum: ['css', 'html', 'javascript', 'json', 'twig'],
+        enum: ['css', 'html', 'javascript', 'json', 'scss', 'twig'],
       },
       lineNumbers: {
         type: 'boolean',

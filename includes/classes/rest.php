@@ -371,6 +371,24 @@ class Rest {
 
 				register_rest_route(
 					'blockstudio/v1',
+					'/scss/compile',
+					array(
+						'methods'             => 'POST',
+						'callback'            => array( $this, 'scss_compile' ),
+						'permission_callback' => $permission_edit,
+						'args'                => array(
+							'scss' => array(
+								'required'          => true,
+								'validate_callback' => function ( $param ) {
+									return is_string( $param );
+								},
+							),
+						),
+					)
+				);
+
+				register_rest_route(
+					'blockstudio/v1',
 					'/gutenberg/block/render/all',
 					array(
 						'methods'             => 'POST',
@@ -661,6 +679,22 @@ class Rest {
 		}
 
 		return rest_ensure_response( $rendered_blocks );
+	}
+
+	/**
+	 * /scss/compile Endpoint.
+	 *
+	 * @since 7.1.0
+	 *
+	 * @param \WP_REST_Request $request The request.
+	 *
+	 * @return \WP_REST_Response The compiled CSS.
+	 */
+	public function scss_compile( $request ) {
+		$scss = $request->get_param( 'scss' );
+		$css  = Assets::compile_scss( $scss, '' );
+
+		return rest_ensure_response( array( 'css' => $css ) );
 	}
 
 	/**

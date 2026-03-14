@@ -1243,13 +1243,18 @@ class Assets {
 		$assets_string = '';
 
 		foreach ( $attribute_data[ $key ] as $asset ) {
-			$type = $asset['language'] ?? 'html';
+			$type  = $asset['language'] ?? 'html';
+			$value = $asset['value'] ?? '';
 
 			if ( 'javascript' === $type ) {
-				$assets_string .= '<script id="' . $attribute_data['selectorAttributeId'] . '-' . uniqid() . '" data-blockstudio-asset>' . $asset['value'] . '</script>';
+				$assets_string .= '<script id="' . $attribute_data['selectorAttributeId'] . '-' . uniqid() . '" data-blockstudio-asset>' . $value . '</script>';
+			}
+			if ( 'scss' === $type ) {
+				$value = self::compile_scss( $value, '' );
+				$type  = 'css';
 			}
 			if ( 'css' === $type ) {
-				$assets_string .= '<style id="' . $attribute_data['selectorAttributeId'] . '-' . uniqid() . '" data-blockstudio-asset>' . $asset['value'] . '</style>';
+				$assets_string .= '<style id="' . $attribute_data['selectorAttributeId'] . '-' . uniqid() . '" data-blockstudio-asset>' . $value . '</style>';
 			}
 		}
 

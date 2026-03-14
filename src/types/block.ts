@@ -1512,6 +1512,7 @@ export enum Language {
   HTML = 'html',
   JSON = 'json',
   Javascript = 'javascript',
+  SCSS = 'scss',
   Twig = 'twig',
 }
 

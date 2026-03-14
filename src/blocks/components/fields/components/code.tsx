@@ -11,7 +11,7 @@ import { json } from '@codemirror/lang-json';
 import { php } from '@codemirror/lang-php';
 import { githubDark, githubLight } from '@uiw/codemirror-theme-github';
 import CodeMirror from '@uiw/react-codemirror';
-import { useEffect } from '@wordpress/element';
+import { useEffect, useRef, useState } from '@wordpress/element';
 import { external } from '@wordpress/icons';
 import { LabelAction } from '@/blocks/components/label';
 import { useGetCssVariables } from '@/blocks/hooks/use-get-css-variables';
@@ -103,6 +103,7 @@ export const Code = ({
   const getExtensions = () => {
     switch (item.language) {
       case 'css':
+      case 'scss':
         return [
           cssLang(),
           autocompletion({
@@ -132,8 +133,52 @@ export const Code = ({
     `.is-root-container [data-block="${clientId}"]`,
   );
 
+  const scssEnabled = item.language === 'scss';
+  const [compiledCss, setCompiledCss] = useState<string>(replacedVal);
+  const debounceRef = useRef<ReturnType<typeof setTimeout>>();
+
   useEffect(() => {
-    if (item.language !== 'css' && item.language !== 'javascript') return;
+    if (!scssEnabled) {
+      setCompiledCss(replacedVal);
+      return;
+    }
+
+    if (!replacedVal) {
+      setCompiledCss('');
+      return;
+    }
+
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+
+    debounceRef.current = setTimeout(async () => {
+      try {
+        const res = await window.fetch(
+          `${window.blockstudioAdmin.rest}blockstudio/v1/scss/compile`,
+          {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'X-WP-Nonce': window.blockstudioAdmin.nonceRest,
+            },
+            body: JSON.stringify({ scss: replacedVal }),
+          },
+        );
+        const data = await res.json();
+        if (data.css !== undefined) setCompiledCss(data.css);
+      } catch {
+        setCompiledCss(replacedVal);
+      }
+    }, 400);
+
+    return () => {
+      if (debounceRef.current) clearTimeout(debounceRef.current);
+    };
+  }, [replacedVal, scssEnabled]);
+
+  const isCssLike = item.language === 'css' || item.language === 'scss';
+
+  useEffect(() => {
+    if (!isCssLike && item.language !== 'javascript') return;
     if (!item.asset && !extensions) return;
 
     const id = `blockstudio-${clientId}-${inRepeater ? repeaterId : item.id}`;
@@ -141,17 +186,18 @@ export const Code = ({
 
     let element = doc.getElementById(id);
     if (!element) {
-      element = doc.createElement(item.language === 'css' ? 'style' : 'script');
+      element = doc.createElement(isCssLike ? 'style' : 'script');
       element.id = id;
-      if (item.language === 'css') {
+      if (isCssLike) {
         doc.head.appendChild(element);
       } else {
         doc.body.appendChild(element);
       }
     }
 
-    element.innerHTML = replacedVal;
-  }, [replacedVal, clientId]);
+    const injectedValue = scssEnabled ? compiledCss : replacedVal;
+    element.innerHTML = injectedValue;
+  }, [compiledCss, replacedVal, clientId]);
 
   const editorProps = {
     ...rest,

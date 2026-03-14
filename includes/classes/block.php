@@ -933,7 +933,7 @@ class Block {
 						$attribute_data['hasCodeSelector'] = true;
 					}
 
-					if ( 'css' === $lang || 'javascript' === $lang ) {
+					if ( 'css' === $lang || 'scss' === $lang || 'javascript' === $lang ) {
 						$asset_data                 = array(
 							'language' => $lang,
 							'value'    => $replaced_value,
