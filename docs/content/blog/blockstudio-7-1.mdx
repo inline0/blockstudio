@@ -1,13 +1,50 @@
 ---
 title: Blockstudio 7.1
-description: String renderer, SCSS code fields, server functions, and more new features coming to the WordPress block framework.
+description: Components, string renderer, SCSS code fields, server functions, and more new features coming to the WordPress block framework.
 date: 2026-03-14
 author: Dennis
 ---
 
 Blockstudio 7.1 is the first feature release since the v7 rewrite. It introduces
-the string renderer, SCSS support for code fields, and lays the groundwork for
-more features to come.
+components, the string renderer, SCSS support for code fields, and lays the
+groundwork for more features to come.
+
+## Components
+
+Components are Blockstudio blocks that go through the full pipeline (attributes,
+templates, assets, RPC, Tailwind) but never appear in the WordPress editor
+inserter. Set `"component": true` in your block.json and the block becomes
+available exclusively for programmatic rendering.
+
+```json title="block.json"
+{
+  "name": "my-theme/card",
+  "title": "Card",
+  "blockstudio": {
+    "component": true,
+    "attributes": [
+      { "id": "title", "type": "text" },
+      { "id": "description", "type": "textarea" }
+    ]
+  }
+}
+```
+
+Render components using the string renderer or `bs_render_block()`:
+
+```html
+<bs:card title="My Card" description="Card content." />
+```
+
+```php
+bs_render_block([
+  'name' => 'my-theme/card',
+  'data' => ['title' => 'My Card', 'description' => 'Card content.'],
+]);
+```
+
+This is useful for building shadcn-style application UI using Blockstudio's
+tooling without cluttering the editor inserter.
 
 ## String renderer
 

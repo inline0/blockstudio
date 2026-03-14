@@ -28,6 +28,25 @@ if ( class_exists( 'Timber\Timber' ) ) {
 	Timber\Timber::init();
 }
 
+// Shortcode for testing bs_render_block() in post content.
+add_shortcode(
+	'bs_test_render',
+	function ( $atts ) {
+		$atts       = is_array( $atts ) ? $atts : array();
+		$block_name = $atts['name'] ?? '';
+		unset( $atts['name'] );
+
+		$config = array(
+			'name' => $block_name,
+			'data' => $atts,
+		);
+
+		ob_start();
+		bs_render_block( $config );
+		return ob_get_clean();
+	}
+);
+
 // Blade template rendering.
 add_filter(
 	'blockstudio/blocks/render',
@@ -805,6 +824,29 @@ add_action(
 							)
 						);
 						$created['posts'][] = 3100;
+					}
+
+					// Component test page with bs: string renderer and bs_render_block()
+					$comp_content = '<bs:type-component heading="String Rendered" content="Via bs tag" />'
+						. '<bs:type-component heading="Paired Tag" content="Via paired tag"></bs:type-component>'
+						. '[bs_test_render name="blockstudio/type-component" heading="PHP Rendered" content="Via bs_render_block"]';
+					if ( ! get_post( 3200 ) ) {
+						$wpdb->insert( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery
+							$wpdb->posts,
+							array(
+								'ID'            => 3200,
+								'post_author'   => 1,
+								'post_date'     => current_time( 'mysql' ),
+								'post_date_gmt' => current_time( 'mysql', 1 ),
+								'post_content'  => $comp_content,
+								'post_title'    => 'Component Test',
+								'post_status'   => 'publish',
+								'post_name'     => 'component-test',
+								'post_type'     => 'page',
+								'guid'          => home_url( '/?p=3200' ),
+							)
+						);
+						$created['posts'][] = 3200;
 					}
 
 					// Pattern 2643 - contains type-text block

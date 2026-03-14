@@ -1101,6 +1101,11 @@ export const schema = async (extensions = false) => {
               description:
                 'HTML content that will be rendered as the inner blocks.',
             },
+            component: {
+              type: 'boolean',
+              description:
+                'Whether this block is a component. Components go through the full Blockstudio pipeline but do not appear in the editor inserter. They can only be rendered via the string renderer or bs_render_block().',
+            },
             override: {
               type: 'boolean',
               description: 'Whether this block should overwrite another block.',

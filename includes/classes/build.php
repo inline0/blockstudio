@@ -1044,7 +1044,7 @@ class Build {
 				);
 
 				$block = $registry->get_block( $name );
-				if ( $block ) {
+				if ( $block && empty( $block->blockstudio['component'] ) ) {
 					\register_block_type(
 						apply_filters( 'blockstudio/blocks/meta', $block )
 					);
@@ -1424,6 +1424,7 @@ class Build {
 			'blockEditor'   => array(
 				'disableLoading' => $disable_loading,
 			),
+			'component'     => $classification['is_component'] ?? false,
 			'conditions'    => $block->blockstudio['conditions'] ?? true,
 			'editor'        => $block->blockstudio['editor'] ?? false,
 			'extend'        => $block->blockstudio['extend'] ?? false,

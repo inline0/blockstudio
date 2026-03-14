@@ -1,0 +1,25 @@
+{
+  "$schema": "https://blockstudio.dev/schema/block",
+  "name": "blockstudio/type-component",
+  "title": "Component Test",
+  "category": "blockstudio-test-native",
+  "icon": "screenoptions",
+  "description": "Test block for component feature.",
+  "blockstudio": {
+    "component": true,
+    "attributes": [
+      {
+        "id": "heading",
+        "type": "text",
+        "label": "Heading",
+        "default": "Default Heading"
+      },
+      {
+        "id": "content",
+        "type": "text",
+        "label": "Content",
+        "default": "Default Content"
+      }
+    ]
+  }
+}

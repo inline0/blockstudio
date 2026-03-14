@@ -314,21 +314,23 @@ class Block_Discovery {
 		$is_blockstudio = 'block.json' === $path_info['basename']
 			&& isset( $this->decode_json( $contents )['blockstudio'] );
 
-		$is_extend   = $this->check_blockstudio_flag( $contents, 'extend' );
-		$is_override = $is_blockstudio && $this->check_blockstudio_flag( $contents, 'override' );
-		$is_block    = $is_blockstudio && Files::get_render_template( $file_path ) && ! $is_extend;
-		$is_init     = 'php' === ( $path_info['extension'] ?? '' )
+		$is_extend    = $this->check_blockstudio_flag( $contents, 'extend' );
+		$is_override  = $is_blockstudio && $this->check_blockstudio_flag( $contents, 'override' );
+		$is_component = $is_blockstudio && $this->check_blockstudio_flag( $contents, 'component' );
+		$is_block     = $is_blockstudio && Files::get_render_template( $file_path ) && ! $is_extend;
+		$is_init      = 'php' === ( $path_info['extension'] ?? '' )
 			&& str_starts_with( $path_info['basename'], 'init' );
-		$is_dir      = is_dir( $file_path )
+		$is_dir       = is_dir( $file_path )
 			&& ! file_exists( $file_path . '/block.json' )
 			&& ! Files::get_render_template( $file_path );
-		$is_twig     = str_ends_with( $file_path, '.twig' );
-		$is_php      = ! $is_twig;
-		$is_blade    = str_ends_with( $file_path, '.blade.php' );
+		$is_twig      = str_ends_with( $file_path, '.twig' );
+		$is_php       = ! $is_twig;
+		$is_blade     = str_ends_with( $file_path, '.blade.php' );
 
 		return array(
 			'is_blockstudio' => $is_blockstudio,
 			'is_block'       => $is_block,
+			'is_component'   => $is_component,
 			'is_extend'      => $is_extend,
 			'is_override'    => $is_override,
 			'is_init'        => $is_init,

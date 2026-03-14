@@ -232,6 +232,10 @@ export interface BlockstudioClass {
    */
   blockEditor?: BlockstudioBlockEditor;
   /**
+   * Whether this block is a component (excluded from editor inserter).
+   */
+  component?: boolean;
+  /**
    * Conditional logic detailing when the field should be displayed in the editor.
    */
   conditions?: Array<BlockstudioCondition[]>;

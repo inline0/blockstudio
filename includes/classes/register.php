@@ -51,6 +51,10 @@ class Register {
 	 */
 	public function register_blocks(): void {
 		foreach ( Build::blocks() as $block ) {
+			if ( ! empty( $block->blockstudio['component'] ) ) {
+				continue;
+			}
+
 			register_block_type(
 				apply_filters( 'blockstudio/blocks/meta', $block )
 			);

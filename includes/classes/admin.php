@@ -492,7 +492,10 @@ class Admin {
 			);
 		}
 
-		$blocks     = Build::blocks();
+		$blocks     = array_filter(
+			Build::blocks(),
+			fn( $block ) => empty( $block->blockstudio['component'] )
+		);
 		$extensions = Build::extensions();
 
 		return array_merge(

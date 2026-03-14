@@ -1,0 +1,80 @@
+---
+title: Components
+description: Non-editor blocks for programmatic rendering.
+---
+
+# Components
+
+Components are Blockstudio blocks that go through the full pipeline (attributes, templates, assets, RPC, Tailwind) but do not appear in the WordPress editor inserter. They are designed for building reusable UI pieces that are only rendered programmatically.
+
+## block.json
+
+Set the `component` property to `true` in the `blockstudio` object:
+
+```json title="block.json"
+{
+  "$schema": "https://blockstudio.dev/schema/block",
+  "name": "my-theme/card",
+  "title": "Card",
+  "blockstudio": {
+    "component": true,
+    "attributes": [
+      {
+        "id": "title",
+        "type": "text",
+        "label": "Title"
+      },
+      {
+        "id": "description",
+        "type": "textarea",
+        "label": "Description"
+      }
+    ]
+  }
+}
+```
+
+## Rendering
+
+Components can be rendered in two ways:
+
+### String Renderer
+
+Use `<bs:>` tags in page templates or post content:
+
+```html title="index.php"
+<bs:card title="My Card" description="Card content." />
+```
+
+### PHP
+
+Use `bs_render_block()` or `bs_block()` in PHP templates:
+
+```php title="template.php"
+bs_render_block([
+  'name' => 'my-theme/card',
+  'attributes' => [
+    'title' => 'My Card',
+    'description' => 'Card content.',
+  ],
+]);
+```
+
+## What Works
+
+Components support all Blockstudio features:
+
+- Attributes and field types
+- PHP, Twig, and Blade templates
+- CSS/SCSS assets (loaded when the component is rendered)
+- Tailwind CSS
+- Server functions (RPC)
+- Scoped styles
+
+## What Does Not Apply
+
+Since components never appear in the editor:
+
+- Block editor preview is not available
+- Block inserter search will not find them
+- `registerBlockType()` is never called for components
