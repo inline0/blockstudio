@@ -1,11 +1,10 @@
-import { test, expect, Page, Frame } from '@playwright/test';
+import { test, expect, Page } from '@playwright/test';
 import { login, getEditorCanvas } from './utils/playwright-utils';
 
 const BASE_URL = 'http://localhost:8888';
 const POST_URL = `${BASE_URL}/wp-admin/post.php?post=1483&action=edit`;
 
 let page: Page;
-let canvas: Frame;
 
 test.describe.configure({ mode: 'serial' });
 
@@ -15,7 +14,7 @@ test.beforeAll(async ({ browser }) => {
   page.setViewportSize({ width: 1920, height: 1080 });
   await login(page);
   await page.goto(POST_URL);
-  canvas = await getEditorCanvas(page);
+  await getEditorCanvas(page);
 });
 
 test.afterAll(async () => {
