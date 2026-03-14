@@ -19,7 +19,6 @@
     "overrides",
     "loading",
     "rendering",
-    "string-renderer",
     "interactivity",
     "seo",
     "hooks"

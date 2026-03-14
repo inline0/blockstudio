@@ -1,20 +1,22 @@
 ---
 title: Programmatic Rendering
-description: Render Blockstudio blocks programmatically in PHP.
+description: Render Blockstudio blocks programmatically via PHP functions or HTML tags.
 ---
 
 # Programmatic Rendering
 
 With Gutenberg becoming the prominent instrument in creating easily editable websites for clients, it makes sense to create all necessary website areas as blocks. While this approach will cater to most, advanced users and specific use cases might need to use those existing blocks outside the editor.
 
-Blockstudio provides two specific functions for exactly this use case:
+Blockstudio provides two approaches for rendering blocks programmatically:
 
-- `bs_render_block`: immediately renders the block to the page (no `echo` needed)
-- `bs_block`: needs an `echo` to be rendered to the page. This function is useful when [nesting](#nesting) blocks.
+- **PHP functions**: `bs_render_block` and `bs_block` for rendering from PHP code
+- **HTML tags**: `<bs:block-name>` tags that get replaced with block output anywhere on the page
 
-All Blockstudio specific features like inline styles, scripts, and scoped styles are supported when using the render functions.
+All Blockstudio specific features like inline styles, scripts, and scoped styles are supported.
 
-## Without Data
+## PHP Functions
+
+### Without Data
 
 In its simplest form, the function accepts a single value which is the ID of the block that should be rendered on the page.
 
@@ -22,7 +24,7 @@ In its simplest form, the function accepts a single value which is the ID of the
 bs_render_block('blockstudio/cta');
 ```
 
-## With Data
+### With Data
 
 To render the block with custom data, an array needs to be used in place of a single value for the first parameter. The value in the data key will be passed to the `$attributes` and `$a` variable inside your block template.
 
@@ -36,7 +38,7 @@ bs_render_block([
 ]);
 ```
 
-## Nesting
+### Nesting
 
 Blocks can be nested within each other using the `bs_block` function in combination with the powerful `$content` variable inside your block templates.
 
@@ -97,4 +99,107 @@ echo bs_block([
     ])
   ]
 ]);
+```
+
+## HTML Tags
+
+Use `<bs:>` tags to embed blocks anywhere in your HTML output. Blockstudio hooks
+into the output buffer and replaces each tag with the full block output.
+
+### Activation
+
+The tag syntax is opt-in. Enable it in your `blockstudio.json`:
+
+```json title="blockstudio.json"
+{
+  "stringRenderer": {
+    "enabled": true
+  }
+}
+```
+
+Or via the PHP filter:
+
+```php
+add_filter('blockstudio/settings/string_renderer/enabled', '__return_true');
+```
+
+### Self-closing tags
+
+For blocks without inner content:
+
+```html
+<bs:hero title="Welcome" background="dark" />
+```
+
+### Paired tags
+
+When you need inner content passed to the block:
+
+```html
+<bs:section layout="wide">
+  <p>Content inside the block.</p>
+</bs:section>
+```
+
+### Nested tags
+
+Inner blocks render first, then the outer block:
+
+```html
+<bs:section layout="wide">
+  <bs:hero title="Welcome" />
+  <bs:card title="Features" />
+</bs:section>
+```
+
+### Namespace prefix
+
+By default, the tag matches the first registered block with that slug. Use a
+double-dash to specify a namespace:
+
+```html
+<bs:acme--hero title="Branded" />
+```
+
+This resolves to exactly `acme/hero`.
+
+### Attribute mapping
+
+Element attributes map directly to block attributes:
+
+```html
+<bs:cta title="Get started" count="42" active="true" />
+```
+
+String values are passed as-is. Numeric and boolean strings are kept as strings
+and converted by the block's attribute definitions.
+
+### Where it works
+
+The tag syntax processes the full output buffer, so it works everywhere the
+tag appears in the final HTML:
+
+- Post content
+- Widget areas
+- Theme templates
+- Headers and footers
+- Shortcode output
+
+### Programmatic usage
+
+Apply the tag renderer to any string from PHP:
+
+```php
+$html = apply_filters('blockstudio/string_renderer/render', $content);
+```
+
+### Components
+
+The tag syntax pairs well with [Components](/docs/blocks/components).
+Components are blocks that only render programmatically and never appear in the
+editor inserter. Use `<bs:>` tags to place them anywhere on the page.
+
+```html
+<bs:card title="My Card" description="Card content." />
 ```
