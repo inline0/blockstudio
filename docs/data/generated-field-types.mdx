@@ -17,6 +17,23 @@ Renders data attribute inputs.
 | `link` | `boolean` | Enables link selection from dropdown. |
 | `media` | `boolean` | Enables media selection from dropdown. |
 
+## block
+
+References another Blockstudio block, expanding its fields inline. In templates, the value returns the rendered block output.
+
+```json
+{
+  "type": "block"
+}
+```
+
+### Properties
+
+| Property | Type | Description |
+|----------|------|-------------|
+| `block` | `string` | The name of the block to reference (e.g., "mytheme/card"). |
+| `returnFormat` | `string` | How the value should be returned in templates. |
+
 ## checkbox
 
 Renders a set of checkbox inputs.
