@@ -1,6 +1,6 @@
 ---
 title: Blockstudio 7.1
-description: String renderer, SCSS code fields, and more new features coming to the WordPress block framework.
+description: String renderer, SCSS code fields, server functions, and more new features coming to the WordPress block framework.
 date: 2026-03-14
 author: Dennis
 ---
@@ -111,3 +111,29 @@ results as you type.
 ```
 
 No additional settings required. Just set the language to `scss` and it works.
+
+## Server functions
+
+Blocks can now define PHP functions that the frontend can call. Drop a
+`functions.php` into any block directory and Blockstudio handles the rest:
+REST endpoint routing, authentication, and a tiny JS client.
+
+```php title="functions.php"
+return [
+    'subscribe' => function (array $params): array {
+        $email = sanitize_email($params['email']);
+        return ['success' => true];
+    },
+];
+```
+
+```js
+const result = await bs.fn('subscribe', { email: 'user@example.com' });
+```
+
+This pairs naturally with the WordPress Interactivity API. Your store actions can
+call server functions and update reactive state with the response.
+
+Functions are authenticated by default. Add `'public' => true` to allow
+unauthenticated access. Cross-block calling works too: any block can call
+functions on any other block by passing the block name as the third argument.

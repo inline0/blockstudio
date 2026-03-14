@@ -1,0 +1,19 @@
+{
+  "$schema": "https://blockstudio.dev/schema/block",
+  "name": "blockstudio/type-functions",
+  "title": "Functions Test",
+  "category": "blockstudio-test-native",
+  "icon": "admin-generic",
+  "description": "Test block for server functions.",
+  "blockstudio": {
+    "interactivity": true,
+    "attributes": [
+      {
+        "id": "message",
+        "type": "text",
+        "label": "Message",
+        "default": "Hello"
+      }
+    ]
+  }
+}

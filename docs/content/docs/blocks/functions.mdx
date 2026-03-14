@@ -1,0 +1,145 @@
+---
+title: Server Functions
+description: Define PHP functions in your block that can be called from the frontend via a lightweight RPC system.
+---
+
+# Server Functions
+
+Blocks can define server-side PHP functions that are callable from the frontend. Add a `functions.php` file to your block directory and Blockstudio exposes them through a REST endpoint with a tiny JS client.
+
+## Setup
+
+Create a `functions.php` in your block directory that returns an associative array of functions:
+
+```
+blocks/my-block/
+├── block.json
+├── index.twig
+├── functions.php    ← server functions
+└── script.js
+```
+
+```php title="functions.php"
+return [
+    'subscribe' => function (array $params): array {
+        $email = sanitize_email($params['email']);
+        // process subscription
+        return ['success' => true];
+    },
+    'load_more' => function (array $params): array {
+        $offset = (int) ($params['offset'] ?? 0);
+        $posts = get_posts(['offset' => $offset, 'numberposts' => 5]);
+        return ['posts' => $posts];
+    },
+];
+```
+
+## Calling from JavaScript
+
+Blockstudio auto-injects a `bs.fn()` helper on pages that have blocks with server functions.
+
+```js
+// Call a function on the current block
+const result = await bs.fn('subscribe', { email: 'user@example.com' });
+console.log(result.success);
+
+// Call a function on a specific block
+const posts = await bs.fn('load_more', { offset: 10 }, 'my-theme/blog-feed');
+```
+
+**Signature:** `bs.fn(functionName, params?, blockName?) -> Promise`
+
+When `blockName` is omitted, it looks for the nearest `[data-bs-block]` attribute on an ancestor element. You can also always pass the full block name as the third argument.
+
+## With the Interactivity API
+
+Server functions pair naturally with the WordPress Interactivity API:
+
+```js title="script.js"
+import { store, getContext } from '@wordpress/interactivity';
+
+store('myTheme/newsletter', {
+  actions: {
+    subscribe: async () => {
+      const ctx = getContext();
+      ctx.loading = true;
+      ctx.result = await bs.fn('subscribe', { email: ctx.email }, 'myTheme/newsletter');
+      ctx.loading = false;
+    },
+  },
+});
+```
+
+```php title="index.php"
+<div data-wp-interactive="myTheme/newsletter" data-bs-block="myTheme/newsletter" data-wp-context='{"email":"","loading":false,"result":null}' useBlockProps>
+  <input type="email" data-wp-bind--value="context.email" data-wp-on--input="actions.updateEmail" />
+  <button data-wp-on--click="actions.subscribe" data-wp-bind--disabled="context.loading">Subscribe</button>
+  <span data-wp-text="context.result.message"></span>
+</div>
+```
+
+## Public Functions
+
+By default, functions require an authenticated user. To allow unauthenticated access, use the expanded format with `public: true`:
+
+```php title="functions.php"
+return [
+    'get_count' => [
+        'callback' => function (array $params): array {
+            return ['count' => wp_count_posts()->publish];
+        },
+        'public' => true,
+    ],
+];
+```
+
+## Cross-Block Calling
+
+### From JavaScript
+
+Any block can call functions on any other block by passing the block name:
+
+```js
+const result = await bs.fn('load_more', { offset: 0 }, 'my-theme/blog-feed');
+```
+
+### From PHP
+
+Use the `Functions::call()` method for server-side cross-block calls:
+
+```php title="functions.php"
+return [
+    'refresh' => function (array $params): array {
+        $feed = \Blockstudio\Functions::call('my-theme/blog-feed', 'load_more', ['offset' => 0]);
+        return ['feed' => $feed];
+    },
+];
+```
+
+## REST Endpoint
+
+All function calls go through a single endpoint:
+
+```
+POST /wp-json/blockstudio/v1/fn/{namespace}/{block}/{function}
+```
+
+**Body:** `{ "params": { ... } }`
+
+**Response:** The return value of the PHP function as JSON.
+
+## Filter
+
+Use the `blockstudio/functions` filter to modify or add functions programmatically:
+
+```php
+add_filter('blockstudio/functions', function (array $functions): array {
+    $functions['my-theme/hero']['custom_action'] = [
+        'callback' => function (array $params): array {
+            return ['ok' => true];
+        },
+        'public' => false,
+    ];
+    return $functions;
+});
+```
