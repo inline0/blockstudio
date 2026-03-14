@@ -42,6 +42,15 @@ Paired tags when you need inner content:
 </bs:section>
 ```
 
+Nested tags work too. Inner blocks render first, then the outer block:
+
+```html
+<bs:section layout="wide">
+  <bs:hero title="Welcome" />
+  <bs:card title="Features" />
+</bs:section>
+```
+
 Namespace prefix with double-dash for disambiguation:
 
 ```html

@@ -786,6 +786,7 @@ add_action(
 						. '<bs:type-string-renderer title="First" count=1 />'
 						. '<bs:type-string-renderer title="Second" count=2 />'
 						. '<bs:blockstudio--type-string-renderer title="Namespaced" count=99 />'
+						. '<bs:type-string-renderer title="Outer" count=100><bs:type-string-renderer title="Inner" count=200 /></bs:type-string-renderer>'
 						. '<p>Unknown tag: <bs:nonexistent-block title="Nope" /></p>';
 					if ( ! get_post( 3100 ) ) {
 						$wpdb->insert( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery

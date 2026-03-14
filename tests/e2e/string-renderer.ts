@@ -54,6 +54,15 @@ test.describe('String Renderer', () => {
     await expect(block.locator('.sr-count')).toHaveText('99');
   });
 
+  test('renders nested tags', async () => {
+    const outer = page.locator('.bs-string-renderer', { hasText: 'Outer' });
+    const inner = page.locator('.bs-string-renderer', { hasText: 'Inner' });
+    await expect(outer).toBeVisible();
+    await expect(inner).toBeVisible();
+    await expect(outer.locator('.sr-count').first()).toHaveText('100');
+    await expect(inner.locator('.sr-count')).toHaveText('200');
+  });
+
   test('leaves unresolvable tags untouched', async () => {
     await expect(page.locator('text=Unknown tag:')).toBeVisible();
   });

@@ -59,8 +59,11 @@ class String_Renderer {
 			return $content;
 		}
 
-		$content = self::replace_self_closing_tags( $content, $blocks );
-		$content = self::replace_paired_tags( $content, $blocks );
+		do {
+			$previous = $content;
+			$content  = self::replace_self_closing_tags( $content, $blocks );
+			$content  = self::replace_paired_tags( $content, $blocks );
+		} while ( $content !== $previous );
 
 		return $content;
 	}
@@ -89,7 +92,7 @@ class String_Renderer {
 					return $matches[0];
 				}
 
-				return self::render_block( $block_name, $attributes, $inner_content );
+				return self::render_block( $block_name, $attributes ) . $inner_content;
 			},
 			$content
 		) ?? $content;
