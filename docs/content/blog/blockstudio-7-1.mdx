@@ -1,13 +1,47 @@
 ---
 title: Blockstudio 7.1
-description: Components, string renderer, SCSS code fields, server functions, and more new features coming to the WordPress block framework.
+description: Block field, components, string renderer, SCSS code fields, server functions, and more new features coming to the WordPress block framework.
 date: 2026-03-14
 author: Dennis
 ---
 
 Blockstudio 7.1 is the first feature release since the v7 rewrite. It introduces
-components, the string renderer, SCSS support for code fields, and lays the
-groundwork for more features to come.
+the block field type, components, the string renderer, SCSS support for code
+fields, and lays the groundwork for more features to come.
+
+## Block field
+
+The new `block` field type lets you reference another Blockstudio block as an
+attribute. The referenced block's fields expand inline using the same
+`idStructure` and `overrides` system as custom fields. In templates, the value
+returns the rendered block output.
+
+```json title="block.json"
+{
+  "blockstudio": {
+    "attributes": [
+      {
+        "id": "card",
+        "type": "block",
+        "block": "mytheme/card",
+        "idStructure": "card_{id}"
+      }
+    ]
+  }
+}
+```
+
+```twig title="index.twig"
+<div class="hero">
+  <h1>{{ a.title }}</h1>
+  {{ a.card }}
+</div>
+```
+
+This works with both regular blocks and component blocks. It uses the same
+expansion logic as custom fields, so `idStructure` and `overrides` work
+identically. The `returnFormat` option controls whether you get rendered HTML,
+raw data, or both.
 
 ## Components
 

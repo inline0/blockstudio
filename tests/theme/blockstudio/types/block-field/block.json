@@ -1,0 +1,25 @@
+{
+  "$schema": "https://blockstudio.dev/schema/block",
+  "name": "blockstudio/type-block-field",
+  "title": "Block Field Test",
+  "category": "blockstudio-test-native",
+  "icon": "screenoptions",
+  "description": "Test block for block field type.",
+  "blockstudio": {
+    "attributes": [
+      {
+        "id": "label",
+        "type": "text",
+        "label": "Label",
+        "default": "Host Block"
+      },
+      {
+        "id": "card",
+        "type": "block",
+        "block": "blockstudio/type-component",
+        "idStructure": "card_{id}",
+        "label": "Card Component"
+      }
+    ]
+  }
+}

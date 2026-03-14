@@ -255,6 +255,25 @@ export const schema = async (extensions = false) => {
     },
   };
 
+  const blockField = {
+    description:
+      'References another Blockstudio block, expanding its fields inline. In templates, the value returns the rendered block output.',
+    properties: {
+      type: { const: 'block' },
+      block: {
+        type: 'string',
+        description:
+          'The name of the block to reference (e.g., "mytheme/card").',
+      },
+      returnFormat: {
+        type: 'string',
+        description: 'How the value should be returned in templates.',
+        enum: ['rendered', 'data', 'both'],
+        default: 'rendered',
+      },
+    },
+  };
+
   const checkbox = {
     example: 'option-multiple',
     description: 'Renders a set of checkbox inputs.',
@@ -866,6 +885,7 @@ export const schema = async (extensions = false) => {
                     {
                       enum: [
                         'attributes',
+                        'block',
                         'checkbox',
                         'classes',
                         'code',
@@ -996,6 +1016,7 @@ export const schema = async (extensions = false) => {
               },
               anyOf: [
                 { ...attributes },
+                { ...blockField },
                 { ...checkbox },
                 { ...classes },
                 { ...code },

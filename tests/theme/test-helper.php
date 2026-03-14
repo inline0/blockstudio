@@ -849,6 +849,27 @@ add_action(
 						$created['posts'][] = 3200;
 					}
 
+					// Block field test page
+					$bf_content = '[bs_test_render name="blockstudio/type-block-field" label="Field Host" card_heading="Embedded Card" card_content="From block field"]';
+					if ( ! get_post( 3300 ) ) {
+						$wpdb->insert( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery
+							$wpdb->posts,
+							array(
+								'ID'            => 3300,
+								'post_author'   => 1,
+								'post_date'     => current_time( 'mysql' ),
+								'post_date_gmt' => current_time( 'mysql', 1 ),
+								'post_content'  => $bf_content,
+								'post_title'    => 'Block Field Test',
+								'post_status'   => 'publish',
+								'post_name'     => 'block-field-test',
+								'post_type'     => 'page',
+								'guid'          => home_url( '/?p=3300' ),
+							)
+						);
+						$created['posts'][] = 3300;
+					}
+
 					// Pattern 2643 - contains type-text block
 					$pattern_2643_content = '<!-- wp:blockstudio/type-text /--><!-- wp:blockstudio/type-textarea /-->';
 					$existing_2643        = get_post( 2643 );

@@ -1,0 +1,94 @@
+---
+title: Block Field
+description: Reference another block as a field, expanding its attributes inline.
+---
+
+# Block Field
+
+The `block` field type lets you reference another Blockstudio block as an
+attribute. The referenced block's fields are expanded inline using the same
+`idStructure` and `overrides` system as [custom fields](/docs/blocks/attributes/custom-fields).
+In templates, the value returns the rendered block output.
+
+## Definition
+
+```json title="block.json"
+{
+  "blockstudio": {
+    "attributes": [
+      {
+        "id": "card",
+        "type": "block",
+        "block": "mytheme/card",
+        "idStructure": "card_{id}"
+      }
+    ]
+  }
+}
+```
+
+This expands the referenced block's fields inline. If `mytheme/card` has
+`heading` and `content` fields, the host block gets `card_heading` and
+`card_content` attributes.
+
+## Template Usage
+
+In templates, the field value returns the rendered HTML of the referenced block:
+
+```twig title="index.twig"
+<div class="hero">
+  <h1>{{ a.title }}</h1>
+  {{ a.card }}
+</div>
+```
+
+```php title="index.php"
+<div class="hero">
+  <h1><?php echo $a['title']; ?></h1>
+  <?php echo $a['card']; ?>
+</div>
+```
+
+## Return Format
+
+Control what the field value returns using `returnFormat`:
+
+| Value | Description |
+|-------|-------------|
+| `rendered` | (default) The rendered HTML output of the referenced block |
+| `data` | An associative array of the referenced block's attribute values |
+| `both` | An object with `rendered` (HTML) and `data` (attribute values) |
+
+```json
+{
+  "id": "card",
+  "type": "block",
+  "block": "mytheme/card",
+  "idStructure": "card_{id}",
+  "returnFormat": "data"
+}
+```
+
+## Overrides
+
+Override individual field properties from the referenced block, just like custom
+fields:
+
+```json
+{
+  "id": "card",
+  "type": "block",
+  "block": "mytheme/card",
+  "idStructure": "card_{id}",
+  "overrides": {
+    "heading": { "default": "Welcome", "label": "Card Title" },
+    "content": { "label": "Card Body" }
+  }
+}
+```
+
+## Works With
+
+The block field works with both regular blocks and
+[component blocks](/docs/blocks/components). Component blocks are a natural fit
+since they are designed for programmatic rendering.

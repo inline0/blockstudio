@@ -559,6 +559,12 @@ class Build {
 						$attributes[ $field_id ]['populate'] = $v['populate'];
 					}
 
+					if ( ! empty( $v['_blockField'] ) ) {
+						$attributes[ $field_id ]['_blockField'] = true;
+						$attributes[ $field_id ]['_blockName']  = $v['_blockName'] ?? '';
+						$attributes[ $field_id ]['_blockIds']   = $v['_blockIds'] ?? array();
+					}
+
 					if ( 'tabs' !== $type && 'group' !== $type ) {
 						$attributes[ $field_id ]['id'] = $i . ( $v['id'] ?? '' );
 					}
@@ -904,6 +910,11 @@ class Build {
 
 		// Phase 3: Register blocks.
 		if ( ! $editor ) {
+			$block_lookup = array();
+			foreach ( $registerable as $reg_name => $reg_item ) {
+				$block_lookup[ $reg_name ] = $reg_item['block_json'];
+			}
+
 			foreach ( $registerable as $name => $item ) {
 				self::register_block_type(
 					$item['data'],
@@ -911,7 +922,8 @@ class Build {
 					$item['classification'],
 					$item['contents'],
 					$name,
-					$registry
+					$registry,
+					$block_lookup
 				);
 			}
 		}
@@ -1017,6 +1029,11 @@ class Build {
 			$discovery = new Block_Discovery();
 			$results   = $discovery->discover( $path, $instance, false );
 
+			$refresh_lookup = array();
+			foreach ( $results['registerable'] as $reg_name => $reg_item ) {
+				$refresh_lookup[ $reg_name ] = $reg_item['block_json'];
+			}
+
 			foreach ( $results['registerable'] as $name => $item ) {
 				$discovered_names[] = $name;
 
@@ -1040,7 +1057,8 @@ class Build {
 					$item['classification'],
 					$item['contents'],
 					$name,
-					$registry
+					$registry,
+					$refresh_lookup
 				);
 
 				$block = $registry->get_block( $name );
@@ -1232,11 +1250,12 @@ class Build {
 	 *
 	 * @since 7.0.0
 	 *
-	 * @param array $attributes The attributes array (passed by reference).
+	 * @param array $attributes   The attributes array (passed by reference).
+	 * @param array $block_lookup Block JSON data indexed by block name for resolving block field references.
 	 *
 	 * @return void
 	 */
-	public static function expand_custom_fields( array &$attributes ): void {
+	public static function expand_custom_fields( array &$attributes, array $block_lookup = array() ): void {
 		$registry = Field_Registry::instance();
 		$expanded = array();
 
@@ -1244,7 +1263,7 @@ class Build {
 			$type = $attr['type'] ?? '';
 
 			if ( 'group' === $type && isset( $attr['attributes'] ) ) {
-				self::expand_custom_fields( $attr['attributes'] );
+				self::expand_custom_fields( $attr['attributes'], $block_lookup );
 				$expanded[] = $attr;
 				continue;
 			}
@@ -1252,7 +1271,7 @@ class Build {
 			if ( 'tabs' === $type && isset( $attr['tabs'] ) ) {
 				foreach ( $attr['tabs'] as &$tab ) {
 					if ( isset( $tab['attributes'] ) ) {
-						self::expand_custom_fields( $tab['attributes'] );
+						self::expand_custom_fields( $tab['attributes'], $block_lookup );
 					}
 				}
 				unset( $tab );
@@ -1261,28 +1280,51 @@ class Build {
 			}
 
 			if ( 'repeater' === $type && isset( $attr['attributes'] ) ) {
-				self::expand_custom_fields( $attr['attributes'] );
+				self::expand_custom_fields( $attr['attributes'], $block_lookup );
 				$expanded[] = $attr;
 				continue;
 			}
 
-			if ( ! str_starts_with( $type, 'custom/' ) ) {
+			$is_custom = str_starts_with( $type, 'custom/' );
+			$is_block  = 'block' === $type && isset( $attr['block'] );
+
+			if ( ! $is_custom && ! $is_block ) {
 				$expanded[] = $attr;
 				continue;
 			}
 
-			$field_name = substr( $type, 7 );
-			$definition = $registry->get( $field_name );
+			if ( $is_custom ) {
+				$field_name      = substr( $type, 7 );
+				$definition_atts = $registry->get( $field_name )['attributes'] ?? null;
+			} else {
+				$block_name      = $attr['block'];
+				$definition_atts = $block_lookup[ $block_name ]['blockstudio']['attributes'] ?? null;
+			}
 
-			if ( ! $definition ) {
+			if ( ! $definition_atts ) {
 				$expanded[] = $attr;
 				continue;
 			}
 
 			$id_structure = $attr['idStructure'] ?? '{id}';
 			$overrides    = $attr['overrides'] ?? array();
+			$field_id     = $attr['id'] ?? '';
 
-			foreach ( $definition['attributes'] as $field_attr ) {
+			if ( $is_block && $field_id ) {
+				$expanded[] = array(
+					'id'           => $field_id,
+					'type'         => 'text',
+					'hidden'       => true,
+					'_blockField'  => true,
+					'_blockName'   => $block_name,
+					'_blockIds'    => array(),
+					'returnFormat' => $attr['returnFormat'] ?? 'rendered',
+				);
+			}
+
+			$block_field_ids = array();
+
+			foreach ( $definition_atts as $field_attr ) {
 				$original_id    = $field_attr['id'] ?? '';
 				$field_override = $overrides[ $original_id ] ?? array();
 
@@ -1296,6 +1338,17 @@ class Build {
 				$merged['id'] = $final_id;
 
 				$expanded[] = $merged;
+
+				if ( $is_block ) {
+					$block_field_ids[ $final_id ] = $original_id;
+				}
+			}
+
+			if ( $is_block && $field_id ) {
+				$last_index = count( $expanded ) - count( $block_field_ids ) - 1;
+				if ( $last_index >= 0 ) {
+					$expanded[ $last_index ]['_blockIds'] = $block_field_ids;
+				}
 			}
 		}
 
@@ -1313,6 +1366,7 @@ class Build {
 	 * @param string         $contents       The file contents.
 	 * @param string         $name           The block name.
 	 * @param Block_Registry $registry       The block registry.
+	 * @param array          $block_lookup   Block JSON data indexed by block name.
 	 *
 	 * @return void
 	 */
@@ -1322,7 +1376,8 @@ class Build {
 		array $classification,
 		string $contents,
 		string $name,
-		Block_Registry $registry
+		Block_Registry $registry,
+		array $block_lookup = array()
 	): void {
 		$is_block    = $classification['is_block'];
 		$is_override = $classification['is_override'];
@@ -1336,7 +1391,7 @@ class Build {
 		$filtered_attributes = array();
 
 		if ( isset( $block_json['blockstudio']['attributes'] ) ) {
-			self::expand_custom_fields( $block_json['blockstudio']['attributes'] );
+			self::expand_custom_fields( $block_json['blockstudio']['attributes'], $block_lookup );
 
 			if ( ! $is_override ) {
 				self::filter_attributes(

@@ -276,6 +276,10 @@ export interface BlockstudioInteractivity {
 
 export interface BlockstudioAttribute {
   /**
+   * The name of the block to reference for block field types.
+   */
+  block?: string;
+  /**
    * Conditional logic detailing when the field should be displayed in the editor.
    */
   conditions?: Array<StickyCondition[]>;
@@ -2039,6 +2043,7 @@ export interface FluffyTags {
 
 export enum PurpleType {
   Attributes = 'attributes',
+  Block = 'block',
   Checkbox = 'checkbox',
   Classes = 'classes',
   Code = 'code',
@@ -2354,6 +2359,7 @@ export interface TentacledTags {
 
 export enum FluffyType {
   Attributes = 'attributes',
+  Block = 'block',
   Checkbox = 'checkbox',
   Classes = 'classes',
   Code = 'code',
@@ -4964,6 +4970,7 @@ const typeMap: any = {
   ],
   PurpleType: [
     'attributes',
+    'block',
     'checkbox',
     'classes',
     'code',
@@ -4990,6 +4997,7 @@ const typeMap: any = {
   ],
   FluffyType: [
     'attributes',
+    'block',
     'checkbox',
     'classes',
     'code',

@@ -1020,6 +1020,59 @@ class Block {
 			);
 		}
 
+		// Resolve block field references after all attributes are transformed.
+		foreach ( $attributes as $k => $v ) {
+			$att = $repeater
+				? array_values(
+					array_filter(
+						$repeater,
+						fn( $item ) => ( $item['id'] ?? false ) === $k
+					)
+				)[0] ?? false
+				: $block_attributes[ $k ] ?? false;
+
+			if ( ! $att || empty( $att['_blockField'] ) ) {
+				continue;
+			}
+
+			$ref_block_name = $att['_blockName'] ?? '';
+			$block_ids      = $att['_blockIds'] ?? array();
+			$return_format  = $att['returnFormat'] ?? 'rendered';
+
+			if ( ! $ref_block_name || empty( $block_ids ) ) {
+				$attributes[ $k ] = false;
+				continue;
+			}
+
+			$block_data = array();
+			foreach ( $block_ids as $mapped_id => $original_id ) {
+				$block_data[ $original_id ] = $attributes[ $mapped_id ] ?? false;
+			}
+
+			if ( 'data' === $return_format ) {
+				$attributes[ $k ] = $block_data;
+				continue;
+			}
+
+			ob_start();
+			Render::block(
+				array(
+					'name' => $ref_block_name,
+					'data' => $block_data,
+				)
+			);
+			$rendered = ob_get_clean();
+
+			if ( 'both' === $return_format ) {
+				$attributes[ $k ] = array(
+					'rendered' => $rendered,
+					'data'     => $block_data,
+				);
+			} else {
+				$attributes[ $k ] = $rendered;
+			}
+		}
+
 		return array(
 			'assets'              => $attribute_data['assets'] ?? array(),
 			'assetsAsset'         => $attribute_data['assetsAsset'] ?? array(),
