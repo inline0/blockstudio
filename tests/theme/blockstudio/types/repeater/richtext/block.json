@@ -1,0 +1,45 @@
+{
+  "$schema": "https://blockstudio.dev/schema/block",
+  "name": "blockstudio/type-repeater-richtext",
+  "title": "Native Repeater RichText",
+  "category": "blockstudio-test-native",
+  "icon": "star-filled",
+  "description": "Native Blockstudio Repeater block with RichText and MediaPlaceholder fields.",
+  "keywords": ["native", "repeater", "richtext"],
+  "blockstudio": {
+    "conditions": [
+      [
+        {
+          "type": "postType",
+          "operator": "==",
+          "value": "post"
+        }
+      ]
+    ],
+    "attributes": [
+      {
+        "id": "items",
+        "type": "repeater",
+        "label": "Items",
+        "min": 1,
+        "max": 5,
+        "textButton": "Add item",
+        "attributes": [
+          {
+            "id": "heading",
+            "type": "richtext"
+          },
+          {
+            "id": "content",
+            "type": "richtext"
+          },
+          {
+            "id": "image",
+            "type": "files",
+            "label": "Image"
+          }
+        ]
+      }
+    ]
+  }
+}

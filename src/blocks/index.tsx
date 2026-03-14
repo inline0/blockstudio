@@ -4,6 +4,7 @@ import { register, useDispatch, useSelect } from '@wordpress/data';
 import { useEffect, useState, createPortal } from '@wordpress/element';
 import { registerPlugin } from '@wordpress/plugins';
 import parse from 'html-react-parser';
+import { cloneDeep, set } from 'lodash-es';
 import { Block } from '@/blocks/components/block';
 import { renderCache } from '@/blocks/components/block/render-cache';
 import { Fields } from '@/blocks/components/fields';
@@ -89,15 +90,26 @@ const registerSingleBlock = (block: BlockstudioBlock) => {
             return;
           }
 
+          const richTextEntries = richText[clientId] as unknown as Record<string, string>;
+          const clonedAttrs = cloneDeep(
+            attributes.blockstudio?.attributes ?? {},
+          );
+
+          Object.entries(richTextEntries).forEach(([key, value]) => {
+            if (key.includes('[')) {
+              const path = key.replace(/\[(\d+)\]/g, '.$1');
+              set(clonedAttrs as object, path, value);
+            } else {
+              (clonedAttrs as unknown as Record<string, unknown>)[key] = value;
+            }
+          });
+
           markNextChangeAsNotPersistent();
           setAttributes({
             ...attributes,
             blockstudio: {
               ...attributes.blockstudio,
-              attributes: {
-                ...attributes.blockstudio?.attributes,
-                ...((richText?.[clientId] ? richText[clientId] : {}) as object),
-              },
+              attributes: clonedAttrs,
             },
           });
         };
@@ -133,15 +145,31 @@ const registerSingleBlock = (block: BlockstudioBlock) => {
         if (renderedIds.includes(clientId)) return;
 
         const richTexts: Record<string, string> = {};
-        Object.values(block.attributes as Record<string, BlockstudioAttribute>)
+        const blockAttrs = block.attributes as Record<string, BlockstudioAttribute>;
+        const savedAttrs = (attributes?.blockstudio?.attributes ?? {}) as unknown as Record<string, unknown>;
+
+        Object.values(blockAttrs)
           .filter((item) => item.field === 'richtext')
           .forEach((attribute) => {
-            richTexts[attribute.id ?? ''] = (
-              attributes?.blockstudio?.attributes as unknown as Record<
-                string,
-                string
-              >
-            )?.[attribute.id ?? ''];
+            richTexts[attribute.id ?? ''] = (savedAttrs as Record<string, string>)?.[attribute.id ?? ''];
+          });
+
+        Object.values(blockAttrs)
+          .filter((item) => item.field === 'repeater')
+          .forEach((repeaterAttr) => {
+            const repeaterId = repeaterAttr.id ?? '';
+            const rows = (savedAttrs?.[repeaterId] as unknown[]) ?? [];
+            const innerAttrs = (repeaterAttr as unknown as { attributes: BlockstudioAttribute[] }).attributes ?? [];
+            const richTextInner = innerAttrs.filter((a) => a.field === 'richtext');
+
+            if (richTextInner.length > 0 && Array.isArray(rows)) {
+              rows.forEach((row, index) => {
+                richTextInner.forEach((rtAttr) => {
+                  const path = `${repeaterId}[${index}].${rtAttr.id}`;
+                  richTexts[path] = (row as Record<string, string>)?.[rtAttr.id ?? ''] ?? '';
+                });
+              });
+            }
           });
 
         setRichText({

@@ -53,7 +53,13 @@ export const RichText = ({
 
   const props = { ...richTextBlockProps, ...rest };
 
-  if (!(block.attributes as Record<string, Any>)?.[data.attribute]) return null;
+  const blockAttrs = block.attributes as Record<string, Any>;
+  const attrKey = data.attribute;
+  const hasAttr = attrKey.includes('[')
+    ? !!blockAttrs[attrKey.split('[')[0]]
+    : !!blockAttrs[attrKey];
+
+  if (!hasAttr) return null;
 
   const setter = (value: string) => {
     const obj = {

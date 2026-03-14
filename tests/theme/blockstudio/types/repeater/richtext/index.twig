@@ -1,0 +1,10 @@
+<div class="blockstudio-test__block" id="{{ b.name|replace({'/': '-'}) }}" useBlockProps>
+  <h1>ID: {{ b.name|replace({'/': '-'}) }}</h1>
+  {% for item in a.items %}
+  <div class="repeater-item" data-index="{{ loop.index0 }}">
+    <RichText tag="h2" attribute="items[{{ loop.index0 }}].heading" placeholder="Enter heading" class="repeater-heading" />
+    <RichText tag="p" attribute="items[{{ loop.index0 }}].content" placeholder="Enter content" class="repeater-content" />
+    <MediaPlaceholder attribute="items[{{ loop.index0 }}].image" />
+  </div>
+  {% endfor %}
+</div>

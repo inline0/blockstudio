@@ -278,6 +278,36 @@ class Block {
 	}
 
 	/**
+	 * Resolve a bracket-notation attribute path from nested arrays.
+	 *
+	 * Converts paths like "items[0].content" into the corresponding value
+	 * from the attributes array.
+	 *
+	 * @since 7.1.0
+	 *
+	 * @param string $path       The attribute path (e.g., "items[0].content").
+	 * @param array  $attributes The block attributes.
+	 *
+	 * @return mixed The resolved value, or null if not found.
+	 */
+	public static function resolve_attribute_path( $path, $attributes ) {
+		$parts   = preg_split( '/[\[\]\.]+/', $path, -1, PREG_SPLIT_NO_EMPTY );
+		$current = $attributes;
+
+		foreach ( $parts as $part ) {
+			if ( is_array( $current ) && array_key_exists( $part, $current ) ) {
+				$current = $current[ $part ];
+			} elseif ( is_array( $current ) && is_numeric( $part ) && array_key_exists( (int) $part, $current ) ) {
+				$current = $current[ (int) $part ];
+			} else {
+				return null;
+			}
+		}
+
+		return $current;
+	}
+
+	/**
 	 * Replace custom block tags.
 	 *
 	 * @since 4.2.0
@@ -333,8 +363,10 @@ class Block {
 				$attribute_map[ $attr_name ] = $attr_value;
 			}
 
-			$attribute   =
-				$block_attributes[ $attribute_map['attribute'] ?? null ] ?? null;
+			$attr_key    = $attribute_map['attribute'] ?? null;
+			$attribute   = ( $attr_key && false !== strpos( $attr_key, '[' ) )
+				? self::resolve_attribute_path( $attr_key, $block_attributes )
+				: ( $block_attributes[ $attr_key ] ?? null );
 			$element_tag =
 				$attribute_map['tag'] ?? ( 'InnerBlocks' === $type ? 'div' : 'p' );
 
@@ -496,6 +528,27 @@ class Block {
 					'RichText',
 					$attribute['id']
 				);
+			}
+		}
+
+		if ( false !== strpos( $content, '<RichText' ) ) {
+			preg_match_all(
+				'/<RichText\s+[^>]*attribute=["\']([^"\']*\[[^"\']*)["\'][^>]*\/?>/s',
+				$content,
+				$remaining_rich_texts
+			);
+
+			if ( ! empty( $remaining_rich_texts[1] ) ) {
+				foreach ( $remaining_rich_texts[1] as $rich_text_path ) {
+					self::replace_custom_tag(
+						$content,
+						$inner_blocks,
+						$block,
+						$attributes,
+						'RichText',
+						$rich_text_path
+					);
+				}
 			}
 		}
 

@@ -7,10 +7,6 @@ description: Add editable text fields directly in your block templates.
 
 The `RichText` component allows rendering an editable input inside the editor and a static HTML Element in the frontend. It is based on the [RichText](https://developer.wordpress.org/block-editor/reference-guides/richtext/) component WordPress provides.
 
-<Callout type="warn">
-RichText is currently not working inside repeater fields.
-</Callout>
-
 ## Basic Usage
 
 To use `RichText` in its most basic form, you need to add the appropriate attribute to your block.json and add the `RichText` component to your block.
@@ -90,3 +86,40 @@ By default, all formatting controls are present. This setting can be used to rem
 ```php title="index.php"
 <RichText attribute="myRichText" withoutInteractiveFormatting="true" />
 ```
+
+## Repeater fields
+
+RichText works inside repeater fields. Use bracket notation with the loop index to target the correct row.
+
+```json title="block.json"
+{
+  "blockstudio": {
+    "attributes": [
+      {
+        "id": "items",
+        "type": "repeater",
+        "attributes": [
+          {
+            "id": "heading",
+            "type": "richtext"
+          }
+        ]
+      }
+    ]
+  }
+}
+```
+
+```php title="index.php"
+<?php foreach ($a['items'] as $index => $item) : ?>
+  <RichText tag="h2" attribute="items[<?php echo $index; ?>].heading" placeholder="Enter heading" />
+<?php endforeach; ?>
+```
+
+```twig title="index.twig"
+{% for item in a.items %}
+  <RichText tag="h2" attribute="items[{{ loop.index0 }}].heading" placeholder="Enter heading" />
+{% endfor %}
+```
+
+The `attribute` value follows the pattern `repeaterId[index].fieldId`, where `index` is the zero-based row number from the loop.

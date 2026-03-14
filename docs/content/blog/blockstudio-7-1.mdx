@@ -121,6 +121,24 @@ results as you type.
 
 No additional settings required. Just set the language to `scss` and it works.
 
+## RichText and MediaPlaceholder in repeaters
+
+The `RichText` and `MediaPlaceholder` template components now work inside repeater
+fields. Use bracket notation in the `attribute` prop to target the correct row.
+
+```twig
+{% for item in a.items %}
+  <div class="card">
+    <MediaPlaceholder attribute="items[{{ loop.index0 }}].image" />
+    <RichText tag="h2" attribute="items[{{ loop.index0 }}].heading" />
+    <RichText tag="p" attribute="items[{{ loop.index0 }}].content" />
+  </div>
+{% endfor %}
+```
+
+This was a frequently requested feature. Editable headings, paragraphs, and media
+drop zones now work per-row in any repeater field.
+
 ## Server functions
 
 Blocks can now define PHP functions that the frontend can call. Drop a

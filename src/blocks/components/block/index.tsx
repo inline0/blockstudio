@@ -69,15 +69,17 @@ export const Block = ({
         const innerAttributes = getAttributes(match, 'RichText');
         const attrKey = innerAttributes.attribute as string;
         attributeMap[attrKey] = innerAttributes;
+        const cssClass = attrKey.replace(/[\[\].]/g, '_');
 
-        return `<div id="blockstudio-replace-richtext" class="${attrKey}"></div>`;
+        return `<div id="blockstudio-replace-richtext" class="${cssClass}" data-attribute="${attrKey}"></div>`;
       });
       input = input.replace(getRegex('MediaPlaceholder', 'gs'), (match) => {
         const innerAttributes = getAttributes(match, 'MediaPlaceholder');
         const attrKey = innerAttributes.attribute as string;
         attributeMap[attrKey] = innerAttributes;
+        const cssClass = attrKey.replace(/[\[\].]/g, '_');
 
-        return `<div id="blockstudio-replace-dropzone" class="${attrKey}"></div>`;
+        return `<div id="blockstudio-replace-dropzone" class="${cssClass}" data-attribute="${attrKey}"></div>`;
       });
 
       return input;
@@ -109,6 +111,7 @@ export const Block = ({
             node.attribs &&
             node.attribs.id === 'blockstudio-replace-richtext'
           ) {
+            const attrKey = node.attribs['data-attribute'] || node.attribs.class;
             return (
               <RichText
                 {...{
@@ -117,7 +120,7 @@ export const Block = ({
                   block,
                   clientId,
                 }}
-                data={attributeMap[node.attribs.class]}
+                data={attributeMap[attrKey]}
                 hasOwnBlockProps={hasComponentBlockProps ?? false}
               />
             );
@@ -127,10 +130,11 @@ export const Block = ({
             node.attribs &&
             node.attribs.id === 'blockstudio-replace-dropzone'
           ) {
+            const attrKey = node.attribs['data-attribute'] || node.attribs.class;
             return (
               <MediaPlaceholder
                 {...{ attributes, block, setAttributes }}
-                data={attributeMap[node.attribs.class]}
+                data={attributeMap[attrKey]}
               />
             );
           }

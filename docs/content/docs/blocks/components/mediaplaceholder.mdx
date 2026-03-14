@@ -7,10 +7,6 @@ description: Add a media upload placeholder to your blocks.
 
 The `MediaPlaceholder` component provides a placeholder to add media items to a block. The same component is being used in the `core/image` block. It is based on the [React component](https://github.com/WordPress/gutenberg/blob/trunk/packages/block-editor/src/components/media-placeholder/README.md) with the same name.
 
-<Callout type="warn">
-MediaPlaceholder is currently not working inside repeater fields.
-</Callout>
-
 ## Basic Usage
 
 To use `MediaPlaceholder` in its most basic form, you need to add the appropriate attribute to your block.json and add the `MediaPlaceholder` component to your block.
@@ -118,3 +114,40 @@ An object that can contain a title and instructions properties.
 ```
   </Tab>
 </Tabs>
+
+## Repeater fields
+
+MediaPlaceholder works inside repeater fields. Use bracket notation with the loop index to target the correct row.
+
+```json title="block.json"
+{
+  "blockstudio": {
+    "attributes": [
+      {
+        "id": "items",
+        "type": "repeater",
+        "attributes": [
+          {
+            "id": "image",
+            "type": "files"
+          }
+        ]
+      }
+    ]
+  }
+}
+```
+
+```php title="index.php"
+<?php foreach ($a['items'] as $index => $item) : ?>
+  <MediaPlaceholder attribute="items[<?php echo $index; ?>].image" />
+<?php endforeach; ?>
+```
+
+```twig title="index.twig"
+{% for item in a.items %}
+  <MediaPlaceholder attribute="items[{{ loop.index0 }}].image" />
+{% endfor %}
+```
+
+The `attribute` value follows the pattern `repeaterId[index].fieldId`, where `index` is the zero-based row number from the loop.
