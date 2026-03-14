@@ -1,47 +1,13 @@
 ---
 title: Blockstudio 7.1
-description: Block field, components, string renderer, SCSS code fields, server functions, and more new features coming to the WordPress block framework.
+description: Components, string renderer, block field, server functions, and more new features coming to the WordPress block framework.
 date: 2026-03-14
 author: Dennis
 ---
 
 Blockstudio 7.1 is the first feature release since the v7 rewrite. It introduces
-the block field type, components, the string renderer, SCSS support for code
-fields, and lays the groundwork for more features to come.
-
-## Block field
-
-The new `block` field type lets you reference another Blockstudio block as an
-attribute. The referenced block's fields expand inline using the same
-`idStructure` and `overrides` system as custom fields. In templates, the value
-returns the rendered block output.
-
-```json title="block.json"
-{
-  "blockstudio": {
-    "attributes": [
-      {
-        "id": "card",
-        "type": "block",
-        "block": "mytheme/card",
-        "idStructure": "card_{id}"
-      }
-    ]
-  }
-}
-```
-
-```twig title="index.twig"
-<div class="hero">
-  <h1>{{ a.title }}</h1>
-  {{ a.card }}
-</div>
-```
-
-This works with both regular blocks and component blocks. It uses the same
-expansion logic as custom fields, so `idStructure` and `overrides` work
-identically. The `returnFormat` option controls whether you get rendered HTML,
-raw data, or both.
+components, the string renderer, and server functions, along with several DX
+improvements.
 
 ## Components
 
@@ -157,6 +123,84 @@ You can also apply the string renderer to any string from PHP:
 $html = apply_filters('blockstudio/string_renderer/render', $content);
 ```
 
+## Block field
+
+The new `block` field type lets you reference another Blockstudio block as an
+attribute. The referenced block's fields expand inline using the same
+`idStructure` and `overrides` system as custom fields. In templates, the value
+returns the rendered block output.
+
+```json title="block.json"
+{
+  "blockstudio": {
+    "attributes": [
+      {
+        "id": "card",
+        "type": "block",
+        "block": "mytheme/card",
+        "idStructure": "card_{id}"
+      }
+    ]
+  }
+}
+```
+
+```twig title="index.twig"
+<div class="hero">
+  <h1>{{ a.title }}</h1>
+  {{ a.card }}
+</div>
+```
+
+This works with both regular blocks and component blocks. It uses the same
+expansion logic as custom fields, so `idStructure` and `overrides` work
+identically. The `returnFormat` option controls whether you get rendered HTML,
+raw data, or both.
+
+## Server functions
+
+Blocks can now define PHP functions that the frontend can call. Drop a
+`rpc.php` into any block directory and Blockstudio handles the rest:
+REST endpoint routing, authentication, and a tiny JS client.
+
+```php title="rpc.php"
+return [
+    'subscribe' => function (array $params): array {
+        $email = sanitize_email($params['email']);
+        return ['success' => true];
+    },
+];
+```
+
+```js
+const result = await bs.fn('subscribe', { email: 'user@example.com' });
+```
+
+This pairs naturally with the WordPress Interactivity API. Your store actions can
+call server functions and update reactive state with the response.
+
+Functions are authenticated by default. Add `'public' => true` to allow
+unauthenticated access. Cross-block calling works too: any block can call
+functions on any other block by passing the block name as the third argument.
+
+## RichText and MediaPlaceholder in repeaters
+
+The `RichText` and `MediaPlaceholder` template components now work inside repeater
+fields. Use bracket notation in the `attribute` prop to target the correct row.
+
+```twig
+{% for item in a.items %}
+  <div class="card">
+    <MediaPlaceholder attribute="items[{{ loop.index0 }}].image" />
+    <RichText tag="h2" attribute="items[{{ loop.index0 }}].heading" />
+    <RichText tag="p" attribute="items[{{ loop.index0 }}].content" />
+  </div>
+{% endfor %}
+```
+
+This was a frequently requested feature. Editable headings, paragraphs, and media
+drop zones now work per-row in any repeater field.
+
 ## SCSS code fields
 
 Code fields now support `language: "scss"`. When set, the field value is compiled
@@ -191,47 +235,3 @@ results as you type.
 ```
 
 No additional settings required. Just set the language to `scss` and it works.
-
-## RichText and MediaPlaceholder in repeaters
-
-The `RichText` and `MediaPlaceholder` template components now work inside repeater
-fields. Use bracket notation in the `attribute` prop to target the correct row.
-
-```twig
-{% for item in a.items %}
-  <div class="card">
-    <MediaPlaceholder attribute="items[{{ loop.index0 }}].image" />
-    <RichText tag="h2" attribute="items[{{ loop.index0 }}].heading" />
-    <RichText tag="p" attribute="items[{{ loop.index0 }}].content" />
-  </div>
-{% endfor %}
-```
-
-This was a frequently requested feature. Editable headings, paragraphs, and media
-drop zones now work per-row in any repeater field.
-
-## Server functions
-
-Blocks can now define PHP functions that the frontend can call. Drop a
-`rpc.php` into any block directory and Blockstudio handles the rest:
-REST endpoint routing, authentication, and a tiny JS client.
-
-```php title="rpc.php"
-return [
-    'subscribe' => function (array $params): array {
-        $email = sanitize_email($params['email']);
-        return ['success' => true];
-    },
-];
-```
-
-```js
-const result = await bs.fn('subscribe', { email: 'user@example.com' });
-```
-
-This pairs naturally with the WordPress Interactivity API. Your store actions can
-call server functions and update reactive state with the response.
-
-Functions are authenticated by default. Add `'public' => true` to allow
-unauthenticated access. Cross-block calling works too: any block can call
-functions on any other block by passing the block name as the third argument.
