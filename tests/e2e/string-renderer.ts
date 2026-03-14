@@ -48,12 +48,6 @@ test.describe('String Renderer', () => {
     await expect(second.locator('.sr-count')).toHaveText('2');
   });
 
-  test('renders with namespace prefix', async () => {
-    const block = page.locator('.bs-string-renderer', { hasText: 'Namespaced' });
-    await expect(block).toBeVisible();
-    await expect(block.locator('.sr-count')).toHaveText('99');
-  });
-
   test('renders nested tags', async () => {
     const outer = page.locator('.bs-string-renderer', { hasText: 'Outer' });
     const inner = page.locator('.bs-string-renderer', { hasText: 'Inner' });

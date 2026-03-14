@@ -2,7 +2,7 @@
 /**
  * String renderer class.
  *
- * Parses <bs:block-name> tags in content and renders the corresponding
+ * Parses <bs:namespace-block-name> tags in content and renders the corresponding
  * Blockstudio blocks. Opt-in via the stringRenderer/enabled setting.
  *
  * @package Blockstudio
@@ -11,7 +11,7 @@
 namespace Blockstudio;
 
 /**
- * Replaces <bs:block-name attr="value"> tags in post content
+ * Replaces <bs:namespace-block-name attr="value"> tags in post content
  * with rendered Blockstudio block output.
  *
  * @since 7.1.0
@@ -37,8 +37,8 @@ class String_Renderer {
 	 * Parse and replace all <bs:*> tags in the given content.
 	 *
 	 * Supports both self-closing and paired tags:
-	 *   <bs:hero title="Hello" />
-	 *   <bs:section layout="wide">inner content</bs:section>
+	 *   <bs:acme-hero title="Hello" />
+	 *   <bs:acme-section layout="wide">inner content</bs:acme-section>
 	 *
 	 * @param string $content The content to process.
 	 *
@@ -130,9 +130,11 @@ class String_Renderer {
 	/**
 	 * Resolve a tag name to a registered Blockstudio block name.
 	 *
-	 * Lookup order:
-	 *   1. Exact namespace match: bs:acme--hero resolves to acme/hero
-	 *   2. First block whose slug matches: bs:hero resolves to the first registered block with that slug
+	 * The first hyphen maps to the namespace separator:
+	 *   bs:acme-hero resolves to acme/hero
+	 *   bs:blockstudio-type-text resolves to blockstudio/type-text
+	 *
+	 * Only exact matches are returned.
 	 *
 	 * @param string $tag_name The tag name (without bs: prefix).
 	 * @param array  $blocks   Registered blocks keyed by full name.
@@ -140,22 +142,16 @@ class String_Renderer {
 	 * @return string|false The full block name or false if not found.
 	 */
 	private static function resolve_block_name( string $tag_name, array $blocks ) {
-		if ( str_contains( $tag_name, '--' ) ) {
-			$full_name = str_replace( '--', '/', $tag_name );
+		$pos = strpos( $tag_name, '-' );
 
-			if ( isset( $blocks[ $full_name ] ) ) {
-				return $full_name;
-			}
-
+		if ( false === $pos ) {
 			return false;
 		}
 
-		foreach ( $blocks as $name => $data ) {
-			$parts = explode( '/', $name );
+		$full_name = substr_replace( $tag_name, '/', $pos, 1 );
 
-			if ( isset( $parts[1] ) && $parts[1] === $tag_name ) {
-				return $name;
-			}
+		if ( isset( $blocks[ $full_name ] ) ) {
+			return $full_name;
 		}
 
 		return false;

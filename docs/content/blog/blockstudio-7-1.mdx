@@ -33,7 +33,7 @@ available exclusively for programmatic rendering.
 Render components using the string renderer or `bs_render_block()`:
 
 ```html
-<bs:card title="My Card" description="Card content." />
+<bs:my-theme-card title="My Card" description="Card content." />
 ```
 
 ```php
@@ -46,56 +46,46 @@ bs_render_block([
 This is useful for building shadcn-style application UI using Blockstudio's
 tooling without cluttering the editor inserter.
 
-## String renderer
+## HTML tags
 
-The string renderer lets you embed Blockstudio blocks anywhere in your HTML
-output using simple tags. Write `<bs:block-name>` anywhere on the page and
-Blockstudio renders the full block output in its place.
+Embed Blockstudio blocks anywhere in your HTML output using `<bs:>` tags.
+Blockstudio hooks into the output buffer and replaces each tag with the full
+block output.
+
+The tag name uses the block's full name with the first hyphen replacing the
+namespace separator. For example, `acme/hero` becomes `bs:acme-hero`.
 
 ```html
-<bs:marketing-cta title="Get started" variant="primary" />
+<bs:acme-marketing-cta title="Get started" variant="primary" />
 ```
 
-It hooks into the output buffer, so it works everywhere: post content, widget
-areas, theme templates, headers, footers. Anywhere the tag appears in the final
-HTML, it gets replaced.
-
-Element attributes map directly to block attributes, so passing data works the
-same as it does in the editor.
+It works everywhere: post content, widget areas, theme templates, headers,
+footers. Anywhere the tag appears in the final HTML, it gets replaced.
 
 ### Syntax
 
-Self-closing tags for simple blocks:
+Self-closing tags:
 
 ```html
-<bs:hero title="Welcome" background="dark" />
+<bs:acme-hero title="Welcome" background="dark" />
 ```
 
 Paired tags when you need inner content:
 
 ```html
-<bs:section layout="wide">
+<bs:acme-section layout="wide">
   <p>Content inside the block.</p>
-</bs:section>
+</bs:acme-section>
 ```
 
 Nested tags work too. Inner blocks render first, then the outer block:
 
 ```html
-<bs:section layout="wide">
-  <bs:hero title="Welcome" />
-  <bs:card title="Features" />
-</bs:section>
+<bs:acme-section layout="wide">
+  <bs:acme-hero title="Welcome" />
+  <bs:acme-card title="Features" />
+</bs:acme-section>
 ```
-
-Namespace prefix with double-dash for disambiguation:
-
-```html
-<bs:acme--hero title="Branded" />
-```
-
-Without a namespace, Blockstudio matches the first registered block with that
-slug. With a namespace (`acme--hero`), it resolves to exactly `acme/hero`.
 
 ### Activation
 

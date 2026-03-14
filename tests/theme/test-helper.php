@@ -799,13 +799,12 @@ add_action(
 					$create_post_with_id( 1099, 'Reusable', 'reusable' );
 
 					// String renderer test page with raw bs: tags in content
-					$sr_content = '<bs:type-string-renderer title="Self Closing" count=42 />'
-						. '<bs:type-string-renderer title="Paired Tag" count=7></bs:type-string-renderer>'
-						. '<bs:type-string-renderer />'
-						. '<bs:type-string-renderer title="First" count=1 />'
-						. '<bs:type-string-renderer title="Second" count=2 />'
-						. '<bs:blockstudio--type-string-renderer title="Namespaced" count=99 />'
-						. '<bs:type-string-renderer title="Outer" count=100><bs:type-string-renderer title="Inner" count=200 /></bs:type-string-renderer>'
+					$sr_content = '<bs:blockstudio-type-string-renderer title="Self Closing" count=42 />'
+						. '<bs:blockstudio-type-string-renderer title="Paired Tag" count=7></bs:blockstudio-type-string-renderer>'
+						. '<bs:blockstudio-type-string-renderer />'
+						. '<bs:blockstudio-type-string-renderer title="First" count=1 />'
+						. '<bs:blockstudio-type-string-renderer title="Second" count=2 />'
+						. '<bs:blockstudio-type-string-renderer title="Outer" count=100><bs:blockstudio-type-string-renderer title="Inner" count=200 /></bs:blockstudio-type-string-renderer>'
 						. '<p>Unknown tag: <bs:nonexistent-block title="Nope" /></p>';
 					if ( ! get_post( 3100 ) ) {
 						$wpdb->insert( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery
@@ -827,8 +826,8 @@ add_action(
 					}
 
 					// Component test page with bs: string renderer and bs_render_block()
-					$comp_content = '<bs:type-component heading="String Rendered" content="Via bs tag" />'
-						. '<bs:type-component heading="Paired Tag" content="Via paired tag"></bs:type-component>'
+					$comp_content = '<bs:blockstudio-type-component heading="String Rendered" content="Via bs tag" />'
+						. '<bs:blockstudio-type-component heading="Paired Tag" content="Via paired tag"></bs:blockstudio-type-component>'
 						. '[bs_test_render name="blockstudio/type-component" heading="PHP Rendered" content="Via bs_render_block"]';
 					if ( ! get_post( 3200 ) ) {
 						$wpdb->insert( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery

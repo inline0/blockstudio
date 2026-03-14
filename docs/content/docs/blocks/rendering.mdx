@@ -124,52 +124,44 @@ Or via the PHP filter:
 add_filter('blockstudio/settings/string_renderer/enabled', '__return_true');
 ```
 
-### Self-closing tags
+### Syntax
 
-For blocks without inner content:
+The tag name uses the block's full name with the first hyphen replacing the
+namespace separator. For example, `acme/hero` becomes `bs:acme-hero`:
 
 ```html
-<bs:hero title="Welcome" background="dark" />
+<bs:acme-hero title="Welcome" background="dark" />
 ```
 
-### Paired tags
-
-When you need inner content passed to the block:
+Self-closing tags for simple blocks:
 
 ```html
-<bs:section layout="wide">
+<bs:mytheme-cta title="Get started" variant="primary" />
+```
+
+Paired tags when you need inner content:
+
+```html
+<bs:mytheme-section layout="wide">
   <p>Content inside the block.</p>
-</bs:section>
+</bs:mytheme-section>
 ```
 
-### Nested tags
-
-Inner blocks render first, then the outer block:
+Nested tags work too. Inner blocks render first, then the outer block:
 
 ```html
-<bs:section layout="wide">
-  <bs:hero title="Welcome" />
-  <bs:card title="Features" />
-</bs:section>
+<bs:mytheme-section layout="wide">
+  <bs:mytheme-hero title="Welcome" />
+  <bs:mytheme-card title="Features" />
+</bs:mytheme-section>
 ```
-
-### Namespace prefix
-
-By default, the tag matches the first registered block with that slug. Use a
-double-dash to specify a namespace:
-
-```html
-<bs:acme--hero title="Branded" />
-```
-
-This resolves to exactly `acme/hero`.
 
 ### Attribute mapping
 
 Element attributes map directly to block attributes:
 
 ```html
-<bs:cta title="Get started" count="42" active="true" />
+<bs:mytheme-cta title="Get started" count="42" active="true" />
 ```
 
 String values are passed as-is. Numeric and boolean strings are kept as strings
@@ -198,8 +190,8 @@ $html = apply_filters('blockstudio/string_renderer/render', $content);
 
 The tag syntax pairs well with [Components](/docs/blocks/components).
 Components are blocks that only render programmatically and never appear in the
-editor inserter. Use `<bs:>` tags to place them anywhere on the page.
+editor inserter.
 
 ```html
-<bs:card title="My Card" description="Card content." />
+<bs:mytheme-card title="My Card" description="Card content." />
 ```
