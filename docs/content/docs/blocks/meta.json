@@ -9,6 +9,7 @@
     "variations",
     "transforms",
     "initialization",
+    "react-components",
     "components",
     "environment",
     "context",
@@ -18,6 +19,7 @@
     "overrides",
     "loading",
     "rendering",
+    "string-renderer",
     "interactivity",
     "seo",
     "hooks"

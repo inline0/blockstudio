@@ -56,11 +56,15 @@ const config = {
       { source: "/documentation/attributes/field-types", destination: "/docs/blocks/attributes/field-types", permanent: true },
       { source: "/documentation/attributes/html-utilities", destination: "/docs/blocks/attributes/html-utilities", permanent: true },
 
-      // Blocks: components
-      { source: "/documentation/components/useblockprops", destination: "/docs/blocks/components/useblockprops", permanent: true },
-      { source: "/documentation/components/innerblocks", destination: "/docs/blocks/components/innerblocks", permanent: true },
-      { source: "/documentation/components/richtext", destination: "/docs/blocks/components/richtext", permanent: true },
-      { source: "/documentation/components/mediaplaceholder", destination: "/docs/blocks/components/mediaplaceholder", permanent: true },
+      // Blocks: react components
+      { source: "/documentation/components/useblockprops", destination: "/docs/blocks/react-components/useblockprops", permanent: true },
+      { source: "/documentation/components/innerblocks", destination: "/docs/blocks/react-components/innerblocks", permanent: true },
+      { source: "/documentation/components/richtext", destination: "/docs/blocks/react-components/richtext", permanent: true },
+      { source: "/documentation/components/mediaplaceholder", destination: "/docs/blocks/react-components/mediaplaceholder", permanent: true },
+      { source: "/docs/blocks/components/useblockprops", destination: "/docs/blocks/react-components/useblockprops", permanent: true },
+      { source: "/docs/blocks/components/innerblocks", destination: "/docs/blocks/react-components/innerblocks", permanent: true },
+      { source: "/docs/blocks/components/richtext", destination: "/docs/blocks/react-components/richtext", permanent: true },
+      { source: "/docs/blocks/components/mediaplaceholder", destination: "/docs/blocks/react-components/mediaplaceholder", permanent: true },
 
       // Blocks: hooks
       { source: "/documentation/hooks/php", destination: "/docs/blocks/hooks/php", permanent: true },
