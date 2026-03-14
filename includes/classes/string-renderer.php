@@ -28,8 +28,7 @@ class String_Renderer {
 			return;
 		}
 
-		add_filter( 'the_content', array( __CLASS__, 'render' ), 5 );
-		add_filter( 'widget_text', array( __CLASS__, 'render' ), 5 );
+		add_filter( 'blockstudio/buffer/output', array( __CLASS__, 'render' ), 1 );
 		add_filter( 'blockstudio/string_renderer/render', array( __CLASS__, 'render' ) );
 	}
 

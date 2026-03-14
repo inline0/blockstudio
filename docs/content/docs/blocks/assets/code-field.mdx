@@ -110,3 +110,41 @@ When using code fields inside of [extensions](/docs/extensions), the `asset` att
 ```
 
 No additional configuration is needed. The above will show a code field for every `core/*` block in the sidebar and automatically render the content as an asset to the page.
+
+## SCSS
+
+Code fields support SCSS compilation. Set the language to `scss` and Blockstudio will compile the value through ScssPhp before rendering it as CSS.
+
+```json title="block.json"
+{
+  "blockstudio": {
+    "attributes": [
+      {
+        "type": "code",
+        "id": "styles",
+        "label": "Styles",
+        "language": "scss",
+        "asset": true
+      }
+    ]
+  }
+}
+```
+
+SCSS features like variables, nesting, and mixins all work:
+
+```scss
+%selector% {
+  $primary: #3b82f6;
+
+  h1 {
+    color: $primary;
+  }
+
+  &:hover {
+    background: lighten($primary, 40%);
+  }
+}
+```
+
+In the editor, SCSS is compiled server-side in real time so you see the result as you type. On the frontend, compilation happens during block rendering.
