@@ -115,10 +115,10 @@ No additional settings required. Just set the language to `scss` and it works.
 ## Server functions
 
 Blocks can now define PHP functions that the frontend can call. Drop a
-`functions.php` into any block directory and Blockstudio handles the rest:
+`rpc.php` into any block directory and Blockstudio handles the rest:
 REST endpoint routing, authentication, and a tiny JS client.
 
-```php title="functions.php"
+```php title="rpc.php"
 return [
     'subscribe' => function (array $params): array {
         $email = sanitize_email($params['email']);

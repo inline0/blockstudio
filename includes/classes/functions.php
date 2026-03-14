@@ -11,7 +11,7 @@
 namespace Blockstudio;
 
 /**
- * Discovers, registers, and dispatches block functions defined in functions.php files.
+ * Discovers, registers, and dispatches block functions defined in rpc.php files.
  *
  * @since 7.1.0
  */
@@ -256,7 +256,7 @@ class Functions {
 		$fn_path     = false;
 
 		foreach ( $files_paths as $path ) {
-			if ( str_ends_with( $path, '/functions.php' ) ) {
+			if ( str_ends_with( $path, '/rpc.php' ) ) {
 				$fn_path = $path;
 				break;
 			}

@@ -5,21 +5,21 @@ description: Define PHP functions in your block that can be called from the fron
 
 # Server Functions
 
-Blocks can define server-side PHP functions that are callable from the frontend. Add a `functions.php` file to your block directory and Blockstudio exposes them through a REST endpoint with a tiny JS client.
+Blocks can define server-side PHP functions that are callable from the frontend. Add a `rpc.php` file to your block directory and Blockstudio exposes them through a REST endpoint with a tiny JS client.
 
 ## Setup
 
-Create a `functions.php` in your block directory that returns an associative array of functions:
+Create a `rpc.php` in your block directory that returns an associative array of functions:
 
 ```
 blocks/my-block/
 ├── block.json
 ├── index.twig
-├── functions.php    ← server functions
+├── rpc.php    ← server functions
 └── script.js
 ```
 
-```php title="functions.php"
+```php title="rpc.php"
 return [
     'subscribe' => function (array $params): array {
         $email = sanitize_email($params['email']);
@@ -82,7 +82,7 @@ store('myTheme/newsletter', {
 
 By default, functions require an authenticated user. To allow unauthenticated access, use the expanded format with `public: true`:
 
-```php title="functions.php"
+```php title="rpc.php"
 return [
     'get_count' => [
         'callback' => function (array $params): array {
@@ -107,7 +107,7 @@ const result = await bs.fn('load_more', { offset: 0 }, 'my-theme/blog-feed');
 
 Use the `Functions::call()` method for server-side cross-block calls:
 
-```php title="functions.php"
+```php title="rpc.php"
 return [
     'refresh' => function (array $params): array {
         $feed = \Blockstudio\Functions::call('my-theme/blog-feed', 'load_more', ['offset' => 0]);
