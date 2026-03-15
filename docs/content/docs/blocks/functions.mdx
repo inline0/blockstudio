@@ -162,7 +162,7 @@ Use the `Functions::call()` method for server-side cross-block calls:
 ```php title="rpc.php"
 return [
     'refresh' => function (array $params): array {
-        $feed = \Blockstudio\Functions::call('my-theme/blog-feed', 'load_more', ['offset' => 0]);
+        $feed = Functions::call('my-theme/blog-feed', 'load_more', ['offset' => 0]);
         return ['feed' => $feed];
     },
 ];

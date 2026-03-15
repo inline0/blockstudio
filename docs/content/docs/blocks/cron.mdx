@@ -32,7 +32,7 @@ return [
     'cleanup' => [
         'schedule' => 'daily',
         'callback' => function () {
-            $db = \Blockstudio\Db::get('my-theme/app', 'logs');
+            $db = Db::get('my-theme/app', 'logs');
             // delete entries older than 30 days
         },
     ],
@@ -94,7 +94,7 @@ return [
     'expire_trials' => [
         'schedule' => 'daily',
         'callback' => function () {
-            $db = \Blockstudio\Db::get('my-theme/app', 'subscribers');
+            $db = Db::get('my-theme/app', 'subscribers');
             $trials = $db->list(['plan' => 'trial']);
 
             foreach ($trials as $trial) {

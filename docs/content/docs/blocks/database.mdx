@@ -127,11 +127,13 @@ single-schema blocks, the schema name can be omitted (defaults to `"default"`).
 
 ## PHP API
 
-Use the `\Blockstudio\Db` class for server-side access from `rpc.php`, templates,
-or any PHP code:
+Use the `Db` class for server-side access from `rpc.php`, templates,
+or any PHP code. All Blockstudio classes are in the `Blockstudio` namespace.
 
 ```php
-$db = \Blockstudio\Db::get('mytheme/block', 'subscribers');
+use Blockstudio\Db;
+
+$db = Db::get('mytheme/block', 'subscribers');
 
 $record = $db->create(['email' => 'a@b.com', 'plan' => 'pro']);
 $all    = $db->list(['plan' => 'pro']);
@@ -143,7 +145,7 @@ $db->delete(1);
 For single-schema blocks, omit the schema name (defaults to `"default"`):
 
 ```php
-$db = \Blockstudio\Db::get('mytheme/block');
+$db = Db::get('mytheme/block');
 ```
 
 ## Access Control
@@ -285,7 +287,7 @@ go beyond simple CRUD:
 return [
     'export_csv' => [
         'callback'   => function (array $params): array {
-            $db = \Blockstudio\Db::get('my-theme/leads', 'subscribers');
+            $db = Db::get('my-theme/leads', 'subscribers');
             $rows = $db->list();
             // custom export logic
             return ['count' => count($rows)];

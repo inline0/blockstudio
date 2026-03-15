@@ -151,7 +151,7 @@ raw data, or both.
 
 Blocks can now define a data model via `db.php`. Blockstudio generates CRUD
 REST endpoints, validates input against the schema, and provides both a
-`bs.db()` JS client and a `\Blockstudio\Db` PHP API.
+`bs.db()` JS client and a `Db` PHP API.
 
 ```php title="db.php"
 return [
@@ -203,7 +203,7 @@ await db.delete(record.id);
 ### PHP API
 
 ```php
-$db = \Blockstudio\Db::get('my-theme/block', 'subscribers');
+$db = Db::get('my-theme/block', 'subscribers');
 $db->create(['email' => 'a@b.com', 'plan' => 'pro']);
 $db->list(['plan' => 'pro']);
 $db->update(1, ['plan' => 'free']);
@@ -250,7 +250,7 @@ return [
     'cleanup' => [
         'schedule' => 'daily',
         'callback' => function () {
-            $db = \Blockstudio\Db::get('my-theme/app', 'logs');
+            $db = Db::get('my-theme/app', 'logs');
             // delete old entries
         },
     ],
