@@ -1,0 +1,320 @@
+---
+title: Full-Stack Blocks
+description: Build self-contained applications as blocks with RPC, database, cron, and components.
+---
+
+# Full-Stack Blocks
+
+Blockstudio 7.1 lets you build complete applications inside a block folder.
+A single directory can contain the UI, server logic, data model, scheduled tasks,
+and even the data itself. This guide walks through building a subscriber
+management app as a block collection.
+
+## The file structure
+
+```
+blockstudio/
+  newsletter/
+    root/
+      block.json          ← main block (editor-insertable)
+      index.twig          ← UI template
+      style.css           ← styles
+      script-inline.js    ← client-side logic
+      rpc.php             ← custom server functions
+      db.php              ← data model
+      cron.php            ← scheduled tasks
+    confirmation/
+      block.json          ← component (not in editor)
+      index.twig          ← email confirmation UI
+```
+
+Every file has a purpose. No boilerplate, no build step, no separate plugin
+registration.
+
+## Step 1: Data model
+
+Define the schema in `db.php`. This generates CRUD REST endpoints, validates
+input, and manages the database table automatically.
+
+```php title="db.php"
+<?php
+return [
+    'subscribers' => [
+        'storage'    => 'table',
+        'capability' => [
+            'create' => true,
+            'read'   => 'edit_posts',
+            'update' => 'edit_posts',
+            'delete' => 'manage_options',
+        ],
+        'fields' => [
+            'email' => [
+                'type'     => 'string',
+                'format'   => 'email',
+                'required' => true,
+                'validate' => function ($value) {
+                    if (str_ends_with($value, '@disposable.com')) {
+                        return 'Disposable emails are not allowed.';
+                    }
+                    return true;
+                },
+            ],
+            'name'   => ['type' => 'string', 'maxLength' => 100],
+            'plan'   => ['type' => 'string', 'enum' => ['free', 'pro'], 'default' => 'free'],
+            'status' => ['type' => 'string', 'enum' => ['active', 'unsubscribed'], 'default' => 'active'],
+        ],
+        'hooks' => [
+            'after_create' => function ($params) {
+                wp_mail(
+                    $params['record']['email'],
+                    'Welcome!',
+                    'Thanks for subscribing, ' . $params['record']['name'] . '.'
+                );
+            },
+        ],
+    ],
+];
+```
+
+This gives you:
+
+- `POST /wp-json/blockstudio/v1/db/newsletter-root/subscribers` (create)
+- `GET /wp-json/blockstudio/v1/db/newsletter-root/subscribers` (list)
+- `GET /wp-json/blockstudio/v1/db/newsletter-root/subscribers/{id}` (read)
+- `PUT /wp-json/blockstudio/v1/db/newsletter-root/subscribers/{id}` (update)
+- `DELETE /wp-json/blockstudio/v1/db/newsletter-root/subscribers/{id}` (delete)
+
+All with validation. Invalid emails return per-field errors:
+
+```json
+{
+  "code": "blockstudio_db_validation",
+  "message": "Validation failed.",
+  "data": {
+    "status": 400,
+    "errors": { "email": ["Must be a valid email address."] }
+  }
+}
+```
+
+## Step 2: Custom server logic
+
+`rpc.php` handles operations that go beyond CRUD. The `bs.fn()` client calls
+these from the frontend.
+
+```php title="rpc.php"
+<?php
+use Blockstudio\Db;
+
+return [
+    'unsubscribe' => [
+        'callback' => function (array $params): array {
+            $db    = Db::get('my-theme/newsletter-root', 'subscribers');
+            $email = sanitize_email($params['email'] ?? '');
+
+            $subscribers = $db->list(['email' => $email]);
+
+            if (empty($subscribers)) {
+                return ['success' => false, 'message' => 'Not found.'];
+            }
+
+            $db->update((int) $subscribers[0]['id'], ['status' => 'unsubscribed']);
+
+            return ['success' => true];
+        },
+        'public' => true,
+    ],
+    'stats' => [
+        'callback'   => function (array $params): array {
+            $db = Db::get('my-theme/newsletter-root', 'subscribers');
+
+            return [
+                'total'  => count($db->list()),
+                'active' => count($db->list(['status' => 'active'])),
+            ];
+        },
+        'capability' => 'edit_posts',
+    ],
+];
+```
+
+## Step 3: Scheduled tasks
+
+`cron.php` runs recurring jobs via WordPress Cron.
+
+```php title="cron.php"
+<?php
+use Blockstudio\Db;
+
+return [
+    'cleanup_unsubscribed' => [
+        'schedule' => 'daily',
+        'callback' => function () {
+            $db   = Db::get('my-theme/newsletter-root', 'subscribers');
+            $unsub = $db->list(['status' => 'unsubscribed']);
+
+            foreach ($unsub as $row) {
+                if (strtotime($row['updated_at']) < strtotime('-30 days')) {
+                    $db->delete((int) $row['id']);
+                }
+            }
+        },
+    ],
+];
+```
+
+## Step 4: The UI
+
+The block template renders a subscription form. The Interactivity API handles
+the client-side state.
+
+```twig title="index.twig"
+<div
+  data-wp-interactive="my-theme/newsletter"
+  data-wp-context='{"email":"","name":"","loading":false,"success":false,"error":""}'
+  useBlockProps
+  class="newsletter-form"
+>
+  <template data-wp-if="!context.success">
+    <input
+      type="text"
+      placeholder="Name"
+      data-wp-bind--value="context.name"
+      data-wp-on--input="actions.setName"
+    />
+    <input
+      type="email"
+      placeholder="Email"
+      data-wp-bind--value="context.email"
+      data-wp-on--input="actions.setEmail"
+    />
+    <button
+      data-wp-on--click="actions.subscribe"
+      data-wp-bind--disabled="context.loading"
+    >
+      <span data-wp-text="context.loading ? 'Subscribing...' : 'Subscribe'"></span>
+    </button>
+    <p data-wp-if="context.error" data-wp-text="context.error" class="error"></p>
+  </template>
+  <template data-wp-if="context.success">
+    <p>Thanks for subscribing!</p>
+  </template>
+</div>
+```
+
+## Step 5: Client-side logic
+
+The inline script auto-detects the block name from its `data-block` attribute,
+so `bs.fn()` and `bs.db()` work without passing it explicitly.
+
+```js title="script-inline.js"
+import { store, getContext } from '@wordpress/interactivity';
+
+store('my-theme/newsletter', {
+  actions: {
+    setName: () => {
+      const ctx = getContext();
+      ctx.name = event.target.value;
+    },
+    setEmail: () => {
+      const ctx = getContext();
+      ctx.email = event.target.value;
+    },
+    subscribe: async () => {
+      const ctx = getContext();
+      ctx.loading = true;
+      ctx.error = '';
+
+      const db = bs.db('my-theme/newsletter-root', 'subscribers');
+      const result = await db.create({ email: ctx.email, name: ctx.name });
+
+      if (result.data?.errors) {
+        const firstError = Object.values(result.data.errors)[0];
+        ctx.error = firstError[0];
+        ctx.loading = false;
+        return;
+      }
+
+      ctx.success = true;
+      ctx.loading = false;
+    },
+  },
+});
+```
+
+## Step 6: Component blocks
+
+The confirmation block is a [component](/docs/blocks/components): it renders
+programmatically but never appears in the editor inserter.
+
+```json title="confirmation/block.json"
+{
+  "name": "my-theme/newsletter-confirmation",
+  "title": "Newsletter Confirmation",
+  "blockstudio": {
+    "component": true,
+    "attributes": [
+      { "id": "name", "type": "text" },
+      { "id": "message", "type": "textarea" }
+    ]
+  }
+}
+```
+
+Render it from the `after_create` hook, a cron job, or anywhere in PHP:
+
+```php
+bs_render_block([
+  'name' => 'my-theme/newsletter-confirmation',
+  'data' => ['name' => 'Alice', 'message' => 'Welcome aboard!'],
+]);
+```
+
+Or via HTML tags on any page:
+
+```html
+<bs:my-theme-newsletter-confirmation name="Alice" message="Welcome aboard!" />
+```
+
+## Portability
+
+The entire application lives in one folder. To deploy it to another site:
+
+1. Copy the `newsletter/` folder into the target theme's `blockstudio/` directory
+2. Done
+
+If you use JSONC storage instead of `table`, even the data comes along:
+
+```php title="db.php"
+'subscribers' => [
+    'storage' => 'jsonc',
+    // ...
+],
+```
+
+Records are stored in `newsletter/root/db/subscribers.jsonc` as one JSON object
+per line. Copy the folder, copy the data.
+
+## What you get
+
+From a single block folder, without any external plugins or custom code:
+
+| Feature | File |
+|---------|------|
+| UI template | `index.twig` |
+| Styles | `style.css` |
+| Client logic | `script-inline.js` |
+| CRUD endpoints | `db.php` |
+| Input validation | `db.php` fields + validate callbacks |
+| Access control | `db.php` capability per operation |
+| Lifecycle hooks | `db.php` hooks key |
+| Custom endpoints | `rpc.php` |
+| Scheduled tasks | `cron.php` |
+| Component blocks | `confirmation/block.json` |
+| Programmatic rendering | `bs_render_block()` or `<bs:>` tags |
+| JavaScript client | `bs.db()` and `bs.fn()` |
+| PHP API | `Db::get()` and `Rpc::call()` |
+| Portability | Copy the folder |
+
+This is a complete full-stack application pattern inside WordPress, built
+entirely with files in a directory.
