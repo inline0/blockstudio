@@ -52,8 +52,11 @@ class Rpc {
 		$nonce    = wp_create_nonce( 'wp_rest' );
 
 		return 'window.bs=window.bs||{};'
+			. 'bs._block=function(){var s=document.currentScript;return s&&s.dataset.block||""};'
 			. 'bs.fn=function(n,p,b){'
-			. 'var u="' . $rest_url . '"+(b||"")+"/"+n;'
+			. 'var block=b||bs._block();'
+			. 'if(!block)throw new Error("bs.fn: block name required. Pass as third argument or use an inline script.");'
+			. 'var u="' . $rest_url . '"+block+"/"+n;'
 			. 'return fetch(u,{method:"POST",headers:{"Content-Type":"application/json","X-WP-Nonce":"' . $nonce . '"},body:JSON.stringify({params:p||{}})}).then(function(r){return r.json()});'
 			. '};';
 	}

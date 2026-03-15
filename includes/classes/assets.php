@@ -1180,8 +1180,9 @@ class Assets {
 			}
 		}
 
-		$type   = 'script' === $tag ? 'type="module"' : '';
-		$string = "<$tag id='$id' $processed_string $type $key>" . $contents . "</$tag>";
+		$type       = 'script' === $tag ? 'type="module"' : '';
+		$block_attr = $is_script && isset( $block['name'] ) ? "data-block='" . esc_attr( $block['name'] ) . "'" : '';
+		$string     = "<$tag id='$id' $processed_string $type $key $block_attr>" . $contents . "</$tag>";
 
 		if ( $return ) {
 			return 'gutenberg' === $return ? $contents : $string;

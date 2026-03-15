@@ -36,20 +36,41 @@ return [
 
 ## Calling from JavaScript
 
-Blockstudio auto-injects a `bs.fn()` helper on pages that have blocks with server functions.
-
-```js
-// Call a function on the current block
-const result = await bs.fn('subscribe', { email: 'user@example.com' });
-console.log(result.success);
-
-// Call a function on a specific block
-const posts = await bs.fn('load_more', { offset: 10 }, 'my-theme/blog-feed');
-```
+Blockstudio auto-injects a `bs.fn()` helper on pages that have blocks with RPC
+functions.
 
 **Signature:** `bs.fn(functionName, params?, blockName?) -> Promise`
 
-When `blockName` is omitted, it looks for the nearest `[data-bs-block]` attribute on an ancestor element. You can also always pass the full block name as the third argument.
+### Inline scripts (recommended)
+
+Inline scripts (`script-inline.js` or `script.inline.js`) automatically know
+which block they belong to. Blockstudio adds a `data-block` attribute to the
+script tag, so `bs.fn()` resolves the block name without you passing it:
+
+```js title="script-inline.js"
+const result = await bs.fn('subscribe', { email: 'user@example.com' });
+console.log(result.success);
+```
+
+This works because inline scripts run synchronously and `document.currentScript`
+points to their own `<script data-block="my-theme/newsletter">` tag.
+
+### Module scripts
+
+Module scripts and external JS files don't have access to `document.currentScript`
+at call time. Pass the block name explicitly as the third argument:
+
+```js title="script.js"
+const posts = await bs.fn('load_more', { offset: 10 }, 'my-theme/blog-feed');
+```
+
+### Cross-block calls
+
+Call functions on any other block by passing its name:
+
+```js
+const result = await bs.fn('subscribe', { email: 'a@b.com' }, 'my-theme/newsletter');
+```
 
 ## With the Interactivity API
 
