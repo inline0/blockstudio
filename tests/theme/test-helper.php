@@ -870,7 +870,7 @@ add_action(
 					}
 
 					// Native WP block test page
-					$native_wp_content = '<!-- wp:blockstudio-test/native-wp-block /-->';
+					$native_wp_content = '<!-- wp:create-block/blockstudio-test-native /-->';
 					if ( ! get_post( 3400 ) ) {
 						$wpdb->insert( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery
 							$wpdb->posts,

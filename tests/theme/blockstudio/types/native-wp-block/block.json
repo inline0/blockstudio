@@ -1,11 +1,20 @@
 {
   "$schema": "https://schemas.wp.org/trunk/block.json",
   "apiVersion": 3,
-  "name": "blockstudio-test/native-wp-block",
-  "title": "Native WP Block Test",
-  "category": "text",
+  "name": "create-block/blockstudio-test-native",
+  "version": "0.1.0",
+  "title": "Blockstudio Test Native",
+  "category": "widgets",
   "icon": "smiley",
-  "description": "A standard WordPress block auto-registered by Blockstudio.",
-  "textdomain": "blockstudio-test",
-  "render": "file:./render.php"
+  "description": "Example block scaffolded with Create Block tool.",
+  "example": {},
+  "supports": {
+    "html": false
+  },
+  "textdomain": "blockstudio-test-native",
+  "editorScript": "file:./index.js",
+  "editorStyle": "file:./index.css",
+  "style": "file:./style-index.css",
+  "render": "file:./render.php",
+  "viewScript": "file:./view.js"
 }

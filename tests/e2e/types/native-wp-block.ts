@@ -22,15 +22,8 @@ test.describe('Native WP Block', () => {
       waitUntil: 'domcontentloaded',
     });
 
-    const block = page.locator('.native-wp-block-test');
+    const block = page.locator('.wp-block-create-block-blockstudio-test-native');
     await expect(block).toBeVisible();
-    await expect(block.locator('.native-wp-block-text')).toHaveText(
-      'Native WP block registered by Blockstudio'
-    );
-  });
-
-  test('has WordPress block wrapper class', async () => {
-    const block = page.locator('.wp-block-blockstudio-test-native-wp-block');
-    await expect(block).toBeVisible();
+    await expect(block).toContainText('hello from a dynamic block');
   });
 });
