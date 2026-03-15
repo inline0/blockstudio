@@ -21,6 +21,7 @@
     "interactivity",
     "seo",
     "block-api",
+    "cli",
     "hooks"
   ]
 }
