@@ -1,0 +1,11 @@
+{
+  "$schema": "https://blockstudio.dev/schema/block",
+  "name": "blockstudio/type-database",
+  "title": "Database Test",
+  "category": "blockstudio-test-native",
+  "icon": "database",
+  "description": "Test block for database feature.",
+  "blockstudio": {
+    "component": true
+  }
+}

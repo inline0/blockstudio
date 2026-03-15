@@ -1,0 +1,183 @@
+---
+title: Database
+description: Define a data model for your block with automatic CRUD endpoints and validation.
+---
+
+# Database
+
+Blocks can define a data model via a `db.php` file. Blockstudio generates CRUD
+REST endpoints, validates input, manages storage, and provides a `bs.db()` JS
+client.
+
+## Setup
+
+Create a `db.php` in your block directory that returns a schema definition:
+
+```
+blocks/my-block/
+├── block.json
+├── index.twig
+├── rpc.php     ← custom logic
+├── db.php      ← data model
+└── style.css
+```
+
+```php title="db.php"
+return [
+    'storage'    => 'table',
+    'capability' => [
+        'create' => true,
+        'read'   => true,
+        'update' => 'edit_posts',
+        'delete' => 'manage_options',
+    ],
+    'fields' => [
+        'email' => ['type' => 'string', 'format' => 'email', 'required' => true],
+        'name'  => ['type' => 'string', 'maxLength' => 100],
+        'plan'  => ['type' => 'string', 'enum' => ['free', 'pro'], 'default' => 'free'],
+    ],
+];
+```
+
+## Storage Modes
+
+### Custom Table (`storage: "table"`)
+
+Each record is a database row. Blockstudio creates and manages the table
+automatically via `dbDelta()`. Adding fields to the schema adds columns
+on the next load.
+
+### Post Meta (`storage: "meta"`)
+
+Records are stored as a JSON array in post meta. Requires a `postId` in the
+schema to specify which post owns the data.
+
+```php title="db.php"
+return [
+    'storage' => 'meta',
+    'postId'  => 42,
+    'fields'  => [ /* ... */ ],
+];
+```
+
+## JavaScript Client
+
+Blockstudio injects `bs.db()` on pages with database blocks:
+
+```js
+const db = bs.db('my-theme-subscribers');
+
+// Create
+const record = await db.create({ email: 'a@b.com', plan: 'pro' });
+
+// List (with optional filters)
+const all = await db.list();
+const pros = await db.list({ plan: 'pro', limit: 10 });
+
+// Read
+const one = await db.get(record.id);
+
+// Update
+const updated = await db.update(record.id, { plan: 'enterprise' });
+
+// Delete
+await db.delete(record.id);
+```
+
+The argument to `bs.db()` is the block name with `/` replaced by `-`.
+
+## Access Control
+
+Per-operation capability control. Use `true` for public access, a capability
+string, or an array of capabilities (user needs any one):
+
+```php title="db.php"
+'capability' => [
+    'create' => true,                              // public
+    'read'   => true,                              // public
+    'update' => 'edit_posts',                      // single capability
+    'delete' => ['delete_posts', 'manage_options'], // any of these
+],
+```
+
+When `capability` is omitted for an operation, it defaults to requiring
+authentication (logged-in user).
+
+## Field Types
+
+| Type | MySQL Column | Description |
+|------|-------------|-------------|
+| `string` | `varchar(maxLength)` | Text, default maxLength 255 |
+| `integer` | `bigint(20)` | Whole numbers |
+| `number` | `decimal(20,6)` | Decimal numbers |
+| `boolean` | `tinyint(1)` | True/false |
+| `text` | `longtext` | Long text content |
+
+## Validation
+
+All writes are validated against the schema before storage:
+
+| Rule | Description |
+|------|-------------|
+| `required` | Field must be present on create |
+| `type` | Value must match the declared type |
+| `enum` | Value must be one of the listed options |
+| `maxLength` | String must not exceed this length |
+| `minLength` | String must be at least this length |
+| `format: "email"` | Must be a valid email address |
+| `format: "url"` | Must be a valid URL |
+
+Invalid requests return a `400` status with error details.
+
+## REST Endpoints
+
+All endpoints are under the `blockstudio/v1/db/` namespace. The block name
+has `/` replaced by `-`:
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| `GET` | `/db/{block}` | List records |
+| `POST` | `/db/{block}` | Create a record |
+| `GET` | `/db/{block}/{id}` | Get a record |
+| `PUT` | `/db/{block}/{id}` | Update a record |
+| `DELETE` | `/db/{block}/{id}` | Delete a record |
+
+### Query Parameters (list)
+
+| Parameter | Description |
+|-----------|-------------|
+| `limit` | Maximum records (default 50, max 100) |
+| `offset` | Skip records |
+| Any field name | Filter by exact value |
+
+## Filter
+
+Use the `blockstudio/database` filter to modify schemas programmatically:
+
+```php
+add_filter('blockstudio/database', function (array $schemas): array {
+    $schemas['my-theme/leads']['fields']['source'] = [
+        'type' => 'string',
+        'default' => 'website',
+    ];
+    return $schemas;
+});
+```
+
+## With RPC
+
+The database layer and RPC system complement each other. Use `db.php` for
+standard CRUD and `rpc.php` for custom business logic:
+
+```php title="rpc.php"
+return [
+    'export_csv' => [
+        'callback'   => function (array $params): array {
+            $db = \Blockstudio\Database::get_all();
+            // custom export logic
+            return ['url' => $csv_url];
+        },
+        'capability' => 'manage_options',
+    ],
+];
+```

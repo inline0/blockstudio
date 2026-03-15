@@ -147,6 +147,41 @@ expansion logic as custom fields, so `idStructure` and `overrides` work
 identically. The `returnFormat` option controls whether you get rendered HTML,
 raw data, or both.
 
+## Database
+
+Blocks can now define a data model via `db.php`. Blockstudio generates CRUD
+REST endpoints, validates input, manages storage, and provides a `bs.db()` JS
+client. Two storage modes are supported: custom tables (via `dbDelta()`) and
+post meta.
+
+```php title="db.php"
+return [
+    'storage'    => 'table',
+    'capability' => [
+        'create' => true,
+        'read'   => true,
+        'update' => 'edit_posts',
+        'delete' => 'manage_options',
+    ],
+    'fields' => [
+        'email' => ['type' => 'string', 'format' => 'email', 'required' => true],
+        'name'  => ['type' => 'string', 'maxLength' => 100],
+        'plan'  => ['type' => 'string', 'enum' => ['free', 'pro'], 'default' => 'free'],
+    ],
+];
+```
+
+```js
+const db = bs.db('my-theme-subscribers');
+const record = await db.create({ email: 'a@b.com', plan: 'pro' });
+const all = await db.list({ plan: 'pro' });
+await db.update(record.id, { plan: 'enterprise' });
+await db.delete(record.id);
+```
+
+Combined with RPC, blocks can now function as self-contained mini applications
+with both custom logic and persistent storage.
+
 ## RPC
 
 Blocks can now define PHP functions that the frontend can call. Drop a
