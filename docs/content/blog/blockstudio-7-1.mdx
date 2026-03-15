@@ -150,37 +150,95 @@ raw data, or both.
 ## Database
 
 Blocks can now define a data model via `db.php`. Blockstudio generates CRUD
-REST endpoints, validates input, manages storage, and provides a `bs.db()` JS
-client. Two storage modes are supported: custom tables (via `dbDelta()`) and
-post meta.
+REST endpoints, validates input against the schema, and provides both a
+`bs.db()` JS client and a `\Blockstudio\Db` PHP API.
 
 ```php title="db.php"
 return [
-    'storage'    => 'table',
-    'capability' => [
-        'create' => true,
-        'read'   => true,
-        'update' => 'edit_posts',
-        'delete' => 'manage_options',
-    ],
-    'fields' => [
-        'email' => ['type' => 'string', 'format' => 'email', 'required' => true],
-        'name'  => ['type' => 'string', 'maxLength' => 100],
-        'plan'  => ['type' => 'string', 'enum' => ['free', 'pro'], 'default' => 'free'],
+    'subscribers' => [
+        'storage'    => 'table',
+        'capability' => [
+            'create' => true,
+            'read'   => true,
+            'update' => 'edit_posts',
+            'delete' => 'manage_options',
+        ],
+        'fields' => [
+            'email' => [
+                'type'     => 'string',
+                'format'   => 'email',
+                'required' => true,
+                'validate' => function ($value) {
+                    if (str_ends_with($value, '@spam.com')) {
+                        return 'This domain is blocked.';
+                    }
+                    return true;
+                },
+            ],
+            'name' => ['type' => 'string', 'maxLength' => 100],
+            'plan' => ['type' => 'string', 'enum' => ['free', 'pro']],
+        ],
     ],
 ];
 ```
 
+### Three storage modes
+
+- **`table`**: Custom database table, managed automatically via `dbDelta()`.
+  Adding fields to the schema adds columns on the next load.
+- **`meta`**: JSON array stored in post meta, tied to a specific post.
+- **`jsonc`**: One JSON object per line in a flat file. File-based, portable,
+  and version-controllable.
+
+### JavaScript client
+
 ```js
-const db = bs.db('my-theme/subscribers');
+const db = bs.db('my-theme/block', 'subscribers');
 const record = await db.create({ email: 'a@b.com', plan: 'pro' });
 const all = await db.list({ plan: 'pro' });
-await db.update(record.id, { plan: 'enterprise' });
+await db.update(record.id, { plan: 'free' });
 await db.delete(record.id);
 ```
 
+### PHP API
+
+```php
+$db = \Blockstudio\Db::get('my-theme/block', 'subscribers');
+$db->create(['email' => 'a@b.com', 'plan' => 'pro']);
+$db->list(['plan' => 'pro']);
+$db->update(1, ['plan' => 'free']);
+$db->delete(1);
+```
+
+### Per-field validation errors
+
+Validation errors return per-field error arrays, making it straightforward to
+map errors to form fields:
+
+```json
+{
+  "code": "blockstudio_db_validation",
+  "message": "Validation failed.",
+  "data": {
+    "status": 400,
+    "errors": {
+      "email": ["Must be a valid email address.", "This domain is blocked."],
+      "plan": ["Must be one of: free, pro."]
+    }
+  }
+}
+```
+
+### Portable mini-apps
+
 Combined with RPC, blocks can now function as self-contained mini applications
-with both custom logic and persistent storage.
+with custom logic, persistent storage, and access control. A block collection
+with `rpc.php`, `db.php`, templates, and assets is a complete full-stack app
+inside a single folder.
+
+When using JSONC storage, the data lives alongside the code. Copy the block
+folder to another site and everything travels with it: templates, styles,
+server functions, and the data itself.
 
 ## RPC
 

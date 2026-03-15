@@ -232,16 +232,22 @@ errors next to form fields on the frontend.
 
 ## REST Endpoints
 
-All endpoints are under the `blockstudio/v1/db/` namespace. The block name
-has `/` replaced by `-`:
+All endpoints are under the `blockstudio/v1/db/` namespace:
+
+```
+/db/{block-name}/{schema-name}
+```
+
+The block name has `/` replaced by `-`. For single-schema blocks, the schema
+name is `default`.
 
 | Method | Endpoint | Description |
 |--------|----------|-------------|
-| `GET` | `/db/{block}` | List records |
-| `POST` | `/db/{block}` | Create a record |
-| `GET` | `/db/{block}/{id}` | Get a record |
-| `PUT` | `/db/{block}/{id}` | Update a record |
-| `DELETE` | `/db/{block}/{id}` | Delete a record |
+| `GET` | `/db/{block}/{schema}` | List records |
+| `POST` | `/db/{block}/{schema}` | Create a record |
+| `GET` | `/db/{block}/{schema}/{id}` | Get a record |
+| `PUT` | `/db/{block}/{schema}/{id}` | Update a record |
+| `DELETE` | `/db/{block}/{schema}/{id}` | Delete a record |
 
 ### Query Parameters (list)
 
@@ -257,7 +263,7 @@ Use the `blockstudio/database` filter to modify schemas programmatically:
 
 ```php
 add_filter('blockstudio/database', function (array $schemas): array {
-    $schemas['my-theme/leads']['fields']['source'] = [
+    $schemas['my-theme/leads:default']['fields']['source'] = [
         'type' => 'string',
         'default' => 'website',
     ];
@@ -274,11 +280,30 @@ standard CRUD and `rpc.php` for custom business logic:
 return [
     'export_csv' => [
         'callback'   => function (array $params): array {
-            $db = \Blockstudio\Database::get_all();
+            $db = \Blockstudio\Db::get('my-theme/leads', 'subscribers');
+            $rows = $db->list();
             // custom export logic
-            return ['url' => $csv_url];
+            return ['count' => count($rows)];
         },
         'capability' => 'manage_options',
     ],
 ];
+```
+
+## Portability
+
+With JSONC storage, data lives alongside code. A block folder with `db.php`,
+`rpc.php`, templates, styles, and `db/*.jsonc` files is a complete portable
+application. Copy it to another site and everything travels together: the UI,
+the logic, the access control, and the data itself.
+
+```
+my-app/
+├── block.json
+├── index.twig
+├── style.css
+├── rpc.php        ← custom endpoints
+├── db.php         ← data schema
+└── db/
+    └── entries.jsonc  ← portable data
 ```
