@@ -182,13 +182,13 @@ return [
 ];
 ```
 
-### Three storage modes
+### Four storage modes
 
-- **`table`**: Custom database table, managed automatically via `dbDelta()`.
-  Adding fields to the schema adds columns on the next load.
-- **`meta`**: JSON array stored in post meta, tied to a specific post.
-- **`jsonc`**: One JSON object per line in a flat file. File-based, portable,
-  and version-controllable.
+- **`table`**: Custom MySQL table, managed automatically via `dbDelta()`.
+- **`sqlite`**: Single-file SQLite database with WAL mode. Real SQL queries,
+  portable, handles thousands of records.
+- **`jsonc`**: One JSON object per line in a flat file. Version-controllable.
+- **`meta`**: JSON array in post meta, tied to a specific post.
 
 ### JavaScript client
 
