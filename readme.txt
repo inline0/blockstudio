@@ -66,6 +66,7 @@ Download the latest release zip from [GitHub Releases](https://github.com/inline
 * New: auto-register standard WordPress blocks (create-block) in Blockstudio directories
 * New: SCSS support for code fields (`language: "scss"`)
 * New: RichText and MediaPlaceholder support inside repeater fields
+* Fix: HTML parser adds null innerContent placeholders for nested blocks
 
 = 7.0.11 =
 * Fix: restore $isEditor and $isPreview aliases in PHP block templates
