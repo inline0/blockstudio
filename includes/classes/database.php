@@ -257,13 +257,13 @@ class Database {
 	 * @return true|\WP_Error True if valid, WP_Error otherwise.
 	 */
 	private static function validate( array $data, array $schema, bool $partial = false ) {
-		$fields = $schema['fields'] ?? array();
-		$errors = array();
+		$fields       = $schema['fields'] ?? array();
+		$field_errors = array();
 
 		if ( ! $partial ) {
 			foreach ( $fields as $name => $def ) {
 				if ( ! empty( $def['required'] ) && ! isset( $data[ $name ] ) ) {
-					$errors[] = sprintf( 'Field "%s" is required.', $name );
+					$field_errors[ $name ][] = 'Required.';
 				}
 			}
 		}
@@ -277,43 +277,54 @@ class Database {
 			$type = $def['type'] ?? 'string';
 
 			if ( 'string' === $type && ! is_string( $value ) && ! is_numeric( $value ) ) {
-				$errors[] = sprintf( 'Field "%s" must be a string.', $name );
+				$field_errors[ $name ][] = 'Must be a string.';
 				continue;
 			}
 			if ( 'integer' === $type && ! is_numeric( $value ) ) {
-				$errors[] = sprintf( 'Field "%s" must be an integer.', $name );
+				$field_errors[ $name ][] = 'Must be an integer.';
 				continue;
 			}
 			if ( 'number' === $type && ! is_numeric( $value ) ) {
-				$errors[] = sprintf( 'Field "%s" must be a number.', $name );
+				$field_errors[ $name ][] = 'Must be a number.';
 				continue;
 			}
 			if ( 'boolean' === $type && ! is_bool( $value ) ) {
-				$errors[] = sprintf( 'Field "%s" must be a boolean.', $name );
+				$field_errors[ $name ][] = 'Must be a boolean.';
 				continue;
 			}
 			if ( isset( $def['enum'] ) && ! in_array( $value, $def['enum'], true ) ) {
-				$errors[] = sprintf( 'Field "%s" must be one of: %s.', $name, implode( ', ', $def['enum'] ) );
+				$field_errors[ $name ][] = 'Must be one of: ' . implode( ', ', $def['enum'] ) . '.';
 			}
 			if ( isset( $def['maxLength'] ) && is_string( $value ) && strlen( $value ) > $def['maxLength'] ) {
-				$errors[] = sprintf( 'Field "%s" exceeds maximum length of %d.', $name, $def['maxLength'] );
+				$field_errors[ $name ][] = 'Exceeds maximum length of ' . $def['maxLength'] . '.';
 			}
 			if ( isset( $def['minLength'] ) && is_string( $value ) && strlen( $value ) < $def['minLength'] ) {
-				$errors[] = sprintf( 'Field "%s" is shorter than minimum length of %d.', $name, $def['minLength'] );
+				$field_errors[ $name ][] = 'Must be at least ' . $def['minLength'] . ' characters.';
 			}
 			if ( 'email' === ( $def['format'] ?? '' ) && ! is_email( $value ) ) {
-				$errors[] = sprintf( 'Field "%s" must be a valid email address.', $name );
+				$field_errors[ $name ][] = 'Must be a valid email address.';
 			}
 			if ( 'url' === ( $def['format'] ?? '' ) && ! filter_var( $value, FILTER_VALIDATE_URL ) ) {
-				$errors[] = sprintf( 'Field "%s" must be a valid URL.', $name );
+				$field_errors[ $name ][] = 'Must be a valid URL.';
+			}
+
+			if ( isset( $def['validate'] ) && is_callable( $def['validate'] ) ) {
+				$custom = call_user_func( $def['validate'], $value, $data );
+
+				if ( true !== $custom && null !== $custom ) {
+					$field_errors[ $name ][] = is_string( $custom ) ? $custom : 'Validation failed.';
+				}
 			}
 		}
 
-		if ( ! empty( $errors ) ) {
+		if ( ! empty( $field_errors ) ) {
 			return new \WP_Error(
 				'blockstudio_db_validation',
-				implode( ' ', $errors ),
-				array( 'status' => 400 )
+				__( 'Validation failed.', 'blockstudio' ),
+				array(
+					'status' => 400,
+					'errors' => $field_errors,
+				)
 			);
 		}
 

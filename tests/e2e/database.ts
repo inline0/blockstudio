@@ -92,7 +92,7 @@ test.describe('Database (table storage)', () => {
     expect(result.body.plan).toBe('enterprise');
   });
 
-  test('validates required fields', async () => {
+  test('returns per-field errors for required fields', async () => {
     const result = await page.evaluate(
       async ({ route, nonce }) => {
         const res = await fetch(route, {
@@ -100,14 +100,16 @@ test.describe('Database (table storage)', () => {
           headers: { 'Content-Type': 'application/json', 'X-WP-Nonce': nonce },
           body: JSON.stringify({ name: 'No Email' }),
         });
-        return res.status;
+        return { status: res.status, body: await res.json() };
       },
       { route: TABLE_ROUTE, nonce }
     );
-    expect(result).toBe(400);
+    expect(result.status).toBe(400);
+    expect(result.body.data.errors.email).toBeDefined();
+    expect(result.body.data.errors.email[0]).toBe('Required.');
   });
 
-  test('validates enum values', async () => {
+  test('returns per-field errors for enum values', async () => {
     const result = await page.evaluate(
       async ({ route, nonce }) => {
         const res = await fetch(route, {
@@ -115,11 +117,47 @@ test.describe('Database (table storage)', () => {
           headers: { 'Content-Type': 'application/json', 'X-WP-Nonce': nonce },
           body: JSON.stringify({ email: 'a@b.com', plan: 'invalid' }),
         });
-        return res.status;
+        return { status: res.status, body: await res.json() };
       },
       { route: TABLE_ROUTE, nonce }
     );
-    expect(result).toBe(400);
+    expect(result.status).toBe(400);
+    expect(result.body.data.errors.plan).toBeDefined();
+    expect(result.body.data.errors.plan[0]).toContain('Must be one of');
+  });
+
+  test('returns per-field errors for custom validate callback', async () => {
+    const result = await page.evaluate(
+      async ({ route, nonce }) => {
+        const res = await fetch(route, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'X-WP-Nonce': nonce },
+          body: JSON.stringify({ email: 'user@banned.com' }),
+        });
+        return { status: res.status, body: await res.json() };
+      },
+      { route: TABLE_ROUTE, nonce }
+    );
+    expect(result.status).toBe(400);
+    expect(result.body.data.errors.email).toBeDefined();
+    expect(result.body.data.errors.email[0]).toBe('This domain is not allowed.');
+  });
+
+  test('returns multiple errors per field', async () => {
+    const result = await page.evaluate(
+      async ({ route, nonce }) => {
+        const res = await fetch(route, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'X-WP-Nonce': nonce },
+          body: JSON.stringify({ email: 'not-an-email', plan: 'invalid' }),
+        });
+        return { status: res.status, body: await res.json() };
+      },
+      { route: TABLE_ROUTE, nonce }
+    );
+    expect(result.status).toBe(400);
+    expect(result.body.data.errors.email).toBeDefined();
+    expect(result.body.data.errors.plan).toBeDefined();
   });
 
   test('deletes a record', async () => {

@@ -186,8 +186,49 @@ All writes are validated against the schema before storage:
 | `minLength` | String must be at least this length |
 | `format: "email"` | Must be a valid email address |
 | `format: "url"` | Must be a valid URL |
+| `validate` | Custom callback for server-side validation |
 
-Invalid requests return a `400` status with error details.
+### Custom Validation
+
+Add a `validate` callback to any field for custom server-side checks:
+
+```php title="db.php"
+'email' => [
+    'type'     => 'string',
+    'format'   => 'email',
+    'required' => true,
+    'validate' => function ($value, $data) {
+        if (str_ends_with($value, '@banned.com')) {
+            return 'This domain is not allowed.';
+        }
+        return true;
+    },
+],
+```
+
+Return `true` to pass, or a string with the error message to fail.
+
+### Error Response
+
+Validation errors return a `400` status with per-field error arrays:
+
+```json
+{
+  "code": "blockstudio_db_validation",
+  "message": "Validation failed.",
+  "data": {
+    "status": 400,
+    "errors": {
+      "email": ["Must be a valid email address."],
+      "plan": ["Must be one of: free, pro, enterprise."]
+    }
+  }
+}
+```
+
+Each field maps to an array of error strings, so multiple validation rules
+can fail on the same field. This format makes it straightforward to display
+errors next to form fields on the frontend.
 
 ## REST Endpoints
 

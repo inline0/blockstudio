@@ -19,6 +19,12 @@ return array(
 				'type'     => 'string',
 				'format'   => 'email',
 				'required' => true,
+				'validate' => function ( $value ) {
+					if ( str_ends_with( $value, '@banned.com' ) ) {
+						return 'This domain is not allowed.';
+					}
+					return true;
+				},
 			),
 			'name'  => array(
 				'type'      => 'string',
