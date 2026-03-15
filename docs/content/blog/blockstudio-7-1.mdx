@@ -147,7 +147,7 @@ expansion logic as custom fields, so `idStructure` and `overrides` work
 identically. The `returnFormat` option controls whether you get rendered HTML,
 raw data, or both.
 
-## Server functions
+## RPC
 
 Blocks can now define PHP functions that the frontend can call. Drop a
 `rpc.php` into any block directory and Blockstudio handles the rest:
@@ -169,9 +169,11 @@ const result = await bs.fn('subscribe', { email: 'user@example.com' });
 This pairs naturally with the WordPress Interactivity API. Your store actions can
 call server functions and update reactive state with the response.
 
-Functions are authenticated by default. Add `'public' => true` to allow
-unauthenticated access. Cross-block calling works too: any block can call
-functions on any other block by passing the block name as the third argument.
+Functions are authenticated by default. Access control options include
+`public` for unauthenticated access, `capability` for WordPress capability
+checks (string or array), and `methods` to control allowed HTTP methods.
+Cross-block calling works too: any block can call functions on any other block
+by passing the block name as the third argument.
 
 ## RichText and MediaPlaceholder in repeaters
 

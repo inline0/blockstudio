@@ -59,7 +59,7 @@ Download the latest release zip from [GitHub Releases](https://github.com/inline
 * New: components: non-editor blocks rendered via string renderer or `bs_render_block()`
 * New: string renderer for embedding blocks via `<bs:block-name>` tags
 * New: SCSS support for code fields (`language: "scss"`)
-* New: server functions (RPC) via `rpc.php` with `bs.fn()` JS client
+* New: RPC via `rpc.php` with `bs.fn()` JS client, capability and method controls
 * New: RichText and MediaPlaceholder support inside repeater fields
 
 = 7.0.11 =

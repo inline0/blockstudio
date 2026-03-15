@@ -112,7 +112,7 @@ class Functions {
 			'blockstudio/v1',
 			'/fn/(?P<block>[a-z0-9-]+/[a-z0-9-]+)/(?P<function>[a-z0-9_-]+)',
 			array(
-				'methods'             => 'POST',
+				'methods'             => \WP_REST_Server::ALLMETHODS,
 				'callback'            => array( __CLASS__, 'handle_request' ),
 				'permission_callback' => array( __CLASS__, 'check_permission' ),
 				'args'                => array(
@@ -157,6 +157,18 @@ class Functions {
 
 		$fn = self::$functions[ $block_name ][ $function_name ];
 
+		$allowed_methods = (array) ( $fn['methods'] ?? array( 'POST' ) );
+		$allowed_methods = array_map( 'strtoupper', $allowed_methods );
+		$request_method  = strtoupper( $request->get_method() );
+
+		if ( ! in_array( $request_method, $allowed_methods, true ) ) {
+			return new \WP_Error(
+				'blockstudio_fn_method_not_allowed',
+				__( 'Method not allowed.', 'blockstudio' ),
+				array( 'status' => 405 )
+			);
+		}
+
 		if ( ! empty( $fn['public'] ) ) {
 			return true;
 		}
@@ -167,6 +179,26 @@ class Functions {
 				__( 'Authentication required.', 'blockstudio' ),
 				array( 'status' => 401 )
 			);
+		}
+
+		if ( ! empty( $fn['capability'] ) ) {
+			$caps    = (array) $fn['capability'];
+			$has_cap = false;
+
+			foreach ( $caps as $cap ) {
+				if ( current_user_can( $cap ) ) {
+					$has_cap = true;
+					break;
+				}
+			}
+
+			if ( ! $has_cap ) {
+				return new \WP_Error(
+					'blockstudio_fn_forbidden',
+					__( 'Insufficient permissions.', 'blockstudio' ),
+					array( 'status' => 403 )
+				);
+			}
 		}
 
 		return true;
@@ -297,13 +329,17 @@ class Functions {
 		foreach ( $definitions as $name => $definition ) {
 			if ( is_callable( $definition ) ) {
 				self::$functions[ $block_name ][ $name ] = array(
-					'callback' => $definition,
-					'public'   => false,
+					'callback'   => $definition,
+					'public'     => false,
+					'capability' => null,
+					'methods'    => array( 'POST' ),
 				);
 			} elseif ( is_array( $definition ) && isset( $definition['callback'] ) ) {
 				self::$functions[ $block_name ][ $name ] = array(
-					'callback' => $definition['callback'],
-					'public'   => $definition['public'] ?? false,
+					'callback'   => $definition['callback'],
+					'public'     => $definition['public'] ?? false,
+					'capability' => $definition['capability'] ?? null,
+					'methods'    => (array) ( $definition['methods'] ?? array( 'POST' ) ),
 				);
 			}
 		}

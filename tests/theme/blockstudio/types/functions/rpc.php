@@ -21,4 +21,22 @@ return array(
 		},
 		'public'   => true,
 	),
+	'admin_only' => array(
+		'callback'   => function ( array $params ): array {
+			return array( 'admin' => true );
+		},
+		'capability' => 'manage_options',
+	),
+	'editor_up' => array(
+		'callback'   => function ( array $params ): array {
+			return array( 'editor' => true );
+		},
+		'capability' => array( 'edit_posts', 'manage_options' ),
+	),
+	'get_status' => array(
+		'callback' => function ( array $params ): array {
+			return array( 'status' => 'ok' );
+		},
+		'methods' => array( 'GET', 'POST' ),
+	),
 );

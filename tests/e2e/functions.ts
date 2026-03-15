@@ -94,6 +94,55 @@ test.describe('Block Functions (RPC)', () => {
     expect(result).toEqual({ message: 'Hello, Editor!' });
   });
 
+  test('capability-restricted function works for admin', async () => {
+    const result = await page.evaluate(async () => {
+      const res = await fetch('/wp-json/blockstudio/v1/fn/blockstudio/type-functions/admin_only', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-WP-Nonce': (window as any).blockstudioAdmin.nonceRest },
+        body: JSON.stringify({ params: {} }),
+      });
+      return { status: res.status, body: await res.json() };
+    });
+    expect(result.status).toBe(200);
+    expect(result.body).toEqual({ admin: true });
+  });
+
+  test('capability array function works for admin', async () => {
+    const result = await page.evaluate(async () => {
+      const res = await fetch('/wp-json/blockstudio/v1/fn/blockstudio/type-functions/editor_up', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-WP-Nonce': (window as any).blockstudioAdmin.nonceRest },
+        body: JSON.stringify({ params: {} }),
+      });
+      return { status: res.status, body: await res.json() };
+    });
+    expect(result.status).toBe(200);
+    expect(result.body).toEqual({ editor: true });
+  });
+
+  test('GET method works when allowed', async () => {
+    const result = await page.evaluate(async () => {
+      const res = await fetch('/wp-json/blockstudio/v1/fn/blockstudio/type-functions/get_status', {
+        method: 'GET',
+        headers: { 'X-WP-Nonce': (window as any).blockstudioAdmin.nonceRest },
+      });
+      return { status: res.status, body: await res.json() };
+    });
+    expect(result.status).toBe(200);
+    expect(result.body).toEqual({ status: 'ok' });
+  });
+
+  test('GET method rejected when not allowed', async () => {
+    const result = await page.evaluate(async () => {
+      const res = await fetch('/wp-json/blockstudio/v1/fn/blockstudio/type-functions/greet', {
+        method: 'GET',
+        headers: { 'X-WP-Nonce': (window as any).blockstudioAdmin.nonceRest },
+      });
+      return res.status;
+    });
+    expect(result).toBe(405);
+  });
+
   test('bs.fn is available on frontend', async () => {
     await page.goto(`${BASE_URL}/native-single`);
     await page.waitForLoadState('domcontentloaded');

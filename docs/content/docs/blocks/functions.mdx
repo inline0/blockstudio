@@ -1,9 +1,9 @@
 ---
-title: Server Functions
+title: RPC
 description: Define PHP functions in your block that can be called from the frontend via a lightweight RPC system.
 ---
 
-# Server Functions
+# RPC
 
 Blocks can define server-side PHP functions that are callable from the frontend. Add a `rpc.php` file to your block directory and Blockstudio exposes them through a REST endpoint with a tiny JS client.
 
@@ -78,9 +78,13 @@ store('myTheme/newsletter', {
 </div>
 ```
 
-## Public Functions
+## Access Control
 
-By default, functions require an authenticated user. To allow unauthenticated access, use the expanded format with `public: true`:
+By default, functions require an authenticated (logged-in) user.
+
+### Public Functions
+
+Allow unauthenticated access with `public: true`:
 
 ```php title="rpc.php"
 return [
@@ -89,6 +93,54 @@ return [
             return ['count' => wp_count_posts()->publish];
         },
         'public' => true,
+    ],
+];
+```
+
+### Capabilities
+
+Restrict to users with specific WordPress capabilities:
+
+```php title="rpc.php"
+return [
+    'save_draft' => [
+        'callback'   => function (array $params): array { /* ... */ },
+        'capability' => 'edit_posts',
+    ],
+    'delete_page' => [
+        'callback'   => function (array $params): array { /* ... */ },
+        'capability' => 'delete_pages',
+    ],
+    'manage_site' => [
+        'callback'   => function (array $params): array { /* ... */ },
+        'capability' => 'manage_options',
+    ],
+];
+```
+
+Pass an array to allow any of multiple capabilities:
+
+```php title="rpc.php"
+return [
+    'moderate' => [
+        'callback'   => function (array $params): array { /* ... */ },
+        'capability' => ['edit_others_posts', 'manage_options'],
+    ],
+];
+```
+
+### HTTP Methods
+
+By default, functions only accept `POST` requests. Allow other methods with the
+`methods` option:
+
+```php title="rpc.php"
+return [
+    'get_status' => [
+        'callback' => function (array $params): array {
+            return ['status' => 'ok'];
+        },
+        'methods' => ['GET', 'POST'],
     ],
 ];
 ```
