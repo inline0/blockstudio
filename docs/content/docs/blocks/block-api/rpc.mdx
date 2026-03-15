@@ -287,7 +287,7 @@ add_action('blockstudio/rpc/before_call', function ($params) {
 Modify or add functions programmatically from outside the block:
 
 ```php
-add_filter('blockstudio/functions', function (array $functions): array {
+add_filter('blockstudio/rpc', function (array $functions): array {
     $functions['my-theme/hero']['custom_action'] = [
         'callback' => function (array $params): array {
             return ['ok' => true];

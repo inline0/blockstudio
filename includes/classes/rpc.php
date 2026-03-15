@@ -328,7 +328,7 @@ class Rpc {
 			self::load_block_functions( $block_name, $block_data );
 		}
 
-		self::$functions = apply_filters( 'blockstudio/functions', self::$functions );
+		self::$functions = apply_filters( 'blockstudio/rpc', self::$functions );
 	}
 
 	/**
