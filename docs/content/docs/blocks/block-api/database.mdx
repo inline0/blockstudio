@@ -1,28 +1,34 @@
 ---
 title: Database
-description: Define a data model for your block with automatic CRUD endpoints and validation.
+description: Define a data model for your block with automatic CRUD endpoints, validation, and multiple storage backends.
 ---
 
 # Database
 
-Blocks can define a data model via a `db.php` file. Blockstudio generates CRUD
-REST endpoints, validates input, manages storage, and provides a `bs.db()` JS
-client.
+The database layer lets you define a data model for your block in a `db.php`
+file. Blockstudio generates REST CRUD endpoints, validates input against the
+schema, manages storage automatically, and provides both a JavaScript client
+(`bs.db()`) and a PHP API (`Db` class).
 
-## Setup
+This is the data backbone for full-stack blocks. Where
+[RPC](/docs/blocks/block-api/rpc) handles custom logic, the database layer
+handles structured data with zero boilerplate.
 
-Create a `db.php` in your block directory that returns a schema definition:
+## How it works
 
-```
-blocks/my-block/
-├── block.json
-├── index.twig
-├── rpc.php     ← custom logic
-├── db.php      ← data model
-└── style.css
-```
+1. You create `db.php` in your block directory
+2. It returns a schema: fields, types, validation rules, access control
+3. Blockstudio creates the storage (table, file, or post meta)
+4. Five REST endpoints are generated automatically (list, get, create, update, delete)
+5. `bs.db()` and `Db::get()` provide client and server access
+
+No migrations, no controllers, no route registration.
+
+## Defining schemas
 
 ### Single schema
+
+The simplest form: a single data model per block.
 
 ```php title="db.php"
 return [
@@ -43,7 +49,7 @@ return [
 
 ### Multiple schemas
 
-Return a named array to define multiple schemas per block:
+A single block can own multiple data models. Return a named array:
 
 ```php title="db.php"
 return [
@@ -54,7 +60,7 @@ return [
             'plan'  => ['type' => 'string', 'enum' => ['free', 'pro']],
         ],
     ],
-    'logs' => [
+    'activity_log' => [
         'storage' => 'jsonc',
         'fields'  => [
             'action'  => ['type' => 'string', 'required' => true],
@@ -64,31 +70,41 @@ return [
 ];
 ```
 
-## Storage Modes
+Each schema gets its own endpoints, storage, and access control.
 
-### Custom Table (`storage: "table"`)
+## Storage modes
 
-Each record is a database row. Blockstudio creates and manages the table
-automatically via `dbDelta()`. Adding fields to the schema adds columns
-on the next load.
+Three storage backends, each suited for different use cases.
 
-### JSONC Files (`storage: "jsonc"`)
+### Custom table (`storage: "table"`)
+
+Each record is a row in a dedicated MySQL table. Blockstudio creates and manages
+the table automatically using WordPress's `dbDelta()` function. Adding new fields
+to the schema adds columns on the next page load. Existing columns are never
+removed.
+
+Best for: structured data, queries, production applications.
+
+### JSONC files (`storage: "jsonc"`)
 
 Records are stored as one JSON object per line in a `.jsonc` file inside a `db/`
-subfolder of the block directory. File-based, portable, and version-controllable.
-Comments (lines starting with `//`) are preserved.
+subfolder. The file is created automatically on first write. Lines starting with
+`//` are treated as comments and preserved.
 
 ```
 blocks/my-block/
 ├── db.php
 └── db/
-    └── logs.jsonc    ← auto-created on first write
+    └── subscribers.jsonc    ← one record per line
 ```
 
-### Post Meta (`storage: "meta"`)
+Best for: prototyping, portable data, version-controllable datasets, config-like
+data that should travel with the code.
 
-Records are stored as a JSON array in post meta. Requires a `postId` in the
-schema to specify which post owns the data.
+### Post meta (`storage: "meta"`)
+
+Records are stored as a JSON array in WordPress post meta, tied to a specific
+post via `postId`.
 
 ```php title="db.php"
 return [
@@ -98,101 +114,120 @@ return [
 ];
 ```
 
-## JavaScript Client
+Best for: data that belongs to a specific post or page.
 
-Blockstudio injects `bs.db()` on pages with database blocks:
+## JavaScript client
+
+Blockstudio injects `bs.db()` on pages with database blocks. It returns an
+object with five methods:
 
 ```js
 const db = bs.db('my-theme/block', 'subscribers');
 
-// Create
+// Create a record
 const record = await db.create({ email: 'a@b.com', plan: 'pro' });
 
-// List (with optional filters)
+// List all records (with optional filters)
 const all = await db.list();
-const pros = await db.list({ plan: 'pro', limit: 10 });
+const pros = await db.list({ plan: 'pro', limit: 10, offset: 0 });
 
-// Read
+// Get a single record
 const one = await db.get(record.id);
 
-// Update
+// Update specific fields
 const updated = await db.update(record.id, { plan: 'enterprise' });
 
-// Delete
+// Delete a record
 await db.delete(record.id);
 ```
 
-The first argument is the block name and the second is the schema name. For
-single-schema blocks, the schema name can be omitted (defaults to `"default"`).
+The first argument is the block name (with `/`), the second is the schema name.
+For single-schema blocks, omit the schema name (defaults to `"default"`).
 
 ## PHP API
 
-Use the `Db` class for server-side access from `rpc.php`, templates,
-or any PHP code. All Blockstudio classes are in the `Blockstudio` namespace.
+The `Db` class provides the same operations server-side. Use it in `rpc.php`,
+`cron.php`, templates, or any PHP code.
 
 ```php
 use Blockstudio\Db;
 
-$db = Db::get('mytheme/block', 'subscribers');
+$db = Db::get('my-theme/block', 'subscribers');
 
+// Create
 $record = $db->create(['email' => 'a@b.com', 'plan' => 'pro']);
-$all    = $db->list(['plan' => 'pro']);
-$one    = $db->get_record(1);
+
+// List with filters
+$all  = $db->list();
+$pros = $db->list(['plan' => 'pro'], limit: 10, offset: 0);
+
+// Get by ID
+$one = $db->get_record(1);
+
+// Update
 $db->update(1, ['plan' => 'enterprise']);
+
+// Delete
 $db->delete(1);
 ```
 
-For single-schema blocks, omit the schema name (defaults to `"default"`):
+For single-schema blocks:
 
 ```php
-$db = Db::get('mytheme/block');
+$db = Db::get('my-theme/block');
 ```
 
-## Access Control
+## Access control
 
-Per-operation capability control. Use `true` for public access, a capability
-string, or an array of capabilities (user needs any one):
+Each CRUD operation has its own permission level. Use `true` for public
+(unauthenticated) access, a WordPress capability string, an array of
+capabilities (user needs any one), or omit entirely to require just
+authentication.
 
 ```php title="db.php"
 'capability' => [
-    'create' => true,                              // public
-    'read'   => true,                              // public
-    'update' => 'edit_posts',                      // single capability
-    'delete' => ['delete_posts', 'manage_options'], // any of these
+    'create' => true,                               // anyone can create
+    'read'   => true,                               // anyone can read
+    'update' => 'edit_posts',                       // editors and above
+    'delete' => ['delete_posts', 'manage_options'], // either capability works
 ],
 ```
 
-When `capability` is omitted for an operation, it defaults to requiring
-authentication (logged-in user).
+This maps directly to WordPress's capability system. When a request lacks the
+required capability, the endpoint returns a `403 Forbidden` response.
 
-## Field Types
+## Field types
 
-| Type | MySQL Column | Description |
-|------|-------------|-------------|
-| `string` | `varchar(maxLength)` | Text, default maxLength 255 |
-| `integer` | `bigint(20)` | Whole numbers |
-| `number` | `decimal(20,6)` | Decimal numbers |
-| `boolean` | `tinyint(1)` | True/false |
-| `text` | `longtext` | Long text content |
+| Type | MySQL Column | PHP Type | Description |
+|------|-------------|----------|-------------|
+| `string` | `varchar(maxLength)` | `string` | Text, default maxLength 255 |
+| `integer` | `bigint(20)` | `int` | Whole numbers |
+| `number` | `decimal(20,6)` | `float` | Decimal numbers |
+| `boolean` | `tinyint(1)` | `bool` | True/false |
+| `text` | `longtext` | `string` | Long-form text content |
 
 ## Validation
 
-All writes are validated against the schema before storage:
+All writes (create and update) are validated against the schema before touching
+storage. Validation happens server-side regardless of whether the request comes
+from `bs.db()`, the REST API, or `Db::get()`.
 
-| Rule | Description |
-|------|-------------|
-| `required` | Field must be present on create |
-| `type` | Value must match the declared type |
-| `enum` | Value must be one of the listed options |
-| `maxLength` | String must not exceed this length |
-| `minLength` | String must be at least this length |
-| `format: "email"` | Must be a valid email address |
-| `format: "url"` | Must be a valid URL |
-| `validate` | Custom callback for server-side validation |
+### Built-in rules
 
-### Custom Validation
+| Rule | Example | Description |
+|------|---------|-------------|
+| `required` | `'required' => true` | Field must be present on create |
+| `type` | `'type' => 'integer'` | Value must match the declared type |
+| `enum` | `'enum' => ['a', 'b']` | Value must be one of the listed options |
+| `maxLength` | `'maxLength' => 100` | String cannot exceed this length |
+| `minLength` | `'minLength' => 3` | String must be at least this long |
+| `format: "email"` | `'format' => 'email'` | Must be a valid email address |
+| `format: "url"` | `'format' => 'url'` | Must be a valid URL |
 
-Add a `validate` callback to any field for custom server-side checks:
+### Custom validation
+
+Add a `validate` callback to any field for server-side checks that go beyond
+the built-in rules. Return `true` to pass, or a string with the error message:
 
 ```php title="db.php"
 'email' => [
@@ -200,19 +235,22 @@ Add a `validate` callback to any field for custom server-side checks:
     'format'   => 'email',
     'required' => true,
     'validate' => function ($value, $data) {
-        if (str_ends_with($value, '@banned.com')) {
-            return 'This domain is not allowed.';
+        if (str_ends_with($value, '@disposable.com')) {
+            return 'Disposable email addresses are not allowed.';
         }
         return true;
     },
 ],
 ```
 
-Return `true` to pass, or a string with the error message to fail.
+The callback receives the field value and the full data array, so you can do
+cross-field validation.
 
-### Error Response
+### Error response format
 
-Validation errors return a `400` status with per-field error arrays:
+Validation errors return a `400` status with per-field error arrays. This format
+is inspired by [Zod's `fieldErrors`](https://zod.dev/error-formatting) and makes
+it straightforward to map errors to form fields:
 
 ```json
 {
@@ -221,18 +259,28 @@ Validation errors return a `400` status with per-field error arrays:
   "data": {
     "status": 400,
     "errors": {
-      "email": ["Must be a valid email address."],
-      "plan": ["Must be one of: free, pro, enterprise."]
+      "email": ["Must be a valid email address.", "Disposable email addresses are not allowed."],
+      "plan": ["Must be one of: free, pro."]
     }
   }
 }
 ```
 
-Each field maps to an array of error strings, so multiple validation rules
-can fail on the same field. This format makes it straightforward to display
-errors next to form fields on the frontend.
+Each field maps to an array of error strings. Multiple rules can fail on the
+same field. On the frontend:
 
-## REST Endpoints
+```js
+const result = await db.create({ email: 'bad', plan: 'invalid' });
+
+if (result.data?.errors) {
+  // { email: ["Must be a valid email address."], plan: ["Must be one of: free, pro."] }
+  Object.entries(result.data.errors).forEach(([field, messages]) => {
+    showFieldError(field, messages[0]);
+  });
+}
+```
+
+## REST endpoints
 
 All endpoints are under the `blockstudio/v1/db/` namespace:
 
@@ -247,58 +295,19 @@ name is `default`.
 |--------|----------|-------------|
 | `GET` | `/db/{block}/{schema}` | List records |
 | `POST` | `/db/{block}/{schema}` | Create a record |
-| `GET` | `/db/{block}/{schema}/{id}` | Get a record |
+| `GET` | `/db/{block}/{schema}/{id}` | Get a single record |
 | `PUT` | `/db/{block}/{schema}/{id}` | Update a record |
 | `DELETE` | `/db/{block}/{schema}/{id}` | Delete a record |
 
-### Query Parameters (list)
+### Query parameters (list)
 
 | Parameter | Description |
 |-----------|-------------|
-| `limit` | Maximum records (default 50, max 100) |
-| `offset` | Skip records |
-| Any field name | Filter by exact value |
+| `limit` | Maximum records to return (default 50, max 100) |
+| `offset` | Number of records to skip |
+| Any field name | Filter by exact value match |
 
-## Filter
-
-Use the `blockstudio/database` filter to modify schemas programmatically:
-
-```php
-add_filter('blockstudio/database', function (array $schemas): array {
-    $schemas['my-theme/leads:default']['fields']['source'] = [
-        'type' => 'string',
-        'default' => 'website',
-    ];
-    return $schemas;
-});
-```
-
-## Combining with RPC
-
-`db.php` and `rpc.php` are independent. `db.php` generates CRUD endpoints
-automatically. `rpc.php` defines custom server functions. Either works on its
-own, and they can be combined when you need both standard data operations and
-custom logic.
-
-For example, use `db.php` for the data model and `rpc.php` for operations that
-go beyond simple CRUD:
-
-```php title="rpc.php"
-return [
-    'export_csv' => [
-        'callback'   => function (array $params): array {
-            $db = Db::get('my-theme/leads', 'subscribers');
-            $rows = $db->list();
-            // custom export logic
-            return ['count' => count($rows)];
-        },
-        'capability' => 'manage_options',
-    ],
-];
-```
-
-See the [RPC documentation](/docs/blocks/block-api/rpc) for details on server
-functions.
+Example: `GET /db/my-theme-app/subscribers?plan=pro&limit=10`
 
 ## Hooks
 
@@ -308,22 +317,21 @@ for the full list.
 
 ### Inline hooks
 
-Define hooks directly in `db.php` using the `hooks` key. They are scoped to
-that schema automatically:
+Define hooks directly in `db.php`. They are scoped to that schema automatically,
+so you don't need to check the block/schema name:
 
 ```php title="db.php"
 return [
     'storage' => 'table',
-    'fields'  => [
-        'email' => ['type' => 'string', 'format' => 'email', 'required' => true],
-        'plan'  => ['type' => 'string', 'enum' => ['free', 'pro']],
-    ],
+    'fields'  => [ /* ... */ ],
     'hooks' => [
         'after_create' => function ($params) {
+            // $params['record'] is the created record
             wp_mail($params['record']['email'], 'Welcome!', 'Thanks for subscribing.');
         },
         'before_delete' => function ($params) {
-            error_log('Deleting record ' . $params['id']);
+            // $params['id'] is the record being deleted
+            error_log('Deleting subscriber ' . $params['id']);
         },
     ],
 ];
@@ -331,22 +339,47 @@ return [
 
 ### Global hooks
 
-Use WordPress actions to listen across all schemas:
+Listen across all schemas from anywhere:
 
 ```php title="functions.php"
 add_action('blockstudio/db/after_create', function ($params) {
-    if ('my-theme/app' === $params['block']) {
-        // runs for all schemas in this block
+    // $params['block'] and $params['schema'] identify the source
+    if ('my-theme/app' === $params['block'] && 'subscribers' === $params['schema']) {
+        // sync to external CRM
     }
 });
 ```
 
+## Combining with RPC
+
+`db.php` and `rpc.php` are independent systems. `db.php` generates CRUD
+endpoints from a schema definition. `rpc.php` defines custom server functions.
+Either works on its own.
+
+Use them together when you need standard data operations plus custom business
+logic:
+
+```php title="rpc.php"
+use Blockstudio\Db;
+
+return [
+    'export' => [
+        'callback'   => function (array $params): array {
+            $db   = Db::get('my-theme/app', 'subscribers');
+            $rows = $db->list(['plan' => 'pro']);
+            // custom CSV generation, email sending, etc.
+            return ['exported' => count($rows)];
+        },
+        'capability' => 'manage_options',
+    ],
+];
+```
+
 ## Portability
 
-With JSONC storage, data lives alongside code. A block folder with `db.php`,
-`rpc.php`, templates, styles, and `db/*.jsonc` files is a complete portable
-application. Copy it to another site and everything travels together: the UI,
-the logic, the access control, and the data itself.
+With JSONC storage, data lives alongside code. Copy the block folder to another
+site and everything travels together: the UI, the logic, the access control,
+and the data itself.
 
 ```
 my-app/
@@ -355,6 +388,24 @@ my-app/
 ├── style.css
 ├── rpc.php        ← custom endpoints
 ├── db.php         ← data schema
+├── cron.php       ← scheduled tasks
 └── db/
-    └── entries.jsonc  ← portable data
+    └── entries.jsonc  ← the actual data
+```
+
+No database migrations, no export/import steps. Just copy the folder.
+
+## Filter
+
+Modify schemas programmatically from outside the block:
+
+```php
+add_filter('blockstudio/database', function (array $schemas): array {
+    // Add a field to an existing schema
+    $schemas['my-theme/app:subscribers']['fields']['source'] = [
+        'type'    => 'string',
+        'default' => 'website',
+    ];
+    return $schemas;
+});
 ```
