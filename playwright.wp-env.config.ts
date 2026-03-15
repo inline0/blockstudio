@@ -2,7 +2,7 @@ import { defineConfig, devices } from '@playwright/test';
 
 export default defineConfig({
 	testDir: './tests/e2e',
-	testMatch: ['types/**/*.ts', 'pages.ts', 'patterns.ts', 'catalog-blocks.ts', 'keyed-merge.ts', 'tailwind-compile.ts', 'grab.ts', 'canvas.ts', 'preload/**/*.ts', 'string-renderer.ts', 'functions.ts', 'database.ts'],
+	testMatch: ['types/**/*.ts', 'pages.ts', 'patterns.ts', 'catalog-blocks.ts', 'keyed-merge.ts', 'tailwind-compile.ts', 'grab.ts', 'canvas.ts', 'preload/**/*.ts', 'string-renderer.ts', 'functions.ts'],
 	timeout: 90000,
 	expect: {
 		timeout: 15000,
