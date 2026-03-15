@@ -22,6 +22,8 @@ blocks/my-block/
 └── style.css
 ```
 
+### Single schema
+
 ```php title="db.php"
 return [
     'storage'    => 'table',
@@ -39,6 +41,29 @@ return [
 ];
 ```
 
+### Multiple schemas
+
+Return a named array to define multiple schemas per block:
+
+```php title="db.php"
+return [
+    'subscribers' => [
+        'storage' => 'table',
+        'fields'  => [
+            'email' => ['type' => 'string', 'format' => 'email', 'required' => true],
+            'plan'  => ['type' => 'string', 'enum' => ['free', 'pro']],
+        ],
+    ],
+    'logs' => [
+        'storage' => 'jsonc',
+        'fields'  => [
+            'action'  => ['type' => 'string', 'required' => true],
+            'details' => ['type' => 'string'],
+        ],
+    ],
+];
+```
+
 ## Storage Modes
 
 ### Custom Table (`storage: "table"`)
@@ -46,6 +71,19 @@ return [
 Each record is a database row. Blockstudio creates and manages the table
 automatically via `dbDelta()`. Adding fields to the schema adds columns
 on the next load.
+
+### JSONC Files (`storage: "jsonc"`)
+
+Records are stored as one JSON object per line in a `.jsonc` file inside a `db/`
+subfolder of the block directory. File-based, portable, and version-controllable.
+Comments (lines starting with `//`) are preserved.
+
+```
+blocks/my-block/
+├── db.php
+└── db/
+    └── logs.jsonc    ← auto-created on first write
+```
 
 ### Post Meta (`storage: "meta"`)
 
@@ -65,7 +103,7 @@ return [
 Blockstudio injects `bs.db()` on pages with database blocks:
 
 ```js
-const db = bs.db('my-theme-subscribers');
+const db = bs.db('my-theme-block', 'subscribers');
 
 // Create
 const record = await db.create({ email: 'a@b.com', plan: 'pro' });
@@ -84,7 +122,29 @@ const updated = await db.update(record.id, { plan: 'enterprise' });
 await db.delete(record.id);
 ```
 
-The argument to `bs.db()` is the block name with `/` replaced by `-`.
+The first argument is the block name with `/` replaced by `-`, and the second
+is the schema name (use `"default"` for single-schema blocks).
+
+## PHP API
+
+Use the `\Blockstudio\Db` class for server-side access from `rpc.php`, templates,
+or any PHP code:
+
+```php
+$db = \Blockstudio\Db::get('mytheme/block', 'subscribers');
+
+$record = $db->create(['email' => 'a@b.com', 'plan' => 'pro']);
+$all    = $db->list(['plan' => 'pro']);
+$one    = $db->get_record(1);
+$db->update(1, ['plan' => 'enterprise']);
+$db->delete(1);
+```
+
+For single-schema blocks, omit the schema name (defaults to `"default"`):
+
+```php
+$db = \Blockstudio\Db::get('mytheme/block');
+```
 
 ## Access Control
 
