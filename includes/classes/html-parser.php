@@ -376,12 +376,21 @@ class Html_Parser {
 		// Fallback: generic block structure (works for dynamic blocks).
 		$inner_blocks = $this->parse_children( $element );
 
+		// WordPress serialize_blocks requires null entries in innerContent
+		// as placeholders for where inner blocks are inserted.
+		$inner_content = array();
+		if ( ! empty( $inner_blocks ) ) {
+			foreach ( $inner_blocks as $i => $inner_block ) {
+				$inner_content[] = null;
+			}
+		}
+
 		return array(
 			'blockName'    => $block_name,
 			'attrs'        => $attrs,
 			'innerBlocks'  => $inner_blocks,
 			'innerHTML'    => '',
-			'innerContent' => array(),
+			'innerContent' => $inner_content,
 		);
 	}
 
