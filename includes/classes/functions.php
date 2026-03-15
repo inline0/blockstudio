@@ -245,7 +245,26 @@ class Functions {
 			);
 		}
 
+		do_action(
+			'blockstudio/rpc/before_call',
+			array(
+				'block'    => $block_name,
+				'function' => $function_name,
+				'params'   => $params,
+			)
+		);
+
 		$result = call_user_func( $callable, $params );
+
+		do_action(
+			'blockstudio/rpc/after_call',
+			array(
+				'block'    => $block_name,
+				'function' => $function_name,
+				'params'   => $params,
+				'result'   => $result,
+			)
+		);
 
 		return rest_ensure_response( $result );
 	}
@@ -270,9 +289,21 @@ class Functions {
 			);
 		}
 
-		$fn = self::$functions[ $block_name ][ $function_name ];
+		$fn        = self::$functions[ $block_name ][ $function_name ];
+		$hook_args = array(
+			'block'    => $block_name,
+			'function' => $function_name,
+			'params'   => $params,
+		);
 
-		return call_user_func( $fn['callback'], $params );
+		do_action( 'blockstudio/rpc/before_call', $hook_args );
+
+		$result = call_user_func( $fn['callback'], $params );
+
+		$hook_args['result'] = $result;
+		do_action( 'blockstudio/rpc/after_call', $hook_args );
+
+		return $result;
 	}
 
 	/**

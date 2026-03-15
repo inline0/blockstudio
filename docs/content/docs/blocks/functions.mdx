@@ -196,6 +196,22 @@ add_filter('blockstudio/functions', function (array $functions): array {
 });
 ```
 
+## Hooks
+
+Actions fire before and after every RPC call (both REST and PHP). All hooks
+receive a single `$params` array:
+
+| Hook | Params |
+|------|--------|
+| `blockstudio/rpc/before_call` | `block`, `function`, `params` |
+| `blockstudio/rpc/after_call` | `block`, `function`, `params`, `result` |
+
+```php
+add_action('blockstudio/rpc/after_call', function ($params) {
+    error_log($params['block'] . '::' . $params['function'] . ' called');
+});
+```
+
 ## Database
 
 For standard CRUD operations, use [`db.php`](/docs/blocks/database) instead.

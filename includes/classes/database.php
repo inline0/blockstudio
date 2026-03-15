@@ -677,14 +677,40 @@ class Database {
 	 * @return array The created record.
 	 */
 	private static function storage_create( string $key, string $storage, array $data ): array {
+		list( $block, $schema ) = self::parse_key( $key );
+
+		do_action(
+			'blockstudio/db/before_create',
+			array(
+				'block'   => $block,
+				'schema'  => $schema,
+				'data'    => $data,
+				'storage' => $storage,
+			)
+		);
+
 		switch ( $storage ) {
 			case 'meta':
-				return self::meta_create( $key, $data );
+				$record = self::meta_create( $key, $data );
+				break;
 			case 'jsonc':
-				return self::jsonc_create( $key, $data );
+				$record = self::jsonc_create( $key, $data );
+				break;
 			default:
-				return self::table_create( $key, $data );
+				$record = self::table_create( $key, $data );
 		}
+
+		do_action(
+			'blockstudio/db/after_create',
+			array(
+				'block'   => $block,
+				'schema'  => $schema,
+				'record'  => $record,
+				'storage' => $storage,
+			)
+		);
+
+		return $record;
 	}
 
 	/**
@@ -698,14 +724,44 @@ class Database {
 	 * @return array|null The updated record or null.
 	 */
 	private static function storage_update( string $key, string $storage, int $id, array $data ) {
+		list( $block, $schema ) = self::parse_key( $key );
+
+		do_action(
+			'blockstudio/db/before_update',
+			array(
+				'block'   => $block,
+				'schema'  => $schema,
+				'id'      => $id,
+				'data'    => $data,
+				'storage' => $storage,
+			)
+		);
+
 		switch ( $storage ) {
 			case 'meta':
-				return self::meta_update( $key, $id, $data );
+				$record = self::meta_update( $key, $id, $data );
+				break;
 			case 'jsonc':
-				return self::jsonc_update( $key, $id, $data );
+				$record = self::jsonc_update( $key, $id, $data );
+				break;
 			default:
-				return self::table_update( $key, $id, $data );
+				$record = self::table_update( $key, $id, $data );
 		}
+
+		if ( $record ) {
+			do_action(
+				'blockstudio/db/after_update',
+				array(
+					'block'   => $block,
+					'schema'  => $schema,
+					'id'      => $id,
+					'record'  => $record,
+					'storage' => $storage,
+				)
+			);
+		}
+
+		return $record;
 	}
 
 	/**
@@ -718,14 +774,42 @@ class Database {
 	 * @return bool Whether the record was deleted.
 	 */
 	private static function storage_delete( string $key, string $storage, int $id ): bool {
+		list( $block, $schema ) = self::parse_key( $key );
+
+		do_action(
+			'blockstudio/db/before_delete',
+			array(
+				'block'   => $block,
+				'schema'  => $schema,
+				'id'      => $id,
+				'storage' => $storage,
+			)
+		);
+
 		switch ( $storage ) {
 			case 'meta':
-				return self::meta_delete( $key, $id );
+				$deleted = self::meta_delete( $key, $id );
+				break;
 			case 'jsonc':
-				return self::jsonc_delete( $key, $id );
+				$deleted = self::jsonc_delete( $key, $id );
+				break;
 			default:
-				return self::table_delete( $key, $id );
+				$deleted = self::table_delete( $key, $id );
 		}
+
+		if ( $deleted ) {
+			do_action(
+				'blockstudio/db/after_delete',
+				array(
+					'block'   => $block,
+					'schema'  => $schema,
+					'id'      => $id,
+					'storage' => $storage,
+				)
+			);
+		}
+
+		return $deleted;
 	}
 
 	// Table storage.
