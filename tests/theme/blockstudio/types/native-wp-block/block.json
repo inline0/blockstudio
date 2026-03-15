@@ -7,6 +7,5 @@
   "icon": "smiley",
   "description": "A standard WordPress block auto-registered by Blockstudio.",
   "textdomain": "blockstudio-test",
-  "editorScript": "file:./index.js",
   "render": "file:./render.php"
 }

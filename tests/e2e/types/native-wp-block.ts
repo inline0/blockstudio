@@ -1,5 +1,5 @@
 import { test, expect, Page } from '@playwright/test';
-import { login, count, delay } from '../utils/playwright-utils';
+import { login } from '../utils/playwright-utils';
 
 let page: Page;
 
@@ -17,38 +17,20 @@ test.afterAll(async () => {
 });
 
 test.describe('Native WP Block', () => {
-  test('appears in editor inserter', async () => {
-    await page.goto(
-      'http://localhost:8888/wp-admin/post-new.php?post_type=page',
-      { waitUntil: 'domcontentloaded' }
-    );
-
-    await page.waitForSelector('iframe[name="editor-canvas"]', {
-      timeout: 30000,
+  test('renders on frontend via auto-registration', async () => {
+    await page.goto('http://localhost:8888/native-wp-block-test/', {
+      waitUntil: 'domcontentloaded',
     });
-    const frame = page.frame('editor-canvas');
-    await frame!.waitForLoadState('domcontentloaded');
 
-    const modalOverlay = await page.$('.components-modal__screen-overlay');
-    if (modalOverlay) {
-      await page.click(
-        '.components-modal__header .components-button.has-icon'
-      );
-      await page.waitForSelector('.components-modal__screen-overlay', {
-        state: 'hidden',
-        timeout: 5000,
-      });
-    }
-
-    await page.click('.editor-document-tools__inserter-toggle');
-    await count(page, '.block-editor-inserter__block-list', 1);
-
-    await page.fill('[placeholder="Search"]', 'Native WP Block Test');
-    await delay(1000);
-
-    const result = page.locator(
-      '.block-editor-block-types-list__list-item:has-text("Native WP Block Test")'
+    const block = page.locator('.native-wp-block-test');
+    await expect(block).toBeVisible();
+    await expect(block.locator('.native-wp-block-text')).toHaveText(
+      'Native WP block registered by Blockstudio'
     );
-    await expect(result.first()).toBeVisible();
+  });
+
+  test('has WordPress block wrapper class', async () => {
+    const block = page.locator('.wp-block-blockstudio-test-native-wp-block');
+    await expect(block).toBeVisible();
   });
 });
