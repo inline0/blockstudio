@@ -54,6 +54,7 @@ Download the latest release zip from [GitHub Releases](https://github.com/inline
 == Changelog ==
 
 = 7.1.0 =
+* New: scheduled tasks via `cron.php` with WordPress Cron integration
 * New: database layer via `db.php` with CRUD endpoints, validation, and `bs.db()` JS client
 * New: auto-register standard WordPress blocks (create-block) found in Blockstudio directories
 * New: block field type to reference another block as an attribute with inline field expansion

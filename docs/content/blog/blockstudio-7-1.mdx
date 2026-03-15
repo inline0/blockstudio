@@ -231,14 +231,37 @@ map errors to form fields:
 
 ### Portable mini-apps
 
-Combined with RPC, blocks can now function as self-contained mini applications
-with custom logic, persistent storage, and access control. A block collection
-with `rpc.php`, `db.php`, templates, and assets is a complete full-stack app
-inside a single folder.
+Combined with RPC and Cron, blocks can now function as self-contained mini
+applications with custom logic, persistent storage, scheduled tasks, and access
+control. A block collection with `rpc.php`, `db.php`, `cron.php`, templates, and
+assets is a complete full-stack app inside a single folder.
 
 When using JSONC storage, the data lives alongside the code. Copy the block
 folder to another site and everything travels with it: templates, styles,
-server functions, and the data itself.
+server functions, scheduled tasks, and the data itself.
+
+## Cron
+
+Blocks can define scheduled tasks via `cron.php`. Blockstudio registers them
+with WordPress Cron and cleans them up on plugin deactivation.
+
+```php title="cron.php"
+return [
+    'cleanup' => [
+        'schedule' => 'daily',
+        'callback' => function () {
+            $db = \Blockstudio\Db::get('my-theme/app', 'logs');
+            // delete old entries
+        },
+    ],
+    'sync' => [
+        'schedule' => 'hourly',
+        'callback' => function () {
+            // sync with external API
+        },
+    ],
+];
+```
 
 ## RPC
 

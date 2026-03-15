@@ -142,6 +142,7 @@ class Plugin {
 		require_once $classes_dir . 'functions.php';
 		require_once $classes_dir . 'database.php';
 		require_once $classes_dir . 'db.php';
+		require_once $classes_dir . 'cron.php';
 		require_once $classes_dir . 'github-updater.php';
 
 		// File-based pages system.
@@ -251,6 +252,9 @@ class Plugin {
 				}
 				if ( class_exists( 'Blockstudio\Database' ) ) {
 					Database::init();
+				}
+				if ( class_exists( 'Blockstudio\Cron' ) ) {
+					Cron::init();
 				}
 			},
 			PHP_INT_MAX

@@ -1,0 +1,8 @@
+{
+  "$schema": "https://blockstudio.dev/schema/block",
+  "name": "blockstudio/type-cron",
+  "title": "Cron Test",
+  "category": "blockstudio-test-native",
+  "icon": "clock",
+  "blockstudio": { "component": true }
+}
