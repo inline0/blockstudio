@@ -22,11 +22,11 @@ class Cli {
 	 * @return void
 	 */
 	public static function register(): void {
-		\WP_CLI::add_command( 'blockstudio blocks', array( __CLASS__, 'blocks' ) );
-		\WP_CLI::add_command( 'blockstudio db', array( __CLASS__, 'db' ) );
-		\WP_CLI::add_command( 'blockstudio rpc', array( __CLASS__, 'rpc' ) );
-		\WP_CLI::add_command( 'blockstudio cron', array( __CLASS__, 'cron' ) );
-		\WP_CLI::add_command( 'blockstudio settings', array( __CLASS__, 'settings' ) );
+		\WP_CLI::add_command( 'bs blocks', array( __CLASS__, 'blocks' ) );
+		\WP_CLI::add_command( 'bs db', array( __CLASS__, 'db' ) );
+		\WP_CLI::add_command( 'bs rpc', array( __CLASS__, 'rpc' ) );
+		\WP_CLI::add_command( 'bs cron', array( __CLASS__, 'cron' ) );
+		\WP_CLI::add_command( 'bs settings', array( __CLASS__, 'settings' ) );
 	}
 
 	/**

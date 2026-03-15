@@ -14,7 +14,7 @@ do through the REST API or PHP, you can do from the command line.
 ### List all blocks
 
 ```bash
-wp blockstudio blocks list
+wp bs blocks list
 ```
 
 ```
@@ -30,13 +30,13 @@ wp blockstudio blocks list
 ### Filter to components only
 
 ```bash
-wp blockstudio blocks list --components
+wp bs blocks list --components
 ```
 
 ### Output as JSON
 
 ```bash
-wp blockstudio blocks list --format=json
+wp bs blocks list --format=json
 ```
 
 ## Database
@@ -44,7 +44,7 @@ wp blockstudio blocks list --format=json
 ### List schemas
 
 ```bash
-wp blockstudio db schemas
+wp bs db schemas
 ```
 
 ```
@@ -60,28 +60,28 @@ wp blockstudio db schemas
 
 ```bash
 # List records
-wp blockstudio db list my-theme/app subscribers
+wp bs db list my-theme/app subscribers
 
 # List with filters
-wp blockstudio db list my-theme/app subscribers --plan=pro --limit=10
+wp bs db list my-theme/app subscribers --plan=pro --limit=10
 
 # Get a single record
-wp blockstudio db get my-theme/app subscribers 1
+wp bs db get my-theme/app subscribers 1
 
 # Create a record
-wp blockstudio db create my-theme/app subscribers --email=a@b.com --plan=pro
+wp bs db create my-theme/app subscribers --email=a@b.com --plan=pro
 
 # Update a record
-wp blockstudio db update my-theme/app subscribers 1 --plan=enterprise
+wp bs db update my-theme/app subscribers 1 --plan=enterprise
 
 # Delete a record
-wp blockstudio db delete my-theme/app subscribers 1
+wp bs db delete my-theme/app subscribers 1
 ```
 
 For single-schema blocks, the schema name defaults to `default`:
 
 ```bash
-wp blockstudio db list my-theme/leads
+wp bs db list my-theme/leads
 ```
 
 ### Output formats
@@ -90,7 +90,7 @@ All list commands support `--format=table` (default), `--format=json`, and
 `--format=csv`:
 
 ```bash
-wp blockstudio db list my-theme/app subscribers --format=json
+wp bs db list my-theme/app subscribers --format=json
 ```
 
 ## RPC
@@ -98,7 +98,7 @@ wp blockstudio db list my-theme/app subscribers --format=json
 ### List all functions
 
 ```bash
-wp blockstudio rpc list
+wp bs rpc list
 ```
 
 ```
@@ -114,7 +114,7 @@ wp blockstudio rpc list
 ### Call a function
 
 ```bash
-wp blockstudio rpc call my-theme/app subscribe --email=user@example.com
+wp bs rpc call my-theme/app subscribe --email=user@example.com
 ```
 
 Output is JSON:
@@ -128,7 +128,7 @@ Output is JSON:
 Parameters are passed as `--key=value` flags:
 
 ```bash
-wp blockstudio rpc call my-theme/app load_more --offset=10 --limit=5
+wp bs rpc call my-theme/app load_more --offset=10 --limit=5
 ```
 
 ## Cron
@@ -136,7 +136,7 @@ wp blockstudio rpc call my-theme/app load_more --offset=10 --limit=5
 ### List all jobs
 
 ```bash
-wp blockstudio cron list
+wp bs cron list
 ```
 
 ```
@@ -151,7 +151,7 @@ wp blockstudio cron list
 ### Run a job manually
 
 ```bash
-wp blockstudio cron run my-theme/app cleanup
+wp bs cron run my-theme/app cleanup
 ```
 
 This executes the callback immediately, regardless of the schedule. Useful for
@@ -162,14 +162,14 @@ testing and debugging.
 ### Show all settings
 
 ```bash
-wp blockstudio settings list
+wp bs settings list
 ```
 
 ### Get a specific setting
 
 ```bash
-wp blockstudio settings get tailwind/enabled
-wp blockstudio settings get assets/enqueue
+wp bs settings get tailwind/enabled
+wp bs settings get assets/enqueue
 ```
 
 ## Scripting
@@ -178,13 +178,13 @@ All commands support `--format=json` for easy piping:
 
 ```bash
 # Export all subscribers as JSON
-wp blockstudio db list my-theme/app subscribers --format=json > subscribers.json
+wp bs db list my-theme/app subscribers --format=json > subscribers.json
 
 # Count records
-wp blockstudio db list my-theme/app subscribers --format=json | jq length
+wp bs db list my-theme/app subscribers --format=json | jq length
 
 # Batch delete
-wp blockstudio db list my-theme/app logs --format=json | \
+wp bs db list my-theme/app logs --format=json | \
   jq -r '.[].id' | \
-  xargs -I {} wp blockstudio db delete my-theme/app logs {}
+  xargs -I {} wp bs db delete my-theme/app logs {}
 ```
