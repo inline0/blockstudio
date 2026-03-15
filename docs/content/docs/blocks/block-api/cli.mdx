@@ -1,0 +1,190 @@
+---
+title: CLI
+description: Manage Blockstudio blocks, database, RPC, and cron from the command line via WP-CLI.
+---
+
+# CLI
+
+Blockstudio registers WP-CLI commands for managing blocks, database records,
+RPC functions, cron jobs, and settings from the terminal. Everything you can
+do through the REST API or PHP, you can do from the command line.
+
+## Blocks
+
+### List all blocks
+
+```bash
+wp blockstudio blocks list
+```
+
+```
++----------------------------+---------------------+-----------+------------------------+
+| name                       | title               | component | category               |
++----------------------------+---------------------+-----------+------------------------+
+| my-theme/hero              | Hero                |           | my-theme               |
+| my-theme/card              | Card                | yes       | my-theme               |
+| my-theme/newsletter        | Newsletter          |           | my-theme               |
++----------------------------+---------------------+-----------+------------------------+
+```
+
+### Filter to components only
+
+```bash
+wp blockstudio blocks list --components
+```
+
+### Output as JSON
+
+```bash
+wp blockstudio blocks list --format=json
+```
+
+## Database
+
+### List schemas
+
+```bash
+wp blockstudio db schemas
+```
+
+```
++-------------------+-------------+---------+---------------------+
+| block             | schema      | storage | fields              |
++-------------------+-------------+---------+---------------------+
+| my-theme/app      | subscribers | table   | email, name, plan   |
+| my-theme/app      | logs        | jsonc   | action, details     |
++-------------------+-------------+---------+---------------------+
+```
+
+### CRUD operations
+
+```bash
+# List records
+wp blockstudio db list my-theme/app subscribers
+
+# List with filters
+wp blockstudio db list my-theme/app subscribers --plan=pro --limit=10
+
+# Get a single record
+wp blockstudio db get my-theme/app subscribers 1
+
+# Create a record
+wp blockstudio db create my-theme/app subscribers --email=a@b.com --plan=pro
+
+# Update a record
+wp blockstudio db update my-theme/app subscribers 1 --plan=enterprise
+
+# Delete a record
+wp blockstudio db delete my-theme/app subscribers 1
+```
+
+For single-schema blocks, the schema name defaults to `default`:
+
+```bash
+wp blockstudio db list my-theme/leads
+```
+
+### Output formats
+
+All list commands support `--format=table` (default), `--format=json`, and
+`--format=csv`:
+
+```bash
+wp blockstudio db list my-theme/app subscribers --format=json
+```
+
+## RPC
+
+### List all functions
+
+```bash
+wp blockstudio rpc list
+```
+
+```
++-------------------+-------------+--------+----------------+---------+
+| block             | function    | public | capability     | methods |
++-------------------+-------------+--------+----------------+---------+
+| my-theme/app      | subscribe   | yes    |                | POST    |
+| my-theme/app      | stats       |        | edit_posts     | POST    |
+| my-theme/app      | get_status  |        |                | GET,POST|
++-------------------+-------------+--------+----------------+---------+
+```
+
+### Call a function
+
+```bash
+wp blockstudio rpc call my-theme/app subscribe --email=user@example.com
+```
+
+Output is JSON:
+
+```json
+{
+  "success": true
+}
+```
+
+Parameters are passed as `--key=value` flags:
+
+```bash
+wp blockstudio rpc call my-theme/app load_more --offset=10 --limit=5
+```
+
+## Cron
+
+### List all jobs
+
+```bash
+wp blockstudio cron list
+```
+
+```
++-------------------+----------+----------+---------------------+
+| block             | job      | schedule | next_run            |
++-------------------+----------+----------+---------------------+
+| my-theme/app      | cleanup  | daily    | 2026-03-17 00:00:00 |
+| my-theme/app      | sync     | hourly   | 2026-03-16 15:00:00 |
++-------------------+----------+----------+---------------------+
+```
+
+### Run a job manually
+
+```bash
+wp blockstudio cron run my-theme/app cleanup
+```
+
+This executes the callback immediately, regardless of the schedule. Useful for
+testing and debugging.
+
+## Settings
+
+### Show all settings
+
+```bash
+wp blockstudio settings list
+```
+
+### Get a specific setting
+
+```bash
+wp blockstudio settings get tailwind/enabled
+wp blockstudio settings get assets/enqueue
+```
+
+## Scripting
+
+All commands support `--format=json` for easy piping:
+
+```bash
+# Export all subscribers as JSON
+wp blockstudio db list my-theme/app subscribers --format=json > subscribers.json
+
+# Count records
+wp blockstudio db list my-theme/app subscribers --format=json | jq length
+
+# Batch delete
+wp blockstudio db list my-theme/app logs --format=json | \
+  jq -r '.[].id' | \
+  xargs -I {} wp blockstudio db delete my-theme/app logs {}
+```

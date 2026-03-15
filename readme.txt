@@ -59,6 +59,7 @@ Download the latest release zip from [GitHub Releases](https://github.com/inline
 * New: `Db` PHP API and `bs.db()` JS client for CRUD operations
 * New: per-field validation errors and custom `validate` callbacks in `db.php`
 * New: lifecycle hooks for DB and RPC operations
+* New: WP-CLI commands for blocks, database, RPC, cron, and settings
 * New: scheduled tasks via `cron.php` with WordPress Cron integration
 * New: components: non-editor blocks for programmatic rendering
 * New: `<bs:namespace-slug>` HTML tags for embedding blocks anywhere

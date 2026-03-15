@@ -143,6 +143,7 @@ class Plugin {
 		require_once $classes_dir . 'database.php';
 		require_once $classes_dir . 'db.php';
 		require_once $classes_dir . 'cron.php';
+		require_once $classes_dir . 'cli.php';
 		require_once $classes_dir . 'github-updater.php';
 
 		// File-based pages system.
@@ -259,6 +260,10 @@ class Plugin {
 			},
 			PHP_INT_MAX
 		);
+
+		if ( defined( 'WP_CLI' ) && WP_CLI && class_exists( 'Blockstudio\Cli' ) ) {
+			Cli::register();
+		}
 
 		if ( ! str_contains( BLOCKSTUDIO_DIR, '/vendor/' ) ) {
 			new Github_Updater();
