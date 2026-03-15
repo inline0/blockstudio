@@ -1,0 +1,11 @@
+{
+  "$schema": "https://schemas.wp.org/trunk/block.json",
+  "apiVersion": 3,
+  "name": "blockstudio-test/native-wp-block",
+  "title": "Native WP Block Test",
+  "category": "text",
+  "icon": "smiley",
+  "description": "A standard WordPress block auto-registered by Blockstudio.",
+  "textdomain": "blockstudio-test",
+  "render": "file:./render.php"
+}

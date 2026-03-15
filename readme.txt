@@ -54,6 +54,7 @@ Download the latest release zip from [GitHub Releases](https://github.com/inline
 == Changelog ==
 
 = 7.1.0 =
+* New: auto-register standard WordPress blocks (create-block) found in Blockstudio directories
 * New: block field type to reference another block as an attribute with inline field expansion
 * New: components: non-editor blocks rendered via string renderer or `bs_render_block()`
 * New: string renderer for embedding blocks via `<bs:block-name>` tags

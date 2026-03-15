@@ -916,6 +916,14 @@ class Build {
 			}
 
 			foreach ( $registerable as $name => $item ) {
+				if ( $item['classification']['is_native'] ?? false ) {
+					$native_dir = dirname( $item['data']['path'] );
+					if ( ! \WP_Block_Type_Registry::get_instance()->is_registered( $name ) ) {
+						\register_block_type( $native_dir );
+					}
+					continue;
+				}
+
 				self::register_block_type(
 					$item['data'],
 					$item['block_json'],
@@ -1038,6 +1046,14 @@ class Build {
 				$discovered_names[] = $name;
 
 				if ( in_array( $name, $existing_block_names, true ) ) {
+					continue;
+				}
+
+				if ( $item['classification']['is_native'] ?? false ) {
+					$native_dir = dirname( $item['data']['path'] );
+					if ( ! \WP_Block_Type_Registry::get_instance()->is_registered( $name ) ) {
+						\register_block_type( $native_dir );
+					}
 					continue;
 				}
 

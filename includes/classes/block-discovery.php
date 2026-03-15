@@ -288,7 +288,7 @@ class Block_Discovery {
 		}
 
 		// Track items that need registration.
-		if ( ( $classification['is_block'] || $classification['is_override'] || $classification['is_extend'] ) && ! $is_editor ) {
+		if ( ( $classification['is_block'] || $classification['is_override'] || $classification['is_extend'] || $classification['is_native'] ) && ! $is_editor ) {
 			$this->registerable[ $name ] = array(
 				'data'           => $data,
 				'block_json'     => $block_json,
@@ -311,8 +311,10 @@ class Block_Discovery {
 	 * @return array The classification.
 	 */
 	private function classify_file( string $file_path, array $path_info, string $contents ): array {
-		$is_blockstudio = 'block.json' === $path_info['basename']
-			&& isset( $this->decode_json( $contents )['blockstudio'] );
+		$json_data      = $this->decode_json( $contents );
+		$is_block_json  = 'block.json' === $path_info['basename'];
+		$is_blockstudio = $is_block_json && isset( $json_data['blockstudio'] );
+		$is_native      = $is_block_json && ! $is_blockstudio && isset( $json_data['name'] );
 
 		$is_extend    = $this->check_blockstudio_flag( $contents, 'extend' );
 		$is_override  = $is_blockstudio && $this->check_blockstudio_flag( $contents, 'override' );
@@ -332,6 +334,7 @@ class Block_Discovery {
 			'is_block'       => $is_block,
 			'is_component'   => $is_component,
 			'is_extend'      => $is_extend,
+			'is_native'      => $is_native,
 			'is_override'    => $is_override,
 			'is_init'        => $is_init,
 			'is_dir'         => $is_dir,
@@ -354,6 +357,7 @@ class Block_Discovery {
 			|| $classification['is_blade']
 			|| $classification['is_init']
 			|| $classification['is_dir']
+			|| $classification['is_native']
 			|| $classification['is_override']
 			|| $classification['is_extend']
 			|| $is_editor;
