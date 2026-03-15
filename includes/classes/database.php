@@ -1342,13 +1342,43 @@ class Database {
 
 		if ( isset( $definition['fields'] ) ) {
 			self::$schemas[ $block_name . ':default' ] = $definition;
+			self::register_inline_hooks( $definition, $block_name, 'default' );
 			return;
 		}
 
 		foreach ( $definition as $schema_name => $schema ) {
 			if ( is_array( $schema ) && isset( $schema['fields'] ) ) {
 				self::$schemas[ $block_name . ':' . $schema_name ] = $schema;
+				self::register_inline_hooks( $schema, $block_name, $schema_name );
 			}
+		}
+	}
+
+	/**
+	 * Register inline hooks defined in a schema's 'hooks' key.
+	 *
+	 * @param array  $schema      The schema definition.
+	 * @param string $block_name  The block name.
+	 * @param string $schema_name The schema name.
+	 *
+	 * @return void
+	 */
+	private static function register_inline_hooks( array $schema, string $block_name, string $schema_name ): void {
+		$hooks = $schema['hooks'] ?? array();
+
+		foreach ( $hooks as $hook_name => $callback ) {
+			if ( ! is_callable( $callback ) ) {
+				continue;
+			}
+
+			add_action(
+				'blockstudio/db/' . $hook_name,
+				function ( $params ) use ( $callback, $block_name, $schema_name ) {
+					if ( ( $params['block'] ?? '' ) === $block_name && ( $params['schema'] ?? '' ) === $schema_name ) {
+						call_user_func( $callback, $params );
+					}
+				}
+			);
 		}
 	}
 

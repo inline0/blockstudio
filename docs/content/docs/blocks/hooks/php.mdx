@@ -502,3 +502,92 @@ add_action('blockstudio/error/exception', function($exception, $context) {
   my_error_tracker($exception);
 }, 10, 2);
 ```
+
+## Database
+
+All database hooks receive a single `$params` array.
+
+### db/before_create
+
+Action fired before a record is created.
+
+```php title="functions.php"
+add_action('blockstudio/db/before_create', function($params) {
+  // $params: block, schema, data, storage
+});
+```
+
+### db/after_create
+
+Action fired after a record is created.
+
+```php title="functions.php"
+add_action('blockstudio/db/after_create', function($params) {
+  // $params: block, schema, record, storage
+  wp_mail($params['record']['email'], 'Welcome!', 'Thanks for subscribing.');
+});
+```
+
+### db/before_update
+
+Action fired before a record is updated.
+
+```php title="functions.php"
+add_action('blockstudio/db/before_update', function($params) {
+  // $params: block, schema, id, data, storage
+});
+```
+
+### db/after_update
+
+Action fired after a record is updated.
+
+```php title="functions.php"
+add_action('blockstudio/db/after_update', function($params) {
+  // $params: block, schema, id, record, storage
+});
+```
+
+### db/before_delete
+
+Action fired before a record is deleted.
+
+```php title="functions.php"
+add_action('blockstudio/db/before_delete', function($params) {
+  // $params: block, schema, id, storage
+});
+```
+
+### db/after_delete
+
+Action fired after a record is deleted.
+
+```php title="functions.php"
+add_action('blockstudio/db/after_delete', function($params) {
+  // $params: block, schema, id, storage
+});
+```
+
+## RPC
+
+All RPC hooks receive a single `$params` array.
+
+### rpc/before_call
+
+Action fired before an RPC function is called.
+
+```php title="functions.php"
+add_action('blockstudio/rpc/before_call', function($params) {
+  // $params: block, function, params
+});
+```
+
+### rpc/after_call
+
+Action fired after an RPC function is called.
+
+```php title="functions.php"
+add_action('blockstudio/rpc/after_call', function($params) {
+  // $params: block, function, params, result
+});
+```

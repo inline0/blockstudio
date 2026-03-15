@@ -301,27 +301,41 @@ functions.
 ## Hooks
 
 Actions fire before and after every write operation. All hooks receive a single
-`$params` array:
+`$params` array. See the [PHP Hooks](/docs/blocks/hooks/php#database) reference
+for the full list.
 
-| Hook | Params |
-|------|--------|
-| `blockstudio/db/before_create` | `block`, `schema`, `data`, `storage` |
-| `blockstudio/db/after_create` | `block`, `schema`, `record`, `storage` |
-| `blockstudio/db/before_update` | `block`, `schema`, `id`, `data`, `storage` |
-| `blockstudio/db/after_update` | `block`, `schema`, `id`, `record`, `storage` |
-| `blockstudio/db/before_delete` | `block`, `schema`, `id`, `storage` |
-| `blockstudio/db/after_delete` | `block`, `schema`, `id`, `storage` |
+### Inline hooks
 
-```php
+Define hooks directly in `db.php` using the `hooks` key. They are scoped to
+that schema automatically:
+
+```php title="db.php"
+return [
+    'storage' => 'table',
+    'fields'  => [
+        'email' => ['type' => 'string', 'format' => 'email', 'required' => true],
+        'plan'  => ['type' => 'string', 'enum' => ['free', 'pro']],
+    ],
+    'hooks' => [
+        'after_create' => function ($params) {
+            wp_mail($params['record']['email'], 'Welcome!', 'Thanks for subscribing.');
+        },
+        'before_delete' => function ($params) {
+            error_log('Deleting record ' . $params['id']);
+        },
+    ],
+];
+```
+
+### Global hooks
+
+Use WordPress actions to listen across all schemas:
+
+```php title="functions.php"
 add_action('blockstudio/db/after_create', function ($params) {
-    if ('my-theme/app' === $params['block'] && 'subscribers' === $params['schema']) {
-        wp_mail($params['record']['email'], 'Welcome!', 'Thanks for subscribing.');
+    if ('my-theme/app' === $params['block']) {
+        // runs for all schemas in this block
     }
-});
-
-add_action('blockstudio/db/before_delete', function ($params) {
-    // Log deletions
-    error_log('Deleting record ' . $params['id'] . ' from ' . $params['schema']);
 });
 ```
 
