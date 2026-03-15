@@ -157,12 +157,14 @@ const result = await bs.fn('load_more', { offset: 0 }, 'my-theme/blog-feed');
 
 ### From PHP
 
-Use the `Functions::call()` method for server-side cross-block calls:
+Use `Rpc::call()` for server-side cross-block calls:
 
 ```php title="rpc.php"
+use Blockstudio\Rpc;
+
 return [
     'refresh' => function (array $params): array {
-        $feed = Functions::call('my-theme/blog-feed', 'load_more', ['offset' => 0]);
+        $feed = Rpc::call('my-theme/blog-feed', 'load_more', ['offset' => 0]);
         return ['feed' => $feed];
     },
 ];

@@ -140,6 +140,7 @@ class Plugin {
 		require_once $classes_dir . 'register.php';
 		require_once $classes_dir . 'string-renderer.php';
 		require_once $classes_dir . 'functions.php';
+		require_once $classes_dir . 'rpc.php';
 		require_once $classes_dir . 'database.php';
 		require_once $classes_dir . 'db.php';
 		require_once $classes_dir . 'cron.php';
