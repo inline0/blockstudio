@@ -60,7 +60,7 @@ class Database {
 
 		return 'window.bs=window.bs||{};'
 			. 'bs.db=function(b,s){'
-			. 'var u="' . $rest_url . '"+b+"/"+s;'
+			. 'var u="' . $rest_url . '"+b.replace("/","-")+"/"+(s||"default");'
 			. 'var h={"Content-Type":"application/json","X-WP-Nonce":"' . $nonce . '"};'
 			. 'return{'
 			. 'create:function(d){return fetch(u,{method:"POST",headers:h,body:JSON.stringify(d)}).then(function(r){return r.json()})},'

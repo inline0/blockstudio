@@ -172,7 +172,7 @@ return [
 ```
 
 ```js
-const db = bs.db('my-theme-subscribers');
+const db = bs.db('my-theme/subscribers');
 const record = await db.create({ email: 'a@b.com', plan: 'pro' });
 const all = await db.list({ plan: 'pro' });
 await db.update(record.id, { plan: 'enterprise' });

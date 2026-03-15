@@ -103,7 +103,7 @@ return [
 Blockstudio injects `bs.db()` on pages with database blocks:
 
 ```js
-const db = bs.db('my-theme-block', 'subscribers');
+const db = bs.db('my-theme/block', 'subscribers');
 
 // Create
 const record = await db.create({ email: 'a@b.com', plan: 'pro' });
@@ -122,8 +122,8 @@ const updated = await db.update(record.id, { plan: 'enterprise' });
 await db.delete(record.id);
 ```
 
-The first argument is the block name with `/` replaced by `-`, and the second
-is the schema name (use `"default"` for single-schema blocks).
+The first argument is the block name and the second is the schema name. For
+single-schema blocks, the schema name can be omitted (defaults to `"default"`).
 
 ## PHP API
 
