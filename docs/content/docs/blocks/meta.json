@@ -19,11 +19,8 @@
     "loading",
     "rendering",
     "interactivity",
-    "initialization",
-    "rpc",
-    "database",
-    "cron",
     "seo",
+    "block-api",
     "hooks"
   ]
 }
