@@ -54,14 +54,17 @@ Download the latest release zip from [GitHub Releases](https://github.com/inline
 == Changelog ==
 
 = 7.1.0 =
-* New: scheduled tasks via `cron.php` with WordPress Cron integration
-* New: database layer via `db.php` with CRUD endpoints, validation, and `bs.db()` JS client
-* New: auto-register standard WordPress blocks (create-block) found in Blockstudio directories
-* New: block field type to reference another block as an attribute with inline field expansion
-* New: components: non-editor blocks rendered via string renderer or `bs_render_block()`
-* New: string renderer for embedding blocks via `<bs:block-name>` tags
-* New: SCSS support for code fields (`language: "scss"`)
 * New: RPC via `rpc.php` with `bs.fn()` JS client, capability and method controls
+* New: database layer via `db.php` with table, post meta, and JSONC storage
+* New: `Db` PHP API and `bs.db()` JS client for CRUD operations
+* New: per-field validation errors and custom `validate` callbacks in `db.php`
+* New: lifecycle hooks for DB and RPC operations
+* New: scheduled tasks via `cron.php` with WordPress Cron integration
+* New: components: non-editor blocks for programmatic rendering
+* New: `<bs:namespace-slug>` HTML tags for embedding blocks anywhere
+* New: block field type to reference another block as an attribute
+* New: auto-register standard WordPress blocks (create-block) in Blockstudio directories
+* New: SCSS support for code fields (`language: "scss"`)
 * New: RichText and MediaPlaceholder support inside repeater fields
 
 = 7.0.11 =

@@ -19,6 +19,9 @@
     "overrides",
     "loading",
     "rendering",
+    "rpc",
+    "database",
+    "cron",
     "interactivity",
     "seo",
     "hooks"
