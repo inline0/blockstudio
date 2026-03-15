@@ -139,7 +139,6 @@ class Plugin {
 		require_once $classes_dir . 'examples.php';
 		require_once $classes_dir . 'register.php';
 		require_once $classes_dir . 'string-renderer.php';
-		require_once $classes_dir . 'functions.php';
 		require_once $classes_dir . 'rpc.php';
 		require_once $classes_dir . 'database.php';
 		require_once $classes_dir . 'db.php';
@@ -248,8 +247,8 @@ class Plugin {
 		add_action(
 			'init',
 			function () {
-				if ( class_exists( 'Blockstudio\Functions' ) ) {
-					Functions::init();
+				if ( class_exists( 'Blockstudio\Rpc' ) ) {
+					Rpc::init();
 				}
 				if ( class_exists( 'Blockstudio\Database' ) ) {
 					Database::init();
