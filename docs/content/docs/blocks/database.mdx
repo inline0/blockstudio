@@ -271,10 +271,15 @@ add_filter('blockstudio/database', function (array $schemas): array {
 });
 ```
 
-## With RPC
+## Combining with RPC
 
-The database layer and RPC system complement each other. Use `db.php` for
-standard CRUD and `rpc.php` for custom business logic:
+`db.php` and `rpc.php` are independent. `db.php` generates CRUD endpoints
+automatically. `rpc.php` defines custom server functions. Either works on its
+own, and they can be combined when you need both standard data operations and
+custom logic.
+
+For example, use `db.php` for the data model and `rpc.php` for operations that
+go beyond simple CRUD:
 
 ```php title="rpc.php"
 return [
@@ -289,6 +294,9 @@ return [
     ],
 ];
 ```
+
+See the [RPC documentation](/docs/blocks/functions) for details on server
+functions.
 
 ## Portability
 
