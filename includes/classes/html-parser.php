@@ -352,7 +352,22 @@ class Html_Parser {
 		$attrs = $this->get_element_attributes( $element );
 		unset( $attrs['name'] );
 
-		// DOMDocument lowercases attribute names; remap camelCase attributes.
+		// DOMDocument lowercases attribute names; remap to camelCase using
+		// the block's registered attribute definitions.
+		$registered = Build::blocks();
+		if ( isset( $registered[ $block_name ] ) ) {
+			$registered_attrs = $registered[ $block_name ]->attributes ?? array();
+			$lower_map        = array();
+			foreach ( $registered_attrs as $key => $def ) {
+				$lower_map[ strtolower( $key ) ] = $key;
+			}
+			$remapped = array();
+			foreach ( $attrs as $key => $value ) {
+				$remapped[ $lower_map[ $key ] ?? $key ] = $value;
+			}
+			$attrs = $remapped;
+		}
+
 		if ( isset( $attrs['blockeditingmode'] ) ) {
 			$attrs['blockEditingMode'] = $attrs['blockeditingmode'];
 			unset( $attrs['blockeditingmode'] );
