@@ -77,6 +77,32 @@ key, only
 [Dashicons](https://developer.wordpress.org/resource/dashicons/#editor-video)
 IDs are allowed here.
 
+## Standard WordPress Blocks
+
+Blockstudio also auto-registers standard WordPress blocks found in your
+Blockstudio directories. Any `block.json` without a `blockstudio` key but with a
+valid `name` property is registered via WordPress's native `register_block_type()`.
+
+This means you can place blocks scaffolded with `@wordpress/create-block`
+directly inside your `blockstudio/` folder and they will be auto-registered
+alongside your Blockstudio blocks. No separate plugin registration code needed.
+
+```
+blockstudio/
+├── hero/
+│   ├── block.json          ← Blockstudio block (has "blockstudio" key)
+│   └── index.twig
+├── my-js-block/
+│   ├── block.json          ← Standard WP block (no "blockstudio" key)
+│   ├── index.js            ← Compiled editor script
+│   ├── index.css
+│   ├── style-index.css
+│   └── render.php
+```
+
+Build your block with `npx wp-scripts build`, then drop the output folder into
+your Blockstudio directory. It will be registered automatically.
+
 ### HTML
 
 Blockstudio is using a React element parser to render the icon element, so it is

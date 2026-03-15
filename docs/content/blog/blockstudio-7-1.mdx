@@ -225,3 +225,11 @@ results as you type.
 ```
 
 No additional settings required. Just set the language to `scss` and it works.
+
+## Standard WordPress block support
+
+Blockstudio now auto-registers standard WordPress blocks found in your
+Blockstudio directories. Drop a `@wordpress/create-block` build output into your
+`blockstudio/` folder and it gets registered automatically, no separate plugin
+registration code needed. Blockstudio and standard WordPress blocks can live
+side by side in the same directory structure.
