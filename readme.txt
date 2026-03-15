@@ -55,7 +55,7 @@ Download the latest release zip from [GitHub Releases](https://github.com/inline
 
 = 7.1.0 =
 * New: RPC via `rpc.php` with `bs.fn()` JS client, capability and method controls
-* New: database layer via `db.php` with table, post meta, and JSONC storage
+* New: database layer via `db.php` with table, SQLite, post meta, and JSONC storage
 * New: `Db` PHP API and `bs.db()` JS client for CRUD operations
 * New: per-field validation errors and custom `validate` callbacks in `db.php`
 * New: lifecycle hooks for DB and RPC operations

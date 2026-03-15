@@ -389,7 +389,7 @@ class Database {
 	 *
 	 * @param string $key The schema key.
 	 *
-	 * @return string The storage type (table, meta, jsonc).
+	 * @return string The storage type (table, meta, jsonc, sqlite).
 	 */
 	private static function storage_type( string $key ): string {
 		return self::$schemas[ $key ]['storage'] ?? 'table';
@@ -405,6 +405,11 @@ class Database {
 	 */
 	private static function ensure_storage( string $key, array $schema ): void {
 		$storage = $schema['storage'] ?? 'table';
+
+		if ( 'sqlite' === $storage ) {
+			self::sqlite_ensure( $key, $schema );
+			return;
+		}
 
 		if ( 'table' !== $storage ) {
 			return;
@@ -642,6 +647,8 @@ class Database {
 				return self::meta_list( $key, $schema, $filters, $limit, $offset );
 			case 'jsonc':
 				return self::jsonc_list( $key, $filters, $limit, $offset );
+			case 'sqlite':
+				return self::sqlite_list( $key, $schema, $filters, $limit, $offset );
 			default:
 				return self::table_list( $key, $schema, $filters, $limit, $offset );
 		}
@@ -662,6 +669,8 @@ class Database {
 				return self::meta_get( $key, $id );
 			case 'jsonc':
 				return self::jsonc_get( $key, $id );
+			case 'sqlite':
+				return self::sqlite_get( $key, $id );
 			default:
 				return self::table_get( $key, $id );
 		}
@@ -695,6 +704,9 @@ class Database {
 				break;
 			case 'jsonc':
 				$record = self::jsonc_create( $key, $data );
+				break;
+			case 'sqlite':
+				$record = self::sqlite_create( $key, $data );
 				break;
 			default:
 				$record = self::table_create( $key, $data );
@@ -744,6 +756,9 @@ class Database {
 			case 'jsonc':
 				$record = self::jsonc_update( $key, $id, $data );
 				break;
+			case 'sqlite':
+				$record = self::sqlite_update( $key, $id, $data );
+				break;
 			default:
 				$record = self::table_update( $key, $id, $data );
 		}
@@ -792,6 +807,9 @@ class Database {
 				break;
 			case 'jsonc':
 				$deleted = self::jsonc_delete( $key, $id );
+				break;
+			case 'sqlite':
+				$deleted = self::sqlite_delete( $key, $id );
 				break;
 			default:
 				$deleted = self::table_delete( $key, $id );
@@ -1280,6 +1298,256 @@ class Database {
 		self::jsonc_write( $key, $records );
 
 		return true;
+	}
+
+	// SQLite storage.
+
+	/**
+	 * SQLite PDO connections keyed by file path.
+	 *
+	 * @var array<string, \PDO>
+	 */
+	private static array $sqlite_connections = array();
+
+	/**
+	 * Get the SQLite database file path for a schema key.
+	 *
+	 * @param string $key The schema key.
+	 *
+	 * @return string The file path.
+	 */
+	private static function sqlite_path( string $key ): string {
+		list( $block_name, $schema_name ) = self::parse_key( $key );
+		$block_path                       = self::$block_paths[ $block_name ] ?? '';
+
+		return dirname( $block_path ) . '/db/' . $schema_name . '.sqlite';
+	}
+
+	/**
+	 * Get or create a SQLite PDO connection.
+	 *
+	 * @param string $key The schema key.
+	 *
+	 * @return \PDO The PDO instance.
+	 */
+	private static function sqlite_pdo( string $key ): \PDO {
+		$path = self::sqlite_path( $key );
+
+		if ( isset( self::$sqlite_connections[ $path ] ) ) {
+			return self::$sqlite_connections[ $path ];
+		}
+
+		$dir = dirname( $path );
+		if ( ! is_dir( $dir ) ) {
+			wp_mkdir_p( $dir );
+		}
+
+		// phpcs:disable WordPress.DB.RestrictedClasses.mysql__PDO -- SQLite via PDO, not MySQL.
+		$pdo = new \PDO( 'sqlite:' . $path );
+		$pdo->setAttribute( \PDO::ATTR_ERRMODE, \PDO::ERRMODE_EXCEPTION );
+		$pdo->setAttribute( \PDO::ATTR_DEFAULT_FETCH_MODE, \PDO::FETCH_ASSOC );
+		$pdo->exec( 'PRAGMA journal_mode=WAL' );
+		// phpcs:enable WordPress.DB.RestrictedClasses.mysql__PDO
+
+		self::$sqlite_connections[ $path ] = $pdo;
+
+		return $pdo;
+	}
+
+	/**
+	 * Map a field type to a SQLite column type.
+	 *
+	 * @param array $def The field definition.
+	 *
+	 * @return string The SQLite column type.
+	 */
+	private static function sqlite_column_type( array $def ): string {
+		$type = $def['type'] ?? 'string';
+
+		switch ( $type ) {
+			case 'integer':
+				return 'INTEGER DEFAULT 0';
+			case 'number':
+				return 'REAL DEFAULT 0';
+			case 'boolean':
+				return 'INTEGER DEFAULT 0';
+			default:
+				return "TEXT DEFAULT ''";
+		}
+	}
+
+	/**
+	 * Ensure the SQLite table exists for a schema.
+	 *
+	 * @param string $key    The schema key.
+	 * @param array  $schema The schema definition.
+	 *
+	 * @return void
+	 */
+	private static function sqlite_ensure( string $key, array $schema ): void {
+		$pdo     = self::sqlite_pdo( $key );
+		$fields  = $schema['fields'] ?? array();
+		$columns = array();
+
+		foreach ( $fields as $name => $def ) {
+			$col_type  = self::sqlite_column_type( $def );
+			$col_name  = preg_replace( '/[^a-z0-9_]/', '', $name );
+			$columns[] = "$col_name $col_type";
+		}
+
+		$columns_sql = implode( ', ', $columns );
+
+		$pdo->exec(
+			"CREATE TABLE IF NOT EXISTS data (
+				id INTEGER PRIMARY KEY AUTOINCREMENT,
+				$columns_sql,
+				created_at TEXT DEFAULT (datetime('now')),
+				updated_at TEXT DEFAULT (datetime('now'))
+			)"
+		);
+
+		// Add missing columns (like dbDelta for SQLite).
+		$existing = array();
+		$info     = $pdo->query( 'PRAGMA table_info(data)' );
+
+		foreach ( $info as $col ) {
+			$existing[] = $col['name'];
+		}
+
+		foreach ( $fields as $name => $def ) {
+			$col_name = preg_replace( '/[^a-z0-9_]/', '', $name );
+
+			if ( ! in_array( $col_name, $existing, true ) ) {
+				$col_type = self::sqlite_column_type( $def );
+				$pdo->exec( "ALTER TABLE data ADD COLUMN $col_name $col_type" );
+			}
+		}
+	}
+
+	/**
+	 * List rows from SQLite.
+	 *
+	 * @param string $key     The schema key.
+	 * @param array  $schema  The schema.
+	 * @param array  $filters Field equality filters.
+	 * @param int    $limit   Maximum rows.
+	 * @param int    $offset  Row offset.
+	 *
+	 * @return array The rows.
+	 */
+	private static function sqlite_list( string $key, array $schema, array $filters, int $limit, int $offset ): array {
+		$pdo    = self::sqlite_pdo( $key );
+		$fields = array_keys( $schema['fields'] ?? array() );
+		$where  = array();
+		$values = array();
+
+		foreach ( $filters as $k => $val ) {
+			if ( in_array( $k, $fields, true ) ) {
+				$where[]  = "$k = ?";
+				$values[] = $val;
+			}
+		}
+
+		$sql = 'SELECT * FROM data';
+
+		if ( ! empty( $where ) ) {
+			$sql .= ' WHERE ' . implode( ' AND ', $where );
+		}
+
+		$sql     .= ' ORDER BY id DESC LIMIT ? OFFSET ?';
+		$values[] = $limit;
+		$values[] = $offset;
+
+		$stmt = $pdo->prepare( $sql );
+		$stmt->execute( $values );
+
+		return $stmt->fetchAll();
+	}
+
+	/**
+	 * Get a single row from SQLite.
+	 *
+	 * @param string $key The schema key.
+	 * @param int    $id  The row ID.
+	 *
+	 * @return array|null The row or null.
+	 */
+	private static function sqlite_get( string $key, int $id ) {
+		$pdo  = self::sqlite_pdo( $key );
+		$stmt = $pdo->prepare( 'SELECT * FROM data WHERE id = ?' );
+		$stmt->execute( array( $id ) );
+		$row = $stmt->fetch();
+
+		return false !== $row ? $row : null;
+	}
+
+	/**
+	 * Insert a row into SQLite.
+	 *
+	 * @param string $key  The schema key.
+	 * @param array  $data The sanitized data.
+	 *
+	 * @return array The created row.
+	 */
+	private static function sqlite_create( string $key, array $data ): array {
+		$pdo = self::sqlite_pdo( $key );
+		$now = gmdate( 'Y-m-d H:i:s' );
+
+		$data['created_at'] = $now;
+		$data['updated_at'] = $now;
+
+		$columns      = implode( ', ', array_keys( $data ) );
+		$placeholders = implode( ', ', array_fill( 0, count( $data ), '?' ) );
+
+		$stmt = $pdo->prepare( "INSERT INTO data ($columns) VALUES ($placeholders)" );
+		$stmt->execute( array_values( $data ) );
+
+		return self::sqlite_get( $key, (int) $pdo->lastInsertId() );
+	}
+
+	/**
+	 * Update a row in SQLite.
+	 *
+	 * @param string $key  The schema key.
+	 * @param int    $id   The row ID.
+	 * @param array  $data The sanitized data.
+	 *
+	 * @return array|null The updated row or null.
+	 */
+	private static function sqlite_update( string $key, int $id, array $data ) {
+		$pdo                = self::sqlite_pdo( $key );
+		$data['updated_at'] = gmdate( 'Y-m-d H:i:s' );
+
+		$sets   = array();
+		$values = array();
+
+		foreach ( $data as $col => $val ) {
+			$sets[]   = "$col = ?";
+			$values[] = $val;
+		}
+
+		$values[] = $id;
+		$sql      = 'UPDATE data SET ' . implode( ', ', $sets ) . ' WHERE id = ?';
+		$stmt     = $pdo->prepare( $sql );
+		$stmt->execute( $values );
+
+		return self::sqlite_get( $key, $id );
+	}
+
+	/**
+	 * Delete a row from SQLite.
+	 *
+	 * @param string $key The schema key.
+	 * @param int    $id  The row ID.
+	 *
+	 * @return bool Whether the row was deleted.
+	 */
+	private static function sqlite_delete( string $key, int $id ): bool {
+		$pdo  = self::sqlite_pdo( $key );
+		$stmt = $pdo->prepare( 'DELETE FROM data WHERE id = ?' );
+		$stmt->execute( array( $id ) );
+
+		return $stmt->rowCount() > 0;
 	}
 
 	// Discovery.

@@ -85,6 +85,24 @@ removed.
 
 Best for: structured data, queries, production applications.
 
+### SQLite (`storage: "sqlite"`)
+
+Each schema gets its own SQLite database file in a `db/` subfolder. Blockstudio
+creates the file and table automatically, and adds missing columns when the
+schema changes (like `dbDelta` for MySQL). Uses WAL journal mode for concurrent
+read performance.
+
+```
+blocks/my-block/
+├── db.php
+└── db/
+    └── subscribers.sqlite   ← single-file database
+```
+
+Best for: structured data that needs real SQL queries but should stay portable.
+Handles thousands of records efficiently without loading everything into memory.
+Copy the folder to move the data.
+
 ### JSONC files (`storage: "jsonc"`)
 
 Records are stored as one JSON object per line in a `.jsonc` file inside a `db/`
@@ -98,8 +116,7 @@ blocks/my-block/
     └── subscribers.jsonc    ← one record per line
 ```
 
-Best for: prototyping, portable data, version-controllable datasets, config-like
-data that should travel with the code.
+Best for: small datasets, config-like data, version-controllable records.
 
 ### Post meta (`storage: "meta"`)
 
