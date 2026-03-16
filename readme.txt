@@ -58,6 +58,8 @@ Download the latest release zip from [GitHub Releases](https://github.com/inline
 * New: database layer via `db.php` with table, SQLite, post meta, and JSONC storage
 * New: `Db` PHP API and `bs.db()` JS client for CRUD operations
 * New: per-field validation errors and custom `validate` callbacks in `db.php`
+* New: `userScoped` option for automatic per-user data isolation in `db.php`
+* New: CSRF protection via `X-BS-Token` for public endpoints, `'open'` to bypass
 * New: lifecycle hooks for DB and RPC operations
 * New: WP-CLI commands (`wp bs`) for blocks, db, rpc, cron, tailwind, scss, fields, assets, settings
 * New: scheduled tasks via `cron.php` with WordPress Cron integration

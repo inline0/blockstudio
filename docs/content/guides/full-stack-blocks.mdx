@@ -1,6 +1,6 @@
 ---
 title: Full-Stack Blocks
-description: Build a per-user todo app as a single block with RPC, database, cron, and the Interactivity API.
+description: Build complete applications as blocks with database, RPC, cron, and the Interactivity API.
 ---
 
 # Full-Stack Blocks
@@ -9,11 +9,15 @@ Blockstudio 7.1 lets you build complete applications inside a block folder.
 A single directory can contain the UI, server logic, data model, scheduled tasks,
 and even the data itself.
 
-This guide walks through building a per-user todo app as a single block. By the
-end you'll have a working application with authentication, CRUD, live UI updates,
-and automated cleanup, all inside one folder.
+This guide builds two real applications to show the pattern: a per-user todo app
+and a public newsletter signup. Same file structure, different access models.
 
-## The file structure
+## Todo App
+
+A per-user task manager. Each logged-in user sees only their own todos. Uses
+`userScoped: true` for automatic user isolation and SQLite for portable storage.
+
+### File structure
 
 ```
 blockstudio/
@@ -27,9 +31,7 @@ blockstudio/
     cron.php              ← scheduled cleanup
 ```
 
-Seven files. No build step, no external dependencies, no separate plugin.
-
-## Step 1: Block definition
+### Block definition
 
 ```json title="block.json"
 {
@@ -45,11 +47,10 @@ Seven files. No build step, no external dependencies, no separate plugin.
 No attributes needed. All state lives in the database and the Interactivity API
 context.
 
-## Step 2: Data model
+### Data model
 
-The `db.php` defines the schema. Each todo belongs to a user via `user_id`.
-Public read so the block renders for logged-out users (empty state), but writes
-require authentication.
+`userScoped: true` automatically adds a `user_id` column, sets it on create,
+and filters all queries to the current user. No manual user handling needed.
 
 ```php title="db.php"
 <?php
@@ -77,9 +78,6 @@ return [
 ];
 ```
 
-`userScoped: true` automatically adds a `user_id` column, sets it on create,
-and filters all queries to the current user. No manual user handling needed.
-
 SQLite storage means the database file lives at `todo/db/default.sqlite`. Copy
 the block folder to another site and the data comes with it.
 
@@ -93,12 +91,11 @@ PUT    /wp-json/blockstudio/v1/db/my-theme-todo/default/{id}
 DELETE /wp-json/blockstudio/v1/db/my-theme-todo/default/{id}
 ```
 
-## Step 3: Custom server logic
+### Custom server logic
 
-Since `userScoped: true` auto-filters to the current user, we don't need
-a custom `my_todos` endpoint. The built-in `bs.db().list()` already returns
-only the current user's records. RPC is only needed for operations beyond CRUD:
-toggling and bulk clearing.
+Since `userScoped` auto-filters to the current user, the built-in
+`bs.db().list()` already returns only the current user's records. RPC is only
+needed for operations beyond CRUD: toggling and bulk clearing.
 
 ```php title="rpc.php"
 <?php
@@ -142,9 +139,9 @@ return [
 ];
 ```
 
-## Step 4: Scheduled cleanup
+### Scheduled cleanup
 
-Old completed todos get cleaned up automatically. Cron runs daily.
+Old completed todos get cleaned up automatically.
 
 ```php title="cron.php"
 <?php
@@ -170,10 +167,10 @@ return [
 ];
 ```
 
-## Step 5: The template
+### Template
 
-The template uses the WordPress Interactivity API for reactive state. PHP loads
-the initial todos server-side, then JavaScript handles interactions.
+PHP loads the initial todos server-side, then the Interactivity API handles
+interactions.
 
 ```php title="index.php"
 <?php
@@ -245,7 +242,7 @@ $context = wp_json_encode([
 </div>
 ```
 
-## Step 6: Client logic
+### Client logic
 
 The inline script auto-detects the block name from its `data-block` attribute,
 so `bs.fn()` and `bs.db()` work without passing it explicitly.
@@ -313,7 +310,7 @@ store('myTheme/todo', {
 });
 ```
 
-## Step 7: Styles
+### Styles
 
 ```css title="style.css"
 .todo-app {
@@ -410,51 +407,22 @@ store('myTheme/todo', {
 }
 ```
 
-## Managing from the CLI
+### CLI
 
 ```bash
-# List all todos
 wp bs db list my-theme/todo
-
-# Create a todo for user 1
 wp bs db create my-theme/todo --text="Buy milk" --user_id=1
-
-# Run the cleanup cron manually
 wp bs cron run my-theme/todo cleanup_old_todos
-
-# Call the toggle RPC
 wp bs rpc call my-theme/todo toggle --id=1
 ```
 
-## What you get
+## Newsletter Signup
 
-From seven files in a single folder:
+A public subscription form. Anyone can subscribe, only admins can view and
+manage subscribers. No `userScoped`, no authentication for the main action.
+Uses MySQL table storage for production use.
 
-| Capability | Source |
-|-----------|--------|
-| Block UI with reactive state | `index.php` + `script-inline.js` |
-| Scoped styles | `style.css` |
-| Per-user data with SQLite | `db.php` |
-| Auto-generated CRUD endpoints | `db.php` |
-| Input validation | `db.php` field rules |
-| Custom server operations | `rpc.php` |
-| Automated cleanup | `cron.php` |
-| CLI management | `wp bs db/rpc/cron` |
-| Portability | Copy the folder |
-
-No webpack, no separate database migrations, no REST controller classes, no
-plugin boilerplate. Drop the folder into any theme's `blockstudio/` directory
-and you have a working todo app.
-
----
-
-# Example 2: Newsletter Signup
-
-Not every app needs per-user data. A newsletter signup block is public: anyone
-can subscribe, only admins can view and manage subscribers. No `userScoped`,
-no authentication required for the main action.
-
-## File structure
+### File structure
 
 ```
 blockstudio/
@@ -468,10 +436,10 @@ blockstudio/
     cron.php
 ```
 
-## Data model
+### Data model
 
-Public create (anyone can subscribe), admin-only read/delete. Custom validation
-blocks disposable emails.
+Public create with CSRF protection. Custom validation blocks disposable emails.
+Admin-only for read/delete.
 
 ```php title="db.php"
 <?php
@@ -509,19 +477,21 @@ return [
     ],
     'hooks' => [
         'after_create' => function ($params) {
+            $name = $params['record']['name'];
             wp_mail(
                 $params['record']['email'],
                 'Welcome!',
-                'Thanks for subscribing' . ($params['record']['name'] ? ', ' . $params['record']['name'] : '') . '.'
+                'Thanks for subscribing' . ($name ? ", $name" : '') . '.'
             );
         },
     ],
 ];
 ```
 
-## Custom logic
+### Custom logic
 
-An unsubscribe endpoint that's public (works from email links without login):
+A public unsubscribe endpoint (works from email links without login) and
+admin-only stats:
 
 ```php title="rpc.php"
 <?php
@@ -540,7 +510,7 @@ return [
 
             $db->update((int) $subs[0]['id'], ['status' => 'unsubscribed']);
 
-            return ['success' => true, 'message' => 'You have been unsubscribed.'];
+            return ['success' => true];
         },
         'public' => true,
     ],
@@ -557,9 +527,7 @@ return [
 ];
 ```
 
-## Scheduled cleanup
-
-Remove unsubscribed emails after 90 days:
+### Scheduled cleanup
 
 ```php title="cron.php"
 <?php
@@ -582,7 +550,7 @@ return [
 ];
 ```
 
-## Template
+### Template
 
 ```php title="index.php"
 <?php
@@ -632,7 +600,7 @@ $context = wp_json_encode([
 </div>
 ```
 
-## Client logic
+### Client logic
 
 ```js title="script-inline.js"
 import { store, getContext } from '@wordpress/interactivity';
@@ -684,7 +652,7 @@ store('myTheme/newsletter', {
 });
 ```
 
-## Styles
+### Styles
 
 ```css title="style.css"
 .newsletter {
@@ -738,48 +706,29 @@ store('myTheme/newsletter', {
 }
 ```
 
-## Managing from the CLI
+### CLI
 
 ```bash
-# View all subscribers (admin only)
 wp bs db list my-theme/newsletter --format=table
-
-# Export as JSON
 wp bs db list my-theme/newsletter --format=json > subscribers.json
-
-# Check stats
 wp bs rpc call my-theme/newsletter stats
-
-# Manually unsubscribe someone
 wp bs rpc call my-theme/newsletter unsubscribe --email=user@example.com
-
-# Run the cleanup
 wp bs cron run my-theme/newsletter cleanup
 ```
 
----
-
-## Comparison
+## Side by side
 
 | | Todo App | Newsletter |
 |---|---------|-----------|
 | **Auth model** | `userScoped: true` | Public create, admin read |
 | **Storage** | SQLite (portable) | MySQL table (production) |
 | **User filtering** | Automatic | Not needed |
+| **CSRF** | Via `X-BS-Token` | Via `X-BS-Token` |
 | **Custom RPC** | Toggle, clear done | Unsubscribe, stats |
 | **Cron** | Delete old completed | Remove unsubscribed |
 | **Validation** | Length constraints | Email format + domain block |
 
 Same pattern, different access models. The building blocks are identical:
-
-- `db.php` for the data model
-- `rpc.php` for business logic
-- `cron.php` for background tasks
-- `index.php` + `script-inline.js` for the UI
-- `style.css` for the look
-
-Each block is a self-contained application. Compose multiple blocks on a page
-for a full dashboard. Use [components](/docs/blocks/components) for shared UI
-pieces that don't appear in the editor. Use the
-[block field](/docs/blocks/attributes/block-field) to embed one block's output
-inside another.
+`db.php` for the data model, `rpc.php` for business logic, `cron.php` for
+background tasks, `index.php` + `script-inline.js` for the UI, `style.css`
+for the look. Each block is a self-contained application.

@@ -1,0 +1,8 @@
+{
+  "$schema": "https://blockstudio.dev/schema/block",
+  "name": "blockstudio/type-db-user-scoped",
+  "title": "DB User Scoped Test",
+  "category": "blockstudio-test-native",
+  "icon": "database",
+  "blockstudio": { "component": true }
+}

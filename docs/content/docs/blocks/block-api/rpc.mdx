@@ -169,7 +169,7 @@ WordPress conventions where REST endpoints are protected by default.
 
 ### Public functions
 
-Allow unauthenticated access for frontend-facing operations:
+Allow unauthenticated access with CSRF protection:
 
 ```php title="rpc.php"
 return [
@@ -177,7 +177,24 @@ return [
         'callback' => function (array $params): array {
             return ['count' => wp_count_posts()->publish];
         },
-        'public' => true,
+        'public' => true,    // public + CSRF protected via X-BS-Token
+    ],
+];
+```
+
+### Open functions
+
+For webhooks or external API callbacks that need truly open access without any
+token:
+
+```php title="rpc.php"
+return [
+    'webhook' => [
+        'callback' => function (array $params): array {
+            // Called by an external service
+            return ['received' => true];
+        },
+        'public' => 'open',  // no CSRF, no auth
     ],
 ];
 ```

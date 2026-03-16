@@ -217,22 +217,34 @@ managed entirely by Blockstudio.
 
 ## Access control
 
-Each CRUD operation has its own permission level. Use `true` for public
-(unauthenticated) access, a WordPress capability string, an array of
-capabilities (user needs any one), or omit entirely to require just
-authentication.
+Each CRUD operation has its own permission level:
+
+| Value | Behavior |
+|-------|----------|
+| `true` | Public with CSRF protection (logged-out users allowed, `X-BS-Token` required) |
+| `'open'` | Truly public, no CSRF, no auth (for webhooks and external APIs) |
+| `'edit_posts'` | WordPress capability check |
+| `['cap_a', 'cap_b']` | User needs any one of the listed capabilities |
+| omitted / `null` | Requires authentication (logged-in user) |
 
 ```php title="db.php"
 'capability' => [
-    'create' => true,                               // anyone can create
-    'read'   => true,                               // anyone can read
+    'create' => true,                               // public + CSRF protected
+    'read'   => 'open',                             // truly open, no protection
     'update' => 'edit_posts',                       // editors and above
     'delete' => ['delete_posts', 'manage_options'], // either capability works
 ],
 ```
 
-This maps directly to WordPress's capability system. When a request lacks the
-required capability, the endpoint returns a `403 Forbidden` response.
+### CSRF protection
+
+Public endpoints (`true`) are protected by a `X-BS-Token` header. Blockstudio
+generates the token on page render and injects it into the `bs.db()` and
+`bs.fn()` clients automatically. External forms or scripts without the token
+get a `403` response.
+
+Use `'open'` when you need truly unauthenticated access without CSRF, for
+example for incoming webhooks from external services.
 
 ## Field types
 

@@ -229,6 +229,30 @@ map errors to form fields:
 }
 ```
 
+### User-scoped data
+
+Set `userScoped: true` to automatically isolate data per user. Blockstudio
+adds a `user_id` column, sets it on create, and filters all operations to the
+current user. No manual filtering, no ownership checks.
+
+```php title="db.php"
+return [
+    'storage'    => 'sqlite',
+    'userScoped' => true,
+    'fields'     => [
+        'text' => ['type' => 'string', 'required' => true],
+        'done' => ['type' => 'boolean', 'default' => false],
+    ],
+];
+```
+
+### CSRF protection
+
+Public endpoints are protected by a `X-BS-Token` header, generated per page
+load and injected into the JS clients automatically. This prevents cross-site
+request forgery even for logged-out users. Use `'open'` instead of `true` when
+you need truly unauthenticated access (webhooks, external APIs).
+
 ### Portable mini-apps
 
 Combined with RPC and Cron, blocks can now function as self-contained mini
