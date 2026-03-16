@@ -69,9 +69,9 @@ export function Hero() {
             Full-stack blocks
           </h1>
           <p className="mt-4 text-fd-muted-foreground sm:text-lg sm:leading-normal text-balance">
-            Build complete applications inside a block folder. Database, server
-            functions, scheduled tasks, and CLI. No separate plugins, no build
-            step, no boilerplate. Drop a file, get an API.
+            Blocks can define their own database, server functions, scheduled
+            tasks, and CLI commands. Everything lives in one folder, works
+            without a build step, and deploys by copying files.
           </p>
         </div>
         <Button href="/guides/full-stack-blocks" className="w-max shrink-0">
