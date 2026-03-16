@@ -263,6 +263,7 @@ class Build {
 						'code' === $type ||
 						'date' === $type ||
 						'datetime' === $type ||
+						'html-tag' === $type ||
 						'text' === $type ||
 						'textarea' === $type ||
 						'unit' === $type ||
@@ -489,6 +490,7 @@ class Build {
 								'date' === $type ||
 								'datetime' === $type ||
 								'files' === $type ||
+								'html-tag' === $type ||
 								'icon' === $type ||
 								'link' === $type ||
 								'richtext' === $type ||

@@ -14,6 +14,7 @@ import { Date } from '@/blocks/components/fields/components/date';
 import { Datetime } from '@/blocks/components/fields/components/datetime';
 import { Files } from '@/blocks/components/fields/components/files';
 import { Gradient } from '@/blocks/components/fields/components/gradient';
+import { HtmlTag } from '@/blocks/components/fields/components/html-tag';
 import { Icon } from '@/blocks/components/fields/components/icon';
 import { Link } from '@/blocks/components/fields/components/link';
 import { Message } from '@/blocks/components/fields/components/message';
@@ -615,6 +616,8 @@ export const Fields = ({
             <Base>
               <Link {...{ ...props, item, change }} value={v} />
             </Base>
+          ) : item.type === 'html-tag' ? (
+            <HtmlTag {...{ item, v, change }} />
           ) : item.type === 'icon' ? (
             <Icon {...({ item, change } as Any)} value={v} />
           ) : item.type === 'repeater' ? (

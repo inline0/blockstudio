@@ -466,6 +466,27 @@ export const schema = async (extensions = false) => {
     },
   };
 
+  const htmlTag = {
+    description:
+      'Renders an HTML tag selector. Useful for choosing heading levels or semantic elements.',
+    properties: {
+      type: { const: 'html-tag' },
+      ...def(),
+      tags: {
+        type: ['string', 'array'],
+        description:
+          'Which tags to include. Use a preset string or an array of tag names.',
+        enum: ['heading', 'text', 'structural', 'all'],
+      },
+      exclude: {
+        type: 'array',
+        items: { type: 'string' },
+        description:
+          'Tags to exclude from the preset. Only applies when using a preset string for tags.',
+      },
+    },
+  };
+
   const icon = {
     example: 'icon',
     description: 'Renders an SVG icon from an icon set.',
@@ -895,6 +916,7 @@ export const schema = async (extensions = false) => {
                         'files',
                         'gradient',
                         g ? 'group' : false,
+                        'html-tag',
                         'icon',
                         'link',
                         'message',
@@ -1026,6 +1048,7 @@ export const schema = async (extensions = false) => {
                 { ...files },
                 { ...gradient },
                 g ? group() : false,
+                { ...htmlTag },
                 { ...icon },
                 { ...link },
                 { ...message },
