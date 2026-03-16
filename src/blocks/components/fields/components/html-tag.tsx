@@ -38,7 +38,7 @@ export const HtmlTag = ({
   v,
   change,
 }: {
-  item: { tags?: string | string[]; exclude?: string[] };
+  item: Record<string, any>;
   v: string;
   change: (value: string) => void;
 }) => {
