@@ -1,5 +1,5 @@
 import {
-  Blocks,
+  Layers,
   Database,
   Globe,
   Clock,
@@ -67,7 +67,7 @@ const details = [
     icon: Terminal,
     title: 'CLI',
     description:
-      'Full WP-CLI integration via wp bs. Manage blocks, query records, call functions, run cron jobs, compile Tailwind and SCSS.',
+      'Full WP-CLI integration via wp bs. Manage blocks, query records, call RPC functions, run cron jobs, and inspect settings.',
     href: '/docs/blocks/cli',
   },
   {
@@ -105,7 +105,7 @@ export function FullStack() {
     <Section
       icon={
         <SectionIcon>
-          <Blocks />
+          <Layers />
         </SectionIcon>
       }
       title="Full-stack blocks"

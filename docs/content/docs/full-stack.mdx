@@ -134,15 +134,14 @@ The entire feature set is accessible via `wp bs`:
 
 ```bash
 wp bs blocks list                     # list all blocks
+wp bs db schemas                      # list all database schemas
 wp bs db list my-theme/app            # query records
 wp bs db create my-theme/app --email=a@b.com
+wp bs rpc list                        # list all RPC functions
 wp bs rpc call my-theme/app subscribe --email=a@b.com
+wp bs cron list                       # list scheduled jobs
 wp bs cron run my-theme/app cleanup   # run a job manually
-wp bs tailwind compile --file=t.html  # compile Tailwind
-wp bs scss compile --file=style.scss  # compile SCSS
-wp bs fields list                     # custom field definitions
-wp bs assets list --type=global       # registered assets
-wp bs settings get tailwind/enabled   # read settings
+wp bs settings get assets/enqueue     # read settings
 ```
 
 [Full CLI documentation &rarr;](/docs/blocks/cli)
