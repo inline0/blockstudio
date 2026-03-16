@@ -5,16 +5,26 @@ date: 2026-03-14
 author: Dennis
 ---
 
-Blockstudio 7.1 is the first feature release since the v7 rewrite. It turns
-blocks into full-stack applications with RPC, a database layer, scheduled tasks,
-components, and more.
+Blockstudio 7.1 is the first feature release since the v7 rewrite. Where v7
+rebuilt the foundation, 7.1 adds the pieces that turn blocks into something
+more: a database layer, server functions, scheduled tasks, and a CLI. A block
+folder can now be a complete application.
+
+Here's everything that's new.
 
 ## Components
 
-Components are Blockstudio blocks that go through the full pipeline (attributes,
-templates, assets, RPC, Tailwind) but never appear in the WordPress editor
-inserter. Set `"component": true` in your block.json and the block becomes
-available exclusively for programmatic rendering.
+There's always been a tension between blocks that editors use in the inserter
+and blocks that developers use as building blocks for other things. A card, a
+badge, a stat widget, a form input. They need the full Blockstudio pipeline
+(attributes, templates, assets, Tailwind) but have no business showing up in
+the inserter.
+
+7.1 introduces components to solve this. Set `"component": true` in your
+block.json and the block goes through the entire build pipeline but never gets
+registered with WordPress's block type registry. It doesn't appear in the
+inserter, doesn't show up in the editor data sent to JavaScript, but is fully
+available for programmatic rendering.
 
 ```json title="block.json"
 {
@@ -30,11 +40,7 @@ available exclusively for programmatic rendering.
 }
 ```
 
-Render components using the string renderer or `bs_render_block()`:
-
-```html
-<bs:my-theme-card title="My Card" description="Card content." />
-```
+Render them from PHP:
 
 ```php
 bs_render_block([
@@ -43,34 +49,26 @@ bs_render_block([
 ]);
 ```
 
-This is useful for building shadcn-style application UI using Blockstudio's
-tooling without cluttering the editor inserter.
+Or using the new HTML tag syntax:
+
+```html
+<bs:my-theme-card title="My Card" description="Card content." />
+```
 
 ## HTML tags
 
-Embed Blockstudio blocks anywhere in your HTML output using `<bs:>` tags.
-Blockstudio hooks into the output buffer and replaces each tag with the full
-block output.
+Blocks can now be embedded anywhere using `<bs:>` tags. Write the tag in post
+content, a widget area, a theme template, a header, a footer. Blockstudio hooks
+into the output buffer and replaces each tag with the rendered block output.
 
-The tag name uses the block's full name with the first hyphen replacing the
-namespace separator. For example, `acme/hero` becomes `bs:acme-hero`.
-
-```html
-<bs:acme-marketing-cta title="Get started" variant="primary" />
-```
-
-It works everywhere: post content, widget areas, theme templates, headers,
-footers. Anywhere the tag appears in the final HTML, it gets replaced.
-
-### Syntax
-
-Self-closing tags:
+The tag name maps directly to the block name. The first hyphen becomes the
+namespace separator, so `acme/hero` becomes `<bs:acme-hero>`:
 
 ```html
 <bs:acme-hero title="Welcome" background="dark" />
 ```
 
-Paired tags when you need inner content:
+Paired tags pass inner content to the block's `$content` variable:
 
 ```html
 <bs:acme-section layout="wide">
@@ -78,7 +76,8 @@ Paired tags when you need inner content:
 </bs:acme-section>
 ```
 
-Nested tags work too. Inner blocks render first, then the outer block:
+Nesting works too. Inner blocks render first, then the outer block receives
+their output:
 
 ```html
 <bs:acme-section layout="wide">
@@ -87,39 +86,17 @@ Nested tags work too. Inner blocks render first, then the outer block:
 </bs:acme-section>
 ```
 
-### Activation
-
-The string renderer is opt-in. Enable it in your `blockstudio.json`:
-
-```json
-{
-  "stringRenderer": {
-    "enabled": true
-  }
-}
-```
-
-Or via the PHP filter:
-
-```php
-add_filter('blockstudio/settings/string_renderer/enabled', '__return_true');
-```
-
-### Programmatic rendering
-
-You can also apply the string renderer to any string from PHP:
-
-```php
-$html = apply_filters('blockstudio/string_renderer/render', $content);
-```
+The tag renderer is opt-in. Enable it in your `blockstudio.json` or via the
+`blockstudio/settings/string_renderer/enabled` filter.
 
 ## New field types
 
 ### Block
 
-Reference another Blockstudio block as an attribute. The referenced block's
-fields expand inline using `idStructure` and `overrides`. In templates, the
-value returns the rendered block output.
+A new `block` field type that lets you reference another Blockstudio block as
+an attribute. The referenced block's fields expand inline using `idStructure`
+and `overrides`, exactly like custom fields. The difference: in the template,
+accessing the value returns the rendered block output.
 
 ```json title="block.json"
 {
@@ -136,28 +113,30 @@ value returns the rendered block output.
 }
 ```
 
-```twig title="index.twig"
-<div class="hero">
-  <h1>{{ a.title }}</h1>
-  {{ a.card }}
-</div>
-```
+If `mytheme/card` has `heading` and `content` fields, the host block gets
+`card_heading` and `card_content` in its sidebar. In the template, `{{ a.card }}`
+outputs the rendered card. Works with both regular blocks and components.
 
 ### HTML tag
 
-Select an HTML element for semantic flexibility. Presets for headings, text,
-structural elements, or all. Exclude specific tags from any preset.
+Every theme has blocks where the heading level should change depending on
+context. An H1 on the homepage, an H2 on inner pages. Instead of building this
+as a select field with hardcoded options every time, there's now a dedicated
+`html-tag` field type with built-in presets.
 
 ```json
 {
   "id": "tag",
   "type": "html-tag",
-  "label": "Heading Level",
   "default": "h2",
   "tags": "heading",
   "exclude": ["h5", "h6"]
 }
 ```
+
+Presets: `heading` (h1-h6), `text` (headings + p, span, div), `structural`
+(div, section, article, aside, main, header, footer, nav), `all`. Or pass a
+custom array. `exclude` removes specific tags from any preset.
 
 ```twig
 <{{ a.tag }}>{{ a.title }}</{{ a.tag }}>
@@ -165,9 +144,12 @@ structural elements, or all. Exclude specific tags from any preset.
 
 ## Database
 
-Blocks can now define a data model via `db.php`. Blockstudio generates CRUD
-REST endpoints, validates input against the schema, and provides both a
-`bs.db()` JS client and a `Db` PHP API.
+This is the centerpiece of the release. Blocks can now define a data model by
+adding a `db.php` file to their directory. From that single file, Blockstudio
+generates five REST CRUD endpoints, validates every write against the schema,
+manages the storage backend automatically, and provides both a JavaScript client
+(`bs.db()`) and a PHP API (`Db::get()`). No migration files, no controller
+classes, no route registration.
 
 ```php title="db.php"
 return [
@@ -198,43 +180,52 @@ return [
 ];
 ```
 
-### Four storage modes
+That schema alone produces a fully working API with create, list, get, update,
+and delete endpoints, all with input validation.
 
-- **`table`**: Custom MySQL table, managed automatically via `dbDelta()`.
-- **`sqlite`**: Single-file SQLite database with WAL mode. Real SQL queries,
-  portable, handles thousands of records.
-- **`jsonc`**: One JSON object per line in a flat file. Version-controllable.
-- **`meta`**: JSON array in post meta, tied to a specific post.
+### Storage
 
-### JavaScript client
+There are four storage backends to choose from:
+
+- **`table`**: Custom MySQL table managed via `dbDelta()`. Adding fields to the
+  schema adds columns on the next page load. The production default.
+- **`sqlite`**: A single SQLite file in the block's `db/` folder. Real SQL
+  queries, WAL mode for concurrent reads, and completely portable. Copy the
+  folder, copy the database.
+- **`jsonc`**: One JSON object per line in a flat file. Human-readable,
+  version-controllable, git-friendly.
+- **`meta`**: JSON array in WordPress post meta, tied to a specific post.
+
+### Clients
+
+From JavaScript, there's a new `bs.db()` client:
 
 ```js
 const db = bs.db('my-theme/block', 'subscribers');
 const record = await db.create({ email: 'a@b.com', plan: 'pro' });
-const all = await db.list({ plan: 'pro' });
+const pros = await db.list({ plan: 'pro' });
 await db.update(record.id, { plan: 'free' });
 await db.delete(record.id);
 ```
 
-### PHP API
+From PHP, there's a new `Db` class with the same operations:
 
 ```php
+use Blockstudio\Db;
+
 $db = Db::get('my-theme/block', 'subscribers');
 $db->create(['email' => 'a@b.com', 'plan' => 'pro']);
 $db->list(['plan' => 'pro']);
-$db->update(1, ['plan' => 'free']);
-$db->delete(1);
 ```
 
-### Per-field validation errors
+### Validation
 
-Validation errors return per-field error arrays, making it straightforward to
-map errors to form fields:
+Validation errors now come back as per-field error arrays, inspired by Zod's
+`fieldErrors` format. Multiple rules can fail on the same field, and the
+structure makes it easy to map errors to form fields on the frontend:
 
 ```json
 {
-  "code": "blockstudio_db_validation",
-  "message": "Validation failed.",
   "data": {
     "status": 400,
     "errors": {
@@ -245,119 +236,47 @@ map errors to form fields:
 }
 ```
 
+Custom `validate` callbacks run server-side for anything the built-in rules
+can't cover: domain blocking, cross-field validation, external lookups.
+
 ### User-scoped data
 
-Set `userScoped: true` to automatically isolate data per user. Blockstudio
-adds a `user_id` column, sets it on create, and filters all operations to the
-current user. No manual filtering, no ownership checks.
+For per-user data (todos, favorites, drafts), there's a new `userScoped` option.
+Set it to `true` and Blockstudio adds a `user_id` column, sets it automatically
+on create, and filters every query to the current user. Updates and deletes
+check ownership. No manual `user_id` field, no `before_create` hook, no
+filtering in RPC. One line of config.
 
-```php title="db.php"
+```php
 return [
     'storage'    => 'sqlite',
     'userScoped' => true,
-    'fields'     => [
-        'text' => ['type' => 'string', 'required' => true],
-        'done' => ['type' => 'boolean', 'default' => false],
-    ],
+    'fields'     => [ /* ... */ ],
 ];
 ```
 
-### CSRF protection
+### Security, hooks, portability
 
-Public endpoints are protected by a `X-BS-Token` header, generated per page
-load and injected into the JS clients automatically. This prevents cross-site
-request forgery even for logged-out users. Use `'open'` instead of `true` when
-you need truly unauthenticated access (webhooks, external APIs).
+Public endpoints are now protected by a `X-BS-Token` CSRF header, auto-injected
+into the JS clients. Use `'open'` for webhooks that need truly unauthenticated
+access.
 
-### Form rendering
+Lifecycle hooks fire before and after every write operation, definable inline in
+`db.php` or globally via WordPress actions.
 
-Fields can define a `component` key referencing a Blockstudio block. Call
-`bs_db_form()` to render all fields using their component blocks:
+Fields can define a `component` key for schema-driven form rendering via
+`bs_db_form()`.
 
-```php title="db.php"
-'email' => [
-    'type'      => 'string',
-    'format'    => 'email',
-    'component' => [
-        'name' => 'my-theme/field',
-        'attributes' => ['label' => 'Email'],
-        'innerBlocks' => [
-            ['name' => 'my-theme/input', 'attributes' => ['type' => 'email']],
-        ],
-    ],
-],
-```
-
-```php title="index.php"
-<form>
-  <?php bs_db_form('my-theme/app', 'subscribers'); ?>
-</form>
-```
-
-### Portable mini-apps
-
-Combined with RPC and Cron, blocks can now function as self-contained mini
-applications with custom logic, persistent storage, scheduled tasks, and access
-control. A block collection with `rpc.php`, `db.php`, `cron.php`, templates, and
-assets is a complete full-stack app inside a single folder.
-
-When using JSONC storage, the data lives alongside the code. Copy the block
-folder to another site and everything travels with it: templates, styles,
-server functions, scheduled tasks, and the data itself.
-
-## Cron
-
-Blocks can define scheduled tasks via `cron.php`. Blockstudio registers them
-with WordPress Cron and cleans them up on plugin deactivation.
-
-```php title="cron.php"
-return [
-    'cleanup' => [
-        'schedule' => 'daily',
-        'callback' => function () {
-            $db = Db::get('my-theme/app', 'logs');
-            // delete old entries
-        },
-    ],
-    'sync' => [
-        'schedule' => 'hourly',
-        'callback' => function () {
-            // sync with external API
-        },
-    ],
-];
-```
-
-## CLI
-
-The entire Blockstudio feature set is accessible from the command line via
-WP-CLI under the `wp bs` prefix:
-
-```bash
-wp bs blocks list                    # list all blocks
-wp bs blocks list --components       # components only
-wp bs db schemas                     # list all database schemas
-wp bs db list my-theme/app subs      # query database records
-wp bs db create my-theme/app subs --email=a@b.com
-wp bs rpc list                       # list all RPC functions
-wp bs rpc call my-theme/app subscribe --email=a@b.com
-wp bs cron list                      # list scheduled jobs
-wp bs cron run my-theme/app cleanup  # run a job manually
-wp bs tailwind compile --file=t.html # compile Tailwind CSS
-wp bs tailwind cache clear           # clear Tailwind cache
-wp bs scss compile --file=style.scss # compile SCSS to CSS
-wp bs fields list                    # list custom field definitions
-wp bs assets list --type=global      # list assets by type
-wp bs settings get tailwind/enabled  # read settings
-```
-
-Every command supports `--format=json` for scripting and piping.
+And with SQLite or JSONC storage, the entire application (code + data) lives in
+one folder. Copy it to deploy.
 
 ## RPC
 
-Blocks can now define PHP functions that the frontend can call. Drop a
-`rpc.php` into any block directory and Blockstudio handles the rest:
-REST endpoint routing, authentication, and a tiny JS client.
+Server functions now live in `rpc.php`. Define a PHP function, call it from the
+frontend with the new `bs.fn()` client. Blockstudio handles the REST endpoint,
+authentication, CSRF protection, and JSON serialization. The pattern is inspired
+by [tRPC](https://trpc.io): procedures defined server-side, called from the
+client by name.
 
 ```php title="rpc.php"
 return [
@@ -372,22 +291,72 @@ return [
 const result = await bs.fn('subscribe', { email: 'user@example.com' });
 ```
 
-This pairs naturally with the WordPress Interactivity API. Your store actions can
-call server functions and update reactive state with the response.
+Inline scripts (`script-inline.js`) now auto-detect the block name from the
+`data-block` attribute on their script tag, so you don't need to pass it
+manually. Module scripts pass it as the third argument.
 
-Functions are authenticated by default. Access control options include
-`public` for unauthenticated access, `capability` for WordPress capability
-checks (string or array), and `methods` to control allowed HTTP methods.
-Cross-block calling works too: any block can call functions on any other block
-by passing the block name as the third argument.
+Access control options include `public` (with CSRF), `'open'` (no protection),
+capability strings, or arrays. There's per-function HTTP method control,
+lifecycle hooks, and cross-block calling from both JS and PHP.
 
-## RichText and MediaPlaceholder in repeaters
+## Cron
 
-## Smarter textMinimized for repeaters
+Blocks can now define scheduled background tasks in a `cron.php` file. Define a
+schedule and a callback, and Blockstudio registers them with WordPress Cron on
+init. Everything is unscheduled cleanly when the plugin is deactivated.
 
-The `textMinimized` property on repeaters now handles object field values.
-Link fields auto-display the title, color fields show the value. Use the `key`
-property to drill into any sub-property:
+```php title="cron.php"
+return [
+    'cleanup' => [
+        'schedule' => 'daily',
+        'callback' => function () {
+            $db = Db::get('my-theme/app', 'logs');
+            // delete old entries
+        },
+    ],
+    'sync' => [
+        'schedule' => 'hourly',
+        'callback' => function () {
+            // pull from external API
+        },
+    ],
+];
+```
+
+All built-in WordPress schedules are supported, plus custom intervals via the
+`cron_schedules` filter.
+
+## CLI
+
+There's a new `wp bs` command that covers the full Blockstudio feature set:
+blocks, database, RPC, cron, settings, Tailwind compilation, SCSS compilation,
+custom fields, and asset management.
+
+```bash
+wp bs blocks list --components
+wp bs db schemas
+wp bs db create my-theme/app subs --email=a@b.com
+wp bs db list my-theme/app subs --plan=pro --format=json
+wp bs rpc call my-theme/app subscribe --email=a@b.com
+wp bs cron run my-theme/app cleanup
+wp bs tailwind compile --file=template.html
+wp bs scss compile --file=style.scss
+wp bs fields list
+wp bs assets list --type=global
+wp bs settings get tailwind/enabled
+```
+
+All commands support `--format=json` for scripting.
+
+## Repeater improvements
+
+### textMinimized for object fields
+
+Collapsed repeater rows now handle object field values. Previously, pointing
+`textMinimized` at a link field showed `[object Object]`. Blockstudio now
+auto-reads the right sub-property based on the field type: `title` for links,
+`value` for colors and gradients, `icon` for icons. You can also set an explicit
+`key` property to read any sub-property you want.
 
 ```json
 {
@@ -397,13 +366,11 @@ property to drill into any sub-property:
 }
 ```
 
-Smart defaults: `link` reads `title`, `color`/`gradient` read `value`,
-`icon` reads `icon`. Override with an explicit `key`.
+### RichText and MediaPlaceholder
 
-## RichText and MediaPlaceholder in repeaters
-
-The `RichText` and `MediaPlaceholder` template components now work inside repeater
-fields. Use bracket notation in the `attribute` prop to target the correct row.
+Both template components now work inside repeater fields with bracket notation
+to target the correct row. This means you can now have inline-editable headings,
+paragraphs, and media upload zones in each row of a repeater.
 
 ```twig
 {% for item in a.items %}
@@ -415,64 +382,27 @@ fields. Use bracket notation in the `attribute` prop to target the correct row.
 {% endfor %}
 ```
 
-This was a frequently requested feature. Editable headings, paragraphs, and media
-drop zones now work per-row in any repeater field.
-
 ## Custom field conditions with idStructure
 
-Conditions inside custom field definitions now automatically rewrite their IDs
-when `idStructure` is applied. A toggle that controls sibling fields keeps
-working after expansion. Reference-level conditions can also be applied to hide
-an entire field group behind an external toggle.
+When using a custom field with `idStructure`, conditions inside the field
+definition now automatically rewrite their IDs to match the expanded names. If
+your font-size field group has a condition on `enable`, and you expand it with
+`idStructure: "title_font_{id}"`, the condition now correctly references
+`title_font_enable` instead of the original `enable`.
 
-```json
-// Field definition: conditions use original IDs
-{ "id": "min", "conditions": [[{ "id": "enable", ... }]] }
+Reference-level conditions are also supported. Add `conditions` on the custom
+field reference to apply them to every expanded field at once.
 
-// Usage: idStructure remaps both field IDs and condition IDs
-{ "type": "custom/font-size", "idStructure": "title_font_{id}" }
-// → title_font_min condition now references title_font_enable
-```
+## More
 
-## SCSS code fields
+- **SCSS code fields**: Code fields now support `language: "scss"`. Values are
+  compiled through ScssPhp in both the editor and on the frontend.
+- **Standard WordPress blocks**: Blockstudio directories can now contain
+  `@wordpress/create-block` output alongside Blockstudio blocks. They get
+  auto-registered without any separate plugin code.
 
-Code fields now support `language: "scss"`. When set, the field value is compiled
-through ScssPhp before rendering as CSS, both in the editor and on the frontend.
+---
 
-```json
-{
-  "type": "code",
-  "id": "styles",
-  "label": "Custom Styles",
-  "language": "scss",
-  "asset": true
-}
-```
-
-Variables, nesting, mixins, and all standard SCSS features work out of the box.
-In the editor, compilation happens server-side with debounced requests so you see
-results as you type.
-
-```scss
-%selector% {
-  $primary: #3b82f6;
-
-  h1 {
-    color: $primary;
-  }
-
-  &:hover {
-    background: lighten($primary, 40%);
-  }
-}
-```
-
-No additional settings required. Just set the language to `scss` and it works.
-
-## Standard WordPress block support
-
-Blockstudio now auto-registers standard WordPress blocks found in your
-Blockstudio directories. Drop a `@wordpress/create-block` build output into your
-`blockstudio/` folder and it gets registered automatically, no separate plugin
-registration code needed. Blockstudio and standard WordPress blocks can live
-side by side in the same directory structure.
+If you want to see the full-stack pattern in action, the
+[Full-Stack Blocks guide](/guides/full-stack-blocks) walks through building a
+per-user todo app and a public newsletter signup from scratch.
