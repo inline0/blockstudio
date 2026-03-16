@@ -3,13 +3,16 @@ import { execSync } from 'child_process';
 
 const wp = (cmd: string) => {
   const result = execSync(
-    `cd tests/wp-env && npx wp-env run cli wp ${cmd}`,
+    `cd tests/wp-env && npx wp-env run cli -- wp ${cmd}`,
     { encoding: 'utf-8', timeout: 30000 }
   ).trim();
 
   const lines = result.split('\n');
   const output = lines.filter(
-    (l) => !l.startsWith('ℹ ') && !l.startsWith('✔ ')
+    (l) =>
+      !l.startsWith('ℹ ') &&
+      !l.startsWith('✔ ') &&
+      !l.startsWith('Ran ')
   );
   return output.join('\n').trim();
 };

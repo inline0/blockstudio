@@ -30,30 +30,7 @@ class Cli {
 	}
 
 	/**
-	 * List all registered Blockstudio blocks.
-	 *
-	 * ## OPTIONS
-	 *
-	 * [--format=<format>]
-	 * : Output format.
-	 * ---
-	 * default: table
-	 * options:
-	 *   - table
-	 *   - json
-	 *   - csv
-	 * ---
-	 *
-	 * [--components]
-	 * : Only show component blocks.
-	 *
-	 * ## EXAMPLES
-	 *
-	 *     wp blockstudio blocks list
-	 *     wp blockstudio blocks list --format=json
-	 *     wp blockstudio blocks list --components
-	 *
-	 * @subcommand list
+	 * Manage blocks. Usage: wp bs blocks list [--components] [--format=json]
 	 *
 	 * @param array $args       Positional arguments.
 	 * @param array $assoc_args Associative arguments.
@@ -64,7 +41,7 @@ class Cli {
 		$subcommand = $args[0] ?? 'list';
 
 		if ( 'list' !== $subcommand ) {
-			\WP_CLI::error( "Unknown subcommand: $subcommand" );
+			\WP_CLI::error( "Unknown subcommand: $subcommand. Use: list" );
 			return;
 		}
 
@@ -99,15 +76,6 @@ class Cli {
 	/**
 	 * Manage database records.
 	 *
-	 * ## EXAMPLES
-	 *
-	 *     wp blockstudio db list my-theme/app subscribers
-	 *     wp blockstudio db get my-theme/app subscribers 1
-	 *     wp blockstudio db create my-theme/app subscribers --email=a@b.com --plan=pro
-	 *     wp blockstudio db update my-theme/app subscribers 1 --plan=enterprise
-	 *     wp blockstudio db delete my-theme/app subscribers 1
-	 *     wp blockstudio db schemas
-	 *
 	 * @param array $args       Positional arguments.
 	 * @param array $assoc_args Associative arguments.
 	 *
@@ -125,7 +93,7 @@ class Cli {
 		$schema = $args[2] ?? 'default';
 
 		if ( empty( $block ) ) {
-			\WP_CLI::error( 'Block name required. Usage: wp blockstudio db <command> <block> [schema]' );
+			\WP_CLI::error( 'Block name required. Usage: wp bs db <command> <block> [schema]' );
 			return;
 		}
 
@@ -246,12 +214,7 @@ class Cli {
 	}
 
 	/**
-	 * Call an RPC function.
-	 *
-	 * ## EXAMPLES
-	 *
-	 *     wp blockstudio rpc call my-theme/app subscribe --email=a@b.com
-	 *     wp blockstudio rpc list
+	 * Manage RPC functions.
 	 *
 	 * @param array $args       Positional arguments.
 	 * @param array $assoc_args Associative arguments.
@@ -275,7 +238,7 @@ class Cli {
 		$function = $args[2] ?? '';
 
 		if ( empty( $block ) || empty( $function ) ) {
-			\WP_CLI::error( 'Usage: wp blockstudio rpc call <block> <function> [--param=value]' );
+			\WP_CLI::error( 'Usage: wp bs rpc call <block> <function> [--param=value]' );
 			return;
 		}
 
@@ -327,11 +290,6 @@ class Cli {
 	/**
 	 * Manage cron jobs.
 	 *
-	 * ## EXAMPLES
-	 *
-	 *     wp blockstudio cron list
-	 *     wp blockstudio cron run my-theme/app cleanup
-	 *
 	 * @param array $args       Positional arguments.
 	 * @param array $assoc_args Associative arguments.
 	 *
@@ -354,7 +312,7 @@ class Cli {
 		$job   = $args[2] ?? '';
 
 		if ( empty( $block ) || empty( $job ) ) {
-			\WP_CLI::error( 'Usage: wp blockstudio cron run <block> <job>' );
+			\WP_CLI::error( 'Usage: wp bs cron run <block> <job>' );
 			return;
 		}
 
@@ -412,12 +370,7 @@ class Cli {
 	}
 
 	/**
-	 * Show Blockstudio settings.
-	 *
-	 * ## EXAMPLES
-	 *
-	 *     wp blockstudio settings list
-	 *     wp blockstudio settings get tailwind/enabled
+	 * Manage settings.
 	 *
 	 * @param array $args       Positional arguments.
 	 * @param array $assoc_args Associative arguments.
