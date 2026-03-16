@@ -64,8 +64,8 @@ function getLayoutOptions() {
     links: [
       featuresMenuDesktop,
       featuresMenuMobile,
-      { text: 'Build with AI', url: '/ai', icon: <Bot />, on: 'nav' },
-      { text: 'Full-Stack', url: '/full-stack', icon: <Layers />, on: 'nav' },
+      { text: 'Build with AI', url: '/ai', icon: <Bot />, on: 'nav' } as LinkItemType,
+      { text: 'Full-Stack', url: '/full-stack', icon: <Layers />, on: 'nav' } as LinkItemType,
       { text: 'Docs', url: '/docs', icon: <BookOpen /> },
       { text: 'Guides', url: '/guides', icon: <Compass /> },
       { text: 'Blog', url: '/blog', icon: <Newspaper /> },
