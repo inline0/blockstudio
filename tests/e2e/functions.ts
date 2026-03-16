@@ -58,16 +58,44 @@ test.describe('Block Functions (RPC)', () => {
     expect(result).toEqual({ result: 10 });
   });
 
-  test('public function works without nonce', async () => {
+  test('public function works with CSRF token', async () => {
+    const result = await page.evaluate(async () => {
+      const res = await fetch('/wp-json/blockstudio/v1/fn/blockstudio/type-functions/public', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-BS-Token': (window as any).bs._token || '',
+        },
+        body: JSON.stringify({ params: { value: 'test' } }),
+      });
+      return { status: res.status, body: await res.json() };
+    });
+    expect(result.status).toBe(200);
+    expect(result.body).toEqual({ public: true, echo: 'test' });
+  });
+
+  test('public function rejected without CSRF token', async () => {
     const result = await page.evaluate(async () => {
       const res = await fetch('/wp-json/blockstudio/v1/fn/blockstudio/type-functions/public', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ params: { value: 'test' } }),
       });
+      return res.status;
+    });
+    expect(result).toBe(403);
+  });
+
+  test('open function works without any token', async () => {
+    const result = await page.evaluate(async () => {
+      const res = await fetch('/wp-json/blockstudio/v1/fn/blockstudio/type-functions/open_endpoint', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ params: { value: 'test' } }),
+      });
       return res.json();
     });
-    expect(result).toEqual({ public: true, echo: 'test' });
+    expect(result).toEqual({ open: true, echo: 'test' });
   });
 
   test('returns 404 for unknown function', async () => {

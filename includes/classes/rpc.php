@@ -54,6 +54,7 @@ class Rpc {
 		$bs_token = Csrf::generate();
 
 		return 'window.bs=window.bs||{};'
+			. 'bs._token="' . $bs_token . '";'
 			. 'bs._block=function(){var s=document.currentScript;return s&&s.dataset.block||""};'
 			. 'bs.fn=function(n,p,b){'
 			. 'var block=b||bs._block();'
@@ -179,6 +180,9 @@ class Rpc {
 		}
 
 		if ( ! empty( $fn['public'] ) && true === $fn['public'] ) {
+			if ( is_user_logged_in() ) {
+				return true;
+			}
 			if ( ! Csrf::verify_request( $request ) ) {
 				return new \WP_Error(
 					'blockstudio_fn_csrf',

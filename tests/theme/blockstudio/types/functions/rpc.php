@@ -21,6 +21,12 @@ return array(
 		},
 		'public'   => true,
 	),
+	'open_endpoint' => array(
+		'callback' => function ( array $params ): array {
+			return array( 'open' => true, 'echo' => $params['value'] ?? null );
+		},
+		'public'   => 'open',
+	),
 	'admin_only' => array(
 		'callback'   => function ( array $params ): array {
 			return array( 'admin' => true );

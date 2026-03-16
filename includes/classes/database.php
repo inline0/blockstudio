@@ -230,6 +230,9 @@ class Database {
 		}
 
 		if ( true === $cap ) {
+			if ( is_user_logged_in() ) {
+				return true;
+			}
 			if ( $request && ! Csrf::verify_request( $request ) ) {
 				return new \WP_Error(
 					'blockstudio_db_csrf',
