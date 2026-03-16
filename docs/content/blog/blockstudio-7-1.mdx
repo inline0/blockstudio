@@ -220,7 +220,7 @@ $db->list(['plan' => 'pro']);
 
 ### Validation
 
-Validation errors now come back as per-field error arrays, inspired by Zod's
+Validation errors come back as per-field error arrays, inspired by Zod's
 `fieldErrors` format. Multiple rules can fail on the same field, and the
 structure makes it easy to map errors to form fields on the frontend:
 
@@ -257,7 +257,7 @@ return [
 
 ### Security, hooks, portability
 
-Public endpoints are now protected by a `X-BS-Token` CSRF header, auto-injected
+Public endpoints are protected by a `X-BS-Token` CSRF header, auto-injected
 into the JS clients. Use `'open'` for webhooks that need truly unauthenticated
 access.
 
@@ -272,8 +272,8 @@ one folder. Copy it to deploy.
 
 ## RPC
 
-Server functions now live in `rpc.php`. Define a PHP function, call it from the
-frontend with the new `bs.fn()` client. Blockstudio handles the REST endpoint,
+Server functions live in `rpc.php`. Define a PHP function, call it from the
+frontend with `bs.fn()`. Blockstudio handles the REST endpoint,
 authentication, CSRF protection, and JSON serialization. The pattern is inspired
 by [tRPC](https://trpc.io): procedures defined server-side, called from the
 client by name.
@@ -291,7 +291,7 @@ return [
 const result = await bs.fn('subscribe', { email: 'user@example.com' });
 ```
 
-Inline scripts (`script-inline.js`) now auto-detect the block name from the
+Inline scripts (`script-inline.js`) auto-detect the block name from the
 `data-block` attribute on their script tag, so you don't need to pass it
 manually. Module scripts pass it as the third argument.
 
@@ -395,9 +395,9 @@ field reference to apply them to every expanded field at once.
 
 ## More
 
-- **SCSS code fields**: Code fields now support `language: "scss"`. Values are
+- **SCSS code fields**: Code fields support `language: "scss"`. Values are
   compiled through ScssPhp in both the editor and on the frontend.
-- **Standard WordPress blocks**: Blockstudio directories can now contain
+- **Standard WordPress blocks**: Blockstudio directories can contain
   `@wordpress/create-block` output alongside Blockstudio blocks. They get
   auto-registered without any separate plugin code.
 
