@@ -68,6 +68,7 @@ Download the latest release zip from [GitHub Releases](https://github.com/inline
 * New: `block` field type to reference another block as an attribute
 * New: `html-tag` field type for HTML tag selection with presets and exclude
 * New: auto-register standard WordPress blocks (create-block) in Blockstudio directories
+* Enhancement: dynamic attribute references in populate arguments via `{attributes.*}` syntax
 * Enhancement: per-field validation errors and custom `validate` callbacks in `db.php`
 * Enhancement: `textMinimized` supports object fields via `key` with smart defaults
 * Enhancement: SCSS support for code fields (`language: "scss"`)

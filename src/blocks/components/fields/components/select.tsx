@@ -8,6 +8,7 @@ import {
 import { useRef, useEffect, useState, useMemo } from '@wordpress/element';
 import { debounce, get, isArray } from 'lodash-es';
 import { Cards } from '@/blocks/components/list/cards';
+import { parseTemplate } from '@/blocks/utils/parse-template';
 import { BlockstudioAttribute } from '@/types/block';
 import {
   Any,
@@ -16,6 +17,18 @@ import {
 } from '@/types/types';
 import { __ } from '@/utils/__';
 import { css } from '@/utils/css';
+
+const hasTemplateStrings = (obj: Any): boolean => {
+  if (!obj) return false;
+  return JSON.stringify(obj).includes('{attributes.');
+};
+
+const resolveTemplateArgs = (args: Any, attributes: Any): Any => {
+  if (!args) return args;
+  const str = JSON.stringify(args);
+  const resolved = parseTemplate(str, { attributes });
+  return JSON.parse(resolved);
+};
 
 const addSingleFetched = (
   options: BlockstudioFieldsOptions[],
@@ -60,9 +73,11 @@ const AdvancedSelect = ({
 }) => {
   value = multiple && value?.value ? [value] : value;
 
+  const hasDynamicArgs = hasTemplateStrings(item?.populate);
   const isFetch =
     (item?.populate?.fetch && item?.populate?.type === 'query') ||
-    item?.populate?.type === 'fetch';
+    item?.populate?.type === 'fetch' ||
+    hasDynamicArgs;
   const ref = useRef(null);
   const [allOptions, setAllOptions] = useState(
     isFetch
@@ -115,6 +130,13 @@ const AdvancedSelect = ({
           }));
         }
       } else {
+        const resolvedPopulate = hasDynamicArgs
+          ? resolveTemplateArgs(
+              item?.populate || {},
+              (attributes as Any)?.blockstudio?.attributes || {},
+            )
+          : item?.populate || {};
+
         res = await apiFetch({
           path: '/blockstudio/v1/attributes/populate',
           method: 'POST',
@@ -122,9 +144,9 @@ const AdvancedSelect = ({
             ...item,
             fromEditor: true,
             populate: {
-              ...item?.populate,
+              ...resolvedPopulate,
               arguments: {
-                ...(item?.populate?.arguments || {}),
+                ...(resolvedPopulate.arguments || {}),
                 search:
                   item?.populate?.query === 'users' && searchValue !== ''
                     ? `*${searchValue}*`
@@ -194,6 +216,19 @@ const AdvancedSelect = ({
       input.placeholder = String(item.allowNull);
     }
   }, [allOptions]);
+
+  const dynamicDepValues = useMemo(() => {
+    if (!hasDynamicArgs) return '';
+    const args = JSON.stringify(item?.populate || {});
+    const refs = [...args.matchAll(/\{attributes\.([^}]+)\}/g)].map((m) => m[1]);
+    const attrs = (attributes as Any)?.blockstudio?.attributes || {};
+    return refs.map((r) => JSON.stringify(get(attrs, r))).join('|');
+  }, [(attributes as Any)?.blockstudio?.attributes]);
+
+  useEffect(() => {
+    if (!hasDynamicArgs) return;
+    fetcher('');
+  }, [dynamicDepValues]);
 
   useEffect(() => {
     if (!isFetch) return;

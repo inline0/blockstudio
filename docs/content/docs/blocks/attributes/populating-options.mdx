@@ -315,3 +315,44 @@ Fetch data from an external source:
 ```
 
 The search term is appended to `urlSearch`.
+
+## Dynamic Arguments
+
+Populate arguments can reference other block attributes using `{attributes.*}`
+syntax. When the referenced attribute changes, the field re-fetches its options
+automatically.
+
+```json title="block.json"
+{
+  "blockstudio": {
+    "attributes": [
+      {
+        "id": "post_type",
+        "type": "select",
+        "label": "Post Type",
+        "options": [
+          { "label": "Pages", "value": "page" },
+          { "label": "Posts", "value": "post" }
+        ]
+      },
+      {
+        "id": "selected_post",
+        "type": "select",
+        "label": "Select Post",
+        "populate": {
+          "type": "query",
+          "query": "posts",
+          "arguments": {
+            "post_type": "{attributes.post_type}",
+            "numberposts": 10
+          }
+        }
+      }
+    ]
+  }
+}
+```
+
+This works with all populate types (`query`, `function`, `custom`). Any value
+in the populate configuration containing `{attributes.*}` is resolved
+client-side with the current attribute value before the query runs.

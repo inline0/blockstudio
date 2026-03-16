@@ -376,10 +376,18 @@ class Build {
 							$attributes[ $field_id ]['options'] = $options;
 							$populate_type                      = $v['populate']['type'] ?? false;
 
+							$has_dynamic_args = str_contains(
+								wp_json_encode( $v['populate'] ?? array() ),
+								'{attributes.'
+							);
+
 							if (
-								'query' === $populate_type ||
-								'custom' === $populate_type ||
-								'function' === $populate_type
+								! $has_dynamic_args &&
+								(
+									'query' === $populate_type ||
+									'custom' === $populate_type ||
+									'function' === $populate_type
+								)
 							) {
 								$options_addons        = Populate::init(
 									$v['populate'],

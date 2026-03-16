@@ -393,6 +393,30 @@ your font-size field group has a condition on `enable`, and you expand it with
 Reference-level conditions are also supported. Add `conditions` on the custom
 field reference to apply them to every expanded field at once.
 
+## Dynamic populate arguments
+
+Populate arguments can reference other block attributes using `{attributes.*}`
+syntax. When the referenced attribute changes, the select field re-fetches its
+options automatically. This makes it possible to chain selects: one for choosing
+a post type, another that loads posts of that type.
+
+```json
+{
+  "id": "selected_post",
+  "type": "select",
+  "populate": {
+    "type": "query",
+    "query": "posts",
+    "arguments": {
+      "post_type": "{attributes.post_type}"
+    }
+  }
+}
+```
+
+Change `post_type` to "page" and the second select loads pages. Change it to
+"post" and it loads posts. Works with any populate type and any attribute.
+
 ## More
 
 - **SCSS code fields**: Code fields support `language: "scss"`. Values are
