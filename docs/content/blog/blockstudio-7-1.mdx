@@ -383,6 +383,25 @@ by passing the block name as the third argument.
 
 ## RichText and MediaPlaceholder in repeaters
 
+## Smarter textMinimized for repeaters
+
+The `textMinimized` property on repeaters now handles object field values.
+Link fields auto-display the title, color fields show the value. Use the `key`
+property to drill into any sub-property:
+
+```json
+{
+  "type": "repeater",
+  "textMinimized": { "id": "href", "fallback": "Add a link" },
+  "attributes": [{ "id": "href", "type": "link" }]
+}
+```
+
+Smart defaults: `link` reads `title`, `color`/`gradient` read `value`,
+`icon` reads `icon`. Override with an explicit `key`.
+
+## RichText and MediaPlaceholder in repeaters
+
 The `RichText` and `MediaPlaceholder` template components now work inside repeater
 fields. Use bracket notation in the `attribute` prop to target the correct row.
 

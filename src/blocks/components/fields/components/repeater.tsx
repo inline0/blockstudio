@@ -79,10 +79,31 @@ const DragElement = ({
   }
 
   if (item?.textMinimized?.id) {
+    let minimizedValue = (
+      result(attributes, `blockstudio.attributes.${draggableId}`) as Any
+    )?.[item.textMinimized?.id];
+
+    if (minimizedValue && typeof minimizedValue === 'object') {
+      const defaultKeys: Record<string, string> = {
+        link: 'title',
+        icon: 'icon',
+        color: 'value',
+        gradient: 'value',
+      };
+
+      const fieldType = item.attributes?.find(
+        (a: Any) => a.id === item.textMinimized.id
+      )?.type;
+
+      const key = item.textMinimized.key || defaultKeys[fieldType] || '';
+
+      if (key) {
+        minimizedValue = minimizedValue[key];
+      }
+    }
+
     textMinimized = `${item?.textMinimized?.prefix || ''}${
-      (result(attributes, `blockstudio.attributes.${draggableId}`) as Any)?.[
-        item.textMinimized?.id
-      ] ||
+      minimizedValue ||
       item?.textMinimized?.fallback ||
       textMinimized
     }${item?.textMinimized?.suffix || ''}`;

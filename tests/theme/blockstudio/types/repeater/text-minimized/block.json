@@ -1,0 +1,92 @@
+{
+  "$schema": "https://blockstudio.dev/schema/block",
+  "name": "blockstudio/type-repeater-text-minimized",
+  "title": "Repeater textMinimized Test",
+  "category": "blockstudio-test-native",
+  "icon": "star-filled",
+  "blockstudio": {
+    "attributes": [
+      {
+        "id": "links",
+        "type": "repeater",
+        "label": "Links (auto key: title)",
+        "textMinimized": {
+          "id": "href",
+          "fallback": "Add a link"
+        },
+        "attributes": [
+          {
+            "id": "href",
+            "type": "link",
+            "label": "Link"
+          }
+        ]
+      },
+      {
+        "id": "links_explicit",
+        "type": "repeater",
+        "label": "Links (explicit key: url)",
+        "textMinimized": {
+          "id": "href",
+          "key": "url",
+          "fallback": "Add link"
+        },
+        "attributes": [
+          {
+            "id": "href",
+            "type": "link",
+            "label": "Link"
+          }
+        ]
+      },
+      {
+        "id": "colors",
+        "type": "repeater",
+        "label": "Colors (auto key: value)",
+        "textMinimized": {
+          "id": "color",
+          "fallback": "Pick a color"
+        },
+        "attributes": [
+          {
+            "id": "color",
+            "type": "color",
+            "label": "Color"
+          }
+        ]
+      },
+      {
+        "id": "gradients",
+        "type": "repeater",
+        "label": "Gradients (auto key: value)",
+        "textMinimized": {
+          "id": "grad",
+          "fallback": "Pick a gradient"
+        },
+        "attributes": [
+          {
+            "id": "grad",
+            "type": "gradient",
+            "label": "Gradient"
+          }
+        ]
+      },
+      {
+        "id": "icons",
+        "type": "repeater",
+        "label": "Icons (auto key: icon)",
+        "textMinimized": {
+          "id": "ico",
+          "fallback": "Pick an icon"
+        },
+        "attributes": [
+          {
+            "id": "ico",
+            "type": "icon",
+            "label": "Icon"
+          }
+        ]
+      }
+    ]
+  }
+}

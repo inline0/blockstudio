@@ -58,7 +58,6 @@ Download the latest release zip from [GitHub Releases](https://github.com/inline
 * New: database layer via `db.php` with table, SQLite, post meta, and JSONC storage
 * New: `Db` PHP API and `bs.db()` JS client for CRUD operations
 * New: `bs_db_form()` renders field components from db.php schema definitions
-* New: per-field validation errors and custom `validate` callbacks in `db.php`
 * New: `userScoped` option for automatic per-user data isolation in `db.php`
 * New: CSRF protection via `X-BS-Token` for public endpoints, `'open'` to bypass
 * New: lifecycle hooks for DB and RPC operations
@@ -66,12 +65,14 @@ Download the latest release zip from [GitHub Releases](https://github.com/inline
 * New: scheduled tasks via `cron.php` with WordPress Cron integration
 * New: components: non-editor blocks for programmatic rendering
 * New: `<bs:namespace-slug>` HTML tags for embedding blocks anywhere
-* New: block field type to reference another block as an attribute
-* New: auto-register standard WordPress blocks (create-block) in Blockstudio directories
+* New: `block` field type to reference another block as an attribute
 * New: `html-tag` field type for HTML tag selection with presets and exclude
-* New: SCSS support for code fields (`language: "scss"`)
-* New: RichText and MediaPlaceholder support inside repeater fields
-* Fix: custom field conditions now rewrite IDs when using `idStructure`
+* New: auto-register standard WordPress blocks (create-block) in Blockstudio directories
+* Enhancement: per-field validation errors and custom `validate` callbacks in `db.php`
+* Enhancement: `textMinimized` supports object fields via `key` with smart defaults
+* Enhancement: SCSS support for code fields (`language: "scss"`)
+* Enhancement: RichText and MediaPlaceholder support inside repeater fields
+* Enhancement: custom field conditions now rewrite IDs when using `idStructure`
 * Fix: `npm:` prefix for ES module imports now resolves correctly in production builds
 * Fix: HTML parser adds null innerContent placeholders for nested blocks
 

@@ -1257,6 +1257,11 @@ export const schema = async (extensions = false) => {
               description:
                 'ID of the attribute which should be used as the text.',
             },
+            key: {
+              type: 'string',
+              description:
+                'Sub-property to read when the field value is an object (e.g. "title" for link fields).',
+            },
             fallback: {
               type: 'string',
               description: 'Fallback text if the attribute is not set.',
