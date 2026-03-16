@@ -1,5 +1,6 @@
 import { HeroBlocks } from '@/components/hero-blocks';
 import { AiContext } from '@/components/homepage/ai-context';
+import { FullStack } from '@/components/homepage/full-stack';
 import { AssetProcessing } from '@/components/homepage/asset-processing';
 import { Extensions } from '@/components/homepage/beyond-blocks';
 import { Composition } from '@/components/homepage/composition';
@@ -101,6 +102,7 @@ export default function Home() {
               <DeveloperExperience />
               <DevTools />
               <AiContext />
+              <FullStack />
               <FAQ />
               <div className="border-t">
                 <PlusSection />

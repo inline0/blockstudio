@@ -1,0 +1,194 @@
+---
+title: Full-Stack Blocks
+description: Build complete applications inside a block folder with database, RPC, cron, CLI, and more.
+---
+
+# Full-Stack Blocks
+
+Blockstudio 7.1 turns blocks into full-stack applications. A single directory
+can contain the UI, server logic, data model, scheduled tasks, and even the data
+itself. No separate plugins, no build step, no boilerplate.
+
+## The pattern
+
+Every capability maps to a file:
+
+| File | Purpose |
+|------|---------|
+| `block.json` | Block definition |
+| `index.php` / `index.twig` | Template |
+| `style.css` | Styles |
+| `script-inline.js` | Client logic (auto-detects block name) |
+| `db.php` | Data model with auto-generated CRUD endpoints |
+| `rpc.php` | Custom server functions |
+| `cron.php` | Scheduled background tasks |
+
+Drop a file, it works. Remove a file, the feature disappears. No configuration
+wiring.
+
+## Database
+
+Define your data model in `db.php`. Blockstudio generates REST endpoints,
+validates input, manages storage, and provides `bs.db()` (JavaScript) and
+`Db::get()` (PHP) clients.
+
+```php title="db.php"
+return [
+    'storage' => 'sqlite',
+    'fields'  => [
+        'email' => ['type' => 'string', 'format' => 'email', 'required' => true],
+        'plan'  => ['type' => 'string', 'enum' => ['free', 'pro']],
+    ],
+];
+```
+
+### Storage backends
+
+| Storage | Backend | Portable | Best for |
+|---------|---------|----------|----------|
+| `table` | MySQL via `$wpdb` | No | Production, large datasets |
+| `sqlite` | SQLite via PDO | Yes | Structured queries, portable |
+| `jsonc` | Flat file | Yes | Small datasets, version control |
+| `meta` | Post meta | No | Per-post data |
+
+### User-scoped data
+
+Set `userScoped: true` to automatically isolate data per user:
+
+```php
+return [
+    'storage'    => 'sqlite',
+    'userScoped' => true,
+    'fields'     => [ /* ... */ ],
+];
+```
+
+Blockstudio adds `user_id`, sets it on create, and filters all operations to the
+current user.
+
+### Validation
+
+Per-field validation with structured error responses:
+
+```json
+{
+  "code": "blockstudio_db_validation",
+  "message": "Validation failed.",
+  "data": {
+    "status": 400,
+    "errors": {
+      "email": ["Must be a valid email address."],
+      "plan": ["Must be one of: free, pro."]
+    }
+  }
+}
+```
+
+[Full database documentation &rarr;](/docs/blocks/block-api/database)
+
+## RPC
+
+Custom server functions in `rpc.php`, callable from the frontend with `bs.fn()`:
+
+```php title="rpc.php"
+return [
+    'subscribe' => function (array $params): array {
+        $email = sanitize_email($params['email']);
+        return ['success' => true];
+    },
+];
+```
+
+```js
+const result = await bs.fn('subscribe', { email: 'a@b.com' });
+```
+
+Access control via `public`, `capability`, and `methods`. CSRF protection on
+public endpoints. Lifecycle hooks before and after every call.
+
+[Full RPC documentation &rarr;](/docs/blocks/block-api/rpc)
+
+## Cron
+
+Scheduled tasks in `cron.php`:
+
+```php title="cron.php"
+return [
+    'cleanup' => [
+        'schedule' => 'daily',
+        'callback' => function () {
+            $db = Db::get('my-theme/app');
+            // delete old records
+        },
+    ],
+];
+```
+
+Auto-registered with WordPress Cron, auto-unscheduled on plugin deactivation.
+
+[Full cron documentation &rarr;](/docs/blocks/block-api/cron)
+
+## CLI
+
+The entire feature set is accessible via `wp bs`:
+
+```bash
+wp bs blocks list                     # list all blocks
+wp bs db list my-theme/app            # query records
+wp bs db create my-theme/app --email=a@b.com
+wp bs rpc call my-theme/app subscribe --email=a@b.com
+wp bs cron run my-theme/app cleanup   # run a job manually
+wp bs tailwind compile --file=t.html  # compile Tailwind
+wp bs scss compile --file=style.scss  # compile SCSS
+wp bs fields list                     # custom field definitions
+wp bs assets list --type=global       # registered assets
+wp bs settings get tailwind/enabled   # read settings
+```
+
+[Full CLI documentation &rarr;](/docs/blocks/cli)
+
+## Security
+
+### CSRF protection
+
+Public endpoints (`capability: true`) require a `X-BS-Token` header. The token
+is generated per page load and injected into `bs.db()` and `bs.fn()`
+automatically. Use `'open'` for webhooks that need truly unauthenticated access.
+
+### Per-operation access control
+
+Each CRUD operation has its own permission level:
+
+```php
+'capability' => [
+    'create' => true,              // public + CSRF
+    'read'   => 'open',            // truly open
+    'update' => 'edit_posts',      // capability check
+    'delete' => 'manage_options',  // admin only
+],
+```
+
+## Portability
+
+With SQLite or JSONC storage, the entire application (code + data) lives in one
+folder:
+
+```
+my-app/
+├── block.json
+├── index.twig
+├── style.css
+├── rpc.php
+├── db.php
+├── cron.php
+└── db/
+    └── default.sqlite
+```
+
+Copy the folder to another site. Done.
+
+## Guide
+
+For a complete step-by-step walkthrough building two real applications (a
+per-user todo app and a public newsletter signup), see the
+[Full-Stack Blocks guide](/guides/full-stack-blocks).
