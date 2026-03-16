@@ -446,10 +446,331 @@ No webpack, no separate database migrations, no REST controller classes, no
 plugin boilerplate. Drop the folder into any theme's `blockstudio/` directory
 and you have a working todo app.
 
-## Next steps
+---
 
-This pattern scales. Replace "todo" with "bookings", "surveys", "feedback",
-"leads", or any domain. The building blocks are the same:
+# Example 2: Newsletter Signup
+
+Not every app needs per-user data. A newsletter signup block is public: anyone
+can subscribe, only admins can view and manage subscribers. No `userScoped`,
+no authentication required for the main action.
+
+## File structure
+
+```
+blockstudio/
+  newsletter/
+    block.json
+    index.php
+    style.css
+    script-inline.js
+    db.php
+    rpc.php
+    cron.php
+```
+
+## Data model
+
+Public create (anyone can subscribe), admin-only read/delete. Custom validation
+blocks disposable emails.
+
+```php title="db.php"
+<?php
+return [
+    'storage'    => 'table',
+    'capability' => [
+        'create' => true,
+        'read'   => 'manage_options',
+        'update' => 'manage_options',
+        'delete' => 'manage_options',
+    ],
+    'fields' => [
+        'email' => [
+            'type'     => 'string',
+            'format'   => 'email',
+            'required' => true,
+            'validate' => function ($value) {
+                $blocked = ['mailinator.com', 'tempmail.com', 'throwaway.email'];
+                $domain  = substr($value, strpos($value, '@') + 1);
+                if (in_array($domain, $blocked, true)) {
+                    return 'Please use a permanent email address.';
+                }
+                return true;
+            },
+        ],
+        'name' => [
+            'type'      => 'string',
+            'maxLength' => 100,
+        ],
+        'status' => [
+            'type'    => 'string',
+            'enum'    => ['active', 'unsubscribed'],
+            'default' => 'active',
+        ],
+    ],
+    'hooks' => [
+        'after_create' => function ($params) {
+            wp_mail(
+                $params['record']['email'],
+                'Welcome!',
+                'Thanks for subscribing' . ($params['record']['name'] ? ', ' . $params['record']['name'] : '') . '.'
+            );
+        },
+    ],
+];
+```
+
+## Custom logic
+
+An unsubscribe endpoint that's public (works from email links without login):
+
+```php title="rpc.php"
+<?php
+use Blockstudio\Db;
+
+return [
+    'unsubscribe' => [
+        'callback' => function (array $params): array {
+            $email = sanitize_email($params['email'] ?? '');
+            $db    = Db::get('my-theme/newsletter');
+            $subs  = $db->list(['email' => $email]);
+
+            if (empty($subs)) {
+                return ['error' => 'Email not found.'];
+            }
+
+            $db->update((int) $subs[0]['id'], ['status' => 'unsubscribed']);
+
+            return ['success' => true, 'message' => 'You have been unsubscribed.'];
+        },
+        'public' => true,
+    ],
+    'stats' => [
+        'callback'   => function (array $params): array {
+            $db = Db::get('my-theme/newsletter');
+            return [
+                'total'  => count($db->list()),
+                'active' => count($db->list(['status' => 'active'])),
+            ];
+        },
+        'capability' => 'manage_options',
+    ],
+];
+```
+
+## Scheduled cleanup
+
+Remove unsubscribed emails after 90 days:
+
+```php title="cron.php"
+<?php
+use Blockstudio\Db;
+
+return [
+    'cleanup' => [
+        'schedule' => 'weekly',
+        'callback' => function () {
+            $db    = Db::get('my-theme/newsletter');
+            $unsub = $db->list(['status' => 'unsubscribed']);
+
+            foreach ($unsub as $row) {
+                if (strtotime($row['updated_at']) < strtotime('-90 days')) {
+                    $db->delete((int) $row['id']);
+                }
+            }
+        },
+    ],
+];
+```
+
+## Template
+
+```php title="index.php"
+<?php
+$context = wp_json_encode([
+    'email'   => '',
+    'name'    => '',
+    'loading' => false,
+    'success' => false,
+    'error'   => '',
+]);
+?>
+
+<div
+    data-wp-interactive="myTheme/newsletter"
+    data-wp-context='<?php echo esc_attr($context); ?>'
+    useBlockProps
+    class="newsletter"
+>
+    <template data-wp-if="!context.success">
+        <h3>Stay in the loop</h3>
+        <div class="newsletter-form">
+            <input
+                type="text"
+                placeholder="Name (optional)"
+                data-wp-bind--value="context.name"
+                data-wp-on--input="actions.setName"
+            />
+            <input
+                type="email"
+                placeholder="Email address"
+                data-wp-bind--value="context.email"
+                data-wp-on--input="actions.setEmail"
+                data-wp-on--keydown="actions.handleKeydown"
+            />
+            <button
+                data-wp-on--click="actions.subscribe"
+                data-wp-bind--disabled="context.loading"
+            >
+                <span data-wp-text="context.loading ? 'Subscribing...' : 'Subscribe'"></span>
+            </button>
+        </div>
+        <p data-wp-if="context.error" class="newsletter-error" data-wp-text="context.error"></p>
+    </template>
+    <template data-wp-if="context.success">
+        <p class="newsletter-success">You're in! Check your email for a confirmation.</p>
+    </template>
+</div>
+```
+
+## Client logic
+
+```js title="script-inline.js"
+import { store, getContext } from '@wordpress/interactivity';
+
+store('myTheme/newsletter', {
+    actions: {
+        setName(event) {
+            getContext().name = event.target.value;
+        },
+        setEmail(event) {
+            getContext().email = event.target.value;
+        },
+        handleKeydown(event) {
+            if (event.key === 'Enter') {
+                store('myTheme/newsletter').actions.subscribe();
+            }
+        },
+        async subscribe() {
+            const ctx = getContext();
+            const email = ctx.email.trim();
+            if (!email) return;
+
+            ctx.loading = true;
+            ctx.error = '';
+
+            const db = bs.db('my-theme/newsletter');
+            const result = await db.create({
+                email,
+                name: ctx.name.trim(),
+            });
+
+            if (result.data?.errors) {
+                const first = Object.values(result.data.errors)[0];
+                ctx.error = first[0];
+                ctx.loading = false;
+                return;
+            }
+
+            if (result.code) {
+                ctx.error = result.message || 'Something went wrong.';
+                ctx.loading = false;
+                return;
+            }
+
+            ctx.success = true;
+            ctx.loading = false;
+        },
+    },
+});
+```
+
+## Styles
+
+```css title="style.css"
+.newsletter {
+    max-width: 480px;
+    margin: 0 auto;
+    padding: 2rem;
+    text-align: center;
+}
+
+.newsletter h3 {
+    margin: 0 0 1rem;
+}
+
+.newsletter-form {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.newsletter-form input {
+    padding: 0.625rem 0.75rem;
+    border: 1px solid #d1d5db;
+    border-radius: 0.375rem;
+    font-size: 1rem;
+}
+
+.newsletter-form button {
+    padding: 0.625rem 1rem;
+    background: #3b82f6;
+    color: white;
+    border: none;
+    border-radius: 0.375rem;
+    font-size: 1rem;
+    cursor: pointer;
+}
+
+.newsletter-form button:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+.newsletter-error {
+    color: #ef4444;
+    font-size: 0.875rem;
+    margin: 0.5rem 0 0;
+}
+
+.newsletter-success {
+    color: #10b981;
+    font-size: 1.125rem;
+}
+```
+
+## Managing from the CLI
+
+```bash
+# View all subscribers (admin only)
+wp bs db list my-theme/newsletter --format=table
+
+# Export as JSON
+wp bs db list my-theme/newsletter --format=json > subscribers.json
+
+# Check stats
+wp bs rpc call my-theme/newsletter stats
+
+# Manually unsubscribe someone
+wp bs rpc call my-theme/newsletter unsubscribe --email=user@example.com
+
+# Run the cleanup
+wp bs cron run my-theme/newsletter cleanup
+```
+
+---
+
+## Comparison
+
+| | Todo App | Newsletter |
+|---|---------|-----------|
+| **Auth model** | `userScoped: true` | Public create, admin read |
+| **Storage** | SQLite (portable) | MySQL table (production) |
+| **User filtering** | Automatic | Not needed |
+| **Custom RPC** | Toggle, clear done | Unsubscribe, stats |
+| **Cron** | Delete old completed | Remove unsubscribed |
+| **Validation** | Length constraints | Email format + domain block |
+
+Same pattern, different access models. The building blocks are identical:
 
 - `db.php` for the data model
 - `rpc.php` for business logic
