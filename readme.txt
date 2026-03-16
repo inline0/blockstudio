@@ -68,6 +68,7 @@ Download the latest release zip from [GitHub Releases](https://github.com/inline
 * New: `<bs:namespace-slug>` HTML tags for embedding blocks anywhere
 * New: block field type to reference another block as an attribute
 * New: auto-register standard WordPress blocks (create-block) in Blockstudio directories
+* New: `html-tag` field type for HTML tag selection with presets and exclude
 * New: SCSS support for code fields (`language: "scss"`)
 * New: RichText and MediaPlaceholder support inside repeater fields
 * Fix: `npm:` prefix for ES module imports now resolves correctly in production builds

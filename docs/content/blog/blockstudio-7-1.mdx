@@ -365,6 +365,26 @@ checks (string or array), and `methods` to control allowed HTTP methods.
 Cross-block calling works too: any block can call functions on any other block
 by passing the block name as the third argument.
 
+## HTML tag field
+
+A new `html-tag` field type for selecting HTML elements. Comes with presets
+(`heading`, `text`, `structural`, `all`) and an `exclude` option for filtering.
+
+```json
+{
+  "id": "tag",
+  "type": "html-tag",
+  "label": "Heading Level",
+  "default": "h2",
+  "tags": "heading",
+  "exclude": ["h5", "h6"]
+}
+```
+
+```twig
+<{{ a.tag }}>{{ a.title }}</{{ a.tag }}>
+```
+
 ## RichText and MediaPlaceholder in repeaters
 
 The `RichText` and `MediaPlaceholder` template components now work inside repeater

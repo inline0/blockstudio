@@ -1,0 +1,33 @@
+{
+  "$schema": "https://blockstudio.dev/schema/block",
+  "name": "blockstudio/type-html-tag",
+  "title": "HTML Tag Test",
+  "category": "blockstudio-test-native",
+  "icon": "editor-code",
+  "blockstudio": {
+    "attributes": [
+      {
+        "id": "heading",
+        "type": "html-tag",
+        "label": "Heading Tag",
+        "default": "h2",
+        "tags": "heading"
+      },
+      {
+        "id": "wrapper",
+        "type": "html-tag",
+        "label": "Wrapper Tag",
+        "default": "div",
+        "tags": "structural",
+        "exclude": ["nav", "footer"]
+      },
+      {
+        "id": "custom",
+        "type": "html-tag",
+        "label": "Custom Tags",
+        "default": "p",
+        "tags": ["p", "span", "div"]
+      }
+    ]
+  }
+}
