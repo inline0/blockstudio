@@ -16,6 +16,7 @@ export default defineConfig({
   nav: {
     links: [
       { label: "Build with AI", href: "/ai" },
+      { label: "Full-Stack", href: "/docs/full-stack" },
       { label: "Docs", href: "/docs" },
       { label: "Guides", href: "/guides" },
       { label: "Blog", href: "/blog" },
