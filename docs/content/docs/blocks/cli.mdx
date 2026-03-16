@@ -172,6 +172,75 @@ wp bs settings get tailwind/enabled
 wp bs settings get assets/enqueue
 ```
 
+## Tailwind
+
+### Compile HTML to CSS
+
+```bash
+wp bs tailwind compile '<div class="flex items-center p-4">'
+```
+
+### Compile from file
+
+```bash
+wp bs tailwind compile --file=template.html
+```
+
+### Cache management
+
+```bash
+wp bs tailwind cache path    # show cache directory
+wp bs tailwind cache clear   # clear compiled cache
+```
+
+## SCSS
+
+### Compile SCSS to CSS
+
+```bash
+wp bs scss compile '$color: red; .test { color: $color; }'
+```
+
+### Compile from file
+
+```bash
+wp bs scss compile --file=styles.scss
+```
+
+## Custom Fields
+
+### List all registered custom fields
+
+```bash
+wp bs fields list
+```
+
+```
++-------+----------------+---------------------------+
+| name  | title          | fields                    |
++-------+----------------+---------------------------+
+| hero  | Hero Section   | heading, description, cta |
+| card  | Card           | title, image, link        |
++-------+----------------+---------------------------+
+```
+
+## Assets
+
+### List all assets
+
+```bash
+wp bs assets list
+```
+
+### Filter by type
+
+```bash
+wp bs assets list --type=global
+wp bs assets list --type=admin
+wp bs assets list --type=editor
+wp bs assets list --type=registered
+```
+
 ## Scripting
 
 All commands support `--format=json` for easy piping:
