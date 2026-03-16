@@ -64,21 +64,25 @@ test.describe('seo - yoast', () => {
     const uniqueText = 'blockstudioseotest' + Date.now();
     await page.fill('.blockstudio-fields__field--text input', uniqueText);
 
-    // Wait for debounce (1s) + processing
-    await delay(3000);
+    // Poll for Yoast to pick up the content (debounce + SSR + processing).
+    let found = false;
+    for (let i = 0; i < 10; i++) {
+      await delay(1000);
+      found = await page.evaluate((searchText) => {
+        const app = (window as any).YoastSEO?.app;
+        if (!app?.pluggable?.modifications?.content) return false;
 
-    const result = await page.evaluate((searchText) => {
-      const app = (window as any).YoastSEO?.app;
-      if (!app?.pluggable?.modifications?.content) return false;
+        let content = '';
+        for (const mod of app.pluggable.modifications.content) {
+          content = mod.callable(content);
+        }
+        return content.includes(searchText);
+      }, uniqueText);
 
-      let content = '';
-      for (const mod of app.pluggable.modifications.content) {
-        content = mod.callable(content);
-      }
-      return content.includes(searchText);
-    }, uniqueText);
+      if (found) break;
+    }
 
-    expect(result).toBe(true);
+    expect(found).toBe(true);
   });
 
   test('disabled fields are excluded from seo content', async () => {
