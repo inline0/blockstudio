@@ -164,14 +164,18 @@ class Db {
 				$component = array( 'name' => $component );
 			}
 
-			$component['attributes']               = $component['attributes'] ?? array();
-			$component['attributes']['_fieldName'] = $field_name;
-			$component['attributes']['_fieldType'] = $def['type'] ?? 'string';
-			$component['attributes']['_required']  = ! empty( $def['required'] );
-			$component['attributes']['_enum']      = $def['enum'] ?? array();
-			$component['attributes']['_format']    = $def['format'] ?? '';
-			$component['attributes']['_maxLength'] = $def['maxLength'] ?? null;
-			$component['attributes']['_minLength'] = $def['minLength'] ?? null;
+			$component['attributes']           = $component['attributes'] ?? array();
+			$component['attributes']['field'] = array_merge(
+				array( 'name' => $field_name ),
+				array_diff_key(
+					$def,
+					array(
+						'component' => true,
+						'validate'  => true,
+						'hooks'     => true,
+					)
+				)
+			);
 
 			$output .= self::render_block_tree( $component );
 		}
