@@ -8,8 +8,8 @@ export function FileStructure() {
               Every capability is a file
             </h2>
             <p className="mt-4 text-fd-muted-foreground sm:text-lg sm:leading-normal text-balance">
-              Drop a file, it works. Remove a file, the feature disappears. No
-              configuration wiring, no registration code.
+              Each file adds a capability. No configuration, no registration
+              code.
             </p>
           </div>
         </div>
