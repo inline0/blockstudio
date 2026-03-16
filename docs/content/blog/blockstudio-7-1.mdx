@@ -399,6 +399,22 @@ fields. Use bracket notation in the `attribute` prop to target the correct row.
 This was a frequently requested feature. Editable headings, paragraphs, and media
 drop zones now work per-row in any repeater field.
 
+## Custom field conditions with idStructure
+
+Conditions inside custom field definitions now automatically rewrite their IDs
+when `idStructure` is applied. A toggle that controls sibling fields keeps
+working after expansion. Reference-level conditions can also be applied to hide
+an entire field group behind an external toggle.
+
+```json
+// Field definition: conditions use original IDs
+{ "id": "min", "conditions": [[{ "id": "enable", ... }]] }
+
+// Usage: idStructure remaps both field IDs and condition IDs
+{ "type": "custom/font-size", "idStructure": "title_font_{id}" }
+// → title_font_min condition now references title_font_enable
+```
+
 ## SCSS code fields
 
 Code fields now support `language: "scss"`. When set, the field value is compiled

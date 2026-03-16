@@ -1,0 +1,39 @@
+{
+  "$schema": "https://blockstudio.dev/schema/block",
+  "name": "blockstudio/type-fields-conditions",
+  "title": "Fields Conditions Test",
+  "category": "blockstudio-test-native",
+  "icon": "star-filled",
+  "blockstudio": {
+    "attributes": [
+      {
+        "id": "title",
+        "type": "text",
+        "label": "Title",
+        "default": "Test"
+      },
+      {
+        "type": "custom/font-size",
+        "idStructure": "title_font_{id}"
+      },
+      {
+        "id": "subtitle",
+        "type": "text",
+        "label": "Subtitle"
+      },
+      {
+        "type": "custom/font-size",
+        "idStructure": "subtitle_font_{id}",
+        "conditions": [
+          [{ "id": "show_advanced", "operator": "==", "value": true }]
+        ]
+      },
+      {
+        "id": "show_advanced",
+        "type": "toggle",
+        "label": "Show Advanced",
+        "default": false
+      }
+    ]
+  }
+}

@@ -104,6 +104,56 @@ Customize individual fields per-instance using `overrides`. Keys are the origina
 
 Override properties are merged on top of the original field definition. An `id` override bypasses the `idStructure` pattern. In the example above, `enabled` becomes `active` instead of `hero_enabled`.
 
+## Conditions
+
+Conditions inside custom field definitions are automatically rewritten when
+`idStructure` is applied. A field that conditionally depends on a sibling field
+keeps working after expansion.
+
+```json title="fields/font-size/field.json"
+{
+  "name": "font-size",
+  "attributes": [
+    { "id": "enable", "type": "toggle", "label": "Modify font size" },
+    {
+      "id": "min", "type": "number", "label": "Min Size",
+      "conditions": [[{ "id": "enable", "operator": "==", "value": true }]]
+    },
+    {
+      "id": "max", "type": "number", "label": "Max Size",
+      "conditions": [[{ "id": "enable", "operator": "==", "value": true }]]
+    }
+  ]
+}
+```
+
+```json title="block.json"
+{ "type": "custom/font-size", "idStructure": "title_font_{id}" }
+```
+
+Blockstudio expands this to `title_font_enable`, `title_font_min`,
+`title_font_max` and rewrites the conditions to reference
+`title_font_enable` instead of `enable`. The toggle controls work
+exactly as if the fields were defined inline.
+
+### Reference-level conditions
+
+Add `conditions` on the reference to apply them to every expanded field. This
+is useful for hiding an entire group behind an external toggle:
+
+```json title="block.json"
+{
+  "type": "custom/font-size",
+  "idStructure": "subtitle_font_{id}",
+  "conditions": [
+    [{ "id": "show_advanced", "operator": "==", "value": true }]
+  ]
+}
+```
+
+These conditions merge with any conditions already defined inside the field
+definition. Condition IDs are also rewritten via `idStructure`.
+
 ## Multiple Custom Fields
 
 You can use multiple custom fields in a single block, alongside regular fields:

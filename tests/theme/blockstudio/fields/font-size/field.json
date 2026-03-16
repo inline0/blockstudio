@@ -1,0 +1,31 @@
+{
+  "$schema": "https://blockstudio.dev/schema/field",
+  "name": "font-size",
+  "title": "Font Size Controls",
+  "attributes": [
+    {
+      "id": "enable",
+      "type": "toggle",
+      "label": "Modify font size",
+      "default": false
+    },
+    {
+      "id": "min",
+      "type": "number",
+      "label": "Min Size",
+      "default": 16,
+      "conditions": [
+        [{ "id": "enable", "operator": "==", "value": true }]
+      ]
+    },
+    {
+      "id": "max",
+      "type": "number",
+      "label": "Max Size",
+      "default": 24,
+      "conditions": [
+        [{ "id": "enable", "operator": "==", "value": true }]
+      ]
+    }
+  ]
+}

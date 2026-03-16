@@ -1324,9 +1324,10 @@ class Build {
 				continue;
 			}
 
-			$id_structure = $attr['idStructure'] ?? '{id}';
-			$overrides    = $attr['overrides'] ?? array();
-			$field_id     = $attr['id'] ?? '';
+			$id_structure   = $attr['idStructure'] ?? '{id}';
+			$overrides      = $attr['overrides'] ?? array();
+			$field_id       = $attr['id'] ?? '';
+			$ref_conditions = $attr['conditions'] ?? null;
 
 			if ( $is_block && $field_id ) {
 				$expanded[] = array(
@@ -1355,6 +1356,16 @@ class Build {
 				$merged       = array_merge( $field_attr, $field_override );
 				$merged['id'] = $final_id;
 
+				if ( $ref_conditions ) {
+					$merged['conditions'] = isset( $merged['conditions'] )
+						? array_merge( $merged['conditions'], $ref_conditions )
+						: $ref_conditions;
+				}
+
+				if ( '{id}' !== $id_structure && isset( $merged['conditions'] ) ) {
+					self::rewrite_condition_ids( $merged['conditions'], $id_structure );
+				}
+
 				$expanded[] = $merged;
 
 				if ( $is_block ) {
@@ -1371,6 +1382,27 @@ class Build {
 		}
 
 		$attributes = $expanded;
+	}
+
+	/**
+	 * Rewrite condition IDs using an idStructure pattern.
+	 *
+	 * @since 7.1.0
+	 *
+	 * @param array  $conditions   The conditions array (passed by reference).
+	 * @param string $id_structure The idStructure pattern.
+	 *
+	 * @return void
+	 */
+	private static function rewrite_condition_ids( array &$conditions, string $id_structure ): void {
+		foreach ( $conditions as &$group ) {
+			foreach ( $group as &$condition ) {
+				if ( isset( $condition['id'] ) ) {
+					$condition['id'] = str_replace( '{id}', $condition['id'], $id_structure );
+				}
+			}
+		}
+		unset( $group, $condition );
 	}
 
 	/**

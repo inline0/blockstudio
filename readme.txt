@@ -71,6 +71,7 @@ Download the latest release zip from [GitHub Releases](https://github.com/inline
 * New: `html-tag` field type for HTML tag selection with presets and exclude
 * New: SCSS support for code fields (`language: "scss"`)
 * New: RichText and MediaPlaceholder support inside repeater fields
+* Fix: custom field conditions now rewrite IDs when using `idStructure`
 * Fix: `npm:` prefix for ES module imports now resolves correctly in production builds
 * Fix: HTML parser adds null innerContent placeholders for nested blocks
 
