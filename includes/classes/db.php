@@ -164,8 +164,11 @@ class Db {
 				$component = array( 'name' => $component );
 			}
 
-			$component['attributes']           = $component['attributes'] ?? array();
-			$component['attributes']['field']  = array_merge(
+			if ( ! isset( $component['attributes'] ) ) {
+				$component['attributes'] = array();
+			}
+
+			$component['attributes']['field'] = array_merge(
 				array( 'name' => $field_name ),
 				array_diff_key(
 					$def,
