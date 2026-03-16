@@ -55,6 +55,7 @@ require authentication.
 <?php
 return [
     'storage'    => 'sqlite',
+    'userScoped' => true,
     'capability' => [
         'create' => true,
         'read'   => true,
@@ -72,19 +73,12 @@ return [
             'type'    => 'boolean',
             'default' => false,
         ],
-        'user_id' => [
-            'type'    => 'integer',
-            'default' => 0,
-        ],
-    ],
-    'hooks' => [
-        'before_create' => function ($params) {
-            // Auto-set user_id on create.
-            $params['data']['user_id'] = get_current_user_id();
-        },
     ],
 ];
 ```
+
+`userScoped: true` automatically adds a `user_id` column, sets it on create,
+and filters all queries to the current user. No manual user handling needed.
 
 SQLite storage means the database file lives at `todo/db/default.sqlite`. Copy
 the block folder to another site and the data comes with it.
@@ -101,34 +95,27 @@ DELETE /wp-json/blockstudio/v1/db/my-theme-todo/default/{id}
 
 ## Step 3: Custom server logic
 
-The auto-generated CRUD works for most operations, but we need a custom
-endpoint to toggle completion and to load only the current user's todos.
+Since `userScoped: true` auto-filters to the current user, we don't need
+a custom `my_todos` endpoint. The built-in `bs.db().list()` already returns
+only the current user's records. RPC is only needed for operations beyond CRUD:
+toggling and bulk clearing.
 
 ```php title="rpc.php"
 <?php
 use Blockstudio\Db;
 
 return [
-    'my_todos' => [
-        'callback' => function (array $params): array {
-            $db      = Db::get('my-theme/todo');
-            $user_id = get_current_user_id();
-            $all     = $db->list(['user_id' => $user_id]);
-
-            return ['todos' => $all];
-        },
-        'public' => false,
-    ],
     'toggle' => [
         'callback' => function (array $params): array {
             $db   = Db::get('my-theme/todo');
             $id   = (int) ($params['id'] ?? 0);
             $todo = $db->get_record($id);
 
-            if (!$todo || (int) $todo['user_id'] !== get_current_user_id()) {
+            if (!$todo) {
                 return ['error' => 'Not found.'];
             }
 
+            // userScoped already ensures this is the current user's record.
             $db->update($id, ['done' => !$todo['done']]);
 
             return ['success' => true];
@@ -137,9 +124,8 @@ return [
     ],
     'clear_done' => [
         'callback' => function (array $params): array {
-            $db      = Db::get('my-theme/todo');
-            $user_id = get_current_user_id();
-            $todos   = $db->list(['user_id' => $user_id]);
+            $db    = Db::get('my-theme/todo');
+            $todos = $db->list(); // userScoped: only current user's todos.
             $cleared = 0;
 
             foreach ($todos as $todo) {
@@ -192,12 +178,8 @@ the initial todos server-side, then JavaScript handles interactions.
 ```php title="index.php"
 <?php
 $user_id = get_current_user_id();
-$todos   = [];
-
-if ($user_id) {
-    $db    = \Blockstudio\Db::get('my-theme/todo');
-    $todos = $db ? $db->list(['user_id' => $user_id]) : [];
-}
+$db      = \Blockstudio\Db::get('my-theme/todo');
+$todos   = ($user_id && $db) ? $db->list() : []; // userScoped: auto-filters to current user.
 
 $context = wp_json_encode([
     'todos'   => $todos,
@@ -301,11 +283,8 @@ store('myTheme/todo', {
 
             ctx.loading = true;
             const db = bs.db('my-theme/todo');
-            const record = await db.create({
-                text,
-                done: false,
-                user_id: ctx.userId,
-            });
+            const record = await db.create({ text, done: false });
+            // user_id is auto-set by userScoped.
 
             ctx.todos = [record, ...ctx.todos];
             ctx.newText = '';

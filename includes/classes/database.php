@@ -627,6 +627,33 @@ class Database {
 		);
 	}
 
+	/**
+	 * Check if a schema is user-scoped.
+	 *
+	 * @param string $key The schema key.
+	 *
+	 * @return bool Whether the schema is user-scoped.
+	 */
+	private static function is_user_scoped( string $key ): bool {
+		return ! empty( self::$schemas[ $key ]['userScoped'] );
+	}
+
+	/**
+	 * Check user-scoped ownership of a record.
+	 *
+	 * @param string     $key    The schema key.
+	 * @param array|null $record The record to check.
+	 *
+	 * @return bool Whether the current user owns the record.
+	 */
+	private static function user_owns_record( string $key, $record ): bool {
+		if ( ! self::is_user_scoped( $key ) || ! $record ) {
+			return true;
+		}
+
+		return (int) ( $record['user_id'] ?? 0 ) === get_current_user_id();
+	}
+
 	// Storage dispatch.
 
 	/**
@@ -642,6 +669,10 @@ class Database {
 	 * @return array The records.
 	 */
 	private static function storage_list( string $key, string $storage, array $schema, array $filters, int $limit, int $offset ): array {
+		if ( self::is_user_scoped( $key ) ) {
+			$filters['user_id'] = (string) get_current_user_id();
+		}
+
 		switch ( $storage ) {
 			case 'meta':
 				return self::meta_list( $key, $schema, $filters, $limit, $offset );
@@ -666,14 +697,23 @@ class Database {
 	private static function storage_get( string $key, string $storage, int $id ) {
 		switch ( $storage ) {
 			case 'meta':
-				return self::meta_get( $key, $id );
+				$record = self::meta_get( $key, $id );
+				break;
 			case 'jsonc':
-				return self::jsonc_get( $key, $id );
+				$record = self::jsonc_get( $key, $id );
+				break;
 			case 'sqlite':
-				return self::sqlite_get( $key, $id );
+				$record = self::sqlite_get( $key, $id );
+				break;
 			default:
-				return self::table_get( $key, $id );
+				$record = self::table_get( $key, $id );
 		}
+
+		if ( ! self::user_owns_record( $key, $record ) ) {
+			return null;
+		}
+
+		return $record;
 	}
 
 	/**
@@ -686,6 +726,10 @@ class Database {
 	 * @return array The created record.
 	 */
 	private static function storage_create( string $key, string $storage, array $data ): array {
+		if ( self::is_user_scoped( $key ) ) {
+			$data['user_id'] = get_current_user_id();
+		}
+
 		list( $block, $schema ) = self::parse_key( $key );
 
 		do_action(
@@ -736,6 +780,14 @@ class Database {
 	 * @return array|null The updated record or null.
 	 */
 	private static function storage_update( string $key, string $storage, int $id, array $data ) {
+		if ( self::is_user_scoped( $key ) ) {
+			$existing = self::storage_get( $key, $storage, $id );
+			if ( ! $existing ) {
+				return null;
+			}
+			unset( $data['user_id'] );
+		}
+
 		list( $block, $schema ) = self::parse_key( $key );
 
 		do_action(
@@ -789,6 +841,13 @@ class Database {
 	 * @return bool Whether the record was deleted.
 	 */
 	private static function storage_delete( string $key, string $storage, int $id ): bool {
+		if ( self::is_user_scoped( $key ) ) {
+			$existing = self::storage_get( $key, $storage, $id );
+			if ( ! $existing ) {
+				return false;
+			}
+		}
+
 		list( $block, $schema ) = self::parse_key( $key );
 
 		do_action(
@@ -1609,6 +1668,7 @@ class Database {
 		}
 
 		if ( isset( $definition['fields'] ) ) {
+			self::inject_user_scoped_field( $definition );
 			self::$schemas[ $block_name . ':default' ] = $definition;
 			self::register_inline_hooks( $definition, $block_name, 'default' );
 			return;
@@ -1616,9 +1676,30 @@ class Database {
 
 		foreach ( $definition as $schema_name => $schema ) {
 			if ( is_array( $schema ) && isset( $schema['fields'] ) ) {
+				self::inject_user_scoped_field( $schema );
 				self::$schemas[ $block_name . ':' . $schema_name ] = $schema;
 				self::register_inline_hooks( $schema, $block_name, $schema_name );
 			}
+		}
+	}
+
+	/**
+	 * Inject user_id field into user-scoped schemas.
+	 *
+	 * @param array $schema The schema definition (passed by reference).
+	 *
+	 * @return void
+	 */
+	private static function inject_user_scoped_field( array &$schema ): void {
+		if ( empty( $schema['userScoped'] ) ) {
+			return;
+		}
+
+		if ( ! isset( $schema['fields']['user_id'] ) ) {
+			$schema['fields']['user_id'] = array(
+				'type'    => 'integer',
+				'default' => 0,
+			);
 		}
 	}
 

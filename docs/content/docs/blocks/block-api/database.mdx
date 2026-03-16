@@ -194,6 +194,27 @@ For single-schema blocks:
 $db = Db::get('my-theme/block');
 ```
 
+## User-scoped data
+
+Set `userScoped: true` to automatically scope all records to the current user.
+Blockstudio adds a `user_id` column, sets it on create, and filters all
+operations to only the current user's records:
+
+```php title="db.php"
+return [
+    'storage'    => 'sqlite',
+    'userScoped' => true,
+    'fields'     => [
+        'text' => ['type' => 'string', 'required' => true],
+        'done' => ['type' => 'boolean', 'default' => false],
+    ],
+];
+```
+
+No manual `user_id` field, no `before_create` hook, no filtering in RPC. Users
+can only see, edit, and delete their own records. The `user_id` column is
+managed entirely by Blockstudio.
+
 ## Access control
 
 Each CRUD operation has its own permission level. Use `true` for public
