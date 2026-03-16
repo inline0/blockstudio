@@ -51,13 +51,15 @@ class Rpc {
 		$rest_url = esc_url_raw( rest_url( 'blockstudio/v1/fn/' ) );
 		$nonce    = wp_create_nonce( 'wp_rest' );
 
+		$bs_token = Csrf::generate();
+
 		return 'window.bs=window.bs||{};'
 			. 'bs._block=function(){var s=document.currentScript;return s&&s.dataset.block||""};'
 			. 'bs.fn=function(n,p,b){'
 			. 'var block=b||bs._block();'
 			. 'if(!block)throw new Error("bs.fn: block name required. Pass as third argument or use an inline script.");'
 			. 'var u="' . $rest_url . '"+block+"/"+n;'
-			. 'return fetch(u,{method:"POST",headers:{"Content-Type":"application/json","X-WP-Nonce":"' . $nonce . '"},body:JSON.stringify({params:p||{}})}).then(function(r){return r.json()});'
+			. 'return fetch(u,{method:"POST",headers:{"Content-Type":"application/json","X-WP-Nonce":"' . $nonce . '","X-BS-Token":"' . $bs_token . '"},body:JSON.stringify({params:p||{}})}).then(function(r){return r.json()});'
 			. '};';
 	}
 
@@ -172,7 +174,18 @@ class Rpc {
 			);
 		}
 
-		if ( ! empty( $fn['public'] ) ) {
+		if ( 'open' === ( $fn['public'] ?? false ) ) {
+			return true;
+		}
+
+		if ( ! empty( $fn['public'] ) && true === $fn['public'] ) {
+			if ( ! Csrf::verify_request( $request ) ) {
+				return new \WP_Error(
+					'blockstudio_fn_csrf',
+					__( 'Invalid or missing CSRF token.', 'blockstudio' ),
+					array( 'status' => 403 )
+				);
+			}
 			return true;
 		}
 

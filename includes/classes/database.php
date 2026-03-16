@@ -57,11 +57,12 @@ class Database {
 	private static function get_client_script(): string {
 		$rest_url = esc_url_raw( rest_url( 'blockstudio/v1/db/' ) );
 		$nonce    = wp_create_nonce( 'wp_rest' );
+		$bs_token = Csrf::generate();
 
 		return 'window.bs=window.bs||{};'
 			. 'bs.db=function(b,s){'
 			. 'var u="' . $rest_url . '"+b.replace("/","-")+"/"+(s||"default");'
-			. 'var h={"Content-Type":"application/json","X-WP-Nonce":"' . $nonce . '"};'
+			. 'var h={"Content-Type":"application/json","X-WP-Nonce":"' . $nonce . '","X-BS-Token":"' . $bs_token . '"};'
 			. 'return{'
 			. 'create:function(d){return fetch(u,{method:"POST",headers:h,body:JSON.stringify(d)}).then(function(r){return r.json()})},'
 			. 'list:function(q){var p=q?"?"+new URLSearchParams(q):"";return fetch(u+p,{method:"GET",headers:h}).then(function(r){return r.json()})},'
@@ -140,8 +141,8 @@ class Database {
 						'callback'            => function ( $request ) use ( $key ) {
 							return self::handle_list( $key, $request );
 						},
-						'permission_callback' => function () use ( $schema ) {
-							return self::check_capability( $schema, 'read' );
+						'permission_callback' => function ( $request ) use ( $schema ) {
+							return self::check_capability( $schema, 'read', $request );
 						},
 					),
 					array(
@@ -149,8 +150,8 @@ class Database {
 						'callback'            => function ( $request ) use ( $key, $schema ) {
 							return self::handle_create( $key, $schema, $request );
 						},
-						'permission_callback' => function () use ( $schema ) {
-							return self::check_capability( $schema, 'create' );
+						'permission_callback' => function ( $request ) use ( $schema ) {
+							return self::check_capability( $schema, 'create', $request );
 						},
 					),
 				)
@@ -165,8 +166,8 @@ class Database {
 						'callback'            => function ( $request ) use ( $key ) {
 							return self::handle_get( $key, $request );
 						},
-						'permission_callback' => function () use ( $schema ) {
-							return self::check_capability( $schema, 'read' );
+						'permission_callback' => function ( $request ) use ( $schema ) {
+							return self::check_capability( $schema, 'read', $request );
 						},
 					),
 					array(
@@ -174,8 +175,8 @@ class Database {
 						'callback'            => function ( $request ) use ( $key, $schema ) {
 							return self::handle_update( $key, $schema, $request );
 						},
-						'permission_callback' => function () use ( $schema ) {
-							return self::check_capability( $schema, 'update' );
+						'permission_callback' => function ( $request ) use ( $schema ) {
+							return self::check_capability( $schema, 'update', $request );
 						},
 					),
 					array(
@@ -183,8 +184,8 @@ class Database {
 						'callback'            => function ( $request ) use ( $key ) {
 							return self::handle_delete( $key, $request );
 						},
-						'permission_callback' => function () use ( $schema ) {
-							return self::check_capability( $schema, 'delete' );
+						'permission_callback' => function ( $request ) use ( $schema ) {
+							return self::check_capability( $schema, 'delete', $request );
 						},
 					),
 				)
@@ -207,16 +208,35 @@ class Database {
 	/**
 	 * Check capability for a CRUD operation.
 	 *
-	 * @param array  $schema    The database schema.
-	 * @param string $operation The operation (create, read, update, delete).
+	 * Access levels:
+	 *   true    - Public with CSRF protection (nonce required).
+	 *   'open'  - Truly public, no nonce, no auth (webhooks, external APIs).
+	 *   string  - WordPress capability check.
+	 *   array   - Any of the listed capabilities.
+	 *   null    - Requires authentication (logged-in user).
+	 *
+	 * @param array            $schema    The database schema.
+	 * @param string           $operation The operation (create, read, update, delete).
+	 * @param \WP_REST_Request $request   The REST request.
 	 *
 	 * @return bool|\WP_Error Whether the user has permission.
 	 */
-	private static function check_capability( array $schema, string $operation ) {
+	private static function check_capability( array $schema, string $operation, $request = null ) {
 		$capabilities = $schema['capability'] ?? array();
 		$cap          = $capabilities[ $operation ] ?? null;
 
+		if ( 'open' === $cap ) {
+			return true;
+		}
+
 		if ( true === $cap ) {
+			if ( $request && ! Csrf::verify_request( $request ) ) {
+				return new \WP_Error(
+					'blockstudio_db_csrf',
+					__( 'Invalid or missing CSRF token.', 'blockstudio' ),
+					array( 'status' => 403 )
+				);
+			}
 			return true;
 		}
 
