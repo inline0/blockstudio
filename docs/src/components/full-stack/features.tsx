@@ -13,6 +13,7 @@ import {
   Workflow,
 } from 'lucide-react';
 import Link from 'next/link';
+import { Section, SectionIcon } from '../homepage/section';
 
 const sections = [
   {
@@ -36,17 +37,10 @@ const sections = [
       },
       {
         icon: FileCheck,
-        title: 'Validation',
+        title: 'Validation and hooks',
         description:
-          'Required, type, enum, format, length, and custom callbacks. Per-field error arrays in responses.',
+          'Required, type, enum, format, length, and custom callbacks. Lifecycle hooks before and after every write.',
         href: '/docs/blocks/block-api/database#validation',
-      },
-      {
-        icon: GitBranch,
-        title: 'Lifecycle hooks',
-        description:
-          'before/after actions on create, update, delete. Define inline in db.php or globally via WordPress actions.',
-        href: '/docs/blocks/block-api/database#hooks',
       },
     ],
   },
@@ -80,7 +74,7 @@ const sections = [
   },
   {
     title: 'Infrastructure',
-    description: 'Cron, CLI, and security.',
+    description: 'Cron, CLI, portability, and security.',
     icon: Layers,
     items: [
       {
@@ -98,25 +92,11 @@ const sections = [
         href: '/docs/blocks/cli',
       },
       {
-        icon: Shield,
-        title: 'CSRF protection',
-        description:
-          'X-BS-Token header on all public endpoints. Generated per page load, verified server-side.',
-        href: '/docs/blocks/block-api/database#csrf-protection',
-      },
-      {
         icon: FolderOpen,
         title: 'Portability',
         description:
-          'SQLite and JSONC storage travel with the code. Copy the folder to deploy the entire app.',
+          'SQLite and JSONC storage travel with the code. Copy the folder to deploy the entire app with its data.',
         href: '/guides/full-stack-blocks',
-      },
-      {
-        icon: Server,
-        title: 'Components',
-        description:
-          'Non-editor blocks for programmatic rendering via bs: tags or bs_render_block().',
-        href: '/docs/blocks/components',
       },
     ],
   },
@@ -141,7 +121,7 @@ export function Features() {
                 </p>
               </div>
             </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8 sm:gap-10">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-8 sm:gap-10">
               {section.items.map((item) => (
                 <Link
                   key={item.title}

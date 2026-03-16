@@ -1,4 +1,64 @@
 import { Button } from 'onedocs';
+import { CodeCard } from '../homepage/code-card';
+
+const dbCode = `return [
+    'storage'    => 'sqlite',
+    'userScoped' => true,
+    'capability' => [
+        'create' => true,
+        'read'   => true,
+        'update' => true,
+        'delete' => true,
+    ],
+    'fields' => [
+        'text' => [
+            'type'     => 'string',
+            'required' => true,
+        ],
+        'done' => [
+            'type'    => 'boolean',
+            'default' => false,
+        ],
+    ],
+];`;
+
+const rpcCode = `return [
+    'toggle' => function (array $params): array {
+        $db   = Db::get('my-theme/todo');
+        $todo = $db->get_record((int) $params['id']);
+        $db->update((int) $params['id'], [
+            'done' => !$todo['done'],
+        ]);
+        return ['success' => true];
+    },
+    'clear_done' => function (array $params): array {
+        $db    = Db::get('my-theme/todo');
+        $todos = $db->list();
+        foreach ($todos as $todo) {
+            if ($todo['done']) {
+                $db->delete((int) $todo['id']);
+            }
+        }
+        return ['cleared' => true];
+    },
+];`;
+
+function ComparisonHeader({
+  title,
+  subtitle,
+}: {
+  title: string;
+  subtitle: string;
+}) {
+  return (
+    <div className="flex items-center justify-between px-1">
+      <div>
+        <h3 className="text-sm font-semibold text-fd-foreground">{title}</h3>
+        <p className="text-xs text-fd-muted-foreground">{subtitle}</p>
+      </div>
+    </div>
+  );
+}
 
 export function Hero() {
   return (
@@ -19,62 +79,27 @@ export function Hero() {
         </Button>
       </div>
 
-      <div className="mt-10 grid grid-cols-1 sm:grid-cols-2 gap-3">
-        <Panel title="db.php" badge="CRUD + Validation">
-          {`return [
-    'storage'    => 'sqlite',
-    'userScoped' => true,
-    'fields'     => [
-        'text' => [
-            'type'     => 'string',
-            'required' => true,
-        ],
-        'done' => [
-            'type'    => 'boolean',
-            'default' => false,
-        ],
-    ],
-];`}
-        </Panel>
-        <Panel title="rpc.php" badge="Server Functions">
-          {`return [
-    'toggle' => function (array $params): array {
-        $db   = Db::get('my-theme/todo');
-        $todo = $db->get_record((int) $params['id']);
-        $db->update((int) $params['id'], [
-            'done' => !$todo['done'],
-        ]);
-        return ['success' => true];
-    },
-];`}
-        </Panel>
+      <div className="mt-10 grid grid-cols-1 lg:grid-cols-2 gap-3">
+        <div className="flex flex-col gap-3">
+          <ComparisonHeader
+            title="db.php"
+            subtitle="Define schema, get CRUD endpoints"
+          />
+          <div className="rounded-2xl bg-fd-secondary/50 overflow-hidden">
+            <CodeCard code={dbCode} lang="php" />
+          </div>
+        </div>
+
+        <div className="flex flex-col gap-3">
+          <ComparisonHeader
+            title="rpc.php"
+            subtitle="Custom server functions"
+          />
+          <div className="rounded-2xl bg-fd-secondary/50 overflow-hidden">
+            <CodeCard code={rpcCode} lang="php" />
+          </div>
+        </div>
       </div>
     </section>
-  );
-}
-
-function Panel({
-  title,
-  badge,
-  children,
-}: {
-  title: string;
-  badge: string;
-  children: string;
-}) {
-  return (
-    <div className="rounded-2xl bg-fd-secondary p-5 sm:p-6 font-mono text-[13px] leading-relaxed">
-      <div className="flex items-center justify-between mb-4">
-        <span className="text-fd-foreground font-sans font-medium text-sm">
-          {title}
-        </span>
-        <span className="rounded bg-fd-primary/10 px-2 py-0.5 text-[11px] font-sans font-medium text-fd-primary">
-          {badge}
-        </span>
-      </div>
-      <pre className="text-fd-muted-foreground whitespace-pre overflow-x-auto">
-        <code>{children}</code>
-      </pre>
-    </div>
   );
 }

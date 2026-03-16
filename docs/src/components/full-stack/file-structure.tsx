@@ -27,11 +27,11 @@ export function FileStructure() {
             <FileRow indent={8} name="index.php" label="Template + Interactivity API" />
             <FileRow indent={8} name="style.css" label="Scoped styles" />
             <FileRow indent={8} name="script-inline.js" label="Client logic (auto block detection)" />
-            <FileRow indent={8} name="db.php" label="Data model → CRUD endpoints" color="emerald" />
-            <FileRow indent={8} name="rpc.php" label="Server functions → bs.fn()" color="emerald" />
-            <FileRow indent={8} name="cron.php" label="Scheduled tasks → WP Cron" color="emerald" />
+            <FileRow indent={8} name="db.php" label="Data model with CRUD endpoints" />
+            <FileRow indent={8} name="rpc.php" label="Server functions via bs.fn()" />
+            <FileRow indent={8} name="cron.php" label="Scheduled tasks via WP Cron" />
             <div className="pl-8">{'└── '}db/</div>
-            <FileRow indent={12} name="default.sqlite" label="Portable database" color="blue" last />
+            <FileRow indent={12} name="default.sqlite" label="Portable database" last />
           </div>
         </div>
       </div>
@@ -43,20 +43,13 @@ function FileRow({
   indent,
   name,
   label,
-  color,
   last,
 }: {
   indent: number;
   name: string;
   label: string;
-  color?: string;
   last?: boolean;
 }) {
-  const colorClasses = {
-    emerald: 'bg-emerald-600/15 dark:bg-emerald-400/15 text-emerald-600 dark:text-emerald-400',
-    blue: 'bg-blue-600/15 dark:bg-blue-400/15 text-blue-600 dark:text-blue-400',
-  };
-
   return (
     <div style={{ paddingLeft: `${indent * 4}px` }}>
       {last ? '└── ' : '├── '}
@@ -64,13 +57,6 @@ function FileRow({
       <span className="ml-3 text-fd-muted-foreground/60 text-[11px] font-sans">
         {label}
       </span>
-      {color && (
-        <span
-          className={`ml-2 rounded px-1.5 py-0.5 text-[11px] font-sans font-medium ${colorClasses[color as keyof typeof colorClasses]}`}
-        >
-          NEW
-        </span>
-      )}
     </div>
   );
 }
