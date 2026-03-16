@@ -1043,11 +1043,9 @@ class Assets {
 				$name             = $module['name'];
 				$version          = $module['version'];
 				$name_transformed = $module['nameTransformed'];
-				$data             = str_replace(
-					"blockstudio/$name@$version",
-					"./modules/$name_transformed/$version.js",
-					$data
-				);
+				$local_path       = "./modules/$name_transformed/$version.js";
+				$data             = str_replace( "npm:$name@$version", $local_path, $data );
+				$data             = str_replace( "blockstudio/$name@$version", $local_path, $data );
 			}
 		}
 
