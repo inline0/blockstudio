@@ -253,6 +253,31 @@ load and injected into the JS clients automatically. This prevents cross-site
 request forgery even for logged-out users. Use `'open'` instead of `true` when
 you need truly unauthenticated access (webhooks, external APIs).
 
+### Form rendering
+
+Fields can define a `component` key referencing a Blockstudio block. Call
+`bs_db_form()` to render all fields using their component blocks:
+
+```php title="db.php"
+'email' => [
+    'type'      => 'string',
+    'format'    => 'email',
+    'component' => [
+        'name' => 'my-theme/field',
+        'attributes' => ['label' => 'Email'],
+        'innerBlocks' => [
+            ['name' => 'my-theme/input', 'attributes' => ['type' => 'email']],
+        ],
+    ],
+],
+```
+
+```php title="index.php"
+<form>
+  <?php bs_db_form('my-theme/app', 'subscribers'); ?>
+</form>
+```
+
 ### Portable mini-apps
 
 Combined with RPC and Cron, blocks can now function as self-contained mini

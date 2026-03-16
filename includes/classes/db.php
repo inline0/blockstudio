@@ -133,4 +133,77 @@ class Db {
 	public function delete( int $id ): bool {
 		return (bool) Database::execute( 'delete', $this->key, array( 'id' => $id ) );
 	}
+
+	/**
+	 * Render all field components as a form.
+	 *
+	 * Loops through fields that have a 'component' key and renders each
+	 * one using bs_block(). Returns the concatenated HTML.
+	 *
+	 * @return string The rendered form HTML.
+	 */
+	public function form(): string {
+		$schemas = Database::get_all();
+		$schema  = $schemas[ $this->key ] ?? null;
+
+		if ( ! $schema ) {
+			return '';
+		}
+
+		$fields = $schema['fields'] ?? array();
+		$output = '';
+
+		foreach ( $fields as $field_name => $def ) {
+			if ( ! isset( $def['component'] ) ) {
+				continue;
+			}
+
+			$component = $def['component'];
+
+			if ( is_string( $component ) ) {
+				$component = array( 'name' => $component );
+			}
+
+			$component['attributes']               = $component['attributes'] ?? array();
+			$component['attributes']['_fieldName'] = $field_name;
+			$component['attributes']['_fieldType'] = $def['type'] ?? 'string';
+			$component['attributes']['_required']  = ! empty( $def['required'] );
+			$component['attributes']['_enum']      = $def['enum'] ?? array();
+			$component['attributes']['_format']    = $def['format'] ?? '';
+			$component['attributes']['_maxLength'] = $def['maxLength'] ?? null;
+			$component['attributes']['_minLength'] = $def['minLength'] ?? null;
+
+			$output .= self::render_block_tree( $component );
+		}
+
+		return $output;
+	}
+
+	/**
+	 * Render a block tree recursively.
+	 *
+	 * Accepts the same format as WordPress serialized blocks:
+	 * name, attributes, innerBlocks. Renders inner blocks first
+	 * and passes the result as $content to the parent.
+	 *
+	 * @param array $block The block definition.
+	 *
+	 * @return string The rendered HTML.
+	 */
+	public static function render_block_tree( array $block ): string {
+		$inner_blocks = $block['innerBlocks'] ?? array();
+		$content      = '';
+
+		foreach ( $inner_blocks as $inner ) {
+			$content .= self::render_block_tree( $inner );
+		}
+
+		return bs_block(
+			array(
+				'name'    => $block['name'] ?? '',
+				'data'    => $block['attributes'] ?? array(),
+				'content' => $content,
+			)
+		);
+	}
 }

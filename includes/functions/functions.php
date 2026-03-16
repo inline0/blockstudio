@@ -5,6 +5,7 @@
  * @package Blockstudio
  */
 
+use Blockstudio\Db;
 use Blockstudio\Render;
 use Blockstudio\Build;
 
@@ -56,6 +57,30 @@ function bs_block( $value ) {
 function bs_render_block( $value ) {
 	// phpcs:enable WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedFunctionFound
 	return Render::block( $value );
+}
+
+/**
+ * Render a database schema's field components as a form.
+ *
+ * @since 7.1.0
+ *
+ * @param string $block_name  The block name.
+ * @param string $schema_name The schema name (default: "default").
+ *
+ * @return void
+ *
+ * @phpcs:disable WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedFunctionFound -- Public API function.
+ */
+function bs_db_form( string $block_name, string $schema_name = 'default' ) {
+	// phpcs:enable WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedFunctionFound
+	$db = Db::get( $block_name, $schema_name );
+
+	if ( ! $db ) {
+		return;
+	}
+
+	// phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Block render handles escaping.
+	echo $db->form();
 }
 
 /**

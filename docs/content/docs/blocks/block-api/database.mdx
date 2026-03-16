@@ -359,6 +359,70 @@ name is `default`.
 
 Example: `GET /db/my-theme-app/subscribers?plan=pro&limit=10`
 
+## Form rendering
+
+Fields can define a `component` key that references a Blockstudio block. Call
+`bs_db_form()` in your template to render all fields as a form using their
+component blocks.
+
+```php title="db.php"
+'fields' => [
+    'email' => [
+        'type'     => 'string',
+        'format'   => 'email',
+        'required' => true,
+        'component' => [
+            'name' => 'my-theme/field',
+            'attributes' => ['label' => 'Email', 'type' => 'email'],
+            'innerBlocks' => [
+                [
+                    'name' => 'my-theme/input',
+                    'attributes' => ['placeholder' => 'Enter your email'],
+                ],
+            ],
+        ],
+    ],
+    'plan' => [
+        'type' => 'string',
+        'enum' => ['free', 'pro'],
+        'component' => [
+            'name' => 'my-theme/field',
+            'attributes' => ['label' => 'Plan'],
+            'innerBlocks' => [
+                [
+                    'name' => 'my-theme/select',
+                    'attributes' => ['options' => ['free', 'pro']],
+                ],
+            ],
+        ],
+    ],
+],
+```
+
+```php title="index.php"
+<form>
+  <?php bs_db_form('my-theme/app', 'subscribers'); ?>
+  <button type="submit">Subscribe</button>
+</form>
+```
+
+Each component receives the field metadata (`_fieldName`, `_fieldType`,
+`_required`, `_enum`, `_format`) as additional attributes, so components can
+adapt their rendering based on the schema.
+
+The component structure follows the same `name`, `attributes`, `innerBlocks`
+format as WordPress blocks. Inner blocks render first and are passed as
+`$content` to the parent.
+
+For PHP usage without echoing:
+
+```php
+use Blockstudio\Db;
+
+$db   = Db::get('my-theme/app', 'subscribers');
+$html = $db->form();
+```
+
 ## Hooks
 
 Actions fire before and after every write operation. All hooks receive a single

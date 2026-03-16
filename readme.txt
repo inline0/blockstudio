@@ -57,6 +57,7 @@ Download the latest release zip from [GitHub Releases](https://github.com/inline
 * New: RPC via `rpc.php` with `bs.fn()` JS client, capability and method controls
 * New: database layer via `db.php` with table, SQLite, post meta, and JSONC storage
 * New: `Db` PHP API and `bs.db()` JS client for CRUD operations
+* New: `bs_db_form()` renders field components from db.php schema definitions
 * New: per-field validation errors and custom `validate` callbacks in `db.php`
 * New: `userScoped` option for automatic per-user data isolation in `db.php`
 * New: CSRF protection via `X-BS-Token` for public endpoints, `'open'` to bypass
