@@ -265,17 +265,25 @@ return [
 
 ## CLI
 
-All Block API features are accessible from the command line via WP-CLI:
+The entire Blockstudio feature set is accessible from the command line via
+WP-CLI under the `wp bs` prefix:
 
 ```bash
 wp bs blocks list                    # list all blocks
+wp bs blocks list --components       # components only
+wp bs db schemas                     # list all database schemas
 wp bs db list my-theme/app subs      # query database records
 wp bs db create my-theme/app subs --email=a@b.com
-wp bs rpc call my-theme/app subscribe --email=a@b.com
 wp bs rpc list                       # list all RPC functions
+wp bs rpc call my-theme/app subscribe --email=a@b.com
 wp bs cron list                      # list scheduled jobs
 wp bs cron run my-theme/app cleanup  # run a job manually
-wp bs settings get tailwind/enabled
+wp bs tailwind compile --file=t.html # compile Tailwind CSS
+wp bs tailwind cache clear           # clear Tailwind cache
+wp bs scss compile --file=style.scss # compile SCSS to CSS
+wp bs fields list                    # list custom field definitions
+wp bs assets list --type=global      # list assets by type
+wp bs settings get tailwind/enabled  # read settings
 ```
 
 Every command supports `--format=json` for scripting and piping.
