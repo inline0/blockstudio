@@ -99,8 +99,8 @@ jobs:
           name: blockstudio-zip
           path: blockstudio.zip
 
-  wordpress-activation:
-    name: WordPress activation
+  plugin-zip:
+    name: Plugin install (zip)
     if: contains(github.event.head_commit.message, '[e2e]')
     needs: zip-integrity
     runs-on: ubuntu-latest
@@ -127,7 +127,7 @@ jobs:
           sudo systemctl start mysql
           mysql -u root -proot -e "CREATE DATABASE IF NOT EXISTS wordpress;"
 
-      - name: Download and install WordPress
+      - name: Set up WordPress
         run: |
           mkdir wordpress && cd wordpress
           wp core download
@@ -145,34 +145,31 @@ jobs:
           cd wordpress
           wp theme activate blockstudio-test
 
-      - name: Verify plugin is active
-        run: |
-          cd wordpress
-          wp plugin list --status=active --field=name | grep -q blockstudio
-          echo "Plugin is active"
-
-      - name: Verify plugin loads without errors
-        run: |
-          cd wordpress
-          wp eval "echo 'BLOCKSTUDIO_VERSION: ' . BLOCKSTUDIO_VERSION . PHP_EOL;"
-          wp eval "echo 'Plugin class exists: ' . (class_exists('Blockstudio\\\Plugin') ? 'yes' : 'no') . PHP_EOL;"
-
-      - name: Verify block detection
+      - name: Verify plugin loads and blocks register
         run: |
           cd wordpress
           wp eval "
-            \$registry = WP_Block_Type_Registry::get_instance();
-            \$block = \$registry->get_registered('blockstudio/type-number');
-            if (!\$block) {
-              echo \"FAIL: blockstudio/type-number not registered\n\";
-              exit(1);
-            }
-            echo \"Block registered: \" . \$block->name . \"\n\";
-            echo \"Title: \" . \$block->title . \"\n\";
+            echo 'BLOCKSTUDIO_VERSION: ' . BLOCKSTUDIO_VERSION . PHP_EOL;
+            echo 'Plugin class: ' . (class_exists('Blockstudio\\\Plugin') ? 'yes' : 'no') . PHP_EOL;
+            \$block = WP_Block_Type_Registry::get_instance()->get_registered('blockstudio/type-number');
+            if (!\$block) { echo \"FAIL: block not registered\n\"; exit(1); }
+            echo 'Block: ' . \$block->name . PHP_EOL;
           "
 
-  packagist-install:
-    name: Packagist install
+      - name: Verify asset URLs resolve to plugins directory
+        run: |
+          cd wordpress
+          wp eval "
+            \$url = BLOCKSTUDIO_URL . 'includes/admin/assets/blocks/index.tsx.js';
+            if (strpos(\$url, '/wp-content/plugins/blockstudio/') === false) {
+              echo \"FAIL: URL does not point to plugins dir: \$url\n\";
+              exit(1);
+            }
+            echo \"Asset URL: \$url\n\";
+          "
+
+  plugin-composer:
+    name: Plugin via Composer
     runs-on: ubuntu-latest
     steps:
       - name: Checkout (for test theme)
@@ -187,82 +184,9 @@ jobs:
           extensions: dom, json, zip, simplexml, libxml, iconv, mysqli
           tools: wp-cli
 
-      - name: Install via Composer from Packagist
+      - name: Create Composer project
         run: |
           mkdir -p test-project && cd test-project
-          composer init --no-interaction --name=test/blockstudio-packagist
-          composer config allow-plugins.composer/installers true
-          composer require blockstudio/blockstudio --no-interaction
-
-      - name: Verify package installed
-        run: |
-          cd test-project
-          test -f vendor/blockstudio/blockstudio/blockstudio.php
-          echo "Plugin files installed from Packagist"
-
-      - name: Verify autoloader resolves classes
-        run: |
-          cd test-project
-          php -r "
-            require 'vendor/autoload.php';
-            require 'vendor/blockstudio/blockstudio/lib/tailwindphp-autoload.php';
-            if (!class_exists('YahnisElsts\\\PluginUpdateChecker\\\v5\\\PucFactory')) {
-              echo \"PucFactory not found\n\";
-              exit(1);
-            }
-            echo \"Packagist install: classes resolve\n\";
-          "
-
-      - name: Start MySQL
-        run: |
-          sudo systemctl start mysql
-          mysql -u root -proot -e "CREATE DATABASE IF NOT EXISTS wordpress;"
-
-      - name: Set up WordPress with Packagist-installed plugin
-        run: |
-          mkdir wordpress && cd wordpress
-          wp core download
-          wp config create --dbname=wordpress --dbuser=root --dbpass=root
-          wp core install --url=http://localhost --title=Test --admin_user=admin --admin_email=admin@test.com --admin_password=password --skip-email
-          ln -s $GITHUB_WORKSPACE/test-project/vendor/blockstudio/blockstudio wp-content/plugins/blockstudio
-          wp plugin activate blockstudio
-
-      - name: Install test theme and verify block detection
-        run: |
-          cp -r repo/tests/theme wordpress/wp-content/themes/blockstudio-test
-          cd wordpress
-          wp theme activate blockstudio-test
-          wp eval "
-            \$registry = WP_Block_Type_Registry::get_instance();
-            \$block = \$registry->get_registered('blockstudio/type-number');
-            if (!\$block) {
-              echo \"FAIL: blockstudio/type-number not registered\n\";
-              exit(1);
-            }
-            echo \"Block registered: \" . \$block->name . \"\n\";
-            echo \"Title: \" . \$block->title . \"\n\";
-          "
-
-  composer-install:
-    name: Composer install
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout (for test theme)
-        uses: actions/checkout@v4
-        with:
-          path: repo
-
-      - name: Setup PHP
-        uses: shivammathur/setup-php@v2
-        with:
-          php-version: "8.4"
-          extensions: dom, json, zip, simplexml, libxml, iconv, mysqli
-          tools: wp-cli
-
-      - name: Create test project
-        run: |
-          mkdir -p test-project
-          cd test-project
           cat > composer.json << 'COMPOSER'
           {
             "repositories": [
@@ -279,6 +203,11 @@ jobs:
                 "composer/installers": true,
                 "dealerdirect/phpcodesniffer-composer-installer": true
               }
+            },
+            "extra": {
+              "installer-paths": {
+                "wordpress/wp-content/plugins/{$name}/": ["type:wordpress-plugin"]
+              }
             }
           }
           COMPOSER
@@ -290,51 +219,154 @@ jobs:
         env:
           COMPOSER_AUTH: '{"github-oauth": {"github.com": "${{ secrets.GITHUB_TOKEN }}"}}'
 
-      - name: Verify package installed
+      - name: Verify package installed into plugins directory
         run: |
-          cd test-project
-          test -f vendor/blockstudio/blockstudio/blockstudio.php
-          echo "Plugin files installed"
-
-      - name: Verify autoloader resolves classes
-        run: |
-          cd test-project
-          php -r "
-            require 'vendor/autoload.php';
-            require 'vendor/blockstudio/blockstudio/lib/tailwindphp-autoload.php';
-            if (!class_exists('YahnisElsts\\\PluginUpdateChecker\\\v5\\\PucFactory')) {
-              echo \"PucFactory not found\n\";
-              exit(1);
-            }
-            echo \"Composer install: classes resolve\n\";
-          "
+          test -f test-project/wordpress/wp-content/plugins/blockstudio/blockstudio.php
+          echo "Plugin installed to wp-content/plugins via Composer"
 
       - name: Start MySQL
         run: |
           sudo systemctl start mysql
           mysql -u root -proot -e "CREATE DATABASE IF NOT EXISTS wordpress;"
 
-      - name: Set up WordPress with Composer-installed plugin
+      - name: Set up WordPress and activate plugin
+        run: |
+          cd test-project/wordpress
+          wp core download
+          wp config create --dbname=wordpress --dbuser=root --dbpass=root
+          wp core install --url=http://localhost --title=Test --admin_user=admin --admin_email=admin@test.com --admin_password=password --skip-email
+          wp plugin activate blockstudio
+
+      - name: Install test theme and verify
+        run: |
+          cp -r repo/tests/theme test-project/wordpress/wp-content/themes/blockstudio-test
+          cd test-project/wordpress
+          wp theme activate blockstudio-test
+          wp eval "
+            \$block = WP_Block_Type_Registry::get_instance()->get_registered('blockstudio/type-number');
+            if (!\$block) { echo \"FAIL: block not registered\n\"; exit(1); }
+            echo 'Block: ' . \$block->name . PHP_EOL;
+          "
+
+      - name: Verify asset URLs resolve correctly
+        run: |
+          cd test-project/wordpress
+          wp eval "
+            \$url = BLOCKSTUDIO_URL . 'includes/admin/assets/blocks/index.tsx.js';
+            if (strpos(\$url, '/wp-content/plugins/blockstudio/') === false) {
+              echo \"FAIL: URL does not point to plugins dir: \$url\n\";
+              exit(1);
+            }
+            echo \"Asset URL: \$url\n\";
+          "
+
+  theme-bundled:
+    name: Theme-bundled via Composer
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout (for test blocks)
+        uses: actions/checkout@v4
+        with:
+          path: repo
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: "8.4"
+          extensions: dom, json, zip, simplexml, libxml, iconv, mysqli
+          tools: wp-cli
+
+      - name: Create theme with Blockstudio as dependency
+        run: |
+          mkdir -p test-theme
+          cd test-theme
+
+          cat > composer.json << 'COMPOSER'
+          {
+            "repositories": [
+              {
+                "type": "vcs",
+                "url": "https://github.com/${{ github.repository }}"
+              }
+            ],
+            "require": {
+              "blockstudio/blockstudio": "dev-${{ github.ref_name }}"
+            },
+            "config": {
+              "allow-plugins": {
+                "composer/installers": false
+              }
+            }
+          }
+          COMPOSER
+
+          cat > style.css << 'CSS'
+          /*
+          Theme Name: Composer Theme Test
+          */
+          CSS
+
+          cat > index.php << 'PHP'
+          <?php // Silence is golden.
+          PHP
+
+          cat > functions.php << 'PHP'
+          <?php
+          require_once __DIR__ . '/vendor/autoload.php';
+          PHP
+
+      - name: Install Blockstudio via Composer
+        run: |
+          cd test-theme
+          composer install --no-interaction --prefer-dist
+        env:
+          COMPOSER_AUTH: '{"github-oauth": {"github.com": "${{ secrets.GITHUB_TOKEN }}"}}'
+
+      - name: Verify package installed in theme vendor
+        run: |
+          test -f test-theme/vendor/blockstudio/blockstudio/blockstudio.php
+          echo "Blockstudio installed in theme vendor/"
+
+      - name: Start MySQL
+        run: |
+          sudo systemctl start mysql
+          mysql -u root -proot -e "CREATE DATABASE IF NOT EXISTS wordpress;"
+
+      - name: Set up WordPress with theme
         run: |
           mkdir wordpress && cd wordpress
           wp core download
           wp config create --dbname=wordpress --dbuser=root --dbpass=root
           wp core install --url=http://localhost --title=Test --admin_user=admin --admin_email=admin@test.com --admin_password=password --skip-email
-          ln -s $GITHUB_WORKSPACE/test-project/vendor/blockstudio/blockstudio wp-content/plugins/blockstudio
-          wp plugin activate blockstudio
+          cp -r $GITHUB_WORKSPACE/test-theme wp-content/themes/composer-theme-test
+          wp theme activate composer-theme-test
 
-      - name: Install test theme and verify block detection
+      - name: Copy test blocks into theme
         run: |
-          cp -r repo/tests/theme wordpress/wp-content/themes/blockstudio-test
+          cp -r repo/tests/theme/blockstudio wordpress/wp-content/themes/composer-theme-test/blockstudio
+
+      - name: Verify Blockstudio loads and blocks register
+        run: |
           cd wordpress
-          wp theme activate blockstudio-test
           wp eval "
-            \$registry = WP_Block_Type_Registry::get_instance();
-            \$block = \$registry->get_registered('blockstudio/type-number');
-            if (!\$block) {
-              echo \"FAIL: blockstudio/type-number not registered\n\";
+            if (!defined('BLOCKSTUDIO_VERSION')) { echo \"FAIL: BLOCKSTUDIO_VERSION not defined\n\"; exit(1); }
+            echo 'BLOCKSTUDIO_VERSION: ' . BLOCKSTUDIO_VERSION . PHP_EOL;
+            echo 'Plugin class: ' . (class_exists('Blockstudio\\\Plugin') ? 'yes' : 'no') . PHP_EOL;
+            \$block = WP_Block_Type_Registry::get_instance()->get_registered('blockstudio/type-number');
+            if (!\$block) { echo \"FAIL: block not registered\n\"; exit(1); }
+            echo 'Block: ' . \$block->name . PHP_EOL;
+          "
+
+      - name: Verify asset URLs point to theme directory (not plugins)
+        run: |
+          cd wordpress
+          wp eval "
+            \$url = BLOCKSTUDIO_URL . 'includes/admin/assets/blocks/index.tsx.js';
+            echo \"Asset URL: \$url\n\";
+            if (strpos(\$url, '/wp-content/themes/composer-theme-test/vendor/blockstudio/blockstudio/') === false) {
+              echo \"FAIL: URL does not point to theme vendor dir\n\";
+              echo \"Expected to contain: /wp-content/themes/composer-theme-test/vendor/blockstudio/blockstudio/\n\";
               exit(1);
             }
-            echo \"Block registered: \" . \$block->name . \"\n\";
-            echo \"Title: \" . \$block->title . \"\n\";
+            echo \"Asset URL correctly points to theme vendor directory\n\";
           "

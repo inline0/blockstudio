@@ -355,7 +355,7 @@ class Assets {
 	 */
 	public static function get_interactivity_api_import_map(): string {
 		$string = '<script type="importmap"> { "imports": { "@wordpress/interactivity": "@path/@wordpress/interactivity/build-module/index.js", "preact": "@path/preact/dist/preact.module.js", "preact/hooks": "@path/preact/hooks/dist/hooks.module.js", "@preact/signals": "@path/@preact/signals/dist/signals.module.js", "@preact/signals-core": "@path/@preact/signals-core/dist/signals-core.module.js" } } </script>';
-		$path   = plugin_dir_url( __FILE__ ) . '../assets/interactivity';
+		$path   = BLOCKSTUDIO_URL . 'includes/assets/interactivity';
 
 		return str_replace( '@path', $path, $string );
 	}

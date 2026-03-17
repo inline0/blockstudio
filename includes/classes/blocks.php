@@ -74,7 +74,7 @@ class Blocks {
 		$block_scripts = include BLOCKSTUDIO_DIR . '/includes/admin/assets/blocks/index.tsx.asset.php';
 		wp_enqueue_script(
 			'blockstudio-blocks',
-			plugin_dir_url( __FILE__ ) . '../admin/assets/blocks/index.tsx.js',
+			BLOCKSTUDIO_URL . 'includes/admin/assets/blocks/index.tsx.js',
 			$block_scripts['dependencies'],
 			$block_scripts['version'],
 			true

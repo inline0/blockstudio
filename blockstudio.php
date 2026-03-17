@@ -25,6 +25,8 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit();
 }
 
+define( 'BLOCKSTUDIO_URL', set_url_scheme( content_url( str_replace( WP_CONTENT_DIR, '', BLOCKSTUDIO_DIR ) . '/' ) ) );
+
 spl_autoload_register(
 	function ( $class_name ) {
 		$prefix   = 'Blockstudio\\';

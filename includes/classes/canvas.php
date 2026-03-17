@@ -126,7 +126,7 @@ class Canvas {
 
 		wp_enqueue_script(
 			'blockstudio-canvas',
-			plugins_url( 'includes/admin/assets/canvas/index.js', BLOCKSTUDIO_FILE ),
+			BLOCKSTUDIO_URL . 'includes/admin/assets/canvas/index.js',
 			array_merge( $asset['dependencies'] ?? array(), array( 'blockstudio-blocks' ) ),
 			$asset['version'] ?? BLOCKSTUDIO_VERSION,
 			true

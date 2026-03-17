@@ -31,8 +31,8 @@ class Github_Updater {
 		$update_checker->addResultFilter(
 			function ( $info ) {
 				$info->icons = array(
-					'svg'     => plugins_url( 'includes/assets/icon.svg', BLOCKSTUDIO_FILE ),
-					'default' => plugins_url( 'includes/assets/icon.png', BLOCKSTUDIO_FILE ),
+					'svg'     => BLOCKSTUDIO_URL . 'includes/assets/icon.svg',
+					'default' => BLOCKSTUDIO_URL . 'includes/assets/icon.png',
 				);
 				return $info;
 			}

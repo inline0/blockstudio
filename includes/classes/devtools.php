@@ -55,7 +55,7 @@ class Devtools {
 
 		wp_enqueue_script(
 			'blockstudio-devtools',
-			plugins_url( 'includes/admin/assets/devtools/index.js', BLOCKSTUDIO_FILE ),
+			BLOCKSTUDIO_URL . 'includes/admin/assets/devtools/index.js',
 			array(),
 			$asset['version'] ?? BLOCKSTUDIO_VERSION,
 			true

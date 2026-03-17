@@ -321,7 +321,7 @@ class Pages {
 
 				wp_enqueue_script(
 					'blockstudio-pages',
-					plugin_dir_url( __FILE__ ) . '../admin/assets/pages/index.js',
+					BLOCKSTUDIO_URL . 'includes/admin/assets/pages/index.js',
 					$asset['dependencies'],
 					$asset['version'],
 					true
