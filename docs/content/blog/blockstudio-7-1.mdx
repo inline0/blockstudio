@@ -417,6 +417,31 @@ a post type, another that loads posts of that type.
 Change `post_type` to "page" and the second select loads pages. Change it to
 "post" and it loads posts. Works with any populate type and any attribute.
 
+## Composer and distribution
+
+All runtime dependencies (TailwindPHP, ScssPhp, Minify) are now fully
+namespaced under `BlockstudioVendor` via php-scoper. The only Composer
+dependency that gets installed into your `vendor/` directory is
+`plugin-update-checker`. The `require` section in `composer.json` went from
+seven packages and six PHP extensions down to just `php >= 8.2` and one
+package.
+
+Asset URLs are now resolved via a `BLOCKSTUDIO_URL` constant instead of
+`plugins_url()`. This means Blockstudio works correctly when loaded from
+anywhere under `wp-content/`, including a theme's `vendor/` directory.
+Bundling Blockstudio in a theme is two lines:
+
+```php title="functions.php"
+require_once __DIR__ . '/vendor/autoload.php';
+require_once __DIR__ . '/vendor/blockstudio/blockstudio/blockstudio.php';
+```
+
+All three install methods (plugin zip, plugin via Composer, theme-bundled via
+Composer) are tested in CI with full WordPress activation, block registration,
+and frontend rendering verification.
+
+See the [Composer documentation](/docs/dev/composer) for setup instructions.
+
 ## More
 
 - **SCSS code fields**: Code fields support `language: "scss"`. Values are

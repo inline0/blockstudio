@@ -5,27 +5,71 @@ description: Install Blockstudio using Composer.
 
 # Composer
 
-Blockstudio is available as a Composer package. This is the recommended way to install it in managed WordPress projects.
+Blockstudio is available on [Packagist](https://packagist.org/packages/blockstudio/blockstudio). There are two ways to install it via Composer depending on your project setup.
 
-## Installation
+## As a Plugin
 
-```bash
-composer require blockstudio/blockstudio
-```
-
-The package is published on [Packagist](https://packagist.org/packages/blockstudio/blockstudio).
-
-## Embedding in Plugins and Themes
-
-Blockstudio is fully namespaced and uses a singleton pattern, so it can be safely embedded within other plugins or themes without class name collisions. If you are building a plugin or theme that bundles Blockstudio, require it in your project's `composer.json`:
+Use `composer/installers` to install Blockstudio directly into your `wp-content/plugins/` directory. This is the standard approach for Composer-managed WordPress projects like Bedrock.
 
 ```json title="composer.json"
 {
-  "name": "my-company/my-plugin",
+  "require": {
+    "composer/installers": "^2.0",
+    "blockstudio/blockstudio": "^7.0"
+  },
+  "extra": {
+    "installer-paths": {
+      "wp-content/plugins/{$name}/": ["type:wordpress-plugin"]
+    }
+  }
+}
+```
+
+Activate Blockstudio through the WordPress admin or WP-CLI:
+
+```bash
+wp plugin activate blockstudio
+```
+
+Your project's Composer autoloader must be loaded before WordPress initializes. In Bedrock this is handled automatically. In other setups, use a must-use plugin:
+
+```php title="wp-content/mu-plugins/autoloader.php"
+<?php
+require_once dirname( __DIR__, 2 ) . '/vendor/autoload.php';
+```
+
+## Bundled in a Theme
+
+Install Blockstudio as a dependency inside your theme. This keeps everything self-contained without requiring a separate plugin.
+
+```json title="my-theme/composer.json"
+{
   "require": {
     "blockstudio/blockstudio": "^7.0"
   }
 }
 ```
 
-The singleton pattern ensures only one instance runs, even if multiple plugins bundle Blockstudio. Namespacing prevents conflicts with other libraries in the WordPress environment.
+Load it in your theme's `functions.php`:
+
+```php title="functions.php"
+<?php
+require_once __DIR__ . '/vendor/autoload.php';
+require_once __DIR__ . '/vendor/blockstudio/blockstudio/blockstudio.php';
+```
+
+That's it. Asset URLs resolve automatically to the correct theme directory. Blocks defined in your theme's `blockstudio/` folder work exactly as they would with a plugin install.
+
+## Dependencies
+
+Blockstudio's runtime dependencies (TailwindPHP, ScssPhp, Minify) are bundled and namespaced inside the plugin. The only Composer dependency installed into your `vendor/` directory is `yahnis-elsts/plugin-update-checker`, which handles version conflict resolution internally.
+
+```
+composer.json requires:
+  php >= 8.2
+  yahnis-elsts/plugin-update-checker ^5.6
+```
+
+## Updates
+
+Composer installations receive updates through Composer. The built-in GitHub updater is automatically disabled when Blockstudio is loaded from a `vendor/` directory.
