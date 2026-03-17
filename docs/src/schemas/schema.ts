@@ -1148,7 +1148,7 @@ export const schema = async (extensions = false) => {
             component: {
               type: 'boolean',
               description:
-                'Whether this block is a component. Components go through the full Blockstudio pipeline but do not appear in the editor inserter. They can only be rendered via the string renderer or bs_render_block().',
+                'Whether this block is a component. Components go through the full Blockstudio pipeline but do not appear in the editor inserter. They can only be rendered via block tags or bs_render_block().',
             },
             override: {
               type: 'boolean',

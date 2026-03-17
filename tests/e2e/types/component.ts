@@ -53,7 +53,7 @@ test.describe('Component', () => {
     await expect(result).toHaveCount(0);
   });
 
-  test('renders via string renderer', async () => {
+  test('renders via block tags', async () => {
     await page.goto('http://localhost:8888/component-test/', {
       waitUntil: 'domcontentloaded',
     });

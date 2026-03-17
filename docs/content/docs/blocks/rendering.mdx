@@ -101,45 +101,51 @@ echo bs_block([
 ]);
 ```
 
-## HTML Tags
+## Block Tags
 
-Use `<bs:>` tags to embed blocks anywhere in your HTML output. Blockstudio hooks
-into the output buffer and replaces each tag with the full block output.
+Use `<bs:>` tags to embed blocks as HTML tags. The tag name maps to the block
+name with the first hyphen as the namespace separator: `acme/hero` becomes
+`<bs:acme-hero>`.
 
-### Activation
+### In block templates
 
-The tag syntax is opt-in. Enable it in your `blockstudio.json`:
+Block tags work automatically inside Twig and PHP templates. No setting needed.
+
+```twig title="index.twig"
+<div class="my-section">
+  <bs:mytheme-card title="Embedded" count=42 />
+</div>
+```
+
+The embedded block renders with full attribute support, assets, and Tailwind.
+
+### In post content
+
+Page-level rendering (post content, widget areas) is opt-in:
 
 ```json title="blockstudio.json"
 {
-  "stringRenderer": {
+  "blockTags": {
     "enabled": true
   }
 }
 ```
 
-Or via the PHP filter:
+Or via filter:
 
 ```php
-add_filter('blockstudio/settings/string_renderer/enabled', '__return_true');
+add_filter('blockstudio/settings/block_tags/enabled', '__return_true');
 ```
 
 ### Syntax
 
-The tag name uses the block's full name with the first hyphen replacing the
-namespace separator. For example, `acme/hero` becomes `bs:acme-hero`:
-
-```html
-<bs:acme-hero title="Welcome" background="dark" />
-```
-
-Self-closing tags for simple blocks:
+Self-closing tags:
 
 ```html
 <bs:mytheme-cta title="Get started" variant="primary" />
 ```
 
-Paired tags when you need inner content:
+Paired tags with inner content:
 
 ```html
 <bs:mytheme-section layout="wide">
@@ -147,7 +153,7 @@ Paired tags when you need inner content:
 </bs:mytheme-section>
 ```
 
-Nested tags work too. Inner blocks render first, then the outer block:
+Nested tags (inner blocks render first):
 
 ```html
 <bs:mytheme-section layout="wide">
@@ -156,41 +162,38 @@ Nested tags work too. Inner blocks render first, then the outer block:
 </bs:mytheme-section>
 ```
 
-### Attribute mapping
+### Allow and deny lists
 
-Element attributes map directly to block attributes:
+Control which blocks can render via tags:
 
-```html
-<bs:mytheme-cta title="Get started" count="42" active="true" />
+```json title="blockstudio.json"
+{
+  "blockTags": {
+    "enabled": true,
+    "allow": ["mytheme/*", "bsui/*"],
+    "deny": ["mytheme/internal-*"]
+  }
+}
 ```
 
-String values are passed as-is. Numeric and boolean strings are kept as strings
-and converted by the block's attribute definitions.
+`allow` restricts to only matching patterns. `deny` excludes matching patterns
+and takes precedence. Both support `*` wildcards via `fnmatch()`. These apply
+to both template-level and page-level rendering.
 
-### Where it works
-
-The tag syntax processes the full output buffer, so it works everywhere the
-tag appears in the final HTML:
-
-- Post content
-- Widget areas
-- Theme templates
-- Headers and footers
-- Shortcode output
+Filters: `blockstudio/block_tags/allow` and `blockstudio/block_tags/deny`.
 
 ### Programmatic usage
 
-Apply the tag renderer to any string from PHP:
+Apply tag rendering to any string from PHP:
 
 ```php
-$html = apply_filters('blockstudio/string_renderer/render', $content);
+$html = apply_filters('blockstudio/block_tags/render', $content);
 ```
 
 ### Components
 
-The tag syntax pairs well with [Components](/docs/blocks/components).
-Components are blocks that only render programmatically and never appear in the
-editor inserter.
+Block tags pair well with [Components](/docs/blocks/components). Components
+are blocks that only render programmatically and never appear in the editor.
 
 ```html
 <bs:mytheme-card title="My Card" description="Card content." />

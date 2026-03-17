@@ -1,0 +1,18 @@
+{
+  "$schema": "https://blockstudio.dev/schema/block",
+  "name": "blockstudio/type-block-tags-template",
+  "title": "Block Tags Template Test",
+  "category": "blockstudio-test-native",
+  "icon": "shortcode",
+  "description": "Test block that uses bs: tags in its template.",
+  "blockstudio": {
+    "attributes": [
+      {
+        "id": "label",
+        "type": "text",
+        "label": "Label",
+        "default": "Host"
+      }
+    ]
+  }
+}

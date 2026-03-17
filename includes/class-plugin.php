@@ -138,7 +138,7 @@ class Plugin {
 		require_once $classes_dir . 'extensions.php';
 		require_once $classes_dir . 'examples.php';
 		require_once $classes_dir . 'register.php';
-		require_once $classes_dir . 'string-renderer.php';
+		require_once $classes_dir . 'block-tags.php';
 		require_once $classes_dir . 'csrf.php';
 		require_once $classes_dir . 'rpc.php';
 		require_once $classes_dir . 'database.php';
@@ -229,8 +229,8 @@ class Plugin {
 		add_action(
 			'init',
 			function () {
-				if ( class_exists( 'Blockstudio\String_Renderer' ) ) {
-					String_Renderer::init();
+				if ( class_exists( 'Blockstudio\Block_Tags' ) ) {
+					Block_Tags::init();
 				}
 			},
 			PHP_INT_MAX

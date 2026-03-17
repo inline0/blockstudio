@@ -798,13 +798,13 @@ add_action(
 					// Post 1099 - "Reusable" for text.ts populate tests (matches extension default)
 					$create_post_with_id( 1099, 'Reusable', 'reusable' );
 
-					// String renderer test page with raw bs: tags in content
-					$sr_content = '<bs:blockstudio-type-string-renderer title="Self Closing" count=42 />'
-						. '<bs:blockstudio-type-string-renderer title="Paired Tag" count=7></bs:blockstudio-type-string-renderer>'
-						. '<bs:blockstudio-type-string-renderer />'
-						. '<bs:blockstudio-type-string-renderer title="First" count=1 />'
-						. '<bs:blockstudio-type-string-renderer title="Second" count=2 />'
-						. '<bs:blockstudio-type-string-renderer title="Outer" count=100><bs:blockstudio-type-string-renderer title="Inner" count=200 /></bs:blockstudio-type-string-renderer>'
+					// Block tags test page with raw bs: tags in content
+					$bt_content = '<bs:blockstudio-type-block-tags title="Self Closing" count=42 />'
+						. '<bs:blockstudio-type-block-tags title="Paired Tag" count=7></bs:blockstudio-type-block-tags>'
+						. '<bs:blockstudio-type-block-tags />'
+						. '<bs:blockstudio-type-block-tags title="First" count=1 />'
+						. '<bs:blockstudio-type-block-tags title="Second" count=2 />'
+						. '<bs:blockstudio-type-block-tags title="Outer" count=100><bs:blockstudio-type-block-tags title="Inner" count=200 /></bs:blockstudio-type-block-tags>'
 						. '<p>Unknown tag: <bs:nonexistent-block title="Nope" /></p>';
 					if ( ! get_post( 3100 ) ) {
 						$wpdb->insert( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery
@@ -814,10 +814,10 @@ add_action(
 								'post_author'   => 1,
 								'post_date'     => current_time( 'mysql' ),
 								'post_date_gmt' => current_time( 'mysql', 1 ),
-								'post_content'  => $sr_content,
-								'post_title'    => 'String Renderer Test',
+								'post_content'  => $bt_content,
+								'post_title'    => 'Block Tags Test',
 								'post_status'   => 'publish',
-								'post_name'     => 'string-renderer-test',
+								'post_name'     => 'block-tags-test',
 								'post_type'     => 'page',
 								'guid'          => home_url( '/?p=3100' ),
 							)
@@ -825,7 +825,7 @@ add_action(
 						$created['posts'][] = 3100;
 					}
 
-					// Component test page with bs: string renderer and bs_render_block()
+					// Component test page with bs: block tags and bs_render_block()
 					$comp_content = '<bs:blockstudio-type-component heading="String Rendered" content="Via bs tag" />'
 						. '<bs:blockstudio-type-component heading="Paired Tag" content="Via paired tag"></bs:blockstudio-type-component>'
 						. '[bs_test_render name="blockstudio/type-component" heading="PHP Rendered" content="Via bs_render_block"]';
@@ -868,6 +868,27 @@ add_action(
 							)
 						);
 						$created['posts'][] = 3300;
+					}
+
+					// Block tags template test page (bs: tags in block template)
+					$btt_content = '[bs_test_render name="blockstudio/type-block-tags-template" label="Template Host"]';
+					if ( ! get_post( 3500 ) ) {
+						$wpdb->insert( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery
+							$wpdb->posts,
+							array(
+								'ID'            => 3500,
+								'post_author'   => 1,
+								'post_date'     => current_time( 'mysql' ),
+								'post_date_gmt' => current_time( 'mysql', 1 ),
+								'post_content'  => $btt_content,
+								'post_title'    => 'Block Tags Template Test',
+								'post_status'   => 'publish',
+								'post_name'     => 'block-tags-template-test',
+								'post_type'     => 'page',
+								'guid'          => home_url( '/?p=3500' ),
+							)
+						);
+						$created['posts'][] = 3500;
 					}
 
 					// Native WP block test page

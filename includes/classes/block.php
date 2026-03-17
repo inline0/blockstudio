@@ -1445,6 +1445,10 @@ class Block {
 				// phpcs:enable WordPress.Security.EscapeOutput.ExceptionNotEscaped
 			}
 
+			if ( ! $is_editor && str_contains( $compiled_string, '<bs:' ) ) {
+				$compiled_string = Block_Tags::render( $compiled_string );
+			}
+
 			$render = self::replace_components(
 				$compiled_string,
 				$inner_blocks,
@@ -1489,10 +1493,16 @@ class Block {
 				}
 			}
 
+			$php_output = ob_get_clean();
+
+			if ( ! $is_editor && str_contains( $php_output, '<bs:' ) ) {
+				$php_output = Block_Tags::render( $php_output );
+			}
+
 			$rendered_block =
 				( '' !== $render ? $blockstudio_id : '' ) .
 				self::replace_components(
-					ob_get_clean(),
+					$php_output,
 					$inner_blocks,
 					$is_editor || $is_preview,
 					$filter_data,

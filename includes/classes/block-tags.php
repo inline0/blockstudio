@@ -1,9 +1,10 @@
 <?php
 /**
- * String renderer class.
+ * Block Tags class.
  *
  * Parses <bs:namespace-block-name> tags in content and renders the corresponding
- * Blockstudio blocks. Opt-in via the stringRenderer/enabled setting.
+ * Blockstudio blocks. Page-level rendering is opt-in via the blockTags/enabled
+ * setting. Template-level rendering is always active.
  *
  * @package Blockstudio
  */
@@ -11,26 +12,26 @@
 namespace Blockstudio;
 
 /**
- * Replaces <bs:namespace-block-name attr="value"> tags in post content
- * with rendered Blockstudio block output.
+ * Replaces <bs:namespace-block-name attr="value"> tags with rendered
+ * Blockstudio block output.
  *
  * @since 7.1.0
  */
-class String_Renderer {
+class Block_Tags {
 
 	/**
-	 * Initialize the string renderer.
+	 * Initialize page-level block tag rendering.
 	 *
 	 * @return void
 	 */
 	public static function init(): void {
-		if ( ! Settings::get( 'stringRenderer/enabled' ) ) {
+		if ( ! Settings::get( 'blockTags/enabled' ) ) {
 			return;
 		}
 
 		add_filter( 'the_content', array( __CLASS__, 'render' ), 5 );
 		add_filter( 'widget_text', array( __CLASS__, 'render' ), 5 );
-		add_filter( 'blockstudio/string_renderer/render', array( __CLASS__, 'render' ) );
+		add_filter( 'blockstudio/block_tags/render', array( __CLASS__, 'render' ) );
 	}
 
 	/**
@@ -134,7 +135,8 @@ class String_Renderer {
 	 *   bs:acme-hero resolves to acme/hero
 	 *   bs:blockstudio-type-text resolves to blockstudio/type-text
 	 *
-	 * Only exact matches are returned.
+	 * Only exact matches are returned. Blocks are checked against the
+	 * allow/deny lists from blockTags settings.
 	 *
 	 * @param string $tag_name The tag name (without bs: prefix).
 	 * @param array  $blocks   Registered blocks keyed by full name.
@@ -150,11 +152,34 @@ class String_Renderer {
 
 		$full_name = substr_replace( $tag_name, '/', $pos, 1 );
 
-		if ( isset( $blocks[ $full_name ] ) ) {
-			return $full_name;
+		if ( ! isset( $blocks[ $full_name ] ) ) {
+			return false;
 		}
 
-		return false;
+		$allow = Settings::get( 'blockTags/allow' );
+		$deny  = Settings::get( 'blockTags/deny' );
+
+		$allow = apply_filters( 'blockstudio/block_tags/allow', $allow );
+		$deny  = apply_filters( 'blockstudio/block_tags/deny', $deny );
+
+		if ( ! empty( $deny ) && is_array( $deny ) ) {
+			foreach ( $deny as $pattern ) {
+				if ( fnmatch( $pattern, $full_name ) ) {
+					return false;
+				}
+			}
+		}
+
+		if ( ! empty( $allow ) && is_array( $allow ) ) {
+			foreach ( $allow as $pattern ) {
+				if ( fnmatch( $pattern, $full_name ) ) {
+					return $full_name;
+				}
+			}
+			return false;
+		}
+
+		return $full_name;
 	}
 
 	/**

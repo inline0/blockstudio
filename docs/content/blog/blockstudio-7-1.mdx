@@ -55,39 +55,50 @@ Or using the new HTML tag syntax:
 <bs:my-theme-card title="My Card" description="Card content." />
 ```
 
-## HTML tags
+## Block tags
 
-Blocks can now be embedded anywhere using `<bs:>` tags. Write the tag in post
-content, a widget area, a theme template, a header, a footer. Blockstudio hooks
-into the output buffer and replaces each tag with the rendered block output.
-
-The tag name maps directly to the block name. The first hyphen becomes the
-namespace separator, so `acme/hero` becomes `<bs:acme-hero>`:
+Blocks can be embedded as HTML tags using the `<bs:>` syntax. The tag name
+maps to the block name with the first hyphen as the namespace separator:
+`acme/hero` becomes `<bs:acme-hero>`.
 
 ```html
 <bs:acme-hero title="Welcome" background="dark" />
 ```
 
-Paired tags pass inner content to the block's `$content` variable:
+Inside block templates, this works automatically. Write a `<bs:>` tag in your
+Twig or PHP template and the referenced block renders inline with full
+attribute support, assets, and Tailwind:
 
-```html
-<bs:acme-section layout="wide">
-  <p>Content inside the block.</p>
-</bs:acme-section>
+```twig title="index.twig"
+<div class="my-page">
+  <bs:mytheme-card title="Featured" />
+  <bs:mytheme-cta variant="primary" />
+</div>
 ```
 
-Nesting works too. Inner blocks render first, then the outer block receives
-their output:
+For page-level rendering (post content, widget areas), enable it in
+`blockstudio.json`:
 
-```html
-<bs:acme-section layout="wide">
-  <bs:acme-hero title="Welcome" />
-  <bs:acme-card title="Features" />
-</bs:acme-section>
+```json
+{ "blockTags": { "enabled": true } }
 ```
 
-The tag renderer is opt-in. Enable it in your `blockstudio.json` or via the
-`blockstudio/settings/string_renderer/enabled` filter.
+Allow and deny lists control which blocks can render via tags. Both support
+wildcard patterns:
+
+```json
+{
+  "blockTags": {
+    "enabled": true,
+    "allow": ["mytheme/*"],
+    "deny": ["mytheme/internal-*"]
+  }
+}
+```
+
+Paired tags, nested tags, and programmatic usage via
+`apply_filters('blockstudio/block_tags/render', $content)` all work as
+expected.
 
 ## New field types
 

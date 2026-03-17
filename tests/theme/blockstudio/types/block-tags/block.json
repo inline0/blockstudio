@@ -1,10 +1,10 @@
 {
   "$schema": "https://blockstudio.dev/schema/block",
-  "name": "blockstudio/type-string-renderer",
-  "title": "String Renderer Test",
+  "name": "blockstudio/type-block-tags",
+  "title": "Block Tags Test",
   "category": "blockstudio-test-native",
   "icon": "shortcode",
-  "description": "Test block for string renderer feature.",
+  "description": "Test block for block tags feature.",
   "blockstudio": {
     "attributes": [
       {

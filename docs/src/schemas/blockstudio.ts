@@ -233,19 +233,35 @@ export const blockstudio = {
       },
       additionalProperties: true,
     },
-    stringRenderer: {
+    blockTags: {
       type: 'object',
       description:
-        'Settings related to the string renderer, which replaces bs: tags in post content with rendered Blockstudio blocks.',
+        'Settings for bs: tag rendering. Controls page-level replacement of <bs:block-name> tags with rendered block output. Template-level rendering is always active.',
       properties: {
         enabled: {
           type: 'boolean',
           default: false,
           description:
-            'Enable the string renderer to parse and render bs: tags in post content.',
+            'Enable page-level bs: tag rendering in post content and widget areas.',
           descriptionFilter:
-            'This filter allows you to enable/disable the string renderer.',
+            'This filter allows you to enable/disable page-level block tag rendering.',
           example: true,
+        },
+        allow: {
+          type: 'array',
+          items: { type: 'string' },
+          default: [],
+          description:
+            'Allowlist of block name patterns. Supports wildcards via fnmatch(). When set, only matching blocks render via tags.',
+          example: ['mytheme/*', 'bsui/*'],
+        },
+        deny: {
+          type: 'array',
+          items: { type: 'string' },
+          default: [],
+          description:
+            'Denylist of block name patterns. Supports wildcards via fnmatch(). Matching blocks are excluded from tag rendering. Takes precedence over allow.',
+          example: ['mytheme/internal-*'],
         },
       },
       additionalProperties: true,
