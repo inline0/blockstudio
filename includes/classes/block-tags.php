@@ -78,7 +78,7 @@ class Block_Tags {
 	 * @return string Processed content.
 	 */
 	private static function replace_paired_tags( string $content, array $blocks ): string {
-		$pattern = '/<bs:([a-z0-9](?:[a-z0-9-]*[a-z0-9])?)(\s[^>]*)?>(.*?)<\/bs:\1>/si';
+		$pattern = '/<bs:([a-z0-9](?:[a-z0-9-]*[a-z0-9])?)(\s[^>]*)?>((?:(?!<bs:).)*?)<\/bs:\1>/si';
 
 		return preg_replace_callback(
 			$pattern,
@@ -93,7 +93,7 @@ class Block_Tags {
 					return $matches[0];
 				}
 
-				return self::render_block( $block_name, $attributes ) . $inner_content;
+				return self::render_block( $block_name, $attributes, $inner_content );
 			},
 			$content
 		) ?? $content;
@@ -272,7 +272,7 @@ class Block_Tags {
 					'attributes' => $block_attrs,
 				),
 			),
-			'',
+			$inner_content,
 			'',
 			$inner_content
 		);
