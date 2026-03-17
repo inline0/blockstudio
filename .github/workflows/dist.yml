@@ -336,6 +336,7 @@ jobs:
           cat > functions.php << 'PHP'
           <?php
           require_once __DIR__ . '/vendor/autoload.php';
+          require_once __DIR__ . '/vendor/blockstudio/blockstudio/blockstudio.php';
           Timber\Timber::init();
           PHP
 
