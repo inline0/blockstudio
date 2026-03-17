@@ -241,6 +241,11 @@ jobs:
           wp core download
           wp config create --dbname=wordpress --dbuser=root --dbpass=root
           wp core install --url=http://localhost --title=Test --admin_user=admin --admin_email=admin@test.com --admin_password=password --skip-email
+
+          # Load Composer autoloader via mu-plugin (standard Bedrock pattern)
+          mkdir -p wp-content/mu-plugins
+          echo "<?php require_once '$GITHUB_WORKSPACE/test-project/vendor/autoload.php';" > wp-content/mu-plugins/autoloader.php
+
           wp plugin activate blockstudio
 
           cp -r $GITHUB_WORKSPACE/repo/tests/theme wp-content/themes/blockstudio-test

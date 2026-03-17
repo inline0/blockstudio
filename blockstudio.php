@@ -13,6 +13,10 @@
  * @package Blockstudio
  */
 
+if ( ! defined( 'ABSPATH' ) ) {
+	return;
+}
+
 if ( defined( 'BLOCKSTUDIO_VERSION' ) ) {
 	return;
 }
@@ -20,11 +24,6 @@ if ( defined( 'BLOCKSTUDIO_VERSION' ) ) {
 define( 'BLOCKSTUDIO_VERSION', '7.0.11' );
 define( 'BLOCKSTUDIO_FILE', __FILE__ );
 define( 'BLOCKSTUDIO_DIR', __DIR__ );
-
-if ( ! defined( 'ABSPATH' ) ) {
-	return;
-}
-
 define( 'BLOCKSTUDIO_URL', set_url_scheme( content_url( str_replace( WP_CONTENT_DIR, '', BLOCKSTUDIO_DIR ) . '/' ) ) );
 
 spl_autoload_register(
