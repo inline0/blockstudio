@@ -70,3 +70,11 @@ playwright-report/
 
 # Generated catalog
 block-catalog.json
+
+# Registry build
+registry/dist/
+registry/package-lock.json
+
+# Test theme generated files
+tests/theme/blockstudio/**/db/
+tests/theme/blockstudio/**/_dist/
