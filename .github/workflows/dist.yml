@@ -3,6 +3,7 @@ name: Distribution
 on:
   push:
     branches: [main]
+  workflow_dispatch:
 
 concurrency:
   group: dist-${{ github.ref }}
@@ -41,7 +42,7 @@ jobs:
       - name: Verify required files exist
         run: |
           cd build/blockstudio
-          for f in blockstudio.php readme.txt vendor/autoload.php lib/tailwindphp-autoload.php includes/class-plugin.php; do
+          for f in blockstudio.php readme.txt vendor/autoload.php lib/tailwindphp-autoload.php lib/puc-autoload.php includes/class-plugin.php; do
             if [ ! -f "$f" ]; then
               echo "MISSING: $f"
               exit 1
@@ -78,8 +79,9 @@ jobs:
           php -r "
             require 'vendor/autoload.php';
             require 'lib/tailwindphp-autoload.php';
+            require 'lib/puc-autoload.php';
             \$classes = [
-              'YahnisElsts\\\PluginUpdateChecker\\\v5\\\PucFactory',
+              'BlockstudioVendor\\\YahnisElsts\\\PluginUpdateChecker\\\v5\\\PucFactory',
               'BlockstudioVendor\\\MatthiasMullie\\\Minify\\\CSS',
               'BlockstudioVendor\\\ScssPhp\\\ScssPhp\\\Compiler',
               'BlockstudioVendor\\\League\\\Uri\\\Uri',
@@ -101,7 +103,6 @@ jobs:
 
   plugin-zip:
     name: Plugin install (zip)
-    if: contains(github.event.head_commit.message, '[e2e]')
     needs: zip-integrity
     runs-on: ubuntu-latest
     steps:
@@ -150,7 +151,6 @@ jobs:
           cd wordpress
           wp eval "
             echo 'BLOCKSTUDIO_VERSION: ' . BLOCKSTUDIO_VERSION . PHP_EOL;
-            echo 'Plugin class: ' . (class_exists('Blockstudio\\\Plugin') ? 'yes' : 'no') . PHP_EOL;
             \$block = WP_Block_Type_Registry::get_instance()->get_registered('blockstudio/type-number');
             if (!\$block) { echo \"FAIL: block not registered\n\"; exit(1); }
             echo 'Block: ' . \$block->name . PHP_EOL;
@@ -184,10 +184,10 @@ jobs:
           extensions: dom, json, zip, simplexml, libxml, iconv, mysqli
           tools: wp-cli
 
-      - name: Create Composer project
+      - name: Install Blockstudio into plugins via Composer
         run: |
           mkdir -p test-project && cd test-project
-          cat > composer.json << 'COMPOSER'
+          cat > composer.json << COMPOSER
           {
             "repositories": [
               {
@@ -195,26 +195,23 @@ jobs:
                 "url": "https://github.com/${{ github.repository }}"
               }
             ],
+            "minimum-stability": "dev",
+            "prefer-stable": true,
             "require": {
               "blockstudio/blockstudio": "dev-${{ github.ref_name }}"
             },
             "config": {
               "allow-plugins": {
-                "composer/installers": true,
-                "dealerdirect/phpcodesniffer-composer-installer": true
+                "composer/installers": true
               }
             },
             "extra": {
               "installer-paths": {
-                "wordpress/wp-content/plugins/{$name}/": ["type:wordpress-plugin"]
+                "wordpress/wp-content/plugins/{name}/": ["type:wordpress-plugin"]
               }
             }
           }
           COMPOSER
-
-      - name: Install via Composer
-        run: |
-          cd test-project
           composer install --no-interaction --prefer-dist
         env:
           COMPOSER_AUTH: '{"github-oauth": {"github.com": "${{ secrets.GITHUB_TOKEN }}"}}'
@@ -229,7 +226,7 @@ jobs:
           sudo systemctl start mysql
           mysql -u root -proot -e "CREATE DATABASE IF NOT EXISTS wordpress;"
 
-      - name: Set up WordPress and activate plugin
+      - name: Set up WordPress and activate
         run: |
           cd test-project/wordpress
           wp core download
@@ -237,7 +234,7 @@ jobs:
           wp core install --url=http://localhost --title=Test --admin_user=admin --admin_email=admin@test.com --admin_password=password --skip-email
           wp plugin activate blockstudio
 
-      - name: Install test theme and verify
+      - name: Install test theme and verify blocks
         run: |
           cp -r repo/tests/theme test-project/wordpress/wp-content/themes/blockstudio-test
           cd test-project/wordpress
@@ -246,16 +243,9 @@ jobs:
             \$block = WP_Block_Type_Registry::get_instance()->get_registered('blockstudio/type-number');
             if (!\$block) { echo \"FAIL: block not registered\n\"; exit(1); }
             echo 'Block: ' . \$block->name . PHP_EOL;
-          "
-
-      - name: Verify asset URLs resolve correctly
-        run: |
-          cd test-project/wordpress
-          wp eval "
             \$url = BLOCKSTUDIO_URL . 'includes/admin/assets/blocks/index.tsx.js';
             if (strpos(\$url, '/wp-content/plugins/blockstudio/') === false) {
-              echo \"FAIL: URL does not point to plugins dir: \$url\n\";
-              exit(1);
+              echo \"FAIL: asset URL wrong: \$url\n\"; exit(1);
             }
             echo \"Asset URL: \$url\n\";
           "
@@ -276,12 +266,11 @@ jobs:
           extensions: dom, json, zip, simplexml, libxml, iconv, mysqli
           tools: wp-cli
 
-      - name: Create theme with Blockstudio as dependency
+      - name: Create theme with Blockstudio as Composer dependency
         run: |
           mkdir -p test-theme
           cd test-theme
-
-          cat > composer.json << 'COMPOSER'
+          cat > composer.json << COMPOSER
           {
             "repositories": [
               {
@@ -289,6 +278,8 @@ jobs:
                 "url": "https://github.com/${{ github.repository }}"
               }
             ],
+            "minimum-stability": "dev",
+            "prefer-stable": true,
             "require": {
               "blockstudio/blockstudio": "dev-${{ github.ref_name }}"
             },
@@ -299,17 +290,14 @@ jobs:
             }
           }
           COMPOSER
-
           cat > style.css << 'CSS'
           /*
           Theme Name: Composer Theme Test
           */
           CSS
-
           cat > index.php << 'PHP'
           <?php // Silence is golden.
           PHP
-
           cat > functions.php << 'PHP'
           <?php
           require_once __DIR__ . '/vendor/autoload.php';
@@ -339,25 +327,21 @@ jobs:
           wp config create --dbname=wordpress --dbuser=root --dbpass=root
           wp core install --url=http://localhost --title=Test --admin_user=admin --admin_email=admin@test.com --admin_password=password --skip-email
           cp -r $GITHUB_WORKSPACE/test-theme wp-content/themes/composer-theme-test
+          cp -r $GITHUB_WORKSPACE/repo/tests/theme/blockstudio wp-content/themes/composer-theme-test/blockstudio
           wp theme activate composer-theme-test
-
-      - name: Copy test blocks into theme
-        run: |
-          cp -r repo/tests/theme/blockstudio wordpress/wp-content/themes/composer-theme-test/blockstudio
 
       - name: Verify Blockstudio loads and blocks register
         run: |
           cd wordpress
           wp eval "
-            if (!defined('BLOCKSTUDIO_VERSION')) { echo \"FAIL: BLOCKSTUDIO_VERSION not defined\n\"; exit(1); }
+            if (!defined('BLOCKSTUDIO_VERSION')) { echo \"FAIL: not loaded\n\"; exit(1); }
             echo 'BLOCKSTUDIO_VERSION: ' . BLOCKSTUDIO_VERSION . PHP_EOL;
-            echo 'Plugin class: ' . (class_exists('Blockstudio\\\Plugin') ? 'yes' : 'no') . PHP_EOL;
             \$block = WP_Block_Type_Registry::get_instance()->get_registered('blockstudio/type-number');
             if (!\$block) { echo \"FAIL: block not registered\n\"; exit(1); }
             echo 'Block: ' . \$block->name . PHP_EOL;
           "
 
-      - name: Verify asset URLs point to theme directory (not plugins)
+      - name: Verify asset URLs point to theme directory
         run: |
           cd wordpress
           wp eval "
@@ -365,8 +349,7 @@ jobs:
             echo \"Asset URL: \$url\n\";
             if (strpos(\$url, '/wp-content/themes/composer-theme-test/vendor/blockstudio/blockstudio/') === false) {
               echo \"FAIL: URL does not point to theme vendor dir\n\";
-              echo \"Expected to contain: /wp-content/themes/composer-theme-test/vendor/blockstudio/blockstudio/\n\";
               exit(1);
             }
-            echo \"Asset URL correctly points to theme vendor directory\n\";
+            echo \"OK: asset URLs resolve to theme vendor directory\n\";
           "
