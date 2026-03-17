@@ -245,18 +245,31 @@ class Block_Tags {
 	 * @return string Rendered block HTML.
 	 */
 	private static function render_block( string $block_name, array $attributes, string $inner_content = '' ): string {
+		$passthrough = array();
+		$block_attrs = array();
+
+		foreach ( $attributes as $key => $value ) {
+			if ( str_starts_with( $key, 'data-' ) ) {
+				$passthrough[ $key ] = $value;
+			} elseif ( str_starts_with( $key, 'html-' ) ) {
+				$passthrough[ substr( $key, 5 ) ] = $value;
+			} else {
+				$block_attrs[ $key ] = $value;
+			}
+		}
+
 		$parent = \WP_Block_Supports::$block_to_render;
 
 		\WP_Block_Supports::$block_to_render = array(
 			'blockName' => $block_name,
-			'attrs'     => $attributes,
+			'attrs'     => $block_attrs,
 		);
 
 		$result = Block::render(
 			array(
 				'blockstudio' => array(
 					'name'       => $block_name,
-					'attributes' => $attributes,
+					'attributes' => $block_attrs,
 				),
 			),
 			'',
@@ -266,6 +279,20 @@ class Block_Tags {
 
 		\WP_Block_Supports::$block_to_render = $parent;
 
-		return is_string( $result ) ? $result : '';
+		$result = is_string( $result ) ? $result : '';
+
+		if ( ! empty( $passthrough ) && '' !== $result ) {
+			$processor = new \WP_HTML_Tag_Processor( $result );
+
+			if ( $processor->next_tag() ) {
+				foreach ( $passthrough as $key => $value ) {
+					$processor->set_attribute( $key, is_bool( $value ) ? '' : (string) $value );
+				}
+
+				$result = $processor->get_updated_html();
+			}
+		}
+
+		return $result;
 	}
 }
