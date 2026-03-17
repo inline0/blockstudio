@@ -143,11 +143,16 @@ jobs:
           cd wordpress
           wp plugin install ../blockstudio.zip --activate
 
-      - name: Install test theme and verify
+      - name: Install test theme with Timber
         run: |
           cp -r repo/tests/theme wordpress/wp-content/themes/blockstudio-test
+          composer install --no-interaction --working-dir=wordpress/wp-content/themes/blockstudio-test
           cd wordpress
           wp theme activate blockstudio-test
+
+      - name: Verify plugin loads, blocks register, and URLs are correct
+        run: |
+          cd wordpress
           wp eval "
             echo 'BLOCKSTUDIO_VERSION: ' . BLOCKSTUDIO_VERSION . PHP_EOL;
             echo 'BLOCKSTUDIO_URL: ' . BLOCKSTUDIO_URL . PHP_EOL;
@@ -162,6 +167,19 @@ jobs:
             if (!\$block) { echo \"FAIL: block not registered\n\"; exit(1); }
             echo 'Block registered: ' . \$block->name . PHP_EOL;
           "
+
+      - name: Verify block renders on frontend
+        run: |
+          cd wordpress
+          wp post create --post_title='Dist Test' --post_status=publish --post_content='[bs_test_render name="blockstudio/type-number" number="42"]' --porcelain
+          CONTENT=$(wp eval "
+            \$p = get_page_by_title('Dist Test', OBJECT, 'post');
+            if (!\$p) { echo 'FAIL: post not found'; exit(1); }
+            echo apply_filters('the_content', \$p->post_content);
+          ")
+          echo "$CONTENT"
+          echo "$CONTENT" | grep -q "42" || { echo "FAIL: block output missing"; exit 1; }
+          echo "Block renders correctly"
 
   plugin-composer:
     name: Plugin via Composer
@@ -236,8 +254,12 @@ jobs:
           wp plugin activate blockstudio
 
           cp -r $GITHUB_WORKSPACE/repo/tests/theme wp-content/themes/blockstudio-test
+          composer install --no-interaction --working-dir=wp-content/themes/blockstudio-test
           wp theme activate blockstudio-test
 
+      - name: Verify blocks register and URLs are correct
+        run: |
+          cd test-project/wordpress
           wp eval "
             echo 'BLOCKSTUDIO_URL: ' . BLOCKSTUDIO_URL . PHP_EOL;
             \$url = BLOCKSTUDIO_URL . 'includes/admin/assets/blocks/index.tsx.js';
@@ -248,6 +270,19 @@ jobs:
             if (!\$block) { echo \"FAIL: block not registered\n\"; exit(1); }
             echo 'Block: ' . \$block->name . PHP_EOL;
           "
+
+      - name: Verify block renders on frontend
+        run: |
+          cd test-project/wordpress
+          wp post create --post_title='Dist Test' --post_status=publish --post_content='[bs_test_render name="blockstudio/type-number" number="42"]' --porcelain
+          CONTENT=$(wp eval "
+            \$p = get_page_by_title('Dist Test', OBJECT, 'post');
+            if (!\$p) { echo 'FAIL: post not found'; exit(1); }
+            echo apply_filters('the_content', \$p->post_content);
+          ")
+          echo "$CONTENT"
+          echo "$CONTENT" | grep -q "42" || { echo "FAIL: block output missing"; exit 1; }
+          echo "Block renders correctly"
 
   theme-bundled:
     name: Theme-bundled via Composer
@@ -280,7 +315,8 @@ jobs:
             "minimum-stability": "dev",
             "prefer-stable": true,
             "require": {
-              "blockstudio/blockstudio": "${{ env.BS_VERSION }}"
+              "blockstudio/blockstudio": "${{ env.BS_VERSION }}",
+              "timber/timber": "^2.0"
             },
             "config": {
               "allow-plugins": {
@@ -301,6 +337,7 @@ jobs:
           <?php
           require_once __DIR__ . '/vendor/autoload.php';
           require_once __DIR__ . '/vendor/blockstudio/blockstudio/blockstudio.php';
+          Timber\Timber::init();
           PHP
 
       - name: Install Blockstudio via Composer
@@ -328,6 +365,8 @@ jobs:
           wp core install --url=http://localhost --title=Test --admin_user=admin --admin_email=admin@test.com --admin_password=password --skip-email
           cp -r $GITHUB_WORKSPACE/test-theme wp-content/themes/composer-theme-test
           cp -r $GITHUB_WORKSPACE/repo/tests/theme/blockstudio wp-content/themes/composer-theme-test/blockstudio
+          cp $GITHUB_WORKSPACE/repo/tests/theme/test-helper.php wp-content/themes/composer-theme-test/test-helper.php
+          echo "require_once __DIR__ . '/test-helper.php';" >> wp-content/themes/composer-theme-test/functions.php
           wp theme activate composer-theme-test
 
       - name: Verify Blockstudio loads, blocks register, and URLs are correct
@@ -349,3 +388,15 @@ jobs:
             echo 'Block: ' . \$block->name . PHP_EOL;
           "
 
+      - name: Verify block renders on frontend
+        run: |
+          cd wordpress
+          wp post create --post_title='Dist Test' --post_status=publish --post_content='[bs_test_render name="blockstudio/type-number" number="42"]' --porcelain
+          CONTENT=$(wp eval "
+            \$p = get_page_by_title('Dist Test', OBJECT, 'post');
+            if (!\$p) { echo 'FAIL: post not found'; exit(1); }
+            echo apply_filters('the_content', \$p->post_content);
+          ")
+          echo "$CONTENT"
+          echo "$CONTENT" | grep -q "42" || { echo "FAIL: block output missing"; exit 1; }
+          echo "Block renders correctly"
