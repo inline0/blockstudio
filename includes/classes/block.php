@@ -1514,19 +1514,6 @@ class Block {
 
 		$rendered_block = $rendered_block . ( ! $is_editor ? $assets : '' );
 
-		if (
-			! $is_editor &&
-			! $is_preview &&
-			function_exists( 'wp_interactivity_process_directives' ) &&
-			$filter_data &&
-			(
-				! empty( $filter_data->blockstudio['interactivity'] ) ||
-				! empty( $filter_data->blockstudio['supports']['interactivity'] )
-			)
-		) {
-			$rendered_block = wp_interactivity_process_directives( $rendered_block );
-		}
-
 		return apply_filters(
 			'blockstudio/blocks/render',
 			$rendered_block,
