@@ -570,9 +570,10 @@ class Build {
 					}
 
 					if ( ! empty( $v['_blockField'] ) ) {
-						$attributes[ $field_id ]['_blockField'] = true;
-						$attributes[ $field_id ]['_blockName']  = $v['_blockName'] ?? '';
-						$attributes[ $field_id ]['_blockIds']   = $v['_blockIds'] ?? array();
+						$attributes[ $field_id ]['_blockField']  = true;
+						$attributes[ $field_id ]['_blockName']   = $v['_blockName'] ?? '';
+						$attributes[ $field_id ]['_blockIds']    = $v['_blockIds'] ?? array();
+						$attributes[ $field_id ]['_idStructure'] = $v['_idStructure'] ?? '{id}';
 					}
 
 					if ( 'tabs' !== $type && 'group' !== $type ) {
@@ -1345,7 +1346,14 @@ class Build {
 					'_blockField'  => true,
 					'_blockName'   => $block_name,
 					'_blockIds'    => array(),
+					'_idStructure' => $id_structure,
 					'returnFormat' => $attr['returnFormat'] ?? 'rendered',
+				);
+				$expanded[] = array(
+					'id'      => $field_id . '_block',
+					'type'    => 'text',
+					'hidden'  => true,
+					'default' => $block_name,
 				);
 			}
 
@@ -1382,10 +1390,13 @@ class Build {
 			}
 
 			if ( $is_block && $field_id ) {
-				$last_index = count( $expanded ) - count( $block_field_ids ) - 1;
-				if ( $last_index >= 0 ) {
-					$expanded[ $last_index ]['_blockIds'] = $block_field_ids;
+				foreach ( $expanded as $ei => &$eattr ) {
+					if ( ( $eattr['id'] ?? '' ) === $field_id && ! empty( $eattr['_blockField'] ) ) {
+						$eattr['_blockIds'] = $block_field_ids;
+						break;
+					}
 				}
+				unset( $eattr );
 			}
 		}
 

@@ -1035,18 +1035,40 @@ class Block {
 				continue;
 			}
 
-			$ref_block_name = $att['_blockName'] ?? '';
-			$block_ids      = $att['_blockIds'] ?? array();
-			$return_format  = $att['returnFormat'] ?? 'rendered';
+			$default_block_name = $att['_blockName'] ?? '';
+			$override_key       = $k . '_block';
+			$ref_block_name     = ! empty( $attributes[ $override_key ] )
+				? $attributes[ $override_key ]
+				: $default_block_name;
+			$block_ids          = $att['_blockIds'] ?? array();
+			$id_structure       = $att['_idStructure'] ?? '{id}';
+			$return_format      = $att['returnFormat'] ?? 'rendered';
 
-			if ( ! $ref_block_name || empty( $block_ids ) ) {
+			if ( ! $ref_block_name ) {
 				$attributes[ $k ] = false;
 				continue;
 			}
 
 			$block_data = array();
-			foreach ( $block_ids as $mapped_id => $original_id ) {
-				$block_data[ $original_id ] = $attributes[ $mapped_id ] ?? false;
+
+			if ( $ref_block_name !== $default_block_name || empty( $block_ids ) ) {
+				$prefix = str_replace( '{id}', '', $id_structure );
+				foreach ( $attributes as $ak => $av ) {
+					if ( str_starts_with( $ak, $prefix ) && $ak !== $k && $ak !== $override_key ) {
+						$original_id = substr( $ak, strlen( $prefix ) );
+
+						$block_data[ $original_id ] = $av;
+					}
+				}
+			} else {
+				foreach ( $block_ids as $mapped_id => $original_id ) {
+					$block_data[ $original_id ] = $attributes[ $mapped_id ] ?? false;
+				}
+			}
+
+			if ( empty( $block_data ) ) {
+				$attributes[ $k ] = false;
+				continue;
 			}
 
 			if ( 'data' === $return_format ) {
