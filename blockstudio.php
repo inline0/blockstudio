@@ -22,7 +22,7 @@ define( 'BLOCKSTUDIO_FILE', __FILE__ );
 define( 'BLOCKSTUDIO_DIR', __DIR__ );
 
 if ( ! defined( 'ABSPATH' ) ) {
-	exit();
+	return;
 }
 
 define( 'BLOCKSTUDIO_URL', set_url_scheme( content_url( str_replace( WP_CONTENT_DIR, '', BLOCKSTUDIO_DIR ) . '/' ) ) );

@@ -28,9 +28,6 @@ return array(
 		Finder::create()
 			->files()
 			->in( 'vendor/tailwindphp' ),
-		Finder::create()
-			->files()
-			->in( 'vendor/yahnis-elsts' ),
 	),
 
 	'patchers' => array(

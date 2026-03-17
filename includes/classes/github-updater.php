@@ -7,7 +7,7 @@
 
 namespace Blockstudio;
 
-use BlockstudioVendor\YahnisElsts\PluginUpdateChecker\v5\PucFactory;
+use YahnisElsts\PluginUpdateChecker\v5\PucFactory;
 
 /**
  * Checks GitHub releases for plugin updates using plugin-update-checker.
@@ -20,8 +20,6 @@ class Github_Updater {
 	 * Constructor.
 	 */
 	public function __construct() {
-		require_once BLOCKSTUDIO_DIR . '/lib/puc-autoload.php';
-
 		$update_checker = PucFactory::buildUpdateChecker(
 			'https://github.com/inline0/blockstudio/',
 			BLOCKSTUDIO_FILE,

@@ -46,13 +46,13 @@ jobs:
       - name: Verify required files exist
         run: |
           cd build/blockstudio
-          for f in blockstudio.php readme.txt vendor/autoload.php lib/tailwindphp-autoload.php lib/puc-autoload.php includes/class-plugin.php; do
+          for f in blockstudio.php readme.txt vendor/autoload.php lib/tailwindphp-autoload.php includes/class-plugin.php; do
             if [ ! -f "$f" ]; then
               echo "MISSING: $f"
               exit 1
             fi
           done
-          for d in lib includes/classes includes/admin/assets lib/yahnis-elsts; do
+          for d in lib includes/classes includes/admin/assets; do
             if [ ! -d "$d" ]; then
               echo "MISSING DIR: $d"
               exit 1
@@ -83,9 +83,8 @@ jobs:
           php -r "
             require 'vendor/autoload.php';
             require 'lib/tailwindphp-autoload.php';
-            require 'lib/puc-autoload.php';
             \$classes = [
-              'BlockstudioVendor\\\YahnisElsts\\\PluginUpdateChecker\\\v5\\\PucFactory',
+              'YahnisElsts\\\PluginUpdateChecker\\\v5\\\PucFactory',
               'BlockstudioVendor\\\MatthiasMullie\\\Minify\\\CSS',
               'BlockstudioVendor\\\ScssPhp\\\ScssPhp\\\Compiler',
               'BlockstudioVendor\\\League\\\Uri\\\Uri',
@@ -207,6 +206,7 @@ jobs:
             "minimum-stability": "dev",
             "prefer-stable": true,
             "require": {
+              "composer/installers": "^2.0",
               "blockstudio/blockstudio": "${{ env.BS_VERSION }}"
             },
             "config": {
@@ -216,7 +216,7 @@ jobs:
             },
             "extra": {
               "installer-paths": {
-                "wordpress/wp-content/plugins/{$name}/": ["type:wordpress-plugin"]
+                "wordpress/wp-content/plugins/{\$name}/": ["type:wordpress-plugin"]
               }
             }
           }
