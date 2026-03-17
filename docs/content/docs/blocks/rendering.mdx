@@ -182,6 +182,26 @@ to both template-level and page-level rendering.
 
 Filters: `blockstudio/block_tags/allow` and `blockstudio/block_tags/deny`.
 
+### HTML passthrough
+
+Attributes prefixed with `data-` pass through to the rendered block's root
+element. Attributes prefixed with `html-` also pass through, with the prefix
+stripped. This lets you add classes, IDs, or data attributes without them being
+treated as block attributes.
+
+```html
+<bs:mytheme-card
+  title="My Card"
+  html-class="featured-card"
+  html-id="main-card"
+  data-analytics="card-click"
+/>
+```
+
+The rendered output's root element receives `class="featured-card"`,
+`id="main-card"`, and `data-analytics="card-click"`. Block attributes
+(`title`) are passed to the block template as usual.
+
 ### Programmatic usage
 
 Apply tag rendering to any string from PHP:

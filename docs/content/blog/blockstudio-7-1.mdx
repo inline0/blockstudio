@@ -96,6 +96,14 @@ wildcard patterns:
 }
 ```
 
+Attributes prefixed with `data-` or `html-` pass through to the rendered
+block's root element. `html-` prefixed attributes have the prefix stripped,
+so `html-class="featured"` becomes `class="featured"` on the output:
+
+```html
+<bs:mytheme-card title="My Card" html-class="featured" data-track="click" />
+```
+
 Paired tags, nested tags, and programmatic usage via
 `apply_filters('blockstudio/block_tags/render', $content)` all work as
 expected.
