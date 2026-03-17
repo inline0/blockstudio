@@ -26,6 +26,9 @@
   "autoload": {
     "classmap": [
       "lib/"
+    ],
+    "files": [
+      "blockstudio.php"
     ]
   },
   "scripts": {
