@@ -78,25 +78,124 @@ class Block_Tags {
 	 * @return string Processed content.
 	 */
 	private static function replace_paired_tags( string $content, array $blocks ): string {
-		$pattern = '/<bs:([a-z0-9](?:[a-z0-9-]*[a-z0-9])?)(\s[^>]*)?>((?:(?!<bs:).)*?)<\/bs:\1>/si';
+		$offset = 0;
+		$found  = false;
 
-		return preg_replace_callback(
-			$pattern,
-			function ( $matches ) use ( $blocks ) {
-				$tag_name      = $matches[1];
-				$attr_string   = trim( $matches[2] ?? '' );
-				$inner_content = $matches[3];
-				$attributes    = self::parse_attributes( $attr_string );
-				$block_name    = self::resolve_block_name( $tag_name, $blocks );
+		while ( false !== ( $open_pos = strpos( $content, '<bs:', $offset ) ) ) {
+			// Extract tag name.
+			$tag_start = $open_pos + 4;
+			$tag_end   = $tag_start;
 
-				if ( ! $block_name ) {
-					return $matches[0];
+			while ( $tag_end < strlen( $content ) && preg_match( '/[a-z0-9-]/', $content[ $tag_end ] ) ) {
+				++$tag_end;
+			}
+
+			$tag_name = substr( $content, $tag_start, $tag_end - $tag_start );
+
+			if ( '' === $tag_name ) {
+				$offset = $open_pos + 1;
+				continue;
+			}
+
+			// Find the closing > of the opening tag, skipping quoted attribute values.
+			$gt_pos   = $tag_end;
+			$in_quote = false;
+			$quote_ch = '';
+
+			while ( $gt_pos < strlen( $content ) ) {
+				$ch = $content[ $gt_pos ];
+
+				if ( $in_quote ) {
+					if ( $ch === $quote_ch ) {
+						$in_quote = false;
+					}
+				} elseif ( '"' === $ch || "'" === $ch ) {
+					$in_quote = true;
+					$quote_ch = $ch;
+				} elseif ( '>' === $ch ) {
+					break;
 				}
 
-				return self::render_block( $block_name, $attributes, $inner_content );
-			},
-			$content
-		) ?? $content;
+				++$gt_pos;
+			}
+
+			if ( $gt_pos >= strlen( $content ) ) {
+				break;
+			}
+
+			// Self-closing tags end with />
+			if ( '/' === $content[ $gt_pos - 1 ] ) {
+				$offset = $gt_pos + 1;
+				continue;
+			}
+
+			// Find the matching closing tag.
+			$close_tag = '</bs:' . $tag_name . '>';
+			$close_pos = strpos( $content, $close_tag, $gt_pos + 1 );
+
+			if ( false === $close_pos ) {
+				$offset = $gt_pos + 1;
+				continue;
+			}
+
+			// Check for nested same-name tags and find the correct close.
+			$search_pos = $gt_pos + 1;
+			$depth      = 1;
+			$open_tag   = '<bs:' . $tag_name;
+
+			while ( $depth > 0 && $search_pos < strlen( $content ) ) {
+				$next_open  = strpos( $content, $open_tag, $search_pos );
+				$next_close = strpos( $content, $close_tag, $search_pos );
+
+				if ( false === $next_close ) {
+					break;
+				}
+
+				if ( false !== $next_open && $next_open < $next_close ) {
+					// Check it's actually an opening tag (not self-closing).
+					$check_gt = strpos( $content, '>', $next_open );
+					if ( false !== $check_gt && '/' !== $content[ $check_gt - 1 ] ) {
+						++$depth;
+					}
+					$search_pos = ( false !== $check_gt ) ? $check_gt + 1 : $next_open + 1;
+				} else {
+					--$depth;
+					if ( 0 === $depth ) {
+						$close_pos = $next_close;
+					}
+					$search_pos = $next_close + strlen( $close_tag );
+				}
+			}
+
+			if ( $depth > 0 ) {
+				$offset = $gt_pos + 1;
+				continue;
+			}
+
+			// Extract parts.
+			$full_open    = substr( $content, $open_pos, $gt_pos - $open_pos + 1 );
+			$attr_string  = trim( substr( $content, $tag_end, $gt_pos - $tag_end ) );
+			$inner_start  = $gt_pos + 1;
+			$inner_content = substr( $content, $inner_start, $close_pos - $inner_start );
+
+			$attributes = self::parse_attributes( $attr_string );
+			$block_name = self::resolve_block_name( $tag_name, $blocks );
+
+			if ( ! $block_name ) {
+				$offset = $close_pos + strlen( $close_tag );
+				continue;
+			}
+
+			$rendered    = self::render_block( $block_name, $attributes, $inner_content );
+			$full_length = $close_pos + strlen( $close_tag ) - $open_pos;
+			$content     = substr_replace( $content, $rendered, $open_pos, $full_length );
+			$found       = true;
+
+			// Continue scanning from where we inserted (rendered content may be shorter/longer).
+			$offset = $open_pos + strlen( $rendered );
+		}
+
+		return $content;
 	}
 
 	/**
@@ -264,6 +363,10 @@ class Block_Tags {
 			'blockName' => $block_name,
 			'attrs'     => $block_attrs,
 		);
+
+		if ( '' !== $inner_content && false !== strpos( $inner_content, '<bs:' ) ) {
+			$inner_content = self::render( $inner_content );
+		}
 
 		$result = Block::render(
 			array(
