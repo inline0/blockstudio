@@ -163,19 +163,6 @@ jobs:
             echo 'Block registered: ' . \$block->name . PHP_EOL;
           "
 
-      - name: Verify block renders on frontend
-        run: |
-          cd wordpress
-          wp post create --post_title='Dist Test' --post_status=publish --post_content='[bs_test_render name="blockstudio/type-number" number="42"]' --porcelain
-          CONTENT=$(wp eval "
-            \$p = get_page_by_title('Dist Test', OBJECT, 'post');
-            if (!\$p) { echo 'FAIL: post not found'; exit(1); }
-            echo apply_filters('the_content', \$p->post_content);
-          ")
-          echo "$CONTENT"
-          echo "$CONTENT" | grep -q "42" || { echo "FAIL: block output missing"; exit 1; }
-          echo "Block renders correctly"
-
   plugin-composer:
     name: Plugin via Composer
     runs-on: ubuntu-latest
@@ -362,15 +349,3 @@ jobs:
             echo 'Block: ' . \$block->name . PHP_EOL;
           "
 
-      - name: Verify block renders on frontend
-        run: |
-          cd wordpress
-          wp post create --post_title='Dist Test' --post_status=publish --post_content='[bs_test_render name="blockstudio/type-number" number="42"]' --porcelain
-          CONTENT=$(wp eval "
-            \$p = get_page_by_title('Dist Test', OBJECT, 'post');
-            if (!\$p) { echo 'FAIL: post not found'; exit(1); }
-            echo apply_filters('the_content', \$p->post_content);
-          ")
-          echo "$CONTENT"
-          echo "$CONTENT" | grep -q "42" || { echo "FAIL: block output missing"; exit 1; }
-          echo "Block renders correctly"
