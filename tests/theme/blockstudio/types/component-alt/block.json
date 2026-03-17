@@ -1,0 +1,25 @@
+{
+  "$schema": "https://blockstudio.dev/schema/block",
+  "name": "blockstudio/type-component-alt",
+  "title": "Component Alt Test",
+  "category": "blockstudio-test-native",
+  "icon": "screenoptions",
+  "description": "Alternative component for block field override tests.",
+  "blockstudio": {
+    "component": true,
+    "attributes": [
+      {
+        "id": "heading",
+        "type": "text",
+        "label": "Heading",
+        "default": "Alt Heading"
+      },
+      {
+        "id": "content",
+        "type": "text",
+        "label": "Content",
+        "default": "Alt Content"
+      }
+    ]
+  }
+}

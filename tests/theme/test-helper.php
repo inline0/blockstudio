@@ -848,8 +848,9 @@ add_action(
 						$created['posts'][] = 3200;
 					}
 
-					// Block field test page
-					$bf_content = '[bs_test_render name="blockstudio/type-block-field" label="Field Host" card_heading="Embedded Card" card_content="From block field"]';
+					// Block field test page (default + override)
+					$bf_content  = '[bs_test_render name="blockstudio/type-block-field" label="Field Host" card_heading="Embedded Card" card_content="From block field"]';
+					$bf_content .= '[bs_test_render name="blockstudio/type-block-field" label="Override Host" card_block="blockstudio/type-component-alt" card_heading="Override Card" card_content="From override"]';
 					if ( ! get_post( 3300 ) ) {
 						$wpdb->insert( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery
 							$wpdb->posts,
