@@ -36,44 +36,32 @@ test.describe('Block Tags Kitchen Sink', () => {
     await expect(host.locator('.ks-label')).toHaveText('Kitchen Sink');
   });
 
-  // Core blocks: both syntaxes produce identical output
-  test('core/paragraph: bs and block produce same output', async () => {
-    await assertSameInnerHTML(
-      page,
-      '.ks-paragraph-bs',
-      '.ks-paragraph-block'
-    );
+  // Static blocks: both syntaxes produce identical output
+  test('core/paragraph: bs and block identical', async () => {
+    await assertSameInnerHTML(page, '.ks-paragraph-bs', '.ks-paragraph-block');
   });
 
-  test('core/heading: bs and block produce same output', async () => {
-    await assertSameInnerHTML(
-      page,
-      '.ks-heading-bs',
-      '.ks-heading-block'
-    );
+  test('core/heading: bs and block identical', async () => {
+    await assertSameInnerHTML(page, '.ks-heading-bs', '.ks-heading-block');
   });
 
-  test('core/list: bs and block produce same output', async () => {
+  test('core/list: bs and block identical', async () => {
     await assertSameInnerHTML(page, '.ks-list-bs', '.ks-list-block');
   });
 
-  test('core/quote: bs and block produce same output', async () => {
+  test('core/quote: bs and block identical', async () => {
     await assertSameInnerHTML(page, '.ks-quote-bs', '.ks-quote-block');
   });
 
-  test('core/pullquote: bs and block produce same output', async () => {
-    await assertSameInnerHTML(
-      page,
-      '.ks-pullquote-bs',
-      '.ks-pullquote-block'
-    );
+  test('core/pullquote: bs and block identical', async () => {
+    await assertSameInnerHTML(page, '.ks-pullquote-bs', '.ks-pullquote-block');
   });
 
-  test('core/code: bs and block produce same output', async () => {
+  test('core/code: bs and block identical', async () => {
     await assertSameInnerHTML(page, '.ks-code-bs', '.ks-code-block');
   });
 
-  test('core/preformatted: bs and block produce same output', async () => {
+  test('core/preformatted: bs and block identical', async () => {
     await assertSameInnerHTML(
       page,
       '.ks-preformatted-bs',
@@ -81,15 +69,15 @@ test.describe('Block Tags Kitchen Sink', () => {
     );
   });
 
-  test('core/verse: bs and block produce same output', async () => {
+  test('core/verse: bs and block identical', async () => {
     await assertSameInnerHTML(page, '.ks-verse-bs', '.ks-verse-block');
   });
 
-  test('core/image: bs and block produce same output', async () => {
+  test('core/image: bs and block identical', async () => {
     await assertSameInnerHTML(page, '.ks-image-bs', '.ks-image-block');
   });
 
-  test('core/separator: bs and block produce same output', async () => {
+  test('core/separator: bs and block identical', async () => {
     await assertSameInnerHTML(
       page,
       '.ks-separator-bs',
@@ -97,39 +85,43 @@ test.describe('Block Tags Kitchen Sink', () => {
     );
   });
 
-  test('core/spacer: bs and block produce same output', async () => {
+  test('core/spacer: bs and block identical', async () => {
     await assertSameInnerHTML(page, '.ks-spacer-bs', '.ks-spacer-block');
   });
 
-  test('core/group: bs and block produce same output', async () => {
+  test('core/audio: bs and block identical', async () => {
+    await assertSameInnerHTML(page, '.ks-audio-bs', '.ks-audio-block');
+  });
+
+  test('core/video: bs and block identical', async () => {
+    await assertSameInnerHTML(page, '.ks-video-bs', '.ks-video-block');
+  });
+
+  test('core/embed: bs and block identical', async () => {
+    await assertSameInnerHTML(page, '.ks-embed-bs', '.ks-embed-block');
+  });
+
+  test('core/table: bs and block identical', async () => {
+    await assertSameInnerHTML(page, '.ks-table-bs', '.ks-table-block');
+  });
+
+  test('core/group: bs and block identical', async () => {
     await assertSameInnerHTML(page, '.ks-group-bs', '.ks-group-block');
   });
 
-  test('core/columns: bs and block produce same output', async () => {
-    await assertSameInnerHTML(
-      page,
-      '.ks-columns-bs',
-      '.ks-columns-block'
-    );
+  test('core/columns: bs and block identical', async () => {
+    await assertSameInnerHTML(page, '.ks-columns-bs', '.ks-columns-block');
   });
 
-  test('core/buttons: bs and block produce same output', async () => {
-    await assertSameInnerHTML(
-      page,
-      '.ks-buttons-bs',
-      '.ks-buttons-block'
-    );
+  test('core/buttons: bs and block identical', async () => {
+    await assertSameInnerHTML(page, '.ks-buttons-bs', '.ks-buttons-block');
   });
 
-  test('core/details: bs and block produce same output', async () => {
-    await assertSameInnerHTML(
-      page,
-      '.ks-details-bs',
-      '.ks-details-block'
-    );
+  test('core/details: bs and block identical', async () => {
+    await assertSameInnerHTML(page, '.ks-details-bs', '.ks-details-block');
   });
 
-  test('core/social-links: bs and block produce same output', async () => {
+  test('core/social-links: bs and block identical', async () => {
     await assertSameInnerHTML(
       page,
       '.ks-social-links-bs',
@@ -137,7 +129,23 @@ test.describe('Block Tags Kitchen Sink', () => {
     );
   });
 
-  // Blockstudio block in template
+  test('core/cover: bs and block identical', async () => {
+    await assertSameInnerHTML(page, '.ks-cover-bs', '.ks-cover-block');
+  });
+
+  test('core/more: bs and block identical', async () => {
+    await assertSameInnerHTML(page, '.ks-more-bs', '.ks-more-block');
+  });
+
+  // Dynamic block renders via WordPress callback
+  test('core/search: dynamic block renders', async () => {
+    const bsSearch = page.locator('.ks-dynamic-bs');
+    const blockSearch = page.locator('.ks-dynamic-block');
+    await expect(bsSearch).not.toBeEmpty();
+    await expect(blockSearch).not.toBeEmpty();
+  });
+
+  // Blockstudio block
   test('Blockstudio block renders in template', async () => {
     const custom = page.locator('.ks-custom-block .bs-block-tags');
     await expect(custom).toBeVisible();
@@ -155,8 +163,8 @@ test.describe('Block Tags Kitchen Sink', () => {
     await expect(bs.locator('.bt-title')).toHaveText('Mixed BS');
   });
 
-  // Passthrough: both syntaxes produce same passthrough attributes
-  test('passthrough: bs and block produce same output', async () => {
+  // Passthrough
+  test('passthrough: both syntaxes apply attributes', async () => {
     const bsP = page.locator('.ks-passthrough-bs p');
     const blockP = page.locator('.ks-passthrough-block p');
     await expect(bsP).toHaveClass(/pt-class/);
