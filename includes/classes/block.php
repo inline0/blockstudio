@@ -1514,6 +1514,26 @@ class Block {
 
 		$rendered_block = $rendered_block . ( ! $is_editor ? $assets : '' );
 
+		if ( $is_editor && str_contains( $rendered_block, 'data-wp-interactive' ) ) {
+			$rendered_block = wp_interactivity_process_directives( $rendered_block );
+
+			// Embed server state as a data attribute so the editor
+			// MutationObserver can inject it into the store before hydrating.
+			if ( preg_match( '/data-wp-interactive="([^"]+)"/', $rendered_block, $m ) ) {
+				$ns    = $m[1];
+				$state = wp_interactivity_state( $ns );
+				if ( ! empty( $state ) ) {
+					$encoded         = esc_attr( wp_json_encode( $state ) );
+					$rendered_block  = preg_replace(
+						'/data-wp-interactive="' . preg_quote( $ns, '/' ) . '"/',
+						'data-wp-interactive="' . $ns . '" data-wp-server-state="' . $encoded . '"',
+						$rendered_block,
+						1
+					);
+				}
+			}
+		}
+
 		return apply_filters(
 			'blockstudio/blocks/render',
 			$rendered_block,

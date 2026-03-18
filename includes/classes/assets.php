@@ -447,12 +447,21 @@ class Assets {
 
 		// In the editor, blocks render asynchronously via ServerSideRender.
 		// The Interactivity API runs init() at module load, before those
-		// elements exist. This observer re-hydrates islands that appear later.
+		// elements exist. This observer re-hydrates interactive islands that
+		// appear later. It also injects server state (from data-wp-server-state)
+		// and fixes React's <template> handling before hydrating.
 		$reinit = '<script type="module">'
-			. 'import{privateApis}from"@wordpress/interactivity";'
+			. 'import{privateApis,store}from"@wordpress/interactivity";'
 			. 'const a=privateApis("I acknowledge that using private APIs means my theme or plugin will inevitably break in the next version of WordPress.");'
 			. 'const{toVdom:v,getRegionRootFragment:f,render:r}=a;'
+			. 'function fixTpl(root){root.querySelectorAll("template").forEach(function(t){'
+			. 'if(!t.content.childNodes.length&&t.childNodes.length){'
+			. 'while(t.firstChild)t.content.appendChild(t.firstChild)'
+			. '}})}'
 			. 'const p=()=>{document.querySelectorAll("[data-wp-interactive]:not([data-wp-processed])").forEach(n=>{'
+			. 'var ss=n.dataset.wpServerState;'
+			. 'if(ss){var ns=n.dataset.wpInteractive;store(ns,{state:JSON.parse(ss)})}'
+			. 'fixTpl(n);'
 			. 'n.dataset.wpProcessed="1";r(v(n),f(n))})};'
 			. 'const o=new MutationObserver(()=>p());'
 			. 'if(document.body){o.observe(document.body,{childList:true,subtree:true});p()}'

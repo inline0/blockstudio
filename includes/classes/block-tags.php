@@ -1567,6 +1567,11 @@ class Block_Tags {
 			'attrs'     => $block_attrs,
 		);
 
+		// Block tags embed rendered HTML, not editor blocks. Force frontend
+		// mode so <InnerBlocks /> gets replaced with actual content.
+		$mode = $_GET['blockstudioMode'] ?? null; // phpcs:ignore WordPress.Security.NonceVerification.Recommended
+		unset( $_GET['blockstudioMode'] );
+
 		$result = Block::render(
 			array(
 				'blockstudio' => array(
@@ -1578,6 +1583,10 @@ class Block_Tags {
 			'',
 			$inner_content
 		);
+
+		if ( null !== $mode ) {
+			$_GET['blockstudioMode'] = $mode; // phpcs:ignore WordPress.Security.NonceVerification.Recommended
+		}
 
 		\WP_Block_Supports::$block_to_render = $parent;
 
