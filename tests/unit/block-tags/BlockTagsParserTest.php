@@ -708,6 +708,122 @@ class BlockTagsParserTest extends TestCase {
 	}
 
 	// -------------------------------------------------------------------------
+	// Dynamic blocks (fallback path)
+	// -------------------------------------------------------------------------
+
+	public function test_dynamic_block_produces_valid_array(): void {
+		$block = Block_Tags::build_block_array( 'core/archives', array(), '' );
+		$this->assertSame( 'core/archives', $block['blockName'] );
+		$this->assertArrayHasKey( 'attrs', $block );
+		$this->assertArrayHasKey( 'innerBlocks', $block );
+		$this->assertArrayHasKey( 'innerHTML', $block );
+		$this->assertArrayHasKey( 'innerContent', $block );
+	}
+
+	public function test_dynamic_block_preserves_attrs(): void {
+		$block = Block_Tags::build_block_array( 'core/latest-posts', array( 'postsToShow' => 5 ), '' );
+		$this->assertSame( 'core/latest-posts', $block['blockName'] );
+		$this->assertSame( 5, $block['attrs']['postsToShow'] );
+	}
+
+	public function test_dynamic_container_with_children(): void {
+		$block = Block_Tags::build_block_array(
+			'core/post-template',
+			array(),
+			'<block name="core/post-title" /><block name="core/post-date" />'
+		);
+		$this->assertSame( 'core/post-template', $block['blockName'] );
+		$this->assertCount( 2, $block['innerBlocks'] );
+	}
+
+	#[\PHPUnit\Framework\Attributes\DataProvider( 'dynamicBlockProvider' )]
+	public function test_dynamic_blocks_via_bs_syntax( string $block_name, string $bs_name ): void {
+		$blocks = Block_Tags::parse_inner_blocks( "<bs:{$bs_name} />" );
+		$this->assertCount( 1, $blocks );
+		$this->assertSame( $block_name, $blocks[0]['blockName'] );
+	}
+
+	public static function dynamicBlockProvider(): array {
+		return array(
+			'archives'       => array( 'core/archives', 'core-archives' ),
+			'calendar'       => array( 'core/calendar', 'core-calendar' ),
+			'categories'     => array( 'core/categories', 'core-categories' ),
+			'latest-posts'   => array( 'core/latest-posts', 'core-latest-posts' ),
+			'search'         => array( 'core/search', 'core-search' ),
+			'site-title'     => array( 'core/site-title', 'core-site-title' ),
+			'site-logo'      => array( 'core/site-logo', 'core-site-logo' ),
+			'loginout'       => array( 'core/loginout', 'core-loginout' ),
+			'post-title'     => array( 'core/post-title', 'core-post-title' ),
+			'post-date'      => array( 'core/post-date', 'core-post-date' ),
+			'post-excerpt'   => array( 'core/post-excerpt', 'core-post-excerpt' ),
+			'post-content'   => array( 'core/post-content', 'core-post-content' ),
+			'navigation'     => array( 'core/navigation', 'core-navigation' ),
+			'tag-cloud'      => array( 'core/tag-cloud', 'core-tag-cloud' ),
+			'rss'            => array( 'core/rss', 'core-rss' ),
+			'shortcode'      => array( 'core/shortcode', 'core-shortcode' ),
+			'file'           => array( 'core/file', 'core-file' ),
+		);
+	}
+
+	// -------------------------------------------------------------------------
+	// All container block wrappers
+	// -------------------------------------------------------------------------
+
+	#[\PHPUnit\Framework\Attributes\DataProvider( 'containerBlockProvider' )]
+	public function test_container_block_has_inner_blocks( string $block_name ): void {
+		$block = Block_Tags::build_block_array(
+			$block_name,
+			array(),
+			'<block name="core/paragraph">Child</block>'
+		);
+		$this->assertSame( $block_name, $block['blockName'] );
+		$this->assertCount( 1, $block['innerBlocks'] );
+		$this->assertSame( 'core/paragraph', $block['innerBlocks'][0]['blockName'] );
+	}
+
+	public static function containerBlockProvider(): array {
+		return array(
+			'group'           => array( 'core/group' ),
+			'columns'         => array( 'core/columns' ),
+			'column'          => array( 'core/column' ),
+			'buttons'         => array( 'core/buttons' ),
+			'quote'           => array( 'core/quote' ),
+			'cover'           => array( 'core/cover' ),
+			'details'         => array( 'core/details' ),
+			'social-links'    => array( 'core/social-links' ),
+			'query'           => array( 'core/query' ),
+			'comments'        => array( 'core/comments' ),
+			'accordion'       => array( 'core/accordion' ),
+			'accordion-item'  => array( 'core/accordion-item' ),
+			'accordion-panel' => array( 'core/accordion-panel' ),
+		);
+	}
+
+	// -------------------------------------------------------------------------
+	// Boolean attribute conversion
+	// -------------------------------------------------------------------------
+
+	public function test_boolean_true_attribute(): void {
+		$blocks = Block_Tags::parse_inner_blocks( '<block name="core/paragraph" active="true" />' );
+		$this->assertSame( true, $blocks[0]['attrs']['active'] );
+	}
+
+	public function test_boolean_false_attribute(): void {
+		$blocks = Block_Tags::parse_inner_blocks( '<block name="core/paragraph" active="false" />' );
+		$this->assertSame( false, $blocks[0]['attrs']['active'] );
+	}
+
+	// -------------------------------------------------------------------------
+	// Key remapping
+	// -------------------------------------------------------------------------
+
+	public function test_key_remapped_to_blockstudio_key(): void {
+		$block = Block_Tags::build_block_array( 'core/heading', array( 'key' => 'title', 'level' => 2 ), 'Title' );
+		$this->assertSame( 'title', $block['attrs']['__BLOCKSTUDIO_KEY'] );
+		$this->assertArrayNotHasKey( 'key', $block['attrs'] );
+	}
+
+	// -------------------------------------------------------------------------
 	// Stress test
 	// -------------------------------------------------------------------------
 

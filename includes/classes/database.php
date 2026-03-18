@@ -69,7 +69,68 @@ class Database {
 			. 'get:function(id){return fetch(u+"/"+id,{method:"GET",headers:h}).then(function(r){return r.json()})},'
 			. 'update:function(id,d){return fetch(u+"/"+id,{method:"PUT",headers:h,body:JSON.stringify(d)}).then(function(r){return r.json()})},'
 			. 'delete:function(id){return fetch(u+"/"+id,{method:"DELETE",headers:h}).then(function(r){return r.json()})}'
-			. '};};';
+			. '};};'
+
+			// bs.cache: in-memory query cache with manual controls.
+			. 'bs._qc={};'
+			. 'bs.cache={'
+			. 'get:function(k){var e=bs._qc[k];if(!e)return undefined;return e.data},'
+			. 'set:function(k,d){bs._qc[k]={data:d,time:Date.now()}},'
+			. 'invalidate:function(k){delete bs._qc[k]},'
+			. 'invalidateAll:function(){bs._qc={}},'
+			. 'clear:function(){bs._qc={}}'
+			. '};'
+
+			// bs.query: cached fetch with dedup and staleTime.
+			. 'bs._qp={};'
+			. 'bs.query=function(k,fn,o){'
+			. 'o=o||{};'
+			. 'var st=o.staleTime||0;'
+			. 'var e=bs._qc[k];'
+			. 'if(e&&st&&(Date.now()-e.time)<st)return Promise.resolve(e.data);'
+			. 'if(bs._qp[k])return bs._qp[k];'
+			. 'var p=fn().then(function(d){bs._qc[k]={data:d,time:Date.now()};delete bs._qp[k];return d});'
+			. 'bs._qp[k]=p;'
+			. 'return p;'
+			. '};'
+
+			// bs.mutate: optimistic mutations with auto-rollback.
+			. 'bs._tc=0;'
+			. 'bs.mutate=function(o){'
+			. 'var snap;'
+			// Auto mode: state + key + action + optimistic.
+			. 'if(o.state&&o.key){'
+			. 'snap=o.state[o.key]?o.state[o.key].slice():[];'
+			. 'var tid;'
+			. 'if(o.action==="create"&&o.optimistic){'
+			. 'tid="__temp_"+ ++bs._tc;'
+			. 'o.state[o.key]=o.state[o.key].concat([Object.assign({id:tid},o.optimistic)]);'
+			. '}else if(o.action==="update"&&o.optimistic){'
+			. 'o.state[o.key]=o.state[o.key].map(function(t){return t.id===o.id?o.optimistic:t});'
+			. '}else if(o.action==="delete"){'
+			. 'o.state[o.key]=o.state[o.key].filter(function(t){return t.id!==o.id});'
+			. '}'
+			. 'return o.fn().then(function(r){'
+			. 'if(o.action==="create"){if(tid){var items=o.state[o.key];for(var i=0;i<items.length;i++){if(items[i].id===tid){var ks=Object.keys(r);for(var j=0;j<ks.length;j++){items[i][ks[j]]=r[ks[j]]}break}}}else{o.state[o.key]=o.state[o.key].concat([r])}}'
+			. 'else if(o.action==="update"){o.state[o.key]=o.state[o.key].map(function(t){return t.id===o.id?r:t})}'
+			. 'bs.cache.invalidate(o.key);'
+			. 'return r;'
+			. '},function(err){'
+			. 'o.state[o.key]=snap;'
+			. 'throw err;'
+			. '});'
+			. '}'
+			// Manual mode: before/onSuccess/onError.
+			. 'if(o.before)snap=o.before();'
+			. 'return o.fn().then(function(r){'
+			. 'if(o.onSuccess)o.onSuccess(r,snap);'
+			. 'if(o.invalidate)bs.cache.invalidate(o.invalidate);'
+			. 'return r;'
+			. '},function(err){'
+			. 'if(o.onError)o.onError(err,snap);'
+			. 'throw err;'
+			. '});'
+			. '};';
 	}
 
 	/**
