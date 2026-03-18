@@ -57,24 +57,34 @@ Or using the new HTML tag syntax:
 
 ## Block tags
 
-Blocks can be embedded as HTML tags using the `<bs:>` syntax. The tag name
-maps to the block name with the first hyphen as the namespace separator:
-`acme/hero` becomes `<bs:acme-hero>`.
+Blocks can be embedded as HTML tags using two interchangeable syntaxes:
 
 ```html
-<bs:acme-hero title="Welcome" background="dark" />
+<bs:acme-hero title="Welcome" />
+<block name="acme/hero" title="Welcome" />
 ```
 
-Inside block templates, this works automatically. Write a `<bs:>` tag in your
-Twig or PHP template and the referenced block renders inline with full
-attribute support, assets, and Tailwind:
+Both render the same block. Both work with Blockstudio blocks and core
+WordPress blocks. Inside block templates, they render automatically with no
+opt-in required. You can compose entire layouts from other blocks directly in
+your template:
 
 ```twig title="index.twig"
 <div class="my-page">
   <bs:mytheme-card title="Featured" />
-  <bs:mytheme-cta variant="primary" />
+  <block name="core/separator" />
+  <bs:core-heading level="2">Section Title</bs:core-heading>
+  <block name="core/group">
+    <block name="core/paragraph">Inside a core group block.</block>
+    <bs:mytheme-cta variant="primary" />
+  </block>
 </div>
 ```
+
+The two syntaxes nest inside each other freely. Blockstudio blocks render
+through the full pipeline (templates, Tailwind, assets). Core blocks render
+through WordPress using the same renderers that power
+[Pages and Patterns](/docs/pages-and-patterns).
 
 For page-level rendering (post content, widget areas), enable it in
 `blockstudio.json`:
@@ -83,30 +93,10 @@ For page-level rendering (post content, widget areas), enable it in
 { "blockTags": { "enabled": true } }
 ```
 
-Allow and deny lists control which blocks can render via tags. Both support
-wildcard patterns:
-
-```json
-{
-  "blockTags": {
-    "enabled": true,
-    "allow": ["mytheme/*"],
-    "deny": ["mytheme/internal-*"]
-  }
-}
-```
-
-Attributes prefixed with `data-` or `html-` pass through to the rendered
-block's root element. `html-` prefixed attributes have the prefix stripped,
-so `html-class="featured"` becomes `class="featured"` on the output:
-
-```html
-<bs:mytheme-card title="My Card" html-class="featured" data-track="click" />
-```
-
-Paired tags, nested tags, and programmatic usage via
-`apply_filters('blockstudio/block_tags/render', $content)` all work as
-expected.
+Allow and deny lists control which blocks can render via tags using wildcard
+patterns. `data-*` and `html-*` attributes pass through to the rendered
+block's root HTML element. Custom renderers can be registered via the
+`blockstudio/block_tags/renderers` filter.
 
 ## New field types
 

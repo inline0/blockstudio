@@ -19,7 +19,8 @@ test.afterAll(async () => {
 });
 
 test.describe('Block Tags', () => {
-  test('renders a self-closing tag with attributes', async () => {
+  // Blockstudio blocks via bs: syntax
+  test('renders a self-closing bs: tag with attributes', async () => {
     const blocks = page.locator('.bs-block-tags');
     const first = blocks.first();
     await expect(first).toBeVisible();
@@ -27,7 +28,7 @@ test.describe('Block Tags', () => {
     await expect(first.locator('.bt-count')).toHaveText('42');
   });
 
-  test('renders a paired tag', async () => {
+  test('renders a paired bs: tag', async () => {
     const block = page.locator('.bs-block-tags', { hasText: 'Paired Tag' });
     await expect(block).toBeVisible();
     await expect(block.locator('.bt-count')).toHaveText('7');
@@ -49,15 +50,59 @@ test.describe('Block Tags', () => {
   });
 
   test('renders nested tags', async () => {
-    const outer = page.locator('.bs-block-tags', { hasText: 'Outer' });
-    const inner = page.locator('.bs-block-tags', { hasText: 'Inner' });
+    const outer = page.locator('.bs-block-tags', { hasText: 'Outer' }).first();
     await expect(outer).toBeVisible();
-    await expect(inner).toBeVisible();
     await expect(outer.locator('.bt-count').first()).toHaveText('100');
+    const inner = outer.locator('.bs-block-tags');
+    await expect(inner).toBeVisible();
     await expect(inner.locator('.bt-count')).toHaveText('200');
   });
 
   test('leaves unresolvable tags untouched', async () => {
     await expect(page.locator('text=Unknown tag:')).toBeVisible();
+  });
+
+  // Core blocks via <block> element
+  test('core/paragraph via block element', async () => {
+    const p = page.locator('p:has-text("Core via block element")');
+    await expect(p).toBeVisible();
+  });
+
+  test('core/heading via block element', async () => {
+    const h2 = page.locator('h2:has-text("Core heading")');
+    await expect(h2).toBeVisible();
+  });
+
+  // Core blocks via bs: syntax
+  test('core/paragraph via bs: tag', async () => {
+    const p = page.locator('p:has-text("Core via bs tag")');
+    await expect(p).toBeVisible();
+  });
+
+  test('core/heading via bs: tag', async () => {
+    const h3 = page.locator('h3:has-text("Core heading via bs")');
+    await expect(h3).toBeVisible();
+  });
+
+  // Core separator
+  test('core/separator via block element', async () => {
+    const hr = page.locator('hr.wp-block-separator');
+    await expect(hr).toBeAttached();
+  });
+
+  // Nested core blocks
+  test('nested block elements: group with paragraph', async () => {
+    const group = page.locator('.wp-block-group');
+    await expect(group.first()).toBeVisible();
+    const p = group.first().locator('p:has-text("Inside group")');
+    await expect(p).toBeVisible();
+  });
+
+  // Passthrough in page content
+  test('passthrough attributes on core block in page content', async () => {
+    const p = page.locator('p.page-passthrough');
+    await expect(p).toBeVisible();
+    await expect(p).toHaveAttribute('data-testid', 'page-pt');
+    await expect(p).toHaveText('Passthrough test');
   });
 });

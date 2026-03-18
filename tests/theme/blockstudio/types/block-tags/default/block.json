@@ -1,0 +1,24 @@
+{
+  "$schema": "https://blockstudio.dev/schema/block",
+  "name": "blockstudio/type-block-tags-default",
+  "title": "Block Tags Test",
+  "category": "blockstudio-test-native",
+  "icon": "shortcode",
+  "description": "Test block for block tags feature.",
+  "blockstudio": {
+    "attributes": [
+      {
+        "id": "title",
+        "type": "text",
+        "label": "Title",
+        "default": "Default Title"
+      },
+      {
+        "id": "count",
+        "type": "number",
+        "label": "Count",
+        "default": 0
+      }
+    ]
+  }
+}

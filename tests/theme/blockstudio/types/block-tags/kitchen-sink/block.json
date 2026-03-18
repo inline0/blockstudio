@@ -1,0 +1,18 @@
+{
+  "$schema": "https://blockstudio.dev/schema/block",
+  "name": "blockstudio/type-block-tags-kitchen-sink",
+  "title": "Block Tags Kitchen Sink",
+  "category": "blockstudio-test-native",
+  "icon": "shortcode",
+  "description": "Test block with every block tag combination in its template.",
+  "blockstudio": {
+    "attributes": [
+      {
+        "id": "label",
+        "type": "text",
+        "label": "Label",
+        "default": "Kitchen Sink"
+      }
+    ]
+  }
+}

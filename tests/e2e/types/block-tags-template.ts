@@ -17,7 +17,7 @@ test.afterAll(async () => {
 });
 
 test.describe('Block Tags in Templates', () => {
-  test('bs: tag in block template renders embedded block', async () => {
+  test('bs: tag renders Blockstudio block in template', async () => {
     await page.goto('http://localhost:8888/block-tags-template-test/', {
       waitUntil: 'domcontentloaded',
     });
@@ -30,5 +30,17 @@ test.describe('Block Tags in Templates', () => {
     await expect(embedded).toBeVisible({ timeout: 5000 });
     await expect(embedded.locator('.bt-title')).toHaveText('From Template');
     await expect(embedded.locator('.bt-count')).toHaveText('99');
+  });
+
+  test('bs: tag renders core paragraph in template', async () => {
+    const coreBs = page.locator('.btt-core-bs p');
+    await expect(coreBs).toBeVisible();
+    await expect(coreBs).toHaveText('Core paragraph via bs tag');
+  });
+
+  test('block element renders core paragraph in template', async () => {
+    const coreBlock = page.locator('.btt-core-block p');
+    await expect(coreBlock).toBeVisible();
+    await expect(coreBlock).toHaveText('Core paragraph via block tag');
   });
 });

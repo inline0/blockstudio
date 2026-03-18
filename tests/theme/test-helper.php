@@ -798,14 +798,21 @@ add_action(
 					// Post 1099 - "Reusable" for text.ts populate tests (matches extension default)
 					$create_post_with_id( 1099, 'Reusable', 'reusable' );
 
-					// Block tags test page with raw bs: tags in content
-					$bt_content = '<bs:blockstudio-type-block-tags title="Self Closing" count=42 />'
-						. '<bs:blockstudio-type-block-tags title="Paired Tag" count=7></bs:blockstudio-type-block-tags>'
-						. '<bs:blockstudio-type-block-tags />'
-						. '<bs:blockstudio-type-block-tags title="First" count=1 />'
-						. '<bs:blockstudio-type-block-tags title="Second" count=2 />'
-						. '<bs:blockstudio-type-block-tags title="Outer" count=100><bs:blockstudio-type-block-tags title="Inner" count=200 /></bs:blockstudio-type-block-tags>'
-						. '<p>Unknown tag: <bs:nonexistent-block title="Nope" /></p>';
+					// Block tags test page with both bs: and <block> syntax
+					$bt_content = '<bs:blockstudio-type-block-tags-default title="Self Closing" count=42 />'
+						. '<bs:blockstudio-type-block-tags-default title="Paired Tag" count=7></bs:blockstudio-type-block-tags-default>'
+						. '<bs:blockstudio-type-block-tags-default />'
+						. '<bs:blockstudio-type-block-tags-default title="First" count=1 />'
+						. '<bs:blockstudio-type-block-tags-default title="Second" count=2 />'
+						. '<bs:blockstudio-type-block-tags-default title="Outer" count=100><bs:blockstudio-type-block-tags-default title="Inner" count=200 /></bs:blockstudio-type-block-tags-default>'
+						. '<p>Unknown tag: <bs:nonexistent-block title="Nope" /></p>'
+						. '<block name="core/paragraph">Core via block element</block>'
+						. '<bs:core-paragraph>Core via bs tag</bs:core-paragraph>'
+						. '<block name="core/heading" level="2">Core heading</block>'
+						. '<bs:core-heading level="3">Core heading via bs</bs:core-heading>'
+						. '<block name="core/separator" />'
+						. '<block name="core/group"><block name="core/paragraph">Inside group</block></block>'
+						. '<bs:core-paragraph html-class="page-passthrough" data-testid="page-pt">Passthrough test</bs:core-paragraph>';
 					if ( ! get_post( 3100 ) ) {
 						$wpdb->insert( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery
 							$wpdb->posts,
@@ -889,6 +896,27 @@ add_action(
 							)
 						);
 						$created['posts'][] = 3500;
+					}
+
+					// Block tags kitchen sink test page (renders all core + mixed syntax in template)
+					$ks_content = '[bs_test_render name="blockstudio/type-block-tags-kitchen-sink" label="Kitchen Sink"]';
+					if ( ! get_post( 3600 ) ) {
+						$wpdb->insert( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery
+							$wpdb->posts,
+							array(
+								'ID'            => 3600,
+								'post_author'   => 1,
+								'post_date'     => current_time( 'mysql' ),
+								'post_date_gmt' => current_time( 'mysql', 1 ),
+								'post_content'  => $ks_content,
+								'post_title'    => 'Kitchen Sink Test',
+								'post_status'   => 'publish',
+								'post_name'     => 'kitchen-sink-test',
+								'post_type'     => 'page',
+								'guid'          => home_url( '/?p=3600' ),
+							)
+						);
+						$created['posts'][] = 3600;
 					}
 
 					// Native WP block test page

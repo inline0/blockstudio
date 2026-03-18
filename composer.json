@@ -21,7 +21,8 @@
     "humbug/php-scoper": "^0.18.18",
     "tailwindphp/tailwindphp": "^1.0",
     "scssphp/scssphp": "^2.1",
-    "matthiasmullie/minify": "^1.3"
+    "matthiasmullie/minify": "^1.3",
+    "phpunit/phpunit": "^11.0"
   },
   "autoload": {
     "classmap": [
@@ -32,7 +33,8 @@
     "scope": "vendor/bin/php-scoper add-prefix --output-dir=lib --force",
     "preflight": "php bin/generate-preflight.php",
     "cs": "phpcs",
-    "cs:fix": "phpcbf"
+    "cs:fix": "phpcbf",
+    "test": "phpunit"
   },
   "config": {
     "allow-plugins": {

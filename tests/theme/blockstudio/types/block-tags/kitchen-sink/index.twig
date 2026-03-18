@@ -1,0 +1,79 @@
+<div class="bs-kitchen-sink" data-block="{{ b.name }}">
+  <span class="ks-label">{{ a.label }}</span>
+
+  <div class="ks-paragraph-bs"><bs:core-paragraph>Test paragraph</bs:core-paragraph></div>
+  <div class="ks-paragraph-block"><block name="core/paragraph">Test paragraph</block></div>
+
+  <div class="ks-heading-bs"><bs:core-heading level="2">Test heading</bs:core-heading></div>
+  <div class="ks-heading-block"><block name="core/heading" level="2">Test heading</block></div>
+
+  <div class="ks-list-bs"><bs:core-list><li>Item one</li><li>Item two</li></bs:core-list></div>
+  <div class="ks-list-block"><block name="core/list"><li>Item one</li><li>Item two</li></block></div>
+
+  <div class="ks-quote-bs"><bs:core-quote>Test quote</bs:core-quote></div>
+  <div class="ks-quote-block"><block name="core/quote">Test quote</block></div>
+
+  <div class="ks-pullquote-bs"><bs:core-pullquote>Test pullquote</bs:core-pullquote></div>
+  <div class="ks-pullquote-block"><block name="core/pullquote">Test pullquote</block></div>
+
+  <div class="ks-code-bs"><bs:core-code>const x = 1;</bs:core-code></div>
+  <div class="ks-code-block"><block name="core/code">const x = 1;</block></div>
+
+  <div class="ks-preformatted-bs"><bs:core-preformatted>Preformatted text</bs:core-preformatted></div>
+  <div class="ks-preformatted-block"><block name="core/preformatted">Preformatted text</block></div>
+
+  <div class="ks-verse-bs"><bs:core-verse>Test verse</bs:core-verse></div>
+  <div class="ks-verse-block"><block name="core/verse">Test verse</block></div>
+
+  <div class="ks-image-bs"><bs:core-image url="https://via.placeholder.com/100" alt="Test" /></div>
+  <div class="ks-image-block"><block name="core/image" url="https://via.placeholder.com/100" alt="Test" /></div>
+
+  <div class="ks-separator-bs"><bs:core-separator /></div>
+  <div class="ks-separator-block"><block name="core/separator" /></div>
+
+  <div class="ks-spacer-bs"><bs:core-spacer height="50px" /></div>
+  <div class="ks-spacer-block"><block name="core/spacer" height="50px" /></div>
+
+  <div class="ks-group-bs"><bs:core-group><bs:core-paragraph>In group</bs:core-paragraph></bs:core-group></div>
+  <div class="ks-group-block"><block name="core/group"><block name="core/paragraph">In group</block></block></div>
+
+  <div class="ks-columns-bs">
+    <bs:core-columns>
+      <bs:core-column><bs:core-paragraph>Left</bs:core-paragraph></bs:core-column>
+      <bs:core-column><bs:core-paragraph>Right</bs:core-paragraph></bs:core-column>
+    </bs:core-columns>
+  </div>
+  <div class="ks-columns-block">
+    <block name="core/columns">
+      <block name="core/column"><block name="core/paragraph">Left</block></block>
+      <block name="core/column"><block name="core/paragraph">Right</block></block>
+    </block>
+  </div>
+
+  <div class="ks-buttons-bs"><bs:core-buttons><bs:core-button url="https://example.com">Click</bs:core-button></bs:core-buttons></div>
+  <div class="ks-buttons-block"><block name="core/buttons"><block name="core/button" url="https://example.com">Click</block></block></div>
+
+  <div class="ks-details-bs"><bs:core-details><bs:core-paragraph>Details content</bs:core-paragraph></bs:core-details></div>
+  <div class="ks-details-block"><block name="core/details"><block name="core/paragraph">Details content</block></block></div>
+
+  <div class="ks-social-links-bs"><bs:core-social-links><bs:core-social-link service="twitter" url="https://twitter.com" /></bs:core-social-links></div>
+  <div class="ks-social-links-block"><block name="core/social-links"><block name="core/social-link" service="twitter" url="https://twitter.com" /></block></div>
+
+  <div class="ks-custom-block">
+    <bs:blockstudio-type-block-tags-default title="BS Block" count="7" />
+  </div>
+
+  <div class="ks-mixed">
+    <bs:core-group>
+      <block name="core/paragraph">Mixed content</block>
+      <bs:blockstudio-type-block-tags-default title="Mixed BS" count="42" />
+    </bs:core-group>
+  </div>
+
+  <div class="ks-passthrough-bs">
+    <bs:core-paragraph html-class="pt-class" data-testid="pt-bs">Passthrough</bs:core-paragraph>
+  </div>
+  <div class="ks-passthrough-block">
+    <block name="core/paragraph" html-class="pt-class" data-testid="pt-block">Passthrough</block>
+  </div>
+</div>

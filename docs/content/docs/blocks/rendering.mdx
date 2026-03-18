@@ -103,21 +103,35 @@ echo bs_block([
 
 ## Block Tags
 
-Use `<bs:>` tags to embed blocks as HTML tags. The tag name maps to the block
-name with the first hyphen as the namespace separator: `acme/hero` becomes
-`<bs:acme-hero>`.
+Embed any block using HTML tag syntax. Two formats are supported:
+
+```html
+<bs:acme-hero title="Welcome" />
+<block name="acme/hero" title="Welcome" />
+```
+
+Both render the same block. The `<bs:>` syntax uses the first hyphen as the
+namespace separator (`acme-hero` becomes `acme/hero`). The `<block>` syntax
+takes the full block name as a `name` attribute.
+
+Both Blockstudio blocks and core WordPress blocks work. Blockstudio blocks
+render through the full pipeline (templates, Tailwind, assets). Core blocks
+render through WordPress's block rendering system using the built-in
+[block renderers](/docs/pages-and-patterns).
 
 ### In block templates
 
-Block tags work automatically inside Twig and PHP templates. No setting needed.
+Block tags render automatically inside Twig and PHP templates. No setting
+needed. Use them to compose blocks from other blocks:
 
 ```twig title="index.twig"
-<div class="my-section">
-  <bs:mytheme-card title="Embedded" count=42 />
+<div class="my-page">
+  <bs:mytheme-card title="Featured" />
+  <block name="core/separator" />
+  <bs:core-paragraph>Rendered by WordPress</bs:core-paragraph>
+  <block name="core/heading" level="2">Also WordPress</block>
 </div>
 ```
-
-The embedded block renders with full attribute support, assets, and Tailwind.
 
 ### In post content
 
@@ -143,6 +157,7 @@ Self-closing tags:
 
 ```html
 <bs:mytheme-cta title="Get started" variant="primary" />
+<block name="core/separator" />
 ```
 
 Paired tags with inner content:
@@ -151,15 +166,49 @@ Paired tags with inner content:
 <bs:mytheme-section layout="wide">
   <p>Content inside the block.</p>
 </bs:mytheme-section>
+
+<block name="core/group">
+  <block name="core/paragraph">Inside a group.</block>
+</block>
 ```
 
-Nested tags (inner blocks render first):
+Mix and match freely. Both syntaxes can nest inside each other:
 
 ```html
-<bs:mytheme-section layout="wide">
-  <bs:mytheme-hero title="Welcome" />
+<bs:mytheme-section>
+  <block name="core/heading" level="2">Title</block>
   <bs:mytheme-card title="Features" />
+  <block name="core/paragraph">Description text.</block>
 </bs:mytheme-section>
+```
+
+### Core blocks
+
+Any block with a registered [renderer](/docs/pages-and-patterns) can be used:
+
+```html
+<bs:core-paragraph>A paragraph</bs:core-paragraph>
+<bs:core-heading level="2">A heading</bs:core-heading>
+<bs:core-separator />
+<bs:core-image url="photo.jpg" alt="Photo" />
+<bs:core-buttons>
+  <bs:core-button url="/about">About</bs:core-button>
+</bs:core-buttons>
+```
+
+Or with `<block>` syntax:
+
+```html
+<block name="core/group">
+  <block name="core/columns">
+    <block name="core/column">
+      <block name="core/paragraph">Left column</block>
+    </block>
+    <block name="core/column">
+      <block name="core/paragraph">Right column</block>
+    </block>
+  </block>
+</block>
 ```
 
 ### Allow and deny lists
@@ -170,7 +219,7 @@ Control which blocks can render via tags:
 {
   "blockTags": {
     "enabled": true,
-    "allow": ["mytheme/*", "bsui/*"],
+    "allow": ["mytheme/*", "core/*"],
     "deny": ["mytheme/internal-*"]
   }
 }
@@ -178,7 +227,7 @@ Control which blocks can render via tags:
 
 `allow` restricts to only matching patterns. `deny` excludes matching patterns
 and takes precedence. Both support `*` wildcards via `fnmatch()`. These apply
-to both template-level and page-level rendering.
+to both syntaxes and both template-level and page-level rendering.
 
 Filters: `blockstudio/block_tags/allow` and `blockstudio/block_tags/deny`.
 
@@ -186,8 +235,7 @@ Filters: `blockstudio/block_tags/allow` and `blockstudio/block_tags/deny`.
 
 Attributes prefixed with `data-` pass through to the rendered block's root
 element. Attributes prefixed with `html-` also pass through, with the prefix
-stripped. This lets you add classes, IDs, or data attributes without them being
-treated as block attributes.
+stripped. Works with both syntaxes.
 
 ```html
 <bs:mytheme-card
@@ -196,11 +244,30 @@ treated as block attributes.
   html-id="main-card"
   data-analytics="card-click"
 />
+
+<block name="core/paragraph" html-class="highlight" data-section="intro">
+  Highlighted paragraph.
+</block>
 ```
 
-The rendered output's root element receives `class="featured-card"`,
-`id="main-card"`, and `data-analytics="card-click"`. Block attributes
-(`title`) are passed to the block template as usual.
+### Custom renderers
+
+Register custom block renderers to support additional block types:
+
+```php
+add_filter('blockstudio/block_tags/renderers', function ($renderers, $parser) {
+    $renderers['myplugin/custom-block'] = function ($element, $attrs, $parser) {
+        return [
+            'blockName'    => 'myplugin/custom-block',
+            'attrs'        => $attrs,
+            'innerBlocks'  => [],
+            'innerHTML'    => '<div>' . $parser->get_inner_html($element) . '</div>',
+            'innerContent' => ['<div>' . $parser->get_inner_html($element) . '</div>'],
+        ];
+    };
+    return $renderers;
+}, 10, 2);
+```
 
 ### Programmatic usage
 
