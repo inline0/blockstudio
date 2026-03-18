@@ -252,21 +252,44 @@ stripped. Works with both syntaxes.
 
 ### Custom renderers
 
-Register custom block renderers to support additional block types:
+Register custom block renderers for additional block types. Renderers take
+an attributes array and inner content string, and return a WordPress block
+array:
 
 ```php
 add_filter('blockstudio/block_tags/renderers', function ($renderers, $parser) {
-    $renderers['myplugin/custom-block'] = function ($element, $attrs, $parser) {
+    $renderers['myplugin/custom-block'] = function (array $attrs, string $inner_content) {
+        $html = '<div class="my-block">' . $inner_content . '</div>';
         return [
             'blockName'    => 'myplugin/custom-block',
             'attrs'        => $attrs,
             'innerBlocks'  => [],
-            'innerHTML'    => '<div>' . $parser->get_inner_html($element) . '</div>',
-            'innerContent' => ['<div>' . $parser->get_inner_html($element) . '</div>'],
+            'innerHTML'    => $html,
+            'innerContent' => [$html],
         ];
     };
     return $renderers;
 }, 10, 2);
+```
+
+For container blocks that need to parse inner content into child blocks:
+
+```php
+$renderers['myplugin/wrapper'] = function (array $attrs, string $inner_content) {
+    $inner_blocks = Blockstudio\Block_Tags::parse_inner_blocks($inner_content);
+    $content = ['<div class="my-wrapper">'];
+    foreach ($inner_blocks as $block) {
+        $content[] = null;
+    }
+    $content[] = '</div>';
+    return [
+        'blockName'    => 'myplugin/wrapper',
+        'attrs'        => $attrs,
+        'innerBlocks'  => $inner_blocks,
+        'innerHTML'    => '<div class="my-wrapper"></div>',
+        'innerContent' => $content,
+    ];
+};
 ```
 
 ### Programmatic usage
@@ -285,3 +308,17 @@ are blocks that only render programmatically and never appear in the editor.
 ```html
 <bs:mytheme-card title="My Card" description="Card content." />
 ```
+
+### Parser
+
+Block tags are processed by a lightweight string scanner that replaces
+DOMDocument. The parser handles both `<bs:>` and `<block>` syntax, nested
+same-name tags with depth tracking, quoted attribute values, and recursive
+container blocks. It is purpose-built for this specific use case, benchmarks
+faster than both DOMDocument and WordPress's `WP_HTML_Tag_Processor`, and
+avoids DOMDocument's known issues with namespace prefix stripping and
+attribute lowercasing.
+
+For [Pages and Patterns](/docs/pages-and-patterns), the same parser also
+handles raw HTML elements (`<p>`, `<div>`, `<h1>`, etc.), mapping them to
+their corresponding WordPress core blocks.

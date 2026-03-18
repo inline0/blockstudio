@@ -98,6 +98,16 @@ patterns. `data-*` and `html-*` attributes pass through to the rendered
 block's root HTML element. Custom renderers can be registered via the
 `blockstudio/block_tags/renderers` filter.
 
+Under the hood, the tag parser is a new lightweight string scanner that
+replaces DOMDocument entirely. It handles nested tags with depth tracking,
+recursive container blocks, and mixed syntax in a single pass. In benchmarks,
+it parses 1,000 flat tags in 2.4ms and 100 levels of nesting in 3.7ms,
+consistently faster than both DOMDocument and WordPress's
+`WP_HTML_Tag_Processor`. The same parser also handles raw HTML element
+parsing for [Pages and Patterns](/docs/pages-and-patterns), replacing the
+DOMDocument-based parser that previously handled `<p>`, `<div>`, and other
+HTML elements.
+
 ## New field types
 
 ### Block
