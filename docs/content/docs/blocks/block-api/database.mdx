@@ -161,6 +161,144 @@ await db.delete(record.id);
 The first argument is the block name (with `/`), the second is the schema name.
 For single-schema blocks, omit the schema name (defaults to `"default"`).
 
+### Cache
+
+`bs.cache` is an in-memory query cache shared across all `bs.query` and
+`bs.mutate` calls. You can also use it directly:
+
+```js
+// Read a cached value
+const data = bs.cache.get('my-key');
+
+// Write to the cache
+bs.cache.set('my-key', { items: [...] });
+
+// Invalidate a single key
+bs.cache.invalidate('my-key');
+
+// Invalidate all keys
+bs.cache.invalidateAll();
+
+// Alias for invalidateAll
+bs.cache.clear();
+```
+
+Cache entries are stored in memory and cleared on page navigation. They are
+primarily used internally by `bs.query` and `bs.mutate`, but direct access is
+useful for pre-populating data or manually invalidating after custom operations.
+
+### Query
+
+`bs.query()` wraps any async function with caching, deduplication, and
+staleness control. Multiple calls with the same key while a request is in
+flight return the same promise (no duplicate fetches).
+
+```js
+// Basic cached fetch
+const subscribers = await bs.query('subscribers', () =>
+  bs.db('my-theme/app', 'subscribers').list()
+);
+
+// With staleTime: skip the fetch if cached data is younger than 30 seconds
+const subscribers = await bs.query('subscribers', () =>
+  bs.db('my-theme/app', 'subscribers').list(),
+  { staleTime: 30000 }
+);
+```
+
+The first argument is a cache key (any string). The second is a function that
+returns a promise. The third is an optional options object:
+
+| Option | Type | Description |
+|--------|------|-------------|
+| `staleTime` | `number` | Milliseconds before cached data is considered stale. `0` (default) always refetches. |
+
+If the cache has data for the key and it is younger than `staleTime`, the
+cached value is returned immediately without calling the function.
+
+### Mutate
+
+`bs.mutate()` handles write operations with optimistic updates and automatic
+rollback on failure. It has two modes: auto mode for common CRUD patterns, and
+manual mode for full control.
+
+**Auto mode** works with a reactive state object (like Alpine.js `$data`). Pass
+`state`, `key`, `action`, and optionally `optimistic`:
+
+```js
+// Optimistic create: item appears instantly, gets real ID on success
+await bs.mutate({
+  state: $data,
+  key: 'todos',
+  action: 'create',
+  optimistic: { text: 'New todo', done: false },
+  fn: () => bs.db('my-theme/app', 'todos').create({ text: 'New todo', done: false }),
+});
+
+// Optimistic update: field changes instantly, reverts on failure
+await bs.mutate({
+  state: $data,
+  key: 'todos',
+  action: 'update',
+  id: todoId,
+  optimistic: { done: true },
+  fn: () => bs.db('my-theme/app', 'todos').update(todoId, { done: true }),
+});
+
+// Delete: item removed from the array immediately
+await bs.mutate({
+  state: $data,
+  key: 'todos',
+  action: 'delete',
+  id: todoId,
+  fn: () => bs.db('my-theme/app', 'todos').delete(todoId),
+});
+```
+
+On success, the optimistic data is replaced with the server response. On
+failure, the state rolls back to a snapshot taken before the mutation. The
+cache key is automatically invalidated after every successful mutation.
+
+For create operations, a temporary `id` (like `__temp_1`) is assigned to the
+optimistic item. When the server responds, the temporary item is patched with
+the real data including the server-assigned `id`.
+
+**Manual mode** gives you full control with `before`, `onSuccess`, and
+`onError` callbacks:
+
+```js
+await bs.mutate({
+  fn: () => bs.db('my-theme/app', 'todos').create({ text: 'New' }),
+  invalidate: 'todos',
+  before: () => {
+    // Take a snapshot, return it for use in onError
+    const snapshot = [...$data.todos];
+    $data.todos.push({ id: '__temp', text: 'New' });
+    return snapshot;
+  },
+  onSuccess: (result, snapshot) => {
+    // Replace temp item with server response
+  },
+  onError: (error, snapshot) => {
+    // Restore from snapshot
+    $data.todos = snapshot;
+  },
+});
+```
+
+| Option | Type | Mode | Description |
+|--------|------|------|-------------|
+| `fn` | `function` | Both | The async function that performs the mutation. Required. |
+| `state` | `object` | Auto | Reactive state object (e.g., Alpine `$data`). |
+| `key` | `string` | Auto | Property name on state that holds the array. Also used as cache key. |
+| `action` | `string` | Auto | One of `create`, `update`, or `delete`. |
+| `id` | `any` | Auto | Record ID for `update` and `delete` actions. |
+| `optimistic` | `object` | Auto | Data to apply optimistically before the server responds. |
+| `before` | `function` | Manual | Called before `fn`. Return value is passed to `onSuccess`/`onError` as `snapshot`. |
+| `onSuccess` | `function` | Manual | Called with `(result, snapshot)` on success. |
+| `onError` | `function` | Manual | Called with `(error, snapshot)` on failure. |
+| `invalidate` | `string` | Manual | Cache key to invalidate on success. |
+
 ## PHP API
 
 The `Db` class provides the same operations server-side. Use it in `rpc.php`,

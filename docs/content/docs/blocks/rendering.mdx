@@ -119,10 +119,29 @@ render through the full pipeline (templates, Tailwind, assets). Core blocks
 render through WordPress's block rendering system using the built-in
 [block renderers](/docs/pages-and-patterns).
 
+### How it works
+
+Block tags behave differently depending on where they appear:
+
+**In block templates and post content**, tags are replaced with rendered HTML
+at runtime. The output is the final markup of the referenced block, embedded
+directly into the page. There is no WordPress block in the editor for these.
+They are purely a rendering mechanism.
+
+**In [Pages and Patterns](/docs/pages-and-patterns)**, tags are converted to
+native WordPress blocks and stored in `post_content`. This means the blocks
+appear in the editor, can be edited, and go through WordPress's full block
+lifecycle. The tag syntax is a shorthand for defining block content in
+template files.
+
+This distinction matters: block tags in templates produce output, block tags
+in pages produce editable blocks.
+
 ### In block templates
 
 Block tags render automatically inside Twig and PHP templates. No setting
-needed. Use them to compose blocks from other blocks:
+needed. The output is rendered HTML embedded directly into the block's
+template output:
 
 ```twig title="index.twig"
 <div class="my-page">

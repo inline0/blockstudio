@@ -1445,7 +1445,7 @@ class Block {
 				// phpcs:enable WordPress.Security.EscapeOutput.ExceptionNotEscaped
 			}
 
-			if ( ! $is_editor && ( str_contains( $compiled_string, '<bs:' ) || str_contains( $compiled_string, '<block ' ) ) ) {
+			if ( str_contains( $compiled_string, '<bs:' ) || str_contains( $compiled_string, '<block ' ) ) {
 				$compiled_string = Block_Tags::render( $compiled_string );
 			}
 
@@ -1495,7 +1495,7 @@ class Block {
 
 			$php_output = ob_get_clean();
 
-			if ( ! $is_editor && ( str_contains( $php_output, '<bs:' ) || str_contains( $php_output, '<block ' ) ) ) {
+			if ( str_contains( $php_output, '<bs:' ) || str_contains( $php_output, '<block ' ) ) {
 				$php_output = Block_Tags::render( $php_output );
 			}
 

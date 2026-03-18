@@ -227,6 +227,21 @@ await db.update(record.id, { plan: 'free' });
 await db.delete(record.id);
 ```
 
+On top of the CRUD client, three companion utilities ship alongside `bs.db()`:
+
+- **`bs.cache`**: In-memory query cache with `get`, `set`, `invalidate`, and
+  `clear`. Shared across all query and mutation calls.
+- **`bs.query(key, fn, options)`**: Cached async fetch with request
+  deduplication and configurable `staleTime`. Multiple calls with the same key
+  while a request is in flight return the same promise.
+- **`bs.mutate(options)`**: Optimistic mutations with auto-rollback. Pass a
+  reactive state object, an action (`create`, `update`, `delete`), and
+  optimistic data. The UI updates instantly; if the server call fails, the
+  state rolls back to its pre-mutation snapshot.
+
+Together these cover the full read/write cycle: `bs.query` for cached reads,
+`bs.mutate` for optimistic writes, `bs.cache` for manual control.
+
 From PHP, there's a new `Db` class with the same operations:
 
 ```php
