@@ -1523,8 +1523,8 @@ class Block {
 				$ns    = $m[1];
 				$state = wp_interactivity_state( $ns );
 				if ( ! empty( $state ) ) {
-					$encoded         = esc_attr( wp_json_encode( $state ) );
-					$rendered_block  = preg_replace(
+					$encoded        = esc_attr( wp_json_encode( $state ) );
+					$rendered_block = preg_replace(
 						'/data-wp-interactive="' . preg_quote( $ns, '/' ) . '"/',
 						'data-wp-interactive="' . $ns . '" data-wp-server-state="' . $encoded . '"',
 						$rendered_block,
