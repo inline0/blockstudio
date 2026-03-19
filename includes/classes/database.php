@@ -104,8 +104,9 @@ class Database {
 			. 'bs._sp=function(arr,id,p){for(var i=0;i<arr.length;i++){if(arr[i].id===id){var ks=Object.keys(p);for(var j=0;j<ks.length;j++){arr[i][ks[j]]=p[ks[j]]}return}}};'
 
 			// bs.mutate: optimistic mutations with auto-rollback.
-			. 'bs._tc=0;'
+			. 'bs._tc=0;bs._rm=0;'
 			. 'bs.mutate=function(o){'
+			. 'bs._rm=Date.now();'
 			. 'var snap;'
 			// Auto mode: state + key + action + optimistic.
 			. 'if(o.state&&o.key){'
@@ -155,6 +156,7 @@ class Database {
 				. 'if(bs._rh[hk]!==d.hash){'
 				. 'bs._rh[hk]=d.hash;'
 				. 'fetch(u,{headers:h}).then(function(r){return r.json()}).then(function(rows){'
+				. 'if(bs._rm&&(Date.now()-bs._rm)<c.interval*2)return;'
 				. 'bs.cache.set(c.key,rows);'
 				. 'import("@wordpress/interactivity").then(function(m){try{m.store(c.block).state[c.key]=rows}catch(e){}}).catch(function(){})'
 				. '})'
