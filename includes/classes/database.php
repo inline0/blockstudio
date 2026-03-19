@@ -32,6 +32,13 @@ class Database {
 	private static array $block_paths = array();
 
 	/**
+	 * Realtime polling configs collected from schemas.
+	 *
+	 * @var array<int, array>
+	 */
+	private static array $realtime = array();
+
+	/**
 	 * Whether schemas have been loaded.
 	 *
 	 * @var bool
@@ -59,7 +66,7 @@ class Database {
 		$nonce    = wp_create_nonce( 'wp_rest' );
 		$bs_token = Csrf::generate();
 
-		return 'window.bs=window.bs||{};'
+		$script = 'window.bs=window.bs||{};'
 			. 'bs.db=function(b,s){'
 			. 'var u="' . $rest_url . '"+b.replace("/","-")+"/"+(s||"default");'
 			. 'var h={"Content-Type":"application/json","X-WP-Nonce":"' . $nonce . '","X-BS-Token":"' . $bs_token . '"};'
@@ -135,6 +142,46 @@ class Database {
 			. 'throw err;'
 			. '});'
 			. '};';
+
+		// bs.realtime: automatic polling with hash comparison.
+		self::load_all();
+
+		if ( ! empty( self::$realtime ) ) {
+			$script .= 'bs._rh={};'
+				. 'bs._rt=function(c,u,h){'
+				. 'function poll(){'
+				. 'fetch(u+"?_hash=1",{headers:h}).then(function(r){return r.json()}).then(function(d){'
+				. 'var hk=c.block+":"+c.key;'
+				. 'if(bs._rh[hk]!==d.hash){'
+				. 'bs._rh[hk]=d.hash;'
+				. 'fetch(u,{headers:h}).then(function(r){return r.json()}).then(function(rows){'
+				. 'bs.cache.set(c.key,rows);'
+				. 'import("@wordpress/interactivity").then(function(m){try{m.store(c.block).state[c.key]=rows}catch(e){}}).catch(function(){})'
+				. '})'
+				. '}'
+				. '}).catch(function(){})'
+				. '}'
+				. 'fetch(u+"?_hash=1",{headers:h}).then(function(r){return r.json()}).then(function(d){'
+				. 'bs._rh[c.block+":"+c.key]=d.hash;'
+				. 'var tid=setInterval(poll,c.interval);'
+				. 'document.addEventListener("visibilitychange",function(){'
+				. 'if(document.hidden){clearInterval(tid)}'
+				. 'else{poll();tid=setInterval(poll,c.interval)}'
+				. '})'
+				. '}).catch(function(){})'
+				. '};'
+				. 'document.addEventListener("DOMContentLoaded",function(){'
+				. 'var R=' . wp_json_encode( self::$realtime ) . ';'
+				. 'var U="' . $rest_url . '";'
+				. 'var H={"X-WP-Nonce":"' . $nonce . '","X-BS-Token":"' . $bs_token . '"};'
+				. 'R.forEach(function(c){'
+				. 'if(!document.querySelector(\'[data-wp-interactive="\'+c.block+\'"]\'))return;'
+				. 'bs._rt(c,U+c.slug+"/"+c.schema,H)'
+				. '})'
+				. '});';
+		}
+
+		return $script;
 	}
 
 	/**
@@ -145,7 +192,7 @@ class Database {
 	 * @return string The HTML with client script injected.
 	 */
 	public static function inject_frontend_client( string $html ): string {
-		if ( ! self::has_any_schemas() ) {
+		if ( ! self::has_any_schemas() || str_contains( $html, 'id="blockstudio-db"' ) ) {
 			return $html;
 		}
 
@@ -161,7 +208,7 @@ class Database {
 	 * @return void
 	 */
 	public static function inject_editor_client(): void {
-		if ( ! self::has_any_schemas() ) {
+		if ( ! is_admin() || ! self::has_any_schemas() ) {
 			return;
 		}
 
@@ -198,6 +245,36 @@ class Database {
 
 		return ! empty( self::$schemas );
 	}
+
+	/**
+	 * Collect realtime config from a schema definition.
+	 *
+	 * @param array  $schema      The schema definition.
+	 * @param string $block_name  The block name.
+	 * @param string $schema_name The schema name.
+	 *
+	 * @return void
+	 */
+	private static function collect_realtime( array $schema, string $block_name, string $schema_name ): void {
+		$rt = $schema['realtime'] ?? false;
+
+		if ( ! $rt ) {
+			return;
+		}
+
+		if ( true === $rt ) {
+			$rt = array();
+		}
+
+		self::$realtime[] = array(
+			'block'    => $block_name,
+			'slug'     => str_replace( '/', '-', $block_name ),
+			'schema'   => $schema_name,
+			'key'      => $rt['key'] ?? $schema_name,
+			'interval' => $rt['interval'] ?? 3000,
+		);
+	}
+
 
 	/**
 	 * Register REST endpoints for all database schemas.
@@ -622,15 +699,25 @@ class Database {
 	 * @return \WP_REST_Response The response.
 	 */
 	private static function handle_list( string $key, $request ) {
-		$schema  = self::$schemas[ $key ];
-		$storage = self::storage_type( $key );
-		$params  = $request->get_query_params();
-		$limit   = min( (int) ( $params['limit'] ?? 50 ), 100 );
-		$offset  = (int) ( $params['offset'] ?? 0 );
+		$schema    = self::$schemas[ $key ];
+		$storage   = self::storage_type( $key );
+		$params    = $request->get_query_params();
+		$limit     = min( (int) ( $params['limit'] ?? 50 ), 100 );
+		$offset    = (int) ( $params['offset'] ?? 0 );
+		$hash_only = ! empty( $params['_hash'] );
 
-		unset( $params['limit'], $params['offset'] );
+		unset( $params['limit'], $params['offset'], $params['_hash'] );
 
 		$rows = self::storage_list( $key, $storage, $schema, $params, $limit, $offset );
+
+		if ( $hash_only ) {
+			return rest_ensure_response(
+				array(
+					'hash'  => md5( wp_json_encode( $rows ) ),
+					'count' => count( $rows ),
+				)
+			);
+		}
 
 		return rest_ensure_response( $rows );
 	}
@@ -1777,6 +1864,7 @@ class Database {
 			self::inject_user_scoped_field( $definition );
 			self::$schemas[ $block_name . ':default' ] = $definition;
 			self::register_inline_hooks( $definition, $block_name, 'default' );
+			self::collect_realtime( $definition, $block_name, 'default' );
 			return;
 		}
 
@@ -1785,6 +1873,7 @@ class Database {
 				self::inject_user_scoped_field( $schema );
 				self::$schemas[ $block_name . ':' . $schema_name ] = $schema;
 				self::register_inline_hooks( $schema, $block_name, $schema_name );
+				self::collect_realtime( $schema, $block_name, $schema_name );
 			}
 		}
 	}

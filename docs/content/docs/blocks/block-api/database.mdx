@@ -329,6 +329,55 @@ For single-schema blocks:
 $db = Db::get('my-theme/block');
 ```
 
+## Realtime polling
+
+Add `realtime` to your schema to enable automatic polling. When data changes
+on the server, the UI updates automatically through the Interactivity API
+store. No JavaScript changes needed.
+
+```php title="db.php"
+return [
+    'storage'  => 'table',
+    'realtime' => true,
+    'fields'   => [ /* ... */ ],
+];
+```
+
+With `true`, Blockstudio polls every 3 seconds using the schema name as the
+Interactivity API state key (`default` for single-schema blocks).
+
+### Custom configuration
+
+```php title="db.php"
+return [
+    'storage'  => 'table',
+    'realtime' => [
+        'key'      => 'todos',
+        'interval' => 5000,
+    ],
+    'fields' => [ /* ... */ ],
+];
+```
+
+| Option | Type | Default | Description |
+|--------|------|---------|-------------|
+| `key` | `string` | schema name | Property name on `state` that holds the data array |
+| `interval` | `number` | `3000` | Polling interval in milliseconds |
+
+### How it works
+
+1. On page load, the client fetches a lightweight hash of the current data
+2. Every `interval` milliseconds, it re-fetches the hash
+3. If the hash changed, it fetches the full dataset
+4. The new data is pushed into the Interactivity API store via `store()`
+5. Any directives bound to that state property re-render automatically
+
+Polling only runs on pages where a matching `data-wp-interactive` element
+exists. It pauses when the browser tab is hidden and resumes when visible.
+
+The hash endpoint (`?_hash=1`) returns only an md5 checksum and record count,
+keeping poll requests lightweight.
+
 ## User-scoped data
 
 Set `userScoped: true` to automatically scope all records to the current user.

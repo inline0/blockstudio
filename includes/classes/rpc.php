@@ -72,7 +72,7 @@ class Rpc {
 	 * @return string The HTML with client script injected.
 	 */
 	public static function inject_frontend_client( string $html ): string {
-		if ( ! self::has_any_functions() ) {
+		if ( ! self::has_any_functions() || str_contains( $html, 'id="blockstudio-fn"' ) ) {
 			return $html;
 		}
 
@@ -88,7 +88,7 @@ class Rpc {
 	 * @return void
 	 */
 	public static function inject_editor_client(): void {
-		if ( ! self::has_any_functions() ) {
+		if ( ! is_admin() || ! self::has_any_functions() ) {
 			return;
 		}
 

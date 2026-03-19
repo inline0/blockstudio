@@ -289,6 +289,15 @@ return [
 ];
 ```
 
+### Realtime polling
+
+Set `'realtime' => true` in your schema and the client automatically polls
+for changes. When data changes on the server, the Interactivity API store
+updates and the UI re-renders. No JavaScript changes needed. Configure with
+`'realtime' => ['key' => 'todos', 'interval' => 5000]` for custom state
+keys and intervals. Polling uses hash comparison to keep requests lightweight
+and pauses when the browser tab is hidden.
+
 ### Security, hooks, portability
 
 Public endpoints are protected by a `X-BS-Token` CSRF header, auto-injected
