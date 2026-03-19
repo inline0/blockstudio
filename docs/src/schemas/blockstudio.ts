@@ -284,6 +284,15 @@ export const blockstudio = {
             },
           },
         },
+        perf: {
+          type: 'boolean',
+          default: false,
+          description:
+            'Enable the performance profiler. Shows Server-Timing headers and a debug panel on every page load.',
+          descriptionFilter:
+            'This filter allows you to enable/disable the performance profiler.',
+          example: false,
+        },
         canvas: {
           type: 'object',
           description: 'Settings related to the canvas.',

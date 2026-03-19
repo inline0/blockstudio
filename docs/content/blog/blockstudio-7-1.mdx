@@ -483,6 +483,30 @@ and frontend rendering verification.
 
 See the [Composer documentation](/docs/dev/composer) for setup instructions.
 
+## Performance profiler
+
+A built-in profiler tracks render times for every block, template phase,
+asset processing, and Tailwind compilation. Activate it with a query
+parameter or a setting:
+
+```
+https://example.com/my-page/?blockstudio-perf
+```
+
+```json title="blockstudio.json"
+{ "dev": { "perf": true } }
+```
+
+The profiler outputs Server-Timing headers (visible in browser DevTools
+Network tab) and a fixed debug panel at the bottom of the page. Every
+block render is tracked individually with call counts, so you can spot
+which blocks are slow or called too often. Only visible to logged-in
+users with `edit_posts` capability.
+
+Self-closing block tags are also cached in memory now. When the same block
+with identical attributes appears multiple times on a page, subsequent
+renders are served from cache, skipping the entire template pipeline.
+
 ## More
 
 - **SCSS code fields**: Code fields support `language: "scss"`. Values are
