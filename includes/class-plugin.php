@@ -116,6 +116,7 @@ class Plugin {
 		// Error handling (Phase 6).
 		require_once $classes_dir . 'error-handler.php';
 
+		require_once $classes_dir . 'perf.php';
 		require_once $classes_dir . 'migrate.php';
 		require_once $classes_dir . 'files.php';
 		require_once $classes_dir . 'settings.php';
@@ -225,6 +226,8 @@ class Plugin {
 			},
 			PHP_INT_MAX
 		);
+
+		Perf::init();
 
 		add_action(
 			'init',

@@ -246,6 +246,8 @@ class Assets {
 	 * @return string The processed HTML.
 	 */
 	public function parse_output( $html ): string {
+		Perf::start( 'assets' );
+
 		$blocks         = Build::data();
 		$blocks_native  = Build::blocks();
 		$ids            = array();
@@ -344,6 +346,8 @@ class Assets {
 				'</HEAD>' => $head . '</HEAD>',
 			)
 		);
+
+		Perf::stop( 'assets', 'Assets' );
 
 		return apply_filters( 'blockstudio/render', $output, $blocks_on_page );
 	}

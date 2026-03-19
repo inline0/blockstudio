@@ -112,6 +112,8 @@ class Block_Tags {
 			return $content;
 		}
 
+		Perf::start( 'block-tags' );
+
 		$blocks = Build::blocks();
 
 		do {
@@ -130,6 +132,8 @@ class Block_Tags {
 			$has_bs    = false !== strpos( $content, '<bs:' );
 			$has_block = false !== strpos( $content, '<block ' );
 		} while ( $content !== $previous && ( $has_bs || $has_block ) );
+
+		Perf::stop( 'block-tags', 'Block Tags' );
 
 		return $content;
 	}

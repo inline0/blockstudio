@@ -115,6 +115,7 @@ class Tailwind {
 			return $html;
 		}
 
+		Perf::start( 'tailwind' );
 		$this->compiled = true;
 
 		self::load_autoloader();
@@ -152,6 +153,8 @@ class Tailwind {
 		if ( empty( $compiled ) ) {
 			return $html;
 		}
+
+		Perf::stop( 'tailwind', 'Tailwind' );
 
 		return str_replace(
 			'</head>',

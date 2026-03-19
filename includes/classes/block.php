@@ -483,6 +483,15 @@ class Block {
 		$attributes_block,
 		$attribute_data
 	) {
+		if ( ! $is_editor_or_preview
+			&& false === strpos( $content, '<InnerBlocks' )
+			&& false === strpos( $content, '<RichText' )
+			&& false === strpos( $content, '<MediaPlaceholder' )
+			&& false === strpos( $content, 'useBlockProps' )
+		) {
+			return $content;
+		}
+
 		if ( $is_editor_or_preview ) {
 			if (
 				class_exists( 'WP_HTML_Tag_Processor' ) &&
@@ -1258,6 +1267,8 @@ class Block {
 			return false;
 		}
 
+		$perf_start = Perf::active() ? microtime( true ) : 0;
+
 		++self::$count;
 		if ( ! isset( self::$count_by_block[ $name ] ) ) {
 			self::$count_by_block[ $name ] = 1;
@@ -1358,6 +1369,8 @@ class Block {
 
 		$context = $compiled_context;
 
+		$perf_phase = Perf::active() ? microtime( true ) : 0;
+
 		$attribute_data = self::transform(
 			$attributes,
 			$block,
@@ -1367,6 +1380,10 @@ class Block {
 			Build::blocks()[ $name ]->attributes + $extension_attributes
 		);
 		$assets         = Assets::render_code_field_assets( $attribute_data, 'assetsAsset' );
+
+		if ( $perf_phase ) {
+			Perf::track( 'phase:transform', ( microtime( true ) - $perf_phase ) * 1000 );
+		}
 
 		$filter_data = $data;
 		if ( $filter_data ) {
@@ -1382,6 +1399,10 @@ class Block {
 			0 === substr_compare( $path, '.twig', -strlen( '.twig' ) ) &&
 			class_exists( 'Timber\Site' )
 		) {
+			if ( $perf_phase ) {
+				$perf_phase = microtime( true );
+			}
+
 			Timber::init();
 			$twig_context = Timber::context();
 
@@ -1422,6 +1443,11 @@ class Block {
 					$template_content,
 					$twig_context
 				);
+
+				if ( $perf_phase ) {
+					Perf::track( 'phase:twig', ( microtime( true ) - $perf_phase ) * 1000 );
+					$perf_phase = microtime( true );
+				}
 			} catch ( Throwable $e ) {
 				$previous_error = $e->getPrevious();
 				if (
@@ -1459,6 +1485,10 @@ class Block {
 				$attribute_data
 			);
 
+			if ( $perf_phase ) {
+				Perf::track( 'phase:components', ( microtime( true ) - $perf_phase ) * 1000 );
+			}
+
 			$rendered_block =
 				( '' !== trim( $render ?? '' ) ? $blockstudio_id : '' ) .
 				( $is_preview ? Assets::get_preview_assets( $block_data ) : '' ) .
@@ -1467,6 +1497,10 @@ class Block {
 
 			remove_filter( 'timber/locations', $add_custom_path );
 		} else {
+			if ( $perf_phase ) {
+				$perf_phase = microtime( true );
+			}
+
 			ob_start();
 			$a         = $attributes;
 			$b         = $block;
@@ -1495,6 +1529,11 @@ class Block {
 
 			$php_output = ob_get_clean();
 
+			if ( $perf_phase ) {
+				Perf::track( 'phase:template', ( microtime( true ) - $perf_phase ) * 1000 );
+				$perf_phase = microtime( true );
+			}
+
 			if ( str_contains( $php_output, '<bs:' ) || str_contains( $php_output, '<block ' ) ) {
 				$php_output = Block_Tags::render( $php_output );
 			}
@@ -1510,6 +1549,10 @@ class Block {
 					$block,
 					$attribute_data
 				);
+
+			if ( $perf_phase ) {
+				Perf::track( 'phase:components', ( microtime( true ) - $perf_phase ) * 1000 );
+			}
 		}
 
 		$rendered_block = $rendered_block . ( ! $is_editor ? $assets : '' );
@@ -1545,6 +1588,10 @@ class Block {
 			// Append block inline scripts (store actions) so interactive
 			// blocks are fully functional in the editor.
 			$rendered_block .= Assets::get_preview_assets( $block_data, false );
+		}
+
+		if ( $perf_start ) {
+			Perf::track( 'block:' . $name, ( microtime( true ) - $perf_start ) * 1000 );
 		}
 
 		return apply_filters(
