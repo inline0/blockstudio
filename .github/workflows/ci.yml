@@ -38,9 +38,41 @@ jobs:
       - name: PHPCS
         run: composer cs
 
+  unit:
+    name: Unit Tests
+    if: contains(github.event.head_commit.message, '[unit]') || contains(github.event.head_commit.message, '[all]')
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: "8.4"
+
+      - name: Configure npm registries
+        run: |
+          echo "@fortawesome:registry=https://npm.fontawesome.com/" >> .npmrc
+          echo "//npm.fontawesome.com/:_authToken=${{ secrets.FONTAWESOME_TOKEN }}" >> .npmrc
+
+      - run: npm ci
+      - run: composer install --no-interaction
+      - run: composer install --no-interaction --working-dir=tests/theme
+
+      - name: Start wp-env
+        run: npm run wp-env:start
+
+      - name: Run unit tests
+        run: npm run test:unit
+
   e2e:
     name: E2E Tests (Shard ${{ matrix.shard }}/${{ matrix.total_shards }})
-    if: contains(github.event.head_commit.message, '[e2e]')
+    if: contains(github.event.head_commit.message, '[e2e]') || contains(github.event.head_commit.message, '[all]')
     runs-on: ubuntu-latest
     timeout-minutes: 120
     strategy:
