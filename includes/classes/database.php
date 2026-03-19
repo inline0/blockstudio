@@ -176,6 +176,19 @@ class Database {
 	 *
 	 * @return bool Whether any schemas are registered.
 	 */
+	public static function has_schemas(): bool {
+		return self::has_any_schemas();
+	}
+
+	/**
+	 * Get the client script code for external use.
+	 *
+	 * @return string The JavaScript client code.
+	 */
+	public static function client_script(): string {
+		return self::get_client_script();
+	}
+
 	private static function has_any_schemas(): bool {
 		self::load_all();
 

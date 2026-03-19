@@ -102,6 +102,19 @@ class Rpc {
 	 *
 	 * @return bool Whether any functions are registered.
 	 */
+	public static function has_any(): bool {
+		return self::has_any_functions();
+	}
+
+	/**
+	 * Get the client script code for external use.
+	 *
+	 * @return string The JavaScript client code.
+	 */
+	public static function client_script(): string {
+		return self::get_client_script();
+	}
+
 	private static function has_any_functions(): bool {
 		self::load_all();
 

@@ -1522,6 +1522,15 @@ class Block {
 			if ( preg_match( '/data-wp-interactive="([^"]+)"/', $rendered_block, $m ) ) {
 				$ns    = $m[1];
 				$state = wp_interactivity_state( $ns );
+				// Only include array/object values. Scalar values (strings,
+				// booleans) are likely computed by JS getters and would
+				// overwrite them if injected via store().
+				$state = array_filter(
+					$state,
+					function ( $v ) {
+						return is_array( $v );
+					}
+				);
 				if ( ! empty( $state ) ) {
 					$encoded        = esc_attr( wp_json_encode( $state ) );
 					$rendered_block = preg_replace(
@@ -1532,6 +1541,10 @@ class Block {
 					);
 				}
 			}
+
+			// Append block inline scripts (store actions) so interactive
+			// blocks are fully functional in the editor.
+			$rendered_block .= Assets::get_preview_assets( $block_data, false );
 		}
 
 		return apply_filters(

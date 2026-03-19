@@ -469,7 +469,17 @@ class Assets {
 			. 'o.observe(document.body,{childList:true,subtree:true});p()})}'
 			. '</script>';
 
-		return $importmap . $module_output . $reinit;
+		// Inject bs.db / bs.fn / bs.mutate client scripts so interactive
+		// blocks can make data calls from inside the editor iframe.
+		$data_clients = '';
+		if ( Database::has_schemas() ) {
+			$data_clients .= '<script>' . Database::client_script() . '</script>';
+		}
+		if ( Rpc::has_any() ) {
+			$data_clients .= '<script>' . Rpc::client_script() . '</script>';
+		}
+
+		return $importmap . $module_output . $data_clients . $reinit;
 	}
 
 	/**

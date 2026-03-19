@@ -690,7 +690,10 @@ class Block_Tags {
 							'core/accordion-item',
 							'core/accordion-panel',
 						);
-						if ( in_array( $block_arr['blockName'], $container_names, true ) ) {
+
+						$is_container = in_array( $block_arr['blockName'], $container_names, true )
+							|| ! str_starts_with( $block_arr['blockName'], 'core/' );
+						if ( $is_container ) {
 							$inner_blocks = self::parse_all_elements( $result['inner'] );
 							$original_ic  = $block_arr['innerContent'];
 							$open_tag     = ! empty( $original_ic ) ? $original_ic[0] : '';
