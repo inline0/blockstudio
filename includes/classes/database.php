@@ -170,7 +170,7 @@ class Database {
 				. '})'
 				. '}).catch(function(){})'
 				. '};'
-				. 'document.addEventListener("DOMContentLoaded",function(){'
+				. 'if(!bs._ri){bs._ri=1;document.addEventListener("DOMContentLoaded",function(){'
 				. 'var R=' . wp_json_encode( self::$realtime ) . ';'
 				. 'var U="' . $rest_url . '";'
 				. 'var n=(window.wpApiSettings&&wpApiSettings.nonce)||"' . $nonce . '";'
@@ -179,7 +179,7 @@ class Database {
 				. 'if(!document.querySelector(\'[data-wp-interactive="\'+c.block+\'"]\'))return;'
 				. 'bs._rt(c,U+c.slug+"/"+c.schema,H)'
 				. '})'
-				. '});';
+				. '})}';
 		}
 
 		return $script;
