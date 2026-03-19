@@ -77,7 +77,6 @@ class Database {
 			. 'get:function(k){var e=bs._qc[k];if(!e)return undefined;return e.data},'
 			. 'set:function(k,d){bs._qc[k]={data:d,time:Date.now()}},'
 			. 'invalidate:function(k){delete bs._qc[k]},'
-			. 'invalidateAll:function(){bs._qc={}},'
 			. 'clear:function(){bs._qc={}}'
 			. '};'
 
@@ -89,7 +88,7 @@ class Database {
 			. 'var e=bs._qc[k];'
 			. 'if(e&&st&&(Date.now()-e.time)<st)return Promise.resolve(e.data);'
 			. 'if(bs._qp[k])return bs._qp[k];'
-			. 'var p=fn().then(function(d){bs._qc[k]={data:d,time:Date.now()};delete bs._qp[k];return d});'
+			. 'var p=fn().then(function(d){bs._qc[k]={data:d,time:Date.now()};delete bs._qp[k];return d},function(err){delete bs._qp[k];throw err});'
 			. 'bs._qp[k]=p;'
 			. 'return p;'
 			. '};'
@@ -189,6 +188,11 @@ class Database {
 		return self::get_client_script();
 	}
 
+	/**
+	 * Check if any database schemas exist (internal).
+	 *
+	 * @return bool Whether any schemas are registered.
+	 */
 	private static function has_any_schemas(): bool {
 		self::load_all();
 

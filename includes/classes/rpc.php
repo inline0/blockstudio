@@ -58,7 +58,7 @@ class Rpc {
 			. 'bs._block=function(){var s=document.currentScript;return s&&s.dataset.block||""};'
 			. 'bs.fn=function(n,p,b){'
 			. 'var block=b||bs._block();'
-			. 'if(!block)throw new Error("bs.fn: block name required. Pass as third argument or use an inline script.");'
+			. 'if(!block)throw new Error("bs.fn: block name required. Pass as third argument, or use an inline script (module scripts cannot auto-detect).");'
 			. 'var u="' . $rest_url . '"+block+"/"+n;'
 			. 'return fetch(u,{method:"POST",headers:{"Content-Type":"application/json","X-WP-Nonce":"' . $nonce . '","X-BS-Token":"' . $bs_token . '"},body:JSON.stringify({params:p||{}})}).then(function(r){return r.json()});'
 			. '};';
@@ -115,6 +115,11 @@ class Rpc {
 		return self::get_client_script();
 	}
 
+	/**
+	 * Check if any RPC functions exist (internal).
+	 *
+	 * @return bool Whether any functions are registered.
+	 */
 	private static function has_any_functions(): bool {
 		self::load_all();
 
