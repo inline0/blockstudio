@@ -1566,7 +1566,32 @@ class Block_Tags {
 	 *
 	 * @return string Rendered HTML.
 	 */
+	/**
+	 * In-memory render cache for self-closing block tags.
+	 *
+	 * @var array<string, string>
+	 */
+	private static array $render_cache = array();
+
+	/**
+	 * Render a Blockstudio block.
+	 *
+	 * @param string $block_name    Full block name.
+	 * @param array  $block_attrs   Block attributes.
+	 * @param string $inner_content Inner content from paired tags.
+	 *
+	 * @return string Rendered HTML.
+	 */
 	private static function render_bs_block( string $block_name, array $block_attrs, string $inner_content ): string {
+		// Cache self-closing blocks (no inner content) by name + attributes.
+		$cache_key = '';
+		if ( '' === $inner_content ) {
+			$cache_key = $block_name . ':' . md5( wp_json_encode( $block_attrs ) );
+			if ( isset( self::$render_cache[ $cache_key ] ) ) {
+				return self::$render_cache[ $cache_key ];
+			}
+		}
+
 		$parent = \WP_Block_Supports::$block_to_render;
 
 		\WP_Block_Supports::$block_to_render = array(
@@ -1597,7 +1622,13 @@ class Block_Tags {
 
 		\WP_Block_Supports::$block_to_render = $parent;
 
-		return is_string( $result ) ? $result : '';
+		$result = is_string( $result ) ? $result : '';
+
+		if ( '' !== $cache_key ) {
+			self::$render_cache[ $cache_key ] = $result;
+		}
+
+		return $result;
 	}
 
 	/**
