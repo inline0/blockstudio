@@ -1267,16 +1267,6 @@ class Block {
 			return false;
 		}
 
-		// In-memory render cache for blocks without inner content.
-		static $render_cache = array();
-		$cache_key           = '';
-		if ( '' === $inner_blocks && '' === $content && ! $is_editor && ! $is_preview ) {
-			$cache_key = $name . ':' . md5( wp_json_encode( $attributes ) );
-			if ( isset( $render_cache[ $cache_key ] ) ) {
-				return $render_cache[ $cache_key ];
-			}
-		}
-
 		$perf_start = Perf::active() ? microtime( true ) : 0;
 
 		++self::$count;
@@ -1604,18 +1594,12 @@ class Block {
 			Perf::track( 'block:' . $name, ( microtime( true ) - $perf_start ) * 1000 );
 		}
 
-		$result = apply_filters(
+		return apply_filters(
 			'blockstudio/blocks/render',
 			$rendered_block,
 			$filter_data,
 			$is_editor,
 			$is_preview
 		);
-
-		if ( '' !== $cache_key ) {
-			$render_cache[ $cache_key ] = $result;
-		}
-
-		return $result;
 	}
 }

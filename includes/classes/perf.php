@@ -52,7 +52,7 @@ class Perf {
 	 */
 	public static function init(): void {
 		// phpcs:ignore WordPress.Security.NonceVerification.Recommended
-		if ( ! isset( $_GET['blockstudio-perf'] ) ) {
+		if ( ! isset( $_GET['blockstudio-perf'] ) && ! Settings::get( 'dev/perf' ) ) {
 			return;
 		}
 
