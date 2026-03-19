@@ -241,4 +241,76 @@ class BlockTagsHtmlParsingTest extends TestCase {
 		$this->assertCount( 1, $blocks );
 		$this->assertSame( 'core/paragraph', $blocks[0]['blockName'] );
 	}
+
+	// Non-core block tags with inner content
+
+	public function test_non_core_block_tag_with_inner_html(): void {
+		$blocks = Block_Tags::parse_all_elements(
+			'<block name="custom/panel"><p>Content</p></block>'
+		);
+		$this->assertCount( 1, $blocks );
+		$this->assertSame( 'custom/panel', $blocks[0]['blockName'] );
+		$this->assertCount( 1, $blocks[0]['innerBlocks'] );
+		$this->assertSame( 'core/paragraph', $blocks[0]['innerBlocks'][0]['blockName'] );
+		$this->assertStringContainsString( 'Content', $blocks[0]['innerBlocks'][0]['innerHTML'] );
+	}
+
+	public function test_nested_non_core_block_tags(): void {
+		$blocks = Block_Tags::parse_all_elements(
+			'<block name="custom/tabs"><block name="custom/panel"><p>Text</p></block></block>'
+		);
+		$this->assertCount( 1, $blocks );
+		$this->assertSame( 'custom/tabs', $blocks[0]['blockName'] );
+		$this->assertCount( 1, $blocks[0]['innerBlocks'] );
+
+		$panel = $blocks[0]['innerBlocks'][0];
+		$this->assertSame( 'custom/panel', $panel['blockName'] );
+		$this->assertCount( 1, $panel['innerBlocks'] );
+		$this->assertSame( 'core/paragraph', $panel['innerBlocks'][0]['blockName'] );
+	}
+
+	public function test_self_closing_non_core_block_tag(): void {
+		$blocks = Block_Tags::parse_all_elements(
+			'<block name="custom/divider" />'
+		);
+		$this->assertCount( 1, $blocks );
+		$this->assertSame( 'custom/divider', $blocks[0]['blockName'] );
+		$this->assertEmpty( $blocks[0]['innerBlocks'] );
+	}
+
+	public function test_non_core_block_with_multiple_inner_blocks(): void {
+		$blocks = Block_Tags::parse_all_elements(
+			'<block name="custom/section">'
+			. '<p>First paragraph</p>'
+			. '<h2>A heading</h2>'
+			. '<p>Second paragraph</p>'
+			. '</block>'
+		);
+		$this->assertCount( 1, $blocks );
+		$this->assertSame( 'custom/section', $blocks[0]['blockName'] );
+		$this->assertCount( 3, $blocks[0]['innerBlocks'] );
+		$this->assertSame( 'core/paragraph', $blocks[0]['innerBlocks'][0]['blockName'] );
+		$this->assertSame( 'core/heading', $blocks[0]['innerBlocks'][1]['blockName'] );
+		$this->assertSame( 'core/paragraph', $blocks[0]['innerBlocks'][2]['blockName'] );
+	}
+
+	public function test_non_core_block_with_attributes_and_inner_content(): void {
+		$blocks = Block_Tags::parse_all_elements(
+			'<block name="bsui/tabs-panel" value="tab1"><p>Features content here.</p></block>'
+		);
+		$this->assertCount( 1, $blocks );
+		$this->assertSame( 'bsui/tabs-panel', $blocks[0]['blockName'] );
+		$this->assertSame( 'tab1', $blocks[0]['attrs']['value'] );
+		$this->assertCount( 1, $blocks[0]['innerBlocks'] );
+		$this->assertSame( 'core/paragraph', $blocks[0]['innerBlocks'][0]['blockName'] );
+	}
+
+	public function test_bs_syntax_non_core_block_with_inner_content(): void {
+		$blocks = Block_Tags::parse_all_elements(
+			'<bs:bsui-tabs-panel value="tab1"><p>Panel content</p></bs:bsui-tabs-panel>'
+		);
+		$this->assertCount( 1, $blocks );
+		$this->assertSame( 'bsui/tabs-panel', $blocks[0]['blockName'] );
+		$this->assertCount( 1, $blocks[0]['innerBlocks'] );
+	}
 }
