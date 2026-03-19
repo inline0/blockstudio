@@ -70,7 +70,11 @@ export const renderCache = {
   },
 
   get(hash: string): string | undefined {
-    return cache.get(hash);
+    // Disabled: computeHash() does not include blockstudioMode, so editor
+    // and preview renders share the same key. This causes the Block Inserter
+    // preview to reuse editor-cached HTML instead of fetching with
+    // blockstudioMode=preview. Preloading via claimPreloaded() still works.
+    return undefined;
   },
 
   set(hash: string, rendered: string, blockName?: string) {
