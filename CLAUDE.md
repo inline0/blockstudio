@@ -5,6 +5,9 @@ WordPress block framework plugin. v7 modernization with 100% WordPress Coding St
 ## Quick Reference
 
 ```bash
+# Run unit tests (PHPUnit inside wp-env)
+npm run wp-env:start && npm run test:unit
+
 # Run E2E tests (browser automation)
 npm run wp-env:start && npm run test:e2e
 
@@ -126,6 +129,7 @@ npm run build            # Generate + build
 | `npm run wp-env:start` | Start wp-env for E2E tests (port 8888) |
 | `npm run wp-env:stop` | Stop wp-env |
 | `npm run wp-env:reset` | Reset wp-env + seed test data |
+| `npm run test:unit` | Run PHPUnit tests inside wp-env |
 | `npm run test:e2e` | Run all E2E tests |
 | `npm run catalog:blocks` | Run catalog block test |
 | `composer cs` | Check PHPCS |

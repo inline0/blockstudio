@@ -25,6 +25,7 @@
     "lint": "eslint src",
     "test:e2e:empty": "playwright test --config=playwright.wp-env.empty.config.ts",
     "test:e2e": "playwright test --config=playwright.wp-env.config.ts; npm run wp-env:reset",
+    "test:unit": "cd tests/wp-env && npx @wordpress/env run cli --env-cwd=/var/www/html/wp-content/plugins/blockstudio7 vendor/bin/phpunit",
     "types": "tsx scripts/generate-types.ts",
     "wp-env:empty:start": "cd tests/wp-env-empty && wp-env start && wp-env run cli wp theme activate theme-empty && wp-env run cli wp rewrite structure '/%postname%/' --hard",
     "wp-env:empty:stop": "cd tests/wp-env-empty && wp-env stop",
