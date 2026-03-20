@@ -15,20 +15,22 @@ and a public newsletter signup. Same file structure, different access models.
 ## Todo App
 
 A per-user task manager. Each logged-in user sees only their own todos. Uses
-`userScoped: true` for automatic user isolation and SQLite for portable storage.
+`userScoped: true` for automatic user isolation, SQLite for portable storage,
+`bs.mutate()` for optimistic updates, and realtime polling so changes from
+other tabs appear automatically.
 
 ### File structure
 
 ```
 blockstudio/
   todo/
-    block.json            ← block definition
-    index.php             ← template with Interactivity API
-    style.css             ← styles
-    script-inline.js      ← client logic
-    db.php                ← data model
-    rpc.php               ← custom operations
-    cron.php              ← scheduled cleanup
+    block.json
+    index.php
+    script.inline.js
+    style.css
+    db.php
+    rpc.php
+    cron.php
 ```
 
 ### Block definition
@@ -40,23 +42,36 @@ blockstudio/
   "title": "Todo App",
   "category": "widgets",
   "icon": "editor-ul",
-  "blockstudio": true
+  "supports": {
+    "interactivity": true
+  },
+  "blockstudio": {
+    "interactivity": {
+      "enqueue": true
+    }
+  }
 }
 ```
 
-No attributes needed. All state lives in the database and the Interactivity API
-context.
+`supports.interactivity` enables WordPress's directive processing (SSR for
+`data-wp-each`, `data-wp-bind`, etc.). `interactivity.enqueue` loads the
+`@wordpress/interactivity` module on the frontend.
 
 ### Data model
 
 `userScoped: true` automatically adds a `user_id` column, sets it on create,
-and filters all queries to the current user. No manual user handling needed.
+and filters all queries to the current user. `realtime` enables automatic
+polling so changes from other tabs or devices appear without a page refresh.
 
 ```php title="db.php"
 <?php
 return [
     'storage'    => 'sqlite',
     'userScoped' => true,
+    'realtime'   => [
+        'key'      => 'todos',
+        'interval' => 3000,
+    ],
     'capability' => [
         'create' => true,
         'read'   => true,
@@ -81,15 +96,9 @@ return [
 SQLite storage means the database file lives at `todo/db/default.sqlite`. Copy
 the block folder to another site and the data comes with it.
 
-This gives you five REST endpoints automatically:
-
-```
-POST   /wp-json/blockstudio/v1/db/my-theme-todo/default
-GET    /wp-json/blockstudio/v1/db/my-theme-todo/default
-GET    /wp-json/blockstudio/v1/db/my-theme-todo/default/{id}
-PUT    /wp-json/blockstudio/v1/db/my-theme-todo/default/{id}
-DELETE /wp-json/blockstudio/v1/db/my-theme-todo/default/{id}
-```
+The `realtime` config tells the client to poll for changes every 3 seconds using
+a lightweight hash comparison. When data changes, `state.todos` is updated and
+the UI re-renders automatically.
 
 ### Custom server logic
 
@@ -103,38 +112,42 @@ use Blockstudio\Db;
 
 return [
     'toggle' => [
-        'callback' => function (array $params): array {
+        'callback' => function (array $params) {
+            $id = (int) ($params['id'] ?? 0);
+
+            if (!$id) {
+                return new \WP_Error('missing_id', 'ID is required.', ['status' => 400]);
+            }
+
             $db   = Db::get('my-theme/todo');
-            $id   = (int) ($params['id'] ?? 0);
             $todo = $db->get_record($id);
 
             if (!$todo) {
-                return ['error' => 'Not found.'];
+                return new \WP_Error('not_found', 'Not found.', ['status' => 404]);
             }
 
-            // userScoped already ensures this is the current user's record.
-            $db->update($id, ['done' => !$todo['done']]);
-
-            return ['success' => true];
+            return $db->update($id, ['done' => !$todo['done']]);
         },
-        'public' => false,
+        'public'  => true,
+        'methods' => ['POST'],
     ],
     'clear_done' => [
-        'callback' => function (array $params): array {
+        'callback' => function () {
             $db    = Db::get('my-theme/todo');
-            $todos = $db->list(); // userScoped: only current user's todos.
-            $cleared = 0;
+            $todos = $db->list();
+            $count = 0;
 
             foreach ($todos as $todo) {
-                if ($todo['done']) {
+                if (!empty($todo['done'])) {
                     $db->delete((int) $todo['id']);
-                    ++$cleared;
+                    ++$count;
                 }
             }
 
-            return ['cleared' => $cleared];
+            return ['deleted' => $count];
         },
-        'public' => false,
+        'public'  => true,
+        'methods' => ['POST'],
     ],
 ];
 ```
@@ -169,146 +182,173 @@ return [
 
 ### Template
 
-PHP loads the initial todos server-side, then the Interactivity API handles
-interactions.
+PHP loads the initial todos server-side via `wp_interactivity_state()`, which
+provides the data for both SSR directive processing and client-side hydration.
+Per-instance UI state (like the input field value) goes in `data-wp-context`.
 
 ```php title="index.php"
 <?php
-$user_id = get_current_user_id();
-$db      = \Blockstudio\Db::get('my-theme/todo');
-$todos   = ($user_id && $db) ? $db->list() : []; // userScoped: auto-filters to current user.
+$db         = \Blockstudio\Db::get('my-theme/todo');
+$todos      = $db ? $db->list() : [];
+$items_left = count(array_filter($todos, fn($t) => empty($t['done'])));
 
-$context = wp_json_encode([
-    'todos'   => $todos,
-    'newText' => '',
-    'loading' => false,
-    'userId'  => $user_id,
+wp_interactivity_state('my-theme/todo', [
+    'todos'     => array_values($todos),
+    'hasTodos'  => !empty($todos),
+    'hasDone'   => count($todos) !== $items_left,
+    'itemsLeft' => $items_left . ($items_left === 1 ? ' item left' : ' items left'),
 ]);
 ?>
-
 <div
-    data-wp-interactive="myTheme/todo"
-    data-wp-context='<?php echo esc_attr($context); ?>'
+    data-wp-interactive="my-theme/todo"
+    data-wp-context='<?php echo esc_attr(wp_json_encode(['newText' => ''])); ?>'
     useBlockProps
     class="todo-app"
 >
-    <?php if (!$user_id) : ?>
-        <p class="todo-login">Log in to manage your todos.</p>
-    <?php else : ?>
-        <div class="todo-input">
-            <input
-                type="text"
-                placeholder="What needs to be done?"
-                data-wp-bind--value="context.newText"
-                data-wp-on--input="actions.updateText"
-                data-wp-on--keydown="actions.handleKeydown"
-            />
-            <button
-                data-wp-on--click="actions.addTodo"
-                data-wp-bind--disabled="context.loading"
-            >Add</button>
-        </div>
+    <h2>Todos</h2>
 
-        <ul class="todo-list" data-wp-each="context.todos" data-wp-each-key="id">
-            <template>
-                <li>
-                    <label>
-                        <input
-                            type="checkbox"
-                            data-wp-bind--checked="context.item.done"
-                            data-wp-on--change="actions.toggleTodo"
-                        />
-                        <span
-                            data-wp-text="context.item.text"
-                            data-wp-class--done="context.item.done"
-                        ></span>
-                    </label>
-                    <button
-                        class="todo-delete"
-                        data-wp-on--click="actions.deleteTodo"
-                    >&times;</button>
-                </li>
-            </template>
-        </ul>
+    <div class="todo-input">
+        <input
+            type="text"
+            placeholder="What needs to be done?"
+            data-wp-bind--value="context.newText"
+            data-wp-on--input="my-theme/todo::actions.updateNewText"
+            data-wp-on--keydown="my-theme/todo::actions.handleKeyDown"
+        />
+        <button
+            data-wp-on--click="my-theme/todo::actions.addTodo"
+            data-wp-bind--disabled="!state.canAdd"
+        >Add</button>
+    </div>
 
-        <div class="todo-footer">
-            <span data-wp-text="state.remainingText"></span>
-            <button
-                data-wp-on--click="actions.clearDone"
-                data-wp-bind--hidden="!state.hasDone"
-            >Clear completed</button>
-        </div>
-    <?php endif; ?>
+    <ul class="todo-list">
+        <template data-wp-each--todo="state.todos" data-wp-each-key="context.todo.id">
+            <li>
+                <label>
+                    <input
+                        type="checkbox"
+                        data-wp-bind--checked="context.todo.done"
+                        data-wp-on--change="actions.toggleTodo"
+                    />
+                    <span
+                        data-wp-text="context.todo.text"
+                        data-wp-class--done="context.todo.done"
+                    ></span>
+                </label>
+                <button
+                    class="todo-delete"
+                    data-wp-on--click="actions.deleteTodo"
+                >&times;</button>
+            </li>
+        </template>
+    </ul>
+
+    <div class="todo-footer" data-wp-bind--hidden="!state.hasTodos">
+        <span data-wp-text="state.itemsLeft"></span>
+        <button
+            data-wp-on--click="my-theme/todo::actions.clearDone"
+            data-wp-bind--hidden="!state.hasDone"
+        >Clear done</button>
+    </div>
 </div>
 ```
 
+Key patterns:
+
+- `wp_interactivity_state()` for data that comes from the server (todos, counts)
+- `data-wp-context` for ephemeral UI state (input text)
+- `data-wp-each--todo` gives each iteration item a named context (`context.todo`)
+- `state.*` references the global store, `context.*` references per-instance data
+
 ### Client logic
 
-The inline script auto-detects the block name from its `data-block` attribute,
-so `bs.fn()` and `bs.db()` work without passing it explicitly.
+`bs.mutate()` handles all writes with optimistic updates and automatic rollback.
+The UI updates instantly; if the server call fails, the state reverts.
 
-```js title="script-inline.js"
+```js title="script.inline.js"
 import { store, getContext } from '@wordpress/interactivity';
 
-store('myTheme/todo', {
+const { state } = store('my-theme/todo', {
     state: {
-        get remainingText() {
-            const ctx = getContext();
-            const remaining = ctx.todos.filter(t => !t.done).length;
-            return `${remaining} item${remaining !== 1 ? 's' : ''} left`;
+        get canAdd() {
+            return getContext().newText.trim() !== '';
+        },
+        get hasTodos() {
+            return state.todos.length > 0;
         },
         get hasDone() {
-            const ctx = getContext();
-            return ctx.todos.some(t => t.done);
+            return state.todos.some(t => t.done);
+        },
+        get itemsLeft() {
+            const count = state.todos.filter(t => !t.done).length;
+            return count + (count === 1 ? ' item left' : ' items left');
         },
     },
     actions: {
-        updateText(event) {
-            const ctx = getContext();
-            ctx.newText = event.target.value;
+        updateNewText(event) {
+            getContext().newText = event.target.value;
         },
-        handleKeydown(event) {
+        handleKeyDown(event) {
             if (event.key === 'Enter') {
-                const { actions } = store('myTheme/todo');
-                actions.addTodo();
+                event.preventDefault();
+                store('my-theme/todo').actions.addTodo();
             }
         },
-        async addTodo() {
+        *addTodo() {
             const ctx = getContext();
             const text = ctx.newText.trim();
             if (!text) return;
-
-            ctx.loading = true;
-            const db = bs.db('my-theme/todo');
-            const record = await db.create({ text, done: false });
-            // user_id is auto-set by userScoped.
-
-            ctx.todos = [record, ...ctx.todos];
             ctx.newText = '';
-            ctx.loading = false;
+
+            yield bs.mutate({
+                fn: () => bs.db('my-theme/todo').create({ text, done: false }),
+                state, key: 'todos', action: 'create',
+                optimistic: { text, done: false },
+            });
         },
-        async toggleTodo() {
-            const ctx = getContext();
-            const todo = ctx.item;
-            await bs.fn('toggle', { id: todo.id });
-            todo.done = !todo.done;
+        *toggleTodo() {
+            const todo = getContext().todo;
+
+            yield bs.mutate({
+                fn: () => bs.fn('toggle', { id: todo.id }, 'my-theme/todo'),
+                state, key: 'todos', action: 'update', id: todo.id,
+                optimistic: { ...todo, done: !todo.done },
+            });
         },
-        async deleteTodo() {
-            const ctx = getContext();
-            const todo = ctx.item;
-            const db = bs.db('my-theme/todo');
-            await db.delete(todo.id);
-            const parent = getContext({ level: 1 });
-            parent.todos = parent.todos.filter(t => t.id !== todo.id);
+        *deleteTodo() {
+            const todo = getContext().todo;
+
+            yield bs.mutate({
+                fn: () => bs.db('my-theme/todo').delete(todo.id),
+                state, key: 'todos', action: 'delete', id: todo.id,
+            });
         },
-        async clearDone() {
-            const ctx = getContext();
-            await bs.fn('clear_done', {});
-            ctx.todos = ctx.todos.filter(t => !t.done);
+        *clearDone() {
+            yield bs.mutate({
+                fn: () => bs.fn('clear_done', {}, 'my-theme/todo'),
+                before() {
+                    const snap = state.todos.slice();
+                    state.todos = state.todos.filter(t => !t.done);
+                    return snap;
+                },
+                onError(err, snap) { state.todos = snap; },
+                invalidate: 'todos',
+            });
         },
     },
 });
 ```
+
+Key patterns:
+
+- `bs.mutate()` auto mode for create/update/delete: pass `state`, `key`,
+  `action`, and `optimistic` data. The UI updates immediately, the server
+  call happens in the background, and the state rolls back on failure.
+- `bs.mutate()` manual mode for `clearDone`: `before()` takes a snapshot
+  and applies the change, `onError()` restores from the snapshot.
+- Generator functions (`*addTodo`) with `yield` for async operations in
+  the Interactivity API.
+- `bs.db()` for direct CRUD, `bs.fn()` for custom server functions.
 
 ### Styles
 
@@ -317,12 +357,6 @@ store('myTheme/todo', {
     max-width: 500px;
     margin: 0 auto;
     font-family: system-ui, sans-serif;
-}
-
-.todo-login {
-    text-align: center;
-    color: #6b7280;
-    padding: 2rem;
 }
 
 .todo-input {
@@ -336,7 +370,6 @@ store('myTheme/todo', {
     padding: 0.5rem 0.75rem;
     border: 1px solid #d1d5db;
     border-radius: 0.375rem;
-    font-size: 1rem;
 }
 
 .todo-input button {
@@ -351,7 +384,6 @@ store('myTheme/todo', {
 .todo-list {
     list-style: none;
     padding: 0;
-    margin: 0;
 }
 
 .todo-list li {
@@ -430,10 +462,30 @@ blockstudio/
     block.json
     index.php
     style.css
-    script-inline.js
+    script.inline.js
     db.php
     rpc.php
     cron.php
+```
+
+### Block definition
+
+```json title="block.json"
+{
+  "$schema": "https://blockstudio.dev/schema/block",
+  "name": "my-theme/newsletter",
+  "title": "Newsletter Signup",
+  "category": "widgets",
+  "icon": "email",
+  "supports": {
+    "interactivity": true
+  },
+  "blockstudio": {
+    "interactivity": {
+      "enqueue": true
+    }
+  }
+}
 ```
 
 ### Data model
@@ -554,22 +606,22 @@ return [
 
 ```php title="index.php"
 <?php
-$context = wp_json_encode([
-    'email'   => '',
-    'name'    => '',
-    'loading' => false,
-    'success' => false,
-    'error'   => '',
+wp_interactivity_state('my-theme/newsletter', [
+    'submitted' => false,
 ]);
 ?>
-
 <div
-    data-wp-interactive="myTheme/newsletter"
-    data-wp-context='<?php echo esc_attr($context); ?>'
+    data-wp-interactive="my-theme/newsletter"
+    data-wp-context='<?php echo esc_attr(wp_json_encode([
+        'email'   => '',
+        'name'    => '',
+        'loading' => false,
+        'error'   => '',
+    ])); ?>'
     useBlockProps
     class="newsletter"
 >
-    <template data-wp-if="!context.success">
+    <div data-wp-bind--hidden="state.submitted">
         <h3>Stay in the loop</h3>
         <div class="newsletter-form">
             <input
@@ -592,20 +644,20 @@ $context = wp_json_encode([
                 <span data-wp-text="context.loading ? 'Subscribing...' : 'Subscribe'"></span>
             </button>
         </div>
-        <p data-wp-if="context.error" class="newsletter-error" data-wp-text="context.error"></p>
-    </template>
-    <template data-wp-if="context.success">
-        <p class="newsletter-success">You're in! Check your email for a confirmation.</p>
-    </template>
+        <p data-wp-bind--hidden="!context.error" class="newsletter-error" data-wp-text="context.error"></p>
+    </div>
+    <div data-wp-bind--hidden="!state.submitted">
+        <p class="newsletter-success">You're in! Check your email.</p>
+    </div>
 </div>
 ```
 
 ### Client logic
 
-```js title="script-inline.js"
+```js title="script.inline.js"
 import { store, getContext } from '@wordpress/interactivity';
 
-store('myTheme/newsletter', {
+const { state } = store('my-theme/newsletter', {
     actions: {
         setName(event) {
             getContext().name = event.target.value;
@@ -615,10 +667,10 @@ store('myTheme/newsletter', {
         },
         handleKeydown(event) {
             if (event.key === 'Enter') {
-                store('myTheme/newsletter').actions.subscribe();
+                store('my-theme/newsletter').actions.subscribe();
             }
         },
-        async subscribe() {
+        *subscribe() {
             const ctx = getContext();
             const email = ctx.email.trim();
             if (!email) return;
@@ -626,15 +678,13 @@ store('myTheme/newsletter', {
             ctx.loading = true;
             ctx.error = '';
 
-            const db = bs.db('my-theme/newsletter');
-            const result = await db.create({
+            const result = yield bs.db('my-theme/newsletter').create({
                 email,
                 name: ctx.name.trim(),
             });
 
             if (result.data?.errors) {
-                const first = Object.values(result.data.errors)[0];
-                ctx.error = first[0];
+                ctx.error = Object.values(result.data.errors)[0][0];
                 ctx.loading = false;
                 return;
             }
@@ -645,7 +695,7 @@ store('myTheme/newsletter', {
                 return;
             }
 
-            ctx.success = true;
+            state.submitted = true;
             ctx.loading = false;
         },
     },
@@ -710,7 +760,6 @@ store('myTheme/newsletter', {
 
 ```bash
 wp bs db list my-theme/newsletter --format=table
-wp bs db list my-theme/newsletter --format=json > subscribers.json
 wp bs rpc call my-theme/newsletter stats
 wp bs rpc call my-theme/newsletter unsubscribe --email=user@example.com
 wp bs cron run my-theme/newsletter cleanup
@@ -727,8 +776,11 @@ wp bs cron run my-theme/newsletter cleanup
 | **Custom RPC** | Toggle, clear done | Unsubscribe, stats |
 | **Cron** | Delete old completed | Remove unsubscribed |
 | **Validation** | Length constraints | Email format + domain block |
+| **Realtime** | 3s polling | Not needed |
+| **Optimistic UI** | `bs.mutate()` auto mode | Direct `bs.db().create()` |
+| **State** | `wp_interactivity_state()` | `wp_interactivity_state()` + context |
 
 Same pattern, different access models. The building blocks are identical:
 `db.php` for the data model, `rpc.php` for business logic, `cron.php` for
-background tasks, `index.php` + `script-inline.js` for the UI, `style.css`
+background tasks, `index.php` + `script.inline.js` for the UI, `style.css`
 for the look. Each block is a self-contained application.
