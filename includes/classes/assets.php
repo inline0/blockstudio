@@ -463,6 +463,7 @@ class Assets {
 			. 'while(t.firstChild)t.content.appendChild(t.firstChild)'
 			. '}})}'
 			. 'const p=()=>{document.querySelectorAll("[data-wp-interactive]:not([data-wp-processed])").forEach(n=>{'
+			. 'if(n.parentElement&&n.parentElement.closest("[data-wp-interactive]"))return;'
 			. 'var ss=n.dataset.wpServerState;'
 			. 'if(ss){var ns=n.dataset.wpInteractive;store(ns,{state:JSON.parse(ss)})}'
 			. 'fixTpl(n);'
