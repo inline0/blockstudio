@@ -59,6 +59,9 @@ yarn-error.log*
 
 /ui
 
+# Local wp-env testing environments
+/wp-env/
+
 # Misc
 *.swp
 *.swo
