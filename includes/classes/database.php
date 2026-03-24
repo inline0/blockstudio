@@ -54,6 +54,7 @@ class Database {
 		add_action( 'rest_api_init', array( __CLASS__, 'register_endpoints' ) );
 		add_filter( 'blockstudio/buffer/output', array( __CLASS__, 'inject_frontend_client' ), 3 );
 		add_action( 'enqueue_block_editor_assets', array( __CLASS__, 'inject_editor_client' ) );
+		add_action( 'init', array( __CLASS__, 'register_post_types' ) );
 	}
 
 	/**
@@ -575,7 +576,7 @@ class Database {
 	 *
 	 * @param string $key The schema key.
 	 *
-	 * @return string The storage type (table, meta, jsonc, sqlite).
+	 * @return string The storage type (table, meta, jsonc, sqlite, post_type).
 	 */
 	private static function storage_type( string $key ): string {
 		return self::$schemas[ $key ]['storage'] ?? 'table';
@@ -876,6 +877,8 @@ class Database {
 				return self::jsonc_list( $key, $filters, $limit, $offset );
 			case 'sqlite':
 				return self::sqlite_list( $key, $schema, $filters, $limit, $offset );
+			case 'post_type':
+				return self::cpt_list( $key, $schema, $filters, $limit, $offset );
 			default:
 				return self::table_list( $key, $schema, $filters, $limit, $offset );
 		}
@@ -900,6 +903,9 @@ class Database {
 				break;
 			case 'sqlite':
 				$record = self::sqlite_get( $key, $id );
+				break;
+			case 'post_type':
+				$record = self::cpt_get( $key, $id );
 				break;
 			default:
 				$record = self::table_get( $key, $id );
@@ -947,6 +953,9 @@ class Database {
 				break;
 			case 'sqlite':
 				$record = self::sqlite_create( $key, $data );
+				break;
+			case 'post_type':
+				$record = self::cpt_create( $key, $data );
 				break;
 			default:
 				$record = self::table_create( $key, $data );
@@ -1007,6 +1016,9 @@ class Database {
 			case 'sqlite':
 				$record = self::sqlite_update( $key, $id, $data );
 				break;
+			case 'post_type':
+				$record = self::cpt_update( $key, $id, $data );
+				break;
 			default:
 				$record = self::table_update( $key, $id, $data );
 		}
@@ -1065,6 +1077,9 @@ class Database {
 				break;
 			case 'sqlite':
 				$deleted = self::sqlite_delete( $key, $id );
+				break;
+			case 'post_type':
+				$deleted = self::cpt_delete( $key, $id );
 				break;
 			default:
 				$deleted = self::table_delete( $key, $id );
@@ -1803,6 +1818,252 @@ class Database {
 		$stmt->execute( array( $id ) );
 
 		return $stmt->rowCount() > 0;
+	}
+
+	// Post type (CPT) storage.
+
+	/**
+	 * Get the custom post type name for a schema key.
+	 *
+	 * WordPress limits post type names to 20 characters.
+	 *
+	 * @param string $key The schema key.
+	 *
+	 * @return string The post type name.
+	 */
+	private static function cpt_name( string $key ): string {
+		$safe = str_replace( array( '/', '-', ':' ), '_', $key );
+		$name = 'bs_' . $safe;
+
+		if ( strlen( $name ) > 20 ) {
+			$name = 'bs_' . substr( md5( $key ), 0, 17 );
+		}
+
+		return $name;
+	}
+
+	/**
+	 * Register custom post types for all post_type storage schemas.
+	 *
+	 * @return void
+	 */
+	public static function register_post_types(): void {
+		self::load_all();
+
+		foreach ( self::$schemas as $key => $schema ) {
+			if ( 'post_type' !== ( $schema['storage'] ?? 'table' ) ) {
+				continue;
+			}
+
+			$cpt = self::cpt_name( $key );
+
+			if ( post_type_exists( $cpt ) ) {
+				continue;
+			}
+
+			register_post_type(
+				$cpt,
+				array(
+					'public'       => false,
+					'show_ui'      => false,
+					'show_in_rest' => false,
+					'supports'     => array( 'custom-fields' ),
+					'label'        => $cpt,
+				)
+			);
+		}
+	}
+
+	/**
+	 * Convert a CPT post to a record array.
+	 *
+	 * @param \WP_Post $post   The post object.
+	 * @param array    $schema The schema definition.
+	 *
+	 * @return array The record.
+	 */
+	private static function cpt_to_record( \WP_Post $post, array $schema ): array {
+		$record = array(
+			'id'         => $post->ID,
+			'created_at' => $post->post_date_gmt,
+			'updated_at' => $post->post_modified_gmt,
+		);
+
+		foreach ( array_keys( $schema['fields'] ?? array() ) as $field ) {
+			$value = get_post_meta( $post->ID, $field, true );
+
+			$type = $schema['fields'][ $field ]['type'] ?? 'string';
+			if ( 'boolean' === $type ) {
+				$value = filter_var( $value, FILTER_VALIDATE_BOOLEAN );
+			} elseif ( 'integer' === $type ) {
+				$value = (int) $value;
+			} elseif ( 'number' === $type ) {
+				$value = (float) $value;
+			} elseif ( '' === $value && isset( $schema['fields'][ $field ]['default'] ) ) {
+				$value = $schema['fields'][ $field ]['default'];
+			}
+
+			$record[ $field ] = $value;
+		}
+
+		if ( isset( $schema['userScoped'] ) && $schema['userScoped'] ) {
+			$record['user_id'] = (int) $post->post_author;
+		}
+
+		return $record;
+	}
+
+	/**
+	 * List records from CPT storage.
+	 *
+	 * @param string $key     The schema key.
+	 * @param array  $schema  The schema.
+	 * @param array  $filters Field equality filters.
+	 * @param int    $limit   Maximum rows.
+	 * @param int    $offset  Row offset.
+	 *
+	 * @return array The records.
+	 */
+	private static function cpt_list( string $key, array $schema, array $filters, int $limit, int $offset ): array {
+		$cpt  = self::cpt_name( $key );
+		$args = array(
+			'post_type'      => $cpt,
+			'post_status'    => 'publish',
+			'posts_per_page' => $limit,
+			'offset'         => $offset,
+			'orderby'        => 'ID',
+			'order'          => 'DESC',
+		);
+
+		$user_id = $filters['user_id'] ?? null;
+		unset( $filters['user_id'] );
+
+		if ( $user_id ) {
+			$args['author'] = (int) $user_id;
+		}
+
+		if ( ! empty( $filters ) ) {
+			$meta_query = array();
+			foreach ( $filters as $field => $value ) {
+				$meta_query[] = array(
+					'key'   => $field,
+					'value' => $value,
+				);
+			}
+			$args['meta_query'] = $meta_query; // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query
+		}
+
+		$posts   = get_posts( $args );
+		$records = array();
+
+		foreach ( $posts as $post ) {
+			$records[] = self::cpt_to_record( $post, $schema );
+		}
+
+		return $records;
+	}
+
+	/**
+	 * Get a single record from CPT storage.
+	 *
+	 * @param string $key The schema key.
+	 * @param int    $id  The record (post) ID.
+	 *
+	 * @return array|null The record or null.
+	 */
+	private static function cpt_get( string $key, int $id ) {
+		$cpt  = self::cpt_name( $key );
+		$post = get_post( $id );
+
+		if ( ! $post || $cpt !== $post->post_type || 'publish' !== $post->post_status ) {
+			return null;
+		}
+
+		return self::cpt_to_record( $post, self::$schemas[ $key ] );
+	}
+
+	/**
+	 * Create a record in CPT storage.
+	 *
+	 * @param string $key  The schema key.
+	 * @param array  $data The sanitized data.
+	 *
+	 * @return array The created record.
+	 */
+	private static function cpt_create( string $key, array $data ): array {
+		$cpt    = self::cpt_name( $key );
+		$schema = self::$schemas[ $key ];
+
+		$post_data = array(
+			'post_type'   => $cpt,
+			'post_status' => 'publish',
+			'post_title'  => $cpt . '_entry',
+		);
+
+		if ( isset( $data['user_id'] ) ) {
+			$post_data['post_author'] = (int) $data['user_id'];
+			unset( $data['user_id'] );
+		}
+
+		$post_id = wp_insert_post( $post_data );
+
+		foreach ( $data as $field => $value ) {
+			update_post_meta( $post_id, $field, $value );
+		}
+
+		return self::cpt_to_record( get_post( $post_id ), $schema );
+	}
+
+	/**
+	 * Update a record in CPT storage.
+	 *
+	 * @param string $key  The schema key.
+	 * @param int    $id   The record (post) ID.
+	 * @param array  $data The sanitized data.
+	 *
+	 * @return array|null The updated record or null.
+	 */
+	private static function cpt_update( string $key, int $id, array $data ) {
+		$cpt  = self::cpt_name( $key );
+		$post = get_post( $id );
+
+		if ( ! $post || $cpt !== $post->post_type ) {
+			return null;
+		}
+
+		wp_update_post(
+			array(
+				'ID'            => $id,
+				'post_modified' => current_time( 'mysql' ),
+			)
+		);
+
+		foreach ( $data as $field => $value ) {
+			update_post_meta( $id, $field, $value );
+		}
+
+		clean_post_cache( $id );
+
+		return self::cpt_to_record( get_post( $id ), self::$schemas[ $key ] );
+	}
+
+	/**
+	 * Delete a record from CPT storage.
+	 *
+	 * @param string $key The schema key.
+	 * @param int    $id  The record (post) ID.
+	 *
+	 * @return bool Whether the record was deleted.
+	 */
+	private static function cpt_delete( string $key, int $id ): bool {
+		$cpt  = self::cpt_name( $key );
+		$post = get_post( $id );
+
+		if ( ! $post || $cpt !== $post->post_type ) {
+			return false;
+		}
+
+		return (bool) wp_delete_post( $id, true );
 	}
 
 	// Discovery.
