@@ -54,7 +54,7 @@ class Database {
 		add_action( 'rest_api_init', array( __CLASS__, 'register_endpoints' ) );
 		add_filter( 'blockstudio/buffer/output', array( __CLASS__, 'inject_frontend_client' ), 3 );
 		add_action( 'enqueue_block_editor_assets', array( __CLASS__, 'inject_editor_client' ) );
-		add_action( 'init', array( __CLASS__, 'register_post_types' ) );
+		self::register_post_types();
 	}
 
 	/**
