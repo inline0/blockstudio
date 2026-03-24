@@ -204,7 +204,7 @@ and delete endpoints, all with input validation.
 
 ### Storage
 
-There are four storage backends to choose from:
+There are five storage backends to choose from:
 
 - **`table`**: Custom MySQL table managed via `dbDelta()`. Adding fields to the
   schema adds columns on the next page load. The production default.
@@ -214,6 +214,8 @@ There are four storage backends to choose from:
 - **`jsonc`**: One JSON object per line in a flat file. Human-readable,
   version-controllable, git-friendly.
 - **`meta`**: JSON array in WordPress post meta, tied to a specific post.
+- **`post_type`**: Each record is a WordPress post in a custom post type. Fields
+  are individual post meta entries, queryable with `WP_Query`.
 
 ### Clients
 
@@ -279,7 +281,8 @@ For per-user data (todos, favorites, drafts), there's a new `userScoped` option.
 Set it to `true` and Blockstudio adds a `user_id` column, sets it automatically
 on create, and filters every query to the current user. Updates and deletes
 check ownership. No manual `user_id` field, no `before_create` hook, no
-filtering in RPC. One line of config.
+filtering in RPC. One line of config. When using `post_type` storage,
+`userScoped` maps to `post_author` instead of a separate `user_id` column.
 
 ```php
 return [

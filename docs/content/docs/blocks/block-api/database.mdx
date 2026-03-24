@@ -74,7 +74,7 @@ Each schema gets its own endpoints, storage, and access control.
 
 ## Storage modes
 
-Three storage backends, each suited for different use cases.
+Five storage backends, each suited for different use cases.
 
 ### Custom table (`storage: "table"`)
 
@@ -132,6 +132,16 @@ return [
 ```
 
 Best for: data that belongs to a specific post or page.
+
+### Custom post type (`storage: "post_type"`)
+
+Each record is a WordPress post in an auto-registered custom post type. Each
+field in the schema becomes a separate `post_meta` entry. This makes records
+queryable with `WP_Query`, compatible with REST API plugins, and visible to
+tools like GraphQL.
+
+Best for: data that should integrate with WordPress natively. Each field is
+independently queryable and indexable.
 
 ## JavaScript client
 
@@ -398,6 +408,9 @@ return [
 No manual `user_id` field, no `before_create` hook, no filtering in RPC. Users
 can only see, edit, and delete their own records. The `user_id` column is
 managed entirely by Blockstudio.
+
+When using `post_type` storage, `userScoped` maps to `post_author` instead of
+a separate `user_id` column.
 
 ## Access control
 

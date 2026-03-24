@@ -11,6 +11,11 @@ class DatabaseTest extends TestCase {
 	 */
 	private array $created_ids = array();
 
+	/**
+	 * Post IDs created during CPT tests, cleaned up via wp_delete_post.
+	 */
+	private array $cpt_post_ids = array();
+
 	protected function tearDown(): void {
 		foreach ( $this->created_ids as $key => $ids ) {
 			foreach ( $ids as $id ) {
@@ -19,6 +24,12 @@ class DatabaseTest extends TestCase {
 		}
 
 		$this->created_ids = array();
+
+		foreach ( $this->cpt_post_ids as $id ) {
+			wp_delete_post( $id, true );
+		}
+
+		$this->cpt_post_ids = array();
 	}
 
 	private function track_record( string $key, array $record ): array {
@@ -957,5 +968,140 @@ class DatabaseTest extends TestCase {
 		$this->track_record( 'blockstudio/type-db-validation:default', $record );
 
 		$this->assertIsArray( $record );
+	}
+
+	// Post type (CPT) storage
+
+	private function track_cpt_post( array $record ): array {
+		$this->cpt_post_ids[] = $record['id'];
+		return $record;
+	}
+
+	public function test_cpt_registered(): void {
+		Database::register_post_types();
+
+		$schemas = Database::get_all();
+		$this->assertArrayHasKey( 'blockstudio/type-db-post-type:default', $schemas );
+		$this->assertSame( 'post_type', $schemas['blockstudio/type-db-post-type:default']['storage'] );
+
+		// The CPT name is derived from the schema key. Verify it exists.
+		$this->assertTrue( post_type_exists( 'bs_type_db_post_type' ) || $this->cpt_exists_by_hash() );
+	}
+
+	private function cpt_exists_by_hash(): bool {
+		$key  = 'blockstudio/type-db-post-type:default';
+		$safe = str_replace( array( '/', '-', ':' ), '_', $key );
+		$name = 'bs_' . $safe;
+
+		if ( strlen( $name ) > 20 ) {
+			$name = 'bs_' . substr( md5( $key ), 0, 17 );
+		}
+
+		return post_type_exists( $name );
+	}
+
+	public function test_cpt_create(): void {
+		$db     = Db::get( 'blockstudio/type-db-post-type' );
+		$record = $db->create( array( 'title' => 'CPT create test' ) );
+		$this->track_record( 'blockstudio/type-db-post-type:default', $record );
+		$this->track_cpt_post( $record );
+
+		$this->assertIsArray( $record );
+		$this->assertArrayHasKey( 'id', $record );
+		$this->assertArrayHasKey( 'created_at', $record );
+		$this->assertArrayHasKey( 'updated_at', $record );
+		$this->assertNotEmpty( $record['created_at'] );
+		$this->assertSame( 'CPT create test', $record['title'] );
+		$this->assertSame( 'draft', $record['status'] );
+	}
+
+	public function test_cpt_get(): void {
+		$db     = Db::get( 'blockstudio/type-db-post-type' );
+		$record = $db->create( array( 'title' => 'CPT get test' ) );
+		$this->track_record( 'blockstudio/type-db-post-type:default', $record );
+		$this->track_cpt_post( $record );
+
+		$fetched = $db->get_record( (int) $record['id'] );
+
+		$this->assertIsArray( $fetched );
+		$this->assertEquals( $record['id'], $fetched['id'] );
+		$this->assertSame( 'CPT get test', $fetched['title'] );
+	}
+
+	public function test_cpt_list(): void {
+		$db = Db::get( 'blockstudio/type-db-post-type' );
+		$r1 = $db->create( array( 'title' => 'CPT list A' ) );
+		$r2 = $db->create( array( 'title' => 'CPT list B' ) );
+		$this->track_record( 'blockstudio/type-db-post-type:default', $r1 );
+		$this->track_record( 'blockstudio/type-db-post-type:default', $r2 );
+		$this->track_cpt_post( $r1 );
+		$this->track_cpt_post( $r2 );
+
+		$list = $db->list();
+		$ids  = array_column( $list, 'id' );
+
+		$this->assertContains( $r1['id'], $ids );
+		$this->assertContains( $r2['id'], $ids );
+	}
+
+	public function test_cpt_list_with_filter(): void {
+		$db = Db::get( 'blockstudio/type-db-post-type' );
+		$r1 = $db->create( array( 'title' => 'CPT filter A', 'status' => 'draft' ) );
+		$r2 = $db->create( array( 'title' => 'CPT filter B', 'status' => 'published' ) );
+		$this->track_record( 'blockstudio/type-db-post-type:default', $r1 );
+		$this->track_record( 'blockstudio/type-db-post-type:default', $r2 );
+		$this->track_cpt_post( $r1 );
+		$this->track_cpt_post( $r2 );
+
+		$list = $db->list( array( 'status' => 'published' ) );
+		$ids  = array_column( $list, 'id' );
+
+		$this->assertContains( $r2['id'], $ids );
+		$this->assertNotContains( $r1['id'], $ids );
+	}
+
+	public function test_cpt_update(): void {
+		$db     = Db::get( 'blockstudio/type-db-post-type' );
+		$record = $db->create( array( 'title' => 'CPT before update' ) );
+		$this->track_record( 'blockstudio/type-db-post-type:default', $record );
+		$this->track_cpt_post( $record );
+
+		$updated = $db->update( (int) $record['id'], array( 'title' => 'CPT after update' ) );
+
+		$this->assertIsArray( $updated );
+		$this->assertSame( 'CPT after update', $updated['title'] );
+		$this->assertEquals( $record['id'], $updated['id'] );
+	}
+
+	public function test_cpt_delete(): void {
+		$db     = Db::get( 'blockstudio/type-db-post-type' );
+		$record = $db->create( array( 'title' => 'CPT delete me' ) );
+
+		$deleted = $db->delete( (int) $record['id'] );
+		$this->assertTrue( $deleted );
+
+		$this->assertNull( $db->get_record( (int) $record['id'] ) );
+	}
+
+	public function test_cpt_delete_nonexistent(): void {
+		$db = Db::get( 'blockstudio/type-db-post-type' );
+		$this->assertFalse( $db->delete( 999999 ) );
+	}
+
+	public function test_cpt_fields_stored_as_post_meta(): void {
+		$db     = Db::get( 'blockstudio/type-db-post-type' );
+		$record = $db->create(
+			array(
+				'title'  => 'CPT meta test',
+				'status' => 'published',
+			)
+		);
+		$this->track_record( 'blockstudio/type-db-post-type:default', $record );
+		$this->track_cpt_post( $record );
+
+		$post_id = (int) $record['id'];
+
+		$this->assertSame( 'CPT meta test', get_post_meta( $post_id, 'title', true ) );
+		$this->assertSame( 'published', get_post_meta( $post_id, 'status', true ) );
 	}
 }
