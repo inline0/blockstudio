@@ -51,7 +51,7 @@ class Canvas {
 		}
 
 		add_submenu_page(
-			null,
+			'edit.php',
 			'Blockstudio Canvas',
 			'',
 			'edit_posts',
