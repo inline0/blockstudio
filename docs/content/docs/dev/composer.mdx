@@ -38,6 +38,33 @@ Your project's Composer autoloader must be loaded before WordPress initializes. 
 require_once dirname( __DIR__, 2 ) . '/vendor/autoload.php';
 ```
 
+## As a Must-Use Plugin
+
+Install Blockstudio into `mu-plugins/` so it loads automatically without activation. Override the installer path to target the mu-plugins directory:
+
+```json title="composer.json"
+{
+  "require": {
+    "composer/installers": "^2.0",
+    "blockstudio/blockstudio": "^7.0"
+  },
+  "extra": {
+    "installer-paths": {
+      "wp-content/mu-plugins/{$name}/": ["type:wordpress-plugin"]
+    }
+  }
+}
+```
+
+WordPress only auto-loads PHP files at the root of `mu-plugins/`, not subdirectories. Add a loader file:
+
+```php title="wp-content/mu-plugins/blockstudio-loader.php"
+<?php
+require_once WPMU_PLUGIN_DIR . '/blockstudio/blockstudio.php';
+```
+
+No activation needed. Blockstudio loads on every request automatically.
+
 ## Bundled in a Theme
 
 Install Blockstudio as a dependency inside your theme. This keeps everything self-contained without requiring a separate plugin.
