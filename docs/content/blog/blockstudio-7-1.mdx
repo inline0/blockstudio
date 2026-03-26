@@ -57,16 +57,16 @@ Or using the new HTML tag syntax:
 
 ## Block tags
 
-Blocks can be embedded as HTML tags using two interchangeable syntaxes:
+Blocks can now be embedded as HTML tags using two interchangeable syntaxes:
 
 ```html
 <bs:acme-hero title="Welcome" />
 <block name="acme/hero" title="Welcome" />
 ```
 
-Both render the same block. Both work with Blockstudio blocks and core
-WordPress blocks. Inside block templates, they render automatically with no
-opt-in required. You can compose entire layouts from other blocks directly in
+Both produce the same output. Both work with Blockstudio blocks and core
+WordPress blocks. Inside block templates, they render automatically without any
+opt-in. This means you can compose entire layouts from other blocks directly in
 your template:
 
 ```twig title="index.twig"
@@ -163,12 +163,11 @@ custom array. `exclude` removes specific tags from any preset.
 
 ## Database
 
-This is the centerpiece of the release. Blocks can now define a data model by
-adding a `db.php` file to their directory. From that single file, Blockstudio
-generates five REST CRUD endpoints, validates every write against the schema,
-manages the storage backend automatically, and provides both a JavaScript client
-(`bs.db()`) and a PHP API (`Db::get()`). No migration files, no controller
-classes, no route registration.
+This is the centerpiece of the release. Add a `db.php` file to any block
+directory and Blockstudio generates five REST CRUD endpoints, validates every
+write against the schema, manages the storage backend automatically, and
+provides both a JavaScript client (`bs.db()`) and a PHP API (`Db::get()`).
+No migration files, no controller classes, no route registration.
 
 ```php title="db.php"
 return [
@@ -204,7 +203,7 @@ and delete endpoints, all with input validation.
 
 ### Storage
 
-There are five storage backends to choose from:
+Five storage backends, each suited for different use cases:
 
 - **`table`**: Custom MySQL table managed via `dbDelta()`. Adding fields to the
   schema adds columns on the next page load. The production default.
@@ -214,12 +213,13 @@ There are five storage backends to choose from:
 - **`jsonc`**: One JSON object per line in a flat file. Human-readable,
   version-controllable, git-friendly.
 - **`meta`**: JSON array in WordPress post meta, tied to a specific post.
-- **`post_type`**: Each record is a WordPress post in a custom post type. Fields
-  are individual post meta entries, queryable with `WP_Query`.
+- **`post_type`**: Each record becomes a WordPress post in a custom post type.
+  Fields are stored as individual post meta entries, fully queryable with
+  `WP_Query`.
 
 ### Clients
 
-From JavaScript, there's a new `bs.db()` client:
+On the JavaScript side, `bs.db()` gives you a complete CRUD client:
 
 ```js
 const db = bs.db('my-theme/block', 'subscribers');
@@ -229,22 +229,22 @@ await db.update(record.id, { plan: 'free' });
 await db.delete(record.id);
 ```
 
-On top of the CRUD client, three companion utilities ship alongside `bs.db()`:
+Three companion utilities ship alongside it:
 
-- **`bs.cache`**: In-memory query cache with `get`, `set`, `invalidate`, and
-  `clear`. Shared across all query and mutation calls.
-- **`bs.query(key, fn, options)`**: Cached async fetch with request
-  deduplication and configurable `staleTime`. Multiple calls with the same key
-  while a request is in flight return the same promise.
-- **`bs.mutate(options)`**: Optimistic mutations with auto-rollback. Pass a
-  reactive state object, an action (`create`, `update`, `delete`), and
-  optimistic data. The UI updates instantly; if the server call fails, the
+- **`bs.cache`**: An in-memory query cache with `get`, `set`, `invalidate`,
+  and `clear`. Shared across all query and mutation calls.
+- **`bs.query(key, fn, options)`**: Wraps any async function with caching,
+  request deduplication, and configurable `staleTime`. Multiple calls with the
+  same key while a request is in flight return the same promise.
+- **`bs.mutate(options)`**: Handles optimistic mutations with auto-rollback.
+  Pass a reactive state object, an action (`create`, `update`, `delete`), and
+  optimistic data. The UI updates instantly. If the server call fails, the
   state rolls back to its pre-mutation snapshot.
 
 Together these cover the full read/write cycle: `bs.query` for cached reads,
 `bs.mutate` for optimistic writes, `bs.cache` for manual control.
 
-From PHP, there's a new `Db` class with the same operations:
+On the PHP side, the `Db` class provides the same operations:
 
 ```php
 use Blockstudio\Db;
@@ -277,12 +277,12 @@ can't cover: domain blocking, cross-field validation, external lookups.
 
 ### User-scoped data
 
-For per-user data (todos, favorites, drafts), there's a new `userScoped` option.
-Set it to `true` and Blockstudio adds a `user_id` column, sets it automatically
-on create, and filters every query to the current user. Updates and deletes
-check ownership. No manual `user_id` field, no `before_create` hook, no
-filtering in RPC. One line of config. When using `post_type` storage,
-`userScoped` maps to `post_author` instead of a separate `user_id` column.
+For per-user data like todos, favorites, or drafts, set `userScoped` to `true`
+and Blockstudio handles the rest. It adds a `user_id` column, sets it
+automatically on create, and filters every query to the current user. Updates
+and deletes check ownership. No manual `user_id` field, no `before_create`
+hook, no filtering in RPC. One line of config. When using `post_type` storage,
+`userScoped` maps to `post_author` instead of a separate column.
 
 ```php
 return [
@@ -295,34 +295,35 @@ return [
 ### Realtime polling
 
 Set `'realtime' => true` in your schema and the client automatically polls
-for changes. When data changes on the server, the Interactivity API store
-updates and the UI re-renders. No JavaScript changes needed. Configure with
-`'realtime' => ['key' => 'todos', 'interval' => 5000]` for custom state
-keys and intervals. Polling uses hash comparison to keep requests lightweight
-and pauses when the browser tab is hidden.
+for changes. When something changes on the server, the Interactivity API store
+updates and the UI re-renders without any JavaScript changes on your end.
+Configure with `'realtime' => ['key' => 'todos', 'interval' => 5000]` for
+custom state keys and intervals. Polling uses hash comparison to keep requests
+lightweight and pauses when the browser tab is hidden.
 
 ### Security, hooks, portability
 
-Public endpoints are protected by a `X-BS-Token` CSRF header, auto-injected
-into the JS clients. Use `'open'` for webhooks that need truly unauthenticated
-access.
+Public endpoints are protected by an auto-injected `X-BS-Token` CSRF header.
+Use `'open'` when you need truly unauthenticated access, for example for
+incoming webhooks.
 
-Lifecycle hooks fire before and after every write operation, definable inline in
-`db.php` or globally via WordPress actions.
+Lifecycle hooks fire before and after every write operation. Define them inline
+in `db.php` or globally via WordPress actions.
 
 Fields can define a `component` key for schema-driven form rendering via
 `bs_db_form()`.
 
-And with SQLite or JSONC storage, the entire application (code + data) lives in
-one folder. Copy it to deploy.
+With SQLite or JSONC storage, the entire application lives in one folder: the
+code, the logic, the access control, and the data. Copy it to deploy.
 
 ## RPC
 
-Server functions live in `rpc.php`. Define a PHP function, call it from the
-frontend with `bs.fn()`. Blockstudio handles the REST endpoint,
-authentication, CSRF protection, and JSON serialization. The pattern is inspired
-by [tRPC](https://trpc.io): procedures defined server-side, called from the
-client by name.
+Sometimes CRUD isn't enough. You need custom server logic: toggling a todo,
+sending a notification, aggregating stats. That's what `rpc.php` is for. Define
+a PHP function, call it from the frontend with `bs.fn()`, and Blockstudio
+handles the REST endpoint, authentication, CSRF protection, and JSON
+serialization. The pattern is inspired by [tRPC](https://trpc.io): procedures
+defined server-side, called from the client by name.
 
 ```php title="rpc.php"
 return [
@@ -342,14 +343,14 @@ Inline scripts (`script-inline.js`) auto-detect the block name from the
 manually. Module scripts pass it as the third argument.
 
 Access control options include `public` (with CSRF), `'open'` (no protection),
-capability strings, or arrays. There's per-function HTTP method control,
-lifecycle hooks, and cross-block calling from both JS and PHP.
+capability strings, or arrays. Per-function HTTP method control, lifecycle
+hooks, and cross-block calling from both JS and PHP are all supported.
 
 ## Cron
 
-Blocks can now define scheduled background tasks in a `cron.php` file. Define a
-schedule and a callback, and Blockstudio registers them with WordPress Cron on
-init. Everything is unscheduled cleanly when the plugin is deactivated.
+Background tasks are defined in a `cron.php` file. Set a schedule and a
+callback, and Blockstudio registers them with WordPress Cron on init. When the
+plugin is deactivated, everything is unscheduled cleanly.
 
 ```php title="cron.php"
 return [
@@ -374,9 +375,9 @@ All built-in WordPress schedules are supported, plus custom intervals via the
 
 ## CLI
 
-There's a new `wp bs` command that covers the full Blockstudio feature set:
-blocks, database, RPC, cron, settings, Tailwind compilation, SCSS compilation,
-custom fields, and asset management.
+A new `wp bs` command covers the full Blockstudio feature set: blocks,
+database, RPC, cron, settings, Tailwind compilation, SCSS compilation, custom
+fields, and asset management.
 
 ```bash
 wp bs blocks list --components
@@ -398,11 +399,11 @@ All commands support `--format=json` for scripting.
 
 ### textMinimized for object fields
 
-Collapsed repeater rows now handle object field values. Previously, pointing
-`textMinimized` at a link field showed `[object Object]`. Blockstudio now
-auto-reads the right sub-property based on the field type: `title` for links,
-`value` for colors and gradients, `icon` for icons. You can also set an explicit
-`key` property to read any sub-property you want.
+Collapsed repeater rows now handle object field values properly. Previously,
+pointing `textMinimized` at a link field showed `[object Object]`. Now
+Blockstudio auto-reads the right sub-property based on the field type: `title`
+for links, `value` for colors and gradients, `icon` for icons. You can also set
+an explicit `key` property to read any sub-property you want.
 
 ```json
 {
@@ -415,8 +416,8 @@ auto-reads the right sub-property based on the field type: `title` for links,
 ### RichText and MediaPlaceholder
 
 Both template components now work inside repeater fields with bracket notation
-to target the correct row. This means you can now have inline-editable headings,
-paragraphs, and media upload zones in each row of a repeater.
+to target the correct row. Inline-editable headings, paragraphs, and media
+upload zones in each row of a repeater.
 
 ```twig
 {% for item in a.items %}
@@ -441,10 +442,10 @@ field reference to apply them to every expanded field at once.
 
 ## Dynamic populate arguments
 
-Populate arguments can reference other block attributes using `{attributes.*}`
-syntax. When the referenced attribute changes, the select field re-fetches its
-options automatically. This makes it possible to chain selects: one for choosing
-a post type, another that loads posts of that type.
+Populate arguments can now reference other block attributes using
+`{attributes.*}` syntax. When the referenced attribute changes, the select
+field re-fetches its options automatically. Chain selects together: one for
+choosing a post type, another that loads posts of that type.
 
 ```json
 {
@@ -463,19 +464,18 @@ a post type, another that loads posts of that type.
 Change `post_type` to "page" and the second select loads pages. Change it to
 "post" and it loads posts. Works with any populate type and any attribute.
 
-## Theme-bundled Composer install
+## Composer
 
-Blockstudio can be bundled directly inside a theme via Composer. Asset URLs
-are resolved via a `BLOCKSTUDIO_URL` constant instead of `plugins_url()`,
-which means Blockstudio works correctly when loaded from anywhere under
-`wp-content/`, not just the plugins directory.
+Blockstudio now works when loaded from anywhere under `wp-content/`, not just
+the plugins directory. Asset URLs are resolved via a `BLOCKSTUDIO_URL` constant
+instead of `plugins_url()`, so theme-bundled installs work out of the box:
 
 ```php title="functions.php"
 require_once __DIR__ . '/vendor/autoload.php';
 require_once __DIR__ . '/vendor/blockstudio/blockstudio/blockstudio.php';
 ```
 
-The `composer.json` `require` section has been cleaned up: scoped packages
+The `composer.json` runtime dependencies have been cleaned up. Scoped packages
 (TailwindPHP, ScssPhp, Minify) that are already bundled in `lib/` are no
 longer listed as runtime dependencies. Only `php >= 8.2` and
 `plugin-update-checker` remain.
@@ -488,27 +488,21 @@ See the [Composer documentation](/docs/dev/composer) for setup instructions.
 
 ## Performance profiler
 
-A built-in profiler tracks render times for every block, template phase,
-asset processing, and Tailwind compilation. Activate it with a query
-parameter or a setting:
-
-```
-https://example.com/my-page/?blockstudio-perf
-```
+Add `?blockstudio-perf` to any page URL and a debug panel appears at the
+bottom with per-block render times, phase breakdowns, and cache hit rates.
+Timing data is also sent as Server-Timing headers, visible in the browser
+DevTools Network tab.
 
 ```json title="blockstudio.json"
 { "dev": { "perf": true } }
 ```
 
-The profiler outputs Server-Timing headers (visible in browser DevTools
-Network tab) and a fixed debug panel at the bottom of the page. Every
-block render is tracked individually with call counts, so you can spot
-which blocks are slow or called too often. Only visible to logged-in
-users with `edit_posts` capability.
+Enable it permanently via settings to profile every page load. Only visible to
+logged-in users with `edit_posts` capability.
 
 Self-closing block tags are also cached in memory now. When the same block
 with identical attributes appears multiple times on a page, subsequent
-renders are served from cache, skipping the entire template pipeline.
+renders skip the entire template pipeline.
 
 ## Bug fixes
 
