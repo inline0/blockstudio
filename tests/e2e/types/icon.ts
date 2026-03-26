@@ -74,7 +74,7 @@ testType(
           await page.locator('[data-id="icon"] select').nth(1).selectOption('user-faces');
           await page.waitForTimeout(2000);
 
-          const combobox = page.locator('[data-id="icon"] .components-combobox-control input');
+          const combobox = page.locator('[data-id="icon"] .components-combobox-control input').first();
           await expect(combobox).toBeVisible({ timeout: 10000 });
         },
       },
@@ -84,7 +84,7 @@ testType(
           await page.locator('[data-id="icon"] select').nth(1).selectOption('health-medical');
           await page.waitForTimeout(2000);
 
-          const combobox = page.locator('[data-id="icon"] .components-combobox-control input');
+          const combobox = page.locator('[data-id="icon"] .components-combobox-control input').first();
           await expect(combobox).toBeVisible({ timeout: 10000 });
         },
       },
@@ -94,7 +94,7 @@ testType(
           await page.locator('[data-id="icon"] select').nth(1).selectOption('game-sports');
           await page.waitForTimeout(2000);
 
-          const combobox = page.locator('[data-id="icon"] .components-combobox-control input');
+          const combobox = page.locator('[data-id="icon"] .components-combobox-control input').first();
           await expect(combobox).toBeVisible({ timeout: 10000 });
         },
       },
