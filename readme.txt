@@ -3,7 +3,7 @@ Contributors: dnnsjsk
 Requires at least: 5.0
 Tested up to: 7.0.0
 Requires PHP: 8.2
-Stable tag: 7.0.11
+Stable tag: 7.1.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -76,6 +76,26 @@ Download the latest release zip from [GitHub Releases](https://github.com/inline
 * Enhancement: custom field conditions now rewrite IDs when using `idStructure`
 * Fix: `npm:` prefix for ES module imports now resolves correctly in production builds
 * Fix: HTML parser adds null innerContent placeholders for nested blocks
+
+= 7.1.0 =
+* New: database layer with CRUD endpoints, validation, and five storage backends (table, sqlite, jsonc, meta, post_type)
+* New: RPC server functions callable from the frontend via bs.fn()
+* New: cron scheduled tasks defined in cron.php
+* New: block tags for embedding blocks as HTML tags (<bs:> and <block> syntax)
+* New: block tags work in the editor with full Interactivity API support
+* New: bs.cache, bs.query, bs.mutate client APIs for data management
+* New: realtime polling with hash comparison for live-updating UIs
+* New: built-in performance profiler (?blockstudio-perf)
+* New: components (blocks that skip the inserter)
+* New: block field type for referencing other blocks as attributes
+* New: html-tag field type with built-in presets
+* New: WP CLI commands (wp bs)
+* New: Composer install as plugin, mu-plugin, or theme-bundled
+* Enhancement: in-memory render cache for self-closing block tags
+* Enhancement: early return in replace_components for blocks without template tags
+* Fix: PHP 8.4 strpos/str_replace deprecation warnings
+* Fix: duplicate script injection from multiple output buffer flushes
+* Fix: non-core block tags now preserve inner content in page sync
 
 = 7.0.11 =
 * Fix: restore $isEditor and $isPreview aliases in PHP block templates
