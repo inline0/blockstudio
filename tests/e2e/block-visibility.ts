@@ -27,6 +27,12 @@ test.describe('Block visibility (issue #26)', () => {
 
     const canvas = await getEditorCanvas(page);
     await canvas.waitForSelector('.editor-styles-wrapper', { timeout: 30000 });
+
+    const modal = await page.$('text=Welcome to the block editor');
+    if (modal) {
+      await page.click('.components-modal__screen-overlay .components-button.has-icon');
+    }
+
     await page.waitForTimeout(2000);
 
     await page.locator('button[aria-label="Document Overview"]').click();
