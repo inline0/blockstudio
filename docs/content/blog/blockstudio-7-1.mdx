@@ -510,6 +510,11 @@ Self-closing block tags are also cached in memory now. When the same block
 with identical attributes appears multiple times on a page, subsequent
 renders are served from cache, skipping the entire template pipeline.
 
+## Bug fixes
+
+- **PHP 8.4 deprecation warnings**: Fixed `strpos()` and `str_replace()`
+  deprecation warnings caused by passing `null` to `add_submenu_page()`.
+
 ## More
 
 - **SCSS code fields**: Code fields support `language: "scss"`. Values are
