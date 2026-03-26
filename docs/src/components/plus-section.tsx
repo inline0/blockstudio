@@ -1,7 +1,7 @@
 import { Check } from 'lucide-react';
 
 const includes = [
-  '150+ site templates',
+  '450+ site templates',
   'AI system instructions',
   'Lifetime updates',
   'Private Discord community',
@@ -71,7 +71,7 @@ function PlusGraphic() {
 
         <div className="col-span-2 flex items-center justify-between rounded-xl border border-[var(--color-plus)]/8 bg-[var(--color-plus-graphic)]/3 px-4 py-3">
           <span className="text-xs font-medium text-[var(--color-plus)]">
-            150+ templates included
+            450+ templates included
           </span>
           <span className="rounded-full bg-[var(--color-plus-graphic)]/15 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-[var(--color-plus)]">
             Plus
