@@ -247,6 +247,14 @@ export const Block = ({
   const fetchSingle = (event: CustomEvent | false = false) => {
     if (event) {
     }
+    const sendAttrs = cloneDeep(attributes) as Record<string, Any>;
+    if (sendAttrs.metadata && typeof sendAttrs.metadata === 'object') {
+      delete (sendAttrs.metadata as Record<string, unknown>).blockVisibility;
+      if (Object.keys(sendAttrs.metadata as object).length === 0) {
+        delete sendAttrs.metadata;
+      }
+    }
+
     const params = new URLSearchParams({
       ...getPostParams(),
     }).toString();
@@ -255,7 +263,7 @@ export const Block = ({
       path: `/blockstudio/v1/gutenberg/block/render/${block.name}?${params}`,
       method: 'POST',
       data: {
-        attributes,
+        attributes: sendAttrs,
         context,
       },
     })

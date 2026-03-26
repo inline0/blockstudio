@@ -27,9 +27,16 @@ const flush = () => {
   const data: Record<string, Any> = {};
 
   batch.forEach((req) => {
+    const attrs = { ...req.attributes };
+    if (attrs.metadata && typeof attrs.metadata === 'object') {
+      const meta = { ...(attrs.metadata as Record<string, unknown>) };
+      delete meta.blockVisibility;
+      attrs.metadata = Object.keys(meta).length > 0 ? meta : undefined;
+    }
+
     data[req.clientId] = {
       clientId: req.clientId,
-      attributes: req.attributes,
+      attributes: attrs,
       context: req.context,
       name: req.name,
       post: req.post,

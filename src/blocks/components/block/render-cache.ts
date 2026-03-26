@@ -27,6 +27,12 @@ export const computeHash = (
       delete cloned[key];
     }
   });
+  if (cloned.metadata && typeof cloned.metadata === 'object') {
+    delete (cloned.metadata as Record<string, unknown>).blockVisibility;
+    if (Object.keys(cloned.metadata as object).length === 0) {
+      delete cloned.metadata;
+    }
+  }
 
   const attrs = replaceEmptyStringsWithFalse(
     cloned as Parameters<typeof replaceEmptyStringsWithFalse>[0],

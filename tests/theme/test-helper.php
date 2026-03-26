@@ -940,6 +940,27 @@ add_action(
 						$created['posts'][] = 3400;
 					}
 
+					// Post 3700 - Block visibility test (hidden block).
+					$visibility_content = '<!-- wp:blockstudio/type-text {"blockstudio":{"name":"blockstudio/type-text","attributes":{"text":"Visibility Test"}},"metadata":{"blockVisibility":false}} /-->';
+					if ( ! get_post( 3700 ) ) {
+						$wpdb->insert( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery
+							$wpdb->posts,
+							array(
+								'ID'            => 3700,
+								'post_author'   => 1,
+								'post_date'     => current_time( 'mysql' ),
+								'post_date_gmt' => current_time( 'mysql', 1 ),
+								'post_content'  => $visibility_content,
+								'post_title'    => 'Block Visibility Test',
+								'post_status'   => 'publish',
+								'post_name'     => 'block-visibility-test',
+								'post_type'     => 'page',
+								'guid'          => home_url( '/?p=3700' ),
+							)
+						);
+						$created['posts'][] = 3700;
+					}
+
 					// Pattern 2643 - contains type-text block
 					$pattern_2643_content = '<!-- wp:blockstudio/type-text /--><!-- wp:blockstudio/type-textarea /-->';
 					$existing_2643        = get_post( 2643 );
