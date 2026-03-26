@@ -42,13 +42,24 @@ class Option_Storage implements Storage_Handler_Interface {
 	public function register( string $block_name, array $field ): void {
 		$option_key = $this->get_key( $block_name, $field );
 		$type       = $field['type'] ?? 'text';
+		$meta_type  = $this->get_meta_type( $type );
+
+		$show_in_rest = true;
+		if ( 'array' === $meta_type ) {
+			$show_in_rest = array(
+				'schema' => array(
+					'type'  => 'array',
+					'items' => array( 'type' => 'object' ),
+				),
+			);
+		}
 
 		register_setting(
 			'blockstudio',
 			$option_key,
 			array(
-				'type'         => $this->get_meta_type( $type ),
-				'show_in_rest' => true,
+				'type'         => $meta_type,
+				'show_in_rest' => $show_in_rest,
 			)
 		);
 	}

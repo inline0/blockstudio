@@ -64,6 +64,40 @@ testType(
           ).not.toHaveValue('0');
         },
       },
+      {
+        description: 'remix user-faces subset loads icons',
+        testFunction: async (page: Page, canvas: Frame) => {
+          await canvas.click('[data-type="blockstudio/type-icon"]');
+
+          await page.locator('[data-id="icon"] select').first().selectOption('remix-icons');
+          await page.waitForTimeout(500);
+          await page.locator('[data-id="icon"] select').nth(1).selectOption('user-faces');
+          await page.waitForTimeout(2000);
+
+          const combobox = page.locator('[data-id="icon"] .components-combobox-control input');
+          await expect(combobox).toBeVisible({ timeout: 10000 });
+        },
+      },
+      {
+        description: 'remix health-medical subset loads icons',
+        testFunction: async (page: Page, _canvas: Frame) => {
+          await page.locator('[data-id="icon"] select').nth(1).selectOption('health-medical');
+          await page.waitForTimeout(2000);
+
+          const combobox = page.locator('[data-id="icon"] .components-combobox-control input');
+          await expect(combobox).toBeVisible({ timeout: 10000 });
+        },
+      },
+      {
+        description: 'remix game-sports subset loads icons',
+        testFunction: async (page: Page, _canvas: Frame) => {
+          await page.locator('[data-id="icon"] select').nth(1).selectOption('game-sports');
+          await page.waitForTimeout(2000);
+
+          const combobox = page.locator('[data-id="icon"] .components-combobox-control input');
+          await expect(combobox).toBeVisible({ timeout: 10000 });
+        },
+      },
     ];
   }
 );

@@ -144,15 +144,24 @@ class Storage_Registry {
 	 */
 	public function process_block_fields( string $block_name, array $fields ): void {
 		foreach ( $fields as $field ) {
-			if ( ! isset( $field['id'] ) ) {
-				continue;
+			if ( isset( $field['id'] ) ) {
+				$this->process_field( $block_name, $field );
+
+				if ( isset( $field['fields'] ) && is_array( $field['fields'] ) ) {
+					$this->process_block_fields( $block_name, $field['fields'] );
+				}
 			}
 
-			$this->process_field( $block_name, $field );
+			if ( isset( $field['attributes'] ) && is_array( $field['attributes'] ) ) {
+				$this->process_block_fields( $block_name, $field['attributes'] );
+			}
 
-			// Process nested fields in container types.
-			if ( isset( $field['fields'] ) && is_array( $field['fields'] ) ) {
-				$this->process_block_fields( $block_name, $field['fields'] );
+			if ( isset( $field['tabs'] ) && is_array( $field['tabs'] ) ) {
+				foreach ( $field['tabs'] as $tab ) {
+					if ( isset( $tab['attributes'] ) && is_array( $tab['attributes'] ) ) {
+						$this->process_block_fields( $block_name, $tab['attributes'] );
+					}
+				}
 			}
 		}
 	}

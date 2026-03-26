@@ -136,21 +136,29 @@ class Storage_Sync {
 	 */
 	private function sync_fields( int $post_id, string $block_name, array $fields, array $attrs, string $prefix = '' ): void {
 		foreach ( $fields as $field ) {
-			if ( ! isset( $field['id'] ) ) {
-				continue;
+			if ( isset( $field['id'] ) ) {
+				$attr_key = '' === $prefix ? $field['id'] : $prefix . '_' . $field['id'];
+
+				if ( isset( $field['storage'] ) ) {
+					$value = $attrs[ $attr_key ] ?? null;
+					$this->sync_field_value( $post_id, $block_name, $field, $value );
+				}
+
+				if ( isset( $field['fields'] ) && is_array( $field['fields'] ) ) {
+					$this->sync_fields( $post_id, $block_name, $field['fields'], $attrs, $attr_key );
+				}
 			}
 
-			$attr_key = '' === $prefix ? $field['id'] : $prefix . '_' . $field['id'];
-
-			// Sync this field if it has storage configuration.
-			if ( isset( $field['storage'] ) ) {
-				$value = $attrs[ $attr_key ] ?? null;
-				$this->sync_field_value( $post_id, $block_name, $field, $value );
+			if ( isset( $field['attributes'] ) && is_array( $field['attributes'] ) ) {
+				$this->sync_fields( $post_id, $block_name, $field['attributes'], $attrs, $prefix );
 			}
 
-			// Process nested fields in container types.
-			if ( isset( $field['fields'] ) && is_array( $field['fields'] ) ) {
-				$this->sync_fields( $post_id, $block_name, $field['fields'], $attrs, $attr_key );
+			if ( isset( $field['tabs'] ) && is_array( $field['tabs'] ) ) {
+				foreach ( $field['tabs'] as $tab ) {
+					if ( isset( $tab['attributes'] ) && is_array( $tab['attributes'] ) ) {
+						$this->sync_fields( $post_id, $block_name, $tab['attributes'], $attrs, $prefix );
+					}
+				}
 			}
 		}
 	}
