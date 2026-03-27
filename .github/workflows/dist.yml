@@ -2,7 +2,7 @@ name: Distribution
 
 on:
   push:
-    branches: [main]
+    branches: [main, '7.*']
   workflow_dispatch:
 
 concurrency:
@@ -46,7 +46,7 @@ jobs:
       - name: Verify required files exist
         run: |
           cd build/blockstudio
-          for f in blockstudio.php readme.txt vendor/autoload.php lib/tailwindphp-autoload.php includes/class-plugin.php; do
+          for f in blockstudio.php bootstrap.php readme.txt vendor/autoload.php lib/tailwindphp-autoload.php includes/class-plugin.php; do
             if [ ! -f "$f" ]; then
               echo "MISSING: $f"
               exit 1
@@ -336,7 +336,6 @@ jobs:
           cat > functions.php << 'PHP'
           <?php
           require_once __DIR__ . '/vendor/autoload.php';
-          require_once __DIR__ . '/vendor/blockstudio/blockstudio/blockstudio.php';
           Timber\Timber::init();
           PHP
 
