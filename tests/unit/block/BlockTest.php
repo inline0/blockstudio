@@ -234,4 +234,33 @@ class BlockTest extends TestCase {
 		$result = Block::resolve_attribute_path( 'level1.level2.level3', $attributes );
 		$this->assertSame( 'deep value', $result );
 	}
+
+	public function test_render_filter_output_resolves_richtext(): void {
+		$filter = function ( $html, $block ) {
+			if ( 'blockstudio/type-text' === ( $block->name ?? '' ) ) {
+				return '<div><RichText attribute="text" tag="h1" class="heading" /></div>';
+			}
+			return $html;
+		};
+
+		add_filter( 'blockstudio/blocks/render', $filter, 10, 2 );
+
+		$result = Block::render(
+			array(
+				'blockstudio' => array(
+					'name'       => 'blockstudio/type-text',
+					'attributes' => array( 'text' => 'Hello World' ),
+				),
+			),
+			'',
+			'',
+			''
+		);
+
+		remove_filter( 'blockstudio/blocks/render', $filter );
+
+		$this->assertIsString( $result );
+		$this->assertStringNotContainsString( '<RichText', $result, 'RichText pseudo-component should be resolved' );
+		$this->assertStringNotContainsString( '<richtext', strtolower( $result ), 'RichText should not appear as raw HTML element' );
+	}
 }

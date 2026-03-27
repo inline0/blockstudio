@@ -1594,12 +1594,35 @@ class Block {
 			Perf::track( 'block:' . $name, ( microtime( true ) - $perf_start ) * 1000 );
 		}
 
-		return apply_filters(
+		$result = apply_filters(
 			'blockstudio/blocks/render',
 			$rendered_block,
 			$filter_data,
 			$is_editor,
 			$is_preview
 		);
+
+		// If a filter replaced the output and it still has pseudo-components,
+		// resolve them (supports external template engines like Blade).
+		if (
+			$result !== $rendered_block
+			&& is_string( $result )
+			&& ( str_contains( $result, '<RichText' )
+				|| str_contains( $result, '<InnerBlocks' )
+				|| str_contains( $result, '<MediaPlaceholder' )
+				|| str_contains( $result, 'useBlockProps' ) )
+		) {
+			$result = self::replace_components(
+				$result,
+				$inner_blocks,
+				$is_editor || $is_preview,
+				$filter_data,
+				$attributes,
+				$block,
+				$attribute_data
+			);
+		}
+
+		return $result;
 	}
 }
