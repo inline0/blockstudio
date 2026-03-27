@@ -984,6 +984,27 @@ add_action(
 						$created['posts'][] = 3800;
 					}
 
+					// Post 3900 - Select with plain string value (issue #27).
+					$select_content = '<!-- wp:blockstudio/type-select {"blockstudio":{"name":"blockstudio/type-select","attributes":{"defaultValueLabel":"two"}}} /-->';
+					if ( ! get_post( 3900 ) ) {
+						$wpdb->insert( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery
+							$wpdb->posts,
+							array(
+								'ID'            => 3900,
+								'post_author'   => 1,
+								'post_date'     => current_time( 'mysql' ),
+								'post_date_gmt' => current_time( 'mysql', 1 ),
+								'post_content'  => $select_content,
+								'post_title'    => 'Select Plain String Test',
+								'post_status'   => 'publish',
+								'post_name'     => 'select-plain-string-test',
+								'post_type'     => 'page',
+								'guid'          => home_url( '/?p=3900' ),
+							)
+						);
+						$created['posts'][] = 3900;
+					}
+
 					// Pattern 2643 - contains type-text block
 					$pattern_2643_content = '<!-- wp:blockstudio/type-text /--><!-- wp:blockstudio/type-textarea /-->';
 					$existing_2643        = get_post( 2643 );

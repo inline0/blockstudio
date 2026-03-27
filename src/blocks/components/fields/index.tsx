@@ -576,7 +576,7 @@ export const Fields = ({
                 item,
                 v,
               }}
-              value={val}
+              value={val ?? (typeof v === 'string' || typeof v === 'number' ? v : undefined)}
               inRepeater={repeaterId !== ''}
             />
           ) : item.type === 'checkbox' ? (
