@@ -53,6 +53,19 @@ Download the latest release zip from [GitHub Releases](https://github.com/inline
 
 == Changelog ==
 
+= 7.1.1 =
+* Fix: duplicate blocks of same type no longer mix attributes in the editor (#22)
+* Fix: hidden blocks (WP 6.9 block visibility) now render correctly after being shown (#26)
+* Fix: editor select field accepts plain string attribute values from block tags (#27)
+* Fix: pseudo-components (RichText, InnerBlocks, MediaPlaceholder) resolved in custom render filter output (#21)
+* Fix: storage sync recurses into tabs, groups, and repeaters (#18)
+* Fix: option and post meta storage registers array settings with proper REST schema (#19)
+* Fix: canvas submenu page PHP 8.4 deprecation warning (#17)
+* Fix: remix icon set filenames with special characters slugified (#13)
+* Enhancement: Composer autoload bootstrap for theme and plugin bundled installs
+* Enhancement: E2E test suite reorganized by feature (block-tags, canvas, components, db, interactivity, pages)
+* Test: 413 new unit tests (Block_Merger, Attribute_Builder, Block_Discovery, Field system, Storage handlers, Migrate, Error_Handler)
+
 = 7.1.0 =
 * New: RPC via `rpc.php` with `bs.fn()` JS client, capability and method controls
 * New: database layer via `db.php` with table, SQLite, post meta, and JSONC storage
