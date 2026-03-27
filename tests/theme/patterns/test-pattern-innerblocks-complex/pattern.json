@@ -1,0 +1,7 @@
+{
+  "name": "test-pattern-innerblocks-complex",
+  "title": "InnerBlocks Complex Pattern",
+  "description": "Pattern with Blockstudio block that has InnerBlocks with template/tag/class props",
+  "categories": ["featured"],
+  "keywords": ["test", "innerblocks"]
+}

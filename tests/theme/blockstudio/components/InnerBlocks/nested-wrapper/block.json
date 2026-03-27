@@ -1,0 +1,21 @@
+{
+  "$schema": "https://blockstudio.dev/schema/block",
+  "name": "blockstudio/component-innerblocks-nested-wrapper",
+  "title": "InnerBlocks Nested Wrapper",
+  "category": "text",
+  "icon": "star-filled",
+  "blockstudio": {
+    "attributes": [
+      {
+        "id": "background",
+        "type": "text",
+        "default": "cream"
+      },
+      {
+        "id": "classes",
+        "type": "text",
+        "default": ""
+      }
+    ]
+  }
+}
