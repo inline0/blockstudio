@@ -28,9 +28,9 @@ test.describe('Block visibility (issue #26)', () => {
     const canvas = await getEditorCanvas(page);
     await canvas.waitForSelector('.editor-styles-wrapper', { timeout: 30000 });
 
-    const modal = await page.$('text=Welcome to the block editor');
-    if (modal) {
-      await page.click('.components-modal__screen-overlay .components-button.has-icon');
+    const modalClose = page.locator('.components-modal__header button[aria-label="Close"]');
+    if (await modalClose.isVisible({ timeout: 2000 }).catch(() => false)) {
+      await modalClose.click();
     }
 
     await page.waitForTimeout(2000);
