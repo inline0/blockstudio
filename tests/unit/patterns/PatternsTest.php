@@ -13,7 +13,8 @@ class PatternsTest extends TestCase {
 		$this->patterns_path = get_template_directory() . '/patterns';
 
 		Patterns::reset();
-		Patterns::init( array( 'force' => true ) );
+		// WP 6.9 core triggers "Undefined array key" in blocks.php during pattern registration.
+		@Patterns::init( array( 'force' => true ) );
 	}
 
 	protected function tearDown(): void {

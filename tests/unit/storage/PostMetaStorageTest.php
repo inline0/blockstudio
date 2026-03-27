@@ -228,8 +228,8 @@ class PostMetaStorageTest extends TestCase {
 
 	// register() with array types
 
-	public function test_register_repeater_field_fails_without_schema(): void {
-		$meta_key              = 'test_pm_repeater';
+	public function test_register_repeater_field_with_array_schema(): void {
+		$meta_key                = 'test_pm_repeater';
 		$this->registered_keys[] = $meta_key;
 
 		$field = array(
@@ -238,26 +238,17 @@ class PostMetaStorageTest extends TestCase {
 			'storage' => array( 'type' => 'postMeta', 'postMetaKey' => $meta_key ),
 		);
 
-		// WordPress rejects array meta with show_in_rest=true (no schema).
-		// Post_Meta_Storage does not provide items schema like Option_Storage does.
-		$notices = array();
-		$capture = function ( $function_name ) use ( &$notices ) {
-			$notices[] = $function_name;
-		};
-		add_action( 'doing_it_wrong_run', $capture );
-
 		$this->handler->register( 'test/block', $field );
 
-		remove_action( 'doing_it_wrong_run', $capture );
-
-		$this->assertContains( 'register_meta', $notices );
-
 		$meta = $this->get_registered_meta( $meta_key );
-		$this->assertNull( $meta, 'WordPress rejects array meta without items schema in show_in_rest' );
+		$this->assertNotNull( $meta );
+		$this->assertSame( 'array', $meta['type'] );
+		$this->assertIsArray( $meta['show_in_rest'] );
+		$this->assertSame( 'array', $meta['show_in_rest']['schema']['type'] );
 	}
 
-	public function test_register_checkbox_field_fails_without_schema(): void {
-		$meta_key              = 'test_pm_checkbox';
+	public function test_register_checkbox_field_with_array_schema(): void {
+		$meta_key                = 'test_pm_checkbox';
 		$this->registered_keys[] = $meta_key;
 
 		$field = array(
@@ -266,24 +257,16 @@ class PostMetaStorageTest extends TestCase {
 			'storage' => array( 'type' => 'postMeta', 'postMetaKey' => $meta_key ),
 		);
 
-		$notices = array();
-		$capture = function ( $function_name ) use ( &$notices ) {
-			$notices[] = $function_name;
-		};
-		add_action( 'doing_it_wrong_run', $capture );
-
 		$this->handler->register( 'test/block', $field );
 
-		remove_action( 'doing_it_wrong_run', $capture );
-
-		$this->assertContains( 'register_meta', $notices );
-
 		$meta = $this->get_registered_meta( $meta_key );
-		$this->assertNull( $meta, 'WordPress rejects array meta without items schema in show_in_rest' );
+		$this->assertNotNull( $meta );
+		$this->assertSame( 'array', $meta['type'] );
+		$this->assertIsArray( $meta['show_in_rest'] );
 	}
 
-	public function test_register_token_field_fails_without_schema(): void {
-		$meta_key              = 'test_pm_token';
+	public function test_register_token_field_with_array_schema(): void {
+		$meta_key                = 'test_pm_token';
 		$this->registered_keys[] = $meta_key;
 
 		$field = array(
@@ -292,20 +275,12 @@ class PostMetaStorageTest extends TestCase {
 			'storage' => array( 'type' => 'postMeta', 'postMetaKey' => $meta_key ),
 		);
 
-		$notices = array();
-		$capture = function ( $function_name ) use ( &$notices ) {
-			$notices[] = $function_name;
-		};
-		add_action( 'doing_it_wrong_run', $capture );
-
 		$this->handler->register( 'test/block', $field );
 
-		remove_action( 'doing_it_wrong_run', $capture );
-
-		$this->assertContains( 'register_meta', $notices );
-
 		$meta = $this->get_registered_meta( $meta_key );
-		$this->assertNull( $meta, 'WordPress rejects array meta without items schema in show_in_rest' );
+		$this->assertNotNull( $meta );
+		$this->assertSame( 'array', $meta['type'] );
+		$this->assertIsArray( $meta['show_in_rest'] );
 	}
 
 	// register() with object types (default to string)
