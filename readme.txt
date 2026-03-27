@@ -64,7 +64,6 @@ Download the latest release zip from [GitHub Releases](https://github.com/inline
 * Fix: remix icon set filenames with special characters slugified (#13)
 * Enhancement: Composer autoload bootstrap for theme and plugin bundled installs
 * Enhancement: E2E test suite reorganized by feature (block-tags, canvas, components, db, interactivity, pages)
-* Test: 413 new unit tests (Block_Merger, Attribute_Builder, Block_Discovery, Field system, Storage handlers, Migrate, Error_Handler)
 
 = 7.1.0 =
 * New: RPC via `rpc.php` with `bs.fn()` JS client, capability and method controls
