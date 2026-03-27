@@ -12,7 +12,7 @@ export default defineConfig({
     light: "/logo-light.svg",
     dark: "/logo-dark.svg",
   },
-  icon: "/icon.png",
+  icon: { light: "/icon.png", dark: "/icon-dark.png" },
   nav: {
     links: [
       { label: "Build with AI", href: "/ai" },
