@@ -1,0 +1,21 @@
+{
+  "minimum-stability": "dev",
+  "prefer-stable": true,
+  "require": {
+    "blockstudio/blockstudio": "@dev"
+  },
+  "repositories": [
+    {
+      "type": "path",
+      "url": "../..",
+      "options": {
+        "symlink": false
+      }
+    }
+  ],
+  "config": {
+    "allow-plugins": {
+      "composer/installers": false
+    }
+  }
+}

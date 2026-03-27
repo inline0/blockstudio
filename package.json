@@ -29,6 +29,8 @@
     "types": "tsx scripts/generate-types.ts",
     "wp-env:empty:start": "cd tests/wp-env-empty && wp-env start && wp-env run cli wp theme activate theme-empty && wp-env run cli wp rewrite structure '/%postname%/' --hard",
     "wp-env:empty:stop": "cd tests/wp-env-empty && wp-env stop",
+    "wp-env:composer:start": "cd tests/theme-composer && composer install --no-dev --no-interaction && cd ../wp-env-composer && wp-env start && wp-env run cli wp theme activate theme-composer && wp-env run cli wp rewrite structure '/%postname%/' --hard",
+    "wp-env:composer:stop": "cd tests/wp-env-composer && wp-env stop",
     "wp-env:reset": "cd tests/wp-env && wp-env stop; wp-env clean all; wp-env start && wp-env run cli wp theme activate theme && wp-env run cli wp rewrite structure '/%postname%/' --hard && curl -s -X POST http://localhost:8888/wp-json/blockstudio-test/v1/e2e/setup",
     "wp-env:start": "cd tests/wp-env && wp-env start && wp-env run cli wp theme activate theme && wp-env run cli wp rewrite structure '/%postname%/' --hard && curl -s -X POST http://localhost:8888/wp-json/blockstudio-test/v1/e2e/setup",
     "wp-env:stop": "cd tests/wp-env && wp-env stop"

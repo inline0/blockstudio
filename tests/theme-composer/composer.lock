@@ -1,0 +1,134 @@
+{
+    "_readme": [
+        "This file locks the dependencies of your project to a known state",
+        "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
+        "This file is @generated automatically"
+    ],
+    "content-hash": "6eb358295255d1ab94cbe3440556dd39",
+    "packages": [
+        {
+            "name": "blockstudio/blockstudio",
+            "version": "7.1.1.x-dev",
+            "dist": {
+                "type": "path",
+                "url": "../..",
+                "reference": "99eed0157604c9ea22b161b7b04103b2d4868119"
+            },
+            "require": {
+                "php": ">=8.2",
+                "yahnis-elsts/plugin-update-checker": "^5.6"
+            },
+            "require-dev": {
+                "dealerdirect/phpcodesniffer-composer-installer": "^1.0",
+                "humbug/php-scoper": "^0.18.18",
+                "matthiasmullie/minify": "^1.3",
+                "phpunit/phpunit": "^11.0",
+                "scssphp/scssphp": "^2.1",
+                "squizlabs/php_codesniffer": "^3.7",
+                "tailwindphp/tailwindphp": "^1.0",
+                "wp-coding-standards/wpcs": "^3.0"
+            },
+            "type": "wordpress-plugin",
+            "autoload": {
+                "classmap": [
+                    "lib/"
+                ],
+                "files": [
+                    "bootstrap.php"
+                ]
+            },
+            "scripts": {
+                "scope": [
+                    "vendor/bin/php-scoper add-prefix --output-dir=lib --force"
+                ],
+                "preflight": [
+                    "php bin/generate-preflight.php"
+                ],
+                "cs": [
+                    "phpcs"
+                ],
+                "cs:fix": [
+                    "phpcbf"
+                ],
+                "test": [
+                    "phpunit"
+                ]
+            },
+            "license": [
+                "GPL-2.0-or-later"
+            ],
+            "authors": [
+                {
+                    "name": "dennis",
+                    "email": "dnnsjsk@gmail.com"
+                }
+            ],
+            "description": "The block framework for WordPress.",
+            "transport-options": {
+                "symlink": false,
+                "relative": true
+            }
+        },
+        {
+            "name": "yahnis-elsts/plugin-update-checker",
+            "version": "v5.6",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/YahnisElsts/plugin-update-checker.git",
+                "reference": "a2db6871deec989a74e1f90fafc6d58ae526a879"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/YahnisElsts/plugin-update-checker/zipball/a2db6871deec989a74e1f90fafc6d58ae526a879",
+                "reference": "a2db6871deec989a74e1f90fafc6d58ae526a879",
+                "shasum": ""
+            },
+            "require": {
+                "ext-json": "*",
+                "php": ">=5.6.20"
+            },
+            "type": "library",
+            "autoload": {
+                "files": [
+                    "load-v5p6.php"
+                ]
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "MIT"
+            ],
+            "authors": [
+                {
+                    "name": "Yahnis Elsts",
+                    "email": "whiteshadow@w-shadow.com",
+                    "homepage": "https://w-shadow.com/",
+                    "role": "Developer"
+                }
+            ],
+            "description": "A custom update checker for WordPress plugins and themes. Useful if you can't host your plugin in the official WP repository but still want it to support automatic updates.",
+            "homepage": "https://github.com/YahnisElsts/plugin-update-checker/",
+            "keywords": [
+                "automatic updates",
+                "plugin updates",
+                "theme updates",
+                "wordpress"
+            ],
+            "support": {
+                "issues": "https://github.com/YahnisElsts/plugin-update-checker/issues",
+                "source": "https://github.com/YahnisElsts/plugin-update-checker/tree/v5.6"
+            },
+            "time": "2025-05-20T12:29:01+00:00"
+        }
+    ],
+    "packages-dev": [],
+    "aliases": [],
+    "minimum-stability": "dev",
+    "stability-flags": {
+        "blockstudio/blockstudio": 20
+    },
+    "prefer-stable": true,
+    "prefer-lowest": false,
+    "platform": {},
+    "platform-dev": {},
+    "plugin-api-version": "2.6.0"
+}
