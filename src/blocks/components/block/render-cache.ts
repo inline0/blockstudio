@@ -4,6 +4,7 @@ import { replaceEmptyStringsWithFalse } from '@/blocks/utils/replace-empty-strin
 const cache = new Map<string, string>();
 const cacheByBlock = new Map<string, Set<string>>();
 const preloadQueues = new Map<string, string[]>();
+const claimedByClient = new Map<string, string | undefined>();
 
 const sortedStringify = (value: unknown): string => {
   if (value === null || value === undefined) return JSON.stringify(value);
@@ -69,10 +70,17 @@ export const renderCache = {
     });
   },
 
-  claimPreloaded(blockName: string): string | undefined {
+  claimPreloaded(blockName: string, clientId?: string): string | undefined {
+    if (clientId && claimedByClient.has(clientId)) {
+      return claimedByClient.get(clientId);
+    }
     const queue = preloadQueues.get(blockName);
     if (!queue || queue.length === 0) return undefined;
-    return queue.shift();
+    const rendered = queue.shift();
+    if (clientId) {
+      claimedByClient.set(clientId, rendered);
+    }
+    return rendered;
   },
 
   get(hash: string): string | undefined {

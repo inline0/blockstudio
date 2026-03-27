@@ -961,6 +961,29 @@ add_action(
 						$created['posts'][] = 3700;
 					}
 
+					// Post 3800 - Duplicate block attributes test (issue #22).
+					$dup_content = '<!-- wp:blockstudio/type-text {"blockstudio":{"name":"blockstudio/type-text","attributes":{"text":"First"}}} /-->'
+						. '<!-- wp:blockstudio/type-text {"blockstudio":{"name":"blockstudio/type-text","attributes":{"text":"First"}}} /-->'
+						. '<!-- wp:blockstudio/type-text {"blockstudio":{"name":"blockstudio/type-text","attributes":{"text":"Third"}}} /-->';
+					if ( ! get_post( 3800 ) ) {
+						$wpdb->insert( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery
+							$wpdb->posts,
+							array(
+								'ID'            => 3800,
+								'post_author'   => 1,
+								'post_date'     => current_time( 'mysql' ),
+								'post_date_gmt' => current_time( 'mysql', 1 ),
+								'post_content'  => $dup_content,
+								'post_title'    => 'Duplicate Attrs Test',
+								'post_status'   => 'publish',
+								'post_name'     => 'duplicate-attrs-test',
+								'post_type'     => 'page',
+								'guid'          => home_url( '/?p=3800' ),
+							)
+						);
+						$created['posts'][] = 3800;
+					}
+
 					// Pattern 2643 - contains type-text block
 					$pattern_2643_content = '<!-- wp:blockstudio/type-text /--><!-- wp:blockstudio/type-textarea /-->';
 					$existing_2643        = get_post( 2643 );

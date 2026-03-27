@@ -201,6 +201,7 @@ export const Block = ({
     }
 
     const hash = computeHash(block.name, attributes);
+    const preloaded = renderCache.claimPreloaded(block.name, clientId);
 
     const cached = renderCache.get(hash);
     if (cached) {
@@ -208,7 +209,6 @@ export const Block = ({
       return computeRender(cached);
     }
 
-    const preloaded = renderCache.claimPreloaded(block.name);
     if (preloaded) {
       renderCache.set(hash, preloaded, block.name);
       firstRenderDone.current = true;
