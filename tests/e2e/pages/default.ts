@@ -1,5 +1,5 @@
 import { expect, test, Page, Frame, Browser, BrowserContext } from '@playwright/test';
-import { count, getEditorCanvas } from '../../utils/playwright-utils';
+import { count, getEditorCanvas } from '../utils/playwright-utils';
 
 const BASE = 'http://localhost:8888';
 

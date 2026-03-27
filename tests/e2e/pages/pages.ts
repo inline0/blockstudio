@@ -1,5 +1,5 @@
 import { test, expect, Page, Frame } from '@playwright/test';
-import { login, getEditorCanvas } from './utils/playwright-utils';
+import { login, getEditorCanvas } from '../utils/playwright-utils';
 
 let page: Page;
 let canvas: Frame;
