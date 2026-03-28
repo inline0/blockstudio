@@ -3,8 +3,8 @@
 	"plugins": [],
 	"themes": ["./theme"],
 	"mappings": {
-		"wp-content/mu-plugins/blockstudio": "../../..",
-		"wp-content/mu-plugins/blockstudio-loader.php": "./blockstudio-loader.php"
+		"wp-content/mu-plugins": "./mu-plugins",
+		"wp-content/mu-plugins/blockstudio": "../../.."
 	},
 	"config": {
 		"WP_DEBUG": true,

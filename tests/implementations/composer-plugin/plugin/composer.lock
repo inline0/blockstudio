@@ -4,15 +4,15 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "6eb358295255d1ab94cbe3440556dd39",
+    "content-hash": "1bc34fab9f5df73fec08517783844c4e",
     "packages": [
         {
             "name": "blockstudio/blockstudio",
             "version": "7.1.1.x-dev",
             "dist": {
                 "type": "path",
-                "url": "../..",
-                "reference": "7aabec1ee7a70db937a57589a07cbe7071122e2f"
+                "url": "../../../..",
+                "reference": "cfbc671560054200bb425948871d04ecbff34b79"
             },
             "require": {
                 "php": ">=8.2",
