@@ -1,0 +1,17 @@
+{
+	"core": "WordPress/WordPress#6.9",
+	"plugins": [],
+	"themes": ["./theme"],
+	"mappings": {
+		"wp-content/mu-plugins/blockstudio": "../../..",
+		"wp-content/mu-plugins/blockstudio-loader.php": "./blockstudio-loader.php"
+	},
+	"config": {
+		"WP_DEBUG": true,
+		"WP_DEBUG_LOG": true,
+		"WP_DEBUG_DISPLAY": false,
+		"SCRIPT_DEBUG": true
+	},
+	"port": 8896,
+	"testsPort": 8897
+}
