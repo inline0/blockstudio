@@ -36,12 +36,6 @@ class RestTest extends TestCase {
 		$this->assertArrayHasKey( '/blockstudio/v1/files', $routes );
 	}
 
-	public function test_files_dist_route_exists(): void {
-		$routes = rest_get_server()->get_routes( 'blockstudio/v1' );
-
-		$this->assertArrayHasKey( '/blockstudio/v1/files/dist', $routes );
-	}
-
 	public function test_icons_route_exists(): void {
 		$routes = rest_get_server()->get_routes( 'blockstudio/v1' );
 

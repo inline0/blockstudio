@@ -8,8 +8,6 @@
 namespace Blockstudio;
 
 use Exception;
-use RecursiveDirectoryIterator;
-use RecursiveIteratorIterator;
 use WP_Block_Type_Registry;
 use WP_Error;
 use WP_HTTP_Response;
@@ -28,7 +26,6 @@ use WP_REST_Response;
  *    - /blocks: All block configurations
  *    - /blocks-sorted: Blocks organized by directory
  *    - /files: All discovered block files
- *    - /files/dist: Compiled asset contents
  *    - /icons: Icon set data for icon picker
  *
  * 2. Settings (POST):
@@ -267,24 +264,6 @@ class Rest {
 
 				register_rest_route(
 					'blockstudio/v1',
-					'/files/dist',
-					array(
-						'methods'             => 'POST',
-						'callback'            => array( $this, 'files_dist' ),
-						'permission_callback' => $permission,
-						'args'                => array(
-							'path' => array(
-								'validate_callback' => function ( $param ) {
-									return is_string( $param ) &&
-										false === strpos( $param, '..' );
-								},
-							),
-						),
-					)
-				);
-
-				register_rest_route(
-					'blockstudio/v1',
 					'/editor/options/save',
 					array(
 						'methods'             => 'POST',
@@ -453,38 +432,6 @@ class Rest {
 	 */
 	public function files(): array {
 		return Build::files();
-	}
-
-	/**
-	 * /files/dist Endpoint.
-	 *
-	 * @since 4.0.5
-	 *
-	 * @param array $data The request data.
-	 *
-	 * @return array The files data.
-	 */
-	public function files_dist( $data ): array {
-		global $wp_filesystem;
-		$path = $data['path'];
-
-		$rii = new RecursiveIteratorIterator(
-			new RecursiveDirectoryIterator( $path )
-		);
-
-		$files = array();
-		foreach ( $rii as $file ) {
-			if ( ! $file->isDir() ) {
-				$files[] = $file->getPathname();
-			}
-		}
-
-		$result = array();
-		foreach ( $files as $file ) {
-			$result[ $file ] = $wp_filesystem->get_contents( $file );
-		}
-
-		return $result;
 	}
 
 	/**
