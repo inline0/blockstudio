@@ -42,6 +42,13 @@ class RestTest extends TestCase {
 		$this->assertArrayHasKey( '/blockstudio/v1/icons', $routes );
 	}
 
+	public function test_icons_route_permission_callback_is_callable(): void {
+		$routes = rest_get_server()->get_routes( 'blockstudio/v1' );
+		$route  = $routes['/blockstudio/v1/icons'][0];
+
+		$this->assertIsCallable( $route['permission_callback'] );
+	}
+
 	public function test_editor_options_save_route_exists(): void {
 		$routes = rest_get_server()->get_routes( 'blockstudio/v1' );
 
@@ -58,6 +65,13 @@ class RestTest extends TestCase {
 		$routes = rest_get_server()->get_routes( 'blockstudio/v1' );
 
 		$this->assertArrayHasKey( '/blockstudio/v1/attributes/populate', $routes );
+	}
+
+	public function test_attributes_populate_route_permission_callback_is_callable(): void {
+		$routes = rest_get_server()->get_routes( 'blockstudio/v1' );
+		$route  = $routes['/blockstudio/v1/attributes/populate'][0];
+
+		$this->assertIsCallable( $route['permission_callback'] );
 	}
 
 	public function test_gutenberg_block_update_route_exists(): void {

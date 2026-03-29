@@ -160,12 +160,14 @@ class Rest {
 			'rest_api_init',
 			function () {
 				$permission      = fn() => Admin::is_allowed();
-				$permission_edit = function ( $request ) {
+				$permission_edit = function ( WP_REST_Request $request ) {
 					global $post;
 
-					$post_id = isset( $request['post_id'] )
-						? (int) $request['post_id']
-						: 0;
+					$post_id = (int) (
+						$request->get_param( 'postId' ) ??
+						$request->get_param( 'post_id' ) ??
+						0
+					);
 
 					if ( $post_id > 0 ) {
 						$post = get_post( $post_id ); // phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited -- Setting post context for permission check.
@@ -234,7 +236,7 @@ class Rest {
 					array(
 						'methods'             => 'GET',
 						'callback'            => array( $this, 'icons' ),
-						'permission_callback' => is_admin(),
+						'permission_callback' => $permission_edit,
 						'args'                => array(
 							'set'    => array(
 								'validate_callback' => function ( $param ) {
@@ -300,7 +302,7 @@ class Rest {
 					array(
 						'methods'             => 'POST',
 						'callback'            => array( $this, 'attributes_populate' ),
-						'permission_callback' => is_admin(),
+						'permission_callback' => $permission_edit,
 					)
 				);
 
