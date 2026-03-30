@@ -3,7 +3,7 @@ Contributors: dnnsjsk
 Requires at least: 5.0
 Tested up to: 7.0.0
 Requires PHP: 8.2
-Stable tag: 7.1.1
+Stable tag: 7.1.2
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -52,6 +52,14 @@ Download the latest release zip from [GitHub Releases](https://github.com/inline
 * [Getting Started](https://blockstudio.dev/docs/getting-started)
 
 == Changelog ==
+
+= 7.1.2 =
+* Fix: remove legacy `/files/dist` REST endpoint
+* Fix: helper REST routes now use proper callable permission checks
+* Fix: editor REST permission checks accept both `postId` and `post_id`
+* Fix: file-based page sync no longer overwrites unrelated pages on slug collisions
+* Fix: storage sync now supports fields stored inside repeater rows and nested repeaters
+* Fix: repeater-descendant option and post meta storage registers as array-backed REST schema
 
 = 7.1.1 =
 * Fix: duplicate blocks of same type no longer mix attributes in the editor (#22)

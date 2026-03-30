@@ -168,6 +168,73 @@ class PagesTest extends TestCase {
 		$this->assertSame( $original, $synced );
 	}
 
+	public function test_force_sync_skips_unrelated_post_with_same_slug(): void {
+		$manual_post_id = wp_insert_post(
+			array(
+				'post_title'   => 'Manual Collision',
+				'post_name'    => 'blockstudio-slug-collision-test',
+				'post_type'    => 'page',
+				'post_status'  => 'publish',
+				'post_content' => 'Manual content should stay untouched.',
+			)
+		);
+
+		$this->assertIsInt( $manual_post_id );
+		$this->assertGreaterThan( 0, $manual_post_id );
+
+		$page_data                = Pages::get_page( 'blockstudio-e2e-test' );
+		$page_data['name']        = 'blockstudio-slug-collision-test';
+		$page_data['title']       = 'Blockstudio Slug Collision Test';
+		$page_data['slug']        = 'blockstudio-slug-collision-test';
+		$page_data['source_path'] = 'pages/blockstudio-slug-collision-test';
+		$page_data['postId']      = null;
+
+		try {
+			$result = ( new Page_Sync() )->force_sync( $page_data );
+
+			$this->assertSame( 0, $result );
+
+			$manual_post = get_post( $manual_post_id );
+			$this->assertInstanceOf( WP_Post::class, $manual_post );
+			$this->assertSame( 'Manual Collision', $manual_post->post_title );
+			$this->assertSame( 'Manual content should stay untouched.', $manual_post->post_content );
+
+			$posts = get_posts(
+				array(
+					'meta_key'       => '_blockstudio_page_source', // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_key
+					'meta_value'     => $page_data['source_path'], // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_value
+					'post_type'      => 'page',
+					'posts_per_page' => 1,
+					'post_status'    => 'any',
+				)
+			);
+
+			$this->assertEmpty( $posts );
+		} finally {
+			wp_delete_post( $manual_post_id, true );
+		}
+	}
+
+	public function test_force_sync_rebinds_existing_page_by_name_when_source_path_changes(): void {
+		$page_data        = Pages::get_page( 'blockstudio-e2e-test' );
+		$original_post_id = Pages::get_post_id( 'blockstudio-e2e-test' );
+		$original_source  = get_post_meta( $original_post_id, '_blockstudio_page_source', true );
+
+		$page_data['source_path'] = 'pages/moved/blockstudio-e2e-test';
+
+		try {
+			$result = ( new Page_Sync() )->force_sync( $page_data );
+
+			$this->assertSame( $original_post_id, $result );
+			$this->assertSame(
+				$page_data['source_path'],
+				get_post_meta( $original_post_id, '_blockstudio_page_source', true )
+			);
+		} finally {
+			update_post_meta( $original_post_id, '_blockstudio_page_source', $original_source );
+		}
+	}
+
 	// Discovery
 
 	public function test_discovery_finds_multiple_pages(): void {

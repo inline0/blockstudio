@@ -129,38 +129,90 @@ class Storage_Sync {
 	 * @param int    $post_id    The post ID.
 	 * @param string $block_name The block name.
 	 * @param array  $fields     The field configurations.
-	 * @param array  $attrs      The block attributes.
+	 * @param array  $attrs      The current attribute scope.
 	 * @param string $prefix     The attribute prefix for nested fields.
+	 * @param bool   $from_repeater Whether the current scope contains repeater rows.
 	 *
 	 * @return void
 	 */
-	private function sync_fields( int $post_id, string $block_name, array $fields, array $attrs, string $prefix = '' ): void {
+	private function sync_fields( int $post_id, string $block_name, array $fields, array $attrs, string $prefix = '', bool $from_repeater = false ): void {
 		foreach ( $fields as $field ) {
+			$attr_key = '';
+			$value    = null;
+
 			if ( isset( $field['id'] ) ) {
-				$attr_key = '' === $prefix ? $field['id'] : $prefix . '_' . $field['id'];
+				$attr_key = $this->get_attribute_key( (string) $field['id'], $prefix );
 
 				if ( isset( $field['storage'] ) ) {
-					$value = $attrs[ $attr_key ] ?? null;
+					$value = $this->get_attribute_value( $attrs, $attr_key, $from_repeater );
 					$this->sync_field_value( $post_id, $block_name, $field, $value );
 				}
 
 				if ( isset( $field['fields'] ) && is_array( $field['fields'] ) ) {
-					$this->sync_fields( $post_id, $block_name, $field['fields'], $attrs, $attr_key );
+					$this->sync_fields( $post_id, $block_name, $field['fields'], $attrs, $attr_key, $from_repeater );
 				}
 			}
 
 			if ( isset( $field['attributes'] ) && is_array( $field['attributes'] ) ) {
-				$this->sync_fields( $post_id, $block_name, $field['attributes'], $attrs, $prefix );
+				if ( 'repeater' === ( $field['type'] ?? '' ) ) {
+					$repeater_attrs = $this->get_attribute_value( $attrs, $attr_key, $from_repeater );
+					$repeater_attrs = is_array( $repeater_attrs ) ? $repeater_attrs : array();
+					$this->sync_fields( $post_id, $block_name, $field['attributes'], $repeater_attrs, '', true );
+				} else {
+					$child_prefix = ( 'group' === ( $field['type'] ?? '' ) && '' !== $attr_key ) ? $attr_key : $prefix;
+					$this->sync_fields( $post_id, $block_name, $field['attributes'], $attrs, $child_prefix, $from_repeater );
+				}
 			}
 
 			if ( isset( $field['tabs'] ) && is_array( $field['tabs'] ) ) {
 				foreach ( $field['tabs'] as $tab ) {
 					if ( isset( $tab['attributes'] ) && is_array( $tab['attributes'] ) ) {
-						$this->sync_fields( $post_id, $block_name, $tab['attributes'], $attrs, $prefix );
+						$this->sync_fields( $post_id, $block_name, $tab['attributes'], $attrs, $prefix, $from_repeater );
 					}
 				}
 			}
 		}
+	}
+
+	/**
+	 * Build an attribute key from the current prefix and field ID.
+	 *
+	 * @param string $field_id The field ID.
+	 * @param string $prefix   The current prefix.
+	 *
+	 * @return string
+	 */
+	private function get_attribute_key( string $field_id, string $prefix ): string {
+		return '' === $prefix ? $field_id : $prefix . '_' . $field_id;
+	}
+
+	/**
+	 * Get an attribute value from the current scope.
+	 *
+	 * Repeater scopes contain lists of row arrays, so nested values are
+	 * collected recursively to preserve row structure.
+	 *
+	 * @param array  $attrs         The current attribute scope.
+	 * @param string $attr_key      The attribute key to read.
+	 * @param bool   $from_repeater Whether the current scope contains repeater rows.
+	 *
+	 * @return mixed
+	 */
+	private function get_attribute_value( array $attrs, string $attr_key, bool $from_repeater = false ) {
+		if ( ! $from_repeater ) {
+			return $attrs[ $attr_key ] ?? null;
+		}
+
+		return array_map(
+			function ( $row ) use ( $attr_key ) {
+				if ( ! is_array( $row ) ) {
+					return null;
+				}
+
+				return $this->get_attribute_value( $row, $attr_key, array_is_list( $row ) );
+			},
+			$attrs
+		);
 	}
 
 	/**

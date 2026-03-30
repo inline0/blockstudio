@@ -42,7 +42,7 @@ class Post_Meta_Storage implements Storage_Handler_Interface {
 	public function register( string $block_name, array $field ): void {
 		$meta_key  = $this->get_key( $block_name, $field );
 		$type      = $field['type'] ?? 'text';
-		$meta_type = $this->get_meta_type( $type );
+		$meta_type = $field['__blockstudio_storage_value_type'] ?? $this->get_meta_type( $type );
 
 		$show_in_rest = true;
 		if ( 'array' === $meta_type ) {

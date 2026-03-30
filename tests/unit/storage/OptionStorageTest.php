@@ -69,4 +69,23 @@ class OptionStorageTest extends TestCase {
 		$this->assertArrayHasKey( 'test_opt_logo', $settings );
 		$this->assertTrue( $settings['test_opt_logo']['show_in_rest'] );
 	}
+
+	public function test_register_repeater_descendant_field_has_array_schema(): void {
+		$handler = new Option_Storage();
+
+		$field = array(
+			'id'                              => 'label',
+			'type'                            => 'text',
+			'storage'                         => array( 'type' => 'option', 'optionKey' => 'test_opt_rep_label' ),
+			'__blockstudio_storage_value_type' => 'array',
+		);
+
+		$this->registered_keys[] = 'test_opt_rep_label';
+		$handler->register( 'test/block', $field );
+
+		$settings = get_registered_settings();
+		$this->assertArrayHasKey( 'test_opt_rep_label', $settings );
+		$this->assertSame( 'array', $settings['test_opt_rep_label']['type'] );
+		$this->assertIsArray( $settings['test_opt_rep_label']['show_in_rest'] );
+	}
 }

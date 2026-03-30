@@ -143,9 +143,63 @@ class StorageSyncTest extends TestCase {
 					),
 				),
 			),
-			array( 'label' => 'Repeater Label' )
+			array(
+				'items' => array(
+					array( 'label' => 'First label' ),
+					array( 'label' => 'Second label' ),
+				),
+			)
 		);
 
-		$this->assertSame( 'Repeater Label', get_option( 'test_sync_rep_label' ) );
+		$this->assertSame( array( 'First label', 'Second label' ), get_option( 'test_sync_rep_label' ) );
+	}
+
+	public function test_sync_field_nested_in_nested_repeater(): void {
+		$this->option_keys[] = 'test_sync_nested_rep_label';
+
+		$this->sync(
+			array(
+				array(
+					'id'         => 'items',
+					'type'       => 'repeater',
+					'attributes' => array(
+						array(
+							'id'         => 'links',
+							'type'       => 'repeater',
+							'attributes' => array(
+								array(
+									'id'      => 'label',
+									'type'    => 'text',
+									'storage' => array( 'type' => 'option', 'optionKey' => 'test_sync_nested_rep_label' ),
+								),
+							),
+						),
+					),
+				),
+			),
+			array(
+				'items' => array(
+					array(
+						'links' => array(
+							array( 'label' => 'One' ),
+							array( 'label' => 'Two' ),
+						),
+					),
+					array(
+						'links' => array(
+							array( 'label' => 'Three' ),
+						),
+					),
+				),
+			)
+		);
+
+		$this->assertSame(
+			array(
+				array( 'One', 'Two' ),
+				array( 'Three' ),
+			),
+			get_option( 'test_sync_nested_rep_label' )
+		);
 	}
 }

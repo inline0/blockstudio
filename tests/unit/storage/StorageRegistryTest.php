@@ -245,6 +245,43 @@ class StorageRegistryTest extends TestCase {
 		$this->assertTrue( true );
 	}
 
+	public function test_process_block_fields_marks_repeater_descendants_as_array_storage(): void {
+		$registered_fields = array();
+
+		$handler = $this->createMock( Storage_Handler_Interface::class );
+		$handler->method( 'get_type' )->willReturn( 'block' );
+		$handler->method( 'register' )->willReturnCallback(
+			function ( string $block_name, array $field ) use ( &$registered_fields ): void {
+				$registered_fields[] = $field;
+			}
+		);
+
+		$registry = Storage_Registry::instance();
+		$registry->register_handler( $handler );
+
+		$fields = array(
+			array(
+				'id'         => 'items',
+				'type'       => 'repeater',
+				'attributes' => array(
+					array( 'id' => 'label', 'type' => 'text' ),
+				),
+			),
+		);
+
+		$registry->process_block_fields( 'test/block', $fields );
+
+		$nested_field = array_values(
+			array_filter(
+				$registered_fields,
+				fn( array $field ): bool => 'label' === ( $field['id'] ?? '' )
+			)
+		)[0] ?? null;
+
+		$this->assertNotNull( $nested_field );
+		$this->assertSame( 'array', $nested_field['__blockstudio_storage_value_type'] ?? null );
+	}
+
 	private function create_handler( string $type ): Storage_Handler_Interface {
 		$handler = $this->createMock( Storage_Handler_Interface::class );
 		$handler->method( 'get_type' )->willReturn( $type );

@@ -247,6 +247,26 @@ class PostMetaStorageTest extends TestCase {
 		$this->assertSame( 'array', $meta['show_in_rest']['schema']['type'] );
 	}
 
+	public function test_register_repeater_descendant_field_with_array_schema(): void {
+		$meta_key                = 'test_pm_repeater_label';
+		$this->registered_keys[] = $meta_key;
+
+		$field = array(
+			'id'                              => 'label',
+			'type'                            => 'text',
+			'storage'                         => array( 'type' => 'postMeta', 'postMetaKey' => $meta_key ),
+			'__blockstudio_storage_value_type' => 'array',
+		);
+
+		$this->handler->register( 'test/block', $field );
+
+		$meta = $this->get_registered_meta( $meta_key );
+		$this->assertNotNull( $meta );
+		$this->assertSame( 'array', $meta['type'] );
+		$this->assertIsArray( $meta['show_in_rest'] );
+		$this->assertSame( 'array', $meta['show_in_rest']['schema']['type'] );
+	}
+
 	public function test_register_checkbox_field_with_array_schema(): void {
 		$meta_key                = 'test_pm_checkbox';
 		$this->registered_keys[] = $meta_key;

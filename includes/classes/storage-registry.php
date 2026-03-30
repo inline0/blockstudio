@@ -139,30 +139,47 @@ class Storage_Registry {
 	 *
 	 * @param string $block_name The block name.
 	 * @param array  $fields     The block fields.
+	 * @param bool   $inside_repeater Whether the current scope is inside a repeater.
 	 *
 	 * @return void
 	 */
-	public function process_block_fields( string $block_name, array $fields ): void {
+	public function process_block_fields( string $block_name, array $fields, bool $inside_repeater = false ): void {
 		foreach ( $fields as $field ) {
+			$field_type             = $field['type'] ?? '';
+			$is_repeater_container  = 'repeater' === $field_type;
+			$field_for_registration = $inside_repeater ? $this->with_array_storage_value_type( $field ) : $field;
+
 			if ( isset( $field['id'] ) ) {
-				$this->process_field( $block_name, $field );
+				$this->process_field( $block_name, $field_for_registration );
 
 				if ( isset( $field['fields'] ) && is_array( $field['fields'] ) ) {
-					$this->process_block_fields( $block_name, $field['fields'] );
+					$this->process_block_fields( $block_name, $field['fields'], $inside_repeater || $is_repeater_container );
 				}
 			}
 
 			if ( isset( $field['attributes'] ) && is_array( $field['attributes'] ) ) {
-				$this->process_block_fields( $block_name, $field['attributes'] );
+				$this->process_block_fields( $block_name, $field['attributes'], $inside_repeater || $is_repeater_container );
 			}
 
 			if ( isset( $field['tabs'] ) && is_array( $field['tabs'] ) ) {
 				foreach ( $field['tabs'] as $tab ) {
 					if ( isset( $tab['attributes'] ) && is_array( $tab['attributes'] ) ) {
-						$this->process_block_fields( $block_name, $tab['attributes'] );
+						$this->process_block_fields( $block_name, $tab['attributes'], $inside_repeater );
 					}
 				}
 			}
 		}
+	}
+
+	/**
+	 * Mark a field as array-backed when its stored value comes from repeater rows.
+	 *
+	 * @param array $field The field configuration.
+	 *
+	 * @return array
+	 */
+	private function with_array_storage_value_type( array $field ): array {
+		$field['__blockstudio_storage_value_type'] = 'array';
+		return $field;
 	}
 }

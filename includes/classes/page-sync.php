@@ -75,6 +75,10 @@ class Page_Sync {
 			return $this->update_post( $existing, $page_data, $content, $file_mtime );
 		}
 
+		if ( $this->has_slug_conflict( $page_data ) ) {
+			return 0;
+		}
+
 		$content = $this->get_parsed_content( $page_data );
 		return $this->create_post( $page_data, $content, $file_mtime );
 	}
@@ -225,8 +229,9 @@ class Page_Sync {
 
 			if ( $post instanceof WP_Post && $post->post_type === $page_data['postType'] ) {
 				$source = get_post_meta( $post->ID, '_blockstudio_page_source', true );
+				$name   = get_post_meta( $post->ID, '_blockstudio_page_name', true );
 
-				if ( empty( $source ) || $source === $page_data['source_path'] ) {
+				if ( empty( $source ) || $source === $page_data['source_path'] || $name === $page_data['name'] ) {
 					return $post;
 				}
 			}
@@ -246,13 +251,41 @@ class Page_Sync {
 			return $posts[0];
 		}
 
-		$post = get_page_by_path( $page_data['slug'], OBJECT, $page_data['postType'] );
+		$posts = get_posts(
+			array(
+				'meta_key'       => '_blockstudio_page_name', // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_key
+				'meta_value'     => $page_data['name'], // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_value
+				'post_type'      => $page_data['postType'],
+				'posts_per_page' => 1,
+				'post_status'    => 'any',
+			)
+		);
 
-		if ( $post instanceof WP_Post ) {
-			return $post;
+		if ( ! empty( $posts ) ) {
+			return $posts[0];
 		}
 
 		return null;
+	}
+
+	/**
+	 * Check whether a page slug is already claimed by an unrelated post.
+	 *
+	 * @param array $page_data The page data.
+	 *
+	 * @return bool True when the slug is occupied by a different page.
+	 */
+	private function has_slug_conflict( array $page_data ): bool {
+		$post = get_page_by_path( $page_data['slug'], OBJECT, $page_data['postType'] );
+
+		if ( ! $post instanceof WP_Post ) {
+			return false;
+		}
+
+		$source = get_post_meta( $post->ID, '_blockstudio_page_source', true );
+		$name   = get_post_meta( $post->ID, '_blockstudio_page_name', true );
+
+		return $source !== $page_data['source_path'] && $name !== $page_data['name'];
 	}
 
 	/**
@@ -415,6 +448,10 @@ class Page_Sync {
 		if ( $existing ) {
 			delete_post_meta( $existing->ID, '_blockstudio_page_locked' );
 			return $this->update_post( $existing, $page_data, $content, $file_mtime );
+		}
+
+		if ( $this->has_slug_conflict( $page_data ) ) {
+			return 0;
 		}
 
 		return $this->create_post( $page_data, $content, $file_mtime );

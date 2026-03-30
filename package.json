@@ -1,6 +1,6 @@
 {
   "name": "blockstudio",
-  "version": "7.1.1",
+  "version": "7.1.2",
   "description": "The block framework for WordPress",
   "private": true,
   "type": "module",
