@@ -1,1 +1,0 @@
-document.addEventListener('blockstudio/blockstudio/type-post-meta/refresh',function(){document.querySelector('.blockstudio-test__block').classList.add('blockstudio-test__block--refreshed')})
