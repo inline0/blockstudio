@@ -130,6 +130,7 @@ class Plugin {
 		require_once $classes_dir . 'assets.php';
 		require_once $classes_dir . 'tailwind.php';
 		require_once $classes_dir . 'llm.php';
+		require_once $classes_dir . 'admin-page.php';
 		require_once $classes_dir . 'utils.php';
 		require_once $classes_dir . 'admin.php';
 		require_once $classes_dir . 'devtools.php';

@@ -7,6 +7,7 @@ module.exports = {
   entry: {
     'blocks/index.tsx': path.resolve(__dirname, 'src/blocks/index.tsx'),
     'pages/index': path.resolve(__dirname, 'src/pages/index.ts'),
+    'admin/index': path.resolve(__dirname, 'src/admin/index.tsx'),
     'devtools/index': path.resolve(__dirname, 'src/devtools/index.ts'),
     'canvas/index': path.resolve(__dirname, 'src/canvas/index.tsx'),
   },
