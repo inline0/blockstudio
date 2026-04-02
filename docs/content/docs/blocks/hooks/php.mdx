@@ -421,6 +421,19 @@ add_filter('blockstudio/assets/process/scss/import_paths', function($paths) {
 });
 ```
 
+### process/scss/prelude
+
+This filter allows you to prepend shared Sass code before each SCSS file is
+compiled.
+
+```php title="functions.php"
+add_filter('blockstudio/assets/process/scss/prelude', function($prelude, $path, $scss) {
+  return '@import "functions";' . "\n"
+    . '@import "variables";' . "\n"
+    . '@import "mixins";';
+}, 10, 3);
+```
+
 ### process/css/content
 
 This filter allows you to adjust the content of the CSS file before it is being

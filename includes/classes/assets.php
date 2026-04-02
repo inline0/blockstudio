@@ -585,23 +585,31 @@ class Assets {
 
 		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Reading local file.
 		$content = file_get_contents( $path );
-		preg_match_all( '/@import\s*([\'"])(.*?)(?<!\\\\)\1/', $content, $matches );
+		$prelude = self::get_scss_prelude( $path, $content );
 
-		$import_paths = apply_filters( 'blockstudio/assets/process/scss/import_paths', array() );
-		// Backwards compatibility.
-		$import_paths = apply_filters( 'blockstudio/assets/process/scss/importPaths', $import_paths ); // phpcs:ignore WordPress.NamingConventions.ValidHookName.NotLowercase -- Deprecated v6 hook.
+		$import_paths = self::get_scss_import_paths();
+
+		if ( ! empty( $import_paths ) ) {
+			$mtimes[] = md5( wp_json_encode( $import_paths ) );
+		}
+
+		if ( '' !== $prelude ) {
+			$mtimes[] = md5( $prelude );
+		}
+
 		foreach ( $import_paths as $import_path ) {
 			if ( file_exists( $import_path ) ) {
 				$mtimes[] = filemtime( $import_path );
 			}
 		}
 
-		foreach ( $matches[2] as $import ) {
-			$import_path = dirname( $path ) . '/' . $import;
+		$dependencies = self::get_scss_dependencies(
+			trim( $prelude . "\n" . $content ),
+			$path
+		);
 
-			if ( file_exists( $import_path ) ) {
-				$mtimes[] = filemtime( $import_path );
-			}
+		foreach ( $dependencies as $dependency ) {
+			$mtimes[] = filemtime( $dependency );
 		}
 
 		if ( 1 === count( $mtimes ) ) {
@@ -711,10 +719,7 @@ class Assets {
 			$compiler->setImportPaths( $import_path );
 		}
 
-		$scss_import_paths = apply_filters( 'blockstudio/assets/process/scss/import_paths', array() );
-		// Backwards compatibility.
-		$scss_import_paths = apply_filters( 'blockstudio/assets/process/scss/importPaths', $scss_import_paths ); // phpcs:ignore WordPress.NamingConventions.ValidHookName.NotLowercase -- Deprecated v6 hook.
-		foreach ( $scss_import_paths as $i_path ) {
+		foreach ( self::get_scss_import_paths() as $i_path ) {
 			if ( ! is_dir( $i_path ) ) {
 				continue;
 			}
@@ -955,6 +960,12 @@ class Assets {
 	 * @return string The compiled CSS.
 	 */
 	public static function compile_scss( string $scss, string $path ): string {
+		$prelude = self::get_scss_prelude( $path, $scss );
+
+		if ( '' !== $prelude ) {
+			$scss = $prelude . "\n" . $scss;
+		}
+
 		$compiler = self::get_scss_compiler( $path );
 
 		try {
@@ -975,6 +986,143 @@ class Assets {
 		$is_scss_ext = str_ends_with( $path, '.scss' ) && Settings::get( 'assets/process/scssFiles' );
 
 		return Settings::get( 'assets/process/scss' ) || $is_scss_ext;
+	}
+
+	/**
+	 * Get configured SCSS import paths.
+	 *
+	 * @return array
+	 */
+	private static function get_scss_import_paths(): array {
+		$import_paths = apply_filters( 'blockstudio/assets/process/scss/import_paths', array() );
+
+		// Backwards compatibility.
+		$import_paths = apply_filters( 'blockstudio/assets/process/scss/importPaths', $import_paths ); // phpcs:ignore WordPress.NamingConventions.ValidHookName.NotLowercase -- Deprecated v6 hook.
+
+		return array_values(
+			array_filter(
+				(array) $import_paths,
+				'is_string'
+			)
+		);
+	}
+
+	/**
+	 * Get SCSS prelude content.
+	 *
+	 * @param string $path The file path.
+	 * @param string $scss The SCSS content.
+	 *
+	 * @return string
+	 */
+	private static function get_scss_prelude( string $path, string $scss ): string {
+		$prelude = apply_filters(
+			'blockstudio/assets/process/scss/prelude',
+			'',
+			$path,
+			$scss
+		);
+
+		return is_string( $prelude ) ? $prelude : '';
+	}
+
+	/**
+	 * Get resolvable SCSS dependencies from the provided source.
+	 *
+	 * @param string $scss The SCSS source.
+	 * @param string $path The SCSS file path.
+	 *
+	 * @return array
+	 */
+	private static function get_scss_dependencies( string $scss, string $path ): array {
+		if ( '' === $scss ) {
+			return array();
+		}
+
+		preg_match_all(
+			'/@(import|use|forward)\s+([\'"])(.*?)(?<!\\\\)\2/',
+			$scss,
+			$matches
+		);
+
+		$dependencies = array();
+
+		foreach ( $matches[3] as $import ) {
+			$dependency = self::resolve_scss_dependency( $import, $path );
+
+			if ( null !== $dependency ) {
+				$dependencies[] = $dependency;
+			}
+		}
+
+		return array_values( array_unique( $dependencies ) );
+	}
+
+	/**
+	 * Resolve a SCSS dependency against local and configured import paths.
+	 *
+	 * @param string $import The import path.
+	 * @param string $path   The source file path.
+	 *
+	 * @return string|null
+	 */
+	private static function resolve_scss_dependency( string $import, string $path ): ?string {
+		if (
+			'' === $import ||
+			str_starts_with( $import, 'sass:' ) ||
+			str_starts_with( $import, 'http://' ) ||
+			str_starts_with( $import, 'https://' )
+		) {
+			return null;
+		}
+
+		$base_paths = self::get_scss_import_paths();
+
+		if ( '' !== $path ) {
+			array_unshift( $base_paths, pathinfo( $path, PATHINFO_DIRNAME ) );
+		}
+
+		foreach ( $base_paths as $base_path ) {
+			foreach ( self::get_scss_dependency_candidates( $base_path, $import ) as $candidate ) {
+				if ( is_file( $candidate ) ) {
+					return $candidate;
+				}
+			}
+		}
+
+		return null;
+	}
+
+	/**
+	 * Get possible SCSS file candidates for a dependency.
+	 *
+	 * @param string $base_path Base directory.
+	 * @param string $import    Import path.
+	 *
+	 * @return array
+	 */
+	private static function get_scss_dependency_candidates( string $base_path, string $import ): array {
+		$import    = str_replace( '\\', '/', $import );
+		$directory = dirname( $import );
+		$directory = '.' === $directory ? '' : trailingslashit( $directory );
+		$filename  = basename( $import );
+		$extension = pathinfo( $filename, PATHINFO_EXTENSION );
+		$name      = '' === $extension ? $filename : basename( $filename, '.' . $extension );
+		$base      = untrailingslashit( $base_path ) . '/' . $directory;
+
+		$candidates = array(
+			$base . $filename,
+			$base . '_' . $filename,
+		);
+
+		if ( '' === $extension ) {
+			$candidates[] = $base . $filename . '.scss';
+			$candidates[] = $base . '_' . $name . '.scss';
+			$candidates[] = $base . $filename . '/index.scss';
+			$candidates[] = $base . $filename . '/_index.scss';
+		}
+
+		return array_values( array_unique( $candidates ) );
 	}
 
 	/**

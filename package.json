@@ -111,6 +111,7 @@
     "@wordpress/scripts": "^31.4.0",
     "ajv": "^8.17.1",
     "autoprefixer": "^10.4.19",
+    "bootstrap": "^5.3.8",
     "bootstrap-icons": "^1.10.2",
     "boxicons": "^2.1.4",
     "css.gg": "^2.0.0",

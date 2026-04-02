@@ -6,6 +6,21 @@ use PHPUnit\Framework\TestCase;
 
 class AssetsTest extends TestCase {
 
+	private array $filter_callbacks = array();
+
+	protected function tearDown(): void {
+		foreach ( $this->filter_callbacks as $filter_callback ) {
+			remove_filter( $filter_callback[0], $filter_callback[1], $filter_callback[2] );
+		}
+
+		$this->filter_callbacks = array();
+	}
+
+	private function add_filter( string $name, callable $callback, int $priority = 10, int $args = 1 ): void {
+		add_filter( $name, $callback, $priority, $args );
+		$this->filter_callbacks[] = array( $name, $callback, $priority );
+	}
+
 	public function test_get_interactivity_api_import_map_returns_importmap_script(): void {
 		$result = Assets::get_interactivity_api_import_map();
 
@@ -145,5 +160,76 @@ class AssetsTest extends TestCase {
 		$this->assertStringContainsString( '</head>', $result );
 		$this->assertStringContainsString( '</body>', $result );
 		$this->assertStringContainsString( '<p>Content</p>', $result );
+	}
+
+	public function test_compile_scss_supports_bootstrap_prelude(): void {
+		$bootstrap_path = BLOCKSTUDIO_DIR . '/node_modules/bootstrap/scss';
+
+		$this->assertDirectoryExists( $bootstrap_path );
+
+		$this->add_filter(
+			'blockstudio/assets/process/scss/import_paths',
+			function ( $paths ) use ( $bootstrap_path ) {
+				$paths[] = $bootstrap_path;
+				return $paths;
+			}
+		);
+
+		$this->add_filter(
+			'blockstudio/assets/process/scss/prelude',
+			function () {
+				return '@import "functions";' . "\n"
+					. '@import "variables";' . "\n"
+					. '@import "variables-dark";' . "\n"
+					. '@import "maps";' . "\n"
+					. '@import "mixins";';
+			},
+			10,
+			3
+		);
+
+		$result = Assets::compile_scss(
+			'.button { @include media-breakpoint-up(lg) { color: $primary; } }',
+			BLOCKSTUDIO_DIR . '/tests/theme/style.scss'
+		);
+
+		$this->assertStringContainsString( '@media (min-width: 992px)', $result );
+		$this->assertStringContainsString( 'color: #0d6efd;', $result );
+	}
+
+	public function test_get_imported_modification_times_changes_when_prelude_dependency_changes(): void {
+		$directory = sys_get_temp_dir() . '/blockstudio-assets-' . uniqid( '', true );
+		wp_mkdir_p( $directory );
+
+		$path = $directory . '/style.scss';
+		file_put_contents( $path, '.button { color: $color; }' );
+		file_put_contents( $directory . '/_tokens.scss', '$color: #0d6efd;' );
+
+		$this->add_filter(
+			'blockstudio/assets/process/scss/import_paths',
+			function ( $paths ) use ( $directory ) {
+				$paths[] = $directory;
+				return $paths;
+			}
+		);
+
+		$this->add_filter(
+			'blockstudio/assets/process/scss/prelude',
+			function () {
+				return '@import "tokens";';
+			},
+			10,
+			3
+		);
+
+		$before = Assets::get_imported_modification_times( $path, '' );
+
+		sleep( 1 );
+		file_put_contents( $directory . '/_tokens.scss', '$color: #6610f2;' );
+		clearstatcache();
+
+		$after = Assets::get_imported_modification_times( $path, '' );
+
+		$this->assertNotSame( $before, $after );
 	}
 }

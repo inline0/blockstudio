@@ -58,6 +58,25 @@ add_filter('blockstudio/assets/process/scss/import_paths', function($paths) {
 });
 ```
 
+### Prelude
+
+If you want shared Sass functions, variables, mixins, or utilities available in
+every SCSS file, you can prepend a global prelude before compilation.
+
+This is useful for frameworks such as Bootstrap, where you may want access to
+shared mixins like breakpoints without repeating imports in every block asset.
+
+```php title="functions.php"
+add_filter('blockstudio/assets/process/scss/prelude', function($prelude, $path, $scss) {
+  return '@import "functions";' . "\n"
+    . '@import "variables";' . "\n"
+    . '@import "mixins";';
+}, 10, 3);
+```
+
+Combined with `blockstudio/assets/process/scss/import_paths`, this makes the
+referenced Sass surface available to every compiled file.
+
 Block assets will be recompiled when any of the imported files change.
 
 ## ES Modules
