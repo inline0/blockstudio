@@ -1,5 +1,6 @@
 import { createRoot } from 'react-dom/client';
-import { Header } from './components/header';
+import { App } from './app';
+import './style.css';
 import './types';
 
 const init = (): void => {
@@ -9,7 +10,7 @@ const init = (): void => {
     return;
   }
 
-  createRoot(root).render(<Header />);
+  createRoot(root).render(<App />);
 };
 
 if (document.readyState === 'loading') {

@@ -22,7 +22,7 @@ export const Header = (): ReactElement | null => {
     >
       <CardBody
         css={css({
-          padding: '20px',
+          padding: '18px 20px',
         })}
       >
         <Flex align="center" justify="space-between">
