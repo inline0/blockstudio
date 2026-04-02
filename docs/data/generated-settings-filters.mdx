@@ -178,12 +178,12 @@ add_filter('blockstudio/settings/ai/enable_context_generation', function() {
 });
 ```
 
-### string_renderer/enabled
+### block_tags/enabled
 
-This filter allows you to enable/disable the string renderer.
+This filter allows you to enable/disable page-level block tag rendering.
 
 ```php title="functions.php"
-add_filter('blockstudio/settings/string_renderer/enabled', function() {
+add_filter('blockstudio/settings/block_tags/enabled', function() {
   return true;
 });
 ```
@@ -194,6 +194,16 @@ This filter allows you to enable/disable the element grabber.
 
 ```php title="functions.php"
 add_filter('blockstudio/settings/dev/grab/enabled', function() {
+  return false;
+});
+```
+
+### dev/perf
+
+This filter allows you to enable/disable the performance profiler.
+
+```php title="functions.php"
+add_filter('blockstudio/settings/dev/perf', function() {
   return false;
 });
 ```

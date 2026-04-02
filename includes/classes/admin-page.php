@@ -95,7 +95,7 @@ class Admin_Page {
 			return;
 		}
 
-		$asset = require $asset_file;
+		$asset      = require $asset_file;
 		$style_file = BLOCKSTUDIO_DIR . '/includes/admin/assets/admin/style-index.css';
 
 		wp_enqueue_script(
@@ -241,18 +241,18 @@ class Admin_Page {
 		foreach ( Pages::pages() as $key => $page ) {
 			$name = (string) ( $page['name'] ?? $key );
 
-			$rows[] = array(
-				'id'         => $name,
-				'name'       => $name,
-				'postId'     => isset( $page['post_id'] ) ? (string) $page['post_id'] : '',
-				'postStatus' => (string) ( $page['postStatus'] ?? '' ),
-				'postType'   => (string) ( $page['postType'] ?? 'page' ),
-				'slug'       => (string) ( $page['slug'] ?? $name ),
-				'sync'       => ! empty( $page['sync'] ) ? 'Yes' : 'No',
-				'template'   => $this->get_page_template_engine( $page ),
-				'templateFor' => (string) ( $page['templateFor'] ?? '' ),
-				'title'      => (string) ( $page['title'] ?? $name ),
-			);
+				$rows[] = array(
+					'id'          => $name,
+					'name'        => $name,
+					'postId'      => isset( $page['post_id'] ) ? (string) $page['post_id'] : '',
+					'postStatus'  => (string) ( $page['postStatus'] ?? '' ),
+					'postType'    => (string) ( $page['postType'] ?? 'page' ),
+					'slug'        => (string) ( $page['slug'] ?? $name ),
+					'sync'        => ! empty( $page['sync'] ) ? 'Yes' : 'No',
+					'template'    => $this->get_page_template_engine( $page ),
+					'templateFor' => (string) ( $page['templateFor'] ?? '' ),
+					'title'       => (string) ( $page['title'] ?? $name ),
+				);
 		}
 
 		$this->sort_rows( $rows, 'title', 'name' );
