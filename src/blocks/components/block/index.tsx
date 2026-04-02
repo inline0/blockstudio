@@ -200,16 +200,10 @@ export const Block = ({
       return { markup: null, hasMarkup: false, hasBlockProps: null };
     }
 
-    const hash = computeHash(block.name, attributes);
     const preloaded = renderCache.claimPreloaded(block.name, clientId);
 
-    const cached = renderCache.get(hash);
-    if (cached) {
-      firstRenderDone.current = true;
-      return computeRender(cached);
-    }
-
     if (preloaded) {
+      const hash = computeHash(block.name, attributes, 'editor');
       renderCache.set(hash, preloaded, block.name);
       firstRenderDone.current = true;
       return computeRender(preloaded);
@@ -269,7 +263,7 @@ export const Block = ({
     })
       .then((response) => {
         const res = response as { rendered: string };
-        const hash = computeHash(block.name, attributes);
+        const hash = computeHash(block.name, attributes, getPostParams().blockstudioMode);
         renderCache.set(hash, res.rendered, block.name);
         updateRender(res.rendered);
       })
@@ -281,14 +275,25 @@ export const Block = ({
   const debouncedFetchSingle = useDebounce(fetchSingle, 500);
 
   useEffect(function onMount() {
-    setIsInPreview(
-      !!ref.current?.closest('.block-editor-block-preview__content-iframe'),
+    const isPreview = !!ref.current?.closest(
+      '.block-editor-block-preview__content-iframe',
     );
+    setIsInPreview(isPreview);
 
     if (disableLoading) return;
 
     if (firstRenderDone.current && renderState.hasMarkup) {
       loaded();
+      return;
+    }
+
+    const mode = isPreview ? 'preview' : 'editor';
+    const hash = computeHash(block.name, attributes, mode);
+    const cached = renderCache.get(hash);
+    if (cached) {
+      updateRender(cached);
+      loaded();
+      firstRenderDone.current = true;
       return;
     }
 
@@ -327,7 +332,7 @@ export const Block = ({
 
       if (!firstRenderDone.current) return;
 
-      const hash = computeHash(block.name, newAttributes);
+      const hash = computeHash(block.name, newAttributes, getPostParams().blockstudioMode);
       const cached = renderCache.get(hash);
 
       if (cached) {
