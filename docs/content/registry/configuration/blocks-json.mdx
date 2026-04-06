@@ -36,14 +36,112 @@ Each block gets its own subfolder inside this directory. If `directory` is
 
 ### `registries`
 
-**Required.** An object mapping namespace names to registry URLs.
+**Required.** An object mapping namespace names to registry references.
 
 The key is the namespace used in CLI commands (`npx blockstudio add ui/hero`).
-The value is the URL to a [`registry.json`](/registry/configuration/registry-json)
-file.
+The value is either a URL string or an object with `url` and optional `headers`.
 
-You can configure as many registries as you want. When adding a block without
-a namespace, the CLI searches all of them.
+**String format** (public registries):
+
+```json
+{
+  "registries": {
+    "ui": "https://example.com/registry.json"
+  }
+}
+```
+
+**Object format** (authenticated registries):
+
+```json
+{
+  "registries": {
+    "private": {
+      "url": "https://private.example.com/registry.json",
+      "headers": {
+        "Authorization": "Bearer ${REGISTRY_TOKEN}"
+      }
+    }
+  }
+}
+```
+
+Both formats can be mixed in the same config. You can configure as many
+registries as you want. When adding a block without a namespace, the CLI
+searches all of them.
+
+## Authentication
+
+Registries that require authentication use the object format with `headers`.
+The CLI sends these headers on every request to that registry, including both
+the `registry.json` fetch and individual file downloads.
+
+### Bearer token
+
+```json
+{
+  "registries": {
+    "private": {
+      "url": "https://api.example.com/registry.json",
+      "headers": {
+        "Authorization": "Bearer ${REGISTRY_TOKEN}"
+      }
+    }
+  }
+}
+```
+
+### Basic auth
+
+```json
+{
+  "registries": {
+    "private": {
+      "url": "https://api.example.com/registry.json",
+      "headers": {
+        "Authorization": "Basic ${REGISTRY_CREDENTIALS}"
+      }
+    }
+  }
+}
+```
+
+### Custom headers
+
+Any header can be added. This works for API keys, org identifiers, or
+whatever your registry server expects:
+
+```json
+{
+  "registries": {
+    "internal": {
+      "url": "https://blocks.internal.company.com/registry.json",
+      "headers": {
+        "X-API-Key": "${BLOCKS_API_KEY}",
+        "X-Org-ID": "acme"
+      }
+    }
+  }
+}
+```
+
+## Environment variables
+
+Header values support `${VAR_NAME}` syntax for reading environment variables.
+This keeps tokens out of version control.
+
+The CLI resolves environment variables at runtime. If a referenced variable
+is not set, the CLI exits with an error naming the missing variable and the
+header it was used in.
+
+Set the variable in your shell, `.env` file, or CI environment:
+
+```bash
+export REGISTRY_TOKEN=ghp_abc123
+npx blockstudio add private/hero
+```
+
+Static header values (without `${...}`) are passed through as-is.
 
 ## Config discovery
 

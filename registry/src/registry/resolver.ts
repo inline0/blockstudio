@@ -3,12 +3,14 @@ import type { BlockEntry, Registry } from "../config/schema.js";
 export type ResolvedBlock = BlockEntry & {
   registryName: string;
   registryBaseUrl: string;
+  headers?: Record<string, string>;
 };
 
 export function resolveBlock(
   blockName: string,
   registry: Registry,
   registryName: string,
+  headers?: Record<string, string>,
 ): ResolvedBlock[] {
   const blockMap = new Map(registry.blocks.map((b) => [b.name, b]));
   const resolved: ResolvedBlock[] = [];
@@ -42,6 +44,7 @@ export function resolveBlock(
       ...block,
       registryName,
       registryBaseUrl: registry.baseUrl,
+      headers,
     });
   }
 
@@ -53,11 +56,13 @@ export type RegistryMatch = {
   block: BlockEntry;
   registryName: string;
   registryBaseUrl: string;
+  headers?: Record<string, string>;
 };
 
 export function findBlockAcrossRegistries(
   blockName: string,
   registries: Map<string, Registry>,
+  headersMap?: Map<string, Record<string, string>>,
 ): RegistryMatch[] {
   const matches: RegistryMatch[] = [];
 
@@ -68,6 +73,7 @@ export function findBlockAcrossRegistries(
         block,
         registryName: name,
         registryBaseUrl: registry.baseUrl,
+        headers: headersMap?.get(name),
       });
     }
   }

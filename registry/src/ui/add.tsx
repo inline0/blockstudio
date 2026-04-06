@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import { Box, Text, Static, useApp } from "ink";
 import { loadConfig } from "../config/loader.js";
 import type { Config, Registry } from "../config/schema.js";
+import { resolveRegistryRef } from "../config/schema.js";
 import { fetchRegistry, clearCache } from "../registry/fetcher.js";
 import {
   resolveBlock,
@@ -59,8 +60,13 @@ export function AddApp({
       }
 
       const registries = new Map<string, Registry>();
+      const headersMap = new Map<string, Record<string, string>>();
       for (const name of registryNames) {
-        registries.set(name, await fetchRegistry(config.registries[name]));
+        const { url, headers } = resolveRegistryRef(config.registries[name]);
+        registries.set(name, await fetchRegistry(url, headers));
+        if (Object.keys(headers).length > 0) {
+          headersMap.set(name, headers);
+        }
       }
 
       addStep("Registries loaded");
@@ -81,7 +87,7 @@ export function AddApp({
             throw new Error(`Block "${name}" not found in "${namespace}".`);
           }
         } else {
-          const matches = findBlockAcrossRegistries(name, registries);
+          const matches = findBlockAcrossRegistries(name, registries, headersMap);
 
           if (matches.length === 0) {
             throw new Error(`Block "${name}" not found in any registry.`);
@@ -101,7 +107,7 @@ export function AddApp({
           registry = registries.get(registryName)!;
         }
 
-        const resolved = resolveBlock(name, registry, registryName);
+        const resolved = resolveBlock(name, registry, registryName, headersMap.get(registryName));
 
         for (const block of resolved) {
           const blockDir = getBlockDir(config, configDir, block.name);

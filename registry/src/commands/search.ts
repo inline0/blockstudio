@@ -1,5 +1,6 @@
 import chalk from "chalk";
 import { loadConfig } from "../config/loader.js";
+import { resolveRegistryRef } from "../config/schema.js";
 import { fetchRegistry, clearCache } from "../registry/fetcher.js";
 import type { BlockEntry } from "../config/schema.js";
 
@@ -36,8 +37,9 @@ export async function runSearch(
   const { config } = await loadConfig(options.cwd);
   const results: SearchResult[] = [];
 
-  for (const [name, url] of Object.entries(config.registries)) {
-    const registry = await fetchRegistry(url);
+  for (const [name, ref] of Object.entries(config.registries)) {
+    const { url, headers } = resolveRegistryRef(ref);
+    const registry = await fetchRegistry(url, headers);
 
     for (const block of registry.blocks) {
       const score = scoreMatch(query, block);

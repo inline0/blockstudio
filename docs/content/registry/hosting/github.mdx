@@ -99,11 +99,28 @@ You can also serve a registry via GitHub Pages if you prefer a cleaner URL:
 
 ## Private repositories
 
-For private registries, users need to configure access. The CLI uses plain
-`fetch()` without authentication headers, so private GitHub repos won't work
-out of the box.
+For private repos, use the object registry format with a GitHub personal
+access token:
 
-Options for private registries:
-- Use a GitHub token in a proxy server
-- Self-host behind your own authentication layer
-- Use GitHub Packages or a custom server (see [Custom Server](/registry/hosting/custom-server))
+```json
+{
+  "registries": {
+    "private": {
+      "url": "https://raw.githubusercontent.com/acme/private-blocks/main/registry.json",
+      "headers": {
+        "Authorization": "Bearer ${GITHUB_TOKEN}"
+      }
+    }
+  }
+}
+```
+
+Set the token in your environment:
+
+```bash
+export GITHUB_TOKEN=ghp_abc123
+npx blockstudio add private/hero
+```
+
+The token needs `repo` scope (or `contents:read` for fine-grained tokens)
+to access private repository content via `raw.githubusercontent.com`.

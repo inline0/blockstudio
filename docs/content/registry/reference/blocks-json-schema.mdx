@@ -12,7 +12,13 @@ description: Complete field reference for the blocks.json project config file.
   "$schema": "https://blockstudio.dev/schema/blocks.json",
   "directory": "blockstudio",
   "registries": {
-    "namespace": "https://example.com/registry.json"
+    "public": "https://example.com/registry.json",
+    "private": {
+      "url": "https://private.example.com/registry.json",
+      "headers": {
+        "Authorization": "Bearer ${REGISTRY_TOKEN}"
+      }
+    }
   }
 }
 ```
@@ -23,14 +29,29 @@ description: Complete field reference for the blocks.json project config file.
 |-------|------|----------|-------------|
 | `$schema` | `string` | No | JSON Schema URL for editor validation. |
 | `directory` | `string` | Yes | Relative path from `blocks.json` where blocks are installed. Must be non-empty. |
-| `registries` | `Record<string, string>` | Yes | Map of namespace names to registry URLs. Can be empty. Each value must be a valid URL. |
+| `registries` | `Record<string, string \| RegistryRef>` | Yes | Map of namespace names to registry references. Can be empty. |
+
+### Registry reference formats
+
+Each value in `registries` is either a string URL or an object:
+
+**String**: a valid URL to a `registry.json` file.
+
+**Object**:
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `url` | `string` | Yes | Valid URL to a `registry.json` file. |
+| `headers` | `Record<string, string>` | No | HTTP headers sent with every request to this registry. Values support `${ENV_VAR}` interpolation. |
 
 ## Validation rules
 
 - `directory` must be a non-empty string.
-- Each value in `registries` must be a valid URL (validated with Zod's `z.string().url()`).
 - Each key in `registries` must be a non-empty string.
-- The `registries` object can be empty (no registries configured), but the `add`, `list`, and `search` commands will error with a message telling you to add one.
+- String registry values must be valid URLs.
+- Object registry values must have a valid `url` field.
+- `${ENV_VAR}` references in headers are resolved at runtime. Missing variables produce an error naming the variable and header.
+- The `registries` object can be empty, but `add`, `list`, and `search` commands will error with a message telling you to add one.
 
 ## Config discovery
 

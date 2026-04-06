@@ -1,5 +1,6 @@
 import chalk from "chalk";
 import { loadConfig } from "../config/loader.js";
+import { resolveRegistryRef } from "../config/schema.js";
 import { fetchRegistry, clearCache } from "../registry/fetcher.js";
 
 export type ListOptions = {
@@ -22,14 +23,15 @@ export async function runList(options: ListOptions): Promise<void> {
   }
 
   for (const name of names) {
-    const url = config.registries[name];
-    if (!url) {
+    const ref = config.registries[name];
+    if (!ref) {
       throw new Error(
         `Registry "${name}" not found. Available: ${Object.keys(config.registries).join(", ")}`,
       );
     }
 
-    const registry = await fetchRegistry(url);
+    const { url, headers } = resolveRegistryRef(ref);
+    const registry = await fetchRegistry(url, headers);
 
     console.log(chalk.bold(`\n${name}`) + chalk.dim(` (${registry.blocks.length} blocks)`));
     console.log();

@@ -14,13 +14,16 @@ export async function downloadBlock(
   block: ResolvedBlock,
 ): Promise<DownloadedBlock> {
   const files: DownloadedFile[] = [];
+  const fetchOpts = block.headers && Object.keys(block.headers).length > 0
+    ? { headers: block.headers }
+    : undefined;
 
   for (const file of block.files) {
     const url = `${block.registryBaseUrl}/${block.name}/${file}`;
 
     let response: Response;
     try {
-      response = await fetch(url);
+      response = await fetch(url, fetchOpts);
     } catch {
       throw new Error(`Could not fetch ${url}. Are you online?`);
     }

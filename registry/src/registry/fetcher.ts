@@ -6,13 +6,18 @@ export function clearCache(): void {
   cache.clear();
 }
 
-export async function fetchRegistry(url: string): Promise<Registry> {
+export async function fetchRegistry(
+  url: string,
+  headers?: Record<string, string>,
+): Promise<Registry> {
   const cached = cache.get(url);
   if (cached) return cached;
 
   let response: Response;
   try {
-    response = await fetch(url);
+    response = await fetch(url, {
+      headers: headers && Object.keys(headers).length > 0 ? headers : undefined,
+    });
   } catch {
     throw new Error(`Could not reach registry at ${url}. Are you online?`);
   }

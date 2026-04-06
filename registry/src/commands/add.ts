@@ -1,6 +1,7 @@
 import chalk from "chalk";
 import { loadConfig } from "../config/loader.js";
 import type { Registry } from "../config/schema.js";
+import { resolveRegistryRef } from "../config/schema.js";
 import { fetchRegistry, clearCache } from "../registry/fetcher.js";
 import {
   resolveBlock,
@@ -43,9 +44,15 @@ export async function runAdd(
   }
 
   const registries = new Map<string, Registry>();
+  const headersMap = new Map<string, Record<string, string>>();
+
   for (const name of registryNames) {
-    const registry = await fetchRegistry(config.registries[name]);
+    const { url, headers } = resolveRegistryRef(config.registries[name]);
+    const registry = await fetchRegistry(url, headers);
     registries.set(name, registry);
+    if (Object.keys(headers).length > 0) {
+      headersMap.set(name, headers);
+    }
   }
 
   for (const arg of blockArgs) {
@@ -53,6 +60,7 @@ export async function runAdd(
 
     let registryName: string;
     let registry: Registry;
+    let headers: Record<string, string> | undefined;
 
     if (namespace) {
       registry = registries.get(namespace)!;
@@ -62,6 +70,7 @@ export async function runAdd(
         );
       }
       registryName = namespace;
+      headers = headersMap.get(namespace);
 
       if (!registry.blocks.find((b) => b.name === name)) {
         throw new Error(
@@ -69,7 +78,7 @@ export async function runAdd(
         );
       }
     } else {
-      const matches = findBlockAcrossRegistries(name, registries);
+      const matches = findBlockAcrossRegistries(name, registries, headersMap);
 
       if (matches.length === 0) {
         throw new Error(
@@ -92,9 +101,10 @@ export async function runAdd(
 
       registryName = match.registryName;
       registry = registries.get(registryName)!;
+      headers = match.headers;
     }
 
-    const resolved = resolveBlock(name, registry, registryName);
+    const resolved = resolveBlock(name, registry, registryName, headers);
 
     for (const block of resolved) {
       const blockDir = getBlockDir(config, configDir, block.name);
