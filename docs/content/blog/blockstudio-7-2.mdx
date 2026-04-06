@@ -9,21 +9,16 @@ Blockstudio 7.2 is a smaller release than 7.1, but an important one.
 
 Where 7.1 expanded the framework with application-level features like
 databases, RPC, cron, and components, 7.2 focuses on visibility and workflow.
-As Blockstudio projects grow, two things become more important:
-
-- seeing what the system has actually registered
-- sharing styling primitives without repeating Sass imports everywhere
-
-That is what 7.2 is about.
+As Blockstudio projects grow, two things become more important: seeing what the
+system has actually registered, and sharing styling primitives without repeating
+Sass imports everywhere.
 
 ## Admin overview
 
-Blockstudio now includes a new admin screen under **Tools > Blockstudio**.
+There's a new admin screen under **Tools > Blockstudio**. It gives you a
+single place to inspect what the system has registered from the filesystem.
 
-The goal is simple: give you a single place to inspect the parts of the system
-that are registered from the filesystem and shape the structure of a project.
-
-Right now, the overview includes dedicated tabs for:
+The overview includes dedicated tabs for:
 
 - Blocks
 - Extensions
@@ -32,11 +27,11 @@ Right now, the overview includes dedicated tabs for:
 - Schemas
 
 Instead of building a custom grid of panels, the screen uses native WordPress
-DataViews tables. That keeps the UI aligned with wp-admin and makes it much
-more practical once a project has dozens or hundreds of registrations.
+DataViews tables. That keeps the UI aligned with wp-admin and makes it
+practical once a project has dozens or hundreds of registrations.
 
-On a small install, you can usually keep the runtime state in your head. On a
-larger codebase, that stops working. You start asking questions like:
+On a small install, you can keep the runtime state in your head. On a larger
+codebase, that stops working. You start asking questions like:
 
 - Which blocks are actually registered right now?
 - Which extensions target `core/*` and which target individual blocks?
@@ -44,14 +39,14 @@ larger codebase, that stops working. You start asking questions like:
 - Which reusable fields exist in this project?
 - Which schemas are registered and what storage backend do they use?
 
-Until now, the answer was usually some combination of reading folders, opening
-JSON files, and stepping through PHP. The new overview turns that into an
-actual admin surface.
+Until now, the answer was some combination of reading folders, opening JSON
+files, and stepping through PHP. The overview turns that into an actual admin
+surface.
 
-This first version is intentionally focused on schema-backed registrations. It
-is not a settings page. It is an inspection page.
+This first version is intentionally focused on schema-backed registrations.
+It's not a settings page. It's an inspection page.
 
-And if you do not want it at all, it can be disabled entirely:
+If you don't want it at all, disable it entirely:
 
 ```php
 add_filter('blockstudio/admin/enabled', '__return_false');
@@ -59,15 +54,14 @@ add_filter('blockstudio/admin/enabled', '__return_false');
 
 ## Global SCSS preludes
 
-Blockstudio already supported SCSS compilation, but there was still one
-annoying friction point: shared Sass setup.
+Blockstudio already supported SCSS compilation, but there was one annoying
+friction point: shared Sass setup.
 
 If you wanted access to a common set of variables, functions, or mixins, you
-had to keep importing them in every SCSS file. That gets repetitive quickly,
-especially when working with larger design systems or Sass toolkits such as
-Bootstrap.
+had to import them in every SCSS file. That gets repetitive quickly, especially
+with larger design systems or Sass toolkits like Bootstrap.
 
-7.2 adds a new SCSS prelude hook for exactly that:
+7.2 adds a prelude hook for exactly that:
 
 ```php
 add_filter('blockstudio/assets/process/scss/prelude', function($prelude, $path, $scss) {
@@ -78,10 +72,10 @@ add_filter('blockstudio/assets/process/scss/prelude', function($prelude, $path, 
 ```
 
 Combined with the existing `blockstudio/assets/process/scss/import_paths`
-filter, this lets you define a shared Sass surface once and make it available
-to every compiled file.
+filter, you define a shared Sass surface once and it's available to every
+compiled file.
 
-That means a block stylesheet can stay focused on the actual styles it needs:
+A block stylesheet can stay focused on the actual styles it needs:
 
 ```scss title="style.scss"
 .hero {
@@ -91,35 +85,19 @@ That means a block stylesheet can stay focused on the actual styles it needs:
 }
 ```
 
-without having to repeat the same imports in every block asset.
-
-This is not really "Bootstrap support" as a special mode. It is more useful
-than that. It is a generic way to provide shared Sass capabilities across a
-Blockstudio project, whether they come from Bootstrap or from your own
-internal toolkit.
-
-## Why these features belong together
-
-At first glance, an admin overview page and a Sass prelude hook do not look
-related. But they solve the same kind of problem.
-
-They both make larger Blockstudio projects easier to reason about.
-
-One does it at the project level by making the runtime state visible. The
-other does it at the styling level by removing repeated boilerplate and
-centralizing shared Sass setup.
-
-That makes 7.2 a workflow release more than a headline release.
+No repeated imports in every block asset. It's not "Bootstrap support" as a
+special mode. It's a generic hook for shared Sass across a project, whether
+that comes from Bootstrap or your own internal toolkit.
 
 ## Looking ahead
 
-The admin overview is only the first pass. It already gives you a much better
+The admin overview is the first pass. It already gives you a much better
 picture of what Blockstudio has registered, but it can grow into deeper
 inspection and debugging workflows over time.
 
-The same goes for the SCSS pipeline. The new prelude hook is small, but it
-opens the door to much cleaner shared styling patterns across blocks, pages,
-and larger theme or plugin setups.
+The same goes for the SCSS pipeline. The prelude hook is small, but it opens
+the door to much cleaner shared styling patterns across blocks, pages, and
+larger theme or plugin setups.
 
-That is the direction of 7.2 in general: less guesswork, less repetition, and
-better visibility into how a Blockstudio project is put together.
+Less guesswork, less repetition, better visibility into how a project is put
+together.
