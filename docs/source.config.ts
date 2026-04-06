@@ -9,6 +9,10 @@ export const guides = defineDocs({
   dir: "content/guides",
 });
 
+export const registry = defineDocs({
+  dir: "content/registry",
+});
+
 export const blog = defineCollections({
   type: "doc",
   dir: "content/blog",

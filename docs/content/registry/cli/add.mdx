@@ -1,0 +1,91 @@
+---
+title: add
+description: Add blocks from a registry to your project.
+---
+
+```bash
+npx blockstudio add <blocks...> [options]
+```
+
+Downloads blocks from a registry and writes them to your project's block
+directory.
+
+## Arguments
+
+| Argument | Description |
+|----------|-------------|
+| `blocks` | One or more blocks to add. Format: `namespace/block` or just `block`. |
+
+## Options
+
+| Option | Description |
+|--------|-------------|
+| `-y, --yes` | Skip all prompts (overwrite, conflict resolution). |
+| `--dry-run` | Preview what would be installed without writing files. |
+
+## Namespace resolution
+
+When you specify a namespace, the CLI looks in that specific registry:
+
+```bash
+npx blockstudio add ui/tabs
+```
+
+When you omit the namespace, the CLI searches all configured registries:
+
+```bash
+npx blockstudio add tabs
+```
+
+If the block is found in exactly one registry, it's used automatically. If
+found in multiple, the CLI shows an interactive select prompt to choose.
+
+With `--yes`, the first matching registry is used.
+
+## Dependencies
+
+Blocks can declare dependencies on other blocks in the same registry. When
+you add a block, its dependencies are resolved and installed automatically.
+
+```bash
+npx blockstudio add ui/tabs
+```
+
+If `tabs` depends on `tab-item`, both blocks are downloaded and installed.
+Dependencies are always installed before the blocks that depend on them.
+
+Circular dependencies are detected and rejected with an error.
+
+## Overwrite behavior
+
+If a block folder already exists in the target directory:
+
+- **Interactive mode**: prompts you to confirm the overwrite
+- **`--yes` flag**: overwrites without asking
+- **`--dry-run` flag**: reports what would be overwritten
+
+## Examples
+
+Add a single block:
+
+```bash
+npx blockstudio add ui/hero
+```
+
+Add multiple blocks:
+
+```bash
+npx blockstudio add ui/tabs ui/hero ui/accordion
+```
+
+Preview without writing:
+
+```bash
+npx blockstudio add ui/tabs --dry-run
+```
+
+Skip all prompts:
+
+```bash
+npx blockstudio add ui/tabs --yes
+```

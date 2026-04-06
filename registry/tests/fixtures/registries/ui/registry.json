@@ -1,0 +1,32 @@
+{
+  "name": "ui",
+  "description": "Core UI blocks.",
+  "baseUrl": "{{BASE_URL}}/ui/blocks",
+  "blocks": [
+    {
+      "name": "tabs",
+      "title": "Tabs",
+      "description": "Tabbed content with accessible keyboard navigation.",
+      "category": "layout",
+      "type": "blockstudio",
+      "dependencies": ["tab-item"],
+      "files": ["block.json", "index.php", "style.scss"]
+    },
+    {
+      "name": "tab-item",
+      "title": "Tab Item",
+      "description": "Single tab panel used inside Tabs.",
+      "category": "layout",
+      "type": "blockstudio",
+      "files": ["block.json", "index.php"]
+    },
+    {
+      "name": "hero",
+      "title": "Hero",
+      "description": "Full-width hero section.",
+      "category": "layout",
+      "type": "blockstudio",
+      "files": ["block.json", "index.php"]
+    }
+  ]
+}

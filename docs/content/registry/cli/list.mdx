@@ -1,0 +1,50 @@
+---
+title: list
+description: List available blocks from your configured registries.
+---
+
+```bash
+npx blockstudio list [namespace]
+```
+
+Fetches all configured registries and displays their available blocks in a
+table.
+
+## Arguments
+
+| Argument | Description |
+|----------|-------------|
+| `namespace` | Optional. Show blocks from a specific registry only. |
+
+## Output
+
+The table shows each block's name, title, category, and type, grouped by
+registry.
+
+```
+ui (3 blocks)
+
+  Name       Title      Category    Type
+  tabs       Tabs       layout      blockstudio
+  tab-item   Tab Item   layout      blockstudio
+  hero       Hero       layout      blockstudio
+
+starter (1 block)
+
+  Name       Title          Category    Type
+  hero       Starter Hero   layout      blockstudio
+```
+
+## Examples
+
+List all blocks:
+
+```bash
+npx blockstudio list
+```
+
+List blocks from a specific registry:
+
+```bash
+npx blockstudio list ui
+```

@@ -1,0 +1,45 @@
+---
+title: remove
+description: Remove an installed block from your project.
+---
+
+```bash
+npx blockstudio remove <block> [options]
+```
+
+Deletes an installed block folder from your project's block directory.
+
+## Arguments
+
+| Argument | Description |
+|----------|-------------|
+| `block` | The block name to remove (folder name, not namespace/block). |
+
+## Options
+
+| Option | Description |
+|--------|-------------|
+| `-y, --yes` | Skip confirmation prompt. |
+
+## Behavior
+
+In interactive mode, the CLI asks for confirmation before deleting. In
+non-interactive mode (piped output, CI), it proceeds without prompting.
+
+The command removes the entire block folder. It does not remove blocks that
+were installed as dependencies. If you installed `tabs` which pulled in
+`tab-item`, removing `tabs` leaves `tab-item` in place.
+
+## Examples
+
+Interactive removal:
+
+```bash
+npx blockstudio remove hero
+```
+
+Skip confirmation:
+
+```bash
+npx blockstudio remove hero --yes
+```

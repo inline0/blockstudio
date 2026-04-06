@@ -1,0 +1,72 @@
+---
+title: Hosting a Registry
+description: How to publish your own block registry for others to use.
+---
+
+A registry is a `registry.json` file and a set of block folders served over
+HTTP. There's no special server required. Anything that can serve static files
+works.
+
+## What you need
+
+1. A `registry.json` file listing your blocks
+2. Block folders with the files referenced in the manifest
+3. A web server or hosting service that serves both
+
+## Directory structure
+
+A typical registry repository looks like this:
+
+```
+my-registry/
+  registry.json
+  blocks/
+    hero/
+      block.json
+      index.php
+      style.scss
+    tabs/
+      block.json
+      index.php
+      style.scss
+    tab-item/
+      block.json
+      index.php
+```
+
+The `registry.json` points at the `blocks/` directory as its `baseUrl`:
+
+```json
+{
+  "name": "my-registry",
+  "baseUrl": "https://example.com/blocks",
+  "blocks": [
+    {
+      "name": "hero",
+      "title": "Hero",
+      "files": ["block.json", "index.php", "style.scss"]
+    }
+  ]
+}
+```
+
+## Requirements
+
+The hosting must support direct file access via URL. The CLI fetches files by
+constructing URLs from `{baseUrl}/{block.name}/{file}`.
+
+There's no authentication mechanism built in. If you need private registries,
+you'll need to handle access control at the hosting layer (e.g. private GitHub
+repos with tokens, or a server that checks credentials).
+
+## Testing your registry
+
+Before publishing, test locally by starting a simple HTTP server:
+
+```bash
+cd my-registry
+npx serve .
+```
+
+Then point your `blocks.json` at `http://localhost:3000/registry.json` and
+run `npx blockstudio list` to verify everything resolves.

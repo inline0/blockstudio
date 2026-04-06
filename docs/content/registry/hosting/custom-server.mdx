@@ -1,0 +1,102 @@
+---
+title: Custom Server
+description: Serve a block registry from your own infrastructure.
+---
+
+If GitHub doesn't fit your needs, you can host a registry from any HTTP
+server. The only requirement is that the `registry.json` and block files are
+accessible via their URLs.
+
+## Static file server
+
+The simplest option. Drop your `registry.json` and `blocks/` folder on any
+static hosting:
+
+- **Nginx/Apache**: serve the directory directly
+- **Vercel/Netlify**: deploy the directory as a static site
+- **S3/R2/GCS**: upload the files to a bucket with public access
+- **CDN**: put the files behind Cloudflare, Fastly, or any CDN
+
+The CLI only needs `GET` access to the files. There's no API, no dynamic
+routes, no server-side logic required.
+
+## Dynamic server
+
+If you want to generate `registry.json` dynamically (e.g. from a database,
+or to add access control), you can build a simple API:
+
+```
+GET /registry.json          -> returns the registry manifest
+GET /blocks/{name}/{file}   -> returns the block file content
+```
+
+The CLI doesn't care how these endpoints are implemented. It makes plain
+`GET` requests and expects the response body to be the file content.
+
+### Example: Express
+
+```js
+const express = require('express');
+const path = require('path');
+
+const app = express();
+const BLOCKS_DIR = path.join(__dirname, 'blocks');
+
+app.get('/registry.json', (req, res) => {
+  res.sendFile(path.join(__dirname, 'registry.json'));
+});
+
+app.get('/blocks/:block/:file', (req, res) => {
+  const filePath = path.join(BLOCKS_DIR, req.params.block, req.params.file);
+  res.sendFile(filePath);
+});
+
+app.listen(3000);
+```
+
+### Example: PHP
+
+```php
+<?php
+$path = parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH);
+
+if ($path === '/registry.json') {
+    header('Content-Type: application/json');
+    readfile(__DIR__ . '/registry.json');
+    exit;
+}
+
+if (preg_match('#^/blocks/([^/]+)/(.+)$#', $path, $matches)) {
+    $file = __DIR__ . '/blocks/' . $matches[1] . '/' . $matches[2];
+    if (file_exists($file)) {
+        readfile($file);
+        exit;
+    }
+}
+
+http_response_code(404);
+```
+
+## CORS
+
+If the CLI runs in an environment where CORS matters (unlikely for a Node.js
+CLI, but possible for future web-based tools), make sure your server sends
+the appropriate `Access-Control-Allow-Origin` headers.
+
+## Caching
+
+The CLI caches fetched `registry.json` files in memory during a single
+command run. It does not persist caches across runs. If you want to optimize
+for large registries, add standard HTTP caching headers
+(`Cache-Control`, `ETag`) to your server responses.
+
+## Internal/corporate registries
+
+For teams that want to share blocks internally:
+
+1. Host the registry on an internal server or VPN-accessible URL
+2. Each developer adds the registry URL to their project's `blocks.json`
+3. The CLI fetches from that URL like any other registry
+
+No special setup is needed. As long as the URL is reachable from the
+developer's machine, it works.

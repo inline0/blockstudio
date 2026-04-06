@@ -19,6 +19,7 @@ export default defineConfig({
       { label: "Full-Stack", href: "/docs/full-stack" },
       { label: "Docs", href: "/docs" },
       { label: "Guides", href: "/guides" },
+      { label: "Registry", href: "/registry" },
       { label: "Blog", href: "/blog" },
     ],
     github: "inline0/blockstudio",

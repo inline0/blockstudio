@@ -1,0 +1,43 @@
+---
+title: Registry
+description: A shadcn-style CLI for WordPress blocks. No packages, no builds. Just source code copied into your project.
+---
+
+The Blockstudio Registry is a CLI tool for distributing and installing
+WordPress blocks from hosted registries.
+
+It works like [shadcn/ui](https://ui.shadcn.com), but for WordPress blocks.
+There's no npm package to install. You run a command, the block source code
+gets copied into your project, and you own it completely.
+
+## How it works
+
+1. Block authors publish a `registry.json` at a URL listing their available blocks.
+2. You add a `blocks.json` to your theme or plugin pointing at registries you want to use.
+3. You run `npx blockstudio add ui/tabs` and the block folder lands in your project.
+
+That's it. The CLI downloads the files, resolves dependencies, and writes them
+to disk. It doesn't transform anything. A WordPress block folder is the same
+everywhere.
+
+## What it supports
+
+The registry is block-type agnostic. It copies folders. Any block that lives
+in a directory works:
+
+- **Blockstudio blocks**: `block.json` + PHP/Twig/Blade template + optional assets
+- **`@wordpress/create-block` blocks**: full JS build output with `edit.js`, `save.js`, etc.
+- **Plain PHP blocks**: any block registered with `register_block_type()`
+- **Static blocks**: blocks with only a `block.json` and no server-side render
+
+The CLI doesn't care what's inside the folder. It reads the file manifest from
+the registry and downloads exactly those files.
+
+## Quick start
+
+```bash
+npx blockstudio init
+npx blockstudio add ui/tabs
+```
+
+See [Getting Started](/registry/getting-started) for the full setup.

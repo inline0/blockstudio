@@ -1,0 +1,53 @@
+---
+title: init
+description: Create a blocks.json config file in your project.
+---
+
+```bash
+npx blockstudio init [options]
+```
+
+Creates a `blocks.json` config file in the current directory.
+
+## Interactive mode
+
+When run in a terminal, `init` walks through an interactive setup:
+
+1. Prompts for the block install directory (default: `blockstudio`)
+2. Asks if you want to add a registry
+3. If yes, prompts for a name and URL, then repeats
+
+If `blocks.json` already exists, you're asked whether to overwrite it.
+
+## Options
+
+| Option | Description |
+|--------|-------------|
+| `-d, --directory <path>` | Block install directory. Default: `blockstudio`. |
+| `-y, --yes` | Skip all prompts and use defaults. |
+
+## Examples
+
+Interactive setup:
+
+```bash
+npx blockstudio init
+```
+
+Non-interactive with custom directory:
+
+```bash
+npx blockstudio init --yes --directory my-blocks
+```
+
+## Output
+
+Creates a `blocks.json` file:
+
+```json
+{
+  "$schema": "https://blockstudio.dev/schema/blocks.json",
+  "directory": "blockstudio",
+  "registries": {}
+}
+```

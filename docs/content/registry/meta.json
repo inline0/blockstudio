@@ -1,0 +1,11 @@
+{
+  "title": "Registry",
+  "pages": [
+    "index",
+    "getting-started",
+    "cli",
+    "configuration",
+    "hosting",
+    "reference"
+  ]
+}

@@ -1,0 +1,77 @@
+---
+title: registry.json Schema
+description: Complete field reference for the registry.json manifest file.
+---
+
+## Full schema
+
+```json
+{
+  "$schema": "https://blockstudio.dev/schema/registry.json",
+  "name": "my-registry",
+  "description": "A collection of WordPress blocks.",
+  "baseUrl": "https://example.com/blocks",
+  "blocks": [
+    {
+      "name": "hero",
+      "title": "Hero",
+      "description": "Full-width hero section with heading and CTA.",
+      "category": "layout",
+      "type": "blockstudio",
+      "dependencies": ["button"],
+      "files": [
+        "block.json",
+        "index.php",
+        "style.scss"
+      ]
+    }
+  ]
+}
+```
+
+## Top-level fields
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `$schema` | `string` | No | JSON Schema URL for editor validation. |
+| `name` | `string` | Yes | Registry identifier. Non-empty. |
+| `description` | `string` | No | Short description of the registry. |
+| `baseUrl` | `string` | Yes | Base URL for downloading block files. Must be a valid URL. |
+| `blocks` | `BlockEntry[]` | Yes | Array of available blocks. Must contain at least one entry. |
+
+## Block entry fields
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `name` | `string` | Yes | Block folder name and CLI identifier. Non-empty. |
+| `title` | `string` | No | Human-readable display name. |
+| `description` | `string` | No | One-line description for search results. |
+| `category` | `string` | No | Grouping label for list output. |
+| `type` | `"blockstudio" \| "create-block" \| "wordpress"` | No | Block type. Informational only, does not affect CLI behavior. |
+| `dependencies` | `string[]` | No | Block names in the same registry that must be installed with this block. |
+| `files` | `string[]` | Yes | File paths relative to the block folder. At least one file required. |
+
+## File resolution
+
+Each file is downloaded from:
+
+```
+{baseUrl}/{block.name}/{file}
+```
+
+And written to:
+
+```
+{directory}/{block.name}/{file}
+```
+
+Subdirectories in file paths are created automatically.
+
+## Validation rules
+
+- `name` must be non-empty at both the registry and block level.
+- `baseUrl` must be a valid URL.
+- `blocks` must contain at least one entry.
+- Each block's `files` must contain at least one entry.
+- `type`, if provided, must be one of the three allowed values.
+- `dependencies`, if provided, must be an array of strings. Each dependency must exist in the same registry or the CLI will error at resolve time.

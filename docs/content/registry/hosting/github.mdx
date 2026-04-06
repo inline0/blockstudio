@@ -1,0 +1,107 @@
+---
+title: GitHub
+description: Host a block registry directly from a GitHub repository.
+---
+
+GitHub is the simplest way to host a registry. Push your blocks to a
+repository and use GitHub's raw content URLs.
+
+## Setup
+
+Create a repository with this structure:
+
+```
+acme-blocks/
+  registry.json
+  blocks/
+    hero/
+      block.json
+      index.php
+    card/
+      block.json
+      index.php
+      style.scss
+```
+
+## registry.json
+
+Set `baseUrl` to the raw GitHub URL for your `blocks/` directory:
+
+```json
+{
+  "name": "acme",
+  "description": "Acme Corp block library.",
+  "baseUrl": "https://raw.githubusercontent.com/acme/acme-blocks/main/blocks",
+  "blocks": [
+    {
+      "name": "hero",
+      "title": "Hero",
+      "category": "layout",
+      "type": "blockstudio",
+      "files": ["block.json", "index.php"]
+    },
+    {
+      "name": "card",
+      "title": "Card",
+      "category": "components",
+      "type": "blockstudio",
+      "files": ["block.json", "index.php", "style.scss"]
+    }
+  ]
+}
+```
+
+The `baseUrl` uses `raw.githubusercontent.com` so the CLI gets the raw file
+content, not the GitHub HTML page.
+
+## Consumer config
+
+Users add your registry to their `blocks.json`:
+
+```json
+{
+  "directory": "blockstudio",
+  "registries": {
+    "acme": "https://raw.githubusercontent.com/acme/acme-blocks/main/registry.json"
+  }
+}
+```
+
+Then:
+
+```bash
+npx blockstudio add acme/hero
+```
+
+## Pinning to a release
+
+To pin to a specific version, use a tag or commit SHA instead of `main`:
+
+```json
+{
+  "registries": {
+    "acme": "https://raw.githubusercontent.com/acme/acme-blocks/v1.0.0/registry.json"
+  }
+}
+```
+
+This prevents breaking changes from affecting existing projects.
+
+## GitHub Pages
+
+You can also serve a registry via GitHub Pages if you prefer a cleaner URL:
+
+1. Enable GitHub Pages for the repository
+2. Set `baseUrl` to your Pages URL: `https://acme.github.io/acme-blocks/blocks`
+3. The `registry.json` is accessible at `https://acme.github.io/acme-blocks/registry.json`
+
+## Private repositories
+
+For private registries, users need to configure access. The CLI uses plain
+`fetch()` without authentication headers, so private GitHub repos won't work
+out of the box.
+
+Options for private registries:
+- Use a GitHub token in a proxy server
+- Self-host behind your own authentication layer
+- Use GitHub Packages or a custom server (see [Custom Server](/registry/hosting/custom-server))

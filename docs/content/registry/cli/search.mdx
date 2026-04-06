@@ -1,0 +1,49 @@
+---
+title: search
+description: Search for blocks across all configured registries.
+---
+
+```bash
+npx blockstudio search <query>
+```
+
+Searches all configured registries for blocks matching the query. Matches
+against block names, titles, and descriptions.
+
+## Arguments
+
+| Argument | Description |
+|----------|-------------|
+| `query` | The search term. |
+
+## Scoring
+
+Results are ranked by match quality:
+
+1. Exact name match (highest)
+2. Name starts with query
+3. Name contains query
+4. Title contains query
+5. Description contains query
+
+## Output
+
+Results show the registry and block name, with title and description when
+available:
+
+```
+Results for "tab"
+
+  ui/tabs - Tabs
+    Tabbed content with accessible keyboard navigation.
+  ui/tab-item - Tab Item
+    Single tab panel used inside Tabs.
+```
+
+## Examples
+
+```bash
+npx blockstudio search hero
+npx blockstudio search layout
+npx blockstudio search "keyboard navigation"
+```

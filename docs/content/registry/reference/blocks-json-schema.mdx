@@ -1,0 +1,37 @@
+---
+title: blocks.json Schema
+description: Complete field reference for the blocks.json project config file.
+---
+
+## Full schema
+
+```json
+{
+  "$schema": "https://blockstudio.dev/schema/blocks.json",
+  "directory": "blockstudio",
+  "registries": {
+    "namespace": "https://example.com/registry.json"
+  }
+}
+```
+
+## Fields
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `$schema` | `string` | No | JSON Schema URL for editor validation. |
+| `directory` | `string` | Yes | Relative path from `blocks.json` where blocks are installed. Must be non-empty. |
+| `registries` | `Record<string, string>` | Yes | Map of namespace names to registry URLs. Can be empty. Each value must be a valid URL. |
+
+## Validation rules
+
+- `directory` must be a non-empty string.
+- Each value in `registries` must be a valid URL (validated with Zod's `z.string().url()`).
+- Each key in `registries` must be a non-empty string.
+- The `registries` object can be empty (no registries configured), but the `add`, `list`, and `search` commands will error with a message telling you to add one.
+
+## Config discovery
+
+The CLI searches for `blocks.json` starting from the current working
+directory, walking up parent directories up to 20 levels. The first
+`blocks.json` found is used.

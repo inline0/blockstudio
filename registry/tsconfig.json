@@ -5,6 +5,7 @@
     "moduleResolution": "bundler",
     "strict": true,
     "esModuleInterop": true,
+    "jsx": "react-jsx",
     "outDir": "dist",
     "rootDir": "src"
   },

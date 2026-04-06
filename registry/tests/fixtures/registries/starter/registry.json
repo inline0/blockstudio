@@ -1,0 +1,15 @@
+{
+  "name": "starter",
+  "description": "Starter blocks.",
+  "baseUrl": "{{BASE_URL}}/starter/blocks",
+  "blocks": [
+    {
+      "name": "hero",
+      "title": "Starter Hero",
+      "description": "A simple hero block for starter themes.",
+      "category": "layout",
+      "type": "blockstudio",
+      "files": ["block.json", "index.php"]
+    }
+  ]
+}

@@ -1,0 +1,85 @@
+---
+title: blocks.json
+description: The project config file that tells the CLI where to install blocks and which registries to use.
+---
+
+`blocks.json` lives in the root of your theme or plugin. It tells the CLI
+where to install blocks and which registries to search.
+
+## Schema
+
+```json
+{
+  "$schema": "https://blockstudio.dev/schema/blocks.json",
+  "directory": "blockstudio",
+  "registries": {
+    "ui": "https://blocks.example.com/registry.json",
+    "starter": "https://raw.githubusercontent.com/acme/blocks/main/registry.json"
+  }
+}
+```
+
+## Fields
+
+### `$schema`
+
+Optional. Points to the JSON Schema for editor autocomplete and validation.
+
+### `directory`
+
+**Required.** Relative path from `blocks.json` where blocks are installed.
+
+Each block gets its own subfolder inside this directory. If `directory` is
+`blockstudio` and you add `hero`, the files land in `blockstudio/hero/`.
+
+### `registries`
+
+**Required.** An object mapping namespace names to registry URLs.
+
+The key is the namespace used in CLI commands (`npx blockstudio add ui/hero`).
+The value is the URL to a [`registry.json`](/registry/configuration/registry-json)
+file.
+
+You can configure as many registries as you want. When adding a block without
+a namespace, the CLI searches all of them.
+
+## Config discovery
+
+The CLI walks up from the current working directory looking for `blocks.json`.
+This means you can run commands from any subdirectory of your project.
+
+```
+my-theme/
+  blocks.json        <- found here
+  blockstudio/
+    hero/
+  templates/
+    page.php          <- running `npx blockstudio add` here still works
+```
+
+If no `blocks.json` is found, the CLI tells you to run `npx blockstudio init`.
+
+## Example: theme with two registries
+
+```json
+{
+  "$schema": "https://blockstudio.dev/schema/blocks.json",
+  "directory": "blockstudio",
+  "registries": {
+    "ui": "https://blocks.mycompany.com/ui/registry.json",
+    "internal": "https://blocks.mycompany.com/internal/registry.json"
+  }
+}
+```
+
+## Example: plugin with custom directory
+
+```json
+{
+  "$schema": "https://blockstudio.dev/schema/blocks.json",
+  "directory": "src/blocks",
+  "registries": {
+    "starter": "https://raw.githubusercontent.com/acme/blocks/main/registry.json"
+  }
+}
+```

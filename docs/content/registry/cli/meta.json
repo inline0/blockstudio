@@ -1,0 +1,10 @@
+{
+  "title": "CLI",
+  "pages": [
+    "init",
+    "add",
+    "list",
+    "search",
+    "remove"
+  ]
+}

@@ -1,0 +1,143 @@
+---
+title: registry.json
+description: The registry manifest that block authors publish to make their blocks available.
+---
+
+`registry.json` is a JSON file hosted at a URL. It lists all blocks available
+in a registry, their metadata, dependencies, and file manifests.
+
+## Schema
+
+```json
+{
+  "$schema": "https://blockstudio.dev/schema/registry.json",
+  "name": "ui",
+  "description": "Core UI blocks for Blockstudio projects.",
+  "baseUrl": "https://raw.githubusercontent.com/acme/blocks/main/blocks",
+  "blocks": [
+    {
+      "name": "tabs",
+      "title": "Tabs",
+      "description": "Tabbed content with accessible keyboard navigation.",
+      "category": "layout",
+      "type": "blockstudio",
+      "dependencies": ["tab-item"],
+      "files": [
+        "block.json",
+        "index.php",
+        "style.scss"
+      ]
+    }
+  ]
+}
+```
+
+## Top-level fields
+
+### `name`
+
+**Required.** The registry identifier. Used in CLI output and error messages.
+
+### `description`
+
+Optional. A short description of what this registry contains.
+
+### `baseUrl`
+
+**Required.** The base URL for downloading block files. Must be a valid URL.
+
+Files are fetched by combining the base URL, the block name, and the file
+path: `{baseUrl}/{block.name}/{file}`.
+
+For example, with `baseUrl` set to
+`https://raw.githubusercontent.com/acme/blocks/main/blocks` and a block
+named `tabs` with file `index.php`, the CLI fetches:
+
+```
+https://raw.githubusercontent.com/acme/blocks/main/blocks/tabs/index.php
+```
+
+## Block fields
+
+### `name`
+
+**Required.** The block's folder name. This is the identifier used in CLI
+commands and becomes the folder name on disk.
+
+### `title`
+
+Optional. Human-readable name shown in `list` and `search` output.
+
+### `description`
+
+Optional. One-line description shown in `search` results.
+
+### `category`
+
+Optional. Grouping label for `list` output.
+
+### `type`
+
+Optional. One of `blockstudio`, `create-block`, or `wordpress`.
+
+This is informational only. The CLI does not change behavior based on the
+block type. It always downloads and copies the files listed in `files`.
+
+### `dependencies`
+
+Optional. An array of other block names in the same registry that must be
+installed alongside this block.
+
+When a user adds a block with dependencies, the CLI resolves the full
+dependency tree and installs everything in the correct order. Circular
+dependencies are detected and rejected.
+
+Dependencies must exist in the same registry. Cross-registry dependencies
+are not supported.
+
+### `files`
+
+**Required.** An array of file paths relative to the block folder. At least
+one file is required.
+
+These are the exact files the CLI downloads and writes to disk. The paths
+can include subdirectories:
+
+```json
+{
+  "files": [
+    "block.json",
+    "index.php",
+    "style.scss",
+    "src/components/tabs.tsx",
+    "src/styles/tabs.css"
+  ]
+}
+```
+
+## File resolution
+
+For each file in a block's manifest, the CLI constructs a download URL:
+
+```
+{baseUrl}/{block.name}/{file}
+```
+
+And writes it to:
+
+```
+{directory}/{block.name}/{file}
+```
+
+The directory structure inside the block folder is preserved. If a file path
+contains subdirectories, they are created automatically.
+
+## Validation
+
+The CLI validates `registry.json` against a Zod schema on every fetch.
+Invalid registries produce clear error messages with the specific fields
+that failed validation.
+
+Required fields that are missing, empty `blocks` or `files` arrays, invalid
+URLs, and unknown `type` values are all caught before any files are
+downloaded.

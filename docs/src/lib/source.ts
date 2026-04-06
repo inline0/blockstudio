@@ -1,5 +1,5 @@
 import { loader } from 'fumadocs-core/source';
-import { docs, blog, guides } from '../../.source/server';
+import { docs, blog, guides, registry } from '../../.source/server';
 
 export const source = loader({
   baseUrl: '/docs',
@@ -9,6 +9,11 @@ export const source = loader({
 export const guidesSource = loader({
   baseUrl: '/guides',
   source: guides.toFumadocsSource(),
+});
+
+export const registrySource = loader({
+  baseUrl: '/registry',
+  source: registry.toFumadocsSource(),
 });
 
 export { blog };
