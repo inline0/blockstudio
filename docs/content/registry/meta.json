@@ -2,7 +2,7 @@
   "title": "Registry",
   "pages": [
     "index",
-    "getting-started",
+    "general",
     "cli",
     "configuration",
     "hosting",
