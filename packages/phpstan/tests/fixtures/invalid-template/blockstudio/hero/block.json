@@ -1,0 +1,10 @@
+{
+  "name": "test/hero",
+  "title": "Hero",
+  "blockstudio": {
+    "attributes": [
+      { "id": "title", "type": "text" },
+      { "id": "subtitle", "type": "text" }
+    ]
+  }
+}

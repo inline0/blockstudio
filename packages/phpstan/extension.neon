@@ -1,0 +1,74 @@
+parameters:
+  bootstrapFiles:
+    - src/Stubs/loader.php
+
+services:
+  -
+    class: Blockstudio\PHPStan\Schema\ProjectScanner
+    arguments:
+      currentWorkingDirectory: %currentWorkingDirectory%
+
+  -
+    class: Blockstudio\PHPStan\Schema\BlockJsonReader
+
+  -
+    class: Blockstudio\PHPStan\Schema\DbSchemaReader
+
+  -
+    class: Blockstudio\PHPStan\Schema\RpcSchemaReader
+
+  -
+    class: Blockstudio\PHPStan\Schema\BlockstudioJsonReader
+
+  -
+    class: Blockstudio\PHPStan\Reflection\FieldTypeRegistry
+
+  -
+    class: Blockstudio\PHPStan\Reflection\BlockTemplateDetector
+
+  -
+    class: Blockstudio\PHPStan\Type\DbGetReturnType
+    tags:
+      - phpstan.broker.dynamicStaticMethodReturnTypeExtension
+
+  -
+    class: Blockstudio\PHPStan\Type\SettingsGetReturnType
+    tags:
+      - phpstan.broker.dynamicStaticMethodReturnTypeExtension
+
+  -
+    class: Blockstudio\PHPStan\Rules\BlockAttributeAccessRule
+    tags:
+      - phpstan.rules.rule
+
+  -
+    class: Blockstudio\PHPStan\Rules\BlockJsonShapeRule
+    tags:
+      - phpstan.rules.rule
+
+  -
+    class: Blockstudio\PHPStan\Rules\DbSchemaShapeRule
+    tags:
+      - phpstan.rules.rule
+
+  -
+    class: Blockstudio\PHPStan\Rules\RpcSchemaShapeRule
+    tags:
+      - phpstan.rules.rule
+
+  -
+    class: Blockstudio\PHPStan\Rules\BlockstudioJsonShapeRule
+    arguments:
+      currentWorkingDirectory: %currentWorkingDirectory%
+    tags:
+      - phpstan.rules.rule
+
+  -
+    class: Blockstudio\PHPStan\Rules\SettingsPathRule
+    tags:
+      - phpstan.rules.rule
+
+  -
+    class: Blockstudio\PHPStan\Rules\HookCallbackRule
+    tags:
+      - phpstan.rules.rule

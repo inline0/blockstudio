@@ -1,22 +1,28 @@
 ---
 title: Blockstudio 7.2
-description: Admin overview, global SCSS preludes, and a cleaner way to inspect and structure larger Blockstudio projects.
-date: 2026-04-03
+description: An admin overview, a registry CLI for distributing blocks, a PHPStan extension for type-safe templates, and SCSS preludes.
+date: 2026-04-10
 author: Dennis
 ---
 
-Blockstudio 7.2 is a smaller release than 7.1, but an important one.
+Blockstudio 7.2 expands the framework in two directions at once.
 
-Where 7.1 expanded the framework with application-level features like
-databases, RPC, cron, and components, 7.2 focuses on visibility and workflow.
-As Blockstudio projects grow, two things become more important: seeing what the
-system has actually registered, and sharing styling primitives without repeating
-Sass imports everywhere.
+The first is **visibility and workflow** inside a single project: a new admin
+overview, an admin registry browser, and SCSS preludes for shared Sass setup.
+
+The second is **the ecosystem around Blockstudio**: a registry CLI for
+distributing blocks (like shadcn for WordPress), and a PHPStan extension that
+brings TypeScript-style type safety to block templates, `db.php`, and
+`rpc.php`.
+
+Both directions are about the same thing: making larger Blockstudio projects
+easier to reason about, build on, and share.
 
 ## Admin overview
 
-There's a new admin screen under **Tools > Blockstudio**. It gives you a
-single place to inspect what the system has registered from the filesystem.
+Blockstudio now ships with an admin screen under **Tools > Blockstudio**. It
+gives you a single place to inspect what the system has registered from the
+filesystem.
 
 The overview includes dedicated tabs for:
 
@@ -51,6 +57,156 @@ If you don't want it at all, disable it entirely:
 ```php
 add_filter('blockstudio/admin/enabled', '__return_false');
 ```
+
+## Admin registry browser
+
+Sitting next to the overview is a second tab: **Registry**. It's a browser for
+remote block registries configured in your theme's `blocks.json`, and it lets
+you import blocks directly from the WordPress admin without touching a CLI.
+
+```json title="blocks.json"
+{
+  "directory": "blockstudio",
+  "registries": {
+    "ui": "https://blocks.example.com/registry.json",
+    "private": {
+      "url": "https://api.example.com/registry.json",
+      "headers": {
+        "Authorization": "Bearer ${REGISTRY_TOKEN}"
+      }
+    }
+  }
+}
+```
+
+The browser fetches each configured registry, lists every available block, and
+shows whether it's already installed locally or available to import. Each row
+has an Import button that downloads the block files into your theme's
+configured directory. Blocks already installed get a Reimport button instead.
+
+Authenticated registries are supported via the object format with `headers`,
+including `${ENV_VAR}` interpolation so tokens never end up in version control.
+
+This makes browsing and using registries a first-class admin experience, not
+just a CLI workflow.
+
+## Registry CLI
+
+The other half of the registry story is a standalone CLI: `blockstudio/registry`.
+
+It's a shadcn-style tool for WordPress blocks. No npm package, no build step.
+You run a command, the block source code gets copied into your project, and
+you own it completely.
+
+```bash
+npx blockstudio init
+npx blockstudio add ui/tabs
+```
+
+The CLI works with any block type: Blockstudio blocks, `@wordpress/create-block`
+output, plain PHP blocks. The registry doesn't care what's inside the folder.
+It reads the file manifest from `registry.json` and copies exactly those files.
+
+Block authors publish a `registry.json` at any URL (GitHub raw content, S3, a
+custom server) listing their available blocks with metadata, dependencies, and
+file lists. Users add the URL to their `blocks.json` and pull blocks by name.
+
+The CLI supports:
+
+- **Dependency resolution**: blocks can declare dependencies on other blocks,
+  resolved automatically with cycle detection
+- **Multi-registry conflict handling**: when the same block name exists in
+  multiple registries, the CLI prompts you to pick one
+- **Authenticated registries**: bearer tokens, basic auth, and custom headers
+  with environment variable interpolation
+- **Interactive TUI**: built with Ink, with spinners, select prompts, and
+  progress indicators
+- **Non-interactive mode**: `--yes` flag and automatic CI/piped fallback
+- **Search and list**: browse registries from the command line
+
+The package ships with 130 tests covering schemas, dependency resolution,
+HTTP fetching, file writing, every command flow, and the interactive Ink UI.
+
+Full docs at [blockstudio.dev/registry](/registry).
+
+## PHPStan extension
+
+The other big addition is `blockstudio/phpstan`: a PHPStan extension that
+gives Blockstudio users the kind of type safety TypeScript developers expect.
+
+```bash
+composer require --dev blockstudio/phpstan
+```
+
+The extension reads your project's actual schemas at analysis time and feeds
+the resulting types back into PHPStan.
+
+### Type-safe block templates
+
+Field accesses on `$a` get validated against the sibling `block.json`:
+
+```php title="blockstudio/hero/index.php"
+<?php
+/** @var array<string, mixed> $a */
+
+echo $a['title'];     // OK
+echo $a['cta']['href']; // OK
+echo $a['typo'];      // ERROR: Field "typo" does not exist in block.json (block: hero). Did you mean "title"?
+```
+
+### Type-safe database records
+
+`Db::get()` returns a typed instance based on your `db.php` schema. The record
+shape is built from the actual fields:
+
+```php title="db.php"
+return [
+  'storage' => 'table',
+  'fields' => [
+    'email' => ['type' => 'string', 'required' => true],
+    'name'  => ['type' => 'string'],
+  ],
+];
+```
+
+```php
+$db = Db::get('mytheme/subscribers');
+$record = $db->create(['email' => 'a@b.com']);
+
+echo $record['email']; // PHPStan: string
+echo $record['name'];  // PHPStan: string|null
+echo $record['typo'];  // ERROR: Offset 'typo' does not exist on array{id: int, email: string, name: string|null}
+```
+
+### Schema validation
+
+Invalid `block.json`, `db.php`, `rpc.php`, and `blockstudio.json` files get
+caught at analysis time. Missing names, unknown field types, malformed
+schemas, deprecated shorthand booleans (`"tailwind": true` instead of the
+nested object), all reported with the exact line in the source file.
+
+### Settings path validation
+
+`Settings::get()` calls are validated against the known settings schema:
+
+```php
+Settings::get('tailwind/enabled');  // OK, returns bool
+Settings::get('tailwind/enabld');   // ERROR: Settings path "tailwind/enabld" is not a known Blockstudio setting. Did you mean "tailwind/enabled"?
+```
+
+### Hook name validation
+
+Same for filter and action hook names:
+
+```php
+add_filter('blockstudio/render', $cb);  // OK
+add_filter('blockstudio/rendrr', $cb);  // ERROR: Unknown Blockstudio hook "blockstudio/rendrr". Did you mean "blockstudio/render"?
+```
+
+The extension also ships stubs for the entire Blockstudio public API: `Db`,
+`Settings`, `Field_Registry`, `Build`, and global helpers. You get autocomplete
+and type checking for all Blockstudio APIs without needing the plugin source on
+your dev machine.
 
 ## Global SCSS preludes
 
@@ -89,15 +245,21 @@ No repeated imports in every block asset. It's not "Bootstrap support" as a
 special mode. It's a generic hook for shared Sass across a project, whether
 that comes from Bootstrap or your own internal toolkit.
 
-## Looking ahead
+## Why these things ship together
 
-The admin overview is the first pass. It already gives you a much better
-picture of what Blockstudio has registered, but it can grow into deeper
-inspection and debugging workflows over time.
+The admin overview, the registry browser, the registry CLI, and the PHPStan
+extension are all answers to the same question: how do you keep a Blockstudio
+project understandable as it grows?
 
-The same goes for the SCSS pipeline. The prelude hook is small, but it opens
-the door to much cleaner shared styling patterns across blocks, pages, and
-larger theme or plugin setups.
+The admin tools answer it at the project level: visibility into what's
+registered, ability to pull in blocks from registries, less guesswork.
 
-Less guesswork, less repetition, better visibility into how a project is put
-together.
+The CLI answers it at the ecosystem level: a way to share blocks between
+projects and teams without bundling them into npm packages or fighting build
+systems.
+
+The PHPStan extension answers it at the code level: catch wrong field
+accesses, schema typos, and broken hook callbacks before they hit runtime.
+
+That's the direction of 7.2 in general: less guesswork, less repetition,
+better visibility, and now actual type safety.

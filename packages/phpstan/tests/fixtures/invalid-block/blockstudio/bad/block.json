@@ -1,0 +1,11 @@
+{
+  "title": "Bad Block",
+  "blockstudio": {
+    "attributes": [
+      { "type": "text" },
+      { "id": "no_type" },
+      { "id": "wrong_type", "type": "nonexistent" },
+      { "id": "select_no_options", "type": "select" }
+    ]
+  }
+}

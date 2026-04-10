@@ -1,0 +1,9 @@
+includes:
+  - ../../../extension.neon
+  - ../../../vendor/szepeviktor/phpstan-wordpress/extension.neon
+
+parameters:
+  level: 6
+  paths:
+    - test.php
+    - blockstudio

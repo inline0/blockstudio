@@ -1,0 +1,22 @@
+{
+  "$schema": "https://blockstudio.dev/schema/block",
+  "apiVersion": 3,
+  "name": "test/hero",
+  "title": "Hero",
+  "category": "layout",
+  "blockstudio": {
+    "attributes": [
+      { "id": "title", "type": "text" },
+      { "id": "subtitle", "type": "text" },
+      { "id": "cta", "type": "link" },
+      { "id": "background", "type": "color" },
+      {
+        "id": "items",
+        "type": "repeater",
+        "attributes": [
+          { "id": "label", "type": "text" }
+        ]
+      }
+    ]
+  }
+}
