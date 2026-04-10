@@ -1,0 +1,4 @@
+{
+  "tailwind": { "enabled": true, "config": "" },
+  "assets": { "enqueue": true }
+}

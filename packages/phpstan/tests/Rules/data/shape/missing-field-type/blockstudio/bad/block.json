@@ -1,0 +1,8 @@
+{
+  "name": "test/bad",
+  "blockstudio": {
+    "attributes": [
+      { "id": "title" }
+    ]
+  }
+}

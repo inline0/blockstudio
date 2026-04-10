@@ -1,0 +1,25 @@
+{
+  "name": "test/tabs",
+  "blockstudio": {
+    "attributes": [
+      {
+        "id": "settings",
+        "type": "tabs",
+        "tabs": [
+          {
+            "title": "General",
+            "attributes": [
+              { "id": "title", "type": "text" }
+            ]
+          },
+          {
+            "title": "Style",
+            "attributes": [
+              { "id": "color", "type": "color" }
+            ]
+          }
+        ]
+      }
+    ]
+  }
+}

@@ -1,0 +1,9 @@
+{
+  "name": "test/simple",
+  "blockstudio": {
+    "attributes": [
+      { "id": "title", "type": "text" },
+      { "id": "count", "type": "number" }
+    ]
+  }
+}

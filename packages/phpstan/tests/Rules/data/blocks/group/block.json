@@ -1,0 +1,15 @@
+{
+  "name": "test/group",
+  "blockstudio": {
+    "attributes": [
+      {
+        "id": "cta",
+        "type": "group",
+        "attributes": [
+          { "id": "text", "type": "text" },
+          { "id": "url", "type": "link" }
+        ]
+      }
+    ]
+  }
+}

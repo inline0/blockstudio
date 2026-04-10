@@ -1,0 +1,17 @@
+{
+  "name": "test/all-types",
+  "blockstudio": {
+    "attributes": [
+      { "id": "text", "type": "text" },
+      { "id": "textarea", "type": "textarea" },
+      { "id": "number", "type": "number" },
+      { "id": "toggle", "type": "toggle" },
+      { "id": "select", "type": "select", "options": [] },
+      { "id": "color", "type": "color" },
+      { "id": "link", "type": "link" },
+      { "id": "files", "type": "files" },
+      { "id": "icon", "type": "icon" },
+      { "id": "code", "type": "code" }
+    ]
+  }
+}

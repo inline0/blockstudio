@@ -1,0 +1,14 @@
+{
+  "name": "test/repeater",
+  "blockstudio": {
+    "attributes": [
+      {
+        "id": "items",
+        "type": "repeater",
+        "attributes": [
+          { "id": "label", "type": "text" }
+        ]
+      }
+    ]
+  }
+}

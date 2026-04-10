@@ -1,0 +1,7 @@
+{
+  "blockstudio": {
+    "attributes": [
+      { "id": "title", "type": "text" }
+    ]
+  }
+}

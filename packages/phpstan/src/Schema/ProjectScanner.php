@@ -124,6 +124,9 @@ final class ProjectScanner
                 continue;
             }
             $path = $file->getPathname();
+            if (in_array($path, $this->blockJsonPaths, true)) {
+                continue;
+            }
             $this->blockJsonPaths[] = $path;
 
             $name = $this->extractBlockName($path);

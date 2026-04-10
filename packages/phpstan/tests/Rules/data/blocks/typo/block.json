@@ -1,0 +1,8 @@
+{
+  "name": "test/typo",
+  "blockstudio": {
+    "attributes": [
+      { "id": "title", "type": "text" }
+    ]
+  }
+}

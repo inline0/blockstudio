@@ -1,0 +1,9 @@
+{
+  "name": "test/bad",
+  "blockstudio": {
+    "attributes": [
+      { "id": "title", "type": "text" },
+      { "id": "title", "type": "textarea" }
+    ]
+  }
+}
