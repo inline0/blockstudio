@@ -1,0 +1,7 @@
+{
+  "$schema": "https://blockstudio.dev/schema/blocks.json",
+  "directory": "blockstudio",
+  "registries": {
+    "test": "http://localhost/wp-json/blockstudio-test/v1/e2e/registry"
+  }
+}

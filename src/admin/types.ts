@@ -59,10 +59,26 @@ export type BlockstudioAdminOverview = {
 
 export type RegistryTabName = keyof BlockstudioAdminOverview;
 
+export type AdminRegistryBlockRow = {
+  category: string;
+  description: string;
+  id: string;
+  name: string;
+  registry: string;
+  status: 'installed' | 'available';
+  title: string;
+  type: string;
+};
+
+export type AdminPageName = 'overview' | 'registry';
+
 export type BlockstudioAdminPageData = {
   adminUrl: string;
   logo: string;
+  nonce: string;
   overview: BlockstudioAdminOverview;
+  registryEnabled: boolean;
+  restUrl: string;
   version: string;
 };
 

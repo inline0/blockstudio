@@ -1621,6 +1621,83 @@ add_action(
 	}
 );
 
+add_action(
+	'rest_api_init',
+	function () {
+		register_rest_route(
+			'blockstudio-test/v1',
+			'/e2e/registry',
+			array(
+				'methods'             => 'GET',
+				'callback'            => function () {
+					return array(
+						'name'        => 'test',
+						'description' => 'E2E test registry.',
+						'baseUrl'     => 'http://localhost/wp-json/blockstudio-test/v1/e2e/registry-files',
+						'blocks'      => array(
+							array(
+								'name'        => 'e2e-hero',
+								'title'       => 'E2E Hero',
+								'description' => 'A hero block for E2E testing.',
+								'category'    => 'layout',
+								'type'        => 'blockstudio',
+								'files'       => array( 'block.json', 'index.php' ),
+							),
+							array(
+								'name'        => 'e2e-card',
+								'title'       => 'E2E Card',
+								'description' => 'A card block for E2E testing.',
+								'category'    => 'components',
+								'type'        => 'blockstudio',
+								'files'       => array( 'block.json', 'index.php' ),
+							),
+						),
+					);
+				},
+				'permission_callback' => '__return_true',
+			)
+		);
+
+		register_rest_route(
+			'blockstudio-test/v1',
+			'/e2e/registry-files/(?P<block>[a-z0-9-]+)/(?P<file>[a-z0-9.-]+)',
+			array(
+				'methods'             => 'GET',
+				'callback'            => function ( $request ) {
+					$block = $request->get_param( 'block' );
+					$file  = $request->get_param( 'file' );
+
+					if ( 'block.json' === $file ) {
+						return new \WP_REST_Response(
+							wp_json_encode(
+								array(
+									'apiVersion' => 3,
+									'name'       => 'test/' . $block,
+									'title'      => ucwords( str_replace( '-', ' ', $block ) ),
+									'category'   => 'layout',
+								)
+							),
+							200,
+							array( 'Content-Type' => 'application/json' )
+						);
+					}
+
+					if ( 'index.php' === $file ) {
+						return new \WP_REST_Response(
+							'<div class="' . esc_attr( $block ) . '"><?php echo $a["title"] ?? ""; ?></div>',
+							200,
+							array( 'Content-Type' => 'text/plain' )
+						);
+					}
+
+					return new \WP_Error( 'not_found', 'File not found', array( 'status' => 404 ) );
+				},
+				'permission_callback' => '__return_true',
+			)
+		);
+	}
+);
+
 // Inject raw HTML with Tailwind classes on the tailwind on-demand test page.
 // The HTML parser strips custom classes/IDs, so we append them via the_content.
 add_filter(

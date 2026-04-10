@@ -27,6 +27,7 @@ class Admin_Page {
 	public function __construct() {
 		add_action( 'admin_menu', array( $this, 'register_admin_page' ) );
 		add_action( 'admin_enqueue_scripts', array( $this, 'enqueue_admin_assets' ) );
+		add_action( 'rest_api_init', array( $this, 'register_rest_routes' ) );
 	}
 
 	/**
@@ -130,16 +131,19 @@ class Admin_Page {
 	 */
 	private function get_admin_data(): array {
 		return array(
-			'adminUrl' => admin_url(),
-			'logo'     => BLOCKSTUDIO_URL . 'includes/assets/icon.svg',
-			'overview' => array(
+			'adminUrl'        => admin_url(),
+			'logo'            => BLOCKSTUDIO_URL . 'includes/assets/icon.svg',
+			'nonce'           => wp_create_nonce( 'wp_rest' ),
+			'overview'        => array(
 				'blocks'     => $this->get_blocks(),
 				'extensions' => $this->get_extensions(),
 				'fields'     => $this->get_fields(),
 				'pages'      => $this->get_pages(),
 				'schemas'    => $this->get_schemas(),
 			),
-			'version'  => BLOCKSTUDIO_VERSION,
+			'registryEnabled' => null !== $this->load_blocks_json(),
+			'restUrl'         => esc_url_raw( rest_url( 'blockstudio/v1' ) ),
+			'version'         => BLOCKSTUDIO_VERSION,
 		);
 	}
 
@@ -370,6 +374,280 @@ class Admin_Page {
 		}
 
 		return implode( ', ', $labels );
+	}
+
+	/**
+	 * Get registry block rows from configured remote registries.
+	 *
+	 * @return array<int, array<string, string>>
+	 */
+	private function get_registry_data(): array {
+		$config = $this->load_blocks_json();
+
+		if ( ! $config ) {
+			return array();
+		}
+
+		$directory = $config['directory'] ?? 'blockstudio';
+		$local_dir = get_stylesheet_directory() . '/' . $directory;
+		$rows      = array();
+
+		foreach ( $config['registries'] ?? array() as $name => $ref ) {
+			$resolved = $this->resolve_registry_ref( $ref );
+
+			if ( ! $resolved ) {
+				continue;
+			}
+
+			$response = wp_remote_get(
+				$resolved['url'],
+				array(
+					'headers' => $resolved['headers'],
+					'timeout' => 10,
+				)
+			);
+
+			if ( is_wp_error( $response ) || 200 !== wp_remote_retrieve_response_code( $response ) ) {
+				continue;
+			}
+
+			$registry = json_decode( wp_remote_retrieve_body( $response ), true );
+
+			if ( ! is_array( $registry ) || empty( $registry['blocks'] ) ) {
+				continue;
+			}
+
+			foreach ( $registry['blocks'] as $block ) {
+				$block_name = $block['name'] ?? '';
+
+				if ( '' === $block_name ) {
+					continue;
+				}
+
+				$rows[] = array(
+					'category'    => (string) ( $block['category'] ?? '' ),
+					'description' => (string) ( $block['description'] ?? '' ),
+					'id'          => $name . '/' . $block_name,
+					'name'        => $block_name,
+					'registry'    => (string) $name,
+					'status'      => is_dir( $local_dir . '/' . $block_name ) ? 'installed' : 'available',
+					'title'       => (string) ( $block['title'] ?? $block_name ),
+					'type'        => (string) ( $block['type'] ?? '' ),
+				);
+			}
+		}
+
+		$this->sort_rows( $rows, 'registry', 'name' );
+
+		return $rows;
+	}
+
+	/**
+	 * Load and parse blocks.json from the active theme.
+	 *
+	 * @return array|null
+	 */
+	private function load_blocks_json(): ?array {
+		$path = get_stylesheet_directory() . '/blocks.json';
+
+		if ( ! file_exists( $path ) ) {
+			return null;
+		}
+
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Local file read.
+		$config = json_decode( file_get_contents( $path ), true );
+
+		if ( ! is_array( $config ) ) {
+			return null;
+		}
+
+		return $config;
+	}
+
+	/**
+	 * Resolve a registry reference (string URL or object with url + headers).
+	 *
+	 * @param mixed $ref The registry reference from blocks.json.
+	 * @return array{url: string, headers: array<string, string>}|null
+	 */
+	private function resolve_registry_ref( $ref ): ?array {
+		if ( is_string( $ref ) ) {
+			return array(
+				'url'     => $ref,
+				'headers' => array(),
+			);
+		}
+
+		if ( ! is_array( $ref ) || empty( $ref['url'] ) ) {
+			return null;
+		}
+
+		$headers = array();
+
+		foreach ( $ref['headers'] ?? array() as $key => $value ) {
+			$headers[ $key ] = preg_replace_callback(
+				'/\$\{([^}]+)\}/',
+				static function ( $matches ) {
+					$env_value = getenv( $matches[1] );
+					return false !== $env_value ? $env_value : '';
+				},
+				$value
+			);
+		}
+
+		return array(
+			'url'     => $ref['url'],
+			'headers' => $headers,
+		);
+	}
+
+	/**
+	 * Register REST API routes for the admin page.
+	 *
+	 * @return void
+	 */
+	public function register_rest_routes(): void {
+		register_rest_route(
+			'blockstudio/v1',
+			'/registry/blocks',
+			array(
+				'methods'             => 'GET',
+				'callback'            => array( $this, 'handle_registry_blocks' ),
+				'permission_callback' => static fn() => current_user_can( 'manage_options' ),
+			)
+		);
+
+		register_rest_route(
+			'blockstudio/v1',
+			'/registry/import',
+			array(
+				'methods'             => 'POST',
+				'callback'            => array( $this, 'handle_import' ),
+				'permission_callback' => static fn() => current_user_can( 'manage_options' ),
+				'args'                => array(
+					'registry' => array(
+						'required'          => true,
+						'validate_callback' => static function ( $param ) {
+							return is_string( $param ) && '' !== $param;
+						},
+					),
+					'block'    => array(
+						'required'          => true,
+						'validate_callback' => static function ( $param ) {
+							return is_string( $param ) && '' !== $param && false === strpos( $param, '..' );
+						},
+					),
+				),
+			)
+		);
+	}
+
+	/**
+	 * Handle a request for registry block data.
+	 *
+	 * @return \WP_REST_Response
+	 */
+	public function handle_registry_blocks(): \WP_REST_Response {
+		return rest_ensure_response( $this->get_registry_data() );
+	}
+
+	/**
+	 * Handle a block import request.
+	 *
+	 * @param \WP_REST_Request $request The request.
+	 * @return \WP_REST_Response|\WP_Error
+	 */
+	public function handle_import( \WP_REST_Request $request ) {
+		$registry_name = $request->get_param( 'registry' );
+		$block_name    = $request->get_param( 'block' );
+		$config        = $this->load_blocks_json();
+
+		if ( ! $config ) {
+			return new \WP_Error( 'no_config', 'No blocks.json found.', array( 'status' => 400 ) );
+		}
+
+		$ref = $config['registries'][ $registry_name ] ?? null;
+
+		if ( ! $ref ) {
+			return new \WP_Error( 'unknown_registry', 'Registry not found.', array( 'status' => 400 ) );
+		}
+
+		$resolved = $this->resolve_registry_ref( $ref );
+
+		if ( ! $resolved ) {
+			return new \WP_Error( 'invalid_registry', 'Invalid registry configuration.', array( 'status' => 400 ) );
+		}
+
+		$response = wp_remote_get(
+			$resolved['url'],
+			array(
+				'headers' => $resolved['headers'],
+				'timeout' => 10,
+			)
+		);
+
+		if ( is_wp_error( $response ) || 200 !== wp_remote_retrieve_response_code( $response ) ) {
+			return new \WP_Error( 'fetch_failed', 'Could not fetch registry.', array( 'status' => 502 ) );
+		}
+
+		$registry = json_decode( wp_remote_retrieve_body( $response ), true );
+
+		if ( ! is_array( $registry ) || empty( $registry['blocks'] ) ) {
+			return new \WP_Error( 'invalid_registry_data', 'Invalid registry data.', array( 'status' => 502 ) );
+		}
+
+		$block = null;
+
+		foreach ( $registry['blocks'] as $entry ) {
+			if ( ( $entry['name'] ?? '' ) === $block_name ) {
+				$block = $entry;
+				break;
+			}
+		}
+
+		if ( ! $block ) {
+			return new \WP_Error( 'block_not_found', 'Block not found in registry.', array( 'status' => 404 ) );
+		}
+
+		$base_url  = $registry['baseUrl'] ?? '';
+		$directory = $config['directory'] ?? 'blockstudio';
+		$target    = get_stylesheet_directory() . '/' . $directory . '/' . $block_name;
+
+		$written = 0;
+
+		foreach ( $block['files'] ?? array() as $file ) {
+			$file_url      = $base_url . '/' . $block_name . '/' . $file;
+			$file_response = wp_remote_get(
+				$file_url,
+				array(
+					'headers' => $resolved['headers'],
+					'timeout' => 10,
+				)
+			);
+
+			if ( is_wp_error( $file_response ) || 200 !== wp_remote_retrieve_response_code( $file_response ) ) {
+				continue;
+			}
+
+			$file_path = $target . '/' . $file;
+			$file_dir  = dirname( $file_path );
+
+			if ( ! is_dir( $file_dir ) ) {
+				wp_mkdir_p( $file_dir );
+			}
+
+			// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents -- Direct write for imported block files.
+			file_put_contents( $file_path, wp_remote_retrieve_body( $file_response ) );
+			++$written;
+		}
+
+		return rest_ensure_response(
+			array(
+				'success' => true,
+				'block'   => $block_name,
+				'files'   => $written,
+			)
+		);
 	}
 
 	/**
