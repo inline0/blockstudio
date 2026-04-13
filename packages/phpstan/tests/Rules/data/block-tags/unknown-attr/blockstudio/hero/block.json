@@ -1,0 +1,8 @@
+{
+  "name": "mytheme/hero",
+  "blockstudio": {
+    "attributes": [
+      { "id": "title", "type": "text" }
+    ]
+  }
+}

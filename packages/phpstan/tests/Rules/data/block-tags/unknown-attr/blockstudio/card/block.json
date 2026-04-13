@@ -1,0 +1,8 @@
+{
+  "name": "mytheme/card",
+  "blockstudio": {
+    "attributes": [
+      { "id": "title", "type": "text" }
+    ]
+  }
+}
