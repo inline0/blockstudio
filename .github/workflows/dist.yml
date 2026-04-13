@@ -39,7 +39,7 @@ jobs:
             --exclude='package.json' --exclude='package-lock.json' --exclude='.npmrc' \
             --exclude='.gitignore' --exclude='.prettierrc*' --exclude='eslint*' \
             --exclude='phpcs.xml*' --exclude='scoper.inc.php' --exclude='build.sh' \
-            --exclude='CLAUDE.md' --exclude='.claude' --exclude='/build' \
+            --exclude='CLAUDE.md' --exclude='.claude' --exclude='/build' --exclude='/packages' \
             . build/blockstudio/
           cd build && zip -r ../blockstudio.zip blockstudio/
 
