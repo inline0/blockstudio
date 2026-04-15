@@ -11,7 +11,7 @@ import {
 import { useSelect } from '@wordpress/data';
 import { useState } from '@wordpress/element';
 import { trash, moreHorizontal, link, image } from '@wordpress/icons';
-import { cloneDeep, get, isArray, set, unset } from 'lodash-es';
+import { cloneDeep, get, isArray, set } from 'lodash-es';
 import { LinkModal } from '@/blocks/components/fields/components/link';
 import { Card } from '@/blocks/components/list/cards';
 import { useMedia } from '@/blocks/hooks/use-media';
@@ -67,7 +67,9 @@ export const Attribute = ({
 
   const removeAttributePair = (index: number) => {
     const clone = cloneDeep(attributes);
-    unset(clone, `${keyName}[${index}]`);
+    const existing = get(clone, keyName, []) as AttributePair[];
+    existing.splice(index, 1);
+    set(clone, keyName, existing);
     setAttributes({
       ...attributes,
       blockstudio: clone.blockstudio,

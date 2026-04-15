@@ -1,10 +1,11 @@
-import { Page, Frame } from '@playwright/test';
+import { expect, Page, Frame } from '@playwright/test';
 import {
   count,
   delay,
   getEditorCanvas,
   save,
   testType,
+  text,
 } from '../utils/playwright-utils';
 
 testType('attributes', false, () => {
@@ -103,6 +104,29 @@ testType('attributes', false, () => {
         );
         await page.reload();
         await getEditorCanvas(page);
+      },
+    },
+    {
+      description: 'remove attribute leaves no null values',
+      testFunction: async (page: Page, canvas: Frame) => {
+        const clickVisibleMenuItem = async (label: string) => {
+          const item = page
+            .locator('.components-popover:visible [role="menuitem"]')
+            .filter({ hasText: label })
+            .last();
+          await item.waitFor({ state: 'visible', timeout: 10000 });
+          await item.click();
+        };
+
+        await page
+          .locator('.blockstudio-fields [aria-label="More"]')
+          .nth(1)
+          .click();
+        await clickVisibleMenuItem('Delete');
+        await delay(500);
+
+        const blockContent = await canvas.locator('[data-type="blockstudio/type-attributes"]').innerHTML();
+        expect(blockContent).not.toContain('null');
       },
     },
   ];
