@@ -5,7 +5,7 @@ testType('nested-template', false, () => {
   return [
     {
       description: 'nested children render inside group',
-      testFunction: async (page: Page, canvas: Frame) => {
+      testFunction: async (_page: Page, canvas: Frame) => {
         await delay(3000);
         await expect(canvas.locator('[data-type="core/heading"]')).toBeVisible({ timeout: 10000 });
         const group = canvas.locator('[data-type="core/group"]');
