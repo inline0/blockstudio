@@ -54,7 +54,7 @@ const flush = () => {
       batch.forEach((req) => {
         const html = rendered[req.clientId];
         if (html) {
-          const hash = computeHash(req.name, req.attributes);
+          const hash = computeHash(req.name, req.attributes, req.post.blockstudioMode);
           renderCache.set(hash, html, req.name);
           req.resolve(html);
         } else {

@@ -21,6 +21,7 @@ const sortedStringify = (value: unknown): string => {
 export const computeHash = (
   blockName: string,
   attributes: unknown,
+  mode: string = 'editor',
 ): string => {
   const cloned = cloneDeep(attributes) as Record<string, unknown>;
   Object.keys(cloned).forEach((key) => {
@@ -39,7 +40,7 @@ export const computeHash = (
     cloned as Parameters<typeof replaceEmptyStringsWithFalse>[0],
   );
 
-  return sortedStringify({ blockName, attrs })
+  return sortedStringify({ blockName, attrs, mode })
     .replaceAll('{', '_')
     .replaceAll('}', '_')
     .replaceAll('[', '_')
