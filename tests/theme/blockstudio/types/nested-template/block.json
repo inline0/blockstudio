@@ -1,0 +1,11 @@
+{
+  "$schema": "https://blockstudio.dev/schema/block",
+  "apiVersion": 3,
+  "name": "blockstudio/type-nested-template",
+  "title": "Nested Template",
+  "category": "blockstudio-test-native",
+  "icon": "star-filled",
+  "blockstudio": {
+    "attributes": []
+  }
+}

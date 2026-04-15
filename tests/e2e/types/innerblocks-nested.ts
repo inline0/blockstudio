@@ -1,7 +1,7 @@
 import { expect, Page, Frame } from '@playwright/test';
 import { delay, testType } from '../utils/playwright-utils';
 
-testType('innerblocks-nested', false, () => {
+testType('nested-template', false, () => {
   return [
     {
       description: 'nested children render inside group',
