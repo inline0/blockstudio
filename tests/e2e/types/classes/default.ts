@@ -18,7 +18,7 @@ testType('classes', '"classes":"class-1 class-2"', () => {
         const input = page.locator('.components-form-token-field input');
         await input.fill('my-custom-class');
         await input.press('Enter');
-        await expect(page.locator('.components-form-token-field__token', { hasText: 'my-custom-class' })).toBeVisible();
+        await expect(page.getByRole('button', { name: 'my-custom-class' })).toBeVisible();
       },
     },
     {
