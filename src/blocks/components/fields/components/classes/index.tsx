@@ -189,8 +189,8 @@ export const Classes = ({
           }}
           tokenizeOnBlur
           __experimentalValidateInput={(token) => {
-            if (token.includes('[') || token.includes(':')) return true;
-            return allClasses.includes(token);
+            if (!token || token.trim().length === 0) return false;
+            return true;
           }}
           __experimentalShowHowTo={false}
         />
