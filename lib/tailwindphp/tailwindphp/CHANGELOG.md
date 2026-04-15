@@ -5,6 +5,47 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.3.0] - 2026-03-05
+
+### Added
+
+#### TailwindCSS 4.2 Alignment
+- Updated internal TailwindCSS reference from v4.1.17 to v4.2.1
+
+#### New Color Palettes
+- `mauve` - Purple-tinted neutral (11 shades, 50–950)
+- `olive` - Yellow-green neutral (11 shades, 50–950)
+- `mist` - Cool blue neutral (11 shades, 50–950)
+- `taupe` - Warm brown neutral (11 shades, 50–950)
+
+#### Logical Property Utilities
+- `inset-bs-*` / `inset-be-*` - Inset block-start/end positioning
+- `mbs-*` / `mbe-*` - Margin block-start/end
+- `pbs-*` / `pbe-*` - Padding block-start/end
+- `scroll-mbs-*` / `scroll-mbe-*` - Scroll margin block-start/end
+- `scroll-pbs-*` / `scroll-pbe-*` - Scroll padding block-start/end
+- `border-bs-*` / `border-be-*` - Border block-start/end (width, color, style)
+
+#### Logical Sizing Utilities
+- `inline-*` / `min-inline-*` / `max-inline-*` - Inline-size utilities (logical width)
+- `block-*` / `min-block-*` / `max-block-*` - Block-size utilities (logical height)
+- Static values: `full`, `auto`, `min`, `max`, `fit`, `screen`, `none`, `lh`
+- Viewport units: `svw`, `lvw`, `dvw` (inline), `svh`, `lvh`, `dvh` (block)
+- Spacing-based functional values with fraction support
+
+#### Font Feature Settings
+- `font-features-*` - Arbitrary font-feature-settings via `font-features-["smcp"]`
+
+### Changed
+
+- `start-*` / `end-*` renamed to `inset-s-*` / `inset-e-*` (following TailwindCSS 4.2 deprecation)
+- Test suite expanded to 4,049 tests (+35 from v1.2.4)
+- Re-extracted all test data from TailwindCSS v4.2.1 reference
+
+### Fixed
+
+- `theme(fontWeight.semibold)` JS compat lookup now resolves correctly against default theme
+
 ## [1.2.4] - 2026-02-12
 
 ### Fixed
@@ -190,6 +231,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - No external runtime dependencies
 - Zero Node.js requirement
 
+[1.3.0]: https://github.com/dnnsjsk/tailwindphp/releases/tag/v1.3.0
 [1.2.4]: https://github.com/dnnsjsk/tailwindphp/releases/tag/v1.2.4
 [1.2.3]: https://github.com/dnnsjsk/tailwindphp/releases/tag/v1.2.3
 [1.2.2]: https://github.com/dnnsjsk/tailwindphp/releases/tag/v1.2.2

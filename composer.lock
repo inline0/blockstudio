@@ -4184,16 +4184,16 @@
         },
         {
             "name": "tailwindphp/tailwindphp",
-            "version": "v1.2.4",
+            "version": "v1.3.1",
             "source": {
                 "type": "git",
                 "url": "https://github.com/dnnsjsk/tailwindphp.git",
-                "reference": "ee52b74872bc484ca227b45d4a73fe936f38516e"
+                "reference": "9b1037863ffd1a893d5f00ae5559ef6d12f96440"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/dnnsjsk/tailwindphp/zipball/ee52b74872bc484ca227b45d4a73fe936f38516e",
-                "reference": "ee52b74872bc484ca227b45d4a73fe936f38516e",
+                "url": "https://api.github.com/repos/dnnsjsk/tailwindphp/zipball/9b1037863ffd1a893d5f00ae5559ef6d12f96440",
+                "reference": "9b1037863ffd1a893d5f00ae5559ef6d12f96440",
                 "shasum": ""
             },
             "require": {
@@ -4277,7 +4277,7 @@
                 "issues": "https://github.com/dnnsjsk/tailwindphp/issues",
                 "source": "https://github.com/dnnsjsk/tailwindphp"
             },
-            "time": "2026-02-11T23:00:49+00:00"
+            "time": "2026-04-15T10:30:21+00:00"
         },
         {
             "name": "thecodingmachine/safe",

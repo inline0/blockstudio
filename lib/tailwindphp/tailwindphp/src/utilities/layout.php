@@ -51,8 +51,8 @@ function registerLayoutUtilities(UtilityBuilder $builder): void
     $builder->staticUtility('absolute', [['position', 'absolute']]);
     $builder->staticUtility('relative', [['position', 'relative']]);
     $builder->staticUtility('sticky', [['position', 'sticky']]);
-    // Inset utilities (top, right, bottom, left, inset, inset-x, inset-y, start, end)
-    $insetProperties = [['inset', 'inset'], ['inset-x', 'inset-inline'], ['inset-y', 'inset-block'], ['start', 'inset-inline-start'], ['end', 'inset-inline-end'], ['top', 'top'], ['right', 'right'], ['bottom', 'bottom'], ['left', 'left']];
+    // Inset utilities (top, right, bottom, left, inset, inset-x, inset-y, inset-s, inset-e, inset-bs, inset-be)
+    $insetProperties = [['inset', 'inset'], ['inset-x', 'inset-inline'], ['inset-y', 'inset-block'], ['inset-s', 'inset-inline-start'], ['inset-e', 'inset-inline-end'], ['inset-bs', 'inset-block-start'], ['inset-be', 'inset-block-end'], ['top', 'top'], ['right', 'right'], ['bottom', 'bottom'], ['left', 'left']];
     foreach ($insetProperties as [$name, $property]) {
         $builder->staticUtility("{$name}-auto", [[$property, 'auto']]);
         $builder->staticUtility("{$name}-full", [[$property, '100%']]);

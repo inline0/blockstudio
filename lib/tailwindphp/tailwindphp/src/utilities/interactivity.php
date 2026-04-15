@@ -92,7 +92,7 @@ function registerInteractivityUtilities(UtilityBuilder $builder): void
     // ==================================================
     // Scroll Margin
     // ==================================================
-    $scrollMarginProps = ['scroll-m' => 'scroll-margin', 'scroll-mx' => 'scroll-margin-inline', 'scroll-my' => 'scroll-margin-block', 'scroll-ms' => 'scroll-margin-inline-start', 'scroll-me' => 'scroll-margin-inline-end', 'scroll-mt' => 'scroll-margin-top', 'scroll-mr' => 'scroll-margin-right', 'scroll-mb' => 'scroll-margin-bottom', 'scroll-ml' => 'scroll-margin-left'];
+    $scrollMarginProps = ['scroll-m' => 'scroll-margin', 'scroll-mx' => 'scroll-margin-inline', 'scroll-my' => 'scroll-margin-block', 'scroll-ms' => 'scroll-margin-inline-start', 'scroll-me' => 'scroll-margin-inline-end', 'scroll-mbs' => 'scroll-margin-block-start', 'scroll-mbe' => 'scroll-margin-block-end', 'scroll-mt' => 'scroll-margin-top', 'scroll-mr' => 'scroll-margin-right', 'scroll-mb' => 'scroll-margin-bottom', 'scroll-ml' => 'scroll-margin-left'];
     foreach ($scrollMarginProps as $namespace => $property) {
         $builder->spacingUtility($namespace, ['--scroll-margin', '--spacing'], function ($value) use ($property) {
             return [decl($property, $value)];
@@ -101,7 +101,7 @@ function registerInteractivityUtilities(UtilityBuilder $builder): void
     // ==================================================
     // Scroll Padding
     // ==================================================
-    $scrollPaddingProps = ['scroll-p' => 'scroll-padding', 'scroll-px' => 'scroll-padding-inline', 'scroll-py' => 'scroll-padding-block', 'scroll-ps' => 'scroll-padding-inline-start', 'scroll-pe' => 'scroll-padding-inline-end', 'scroll-pt' => 'scroll-padding-top', 'scroll-pr' => 'scroll-padding-right', 'scroll-pb' => 'scroll-padding-bottom', 'scroll-pl' => 'scroll-padding-left'];
+    $scrollPaddingProps = ['scroll-p' => 'scroll-padding', 'scroll-px' => 'scroll-padding-inline', 'scroll-py' => 'scroll-padding-block', 'scroll-ps' => 'scroll-padding-inline-start', 'scroll-pe' => 'scroll-padding-inline-end', 'scroll-pbs' => 'scroll-padding-block-start', 'scroll-pbe' => 'scroll-padding-block-end', 'scroll-pt' => 'scroll-padding-top', 'scroll-pr' => 'scroll-padding-right', 'scroll-pb' => 'scroll-padding-bottom', 'scroll-pl' => 'scroll-padding-left'];
     foreach ($scrollPaddingProps as $namespace => $property) {
         $builder->spacingUtility($namespace, ['--scroll-padding', '--spacing'], function ($value) use ($property) {
             return [decl($property, $value)];

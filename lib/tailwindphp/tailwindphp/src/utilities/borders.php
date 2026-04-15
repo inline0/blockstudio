@@ -170,6 +170,8 @@ function registerBorderUtilities(UtilityBuilder $builder): void
     $createBorderSideUtility('border-y', ['border-block-width'], ['border-block-color'], 'border-block-style');
     $createBorderSideUtility('border-s', ['border-inline-start-width'], ['border-inline-start-color'], 'border-inline-start-style');
     $createBorderSideUtility('border-e', ['border-inline-end-width'], ['border-inline-end-color'], 'border-inline-end-style');
+    $createBorderSideUtility('border-bs', ['border-block-start-width'], ['border-block-start-color'], 'border-block-start-style');
+    $createBorderSideUtility('border-be', ['border-block-end-width'], ['border-block-end-color'], 'border-block-end-style');
     $createBorderSideUtility('border-t', ['border-top-width'], ['border-top-color'], 'border-top-style');
     $createBorderSideUtility('border-r', ['border-right-width'], ['border-right-color'], 'border-right-style');
     $createBorderSideUtility('border-b', ['border-bottom-width'], ['border-bottom-color'], 'border-bottom-style');

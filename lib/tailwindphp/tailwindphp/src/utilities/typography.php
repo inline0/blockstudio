@@ -358,6 +358,10 @@ function registerTypographyUtilities(UtilityBuilder $builder): void
     $builder->staticUtility('tabular-nums', [['--tw-numeric-spacing', 'tabular-nums'], ['font-variant-numeric', $numericVar]]);
     $builder->staticUtility('diagonal-fractions', [['--tw-numeric-fraction', 'diagonal-fractions'], ['font-variant-numeric', $numericVar]]);
     $builder->staticUtility('stacked-fractions', [['--tw-numeric-fraction', 'stacked-fractions'], ['font-variant-numeric', $numericVar]]);
+    // Font Feature Settings
+    $builder->functionalUtility('font-features', ['themeKeys' => [], 'handle' => function ($value) {
+        return [decl('font-feature-settings', $value)];
+    }]);
     // Font Smoothing
     $builder->staticUtility('antialiased', [['-webkit-font-smoothing', 'antialiased'], ['-moz-osx-font-smoothing', 'grayscale']]);
     $builder->staticUtility('subpixel-antialiased', [['-webkit-font-smoothing', 'auto'], ['-moz-osx-font-smoothing', 'auto']]);

@@ -48,16 +48,41 @@ class CssMinifier
      */
     private static function removeWhitespace(string $css): string
     {
-        // Collapse multiple whitespace to single space
         $css = preg_replace('/\s+/', ' ', $css);
-        // Remove space around special characters
-        $css = preg_replace('/\s*([{};:,>~+])\s*/', '$1', $css);
-        // Remove space after ( and before )
-        $css = preg_replace('/\(\s+/', '(', $css);
-        $css = preg_replace('/\s+\)/', ')', $css);
-        // Remove trailing semicolons before closing braces
-        $css = str_replace(';}', '}', $css);
-        return $css;
+        $out = '';
+        $depth = 0;
+        $len = strlen($css);
+        for ($i = 0; $i < $len; $i++) {
+            $ch = $css[$i];
+            if ($ch === '(') {
+                $depth++;
+                $out .= $ch;
+                continue;
+            }
+            if ($ch === ')') {
+                $depth = max(0, $depth - 1);
+                $out .= $ch;
+                continue;
+            }
+            if ($ch === ' ') {
+                $prev = $out !== '' ? substr($out, -1) : '';
+                $next = $i + 1 < $len ? $css[$i + 1] : '';
+                $stripAfter = '{};:,(';
+                $stripBefore = '{};:,)';
+                if (str_contains($stripAfter, $prev) || str_contains($stripBefore, $next)) {
+                    continue;
+                }
+                // Only strip around selector combinators at depth 0
+                if ($depth === 0) {
+                    $combinators = '>~+';
+                    if (str_contains($combinators, $prev) || str_contains($combinators, $next)) {
+                        continue;
+                    }
+                }
+            }
+            $out .= $ch;
+        }
+        return str_replace(';}', '}', $out);
     }
     /**
      * Shorten 6-digit hex colors to 3-digit where possible.

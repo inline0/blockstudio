@@ -25,7 +25,7 @@ use function BlockstudioVendor\TailwindPHP\Ast\styleRule;
 function registerSpacingUtilities(UtilityBuilder $builder): void
 {
     // Margin utilities
-    $marginProperties = [['m', 'margin'], ['mx', 'margin-inline'], ['my', 'margin-block'], ['mt', 'margin-top'], ['mr', 'margin-right'], ['mb', 'margin-bottom'], ['ml', 'margin-left'], ['ms', 'margin-inline-start'], ['me', 'margin-inline-end']];
+    $marginProperties = [['m', 'margin'], ['mx', 'margin-inline'], ['my', 'margin-block'], ['ms', 'margin-inline-start'], ['me', 'margin-inline-end'], ['mbs', 'margin-block-start'], ['mbe', 'margin-block-end'], ['mt', 'margin-top'], ['mr', 'margin-right'], ['mb', 'margin-bottom'], ['ml', 'margin-left']];
     foreach ($marginProperties as [$name, $property]) {
         // Static auto value
         $builder->staticUtility("{$name}-auto", [[$property, 'auto']]);
@@ -35,7 +35,7 @@ function registerSpacingUtilities(UtilityBuilder $builder): void
         }, ['supportsNegative' => \true]);
     }
     // Padding utilities
-    $paddingProperties = [['p', 'padding'], ['px', 'padding-inline'], ['py', 'padding-block'], ['pt', 'padding-top'], ['pr', 'padding-right'], ['pb', 'padding-bottom'], ['pl', 'padding-left'], ['ps', 'padding-inline-start'], ['pe', 'padding-inline-end']];
+    $paddingProperties = [['p', 'padding'], ['px', 'padding-inline'], ['py', 'padding-block'], ['ps', 'padding-inline-start'], ['pe', 'padding-inline-end'], ['pbs', 'padding-block-start'], ['pbe', 'padding-block-end'], ['pt', 'padding-top'], ['pr', 'padding-right'], ['pb', 'padding-bottom'], ['pl', 'padding-left']];
     foreach ($paddingProperties as [$name, $property]) {
         $builder->spacingUtility($name, ['--padding', '--spacing'], function ($value) use ($property) {
             return [decl($property, $value)];

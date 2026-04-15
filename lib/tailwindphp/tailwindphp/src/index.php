@@ -1711,6 +1711,37 @@ function extractCandidates(string $html): array
     return array_unique($candidates);
 }
 /**
+ * Extract class name candidates from string literals in source code.
+ *
+ * Unlike extractCandidates() which looks for class="..." attributes,
+ * this scans all single and double-quoted strings for tokens that look
+ * like CSS class names. Useful for PHP files where classes are built
+ * via string concatenation (e.g., $container = 'container-px').
+ *
+ * @param string $source Source code content (PHP, JS, etc.)
+ * @return array<string> Unique class name candidates
+ */
+function extractCandidatesFromStrings(string $source): array
+{
+    $candidates = [];
+    // Match all single and double-quoted strings
+    if (preg_match_all('/["\']([^"\']+)["\']/', $source, $matches)) {
+        foreach ($matches[1] as $str) {
+            // Split by whitespace to get individual tokens
+            foreach (preg_split('/\s+/', $str) as $token) {
+                $token = trim($token);
+                // Must look like a CSS class: starts with letter, contains only valid chars
+                // Includes responsive prefixes (sm:, lg:), negative values (-mt-4),
+                // arbitrary values (py-[0.625rem]), fractions (w-1/2)
+                if ($token !== '' && preg_match('/^-?[a-z][a-zA-Z0-9_.:\/-]*(?:\[.*\])?$/', $token)) {
+                    $candidates[] = $token;
+                }
+            }
+        }
+    }
+    return array_values(array_unique($candidates));
+}
+/**
  * Check if a theme value containing --theme() calls would resolve to 'initial'.
  *
  * This is used to determine if a theme value should be output as a CSS variable.
@@ -2122,6 +2153,16 @@ class TailwindCompiler
         return extractCandidates($html);
     }
     /**
+     * Extract class name candidates from string literals in source code.
+     *
+     * @param string $source Source code content
+     * @return array<string> Unique class name candidates
+     */
+    public function extractCandidatesFromStrings(string $source): array
+    {
+        return extractCandidatesFromStrings($source);
+    }
+    /**
      * Minify CSS output.
      *
      * @param string $css The CSS to minify
@@ -2461,6 +2502,16 @@ class Tailwind
         return extractCandidates($html);
     }
     /**
+     * Extract class name candidates from string literals in source code.
+     *
+     * @param string $source Source code content
+     * @return array<string> Unique class name candidates
+     */
+    public static function extractCandidatesFromStrings(string $source): array
+    {
+        return extractCandidatesFromStrings($source);
+    }
+    /**
      * Minify CSS output.
      *
      * @param string $css The CSS to minify
@@ -2512,6 +2563,217 @@ class Tailwind
     {
         $compiler = new TailwindCompiler($css);
         return $compiler->spacing();
+    }
+    /**
+     * Build a reverse map from CSS declarations to Tailwind utility class names.
+     *
+     * Returns a map where keys are "property: value" strings and values are
+     * the corresponding Tailwind utility class name. Uses computedProperties
+     * (CSS variables resolved) for accurate matching against raw CSS.
+     *
+     * @param string $css Optional CSS configuration (e.g., theme with custom colors)
+     * @return array<string, string> Map of "property: value" => "utility-class"
+     */
+    public static function cssMap(string $css = '@import "tailwindcss";'): array
+    {
+        $compiler = new TailwindCompiler($css);
+        $map = [];
+        // All candidate utility class names to resolve
+        $candidates = [];
+        // Static utilities: display, position, overflow, text-align, etc.
+        $statics = ['flex', 'inline-flex', 'block', 'inline-block', 'inline', 'grid', 'inline-grid', 'contents', 'hidden', 'table', 'table-row', 'table-cell', 'table-caption', 'table-column', 'table-column-group', 'table-footer-group', 'table-header-group', 'table-row-group', 'list-item', 'flow-root', 'relative', 'absolute', 'fixed', 'sticky', 'static', 'visible', 'invisible', 'collapse', 'isolate', 'isolation-auto', 'overflow-hidden', 'overflow-auto', 'overflow-scroll', 'overflow-visible', 'overflow-clip', 'overflow-x-auto', 'overflow-x-hidden', 'overflow-x-scroll', 'overflow-y-auto', 'overflow-y-hidden', 'overflow-y-scroll', 'items-start', 'items-end', 'items-center', 'items-baseline', 'items-stretch', 'justify-start', 'justify-end', 'justify-center', 'justify-between', 'justify-around', 'justify-evenly', 'justify-stretch', 'justify-normal', 'justify-items-start', 'justify-items-end', 'justify-items-center', 'justify-items-stretch', 'self-auto', 'self-start', 'self-end', 'self-center', 'self-stretch', 'self-baseline', 'flex-row', 'flex-col', 'flex-row-reverse', 'flex-col-reverse', 'flex-wrap', 'flex-nowrap', 'flex-wrap-reverse', 'flex-1', 'flex-auto', 'flex-initial', 'flex-none', 'grow', 'grow-0', 'shrink', 'shrink-0', 'text-left', 'text-center', 'text-right', 'text-justify', 'text-start', 'text-end', 'text-wrap', 'text-nowrap', 'text-balance', 'text-pretty', 'underline', 'no-underline', 'line-through', 'overline', 'uppercase', 'lowercase', 'capitalize', 'normal-case', 'italic', 'not-italic', 'whitespace-normal', 'whitespace-nowrap', 'whitespace-pre', 'whitespace-pre-line', 'whitespace-pre-wrap', 'whitespace-break-spaces', 'break-normal', 'break-words', 'break-all', 'break-keep', 'truncate', 'antialiased', 'subpixel-antialiased', 'list-none', 'list-disc', 'list-decimal', 'list-inside', 'list-outside', 'object-contain', 'object-cover', 'object-fill', 'object-none', 'object-scale-down', 'object-bottom', 'object-center', 'object-left', 'object-right', 'object-top', 'float-left', 'float-right', 'float-none', 'float-start', 'float-end', 'clear-left', 'clear-right', 'clear-both', 'clear-none', 'clear-start', 'clear-end', 'box-border', 'box-content', 'cursor-auto', 'cursor-default', 'cursor-pointer', 'cursor-wait', 'cursor-text', 'cursor-move', 'cursor-help', 'cursor-not-allowed', 'cursor-none', 'cursor-grab', 'cursor-grabbing', 'pointer-events-none', 'pointer-events-auto', 'resize', 'resize-none', 'resize-x', 'resize-y', 'select-none', 'select-text', 'select-all', 'select-auto', 'touch-auto', 'touch-none', 'touch-manipulation', 'appearance-none', 'appearance-auto', 'border-solid', 'border-dashed', 'border-dotted', 'border-double', 'border-none', 'border-collapse', 'border-separate', 'outline-none', 'table-auto', 'table-fixed', 'will-change-auto', 'will-change-scroll', 'will-change-contents', 'will-change-transform', 'backface-visible', 'backface-hidden', 'mix-blend-normal', 'mix-blend-multiply', 'mix-blend-screen', 'mix-blend-overlay', 'bg-blend-normal', 'bg-blend-multiply', 'bg-blend-screen', 'bg-blend-overlay', 'bg-clip-border', 'bg-clip-padding', 'bg-clip-content', 'bg-clip-text', 'bg-origin-border', 'bg-origin-padding', 'bg-origin-content', 'bg-repeat', 'bg-no-repeat', 'bg-repeat-x', 'bg-repeat-y', 'bg-repeat-round', 'bg-repeat-space', 'bg-auto', 'bg-cover', 'bg-contain', 'bg-center', 'bg-top', 'bg-bottom', 'bg-left', 'bg-right', 'bg-fixed', 'bg-local', 'bg-scroll', 'transition', 'transition-all', 'transition-colors', 'transition-opacity', 'transition-shadow', 'transition-transform', 'transition-none', 'ease-linear', 'ease-in', 'ease-out', 'ease-in-out', 'animate-spin', 'animate-ping', 'animate-pulse', 'animate-bounce', 'animate-none', 'sr-only', 'not-sr-only', 'forced-color-adjust-auto', 'forced-color-adjust-none', 'content-none'];
+        $candidates = array_merge($candidates, $statics);
+        // Font weights
+        foreach (['thin', 'extralight', 'light', 'normal', 'medium', 'semibold', 'bold', 'extrabold', 'black'] as $w) {
+            $candidates[] = "font-{$w}";
+        }
+        // Font sizes
+        foreach (['xs', '2xs', 'sm', 'base', 'lg', 'xl', '2xl', '3xl', '4xl', '5xl', '6xl', '7xl', '8xl', '9xl'] as $s) {
+            $candidates[] = "text-{$s}";
+        }
+        // Line height
+        foreach ([3, 4, 5, 6, 7, 8, 9, 10] as $n) {
+            $candidates[] = "leading-{$n}";
+        }
+        foreach (['none', 'tight', 'snug', 'normal', 'relaxed', 'loose'] as $l) {
+            $candidates[] = "leading-{$l}";
+        }
+        // Letter spacing
+        foreach (['tighter', 'tight', 'normal', 'wide', 'wider', 'widest'] as $t) {
+            $candidates[] = "tracking-{$t}";
+        }
+        // Border radius
+        foreach (['none', 'sm', '', 'md', 'lg', 'xl', '2xl', '3xl', 'full'] as $r) {
+            $candidates[] = 'rounded' . ($r ? "-{$r}" : '');
+        }
+        // Spacing: gap, padding, margin (0-96)
+        $spacingValues = ['0', 'px', '0.5', '1', '1.5', '2', '2.5', '3', '3.5', '4', '5', '6', '7', '8', '9', '10', '11', '12', '14', '16', '20', '24', '28', '32', '36', '40', '44', '48', '52', '56', '60', '64', '72', '80', '96'];
+        $spacingPrefixes = ['p', 'px', 'py', 'pt', 'pr', 'pb', 'pl', 'm', 'mx', 'my', 'mt', 'mr', 'mb', 'ml', 'gap', 'gap-x', 'gap-y'];
+        foreach ($spacingPrefixes as $prefix) {
+            foreach ($spacingValues as $val) {
+                $candidates[] = "{$prefix}-{$val}";
+            }
+            if (str_starts_with($prefix, 'm')) {
+                $candidates[] = "{$prefix}-auto";
+            }
+        }
+        // Width/height/size
+        $sizingValues = ['0', 'px', '0.5', '1', '1.5', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11', '12', '14', '16', '20', '24', '28', '32', '36', '40', '44', '48', '52', '56', '60', '64', '72', '80', '96'];
+        foreach (['w', 'h', 'size', 'min-w', 'min-h', 'max-w', 'max-h'] as $prefix) {
+            foreach ($sizingValues as $val) {
+                $candidates[] = "{$prefix}-{$val}";
+            }
+        }
+        // Named max-widths (containers)
+        foreach (['xs', 'sm', 'md', 'lg', 'xl', '2xl', '3xl', '4xl', '5xl', '6xl', '7xl'] as $s) {
+            $candidates[] = "max-w-{$s}";
+        }
+        // Fractional widths
+        foreach (['1/2', '1/3', '2/3', '1/4', '2/4', '3/4', '1/5', '2/5', '3/5', '4/5', '1/6', '5/6', 'full', 'screen', 'auto', 'min', 'max', 'fit'] as $f) {
+            $candidates[] = "w-{$f}";
+            $candidates[] = "h-{$f}";
+        }
+        // Inset
+        foreach (['inset', 'inset-x', 'inset-y', 'top', 'right', 'bottom', 'left', 'start', 'end'] as $prefix) {
+            foreach (['0', 'px', '0.5', '1', '2', '3', '4', '5', '6', '8', '10', '12', '16', '20', 'auto', 'full', '1/2'] as $val) {
+                $candidates[] = "{$prefix}-{$val}";
+            }
+        }
+        // Z-index
+        foreach (['0', '10', '20', '30', '40', '50', 'auto'] as $z) {
+            $candidates[] = "z-{$z}";
+        }
+        // Opacity
+        foreach (['0', '5', '10', '15', '20', '25', '30', '40', '50', '60', '70', '75', '80', '90', '95', '100'] as $o) {
+            $candidates[] = "opacity-{$o}";
+        }
+        // Transition duration
+        foreach (['0', '75', '100', '150', '200', '300', '500', '700', '1000'] as $d) {
+            $candidates[] = "duration-{$d}";
+        }
+        // Transition delay
+        foreach (['0', '75', '100', '150', '200', '300', '500', '700', '1000'] as $d) {
+            $candidates[] = "delay-{$d}";
+        }
+        // Grid
+        foreach (range(1, 12) as $n) {
+            $candidates[] = "grid-cols-{$n}";
+            $candidates[] = "grid-rows-{$n}";
+            $candidates[] = "col-span-{$n}";
+            $candidates[] = "row-span-{$n}";
+        }
+        // Colors: text, bg, border with default palette
+        $defaultColors = ['black', 'white', 'transparent', 'current', 'inherit'];
+        foreach (['text', 'bg', 'border', 'accent', 'caret', 'fill', 'stroke'] as $prefix) {
+            foreach ($defaultColors as $color) {
+                $candidates[] = "{$prefix}-{$color}";
+            }
+        }
+        // Border widths
+        foreach (['', '0', '2', '4', '8'] as $w) {
+            $candidates[] = 'border' . ($w ? "-{$w}" : '');
+            $candidates[] = 'border-t' . ($w ? "-{$w}" : '');
+            $candidates[] = 'border-r' . ($w ? "-{$w}" : '');
+            $candidates[] = 'border-b' . ($w ? "-{$w}" : '');
+            $candidates[] = 'border-l' . ($w ? "-{$w}" : '');
+            $candidates[] = 'border-x' . ($w ? "-{$w}" : '');
+            $candidates[] = 'border-y' . ($w ? "-{$w}" : '');
+        }
+        // Outline widths
+        foreach (['0', '1', '2', '4', '8'] as $w) {
+            $candidates[] = "outline-{$w}";
+        }
+        // Ring
+        foreach (['', '0', '1', '2', '4', '8'] as $w) {
+            $candidates[] = 'ring' . ($w ? "-{$w}" : '');
+        }
+        // Order
+        foreach (range(1, 12) as $n) {
+            $candidates[] = "order-{$n}";
+        }
+        $candidates[] = 'order-first';
+        $candidates[] = 'order-last';
+        $candidates[] = 'order-none';
+        // Columns
+        foreach (range(1, 12) as $n) {
+            $candidates[] = "columns-{$n}";
+        }
+        // Aspect ratio
+        $candidates[] = 'aspect-auto';
+        $candidates[] = 'aspect-square';
+        $candidates[] = 'aspect-video';
+        // Shadow
+        foreach (['', 'sm', 'md', 'lg', 'xl', '2xl', 'none', 'inner'] as $s) {
+            $candidates[] = 'shadow' . ($s ? "-{$s}" : '');
+        }
+        // Blur
+        foreach (['', 'sm', 'md', 'lg', 'xl', '2xl', '3xl', 'none'] as $b) {
+            $candidates[] = 'blur' . ($b ? "-{$b}" : '');
+        }
+        // Build the map by resolving each candidate
+        foreach ($candidates as $candidate) {
+            $computed = $compiler->computedProperties($candidate);
+            if (empty($computed)) {
+                continue;
+            }
+            // Filter out internal CSS variables (--tw-*) and line-height from text utilities
+            $filtered = [];
+            foreach ($computed as $prop => $val) {
+                if (str_starts_with($prop, '--tw-')) {
+                    continue;
+                }
+                // Normalize values: .875rem => 0.875rem, #fff => #fff
+                $val = preg_replace('/^\.(\d)/', '0.$1', $val);
+                $filtered[$prop] = $val;
+            }
+            if (empty($filtered)) {
+                continue;
+            }
+            // For text-* font-size utilities, store under just font-size (drop line-height)
+            if (str_starts_with($candidate, 'text-') && isset($filtered['font-size']) && isset($filtered['line-height'])) {
+                $key = "font-size: {$filtered['font-size']}";
+                $map[$key] = $candidate;
+                continue;
+            }
+            // Single-property utilities get a simple key
+            if (count($filtered) === 1) {
+                $prop = array_key_first($filtered);
+                $val = $filtered[$prop];
+                $key = "{$prop}: {$val}";
+                // Store with normalized value
+                $map[$key] = $candidate;
+                // Also store common aliases
+                if ($val === '#fff') {
+                    $map["{$prop}: white"] = $candidate;
+                    $map["{$prop}: #FFF"] = $candidate;
+                    $map["{$prop}: #ffffff"] = $candidate;
+                } elseif ($val === '#000') {
+                    $map["{$prop}: black"] = $candidate;
+                    $map["{$prop}: #000000"] = $candidate;
+                } elseif ($val === '3.40282e38px' || $val === '3.40282e+38px') {
+                    $map["{$prop}: 9999px"] = $candidate;
+                    $map["{$prop}: 999px"] = $candidate;
+                    $map["{$prop}: 99999px"] = $candidate;
+                }
+            } else {
+                // Multi-property: store under a compound key
+                $parts = [];
+                foreach ($filtered as $prop => $val) {
+                    $parts[] = "{$prop}: {$val}";
+                }
+                $key = implode('; ', $parts);
+                $map[$key] = $candidate;
+                // Also store each property individually for partial matching
+                foreach ($filtered as $prop => $val) {
+                    $partialKey = "{$prop}: {$val}";
+                    if (!isset($map[$partialKey])) {
+                        $map[$partialKey] = $candidate;
+                    }
+                }
+            }
+        }
+        ksort($map);
+        return $map;
     }
     /**
      * Parse input into utilities and CSS config.
