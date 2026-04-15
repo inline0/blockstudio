@@ -1,0 +1,19 @@
+{
+  "$schema": "https://blockstudio.dev/schema/block",
+  "apiVersion": 3,
+  "name": "blockstudio/type-preview",
+  "title": "Preview Test",
+  "category": "blockstudio-test-native",
+  "icon": "star-filled",
+  "example": true,
+  "blockstudio": {
+    "attributes": [
+      {
+        "id": "title",
+        "type": "text",
+        "label": "Title",
+        "default": "Hello"
+      }
+    ]
+  }
+}
