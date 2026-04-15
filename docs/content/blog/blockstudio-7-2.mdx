@@ -275,3 +275,25 @@ accesses, schema typos, and broken hook callbacks before they hit runtime.
 
 That's the direction of 7.2 in general: less guesswork, less repetition,
 better visibility, and now actual type safety.
+
+## Bug fixes
+
+- **Classes field**: custom class names typed by the user were silently
+  dropped on blur because the validator only accepted classes from the
+  predefined Tailwind/settings list. Now accepts any non-empty string.
+- **Attributes field**: removing an attribute pair left behind `null`
+  entries in the saved data. Switched from lodash `unset()` (which
+  nullifies array elements) to `splice()` (which removes them).
+- **CSS minifier**: the TailwindPHP minifier stripped whitespace around
+  `+` inside `calc()` and `clamp()`, producing invalid CSS like
+  `calc(1rem+0.5vw)`. Fixed upstream in TailwindPHP v1.3.1 with a
+  depth-aware character walk that only strips whitespace around selector
+  combinators at parenthesis depth 0.
+- **Block Inserter preview**: `$isPreview` was always `false` in the
+  Block Inserter preview because the render cache didn't include the
+  rendering mode in its hash key. Editor and preview renders now produce
+  separate cache entries.
+- **InnerBlocks nested template**: the `<InnerBlocks template="..."/>`
+  component dropped the 3rd element (children) from template tuples like
+  `['core/group', {}, [['core/paragraph']]]`, producing empty container
+  blocks. Now preserves nested children.
