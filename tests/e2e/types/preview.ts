@@ -28,6 +28,10 @@ test.afterAll(async () => {
 test.describe('isPreview render cache', () => {
   test('place block and save', async () => {
     await page.goto(`${BASE}/wp-admin/post.php?post=1483&action=edit`);
+    const closeBtn = page.locator('.components-modal__screen-overlay button[aria-label="Close"]');
+    if (await closeBtn.isVisible({ timeout: 3000 }).catch(() => false)) {
+      await closeBtn.click();
+    }
     const canvas = await getEditorCanvas(page);
     await openBlockInserter(page);
     await addBlock(page, 'type-preview');
