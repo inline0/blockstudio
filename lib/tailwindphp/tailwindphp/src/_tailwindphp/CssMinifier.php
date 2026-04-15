@@ -48,16 +48,47 @@ class CssMinifier
      */
     private static function removeWhitespace(string $css): string
     {
-        // Collapse multiple whitespace to single space
         $css = preg_replace('/\s+/', ' ', $css);
-        // Remove space around special characters
-        $css = preg_replace('/\s*([{};:,>~+])\s*/', '$1', $css);
-        // Remove space after ( and before )
-        $css = preg_replace('/\(\s+/', '(', $css);
-        $css = preg_replace('/\s+\)/', ')', $css);
-        // Remove trailing semicolons before closing braces
-        $css = str_replace(';}', '}', $css);
-        return $css;
+
+        $out   = '';
+        $depth = 0;
+        $len   = strlen($css);
+
+        for ($i = 0; $i < $len; $i++) {
+            $ch = $css[$i];
+
+            if ($ch === '(') {
+                $depth++;
+                if ($out !== '' && substr($out, -1) === ' ') {
+                    $out = substr($out, 0, -1);
+                }
+                $out .= $ch;
+                continue;
+            }
+
+            if ($ch === ')') {
+                $depth = max(0, $depth - 1);
+                if ($out !== '' && substr($out, -1) === ' ') {
+                    $out = substr($out, 0, -1);
+                }
+                $out .= $ch;
+                continue;
+            }
+
+            if ($depth === 0 && $ch === ' ') {
+                $prev = $out !== '' ? substr($out, -1) : '';
+                $next = $i + 1 < $len ? $css[$i + 1] : '';
+                if (str_contains('{};:,>~+', $prev) || str_contains('{};:,>~+', $next)) {
+                    continue;
+                }
+            }
+
+            $out .= $ch;
+        }
+
+        $out = str_replace(';}', '}', $out);
+
+        return $out;
     }
     /**
      * Shorten 6-digit hex colors to 3-digit where possible.
