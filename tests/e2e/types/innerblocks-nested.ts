@@ -3,7 +3,6 @@ import {
   addBlock,
   getEditorCanvas,
   login,
-  openBlockInserter,
   delay,
 } from '../utils/playwright-utils';
 
@@ -33,9 +32,8 @@ test.describe('InnerBlocks nested template (#29)', () => {
     }
     const canvas = await getEditorCanvas(page);
 
-    await openBlockInserter(page);
     await addBlock(page, 'type-innerblocks-nested');
-    await delay(2000);
+    await delay(3000);
 
     await expect(canvas.locator('[data-type="core/heading"]')).toBeVisible({ timeout: 10000 });
 
