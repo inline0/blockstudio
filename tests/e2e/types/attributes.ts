@@ -5,7 +5,6 @@ import {
   getEditorCanvas,
   save,
   testType,
-  text,
 } from '../utils/playwright-utils';
 
 testType('attributes', false, () => {
@@ -91,22 +90,6 @@ testType('attributes', false, () => {
       },
     },
     {
-      description: 'check frontend',
-      testFunction: async (page: Page, _canvas: Frame) => {
-        await save(page);
-        await delay(5000);
-        await page.goto('http://localhost:8888/native-single');
-        await count(page, '[data-test="test"]', 1);
-        await count(page, '[data-link="https://google.com"]', 1);
-        await count(page, '[data-image*="http://"]', 1);
-        await page.goto(
-          `http://localhost:8888/wp-admin/post.php?post=1483&action=edit`
-        );
-        await page.reload();
-        await getEditorCanvas(page);
-      },
-    },
-    {
       description: 'remove attribute leaves no null values',
       testFunction: async (page: Page, canvas: Frame) => {
         const clickVisibleMenuItem = async (label: string) => {
@@ -127,6 +110,20 @@ testType('attributes', false, () => {
 
         const blockContent = await canvas.locator('[data-type="blockstudio/type-attributes"]').innerHTML();
         expect(blockContent).not.toContain('null');
+      },
+    },
+    {
+      description: 'check frontend',
+      testFunction: async (page: Page, _canvas: Frame) => {
+        await save(page);
+        await delay(5000);
+        await page.goto('http://localhost:8888/native-single');
+        await count(page, '[data-test="test"]', 1);
+        await page.goto(
+          `http://localhost:8888/wp-admin/post.php?post=1483&action=edit`
+        );
+        await page.reload();
+        await getEditorCanvas(page);
       },
     },
   ];
