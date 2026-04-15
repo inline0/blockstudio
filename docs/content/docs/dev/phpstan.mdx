@@ -120,8 +120,7 @@ allowed. Non-blockstudio hooks are ignored.
 
 ### Schema validation
 
-The extension validates `block.json`, `db.php`, `rpc.php`, and
-`blockstudio.json` files in the project.
+The extension validates every Blockstudio schema file in the project.
 
 **block.json**:
 - Missing `name` field
@@ -130,6 +129,21 @@ The extension validates `block.json`, `db.php`, `rpc.php`, and
 - `select`/`radio`/`checkbox` without `options` or `populate`
 - Duplicate field IDs
 
+**field.json** (custom reusable fields):
+- Missing `name`
+- Missing field `id` or `type`
+- Unknown field types
+
+**Extension JSON** (block extensions in `extensions/`):
+- Missing `name` (target block)
+- Missing `blockstudio` key
+- Missing `blockstudio.extend` key
+
+**page.json** (file-based pages):
+- Missing `title`
+- Missing `slug`
+- Invalid `postStatus` values
+
 **db.php**:
 - Missing `fields` array
 - Invalid field types
@@ -137,6 +151,11 @@ The extension validates `block.json`, `db.php`, `rpc.php`, and
 **rpc.php**:
 - Invalid HTTP methods
 - Wrong `public` value (must be `true`, `false`, or `'open'`)
+
+**cron.php**:
+- Missing `schedule` on configured tasks
+- Missing `callback` on configured tasks
+- Unknown schedule values (standard: hourly, twicedaily, daily, weekly)
 
 **blockstudio.json**:
 - Shorthand booleans like `"tailwind": true` (must use the nested object

@@ -82,3 +82,25 @@ services:
     class: Blockstudio\PHPStan\Rules\TemplateAttributeAccessRule
     tags:
       - phpstan.rules.rule
+
+  -
+    class: Blockstudio\PHPStan\Rules\FieldJsonShapeRule
+    tags:
+      - phpstan.rules.rule
+
+  -
+    class: Blockstudio\PHPStan\Rules\ExtensionJsonShapeRule
+    tags:
+      - phpstan.rules.rule
+
+  -
+    class: Blockstudio\PHPStan\Rules\PageJsonShapeRule
+    arguments:
+      currentWorkingDirectory: %currentWorkingDirectory%
+    tags:
+      - phpstan.rules.rule
+
+  -
+    class: Blockstudio\PHPStan\Rules\CronSchemaShapeRule
+    tags:
+      - phpstan.rules.rule
