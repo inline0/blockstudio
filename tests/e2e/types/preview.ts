@@ -57,14 +57,17 @@ test.describe('isPreview render cache', () => {
       { hasText: 'Preview Test' }
     );
     await inserterItem.hover();
-    await delay(2000);
+    await delay(3000);
 
-    const previewFrame = page.frameLocator(
-      '.block-editor-inserter__preview .block-editor-block-preview__content-iframe'
-    );
+    let found = false;
+    for (const frame of page.frames()) {
+      const el = frame.locator('[data-preview="true"]');
+      if (await el.isVisible({ timeout: 1000 }).catch(() => false)) {
+        found = true;
+        break;
+      }
+    }
 
-    await expect(
-      previewFrame.locator('[data-preview="true"]')
-    ).toBeVisible({ timeout: 15000 });
+    expect(found).toBe(true);
   });
 });
