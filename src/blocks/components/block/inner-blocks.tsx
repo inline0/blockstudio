@@ -72,16 +72,17 @@ export const InnerBlocks = ({
       template: (template || []).map((item) => {
         const blockName = typeof item === 'string' ? item : item[0];
         const blockAttrs = typeof item === 'string' ? undefined : item[1];
+        const innerBlocks = typeof item === 'string' ? undefined : item[2];
         try {
           const defaults = getDefaultsFromTemplate(blocks[blockName], item);
-          return [blockName, defaults];
+          return innerBlocks ? [blockName, defaults, innerBlocks] : [blockName, defaults];
         } catch {
           const templateBlock = {
             name: blockName,
             attributes: blockAttrs,
           } as Block;
           const defaults = getDefaultsFromTemplate(templateBlock, item);
-          return [blockName, defaults];
+          return innerBlocks ? [blockName, defaults, innerBlocks] : [blockName, defaults];
         }
       }),
       templateInsertUpdatesSelection,
