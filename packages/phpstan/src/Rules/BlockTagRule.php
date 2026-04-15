@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Blockstudio\PHPStan\Rules;
 
+use Blockstudio\PHPStan\Reflection\BlockTagParser;
 use Blockstudio\PHPStan\Schema\BlockJsonReader;
 use Blockstudio\PHPStan\Schema\ProjectScanner;
 use PhpParser\Node;
@@ -25,10 +26,14 @@ final class BlockTagRule implements Rule
     /** @var array<string, true> */
     private static array $scannedFiles = [];
 
+    private readonly BlockTagParser $parser;
+
     public function __construct(
         private readonly ProjectScanner $scanner,
         private readonly BlockJsonReader $reader
-    ) {}
+    ) {
+        $this->parser = new BlockTagParser();
+    }
 
     public function getNodeType(): string
     {
@@ -54,7 +59,7 @@ final class BlockTagRule implements Rule
                     continue;
                 }
 
-                $tags = $this->extractBlockTags($content);
+                $tags = $this->parser->extractTags($content);
                 foreach ($tags as $tag) {
                     $errors = array_merge(
                         $errors,
@@ -86,72 +91,7 @@ final class BlockTagRule implements Rule
     }
 
     /**
-     * @return list<array{type: string, name: string, attributes: array<string, string>, line: int}>
-     */
-    private function extractBlockTags(string $content): array
-    {
-        $tags = [];
-        $lines = explode("\n", $content);
-
-        foreach ($lines as $lineNum => $line) {
-            // <block name="namespace/block" attr="val" />
-            if (preg_match_all('/<block\s+name="([^"]+)"([^>]*?)\/?>/i', $line, $matches, PREG_SET_ORDER)) {
-                foreach ($matches as $match) {
-                    $tags[] = [
-                        'type' => 'block',
-                        'name' => $match[1],
-                        'attributes' => $this->parseAttributes($match[2]),
-                        'line' => $lineNum + 1,
-                    ];
-                }
-            }
-
-            // <bs:namespace-block attr="val" />
-            if (preg_match_all('/<bs:([a-z0-9-]+)([^>]*?)\/?>/i', $line, $matches, PREG_SET_ORDER)) {
-                foreach ($matches as $match) {
-                    $tags[] = [
-                        'type' => 'bs',
-                        'name' => $this->bsTagToBlockName($match[1]),
-                        'attributes' => $this->parseAttributes($match[2]),
-                        'line' => $lineNum + 1,
-                    ];
-                }
-            }
-        }
-
-        return $tags;
-    }
-
-    /**
-     * Convert bs: tag name to block name.
-     * "acme-hero" becomes "acme/hero", "mytheme-card" becomes "mytheme/card".
-     * First hyphen is the namespace separator.
-     */
-    private function bsTagToBlockName(string $tag): string
-    {
-        $pos = strpos($tag, '-');
-        if ($pos === false) {
-            return $tag;
-        }
-        return substr($tag, 0, $pos) . '/' . substr($tag, $pos + 1);
-    }
-
-    /**
-     * @return array<string, string>
-     */
-    private function parseAttributes(string $attributeString): array
-    {
-        $attrs = [];
-        if (preg_match_all('/([\w][\w-]*)="([^"]*)"/', $attributeString, $matches, PREG_SET_ORDER)) {
-            foreach ($matches as $match) {
-                $attrs[$match[1]] = $match[2];
-            }
-        }
-        return $attrs;
-    }
-
-    /**
-     * @param array{type: string, name: string, attributes: array<string, string>, line: int} $tag
+     * @param array{name: string, attributes: array<string, string>, line: int} $tag
      * @return list<\PHPStan\Rules\IdentifierRuleError>
      */
     private function validateTag(array $tag, string $file): array

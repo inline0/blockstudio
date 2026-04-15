@@ -77,3 +77,8 @@ services:
     class: Blockstudio\PHPStan\Rules\BlockTagRule
     tags:
       - phpstan.rules.rule
+
+  -
+    class: Blockstudio\PHPStan\Rules\TemplateAttributeAccessRule
+    tags:
+      - phpstan.rules.rule
