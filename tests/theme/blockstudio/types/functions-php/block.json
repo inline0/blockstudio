@@ -1,0 +1,11 @@
+{
+  "$schema": "https://blockstudio.dev/schema/block",
+  "name": "blockstudio/type-functions-php",
+  "title": "Functions PHP Test",
+  "category": "blockstudio-test-native",
+  "icon": "admin-generic",
+  "description": "Test block for attribute-based server functions.",
+  "blockstudio": {
+    "component": true
+  }
+}

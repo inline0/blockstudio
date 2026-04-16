@@ -257,6 +257,69 @@ No repeated imports in every block asset. It's not "Bootstrap support" as a
 special mode. It's a generic hook for shared Sass across a project, whether
 that comes from Bootstrap or your own internal toolkit.
 
+## PHP-native block API definitions
+
+7.2 also adds an optional PHP-native syntax for the full-stack block APIs.
+Arrays remain the default and fully supported. Nothing was replaced. But if you
+prefer named arguments, enums, and attributes over nested config arrays, you
+can now opt into that style.
+
+For `rpc.php`, return an object with attributed methods:
+
+```php title="rpc.php"
+<?php
+use Blockstudio\Http_Method;
+use Blockstudio\Rpc_Access;
+use Blockstudio\Rpc_Definition as Rpc;
+
+return new class {
+    #[Rpc(access: Rpc_Access::Session)]
+    public function subscribe(array $params): array {
+        return ['success' => true];
+    }
+
+    #[Rpc(name: 'status', methods: [Http_Method::Get, Http_Method::Post])]
+    public function getStatus(array $params): array {
+        return ['status' => 'ok'];
+    }
+};
+```
+
+For `cron.php`, the same idea works with `#[Cron]`:
+
+```php title="cron.php"
+<?php
+use Blockstudio\Cron_Definition as Cron;
+use Blockstudio\Cron_Schedule;
+
+return new class {
+    #[Cron(schedule: Cron_Schedule::Hourly)]
+    public function heartbeat(): void {
+    }
+};
+```
+
+And for `db.php`, there's now a small builder layer:
+
+```php title="db.php"
+<?php
+use Blockstudio\Db_Field as Field;
+use Blockstudio\Db_Schema as Schema;
+use Blockstudio\Db_Storage;
+
+return Schema::make(
+    storage: Db_Storage::Table,
+    fields: [
+        'email' => Field::string(required: true, format: 'email'),
+        'active' => Field::boolean(default: false),
+    ],
+);
+```
+
+This hits a better balance for larger codebases. You keep the simplicity of the
+array format when you want it, and you can switch to a more discoverable PHP
+surface when a block grows past a handful of fields or endpoints.
+
 ## Why these things ship together
 
 The admin overview, the registry browser, the registry CLI, and the PHPStan

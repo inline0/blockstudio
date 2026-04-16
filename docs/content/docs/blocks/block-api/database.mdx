@@ -47,6 +47,37 @@ return [
 ];
 ```
 
+### PHP-native builder syntax
+
+`db.php` can also use a small builder API built on named arguments and readonly
+definition objects. Arrays stay as the default format, but this gives you a
+more discoverable PHP-native option when the schema starts getting larger.
+
+```php title="db.php"
+<?php
+use Blockstudio\Db_Field as Field;
+use Blockstudio\Db_Schema as Schema;
+use Blockstudio\Db_Storage;
+
+return Schema::make(
+    storage: Db_Storage::Table,
+    capability: [
+        'create' => true,
+        'read'   => true,
+        'update' => 'edit_posts',
+        'delete' => 'manage_options',
+    ],
+    fields: [
+        'email' => Field::string(required: true, format: 'email'),
+        'name'  => Field::string(maxLength: 100),
+        'plan'  => Field::string(enum: ['free', 'pro'], default: 'free'),
+    ],
+);
+```
+
+Use `Schema::make()` for a single schema, or return an array of named
+`Schema::make(...)` calls for multi-schema blocks.
+
 ### Multiple schemas
 
 A single block can own multiple data models. Return a named array:

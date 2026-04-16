@@ -55,6 +55,33 @@ return [
 ];
 ```
 
+### PHP-native definitions
+
+`cron.php` can also return an object with attributed methods. That gives you a
+cleaner PHP-native surface while keeping the existing array syntax intact.
+
+```php title="cron.php"
+<?php
+use Blockstudio\Cron_Definition as Cron;
+use Blockstudio\Cron_Schedule;
+
+return new class {
+    #[Cron(schedule: Cron_Schedule::Hourly)]
+    public function heartbeat(): void {
+        update_option('my_block_last_heartbeat', time());
+    }
+
+    #[Cron]
+    public function cleanupOldEntries(): void {
+        // defaults to daily
+    }
+};
+```
+
+Method names are normalized to lowercase snake case by default, so
+`cleanupOldEntries()` becomes `cleanup_old_entries`. Use `name:` when you want
+an explicit job name.
+
 ## Schedules
 
 ### Built-in

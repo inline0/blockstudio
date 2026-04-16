@@ -7,6 +7,10 @@
 
 namespace Blockstudio;
 
+use Closure;
+use ReflectionMethod;
+use ReflectionObject;
+
 /**
  * Discovers cron.php files and registers WP Cron events per block.
  *
@@ -142,23 +146,122 @@ class Cron {
 
 		$definitions = include $cron_path;
 
+		if ( is_object( $definitions ) ) {
+			self::load_object_jobs( $block_name, $definitions );
+			return;
+		}
+
 		if ( ! is_array( $definitions ) ) {
 			return;
 		}
 
 		foreach ( $definitions as $name => $definition ) {
-			if ( is_callable( $definition ) ) {
-				self::$jobs[ $block_name ][ $name ] = array(
-					'callback' => $definition,
-					'schedule' => 'daily',
-				);
-			} elseif ( is_array( $definition ) && isset( $definition['callback'] ) ) {
-				self::$jobs[ $block_name ][ $name ] = array(
-					'callback' => $definition['callback'],
-					'schedule' => $definition['schedule'] ?? 'daily',
-				);
+			$normalized = self::normalize_job_definition( $definition );
+
+			if ( null !== $normalized ) {
+				self::$jobs[ $block_name ][ $name ] = $normalized;
 			}
 		}
+	}
+
+	/**
+	 * Load attribute-based jobs from an object definition.
+	 *
+	 * @param string $block_name  The block name.
+	 * @param object $definitions The returned object definition.
+	 *
+	 * @return void
+	 */
+	private static function load_object_jobs( string $block_name, object $definitions ): void {
+		$reflection = new ReflectionObject( $definitions );
+
+		foreach ( $reflection->getMethods( ReflectionMethod::IS_PUBLIC ) as $method ) {
+			if ( $method->isConstructor() || $method->isDestructor() || $method->isStatic() ) {
+				continue;
+			}
+
+			$attributes = $method->getAttributes( Cron_Definition::class );
+
+			if ( empty( $attributes ) ) {
+				continue;
+			}
+
+			/**
+			 * Attribute instances are guaranteed by Reflection.
+			 *
+			 * @var Cron_Definition $attribute
+			 */
+			$attribute = $attributes[0]->newInstance();
+			$name      = null !== $attribute->name && '' !== $attribute->name
+				? $attribute->name
+				: self::normalize_job_name( $method->getName() );
+
+			self::$jobs[ $block_name ][ $name ] = array(
+				'callback' => Closure::fromCallable( array( $definitions, $method->getName() ) ),
+				'schedule' => self::normalize_schedule( $attribute->schedule ),
+			);
+		}
+	}
+
+	/**
+	 * Normalize a PHP method name into a cron job name.
+	 *
+	 * @param string $name The PHP method name.
+	 *
+	 * @return string
+	 */
+	private static function normalize_job_name( string $name ): string {
+		$normalized = preg_replace( '/(?<!^)[A-Z]/', '_$0', $name );
+
+		if ( ! is_string( $normalized ) || '' === $normalized ) {
+			return strtolower( $name );
+		}
+
+		return strtolower( $normalized );
+	}
+
+	/**
+	 * Normalize a legacy or PHP-native job definition.
+	 *
+	 * @param mixed $definition The job definition.
+	 *
+	 * @return array<string, mixed>|null
+	 */
+	private static function normalize_job_definition( mixed $definition ): ?array {
+		if ( is_callable( $definition ) ) {
+			return array(
+				'callback' => $definition,
+				'schedule' => 'daily',
+			);
+		}
+
+		if ( ! is_array( $definition ) || empty( $definition['callback'] ) || ! is_callable( $definition['callback'] ) ) {
+			return null;
+		}
+
+		return array(
+			'callback' => $definition['callback'],
+			'schedule' => self::normalize_schedule( $definition['schedule'] ?? 'daily' ),
+		);
+	}
+
+	/**
+	 * Normalize a cron schedule.
+	 *
+	 * @param mixed $schedule The schedule value.
+	 *
+	 * @return string
+	 */
+	private static function normalize_schedule( mixed $schedule ): string {
+		if ( $schedule instanceof Cron_Schedule ) {
+			return $schedule->value;
+		}
+
+		if ( is_string( $schedule ) && '' !== $schedule ) {
+			return $schedule;
+		}
+
+		return 'daily';
 	}
 
 	/**

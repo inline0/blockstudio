@@ -95,7 +95,8 @@ echo $record['typo'];  // Error: Offset 'typo' does not exist
 ```
 
 Required fields are non-nullable. Optional fields are `type|null`. An `id`
-field (int) is always present.
+field (int) is always present. The same typing works for the PHP-native
+`Db_Schema` / `Db_Field` builder syntax.
 
 ### Settings path validation
 
@@ -147,15 +148,17 @@ The extension validates every Blockstudio schema file in the project.
 **db.php**:
 - Missing `fields` array
 - Invalid field types
+- Supports both legacy arrays and `Db_Schema` / `Db_Field`
 
 **rpc.php**:
 - Invalid HTTP methods
 - Wrong `public` value (must be `true`, `false`, or `'open'`)
+- Supports both legacy arrays and attributed object returns
 
 **cron.php**:
 - Missing `schedule` on configured tasks
 - Missing `callback` on configured tasks
-- Unknown schedule values (standard: hourly, twicedaily, daily, weekly)
+- Supports both legacy arrays and attributed object returns
 
 **blockstudio.json**:
 - Shorthand booleans like `"tailwind": true` (must use the nested object

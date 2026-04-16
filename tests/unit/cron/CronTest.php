@@ -51,6 +51,12 @@ class CronTest extends TestCase {
 		$this->assertIsArray( $definitions );
 	}
 
+	public function test_php_native_cron_test_block_returns_object(): void {
+		$cron_path   = dirname( __DIR__, 2 ) . '/theme/blockstudio/types/cron-php/cron.php';
+		$definitions = include $cron_path;
+		$this->assertIsObject( $definitions );
+	}
+
 	public function test_cron_test_block_has_cleanup_job(): void {
 		$definitions = include dirname( __DIR__, 2 ) . '/theme/blockstudio/types/cron/cron.php';
 		$this->assertArrayHasKey( 'cleanup', $definitions );
@@ -88,6 +94,28 @@ class CronTest extends TestCase {
 		$this->assertArrayHasKey( 'ping', $all_jobs['test/cron-block'] );
 		$this->assertSame( 'daily', $all_jobs['test/cron-block']['cleanup']['schedule'] );
 		$this->assertSame( 'daily', $all_jobs['test/cron-block']['ping']['schedule'] );
+	}
+
+	public function test_load_block_cron_with_attribute_definition(): void {
+		$ref    = new ReflectionClass( Cron::class );
+		$method = $ref->getMethod( 'load_block_cron' );
+		$method->setAccessible( true );
+
+		$cron_path = dirname( __DIR__, 2 ) . '/theme/blockstudio/types/cron-php/cron.php';
+
+		$method->invoke( null, 'test/cron-block-php', array(
+			'filesPaths' => array( $cron_path ),
+		) );
+
+		$jobs = $ref->getProperty( 'jobs' );
+		$jobs->setAccessible( true );
+		$all_jobs = $jobs->getValue( null );
+
+		$this->assertArrayHasKey( 'test/cron-block-php', $all_jobs );
+		$this->assertArrayHasKey( 'heartbeat', $all_jobs['test/cron-block-php'] );
+		$this->assertArrayHasKey( 'cleanup_old_entries', $all_jobs['test/cron-block-php'] );
+		$this->assertSame( 'hourly', $all_jobs['test/cron-block-php']['heartbeat']['schedule'] );
+		$this->assertSame( 'daily', $all_jobs['test/cron-block-php']['cleanup_old_entries']['schedule'] );
 	}
 
 	public function test_load_block_cron_skips_missing_file(): void {

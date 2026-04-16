@@ -57,12 +57,18 @@ final class DbGetReturnType implements DynamicStaticMethodReturnTypeExtension
         }
 
         $blockName = $args[0]->value->value;
+        $schemaName = 'default';
+
+        if (count($args) >= 2 && $args[1]->value instanceof String_) {
+            $schemaName = $args[1]->value->value;
+        }
+
         $dbPath = $this->scanner->findDbPhpByBlockName($blockName);
         if ($dbPath === null) {
             return $defaultReturn;
         }
 
-        $recordType = $this->dbReader->getRecordType($dbPath);
+        $recordType = $this->dbReader->getRecordType($dbPath, $schemaName);
         if ($recordType === null) {
             return $defaultReturn;
         }

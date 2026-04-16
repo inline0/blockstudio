@@ -10,6 +10,10 @@
 
 namespace Blockstudio;
 
+use Closure;
+use ReflectionMethod;
+use ReflectionObject;
+
 /**
  * Discovers, registers, and dispatches block functions defined in rpc.php files.
  *
@@ -391,27 +395,161 @@ class Rpc {
 
 		$definitions = include $fn_path;
 
+		if ( is_object( $definitions ) ) {
+			self::load_object_functions( $block_name, $definitions );
+			return;
+		}
+
 		if ( ! is_array( $definitions ) ) {
 			return;
 		}
 
 		foreach ( $definitions as $name => $definition ) {
-			if ( is_callable( $definition ) ) {
-				self::$functions[ $block_name ][ $name ] = array(
-					'callback'   => $definition,
-					'public'     => false,
-					'capability' => null,
-					'methods'    => array( 'POST' ),
-				);
-			} elseif ( is_array( $definition ) && isset( $definition['callback'] ) ) {
-				self::$functions[ $block_name ][ $name ] = array(
-					'callback'   => $definition['callback'],
-					'public'     => $definition['public'] ?? false,
-					'capability' => $definition['capability'] ?? null,
-					'methods'    => (array) ( $definition['methods'] ?? array( 'POST' ) ),
-				);
+			$normalized = self::normalize_function_definition( $definition );
+
+			if ( null !== $normalized ) {
+				self::$functions[ $block_name ][ $name ] = $normalized;
 			}
 		}
+	}
+
+	/**
+	 * Load attribute-based functions from an object definition.
+	 *
+	 * @param string $block_name  The block name.
+	 * @param object $definitions The returned object definition.
+	 *
+	 * @return void
+	 */
+	private static function load_object_functions( string $block_name, object $definitions ): void {
+		$reflection = new ReflectionObject( $definitions );
+
+		foreach ( $reflection->getMethods( ReflectionMethod::IS_PUBLIC ) as $method ) {
+			if ( $method->isConstructor() || $method->isDestructor() || $method->isStatic() ) {
+				continue;
+			}
+
+			$attributes = $method->getAttributes( Rpc_Definition::class );
+
+			if ( empty( $attributes ) ) {
+				continue;
+			}
+
+			/**
+			 * Attribute instances are guaranteed by Reflection.
+			 *
+			 * @var Rpc_Definition $attribute
+			 */
+			$attribute = $attributes[0]->newInstance();
+			$name      = null !== $attribute->name && '' !== $attribute->name
+				? $attribute->name
+				: self::normalize_function_name( $method->getName() );
+
+			self::$functions[ $block_name ][ $name ] = array(
+				'callback'   => Closure::fromCallable( array( $definitions, $method->getName() ) ),
+				'public'     => self::normalize_access( $attribute->access ),
+				'capability' => $attribute->capability,
+				'methods'    => self::normalize_methods( $attribute->methods ),
+			);
+		}
+	}
+
+	/**
+	 * Normalize a function name for attribute-based definitions.
+	 *
+	 * @param string $name The PHP method name.
+	 *
+	 * @return string
+	 */
+	private static function normalize_function_name( string $name ): string {
+		$normalized = preg_replace( '/(?<!^)[A-Z]/', '_$0', $name );
+
+		if ( ! is_string( $normalized ) || '' === $normalized ) {
+			return strtolower( $name );
+		}
+
+		return strtolower( $normalized );
+	}
+
+	/**
+	 * Normalize a legacy or PHP-native function definition.
+	 *
+	 * @param mixed $definition The function definition.
+	 *
+	 * @return array<string, mixed>|null
+	 */
+	private static function normalize_function_definition( mixed $definition ): ?array {
+		if ( is_callable( $definition ) ) {
+			return array(
+				'callback'   => $definition,
+				'public'     => false,
+				'capability' => null,
+				'methods'    => array( 'POST' ),
+			);
+		}
+
+		if ( ! is_array( $definition ) || empty( $definition['callback'] ) || ! is_callable( $definition['callback'] ) ) {
+			return null;
+		}
+
+		return array(
+			'callback'   => $definition['callback'],
+			'public'     => self::normalize_access( $definition['public'] ?? false ),
+			'capability' => $definition['capability'] ?? null,
+			'methods'    => self::normalize_methods( $definition['methods'] ?? array( 'POST' ) ),
+		);
+	}
+
+	/**
+	 * Normalize access values to the legacy runtime format.
+	 *
+	 * @param mixed $access The access value.
+	 *
+	 * @return bool|string
+	 */
+	private static function normalize_access( mixed $access ): bool|string {
+		if ( $access instanceof Rpc_Access ) {
+			return match ( $access ) {
+				Rpc_Access::Open => 'open',
+				Rpc_Access::Session => true,
+				Rpc_Access::Authenticated => false,
+			};
+		}
+
+		if ( 'session' === $access ) {
+			return true;
+		}
+
+		if ( 'open' === $access ) {
+			return 'open';
+		}
+
+		return true === $access;
+	}
+
+	/**
+	 * Normalize HTTP methods to uppercase strings.
+	 *
+	 * @param mixed $methods Raw method list.
+	 *
+	 * @return array<int, string>
+	 */
+	private static function normalize_methods( mixed $methods ): array {
+		$methods    = (array) $methods;
+		$normalized = array();
+
+		foreach ( $methods as $method ) {
+			if ( $method instanceof Http_Method ) {
+				$normalized[] = $method->value;
+				continue;
+			}
+
+			if ( is_string( $method ) && '' !== $method ) {
+				$normalized[] = strtoupper( $method );
+			}
+		}
+
+		return empty( $normalized ) ? array( 'POST' ) : array_values( array_unique( $normalized ) );
 	}
 
 	/**

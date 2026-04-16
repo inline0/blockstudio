@@ -19,7 +19,7 @@ use PHPStan\Rules\RuleErrorBuilder;
  */
 final class DbSchemaShapeRule implements Rule
 {
-    private const VALID_FIELD_TYPES = ['string', 'number', 'boolean', 'array', 'object'];
+    private const VALID_FIELD_TYPES = ['string', 'text', 'integer', 'number', 'boolean', 'array', 'object'];
 
     /** @var array<string, true> */
     private static array $validatedPaths = [];
@@ -61,9 +61,8 @@ final class DbSchemaShapeRule implements Rule
         }
 
         $errors = [];
-        $fields = $data['fields'];
 
-        if (empty($fields)) {
+        if ($data['schemas'] === []) {
             $errors[] = RuleErrorBuilder::message(sprintf(
                 'db.php missing or empty "fields": %s',
                 $path
@@ -71,31 +70,50 @@ final class DbSchemaShapeRule implements Rule
                 ->identifier('blockstudio.dbSchema.fields')
                 ->file($path)
                 ->build();
+
             return $errors;
         }
 
-        foreach ($fields as $name => $field) {
-            $type = $field['type'] ?? null;
-            if ($type === null) {
+        foreach ($data['schemas'] as $schemaName => $schema) {
+            $fields = $schema['fields'];
+
+            if (empty($fields)) {
                 $errors[] = RuleErrorBuilder::message(sprintf(
-                    'db.php field "%s" missing "type": %s',
-                    $name,
+                    'db.php schema "%s" missing or empty "fields": %s',
+                    $schemaName,
                     $path
                 ))
-                    ->identifier('blockstudio.dbSchema.type')
+                    ->identifier('blockstudio.dbSchema.fields')
                     ->file($path)
                     ->build();
-            } elseif (is_string($type) && !in_array($type, self::VALID_FIELD_TYPES, true)) {
-                $errors[] = RuleErrorBuilder::message(sprintf(
-                    'db.php field "%s" has invalid type "%s" (must be one of: %s) in %s',
-                    $name,
-                    $type,
-                    implode(', ', self::VALID_FIELD_TYPES),
-                    $path
-                ))
-                    ->identifier('blockstudio.dbSchema.type')
-                    ->file($path)
-                    ->build();
+                continue;
+            }
+
+            foreach ($fields as $name => $field) {
+                $type = $field['type'] ?? null;
+                if ($type === null) {
+                    $errors[] = RuleErrorBuilder::message(sprintf(
+                        'db.php schema "%s" field "%s" missing "type": %s',
+                        $schemaName,
+                        $name,
+                        $path
+                    ))
+                        ->identifier('blockstudio.dbSchema.type')
+                        ->file($path)
+                        ->build();
+                } elseif (is_string($type) && !in_array($type, self::VALID_FIELD_TYPES, true)) {
+                    $errors[] = RuleErrorBuilder::message(sprintf(
+                        'db.php schema "%s" field "%s" has invalid type "%s" (must be one of: %s) in %s',
+                        $schemaName,
+                        $name,
+                        $type,
+                        implode(', ', self::VALID_FIELD_TYPES),
+                        $path
+                    ))
+                        ->identifier('blockstudio.dbSchema.type')
+                        ->file($path)
+                        ->build();
+                }
             }
         }
 

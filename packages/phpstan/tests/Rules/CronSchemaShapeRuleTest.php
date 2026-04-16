@@ -35,6 +35,12 @@ final class CronSchemaShapeRuleTest extends RuleTestCase
         $this->analyse([$this->fixtureDir . '/blockstudio/app/index.php'], []);
     }
 
+    public function test_attribute_valid_cron_passes(): void
+    {
+        $this->fixtureDir = __DIR__ . '/data/cron-shape/attribute-valid';
+        $this->analyse([$this->fixtureDir . '/blockstudio/app/index.php'], []);
+    }
+
     public function test_missing_schedule_reported(): void
     {
         $this->fixtureDir = __DIR__ . '/data/cron-shape/missing-schedule';

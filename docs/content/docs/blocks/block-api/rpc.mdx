@@ -69,6 +69,45 @@ return [
 ];
 ```
 
+### PHP-native definitions
+
+If you prefer PHP-native metadata over nested arrays, `rpc.php` can also return
+an object with attributed methods. Arrays still work exactly the same.
+
+```php title="rpc.php"
+<?php
+use Blockstudio\Http_Method;
+use Blockstudio\Rpc_Access;
+use Blockstudio\Rpc_Definition as Rpc;
+
+return new class {
+    #[Rpc(access: Rpc_Access::Session)]
+    public function subscribe(array $params): array {
+        $email = sanitize_email($params['email'] ?? '');
+        return ['success' => !empty($email)];
+    }
+
+    #[Rpc(name: 'status', methods: [Http_Method::Get, Http_Method::Post])]
+    public function getStatus(array $params): array {
+        return ['status' => 'ok'];
+    }
+
+    #[Rpc(access: Rpc_Access::Open)]
+    public function webhook(array $params): array {
+        return ['received' => true];
+    }
+};
+```
+
+Notes:
+
+- Method names are normalized to lowercase snake case by default, so
+  `getStatus()` becomes `get_status`
+- Use `name:` to override the endpoint name explicitly
+- `Rpc_Access::Session` matches the old `'public' => true` behavior
+- `Rpc_Access::Open` matches the old `'public' => 'open'` behavior
+- Omit `access:` for the default authenticated-only behavior
+
 ## Calling from JavaScript
 
 Blockstudio auto-injects a `bs.fn()` helper on pages that have blocks with RPC

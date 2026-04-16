@@ -122,4 +122,26 @@ final class DbSchemaReaderTest extends TestCase
 
         $this->assertSame($first, $second);
     }
+
+    public function test_builder_schema_resolves_to_typed_record(): void
+    {
+        $type = $this->reader->getRecordType($this->dbDir . '/builder.php');
+
+        $this->assertNotNull($type);
+        $description = $type->describe(VerbosityLevel::precise());
+        $this->assertMatchesRegularExpression('/email:\s*string/', $description);
+        $this->assertMatchesRegularExpression('/count\??:\s*int\|null/', $description);
+        $this->assertMatchesRegularExpression('/active:\s*bool/', $description);
+        $this->assertMatchesRegularExpression('/notes\??:\s*string\|null/', $description);
+    }
+
+    public function test_multi_builder_schema_can_select_named_schema(): void
+    {
+        $type = $this->reader->getRecordType($this->dbDir . '/multi-builder.php', 'subscribers');
+
+        $this->assertNotNull($type);
+        $description = $type->describe(VerbosityLevel::precise());
+        $this->assertMatchesRegularExpression('/email:\s*string/', $description);
+        $this->assertMatchesRegularExpression('/active:\s*bool/', $description);
+    }
 }

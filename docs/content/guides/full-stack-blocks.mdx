@@ -12,6 +12,13 @@ and even the data itself.
 This guide builds two real applications to show the pattern: a per-user todo app
 and a public newsletter signup. Same file structure, different access models.
 
+The examples below use the array syntax because it's the most compact, but in
+7.2 all three PHP surfaces also have PHP-native alternatives:
+
+- `db.php` can use `Db_Schema` and `Db_Field`
+- `rpc.php` can return an object with `#[Rpc]` methods
+- `cron.php` can return an object with `#[Cron]` methods
+
 ## Todo App
 
 A per-user task manager. Each logged-in user sees only their own todos. Uses

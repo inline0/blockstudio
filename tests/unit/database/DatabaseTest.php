@@ -74,6 +74,11 @@ class DatabaseTest extends TestCase {
 		$this->assertArrayHasKey( 'blockstudio/type-db-multi:notes', $schemas );
 	}
 
+	public function test_get_all_contains_builder_schema(): void {
+		$schemas = Database::get_all();
+		$this->assertArrayHasKey( 'blockstudio/type-db-builder:default', $schemas );
+	}
+
 	public function test_get_all_contains_user_scoped_schema(): void {
 		$schemas = Database::get_all();
 		$this->assertArrayHasKey( 'blockstudio/type-db-user-scoped:default', $schemas );
@@ -98,6 +103,20 @@ class DatabaseTest extends TestCase {
 		$this->assertSame( 'sqlite', $schemas['blockstudio/type-db-sqlite:default']['storage'] );
 	}
 
+	public function test_builder_schema_normalizes_field_builders(): void {
+		$schemas  = Database::get_all();
+		$builder  = $schemas['blockstudio/type-db-builder:default'];
+
+		$this->assertSame( 'table', $builder['storage'] );
+		$this->assertSame( 'string', $builder['fields']['title']['type'] );
+		$this->assertTrue( $builder['fields']['title']['required'] );
+		$this->assertSame( 'integer', $builder['fields']['count']['type'] );
+		$this->assertSame( 0, $builder['fields']['count']['default'] );
+		$this->assertSame( 'boolean', $builder['fields']['active']['type'] );
+		$this->assertFalse( $builder['fields']['active']['default'] );
+		$this->assertSame( 'text', $builder['fields']['notes']['type'] );
+	}
+
 	public function test_get_all_user_scoped_schema_has_user_id_field(): void {
 		$schemas = Database::get_all();
 		$scoped  = $schemas['blockstudio/type-db-user-scoped:default'];
@@ -116,6 +135,11 @@ class DatabaseTest extends TestCase {
 
 	public function test_db_get_returns_instance_for_valid_block(): void {
 		$db = Db::get( 'blockstudio/type-db-table' );
+		$this->assertInstanceOf( Db::class, $db );
+	}
+
+	public function test_db_get_returns_instance_for_builder_block(): void {
+		$db = Db::get( 'blockstudio/type-db-builder' );
 		$this->assertInstanceOf( Db::class, $db );
 	}
 
@@ -159,6 +183,16 @@ class DatabaseTest extends TestCase {
 		$this->assertArrayHasKey( 'created_at', $record );
 		$this->assertArrayHasKey( 'updated_at', $record );
 		$this->assertNotEmpty( $record['created_at'] );
+	}
+
+	public function test_builder_schema_create_returns_record_with_defaults(): void {
+		$db     = Db::get( 'blockstudio/type-db-builder' );
+		$record = $db->create( array( 'title' => 'Builder test' ) );
+		$this->track_record( 'blockstudio/type-db-builder:default', $record );
+
+		$this->assertSame( 'Builder test', $record['title'] );
+		$this->assertEquals( 0, $record['count'] );
+		$this->assertEquals( 0, $record['active'] );
 	}
 
 	public function test_table_create_applies_defaults(): void {

@@ -44,6 +44,15 @@ final class RpcSchemaShapeRuleTest extends RuleTestCase
         );
     }
 
+    public function test_attribute_valid_rpc_passes(): void
+    {
+        $this->fixtureDir = __DIR__ . '/data/rpc-shape/attribute-valid';
+        $this->analyse(
+            [$this->fixtureDir . '/blockstudio/api/index.php'],
+            []
+        );
+    }
+
     public function test_invalid_method_reported(): void
     {
         $this->fixtureDir = __DIR__ . '/data/rpc-shape/invalid-method';

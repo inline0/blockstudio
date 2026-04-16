@@ -44,6 +44,15 @@ final class DbSchemaShapeRuleTest extends RuleTestCase
         );
     }
 
+    public function test_builder_valid_db_passes(): void
+    {
+        $this->fixtureDir = __DIR__ . '/data/db-shape/builder-valid';
+        $this->analyse(
+            [$this->fixtureDir . '/blockstudio/users/index.php'],
+            []
+        );
+    }
+
     public function test_missing_fields_reported(): void
     {
         $this->fixtureDir = __DIR__ . '/data/db-shape/missing-fields';

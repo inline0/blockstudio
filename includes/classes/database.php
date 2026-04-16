@@ -2120,6 +2120,8 @@ class Database {
 
 		$definition = include $db_path;
 
+		$definition = self::normalize_database_definition( $definition );
+
 		if ( ! is_array( $definition ) ) {
 			return;
 		}
@@ -2140,6 +2142,93 @@ class Database {
 				self::collect_realtime( $schema, $block_name, $schema_name );
 			}
 		}
+	}
+
+	/**
+	 * Normalize database definitions from arrays or PHP-native schema objects.
+	 *
+	 * @param mixed $definition The raw included definition.
+	 *
+	 * @return array<string, mixed>|null
+	 */
+	private static function normalize_database_definition( mixed $definition ): ?array {
+		if ( $definition instanceof Definition_Interface ) {
+			$definition = $definition->to_array();
+		}
+
+		if ( ! is_array( $definition ) ) {
+			return null;
+		}
+
+		if ( isset( $definition['fields'] ) ) {
+			return self::normalize_schema_definition( $definition );
+		}
+
+		$schemas = array();
+
+		foreach ( $definition as $schema_name => $schema ) {
+			$normalized = self::normalize_schema_definition( $schema );
+
+			if ( null !== $normalized ) {
+				$schemas[ $schema_name ] = $normalized;
+			}
+		}
+
+		return $schemas;
+	}
+
+	/**
+	 * Normalize a single schema definition.
+	 *
+	 * @param mixed $schema The raw schema definition.
+	 *
+	 * @return array<string, mixed>|null
+	 */
+	private static function normalize_schema_definition( mixed $schema ): ?array {
+		if ( $schema instanceof Definition_Interface ) {
+			$schema = $schema->to_array();
+		}
+
+		if ( ! is_array( $schema ) ) {
+			return null;
+		}
+
+		if ( isset( $schema['storage'] ) && $schema['storage'] instanceof Db_Storage ) {
+			$schema['storage'] = $schema['storage']->value;
+		}
+
+		if ( ! isset( $schema['fields'] ) || ! is_array( $schema['fields'] ) ) {
+			return $schema;
+		}
+
+		$fields = array();
+
+		foreach ( $schema['fields'] as $field_name => $field_definition ) {
+			$normalized = self::normalize_field_definition( $field_definition );
+
+			if ( null !== $normalized ) {
+				$fields[ $field_name ] = $normalized;
+			}
+		}
+
+		$schema['fields'] = $fields;
+
+		return $schema;
+	}
+
+	/**
+	 * Normalize a single field definition.
+	 *
+	 * @param mixed $field_definition The raw field definition.
+	 *
+	 * @return array<string, mixed>|null
+	 */
+	private static function normalize_field_definition( mixed $field_definition ): ?array {
+		if ( $field_definition instanceof Definition_Interface ) {
+			$field_definition = $field_definition->to_array();
+		}
+
+		return is_array( $field_definition ) ? $field_definition : null;
 	}
 
 	/**
@@ -2219,6 +2308,8 @@ class Database {
 
 		$schema  = self::$schemas[ $key ];
 		$storage = $schema['storage'] ?? 'table';
+
+		self::ensure_storage( $key, $schema );
 
 		switch ( $operation ) {
 			case 'create':

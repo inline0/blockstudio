@@ -61,6 +61,26 @@ final class RpcSchemaReaderTest extends TestCase
         $this->assertSame('open', $functions['open_endpoint']['public']);
     }
 
+    public function test_attribute_syntax_extracts_function_names(): void
+    {
+        $functions = $this->reader->getFunctions($this->rpcDir . '/attribute.php');
+
+        $this->assertNotNull($functions);
+        $this->assertArrayHasKey('subscribe', $functions);
+        $this->assertArrayHasKey('configured', $functions);
+        $this->assertArrayHasKey('open_endpoint', $functions);
+    }
+
+    public function test_attribute_syntax_normalizes_methods_and_access(): void
+    {
+        $functions = $this->reader->getFunctions($this->rpcDir . '/attribute.php');
+
+        $this->assertNotNull($functions);
+        $this->assertTrue($functions['subscribe']['public']);
+        $this->assertSame(['POST', 'GET'], $functions['configured']['methods']);
+        $this->assertSame('open', $functions['open_endpoint']['public']);
+    }
+
     public function test_missing_file_returns_null(): void
     {
         $result = $this->reader->getFunctions($this->rpcDir . '/nonexistent.php');

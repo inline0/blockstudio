@@ -78,6 +78,11 @@ class RpcTest extends TestCase {
 		$this->assertArrayHasKey( 'blockstudio/type-functions', $all );
 	}
 
+	public function test_get_all_contains_php_native_test_block(): void {
+		$all = Rpc::get_all();
+		$this->assertArrayHasKey( 'blockstudio/type-functions-php', $all );
+	}
+
 	public function test_discovered_functions_include_greet(): void {
 		$all       = Rpc::get_all();
 		$functions = $all['blockstudio/type-functions'];
@@ -117,6 +122,30 @@ class RpcTest extends TestCase {
 	public function test_discovered_functions_include_get_status(): void {
 		$all       = Rpc::get_all();
 		$functions = $all['blockstudio/type-functions'];
+		$this->assertArrayHasKey( 'get_status', $functions );
+	}
+
+	public function test_php_native_functions_include_greet(): void {
+		$all       = Rpc::get_all();
+		$functions = $all['blockstudio/type-functions-php'];
+		$this->assertArrayHasKey( 'greet', $functions );
+	}
+
+	public function test_php_native_functions_include_webhook(): void {
+		$all       = Rpc::get_all();
+		$functions = $all['blockstudio/type-functions-php'];
+		$this->assertArrayHasKey( 'webhook', $functions );
+	}
+
+	public function test_php_native_functions_include_admin_panel(): void {
+		$all       = Rpc::get_all();
+		$functions = $all['blockstudio/type-functions-php'];
+		$this->assertArrayHasKey( 'admin_panel', $functions );
+	}
+
+	public function test_php_native_functions_normalize_method_name(): void {
+		$all       = Rpc::get_all();
+		$functions = $all['blockstudio/type-functions-php'];
 		$this->assertArrayHasKey( 'get_status', $functions );
 	}
 
@@ -167,10 +196,42 @@ class RpcTest extends TestCase {
 		$this->assertSame( array( 'GET', 'POST' ), $status['methods'] );
 	}
 
+	public function test_php_native_greet_uses_session_access(): void {
+		$all   = Rpc::get_all();
+		$greet = $all['blockstudio/type-functions-php']['greet'];
+
+		$this->assertTrue( $greet['public'] );
+	}
+
+	public function test_php_native_webhook_uses_open_access(): void {
+		$all     = Rpc::get_all();
+		$webhook = $all['blockstudio/type-functions-php']['webhook'];
+
+		$this->assertSame( 'open', $webhook['public'] );
+	}
+
+	public function test_php_native_admin_panel_has_capability(): void {
+		$all   = Rpc::get_all();
+		$admin = $all['blockstudio/type-functions-php']['admin_panel'];
+
+		$this->assertSame( 'manage_options', $admin['capability'] );
+	}
+
+	public function test_php_native_status_has_multiple_methods(): void {
+		$all    = Rpc::get_all();
+		$status = $all['blockstudio/type-functions-php']['get_status'];
+
+		$this->assertSame( array( 'GET', 'POST' ), $status['methods'] );
+	}
+
 	// has_functions
 
 	public function test_has_functions_returns_true_for_test_block(): void {
 		$this->assertTrue( Rpc::has_functions( 'blockstudio/type-functions' ) );
+	}
+
+	public function test_has_functions_returns_true_for_php_native_block(): void {
+		$this->assertTrue( Rpc::has_functions( 'blockstudio/type-functions-php' ) );
 	}
 
 	public function test_has_functions_returns_false_for_nonexistent_block(): void {
@@ -216,6 +277,26 @@ class RpcTest extends TestCase {
 
 	public function test_call_get_status_function(): void {
 		$result = Rpc::call( 'blockstudio/type-functions', 'get_status', array() );
+		$this->assertSame( array( 'status' => 'ok' ), $result );
+	}
+
+	public function test_call_php_native_greet_with_params(): void {
+		$result = Rpc::call( 'blockstudio/type-functions-php', 'greet', array( 'name' => 'Alice' ) );
+		$this->assertSame( array( 'message' => 'Hello from PHP, Alice!' ), $result );
+	}
+
+	public function test_call_php_native_webhook_function(): void {
+		$result = Rpc::call( 'blockstudio/type-functions-php', 'webhook', array( 'value' => 42 ) );
+		$this->assertSame( array( 'open' => true, 'echo' => 42 ), $result );
+	}
+
+	public function test_call_php_native_admin_panel_function(): void {
+		$result = Rpc::call( 'blockstudio/type-functions-php', 'admin_panel', array() );
+		$this->assertSame( array( 'admin' => true ), $result );
+	}
+
+	public function test_call_php_native_status_function(): void {
+		$result = Rpc::call( 'blockstudio/type-functions-php', 'get_status', array() );
 		$this->assertSame( array( 'status' => 'ok' ), $result );
 	}
 
