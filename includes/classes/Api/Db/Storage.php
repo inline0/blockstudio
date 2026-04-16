@@ -1,19 +1,10 @@
 <?php
 /**
- * Database storage enum.
+ * Backward compatibility alias for DB storage.
  *
  * @package Blockstudio
  */
 
 namespace Blockstudio\Api\Db;
 
-/**
- * Supported database storage backends.
- */
-enum Storage: string {
-	case Table    = 'table';
-	case Sqlite   = 'sqlite';
-	case Jsonc    = 'jsonc';
-	case Meta     = 'meta';
-	case PostType = 'post_type';
-}
+class_alias( \Blockstudio\Db\Storage::class, __NAMESPACE__ . '\Storage' );

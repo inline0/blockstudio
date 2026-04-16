@@ -1,7 +1,7 @@
 <?php
 
-use Blockstudio\Api\Attributes\Cron;
-use Blockstudio\Api\Cron\Schedule;
+use Blockstudio\Attributes\Cron;
+use Blockstudio\Cron\Schedule;
 
 return new class {
 	#[Cron( schedule: Schedule::Hourly )]

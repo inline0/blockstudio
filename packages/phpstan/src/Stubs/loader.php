@@ -8,6 +8,15 @@ declare(strict_types=1);
 
 require_once __DIR__ . '/functions.php';
 require_once __DIR__ . '/Db.php';
+require_once __DIR__ . '/Definition.php';
+require_once __DIR__ . '/Db/Storage.php';
+require_once __DIR__ . '/Db/Field.php';
+require_once __DIR__ . '/Db/Schema.php';
+require_once __DIR__ . '/Rpc/Method.php';
+require_once __DIR__ . '/Rpc/Access.php';
+require_once __DIR__ . '/Cron/Schedule.php';
+require_once __DIR__ . '/Attributes/Rpc.php';
+require_once __DIR__ . '/Attributes/Cron.php';
 require_once __DIR__ . '/Api/Definition.php';
 require_once __DIR__ . '/Api/Db/Storage.php';
 require_once __DIR__ . '/Api/Db/Field.php';

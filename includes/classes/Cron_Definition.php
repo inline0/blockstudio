@@ -1,10 +1,10 @@
 <?php
 /**
- * Backward compatibility alias for the public cron attribute API.
+ * Backward compatibility alias for the cron attribute.
  *
  * @package Blockstudio
  */
 
 namespace Blockstudio;
 
-class_alias( \Blockstudio\Api\Attributes\Cron::class, __NAMESPACE__ . '\Cron_Definition' );
+class_alias( \Blockstudio\Attributes\Cron::class, __NAMESPACE__ . '\Cron_Definition' );

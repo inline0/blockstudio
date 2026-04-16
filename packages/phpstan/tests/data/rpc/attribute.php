@@ -1,8 +1,8 @@
 <?php
 
-use Blockstudio\Api\Attributes\Rpc;
-use Blockstudio\Api\Rpc\Access;
-use Blockstudio\Api\Rpc\Method;
+use Blockstudio\Attributes\Rpc;
+use Blockstudio\Rpc\Access;
+use Blockstudio\Rpc\Method;
 
 return new class {
     #[Rpc(access: Access::Session)]

@@ -2,10 +2,4 @@
 
 namespace Blockstudio\Api;
 
-interface Definition
-{
-    /**
-     * @return array<string, mixed>
-     */
-    public function to_array(): array;
-}
+class_alias(\Blockstudio\Definition::class, __NAMESPACE__ . '\Definition');

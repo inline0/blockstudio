@@ -62,8 +62,8 @@ cleaner PHP-native surface while keeping the existing array syntax intact.
 
 ```php title="cron.php"
 <?php
-use Blockstudio\Api\Attributes\Cron;
-use Blockstudio\Api\Cron\Schedule;
+use Blockstudio\Attributes\Cron;
+use Blockstudio\Cron\Schedule;
 
 return new class {
     #[Cron(schedule: Schedule::Hourly)]

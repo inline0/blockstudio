@@ -1,10 +1,10 @@
 <?php
 /**
- * Backward compatibility alias for the public RPC attribute API.
+ * Backward compatibility alias for the RPC attribute.
  *
  * @package Blockstudio
  */
 
 namespace Blockstudio;
 
-class_alias( \Blockstudio\Api\Attributes\Rpc::class, __NAMESPACE__ . '\Rpc_Definition' );
+class_alias( \Blockstudio\Attributes\Rpc::class, __NAMESPACE__ . '\Rpc_Definition' );

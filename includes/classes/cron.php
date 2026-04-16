@@ -7,8 +7,8 @@
 
 namespace Blockstudio;
 
-use Blockstudio\Api\Attributes\Cron as Cron_Attribute;
-use Blockstudio\Api\Cron\Schedule;
+use Blockstudio\Attributes\Cron as Cron_Attribute;
+use Blockstudio\Cron\Schedule;
 use Closure;
 use ReflectionMethod;
 use ReflectionObject;

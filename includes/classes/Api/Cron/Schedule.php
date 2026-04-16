@@ -1,18 +1,10 @@
 <?php
 /**
- * Cron schedule enum.
+ * Backward compatibility alias for cron schedules.
  *
  * @package Blockstudio
  */
 
 namespace Blockstudio\Api\Cron;
 
-/**
- * Supported WordPress cron schedules.
- */
-enum Schedule: string {
-	case Hourly     = 'hourly';
-	case TwiceDaily = 'twicedaily';
-	case Daily      = 'daily';
-	case Weekly     = 'weekly';
-}
+class_alias( \Blockstudio\Cron\Schedule::class, __NAMESPACE__ . '\Schedule' );

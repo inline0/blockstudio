@@ -10,9 +10,9 @@
 
 namespace Blockstudio;
 
-use Blockstudio\Api\Attributes\Rpc as Rpc_Attribute;
-use Blockstudio\Api\Rpc\Access;
-use Blockstudio\Api\Rpc\Method;
+use Blockstudio\Attributes\Rpc as Rpc_Attribute;
+use Blockstudio\Rpc\Access;
+use Blockstudio\Rpc\Method;
 use Closure;
 use ReflectionMethod;
 use ReflectionObject;

@@ -2,9 +2,4 @@
 
 namespace Blockstudio\Api\Rpc;
 
-enum Access: string
-{
-    case Authenticated = 'authenticated';
-    case Session = 'session';
-    case Open = 'open';
-}
+class_alias(\Blockstudio\Rpc\Access::class, __NAMESPACE__ . '\Access');

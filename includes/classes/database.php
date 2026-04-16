@@ -10,8 +10,8 @@
 
 namespace Blockstudio;
 
-use Blockstudio\Api\Db\Storage;
-use Blockstudio\Api\Definition;
+use Blockstudio\Db\Storage;
+use Blockstudio\Definition;
 
 /**
  * Discovers db.php files, manages storage, and registers REST endpoints.

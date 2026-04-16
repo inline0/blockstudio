@@ -268,9 +268,9 @@ For `rpc.php`, return an object with attributed methods:
 
 ```php title="rpc.php"
 <?php
-use Blockstudio\Api\Attributes\Rpc;
-use Blockstudio\Api\Rpc\Access;
-use Blockstudio\Api\Rpc\Method;
+use Blockstudio\Attributes\Rpc;
+use Blockstudio\Rpc\Access;
+use Blockstudio\Rpc\Method;
 
 return new class {
     #[Rpc(access: Access::Session)]
@@ -289,8 +289,8 @@ For `cron.php`, the same idea works with `#[Cron]`:
 
 ```php title="cron.php"
 <?php
-use Blockstudio\Api\Attributes\Cron;
-use Blockstudio\Api\Cron\Schedule;
+use Blockstudio\Attributes\Cron;
+use Blockstudio\Cron\Schedule;
 
 return new class {
     #[Cron(schedule: Schedule::Hourly)]
@@ -303,9 +303,9 @@ And for `db.php`, there's now a small builder layer:
 
 ```php title="db.php"
 <?php
-use Blockstudio\Api\Db\Field;
-use Blockstudio\Api\Db\Schema;
-use Blockstudio\Api\Db\Storage;
+use Blockstudio\Db\Field;
+use Blockstudio\Db\Schema;
+use Blockstudio\Db\Storage;
 
 return Schema::make(
     storage: Storage::Table,

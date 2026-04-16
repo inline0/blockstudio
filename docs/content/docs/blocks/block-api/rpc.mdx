@@ -76,9 +76,9 @@ an object with attributed methods. Arrays still work exactly the same.
 
 ```php title="rpc.php"
 <?php
-use Blockstudio\Api\Attributes\Rpc;
-use Blockstudio\Api\Rpc\Access;
-use Blockstudio\Api\Rpc\Method;
+use Blockstudio\Attributes\Rpc;
+use Blockstudio\Rpc\Access;
+use Blockstudio\Rpc\Method;
 
 return new class {
     #[Rpc(access: Access::Session)]

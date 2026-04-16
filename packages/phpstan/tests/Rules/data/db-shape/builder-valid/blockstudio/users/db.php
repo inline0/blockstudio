@@ -1,8 +1,8 @@
 <?php
 
-use Blockstudio\Api\Db\Field;
-use Blockstudio\Api\Db\Schema;
-use Blockstudio\Api\Db\Storage;
+use Blockstudio\Db\Field;
+use Blockstudio\Db\Schema;
+use Blockstudio\Db\Storage;
 
 return Schema::make(
     storage: Storage::Table,

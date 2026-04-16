@@ -2,10 +2,4 @@
 
 namespace Blockstudio\Api\Cron;
 
-enum Schedule: string
-{
-    case Hourly = 'hourly';
-    case TwiceDaily = 'twicedaily';
-    case Daily = 'daily';
-    case Weekly = 'weekly';
-}
+class_alias(\Blockstudio\Cron\Schedule::class, __NAMESPACE__ . '\Schedule');

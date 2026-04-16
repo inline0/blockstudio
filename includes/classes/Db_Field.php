@@ -1,10 +1,10 @@
 <?php
 /**
- * Backward compatibility alias for the public DB field API.
+ * Backward compatibility alias for DB field definitions.
  *
  * @package Blockstudio
  */
 
 namespace Blockstudio;
 
-class_alias( \Blockstudio\Api\Db\Field::class, __NAMESPACE__ . '\Db_Field' );
+class_alias( \Blockstudio\Db\Field::class, __NAMESPACE__ . '\Db_Field' );

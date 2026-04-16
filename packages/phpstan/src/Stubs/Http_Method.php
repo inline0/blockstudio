@@ -2,4 +2,4 @@
 
 namespace Blockstudio;
 
-class_alias(\Blockstudio\Api\Rpc\Method::class, __NAMESPACE__ . '\Http_Method');
+class_alias(\Blockstudio\Rpc\Method::class, __NAMESPACE__ . '\Http_Method');
