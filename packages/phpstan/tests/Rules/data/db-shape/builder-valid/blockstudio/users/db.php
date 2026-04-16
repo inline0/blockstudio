@@ -1,11 +1,11 @@
 <?php
 
-use Blockstudio\Db_Field as Field;
-use Blockstudio\Db_Schema as Schema;
-use Blockstudio\Db_Storage;
+use Blockstudio\Api\Db\Field;
+use Blockstudio\Api\Db\Schema;
+use Blockstudio\Api\Db\Storage;
 
 return Schema::make(
-    storage: Db_Storage::Table,
+    storage: Storage::Table,
     fields: [
         'name' => Field::string(required: true),
         'age' => Field::integer(),

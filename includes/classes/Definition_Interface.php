@@ -1,21 +1,10 @@
 <?php
 /**
- * Definition interface.
+ * Backward compatibility alias for the public API definition interface.
  *
  * @package Blockstudio
  */
 
 namespace Blockstudio;
 
-/**
- * Converts PHP-native definition objects into legacy array definitions.
- */
-interface Definition_Interface {
-
-	/**
-	 * Convert the definition into the legacy array format.
-	 *
-	 * @return array<string, mixed>
-	 */
-	public function to_array(): array;
-}
+class_alias( \Blockstudio\Api\Definition::class, __NAMESPACE__ . '\Definition_Interface' );

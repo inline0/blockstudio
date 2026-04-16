@@ -268,17 +268,17 @@ For `rpc.php`, return an object with attributed methods:
 
 ```php title="rpc.php"
 <?php
-use Blockstudio\Http_Method;
-use Blockstudio\Rpc_Access;
-use Blockstudio\Rpc_Definition as Rpc;
+use Blockstudio\Api\Attributes\Rpc;
+use Blockstudio\Api\Rpc\Access;
+use Blockstudio\Api\Rpc\Method;
 
 return new class {
-    #[Rpc(access: Rpc_Access::Session)]
+    #[Rpc(access: Access::Session)]
     public function subscribe(array $params): array {
         return ['success' => true];
     }
 
-    #[Rpc(name: 'status', methods: [Http_Method::Get, Http_Method::Post])]
+    #[Rpc(name: 'status', methods: [Method::Get, Method::Post])]
     public function getStatus(array $params): array {
         return ['status' => 'ok'];
     }
@@ -289,11 +289,11 @@ For `cron.php`, the same idea works with `#[Cron]`:
 
 ```php title="cron.php"
 <?php
-use Blockstudio\Cron_Definition as Cron;
-use Blockstudio\Cron_Schedule;
+use Blockstudio\Api\Attributes\Cron;
+use Blockstudio\Api\Cron\Schedule;
 
 return new class {
-    #[Cron(schedule: Cron_Schedule::Hourly)]
+    #[Cron(schedule: Schedule::Hourly)]
     public function heartbeat(): void {
     }
 };
@@ -303,12 +303,12 @@ And for `db.php`, there's now a small builder layer:
 
 ```php title="db.php"
 <?php
-use Blockstudio\Db_Field as Field;
-use Blockstudio\Db_Schema as Schema;
-use Blockstudio\Db_Storage;
+use Blockstudio\Api\Db\Field;
+use Blockstudio\Api\Db\Schema;
+use Blockstudio\Api\Db\Storage;
 
 return Schema::make(
-    storage: Db_Storage::Table,
+    storage: Storage::Table,
     fields: [
         'email' => Field::string(required: true, format: 'email'),
         'active' => Field::boolean(default: false),

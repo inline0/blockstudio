@@ -1,17 +1,17 @@
 <?php
 
-use Blockstudio\Http_Method;
-use Blockstudio\Rpc_Access;
-use Blockstudio\Rpc_Definition as Rpc;
+use Blockstudio\Api\Attributes\Rpc;
+use Blockstudio\Api\Rpc\Access;
+use Blockstudio\Api\Rpc\Method;
 
 return new class {
-    #[Rpc(access: Rpc_Access::Session)]
+    #[Rpc(access: Access::Session)]
     public function subscribe(array $params): array
     {
         return [];
     }
 
-    #[Rpc(name: 'status', methods: [Http_Method::Get, Http_Method::Post])]
+    #[Rpc(name: 'status', methods: [Method::Get, Method::Post])]
     public function getStatus(array $params): array
     {
         return [];

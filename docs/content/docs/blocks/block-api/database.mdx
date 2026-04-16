@@ -55,12 +55,12 @@ more discoverable PHP-native option when the schema starts getting larger.
 
 ```php title="db.php"
 <?php
-use Blockstudio\Db_Field as Field;
-use Blockstudio\Db_Schema as Schema;
-use Blockstudio\Db_Storage;
+use Blockstudio\Api\Db\Field;
+use Blockstudio\Api\Db\Schema;
+use Blockstudio\Api\Db\Storage;
 
 return Schema::make(
-    storage: Db_Storage::Table,
+    storage: Storage::Table,
     capability: [
         'create' => true,
         'read'   => true,

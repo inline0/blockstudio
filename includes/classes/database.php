@@ -10,6 +10,9 @@
 
 namespace Blockstudio;
 
+use Blockstudio\Api\Db\Storage;
+use Blockstudio\Api\Definition;
+
 /**
  * Discovers db.php files, manages storage, and registers REST endpoints.
  *
@@ -2152,7 +2155,7 @@ class Database {
 	 * @return array<string, mixed>|null
 	 */
 	private static function normalize_database_definition( mixed $definition ): ?array {
-		if ( $definition instanceof Definition_Interface ) {
+		if ( $definition instanceof Definition ) {
 			$definition = $definition->to_array();
 		}
 
@@ -2185,7 +2188,7 @@ class Database {
 	 * @return array<string, mixed>|null
 	 */
 	private static function normalize_schema_definition( mixed $schema ): ?array {
-		if ( $schema instanceof Definition_Interface ) {
+		if ( $schema instanceof Definition ) {
 			$schema = $schema->to_array();
 		}
 
@@ -2193,7 +2196,7 @@ class Database {
 			return null;
 		}
 
-		if ( isset( $schema['storage'] ) && $schema['storage'] instanceof Db_Storage ) {
+		if ( isset( $schema['storage'] ) && $schema['storage'] instanceof Storage ) {
 			$schema['storage'] = $schema['storage']->value;
 		}
 
@@ -2224,7 +2227,7 @@ class Database {
 	 * @return array<string, mixed>|null
 	 */
 	private static function normalize_field_definition( mixed $field_definition ): ?array {
-		if ( $field_definition instanceof Definition_Interface ) {
+		if ( $field_definition instanceof Definition ) {
 			$field_definition = $field_definition->to_array();
 		}
 

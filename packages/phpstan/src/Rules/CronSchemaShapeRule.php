@@ -275,7 +275,7 @@ final class CronSchemaShapeRule implements Rule
             return null;
         }
 
-        if ($node->class->getLast() !== 'Cron_Schedule') {
+        if (!in_array($node->class->getLast(), ['Schedule', 'Cron_Schedule'], true)) {
             return null;
         }
 

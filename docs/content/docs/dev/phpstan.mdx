@@ -96,7 +96,7 @@ echo $record['typo'];  // Error: Offset 'typo' does not exist
 
 Required fields are non-nullable. Optional fields are `type|null`. An `id`
 field (int) is always present. The same typing works for the PHP-native
-`Db_Schema` / `Db_Field` builder syntax.
+`Blockstudio\\Api\\Db\\Schema` / `Blockstudio\\Api\\Db\\Field` builder syntax.
 
 ### Settings path validation
 
@@ -148,7 +148,7 @@ The extension validates every Blockstudio schema file in the project.
 **db.php**:
 - Missing `fields` array
 - Invalid field types
-- Supports both legacy arrays and `Db_Schema` / `Db_Field`
+- Supports both legacy arrays and `Blockstudio\\Api\\Db\\Schema` / `Blockstudio\\Api\\Db\\Field`
 
 **rpc.php**:
 - Invalid HTTP methods

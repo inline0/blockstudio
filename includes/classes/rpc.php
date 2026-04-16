@@ -10,6 +10,9 @@
 
 namespace Blockstudio;
 
+use Blockstudio\Api\Attributes\Rpc as Rpc_Attribute;
+use Blockstudio\Api\Rpc\Access;
+use Blockstudio\Api\Rpc\Method;
 use Closure;
 use ReflectionMethod;
 use ReflectionObject;
@@ -429,7 +432,7 @@ class Rpc {
 				continue;
 			}
 
-			$attributes = $method->getAttributes( Rpc_Definition::class );
+			$attributes = $method->getAttributes( Rpc_Attribute::class, \ReflectionAttribute::IS_INSTANCEOF );
 
 			if ( empty( $attributes ) ) {
 				continue;
@@ -438,7 +441,7 @@ class Rpc {
 			/**
 			 * Attribute instances are guaranteed by Reflection.
 			 *
-			 * @var Rpc_Definition $attribute
+			 * @var Rpc_Attribute $attribute
 			 */
 			$attribute = $attributes[0]->newInstance();
 			$name      = null !== $attribute->name && '' !== $attribute->name
@@ -508,11 +511,11 @@ class Rpc {
 	 * @return bool|string
 	 */
 	private static function normalize_access( mixed $access ): bool|string {
-		if ( $access instanceof Rpc_Access ) {
+		if ( $access instanceof Access ) {
 			return match ( $access ) {
-				Rpc_Access::Open => 'open',
-				Rpc_Access::Session => true,
-				Rpc_Access::Authenticated => false,
+				Access::Open => 'open',
+				Access::Session => true,
+				Access::Authenticated => false,
 			};
 		}
 
@@ -539,7 +542,7 @@ class Rpc {
 		$normalized = array();
 
 		foreach ( $methods as $method ) {
-			if ( $method instanceof Http_Method ) {
+			if ( $method instanceof Method ) {
 				$normalized[] = $method->value;
 				continue;
 			}

@@ -7,6 +7,8 @@
 
 namespace Blockstudio;
 
+use Blockstudio\Api\Attributes\Cron as Cron_Attribute;
+use Blockstudio\Api\Cron\Schedule;
 use Closure;
 use ReflectionMethod;
 use ReflectionObject;
@@ -180,7 +182,7 @@ class Cron {
 				continue;
 			}
 
-			$attributes = $method->getAttributes( Cron_Definition::class );
+			$attributes = $method->getAttributes( Cron_Attribute::class, \ReflectionAttribute::IS_INSTANCEOF );
 
 			if ( empty( $attributes ) ) {
 				continue;
@@ -189,7 +191,7 @@ class Cron {
 			/**
 			 * Attribute instances are guaranteed by Reflection.
 			 *
-			 * @var Cron_Definition $attribute
+			 * @var Cron_Attribute $attribute
 			 */
 			$attribute = $attributes[0]->newInstance();
 			$name      = null !== $attribute->name && '' !== $attribute->name
@@ -253,7 +255,7 @@ class Cron {
 	 * @return string
 	 */
 	private static function normalize_schedule( mixed $schedule ): string {
-		if ( $schedule instanceof Cron_Schedule ) {
+		if ( $schedule instanceof Schedule ) {
 			return $schedule->value;
 		}
 

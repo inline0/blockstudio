@@ -1,17 +1,10 @@
 <?php
 /**
- * RPC access enum.
+ * Backward compatibility alias for the public RPC access API.
  *
  * @package Blockstudio
  */
 
 namespace Blockstudio;
 
-/**
- * Access modes for RPC definitions.
- */
-enum Rpc_Access: string {
-	case Authenticated = 'authenticated';
-	case Session       = 'session';
-	case Open          = 'open';
-}
+class_alias( \Blockstudio\Api\Rpc\Access::class, __NAMESPACE__ . '\Rpc_Access' );

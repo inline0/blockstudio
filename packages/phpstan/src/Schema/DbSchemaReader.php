@@ -28,7 +28,7 @@ use PHPStan\Type\TypeCombinator;
 
 /**
  * Reads a db.php file safely via AST parsing (no eval).
- * Extracts field shapes from legacy arrays and Db_Schema/Db_Field builders.
+ * Extracts field shapes from legacy arrays and PHP-native schema builders.
  */
 final class DbSchemaReader
 {
@@ -286,11 +286,11 @@ final class DbSchemaReader
         $methodName = $node->name->toString();
         $args = $this->argsToMap($node->args);
 
-        if (in_array($className, ['Db_Schema', 'Schema'], true) && $methodName === 'make') {
+        if (in_array($className, ['Schema', 'Db_Schema'], true) && $methodName === 'make') {
             return $this->parseSchemaBuilderCall($args);
         }
 
-        if (in_array($className, ['Db_Field', 'Field'], true)) {
+        if (in_array($className, ['Field', 'Db_Field'], true)) {
             return $this->parseFieldBuilderCall($methodName, $args);
         }
 
@@ -446,7 +446,7 @@ final class DbSchemaReader
         $constName = $node->name->toString();
 
         return match ($className) {
-            'Db_Storage' => match ($constName) {
+            'Storage', 'Db_Storage' => match ($constName) {
                 'Table' => 'table',
                 'Sqlite' => 'sqlite',
                 'Jsonc' => 'jsonc',

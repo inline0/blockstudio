@@ -318,7 +318,7 @@ final class RpcSchemaReader
         $constName = $node->name->toString();
 
         return match ($className) {
-            'Http_Method' => match ($constName) {
+            'Method', 'Http_Method' => match ($constName) {
                 'Get' => 'GET',
                 'Post' => 'POST',
                 'Put' => 'PUT',
@@ -326,7 +326,7 @@ final class RpcSchemaReader
                 'Delete' => 'DELETE',
                 default => null,
             },
-            'Rpc_Access' => match ($constName) {
+            'Access', 'Rpc_Access' => match ($constName) {
                 'Authenticated' => 'authenticated',
                 'Session' => 'session',
                 'Open' => 'open',
