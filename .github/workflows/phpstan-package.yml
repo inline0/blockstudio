@@ -1,0 +1,97 @@
+name: PHPStan Package Split
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'packages/phpstan/**'
+      - '.github/workflows/phpstan-package.yml'
+  workflow_dispatch:
+    inputs:
+      source_ref:
+        description: 'Monorepo ref to split (branch, tag, or SHA)'
+        required: true
+        default: 'main'
+      target_branch:
+        description: 'Target branch in inline0/blockstudio-phpstan'
+        required: true
+        default: 'main'
+      version_tag:
+        description: 'Optional tag to create in the split repo (for example v0.1.0)'
+        required: false
+        default: ''
+
+permissions:
+  contents: read
+
+env:
+  TARGET_REPO: inline0/blockstudio-phpstan
+
+jobs:
+  split:
+    name: Split packages/phpstan
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+
+      - name: Fetch refs
+        run: |
+          git fetch origin "+refs/heads/*:refs/remotes/origin/*" "+refs/tags/*:refs/tags/*"
+
+      - name: Resolve source and target refs
+        id: refs
+        shell: bash
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            SOURCE_INPUT="${{ inputs.source_ref }}"
+            TARGET_BRANCH="${{ inputs.target_branch }}"
+            VERSION_TAG="${{ inputs.version_tag }}"
+
+            if git rev-parse --verify --quiet "refs/remotes/origin/${SOURCE_INPUT}" >/dev/null; then
+              SOURCE_REF="refs/remotes/origin/${SOURCE_INPUT}"
+            elif git rev-parse --verify --quiet "refs/tags/${SOURCE_INPUT}" >/dev/null; then
+              SOURCE_REF="refs/tags/${SOURCE_INPUT}"
+            elif git rev-parse --verify --quiet "${SOURCE_INPUT}^{commit}" >/dev/null; then
+              SOURCE_REF="${SOURCE_INPUT}"
+            else
+              echo "Unknown source ref: ${SOURCE_INPUT}"
+              exit 1
+            fi
+          else
+            SOURCE_REF="${GITHUB_SHA}"
+            TARGET_BRANCH="main"
+            VERSION_TAG=""
+          fi
+
+          echo "source_ref=${SOURCE_REF}" >> "$GITHUB_OUTPUT"
+          echo "target_branch=${TARGET_BRANCH}" >> "$GITHUB_OUTPUT"
+          echo "version_tag=${VERSION_TAG}" >> "$GITHUB_OUTPUT"
+
+      - name: Split subtree
+        id: split
+        run: |
+          SPLIT_SHA=$(git subtree split --prefix=packages/phpstan "${{ steps.refs.outputs.source_ref }}")
+          echo "split_sha=${SPLIT_SHA}" >> "$GITHUB_OUTPUT"
+          echo "Split commit: ${SPLIT_SHA}"
+
+      - name: Configure SSH
+        shell: bash
+        run: |
+          mkdir -p ~/.ssh
+          chmod 700 ~/.ssh
+          printf '%s\n' "${{ secrets.PHPSTAN_SPLIT_DEPLOY_KEY }}" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          ssh-keyscan github.com >> ~/.ssh/known_hosts
+
+      - name: Push branch to split repo
+        run: |
+          git remote add phpstan "git@github.com:${TARGET_REPO}.git"
+          git push phpstan "${{ steps.split.outputs.split_sha }}:refs/heads/${{ steps.refs.outputs.target_branch }}" --force
+
+      - name: Push tag to split repo
+        if: steps.refs.outputs.version_tag != ''
+        run: |
+          git push phpstan "${{ steps.split.outputs.split_sha }}:refs/tags/${{ steps.refs.outputs.version_tag }}" --force

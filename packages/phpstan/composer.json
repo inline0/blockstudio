@@ -14,7 +14,7 @@
   "support": {
     "docs": "https://blockstudio.dev/docs/dev/phpstan",
     "issues": "https://github.com/inline0/blockstudio/issues",
-    "source": "https://github.com/inline0/blockstudio/tree/main/packages/phpstan"
+    "source": "https://github.com/inline0/blockstudio-phpstan"
   },
   "require": {
     "php": "^8.2",
