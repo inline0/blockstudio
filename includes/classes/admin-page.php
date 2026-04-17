@@ -132,6 +132,7 @@ class Admin_Page {
 	private function get_admin_data(): array {
 		return array(
 			'adminUrl'        => admin_url(),
+			'databases'       => $this->get_databases(),
 			'logo'            => BLOCKSTUDIO_URL . 'includes/assets/icon.svg',
 			'nonce'           => wp_create_nonce( 'wp_rest' ),
 			'overview'        => array(
@@ -145,6 +146,43 @@ class Admin_Page {
 			'restUrl'         => esc_url_raw( rest_url( 'blockstudio/v1' ) ),
 			'version'         => BLOCKSTUDIO_VERSION,
 		);
+	}
+
+	/**
+	 * Get database metadata for the admin browser.
+	 *
+	 * @return array<int, array<string, mixed>>
+	 */
+	private function get_databases(): array {
+		$rows = array();
+
+		foreach ( Database::get_all() as $key => $schema ) {
+			$parts       = explode( ':', $key, 2 );
+			$block_name  = $parts[0] ?? '';
+			$schema_name = $parts[1] ?? 'default';
+			$label       = 'default' === $schema_name
+				? $block_name
+				: $block_name . ' / ' . $schema_name;
+
+			$rows[] = array(
+				'block'      => (string) $block_name,
+				'fields'     => array_values(
+					array_map(
+						static fn( $field_name ) => (string) $field_name,
+						array_keys( $schema['fields'] ?? array() )
+					)
+				),
+				'id'         => (string) $key,
+				'label'      => (string) $label,
+				'name'       => (string) $schema_name,
+				'storage'    => (string) ( $schema['storage'] ?? '' ),
+				'userScoped' => ! empty( $schema['userScoped'] ),
+			);
+		}
+
+		$this->sort_rows( $rows, 'label', 'id' );
+
+		return $rows;
 	}
 
 	/**
@@ -540,6 +578,36 @@ class Admin_Page {
 				),
 			)
 		);
+
+		register_rest_route(
+			'blockstudio/v1',
+			'/admin/databases',
+			array(
+				'methods'             => 'GET',
+				'callback'            => array( $this, 'handle_database_records' ),
+				'permission_callback' => static fn() => current_user_can( 'manage_options' ),
+				'args'                => array(
+					'key'    => array(
+						'required'          => true,
+						'validate_callback' => static function ( $param ) {
+							return is_string( $param ) && '' !== $param;
+						},
+					),
+					'limit'  => array(
+						'default'           => 20,
+						'validate_callback' => static function ( $param ) {
+							return is_numeric( $param ) && (int) $param > 0;
+						},
+					),
+					'offset' => array(
+						'default'           => 0,
+						'validate_callback' => static function ( $param ) {
+							return is_numeric( $param ) && (int) $param >= 0;
+						},
+					),
+				),
+			)
+		);
 	}
 
 	/**
@@ -646,6 +714,44 @@ class Admin_Page {
 				'success' => true,
 				'block'   => $block_name,
 				'files'   => $written,
+			)
+		);
+	}
+
+	/**
+	 * Handle an admin request for database rows.
+	 *
+	 * @param \WP_REST_Request $request The request.
+	 * @return \WP_REST_Response|\WP_Error
+	 */
+	public function handle_database_records( \WP_REST_Request $request ) {
+		$key    = (string) $request->get_param( 'key' );
+		$limit  = min( max( (int) $request->get_param( 'limit' ), 1 ), 100 );
+		$offset = max( (int) $request->get_param( 'offset' ), 0 );
+		$schema = Database::get_all()[ $key ] ?? null;
+
+		if ( ! is_array( $schema ) ) {
+			return new \WP_Error( 'unknown_database', 'Database not found.', array( 'status' => 404 ) );
+		}
+
+		$result = Database::execute(
+			'paginate',
+			$key,
+			array(
+				'filters' => array(),
+				'limit'   => $limit,
+				'offset'  => $offset,
+			)
+		);
+		$items  = is_array( $result['items'] ?? null ) ? $result['items'] : array();
+		$total  = max( 0, (int) ( $result['total'] ?? 0 ) );
+
+		return rest_ensure_response(
+			array(
+				'items'  => array_values( $items ),
+				'limit'  => $limit,
+				'offset' => $offset,
+				'total'  => $total,
 			)
 		);
 	}

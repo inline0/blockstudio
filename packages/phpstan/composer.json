@@ -1,8 +1,21 @@
 {
   "name": "blockstudio/phpstan",
-  "description": "PHPStan extension for Blockstudio: type-safe block templates, db.php, rpc.php, and schema validation.",
+  "description": "PHPStan extension for Blockstudio with template typing, schema validation, block tag checks, and public API stubs.",
   "type": "phpstan-extension",
   "license": "MIT",
+  "keywords": [
+    "blockstudio",
+    "phpstan",
+    "wordpress",
+    "gutenberg",
+    "static-analysis"
+  ],
+  "homepage": "https://blockstudio.dev/docs/dev/phpstan",
+  "support": {
+    "docs": "https://blockstudio.dev/docs/dev/phpstan",
+    "issues": "https://github.com/inline0/blockstudio/issues",
+    "source": "https://github.com/inline0/blockstudio/tree/main/packages/phpstan"
+  },
   "require": {
     "php": "^8.2",
     "phpstan/phpstan": "^2.0",

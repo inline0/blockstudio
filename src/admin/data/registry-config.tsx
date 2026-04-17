@@ -45,13 +45,13 @@ export const REGISTRY_CONFIG: RegistryConfigMap = {
     fields: [
       {
         enableGlobalSearch: true,
-        id: 'name',
-        label: __('Name'),
+        id: 'title',
+        label: __('Title'),
       },
       {
         enableGlobalSearch: true,
-        id: 'title',
-        label: __('Title'),
+        id: 'name',
+        label: __('Name'),
       },
       {
         enableGlobalSearch: true,
@@ -77,7 +77,7 @@ export const REGISTRY_CONFIG: RegistryConfigMap = {
     label: __('Blocks'),
     searchLabel: __('Search blocks'),
     view: createTableView(
-      ['name', 'title', 'category', 'apiVersion', 'render', 'attributesCount'],
+      ['title', 'name', 'category', 'apiVersion', 'render', 'attributesCount'],
       'title',
     ),
   },

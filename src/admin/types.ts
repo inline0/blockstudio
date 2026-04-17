@@ -49,6 +49,16 @@ export type AdminSchemaRow = {
   userScoped: string;
 };
 
+export type AdminDatabaseDefinition = {
+  block: string;
+  fields: string[];
+  id: string;
+  label: string;
+  name: string;
+  storage: string;
+  userScoped: boolean;
+};
+
 export type BlockstudioAdminOverview = {
   blocks: AdminBlockRow[];
   extensions: AdminExtensionRow[];
@@ -70,10 +80,22 @@ export type AdminRegistryBlockRow = {
   type: string;
 };
 
-export type AdminPageName = 'overview' | 'registry';
+export type AdminDatabaseRow = Record<string, unknown> & {
+  id?: number | string;
+};
+
+export type AdminDatabaseRecordsResponse = {
+  items: AdminDatabaseRow[];
+  limit: number;
+  offset: number;
+  total: number;
+};
+
+export type AdminPageName = 'overview' | 'databases' | 'registry';
 
 export type BlockstudioAdminPageData = {
   adminUrl: string;
+  databases: AdminDatabaseDefinition[];
   logo: string;
   nonce: string;
   overview: BlockstudioAdminOverview;

@@ -1,5 +1,6 @@
 import type { ReactElement } from 'react';
 import { useState } from '@wordpress/element';
+import { Databases } from './components/databases';
 import { Header } from './components/header';
 import { Overview } from './components/overview';
 import { RegistryBrowser } from './components/registry-browser';
@@ -12,6 +13,7 @@ export const App = (): ReactElement => {
     <>
       <Header currentPage={currentPage} onNavigate={setCurrentPage} />
       {currentPage === 'overview' && <Overview />}
+      {currentPage === 'databases' && <Databases />}
       {currentPage === 'registry' && <RegistryBrowser />}
     </>
   );

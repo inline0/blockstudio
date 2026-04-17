@@ -94,6 +94,14 @@ export const Overview = (): ReactElement => {
         padding: '20px',
         '.components-tab-panel__tabs': {
           margin: '0 0 0 8px',
+          overflowX: 'auto',
+          overflowY: 'hidden',
+          flexWrap: 'nowrap',
+          scrollbarWidth: 'thin',
+        },
+        '.components-tab-panel__tabs .components-button': {
+          flex: '0 0 auto',
+          whiteSpace: 'nowrap',
         },
         '.components-tab-panel__tab-content': {
           outline: 'none',

@@ -888,6 +888,65 @@ class Database {
 	}
 
 	/**
+	 * Paginate records from any storage backend.
+	 *
+	 * @param string $key     The schema key.
+	 * @param string $storage The storage type.
+	 * @param array  $schema  The schema.
+	 * @param array  $filters Field equality filters.
+	 * @param int    $limit   Maximum rows.
+	 * @param int    $offset  Row offset.
+	 *
+	 * @return array{items: array<int, array<string, mixed>>, total: int}
+	 */
+	private static function storage_paginate( string $key, string $storage, array $schema, array $filters, int $limit, int $offset ): array {
+		if ( self::is_user_scoped( $key ) ) {
+			$filters['user_id'] = (string) get_current_user_id();
+		}
+
+		switch ( $storage ) {
+			case 'meta':
+				return self::meta_paginate( $key, $schema, $filters, $limit, $offset );
+			case 'jsonc':
+				return self::jsonc_paginate( $key, $filters, $limit, $offset );
+			default:
+				return array(
+					'items' => self::storage_list( $key, $storage, $schema, $filters, $limit, $offset ),
+					'total' => self::storage_count( $key, $storage, $schema, $filters ),
+				);
+		}
+	}
+
+	/**
+	 * Count records from any storage backend.
+	 *
+	 * @param string $key     The schema key.
+	 * @param string $storage The storage type.
+	 * @param array  $schema  The schema.
+	 * @param array  $filters Field equality filters.
+	 *
+	 * @return int The total number of matching records.
+	 */
+	private static function storage_count( string $key, string $storage, array $schema, array $filters ): int {
+		if ( self::is_user_scoped( $key ) ) {
+			$filters['user_id'] = (string) get_current_user_id();
+		}
+
+		switch ( $storage ) {
+			case 'meta':
+				return self::meta_count( $key, $schema, $filters );
+			case 'jsonc':
+				return self::jsonc_count( $key, $filters );
+			case 'sqlite':
+				return self::sqlite_count( $key, $schema, $filters );
+			case 'post_type':
+				return self::cpt_count( $key, $schema, $filters );
+			default:
+				return self::table_count( $key, $schema, $filters );
+		}
+	}
+
+	/**
 	 * Get a single record from any storage backend.
 	 *
 	 * @param string $key     The schema key.
@@ -1125,7 +1184,7 @@ class Database {
 		$values = array();
 
 		foreach ( $filters as $k => $val ) {
-			if ( in_array( $k, $fields, true ) ) {
+			if ( 'user_id' === $k || in_array( $k, $fields, true ) ) {
 				$where[]  = sanitize_key( $k ) . ' = %s';
 				$values[] = $val;
 			}
@@ -1142,6 +1201,43 @@ class Database {
 		$values[] = $offset;
 
 		return $wpdb->get_results( $wpdb->prepare( $sql, $values ), ARRAY_A ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching,WordPress.DB.PreparedSQL.NotPrepared
+	}
+
+	/**
+	 * Count rows in a custom table.
+	 *
+	 * @param string $key     The schema key.
+	 * @param array  $schema  The schema.
+	 * @param array  $filters Field equality filters.
+	 *
+	 * @return int The total matching rows.
+	 */
+	private static function table_count( string $key, array $schema, array $filters ): int {
+		global $wpdb;
+
+		$table  = self::table_name( $key );
+		$fields = array_keys( $schema['fields'] ?? array() );
+		$where  = array();
+		$values = array();
+
+		foreach ( $filters as $k => $val ) {
+			if ( 'user_id' === $k || in_array( $k, $fields, true ) ) {
+				$where[]  = sanitize_key( $k ) . ' = %s';
+				$values[] = $val;
+			}
+		}
+
+		$sql = "SELECT COUNT(*) FROM $table"; // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+
+		if ( ! empty( $where ) ) {
+			$sql .= ' WHERE ' . implode( ' AND ', $where );
+		}
+
+		if ( ! empty( $values ) ) {
+			return (int) $wpdb->get_var( $wpdb->prepare( $sql, $values ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching,WordPress.DB.PreparedSQL.NotPrepared
+		}
+
+		return (int) $wpdb->get_var( $sql ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching,WordPress.DB.PreparedSQL.NotPrepared
 	}
 
 	/**
@@ -1244,6 +1340,77 @@ class Database {
 		}
 
 		return array_values( array_slice( $entries, $offset, $limit ) );
+	}
+
+	/**
+	 * Paginate entries from post meta.
+	 *
+	 * @param string $key     The schema key.
+	 * @param array  $schema  The schema.
+	 * @param array  $filters Field equality filters.
+	 * @param int    $limit   Maximum entries.
+	 * @param int    $offset  Entry offset.
+	 *
+	 * @return array{items: array<int, array<string, mixed>>, total: int}
+	 */
+	private static function meta_paginate( string $key, array $schema, array $filters, int $limit, int $offset ): array {
+		unset( $schema );
+
+		$entries = self::meta_all( $key );
+
+		if ( ! empty( $filters ) ) {
+			$entries = array_filter(
+				$entries,
+				function ( $entry ) use ( $filters ) {
+					foreach ( $filters as $k => $val ) {
+						if ( ( $entry[ $k ] ?? null ) !== $val ) {
+							return false;
+						}
+					}
+					return true;
+				}
+			);
+		}
+
+		$entries = array_values( $entries );
+
+		return array(
+			'items' => array_values( array_slice( $entries, $offset, $limit ) ),
+			'total' => count( $entries ),
+		);
+	}
+
+	/**
+	 * Count entries from post meta.
+	 *
+	 * @param string $key     The schema key.
+	 * @param array  $schema  The schema.
+	 * @param array  $filters Field equality filters.
+	 *
+	 * @return int The total matching entries.
+	 */
+	private static function meta_count( string $key, array $schema, array $filters ): int {
+		unset( $schema );
+
+		$entries = self::meta_all( $key );
+
+		if ( empty( $filters ) ) {
+			return count( $entries );
+		}
+
+		return count(
+			array_filter(
+				$entries,
+				function ( $entry ) use ( $filters ) {
+					foreach ( $filters as $k => $val ) {
+						if ( ( $entry[ $k ] ?? null ) !== $val ) {
+							return false;
+						}
+					}
+					return true;
+				}
+			)
+		);
 	}
 
 	/**
@@ -1468,6 +1635,71 @@ class Database {
 		}
 
 		return array_values( array_slice( $records, $offset, $limit ) );
+	}
+
+	/**
+	 * Paginate records from JSONC file.
+	 *
+	 * @param string $key     The schema key.
+	 * @param array  $filters Field equality filters.
+	 * @param int    $limit   Maximum records.
+	 * @param int    $offset  Record offset.
+	 *
+	 * @return array{items: array<int, array<string, mixed>>, total: int}
+	 */
+	private static function jsonc_paginate( string $key, array $filters, int $limit, int $offset ): array {
+		$records = self::jsonc_read( $key );
+
+		if ( ! empty( $filters ) ) {
+			$records = array_filter(
+				$records,
+				function ( $record ) use ( $filters ) {
+					foreach ( $filters as $k => $val ) {
+						if ( ( $record[ $k ] ?? null ) != $val ) { // phpcs:ignore Universal.Operators.StrictComparisons.LooseNotEqual -- Intentional loose comparison for query param strings.
+							return false;
+						}
+					}
+					return true;
+				}
+			);
+		}
+
+		$records = array_values( $records );
+
+		return array(
+			'items' => array_values( array_slice( $records, $offset, $limit ) ),
+			'total' => count( $records ),
+		);
+	}
+
+	/**
+	 * Count records from JSONC file.
+	 *
+	 * @param string $key     The schema key.
+	 * @param array  $filters Field equality filters.
+	 *
+	 * @return int The total matching records.
+	 */
+	private static function jsonc_count( string $key, array $filters ): int {
+		$records = self::jsonc_read( $key );
+
+		if ( empty( $filters ) ) {
+			return count( $records );
+		}
+
+		return count(
+			array_filter(
+				$records,
+				function ( $record ) use ( $filters ) {
+					foreach ( $filters as $k => $val ) {
+						if ( ( $record[ $k ] ?? null ) != $val ) { // phpcs:ignore Universal.Operators.StrictComparisons.LooseNotEqual -- Intentional loose comparison for query param strings.
+							return false;
+						}
+					}
+					return true;
+				}
+			)
+		);
 	}
 
 	/**
@@ -1715,7 +1947,7 @@ class Database {
 		$values = array();
 
 		foreach ( $filters as $k => $val ) {
-			if ( in_array( $k, $fields, true ) ) {
+			if ( 'user_id' === $k || in_array( $k, $fields, true ) ) {
 				$where[]  = "$k = ?";
 				$values[] = $val;
 			}
@@ -1735,6 +1967,40 @@ class Database {
 		$stmt->execute( $values );
 
 		return $stmt->fetchAll();
+	}
+
+	/**
+	 * Count rows from SQLite.
+	 *
+	 * @param string $key     The schema key.
+	 * @param array  $schema  The schema.
+	 * @param array  $filters Field equality filters.
+	 *
+	 * @return int The total matching rows.
+	 */
+	private static function sqlite_count( string $key, array $schema, array $filters ): int {
+		$pdo    = self::sqlite_pdo( $key );
+		$fields = array_keys( $schema['fields'] ?? array() );
+		$where  = array();
+		$values = array();
+
+		foreach ( $filters as $k => $val ) {
+			if ( 'user_id' === $k || in_array( $k, $fields, true ) ) {
+				$where[]  = "$k = ?";
+				$values[] = $val;
+			}
+		}
+
+		$sql = 'SELECT COUNT(*) FROM data';
+
+		if ( ! empty( $where ) ) {
+			$sql .= ' WHERE ' . implode( ' AND ', $where );
+		}
+
+		$stmt = $pdo->prepare( $sql );
+		$stmt->execute( $values );
+
+		return (int) $stmt->fetchColumn();
 	}
 
 	/**
@@ -1964,6 +2230,52 @@ class Database {
 		}
 
 		return $records;
+	}
+
+	/**
+	 * Count records from CPT storage.
+	 *
+	 * @param string $key     The schema key.
+	 * @param array  $schema  The schema.
+	 * @param array  $filters Field equality filters.
+	 *
+	 * @return int The total matching records.
+	 */
+	private static function cpt_count( string $key, array $schema, array $filters ): int {
+		unset( $schema );
+
+		$cpt  = self::cpt_name( $key );
+		$args = array(
+			'post_type'              => $cpt,
+			'post_status'            => 'publish',
+			'posts_per_page'         => 1,
+			'fields'                 => 'ids',
+			'no_found_rows'          => false,
+			'update_post_meta_cache' => false,
+			'update_post_term_cache' => false,
+		);
+
+		$user_id = $filters['user_id'] ?? null;
+		unset( $filters['user_id'] );
+
+		if ( $user_id ) {
+			$args['author'] = (int) $user_id;
+		}
+
+		if ( ! empty( $filters ) ) {
+			$meta_query = array();
+			foreach ( $filters as $field => $value ) {
+				$meta_query[] = array(
+					'key'   => $field,
+					'value' => $value,
+				);
+			}
+			$args['meta_query'] = $meta_query; // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query
+		}
+
+		$query = new \WP_Query( $args );
+
+		return (int) $query->found_posts;
 	}
 
 	/**
@@ -2296,7 +2608,7 @@ class Database {
 	/**
 	 * Execute a storage operation directly (used by the Db PHP API).
 	 *
-	 * @param string $operation The operation (create, list, get, update, delete).
+	 * @param string $operation The operation (create, list, paginate, get, update, delete).
 	 * @param string $key       The schema key.
 	 * @param array  $args      Operation-specific arguments.
 	 *
@@ -2306,7 +2618,22 @@ class Database {
 		self::load_all();
 
 		if ( ! isset( self::$schemas[ $key ] ) ) {
-			return 'get' === $operation ? null : ( 'list' === $operation ? array() : false );
+			if ( 'get' === $operation ) {
+				return null;
+			}
+
+			if ( 'list' === $operation ) {
+				return array();
+			}
+
+			if ( 'paginate' === $operation ) {
+				return array(
+					'items' => array(),
+					'total' => 0,
+				);
+			}
+
+			return false;
 		}
 
 		$schema  = self::$schemas[ $key ];
@@ -2325,6 +2652,16 @@ class Database {
 
 			case 'list':
 				return self::storage_list(
+					$key,
+					$storage,
+					$schema,
+					$args['filters'] ?? array(),
+					$args['limit'] ?? 50,
+					$args['offset'] ?? 0
+				);
+
+			case 'paginate':
+				return self::storage_paginate(
 					$key,
 					$storage,
 					$schema,

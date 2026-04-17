@@ -1,0 +1,1 @@
+"<div class=\"e2e-card\"><?php echo $a[\"title\"] ?? \"\"; ?><\/div>"
