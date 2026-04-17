@@ -239,6 +239,26 @@ add_filter('blockstudio/settings/assets/enqueue', function() {
 });
 ```
 
+### assets/reset/enabled
+
+This filter allows you to enable/disable the removal of WordPress core block styles.
+
+```php title="functions.php"
+add_filter('blockstudio/settings/assets/reset/enabled', function() {
+  return true;
+});
+```
+
+### assets/reset/full_width
+
+This filter allows you to control which post types use full-width editing.
+
+```php title="functions.php"
+add_filter('blockstudio/settings/assets/reset/full_width', function() {
+  return ['page'];
+});
+```
+
 ### assets/minify/css
 
 This filter allows you to enable/disable the minification of CSS.
@@ -359,22 +379,62 @@ add_filter('blockstudio/settings/block_editor/css_variables', function() {
 });
 ```
 
-### library
-
-This filter allows you to enable the block library.
-
-```php title="functions.php"
-add_filter('blockstudio/settings/library', function() {
-  return true;
-});
-```
-
 ### ai/enable_context_generation
 
 This filter allows you to enable or disable context file generation for LLM tool integration. When enabled, the context file assembles up-to-date block data, Blockstudio settings of the current install, all relevant schemas, and Blockstudio documentation into a single source for use with AI development tools.
 
 ```php title="functions.php"
 add_filter('blockstudio/settings/ai/enable_context_generation', function() {
+  return true;
+});
+```
+
+### block_tags/enabled
+
+This filter allows you to enable/disable page-level block tag rendering.
+
+```php title="functions.php"
+add_filter('blockstudio/settings/block_tags/enabled', function() {
+  return true;
+});
+```
+
+### dev/grab/enabled
+
+This filter allows you to enable/disable the element grabber.
+
+```php title="functions.php"
+add_filter('blockstudio/settings/dev/grab/enabled', function() {
+  return false;
+});
+```
+
+### dev/perf
+
+This filter allows you to enable/disable the performance profiler.
+
+```php title="functions.php"
+add_filter('blockstudio/settings/dev/perf', function() {
+  return false;
+});
+```
+
+### dev/canvas/enabled
+
+This filter allows you to enable/disable the canvas.
+
+```php title="functions.php"
+add_filter('blockstudio/settings/dev/canvas/enabled', function() {
+  return false;
+});
+```
+
+### dev/canvas/admin_bar
+
+This filter allows you to show/hide the WordPress admin bar on the canvas.
+
+```php title="functions.php"
+add_filter('blockstudio/settings/dev/canvas/admin_bar', function() {
   return true;
 });
 ```

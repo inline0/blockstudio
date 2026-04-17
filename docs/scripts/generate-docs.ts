@@ -7,6 +7,7 @@ import { blockstudio as blockstudioSchema } from "../src/schemas/blockstudio";
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const DATA_DIR = join(__dirname, "../data");
 const CONTENT_DIR = join(__dirname, "../content/docs");
+const BLOCKS_CONTENT_DIR = join(CONTENT_DIR, "blocks");
 
 interface SchemaProperty {
   type: string | string[];
@@ -224,7 +225,7 @@ function generateSettingsDoc() {
   writeFileSync(outputPath, content);
   console.log(`  Generated: ${outputPath}`);
 
-  const mdxPath = join(CONTENT_DIR, "hooks/php.mdx");
+  const mdxPath = join(BLOCKS_CONTENT_DIR, "hooks/php.mdx");
   if (updateMdxFile(mdxPath, "{/* GENERATED_SETTINGS_START */}", "{/* GENERATED_SETTINGS_END */}", content)) {
     console.log(`  Updated: ${mdxPath}`);
   }
@@ -248,7 +249,7 @@ async function generateFieldTypesDoc() {
   console.log(`  Generated: ${outputPath}`);
   console.log(`  Found ${fieldTypes.length} field types`);
 
-  const mdxPath = join(CONTENT_DIR, "attributes/field-types.mdx");
+  const mdxPath = join(BLOCKS_CONTENT_DIR, "attributes/field-types.mdx");
   if (updateMdxFile(mdxPath, "{/* GENERATED_FIELD_TYPES_START */}", "{/* GENERATED_FIELD_TYPES_END */}", content)) {
     console.log(`  Updated: ${mdxPath}`);
   }

@@ -8,12 +8,13 @@ author: Dennis
 Blockstudio 7.2 expands the framework in two directions at once.
 
 The first is **visibility and workflow** inside a single project: a new admin
-overview, an admin registry browser, and SCSS preludes for shared Sass setup.
+overview, a database browser, an admin registry browser, and SCSS preludes for
+shared Sass setup.
 
 The second is **the ecosystem around Blockstudio**: a registry CLI for
 distributing blocks (like shadcn for WordPress), and a PHPStan extension that
-brings TypeScript-style type safety to block templates, `db.php`, and
-`rpc.php`.
+brings TypeScript-style type safety to templates, block tags, `db.php`,
+`rpc.php`, `cron.php`, and the surrounding schema files.
 
 Both directions are about the same thing: making larger Blockstudio projects
 easier to reason about, build on, and share.
@@ -31,6 +32,10 @@ The overview includes dedicated tabs for:
 - Fields
 - Pages
 - Schemas
+
+Alongside that overview, the admin area now includes a dedicated
+**Databases** section. It lists every registered `Blockstudio\Db` schema and
+lets you inspect actual records directly inside wp-admin.
 
 Instead of building a custom grid of panels, the screen uses native WordPress
 DataViews tables. That keeps the UI aligned with wp-admin and makes it
@@ -60,6 +65,12 @@ Each tab is designed to answer different questions:
   engine, and sync state
 - **Schemas** surface registered storage schemas with backend, field count,
   and capability scope
+
+The database browser is intentionally kept separate from the initial overview
+payload. Instead of serializing every row on page load, it only localizes the
+available schemas up front and fetches records on demand when you open a
+database tab. That keeps the admin surface useful even when a project has
+larger datasets behind `db.php`.
 
 This first version is intentionally focused on schema-backed registrations.
 It's not a settings page. It's an inspection page.
@@ -151,7 +162,10 @@ composer require --dev blockstudio/phpstan
 ```
 
 The extension reads your project's actual schemas at analysis time and feeds
-the resulting types back into PHPStan.
+the resulting types back into PHPStan. That now covers PHP templates, Twig,
+Blade, block tags, typed database records, settings paths, hook names, and
+schema validation across `block.json`, `field.json`, extension JSON,
+`page.json`, `db.php`, `rpc.php`, `cron.php`, and `blockstudio.json`.
 
 ### Type-safe block templates
 
@@ -192,10 +206,11 @@ echo $record['typo'];  // ERROR: Offset 'typo' does not exist on array{id: int, 
 
 ### Schema validation
 
-Invalid `block.json`, `db.php`, `rpc.php`, and `blockstudio.json` files get
-caught at analysis time. Missing names, unknown field types, malformed
-schemas, deprecated shorthand booleans (`"tailwind": true` instead of the
-nested object), all reported with the exact line in the source file.
+Invalid schema files get caught at analysis time: `block.json`, `field.json`,
+extension JSON, `page.json`, `db.php`, `rpc.php`, `cron.php`, and
+`blockstudio.json`. Missing names, wrong field types, malformed definitions,
+deprecated shorthand booleans (`"tailwind": true` instead of the nested
+object), all reported with the exact line in the source file.
 
 ### Settings path validation
 

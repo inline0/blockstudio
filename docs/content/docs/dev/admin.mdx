@@ -1,0 +1,92 @@
+---
+title: Admin
+description: Inspect registered Blockstudio blocks, browse registries, and view database records from wp-admin.
+---
+
+# Admin
+
+Blockstudio ships with an admin screen under **Tools > Blockstudio**. It is a
+project-level inspection surface for what Blockstudio has registered from the
+filesystem, plus a browser for registries and database records.
+
+This is intentionally not a settings page. The goal is visibility: what blocks,
+extensions, fields, pages, schemas, registries, and database records exist
+right now.
+
+## Access
+
+The admin page is available when both of these conditions are met:
+
+- the current user has the `manage_options` capability
+- the page is enabled via `blockstudio/admin/enabled`
+
+Disable it entirely with:
+
+```php title="functions.php"
+add_filter('blockstudio/admin/enabled', '__return_false');
+```
+
+## Views
+
+### Overview
+
+The overview is a read-only inventory of Blockstudio registrations. It includes
+dedicated tabs for:
+
+- **Blocks**: registered block types, render mode, API version, attribute count
+- **Extensions**: targets, priority, render mode, attribute count
+- **Fields**: reusable `field.json` definitions
+- **Pages**: file-based pages with post type, status, engine, and sync state
+- **Schemas**: registered `db.php` schemas with storage and field counts
+
+The tables use native WordPress DataViews so the screen stays aligned with
+wp-admin instead of inventing a separate interface.
+
+### Registry
+
+If your project has a `blocks.json` with configured registries, the admin page
+shows a **Registry** view. It fetches the available blocks from those
+registries and lets you import them directly into the configured block
+directory.
+
+The same `blocks.json` config powers both the CLI and the admin browser:
+
+```json title="blocks.json"
+{
+  "$schema": "https://blockstudio.dev/schema/blocks.json",
+  "directory": "blockstudio",
+  "registries": {
+    "ui": "https://blocks.example.com/registry.json"
+  }
+}
+```
+
+Authenticated registries are supported through the object format with `headers`
+and `${ENV_VAR}` interpolation. See the [Registry docs](/registry) for the full
+configuration format.
+
+### Databases
+
+If your project registers any `db.php` schemas, the admin page shows a
+**Databases** view. Each schema gets its own tab and displays actual records
+inside a DataViews table.
+
+The screen does not serialize all records into the initial admin payload.
+Instead:
+
+1. schema metadata is localized up front
+2. records are fetched on demand when you open a database tab
+3. tables paginate through the REST API
+
+That keeps the admin screen usable even when a project has larger datasets.
+
+## Scope
+
+Current scope is intentionally narrow:
+
+- inspect what Blockstudio has registered
+- import blocks from configured registries
+- browse database records
+
+It does not replace the existing settings workflow and it does not edit block
+or page definitions directly.

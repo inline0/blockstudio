@@ -51,6 +51,23 @@ Renders data attribute inputs.
 | `link` | `boolean` | Enables link selection from dropdown. |
 | `media` | `boolean` | Enables media selection from dropdown. |
 
+## block
+
+References another Blockstudio block, expanding its fields inline. In templates, the value returns the rendered block output.
+
+```json
+{
+  "type": "block"
+}
+```
+
+### Properties
+
+| Property | Type | Description |
+|----------|------|-------------|
+| `block` | `string` | The name of the block to reference (e.g., "mytheme/card"). |
+| `returnFormat` | `string` | How the value should be returned in templates. |
+
 ## checkbox
 
 Renders a set of checkbox inputs.
@@ -270,6 +287,25 @@ Renders multiple fields in an (optionally) collapsible container.
 | `class` | `string` | Custom CSS class that will be applied to the group. |
 | `style` | `object` | Custom CSS styles that will be applied to the group. |
 | `attributes` | `array` | Accepts all other field types besides another tabs. |
+
+## html-tag
+
+Renders an HTML tag selector. Useful for choosing heading levels or semantic elements.
+
+```json
+{
+  "type": "html-tag"
+}
+```
+
+### Properties
+
+| Property | Type | Description |
+|----------|------|-------------|
+| `default` | `string` | Default value that should be applied when first adding the block. |
+| `fallback` | `string` | Fallback value that that will display when field value is empty. |
+| `tags` | `string \| array` | Which tags to include. Use a preset string or an array of tag names. |
+| `exclude` | `array` | Tags to exclude from the preset. Only applies when using a preset string for tags. |
 
 ## icon
 

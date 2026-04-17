@@ -35,6 +35,15 @@ in a directory works:
 The CLI doesn't care what's inside the folder. It reads the file manifest from
 the registry and downloads exactly those files.
 
+## WordPress admin
+
+If your project has a `blocks.json` with registries configured, the same
+registries also appear in **Tools > Blockstudio > Registry** inside wp-admin.
+
+That admin browser lets you inspect the available blocks and import them
+without touching the CLI. The config format stays the same. `blocks.json` is
+still the source of truth.
+
 ## Quick start
 
 ```bash

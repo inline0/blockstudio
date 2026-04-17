@@ -1,4 +1,4 @@
 {
   "title": "Dev",
-  "pages": ["canvas", "grab", "perf", "ai", "composer", "phpstan", "migration"]
+  "pages": ["canvas", "grab", "perf", "admin", "ai", "composer", "phpstan", "migration"]
 }

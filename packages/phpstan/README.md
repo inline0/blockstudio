@@ -1,6 +1,8 @@
 # Blockstudio PHPStan Extension
 
-PHPStan extension for [Blockstudio](https://blockstudio.dev). Adds type-safe block templates, schema validation, and Blockstudio API stubs.
+PHPStan extension for [Blockstudio](https://blockstudio.dev). It adds
+type-safe template access, schema validation, hook checking, and stubs for the
+Blockstudio public PHP API.
 
 ## Install
 
@@ -8,42 +10,64 @@ PHPStan extension for [Blockstudio](https://blockstudio.dev). Adds type-safe blo
 composer require --dev blockstudio/phpstan
 ```
 
-If you have [phpstan/extension-installer](https://github.com/phpstan/extension-installer) installed, the extension is auto-discovered. Otherwise, include it in your `phpstan.neon`:
+If you have
+[phpstan/extension-installer](https://github.com/phpstan/extension-installer)
+installed, the extension is auto-discovered. Otherwise, include it manually in
+your `phpstan.neon`:
 
 ```yaml
 includes:
   - vendor/blockstudio/phpstan/extension.neon
 ```
 
-## What it does
+## What it checks
 
-### 1. Validates `$a['key']` accesses in block templates
+### Template field access
 
-When a PHP file lives next to a `block.json`, the extension reads that block's declared attributes and reports any accesses to fields that don't exist.
+When a PHP file lives next to a `block.json`, the extension validates every
+`$a['key']` access against the block's declared attributes.
 
 ```php
-// blockstudio/hero/block.json
-{
-  "blockstudio": {
-    "attributes": [
-      { "id": "title", "type": "text" },
-      { "id": "subtitle", "type": "text" }
-    ]
-  }
-}
-
 // blockstudio/hero/index.php
 <?php
 /** @var array<string, mixed> $a */
 
 echo $a['title'];     // OK
 echo $a['subtitle'];  // OK
-echo $a['typo'];      // Error: Field "typo" does not exist in block.json (block: hero). Did you mean "title"?
+echo $a['typo'];      // Error: Field "typo" does not exist in block.json
 ```
 
-### 2. Types `Db::get()` return values from `db.php`
+Twig and Blade templates are checked too:
 
-When you call `Db::get('mytheme/widget', 'subscribers')`, the extension reads the matching `db.php`, extracts its `fields` shape, and types the resulting record arrays.
+```twig
+<h1>{{ a.title }}</h1>
+<p>{{ a.typo }}</p> {# Error #}
+```
+
+```blade
+<h1>{{ $a['title'] }}</h1>
+<p>{{ $a['typo'] }}</p> {{-- Error --}}
+```
+
+### Block tag validation
+
+Both `<block>` and `<bs:>` tag syntaxes are validated across PHP, Twig, and
+Blade templates.
+
+```html
+<bs:mytheme-hero title="Hello" />          <!-- OK -->
+<bs:mytheme-nonexistent />                 <!-- Error: unknown block -->
+<bs:mytheme-hero badattr="" />             <!-- Error: unknown attribute -->
+<block name="core/separator" />            <!-- OK -->
+```
+
+`data-*` and `html-*` attributes are treated as pass-through and are not
+validated.
+
+### Typed `Db::get()` records
+
+The extension reads your `db.php` schema and uses it to type record arrays
+returned by `Db::get()`.
 
 ```php
 // blockstudio/subscribers/db.php
@@ -55,72 +79,109 @@ return [
     ],
 ];
 
-// somewhere in your code
 $db = Db::get('mytheme/subscribers');
 $record = $db->create(['email' => 'a@b.com']);
 
-echo $record['email']; // PHPStan: string
-echo $record['name'];  // PHPStan: string|null (optional)
-echo $record['typo'];  // Error: Offset 'typo' does not exist on array{id: int, email: string, name: string|null}
+echo $record['email']; // string
+echo $record['name'];  // string|null
+echo $record['typo'];  // Error
 ```
 
-### 3. Validates `block.json` schemas
-
-The extension reads every `block.json` in your project and reports invalid configurations:
-
-- Missing `name` field
-- Missing field `id` or `type`
-- Unknown field types
-- `select`/`radio`/`checkbox` fields without `options` or `populate`
-- Invalid nested `group`, `repeater`, `tabs` structures
-
-### 4. Validates `db.php` schemas
-
-- Missing `fields` array
-- Invalid field types (must be `string`, `number`, `boolean`, `array`, or `object`)
-- Missing field `type` declarations
-
-### 5. Validates `rpc.php` schemas
-
-- Invalid HTTP methods
-- Wrong `public` value (must be bool or `'open'`)
-
-### 6. Validates `Settings::get()` paths
+This also works with the PHP-native builder syntax:
 
 ```php
-Settings::get('tailwind/enabled');  // OK, returns bool
-Settings::get('tailwind/enabld');   // Error: Settings path "tailwind/enabld" is not a known Blockstudio setting. Did you mean "tailwind/enabled"?
+use Blockstudio\Db\Field;
+use Blockstudio\Db\Schema;
+use Blockstudio\Db\Storage;
+
+return Schema::make(
+    storage: Storage::Table,
+    fields: [
+        'email' => Field::string(required: true),
+        'active' => Field::boolean(default: false),
+    ],
+);
 ```
 
-### 7. Validates Blockstudio hook names
+### Settings path validation
+
+`Settings::get()` paths are checked against the known Blockstudio settings
+schema.
 
 ```php
-add_filter('blockstudio/render', $cb);          // OK
-add_filter('blockstudio/rendrr', $cb);          // Error: Unknown Blockstudio hook "blockstudio/rendrr". Did you mean "blockstudio/render"?
+Settings::get('tailwind/enabled');  // OK
+Settings::get('tailwind/enabld');   // Error: Did you mean "tailwind/enabled"?
 ```
 
-### 8. Provides stubs for the Blockstudio public API
+### Hook name validation
 
-`Db`, `Settings`, `Field_Registry`, `Build`, and global helpers like `bs_render_block()` are stubbed with proper PHPDoc, giving you autocomplete and type checking for all Blockstudio APIs without needing the plugin source on your dev machine.
+Blockstudio action and filter hook names are validated.
 
-## Convention: typing `$a` in templates
+```php
+add_filter('blockstudio/render', $cb); // OK
+add_filter('blockstudio/rendrr', $cb); // Error
+```
 
-Add a `@var` annotation at the top of every template so PHPStan knows `$a` exists:
+Dynamic settings hooks such as `blockstudio/settings/tailwind/enabled` are
+always allowed. Non-Blockstudio hooks are ignored.
+
+### Schema validation
+
+The extension validates Blockstudio schema files across the project:
+
+- `block.json`
+- `field.json`
+- extension JSON files in `extensions/`
+- `page.json`
+- `db.php`
+- `rpc.php`
+- `cron.php`
+- `blockstudio.json`
+
+That covers missing required keys, invalid field types, malformed schema
+shapes, bad RPC method values, invalid cron schedules, and deprecated settings
+shorthand such as `"tailwind": true`.
+
+`db.php`, `rpc.php`, and `cron.php` support both legacy arrays and the optional
+PHP-native forms:
+
+- `Blockstudio\Db\Schema` / `Blockstudio\Db\Field`
+- `#[Blockstudio\Attributes\Rpc]`
+- `#[Blockstudio\Attributes\Cron]`
+
+## API stubs
+
+The package ships stubs for the Blockstudio public API, including:
+
+- `Db`, `Settings`, `Build`, `Field_Registry`
+- `Blockstudio\Db\Schema`, `Blockstudio\Db\Field`, `Blockstudio\Db\Storage`
+- `Blockstudio\Rpc\Method`, `Blockstudio\Rpc\Access`
+- `Blockstudio\Cron\Schedule`
+- `Blockstudio\Attributes\Rpc`, `Blockstudio\Attributes\Cron`
+- global helpers like `bs_render_block()`
+
+Legacy compatibility aliases are stubbed too, so older codebases still analyze
+cleanly while migrating.
+
+## Convention: typing `$a` in PHP templates
+
+Add a `@var` annotation at the top of each PHP block template so PHPStan knows
+`$a` exists:
 
 ```php
 <?php
 /** @var array<string, mixed> $a */
-
-// your template here
 ```
 
-The extension's rule will then validate accesses against your `block.json`. Without this annotation, PHPStan reports `$a` as undefined (which is also useful — it tells you when you're not in a block template).
+Twig and Blade templates do not need this annotation.
 
 ## Configuration
 
-The extension requires no configuration. It auto-discovers `block.json`, `db.php`, `rpc.php`, and `blockstudio.json` files in your project.
+The extension requires no manual configuration. It auto-discovers
+`block.json`, `db.php`, `rpc.php`, `cron.php`, `page.json`, `field.json`, and
+`blockstudio.json` files in your project.
 
-If you need to exclude specific paths from analysis, use PHPStan's standard `excludePaths`:
+If you need to exclude specific paths, use PHPStan's standard `excludePaths`:
 
 ```yaml
 parameters:
@@ -132,7 +193,7 @@ parameters:
 
 - PHP 8.2+
 - PHPStan 2.0+
-- [phpstan/phpstan-wordpress](https://github.com/szepeviktor/phpstan-wordpress) (installed automatically)
+- [phpstan/phpstan-wordpress](https://github.com/szepeviktor/phpstan-wordpress)
 
 ## License
 
