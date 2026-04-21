@@ -145,35 +145,12 @@ final class BlockJsonShapeRule implements Rule
             }
 
             $id = $field['id'] ?? $field['key'] ?? null;
-            if ($id === null || !is_string($id) || $id === '') {
-                $errors[] = RuleErrorBuilder::message(sprintf(
-                    'block.json attributes[%d] missing "id": %s',
-                    $i,
-                    $path
-                ))
-                    ->identifier('blockstudio.blockJson.attributes')
-                    ->file($path)
-                    ->build();
-                continue;
-            }
-
-            if (isset($seenIds[$id])) {
-                $errors[] = RuleErrorBuilder::message(sprintf(
-                    'block.json duplicate field id "%s" in %s',
-                    $id,
-                    $path
-                ))
-                    ->identifier('blockstudio.blockJson.duplicate')
-                    ->file($path)
-                    ->build();
-            }
-            $seenIds[$id] = true;
-
             $type = $field['type'] ?? null;
+
             if ($type === null || !is_string($type)) {
                 $errors[] = RuleErrorBuilder::message(sprintf(
                     'block.json field "%s" missing "type": %s',
-                    $id,
+                    $this->getFieldLabel($field, $i),
                     $path
                 ))
                     ->identifier('blockstudio.blockJson.type')
@@ -185,7 +162,7 @@ final class BlockJsonShapeRule implements Rule
             if (!str_starts_with($type, 'custom/') && !in_array($type, self::VALID_FIELD_TYPES, true)) {
                 $errors[] = RuleErrorBuilder::message(sprintf(
                     'block.json field "%s" has unknown type "%s" in %s',
-                    $id,
+                    $this->getFieldLabel($field, $i),
                     $type,
                     $path
                 ))
@@ -193,6 +170,32 @@ final class BlockJsonShapeRule implements Rule
                     ->file($path)
                     ->build();
                 continue;
+            }
+
+            if ($this->requiresFieldId($type) && ($id === null || !is_string($id) || $id === '')) {
+                $errors[] = RuleErrorBuilder::message(sprintf(
+                    'block.json attributes[%d] missing "id": %s',
+                    $i,
+                    $path
+                ))
+                    ->identifier('blockstudio.blockJson.attributes')
+                    ->file($path)
+                    ->build();
+                continue;
+            }
+
+            if (is_string($id) && $id !== '') {
+                if (isset($seenIds[$id])) {
+                    $errors[] = RuleErrorBuilder::message(sprintf(
+                        'block.json duplicate field id "%s" in %s',
+                        $id,
+                        $path
+                    ))
+                        ->identifier('blockstudio.blockJson.duplicate')
+                        ->file($path)
+                        ->build();
+                }
+                $seenIds[$id] = true;
             }
 
             if (in_array($type, ['select', 'radio', 'checkbox'], true)) {
@@ -213,7 +216,7 @@ final class BlockJsonShapeRule implements Rule
                 if (isset($field['attributes']) && is_array($field['attributes'])) {
                     $errors = array_merge(
                         $errors,
-                        $this->validateAttributes($field['attributes'], $path, $id)
+                        $this->validateAttributes($field['attributes'], $path, is_string($id) ? $id : '')
                     );
                 }
             }
@@ -231,5 +234,25 @@ final class BlockJsonShapeRule implements Rule
         }
 
         return $errors;
+    }
+
+    private function requiresFieldId(string $type): bool
+    {
+        return $type !== 'group'
+            && $type !== 'tabs'
+            && !str_starts_with($type, 'custom/');
+    }
+
+    /**
+     * @param array<string, mixed> $field
+     */
+    private function getFieldLabel(array $field, int $index): string
+    {
+        $id = $field['id'] ?? $field['key'] ?? null;
+        if (is_string($id) && $id !== '') {
+            return $id;
+        }
+
+        return sprintf('attributes[%d]', $index);
     }
 }

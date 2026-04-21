@@ -1,1 +1,1 @@
-{"name":"spacing","title":"Spacing","attributes":[{"id":"top","type":"number"},{"id":"bottom","type":"number"}]}
+{"name":"spacing","title":"Spacing","attributes":[{"id":"top","type":"number"},{"id":"bottom","type":"number"},{"type":"group","attributes":[{"id":"locked","type":"toggle"}]},{"type":"tabs","tabs":[{"title":"Section","attributes":[{"id":"section","type":"custom/section"}]}]},{"type":"custom/advanced-spacing"}]}

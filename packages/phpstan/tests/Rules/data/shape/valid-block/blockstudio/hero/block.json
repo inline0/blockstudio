@@ -2,7 +2,25 @@
   "name": "test/hero",
   "blockstudio": {
     "attributes": [
-      { "id": "title", "type": "text" }
+      { "id": "title", "type": "text" },
+      {
+        "type": "group",
+        "attributes": [
+          { "id": "summary", "type": "textarea" }
+        ]
+      },
+      {
+        "type": "tabs",
+        "tabs": [
+          {
+            "title": "Section",
+            "attributes": [
+              { "id": "section", "type": "custom/section" }
+            ]
+          }
+        ]
+      },
+      { "type": "custom/spacing" }
     ]
   }
 }

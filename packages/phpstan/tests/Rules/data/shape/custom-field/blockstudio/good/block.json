@@ -2,7 +2,7 @@
   "name": "test/good",
   "blockstudio": {
     "attributes": [
-      { "id": "spacing", "type": "custom/spacing" }
+      { "type": "custom/spacing" }
     ]
   }
 }

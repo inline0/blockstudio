@@ -125,14 +125,19 @@ The extension validates every Blockstudio schema file in the project.
 
 **block.json**:
 - Missing `name` field
-- Missing field `id` or `type`
+- Missing field `type`
+- Missing `id` on value fields that require one
 - Unknown field types
 - `select`/`radio`/`checkbox` without `options` or `populate`
 - Duplicate field IDs
 
+Container fields like `group` and `tabs`, plus `custom/*` field references, can
+omit `id` when they only expand or wrap other fields.
+
 **field.json** (custom reusable fields):
 - Missing `name`
-- Missing field `id` or `type`
+- Missing field `type`
+- Missing `id` on value fields that require one
 - Unknown field types
 
 **Extension JSON** (block extensions in `extensions/`):

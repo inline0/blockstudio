@@ -123,47 +123,97 @@ final class FieldJsonShapeRule implements Rule
                 ->file($path)
                 ->build();
         } elseif (is_array($attributes)) {
-            foreach ($attributes as $i => $field) {
-                if (!is_array($field)) {
-                    continue;
-                }
-                $id = $field['id'] ?? $field['key'] ?? null;
-                if ($id === null || !is_string($id) || $id === '') {
-                    $errors[] = RuleErrorBuilder::message(sprintf(
-                        'field.json attributes[%d] missing "id": %s',
-                        $i,
-                        $path
-                    ))
-                        ->identifier('blockstudio.fieldJson.attributes')
-                        ->file($path)
-                        ->build();
-                    continue;
-                }
+            $errors = array_merge($errors, $this->validateAttributes($attributes, $path));
+        }
 
-                $type = $field['type'] ?? null;
-                if ($type === null || !is_string($type)) {
-                    $errors[] = RuleErrorBuilder::message(sprintf(
-                        'field.json field "%s" missing "type": %s',
-                        $id,
-                        $path
-                    ))
-                        ->identifier('blockstudio.fieldJson.type')
-                        ->file($path)
-                        ->build();
-                } elseif (!str_starts_with($type, 'custom/') && !in_array($type, self::VALID_FIELD_TYPES, true)) {
-                    $errors[] = RuleErrorBuilder::message(sprintf(
-                        'field.json field "%s" has unknown type "%s": %s',
-                        $id,
-                        $type,
-                        $path
-                    ))
-                        ->identifier('blockstudio.fieldJson.type')
-                        ->file($path)
-                        ->build();
+        return $errors;
+    }
+
+    /**
+     * @param array<int, mixed> $attributes
+     * @return list<\PHPStan\Rules\IdentifierRuleError>
+     */
+    private function validateAttributes(array $attributes, string $path): array
+    {
+        $errors = [];
+
+        foreach ($attributes as $i => $field) {
+            if (!is_array($field)) {
+                continue;
+            }
+
+            $id = $field['id'] ?? $field['key'] ?? null;
+            $type = $field['type'] ?? null;
+
+            if ($type === null || !is_string($type)) {
+                $errors[] = RuleErrorBuilder::message(sprintf(
+                    'field.json field "%s" missing "type": %s',
+                    $this->getFieldLabel($field, $i),
+                    $path
+                ))
+                    ->identifier('blockstudio.fieldJson.type')
+                    ->file($path)
+                    ->build();
+                continue;
+            }
+
+            if (!str_starts_with($type, 'custom/') && !in_array($type, self::VALID_FIELD_TYPES, true)) {
+                $errors[] = RuleErrorBuilder::message(sprintf(
+                    'field.json field "%s" has unknown type "%s": %s',
+                    $this->getFieldLabel($field, $i),
+                    $type,
+                    $path
+                ))
+                    ->identifier('blockstudio.fieldJson.type')
+                    ->file($path)
+                    ->build();
+                continue;
+            }
+
+            if ($this->requiresFieldId($type) && ($id === null || !is_string($id) || $id === '')) {
+                $errors[] = RuleErrorBuilder::message(sprintf(
+                    'field.json attributes[%d] missing "id": %s',
+                    $i,
+                    $path
+                ))
+                    ->identifier('blockstudio.fieldJson.attributes')
+                    ->file($path)
+                    ->build();
+            }
+
+            if (($type === 'group' || $type === 'repeater') && isset($field['attributes']) && is_array($field['attributes'])) {
+                $errors = array_merge($errors, $this->validateAttributes($field['attributes'], $path));
+            }
+
+            if ($type === 'tabs' && isset($field['tabs']) && is_array($field['tabs'])) {
+                foreach ($field['tabs'] as $tab) {
+                    if (is_array($tab) && isset($tab['attributes']) && is_array($tab['attributes'])) {
+                        $errors = array_merge($errors, $this->validateAttributes($tab['attributes'], $path));
+                    }
                 }
             }
         }
 
         return $errors;
+    }
+
+    private function requiresFieldId(string $type): bool
+    {
+        return $type !== 'group'
+            && $type !== 'tabs'
+            && !str_starts_with($type, 'custom/');
+    }
+
+    /**
+     * @param array<string, mixed> $field
+     */
+    private function getFieldLabel(array $field, int $index): string
+    {
+        $id = $field['id'] ?? $field['key'] ?? null;
+        if (is_string($id) && $id !== '') {
+            return $id;
+        }
+
+        return sprintf('attributes[%d]', $index);
     }
 }
