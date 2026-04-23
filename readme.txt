@@ -3,7 +3,7 @@ Contributors: dnnsjsk
 Requires at least: 5.0
 Tested up to: 7.0.0
 Requires PHP: 8.2
-Stable tag: 7.1.2
+Stable tag: 7.2.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -52,6 +52,18 @@ Download the latest release zip from [GitHub Releases](https://github.com/inline
 * [Getting Started](https://blockstudio.dev/docs/getting-started)
 
 == Changelog ==
+
+= 7.2.0 =
+* New: admin overview under Tools > Blockstudio with registry and database browsing
+* New: registry CLI and admin browser for importing blocks from hosted registries
+* New: PHPStan extension for template, hook, and schema validation
+* New: PHP-native `db.php`, `rpc.php`, and `cron.php` definitions
+* New: global SCSS prelude hook for shared Sass setup
+* Fix: nested InnerBlocks templates retain child blocks correctly
+* Fix: Block Inserter previews receive the correct `$isPreview` state
+* Fix: CSS minification preserves whitespace inside `calc()` and `clamp()`
+* Fix: attributes fields remove null values cleanly after deletion
+* Fix: classes field accepts custom class names after blur
 
 = 7.1.2 =
 * Fix: remove legacy `/files/dist` REST endpoint

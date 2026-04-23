@@ -441,6 +441,19 @@ add_filter('blockstudio/settings/dev/canvas/admin_bar', function() {
 
 {/* GENERATED_SETTINGS_END */}
 
+## Admin
+
+### enabled
+
+This filter allows you to enable or disable the Blockstudio admin page under
+**Tools > Blockstudio**.
+
+```php title="functions.php"
+add_filter('blockstudio/admin/enabled', function() {
+  return false;
+});
+```
+
 ## Assets
 
 ### enable
