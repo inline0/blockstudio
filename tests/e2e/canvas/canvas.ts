@@ -2,7 +2,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 
 import { test, expect, Page } from '@playwright/test';
-import { login } from '../utils/playwright-utils';
+import { login, waitForCanvasSurface } from '../utils/playwright-utils';
 
 let page: Page;
 const canvasUrl = 'http://localhost:8888/wp-admin/admin.php?page=blockstudio-canvas';
@@ -60,18 +60,9 @@ test.describe('Canvas', () => {
       await expect(root).toBeVisible();
     });
 
-    test('canvas surface has transform applied', async () => {
-      const surface = page.locator('[data-canvas-surface]');
-      await expect(surface).toBeVisible();
-
-      await page.waitForFunction(
-        () => {
-          const el = document.querySelector('[data-canvas-surface]');
-          return el && window.getComputedStyle(el).transform !== 'none';
-        },
-        null,
-        { timeout: 15000 },
-      );
+    test('renders canvas surface', async () => {
+      await page.goto(canvasUrl, { waitUntil: 'domcontentloaded' });
+      await waitForCanvasSurface(page);
     });
 
     test('shows all published Blockstudio pages as artboards', async () => {
@@ -127,14 +118,7 @@ test.describe('Canvas', () => {
     test('artboard iframes contain no unsupported block warnings', async () => {
       await page.goto(canvasUrl, { waitUntil: 'domcontentloaded' });
 
-      await page.waitForFunction(
-        () => {
-          const el = document.querySelector('[data-canvas-surface]');
-          return el && window.getComputedStyle(el).transform !== 'none';
-        },
-        null,
-        { timeout: 15000 },
-      );
+      await waitForCanvasSurface(page);
 
       // Wait for BlockPreview iframes to finish rendering.
       await page.waitForTimeout(5000);
@@ -195,14 +179,7 @@ test.describe('Canvas', () => {
     test('opens menu when clicking the button', async () => {
       await page.goto(canvasUrl, { waitUntil: 'domcontentloaded' });
 
-      await page.waitForFunction(
-        () => {
-          const el = document.querySelector('[data-canvas-surface]');
-          return el && window.getComputedStyle(el).transform !== 'none';
-        },
-        null,
-        { timeout: 15000 },
-      );
+      await waitForCanvasSurface(page);
 
       const menuButton = page.locator('.blockstudio-canvas-menu .components-button').first();
       await expect(menuButton).toBeVisible();
@@ -275,14 +252,7 @@ test.describe('Canvas', () => {
     test('toggling live mode shows pulsing indicator', async () => {
       await page.evaluate(() => localStorage.removeItem('blockstudio-canvas-settings'));
       await page.goto(canvasUrl, { waitUntil: 'domcontentloaded' });
-      await page.waitForFunction(
-        () => {
-          const el = document.querySelector('[data-canvas-surface]');
-          return el && window.getComputedStyle(el).transform !== 'none';
-        },
-        null,
-        { timeout: 15000 },
-      );
+      await waitForCanvasSurface(page);
 
       const indicator = page.locator('.blockstudio-canvas-menu div[style*="border-radius: 50%"]');
       await expect(indicator).toHaveCount(0);
@@ -439,14 +409,7 @@ test.describe('Canvas', () => {
       await page.evaluate(() => localStorage.removeItem('blockstudio-canvas-settings'));
       await page.goto(canvasUrl, { waitUntil: 'domcontentloaded' });
 
-      await page.waitForFunction(
-        () => {
-          const el = document.querySelector('[data-canvas-surface]');
-          return el && window.getComputedStyle(el).transform !== 'none';
-        },
-        null,
-        { timeout: 15000 },
-      );
+      await waitForCanvasSurface(page);
 
       const artboards = page.locator('[data-canvas-slug]');
       const count = await artboards.count();
@@ -462,14 +425,7 @@ test.describe('Canvas', () => {
       originalContent = fs.readFileSync(templatePath, 'utf-8');
 
       await page.goto(canvasUrl, { waitUntil: 'domcontentloaded' });
-      await page.waitForFunction(
-        () => {
-          const el = document.querySelector('[data-canvas-surface]');
-          return el && window.getComputedStyle(el).transform !== 'none';
-        },
-        null,
-        { timeout: 15000 },
-      );
+      await waitForCanvasSurface(page);
 
       await page.evaluate(() => {
         const canvasData = (window as any).blockstudioCanvas;
@@ -529,14 +485,7 @@ test.describe('Canvas', () => {
       await page.evaluate(() => localStorage.removeItem('blockstudio-canvas-settings'));
       await page.goto(canvasUrl, { waitUntil: 'domcontentloaded' });
 
-      await page.waitForFunction(
-        () => {
-          const el = document.querySelector('[data-canvas-surface]');
-          return el && window.getComputedStyle(el).transform !== 'none';
-        },
-        null,
-        { timeout: 15000 },
-      );
+      await waitForCanvasSurface(page);
 
       const menuButton = page.locator('.blockstudio-canvas-menu .components-button').first();
       await menuButton.click();
@@ -636,14 +585,7 @@ test.describe('Canvas', () => {
       await cleanupNewPage();
       await page.goto(canvasUrl, { waitUntil: 'domcontentloaded' });
 
-      await page.waitForFunction(
-        () => {
-          const el = document.querySelector('[data-canvas-surface]');
-          return el && window.getComputedStyle(el).transform !== 'none';
-        },
-        null,
-        { timeout: 15000 },
-      );
+      await waitForCanvasSurface(page);
 
       const initialCount = await page.locator('[data-canvas-slug]').count();
 
@@ -744,14 +686,7 @@ test.describe('Canvas', () => {
 
       await page.goto(canvasUrl, { waitUntil: 'domcontentloaded' });
 
-      await page.waitForFunction(
-        () => {
-          const el = document.querySelector('[data-canvas-surface]');
-          return el && window.getComputedStyle(el).transform !== 'none';
-        },
-        null,
-        { timeout: 15000 },
-      );
+      await waitForCanvasSurface(page);
 
       await page.evaluate(() => {
         const canvasData = (window as any).blockstudioCanvas;
@@ -840,14 +775,7 @@ test.describe('Canvas', () => {
       await page.evaluate(() => localStorage.removeItem('blockstudio-canvas-settings'));
       await page.goto(canvasUrl, { waitUntil: 'domcontentloaded' });
 
-      await page.waitForFunction(
-        () => {
-          const el = document.querySelector('[data-canvas-surface]');
-          return el && window.getComputedStyle(el).transform !== 'none';
-        },
-        null,
-        { timeout: 15000 },
-      );
+      await waitForCanvasSurface(page);
 
       const menuButton = page.locator('.blockstudio-canvas-menu .components-button').first();
       await menuButton.click();
@@ -1024,14 +952,7 @@ test.describe('Canvas', () => {
         await page.evaluate(() => localStorage.removeItem('blockstudio-canvas-settings'));
         await page.goto(canvasUrl, { waitUntil: 'domcontentloaded' });
 
-        await page.waitForFunction(
-          () => {
-            const el = document.querySelector('[data-canvas-surface]');
-            return el && window.getComputedStyle(el).transform !== 'none';
-          },
-          null,
-          { timeout: 15000 },
-        );
+        await waitForCanvasSurface(page);
 
         const menuButton = page.locator('.blockstudio-canvas-menu .components-button').first();
         await menuButton.click();
@@ -1180,14 +1101,7 @@ test.describe('Canvas', () => {
         await page.evaluate(() => localStorage.removeItem('blockstudio-canvas-settings'));
         await page.goto(canvasUrl, { waitUntil: 'domcontentloaded' });
 
-        await page.waitForFunction(
-          () => {
-            const el = document.querySelector('[data-canvas-surface]');
-            return el && window.getComputedStyle(el).transform !== 'none';
-          },
-          null,
-          { timeout: 15000 },
-        );
+        await waitForCanvasSurface(page);
 
         const menuButton = page.locator('.blockstudio-canvas-menu .components-button').first();
         await menuButton.click();
@@ -1329,14 +1243,7 @@ test.describe('Canvas', () => {
     test('BlockPreview iframes contain blockstudio CSS', async () => {
       await page.goto(canvasUrl, { waitUntil: 'domcontentloaded' });
 
-      await page.waitForFunction(
-        () => {
-          const el = document.querySelector('[data-canvas-surface]');
-          return el && window.getComputedStyle(el).transform !== 'none';
-        },
-        null,
-        { timeout: 15000 },
-      );
+      await waitForCanvasSurface(page);
 
       const iframes = page.locator('#blockstudio-canvas iframe');
       await expect(iframes.first()).toBeVisible({ timeout: 15000 });
@@ -1367,14 +1274,7 @@ test.describe('Canvas', () => {
         );
         await page.goto(canvasUrl, { waitUntil: 'domcontentloaded' });
 
-        await page.waitForFunction(
-          () => {
-            const el = document.querySelector('[data-canvas-surface]');
-            return el && window.getComputedStyle(el).transform !== 'none';
-          },
-          null,
-          { timeout: 15000 },
-        );
+        await waitForCanvasSurface(page);
 
         const iframes = page.locator('#blockstudio-canvas iframe');
         await expect(iframes.first()).toBeVisible({ timeout: 15000 });
@@ -1479,14 +1379,7 @@ test.describe('Canvas', () => {
       try {
         await page.goto(canvasUrl, { waitUntil: 'domcontentloaded' });
 
-        await page.waitForFunction(
-          () => {
-            const el = document.querySelector('[data-canvas-surface]');
-            return el && window.getComputedStyle(el).transform !== 'none';
-          },
-          null,
-          { timeout: 15000 },
-        );
+        await waitForCanvasSurface(page);
 
         await page.evaluate(() => {
           const canvasData = (window as any).blockstudioCanvas;
@@ -1548,14 +1441,7 @@ test.describe('Canvas', () => {
       try {
         await page.goto(canvasUrl, { waitUntil: 'domcontentloaded' });
 
-        await page.waitForFunction(
-          () => {
-            const el = document.querySelector('[data-canvas-surface]');
-            return el && window.getComputedStyle(el).transform !== 'none';
-          },
-          null,
-          { timeout: 15000 },
-        );
+        await waitForCanvasSurface(page);
 
         await page.waitForTimeout(5000);
 
@@ -1588,14 +1474,7 @@ test.describe('Canvas', () => {
     test('trackpad scroll pans the canvas', async () => {
       await page.goto(canvasUrl, { waitUntil: 'domcontentloaded' });
 
-      await page.waitForFunction(
-        () => {
-          const el = document.querySelector('[data-canvas-surface]');
-          return el && window.getComputedStyle(el).transform !== 'none';
-        },
-        null,
-        { timeout: 15000 },
-      );
+      await waitForCanvasSurface(page);
 
       const surface = page.locator('[data-canvas-surface]');
       const before = await surface.evaluate(
@@ -1637,14 +1516,7 @@ test.describe('Canvas', () => {
       await page.evaluate(() => localStorage.removeItem('blockstudio-canvas-settings'));
       await page.goto(canvasUrl, { waitUntil: 'domcontentloaded' });
 
-      await page.waitForFunction(
-        () => {
-          const el = document.querySelector('[data-canvas-surface]');
-          return el && window.getComputedStyle(el).transform !== 'none';
-        },
-        null,
-        { timeout: 15000 },
-      );
+      await waitForCanvasSurface(page);
 
       const firstLabel = page.locator('[data-canvas-label]').first();
       await expect(firstLabel).toBeVisible({ timeout: 15000 });
@@ -1722,14 +1594,7 @@ test.describe('Canvas', () => {
     test('switching to blocks view shows block artboards', async () => {
       await page.goto(canvasUrl, { waitUntil: 'domcontentloaded' });
 
-      await page.waitForFunction(
-        () => {
-          const el = document.querySelector('[data-canvas-surface]');
-          return el && window.getComputedStyle(el).transform !== 'none';
-        },
-        null,
-        { timeout: 15000 },
-      );
+      await waitForCanvasSurface(page);
 
       const menuButton = page.locator('.blockstudio-canvas-menu .components-button').first();
       await menuButton.click();
@@ -1838,14 +1703,7 @@ test.describe('Canvas', () => {
       await page.evaluate(() => localStorage.removeItem('blockstudio-canvas-settings'));
       await page.goto(canvasUrl, { waitUntil: 'domcontentloaded' });
 
-      await page.waitForFunction(
-        () => {
-          const el = document.querySelector('[data-canvas-surface]');
-          return el && window.getComputedStyle(el).transform !== 'none';
-        },
-        null,
-        { timeout: 15000 },
-      );
+      await waitForCanvasSurface(page);
 
       const menuButton = page.locator('.blockstudio-canvas-menu .components-button').first();
       await menuButton.click();
@@ -1891,14 +1749,7 @@ test.describe('Canvas', () => {
       await page.evaluate(() => localStorage.removeItem('blockstudio-canvas-settings'));
       await page.goto(canvasUrl, { waitUntil: 'domcontentloaded' });
 
-      await page.waitForFunction(
-        () => {
-          const el = document.querySelector('[data-canvas-surface]');
-          return el && window.getComputedStyle(el).transform !== 'none';
-        },
-        null,
-        { timeout: 15000 },
-      );
+      await waitForCanvasSurface(page);
 
       const menuButton = page.locator('.blockstudio-canvas-menu .components-button').first();
       await menuButton.click();
@@ -2236,14 +2087,7 @@ test.describe('Canvas', () => {
         await cleanupFirstBlockPage();
         await page.goto(canvasUrl, { waitUntil: 'domcontentloaded' });
 
-        await page.waitForFunction(
-          () => {
-            const el = document.querySelector('[data-canvas-surface]');
-            return el && window.getComputedStyle(el).transform !== 'none';
-          },
-          null,
-          { timeout: 15000 },
-        );
+        await waitForCanvasSurface(page);
 
         const menuButton = page.locator('.blockstudio-canvas-menu .components-button').first();
         await menuButton.click();

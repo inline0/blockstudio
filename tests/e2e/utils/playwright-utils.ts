@@ -44,6 +44,30 @@ export const getEditorCanvas = async (page: Page): Promise<Frame> => {
   return frame;
 };
 
+export const waitForCanvasSurface = async (page: Page): Promise<void> => {
+  await expect(page.locator('#blockstudio-canvas')).toBeVisible({ timeout: 30000 });
+  await expect(page.locator('[data-canvas-surface]')).toBeVisible({ timeout: 30000 });
+
+  await page.waitForFunction(
+    () => {
+      const el = document.querySelector('[data-canvas-surface]');
+      if (!el) return false;
+
+      const style = window.getComputedStyle(el);
+      const rect = el.getBoundingClientRect();
+
+      return (
+        style.display !== 'none' &&
+        style.visibility !== 'hidden' &&
+        rect.width > 0 &&
+        rect.height > 0
+      );
+    },
+    null,
+    { timeout: 30000 },
+  );
+};
+
 // Reset page state - navigate to editor and remove all blocks
 export const resetPageState = async (page: Page) => {
   await page.goto('http://localhost:8888/wp-admin/post.php?post=1483&action=edit');

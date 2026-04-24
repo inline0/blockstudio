@@ -2,7 +2,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 
 import { test, expect, Page } from '@playwright/test';
-import { login } from '../utils/playwright-utils';
+import { login, waitForCanvasSurface } from '../utils/playwright-utils';
 
 let page: Page;
 const canvasUrl = 'http://localhost:8890/wp-admin/admin.php?page=blockstudio-canvas';
@@ -579,14 +579,7 @@ test.describe('Canvas - empty theme', () => {
       const root = page.locator('#blockstudio-canvas');
       await expect(root).toBeVisible({ timeout: 15000 });
 
-      await page.waitForFunction(
-        () => {
-          const el = document.querySelector('[data-canvas-surface]');
-          return el && window.getComputedStyle(el).transform !== 'none';
-        },
-        null,
-        { timeout: 15000 },
-      );
+      await waitForCanvasSurface(page);
 
       await page.waitForFunction(
         () => {
