@@ -9,7 +9,7 @@ namespace BlockstudioVendor\TailwindPHP\Utils;
  * Port of: packages/tailwindcss/src/utils/infer-data-type.ts
  *
  * @port-deviation:dispatch TypeScript uses callback functions directly in type checking.
- * PHP uses match expression with fully-qualified function names for clarity.
+ * PHP uses first-class callables to keep dispatch namespace-relative.
  *
  * @port-deviation:none Otherwise this is a direct 1:1 port.
  */
@@ -30,23 +30,23 @@ function inferDataType(string $value, array $types): ?string
     }
     foreach ($types as $type) {
         $check = match ($type) {
-            'color' => 'TailwindPHP\Utils\isColor',
-            'length' => 'TailwindPHP\Utils\isLengthValue',
-            'percentage' => 'TailwindPHP\Utils\isPercentage',
-            'ratio' => 'TailwindPHP\Utils\isFraction',
-            'number' => 'TailwindPHP\Utils\isNumberValue',
-            'integer' => 'TailwindPHP\Utils\isPositiveInteger',
-            'url' => 'TailwindPHP\Utils\isUrl',
-            'position' => 'TailwindPHP\Utils\isBackgroundPosition',
-            'bg-size' => 'TailwindPHP\Utils\isBackgroundSize',
-            'line-width' => 'TailwindPHP\Utils\isLineWidth',
-            'image' => 'TailwindPHP\Utils\isImage',
-            'family-name' => 'TailwindPHP\Utils\isFamilyName',
-            'generic-name' => 'TailwindPHP\Utils\isGenericName',
-            'absolute-size' => 'TailwindPHP\Utils\isAbsoluteSize',
-            'relative-size' => 'TailwindPHP\Utils\isRelativeSize',
-            'angle' => 'TailwindPHP\Utils\isAngle',
-            'vector' => 'TailwindPHP\Utils\isVector',
+            'color' => isColor(...),
+            'length' => isLengthValue(...),
+            'percentage' => isPercentage(...),
+            'ratio' => isFraction(...),
+            'number' => isNumberValue(...),
+            'integer' => isPositiveInteger(...),
+            'url' => isUrl(...),
+            'position' => isBackgroundPosition(...),
+            'bg-size' => isBackgroundSize(...),
+            'line-width' => isLineWidth(...),
+            'image' => isImage(...),
+            'family-name' => isFamilyName(...),
+            'generic-name' => isGenericName(...),
+            'absolute-size' => isAbsoluteSize(...),
+            'relative-size' => isRelativeSize(...),
+            'angle' => isAngle(...),
+            'vector' => isVector(...),
             default => null,
         };
         if ($check !== null && $check($value)) {

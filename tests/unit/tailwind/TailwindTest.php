@@ -70,6 +70,22 @@ class TailwindTest extends TestCase {
 		$this->assertSame( $first, $second );
 	}
 
+	public function test_scoped_tailwind_compiles_arbitrary_length_font_size(): void {
+		$css = $this->generate_scoped_tailwind_css( 'text-[15px]' );
+
+		$this->assertStringContainsString( 'font-size:15px', $css );
+	}
+
+	public function test_scoped_tailwind_preserves_arbitrary_math_spacing_after_minification(): void {
+		$css = $this->generate_scoped_tailwind_css(
+			'h-[clamp(9.375rem,7.635rem_+_8.699vw,15.8125rem)] w-[calc(100%_+_10px)] mb-[min(1rem_+_2vw,3rem)]'
+		);
+
+		$this->assertStringContainsString( 'height:clamp(9.375rem, 7.635rem + 8.699vw, 15.8125rem)', $css );
+		$this->assertStringContainsString( 'width:calc(100% + 10px)', $css );
+		$this->assertStringContainsString( 'margin-bottom:min(1rem + 2vw, 3rem)', $css );
+	}
+
 	public function test_get_cdn_url_returns_empty_when_disabled(): void {
 		$cb = function () {
 			return false;
@@ -122,5 +138,16 @@ class TailwindTest extends TestCase {
 		$filters_values->setValue( null, array() );
 
 		Settings::get_instance();
+	}
+
+	private function generate_scoped_tailwind_css( string $classes ): string {
+		require_once BLOCKSTUDIO_DIR . '/lib/tailwindphp-autoload.php';
+
+		return \BlockstudioVendor\TailwindPHP\Tailwind::generate(
+			array(
+				'content' => '<div class="' . esc_attr( $classes ) . '"></div>',
+				'minify'  => true,
+			)
+		);
 	}
 }

@@ -3,7 +3,7 @@ Contributors: dnnsjsk
 Requires at least: 6.7
 Tested up to: 7.0.0
 Requires PHP: 8.2
-Stable tag: 7.2.0
+Stable tag: 7.2.1
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -52,6 +52,10 @@ Download the latest release zip from [GitHub Releases](https://github.com/inline
 * [Getting Started](https://blockstudio.dev/docs/getting-started)
 
 == Changelog ==
+
+= 7.2.1 =
+* Fix: Tailwind arbitrary length font sizes such as `text-[15px]` compile correctly in scoped builds
+* Fix: Tailwind arbitrary math values preserve required spacing after minification
 
 = 7.2.0 =
 * New: admin overview under Tools > Blockstudio with registry and database browsing

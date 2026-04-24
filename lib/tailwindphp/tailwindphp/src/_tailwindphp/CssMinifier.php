@@ -67,8 +67,11 @@ class CssMinifier
             if ($ch === ' ') {
                 $prev = $out !== '' ? substr($out, -1) : '';
                 $next = $i + 1 < $len ? $css[$i + 1] : '';
-                $stripAfter = '{};:,(';
+                $stripAfter = '{};:(';
                 $stripBefore = '{};:,)';
+                if ($depth === 0) {
+                    $stripAfter .= ',';
+                }
                 if (str_contains($stripAfter, $prev) || str_contains($stripBefore, $next)) {
                     continue;
                 }
