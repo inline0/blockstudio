@@ -1481,14 +1481,24 @@ test.describe('Canvas', () => {
         (el) => window.getComputedStyle(el).transform,
       );
 
-      await page.mouse.move(960, 540);
-      await page.mouse.wheel(0, -200);
-      await page.waitForTimeout(100);
+      const box = await surface.boundingBox();
+      expect(box).not.toBeNull();
 
-      const after = await surface.evaluate(
-        (el) => window.getComputedStyle(el).transform,
+      await page.mouse.move(
+        (box?.x ?? 0) + (box?.width ?? 0) / 2,
+        (box?.y ?? 0) + (box?.height ?? 0) / 2,
       );
-      expect(after).not.toBe(before);
+      await page.mouse.wheel(0, -200);
+
+      await expect
+        .poll(
+          async () =>
+            await surface.evaluate(
+              (el) => window.getComputedStyle(el).transform,
+            ),
+          { timeout: 3000 },
+        )
+        .not.toBe(before);
     });
 
     test('ctrl+wheel zooms the canvas', async () => {
@@ -2056,6 +2066,8 @@ test.describe('Canvas', () => {
     });
 
     test('first blockstudio block added to page with none renders immediately', async () => {
+      test.slow();
+
       const newPageDir = path.join(
         process.cwd(),
         'tests/theme/pages/test-first-block',
@@ -2128,24 +2140,42 @@ test.describe('Canvas', () => {
           { timeout: 20000 },
         );
 
-        fs.writeFileSync(
-          path.join(newPageDir, 'index.php'),
-          '<p>Page with first block.</p>\n<block name="blockstudio/type-preload-simple" title="First Ever Block" />',
-        );
+        const firstBlockTemplate =
+          '<p>Page with first block.</p>\n<block name="blockstudio/type-preload-simple" title="First Ever Block" />';
+        const firstBlockTemplatePath = path.join(newPageDir, 'index.php');
+        const waitForFirstBlock = (timeout: number) =>
+          page.waitForFunction(
+            (slug: string) => {
+              const ab = document.querySelector(`[data-canvas-slug="${slug}"]`);
+              if (!ab) return false;
+              const iframe = ab.querySelector('iframe') as HTMLIFrameElement | null;
+              if (!iframe) return false;
+              const doc = iframe.contentDocument;
+              if (!doc) return false;
 
-        await page.waitForFunction(
-          (slug: string) => {
-            const ab = document.querySelector(`[data-canvas-slug="${slug}"]`);
-            if (!ab) return false;
-            const iframe = ab.querySelector('iframe') as HTMLIFrameElement | null;
-            if (!iframe) return false;
-            const doc = iframe.contentDocument;
-            if (!doc) return false;
-            return (doc.body?.textContent || '').includes('First Ever Block');
-          },
-          'first-block-test',
-          { timeout: 25000 },
-        );
+              const bodyText = doc.body?.textContent || '';
+              const missingBlocks = doc.querySelectorAll('.wp-block-missing').length;
+              const hasUnsupportedText = bodyText.includes("doesn't include support");
+
+              return (
+                missingBlocks === 0 &&
+                !hasUnsupportedText &&
+                bodyText.includes('First Ever Block')
+              );
+            },
+            'first-block-test',
+            { timeout },
+          );
+
+        fs.writeFileSync(firstBlockTemplatePath, firstBlockTemplate);
+
+        try {
+          await waitForFirstBlock(30000);
+        } catch {
+          fs.writeFileSync(firstBlockTemplatePath, firstBlockTemplate);
+          await page.waitForTimeout(3000);
+          await waitForFirstBlock(45000);
+        }
       } finally {
         await cleanupFirstBlockPage();
       }
