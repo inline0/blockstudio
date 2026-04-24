@@ -22,14 +22,14 @@ export async function HeroLeft() {
   return (
     <>
       <Link
-        href="/blog/introducing-blockstudio-7"
+        href="/blog/blockstudio-7-2"
         className="inline-flex items-center gap-1.5 rounded-full border border-fd-border bg-fd-secondary/50 pl-1 pr-1 py-1 text-xs text-fd-muted-foreground transition-colors hover:bg-fd-secondary hover:text-fd-foreground w-fit mb-4"
       >
         <span className="rounded-full bg-fd-primary px-1.5 py-0.5 text-xs font-medium text-fd-primary-foreground">
           New
         </span>
         <span className="px-3">
-          Introducing Blockstudio 7, now free and open source
+          Blockstudio 7.2: Registry, PHPStan, and admin tools
         </span>
       </Link>
       <h1 className="text-left text-4xl font-medium leading-tight text-fd-foreground sm:text-5xl">
