@@ -1,7 +1,7 @@
 import * as fs from 'fs';
 import * as path from 'path';
 
-import { test, expect, Page } from '@playwright/test';
+import { test, expect, ConsoleMessage, Page } from '@playwright/test';
 import { login, waitForCanvasSurface } from '../utils/playwright-utils';
 
 let page: Page;
@@ -61,8 +61,92 @@ test.describe('Canvas', () => {
     });
 
     test('renders canvas surface', async () => {
-      await page.goto(canvasUrl, { waitUntil: 'domcontentloaded' });
-      await waitForCanvasSurface(page);
+      const errors: string[] = [];
+      const onPageError = (error: Error) => errors.push(error.message);
+      const onConsole = (message: ConsoleMessage) => {
+        if (message.type() === 'error') {
+          errors.push(message.text());
+        }
+      };
+
+      page.on('pageerror', onPageError);
+      page.on('console', onConsole);
+
+      try {
+        await page.goto(canvasUrl, { waitUntil: 'domcontentloaded' });
+        await waitForCanvasSurface(page);
+      } finally {
+        page.off('pageerror', onPageError);
+        page.off('console', onConsole);
+      }
+
+      expect(
+        errors.filter(
+          (message) =>
+            message.includes('isSavingPost') ||
+            message.includes('getEditorSettings') ||
+            message.includes('core/editor'),
+        ),
+      ).toEqual([]);
+    });
+
+    test('renders when core/editor is unavailable during init', async ({ browser }) => {
+      const context = await browser.newContext();
+      const isolatedPage = await context.newPage();
+      const errors: string[] = [];
+
+      await isolatedPage.setViewportSize({ width: 1920, height: 1080 });
+      await isolatedPage.addInitScript(() => {
+        const patchSelect = () => {
+          const data = (window as any).wp?.data;
+
+          if (!data?.select || data.__blockstudioCoreEditorUnavailable) {
+            return;
+          }
+
+          const originalSelect = data.select.bind(data);
+
+          data.select = (storeName: string, ...args: unknown[]) => {
+            if (storeName === 'core/editor') {
+              return undefined;
+            }
+
+            return originalSelect(storeName, ...args);
+          };
+          data.__blockstudioCoreEditorUnavailable = true;
+        };
+
+        patchSelect();
+        const interval = window.setInterval(patchSelect, 0);
+        window.addEventListener('load', () => {
+          window.setTimeout(() => window.clearInterval(interval), 1000);
+        });
+      });
+
+      isolatedPage.on('pageerror', (error) => errors.push(error.message));
+      isolatedPage.on('console', (message) => {
+        if (message.type() === 'error') {
+          errors.push(message.text());
+        }
+      });
+
+      try {
+        await login(isolatedPage);
+        await isolatedPage.goto(canvasUrl, { waitUntil: 'domcontentloaded' });
+        await waitForCanvasSurface(isolatedPage);
+
+        expect(
+          errors.filter(
+            (message) =>
+              message.includes('isSavingPost') ||
+              message.includes('getEditorSettings') ||
+              message.includes('core/editor'),
+          ),
+        ).toEqual([]);
+      } finally {
+        await isolatedPage.close();
+        await context.close();
+      }
     });
 
     test('shows all published Blockstudio pages as artboards', async () => {

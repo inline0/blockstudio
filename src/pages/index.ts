@@ -17,6 +17,18 @@ interface EditorSettings {
   blockstudioBlockEditingMode?: string;
 }
 
+interface EditorStore {
+  getEditorSettings: () => EditorSettings;
+}
+
+interface BlockEditorStore {
+  getBlocks: () => Block[];
+}
+
+interface BlockEditorActions {
+  setBlockEditingMode: (clientId: string, mode: string) => void;
+}
+
 // Register blockEditingMode as an attribute on every block type via JS filter.
 // This must happen before blocks are parsed so the attribute is preserved.
 addFilter(
@@ -77,18 +89,29 @@ domReady(() => {
   const applied: Record<string, string> = {};
 
   subscribe(() => {
-    const settings = select(
-      'core/editor',
-    ).getEditorSettings() as EditorSettings;
+    const editor = select('core/editor') as EditorStore | undefined;
+
+    if (!editor) {
+      return;
+    }
+
+    const settings = editor.getEditorSettings();
     const defaultMode = settings.blockstudioBlockEditingMode;
 
     if (!defaultMode) {
       return;
     }
 
-    const topBlocks = (
-      select('core/block-editor') as { getBlocks: () => Block[] }
-    ).getBlocks();
+    const blockEditor = select('core/block-editor') as BlockEditorStore | undefined;
+    const blockEditorActions = dispatch('core/block-editor') as unknown as
+      | BlockEditorActions
+      | undefined;
+
+    if (!blockEditor || !blockEditorActions) {
+      return;
+    }
+
+    const topBlocks = blockEditor.getBlocks();
     const ancestorIds = findAncestorsOfOverrides(topBlocks, []);
     const blocks = getAllBlocks(topBlocks);
 
@@ -106,11 +129,7 @@ domReady(() => {
       }
 
       if (mode && applied[block.clientId] !== mode) {
-        (
-          dispatch('core/block-editor') as unknown as {
-            setBlockEditingMode: (clientId: string, mode: string) => void;
-          }
-        ).setBlockEditingMode(block.clientId, mode);
+        blockEditorActions.setBlockEditingMode(block.clientId, mode);
         applied[block.clientId] = mode;
       }
     });

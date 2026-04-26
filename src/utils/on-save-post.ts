@@ -1,15 +1,29 @@
 import { select, subscribe } from '@wordpress/data';
 import domReady from '@wordpress/dom-ready';
 
+interface EditorStore {
+  isSavingPost: () => boolean;
+  isAutosavingPost: () => boolean;
+  isEditedPostSaveable: () => boolean;
+  isPostSavingLocked: () => boolean;
+  hasNonPostEntityChanges: () => boolean;
+  getCurrentPostType: () => string | null;
+}
+
+const getEditorStore = () => select('core/editor') as EditorStore | undefined;
+
 const saving = () => {
-  const isSaving =
-    select('core/editor').isSavingPost() ||
-    select('core/editor').isAutosavingPost();
-  const isSaveable = select('core/editor').isEditedPostSaveable();
-  const isPostSavingLocked = select('core/editor').isPostSavingLocked();
-  const hasNonPostEntityChanges =
-    select('core/editor').hasNonPostEntityChanges();
-  const isAutoSaving = select('core/editor').isAutosavingPost();
+  const editor = getEditorStore();
+
+  if (!editor) {
+    return false;
+  }
+
+  const isSaving = editor.isSavingPost() || editor.isAutosavingPost();
+  const isSaveable = editor.isEditedPostSaveable();
+  const isPostSavingLocked = editor.isPostSavingLocked();
+  const hasNonPostEntityChanges = editor.hasNonPostEntityChanges();
+  const isAutoSaving = editor.isAutosavingPost();
   const isButtonDisabled = isSaving || !isSaveable || isPostSavingLocked;
   const isBusy = !isAutoSaving && isSaving;
   const isNotInteractable = isButtonDisabled && !hasNonPostEntityChanges;
@@ -27,7 +41,7 @@ export const onSavePost = (cb = () => {}) => {
       wasSaving = isSaving;
 
       if (isDoneSaving) {
-        const postType = select('core/editor')?.getCurrentPostType();
+        const postType = getEditorStore()?.getCurrentPostType();
         if (!postType) return;
         cb();
       }
