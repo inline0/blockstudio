@@ -24,7 +24,7 @@ if ( defined( 'BLOCKSTUDIO_VERSION' ) ) {
 define( 'BLOCKSTUDIO_VERSION', '7.2.1' );
 define( 'BLOCKSTUDIO_FILE', __FILE__ );
 define( 'BLOCKSTUDIO_DIR', __DIR__ );
-define( 'BLOCKSTUDIO_URL', set_url_scheme( content_url( str_replace( WP_CONTENT_DIR, '', BLOCKSTUDIO_DIR ) . '/' ) ) );
+define( 'BLOCKSTUDIO_URL', set_url_scheme( content_url( str_replace( wp_normalize_path( WP_CONTENT_DIR ), '', wp_normalize_path( BLOCKSTUDIO_DIR ) ) . '/' ) ) );
 
 spl_autoload_register(
 	function ( $class_name ) {
