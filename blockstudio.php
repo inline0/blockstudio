@@ -21,10 +21,26 @@ if ( defined( 'BLOCKSTUDIO_VERSION' ) ) {
 	return;
 }
 
+/**
+ * Get the plugin path relative to the WordPress content directory.
+ *
+ * @param string $content_dir WordPress content directory.
+ * @param string $plugin_dir  Blockstudio plugin directory.
+ *
+ * @return string
+ */
+function blockstudio_get_relative_plugin_path( string $content_dir, string $plugin_dir ): string {
+	return str_replace(
+		wp_normalize_path( $content_dir ),
+		'',
+		wp_normalize_path( $plugin_dir )
+	);
+}
+
 define( 'BLOCKSTUDIO_VERSION', '7.2.2' );
 define( 'BLOCKSTUDIO_FILE', __FILE__ );
 define( 'BLOCKSTUDIO_DIR', __DIR__ );
-define( 'BLOCKSTUDIO_URL', set_url_scheme( content_url( str_replace( WP_CONTENT_DIR, '', BLOCKSTUDIO_DIR ) . '/' ) ) );
+define( 'BLOCKSTUDIO_URL', set_url_scheme( content_url( blockstudio_get_relative_plugin_path( WP_CONTENT_DIR, BLOCKSTUDIO_DIR ) . '/' ) ) );
 
 spl_autoload_register(
 	function ( $class_name ) {
