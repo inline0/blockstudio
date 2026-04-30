@@ -6,6 +6,69 @@ use PHPUnit\Framework\TestCase;
 
 class EsmodulesTest extends TestCase {
 
+	private array $filter_callbacks = array();
+	private array $temp_directories = array();
+
+	protected function tearDown(): void {
+		foreach ( $this->filter_callbacks as $filter_callback ) {
+			remove_filter( $filter_callback[0], $filter_callback[1], $filter_callback[2] );
+		}
+
+		foreach ( $this->temp_directories as $directory ) {
+			$this->delete_directory( $directory );
+		}
+
+		$this->filter_callbacks = array();
+		$this->temp_directories = array();
+	}
+
+	private function add_filter( string $name, callable $callback, int $priority = 10, int $args = 1 ): void {
+		add_filter( $name, $callback, $priority, $args );
+		$this->filter_callbacks[] = array( $name, $callback, $priority );
+	}
+
+	private function delete_directory( string $directory ): void {
+		if ( ! is_dir( $directory ) ) {
+			return;
+		}
+
+		$items = scandir( $directory );
+
+		if ( false === $items ) {
+			return;
+		}
+
+		foreach ( $items as $item ) {
+			if ( '.' === $item || '..' === $item ) {
+				continue;
+			}
+
+			$path = $directory . '/' . $item;
+
+			if ( is_dir( $path ) ) {
+				$this->delete_directory( $path );
+				continue;
+			}
+
+			unlink( $path );
+		}
+
+		rmdir( $directory );
+	}
+
+	private function mock_http_response( string $body, int $code = 200 ): array {
+		return array(
+			'headers'  => array(),
+			'body'     => $body,
+			'response' => array(
+				'code'    => $code,
+				'message' => 200 === $code ? 'OK' : 'Error',
+			),
+			'cookies'  => array(),
+			'filename' => null,
+		);
+	}
+
 	// ESModules::get_blockstudio_regex()
 
 	public function test_js_regex_matches_npm_prefix(): void {
@@ -70,6 +133,40 @@ class EsmodulesTest extends TestCase {
 		$this->assertSame( '@scope-package', $result['nameTransformed'] );
 		$this->assertSame( '1.0.0', $result['version'] );
 		$this->assertSame( '@scope/package@1.0.0', $result['nameVersion'] );
+	}
+
+	public function test_fetch_module_and_write_to_file_supports_js_subpath_imports(): void {
+		$folder                   = sys_get_temp_dir() . '/blockstudio-esmodules-' . uniqid( '', true );
+		$this->temp_directories[] = $folder;
+
+		$this->add_filter(
+			'pre_http_request',
+			function ( $preempt, $parsed_args, $url ) {
+				unset( $parsed_args );
+
+				if ( 'https://esm.sh/gsap@3.14.2/ScrollTrigger?bundle' === $url ) {
+					return $this->mock_http_response( 'export * from "/gsap@3.14.2/es2022/ScrollTrigger.bundle.mjs";' );
+				}
+
+				if ( 'https://esm.sh/gsap@3.14.2/es2022/ScrollTrigger.bundle.mjs' === $url ) {
+					return $this->mock_http_response( 'export default function ScrollTrigger() {}' );
+				}
+
+				return $preempt;
+			},
+			10,
+			3
+		);
+
+		$filename = ESModules::fetch_module_and_write_to_file(
+			'npm:gsap@3.14.2/ScrollTrigger',
+			$folder
+		);
+
+		$expected = $folder . '/_dist/modules/gsap/3.14.2/ScrollTrigger.js';
+
+		$this->assertSame( $expected, $filename );
+		$this->assertFileExists( $expected );
 	}
 
 	// ESModules::get_module_matches() string replacement mode
