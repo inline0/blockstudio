@@ -101,6 +101,50 @@ add_action(
 	}
 );
 
+// Register a legacy API v1 block on demand to test non-iframed editor fallbacks.
+add_action(
+	'init',
+	function () {
+		if ( ! get_option( 'blockstudio_e2e_legacy_api_block_enabled' ) ) {
+			return;
+		}
+
+		register_block_type(
+			'blockstudio-test/legacy-api-v1',
+			array(
+				'api_version'     => 1,
+				'title'           => 'Legacy API v1 Test Block',
+				'category'        => 'widgets',
+				'render_callback' => function () {
+					return '<div class="wp-block-blockstudio-test-legacy-api-v1"></div>';
+				},
+			)
+		);
+	}
+);
+
+add_action(
+	'enqueue_block_editor_assets',
+	function () {
+		if ( ! get_option( 'blockstudio_e2e_legacy_api_block_enabled' ) ) {
+			return;
+		}
+
+		wp_register_script(
+			'blockstudio-e2e-legacy-api-block',
+			false,
+			array( 'wp-blocks', 'wp-element' ),
+			'1.0.0',
+			true
+		);
+		wp_enqueue_script( 'blockstudio-e2e-legacy-api-block' );
+		wp_add_inline_script(
+			'blockstudio-e2e-legacy-api-block',
+			"wp.blocks.registerBlockType('blockstudio-test/legacy-client-api-v1',{apiVersion:1,title:'Legacy API v1 Client Test Block',category:'widgets',edit:function(){return null;},save:function(){return null;}});"
+		);
+	}
+);
+
 // Enqueue test classes CSS for E2E tests.
 add_action(
 	'enqueue_block_editor_assets',
@@ -613,6 +657,28 @@ add_action(
 
 		register_rest_route(
 			'blockstudio-test/v1',
+			'/e2e/legacy-api-block',
+			array(
+				'methods'             => 'POST',
+				'callback'            => function ( $request ) {
+					$enabled = rest_sanitize_boolean( $request->get_param( 'enabled' ) );
+
+					if ( $enabled ) {
+						update_option( 'blockstudio_e2e_legacy_api_block_enabled', 1 );
+					} else {
+						delete_option( 'blockstudio_e2e_legacy_api_block_enabled' );
+					}
+
+					return array(
+						'enabled' => (bool) get_option( 'blockstudio_e2e_legacy_api_block_enabled' ),
+					);
+				},
+				'permission_callback' => '__return_true',
+			)
+		);
+
+		register_rest_route(
+			'blockstudio-test/v1',
 			'/e2e/setup',
 			array(
 				'methods'             => 'POST',
@@ -630,6 +696,8 @@ add_action(
 					foreach ( $all_posts as $post_id ) {
 						wp_delete_post( $post_id, true );
 					}
+
+					delete_option( 'blockstudio_e2e_legacy_api_block_enabled' );
 
 					switch_theme( 'theme' );
 

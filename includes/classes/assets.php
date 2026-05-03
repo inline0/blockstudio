@@ -125,6 +125,16 @@ class Assets {
 			PHP_INT_MAX
 		);
 		add_action(
+			'admin_footer',
+			function () {
+				if ( ! self::is_editor_screen() || ! self::has_legacy_registered_blocks() ) {
+					return;
+				}
+
+				self::get_assets( 'editor' );
+			}
+		);
+		add_action(
 			'customize_preview_init',
 			function () {
 				$this->get_assets( 'customizer' );
@@ -894,6 +904,25 @@ class Assets {
 		}
 
 		return method_exists( $current_screen, 'is_block_editor' ) && $current_screen->is_block_editor();
+	}
+
+	/**
+	 * Check whether any registered block can force the editor out of iframe mode.
+	 *
+	 * @return bool Whether a legacy block API version is registered.
+	 */
+	private static function has_legacy_registered_blocks(): bool {
+		if ( ! class_exists( 'WP_Block_Type_Registry' ) ) {
+			return false;
+		}
+
+		foreach ( \WP_Block_Type_Registry::get_instance()->get_all_registered() as $block ) {
+			if ( isset( $block->api_version ) && $block->api_version < 3 ) {
+				return true;
+			}
+		}
+
+		return false;
 	}
 
 	/**
