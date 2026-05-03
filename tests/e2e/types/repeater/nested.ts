@@ -12,16 +12,6 @@ testType(
       return {
         description: `add media ${index}`,
         testFunction: async (page: Page, canvas: Frame) => {
-          if (
-            index === 0 ||
-            index === 2 ||
-            index === 4 ||
-            index === 6 ||
-            index === 8
-          ) {
-            await delay(1000);
-            await page.locator(`text=Open Media Library`).nth(index).click();
-          }
           await delay(1000);
           await page.locator(`text=Open Media Library`).nth(index).click();
           await page.locator('#menu-item-browse:visible').click();
@@ -35,5 +25,5 @@ testType(
         },
       };
     });
-  }
+  },
 );
