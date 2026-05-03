@@ -1,3 +1,4 @@
+import type { MouseEvent } from 'react';
 import { MediaUpload, MediaUploadCheck } from '@wordpress/block-editor';
 import { Button, PanelRow, SelectControl } from '@wordpress/components';
 import { useSelect } from '@wordpress/data';
@@ -41,7 +42,13 @@ export const Files = ({
 
   const Btn = ({ open }: { open?: () => void }) => {
     return (
-      <Button variant="secondary" onClick={open}>
+      <Button
+        variant="secondary"
+        onMouseDown={(event: MouseEvent<HTMLButtonElement>) =>
+          event.preventDefault()
+        }
+        onClick={open}
+      >
         {__(
           item?.textMediaButton || 'Open Media Library',
           item?.textMediaButton as unknown as boolean,
