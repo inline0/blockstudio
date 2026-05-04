@@ -55,6 +55,10 @@ Download the latest release zip from [GitHub Releases](https://github.com/inline
 
 = 7.2.2 =
 * Fix: Canvas no longer stalls when editor-only WordPress data stores are unavailable during admin page init
+* Fix: plugin URL generation now works on Windows installs with mixed path separators
+* Fix: ES module npm subpath imports now create nested cache directories correctly
+* Fix: repeater file fields now open the Media Library when used inside repeaters
+* Fix: editor block assets now load when legacy API v1/v2 blocks disable the iframed editor
 
 = 7.2.1 =
 * Fix: Tailwind arbitrary length font sizes such as `text-[15px]` compile correctly in scoped builds
