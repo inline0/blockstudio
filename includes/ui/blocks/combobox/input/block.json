@@ -1,0 +1,8 @@
+{
+	"$schema": "https://blockstudio.dev/schema/block",
+	"name": "bsui/combobox-input",
+	"title": "Combobox Input",
+	"parent": ["bsui/combobox"],
+	"usesContext": ["bsui/combobox"],
+	"blockstudio": true
+}

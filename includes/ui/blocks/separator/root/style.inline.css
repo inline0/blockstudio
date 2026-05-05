@@ -1,0 +1,18 @@
+[role="separator"] {
+	border: none;
+	background: var(--bs-ui-border);
+}
+
+[role="separator"][aria-orientation="horizontal"],
+[role="separator"]:not([aria-orientation="vertical"]) {
+	height: 1px;
+	width: 100%;
+	margin: 0.5rem 0;
+}
+
+[role="separator"][aria-orientation="vertical"] {
+	width: 1px;
+	height: 100%;
+	margin: 0 0.5rem;
+	display: inline-block;
+}

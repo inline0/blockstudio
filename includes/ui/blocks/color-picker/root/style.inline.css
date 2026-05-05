@@ -1,0 +1,51 @@
+[data-bsui-color-picker] {
+	display: inline-flex;
+	align-items: center;
+	gap: 0.5rem;
+	font-family: var(--bs-ui-font-sans);
+}
+
+[data-bsui-color-swatch] {
+	position: relative;
+	width: 2.25rem;
+	height: 2.25rem;
+	border-radius: var(--bs-ui-radius);
+	border: 1px solid var(--bs-ui-input);
+	cursor: pointer;
+	flex-shrink: 0;
+	overflow: hidden;
+}
+
+[data-bsui-color-swatch] input[type="color"] {
+	position: absolute;
+	inset: 0;
+	width: 100%;
+	height: 100%;
+	opacity: 0;
+	cursor: pointer;
+	border: none;
+	padding: 0;
+}
+
+[data-bsui-color-picker] > input[type="text"] {
+	all: unset;
+	box-sizing: border-box;
+	width: 7rem;
+	padding: 0.5rem 0.75rem;
+	border-radius: var(--bs-ui-radius);
+	border: 1px solid var(--bs-ui-input);
+	background: var(--bs-ui-background);
+	font-family: var(--bs-ui-font-mono);
+	font-size: var(--bs-ui-font-size);
+	min-height: var(--bs-ui-control-height);
+	color: var(--bs-ui-foreground);
+}
+
+[data-bsui-color-picker] > input[type="text"]::placeholder {
+	color: var(--bs-ui-muted-foreground);
+}
+
+[data-bsui-color-picker] > input:disabled {
+	opacity: 0.5;
+	pointer-events: none;
+}

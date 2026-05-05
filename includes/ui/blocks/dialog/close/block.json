@@ -1,0 +1,23 @@
+{
+	"$schema": "https://blockstudio.dev/schema/block",
+	"name": "bsui/dialog-close",
+	"title": "Dialog Close",
+	"category": "design",
+	"icon": "no",
+	"parent": ["bsui/dialog-popup"],
+	"usesContext": ["bsui/dialog"],
+	"blockstudio": {
+		"attributes": [
+			{
+				"id": "label",
+				"type": "richtext"
+			},
+			{
+				"id": "x",
+				"type": "toggle",
+				"label": "X Icon",
+				"default": false
+			}
+		]
+	}
+}

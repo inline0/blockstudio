@@ -1,0 +1,15 @@
+{
+	"$schema": "https://blockstudio.dev/schema/block",
+	"name": "bsui/kbd",
+	"title": "Keyboard Shortcut",
+	"category": "design",
+	"icon": "editor-code",
+	"blockstudio": {
+		"attributes": [
+			{
+				"id": "label",
+				"type": "richtext"
+			}
+		]
+	}
+}

@@ -1,0 +1,23 @@
+{
+	"$schema": "https://blockstudio.dev/schema/block",
+	"name": "bsui/combobox",
+	"title": "Combobox",
+	"category": "design",
+	"icon": "search",
+	"blockstudio": {
+		"interactivity": { "enqueue": true },
+		"attributes": [
+			{
+				"id": "placeholder",
+				"type": "text",
+				"label": "Placeholder",
+				"default": "Search..."
+			},
+			{
+				"id": "name",
+				"type": "text",
+				"label": "Form Name"
+			}
+		]
+	}
+}

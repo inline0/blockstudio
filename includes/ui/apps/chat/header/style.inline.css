@@ -1,0 +1,39 @@
+[data-chat-header] {
+	height: 56px;
+	box-sizing: border-box;
+	overflow: hidden;
+}
+
+[data-chat-expand-sidebar] {
+	display: none !important;
+}
+
+[data-chat-sidebar-toggle] {
+	display: none !important;
+}
+
+.chat-sidebar-collapsed [data-chat-expand-sidebar] {
+	display: inline-flex !important;
+}
+
+[data-chat-header-title] {
+	font-size: 0.875rem;
+	font-weight: 600;
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
+}
+
+[data-chat-header] svg {
+	width: 1.25rem;
+	height: 1.25rem;
+}
+
+@media (max-width: 640px) {
+	.chat-sidebar-collapsed [data-chat-expand-sidebar] {
+		display: none !important;
+	}
+	[data-chat-sidebar-toggle] {
+		display: inline-flex !important;
+	}
+}

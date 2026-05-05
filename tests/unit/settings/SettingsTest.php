@@ -72,6 +72,10 @@ class SettingsTest extends TestCase {
 		$this->assertStringContainsString( '--color-weird', Settings::get( 'tailwind/config' ) );
 	}
 
+	public function test_ui_enabled_keeps_default(): void {
+		$this->assertFalse( Settings::get( 'ui/enabled' ) );
+	}
+
 	public function test_assets_enqueue_from_json(): void {
 		$this->assertTrue( Settings::get( 'assets/enqueue' ) );
 	}
@@ -380,7 +384,7 @@ class SettingsTest extends TestCase {
 
 	public function test_get_all_contains_top_level_keys(): void {
 		$all  = Settings::get_all();
-		$keys = array( 'users', 'assets', 'editor', 'tailwind', 'blockEditor', 'ai', 'blockTags', 'dev' );
+		$keys = array( 'users', 'assets', 'editor', 'tailwind', 'ui', 'blockEditor', 'ai', 'blockTags', 'dev' );
 		foreach ( $keys as $key ) {
 			$this->assertArrayHasKey( $key, $all, "Missing top-level key: {$key}" );
 		}
@@ -422,6 +426,7 @@ class SettingsTest extends TestCase {
 	public function test_get_filters_contains_top_level_keys(): void {
 		$filters = Settings::get_filters();
 		$this->assertArrayHasKey( 'tailwind', $filters );
+		$this->assertArrayHasKey( 'ui', $filters );
 		$this->assertArrayHasKey( 'assets', $filters );
 		$this->assertArrayHasKey( 'dev', $filters );
 	}

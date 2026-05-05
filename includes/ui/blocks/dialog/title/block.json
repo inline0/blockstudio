@@ -1,0 +1,16 @@
+{
+	"$schema": "https://blockstudio.dev/schema/block",
+	"name": "bsui/dialog-title",
+	"title": "Dialog Title",
+	"category": "design",
+	"icon": "text",
+	"parent": ["bsui/dialog-header"],
+	"blockstudio": {
+		"attributes": [
+			{
+				"id": "content",
+				"type": "richtext"
+			}
+		]
+	}
+}

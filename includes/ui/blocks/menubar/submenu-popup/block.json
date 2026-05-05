@@ -1,0 +1,7 @@
+{
+	"$schema": "https://blockstudio.dev/schema/block",
+	"name": "bsui/menubar-submenu-popup",
+	"title": "Submenu Popup",
+	"parent": ["bsui/menubar-submenu"],
+	"blockstudio": true
+}

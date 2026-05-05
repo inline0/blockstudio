@@ -1,0 +1,14 @@
+{
+	"$schema": "https://blockstudio.dev/schema/block",
+	"name": "bsui/alert-dialog-close",
+	"title": "Alert Dialog Close",
+	"category": "design",
+	"icon": "no",
+	"parent": ["bsui/alert-dialog-popup"],
+	"blockstudio": {
+		"attributes": [
+			{ "id": "label", "type": "richtext" },
+			{ "id": "x", "type": "toggle", "label": "X Icon", "default": false }
+		]
+	}
+}

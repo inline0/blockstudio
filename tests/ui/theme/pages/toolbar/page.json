@@ -1,0 +1,7 @@
+{
+	"name": "toolbar",
+	"title": "Toolbar Test",
+	"slug": "toolbar-test",
+	"postType": "page",
+	"postStatus": "publish"
+}

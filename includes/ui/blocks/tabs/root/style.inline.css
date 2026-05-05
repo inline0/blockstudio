@@ -1,0 +1,49 @@
+[role="tablist"] {
+	display: inline-flex;
+	align-items: center;
+	gap: 0.25rem;
+	border-radius: var(--bs-ui-radius);
+	background: var(--bs-ui-muted);
+	padding: 0.25rem;
+	font-family: var(--bs-ui-font-sans);
+}
+
+[role="tab"] {
+	all: unset;
+
+	box-sizing: border-box;
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	padding: 0.375rem 0.75rem;
+	border-radius: var(--bs-ui-radius-sm);
+	font-size: var(--bs-ui-font-size);
+	font-weight: 500;
+	line-height: 1.25rem;
+	color: var(--bs-ui-muted-foreground);
+	cursor: pointer;
+	transition: color var(--bs-ui-transition), background var(--bs-ui-transition), box-shadow var(--bs-ui-transition);
+	white-space: nowrap;
+}
+
+[role="tab"][aria-selected="true"] {
+	background: var(--bs-ui-background);
+	color: var(--bs-ui-foreground);
+	box-shadow: var(--bs-ui-shadow-sm);
+}
+
+[role="tab"]:hover:not([aria-selected="true"]) {
+	color: var(--bs-ui-foreground);
+}
+
+[role="tabpanel"] {
+	padding: 1rem 0;
+	font-family: var(--bs-ui-font-sans);
+	color: var(--bs-ui-foreground);
+}
+
+[role="tablist"] > div {
+	display: flex;
+	align-items: center;
+	gap: 0.25rem;
+}

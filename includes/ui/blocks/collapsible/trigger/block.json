@@ -1,0 +1,19 @@
+{
+	"$schema": "https://blockstudio.dev/schema/block",
+	"name": "bsui/collapsible-trigger",
+	"title": "Collapsible Trigger",
+	"category": "design",
+	"icon": "button",
+	"parent": ["bsui/collapsible"],
+	"usesContext": ["bsui/collapsible"],
+	"blockstudio": {
+		"attributes": [
+			{
+				"id": "trigger",
+				"type": "block",
+				"block": "bsui/button",
+				"idStructure": "trigger_{id}"
+			}
+		]
+	}
+}

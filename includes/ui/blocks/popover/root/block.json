@@ -1,0 +1,20 @@
+{
+	"$schema": "https://blockstudio.dev/schema/block",
+	"name": "bsui/popover",
+	"title": "Popover",
+	"category": "design",
+	"icon": "format-aside",
+	"blockstudio": {
+		"interactivity": {
+			"enqueue": true
+		},
+		"attributes": [
+			{
+				"id": "defaultOpen",
+				"type": "toggle",
+				"label": "Open by Default",
+				"default": false
+			}
+		]
+	}
+}

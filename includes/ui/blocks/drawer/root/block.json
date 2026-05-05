@@ -1,0 +1,30 @@
+{
+	"$schema": "https://blockstudio.dev/schema/block",
+	"name": "bsui/drawer",
+	"title": "Drawer",
+	"category": "design",
+	"icon": "align-left",
+	"blockstudio": {
+		"interactivity": { "enqueue": true },
+		"attributes": [
+			{
+				"id": "position",
+				"type": "select",
+				"label": "Position",
+				"options": [
+					{ "label": "Left", "value": "left" },
+					{ "label": "Right", "value": "right" },
+					{ "label": "Top", "value": "top" },
+					{ "label": "Bottom", "value": "bottom" }
+				],
+				"default": "left"
+			},
+			{
+				"id": "dismissable",
+				"type": "toggle",
+				"label": "Dismissable",
+				"default": true
+			}
+		]
+	}
+}

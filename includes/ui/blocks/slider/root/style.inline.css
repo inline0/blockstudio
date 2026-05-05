@@ -1,0 +1,51 @@
+[data-wp-interactive="bsui/slider"] {
+	width: 100%;
+}
+
+[role="slider"] {
+	position: relative;
+	display: flex;
+	align-items: center;
+	width: 100%;
+	height: var(--bs-ui-thumb-size);
+	cursor: pointer;
+	touch-action: none;
+}
+
+[role="slider"]::before {
+	content: "";
+	position: absolute;
+	left: 0;
+	right: 0;
+	height: var(--bs-ui-track-size);
+	border-radius: var(--bs-ui-radius-full);
+	background: linear-gradient(
+		to right,
+		var(--bs-ui-primary) 0%,
+		var(--bs-ui-primary) var(--bs-ui-slider-percent, 50%),
+		var(--bs-ui-muted) var(--bs-ui-slider-percent, 50%),
+		var(--bs-ui-muted) 100%
+	);
+}
+[role="slider"]::after {
+	content: "";
+	width: var(--bs-ui-thumb-size);
+	height: var(--bs-ui-thumb-size);
+	border-radius: var(--bs-ui-radius-full);
+	background: var(--bs-ui-background);
+	border: 2px solid var(--bs-ui-primary);
+	position: absolute;
+	left: calc(var(--bs-ui-slider-percent, 50%) - var(--bs-ui-thumb-size) / 2);
+	box-shadow: var(--bs-ui-shadow-sm);
+	transition: box-shadow var(--bs-ui-transition);
+}
+
+[role="slider"]:focus-visible::after {
+	outline: 2px solid var(--bs-ui-ring);
+	outline-offset: 2px;
+}
+
+[role="slider"][aria-disabled="true"] {
+	opacity: 0.5;
+	pointer-events: none;
+}

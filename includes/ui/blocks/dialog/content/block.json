@@ -1,0 +1,9 @@
+{
+	"$schema": "https://blockstudio.dev/schema/block",
+	"name": "bsui/dialog-content",
+	"title": "Dialog Content",
+	"category": "design",
+	"icon": "text",
+	"parent": ["bsui/dialog-popup"],
+	"blockstudio": true
+}

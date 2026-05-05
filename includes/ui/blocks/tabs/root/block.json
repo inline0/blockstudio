@@ -1,0 +1,42 @@
+{
+	"$schema": "https://blockstudio.dev/schema/block",
+	"name": "bsui/tabs",
+	"title": "Tabs",
+	"category": "design",
+	"icon": "columns",
+	"blockstudio": {
+		"interactivity": {
+			"enqueue": true
+		},
+		"attributes": [
+			{
+				"id": "defaultValue",
+				"type": "text",
+				"label": "Default Tab",
+				"default": ""
+			},
+			{
+				"id": "orientation",
+				"type": "select",
+				"label": "Orientation",
+				"options": [
+					{ "label": "Horizontal", "value": "horizontal" },
+					{ "label": "Vertical", "value": "vertical" }
+				],
+				"default": "horizontal"
+			},
+			{
+				"id": "activateOnFocus",
+				"type": "toggle",
+				"label": "Activate on Focus",
+				"default": true
+			},
+			{
+				"id": "loop",
+				"type": "toggle",
+				"label": "Loop Focus",
+				"default": true
+			}
+		]
+	}
+}

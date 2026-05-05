@@ -27,6 +27,7 @@ namespace Blockstudio;
  * - assets/process/scssFiles: Enable .scss file compilation
  * - editor/formatOnSave: Auto-format code in editor
  * - tailwind/enabled: Enable Tailwind CSS integration
+ * - ui/enabled: Enable bundled UI components
  * - dev/grab/enabled: Enable frontend element grabber
  * - dev/canvas/enabled: Enable the canvas
  * - users/ids: Array of user IDs allowed to use editor
@@ -95,6 +96,9 @@ class Settings {
 		'tailwind'    => array(
 			'enabled' => false,
 			'config'  => '',
+		),
+		'ui'          => array(
+			'enabled' => false,
 		),
 		'blockEditor' => array(
 			'disableLoading' => false,

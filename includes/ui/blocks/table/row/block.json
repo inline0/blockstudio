@@ -1,0 +1,8 @@
+{
+	"$schema": "https://blockstudio.dev/schema/block",
+	"name": "bsui/table-row",
+	"title": "Table Row",
+	"parent": ["bsui/table-body"],
+	"usesContext": ["bsui/table"],
+	"blockstudio": true
+}

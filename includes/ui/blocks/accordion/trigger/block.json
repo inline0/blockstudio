@@ -1,0 +1,17 @@
+{
+	"$schema": "https://blockstudio.dev/schema/block",
+	"name": "bsui/accordion-trigger",
+	"title": "Accordion Trigger",
+	"category": "design",
+	"icon": "button",
+	"parent": ["bsui/accordion-item"],
+	"usesContext": ["bsui/accordion", "bsui/accordion-item"],
+	"blockstudio": {
+		"attributes": [
+			{
+				"id": "title",
+				"type": "richtext"
+			}
+		]
+	}
+}

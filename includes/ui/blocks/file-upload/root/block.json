@@ -1,0 +1,39 @@
+{
+	"$schema": "https://blockstudio.dev/schema/block",
+	"name": "bsui/file-upload",
+	"title": "File Upload",
+	"category": "design",
+	"icon": "upload",
+	"blockstudio": {
+		"attributes": [
+			{
+				"id": "name",
+				"type": "text",
+				"label": "Name"
+			},
+			{
+				"id": "accept",
+				"type": "text",
+				"label": "Accept",
+				"default": "*"
+			},
+			{
+				"id": "multiple",
+				"type": "toggle",
+				"label": "Multiple",
+				"default": false
+			},
+			{
+				"id": "disabled",
+				"type": "toggle",
+				"label": "Disabled",
+				"default": false
+			},
+			{
+				"id": "nameAlt",
+				"type": "text",
+				"label": "Form Name (alt)"
+			}
+		]
+	}
+}

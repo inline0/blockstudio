@@ -1,0 +1,14 @@
+{
+	"$schema": "https://blockstudio.dev/schema/block",
+	"name": "bsui/card-description",
+	"title": "Card Description",
+	"parent": ["bsui/card-header"],
+	"blockstudio": {
+		"attributes": [
+			{
+				"id": "label",
+				"type": "richtext"
+			}
+		]
+	}
+}

@@ -147,6 +147,21 @@ export const blockstudio = {
       },
       additionalProperties: true,
     },
+    ui: {
+      type: 'object',
+      description: 'Settings related to bundled UI components.',
+      properties: {
+        enabled: {
+          type: 'boolean',
+          default: false,
+          description: 'Enable bundled UI components.',
+          descriptionFilter:
+            'This filter allows you to enable/disable bundled UI components.',
+          example: true,
+        },
+      },
+      additionalProperties: true,
+    },
     editor: {
       type: 'object',
       description: 'Settings related to the editor.',

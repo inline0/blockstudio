@@ -1,0 +1,7 @@
+{
+	"name": "menu",
+	"title": "Menu Test",
+	"slug": "menu-test",
+	"postType": "page",
+	"postStatus": "publish"
+}

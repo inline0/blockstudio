@@ -1,0 +1,7 @@
+{
+	"name": "file-upload",
+	"title": "File Upload Test",
+	"slug": "file-upload-test",
+	"postType": "page",
+	"postStatus": "publish"
+}

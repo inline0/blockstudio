@@ -1,0 +1,68 @@
+[data-bsui-breadcrumb] ol {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 0.375rem;
+	list-style: none;
+	margin: 0;
+	padding: 0;
+	font-family: var(--bs-ui-font-sans);
+	font-size: var(--bs-ui-font-size);
+	color: var(--bs-ui-muted-foreground);
+}
+
+[data-bsui-breadcrumb] ol > div {
+	display: contents;
+}
+
+[data-bsui-breadcrumb] li {
+	display: inline-flex;
+	align-items: center;
+	gap: 0.375rem;
+}
+
+[data-bsui-breadcrumb] li > div {
+	display: contents;
+}
+
+[data-bsui-breadcrumb] li + li::before {
+	content: "›";
+	color: var(--bs-ui-muted-foreground);
+	font-size: 1rem;
+	line-height: 1;
+}
+
+[data-bsui-breadcrumb-item] a {
+	color: var(--bs-ui-muted-foreground);
+	text-decoration: none;
+	transition: color var(--bs-ui-transition);
+}
+
+[data-bsui-breadcrumb-item] a:hover {
+	color: var(--bs-ui-foreground);
+}
+
+[data-bsui-breadcrumb-page] {
+	color: var(--bs-ui-foreground);
+	font-weight: 400;
+}
+
+[data-bsui-breadcrumb-ellipsis] > span {
+	display: none;
+}
+
+[data-bsui-breadcrumb-ellipsis] [data-bsui-menu-trigger] {
+	all: unset;
+
+	cursor: pointer;
+	padding: 0.25rem;
+	border-radius: var(--bs-ui-radius-sm);
+	color: var(--bs-ui-muted-foreground);
+	font-size: var(--bs-ui-font-size);
+	line-height: 1;
+	transition: color var(--bs-ui-transition);
+}
+
+[data-bsui-breadcrumb-ellipsis] [data-bsui-menu-trigger]:hover {
+	color: var(--bs-ui-foreground);
+}

@@ -1,0 +1,10 @@
+{
+	"$schema": "https://blockstudio.dev/schema/block",
+	"name": "bsui/navigation-menu",
+	"title": "Navigation Menu",
+	"category": "design",
+	"icon": "admin-links",
+	"blockstudio": {
+		"interactivity": { "enqueue": true }
+	}
+}

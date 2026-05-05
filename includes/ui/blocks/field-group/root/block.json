@@ -1,0 +1,27 @@
+{
+	"$schema": "https://blockstudio.dev/schema/block",
+	"name": "bsui/field-group",
+	"title": "Field Group",
+	"category": "design",
+	"icon": "forms",
+	"blockstudio": {
+		"attributes": [
+			{
+				"id": "variant",
+				"type": "select",
+				"label": "Variant",
+				"options": [
+					{ "label": "Default", "value": "default" },
+					{ "label": "Card", "value": "card" }
+				],
+				"default": "default"
+			},
+			{
+				"id": "disabled",
+				"type": "toggle",
+				"label": "Disabled",
+				"default": false
+			}
+		]
+	}
+}

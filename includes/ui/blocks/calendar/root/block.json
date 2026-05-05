@@ -1,0 +1,17 @@
+{
+	"$schema": "https://blockstudio.dev/schema/block",
+	"name": "bsui/calendar",
+	"title": "Calendar",
+	"category": "design",
+	"icon": "calendar-alt",
+	"blockstudio": {
+		"interactivity": { "enqueue": true },
+		"attributes": [
+			{
+				"id": "name",
+				"type": "text",
+				"label": "Form Name"
+			}
+		]
+	}
+}

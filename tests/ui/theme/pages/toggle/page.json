@@ -1,0 +1,7 @@
+{
+	"name": "toggle",
+	"title": "Toggle Test",
+	"slug": "toggle-test",
+	"postType": "page",
+	"postStatus": "publish"
+}

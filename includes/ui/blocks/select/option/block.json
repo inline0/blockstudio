@@ -1,0 +1,29 @@
+{
+	"$schema": "https://blockstudio.dev/schema/block",
+	"name": "bsui/select-option",
+	"title": "Select Option",
+	"category": "design",
+	"icon": "minus",
+	"parent": ["bsui/select-popup"],
+	"usesContext": ["bsui/select"],
+	"blockstudio": {
+		"attributes": [
+			{
+				"id": "value",
+				"type": "text",
+				"label": "Value"
+			},
+			{
+				"id": "label",
+				"type": "text",
+				"label": "Label"
+			},
+			{
+				"id": "disabled",
+				"type": "toggle",
+				"label": "Disabled",
+				"default": false
+			}
+		]
+	}
+}

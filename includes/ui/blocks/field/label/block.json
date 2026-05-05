@@ -1,0 +1,16 @@
+{
+	"$schema": "https://blockstudio.dev/schema/block",
+	"name": "bsui/field-label",
+	"title": "Field Label",
+	"category": "design",
+	"icon": "tag",
+	"parent": ["bsui/field"],
+	"blockstudio": {
+		"attributes": [
+			{
+				"id": "text",
+				"type": "richtext"
+			}
+		]
+	}
+}

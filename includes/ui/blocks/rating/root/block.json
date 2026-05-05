@@ -1,0 +1,51 @@
+{
+	"$schema": "https://blockstudio.dev/schema/block",
+	"name": "bsui/rating",
+	"title": "Rating",
+	"category": "design",
+	"icon": "star-filled",
+	"blockstudio": {
+		"interactivity": {
+			"enqueue": true
+		},
+		"attributes": [
+			{
+				"id": "name",
+				"type": "text",
+				"label": "Name"
+			},
+			{
+				"id": "max",
+				"type": "number",
+				"label": "Max Stars",
+				"default": 5
+			},
+			{
+				"id": "defaultValue",
+				"type": "number",
+				"label": "Default Value",
+				"default": 0
+			},
+			{
+				"id": "disabled",
+				"type": "toggle",
+				"label": "Disabled",
+				"default": false
+			},
+			{
+				"id": "nameAlt",
+				"type": "text",
+				"label": "Form Name (alt)"
+			},
+			{
+				"id": "onChange",
+				"type": "text",
+				"hidden": true
+			},
+			{
+				"id": "value",
+				"type": "text"
+			}
+		]
+	}
+}

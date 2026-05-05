@@ -1,0 +1,29 @@
+{
+	"$schema": "https://blockstudio.dev/schema/block",
+	"name": "bsui/field",
+	"title": "Field",
+	"category": "design",
+	"icon": "edit",
+	"usesContext": ["bsui/form"],
+	"blockstudio": {
+		"attributes": [
+			{
+				"id": "name",
+				"type": "text",
+				"label": "Name"
+			},
+			{
+				"id": "invalid",
+				"type": "toggle",
+				"label": "Invalid",
+				"default": false
+			},
+			{
+				"id": "disabled",
+				"type": "toggle",
+				"label": "Disabled",
+				"default": false
+			}
+		]
+	}
+}

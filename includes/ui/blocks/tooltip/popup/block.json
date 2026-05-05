@@ -1,0 +1,17 @@
+{
+	"$schema": "https://blockstudio.dev/schema/block",
+	"name": "bsui/tooltip-popup",
+	"title": "Tooltip Popup",
+	"category": "design",
+	"icon": "text",
+	"parent": ["bsui/tooltip"],
+	"usesContext": ["bsui/tooltip"],
+	"blockstudio": {
+		"attributes": [
+			{
+				"id": "content",
+				"type": "richtext"
+			}
+		]
+	}
+}

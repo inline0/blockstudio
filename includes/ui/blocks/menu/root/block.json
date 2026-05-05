@@ -1,0 +1,13 @@
+{
+	"$schema": "https://blockstudio.dev/schema/block",
+	"name": "bsui/menu",
+	"title": "Menu",
+	"category": "design",
+	"icon": "menu",
+	"blockstudio": {
+		"interactivity": {
+			"enqueue": true
+		},
+		"attributes": []
+	}
+}

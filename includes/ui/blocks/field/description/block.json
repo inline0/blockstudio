@@ -1,0 +1,16 @@
+{
+	"$schema": "https://blockstudio.dev/schema/block",
+	"name": "bsui/field-description",
+	"title": "Field Description",
+	"category": "design",
+	"icon": "info",
+	"parent": ["bsui/field"],
+	"blockstudio": {
+		"attributes": [
+			{
+				"id": "text",
+				"type": "richtext"
+			}
+		]
+	}
+}

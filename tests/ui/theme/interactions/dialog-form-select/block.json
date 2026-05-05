@@ -1,0 +1,15 @@
+{
+	"$schema": "https://blockstudio.dev/schema/block",
+	"name": "interaction/dialog-form-select",
+	"title": "Dialog Form Select",
+	"category": "widgets",
+	"icon": "screenoptions",
+	"supports": {
+		"interactivity": true
+	},
+	"blockstudio": {
+		"interactivity": {
+			"enqueue": true
+		}
+	}
+}

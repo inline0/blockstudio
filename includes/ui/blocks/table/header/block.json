@@ -1,0 +1,8 @@
+{
+	"$schema": "https://blockstudio.dev/schema/block",
+	"name": "bsui/table-header",
+	"title": "Table Header",
+	"parent": ["bsui/table"],
+	"usesContext": ["bsui/table"],
+	"blockstudio": true
+}

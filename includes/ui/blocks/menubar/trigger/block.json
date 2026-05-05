@@ -1,0 +1,14 @@
+{
+	"$schema": "https://blockstudio.dev/schema/block",
+	"name": "bsui/menubar-trigger",
+	"title": "Menubar Trigger",
+	"parent": ["bsui/menubar-menu"],
+	"blockstudio": {
+		"attributes": [
+			{
+				"id": "label",
+				"type": "richtext"
+			}
+		]
+	}
+}

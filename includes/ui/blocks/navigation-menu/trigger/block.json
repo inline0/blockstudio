@@ -1,0 +1,14 @@
+{
+	"$schema": "https://blockstudio.dev/schema/block",
+	"name": "bsui/navigation-menu-trigger",
+	"title": "Nav Menu Trigger",
+	"parent": ["bsui/navigation-menu-item"],
+	"blockstudio": {
+		"attributes": [
+			{
+				"id": "label",
+				"type": "richtext"
+			}
+		]
+	}
+}

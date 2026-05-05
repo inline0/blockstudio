@@ -1,0 +1,16 @@
+{
+	"$schema": "https://blockstudio.dev/schema/block",
+	"name": "bsui/pagination-previous",
+	"title": "Pagination Previous",
+	"parent": ["bsui/pagination"],
+	"blockstudio": {
+		"attributes": [
+			{
+				"id": "href",
+				"type": "text",
+				"label": "URL",
+				"default": "#"
+			}
+		]
+	}
+}

@@ -1,0 +1,30 @@
+{
+	"$schema": "https://blockstudio.dev/schema/block",
+	"name": "bsui/badge",
+	"title": "Badge",
+	"category": "design",
+	"icon": "tag",
+	"blockstudio": {
+		"attributes": [
+			{
+				"id": "label",
+				"type": "richtext"
+			},
+			{
+				"id": "variant",
+				"type": "select",
+				"label": "Variant",
+				"options": [
+					{ "label": "Default", "value": "default" },
+					{ "label": "Secondary", "value": "secondary" },
+					{ "label": "Outline", "value": "outline" },
+					{ "label": "Destructive", "value": "destructive" },
+					{ "label": "Success", "value": "success" },
+					{ "label": "Warning", "value": "warning" },
+					{ "label": "Info", "value": "info" }
+				],
+				"default": "default"
+			}
+		]
+	}
+}

@@ -1,0 +1,39 @@
+[data-chat-input] {
+	max-width: 640px;
+	margin: 0 auto;
+	width: 100%;
+	padding: 0 1rem 1.5rem;
+	box-sizing: border-box;
+}
+
+[data-chat-input-box] {
+	border: 1px solid var(--bs-ui-border);
+	border-radius: 1.25rem;
+	overflow: hidden;
+	padding: 0.5rem;
+}
+
+[data-chat-input-box] textarea,
+[data-chat-input-box] textarea:focus {
+	border: none !important;
+	outline: none !important;
+	box-shadow: none !important;
+	resize: none;
+	font-size: 1rem;
+	padding: 0.75rem 1rem 0.25rem;
+}
+
+[data-chat-input-actions] {
+	display: flex;
+	justify-content: flex-end;
+}
+
+[data-chat-input-actions] [data-bsui-button] {
+	border-radius: var(--bs-ui-radius-full);
+}
+
+[data-chat-send][aria-disabled="true"],
+[data-chat-send][disabled] {
+	opacity: 0.5;
+	pointer-events: none;
+}

@@ -35,6 +35,9 @@ The following properties are available:
     "assets": [],
     "markup": false
   },
+  "ui": {
+    "enabled": false
+  },
   "library": false,
   "blockEditor": {
     "disableLoading": false,
@@ -51,6 +54,7 @@ Alternatively you can use the `blockstudio/settings/${setting}` filter to set op
 ```php title="functions.php"
 add_filter('blockstudio/settings/assets/enqueue', '__return_false');
 add_filter('blockstudio/settings/editor/formatOnSave', '__return_true');
+add_filter('blockstudio/settings/ui/enabled', '__return_true');
 add_filter('blockstudio/settings/library', '__return_true');
 ```
 
@@ -60,51 +64,57 @@ Options set via the `blockstudio/settings/${setting}` filter will override the o
 
 ### users
 
-| Option | Type | Default | Description |
-|--------|------|---------|-------------|
-| `ids` | array | `[]` | User IDs with editor access |
-| `roles` | array | `[]` | User roles with editor access |
+| Option  | Type  | Default | Description                   |
+| ------- | ----- | ------- | ----------------------------- |
+| `ids`   | array | `[]`    | User IDs with editor access   |
+| `roles` | array | `[]`    | User roles with editor access |
 
 ### assets
 
-| Option | Type | Default | Description |
-|--------|------|---------|-------------|
-| `enqueue` | boolean | `true` | Auto-enqueue block assets |
-| `minify.css` | boolean | `false` | Minify CSS output |
-| `minify.js` | boolean | `false` | Minify JS output |
-| `process.scss` | boolean | `false` | Process SCSS files |
+| Option         | Type    | Default | Description               |
+| -------------- | ------- | ------- | ------------------------- |
+| `enqueue`      | boolean | `true`  | Auto-enqueue block assets |
+| `minify.css`   | boolean | `false` | Minify CSS output         |
+| `minify.js`    | boolean | `false` | Minify JS output          |
+| `process.scss` | boolean | `false` | Process SCSS files        |
 
 ### editor
 
-| Option | Type | Default | Description |
-|--------|------|---------|-------------|
-| `formatOnSave` | boolean | `false` | Format block.json on save |
-| `assets` | array | `[]` | Additional assets to load in editor |
-| `markup` | boolean | `false` | Enable markup editing |
+| Option         | Type    | Default | Description                         |
+| -------------- | ------- | ------- | ----------------------------------- |
+| `formatOnSave` | boolean | `false` | Format block.json on save           |
+| `assets`       | array   | `[]`    | Additional assets to load in editor |
+| `markup`       | boolean | `false` | Enable markup editing               |
 
 ### library
 
-| Type | Default | Description |
-|------|---------|-------------|
+| Type    | Default | Description              |
+| ------- | ------- | ------------------------ |
 | boolean | `false` | Enable the block library |
 
 ### tailwind
 
-| Option | Type | Default | Description |
-|--------|------|---------|-------------|
-| `enabled` | boolean | `false` | Enable Tailwind CSS compilation |
-| `config` | string | `""` | Tailwind v4 CSS-first configuration |
+| Option    | Type    | Default | Description                         |
+| --------- | ------- | ------- | ----------------------------------- |
+| `enabled` | boolean | `false` | Enable Tailwind CSS compilation     |
+| `config`  | string  | `""`    | Tailwind v4 CSS-first configuration |
+
+### ui
+
+| Option    | Type    | Default | Description                                                       |
+| --------- | ------- | ------- | ----------------------------------------------------------------- |
+| `enabled` | boolean | `false` | Register the bundled `bsui/*` UI components and `app/*` demo apps |
 
 ### blockEditor
 
-| Option | Type | Default | Description |
-|--------|------|---------|-------------|
-| `disableLoading` | boolean | `false` | Disable block loading in editor |
-| `cssClasses` | array | `[]` | Stylesheet URLs to extract CSS classes from for the classes field autocomplete |
-| `cssVariables` | array | `[]` | Stylesheet URLs to extract CSS variables from for the code field autocomplete |
+| Option           | Type    | Default | Description                                                                    |
+| ---------------- | ------- | ------- | ------------------------------------------------------------------------------ |
+| `disableLoading` | boolean | `false` | Disable block loading in editor                                                |
+| `cssClasses`     | array   | `[]`    | Stylesheet URLs to extract CSS classes from for the classes field autocomplete |
+| `cssVariables`   | array   | `[]`    | Stylesheet URLs to extract CSS variables from for the code field autocomplete  |
 
 <GuideBanner
-  href="/guides/block-library"
-  title="Building a Block Library"
-  description="See blockstudio.json in context: the complete setup for a Tailwind-powered block library."
+  href="/docs/blocks/ui-components"
+  title="UI Components"
+  description="Enable and compose the bundled headless UI components introduced in Blockstudio 7.3."
 />

@@ -1,0 +1,104 @@
+[data-bsui-button] {
+	all: unset;
+
+	box-sizing: border-box;
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	gap: 0.5rem;
+	border-radius: var(--bs-ui-radius);
+	font-family: var(--bs-ui-font-sans);
+	font-size: var(--bs-ui-font-size);
+	font-weight: 500;
+	line-height: 1;
+	white-space: nowrap;
+	cursor: pointer;
+	transition: background var(--bs-ui-transition), color var(--bs-ui-transition), opacity var(--bs-ui-transition);
+	text-decoration: none;
+}
+
+[data-bsui-button][disabled] {
+	opacity: 0.5;
+	pointer-events: none;
+}
+
+[data-bsui-button][data-size="default"] {
+	height: var(--bs-ui-control-height);
+	padding: 0 var(--bs-ui-control-padding);
+}
+
+[data-bsui-button][data-size="sm"] {
+	height: 2rem;
+	padding: 0 0.625rem;
+	font-size: 0.8125rem;
+}
+
+[data-bsui-button][data-size="lg"] {
+	height: 2.75rem;
+	padding: 0 1.25rem;
+	font-size: 0.9375rem;
+}
+
+[data-bsui-button][data-size="icon"] {
+	height: var(--bs-ui-control-height);
+	width: var(--bs-ui-control-height);
+	padding: 0;
+}
+
+[data-bsui-button][data-variant="default"] {
+	background: var(--bs-ui-primary);
+	color: var(--bs-ui-primary-foreground);
+}
+
+[data-bsui-button][data-variant="default"]:hover {
+	opacity: 0.9;
+}
+
+[data-bsui-button][data-variant="secondary"] {
+	background: var(--bs-ui-secondary);
+	color: var(--bs-ui-secondary-foreground);
+}
+
+[data-bsui-button][data-variant="secondary"]:hover {
+	background: var(--bs-ui-accent);
+}
+
+[data-bsui-button][data-variant="outline"] {
+	background: var(--bs-ui-background);
+	color: var(--bs-ui-foreground);
+	border: 1px solid var(--bs-ui-input);
+}
+
+[data-bsui-button][data-variant="outline"]:hover {
+	background: var(--bs-ui-accent);
+}
+
+[data-bsui-button][data-variant="ghost"] {
+	background: transparent;
+	color: var(--bs-ui-foreground);
+}
+
+[data-bsui-button][data-variant="ghost"]:hover {
+	background: var(--bs-ui-accent);
+}
+
+[data-bsui-button][data-variant="link"] {
+	background: transparent;
+	color: var(--bs-ui-foreground);
+	text-decoration: underline;
+	text-underline-offset: 4px;
+}
+
+[data-bsui-button][data-variant="link"]:hover {
+	opacity: 0.8;
+}
+
+[data-bsui-button][data-variant="destructive"] {
+	background: var(--bs-ui-destructive);
+	color: var(--bs-ui-destructive-foreground);
+	--bs-ui-focus-ring: var(--bs-ui-destructive-foreground);
+}
+
+[data-bsui-button][data-variant="destructive"]:hover {
+	opacity: 0.9;
+}

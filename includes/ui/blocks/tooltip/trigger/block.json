@@ -1,0 +1,19 @@
+{
+	"$schema": "https://blockstudio.dev/schema/block",
+	"name": "bsui/tooltip-trigger",
+	"title": "Tooltip Trigger",
+	"category": "design",
+	"icon": "button",
+	"parent": ["bsui/tooltip"],
+	"usesContext": ["bsui/tooltip"],
+	"blockstudio": {
+		"attributes": [
+			{
+				"id": "trigger",
+				"type": "block",
+				"block": "bsui/button",
+				"idStructure": "trigger_{id}"
+			}
+		]
+	}
+}

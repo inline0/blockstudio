@@ -1,0 +1,10 @@
+{
+	"$schema": "https://blockstudio.dev/schema/block",
+	"name": "bsui/tabs-list",
+	"title": "Tab List",
+	"category": "design",
+	"icon": "columns",
+	"parent": ["bsui/tabs"],
+	"usesContext": ["bsui/tabs"],
+	"blockstudio": true
+}

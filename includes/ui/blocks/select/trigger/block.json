@@ -1,0 +1,10 @@
+{
+	"$schema": "https://blockstudio.dev/schema/block",
+	"name": "bsui/select-trigger",
+	"title": "Select Trigger",
+	"category": "design",
+	"icon": "button",
+	"parent": ["bsui/select"],
+	"usesContext": ["bsui/select"],
+	"blockstudio": true
+}

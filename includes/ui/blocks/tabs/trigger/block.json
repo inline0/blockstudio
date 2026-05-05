@@ -1,0 +1,22 @@
+{
+	"$schema": "https://blockstudio.dev/schema/block",
+	"name": "bsui/tabs-trigger",
+	"title": "Tab",
+	"category": "design",
+	"icon": "button",
+	"parent": ["bsui/tabs-list"],
+	"usesContext": ["bsui/tabs"],
+	"blockstudio": {
+		"attributes": [
+			{
+				"id": "value",
+				"type": "text",
+				"label": "Value"
+			},
+			{
+				"id": "title",
+				"type": "richtext"
+			}
+		]
+	}
+}

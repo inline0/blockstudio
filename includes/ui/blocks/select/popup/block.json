@@ -1,0 +1,10 @@
+{
+	"$schema": "https://blockstudio.dev/schema/block",
+	"name": "bsui/select-popup",
+	"title": "Select Popup",
+	"category": "design",
+	"icon": "list-view",
+	"parent": ["bsui/select"],
+	"usesContext": ["bsui/select"],
+	"blockstudio": true
+}

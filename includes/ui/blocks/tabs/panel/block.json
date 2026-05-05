@@ -1,0 +1,18 @@
+{
+	"$schema": "https://blockstudio.dev/schema/block",
+	"name": "bsui/tabs-panel",
+	"title": "Tab Panel",
+	"category": "design",
+	"icon": "text",
+	"parent": ["bsui/tabs"],
+	"usesContext": ["bsui/tabs"],
+	"blockstudio": {
+		"attributes": [
+			{
+				"id": "value",
+				"type": "text",
+				"label": "Value"
+			}
+		]
+	}
+}

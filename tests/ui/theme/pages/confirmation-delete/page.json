@@ -1,0 +1,7 @@
+{
+	"name": "confirmation-delete",
+	"title": "Confirmation Delete Test",
+	"slug": "confirmation-delete",
+	"postType": "page",
+	"postStatus": "publish"
+}

@@ -1,0 +1,16 @@
+{
+	"$schema": "https://blockstudio.dev/schema/block",
+	"name": "bsui/field-group-description",
+	"title": "Field Group Description",
+	"category": "design",
+	"icon": "editor-help",
+	"parent": ["bsui/field-group"],
+	"blockstudio": {
+		"attributes": [
+			{
+				"id": "text",
+				"type": "richtext"
+			}
+		]
+	}
+}

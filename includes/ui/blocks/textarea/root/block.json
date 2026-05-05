@@ -1,0 +1,41 @@
+{
+	"$schema": "https://blockstudio.dev/schema/block",
+	"name": "bsui/textarea",
+	"title": "Textarea",
+	"category": "design",
+	"icon": "text",
+	"blockstudio": {
+		"attributes": [
+			{
+				"id": "placeholder",
+				"type": "text",
+				"label": "Placeholder"
+			},
+			{
+				"id": "rows",
+				"type": "number",
+				"label": "Rows",
+				"default": 4
+			},
+			{
+				"id": "name",
+				"type": "text",
+				"label": "Form Name"
+			},
+			{
+				"id": "disabled",
+				"type": "toggle",
+				"label": "Disabled",
+				"default": false
+			},
+			{
+				"id": "onChange",
+				"type": "text"
+			},
+			{
+				"id": "value",
+				"type": "text"
+			}
+		]
+	}
+}

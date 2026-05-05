@@ -1,0 +1,16 @@
+{
+	"$schema": "https://blockstudio.dev/schema/block",
+	"name": "bsui/toast",
+	"title": "Toast",
+	"category": "design",
+	"icon": "megaphone",
+	"parent": ["bsui/toast-provider"],
+	"blockstudio": {
+		"attributes": [
+			{
+				"id": "message",
+				"type": "richtext"
+			}
+		]
+	}
+}

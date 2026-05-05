@@ -1,0 +1,12 @@
+{
+	"$schema": "https://blockstudio.dev/schema/block",
+	"name": "bsui/drawer-close",
+	"title": "Drawer Close",
+	"parent": ["bsui/drawer-popup"],
+	"blockstudio": {
+		"attributes": [
+			{ "id": "label", "type": "richtext" },
+			{ "id": "x", "type": "toggle", "label": "X Icon", "default": false }
+		]
+	}
+}

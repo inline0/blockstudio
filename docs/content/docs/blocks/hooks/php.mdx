@@ -319,6 +319,16 @@ add_filter('blockstudio/settings/tailwind/config', function() {
 });
 ```
 
+### ui/enabled
+
+This filter allows you to enable/disable bundled UI components.
+
+```php title="functions.php"
+add_filter('blockstudio/settings/ui/enabled', function() {
+  return true;
+});
+```
+
 ### editor/format_on_save
 
 This filter allows you to enable/disable the formatting of code upon saving.

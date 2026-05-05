@@ -1,0 +1,42 @@
+{
+	"$schema": "https://blockstudio.dev/schema/block",
+	"name": "bsui/toggle",
+	"title": "Toggle",
+	"category": "design",
+	"icon": "controls-play",
+	"blockstudio": {
+		"interactivity": {
+			"enqueue": true
+		},
+		"attributes": [
+			{
+				"id": "defaultPressed",
+				"type": "toggle",
+				"label": "Pressed by Default",
+				"default": false
+			},
+			{
+				"id": "disabled",
+				"type": "toggle",
+				"label": "Disabled",
+				"default": false
+			},
+			{
+				"id": "label",
+				"type": "richtext"
+			},
+			{
+				"id": "bindText",
+				"type": "text"
+			},
+			{
+				"id": "onChange",
+				"type": "text"
+			},
+			{
+				"id": "checked",
+				"type": "text"
+			}
+		]
+	}
+}

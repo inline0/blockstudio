@@ -1,0 +1,58 @@
+[role="group"]:has([role="spinbutton"]) {
+	display: inline-flex;
+}
+[role="group"]:has([role="spinbutton"]) > button {
+	all: unset;
+
+	box-sizing: border-box;
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	width: var(--bs-ui-control-height);
+	height: var(--bs-ui-control-height);
+	font-family: var(--bs-ui-font-sans);
+	font-size: var(--bs-ui-font-size);
+	line-height: 1;
+	cursor: pointer;
+	transition: background var(--bs-ui-transition);
+	color: var(--bs-ui-foreground);
+	border: 1px solid var(--bs-ui-input);
+	border-radius: var(--bs-ui-radius);
+	background-color: var(--bs-ui-background);
+	background-clip: padding-box;
+	user-select: none;
+}
+[role="group"]:has([role="spinbutton"]) > button:hover {
+	background-color: var(--bs-ui-accent);
+}
+[role="group"]:has([role="spinbutton"]) > button:first-child {
+	border-top-right-radius: 0;
+	border-bottom-right-radius: 0;
+}
+[role="group"]:has([role="spinbutton"]) > button:last-child {
+	border-top-left-radius: 0;
+	border-bottom-left-radius: 0;
+}
+input[role="spinbutton"] {
+	all: unset;
+
+	box-sizing: border-box;
+	margin: 0;
+	padding: 0;
+	width: 6rem;
+	height: var(--bs-ui-control-height);
+	text-align: center;
+	font-family: var(--bs-ui-font-sans);
+	font-size: var(--bs-ui-font-size);
+	font-variant-numeric: tabular-nums;
+	color: var(--bs-ui-foreground);
+	border-top: 1px solid var(--bs-ui-input);
+	border-bottom: 1px solid var(--bs-ui-input);
+	border-left: none;
+	border-right: none;
+	border-radius: 0;
+	background-color: transparent;
+}
+input[role="spinbutton"]:focus-visible {
+	z-index: 1;
+}

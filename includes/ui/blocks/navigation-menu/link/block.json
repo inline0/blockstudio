@@ -1,0 +1,20 @@
+{
+	"$schema": "https://blockstudio.dev/schema/block",
+	"name": "bsui/navigation-menu-link",
+	"title": "Nav Menu Link",
+	"parent": ["bsui/navigation-menu"],
+	"blockstudio": {
+		"attributes": [
+			{
+				"id": "label",
+				"type": "richtext"
+			},
+			{
+				"id": "href",
+				"type": "text",
+				"label": "URL",
+				"default": "#"
+			}
+		]
+	}
+}

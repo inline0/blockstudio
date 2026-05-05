@@ -1,0 +1,28 @@
+{
+	"$schema": "https://blockstudio.dev/schema/block",
+	"name": "bsui/progress",
+	"title": "Progress",
+	"category": "design",
+	"icon": "minus",
+	"blockstudio": {
+		"attributes": [
+			{
+				"id": "value",
+				"type": "number",
+				"label": "Value",
+				"default": 0
+			},
+			{
+				"id": "max",
+				"type": "number",
+				"label": "Max",
+				"default": 100
+			},
+			{
+				"id": "label",
+				"type": "text",
+				"label": "Label"
+			}
+		]
+	}
+}

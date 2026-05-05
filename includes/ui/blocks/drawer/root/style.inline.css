@@ -1,0 +1,79 @@
+[data-bsui-drawer-root] [role="dialog"] {
+	position: fixed;
+	z-index: 51;
+	background: var(--bs-ui-background);
+	color: var(--bs-ui-foreground);
+	font-family: var(--bs-ui-font-sans);
+	padding: 1.5rem;
+	border: none;
+	box-shadow: var(--bs-ui-shadow-lg);
+	overflow-y: auto;
+	border-radius: 0;
+	max-height: none;
+	will-change: transform;
+	transition: transform 450ms cubic-bezier(0.32, 0.72, 0, 1);
+}
+
+[data-position="left"] [role="dialog"] {
+	top: 0;
+	bottom: 0;
+	left: 0;
+	right: auto;
+	width: min(20rem, 80vw);
+	height: 100dvh;
+	border-right: 1px solid var(--bs-ui-border);
+}
+
+[data-position="right"] [role="dialog"] {
+	top: 0;
+	bottom: 0;
+	right: 0;
+	left: auto;
+	width: min(20rem, 80vw);
+	height: 100dvh;
+	border-left: 1px solid var(--bs-ui-border);
+}
+
+[data-position="top"] [role="dialog"] {
+	top: 0;
+	left: 0;
+	right: 0;
+	bottom: auto;
+	width: 100%;
+	max-height: 50dvh;
+	border-bottom: 1px solid var(--bs-ui-border);
+}
+
+[data-position="bottom"] [role="dialog"] {
+	bottom: 0;
+	left: 0;
+	right: 0;
+	top: auto;
+	width: 100%;
+	max-height: 50dvh;
+	border-top: 1px solid var(--bs-ui-border);
+}
+
+[data-position="left"] [role="dialog"].bs-ui-entering {
+	transform: translateX(-100%);
+}
+
+[data-position="right"] [role="dialog"].bs-ui-entering {
+	transform: translateX(100%);
+}
+
+[data-position="top"] [role="dialog"].bs-ui-entering {
+	transform: translateY(-100%);
+}
+
+[data-position="bottom"] [role="dialog"].bs-ui-entering {
+	transform: translateY(100%);
+}
+
+[data-bsui-drawer-root] [role="dialog"][data-flush] {
+	padding: 0;
+}
+
+[data-bsui-drawer-root] [role="dialog"][data-flush] > div {
+	height: 100%;
+}

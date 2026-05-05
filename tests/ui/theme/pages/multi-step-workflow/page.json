@@ -1,0 +1,7 @@
+{
+	"name": "multi-step-workflow",
+	"title": "Multi Step Workflow Test",
+	"slug": "multi-step-workflow",
+	"postType": "page",
+	"postStatus": "publish"
+}

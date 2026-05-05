@@ -1,0 +1,16 @@
+{
+	"$schema": "https://blockstudio.dev/schema/block",
+	"name": "bsui/carousel-item",
+	"title": "Carousel Item",
+	"parent": ["bsui/carousel"],
+	"blockstudio": {
+		"attributes": [
+			{
+				"id": "width",
+				"type": "text",
+				"label": "Width",
+				"default": "16rem"
+			}
+		]
+	}
+}

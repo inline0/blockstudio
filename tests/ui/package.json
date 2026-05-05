@@ -1,0 +1,16 @@
+{
+	"name": "blockstudio-ui",
+	"version": "0.1.0",
+	"private": true,
+	"scripts": {
+		"wp-env:start": "npx wp-env start && npx wp-env run cli wp theme activate theme",
+		"wp-env:stop": "npx wp-env stop",
+		"test": "npx playwright test --config=playwright.config.ts",
+		"test:ui": "npx playwright test --config=playwright.config.ts --ui",
+		"seed": "node seed.mjs"
+	},
+	"devDependencies": {
+		"@playwright/test": "^1.58.2",
+		"@wordpress/env": "^11.3.0"
+	}
+}

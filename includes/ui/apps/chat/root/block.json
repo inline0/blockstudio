@@ -1,0 +1,15 @@
+{
+	"$schema": "https://blockstudio.dev/schema/block",
+	"name": "app/chat",
+	"title": "Chat",
+	"category": "widgets",
+	"icon": "format-chat",
+	"supports": {
+		"interactivity": true
+	},
+	"blockstudio": {
+		"interactivity": {
+			"enqueue": true
+		}
+	}
+}

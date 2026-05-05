@@ -1,0 +1,43 @@
+[data-bsui-toggle] {
+	display: inline-flex;
+	align-items: center;
+	gap: 0.5rem;
+	cursor: pointer;
+	font-family: var(--bs-ui-font-sans);
+	font-size: var(--bs-ui-font-size);
+	color: var(--bs-ui-foreground);
+}
+
+[data-bsui-toggle] [aria-pressed] {
+	all: unset;
+
+	box-sizing: border-box;
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	height: var(--bs-ui-control-height);
+	min-width: var(--bs-ui-control-height);
+	padding: 0 0.625rem;
+	border-radius: var(--bs-ui-radius);
+	border: 1px solid var(--bs-ui-border);
+	background: transparent;
+	font-weight: 500;
+	cursor: pointer;
+	color: var(--bs-ui-muted-foreground);
+	transition: background var(--bs-ui-transition), color var(--bs-ui-transition);
+}
+
+[data-bsui-toggle] [aria-pressed]:hover {
+	background: var(--bs-ui-muted);
+	color: var(--bs-ui-foreground);
+}
+
+[data-bsui-toggle] [aria-pressed="true"] {
+	background: var(--bs-ui-accent);
+	color: var(--bs-ui-accent-foreground);
+}
+
+[data-bsui-toggle] [aria-pressed]:disabled {
+	opacity: 0.5;
+	pointer-events: none;
+}

@@ -1,0 +1,28 @@
+{
+	"$schema": "https://blockstudio.dev/schema/block",
+	"name": "bsui/toggle-group-item",
+	"title": "Toggle Group Item",
+	"category": "design",
+	"icon": "button",
+	"parent": ["bsui/toggle-group"],
+	"usesContext": ["bsui/toggle-group"],
+	"blockstudio": {
+		"attributes": [
+			{
+				"id": "value",
+				"type": "text",
+				"label": "Value"
+			},
+			{
+				"id": "label",
+				"type": "richtext"
+			},
+			{
+				"id": "disabled",
+				"type": "toggle",
+				"label": "Disabled",
+				"default": false
+			}
+		]
+	}
+}

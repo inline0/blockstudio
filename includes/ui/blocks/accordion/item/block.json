@@ -1,0 +1,24 @@
+{
+	"$schema": "https://blockstudio.dev/schema/block",
+	"name": "bsui/accordion-item",
+	"title": "Accordion Item",
+	"category": "design",
+	"icon": "list-view",
+	"parent": ["bsui/accordion"],
+	"usesContext": ["bsui/accordion"],
+	"blockstudio": {
+		"attributes": [
+			{
+				"id": "value",
+				"type": "text",
+				"label": "Value"
+			},
+			{
+				"id": "disabled",
+				"type": "toggle",
+				"label": "Disabled",
+				"default": false
+			}
+		]
+	}
+}

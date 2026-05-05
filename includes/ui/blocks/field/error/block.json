@@ -1,0 +1,17 @@
+{
+	"$schema": "https://blockstudio.dev/schema/block",
+	"name": "bsui/field-error",
+	"title": "Field Error",
+	"category": "design",
+	"icon": "warning",
+	"parent": ["bsui/field"],
+	"usesContext": ["bsui/form"],
+	"blockstudio": {
+		"attributes": [
+			{
+				"id": "text",
+				"type": "richtext"
+			}
+		]
+	}
+}

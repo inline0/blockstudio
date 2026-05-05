@@ -1,0 +1,27 @@
+[data-bsui-field-root],
+[data-bsui-field-root] > div {
+	align-self: stretch;
+	display: flex;
+	flex-direction: column;
+	gap: 0.375rem;
+}
+
+[role="alert"] {
+	font-family: var(--bs-ui-font-sans);
+	font-size: 0.8125rem;
+	color: var(--bs-ui-destructive-foreground);
+}
+
+[data-bsui-field-root].bs-ui-invalid,
+[data-bsui-field-root][data-invalid] {
+	--bs-ui-focus-ring: var(--bs-ui-destructive-foreground);
+}
+
+[data-bsui-field-root].bs-ui-invalid input,
+[data-bsui-field-root][data-invalid] input,
+[data-bsui-field-root].bs-ui-invalid textarea,
+[data-bsui-field-root][data-invalid] textarea,
+[data-bsui-field-root].bs-ui-invalid [role="group"] > button,
+[data-bsui-field-root][data-invalid] [role="group"] > button {
+	border-color: var(--bs-ui-destructive-foreground);
+}

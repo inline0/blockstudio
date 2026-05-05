@@ -1,0 +1,26 @@
+{
+	"$schema": "https://blockstudio.dev/schema/block",
+	"name": "bsui/collapsible",
+	"title": "Collapsible",
+	"category": "design",
+	"icon": "arrow-down-alt2",
+	"blockstudio": {
+		"interactivity": {
+			"enqueue": true
+		},
+		"attributes": [
+			{
+				"id": "defaultOpen",
+				"type": "toggle",
+				"label": "Open by Default",
+				"default": false
+			},
+			{
+				"id": "disabled",
+				"type": "toggle",
+				"label": "Disabled",
+				"default": false
+			}
+		]
+	}
+}

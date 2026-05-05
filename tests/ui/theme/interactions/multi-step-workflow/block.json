@@ -1,0 +1,15 @@
+{
+	"$schema": "https://blockstudio.dev/schema/block",
+	"name": "interaction/multi-step-workflow",
+	"title": "Multi Step Workflow",
+	"category": "widgets",
+	"icon": "screenoptions",
+	"supports": {
+		"interactivity": true
+	},
+	"blockstudio": {
+		"interactivity": {
+			"enqueue": true
+		}
+	}
+}

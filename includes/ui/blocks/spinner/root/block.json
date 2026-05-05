@@ -1,0 +1,28 @@
+{
+	"$schema": "https://blockstudio.dev/schema/block",
+	"name": "bsui/spinner",
+	"title": "Spinner",
+	"category": "design",
+	"icon": "update",
+	"blockstudio": {
+		"attributes": [
+			{
+				"id": "size",
+				"type": "select",
+				"label": "Size",
+				"options": [
+					{ "label": "Small", "value": "sm" },
+					{ "label": "Default", "value": "default" },
+					{ "label": "Large", "value": "lg" }
+				],
+				"default": "default"
+			},
+			{
+				"id": "label",
+				"type": "text",
+				"label": "Accessible Label",
+				"default": "Loading"
+			}
+		]
+	}
+}

@@ -1,0 +1,8 @@
+{
+	"$schema": "https://blockstudio.dev/schema/block",
+	"name": "bsui/pagination",
+	"title": "Pagination",
+	"category": "design",
+	"icon": "controls-forward",
+	"blockstudio": true
+}

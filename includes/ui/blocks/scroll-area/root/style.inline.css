@@ -1,0 +1,22 @@
+[data-bsui-scroll-area] {
+	overflow: auto;
+	font-family: var(--bs-ui-font-sans);
+}
+
+[data-bsui-scroll-area]::-webkit-scrollbar {
+	width: 0.5rem;
+	height: 0.5rem;
+}
+
+[data-bsui-scroll-area]::-webkit-scrollbar-track {
+	background: transparent;
+}
+
+[data-bsui-scroll-area]::-webkit-scrollbar-thumb {
+	background: var(--bs-ui-border);
+	border-radius: var(--bs-ui-radius-full);
+}
+
+[data-bsui-scroll-area]::-webkit-scrollbar-thumb:hover {
+	background: var(--bs-ui-muted-foreground);
+}

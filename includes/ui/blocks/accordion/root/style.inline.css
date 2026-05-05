@@ -1,0 +1,59 @@
+[data-bsui-accordion-root] {
+	align-self: stretch;
+	font-family: var(--bs-ui-font-sans);
+	color: var(--bs-ui-foreground);
+}
+
+[data-bsui-accordion-root] > div > div {
+	border-bottom: 1px solid var(--bs-ui-border);
+}
+
+[data-bsui-accordion-trigger] {
+	all: unset;
+
+	box-sizing: border-box;
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	width: 100%;
+	padding: 1rem 0;
+	font-size: 0.9375rem;
+	font-weight: 500;
+	cursor: pointer;
+	transition: color var(--bs-ui-transition);
+}
+
+[data-bsui-accordion-trigger]:hover {
+	text-decoration: underline;
+}
+
+[data-bsui-accordion-trigger]::after {
+	content: "";
+	width: 1rem;
+	height: 1rem;
+	flex-shrink: 0;
+	margin-left: 0.5rem;
+	background: currentColor;
+	mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E") center / contain no-repeat;
+	transition: transform var(--bs-ui-transition-slow);
+}
+
+[data-bsui-accordion-trigger][aria-expanded="true"]::after {
+	transform: rotate(180deg);
+}
+
+[data-bsui-accordion-root] [role="region"] {
+	height: 0;
+	overflow: hidden;
+	transition: height 200ms ease-out;
+	font-size: var(--bs-ui-font-size);
+	color: var(--bs-ui-muted-foreground);
+}
+
+[data-bsui-accordion-root] [role="region"].bs-ui-open {
+	height: var(--bs-ui-panel-height);
+}
+
+[data-bsui-accordion-root] [role="region"] > div {
+	padding-bottom: 1rem;
+}

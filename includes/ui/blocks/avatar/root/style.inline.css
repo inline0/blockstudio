@@ -1,0 +1,34 @@
+[data-wp-interactive="bsui/avatar"] {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	vertical-align: middle;
+	width: 3rem;
+	height: 3rem;
+	border-radius: var(--bs-ui-radius-full);
+	overflow: hidden;
+	background: var(--bs-ui-muted);
+	font-family: var(--bs-ui-font-sans);
+	font-size: 1rem;
+	font-weight: 500;
+	line-height: 1;
+	color: var(--bs-ui-muted-foreground);
+	flex-shrink: 0;
+	user-select: none;
+	position: relative;
+}
+[data-wp-interactive="bsui/avatar"] img {
+	width: 100%;
+	height: 100%;
+	object-fit: cover;
+	position: absolute;
+	inset: 0;
+}
+[data-wp-interactive="bsui/avatar"] > span {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	width: 100%;
+	height: 100%;
+	font-size: 1rem;
+}

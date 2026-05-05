@@ -1,0 +1,10 @@
+{
+	"$schema": "https://blockstudio.dev/schema/block",
+	"name": "bsui/accordion-panel",
+	"title": "Accordion Panel",
+	"category": "design",
+	"icon": "text",
+	"parent": ["bsui/accordion-item"],
+	"usesContext": ["bsui/accordion", "bsui/accordion-item"],
+	"blockstudio": true
+}

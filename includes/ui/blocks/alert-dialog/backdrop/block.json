@@ -1,0 +1,9 @@
+{
+	"$schema": "https://blockstudio.dev/schema/block",
+	"name": "bsui/alert-dialog-backdrop",
+	"title": "Alert Dialog Backdrop",
+	"category": "design",
+	"icon": "format-image",
+	"parent": ["bsui/alert-dialog"],
+	"blockstudio": true
+}

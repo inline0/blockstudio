@@ -1,0 +1,14 @@
+{
+	"$schema": "https://blockstudio.dev/schema/block",
+	"name": "bsui/breadcrumb-page",
+	"title": "Breadcrumb Page",
+	"parent": ["bsui/breadcrumb"],
+	"blockstudio": {
+		"attributes": [
+			{
+				"id": "label",
+				"type": "richtext"
+			}
+		]
+	}
+}

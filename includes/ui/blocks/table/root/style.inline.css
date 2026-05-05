@@ -1,0 +1,64 @@
+[data-bsui-table-root] {
+	font-family: var(--bs-ui-font-sans);
+	color: var(--bs-ui-foreground);
+	width: 100%;
+}
+
+[data-bsui-table-root] table {
+	width: 100%;
+	border-collapse: collapse;
+	font-size: var(--bs-ui-font-size);
+}
+
+[data-bsui-table-root] thead {
+	border-bottom: 1px solid var(--bs-ui-border);
+}
+
+[data-bsui-table-root] th {
+	padding: 0.75rem 1rem;
+	text-align: left;
+	font-weight: 500;
+	color: var(--bs-ui-muted-foreground);
+	font-size: 0.8125rem;
+	white-space: nowrap;
+}
+
+[data-bsui-table-root] th[data-wp-on--click] {
+	cursor: pointer;
+	transition: color var(--bs-ui-transition);
+}
+
+[data-bsui-table-root] th[data-wp-on--click]:hover {
+	color: var(--bs-ui-foreground);
+}
+
+[data-bsui-table-root] th[aria-sort="ascending"],
+[data-bsui-table-root] th[aria-sort="descending"] {
+	color: var(--bs-ui-foreground);
+}
+
+[data-bsui-table-root] th span:last-child {
+	margin-left: 0.25rem;
+	font-size: 0.75rem;
+}
+
+[data-bsui-table-root] td {
+	padding: 0.75rem 1rem;
+	border-bottom: 1px solid var(--bs-ui-border);
+}
+
+[data-bsui-table-root] tbody tr {
+	transition: background var(--bs-ui-transition);
+}
+
+[data-bsui-table-root] tbody tr:hover {
+	background: var(--bs-ui-muted);
+}
+
+[data-bsui-table-root][data-striped] tbody tr:nth-child(even) {
+	background: var(--bs-ui-muted);
+}
+
+[data-bsui-table-root][data-striped] tbody tr:nth-child(even):hover {
+	background: var(--bs-ui-accent);
+}

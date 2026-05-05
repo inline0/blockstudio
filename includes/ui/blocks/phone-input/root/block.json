@@ -1,0 +1,47 @@
+{
+	"$schema": "https://blockstudio.dev/schema/block",
+	"name": "bsui/phone-input",
+	"title": "Phone Input",
+	"category": "design",
+	"icon": "phone",
+	"blockstudio": {
+		"interactivity": {
+			"enqueue": true
+		},
+		"attributes": [
+			{
+				"id": "name",
+				"type": "text",
+				"label": "Name"
+			},
+			{
+				"id": "placeholder",
+				"type": "text",
+				"label": "Placeholder",
+				"default": "Phone number"
+			},
+			{
+				"id": "defaultCountry",
+				"type": "text",
+				"label": "Default Country",
+				"default": "US"
+			},
+			{
+				"id": "disabled",
+				"type": "toggle",
+				"label": "Disabled",
+				"default": false
+			},
+			{
+				"id": "nameAlt",
+				"type": "text",
+				"label": "Form Name (alt)"
+			},
+			{
+				"id": "onChange",
+				"type": "text",
+				"hidden": true
+			}
+		]
+	}
+}

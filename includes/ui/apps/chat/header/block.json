@@ -1,0 +1,8 @@
+{
+	"$schema": "https://blockstudio.dev/schema/block",
+	"name": "app/chat-header",
+	"title": "Chat Header",
+	"parent": ["app/chat"],
+	"usesContext": ["app/chat"],
+	"blockstudio": true
+}

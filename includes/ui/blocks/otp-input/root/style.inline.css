@@ -1,0 +1,32 @@
+[data-bsui-otp-input] {
+	display: inline-flex;
+	align-items: center;
+	gap: 0.375rem;
+	font-family: var(--bs-ui-font-sans);
+}
+
+[data-bsui-otp-input] input[data-index] {
+	all: unset;
+	box-sizing: border-box;
+	width: 2.5rem;
+	height: 2.5rem;
+	text-align: center;
+	font-size: 1.125rem;
+	font-weight: 600;
+	font-family: var(--bs-ui-font-mono);
+	border-radius: var(--bs-ui-radius);
+	border: 1px solid var(--bs-ui-input);
+	background: var(--bs-ui-background);
+	color: var(--bs-ui-foreground);
+	caret-color: var(--bs-ui-foreground);
+}
+
+[data-bsui-otp-input] input[data-index]:disabled {
+	opacity: 0.5;
+	pointer-events: none;
+}
+
+[data-bsui-otp-separator] {
+	color: var(--bs-ui-muted-foreground);
+	font-size: var(--bs-ui-font-size);
+}

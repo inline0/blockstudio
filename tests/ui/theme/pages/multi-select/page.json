@@ -1,0 +1,7 @@
+{
+	"name": "multi-select",
+	"title": "Multi Select Test",
+	"slug": "multi-select-test",
+	"postType": "page",
+	"postStatus": "publish"
+}

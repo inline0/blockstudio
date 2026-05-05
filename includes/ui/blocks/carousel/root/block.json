@@ -1,0 +1,22 @@
+{
+	"$schema": "https://blockstudio.dev/schema/block",
+	"name": "bsui/carousel",
+	"title": "Carousel",
+	"category": "design",
+	"icon": "slides",
+	"blockstudio": {
+		"interactivity": { "enqueue": true },
+		"attributes": [
+			{
+				"id": "orientation",
+				"type": "select",
+				"label": "Orientation",
+				"options": [
+					{ "label": "Horizontal", "value": "horizontal" },
+					{ "label": "Vertical", "value": "vertical" }
+				],
+				"default": "horizontal"
+			}
+		]
+	}
+}

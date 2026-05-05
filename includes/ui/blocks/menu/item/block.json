@@ -1,0 +1,23 @@
+{
+	"$schema": "https://blockstudio.dev/schema/block",
+	"name": "bsui/menu-item",
+	"title": "Menu Item",
+	"category": "design",
+	"icon": "minus",
+	"parent": ["bsui/menu-popup"],
+	"usesContext": ["bsui/menu"],
+	"blockstudio": {
+		"attributes": [
+			{
+				"id": "label",
+				"type": "richtext"
+			},
+			{
+				"id": "disabled",
+				"type": "toggle",
+				"label": "Disabled",
+				"default": false
+			}
+		]
+	}
+}

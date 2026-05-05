@@ -1,0 +1,50 @@
+{
+	"$schema": "https://blockstudio.dev/schema/block",
+	"name": "bsui/select",
+	"title": "Select",
+	"category": "design",
+	"icon": "arrow-down-alt2",
+	"blockstudio": {
+		"interactivity": {
+			"enqueue": true
+		},
+		"attributes": [
+			{
+				"id": "defaultValue",
+				"type": "text",
+				"label": "Default Value"
+			},
+			{
+				"id": "multiple",
+				"type": "toggle",
+				"label": "Allow Multiple",
+				"default": false
+			},
+			{
+				"id": "name",
+				"type": "text",
+				"label": "Form Name"
+			},
+			{
+				"id": "placeholder",
+				"type": "text",
+				"label": "Placeholder",
+				"default": "Select..."
+			},
+			{
+				"id": "nameAlt",
+				"type": "text",
+				"label": "Form Name (alt)"
+			},
+			{
+				"id": "onChange",
+				"type": "text",
+				"hidden": true
+			},
+			{
+				"id": "value",
+				"type": "text"
+			}
+		]
+	}
+}

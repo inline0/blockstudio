@@ -1,0 +1,7 @@
+{
+	"$schema": "https://blockstudio.dev/schema/block",
+	"name": "bsui/preview-card-popup",
+	"title": "Preview Card Popup",
+	"parent": ["bsui/preview-card"],
+	"blockstudio": true
+}

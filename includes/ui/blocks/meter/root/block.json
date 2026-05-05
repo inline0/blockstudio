@@ -1,0 +1,49 @@
+{
+	"$schema": "https://blockstudio.dev/schema/block",
+	"name": "bsui/meter",
+	"title": "Meter",
+	"category": "design",
+	"icon": "minus",
+	"blockstudio": {
+		"attributes": [
+			{
+				"id": "value",
+				"type": "number",
+				"label": "Value",
+				"default": 0
+			},
+			{
+				"id": "min",
+				"type": "number",
+				"label": "Min",
+				"default": 0
+			},
+			{
+				"id": "max",
+				"type": "number",
+				"label": "Max",
+				"default": 100
+			},
+			{
+				"id": "low",
+				"type": "number",
+				"label": "Low"
+			},
+			{
+				"id": "high",
+				"type": "number",
+				"label": "High"
+			},
+			{
+				"id": "optimum",
+				"type": "number",
+				"label": "Optimum"
+			},
+			{
+				"id": "label",
+				"type": "text",
+				"label": "Label"
+			}
+		]
+	}
+}

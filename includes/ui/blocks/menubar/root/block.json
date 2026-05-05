@@ -1,0 +1,10 @@
+{
+	"$schema": "https://blockstudio.dev/schema/block",
+	"name": "bsui/menubar",
+	"title": "Menubar",
+	"category": "design",
+	"icon": "menu",
+	"blockstudio": {
+		"interactivity": { "enqueue": true }
+	}
+}

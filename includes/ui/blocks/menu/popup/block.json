@@ -1,0 +1,10 @@
+{
+	"$schema": "https://blockstudio.dev/schema/block",
+	"name": "bsui/menu-popup",
+	"title": "Menu Popup",
+	"category": "design",
+	"icon": "list-view",
+	"parent": ["bsui/menu"],
+	"usesContext": ["bsui/menu"],
+	"blockstudio": true
+}

@@ -1,0 +1,21 @@
+{
+	"$schema": "https://blockstudio.dev/schema/block",
+	"name": "bsui/separator",
+	"title": "Separator",
+	"category": "design",
+	"icon": "minus",
+	"blockstudio": {
+		"attributes": [
+			{
+				"id": "orientation",
+				"type": "select",
+				"label": "Orientation",
+				"options": [
+					{ "label": "Horizontal", "value": "horizontal" },
+					{ "label": "Vertical", "value": "vertical" }
+				],
+				"default": "horizontal"
+			}
+		]
+	}
+}

@@ -1,0 +1,104 @@
+[data-bsui-calendar] {
+	display: inline-flex;
+	flex-direction: column;
+	gap: 0.25rem;
+	padding: 0.75rem;
+	border-radius: var(--bs-ui-radius-lg);
+	border: 1px solid var(--bs-ui-border);
+	background: var(--bs-ui-card);
+	font-family: var(--bs-ui-font-sans);
+	font-size: var(--bs-ui-font-size);
+	color: var(--bs-ui-card-foreground);
+}
+
+[data-bsui-calendar-header] {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	padding: 0.25rem 0;
+}
+
+[data-bsui-calendar-header] span {
+	font-weight: 500;
+	font-size: var(--bs-ui-font-size);
+}
+
+[data-bsui-calendar-header] button {
+	all: unset;
+
+	box-sizing: border-box;
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	width: 2rem;
+	height: 2rem;
+	border-radius: var(--bs-ui-radius);
+	cursor: pointer;
+	color: var(--bs-ui-muted-foreground);
+	transition: background var(--bs-ui-transition);
+}
+
+[data-bsui-calendar-header] button:hover {
+	background: var(--bs-ui-accent);
+	color: var(--bs-ui-foreground);
+}
+
+[data-bsui-calendar-weekdays] {
+	display: grid;
+	grid-template-columns: repeat(7, 2rem);
+	gap: 1px;
+	text-align: center;
+}
+
+[data-bsui-calendar-weekdays] span {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	height: 2rem;
+	font-size: 0.75rem;
+	font-weight: 500;
+	color: var(--bs-ui-muted-foreground);
+}
+
+[data-bsui-calendar-grid] {
+	display: grid;
+	grid-template-columns: repeat(7, 2rem);
+	gap: 1px;
+}
+
+[data-bsui-calendar-grid] button {
+	all: unset;
+
+	box-sizing: border-box;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	width: 2rem;
+	height: 2rem;
+	border-radius: var(--bs-ui-radius);
+	font-size: 0.8125rem;
+	cursor: pointer;
+	transition: background var(--bs-ui-transition), color var(--bs-ui-transition);
+}
+
+[data-bsui-calendar-grid] button:hover:not([disabled]):not([data-selected]) {
+	background: var(--bs-ui-accent);
+}
+
+[data-bsui-calendar-grid] button[data-today] {
+	font-weight: 600;
+	color: var(--bs-ui-primary);
+}
+
+[data-bsui-calendar-grid] button[data-selected] {
+	background: var(--bs-ui-primary);
+	color: var(--bs-ui-primary-foreground);
+}
+
+[data-bsui-calendar-grid] button[data-selected]:hover {
+	opacity: 0.9;
+}
+
+[data-bsui-calendar-grid] button[disabled] {
+	visibility: hidden;
+}

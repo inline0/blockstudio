@@ -1,0 +1,69 @@
+[data-bsui-date-input] {
+	font-family: var(--bs-ui-font-sans);
+}
+
+[data-bsui-date-input-trigger] {
+	display: flex;
+	align-items: center;
+	position: relative;
+}
+
+[data-bsui-date-input-trigger] input {
+	all: unset;
+	box-sizing: border-box;
+	display: block;
+	width: 100%;
+	min-width: 14rem;
+	padding: 0.5rem 2.5rem 0.5rem 0.75rem;
+	border-radius: var(--bs-ui-radius);
+	border: 1px solid var(--bs-ui-input);
+	background: var(--bs-ui-background);
+	font-family: var(--bs-ui-font-sans);
+	font-size: var(--bs-ui-font-size);
+	min-height: var(--bs-ui-control-height);
+	color: var(--bs-ui-foreground);
+}
+
+[data-bsui-date-input-trigger] input::placeholder {
+	color: var(--bs-ui-muted-foreground);
+}
+
+[data-bsui-date-input-trigger] input:disabled {
+	opacity: 0.5;
+	pointer-events: none;
+}
+
+[data-bsui-date-input-trigger] button {
+	all: unset;
+	position: absolute;
+	right: 0.5rem;
+	top: 50%;
+	transform: translateY(-50%);
+	width: 1.25rem;
+	height: 1.25rem;
+	cursor: pointer;
+	color: var(--bs-ui-muted-foreground);
+	background: currentColor;
+	mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect width='18' height='18' x='3' y='4' rx='2' ry='2'/%3E%3Cline x1='16' x2='16' y1='2' y2='6'/%3E%3Cline x1='8' x2='8' y1='2' y2='6'/%3E%3Cline x1='3' x2='21' y1='10' y2='10'/%3E%3C/svg%3E") center / contain no-repeat;
+	transition: color var(--bs-ui-transition);
+}
+
+[data-bsui-date-input-trigger] button:hover {
+	color: var(--bs-ui-foreground);
+}
+
+[data-bsui-date-input-popup] {
+	position: absolute;
+	z-index: 50;
+	top: calc(100% + 4px);
+	left: 0;
+	background: var(--bs-ui-popover);
+	border: 1px solid var(--bs-ui-border);
+	border-radius: var(--bs-ui-radius-lg);
+	box-shadow: var(--bs-ui-shadow-md);
+	padding: 0;
+}
+
+[data-bsui-date-input-popup]:not([hidden]) {
+	animation: bs-ui-popup-in var(--bs-ui-transition);
+}

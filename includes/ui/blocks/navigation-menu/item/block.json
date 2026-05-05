@@ -1,0 +1,7 @@
+{
+	"$schema": "https://blockstudio.dev/schema/block",
+	"name": "bsui/navigation-menu-item",
+	"title": "Navigation Menu Item",
+	"parent": ["bsui/navigation-menu"],
+	"blockstudio": true
+}

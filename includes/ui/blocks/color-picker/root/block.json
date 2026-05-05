@@ -1,0 +1,45 @@
+{
+	"$schema": "https://blockstudio.dev/schema/block",
+	"name": "bsui/color-picker",
+	"title": "Color Picker",
+	"category": "design",
+	"icon": "admin-customizer",
+	"blockstudio": {
+		"interactivity": {
+			"enqueue": true
+		},
+		"attributes": [
+			{
+				"id": "name",
+				"type": "text",
+				"label": "Name"
+			},
+			{
+				"id": "defaultValue",
+				"type": "text",
+				"label": "Default Color",
+				"default": "#000000"
+			},
+			{
+				"id": "disabled",
+				"type": "toggle",
+				"label": "Disabled",
+				"default": false
+			},
+			{
+				"id": "nameAlt",
+				"type": "text",
+				"label": "Form Name (alt)"
+			},
+			{
+				"id": "onChange",
+				"type": "text",
+				"hidden": true
+			},
+			{
+				"id": "value",
+				"type": "text"
+			}
+		]
+	}
+}

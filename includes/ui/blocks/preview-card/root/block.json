@@ -1,0 +1,14 @@
+{
+	"$schema": "https://blockstudio.dev/schema/block",
+	"name": "bsui/preview-card",
+	"title": "Preview Card",
+	"category": "design",
+	"icon": "visibility",
+	"blockstudio": {
+		"interactivity": { "enqueue": true },
+		"attributes": [
+			{ "id": "openDelay", "type": "number", "label": "Open Delay (ms)", "default": 600 },
+			{ "id": "closeDelay", "type": "number", "label": "Close Delay (ms)", "default": 300 }
+		]
+	}
+}

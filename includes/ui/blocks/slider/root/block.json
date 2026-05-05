@@ -1,0 +1,84 @@
+{
+	"$schema": "https://blockstudio.dev/schema/block",
+	"name": "bsui/slider",
+	"title": "Slider",
+	"category": "design",
+	"icon": "minus",
+	"blockstudio": {
+		"interactivity": {
+			"enqueue": true
+		},
+		"attributes": [
+			{
+				"id": "defaultValue",
+				"type": "number",
+				"label": "Default Value",
+				"default": 50
+			},
+			{
+				"id": "min",
+				"type": "number",
+				"label": "Min",
+				"default": 0
+			},
+			{
+				"id": "max",
+				"type": "number",
+				"label": "Max",
+				"default": 100
+			},
+			{
+				"id": "step",
+				"type": "number",
+				"label": "Step",
+				"default": 1
+			},
+			{
+				"id": "disabled",
+				"type": "toggle",
+				"label": "Disabled",
+				"default": false
+			},
+			{
+				"id": "name",
+				"type": "text",
+				"label": "Form Name"
+			},
+			{
+				"id": "orientation",
+				"type": "select",
+				"label": "Orientation",
+				"options": [
+					{
+						"label": "Horizontal",
+						"value": "horizontal"
+					},
+					{
+						"label": "Vertical",
+						"value": "vertical"
+					}
+				],
+				"default": "horizontal"
+			},
+			{
+				"id": "label",
+				"type": "text",
+				"label": "Label"
+			},
+			{
+				"id": "nameAlt",
+				"type": "text",
+				"label": "Form Name (alt)"
+			},
+			{
+				"id": "onChange",
+				"type": "text",
+				"hidden": true
+			},
+			{
+				"id": "value",
+				"type": "text"
+			}
+		]
+	}
+}

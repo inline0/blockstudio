@@ -1,0 +1,26 @@
+{
+	"$schema": "https://blockstudio.dev/schema/block",
+	"name": "bsui/table-header-cell",
+	"title": "Table Header Cell",
+	"parent": ["bsui/table-header"],
+	"usesContext": ["bsui/table"],
+	"blockstudio": {
+		"attributes": [
+			{
+				"id": "columnId",
+				"type": "text",
+				"label": "Column ID"
+			},
+			{
+				"id": "label",
+				"type": "richtext"
+			},
+			{
+				"id": "sortable",
+				"type": "toggle",
+				"label": "Sortable",
+				"default": true
+			}
+		]
+	}
+}

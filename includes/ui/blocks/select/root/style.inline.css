@@ -1,0 +1,32 @@
+[data-bsui-select-trigger] {
+	all: unset;
+
+	box-sizing: border-box;
+	display: inline-flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 0.5rem;
+	padding: 0 var(--bs-ui-control-padding);
+	border-radius: var(--bs-ui-radius);
+	border: 1px solid var(--bs-ui-input);
+	background: var(--bs-ui-background);
+	font-family: var(--bs-ui-font-sans);
+	font-size: var(--bs-ui-font-size);
+	min-width: 10rem;
+	min-height: var(--bs-ui-control-height);
+	cursor: pointer;
+	color: var(--bs-ui-foreground);
+}
+
+[data-bsui-select-root] [role="option"] {
+	padding-left: calc(var(--bs-ui-control-padding) + 1rem);
+}
+
+[data-bsui-select-trigger]::after {
+	content: "";
+	width: 0.75rem;
+	height: 0.75rem;
+	background: var(--bs-ui-muted-foreground);
+	mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E") center / contain no-repeat;
+	flex-shrink: 0;
+}

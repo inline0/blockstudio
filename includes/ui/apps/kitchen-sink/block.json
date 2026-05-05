@@ -1,0 +1,15 @@
+{
+  "$schema": "https://blockstudio.dev/schema/block",
+  "name": "app/kitchen-sink",
+  "title": "Kitchen Sink",
+  "category": "widgets",
+  "icon": "screenoptions",
+  "supports": {
+    "interactivity": true
+  },
+  "blockstudio": {
+    "interactivity": {
+      "enqueue": true
+    }
+  }
+}

@@ -1,0 +1,13 @@
+{
+	"$schema": "https://blockstudio.dev/schema/block",
+	"name": "bsui/alert-dialog",
+	"title": "Alert Dialog",
+	"category": "design",
+	"icon": "warning",
+	"blockstudio": {
+		"interactivity": {
+			"enqueue": true
+		},
+		"attributes": []
+	}
+}

@@ -1,0 +1,8 @@
+{
+	"$schema": "https://blockstudio.dev/schema/block",
+	"name": "app/chat-input",
+	"title": "Chat Input",
+	"parent": ["app/chat"],
+	"usesContext": ["app/chat"],
+	"blockstudio": true
+}

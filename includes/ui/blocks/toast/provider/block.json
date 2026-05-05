@@ -1,0 +1,24 @@
+{
+	"$schema": "https://blockstudio.dev/schema/block",
+	"name": "bsui/toast-provider",
+	"title": "Toast Provider",
+	"category": "design",
+	"icon": "megaphone",
+	"blockstudio": {
+		"interactivity": { "enqueue": true },
+		"attributes": [
+			{
+				"id": "position",
+				"type": "select",
+				"label": "Position",
+				"options": [
+					{ "label": "Top Right", "value": "top-right" },
+					{ "label": "Top Left", "value": "top-left" },
+					{ "label": "Bottom Right", "value": "bottom-right" },
+					{ "label": "Bottom Left", "value": "bottom-left" }
+				],
+				"default": "bottom-right"
+			}
+		]
+	}
+}

@@ -1,0 +1,7 @@
+{
+	"$schema": "https://blockstudio.dev/schema/block",
+	"name": "bsui/breadcrumb-ellipsis",
+	"title": "Breadcrumb Ellipsis",
+	"parent": ["bsui/breadcrumb"],
+	"blockstudio": true
+}

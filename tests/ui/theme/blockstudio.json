@@ -1,0 +1,16 @@
+{
+	"assets": {
+		"enqueue": true,
+		"reset": {
+			"enabled": true
+		}
+	},
+	"blockTags": {
+		"enabled": true,
+		"allow": ["bsui/*", "app/*"]
+	},
+	"ui": {
+		"enabled": true
+	},
+	"$schema": "https://blockstudio.dev/schema/blockstudio"
+}

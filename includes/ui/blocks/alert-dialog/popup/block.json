@@ -1,0 +1,9 @@
+{
+	"$schema": "https://blockstudio.dev/schema/block",
+	"name": "bsui/alert-dialog-popup",
+	"title": "Alert Dialog Popup",
+	"category": "design",
+	"icon": "text",
+	"parent": ["bsui/alert-dialog"],
+	"blockstudio": true
+}

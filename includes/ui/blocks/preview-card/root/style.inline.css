@@ -1,0 +1,11 @@
+[data-bsui-preview-card-root] [data-bsui-preview-card-popup]:not([hidden]) {
+	max-width: 20rem;
+}
+
+[data-bsui-preview-card-root] a {
+	color: var(--bs-ui-foreground);
+	font-family: var(--bs-ui-font-sans);
+	font-size: var(--bs-ui-font-size);
+	text-decoration: underline;
+	text-underline-offset: 2px;
+}

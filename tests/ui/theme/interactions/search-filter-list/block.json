@@ -1,0 +1,15 @@
+{
+	"$schema": "https://blockstudio.dev/schema/block",
+	"name": "interaction/search-filter-list",
+	"title": "Search Filter List",
+	"category": "widgets",
+	"icon": "screenoptions",
+	"supports": {
+		"interactivity": true
+	},
+	"blockstudio": {
+		"interactivity": {
+			"enqueue": true
+		}
+	}
+}

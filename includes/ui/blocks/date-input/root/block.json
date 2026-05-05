@@ -1,0 +1,41 @@
+{
+	"$schema": "https://blockstudio.dev/schema/block",
+	"name": "bsui/date-input",
+	"title": "Date Input",
+	"category": "design",
+	"icon": "calendar-alt",
+	"blockstudio": {
+		"interactivity": {
+			"enqueue": true
+		},
+		"attributes": [
+			{
+				"id": "name",
+				"type": "text",
+				"label": "Name"
+			},
+			{
+				"id": "placeholder",
+				"type": "text",
+				"label": "Placeholder",
+				"default": "Pick a date"
+			},
+			{
+				"id": "disabled",
+				"type": "toggle",
+				"label": "Disabled",
+				"default": false
+			},
+			{
+				"id": "nameAlt",
+				"type": "text",
+				"label": "Form Name (alt)"
+			},
+			{
+				"id": "onChange",
+				"type": "text",
+				"hidden": true
+			}
+		]
+	}
+}

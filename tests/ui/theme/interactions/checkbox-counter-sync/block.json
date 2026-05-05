@@ -1,0 +1,15 @@
+{
+	"$schema": "https://blockstudio.dev/schema/block",
+	"name": "interaction/checkbox-counter-sync",
+	"title": "Checkbox Counter Sync",
+	"category": "widgets",
+	"icon": "screenoptions",
+	"supports": {
+		"interactivity": true
+	},
+	"blockstudio": {
+		"interactivity": {
+			"enqueue": true
+		}
+	}
+}

@@ -1,0 +1,8 @@
+[data-ks-value] {
+	padding: 0.375rem 0.625rem;
+	border-radius: var(--bs-ui-radius);
+	background: var(--bs-ui-secondary);
+	font-family: var(--bs-ui-font-mono);
+	font-size: 0.75rem;
+	color: var(--bs-ui-muted-foreground);
+}

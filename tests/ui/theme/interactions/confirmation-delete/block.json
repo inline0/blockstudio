@@ -1,0 +1,15 @@
+{
+	"$schema": "https://blockstudio.dev/schema/block",
+	"name": "interaction/confirmation-delete",
+	"title": "Confirmation Delete",
+	"category": "widgets",
+	"icon": "screenoptions",
+	"supports": {
+		"interactivity": true
+	},
+	"blockstudio": {
+		"interactivity": {
+			"enqueue": true
+		}
+	}
+}

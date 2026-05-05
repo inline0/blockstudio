@@ -1,0 +1,9 @@
+[data-bsui-skeleton] {
+	background: var(--bs-ui-muted);
+	animation: bs-ui-skeleton-pulse 1.5s ease-in-out infinite;
+}
+
+@keyframes bs-ui-skeleton-pulse {
+	0%, 100% { opacity: 1; }
+	50% { opacity: 0.5; }
+}

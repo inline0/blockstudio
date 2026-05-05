@@ -1,0 +1,20 @@
+{
+	"$schema": "https://blockstudio.dev/schema/block",
+	"name": "bsui/dialog",
+	"title": "Dialog",
+	"category": "design",
+	"icon": "external",
+	"blockstudio": {
+		"interactivity": {
+			"enqueue": true
+		},
+		"attributes": [
+			{
+				"id": "dismissable",
+				"type": "toggle",
+				"label": "Dismissable",
+				"default": true
+			}
+		]
+	}
+}

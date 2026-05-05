@@ -1,0 +1,36 @@
+{
+	"$schema": "https://blockstudio.dev/schema/block",
+	"name": "bsui/form",
+	"title": "Form",
+	"category": "design",
+	"icon": "feedback",
+	"blockstudio": {
+		"interactivity": {
+			"enqueue": true
+		},
+		"attributes": [
+			{
+				"id": "block",
+				"type": "text",
+				"label": "Block"
+			},
+			{
+				"id": "action",
+				"type": "select",
+				"label": "Action",
+				"options": [
+					{ "label": "Create", "value": "create" },
+					{ "label": "Update", "value": "update" },
+					{ "label": "Delete", "value": "delete" }
+				],
+				"default": "create"
+			},
+			{
+				"id": "successMessage",
+				"type": "text",
+				"label": "Success Message",
+				"default": "Submitted successfully."
+			}
+		]
+	}
+}

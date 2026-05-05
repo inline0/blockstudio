@@ -1,0 +1,22 @@
+{
+	"$schema": "https://blockstudio.dev/schema/block",
+	"name": "bsui/scroll-area",
+	"title": "Scroll Area",
+	"category": "design",
+	"icon": "arrow-down-alt2",
+	"blockstudio": {
+		"attributes": [
+			{
+				"id": "orientation",
+				"type": "select",
+				"label": "Orientation",
+				"options": [
+					{ "label": "Vertical", "value": "vertical" },
+					{ "label": "Horizontal", "value": "horizontal" },
+					{ "label": "Both", "value": "both" }
+				],
+				"default": "vertical"
+			}
+		]
+	}
+}

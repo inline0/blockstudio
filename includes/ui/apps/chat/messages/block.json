@@ -1,0 +1,8 @@
+{
+	"$schema": "https://blockstudio.dev/schema/block",
+	"name": "app/chat-messages",
+	"title": "Chat Messages",
+	"parent": ["app/chat"],
+	"usesContext": ["app/chat"],
+	"blockstudio": true
+}

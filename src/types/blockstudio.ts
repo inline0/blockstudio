@@ -1,4 +1,3 @@
-
 export interface Blockstudio {
   /**
    * Settings related to AI-powered context generation.
@@ -20,6 +19,10 @@ export interface Blockstudio {
    * Settings related to Tailwind.
    */
   tailwind?: Tailwind;
+  /**
+   * Settings related to bundled UI components.
+   */
+  ui?: UI;
   /**
    * Settings related to developer tools.
    */
@@ -162,6 +165,17 @@ export interface Tailwind {
   config?: string;
   /**
    * Enable Tailwind.
+   */
+  enabled?: boolean;
+  [property: string]: any;
+}
+
+/**
+ * Settings related to bundled UI components.
+ */
+export interface UI {
+  /**
+   * Enable bundled UI components.
    */
   enabled?: boolean;
   [property: string]: any;
@@ -413,6 +427,7 @@ const typeMap: any = {
       },
       { json: 'editor', js: 'editor', typ: u(undefined, r('Editor')) },
       { json: 'tailwind', js: 'tailwind', typ: u(undefined, r('Tailwind')) },
+      { json: 'ui', js: 'ui', typ: u(undefined, r('UI')) },
       { json: 'dev', js: 'dev', typ: u(undefined, r('Dev')) },
       { json: 'users', js: 'users', typ: u(undefined, r('Users')) },
     ],
@@ -481,6 +496,7 @@ const typeMap: any = {
     ],
     'any',
   ),
+  UI: o([{ json: 'enabled', js: 'enabled', typ: u(undefined, true) }], 'any'),
   Dev: o(
     [
       { json: 'canvas', js: 'canvas', typ: u(undefined, r('DevCanvas')) },

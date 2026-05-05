@@ -1,0 +1,192 @@
+---
+title: UI Components
+description: Enable and render the bundled Blockstudio UI components.
+---
+
+# UI Components
+
+Blockstudio 7.3 includes a bundled set of headless UI blocks powered by the WordPress Interactivity API. They are registered under the `bsui/*` namespace and can be composed in templates, file-based pages, patterns, and post content.
+
+## Enable UI Components
+
+Bundled UI components are opt-in. Enable them in your theme's `blockstudio.json`:
+
+```json title="blockstudio.json"
+{
+  "$schema": "https://blockstudio.dev/schema/blockstudio",
+  "ui": {
+    "enabled": true
+  }
+}
+```
+
+Or enable them with a filter:
+
+```php title="functions.php"
+add_filter('blockstudio/settings/ui/enabled', '__return_true');
+```
+
+When enabled, Blockstudio registers the bundled component library from `includes/ui/blocks` and the bundled demo apps from `includes/ui/apps`.
+
+## Rendering
+
+Use the normal block tag syntax:
+
+```html
+<block name="bsui/button" label="Save" variant="default"></block>
+```
+
+The shorter `<bs:>` syntax works too:
+
+```html
+<bs:bsui-button label="Save" variant="default" />
+```
+
+In Blockstudio templates, block tags render automatically. In file-based pages and patterns, they are synced as native WordPress blocks. If you want to render UI components directly from post content or widget areas, enable page-level block tags:
+
+```json title="blockstudio.json"
+{
+  "ui": {
+    "enabled": true
+  },
+  "blockTags": {
+    "enabled": true,
+    "allow": ["bsui/*", "app/*"]
+  }
+}
+```
+
+## Basic Components
+
+Simple components render as a single block:
+
+```html
+<block name="bsui/button" label="Continue" variant="default"></block>
+<block name="bsui/badge" label="Beta"></block>
+<block
+  name="bsui/input"
+  nameAlt="email"
+  type="email"
+  placeholder="Email"
+></block>
+<block name="bsui/textarea" name="message" placeholder="Message"></block>
+<block name="bsui/spinner"></block>
+```
+
+Attributes map directly to each component's `block.json` attributes. For example, `bsui/button` supports `label`, `href`, `variant`, `size`, and `disabled`.
+
+## Compound Components
+
+Many UI components are compound blocks. The root block owns the state, and child blocks declare their parent.
+
+### Tabs
+
+```html
+<block name="bsui/tabs" defaultValue="tab1">
+  <block name="bsui/tabs-list">
+    <block name="bsui/tabs-trigger" value="tab1" title="Features"></block>
+    <block name="bsui/tabs-trigger" value="tab2" title="Pricing"></block>
+    <block name="bsui/tabs-trigger" value="tab3" title="FAQ"></block>
+  </block>
+  <block name="bsui/tabs-panel" value="tab1">
+    <p>Features content.</p>
+  </block>
+  <block name="bsui/tabs-panel" value="tab2">
+    <p>Pricing content.</p>
+  </block>
+  <block name="bsui/tabs-panel" value="tab3">
+    <p>FAQ content.</p>
+  </block>
+</block>
+```
+
+### Dialog
+
+```html
+<block name="bsui/dialog">
+  <block name="bsui/dialog-trigger" label="Open Dialog"></block>
+  <block name="bsui/dialog-backdrop"></block>
+  <block name="bsui/dialog-popup">
+    <p>Dialog content.</p>
+    <block name="bsui/dialog-close" label="Close"></block>
+  </block>
+</block>
+```
+
+### Select
+
+```html
+<block name="bsui/select" placeholder="Choose a fruit" nameAlt="fruit">
+  <block name="bsui/select-trigger"></block>
+  <block name="bsui/select-popup">
+    <block name="bsui/select-option" value="apple" label="Apple"></block>
+    <block name="bsui/select-option" value="banana" label="Banana"></block>
+    <block name="bsui/select-option" value="cherry" label="Cherry"></block>
+  </block>
+</block>
+```
+
+### Form Fields
+
+```html
+<block name="bsui/form" block="contact/form" successMessage="Thank you!">
+  <block name="bsui/field">
+    <block name="bsui/field-label" text="Email"></block>
+    <block name="bsui/input" nameAlt="email" type="email"></block>
+    <block name="bsui/field-error"></block>
+  </block>
+</block>
+```
+
+## Available Blocks
+
+The bundled UI library includes:
+
+| Area       | Blocks                                                                                                                                                                                                                                                                                           |
+| ---------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Layout     | `bsui/aspect-ratio`, `bsui/card`, `bsui/separator`, `bsui/stack`, `bsui/table`                                                                                                                                                                                                                   |
+| Actions    | `bsui/button`, `bsui/button-group`, `bsui/toggle`, `bsui/toggle-group`, `bsui/toolbar`                                                                                                                                                                                                           |
+| Inputs     | `bsui/checkbox`, `bsui/color-picker`, `bsui/date-input`, `bsui/file-upload`, `bsui/input`, `bsui/number-field`, `bsui/otp-input`, `bsui/password-input`, `bsui/phone-input`, `bsui/radio-group`, `bsui/rating`, `bsui/select`, `bsui/slider`, `bsui/switch`, `bsui/textarea`, `bsui/time-picker` |
+| Overlays   | `bsui/alert-dialog`, `bsui/dialog`, `bsui/drawer`, `bsui/menu`, `bsui/menubar`, `bsui/popover`, `bsui/preview-card`, `bsui/tooltip`                                                                                                                                                              |
+| Navigation | `bsui/accordion`, `bsui/breadcrumb`, `bsui/carousel`, `bsui/collapsible`, `bsui/context-menu`, `bsui/navigation-menu`, `bsui/pagination`, `bsui/tabs`                                                                                                                                            |
+| Feedback   | `bsui/badge`, `bsui/kbd`, `bsui/meter`, `bsui/progress`, `bsui/skeleton`, `bsui/spinner`, `bsui/text`, `bsui/toast`                                                                                                                                                                              |
+| Forms      | `bsui/field`, `bsui/field-group`, `bsui/form`                                                                                                                                                                                                                                                    |
+
+Compound components also expose child blocks such as `bsui/dialog-trigger`, `bsui/dialog-popup`, `bsui/tabs-list`, `bsui/tabs-trigger`, `bsui/tabs-panel`, `bsui/select-trigger`, `bsui/select-popup`, and `bsui/select-option`.
+
+## Apps
+
+The `app/*` namespace contains bundled app examples built from the same UI components:
+
+```html
+<block name="app/kitchen-sink"></block>
+
+<block name="app/chat">
+  <block name="app/chat-sidebar"></block>
+  <block name="app/chat-header"></block>
+  <block name="app/chat-messages"></block>
+  <block name="app/chat-input"></block>
+</block>
+```
+
+These are useful as reference implementations for more complex Interactivity API flows, RPC, database-backed UI, and compound block composition.
+
+## Styling
+
+UI components ship with their own CSS custom properties using the `--bs-ui-*` prefix. You can override them from your theme CSS:
+
+```css title="style.css"
+:root {
+  --bs-ui-radius: 0.5rem;
+  --bs-ui-primary: oklch(0.45 0.18 260);
+  --bs-ui-primary-foreground: white;
+}
+```
+
+The components are headless in behavior, but opinionated enough to be usable out of the box. Override tokens first, then add component-specific CSS where needed.
+
+## Related
+
+- [Programmatic Rendering](/docs/blocks/rendering)
+- [Components](/docs/blocks/components)
+- [Interactivity API](/docs/blocks/interactivity)

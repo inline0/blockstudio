@@ -1,0 +1,21 @@
+{
+	"$schema": "https://blockstudio.dev/schema/block",
+	"name": "bsui/combobox-option",
+	"title": "Combobox Option",
+	"parent": ["bsui/combobox-popup"],
+	"usesContext": ["bsui/combobox"],
+	"blockstudio": {
+		"attributes": [
+			{
+				"id": "value",
+				"type": "text",
+				"label": "Value"
+			},
+			{
+				"id": "label",
+				"type": "text",
+				"label": "Label"
+			}
+		]
+	}
+}

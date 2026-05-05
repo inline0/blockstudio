@@ -1,0 +1,42 @@
+[data-bsui-button-group] {
+	display: inline-flex;
+	align-items: center;
+}
+
+[data-bsui-button-group] > div {
+	display: contents;
+}
+
+[data-bsui-button-group] [data-bsui-button],
+[data-bsui-button-group] [data-bsui-menu-trigger],
+[data-bsui-button-group] [data-bsui-select-trigger] {
+	border-radius: 0;
+	margin-left: -1px;
+}
+
+[data-bsui-button-group] > div > :first-child [data-bsui-button],
+[data-bsui-button-group] > div > :first-child[data-bsui-button],
+[data-bsui-button-group] > div > :first-child [data-bsui-menu-trigger],
+[data-bsui-button-group] > div > :first-child [data-bsui-select-trigger] {
+	border-top-left-radius: var(--bs-ui-radius);
+	border-bottom-left-radius: var(--bs-ui-radius);
+	margin-left: 0;
+}
+
+[data-bsui-button-group] > div > :last-child [data-bsui-button],
+[data-bsui-button-group] > div > :last-child[data-bsui-button],
+[data-bsui-button-group] > div > :last-child [data-bsui-menu-trigger],
+[data-bsui-button-group] > div > :last-child [data-bsui-select-trigger] {
+	border-top-right-radius: var(--bs-ui-radius);
+	border-bottom-right-radius: var(--bs-ui-radius);
+}
+
+[data-bsui-button-group] [data-bsui-button]:hover,
+[data-bsui-button-group] [data-bsui-button]:focus-visible,
+[data-bsui-button-group] [data-bsui-menu-trigger]:hover,
+[data-bsui-button-group] [data-bsui-menu-trigger]:focus-visible,
+[data-bsui-button-group] [data-bsui-select-trigger]:hover,
+[data-bsui-button-group] [data-bsui-select-trigger]:focus-visible {
+	z-index: 1;
+	position: relative;
+}

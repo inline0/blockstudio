@@ -1,0 +1,38 @@
+[data-bsui-spinner] {
+	display: inline-block;
+	border: 2px solid var(--bs-ui-muted);
+	border-top-color: var(--bs-ui-foreground);
+	border-radius: var(--bs-ui-radius-full);
+	animation: bs-ui-spin 0.6s linear infinite;
+}
+
+[data-bsui-spinner][data-size="sm"] {
+	width: 0.875rem;
+	height: 0.875rem;
+}
+
+[data-bsui-spinner][data-size="default"] {
+	width: 1.25rem;
+	height: 1.25rem;
+}
+
+[data-bsui-spinner][data-size="lg"] {
+	width: 2rem;
+	height: 2rem;
+	border-width: 3px;
+}
+
+@keyframes bs-ui-spin {
+	to { transform: rotate(360deg); }
+}
+
+[data-bsui-spinner] .sr-only {
+	position: absolute;
+	width: 1px;
+	height: 1px;
+	padding: 0;
+	margin: -1px;
+	overflow: hidden;
+	clip: rect(0, 0, 0, 0);
+	border: 0;
+}

@@ -1,0 +1,10 @@
+{
+	"$schema": "https://blockstudio.dev/schema/block",
+	"name": "bsui/switch-thumb",
+	"title": "Switch Thumb",
+	"category": "design",
+	"icon": "marker",
+	"parent": ["bsui/switch"],
+	"usesContext": ["bsui/switch"],
+	"blockstudio": true
+}

@@ -1,0 +1,60 @@
+{
+	"$schema": "https://blockstudio.dev/schema/block",
+	"name": "bsui/radio-group",
+	"title": "Radio Group",
+	"category": "design",
+	"icon": "marker",
+	"blockstudio": {
+		"interactivity": {
+			"enqueue": true
+		},
+		"attributes": [
+			{
+				"id": "defaultValue",
+				"type": "text",
+				"label": "Default Value"
+			},
+			{
+				"id": "name",
+				"type": "text",
+				"label": "Form Name"
+			},
+			{
+				"id": "disabled",
+				"type": "toggle",
+				"label": "Disabled",
+				"default": false
+			},
+			{
+				"id": "orientation",
+				"type": "select",
+				"label": "Orientation",
+				"options": [
+					{
+						"label": "Vertical",
+						"value": "vertical"
+					},
+					{
+						"label": "Horizontal",
+						"value": "horizontal"
+					}
+				],
+				"default": "vertical"
+			},
+			{
+				"id": "nameAlt",
+				"type": "text",
+				"label": "Form Name (alt)"
+			},
+			{
+				"id": "onChange",
+				"type": "text",
+				"hidden": true
+			},
+			{
+				"id": "value",
+				"type": "text"
+			}
+		]
+	}
+}

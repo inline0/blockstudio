@@ -1,0 +1,47 @@
+{
+	"$schema": "https://blockstudio.dev/schema/block",
+	"name": "bsui/text",
+	"title": "Text",
+	"category": "design",
+	"icon": "editor-textcolor",
+	"blockstudio": {
+		"attributes": [
+			{
+				"id": "content",
+				"type": "richtext"
+			},
+			{
+				"id": "variant",
+				"type": "select",
+				"label": "Variant",
+				"options": [
+					{ "label": "Body", "value": "body" },
+					{ "label": "Label", "value": "label" },
+					{ "label": "Heading", "value": "heading" },
+					{ "label": "Title", "value": "title" },
+					{ "label": "Caption", "value": "caption" },
+					{ "label": "Muted", "value": "muted" },
+					{ "label": "Code", "value": "code" },
+					{ "label": "Lead", "value": "lead" }
+				],
+				"default": "body"
+			},
+			{
+				"id": "tag",
+				"type": "select",
+				"label": "Tag",
+				"options": [
+					{ "label": "p", "value": "p" },
+					{ "label": "span", "value": "span" },
+					{ "label": "label", "value": "label" },
+					{ "label": "h1", "value": "h1" },
+					{ "label": "h2", "value": "h2" },
+					{ "label": "h3", "value": "h3" },
+					{ "label": "h4", "value": "h4" },
+					{ "label": "div", "value": "div" }
+				],
+				"default": "p"
+			}
+		]
+	}
+}

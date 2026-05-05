@@ -1,0 +1,26 @@
+{
+	"$schema": "https://blockstudio.dev/schema/block",
+	"name": "bsui/table",
+	"title": "Table",
+	"category": "design",
+	"icon": "editor-table",
+	"blockstudio": {
+		"interactivity": {
+			"enqueue": true
+		},
+		"attributes": [
+			{
+				"id": "sortable",
+				"type": "toggle",
+				"label": "Sortable",
+				"default": true
+			},
+			{
+				"id": "striped",
+				"type": "toggle",
+				"label": "Striped Rows",
+				"default": false
+			}
+		]
+	}
+}

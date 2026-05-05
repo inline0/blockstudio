@@ -1,0 +1,10 @@
+{
+	"$schema": "https://blockstudio.dev/schema/block",
+	"name": "bsui/collapsible-panel",
+	"title": "Collapsible Panel",
+	"category": "design",
+	"icon": "text",
+	"parent": ["bsui/collapsible"],
+	"usesContext": ["bsui/collapsible"],
+	"blockstudio": true
+}

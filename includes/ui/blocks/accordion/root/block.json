@@ -1,0 +1,47 @@
+{
+	"$schema": "https://blockstudio.dev/schema/block",
+	"name": "bsui/accordion",
+	"title": "Accordion",
+	"category": "design",
+	"icon": "list-view",
+	"blockstudio": {
+		"interactivity": {
+			"enqueue": true
+		},
+		"attributes": [
+			{
+				"id": "defaultValue",
+				"type": "text",
+				"label": "Default Open Item"
+			},
+			{
+				"id": "multiple",
+				"type": "toggle",
+				"label": "Allow Multiple Open",
+				"default": false
+			},
+			{
+				"id": "orientation",
+				"type": "select",
+				"label": "Orientation",
+				"options": [
+					{ "label": "Vertical", "value": "vertical" },
+					{ "label": "Horizontal", "value": "horizontal" }
+				],
+				"default": "vertical"
+			},
+			{
+				"id": "disabled",
+				"type": "toggle",
+				"label": "Disabled",
+				"default": false
+			},
+			{
+				"id": "loop",
+				"type": "toggle",
+				"label": "Loop Focus",
+				"default": true
+			}
+		]
+	}
+}

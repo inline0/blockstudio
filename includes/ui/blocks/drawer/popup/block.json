@@ -1,0 +1,16 @@
+{
+	"$schema": "https://blockstudio.dev/schema/block",
+	"name": "bsui/drawer-popup",
+	"title": "Drawer Popup",
+	"parent": ["bsui/drawer"],
+	"blockstudio": {
+		"attributes": [
+			{
+				"id": "flush",
+				"type": "toggle",
+				"label": "Flush (no padding)",
+				"default": false
+			}
+		]
+	}
+}

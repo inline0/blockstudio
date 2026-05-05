@@ -1,0 +1,62 @@
+[role="radiogroup"] {
+	display: flex;
+	flex-direction: column;
+	gap: 0.625rem;
+	font-family: var(--bs-ui-font-sans);
+}
+
+[role="radiogroup"][aria-orientation="horizontal"] {
+	flex-direction: row;
+	gap: 1rem;
+}
+
+[role="radiogroup"] > div {
+	display: contents;
+}
+
+[data-bsui-radio] {
+	display: inline-flex;
+	align-items: center;
+	gap: 0.5rem;
+	cursor: pointer;
+	font-size: var(--bs-ui-font-size);
+	color: var(--bs-ui-foreground);
+}
+
+[role="radio"] {
+	all: unset;
+
+	box-sizing: border-box;
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	position: relative;
+	flex-shrink: 0;
+	width: var(--bs-ui-indicator-size);
+	height: var(--bs-ui-indicator-size);
+	border-radius: var(--bs-ui-radius-full);
+	border: 1px solid var(--bs-ui-primary);
+	transition: border-color var(--bs-ui-transition);
+	cursor: pointer;
+}
+[role="radio"]::after {
+	content: "";
+	position: absolute;
+	left: 50%;
+	top: 50%;
+	transform: translate(-50%, -50%) scale(0);
+	width: calc(var(--bs-ui-indicator-size) / 2);
+	height: calc(var(--bs-ui-indicator-size) / 2);
+	border-radius: var(--bs-ui-radius-full);
+	background: var(--bs-ui-primary);
+	transition: transform var(--bs-ui-transition);
+}
+
+[role="radio"][aria-checked="true"]::after {
+	transform: translate(-50%, -50%) scale(1);
+}
+
+[role="radio"][aria-disabled="true"] {
+	opacity: 0.5;
+	pointer-events: none;
+}

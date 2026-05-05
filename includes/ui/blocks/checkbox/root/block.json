@@ -1,0 +1,66 @@
+{
+	"$schema": "https://blockstudio.dev/schema/block",
+	"name": "bsui/checkbox",
+	"title": "Checkbox",
+	"category": "design",
+	"icon": "yes",
+	"blockstudio": {
+		"interactivity": {
+			"enqueue": true
+		},
+		"attributes": [
+			{
+				"id": "defaultChecked",
+				"type": "toggle",
+				"label": "Checked by Default",
+				"default": false
+			},
+			{
+				"id": "indeterminate",
+				"type": "toggle",
+				"label": "Indeterminate",
+				"default": false
+			},
+			{
+				"id": "disabled",
+				"type": "toggle",
+				"label": "Disabled",
+				"default": false
+			},
+			{
+				"id": "name",
+				"type": "text",
+				"label": "Form Name"
+			},
+			{
+				"id": "value",
+				"type": "text",
+				"label": "Form Value",
+				"default": "on"
+			},
+			{
+				"id": "label",
+				"type": "richtext"
+			},
+			{
+				"id": "bindText",
+				"type": "text",
+				"label": "Bind Text Directive",
+				"hidden": true
+			},
+			{
+				"id": "nameAlt",
+				"type": "text",
+				"label": "Form Name (alt)"
+			},
+			{
+				"id": "onChange",
+				"type": "text"
+			},
+			{
+				"id": "checked",
+				"type": "text"
+			}
+		]
+	}
+}

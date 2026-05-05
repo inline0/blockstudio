@@ -1,0 +1,23 @@
+{
+	"$schema": "https://blockstudio.dev/schema/block",
+	"name": "bsui/popover-close",
+	"title": "Popover Close",
+	"category": "design",
+	"icon": "no",
+	"parent": ["bsui/popover-popup"],
+	"usesContext": ["bsui/popover"],
+	"blockstudio": {
+		"attributes": [
+			{
+				"id": "label",
+				"type": "richtext"
+			},
+			{
+				"id": "x",
+				"type": "toggle",
+				"label": "X Icon",
+				"default": false
+			}
+		]
+	}
+}

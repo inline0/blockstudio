@@ -1,0 +1,29 @@
+{
+	"$schema": "https://blockstudio.dev/schema/block",
+	"name": "bsui/avatar",
+	"title": "Avatar",
+	"category": "design",
+	"icon": "admin-users",
+	"blockstudio": {
+		"interactivity": {
+			"enqueue": true
+		},
+		"attributes": [
+			{
+				"id": "src",
+				"type": "text",
+				"label": "Image URL"
+			},
+			{
+				"id": "alt",
+				"type": "text",
+				"label": "Alt Text"
+			},
+			{
+				"id": "fallback",
+				"type": "text",
+				"label": "Fallback Text"
+			}
+		]
+	}
+}

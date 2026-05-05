@@ -1,0 +1,73 @@
+{
+	"$schema": "https://blockstudio.dev/schema/block",
+	"name": "bsui/stack",
+	"title": "Stack",
+	"category": "design",
+	"icon": "align-center",
+	"blockstudio": {
+		"attributes": [
+			{
+				"id": "direction",
+				"type": "select",
+				"label": "Direction",
+				"options": [
+					{ "label": "Row", "value": "row" },
+					{ "label": "Column", "value": "column" }
+				],
+				"default": "row"
+			},
+			{
+				"id": "gap",
+				"type": "select",
+				"label": "Gap",
+				"options": [
+					{ "label": "0", "value": "0" },
+					{ "label": "0.5 (2px)", "value": "0.5" },
+					{ "label": "1 (4px)", "value": "1" },
+					{ "label": "1.5 (6px)", "value": "1.5" },
+					{ "label": "2 (8px)", "value": "2" },
+					{ "label": "3 (12px)", "value": "3" },
+					{ "label": "4 (16px)", "value": "4" },
+					{ "label": "5 (20px)", "value": "5" },
+					{ "label": "6 (24px)", "value": "6" },
+					{ "label": "8 (32px)", "value": "8" },
+					{ "label": "10 (40px)", "value": "10" },
+					{ "label": "12 (48px)", "value": "12" }
+				],
+				"default": "2"
+			},
+			{
+				"id": "align",
+				"type": "select",
+				"label": "Align",
+				"options": [
+					{ "label": "Start", "value": "start" },
+					{ "label": "Center", "value": "center" },
+					{ "label": "End", "value": "end" },
+					{ "label": "Stretch", "value": "stretch" }
+				],
+				"placeholder": "Auto"
+			},
+			{
+				"id": "justify",
+				"type": "select",
+				"label": "Justify",
+				"options": [
+					{ "label": "Start", "value": "start" },
+					{ "label": "Center", "value": "center" },
+					{ "label": "End", "value": "end" },
+					{ "label": "Between", "value": "space-between" },
+					{ "label": "Around", "value": "space-around" },
+					{ "label": "Evenly", "value": "space-evenly" }
+				],
+				"placeholder": "Auto"
+			},
+			{
+				"id": "wrap",
+				"type": "toggle",
+				"label": "Wrap",
+				"default": true
+			}
+		]
+	}
+}

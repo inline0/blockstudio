@@ -1,0 +1,60 @@
+{
+	"$schema": "https://blockstudio.dev/schema/block",
+	"name": "bsui/number-field",
+	"title": "Number Field",
+	"category": "design",
+	"icon": "edit",
+	"blockstudio": {
+		"interactivity": {
+			"enqueue": true
+		},
+		"attributes": [
+			{
+				"id": "defaultValue",
+				"type": "number",
+				"label": "Default Value"
+			},
+			{
+				"id": "min",
+				"type": "number",
+				"label": "Min"
+			},
+			{
+				"id": "max",
+				"type": "number",
+				"label": "Max"
+			},
+			{
+				"id": "step",
+				"type": "number",
+				"label": "Step",
+				"default": 1
+			},
+			{
+				"id": "name",
+				"type": "text",
+				"label": "Form Name"
+			},
+			{
+				"id": "disabled",
+				"type": "toggle",
+				"label": "Disabled",
+				"default": false
+			},
+			{
+				"id": "nameAlt",
+				"type": "text",
+				"label": "Form Name (alt)"
+			},
+			{
+				"id": "onChange",
+				"type": "text",
+				"hidden": true
+			},
+			{
+				"id": "value",
+				"type": "text"
+			}
+		]
+	}
+}

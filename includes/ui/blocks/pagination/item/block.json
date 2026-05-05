@@ -1,0 +1,26 @@
+{
+	"$schema": "https://blockstudio.dev/schema/block",
+	"name": "bsui/pagination-item",
+	"title": "Pagination Item",
+	"parent": ["bsui/pagination"],
+	"blockstudio": {
+		"attributes": [
+			{
+				"id": "label",
+				"type": "richtext"
+			},
+			{
+				"id": "href",
+				"type": "text",
+				"label": "URL",
+				"default": "#"
+			},
+			{
+				"id": "current",
+				"type": "toggle",
+				"label": "Current Page",
+				"default": false
+			}
+		]
+	}
+}

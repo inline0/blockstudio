@@ -1,0 +1,10 @@
+{
+	"$schema": "https://blockstudio.dev/schema/block",
+	"name": "bsui/popover-popup",
+	"title": "Popover Popup",
+	"category": "design",
+	"icon": "text",
+	"parent": ["bsui/popover"],
+	"usesContext": ["bsui/popover"],
+	"blockstudio": true
+}

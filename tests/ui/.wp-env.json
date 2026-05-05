@@ -1,0 +1,17 @@
+{
+	"core": "WordPress/WordPress#6.9",
+	"plugins": [
+		"../../"
+	],
+	"themes": [
+		"./theme"
+	],
+	"config": {
+		"WP_DEBUG": true,
+		"WP_DEBUG_LOG": true,
+		"WP_DEBUG_DISPLAY": false,
+		"SCRIPT_DEBUG": true
+	},
+	"port": 8879,
+	"testsPort": 8880
+}

@@ -1,0 +1,7 @@
+{
+	"$schema": "https://blockstudio.dev/schema/block",
+	"name": "bsui/card-footer",
+	"title": "Card Footer",
+	"parent": ["bsui/card"],
+	"blockstudio": true
+}

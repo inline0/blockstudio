@@ -1,0 +1,10 @@
+{
+	"$schema": "https://blockstudio.dev/schema/block",
+	"name": "bsui/dialog-backdrop",
+	"title": "Dialog Backdrop",
+	"category": "design",
+	"icon": "format-image",
+	"parent": ["bsui/dialog"],
+	"usesContext": ["bsui/dialog"],
+	"blockstudio": true
+}

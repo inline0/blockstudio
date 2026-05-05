@@ -1,0 +1,35 @@
+{
+	"$schema": "https://blockstudio.dev/schema/block",
+	"name": "bsui/toggle-group",
+	"title": "Toggle Group",
+	"category": "design",
+	"icon": "columns",
+	"blockstudio": {
+		"interactivity": {
+			"enqueue": true
+		},
+		"attributes": [
+			{
+				"id": "defaultValue",
+				"type": "text",
+				"label": "Default Value"
+			},
+			{
+				"id": "multiple",
+				"type": "toggle",
+				"label": "Allow Multiple",
+				"default": false
+			},
+			{
+				"id": "orientation",
+				"type": "select",
+				"label": "Orientation",
+				"options": [
+					{ "label": "Horizontal", "value": "horizontal" },
+					{ "label": "Vertical", "value": "vertical" }
+				],
+				"default": "horizontal"
+			}
+		]
+	}
+}

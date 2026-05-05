@@ -1,0 +1,52 @@
+{
+	"$schema": "https://blockstudio.dev/schema/block",
+	"name": "bsui/button",
+	"title": "Button",
+	"category": "design",
+	"icon": "button",
+	"blockstudio": {
+		"attributes": [
+			{
+				"id": "label",
+				"type": "richtext"
+			},
+			{
+				"id": "href",
+				"type": "text",
+				"label": "URL"
+			},
+			{
+				"id": "variant",
+				"type": "select",
+				"label": "Variant",
+				"options": [
+					{ "label": "Default", "value": "default" },
+					{ "label": "Secondary", "value": "secondary" },
+					{ "label": "Outline", "value": "outline" },
+					{ "label": "Ghost", "value": "ghost" },
+					{ "label": "Link", "value": "link" },
+					{ "label": "Destructive", "value": "destructive" }
+				],
+				"default": "default"
+			},
+			{
+				"id": "size",
+				"type": "select",
+				"label": "Size",
+				"options": [
+					{ "label": "Default", "value": "default" },
+					{ "label": "Small", "value": "sm" },
+					{ "label": "Large", "value": "lg" },
+					{ "label": "Icon", "value": "icon" }
+				],
+				"default": "default"
+			},
+			{
+				"id": "disabled",
+				"type": "toggle",
+				"label": "Disabled",
+				"default": false
+			}
+		]
+	}
+}

@@ -1,0 +1,18 @@
+{
+	"$schema": "https://blockstudio.dev/schema/block",
+	"name": "bsui/alert-dialog-trigger",
+	"title": "Alert Dialog Trigger",
+	"category": "design",
+	"icon": "button",
+	"parent": ["bsui/alert-dialog"],
+	"blockstudio": {
+		"attributes": [
+			{
+				"id": "trigger",
+				"type": "block",
+				"block": "bsui/button",
+				"idStructure": "trigger_{id}"
+			}
+		]
+	}
+}

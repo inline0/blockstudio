@@ -1,0 +1,12 @@
+{
+	"$schema": "https://blockstudio.dev/schema/block",
+	"name": "bsui/toolbar-button",
+	"title": "Toolbar Button",
+	"parent": ["bsui/toolbar"],
+	"blockstudio": {
+		"attributes": [
+			{ "id": "label", "type": "richtext" },
+			{ "id": "disabled", "type": "toggle", "label": "Disabled", "default": false }
+		]
+	}
+}

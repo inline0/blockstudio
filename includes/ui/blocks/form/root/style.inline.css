@@ -1,0 +1,36 @@
+form[data-bsui-form-root] {
+	align-self: stretch;
+	display: flex;
+	flex-direction: column;
+	gap: 1rem;
+	font-family: var(--bs-ui-font-sans);
+}
+
+form[data-bsui-form-root] > div:not([hidden]) {
+	display: flex;
+	flex-direction: column;
+	align-items: stretch;
+}
+
+form[data-bsui-form-root] > div:not([hidden]) > div {
+	display: flex;
+	flex-direction: column;
+	gap: 1rem;
+	align-items: stretch;
+}
+
+.bs-ui-form-error {
+	font-size: var(--bs-ui-font-size);
+	color: var(--bs-ui-destructive-foreground);
+}
+
+.bs-ui-form-success {
+	font-size: var(--bs-ui-font-size);
+	color: var(--bs-ui-success, var(--bs-ui-foreground));
+}
+
+form.bs-ui-submitting [data-bsui-button][type="submit"],
+form.bs-ui-submitting [data-bsui-button][data-bsui-form-submit] {
+	opacity: 0.5;
+	pointer-events: none;
+}

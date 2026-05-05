@@ -1,0 +1,28 @@
+{
+	"$schema": "https://blockstudio.dev/schema/block",
+	"name": "bsui/skeleton",
+	"title": "Skeleton",
+	"category": "design",
+	"icon": "image-filter",
+	"blockstudio": {
+		"attributes": [
+			{
+				"id": "width",
+				"type": "text",
+				"label": "Width"
+			},
+			{
+				"id": "height",
+				"type": "text",
+				"label": "Height",
+				"default": "1rem"
+			},
+			{
+				"id": "rounded",
+				"type": "toggle",
+				"label": "Fully Rounded",
+				"default": false
+			}
+		]
+	}
+}

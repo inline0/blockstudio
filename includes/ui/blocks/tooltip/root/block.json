@@ -1,0 +1,26 @@
+{
+	"$schema": "https://blockstudio.dev/schema/block",
+	"name": "bsui/tooltip",
+	"title": "Tooltip",
+	"category": "design",
+	"icon": "info-outline",
+	"blockstudio": {
+		"interactivity": {
+			"enqueue": true
+		},
+		"attributes": [
+			{
+				"id": "openDelay",
+				"type": "number",
+				"label": "Open Delay (ms)",
+				"default": 600
+			},
+			{
+				"id": "closeDelay",
+				"type": "number",
+				"label": "Close Delay (ms)",
+				"default": 0
+			}
+		]
+	}
+}

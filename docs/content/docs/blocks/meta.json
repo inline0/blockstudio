@@ -10,6 +10,7 @@
     "transforms",
     "react-components",
     "components",
+    "ui-components",
     "environment",
     "context",
     "preview",

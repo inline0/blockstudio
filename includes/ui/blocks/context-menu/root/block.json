@@ -1,0 +1,11 @@
+{
+	"$schema": "https://blockstudio.dev/schema/block",
+	"name": "bsui/context-menu",
+	"title": "Context Menu",
+	"category": "design",
+	"icon": "menu",
+	"blockstudio": {
+		"interactivity": { "enqueue": true },
+		"attributes": []
+	}
+}

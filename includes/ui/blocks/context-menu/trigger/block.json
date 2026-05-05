@@ -1,0 +1,7 @@
+{
+	"$schema": "https://blockstudio.dev/schema/block",
+	"name": "bsui/context-menu-trigger",
+	"title": "Context Menu Trigger",
+	"parent": ["bsui/context-menu"],
+	"blockstudio": true
+}

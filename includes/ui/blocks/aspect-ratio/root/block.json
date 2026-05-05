@@ -1,0 +1,22 @@
+{
+	"$schema": "https://blockstudio.dev/schema/block",
+	"name": "bsui/aspect-ratio",
+	"title": "Aspect Ratio",
+	"category": "design",
+	"icon": "image-crop",
+	"blockstudio": {
+		"attributes": [
+			{
+				"id": "ratio",
+				"type": "text",
+				"label": "Ratio",
+				"default": "16/9"
+			},
+			{
+				"id": "background",
+				"type": "text",
+				"label": "Background"
+			}
+		]
+	}
+}

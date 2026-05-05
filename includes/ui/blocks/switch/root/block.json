@@ -1,0 +1,78 @@
+{
+	"$schema": "https://blockstudio.dev/schema/block",
+	"name": "bsui/switch",
+	"title": "Switch",
+	"category": "design",
+	"icon": "controls-play",
+	"blockstudio": {
+		"interactivity": {
+			"enqueue": true
+		},
+		"attributes": [
+			{
+				"id": "defaultChecked",
+				"type": "toggle",
+				"label": "Checked by Default",
+				"default": false
+			},
+			{
+				"id": "disabled",
+				"type": "toggle",
+				"label": "Disabled",
+				"default": false
+			},
+			{
+				"id": "readOnly",
+				"type": "toggle",
+				"label": "Read Only",
+				"default": false
+			},
+			{
+				"id": "required",
+				"type": "toggle",
+				"label": "Required",
+				"default": false
+			},
+			{
+				"id": "name",
+				"type": "text",
+				"label": "Form Name"
+			},
+			{
+				"id": "checkedValue",
+				"type": "text",
+				"label": "Checked Value",
+				"default": "on"
+			},
+			{
+				"id": "uncheckedValue",
+				"type": "text",
+				"label": "Unchecked Value"
+			},
+			{
+				"id": "label",
+				"type": "richtext"
+			},
+			{
+				"id": "bindText",
+				"type": "text",
+				"label": "Bind Text Directive",
+				"hidden": true
+			},
+			{
+				"id": "nameAlt",
+				"type": "text",
+				"label": "Form Name (alt)"
+			},
+			{
+				"id": "onChange",
+				"type": "text",
+				"hidden": true
+			},
+			{
+				"id": "checked",
+				"type": "text"
+			}
+		]
+	}
+}
