@@ -3,7 +3,7 @@ Contributors: dnnsjsk
 Requires at least: 6.7
 Tested up to: 7.0.0
 Requires PHP: 8.2
-Stable tag: 7.2.2
+Stable tag: 7.3.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -52,6 +52,12 @@ Download the latest release zip from [GitHub Releases](https://github.com/inline
 * [Getting Started](https://blockstudio.dev/docs/getting-started)
 
 == Changelog ==
+
+= 7.3.0 =
+* New: bundled UI components under the `bsui/*` namespace
+* New: opt-in `ui.enabled` setting for registering the bundled UI library
+* New: bundled `app/*` examples built with Blockstudio UI components and the Interactivity API
+* New: UI component documentation and test harness for the bundled components
 
 = 7.2.2 =
 * Fix: Canvas no longer stalls when editor-only WordPress data stores are unavailable during admin page init
