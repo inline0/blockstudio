@@ -261,6 +261,31 @@ With this filter active, every `<h1>` in your templates will produce a `custom/h
 
 This is useful when your theme or plugin provides custom block types that should replace the defaults across all page and pattern templates.
 
+Mapping values may also be callables when the target block depends on element
+attributes:
+
+```php
+add_filter( 'blockstudio/parser/element_mapping', function( $mapping ) {
+    $mapping['div'] = function( array $attrs ) {
+        if ( isset( $attrs['width'] ) ) {
+            return 'theme/row';
+        }
+
+        if ( isset( $attrs['gap'] ) ) {
+            return 'theme/flow';
+        }
+
+        return 'theme/div';
+    };
+
+    return $mapping;
+} );
+```
+
+Custom blocks mapped from container elements such as `<section>` and `<div>`
+parse nested HTML children recursively, so inner headings, images, block tags,
+and paragraphs become native child blocks.
+
 ## Complete Example
 
 A full page template combining multiple block types:

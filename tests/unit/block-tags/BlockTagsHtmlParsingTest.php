@@ -46,6 +46,81 @@ class BlockTagsHtmlParsingTest extends TestCase {
 		$this->assertSame( 'core/group', $blocks[0]['blockName'] );
 	}
 
+	public function test_element_mapping_filter_maps_html_elements_to_custom_blocks(): void {
+		$filter = static function ( array $mapping ): array {
+			$mapping['section'] = 'theme/section';
+			$mapping['h1']      = 'theme/heading';
+			$mapping['img']     = 'theme/image';
+
+			return $mapping;
+		};
+
+		add_filter( 'blockstudio/parser/element_mapping', $filter );
+
+		try {
+			$blocks = Block_Tags::parse_all_elements(
+				'<section variant="hero"><h1 class="h1">Title</h1><img src="hero.png" alt="Hero" /></section>'
+			);
+		} finally {
+			remove_filter( 'blockstudio/parser/element_mapping', $filter );
+		}
+
+		$this->assertCount( 1, $blocks );
+		$this->assertSame( 'theme/section', $blocks[0]['blockName'] );
+		$this->assertSame( 'hero', $blocks[0]['attrs']['variant'] );
+		$this->assertCount( 2, $blocks[0]['innerBlocks'] );
+
+		$heading = $blocks[0]['innerBlocks'][0];
+		$this->assertSame( 'theme/heading', $heading['blockName'] );
+		$this->assertSame( 1, $heading['attrs']['level'] );
+		$this->assertSame( 'Title', $heading['attrs']['content'] );
+		$this->assertSame( 'h1', $heading['attrs']['class'] );
+
+		$image = $blocks[0]['innerBlocks'][1];
+		$this->assertSame( 'theme/image', $image['blockName'] );
+		$this->assertSame( 'hero.png', $image['attrs']['src'] );
+		$this->assertSame( 'Hero', $image['attrs']['alt'] );
+	}
+
+	public function test_element_mapping_filter_supports_attribute_aware_mappers(): void {
+		$filter = static function ( array $mapping ): array {
+			$mapping['div'] = static function ( array $attrs ): string {
+				if ( isset( $attrs['width'] ) ) {
+					return 'theme/row';
+				}
+
+				if ( isset( $attrs['gap'] ) ) {
+					return 'theme/flow';
+				}
+
+				return 'theme/div';
+			};
+
+			return $mapping;
+		};
+
+		add_filter( 'blockstudio/parser/element_mapping', $filter );
+
+		try {
+			$blocks = Block_Tags::parse_all_elements(
+				'<div width="wide"><div gap="1rem"><p>Inside</p></div></div>'
+			);
+		} finally {
+			remove_filter( 'blockstudio/parser/element_mapping', $filter );
+		}
+
+		$this->assertCount( 1, $blocks );
+		$this->assertSame( 'theme/row', $blocks[0]['blockName'] );
+		$this->assertSame( 'wide', $blocks[0]['attrs']['width'] );
+		$this->assertCount( 1, $blocks[0]['innerBlocks'] );
+
+		$flow = $blocks[0]['innerBlocks'][0];
+		$this->assertSame( 'theme/flow', $flow['blockName'] );
+		$this->assertSame( '1rem', $flow['attrs']['gap'] );
+		$this->assertCount( 1, $flow['innerBlocks'] );
+		$this->assertSame( 'core/paragraph', $flow['innerBlocks'][0]['blockName'] );
+	}
+
 	public function test_blockquote_becomes_quote(): void {
 		$blocks = Block_Tags::parse_all_elements( '<blockquote><p>Quoted</p></blockquote>' );
 		$this->assertSame( 'core/quote', $blocks[0]['blockName'] );

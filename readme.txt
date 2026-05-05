@@ -58,6 +58,7 @@ Download the latest release zip from [GitHub Releases](https://github.com/inline
 * New: opt-in `ui.enabled` setting for registering the bundled UI library
 * New: bundled `app/*` examples built with Blockstudio UI components and the Interactivity API
 * New: UI component documentation and test harness for the bundled components
+* Fix: file-based page element mapping now runs during HTML parsing and supports attribute-aware custom container mappings
 
 = 7.2.2 =
 * Fix: Canvas no longer stalls when editor-only WordPress data stores are unavailable during admin page init

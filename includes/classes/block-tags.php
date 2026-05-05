@@ -616,6 +616,23 @@ class Block_Tags {
 	);
 
 	/**
+	 * HTML elements that should parse their inner HTML as child blocks when
+	 * mapped to a custom block.
+	 *
+	 * @var array<string, bool>
+	 */
+	private static array $html_container_tags = array(
+		'blockquote' => true,
+		'details'    => true,
+		'div'        => true,
+		'figure'     => true,
+		'ol'         => true,
+		'section'    => true,
+		'table'      => true,
+		'ul'         => true,
+	);
+
+	/**
 	 * Self-closing HTML tags.
 	 *
 	 * @var array<string, bool>
@@ -625,6 +642,39 @@ class Block_Tags {
 		'img' => true,
 		'br'  => true,
 	);
+
+	/**
+	 * Return the HTML element to block mapping.
+	 *
+	 * Mapping values may be block names or callables. Callable mappings receive
+	 * the element attributes, inner HTML, and tag name, and must return a block
+	 * name string.
+	 *
+	 * @return array<string, string|callable>
+	 */
+	private static function get_html_tag_map(): array {
+		$mapping = apply_filters( 'blockstudio/parser/element_mapping', self::$html_tag_map, null );
+
+		return is_array( $mapping ) ? $mapping : self::$html_tag_map;
+	}
+
+	/**
+	 * Resolve one HTML tag to a target block name.
+	 *
+	 * @param mixed  $mapping_value Block name string or callable mapper.
+	 * @param string $html_tag      HTML tag name.
+	 * @param array  $attrs         Parsed element attributes.
+	 * @param string $inner         Inner HTML.
+	 *
+	 * @return string Target block name, or empty string to skip.
+	 */
+	private static function resolve_html_block_name( mixed $mapping_value, string $html_tag, array $attrs, string $inner ): string {
+		if ( is_callable( $mapping_value ) ) {
+			$mapping_value = call_user_func( $mapping_value, $attrs, $inner, $html_tag );
+		}
+
+		return is_string( $mapping_value ) ? $mapping_value : '';
+	}
 
 	/**
 	 * Parse all elements including raw HTML tags (for pages/patterns).
@@ -644,6 +694,7 @@ class Block_Tags {
 		$blocks = array();
 		$offset = 0;
 		$len    = strlen( $content );
+		$map    = self::get_html_tag_map();
 
 		while ( $offset < $len ) {
 			// Find next tag of any kind.
@@ -737,7 +788,7 @@ class Block_Tags {
 			if ( preg_match( '/^<([a-z][a-z0-9]*)/i', substr( $content, $tag_pos, 20 ), $tag_match ) ) {
 				$html_tag = strtolower( $tag_match[1] );
 
-				if ( isset( self::$html_tag_map[ $html_tag ] ) ) {
+				if ( isset( $map[ $html_tag ] ) ) {
 					$gt_pos = self::find_closing_angle( $content, $tag_pos + 1 );
 					if ( false === $gt_pos ) {
 						$offset = $tag_pos + 1;
@@ -750,7 +801,7 @@ class Block_Tags {
 					$attr_string = trim( substr( $content, $attr_start, $attr_end - $attr_start ) );
 					$attrs       = self::parse_attributes( $attr_string );
 					$inner       = '';
-					$block_name  = self::$html_tag_map[ $html_tag ];
+					$block_name  = '';
 
 					if ( ! $is_void ) {
 						$close_tag = '</' . $html_tag . '>';
@@ -767,9 +818,18 @@ class Block_Tags {
 						$offset = $gt_pos + 1;
 					}
 
+					$block_name = self::resolve_html_block_name( $map[ $html_tag ], $html_tag, $attrs, $inner );
+					if ( '' === $block_name ) {
+						continue;
+					}
+
 					// Heading level from tag name.
-					if ( 'core/heading' === $block_name ) {
+					if ( preg_match( '/^h[1-6]$/', $html_tag ) ) {
 						$attrs['level'] = (int) substr( $html_tag, 1 );
+
+						if ( 'core/heading' !== $block_name && '' !== trim( $inner ) && ! isset( $attrs['content'] ) ) {
+							$attrs['content'] = trim( $inner );
+						}
 					}
 
 					// Ordered list.
@@ -813,7 +873,9 @@ class Block_Tags {
 
 					// For container HTML elements, recursively parse with parse_all_elements.
 					$container_blocks = array( 'core/group', 'core/quote' );
-					if ( in_array( $block_name, $container_blocks, true ) && '' !== $inner ) {
+					$is_container     = in_array( $block_name, $container_blocks, true )
+						|| ( isset( self::$html_container_tags[ $html_tag ] ) && ! str_starts_with( $block_name, 'core/' ) );
+					if ( $is_container && '' !== $inner ) {
 						$inner_blocks = self::parse_all_elements( $inner );
 						$block_array  = self::build_block_array( $block_name, $attrs, '' );
 
