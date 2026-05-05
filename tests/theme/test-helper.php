@@ -758,7 +758,7 @@ add_action(
 						$bg_color = imagecolorallocate( $image, wp_rand( 0, 255 ), wp_rand( 0, 255 ), wp_rand( 0, 255 ) );
 						imagefill( $image, 0, 0, $bg_color );
 						imagepng( $image, $file_path );
-						imagedestroy( $image );
+						unset( $image );
 
 						return array(
 							'path'   => $file_path,

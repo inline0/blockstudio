@@ -1,289 +1,266 @@
-import { test, expect } from '@playwright/test';
+import { test, expect, type Page } from '@playwright/test';
 
 const PAGE = '/form-test/';
 
-function mockBs( page, handler ) {
-	return page.evaluate( ( h ) => {
-		const fn = new Function( 'return ' + h )();
-		window[ 'bs' ] = {
-			db: ( block ) => ( {
-				create: ( data ) => Promise.resolve( fn( data ) ),
-			} ),
-		};
-	}, handler.toString() );
+type MockHandler = (data: Record<string, unknown>) => unknown;
+
+declare global {
+  interface Window {
+    bs?: {
+      db: () => {
+        create: (data: Record<string, unknown>) => Promise<unknown>;
+      };
+      fn?: () => Promise<unknown>;
+    };
+    _testResolve?: (value: unknown) => void;
+  }
 }
 
-test.describe( 'bsui/form', () => {
-	test.beforeEach( async ( { page } ) => {
-		await page.goto( PAGE );
-		await page.waitForSelector( '[data-bsui-form-root]' );
-	} );
+function mockBs(page: Page, handler: MockHandler) {
+  return page.evaluate((h) => {
+    const fn = new Function('return ' + h)() as MockHandler;
+    window.bs = {
+      db: () => ({
+        create: (data) => Promise.resolve(fn(data)),
+      }),
+    };
+  }, handler.toString());
+}
 
-	// Rendering
+test.describe('bsui/form', () => {
+  test.beforeEach(async ({ page }) => {
+    await page.goto(PAGE);
+    await page.waitForSelector('[data-bsui-form-root]');
+  });
 
-	test( 'renders form element', async ( { page } ) => {
-		const form = page.locator( '[data-bsui-form-root]' );
-		await expect( form ).toHaveCount( 1 );
-		await expect( form ).toHaveAttribute(
-			'data-wp-interactive',
-			'bsui/form'
-		);
-	} );
+  // Rendering
 
-	test( 'renders field labels', async ( { page } ) => {
-		const labels = page.locator( 'label' );
-		await expect( labels ).toHaveCount( 2 );
-		await expect( labels.first() ).toContainText( 'Username' );
-		await expect( labels.nth( 1 ) ).toContainText( 'Email' );
-	} );
+  test('renders form element', async ({ page }) => {
+    const form = page.locator('[data-bsui-form-root]');
+    await expect(form).toHaveCount(1);
+    await expect(form).toHaveAttribute('data-wp-interactive', 'bsui/form');
+  });
 
-	test( 'renders named inputs', async ( { page } ) => {
-		const username = page.locator( 'input[name="username"]' );
-		const email = page.locator( 'input[name="email"]' );
-		await expect( username ).toHaveCount( 1 );
-		await expect( email ).toHaveCount( 1 );
-	} );
+  test('renders field labels', async ({ page }) => {
+    const labels = page.locator('label');
+    await expect(labels).toHaveCount(2);
+    await expect(labels.first()).toContainText('Username');
+    await expect(labels.nth(1)).toContainText('Email');
+  });
 
-	test( 'field errors are hidden initially', async ( { page } ) => {
-		const errors = page.locator( '[role="alert"]' );
-		for ( let i = 0; i < ( await errors.count() ); i++ ) {
-			await expect( errors.nth( i ) ).toBeHidden();
-		}
-	} );
+  test('renders named inputs', async ({ page }) => {
+    const username = page.locator('input[name="username"]');
+    const email = page.locator('input[name="email"]');
+    await expect(username).toHaveCount(1);
+    await expect(email).toHaveCount(1);
+  });
 
-	test( 'success message is hidden initially', async ( { page } ) => {
-		await expect( page.locator( '.bs-ui-form-success' ) ).toBeHidden();
-	} );
+  test('field errors are hidden initially', async ({ page }) => {
+    const errors = page.locator('[role="alert"]');
+    for (let i = 0; i < (await errors.count()); i++) {
+      await expect(errors.nth(i)).toBeHidden();
+    }
+  });
 
-	// Submission with validation errors
+  test('success message is hidden initially', async ({ page }) => {
+    await expect(page.locator('.bs-ui-form-success')).toBeHidden();
+  });
 
-	test( 'displays field-level validation errors from server', async ( {
-		page,
-	} ) => {
-		await mockBs(
-			page,
-			() => ( {
-				code: 'blockstudio_db_validation',
-				message: 'Validation failed.',
-				data: {
-					status: 400,
-					errors: {
-						username: [ 'Must be at least 3 characters.' ],
-						email: [ 'Must be a valid email address.' ],
-					},
-				},
-			} )
-		);
+  // Submission with validation errors
 
-		await page.locator( '[data-bsui-form-root]' ).evaluate( ( form ) => {
-			( form as HTMLFormElement ).requestSubmit();
-		} );
+  test('displays field-level validation errors from server', async ({
+    page,
+  }) => {
+    await mockBs(page, () => ({
+      code: 'blockstudio_db_validation',
+      message: 'Validation failed.',
+      data: {
+        status: 400,
+        errors: {
+          username: ['Must be at least 3 characters.'],
+          email: ['Must be a valid email address.'],
+        },
+      },
+    }));
 
-		const usernameError = page
-			.locator( '[data-bsui-field-root]' )
-			.first()
-			.locator( '[role="alert"]' );
-		const emailError = page
-			.locator( '[data-bsui-field-root]' )
-			.nth( 1 )
-			.locator( '[role="alert"]' );
+    await page.locator('[data-bsui-form-root]').evaluate((form) => {
+      (form as HTMLFormElement).requestSubmit();
+    });
 
-		await expect( usernameError ).toBeVisible();
-		await expect( usernameError ).toHaveText(
-			'Must be at least 3 characters.'
-		);
-		await expect( emailError ).toBeVisible();
-		await expect( emailError ).toHaveText(
-			'Must be a valid email address.'
-		);
-	} );
+    const usernameError = page
+      .locator('[data-bsui-field-root]')
+      .first()
+      .locator('[role="alert"]');
+    const emailError = page
+      .locator('[data-bsui-field-root]')
+      .nth(1)
+      .locator('[role="alert"]');
 
-	test( 'displays form-level error message', async ( { page } ) => {
-		await mockBs(
-			page,
-			() => ( {
-				code: 'blockstudio_db_validation',
-				message: 'Validation failed.',
-				data: { status: 400, errors: {} },
-			} )
-		);
+    await expect(usernameError).toBeVisible();
+    await expect(usernameError).toHaveText('Must be at least 3 characters.');
+    await expect(emailError).toBeVisible();
+    await expect(emailError).toHaveText('Must be a valid email address.');
+  });
 
-		await page.locator( '[data-bsui-form-root]' ).evaluate( ( form ) => {
-			( form as HTMLFormElement ).requestSubmit();
-		} );
+  test('displays form-level error message', async ({ page }) => {
+    await mockBs(page, () => ({
+      code: 'blockstudio_db_validation',
+      message: 'Validation failed.',
+      data: { status: 400, errors: {} },
+    }));
 
-		const formError = page.locator( '.bs-ui-form-error' );
-		await expect( formError ).toBeVisible();
-		await expect( formError ).toHaveText( 'Validation failed.' );
-	} );
+    await page.locator('[data-bsui-form-root]').evaluate((form) => {
+      (form as HTMLFormElement).requestSubmit();
+    });
 
-	test( 'adds invalid class to fields with errors', async ( { page } ) => {
-		await mockBs(
-			page,
-			() => ( {
-				code: 'blockstudio_db_validation',
-				message: 'Validation failed.',
-				data: {
-					status: 400,
-					errors: { email: [ 'Invalid email.' ] },
-				},
-			} )
-		);
+    const formError = page.locator('.bs-ui-form-error');
+    await expect(formError).toBeVisible();
+    await expect(formError).toHaveText('Validation failed.');
+  });
 
-		await page.locator( '[data-bsui-form-root]' ).evaluate( ( form ) => {
-			( form as HTMLFormElement ).requestSubmit();
-		} );
+  test('adds invalid class to fields with errors', async ({ page }) => {
+    await mockBs(page, () => ({
+      code: 'blockstudio_db_validation',
+      message: 'Validation failed.',
+      data: {
+        status: 400,
+        errors: { email: ['Invalid email.'] },
+      },
+    }));
 
-		const usernameField = page
-			.locator( '[data-bsui-field-root]' )
-			.first();
-		const emailField = page.locator( '[data-bsui-field-root]' ).nth( 1 );
+    await page.locator('[data-bsui-form-root]').evaluate((form) => {
+      (form as HTMLFormElement).requestSubmit();
+    });
 
-		await expect( emailField ).toHaveClass( /bs-ui-invalid/ );
-		await expect( usernameField ).not.toHaveClass( /bs-ui-invalid/ );
-	} );
+    const usernameField = page.locator('[data-bsui-field-root]').first();
+    const emailField = page.locator('[data-bsui-field-root]').nth(1);
 
-	// Clearing errors
+    await expect(emailField).toHaveClass(/bs-ui-invalid/);
+    await expect(usernameField).not.toHaveClass(/bs-ui-invalid/);
+  });
 
-	test( 'typing in a field clears its error', async ( { page } ) => {
-		await mockBs(
-			page,
-			() => ( {
-				code: 'blockstudio_db_validation',
-				message: 'Validation failed.',
-				data: {
-					status: 400,
-					errors: {
-						username: [ 'Required.' ],
-						email: [ 'Required.' ],
-					},
-				},
-			} )
-		);
+  // Clearing errors
 
-		await page.locator( '[data-bsui-form-root]' ).evaluate( ( form ) => {
-			( form as HTMLFormElement ).requestSubmit();
-		} );
+  test('typing in a field clears its error', async ({ page }) => {
+    await mockBs(page, () => ({
+      code: 'blockstudio_db_validation',
+      message: 'Validation failed.',
+      data: {
+        status: 400,
+        errors: {
+          username: ['Required.'],
+          email: ['Required.'],
+        },
+      },
+    }));
 
-		const usernameError = page
-			.locator( '[data-bsui-field-root]' )
-			.first()
-			.locator( '[role="alert"]' );
-		const emailError = page
-			.locator( '[data-bsui-field-root]' )
-			.nth( 1 )
-			.locator( '[role="alert"]' );
+    await page.locator('[data-bsui-form-root]').evaluate((form) => {
+      (form as HTMLFormElement).requestSubmit();
+    });
 
-		await expect( usernameError ).toBeVisible();
-		await expect( emailError ).toBeVisible();
+    const usernameError = page
+      .locator('[data-bsui-field-root]')
+      .first()
+      .locator('[role="alert"]');
+    const emailError = page
+      .locator('[data-bsui-field-root]')
+      .nth(1)
+      .locator('[role="alert"]');
 
-		await page.locator( 'input[name="username"]' ).fill( 'john' );
+    await expect(usernameError).toBeVisible();
+    await expect(emailError).toBeVisible();
 
-		await expect( usernameError ).toBeHidden();
-		await expect( emailError ).toBeVisible();
-	} );
+    await page.locator('input[name="username"]').fill('john');
 
-	// Success
+    await expect(usernameError).toBeHidden();
+    await expect(emailError).toBeVisible();
+  });
 
-	test( 'shows success message on successful submission', async ( {
-		page,
-	} ) => {
-		await mockBs(
-			page,
-			( data ) => ( { id: 1, ...data } )
-		);
+  // Success
 
-		await page.locator( 'input[name="username"]' ).fill( 'john' );
-		await page.locator( 'input[name="email"]' ).fill( 'john@test.com' );
+  test('shows success message on successful submission', async ({ page }) => {
+    await mockBs(page, (data) => ({ id: 1, ...data }));
 
-		await page.locator( '[data-bsui-form-root]' ).evaluate( ( form ) => {
-			( form as HTMLFormElement ).requestSubmit();
-		} );
+    await page.locator('input[name="username"]').fill('john');
+    await page.locator('input[name="email"]').fill('john@test.com');
 
-		await expect( page.locator( '.bs-ui-form-success' ) ).toBeVisible();
-		await expect( page.locator( '.bs-ui-form-success' ) ).toHaveText(
-			'Thank you!'
-		);
-	} );
+    await page.locator('[data-bsui-form-root]').evaluate((form) => {
+      (form as HTMLFormElement).requestSubmit();
+    });
 
-	test( 'hides form fields on success', async ( { page } ) => {
-		await mockBs(
-			page,
-			( data ) => ( { id: 1, ...data } )
-		);
+    await expect(page.locator('.bs-ui-form-success')).toBeVisible();
+    await expect(page.locator('.bs-ui-form-success')).toHaveText('Thank you!');
+  });
 
-		await page.locator( 'input[name="username"]' ).fill( 'john' );
-		await page.locator( 'input[name="email"]' ).fill( 'john@test.com' );
+  test('hides form fields on success', async ({ page }) => {
+    await mockBs(page, (data) => ({ id: 1, ...data }));
 
-		await page.locator( '[data-bsui-form-root]' ).evaluate( ( form ) => {
-			( form as HTMLFormElement ).requestSubmit();
-		} );
+    await page.locator('input[name="username"]').fill('john');
+    await page.locator('input[name="email"]').fill('john@test.com');
 
-		await expect(
-			page.locator( 'input[name="username"]' )
-		).toBeHidden();
-	} );
+    await page.locator('[data-bsui-form-root]').evaluate((form) => {
+      (form as HTMLFormElement).requestSubmit();
+    });
 
-	// Submitting state
+    await expect(page.locator('input[name="username"]')).toBeHidden();
+  });
 
-	test( 'adds submitting class during submission', async ( { page } ) => {
-		let resolveSubmit;
-		await page.evaluate( () => {
-			let resolve;
-			const pending = new Promise( ( r ) => {
-				resolve = r;
-			} );
-			window[ '_testResolve' ] = resolve;
-			window[ 'bs' ] = {
-				db: () => ( {
-					create: () => pending,
-				} ),
-				fn: () => pending,
-			};
-		} );
+  // Submitting state
 
-		const form = page.locator( '[data-bsui-form-root]' );
-		await form.evaluate( ( f ) => {
-			( f as HTMLFormElement ).requestSubmit();
-		} );
+  test('adds submitting class during submission', async ({ page }) => {
+    await page.evaluate(() => {
+      let resolve!: (value: unknown) => void;
+      const pending = new Promise((r) => {
+        resolve = r;
+      });
+      window._testResolve = resolve;
+      window.bs = {
+        db: () => ({
+          create: () => pending,
+        }),
+        fn: () => pending,
+      };
+    });
 
-		await expect( form ).toHaveClass( /bs-ui-submitting/ );
+    const form = page.locator('[data-bsui-form-root]');
+    await form.evaluate((f) => {
+      (f as HTMLFormElement).requestSubmit();
+    });
 
-		await page.evaluate( () => {
-			window[ '_testResolve' ]( { id: 1 } );
-		} );
+    await expect(form).toHaveClass(/bs-ui-submitting/);
 
-		await expect( form ).not.toHaveClass( /bs-ui-submitting/ );
-	} );
+    await page.evaluate(() => {
+      window._testResolve?.({ id: 1 });
+    });
 
-	// Error only for matching field
+    await expect(form).not.toHaveClass(/bs-ui-submitting/);
+  });
 
-	test( 'only shows error for field that has a server error', async ( {
-		page,
-	} ) => {
-		await mockBs(
-			page,
-			() => ( {
-				code: 'blockstudio_db_validation',
-				message: 'Validation failed.',
-				data: {
-					status: 400,
-					errors: {
-						email: [ 'Invalid email.' ],
-					},
-				},
-			} )
-		);
+  // Error only for matching field
 
-		await page.locator( '[data-bsui-form-root]' ).evaluate( ( form ) => {
-			( form as HTMLFormElement ).requestSubmit();
-		} );
+  test('only shows error for field that has a server error', async ({
+    page,
+  }) => {
+    await mockBs(page, () => ({
+      code: 'blockstudio_db_validation',
+      message: 'Validation failed.',
+      data: {
+        status: 400,
+        errors: {
+          email: ['Invalid email.'],
+        },
+      },
+    }));
 
-		const usernameError = page
-			.locator( '[data-bsui-field-root]' )
-			.first()
-			.locator( '[role="alert"]' );
+    await page.locator('[data-bsui-form-root]').evaluate((form) => {
+      (form as HTMLFormElement).requestSubmit();
+    });
 
-		await expect( usernameError ).toBeHidden();
-	} );
-} );
+    const usernameError = page
+      .locator('[data-bsui-field-root]')
+      .first()
+      .locator('[role="alert"]');
+
+    await expect(usernameError).toBeHidden();
+  });
+});
