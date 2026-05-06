@@ -6,6 +6,10 @@ const ROUTE = `${BASE}/wp-json/blockstudio/v1/db/blockstudio-type-db-jsonc/defau
 
 let page: Page;
 let nonce: string;
+const runId = `e2e-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+const signupAction = `signup-${runId}`;
+const loginAction = `login-${runId}`;
+const createdIds: number[] = [];
 
 test.describe.configure({ mode: 'serial' });
 
@@ -20,6 +24,19 @@ test.beforeAll(async ({ browser }) => {
 });
 
 test.afterAll(async () => {
+  if (page && nonce) {
+    for (const id of createdIds) {
+      await page.evaluate(
+        async ({ route, nonce, id }) => {
+          await fetch(`${route}/${id}`, {
+            method: 'DELETE',
+            headers: { 'X-WP-Nonce': nonce },
+          });
+        },
+        { route: ROUTE, nonce, id }
+      );
+    }
+  }
   await page.close();
 });
 
@@ -28,22 +45,23 @@ test.describe('DB JSONC Storage', () => {
 
   test('create', async () => {
     const r = await page.evaluate(
-      async ({ route, nonce }) => {
+      async ({ route, nonce, signupAction }) => {
         const res = await fetch(route, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', 'X-WP-Nonce': nonce },
-          body: JSON.stringify({ action: 'signup', details: 'New user' }),
+          body: JSON.stringify({ action: signupAction, details: 'New user' }),
         });
         return { s: res.status, b: await res.json() };
       },
-      { route: ROUTE, nonce }
+      { route: ROUTE, nonce, signupAction }
     );
     expect(r.s).toBe(200);
-    expect(r.b.action).toBe('signup');
+    expect(r.b.action).toBe(signupAction);
     expect(r.b.details).toBe('New user');
     expect(r.b.id).toBeDefined();
     expect(r.b.created_at).toBeDefined();
     id = Number(r.b.id);
+    createdIds.push(id);
   });
 
   test('get by id', async () => {
@@ -58,7 +76,7 @@ test.describe('DB JSONC Storage', () => {
       { route: ROUTE, nonce, id }
     );
     expect(r.s).toBe(200);
-    expect(r.b.action).toBe('signup');
+    expect(r.b.action).toBe(signupAction);
   });
 
   test('list', async () => {
@@ -91,39 +109,40 @@ test.describe('DB JSONC Storage', () => {
     );
     expect(r.s).toBe(200);
     expect(r.b.details).toBe('Updated details');
-    expect(r.b.action).toBe('signup');
+    expect(r.b.action).toBe(signupAction);
   });
 
   test('create second record', async () => {
     const r = await page.evaluate(
-      async ({ route, nonce }) => {
+      async ({ route, nonce, loginAction }) => {
         const res = await fetch(route, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', 'X-WP-Nonce': nonce },
-          body: JSON.stringify({ action: 'login', details: 'Returning user' }),
+          body: JSON.stringify({ action: loginAction, details: 'Returning user' }),
         });
         return { s: res.status, b: await res.json() };
       },
-      { route: ROUTE, nonce }
+      { route: ROUTE, nonce, loginAction }
     );
     expect(r.s).toBe(200);
     expect(Number(r.b.id)).toBeGreaterThan(id);
+    createdIds.push(Number(r.b.id));
   });
 
   test('list with filter', async () => {
     const r = await page.evaluate(
-      async ({ route, nonce }) => {
-        const res = await fetch(`${route}?action=login`, {
+      async ({ route, nonce, loginAction }) => {
+        const res = await fetch(`${route}?action=${encodeURIComponent(loginAction)}`, {
           method: 'GET',
           headers: { 'X-WP-Nonce': nonce },
         });
         return { s: res.status, b: await res.json() };
       },
-      { route: ROUTE, nonce }
+      { route: ROUTE, nonce, loginAction }
     );
     expect(r.s).toBe(200);
     expect(r.b.length).toBe(1);
-    expect(r.b[0].action).toBe('login');
+    expect(r.b[0].action).toBe(loginAction);
   });
 
   test('delete', async () => {
