@@ -1839,9 +1839,9 @@ test.describe('Canvas', () => {
       }
     });
 
-    async function setupLiveMode(): Promise<void> {
-      await page.evaluate(() => localStorage.removeItem('blockstudio-canvas-settings'));
-      await page.goto(canvasUrl, { waitUntil: 'domcontentloaded' });
+	    async function setupLiveMode(): Promise<void> {
+	      await page.evaluate(() => localStorage.removeItem('blockstudio-canvas-settings'));
+	      await page.goto(canvasUrl, { waitUntil: 'domcontentloaded' });
 
       await waitForCanvasSurface(page);
 
@@ -1859,8 +1859,25 @@ test.describe('Canvas', () => {
         },
         null,
         { timeout: 10000 },
-      );
-    }
+	      );
+	    }
+
+	    async function waitForArtboardRevisionAfter(
+	      slug: string,
+	      previousRevision: string,
+	    ): Promise<void> {
+	      await page.waitForFunction(
+	        ({ slug, previousRevision }) => {
+	          const artboard = document.querySelector(`[data-canvas-slug="${slug}"]`);
+	          if (!artboard) return false;
+
+	          const current = Number(artboard.getAttribute('data-canvas-revision') ?? '0');
+	          return current > Number(previousRevision);
+	        },
+	        { slug, previousRevision },
+	        { timeout: 20000 },
+	      );
+	    }
 
     test('block template update does not flash white on artboard', async () => {
       await setupLiveMode();
@@ -2062,92 +2079,113 @@ test.describe('Canvas', () => {
       fs.writeFileSync(pageTemplatePath, originalPageTemplate);
     });
 
-    test('adding a block tag with custom attrs renders with those attrs', async () => {
-      await setupLiveMode();
-      await page.waitForTimeout(2000);
+	    test('adding a block tag with custom attrs renders with those attrs', async () => {
+	      await setupLiveMode();
+	      const revisionBefore = await page.locator('[data-canvas-slug="blockstudio-e2e-test"]')
+	        .getAttribute('data-canvas-revision');
 
-      fs.writeFileSync(
-        pageTemplatePath,
-        originalPageTemplate + '\n<block name="blockstudio/type-preload-simple" title="Custom Attrs Test" />',
-      );
+	      try {
+	        fs.writeFileSync(
+	          pageTemplatePath,
+	          originalPageTemplate + '\n<block name="blockstudio/type-preload-simple" title="Custom Attrs Test" />',
+	        );
 
-      await page.waitForFunction(
-        (slug: string) => {
-          const ab = document.querySelector(`[data-canvas-slug="${slug}"]`);
-          return ab && ab.getAttribute('data-canvas-revision') !== '0';
-        },
-        'blockstudio-e2e-test',
-        { timeout: 20000 },
-      );
+	        await waitForArtboardRevisionAfter('blockstudio-e2e-test', revisionBefore ?? '0');
 
-      await page.waitForTimeout(3000);
+	        await page.waitForFunction(
+	          (slug: string) => {
+	            const ab = document.querySelector(`[data-canvas-slug="${slug}"]`);
+	            const iframe = ab?.querySelector('iframe') as HTMLIFrameElement | null;
+	            const doc = iframe?.contentDocument;
+	            if (!doc) return false;
 
-      const result = await page.evaluate((slug: string) => {
-        const ab = document.querySelector(`[data-canvas-slug="${slug}"]`);
-        const iframe = ab?.querySelector('iframe') as HTMLIFrameElement | null;
-        const doc = iframe?.contentDocument;
-        if (!doc) return { error: 'no doc' };
+	            const titles = Array.from(doc.querySelectorAll('.preload-title')).map(
+	              (el) => el.textContent || '',
+	            );
 
-        const titles: string[] = [];
-        doc.querySelectorAll('.preload-title').forEach((el) => {
-          titles.push(el.textContent || '');
-        });
+	            return (
+	              doc.querySelectorAll('.preload-simple').length === 3 &&
+	              titles.includes('Custom Attrs Test')
+	            );
+	          },
+	          'blockstudio-e2e-test',
+	          { timeout: 20000 },
+	        );
 
-        return {
-          preloadSimpleCount: doc.querySelectorAll('.preload-simple').length,
-          preloadTitles: titles,
-        };
-      }, 'blockstudio-e2e-test');
+	        const result = await page.evaluate((slug: string) => {
+	          const ab = document.querySelector(`[data-canvas-slug="${slug}"]`);
+	          const iframe = ab?.querySelector('iframe') as HTMLIFrameElement | null;
+	          const doc = iframe?.contentDocument;
+	          if (!doc) return { error: 'no doc' };
 
-      const r = result as any;
-      expect(r.preloadTitles).toContain('Custom Attrs Test');
-      expect(r.preloadSimpleCount).toBe(3);
+	          const titles: string[] = [];
+	          doc.querySelectorAll('.preload-title').forEach((el) => {
+	            titles.push(el.textContent || '');
+	          });
 
-      fs.writeFileSync(pageTemplatePath, originalPageTemplate);
-    });
+	          return {
+	            preloadSimpleCount: doc.querySelectorAll('.preload-simple').length,
+	            preloadTitles: titles,
+	          };
+	        }, 'blockstudio-e2e-test');
 
-    test('adding a block tag with default attrs renders correctly', async () => {
-      await setupLiveMode();
-      await page.waitForTimeout(2000);
+	        const r = result as any;
+	        expect(r.preloadTitles).toContain('Custom Attrs Test');
+	        expect(r.preloadSimpleCount).toBe(3);
+	      } finally {
+	        fs.writeFileSync(pageTemplatePath, originalPageTemplate);
+	      }
+	    });
 
-      fs.writeFileSync(
-        pageTemplatePath,
-        originalPageTemplate + '\n<block name="blockstudio/type-preload-simple" />',
-      );
+	    test('adding a block tag with default attrs renders correctly', async () => {
+	      await setupLiveMode();
+	      const revisionBefore = await page.locator('[data-canvas-slug="blockstudio-e2e-test"]')
+	        .getAttribute('data-canvas-revision');
 
-      await page.waitForFunction(
-        (slug: string) => {
-          const ab = document.querySelector(`[data-canvas-slug="${slug}"]`);
-          return ab && ab.getAttribute('data-canvas-revision') !== '0';
-        },
-        'blockstudio-e2e-test',
-        { timeout: 20000 },
-      );
+	      try {
+	        fs.writeFileSync(
+	          pageTemplatePath,
+	          originalPageTemplate + '\n<block name="blockstudio/type-preload-simple" />',
+	        );
 
-      await page.waitForTimeout(3000);
+	        await waitForArtboardRevisionAfter('blockstudio-e2e-test', revisionBefore ?? '0');
 
-      const result = await page.evaluate((slug: string) => {
-        const ab = document.querySelector(`[data-canvas-slug="${slug}"]`);
-        const iframe = ab?.querySelector('iframe') as HTMLIFrameElement | null;
-        const doc = iframe?.contentDocument;
-        if (!doc) return { error: 'no doc' };
+	        await page.waitForFunction(
+	          (slug: string) => {
+	            const ab = document.querySelector(`[data-canvas-slug="${slug}"]`);
+	            const iframe = ab?.querySelector('iframe') as HTMLIFrameElement | null;
+	            const doc = iframe?.contentDocument;
+	            if (!doc) return false;
 
-        const titles: string[] = [];
-        doc.querySelectorAll('.preload-title').forEach((el) => {
-          titles.push(el.textContent || '');
-        });
+	            return doc.querySelectorAll('.preload-simple').length === 3;
+	          },
+	          'blockstudio-e2e-test',
+	          { timeout: 20000 },
+	        );
 
-        return {
-          preloadSimpleCount: doc.querySelectorAll('.preload-simple').length,
-          preloadTitles: titles,
-        };
-      }, 'blockstudio-e2e-test');
+	        const result = await page.evaluate((slug: string) => {
+	          const ab = document.querySelector(`[data-canvas-slug="${slug}"]`);
+	          const iframe = ab?.querySelector('iframe') as HTMLIFrameElement | null;
+	          const doc = iframe?.contentDocument;
+	          if (!doc) return { error: 'no doc' };
 
-      const r = result as any;
-      expect(r.preloadSimpleCount).toBe(3);
+	          const titles: string[] = [];
+	          doc.querySelectorAll('.preload-title').forEach((el) => {
+	            titles.push(el.textContent || '');
+	          });
 
-      fs.writeFileSync(pageTemplatePath, originalPageTemplate);
-    });
+	          return {
+	            preloadSimpleCount: doc.querySelectorAll('.preload-simple').length,
+	            preloadTitles: titles,
+	          };
+	        }, 'blockstudio-e2e-test');
+
+	        const r = result as any;
+	        expect(r.preloadSimpleCount).toBe(3);
+	      } finally {
+	        fs.writeFileSync(pageTemplatePath, originalPageTemplate);
+	      }
+	    });
 
     test('first blockstudio block added to page with none renders immediately', async () => {
       test.slow();
