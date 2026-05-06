@@ -32,7 +32,7 @@ class Pages {
 	 * @return void
 	 */
 	public static function init( array $args = array() ): void {
-		if ( ! is_admin() && ! ( defined( 'WP_CLI' ) && WP_CLI ) ) {
+		if ( ! self::can_init_in_current_context( $args ) ) {
 			return;
 		}
 
@@ -86,6 +86,30 @@ class Pages {
 		 * @param Page_Registry $registry The page registry instance.
 		 */
 		do_action( 'blockstudio/pages/synced', $registry );
+	}
+
+	/**
+	 * Determine whether pages should initialize in the current request.
+	 *
+	 * Normal automatic initialization stays limited to admin and WP-CLI.
+	 * Explicit force initialization is allowed for trusted callers that need to
+	 * sync pages from controlled frontend contexts, such as local dev tooling.
+	 *
+	 * @param array     $args Optional arguments.
+	 * @param bool|null $is_admin_request Optional admin context override for tests.
+	 * @param bool|null $is_cli_request Optional WP-CLI context override for tests.
+	 *
+	 * @return bool Whether initialization is allowed.
+	 */
+	private static function can_init_in_current_context( array $args = array(), ?bool $is_admin_request = null, ?bool $is_cli_request = null ): bool {
+		if ( ! empty( $args['force'] ) ) {
+			return true;
+		}
+
+		$is_admin_request ??= is_admin();
+		$is_cli_request   ??= defined( 'WP_CLI' ) && WP_CLI;
+
+		return $is_admin_request || $is_cli_request;
 	}
 
 	/**
