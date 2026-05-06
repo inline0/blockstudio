@@ -121,6 +121,7 @@ npm run build            # Generate + build
 6. **One class at a time** - migrate and test incrementally
 7. **Avoid direct `npx` for routine flows** - prefer `npm run` scripts from package.json
 8. **E2E CI gate** - Add `[e2e]` to commit messages when changes affect plugin functionality. Omit for docs/UI-only changes.
+9. **Durable guidance only** - Add instructions here only when they are general, valid, and repeatedly useful for the repo. Do not add one-off preferences, temporary decisions, or task-specific snippets.
 
 ## Commands
 
