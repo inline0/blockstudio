@@ -484,6 +484,76 @@ class PagesTest extends TestCase {
 		$this->assertSame( 'publish', $pages['docs:docs-loader-local']['postStatus'] );
 	}
 
+	public function test_loader_paths_can_mount_external_markdown_under_logical_prefixes(): void {
+		$temp_dir        = sys_get_temp_dir() . '/blockstudio-page-loader-prefix-' . uniqid();
+		$collection_root = $temp_dir . '/docs';
+		$main_root       = $temp_dir . '/main-docs';
+		$cli_root        = $temp_dir . '/cli-docs';
+
+		mkdir( $collection_root, 0755, true );
+		mkdir( $main_root, 0755, true );
+		mkdir( $cli_root, 0755, true );
+
+		file_put_contents(
+			$collection_root . '/pages.json',
+			wp_json_encode(
+				array(
+					'collection' => 'docs',
+					'title'      => 'Docs',
+					'postType'   => 'page',
+					'defaults'   => array(
+						'postStatus' => 'publish',
+					),
+				)
+			)
+		);
+
+		file_put_contents(
+			$collection_root . '/loader.php',
+			"<?php\nreturn array(\n\t'paths' => array(\n\t\t" . var_export( $main_root, true ) . ",\n\t\tarray(\n\t\t\t'path' => " . var_export( $cli_root, true ) . ",\n\t\t\t'prefix' => 'cli',\n\t\t\t'meta' => array( 'doc_set' => 'cli' ),\n\t\t),\n\t),\n);\n"
+		);
+
+		file_put_contents(
+			$main_root . '/index.md',
+			"---\ntitle: Main Introduction\npath: .\n---\n\n# Main Introduction"
+		);
+		file_put_contents(
+			$main_root . '/getting-started.md',
+			"---\ntitle: Main Getting Started\npath: getting-started\n---\n\n# Main Getting Started"
+		);
+		file_put_contents(
+			$cli_root . '/index.md',
+			"---\ntitle: CLI Introduction\npath: .\n---\n\n# CLI Introduction"
+		);
+		file_put_contents(
+			$cli_root . '/getting-started.md',
+			"---\ntitle: CLI Getting Started\npath: getting-started\n---\n\n# CLI Getting Started"
+		);
+
+		add_filter( 'blockstudio/pages/allow_external_loader_path', '__return_true' );
+
+		try {
+			$discovery = new Page_Discovery();
+			$pages     = $discovery->discover( $collection_root );
+		} finally {
+			remove_filter( 'blockstudio/pages/allow_external_loader_path', '__return_true' );
+			$this->remove_dir( $temp_dir );
+		}
+
+		$this->assertArrayHasKey( 'docs:docs-home', $pages );
+		$this->assertArrayHasKey( 'docs:docs-getting-started', $pages );
+		$this->assertArrayHasKey( 'docs:docs-cli', $pages );
+		$this->assertArrayHasKey( 'docs:docs-cli-getting-started', $pages );
+		$this->assertSame( '.', $pages['docs:docs-home']['path'] );
+		$this->assertSame( 'getting-started', $pages['docs:docs-getting-started']['path'] );
+		$this->assertSame( 'cli', $pages['docs:docs-cli']['path'] );
+		$this->assertSame( 'cli/getting-started', $pages['docs:docs-cli-getting-started']['path'] );
+		$this->assertSame( 'docs/index.md', $pages['docs:docs-home']['source_path'] );
+		$this->assertSame( 'docs/cli/index.md', $pages['docs:docs-cli']['source_path'] );
+		$this->assertSame( 'cli', $pages['docs:docs-cli']['meta']['doc_set'] ?? null );
+		$this->assertSame( 'CLI Getting Started', $pages['docs:docs-cli-getting-started']['title'] );
+	}
+
 	public function test_legacy_nested_pages_link_to_their_parent(): void {
 		$temp_dir    = sys_get_temp_dir() . '/blockstudio-legacy-nested-' . uniqid();
 		$parent_root = $temp_dir . '/account';
