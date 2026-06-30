@@ -2,6 +2,7 @@
 
 use Blockstudio\Site_Template_Discovery;
 use Blockstudio\Site_Templates;
+use Blockstudio\Settings;
 use PHPUnit\Framework\TestCase;
 
 class SiteTemplatesTest extends TestCase {
@@ -13,6 +14,7 @@ class SiteTemplatesTest extends TestCase {
 		parent::setUp();
 
 		add_filter( 'blockstudio/settings/cache/enabled', '__return_false' );
+		$this->reset_settings();
 
 		Site_Templates::reset();
 		Site_Templates::init();
@@ -32,6 +34,7 @@ class SiteTemplatesTest extends TestCase {
 		$this->temp_roots = array();
 
 		remove_filter( 'blockstudio/settings/cache/enabled', '__return_false' );
+		$this->reset_settings();
 		Site_Templates::reset();
 		$this->delete_directory( Blockstudio\Build_Cache::get_cache_dir( 'site-templates' ) );
 
@@ -183,6 +186,7 @@ class SiteTemplatesTest extends TestCase {
 	public function test_persistent_cache_reuses_discovery_until_source_changes(): void {
 		remove_filter( 'blockstudio/settings/cache/enabled', '__return_false' );
 		add_filter( 'blockstudio/settings/cache/enabled', '__return_true' );
+		$this->reset_settings();
 
 		$root   = $this->create_temp_template_root();
 		$filter = static function () use ( $root ): array {
@@ -215,6 +219,7 @@ class SiteTemplatesTest extends TestCase {
 			remove_filter( 'blockstudio/site_templates/template_paths', $filter );
 			remove_filter( 'blockstudio/settings/cache/enabled', '__return_true' );
 			add_filter( 'blockstudio/settings/cache/enabled', '__return_false' );
+			$this->reset_settings();
 			Site_Templates::reset();
 		}
 	}
@@ -325,5 +330,23 @@ class SiteTemplatesTest extends TestCase {
 		}
 
 		rmdir( $directory );
+	}
+
+	private function reset_settings(): void {
+		$ref = new ReflectionClass( Settings::class );
+
+		foreach ( array( 'instance', 'settings_json' ) as $property ) {
+			$ref_property = $ref->getProperty( $property );
+			$ref_property->setAccessible( true );
+			$ref_property->setValue( null, null );
+		}
+
+		foreach ( array( 'settings', 'settings_options', 'settings_filters', 'settings_filters_values' ) as $property ) {
+			$ref_property = $ref->getProperty( $property );
+			$ref_property->setAccessible( true );
+			$ref_property->setValue( null, array() );
+		}
+
+		Settings::get_instance();
 	}
 }
