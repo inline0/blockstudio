@@ -1,0 +1,22 @@
+{
+  "$schema": "https://blockstudio.dev/schema/block",
+  "name": "blockstudio/type-custom-field-type-missing",
+  "title": "Native Custom Field Type Missing",
+  "category": "blockstudio-test-native",
+  "icon": "star-filled",
+  "description": "Native Blockstudio Custom Field Type without editor control block.",
+  "keywords": ["native", "custom-field-type"],
+  "blockstudio": {
+    "attributes": [
+      {
+        "id": "settings",
+        "type": "test/no-control",
+        "label": "Settings",
+        "default": {
+          "top": "stored",
+          "bottom": "value"
+        }
+      }
+    ]
+  }
+}

@@ -1,0 +1,13 @@
+<div
+  class="blockstudio-test__block custom-field-type-output"
+  id="{{ b.name|replace({'/': '-'}) }}"
+  data-margin-top="{{ a.margin.top|default('') }}"
+  data-margin-bottom="{{ a.margin.bottom|default('') }}"
+  data-reusable-top="{{ a.reusable_spacing.top|default('') }}"
+  data-reusable-bottom="{{ a.reusable_spacing.bottom|default('') }}"
+  data-repeater-top="{{ a.items[0].spacing.top|default('') }}"
+  data-repeater-bottom="{{ a.items[0].spacing.bottom|default('') }}"
+>
+  <h1>ID: {{ b.name|replace({'/': '-'}) }}</h1>
+  <code>Attributes: {{ a|json_encode }}</code>
+</div>

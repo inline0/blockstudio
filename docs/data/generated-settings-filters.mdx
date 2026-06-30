@@ -98,6 +98,86 @@ add_filter('blockstudio/settings/cache/enabled', function() {
 });
 ```
 
+### content/enabled
+
+This filter allows you to enable/disable Content Sync.
+
+```php title="functions.php"
+add_filter('blockstudio/settings/content/enabled', function() {
+  return true;
+});
+```
+
+### content/id
+
+This filter allows you to set the Content Sync ownership namespace.
+
+```php title="functions.php"
+add_filter('blockstudio/settings/content/id', function() {
+  return 'docs';
+});
+```
+
+### content/path
+
+This filter allows you to set the Content Sync file directory.
+
+```php title="functions.php"
+add_filter('blockstudio/settings/content/path', function() {
+  return 'content';
+});
+```
+
+### content/include_page_sync_managed
+
+This filter allows you to include or exclude Page Sync managed posts.
+
+```php title="functions.php"
+add_filter('blockstudio/settings/content/include_page_sync_managed', function() {
+  return false;
+});
+```
+
+### content/authors
+
+This filter allows you to configure Content Sync author handling.
+
+```php title="functions.php"
+add_filter('blockstudio/settings/content/authors', function() {
+  return 'ignore';
+});
+```
+
+### content/post_types
+
+This filter allows you to configure Content Sync post type allowlists.
+
+```php title="functions.php"
+add_filter('blockstudio/settings/content/post_types', function() {
+  return ['team_member'];
+});
+```
+
+### content/taxonomies
+
+This filter allows you to configure Content Sync taxonomy allowlists.
+
+```php title="functions.php"
+add_filter('blockstudio/settings/content/taxonomies', function() {
+  return ['category', 'post_tag'];
+});
+```
+
+### content/media
+
+This filter allows you to configure Content Sync media handling.
+
+```php title="functions.php"
+add_filter('blockstudio/settings/content/media', function() {
+  return 'manifest';
+});
+```
+
 ### tailwind/enabled
 
 This filter allows you to enable/disable Tailwind.
@@ -423,6 +503,18 @@ This filter allows you to enable/disable page-level block tag rendering.
 ```php title="functions.php"
 add_filter('blockstudio/settings/block_tags/enabled', function() {
   return true;
+});
+```
+
+### block_tags/prefixes
+
+This filter allows you to register prefix to namespace shorthands for block tags.
+
+```php title="functions.php"
+add_filter('blockstudio/settings/block_tags/prefixes', function() {
+  return [
+    'dv' => ['divine-homepage', 'bsui']
+  ];
 });
 ```
 

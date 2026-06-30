@@ -29,6 +29,11 @@ import { Toggle } from '@/blocks/components/fields/components/toggle';
 import { Token } from '@/blocks/components/fields/components/token';
 import { Unit } from '@/blocks/components/fields/components/unit';
 import { WYSIWYG } from '@/blocks/components/fields/components/wysiwyg';
+import {
+  getFieldType,
+  isCustomFieldTypeName,
+  sanitizeFieldTypeClassName,
+} from '@/blocks/components/fields/registry';
 import { LabelAction } from '@/blocks/components/label';
 import { Styles } from '@/blocks/components/styles';
 import { selectors } from '@/blocks/store/selectors';
@@ -630,6 +635,8 @@ export const Fields = ({
     }
 
     const ActionsWrapper = item.type === 'code' ? CodeActions : null;
+    const customField = getFieldType(item.type);
+    const CustomField = customField?.component;
 
     const controlContent = (existingActions?: LabelAction[]) => {
       const isDisabled = attributes.blockstudio?.disabled?.includes(
@@ -653,7 +660,7 @@ export const Fields = ({
         <Control
           active={!isDisabled}
           actions={actions.length > 0 ? actions : undefined}
-          className={`blockstudio-fields__field blockstudio-fields__field--${item.type}`}
+          className={`blockstudio-fields__field blockstudio-fields__field--${sanitizeFieldTypeClassName(item.type)}`}
           enabled={false}
           help={item.help}
           inRepeater={repeaterId !== ''}
@@ -776,6 +783,28 @@ export const Fields = ({
               link={item.link ?? false}
               media={item.media ?? false}
             />
+          ) : CustomField ? (
+            <CustomField
+              {...props}
+              type={item.type}
+              id={item.id}
+              field={item}
+              value={v}
+              defaultValue={item.default}
+              onChange={(value) => change(value, true)}
+              attributes={attributes}
+              block={block}
+              clientId={clientId}
+              inRepeater={repeaterId !== ''}
+              repeaterId={repeaterId}
+              disabled={!!isDisabled}
+            />
+          ) : isCustomFieldTypeName(item.type) ? (
+            <Base>
+              <div className="blockstudio-fields__custom-missing">
+                Custom field type <code>{item.type}</code> is not registered.
+              </div>
+            </Base>
           ) : null}
         </Control>
       );

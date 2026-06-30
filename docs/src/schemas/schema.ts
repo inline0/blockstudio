@@ -940,6 +940,12 @@ export const schema = async (extensions = false) => {
                       description:
                         "Custom field reference in format 'custom/{name}'.",
                     },
+                    {
+                      pattern:
+                        '^(?!custom/)(?!blockstudio/)[a-z][a-z0-9-]*/[a-z][a-z0-9-]*$',
+                      description:
+                        "Custom field type in format 'namespace/type-name'.",
+                    },
                   ],
                 },
                 label: {
@@ -1074,6 +1080,17 @@ export const schema = async (extensions = false) => {
                     },
                   },
                   required: ['type'],
+                },
+                {
+                  properties: {
+                    type: {
+                      pattern:
+                        '^(?!custom/)(?!blockstudio/)[a-z][a-z0-9-]*/[a-z][a-z0-9-]*$',
+                      description:
+                        'Uses a registered namespaced custom field type.',
+                    },
+                  },
+                  required: ['type', 'id'],
                 },
               ].filter(Boolean),
             },

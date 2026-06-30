@@ -7,6 +7,12 @@ description: Reusable field definitions for Blockstudio blocks.
 
 Custom fields let you define reusable field groups that can be referenced across multiple blocks. Think of them as field templates: define once, use everywhere.
 
+Custom fields are not the same as
+[custom field types](/docs/blocks/attributes/custom-field-types). Use
+`custom/{name}` for reusable groups of existing fields. Use a namespaced custom
+field type such as `acme/dimensions` when a theme or plugin registers a new
+editor control and value shape.
+
 ## File System Registration
 
 Create a `field.json` file inside a `fields/` directory in your blockstudio directory:
@@ -25,7 +31,12 @@ theme/
   "name": "hero",
   "title": "Hero Section",
   "attributes": [
-    { "id": "heading", "type": "text", "label": "Heading", "default": "Hello World" },
+    {
+      "id": "heading",
+      "type": "text",
+      "label": "Heading",
+      "default": "Hello World"
+    },
     { "id": "description", "type": "textarea", "label": "Description" },
     { "id": "enabled", "type": "toggle", "label": "Enabled" }
   ]
@@ -56,9 +67,7 @@ Reference a custom field using the `custom/{name}` type:
 ```json title="block.json"
 {
   "blockstudio": {
-    "attributes": [
-      { "type": "custom/hero" }
-    ]
+    "attributes": [{ "type": "custom/hero" }]
   }
 }
 ```
@@ -87,9 +96,7 @@ Custom fields can also reuse complete group definitions:
 ```json title="block.json"
 {
   "blockstudio": {
-    "attributes": [
-      { "type": "custom/section-header" }
-    ]
+    "attributes": [{ "type": "custom/section-header" }]
   }
 }
 ```
@@ -105,9 +112,7 @@ Use `idStructure` to prefix or transform field IDs. The `{id}` placeholder is re
 ```json title="block.json"
 {
   "blockstudio": {
-    "attributes": [
-      { "type": "custom/hero", "idStructure": "hero_{id}" }
-    ]
+    "attributes": [{ "type": "custom/hero", "idStructure": "hero_{id}" }]
   }
 }
 ```
@@ -149,11 +154,15 @@ keeps working after expansion.
   "attributes": [
     { "id": "enable", "type": "toggle", "label": "Modify font size" },
     {
-      "id": "min", "type": "number", "label": "Min Size",
+      "id": "min",
+      "type": "number",
+      "label": "Min Size",
       "conditions": [[{ "id": "enable", "operator": "==", "value": true }]]
     },
     {
-      "id": "max", "type": "number", "label": "Max Size",
+      "id": "max",
+      "type": "number",
+      "label": "Max Size",
       "conditions": [[{ "id": "enable", "operator": "==", "value": true }]]
     }
   ]
@@ -178,9 +187,7 @@ is useful for hiding an entire group behind an external toggle:
 {
   "type": "custom/font-size",
   "idStructure": "subtitle_font_{id}",
-  "conditions": [
-    [{ "id": "show_advanced", "operator": "==", "value": true }]
-  ]
+  "conditions": [[{ "id": "show_advanced", "operator": "==", "value": true }]]
 }
 ```
 
@@ -215,9 +222,7 @@ Custom fields work inside groups, tabs, and repeaters:
         "type": "group",
         "id": "content",
         "title": "Content",
-        "attributes": [
-          { "type": "custom/hero", "idStructure": "hero_{id}" }
-        ]
+        "attributes": [{ "type": "custom/hero", "idStructure": "hero_{id}" }]
       }
     ]
   }

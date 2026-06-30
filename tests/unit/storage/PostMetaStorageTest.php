@@ -2,6 +2,7 @@
 
 use Blockstudio\Storage_Handlers\Post_Meta_Storage;
 use Blockstudio\Interfaces\Storage_Handler_Interface;
+use Blockstudio\Field_Type_Registry;
 use PHPUnit\Framework\TestCase;
 
 class PostMetaStorageTest extends TestCase {
@@ -10,6 +11,7 @@ class PostMetaStorageTest extends TestCase {
 	private array $registered_keys = array();
 
 	protected function setUp(): void {
+		Field_Type_Registry::instance()->reset();
 		$this->handler = new Post_Meta_Storage();
 	}
 
@@ -18,6 +20,7 @@ class PostMetaStorageTest extends TestCase {
 			unregister_meta_key( 'post', $key );
 		}
 		$this->registered_keys = array();
+		Field_Type_Registry::instance()->reset();
 	}
 
 	// get_type()
@@ -353,6 +356,69 @@ class PostMetaStorageTest extends TestCase {
 
 		$meta = $this->get_registered_meta( $meta_key );
 		$this->assertSame( 'string', $meta['type'] );
+	}
+
+	public function test_register_custom_object_field_has_object_schema(): void {
+		$meta_key                = 'test_pm_custom_object';
+		$this->registered_keys[] = $meta_key;
+
+		Field_Type_Registry::instance()->register(
+			'test/dimensions',
+			array(
+				'attribute' => 'object',
+				'storage'   => array(
+					'type'        => 'object',
+					'rest_schema' => array(
+						'type'                 => 'object',
+						'additionalProperties' => array( 'type' => 'string' ),
+					),
+				),
+			)
+		);
+
+		$field = array(
+			'id'      => 'margin',
+			'type'    => 'test/dimensions',
+			'storage' => array( 'type' => 'postMeta', 'postMetaKey' => $meta_key ),
+		);
+
+		$this->handler->register( 'test/block', $field );
+
+		$meta = $this->get_registered_meta( $meta_key );
+		$this->assertSame( 'object', $meta['type'] );
+		$this->assertIsArray( $meta['show_in_rest'] );
+		$this->assertSame( 'object', $meta['show_in_rest']['schema']['type'] );
+		$this->assertSame(
+			array( 'type' => 'string' ),
+			$meta['show_in_rest']['schema']['additionalProperties']
+		);
+	}
+
+	public function test_register_custom_array_field_has_array_schema(): void {
+		$meta_key                = 'test_pm_custom_array';
+		$this->registered_keys[] = $meta_key;
+
+		Field_Type_Registry::instance()->register(
+			'test/token-list',
+			array(
+				'attribute' => 'array',
+				'storage'   => array( 'type' => 'array' ),
+			)
+		);
+
+		$field = array(
+			'id'      => 'tokens',
+			'type'    => 'test/token-list',
+			'storage' => array( 'type' => 'postMeta', 'postMetaKey' => $meta_key ),
+		);
+
+		$this->handler->register( 'test/block', $field );
+
+		$meta = $this->get_registered_meta( $meta_key );
+		$this->assertSame( 'array', $meta['type'] );
+		$this->assertIsArray( $meta['show_in_rest'] );
+		$this->assertSame( 'array', $meta['show_in_rest']['schema']['type'] );
+		$this->assertArrayHasKey( 'items', $meta['show_in_rest']['schema'] );
 	}
 
 	// register() without explicit type

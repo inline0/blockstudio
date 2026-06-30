@@ -1,0 +1,46 @@
+{
+  "$schema": "https://blockstudio.dev/schema/block",
+  "name": "blockstudio/type-custom-field-type",
+  "title": "Native Custom Field Type",
+  "category": "blockstudio-test-native",
+  "icon": "star-filled",
+  "description": "Native Blockstudio Custom Field Type block.",
+  "keywords": ["native", "custom-field-type"],
+  "blockstudio": {
+    "attributes": [
+      {
+        "id": "margin",
+        "type": "test/dimensions",
+        "label": "Margin",
+        "sides": ["top", "bottom"],
+        "default": {
+          "top": "sm",
+          "bottom": "md"
+        }
+      },
+      {
+        "type": "custom/custom-dimensions",
+        "idStructure": "reusable_{id}"
+      },
+      {
+        "id": "items",
+        "type": "repeater",
+        "label": "Items",
+        "min": 1,
+        "textButton": "Add item",
+        "attributes": [
+          {
+            "id": "spacing",
+            "type": "test/dimensions",
+            "label": "Item Spacing",
+            "sides": ["top", "bottom"],
+            "default": {
+              "top": "xs",
+              "bottom": "xs"
+            }
+          }
+        ]
+      }
+    ]
+  }
+}

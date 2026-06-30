@@ -1,0 +1,17 @@
+{
+  "$schema": "https://blockstudio.dev/schema/field",
+  "name": "custom-dimensions",
+  "title": "Custom Dimensions",
+  "attributes": [
+    {
+      "id": "spacing",
+      "type": "test/dimensions",
+      "label": "Reusable Spacing",
+      "sides": ["top", "bottom"],
+      "default": {
+        "top": "xs",
+        "bottom": "xs"
+      }
+    }
+  ]
+}

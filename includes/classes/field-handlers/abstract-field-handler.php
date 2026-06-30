@@ -81,6 +81,10 @@ abstract class Abstract_Field_Handler implements Field_Handler_Interface {
 	 * @return string The field ID.
 	 */
 	protected function get_field_id( array $field, string $prefix ): string {
+		if ( isset( $field['_blockstudio_field_id'] ) ) {
+			return (string) $field['_blockstudio_field_id'];
+		}
+
 		$id = $field['id'] ?? '';
 		return '' === $prefix ? $id : $prefix . '_' . $id;
 	}

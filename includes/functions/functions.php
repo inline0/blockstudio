@@ -9,6 +9,7 @@ use Blockstudio\Db;
 use Blockstudio\Render;
 use Blockstudio\Build;
 use Blockstudio\Pages;
+use Blockstudio\Field_Type_Registry;
 
 /**
  * Render block.
@@ -228,6 +229,39 @@ function bs_render_variables( $data, array $allowed = array() ) {
 	// phpcs:enable WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedFunctionFound
 	// phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Utils::attributes handles escaping.
 	echo Blockstudio\Utils::attributes( $data, $allowed, true );
+}
+
+/**
+ * Register a custom Blockstudio field type.
+ *
+ * @since 7.5.0
+ *
+ * @param string $name       Namespaced field type name, for example "acme/dimensions".
+ * @param array  $definition Field type definition.
+ *
+ * @return bool Whether registration succeeded.
+ *
+ * @phpcs:disable WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedFunctionFound -- Public API function.
+ */
+function bs_register_field_type( string $name, array $definition ): bool {
+	// phpcs:enable WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedFunctionFound
+	return Field_Type_Registry::instance()->register( $name, $definition );
+}
+
+/**
+ * Unregister a custom Blockstudio field type.
+ *
+ * @since 7.5.0
+ *
+ * @param string $name Namespaced field type name.
+ *
+ * @return bool Whether the field type existed.
+ *
+ * @phpcs:disable WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedFunctionFound -- Public API function.
+ */
+function bs_unregister_field_type( string $name ): bool {
+	// phpcs:enable WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedFunctionFound
+	return Field_Type_Registry::instance()->unregister( $name );
 }
 
 /**

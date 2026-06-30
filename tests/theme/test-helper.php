@@ -57,6 +57,47 @@ add_filter(
 	}
 );
 
+add_action(
+	'init',
+	function () {
+		if ( ! function_exists( 'bs_register_field_type' ) ) {
+			return;
+		}
+
+		wp_register_script(
+			'blockstudio-test-custom-field-type',
+			get_stylesheet_directory_uri() . '/custom-field-type.js',
+			array( 'blockstudio-blocks', 'wp-components', 'wp-element' ),
+			'1.0.0',
+			true
+		);
+
+		bs_register_field_type(
+			'test/dimensions',
+			array(
+				'attribute'     => 'object',
+				'default'       => array(),
+				'editor_script' => 'blockstudio-test-custom-field-type',
+				'storage'       => array(
+					'type'        => 'object',
+					'rest_schema' => array(
+						'type'                 => 'object',
+						'additionalProperties' => array( 'type' => 'string' ),
+					),
+				),
+			)
+		);
+
+		bs_register_field_type(
+			'test/no-control',
+			array(
+				'attribute' => 'object',
+				'default'   => array(),
+			)
+		);
+	}
+);
+
 add_filter(
 	'blockstudio/settings/assets/reset/enabled',
 	function ( $enabled ) {

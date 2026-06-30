@@ -9,6 +9,7 @@ namespace Blockstudio\Storage_Handlers;
 
 use Blockstudio\Interfaces\Storage_Handler_Interface;
 use Blockstudio\Field_Type_Config;
+use Blockstudio\Field_Type_Registry;
 
 /**
  * Post meta storage handler.
@@ -45,12 +46,11 @@ class Post_Meta_Storage implements Storage_Handler_Interface {
 		$meta_type = $field['__blockstudio_storage_value_type'] ?? $this->get_meta_type( $type );
 
 		$show_in_rest = true;
-		if ( 'array' === $meta_type ) {
+		$schema       = Field_Type_Registry::instance()->get_storage_rest_schema( $field, $meta_type );
+
+		if ( null !== $schema ) {
 			$show_in_rest = array(
-				'schema' => array(
-					'type'  => 'array',
-					'items' => array( 'type' => 'object' ),
-				),
+				'schema' => $schema,
 			);
 		}
 
@@ -91,6 +91,14 @@ class Post_Meta_Storage implements Storage_Handler_Interface {
 	 * @return string The meta type.
 	 */
 	private function get_meta_type( string $field_type ): string {
+		$custom_type = Field_Type_Registry::instance()->get_storage_value_type(
+			array( 'type' => $field_type )
+		);
+
+		if ( null !== $custom_type ) {
+			return $custom_type;
+		}
+
 		if ( Field_Type_Config::is_string_type( $field_type ) ) {
 			return 'string';
 		}
@@ -107,7 +115,7 @@ class Post_Meta_Storage implements Storage_Handler_Interface {
 			return 'array';
 		}
 
-		// Default to string for object types and unknown types.
+		// Keep existing built-in object and unknown storage behavior.
 		return 'string';
 	}
 }

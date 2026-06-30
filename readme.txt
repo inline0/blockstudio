@@ -53,6 +53,9 @@ Download the latest release zip from [GitHub Releases](https://github.com/inline
 
 == Changelog ==
 
+= 7.5.0 =
+* New: custom field types let themes and plugins register namespaced editor controls with primitive, array, or object values, including storage schemas, repeaters, reusable custom fields, templates, and extension paths
+
 = 7.4.2 =
 * Enhancement: collection loader `paths` can now mount external page directories under logical prefixes, with path-level metadata and collision-safe generated page names
 

@@ -242,6 +242,22 @@ class ExtensionsTest extends TestCase {
 		$this->assertSame( 'prefix-', $result );
 	}
 
+	public function test_parse_template_resolves_nested_object_paths(): void {
+		$result = Extensions::parse_template(
+			'mt-{attributes.margin.top} mb-{attributes.margin.bottom}',
+			array(
+				'attributes' => array(
+					'margin' => array(
+						'top'    => 'sm',
+						'bottom' => 'lg',
+					),
+				),
+			)
+		);
+
+		$this->assertSame( 'mt-sm mb-lg', $result );
+	}
+
 	// get() nested access
 
 	public function test_get_top_level_key(): void {

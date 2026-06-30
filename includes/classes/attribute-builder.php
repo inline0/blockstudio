@@ -14,6 +14,7 @@ use Blockstudio\Field_Handlers\Boolean_Field_Handler;
 use Blockstudio\Field_Handlers\Select_Field_Handler;
 use Blockstudio\Field_Handlers\Media_Field_Handler;
 use Blockstudio\Field_Handlers\Container_Field_Handler;
+use Blockstudio\Field_Handlers\Custom_Field_Handler;
 
 /**
  * Builds WordPress block attributes from Blockstudio field configurations.
@@ -113,6 +114,9 @@ class Attribute_Builder {
 		$this->container_handler = new Container_Field_Handler();
 		$this->container_handler->set_build_callback( array( $this, 'build_attributes_recursive' ) );
 		$this->register_handler( $this->container_handler );
+
+		// Custom field types run last so built-in handlers always win.
+		$this->register_handler( new Custom_Field_Handler() );
 	}
 
 	/**
@@ -183,6 +187,10 @@ class Attribute_Builder {
 			foreach ( $field as $v ) {
 				$field_id = $from_repeater ? (string) $index : $this->get_field_id( $v, $prefix );
 				++$index;
+
+				if ( $from_repeater ) {
+					$v['_blockstudio_field_id'] = $field_id;
+				}
 
 				$type = $v['type'] ?? '';
 

@@ -1,6 +1,8 @@
 <?php
 
 use Blockstudio\Attribute_Builder;
+use Blockstudio\Build;
+use Blockstudio\Field_Type_Registry;
 use Blockstudio\Interfaces\Field_Handler_Interface;
 use PHPUnit\Framework\TestCase;
 
@@ -9,7 +11,12 @@ class AttributeBuilderTest extends TestCase {
 	private Attribute_Builder $builder;
 
 	protected function setUp(): void {
+		Field_Type_Registry::instance()->reset();
 		$this->builder = new Attribute_Builder();
+	}
+
+	protected function tearDown(): void {
+		Field_Type_Registry::instance()->reset();
 	}
 
 	// build() - empty input
@@ -1161,11 +1168,10 @@ class AttributeBuilderTest extends TestCase {
 
 		$this->builder->build_attributes_recursive( $fields, $attributes, '', false, true );
 
-		// Handlers still use field id for the attribute key.
-		$this->assertArrayHasKey( 'name', $attributes );
-		$this->assertArrayHasKey( 'age', $attributes );
-		$this->assertSame( 'text', $attributes['name']['field'] );
-		$this->assertSame( 'number', $attributes['age']['field'] );
+		$this->assertArrayHasKey( 0, $attributes );
+		$this->assertArrayHasKey( 1, $attributes );
+		$this->assertSame( 'text', $attributes[0]['field'] );
+		$this->assertSame( 'number', $attributes[1]['field'] );
 	}
 
 	// Nested groups
@@ -1632,5 +1638,152 @@ class AttributeBuilderTest extends TestCase {
 
 		$this->assertSame( 'grid', $result['layout']['default']['value'] );
 		$this->assertSame( 'Grid', $result['layout']['default']['label'] );
+	}
+
+	public function test_build_custom_string_field(): void {
+		Field_Type_Registry::instance()->register(
+			'test/text-options',
+			array(
+				'attribute' => 'string',
+				'default'   => 'compact',
+			)
+		);
+
+		$result = $this->builder->build(
+			array(
+				array(
+					'id'   => 'mode',
+					'type' => 'test/text-options',
+				),
+			)
+		);
+
+		$this->assertSame( 'string', $result['mode']['type'] );
+		$this->assertSame( 'test/text-options', $result['mode']['field'] );
+		$this->assertSame( 'compact', $result['mode']['default'] );
+	}
+
+	public function test_build_custom_object_field(): void {
+		Field_Type_Registry::instance()->register(
+			'test/dimensions',
+			array(
+				'attribute' => 'object',
+				'default'   => array(),
+			)
+		);
+
+		$result = $this->builder->build(
+			array(
+				array(
+					'id'      => 'margin',
+					'type'    => 'test/dimensions',
+					'default' => array( 'top' => 'sm' ),
+				),
+			)
+		);
+
+		$this->assertSame( 'object', $result['margin']['type'] );
+		$this->assertSame( array( 'top' => 'sm' ), $result['margin']['default'] );
+	}
+
+	public function test_build_custom_field_inside_group_tabs_and_repeater(): void {
+		Field_Type_Registry::instance()->register( 'test/dimensions', array( 'attribute' => 'object' ) );
+
+		$result = $this->builder->build(
+			array(
+				array(
+					'id'         => 'settings',
+					'type'       => 'group',
+					'attributes' => array(
+						array( 'id' => 'margin', 'type' => 'test/dimensions' ),
+					),
+				),
+				array(
+					'type' => 'tabs',
+					'tabs' => array(
+						array(
+							'attributes' => array(
+								array( 'id' => 'padding', 'type' => 'test/dimensions' ),
+							),
+						),
+					),
+				),
+				array(
+					'id'         => 'items',
+					'type'       => 'repeater',
+					'attributes' => array(
+						array( 'id' => 'gap', 'type' => 'test/dimensions' ),
+					),
+				),
+			)
+		);
+
+		$this->assertSame( 'test/dimensions', $result['settings_margin']['field'] );
+		$this->assertSame( 'test/dimensions', $result['padding']['field'] );
+		$this->assertSame( 'test/dimensions', $result['items']['attributes'][0]['field'] );
+	}
+
+	public function test_display_only_custom_field_produces_no_attribute(): void {
+		Field_Type_Registry::instance()->register(
+			'test/preview',
+			array(
+				'attribute'          => null,
+				'produces_attribute' => false,
+			)
+		);
+
+		$fields = array(
+			array(
+				'id'   => 'preview',
+				'type' => 'test/preview',
+			),
+		);
+
+		$modern = $this->builder->build( $fields );
+		$legacy = array();
+		Build::build_attributes( $fields, $legacy );
+
+		$this->assertSame( array(), $modern );
+		$this->assertSame( $modern, $legacy );
+	}
+
+	public function test_unregistered_namespaced_custom_field_produces_no_attribute(): void {
+		$fields = array(
+			array(
+				'id'   => 'margin',
+				'type' => 'test/dimensions',
+			),
+		);
+
+		$modern = $this->builder->build( $fields );
+		$legacy = array();
+		Build::build_attributes( $fields, $legacy );
+
+		$this->assertSame( array(), $modern );
+		$this->assertSame( $modern, $legacy );
+	}
+
+	public function test_legacy_build_attributes_matches_attribute_builder_for_custom_field(): void {
+		Field_Type_Registry::instance()->register(
+			'test/dimensions',
+			array(
+				'attribute' => 'object',
+				'default'   => array( 'top' => 'md' ),
+			)
+		);
+
+		$fields = array(
+			array(
+				'id'       => 'margin',
+				'type'     => 'test/dimensions',
+				'fallback' => array( 'top' => 'none' ),
+			),
+		);
+
+		$modern = $this->builder->build( $fields );
+		$legacy = array();
+		Build::build_attributes( $fields, $legacy );
+
+		$this->assertSame( $modern, $legacy );
 	}
 }

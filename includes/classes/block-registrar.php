@@ -122,6 +122,7 @@ class Block_Registrar {
 
 		if ( isset( $block_json['blockstudio']['attributes'] ) ) {
 			Build::expand_custom_fields( $block_json['blockstudio']['attributes'] );
+			Field_Type_Registry::instance()->mark_used_fields( $block_json['blockstudio']['attributes'] );
 
 			if ( ! $is_override ) {
 				Build::filter_attributes(

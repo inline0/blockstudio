@@ -1,0 +1,168 @@
+---
+title: Blockstudio 7.5
+description: Custom field types for project-specific editor controls and structured values.
+date: 2026-06-30
+author: Dennis
+---
+
+Blockstudio 7.5 starts with a new extension point for teams that need fields
+that are more specific than Blockstudio core should ship: custom field types.
+
+Reusable custom fields already let projects define a group of existing fields
+once and reuse it with `type: "custom/{name}"`. Custom field types solve a
+different problem. They let a theme or plugin register a new namespaced field
+type, provide its own editor control, and store the value as normal
+Blockstudio data.
+
+The short version:
+
+- **PHP field type registry**: themes and plugins can register namespaced field
+  types such as `acme/dimensions` with `bs_register_field_type()` or the
+  `blockstudio/field_types` filter.
+- **Editor control registry**: custom editor scripts can call
+  `window.blockstudio.registerFieldType()` and render the matching React
+  control in the normal Blockstudio field UI.
+- **Structured values**: custom fields can store strings, numbers, booleans,
+  arrays, or objects without coercing object values through option field
+  normalization.
+- **Storage support**: post meta and option-backed custom fields can declare
+  their value type and REST schema, including object and array values.
+- **Native integration**: custom field types work inside groups, tabs,
+  repeaters, reusable custom fields, templates, and extension template paths.
+
+## Why custom field types?
+
+Blockstudio should stay useful out of the box, but real projects often have
+domain-specific controls: spacing token pickers, design-system color roles,
+responsive dimensions, icon sources, product selectors, or editorial controls
+that map to a structured value.
+
+Before 7.5, those projects could either compose several built-in fields or fork
+the editor. 7.5 gives them a supported middle ground: Blockstudio owns the
+field lifecycle, and the project owns the control.
+
+```php title="functions.php"
+add_action('init', function () {
+    wp_register_script(
+        'acme-field-dimensions',
+        get_stylesheet_directory_uri() . '/fields/dimensions.js',
+        ['blockstudio-blocks', 'wp-components', 'wp-element'],
+        '1.0.0',
+        true
+    );
+
+    bs_register_field_type('acme/dimensions', [
+        'attribute'     => 'object',
+        'default'       => [],
+        'editor_script' => 'acme-field-dimensions',
+        'storage'       => [
+            'type'        => 'object',
+            'rest_schema' => [
+                'type'                 => 'object',
+                'additionalProperties' => ['type' => 'string'],
+            ],
+        ],
+    ]);
+});
+```
+
+```js title="fields/dimensions.js"
+const { createElement: el } = wp.element;
+const { TextControl } = wp.components;
+
+window.blockstudio.registerFieldType('acme/dimensions', {
+  component(props) {
+    const value =
+      props.value &&
+      typeof props.value === 'object' &&
+      !Array.isArray(props.value)
+        ? props.value
+        : {};
+    const sides = props.sides || ['top', 'right', 'bottom', 'left'];
+
+    return el(
+      'div',
+      {},
+      sides.map((side) =>
+        el(TextControl, {
+          key: side,
+          label: side,
+          value: value[side] || '',
+          onChange(nextValue) {
+            props.onChange({
+              ...value,
+              [side]: nextValue,
+            });
+          },
+        }),
+      ),
+    );
+  },
+});
+```
+
+Then the field can be used in `block.json` like a native field:
+
+```json title="block.json"
+{
+  "blockstudio": {
+    "attributes": [
+      {
+        "id": "margin",
+        "type": "acme/dimensions",
+        "label": "Margin",
+        "sides": ["top", "bottom"],
+        "default": {
+          "top": "md",
+          "bottom": "md"
+        }
+      }
+    ]
+  }
+}
+```
+
+## Normal template values
+
+The saved value is available in PHP, Twig, and Blade like any other
+Blockstudio attribute.
+
+```php title="index.php"
+<div class="<?php echo esc_attr('mt-' . ($a['margin']['top'] ?? '')); ?>">
+  <?php echo esc_html($a['title'] ?? ''); ?>
+</div>
+```
+
+The same object paths also work in extension templates:
+
+```json title="extend.json"
+{
+  "blockstudio": {
+    "extend": "core/group",
+    "attributes": [
+      {
+        "id": "margin",
+        "type": "acme/dimensions",
+        "set": [
+          {
+            "attribute": "class",
+            "value": "mt-{attributes.margin.top} mb-{attributes.margin.bottom}"
+          }
+        ]
+      }
+    ]
+  }
+}
+```
+
+## Compatibility notes
+
+Existing built-in field types are unchanged. Existing `custom/{name}` reusable
+field groups are unchanged too. Custom field type names must be lowercase and
+namespaced, for example `acme/dimensions`; the `custom/` and `blockstudio/`
+namespaces stay reserved.
+
+If PHP registers a field type but its editor script does not register the
+matching control, Blockstudio keeps the saved value and shows a non-editable
+notice in the editor. If a field type is not registered in PHP, Blockstudio
+leaves it out of generated WordPress attributes.

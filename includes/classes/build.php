@@ -825,6 +825,17 @@ class Build {
 						);
 					}
 
+					if (
+						! isset( $attributes[ $field_id ] ) &&
+						Field_Type_Registry::instance()->is_custom_type( $type )
+					) {
+						$custom_attribute = Field_Type_Registry::instance()->build_attribute( $v, (string) $field_id );
+
+						if ( null !== $custom_attribute ) {
+							$attributes[ $field_id ] = $custom_attribute;
+						}
+					}
+
 					foreach ( array( 'default', 'fallback' ) as $item ) {
 						if ( isset( $v[ $item ] ) ) {
 							if (
@@ -926,6 +937,10 @@ class Build {
 						$attributes[ $field_id ]['_blockName']   = $v['_blockName'] ?? '';
 						$attributes[ $field_id ]['_blockIds']    = $v['_blockIds'] ?? array();
 						$attributes[ $field_id ]['_idStructure'] = $v['_idStructure'] ?? '{id}';
+					}
+
+					if ( ! isset( $attributes[ $field_id ] ) ) {
+						continue;
 					}
 
 					if ( 'tabs' !== $type && 'group' !== $type ) {
@@ -1685,6 +1700,8 @@ class Build {
 			$block = self::hydrate_cached_block_type( $item['block'] );
 
 			if ( ! empty( $item['storageAttributes'] ) ) {
+				Field_Type_Registry::instance()->mark_used_fields( $item['storageAttributes'] );
+
 				foreach ( (array) $block->name as $storage_block_name ) {
 					if ( is_string( $storage_block_name ) ) {
 						Storage_Registry::instance()->process_block_fields(
@@ -2456,6 +2473,7 @@ class Build {
 
 		if ( isset( $block_json['blockstudio']['attributes'] ) ) {
 			self::expand_custom_fields( $block_json['blockstudio']['attributes'], $block_lookup );
+			Field_Type_Registry::instance()->mark_used_fields( $block_json['blockstudio']['attributes'] );
 
 			if ( ! $is_override ) {
 				self::filter_attributes(

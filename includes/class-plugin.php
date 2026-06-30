@@ -68,6 +68,7 @@ class Plugin {
 		// Core configuration classes.
 		require_once $classes_dir . 'constants.php';
 		require_once $classes_dir . 'field-type-config.php';
+		require_once $classes_dir . 'field-type-registry.php';
 		require_once $classes_dir . 'block-registry.php';
 		require_once $classes_dir . 'option-value-resolver.php';
 
@@ -84,6 +85,7 @@ class Plugin {
 		require_once $classes_dir . 'field-handlers/select-field-handler.php';
 		require_once $classes_dir . 'field-handlers/media-field-handler.php';
 		require_once $classes_dir . 'field-handlers/container-field-handler.php';
+		require_once $classes_dir . 'field-handlers/custom-field-handler.php';
 
 		// Custom field system.
 		require_once $classes_dir . 'field-registry.php';
