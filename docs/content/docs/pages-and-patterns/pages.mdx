@@ -5,14 +5,9 @@ description: Create WordPress pages from file templates with automatic syncing.
 
 # Pages
 
-Pages are file-based templates that sync to the WordPress database as posts.
-When you update a template file, Blockstudio detects the change and updates
-the corresponding page.
+Pages are file-based templates that sync to the WordPress database as posts. When you update a template file, Blockstudio detects the change and updates the corresponding page.
 
-Pages can be defined as a single `page.json` folder, as standalone Markdown,
-or as a collection with a `pages.json` manifest. Collections are useful for
-documentation, knowledge bases, landing page libraries, or any set of nested
-pages that should be generated from files.
+Pages can be defined as a single `page.json` folder, as standalone Markdown, or as a collection with a `pages.json` manifest. Collections are useful for documentation, knowledge bases, landing page libraries, or any set of nested pages that should be generated from files.
 
 ## page.json
 
@@ -31,46 +26,37 @@ For a JSON-defined page, add a `page.json` configuration file:
 
 ### Properties
 
-| Property           | Type            | Default        | Description                                                       |
-| ------------------ | --------------- | -------------- | ----------------------------------------------------------------- |
-| `name`             | `string`        | _required_     | Unique identifier for the page                                    |
-| `title`            | `string`        | Auto from name | The page title                                                    |
-| `slug`             | `string`        | Same as name   | URL slug for the page                                             |
-| `path`             | `string`        | `"."`          | Logical path inside a collection                                  |
-| `order`            | `integer`       | `0`            | Menu order for the synced post                                    |
-| `postType`         | `string`        | `"page"`       | WordPress post type                                               |
-| `postStatus`       | `string`        | `"draft"`      | Status for new posts (`publish`, `draft`, `pending`, `private`)   |
-| `postId`           | `integer`       | -              | Pin the page to a specific WordPress post ID                      |
-| `blockEditingMode` | `string`        | -              | Block editing mode: `"default"`, `"contentOnly"`, or `"disabled"` |
-| `templateLock`     | `string\|false` | `"all"`        | Lock mode: `"all"`, `"insert"`, `"contentOnly"`, or `false`       |
-| `templateFor`      | `string\|null`  | `null`         | Set as default template for a post type                           |
-| `sync`             | `boolean`       | `true`         | Whether to sync content when template changes                     |
+| Property | Type | Default | Description |
+| --- | --- | --- | --- |
+| `name` | `string` | _required_ | Unique identifier for the page |
+| `title` | `string` | Auto from name | The page title |
+| `slug` | `string` | Same as name | URL slug for the page |
+| `path` | `string` | `"."` | Logical path inside a collection |
+| `order` | `integer` | `0` | Menu order for the synced post |
+| `postType` | `string` | `"page"` | WordPress post type |
+| `postStatus` | `string` | `"draft"` | Status for new posts (`publish`, `draft`, `pending`, `private`) |
+| `postId` | `integer` | - | Pin the page to a specific WordPress post ID |
+| `blockEditingMode` | `string` | - | Block editing mode: `"default"`, `"contentOnly"`, or `"disabled"` |
+| `templateLock` | `string\|false` | `"all"` | Lock mode: `"all"`, `"insert"`, `"contentOnly"`, or `false` |
+| `templateFor` | `string\|null` | `null` | Set as default template for a post type |
+| `sync` | `boolean` | `true` | Whether to sync content when template changes |
 
-Recognized `page.json`, frontmatter, and loader page keys are
-`blockEditingMode`, `collection`, `content`, `contentSource`,
-`contentType`, `defaults`, `file`, `generated`, `html`, `markdown`, `meta`,
-`name`, `order`, `path`, `postId`, `postStatus`, `postType`,
-`postTypeArgs`, `slug`, `source`, `source_fingerprint`, `sync`, `template`,
-`templateFor`, `templateLock`, `title`, and `trusted`. Unknown keys are
-stored under the page `meta` array.
+Across `page.json`, frontmatter, and loader entries, recognized keys include `blockEditingMode`, `collection`, `content`, `contentType`, `defaults`, `file`, `html`, `markdown`, `meta`, `name`, `order`, `path`, `postId`, `postStatus`, `postType`, `postTypeArgs`, `slug`, `template`, `templateFor`, `templateLock`, and `title`. Any key not listed above is stored under the page's `meta` array.
 
 ## Content Sources
 
-A page definition decides which WordPress post should exist. The content source
-decides which block markup is written to that post.
+A page definition decides which WordPress post should exist. The content source decides which block markup is written to that post.
 
-When a page folder has a `page.json`, Blockstudio looks for a sibling source
-file in this order:
+When a page folder has a `page.json`, Blockstudio looks for a sibling source file in this order:
 
 | File | Use |
-| ---- | --- |
+| --- | --- |
 | `index.php` | PHP or HTML-like block markup |
 | `index.blade.php` | Blade template content |
 | `index.twig` | Twig template content |
 | `index.md` | Markdown content |
 
-`page.json` can also provide inline `markdown` or `html` instead of a sibling
-file:
+`page.json` can also provide inline `markdown` or `html` instead of a sibling file:
 
 ```json title="page.json"
 {
@@ -93,32 +79,23 @@ Collections add two more source modes:
 - Markdown files discovered directly from the collection tree.
 - Loader entries returned from `loader.php`.
 
-Loader entries can use `markdown`, `html`, or `content` with `contentType`.
-They can also point at a local `file` or `template`. File and template sources
-infer their type from the extension unless `contentType` is set explicitly.
+Loader entries can use `markdown`, `html`, or `content` with `contentType`. They can also point at a local `file` or `template`. File and template sources infer their type from the extension unless `contentType` is set explicitly.
 
-Supported `contentType` values are `php`, `blade`, `twig`, `markdown`, `html`,
-and `generated`. Markdown is converted to HTML first, then parsed into native
-WordPress blocks. PHP, Blade, Twig, and HTML sources go through the normal
-Blockstudio page parser.
+Supported `contentType` values are `php`, `blade`, `twig`, `markdown`, and `html`. Markdown is converted to HTML first, then parsed into native WordPress blocks. PHP, Blade, Twig, and HTML sources go through the normal Blockstudio page parser.
 
 ## Markdown Pages
 
-Use Markdown when prose should live in files but still become editable
-WordPress block content after sync. Markdown source is converted to block
-markup during sync. The synced post stores blocks, not the raw Markdown body.
+Use Markdown when prose should live in files but still become editable WordPress block content after sync. Markdown source is converted to block markup during sync. The synced post stores blocks, not the raw Markdown body.
 
 Markdown can be used in three ways:
 
 | Source | Frontmatter required? | Notes |
-| ------ | --------------------- | ----- |
+| --- | --- | --- |
 | Standalone `pages/example/index.md` | Yes | Frontmatter provides the page identity. |
 | `page.json` plus `index.md` | No | `page.json` defines the page and Markdown provides content. |
 | Markdown inside a collection | No | The collection infers `name` and `path` from the file location. |
 
-A standalone `index.md` without frontmatter is skipped because Blockstudio has
-no page identity to sync. Collection Markdown does not need frontmatter because
-the collection manifest and file path provide that identity.
+A standalone `index.md` without frontmatter is skipped because Blockstudio has no page identity to sync. Collection Markdown does not need frontmatter because the collection manifest and file path provide that identity.
 
 ```md title="pages/about/index.md"
 ---
@@ -133,9 +110,7 @@ postStatus: publish
 This Markdown content is synced as native WordPress blocks.
 ```
 
-You can also pair `page.json` with `index.md`. In that case, `page.json`
-defines the page and `index.md` provides the content. Frontmatter in
-`index.md` overrides matching `page.json` values.
+You can also pair `page.json` with `index.md`. In that case, `page.json` defines the page and `index.md` provides the content. Frontmatter in `index.md` overrides matching `page.json` values.
 
 ```json title="pages/docs/reference/page.json"
 {
@@ -157,82 +132,62 @@ order: 20
 This page uses `page.json` with Markdown content.
 ```
 
-For collection Markdown, the file path becomes the logical page path unless
-frontmatter overrides it:
+For collection Markdown, the file path becomes the logical page path unless frontmatter overrides it:
 
 | File | Default path |
-| ---- | ------------ |
+| --- | --- |
 | `pages/docs/index.md` | `.` |
 | `pages/docs/getting-started.md` | `getting-started` |
 | `pages/docs/guide/install/index.md` | `guide/install` |
 | `pages/docs/guide/install.md` | `guide/install` |
 
-Unknown frontmatter keys are preserved in the page's `meta` array. This lets
-you attach data such as `section` or `description` and read it from the PHP
-API.
+Unknown frontmatter keys are preserved in the page's `meta` array. This lets you attach data such as `section` or `description` and read it from the PHP API.
 
-Markdown is rendered with the bundled League CommonMark GitHub Flavored
-Markdown converter when available. GitHub Flavored Markdown is enabled, raw
-HTML is allowed, unsafe links are blocked, and headings receive stable IDs when
-they do not already have one. If Symfony YAML is unavailable, frontmatter falls
-back to a simple scalar parser, so nested YAML structures require the bundled
-parser.
+Markdown is parsed as GitHub Flavored Markdown. Raw HTML is allowed, unsafe links are stripped, and headings without an explicit ID receive a stable one. Nested YAML frontmatter requires the bundled YAML parser.
 
 ### Raw Markdown
 
-Markdown file sources can expose their original source Markdown for external
-tools and documentation consumers. Inline Markdown does not have a source file,
-so it syncs to blocks but does not produce a raw `.md` response.
+Markdown file sources can expose their original source Markdown for external tools and documentation consumers. Inline Markdown does not have a source file, so it syncs to blocks but does not produce a raw `.md` response.
 
-Request the page with a `.md` suffix:
-
-```txt
-https://example.com/docs/reference.md
-```
-
-Or send an `Accept: text/markdown` header to the normal page URL:
+Request the page with a `.md` suffix, such as `https://example.com/docs/reference.md`. Or send an `Accept: text/markdown` header to the normal page URL:
 
 ```bash
 curl -H "Accept: text/markdown" https://example.com/docs/reference/
 ```
 
-Frontmatter is removed from the response. Successful raw Markdown responses
-send `Content-Type: text/markdown`, `X-Robots-Tag: noindex`, and a canonical
-`Link` header back to the HTML page. Missing `.md` routes return a real 404.
+Frontmatter is removed from the response. Successful raw Markdown responses send `Content-Type: text/markdown`, `X-Robots-Tag: noindex`, and a canonical `Link` header back to the HTML page. Missing `.md` routes return a real 404.
 
 Collection Markdown keeps the same URL shape for raw Markdown:
 
 | Page URL | Raw Markdown URL |
-| -------- | ---------------- |
+| --- | --- |
 | `/docs/` | `/docs.md` |
 | `/docs/getting-started/` | `/docs/getting-started.md` |
 | `/docs/guide/install/` | `/docs/guide/install.md` |
 
-Disable raw Markdown responses with the `blockstudio/pages/serve_markdown`
-filter:
+Disable raw Markdown responses with the `blockstudio/pages/serve_markdown` filter:
 
 ```php title="functions.php"
-add_filter('blockstudio/pages/serve_markdown', '__return_false');
+add_filter( 'blockstudio/pages/serve_markdown', '__return_false' );
 ```
 
 ## Page Collections
 
-A collection is a folder with a `pages.json` manifest. It groups many page
-sources under one collection slug, applies defaults, supports nested paths,
-and can register a dedicated post type automatically.
+A collection is a folder with a `pages.json` manifest. It groups many page sources under one collection slug, applies defaults, supports nested paths, and can register a dedicated post type automatically.
 
-```txt title="pages/"
-docs/
-  pages.json
-  layout.php
-  index.md
-  guide/
-    install/
-      index.md
-  reference/
-    page.json
+```
+pages/
+  docs/
+    pages.json
+    layout.php
     index.md
-  loader.php
+    guide/
+      install/
+        index.md
+    reference/
+      page.json
+      index.md
+    loader.php
 ```
 
 ```json title="pages/docs/pages.json"
@@ -250,83 +205,48 @@ docs/
   "defaults": {
     "postStatus": "publish",
     "templateLock": "contentOnly"
-  },
-  "navigation": "primary"
+  }
 }
 ```
 
-| Property                       | Type      | Description                                                                                        |
-| ------------------------------ | --------- | -------------------------------------------------------------------------------------------------- |
-| `collection` / `slug` / `name` | `string`  | Collection slug. `collection` is the clearest form and becomes the public URL base.                |
-| `title`                        | `string`  | Human-readable collection title.                                                                   |
-| `postType`                     | `string`  | Post type for generated pages. Defaults to `page`. If it does not exist, Blockstudio registers it. |
-| `postTypeArgs`                 | `object`  | Arguments passed to `register_post_type()` when Blockstudio registers the collection post type.    |
-| `defaults`                     | `object`  | Default page properties applied to every page in the collection.                                   |
-| `source`                       | `object`  | Source metadata for the collection.                                                                |
-| `order`                        | `integer` | Optional collection ordering metadata.                                                             |
-| `meta`                         | `object`  | Custom collection metadata. Unknown manifest keys are also stored in `meta`.                       |
+| Property | Type | Description |
+| --- | --- | --- |
+| `collection` / `slug` / `name` | `string` | Collection slug. `collection` is the clearest form and becomes the public URL base. |
+| `title` | `string` | Human-readable collection title. |
+| `postType` | `string` | Post type for generated pages. Defaults to `page`. If it does not exist, Blockstudio registers it. |
+| `postTypeArgs` | `object` | Arguments passed to `register_post_type()` when Blockstudio registers the collection post type. |
+| `defaults` | `object` | Default page properties applied to every page in the collection. |
+| `meta` | `object` | Custom collection metadata. Unknown manifest keys are also stored in `meta`. |
 
-Collection page paths are logical paths. A page with `path: "guide/install"`
-is synced as a child of `guide`, and `guide` is synced as a child of the
-collection root when those parent pages exist.
+Collection page paths are logical paths. A page with `path: "guide/install"` is synced as a child of `guide`, and `guide` is synced as a child of the collection root when those parent pages exist.
 
-If a hierarchical collection has a nested page but an intermediate parent
-source does not exist, Blockstudio generates an empty container page for that
-path. This keeps the WordPress hierarchy complete. Non-hierarchical
-collection post types do not generate empty containers; their routing is based
-on the stored collection path, so nested paths such as `guide/install` and
-`setup/install` can coexist even though both end in `install`.
+If a hierarchical collection has a nested page but an intermediate parent source does not exist, Blockstudio generates an empty container page for that path, which keeps the WordPress hierarchy complete. Non-hierarchical post types (those without `page-attributes` parent support) do not generate empty containers. They route by the stored collection path, so nested paths such as `guide/install` and `setup/install` can coexist even though both end in `install`.
 
 ### Collection Post Types and URLs
 
-Set `postType` on the collection manifest to sync every page in the collection
-to that post type. You do not need to repeat the same value inside
-`defaults`. Individual pages can still override `postType` in frontmatter or
-`page.json`.
+Set `postType` on the collection manifest to sync every page in the collection to that post type. You do not need to repeat the same value inside `defaults`. Individual pages can still override `postType` in frontmatter or `page.json`.
 
-When the post type does not exist, Blockstudio registers it with
-`show_in_rest: true`, a page-like editor setup, and the collection slug as the
-public URL base. `postTypeArgs` can override the registration arguments.
-Collection post type rewrite rules are flushed automatically when the
-registered collection post types or rewrite args change, so you do not need to
-resave WordPress permalinks.
+When the post type does not exist, Blockstudio registers it with `show_in_rest: true`, a page-like editor setup, and the collection slug as the public URL base. `postTypeArgs` can override the registration arguments. Collection post type rewrite rules are flushed automatically when the registered collection post types or rewrite args change, so you do not need to resave WordPress permalinks.
 
 Collection URLs use the collection slug plus each page's logical `path`:
 
-| Source path               | Public URL               |
-| ------------------------- | ------------------------ |
-| `path: "."`               | `/docs/`                 |
+| Source path | Public URL |
+| --- | --- |
+| `path: "."` | `/docs/` |
 | `path: "getting-started"` | `/docs/getting-started/` |
-| `path: "guide/install"`   | `/docs/guide/install/`   |
+| `path: "guide/install"` | `/docs/guide/install/` |
 
-This URL model works for both hierarchical and non-hierarchical collection
-post types. Blockstudio also redirects the older doubled form, such as
-`/docs/docs/` or `/docs/docs/getting-started/`, to the canonical URL.
+This URL model works for both hierarchical and non-hierarchical collection post types. Blockstudio also redirects doubled URLs such as `/docs/docs/` or `/docs/docs/getting-started/` to the canonical URL.
 
-Markdown collection pages keep the same URL shape for raw Markdown:
+Collection pages expose raw Markdown at the same URLs (see [Raw Markdown](#raw-markdown)).
 
-| Page URL                 | Raw Markdown URL           |
-| ------------------------ | -------------------------- |
-| `/docs/`                 | `/docs.md`                 |
-| `/docs/getting-started/` | `/docs/getting-started.md` |
-| `/docs/guide/install/`   | `/docs/guide/install.md`   |
-
-If you change a collection from `postType: "page"` to a custom post type,
-Blockstudio migrates already synced collection posts in place when their
-stored page identity matches. That preserves post IDs, metadata, and existing
-content while avoiding duplicate old-typed posts. Stale collection posts are
-cleaned up across all post statuses according to the
-`blockstudio/pages/orphan_action` filter.
+If you change a collection from `postType: "page"` to a custom post type, Blockstudio migrates already synced collection posts in place when their stored page identity matches. That preserves post IDs, metadata, and existing content while avoiding duplicate old-typed posts. Stale collection posts are cleaned up across all post statuses according to the `blockstudio/pages/orphan_action` filter.
 
 ## Collection Loaders
 
-Collections can include a trusted local `loader.php`. Use it when collection
-pages come from another local source, such as an external docs folder, a
-package, or a generated manifest.
+Collections can include a trusted local `loader.php`. Use it when collection pages come from another local source, such as an external docs folder, a package, or a generated manifest.
 
-The loader runs during page discovery and sync. It should be deterministic and
-local. Avoid fetching remote content from `loader.php`, because admin requests
-can trigger page sync.
+The loader runs during page discovery and sync. It should be deterministic and local. Avoid fetching remote content from `loader.php`, because admin requests can trigger page sync.
 
 ```php title="pages/docs/loader.php"
 <?php
@@ -359,7 +279,7 @@ return array(
 A loader can return an array with `pages`, `meta`, and `paths` keys:
 
 | Key | Description |
-| --- | ----------- |
+| --- | --- |
 | `pages` | A list of page arrays. Each page supports the same recognized keys as `page.json` and Markdown frontmatter. |
 | `meta` | Metadata merged into every loader-generated page's `meta` array. |
 | `paths` | Extra local directories to discover as part of this collection. |
@@ -369,36 +289,24 @@ As a shorthand, the loader may return a bare list of page arrays.
 Loader page entries can provide content in these ways:
 
 | Shape | Description |
-| ----- | ----------- |
+| --- | --- |
 | `markdown` | Inline Markdown content. |
 | `html` | Inline HTML content. |
 | `content` + `contentType` | Generic inline content. `contentType` must resolve to `markdown` or `html`. |
 | `file` | Local file source. Type is inferred from the extension unless `contentType` is set. |
 | `template` | Alias for `file`. |
 
-Loader file references can point to PHP, Blade, Twig, Markdown, or HTML
-sources. Relative paths resolve from the collection root. Absolute paths and
-paths outside the collection root are allowed only when the
-`blockstudio/pages/allow_external_loader_path` filter permits them.
+Loader file references can point to PHP, Blade, Twig, Markdown, or HTML sources. Relative paths resolve from the collection root. Absolute paths and paths outside the collection root are allowed only when the `blockstudio/pages/allow_external_loader_path` filter permits them.
 
-Loader pages default to `generated: true`. When a generated loader page
-disappears from loader output, Blockstudio treats the synced post as an orphan
-on the next sync. The cleanup behavior is controlled by
-`blockstudio/pages/orphan_action`, which can return `trash`, `delete`, or
-`keep`.
+Loader pages default to `generated: true`. When a generated loader page disappears from loader output, Blockstudio treats the synced post as an orphan on the next sync, cleaned up according to the `blockstudio/pages/orphan_action` filter.
 
-Directories listed in `paths` are discovered like normal collection folders.
-They can contain Markdown files or `page.json` folders. If those paths are
-outside the collection root, the same external path filter applies.
+Directories listed in `paths` are discovered like normal collection folders. They can contain Markdown files or `page.json` folders. If those paths are outside the collection root, the same external path filter applies.
 
 ## Layouts
 
-A `layout.php` file wraps the frontend rendering of a file-based page. It does
-not replace the synced `post_content` stored in WordPress, and it does not wrap
-the editor canvas. The layout only runs on singular frontend requests.
+A `layout.php` file wraps the frontend rendering of a file-based page. It does not replace the synced `post_content` stored in WordPress, and it does not wrap the editor canvas. The layout only runs on singular frontend requests.
 
-For collections, put `layout.php` next to `pages.json` to wrap every frontend
-page in that collection:
+For collections, put `layout.php` next to `pages.json` to wrap every frontend page in that collection:
 
 ```php title="pages/docs/layout.php"
 <?php $current = blockstudio_current_page(); ?>
@@ -422,9 +330,7 @@ page in that collection:
 </main>
 ```
 
-`blockstudio_page_content()` prints the page body that WordPress would normally
-render through `the_content`. If a layout does not output
-`blockstudio_page_content()`, the page content is intentionally hidden.
+`blockstudio_page_content()` prints the page body that WordPress would normally render through `the_content`. If a layout does not output `blockstudio_page_content()`, the page content is intentionally hidden.
 
 Layouts can use the page helper functions:
 
@@ -437,14 +343,7 @@ blockstudio_page_children('docs-guide', 'docs');
 blockstudio_page_content();
 ```
 
-Nested non-collection pages can also inherit the nearest ancestor `layout.php`
-inside the `pages` tree. For collection pages, the collection root layout is
-stored on each synced post and watched as part of the page fingerprint, so
-layout changes are picked up on the next sync.
-
-On frontend requests, Blockstudio hydrates the page registry from synced
-published posts. Draft and private pages are available during admin discovery
-and sync, but frontend layout helpers only include published pages.
+Nested non-collection pages can also inherit the nearest ancestor `layout.php` inside the `pages` tree. For collection pages, the collection root layout is stored on each synced post and watched as part of the page fingerprint, so layout changes are picked up on the next sync.
 
 ## Block Editing Mode
 
@@ -467,11 +366,11 @@ The `blockEditingMode` property controls how blocks can be edited in the editor.
 </block>
 ```
 
-| Value           | Description                                                                     |
-| --------------- | ------------------------------------------------------------------------------- |
-| `"default"`     | Full editing. Blocks can be selected, moved, and edited                         |
+| Value | Description |
+| --- | --- |
+| `"default"` | Full editing. Blocks can be selected, moved, and edited |
 | `"contentOnly"` | Text editing only. Block text is editable but settings and structure are locked |
-| `"disabled"`    | No editing. Blocks are completely non-interactive                               |
+| `"disabled"` | No editing. Blocks are completely non-interactive |
 
 Per-element overrides are set as HTML attributes on any element (`<h1>`, `<p>`, `<div>`, etc.) or on `<block>` elements. Ancestor container blocks of overridden elements are automatically set to `contentOnly` so their children remain accessible. This cascade walks up from the overridden element to the page root, so you only need to set `blockEditingMode` on the elements you want to make editable.
 
@@ -479,34 +378,26 @@ Per-element overrides are set as HTML attributes on any element (`<h1>`, `<p>`, 
 
 The `templateLock` property controls how users can edit the page in the editor:
 
-| Value           | Add/Remove | Move | Edit Content |
-| --------------- | ---------- | ---- | ------------ |
-| `"all"`         | No         | No   | No           |
-| `"insert"`      | No         | Yes  | Yes          |
-| `"contentOnly"` | No         | No   | Yes          |
-| `false`         | Yes        | Yes  | Yes          |
+| Value | Add/Remove | Move | Edit Content |
+| --- | --- | --- | --- |
+| `"all"` | No | No | No |
+| `"insert"` | No | Yes | Yes |
+| `"contentOnly"` | No | No | Yes |
+| `false` | Yes | Yes | Yes |
 
 When a `templateLock` is set, Blockstudio disables the ability to unlock blocks via the editor UI.
 
 ## Sync Behavior
 
-Pages are synced when you visit the WordPress admin. Blockstudio only updates
-WordPress when the relevant page source files or settings change.
+Pages are synced when you visit the WordPress admin. Blockstudio only updates WordPress when the relevant page source files or settings change.
 
 To prevent a page from being overwritten after manual edits, set `"sync": false` in `page.json`.
 
-For collection pages, Blockstudio watches the manifest, loader, page source,
-layout file, metadata, and related source paths. When any of those inputs
-change, the generated WordPress pages are synced again.
+For collection pages, Blockstudio watches the manifest, loader, page source, layout file, metadata, and related source paths. When any of those inputs change, the generated WordPress pages are synced again.
 
-When a collection source is removed, Blockstudio removes the generated page so
-old collection pages do not linger after the source file is gone.
-By default, orphaned collection pages are moved to trash. Use
-`blockstudio/pages/orphan_action` to return `trash`, `delete`, or `keep`.
+When a collection source is removed, Blockstudio removes the generated page so old collection pages do not linger after the source file is gone. By default, orphaned collection pages are moved to trash. Use `blockstudio/pages/orphan_action` to return `trash`, `delete`, or `keep`.
 
-On frontend requests, Blockstudio hydrates the page registry from already
-synced published posts. Draft and private pages are available in admin and
-sync contexts, but frontend helpers only hydrate published pages.
+On frontend requests, Blockstudio hydrates the page registry from already synced published posts. Draft and private pages are available in admin and sync contexts, but frontend helpers only hydrate published pages.
 
 ## Post ID Pinning
 
@@ -557,10 +448,10 @@ Keys must be globally unique across the entire template. A key protects the enti
 
 When a template file changes and the page re-syncs:
 
-| Block             | Behavior                                                                                               |
-| ----------------- | ------------------------------------------------------------------------------------------------------ |
-| **Keyed block**   | User's content is preserved (innerHTML, innerContent, innerBlocks). Template's attributes are applied. |
-| **Unkeyed block** | Replaced entirely with the template version (same as without keys)                                     |
+| Block | Behavior |
+| --- | --- |
+| **Keyed block** | User's content is preserved (innerHTML, innerContent, innerBlocks). Template's attributes are applied. |
+| **Unkeyed block** | Replaced entirely with the template version (same as without keys) |
 
 ### Examples
 
@@ -579,15 +470,15 @@ When a template file changes and the page re-syncs:
 
 ### Edge Cases
 
-| Scenario                          | Behavior                                         |
-| --------------------------------- | ------------------------------------------------ |
-| New keyed block added to template | Appears with the template's default content      |
-| Keyed block removed from template | Deleted from the post                            |
-| Block type changes (same key)     | Template wins entirely, no content merge         |
-| Duplicate keys                    | Second occurrence is treated as unkeyed          |
-| No keys in template               | Full replacement (same behavior as without keys) |
-| Force sync                        | Full replacement, keys are ignored               |
-| Locked post                       | No sync at all                                   |
+| Scenario | Behavior |
+| --- | --- |
+| New keyed block added to template | Appears with the template's default content |
+| Keyed block removed from template | Deleted from the post |
+| Block type changes (same key) | Template wins entirely, no content merge |
+| Duplicate keys | Second occurrence is treated as unkeyed |
+| No keys in template | Full replacement (same behavior as without keys) |
+| Force sync | Full replacement, keys are ignored |
+| Locked post | No sync at all |
 
 ### Combining with Editing Controls
 
@@ -731,14 +622,14 @@ register_post_meta( 'page', 'hero_title', array(
 
 ### Keys vs. bindings
 
-|                          | Keys                               | Bindings                           |
-| ------------------------ | ---------------------------------- | ---------------------------------- |
-| Content stored in        | Block markup (`post_content`)      | Post meta (`wp_postmeta`)          |
-| Survives template sync   | Yes (merged by key)                | Yes (data lives in meta)           |
-| Queryable via `WP_Query` | No                                 | Yes (`meta_query`)                 |
-| Available in REST API    | No                                 | Yes                                |
-| Requires registration    | No                                 | Yes (`register_post_meta`)         |
-| User can move blocks     | No (template re-imposes structure) | No (template re-imposes structure) |
+| | Keys | Bindings |
+| --- | --- | --- |
+| Content stored in | Block markup (`post_content`) | Post meta (`wp_postmeta`) |
+| Survives template sync | Yes (merged by key) | Yes (data lives in meta) |
+| Queryable via `WP_Query` | No | Yes (`meta_query`) |
+| Available in REST API | No | Yes |
+| Requires registration | No | Yes (`register_post_meta`) |
+| User can move blocks | No (template re-imposes structure) | No (template re-imposes structure) |
 
 Both approaches can be used in the same template. Use keys for sections where the block structure matters (e.g., a group with multiple children). Use bindings for individual fields where you also want the data accessible outside the block editor.
 
@@ -774,7 +665,7 @@ add_filter( 'blockstudio/pages/paths', function( $paths ) {
 Page discovery, sync, and collection routing expose these extension points:
 
 | Hook | Type | Description |
-| ---- | ---- | ----------- |
+| --- | --- | --- |
 | `blockstudio/pages/paths` | Filter | Add directories that Blockstudio scans for page sources. |
 | `blockstudio/pages/collection_post_type_args` | Filter | Adjust `register_post_type()` args for a collection CPT. |
 | `blockstudio/pages/template_candidates` | Filter | Adjust template filenames considered for a page source. |
@@ -836,10 +727,7 @@ blockstudio_page_content();
 blockstudio_current_page();
 ```
 
-Page arrays returned by `Blockstudio\Pages::pages()`,
-`Blockstudio\Pages::tree()`, `Blockstudio\Pages::children()`, and the global
-helpers include a `permalink` key after sync. There is no separate
-`Pages::permalink()` method.
+Page arrays returned by `Blockstudio\Pages::pages()`, `Blockstudio\Pages::tree()`, `Blockstudio\Pages::children()`, and the global helpers include a `permalink` key after sync. There is no separate `Pages::permalink()` method.
 
 <GuideBanner
   href="/guides/file-based-pages"

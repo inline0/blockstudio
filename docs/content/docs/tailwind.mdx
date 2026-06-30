@@ -37,11 +37,7 @@ This includes Tailwind's preflight (CSS reset) and all matched utility classes.
 
 Inside the block editor, a bundled Tailwind CDN script (browser build of Tailwind CSS v4) runs client-side. This provides instant live preview as you type class names, without any server round-trips. The CDN is only loaded in the editor and is never served on the frontend.
 
-When `assets.reset.enabled` is active, Blockstudio also restores Tailwind's
-common display and position utilities inside the editor canvas. This keeps
-wrapper-level classes such as `flex`, `grid`, `absolute`, `fixed`, and `sticky`
-from being overridden by WordPress editor block wrapper rules, so utility-driven
-layouts match the frontend more closely.
+When `assets.reset.enabled` is active, Blockstudio also restores Tailwind's common display and position utilities inside the editor canvas. This keeps wrapper-level classes such as `flex`, `grid`, `absolute`, `fixed`, and `sticky` from being overridden by WordPress editor block wrapper rules, so utility-driven layouts match the frontend more closely.
 
 ## Enabling Tailwind
 

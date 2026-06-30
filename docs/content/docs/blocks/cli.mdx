@@ -304,8 +304,7 @@ Prune content-set owned database posts and terms that no longer exist in files:
 wp bs content push --prune --yes
 ```
 
-`--prune` is additive-apply first, cleanup second. The command refuses a
-destructive prune unless `--yes` is present.
+With `--prune`, Blockstudio applies all file changes first, then removes content-set owned entities that no longer exist in the files. It refuses to run a destructive prune unless `--yes` is present.
 
 ### Check status
 
@@ -313,5 +312,4 @@ destructive prune unless `--yes` is present.
 wp bs content status
 ```
 
-The table reports whether each file-backed entity is missing from the database,
-unchanged, would update, conflicted, locked, or invalid.
+The table reports each file-backed entity as `unchanged`, `would-update`, `missing-db`, `conflict`, `locked`, or `orphaned`.

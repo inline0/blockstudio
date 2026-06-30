@@ -221,9 +221,7 @@ add_filter('blockstudio/block_tags/tag_aliases', function($aliases) {
 
 ### blockstudio/block_tags/prefixes
 
-This filter lets you register prefix to namespace shorthands for block tags.
-Each key is a lowercase prefix without dashes. Each value can be a namespace
-string or an ordered list of namespaces.
+This filter lets you map prefix shorthands to one or more block namespaces. Each key is a lowercase prefix without dashes. Each value can be a namespace string or an ordered list of namespaces.
 
 ```php title="functions.php"
 add_filter('blockstudio/block_tags/prefixes', function($prefixes) {

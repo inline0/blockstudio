@@ -1,14 +1,14 @@
 ---
 title: Blockstudio 7.4
-description: Page collections, Markdown page sources, Content Sync, block tag namespace prefixes, and editor/runtime fixes.
+description: Page collections, Markdown page sources, Content Sync, block tag prefixes, and runtime and editor fixes.
 date: 2026-06-21
 author: Dennis
 ---
 
-Blockstudio 7.4 is about making file-backed projects more portable. The release
-adds page collections for docs-style sites, Markdown page sources, Content Sync
-for selected WordPress content, and targeted authoring/runtime fixes that came
-directly from real project usage.
+Blockstudio 7.4 is about making file-backed projects more portable. Where 7.2
+made larger projects easier to inspect and distribute and 7.3 added a UI layer
+on top, 7.4 focuses on getting more of a project, its pages and its curated
+content, out of the database and into version-controlled files.
 
 The headline feature is page collections: a way to point Blockstudio at a folder
 of page sources and generate a complete nested WordPress page structure from it.
@@ -37,7 +37,7 @@ The short version:
   across ordered namespaces without per-block aliases.
 - **More reliable syncing**: page changes are detected across manifests,
   loaders, layouts, metadata, and source files.
-- **Editor and rendering fixes**: dynamic options stay fresh, query block
+- **Runtime and editor fixes**: dynamic options stay fresh, query block
   classes survive programmatic rendering, `bsui/select` behaves better in dense
   forms, RichText props reach the editor, and repeater row deletion with
   RichText now persists after saving.
@@ -99,7 +99,7 @@ every page in that collection, so projects do not need to repeat it in
 Collection post types use the collection slug as their public URL base. A
 `docs` collection resolves its root page at `/docs/`, a page with
 `path: "getting-started"` at `/docs/getting-started/`, and nested paths under
-the same base. Older doubled URLs such as `/docs/docs/` redirect to the
+the same base. Doubled URLs such as `/docs/docs/` redirect to the
 canonical location. Rewrite rules are flushed automatically when collection post
 type routing changes, so a new collection does not require a manual permalink
 save.
@@ -178,17 +178,17 @@ directly, or point Blockstudio at additional local directories to discover.
 ```php title="pages/docs/loader.php"
 <?php
 
-return array(
-  'pages' => array(
-    array(
+return [
+  'pages' => [
+    [
       'name' => 'docs-api',
       'title' => 'API',
       'path' => 'api',
       'content' => "# API\n\nGenerated markdown content.",
       'contentType' => 'markdown',
-    ),
-  ),
-);
+    ],
+  ],
+];
 ```
 
 This is useful when the source is already generated elsewhere: a package docs
@@ -199,6 +199,8 @@ page with a `.md` suffix, or send `Accept: text/markdown`. Frontmatter is
 removed from the response, so tools get the readable document body. This works
 for collection post types too, including URLs such as `/docs.md` and
 `/docs/getting-started.md`.
+
+[Read the Pages docs](/docs/pages-and-patterns/pages)
 
 ## Content Sync
 
@@ -260,7 +262,7 @@ in real projects:
   synced posts instead of creating duplicates
 - page order is persisted through `menu_order`
 
-## Block tag namespace prefixes
+## Block tag prefixes
 
 Block tags now support configurable namespace prefixes. A project can register
 one short prefix and let Blockstudio resolve the block inside one or more
@@ -289,40 +291,32 @@ filters still apply to prefix-resolved blocks.
 
 7.4 also includes a set of fixes that came out of real project usage.
 
-Dynamic query-populated options now stay fresh when posts, terms, users, or
-related meta change. `populate.fetch: true` query selects also fetch live
-options for empty editor searches.
+- Dynamic query-populated options stay fresh when posts, terms, users, or
+  related meta change, and `populate.fetch: true` query selects fetch live
+  options for empty editor searches.
+- Programmatic `core/query` and `core/comments` block tags preserve `className`
+  in the generated wrapper markup.
+- Template pseudo-components preserve camelCase props, so props such as
+  `allowedFormats` and `withoutInteractiveFormatting` reach the editor component
+  instead of being dropped beforehand.
+- `bsui/select` handles option data and overflowing menus more reliably,
+  especially inside denser editor controls.
+- `blockstudio/phpstan` recognizes fields declared inside `tabs` containers, so
+  template, Twig/Blade, and block tag validation understand the same field shape
+  Blockstudio uses in projects.
+- Deleting a repeater row with RichText persists after saving. Stale RichText
+  values can no longer bring the deleted row back.
 
-Programmatic `core/query` and `core/comments` block tags now preserve
-`className` in the generated wrapper markup.
+## Why this release matters
 
-Template pseudo-components now preserve camelCase props. That means props such
-as `allowedFormats` and `withoutInteractiveFormatting` reach the editor
-component instead of being lost before reaching the editor.
+The theme of 7.4 is portability.
 
-`bsui/select` now handles option data and overflowing menus more reliably,
-especially inside denser editor controls.
+Page collections turn whole documentation sites into folders of source files.
+Markdown pages make that content easy to write and easy to read back out.
+Content Sync extends the same file-first model to curated database content, so
+posts, terms, and relationships can live in git and move between environments.
+Block tag prefixes keep large block libraries readable in templates.
 
-`blockstudio/phpstan` now recognizes fields declared inside `tabs` containers,
-so template, Twig/Blade, and block tag validation understand the same field
-shape Blockstudio uses in projects.
-
-And finally, deleting a repeater row with RichText now persists after saving.
-Stale RichText values can no longer bring the deleted row back on save.
-
-## Documentation
-
-The Pages documentation has been expanded for collections, Markdown pages,
-layouts, loaders, raw Markdown, and the new helper functions:
-
-[Read the Pages docs](/docs/pages-and-patterns/pages)
-
-The Content Sync and Block Tags docs cover the new CLI workflow and prefix
-resolution behavior:
-
-[Read the Content Sync docs](/docs/content-sync)
-
-[Read the Block Tags docs](/docs/blocks/rendering#prefix-shorthands)
-
-The related settings, performance, RichText, asset, populate, and PHPStan docs
-also reflect the 7.4 behavior.
+Blockstudio is still file-based. Blocks are still folders. Pages are still
+files. 7.4 just lets more of a project, its page structures and its curated
+content, live in those files and travel with them.
