@@ -7,6 +7,7 @@ use PHPUnit\Framework\TestCase;
 class SiteTemplatesTest extends TestCase {
 
 	private array $created_posts = array();
+	private array $temp_roots    = array();
 
 	protected function setUp(): void {
 		parent::setUp();
@@ -24,8 +25,15 @@ class SiteTemplatesTest extends TestCase {
 
 		$this->created_posts = array();
 
+		foreach ( $this->temp_roots as $root ) {
+			$this->delete_directory( $root );
+		}
+
+		$this->temp_roots = array();
+
 		remove_filter( 'blockstudio/settings/cache/enabled', '__return_false' );
 		Site_Templates::reset();
+		$this->delete_directory( Blockstudio\Build_Cache::get_cache_dir( 'site-templates' ) );
 
 		parent::tearDown();
 	}
@@ -278,6 +286,7 @@ class SiteTemplatesTest extends TestCase {
 		$root = wp_normalize_path( sys_get_temp_dir() . '/blockstudio-site-template-' . wp_generate_uuid4() );
 
 		wp_mkdir_p( $root . '/external-template' );
+		$this->temp_roots[] = $root;
 
 		if ( $valid ) {
 			file_put_contents(
@@ -295,5 +304,26 @@ class SiteTemplatesTest extends TestCase {
 		}
 
 		return $root;
+	}
+
+	private function delete_directory( string $directory ): void {
+		if ( ! is_dir( $directory ) ) {
+			return;
+		}
+
+		$iterator = new RecursiveIteratorIterator(
+			new RecursiveDirectoryIterator( $directory, FilesystemIterator::SKIP_DOTS ),
+			RecursiveIteratorIterator::CHILD_FIRST
+		);
+
+		foreach ( $iterator as $file ) {
+			if ( $file->isDir() ) {
+				rmdir( $file->getPathname() );
+			} else {
+				unlink( $file->getPathname() );
+			}
+		}
+
+		rmdir( $directory );
 	}
 }
