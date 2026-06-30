@@ -541,7 +541,10 @@ Do not block the core Site Editor feature on Canvas parity.
     template part usage, and reset/customization behavior.
 12. Add docs, generated docs/LLM, readme changelog, and update the 7.5 blog
     draft.
-13. Push a final commit with `[all]` and keep fixing until GitHub CI is green.
+13. Do not run local unit, E2E, or `npm run test:*` commands for this PRD
+    unless the user explicitly requests it.
+14. Push a final commit with `[all]` and keep fixing from GitHub Actions logs
+    until CI is green.
 
 ## Test Plan
 
@@ -650,6 +653,16 @@ REST/API coverage can be used where UI selectors are brittle:
 - Block tag tests still pass
 - full `[all]` GitHub Actions run is green
 
+### Test Execution
+
+- Add the unit and E2E coverage above, but do not run the local test suite on
+  the development machine by default.
+- Do not run local unit tests, local E2E tests, `npm run test:unit`,
+  `npm run test:e2e`, or `npm run wp-env:start` unless the user explicitly asks
+  for local execution.
+- Use the pushed `[all]` commit as the test gate. Debug failures from GitHub
+  Actions logs and push follow-up fixes until CI is green.
+
 ## Docs
 
 Add a new docs page:
@@ -722,6 +735,6 @@ and get all of this with no consumer-side glue:
 9. deleting/resetting the customization reveals the file-backed source again
 10. native WordPress `.html` templates and parts continue to work
 11. docs, LLM output, changelog, and the 7.5 blog draft are updated
-12. local targeted tests pass during development
+12. no local test suite is run unless the user explicitly asks for local
+    execution
 13. the final GitHub Actions run triggered by `[all]` is green
-
