@@ -378,6 +378,7 @@ class Page_Discovery {
 	 * @param string     $base_path  Base path for the page source.
 	 * @param array|null $collection Collection data.
 	 * @param array      $extra_source_mtime_paths Additional fingerprint source paths.
+	 * @param array      $loader_context Loader path context.
 	 *
 	 * @return array|null The page data or null if invalid.
 	 */
@@ -489,6 +490,7 @@ class Page_Discovery {
 	 * @param array|null $collection          Collection data.
 	 * @param bool       $require_frontmatter Whether standalone legacy markdown needs frontmatter.
 	 * @param array      $extra_source_mtime_paths Additional fingerprint source paths.
+	 * @param array      $loader_context Loader path context.
 	 *
 	 * @return array|null Page data.
 	 */
@@ -786,6 +788,7 @@ class Page_Discovery {
 	 * @param string $root                     Discovery root.
 	 * @param array  $collection               Collection data.
 	 * @param array  $extra_source_mtime_paths Additional fingerprint sources.
+	 * @param array  $loader_context           Loader path context.
 	 *
 	 * @return void
 	 */
