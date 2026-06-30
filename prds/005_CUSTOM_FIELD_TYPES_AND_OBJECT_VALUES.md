@@ -618,6 +618,8 @@ Update docs:
 - update `includes/llm/blockstudio-llm.txt`
 - add a release-facing `readme.txt` changelog line when the implementation
   lands
+- start the 7.5 release blog post at `docs/content/blog/blockstudio-7-5.mdx`
+  with the custom field type story, examples, and migration notes
 
 Docs must include:
 
@@ -643,7 +645,7 @@ Docs must include:
 8. Add schema and TypeScript type updates.
 9. Add unit coverage.
 10. Add E2E fixture and browser coverage.
-11. Add docs, LLM file, and changelog.
+11. Add docs, LLM file, changelog, and the first 7.5 blog post draft.
 12. Run the relevant local unit and E2E tests while developing.
 13. Push a final commit with `[all]` and keep fixing until GitHub CI is green.
 
@@ -683,5 +685,6 @@ Release gate:
 
 - unit tests pass
 - E2E tests pass
-- docs, LLM output, schema, generated types, and changelog are updated
+- docs, LLM output, schema, generated types, changelog, and the initial 7.5
+  blog post draft are updated
 - the final GitHub Actions run triggered by `[all]` is green
