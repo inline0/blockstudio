@@ -9,6 +9,7 @@ use Blockstudio\Db;
 use Blockstudio\Render;
 use Blockstudio\Build;
 use Blockstudio\Pages;
+use Blockstudio\Site_Templates;
 use Blockstudio\Field_Type_Registry;
 
 /**
@@ -405,4 +406,52 @@ function blockstudio_page_content(): string {
  */
 function blockstudio_current_page(): ?array {
 	return Pages::current_page();
+}
+
+/**
+ * Get file-backed Site Editor templates.
+ *
+ * @since 7.5.0
+ *
+ * @return array Registered templates.
+ */
+function blockstudio_site_templates(): array {
+	return Site_Templates::templates();
+}
+
+/**
+ * Get file-backed Site Editor template parts.
+ *
+ * @since 7.5.0
+ *
+ * @return array Registered template parts.
+ */
+function blockstudio_site_template_parts(): array {
+	return Site_Templates::parts();
+}
+
+/**
+ * Get a file-backed Site Editor template.
+ *
+ * @since 7.5.0
+ *
+ * @param string $slug Template slug.
+ *
+ * @return array|null Template data.
+ */
+function blockstudio_site_template( string $slug ): ?array {
+	return Site_Templates::get_template( $slug );
+}
+
+/**
+ * Get a file-backed Site Editor template part.
+ *
+ * @since 7.5.0
+ *
+ * @param string $slug Template part slug.
+ *
+ * @return array|null Template part data.
+ */
+function blockstudio_site_template_part( string $slug ): ?array {
+	return Site_Templates::get_part( $slug );
 }

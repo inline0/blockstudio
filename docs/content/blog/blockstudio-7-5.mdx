@@ -1,12 +1,13 @@
 ---
 title: Blockstudio 7.5
-description: Custom field types for project-specific editor controls and structured values.
+description: Custom field types and file-backed Site Editor templates.
 date: 2026-06-30
 author: Dennis
 ---
 
-Blockstudio 7.5 starts with a new extension point for teams that need fields
-that are more specific than Blockstudio core should ship: custom field types.
+Blockstudio 7.5 starts with two pieces that make Blockstudio's file-first
+workflow more complete: custom field types and file-backed Site Editor
+templates.
 
 Reusable custom fields already let projects define a group of existing fields
 once and reuse it with `type: "custom/{name}"`. Custom field types solve a
@@ -29,6 +30,54 @@ The short version:
   their value type and REST schema, including object and array values.
 - **Native integration**: custom field types work inside groups, tabs,
   repeaters, reusable custom fields, templates, and extension template paths.
+- **Site Editor templates**: themes can define `wp_template` and
+  `wp_template_part` sources from `template.json`, `part.json`, and
+  Blockstudio template files.
+
+## File-backed Site Editor templates
+
+Pages and patterns already let teams keep content structures in files. 7.5
+extends that model to the Site Editor itself.
+
+```text
+theme/
+  templates/
+    front-page/
+      template.json
+      index.php
+  parts/
+    header/
+      part.json
+      index.php
+```
+
+```json title="templates/front-page/template.json"
+{
+  "slug": "front-page",
+  "title": "Front Page"
+}
+```
+
+```php title="templates/front-page/index.php"
+<div class="site-shell">
+  <block name="core/template-part" slug="header" />
+
+  <main>
+    <h1>Welcome</h1>
+    <block name="core/post-content" />
+  </main>
+</div>
+```
+
+Blockstudio compiles the source through the same parser used by pages and
+patterns, then exposes the result to WordPress as a normal Site Editor template
+or template part. The Site Editor sees the template, the frontend can render it,
+and WordPress still owns customizations.
+
+That last part matters. File-backed templates are the source fallback. If a user
+saves a template in the Site Editor, WordPress creates the normal
+`wp_template` or `wp_template_part` database customization and that version
+wins. Reset the customization, and the latest file source is visible again.
 
 ## Why custom field types?
 

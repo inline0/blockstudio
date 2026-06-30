@@ -1,0 +1,6 @@
+{
+  "slug": "blockstudio-single",
+  "title": "Blockstudio Single",
+  "description": "Twig file-backed template fixture",
+  "postTypes": ["post"]
+}

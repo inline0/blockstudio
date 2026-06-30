@@ -197,6 +197,11 @@ class Plugin {
 		require_once $classes_dir . 'pattern-discovery.php';
 		require_once $classes_dir . 'pattern-registry.php';
 		require_once $classes_dir . 'patterns.php';
+
+		// File-based Site Editor templates system.
+		require_once $classes_dir . 'site-template-discovery.php';
+		require_once $classes_dir . 'site-template-registry.php';
+		require_once $classes_dir . 'site-templates.php';
 	}
 
 	/**
@@ -270,6 +275,16 @@ class Plugin {
 			function () {
 				if ( class_exists( 'Blockstudio\Patterns' ) ) {
 					Patterns::init();
+				}
+			},
+			PHP_INT_MAX
+		);
+
+		add_action(
+			'init',
+			function () {
+				if ( class_exists( 'Blockstudio\Site_Templates' ) ) {
+					Site_Templates::init();
 				}
 			},
 			PHP_INT_MAX

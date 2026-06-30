@@ -1,11 +1,11 @@
 ---
 title: Hooks
-description: PHP filters and actions for pages, patterns, and the HTML parser.
+description: PHP filters and actions for pages, patterns, Site Templates, and the HTML parser.
 ---
 
 # Hooks
 
-Filters and actions available for customizing pages, patterns, and the HTML parser.
+Filters and actions available for customizing pages, patterns, Site Templates, and the HTML parser.
 
 ## Parser
 
@@ -132,5 +132,60 @@ Action fired after all patterns have been registered.
 ```php
 add_action( 'blockstudio/patterns/registered', function( $registry ) {
     // $registry is the Pattern_Registry instance
+} );
+```
+
+## Site Templates
+
+### blockstudio/site_templates/template_paths
+
+Filter the directories scanned for `template.json` files.
+
+```php
+add_filter( 'blockstudio/site_templates/template_paths', function( $paths ) {
+    $paths[] = get_stylesheet_directory() . '/site-templates';
+    return $paths;
+} );
+```
+
+### blockstudio/site_templates/part_paths
+
+Filter the directories scanned for `part.json` files.
+
+```php
+add_filter( 'blockstudio/site_templates/part_paths', function( $paths ) {
+    $paths[] = get_stylesheet_directory() . '/site-parts';
+    return $paths;
+} );
+```
+
+### blockstudio/site_templates/template_content
+
+Filter a template source string before Blockstudio parses it into blocks.
+
+```php
+add_filter( 'blockstudio/site_templates/template_content', function( $content, $template ) {
+    return $content;
+}, 10, 2 );
+```
+
+### blockstudio/site_templates/part_content
+
+Filter a template part source string before Blockstudio parses it into blocks.
+
+```php
+add_filter( 'blockstudio/site_templates/part_content', function( $content, $part ) {
+    return $content;
+}, 10, 2 );
+```
+
+### blockstudio/site_templates/registered
+
+Action fired after file-backed Site Editor templates have been discovered and
+registered for the request.
+
+```php
+add_action( 'blockstudio/site_templates/registered', function( $registry ) {
+    // $registry is the Site_Template_Registry instance
 } );
 ```

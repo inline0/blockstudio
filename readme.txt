@@ -55,6 +55,7 @@ Download the latest release zip from [GitHub Releases](https://github.com/inline
 
 = 7.5.0 =
 * New: custom field types let themes and plugins register namespaced editor controls with primitive, array, or object values, including storage schemas, repeaters, reusable custom fields, templates, and extension paths
+* New: file-backed Site Editor templates and template parts can be authored with `template.json`, `part.json`, PHP/Twig/Blade/HTML sources, and normal Blockstudio block tags while preserving WordPress customization/reset behavior
 
 = 7.4.2 =
 * Enhancement: collection loader `paths` can now mount external page directories under logical prefixes, with path-level metadata and collision-safe generated page names

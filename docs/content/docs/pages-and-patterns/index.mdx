@@ -5,12 +5,13 @@ description: Create WordPress pages and block patterns from file templates with 
 
 # Pages & Patterns
 
-Blockstudio lets you define WordPress pages and block patterns as files in your theme. Write HTML-like templates, and Blockstudio's parser converts them into native WordPress blocks.
+Blockstudio lets you define WordPress pages, block patterns, and Site Editor templates as files in your theme. Write HTML-like templates, and Blockstudio's parser converts them into native WordPress blocks.
 
 - **Pages** are synced to the database as WordPress posts, keeping your file templates and page content in sync.
 - **Patterns** are registered in memory via `register_block_pattern()`, available in the block inserter for users to place anywhere.
+- **Site Templates** provide file-backed `wp_template` and `wp_template_part` sources for the WordPress Site Editor.
 
-Both features share the same HTML parser and block syntax.
+All three features share the same HTML parser and block syntax.
 
 <GuideBanner
   href="/guides/file-based-pages"
@@ -29,16 +30,24 @@ theme/
 │   └── contact/
 │       ├── page.json
 │       └── index.twig
-└── patterns/
+├── patterns/
     ├── hero/
     │   ├── pattern.json
     │   └── index.php
     └── cta/
         ├── pattern.json
         └── index.blade.php
+├── templates/
+    └── front-page/
+        ├── template.json
+        └── index.php
+└── parts/
+    └── header/
+        ├── part.json
+        └── index.php
 ```
 
-Each subfolder contains a JSON config file (`page.json` or `pattern.json`) and a template file.
+Each subfolder contains a JSON config file (`page.json`, `pattern.json`, `template.json`, or `part.json`) and a template file.
 
 ## Template Engines
 
