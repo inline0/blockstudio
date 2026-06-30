@@ -3,7 +3,7 @@ Contributors: dnnsjsk
 Requires at least: 6.7
 Tested up to: 7.0.0
 Requires PHP: 8.2
-Stable tag: 7.4.1
+Stable tag: 7.4.2
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -52,6 +52,9 @@ Download the latest release zip from [GitHub Releases](https://github.com/inline
 * [Getting Started](https://blockstudio.dev/docs/getting-started)
 
 == Changelog ==
+
+= 7.4.2 =
+* Enhancement: collection loader `paths` can now mount external page directories under logical prefixes, with path-level metadata and collision-safe generated page names
 
 = 7.4.1 =
 * Enhancement: `assets.reset` now restores common utility-class display and position values in the editor canvas, so wrapper-level `flex`, `grid`, `absolute`, `fixed`, and `sticky` layouts match the frontend more closely
