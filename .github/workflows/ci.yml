@@ -71,7 +71,7 @@ jobs:
         run: |
           PLUGIN_DIR=$(cd tests/wp-env && npx @wordpress/env run cli -- wp eval 'echo BLOCKSTUDIO_DIR;' 2>/dev/null | tr -d '\r\n')
           echo "Plugin dir: $PLUGIN_DIR"
-          cd tests/wp-env && npx @wordpress/env run cli --env-cwd="$PLUGIN_DIR" vendor/bin/phpunit
+          cd tests/wp-env && npx @wordpress/env run cli --env-cwd="$PLUGIN_DIR" vendor/bin/phpunit --debug
 
   e2e:
     name: E2E Tests (Shard ${{ matrix.shard }}/${{ matrix.total_shards }})
