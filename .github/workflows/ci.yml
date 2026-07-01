@@ -76,7 +76,7 @@ jobs:
           }
 
           set +e
-          run_phpunit --display-errors --display-warnings
+          run_phpunit --testdox --display-errors --display-warnings
           STATUS=$?
 
           if [ "$STATUS" -ne 0 ]; then
