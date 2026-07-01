@@ -11,6 +11,8 @@ class IslandsTest extends TestCase {
 	private array $filters = array();
 
 	protected function setUp(): void {
+		unset( $_GET['blockstudioMode'], $_GET['postId'] );
+
 		if ( class_exists( Build::class ) ) {
 			Build::refresh_blocks();
 		}
@@ -22,6 +24,7 @@ class IslandsTest extends TestCase {
 		}
 
 		$this->filters = array();
+		unset( $_GET['blockstudioMode'], $_GET['postId'] );
 	}
 
 	private function require_block( string $name ): void {
@@ -296,6 +299,6 @@ class IslandsTest extends TestCase {
 		$html = Islands::inject_runtime( '<html><body><div data-bs-island="blockstudio/island-dynamic"></div></body></html>' );
 
 		$this->assertStringContainsString( 'data-bs-islands-runtime', $html );
-		$this->assertStringContainsString( 'blockstudio/v1/island/render', $html );
+		$this->assertStringContainsString( 'blockstudio/v1/island/render', str_replace( '\\/', '/', $html ) );
 	}
 }
