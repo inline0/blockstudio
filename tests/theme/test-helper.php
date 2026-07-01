@@ -1068,11 +1068,11 @@ add_action(
 						. '[bs_test_render name="blockstudio/island-dynamic" message="Render helper" secret="Helper secret"]'
 						. '[bs_test_block name="blockstudio/island-fallback" message="Buffered helper"]'
 						. '<bs:blockstudio-island-dynamic message="Block tag" secret="Tag secret" />';
-					if ( ! get_post( 3700 ) ) {
+					if ( ! get_post( 4100 ) ) {
 						$wpdb->insert( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery
 							$wpdb->posts,
 							array(
-								'ID'            => 3700,
+								'ID'            => 4100,
 								'post_author'   => 1,
 								'post_date'     => current_time( 'mysql' ),
 								'post_date_gmt' => current_time( 'mysql', 1 ),
@@ -1081,10 +1081,10 @@ add_action(
 								'post_status'   => 'publish',
 								'post_name'     => 'island-test',
 								'post_type'     => 'page',
-								'guid'          => home_url( '/?p=3700' ),
+								'guid'          => home_url( '/?p=4100' ),
 							)
 						);
-						$created['posts'][] = 3700;
+						$created['posts'][] = 4100;
 					}
 
 					// Block field test page (default + override)
