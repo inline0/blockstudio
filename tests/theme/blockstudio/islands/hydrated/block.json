@@ -1,0 +1,20 @@
+{
+  "$schema": "https://blockstudio.dev/schema/block",
+  "name": "blockstudio/island-hydrated",
+  "title": "Island Hydrated",
+  "category": "blockstudio-test-native",
+  "icon": "update",
+  "description": "Hydrated island fixture.",
+  "viewScript": "file:./view.js",
+  "blockstudio": {
+    "island": "hydrate",
+    "attributes": [
+      {
+        "id": "message",
+        "type": "text",
+        "label": "Message",
+        "default": "Hydrated"
+      }
+    ]
+  }
+}

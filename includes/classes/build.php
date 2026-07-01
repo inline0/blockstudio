@@ -2582,6 +2582,9 @@ class Build {
 			'group'              => $block->blockstudio['group'] ?? false,
 			'icon'               => $block->blockstudio['icon'] ?? null,
 			'interactivity'      => $block->blockstudio['interactivity'] ?? false,
+			'island'             => Islands::normalize_config(
+				$blockstudio_settings['island'] ?? false
+			),
 			'refreshOn'          => $block->blockstudio['refreshOn'] ?? false,
 			'transforms'         => $block->blockstudio['transforms'] ?? false,
 			'variations'         => $block->variations ?? false,

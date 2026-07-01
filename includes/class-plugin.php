@@ -125,6 +125,7 @@ class Plugin {
 		require_once $classes_dir . 'build-cache.php';
 		require_once $classes_dir . 'block-editor-policy.php';
 		require_once $classes_dir . 'block.php';
+		require_once $classes_dir . 'islands.php';
 		require_once $classes_dir . 'render.php';
 		require_once $classes_dir . 'build.php';
 		require_once $classes_dir . 'populate.php';
@@ -222,6 +223,10 @@ class Plugin {
 
 		if ( class_exists( 'Blockstudio\Build_Cache' ) ) {
 			Build_Cache::init();
+		}
+
+		if ( class_exists( 'Blockstudio\Islands' ) ) {
+			Islands::init();
 		}
 
 		add_action(

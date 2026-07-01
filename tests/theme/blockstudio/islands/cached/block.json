@@ -1,0 +1,26 @@
+{
+  "$schema": "https://blockstudio.dev/schema/block",
+  "name": "blockstudio/island-cached",
+  "title": "Island Cached",
+  "category": "blockstudio-test-native",
+  "icon": "update",
+  "description": "Cached dynamic island fixture.",
+  "blockstudio": {
+    "island": {
+      "mode": "dynamic",
+      "cache": {
+        "ttl": 60,
+        "per": "global"
+      },
+      "attributes": ["message"]
+    },
+    "attributes": [
+      {
+        "id": "message",
+        "type": "text",
+        "label": "Message",
+        "default": "Cached"
+      }
+    ]
+  }
+}

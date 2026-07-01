@@ -14,6 +14,11 @@ Blockstudio provides two approaches for rendering blocks programmatically:
 
 All Blockstudio specific features like inline styles, scripts, and scoped styles are supported.
 
+[Islands](/docs/blocks/islands) also work through these render paths. A dynamic
+island rendered with `bs_render_block()`, `bs_block()`, or a block tag returns
+the same placeholder marker as a block rendered from post content, and the
+frontend runtime is injected when that marker is present in the response.
+
 ## PHP Functions
 
 ### Without Data

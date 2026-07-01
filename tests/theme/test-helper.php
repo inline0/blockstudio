@@ -47,6 +47,23 @@ add_shortcode(
 	}
 );
 
+// Shortcode for testing bs_block() in post content.
+add_shortcode(
+	'bs_test_block',
+	function ( $atts ) {
+		$atts       = is_array( $atts ) ? $atts : array();
+		$block_name = $atts['name'] ?? '';
+		unset( $atts['name'] );
+
+		return bs_block(
+			array(
+				'name' => $block_name,
+				'data' => $atts,
+			)
+		);
+	}
+);
+
 add_filter(
 	'blockstudio/block_tags/prefixes',
 	function ( $prefixes ) {
@@ -1039,6 +1056,35 @@ add_action(
 							)
 						);
 						$created['posts'][] = 3200;
+					}
+
+					// Island test page with block comments, helpers, and block tags.
+					$island_content = '<!-- wp:blockstudio/island-dynamic {"blockstudio":{"name":"blockstudio/island-dynamic","attributes":{"message":"Native island","secret":"Should not be signed"}}} /-->'
+						. '<!-- wp:blockstudio/island-dynamic {"blockstudio":{"name":"blockstudio/island-dynamic","attributes":{"message":"Native island","secret":"Duplicate should not be signed"}}} /-->'
+						. '<!-- wp:blockstudio/island-hydrated {"blockstudio":{"name":"blockstudio/island-hydrated","attributes":{"message":"Hydrated island"}}} /-->'
+						. '<div style="height: 1400px"></div>'
+						. '<!-- wp:blockstudio/island-visible {"blockstudio":{"name":"blockstudio/island-visible","attributes":{"message":"Visible island"}}} /-->'
+						. '<!-- wp:blockstudio/island-event {"blockstudio":{"name":"blockstudio/island-event","attributes":{"message":"Event island"}}} /-->'
+						. '[bs_test_render name="blockstudio/island-dynamic" message="Render helper" secret="Helper secret"]'
+						. '[bs_test_block name="blockstudio/island-fallback" message="Buffered helper"]'
+						. '<bs:blockstudio-island-dynamic message="Block tag" secret="Tag secret" />';
+					if ( ! get_post( 3700 ) ) {
+						$wpdb->insert( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery
+							$wpdb->posts,
+							array(
+								'ID'            => 3700,
+								'post_author'   => 1,
+								'post_date'     => current_time( 'mysql' ),
+								'post_date_gmt' => current_time( 'mysql', 1 ),
+								'post_content'  => $island_content,
+								'post_title'    => 'Island Test',
+								'post_status'   => 'publish',
+								'post_name'     => 'island-test',
+								'post_type'     => 'page',
+								'guid'          => home_url( '/?p=3700' ),
+							)
+						);
+						$created['posts'][] = 3700;
 					}
 
 					// Block field test page (default + override)

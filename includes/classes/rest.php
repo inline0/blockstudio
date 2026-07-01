@@ -384,6 +384,24 @@ class Rest {
 						),
 					)
 				);
+
+				register_rest_route(
+					'blockstudio/v1',
+					'/island/render',
+					array(
+						'methods'             => 'POST',
+						'callback'            => array( $this, 'island_render' ),
+						'permission_callback' => '__return_true',
+						'args'                => array(
+							'islands' => array(
+								'required'          => true,
+								'validate_callback' => function ( $param ) {
+									return is_array( $param );
+								},
+							),
+						),
+					)
+				);
 			}
 		);
 	}
@@ -628,6 +646,19 @@ class Rest {
 		}
 
 		return rest_ensure_response( $rendered_blocks );
+	}
+
+	/**
+	 * /island/render Endpoint.
+	 *
+	 * @since 7.5.0
+	 *
+	 * @param WP_REST_Request $request The REST request.
+	 *
+	 * @return WP_Error|WP_REST_Response The response.
+	 */
+	public function island_render( WP_REST_Request $request ) {
+		return Islands::render_endpoint( $request );
 	}
 
 	/**

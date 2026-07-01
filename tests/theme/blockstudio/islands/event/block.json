@@ -1,0 +1,23 @@
+{
+  "$schema": "https://blockstudio.dev/schema/block",
+  "name": "blockstudio/island-event",
+  "title": "Island Event",
+  "category": "blockstudio-test-native",
+  "icon": "update",
+  "description": "Event refreshed dynamic island fixture.",
+  "blockstudio": {
+    "island": {
+      "mode": "dynamic",
+      "event": "blockstudio:test-island-refresh",
+      "attributes": ["message"]
+    },
+    "attributes": [
+      {
+        "id": "message",
+        "type": "text",
+        "label": "Message",
+        "default": "Event"
+      }
+    ]
+  }
+}

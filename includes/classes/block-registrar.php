@@ -300,6 +300,9 @@ class Block_Registrar {
 			'extend'             => $block->blockstudio['extend'] ?? false,
 			'group'              => $block->blockstudio['group'] ?? false,
 			'icon'               => $block->blockstudio['icon'] ?? null,
+			'island'             => Islands::normalize_config(
+				$block_json['blockstudio']['island'] ?? false
+			),
 			'refreshOn'          => $block->blockstudio['refreshOn'] ?? false,
 			'transforms'         => $block->blockstudio['transforms'] ?? false,
 			'variations'         => $block->variations ?? false,

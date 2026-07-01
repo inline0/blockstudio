@@ -1267,6 +1267,16 @@ class Block {
 			return false;
 		}
 
+		$raw_blockstudio_attributes =
+			isset( $attributes['blockstudio']['attributes'] ) &&
+			is_array( $attributes['blockstudio']['attributes'] )
+				? $attributes['blockstudio']['attributes']
+				: array_filter(
+					$attributes,
+					static fn( $key ) => ! in_array( $key, array( 'blockstudio', '_BLOCKSTUDIO_CONTEXT' ), true ),
+					ARRAY_FILTER_USE_KEY
+				);
+
 		$perf_start = Perf::active() ? microtime( true ) : 0;
 
 		++self::$count;
@@ -1305,17 +1315,29 @@ class Block {
 			return null;
 		}
 
+		$island_phase = Islands::render_phase( $name, $is_editor, $is_preview );
+		if ( 'placeholder' === $island_phase ) {
+			$placeholder_path = Islands::placeholder_path( $name, $block_data );
+			if ( $placeholder_path ) {
+				$path = $placeholder_path;
+			}
+		}
+
 		$editor = $attributes['blockstudio']['editor'] ?? false;
 
 		$block = $attributes;
 		unset( $block['blockstudio'] );
 		unset( $block['__internalWidgetId'] );
-		$block['id']         = self::id( $block, $attributes );
-		$block['name']       = $name;
-		$block['postId']     = $object_id;
-		$block['postType']   = get_post_type( $object_id );
-		$block['index']      = self::$count_by_block[ $name ];
-		$block['indexTotal'] = self::$count;
+		$block['id']                  = self::id( $block, $attributes );
+		$block['name']                = $name;
+		$block['postId']              = $object_id;
+		$block['postType']            = get_post_type( $object_id );
+		$block['index']               = self::$count_by_block[ $name ];
+		$block['indexTotal']          = self::$count;
+		$block['islandPhase']         = $island_phase;
+		$block['isIsland']            = in_array( $island_phase, array( 'hydrate', 'placeholder', 'fragment' ), true );
+		$block['isIslandPlaceholder'] = 'placeholder' === $island_phase;
+		$block['isIslandFragment']    = 'fragment' === $island_phase;
 
 		$compiled_context = array();
 		$block_names      = array_keys( Build::blocks() );
@@ -1406,17 +1428,21 @@ class Block {
 			Timber::init();
 			$twig_context = Timber::context();
 
-			$twig_context['attributes'] = $attributes;
-			$twig_context['a']          = $attributes;
-			$twig_context['block']      = $block;
-			$twig_context['b']          = $block;
-			$twig_context['context']    = $context;
-			$twig_context['c']          = $context;
-			$twig_context['content']    = $content;
-			$twig_context['isEditor']   = $is_editor;
-			$twig_context['isPreview']  = $is_preview;
-			$twig_context['postId']     = $post_id;
-			$twig_context['post_id']    = $post_id;
+			$twig_context['attributes']          = $attributes;
+			$twig_context['a']                   = $attributes;
+			$twig_context['block']               = $block;
+			$twig_context['b']                   = $block;
+			$twig_context['context']             = $context;
+			$twig_context['c']                   = $context;
+			$twig_context['content']             = $content;
+			$twig_context['isEditor']            = $is_editor;
+			$twig_context['isPreview']           = $is_preview;
+			$twig_context['isIsland']            = $block['isIsland'];
+			$twig_context['isIslandPlaceholder'] = $block['isIslandPlaceholder'];
+			$twig_context['isIslandFragment']    = $block['isIslandFragment'];
+			$twig_context['islandPhase']         = $island_phase;
+			$twig_context['postId']              = $post_id;
+			$twig_context['post_id']             = $post_id;
 
 			$add_custom_path = function ( $paths ) use (
 				$has_override_path,
@@ -1502,11 +1528,15 @@ class Block {
 			}
 
 			ob_start();
-			$a         = $attributes;
-			$b         = $block;
-			$c         = $context;
-			$isEditor  = $is_editor; // phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- backward-compatible template alias.
-			$isPreview = $is_preview; // phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- backward-compatible template alias.
+			$a                   = $attributes;
+			$b                   = $block;
+			$c                   = $context;
+			$isEditor            = $is_editor; // phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- backward-compatible template alias.
+			$isPreview           = $is_preview; // phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- backward-compatible template alias.
+			$isIsland            = $block['isIsland']; // phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- template alias.
+			$isIslandPlaceholder = $block['isIslandPlaceholder']; // phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- template alias.
+			$isIslandFragment    = $block['isIslandFragment']; // phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- template alias.
+			$islandPhase         = $island_phase; // phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- template alias.
 
 			$render = true;
 
@@ -1551,7 +1581,9 @@ class Block {
 			}
 		}
 
-		$rendered_block = $rendered_block . ( ! $is_editor ? $assets : '' );
+		if ( ! $is_editor && 'fragment' !== $island_phase ) {
+			$rendered_block .= $assets;
+		}
 
 		if ( $is_editor && str_contains( $rendered_block, 'data-wp-interactive' ) ) {
 			$rendered_block = wp_interactivity_process_directives( $rendered_block );
@@ -1629,9 +1661,26 @@ class Block {
 				$result = $blockstudio_id . $result;
 			}
 
-			if ( is_string( $assets ) && '' !== $assets && ! str_contains( $result, $assets ) ) {
+			if (
+				'fragment' !== $island_phase &&
+				is_string( $assets ) &&
+				'' !== $assets &&
+				! str_contains( $result, $assets )
+			) {
 				$result .= $assets;
 			}
+		}
+
+		if (
+			is_string( $result ) &&
+			in_array( $island_phase, array( 'hydrate', 'placeholder' ), true )
+		) {
+			$result = Islands::marker(
+				$name,
+				$raw_blockstudio_attributes,
+				$result,
+				$island_phase
+			);
 		}
 
 		return $result;

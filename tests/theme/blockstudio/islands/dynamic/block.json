@@ -1,0 +1,28 @@
+{
+  "$schema": "https://blockstudio.dev/schema/block",
+  "name": "blockstudio/island-dynamic",
+  "title": "Island Dynamic",
+  "category": "blockstudio-test-native",
+  "icon": "update",
+  "description": "Dynamic island fixture.",
+  "blockstudio": {
+    "island": {
+      "mode": "dynamic",
+      "attributes": ["message"]
+    },
+    "attributes": [
+      {
+        "id": "message",
+        "type": "text",
+        "label": "Message",
+        "default": "Dynamic"
+      },
+      {
+        "id": "secret",
+        "type": "text",
+        "label": "Secret",
+        "default": "Hidden"
+      }
+    ]
+  }
+}

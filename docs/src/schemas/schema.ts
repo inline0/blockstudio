@@ -1140,6 +1140,81 @@ export const schema = async (extensions = false) => {
               description:
                 'Enable the WordPress Interactivity API for this block.',
             },
+            island: {
+              anyOf: [
+                { type: 'boolean' },
+                {
+                  type: 'string',
+                  enum: ['hydrate', 'hydrated', 'dynamic'],
+                },
+                {
+                  type: 'object',
+                  properties: {
+                    mode: {
+                      type: 'string',
+                      enum: ['hydrate', 'hydrated', 'dynamic'],
+                      description:
+                        'Island mode. Hydrated islands render cache-safe HTML and receive a mount event. Dynamic islands render a placeholder first and fetch the real fragment from the visitor request.',
+                    },
+                    tag: {
+                      type: 'string',
+                      description: 'HTML tag used for the island marker.',
+                    },
+                    attributes: {
+                      type: 'array',
+                      description:
+                        'Attribute allow-list sent to dynamic island fragment requests.',
+                      items: {
+                        type: 'string',
+                      },
+                    },
+                    placeholder: {
+                      type: 'string',
+                      description:
+                        'Relative placeholder template path used for dynamic islands.',
+                    },
+                    loading: {
+                      type: 'string',
+                      enum: ['eager', 'visible'],
+                      description:
+                        'When the runtime should fetch a dynamic island fragment.',
+                    },
+                    event: {
+                      type: 'string',
+                      description:
+                        'Window event name that refreshes a dynamic island.',
+                    },
+                    cache: {
+                      anyOf: [
+                        { type: 'boolean' },
+                        {
+                          type: 'object',
+                          properties: {
+                            ttl: {
+                              type: 'number',
+                              description:
+                                'Fragment cache lifetime in seconds.',
+                            },
+                            per: {
+                              type: 'string',
+                              enum: ['global', 'user'],
+                              description:
+                                'Whether cached fragments are shared globally or varied by WordPress user ID.',
+                            },
+                          },
+                          additionalProperties: false,
+                        },
+                      ],
+                      description:
+                        'Optional fragment cache policy for dynamic islands.',
+                    },
+                  },
+                  additionalProperties: false,
+                },
+              ],
+              description:
+                'Enable Blockstudio islands. Use hydrated islands for cache-safe interactive blocks and dynamic islands for request-specific fragments rendered after the page shell.',
+            },
             ...(extensions
               ? {
                   extend: {
