@@ -22,6 +22,11 @@ The user-facing result: a theme can add a file-backed `front-page`, `single`,
 `archive`, `header`, or `footer`, edit it in the Site Editor, reset it to the
 file version, and use Blockstudio block tags and templating engines throughout.
 
+Testing constraint for this PRD: do not run local unit tests, local E2E tests,
+`npm run test:*`, or `npm run wp-env:start` unless the user explicitly asks for
+local execution. Verification happens through pushed GitHub Actions commits
+using `[all]`, with follow-up fixes driven from CI logs.
+
 ## Product Context
 
 Blockstudio's file-first story is currently split:

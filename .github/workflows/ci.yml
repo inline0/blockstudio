@@ -71,35 +71,7 @@ jobs:
         run: |
           PLUGIN_DIR=$(cd tests/wp-env && npx @wordpress/env run cli -- wp eval 'echo BLOCKSTUDIO_DIR;' 2>/dev/null | tr -d '\r\n')
           echo "Plugin dir: $PLUGIN_DIR"
-          run_phpunit() {
-            (cd tests/wp-env && npx @wordpress/env run cli --env-cwd="$PLUGIN_DIR" vendor/bin/phpunit "$@")
-          }
-
-          set +e
-          run_phpunit --testdox --display-errors --display-warnings
-          STATUS=$?
-
-          if [ "$STATUS" -ne 0 ]; then
-            echo "::group::Tail unit diagnostics"
-            for TARGET in \
-              tests/unit/site-templates/SiteTemplatesTest.php \
-              tests/unit/storage/BlockStorageTest.php \
-              tests/unit/storage/OptionStorageTest.php \
-              tests/unit/storage/PostMetaStorageTest.php \
-              tests/unit/storage/StorageRegistryTest.php \
-              tests/unit/storage/StorageSyncTest.php \
-              tests/unit/tailwind/TailwindTest.php \
-              tests/unit/ui/UiTest.php \
-              tests/unit/utils/UtilsTest.php
-            do
-              echo ">>> $TARGET"
-              run_phpunit --testdox "$TARGET"
-              echo "Exit code for $TARGET: $?"
-            done
-            echo "::endgroup::"
-          fi
-
-          exit "$STATUS"
+          cd tests/wp-env && npx @wordpress/env run cli --env-cwd="$PLUGIN_DIR" vendor/bin/phpunit --testdox --display-errors --display-warnings
 
   e2e:
     name: E2E Tests (Shard ${{ matrix.shard }}/${{ matrix.total_shards }})
