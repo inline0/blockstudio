@@ -293,6 +293,70 @@ class IslandsTest extends TestCase {
 		$this->assertSame( $first, $second );
 	}
 
+	public function test_endpoint_without_fragment_cache_renders_each_request(): void {
+		$message = 'Uncached ' . wp_generate_uuid4();
+		$first   = $this->render_endpoint_item( 'blockstudio/island-event', array( 'message' => $message ) );
+
+		usleep( 1000 );
+
+		$second = $this->render_endpoint_item( 'blockstudio/island-event', array( 'message' => $message ) );
+
+		$this->assertIsString( $first );
+		$this->assertIsString( $second );
+		$this->assertNotSame( $first, $second );
+	}
+
+	public function test_endpoint_fragment_cache_can_vary_per_user(): void {
+		$this->require_block( 'blockstudio/island-dynamic' );
+
+		if ( ! function_exists( 'wp_delete_user' ) ) {
+			require_once ABSPATH . 'wp-admin/includes/user.php';
+		}
+
+		$block          = Build::blocks()[ 'blockstudio/island-dynamic' ];
+		$previous_cache = $block->blockstudio['island']['cache'] ?? false;
+		$user_login     = 'island_user_' . wp_generate_password( 8, false, false );
+		$user_id        = wp_insert_user(
+			array(
+				'user_login' => $user_login,
+				'user_pass'  => wp_generate_password( 24, true, true ),
+				'user_email' => $user_login . '@example.com',
+				'role'       => 'subscriber',
+			)
+		);
+
+		$this->assertIsInt( $user_id );
+
+		try {
+			$block->blockstudio['island']['cache'] = array(
+				'ttl' => 60,
+				'per' => 'user',
+			);
+
+			$message = 'Per user ' . wp_generate_uuid4();
+
+			wp_set_current_user( 0 );
+			$guest_first  = $this->render_endpoint_item( 'blockstudio/island-dynamic', array( 'message' => $message ) );
+			$guest_second = $this->render_endpoint_item( 'blockstudio/island-dynamic', array( 'message' => $message ) );
+
+			wp_set_current_user( $user_id );
+			$user_first  = $this->render_endpoint_item( 'blockstudio/island-dynamic', array( 'message' => $message ) );
+			$user_second = $this->render_endpoint_item( 'blockstudio/island-dynamic', array( 'message' => $message ) );
+
+			$this->assertIsString( $guest_first );
+			$this->assertIsString( $user_first );
+			$this->assertSame( $guest_first, $guest_second );
+			$this->assertSame( $user_first, $user_second );
+			$this->assertStringContainsString( 'guest', $guest_first );
+			$this->assertStringContainsString( $user_login, $user_first );
+			$this->assertNotSame( $guest_first, $user_first );
+		} finally {
+			$block->blockstudio['island']['cache'] = $previous_cache;
+			wp_set_current_user( 0 );
+			wp_delete_user( $user_id );
+		}
+	}
+
 	public function test_runtime_is_injected_only_when_islands_are_present(): void {
 		$this->assertSame( '<html><body>No island</body></html>', Islands::inject_runtime( '<html><body>No island</body></html>' ) );
 

@@ -136,4 +136,28 @@ test.describe('Block islands', () => {
     await noJsPage.close();
     await noJsContext.close();
   });
+
+  test('failed dynamic fetch keeps the placeholder and marks the island errored', async ({ browser }) => {
+    const errorContext = await browser.newContext();
+    const errorPage = await errorContext.newPage();
+
+    await errorPage.route('**/wp-json/blockstudio/v1/island/render', (route) =>
+      route.abort('failed'),
+    );
+
+    await errorPage.goto(`${BASE}/island-test/`, {
+      waitUntil: 'domcontentloaded',
+    });
+
+    const marker = errorPage
+      .locator('[data-bs-island="blockstudio/island-dynamic"]')
+      .first();
+
+    await expect(marker.locator('.bs-island-placeholder')).toBeVisible();
+    await expect(marker.locator('.bs-island-fragment')).toHaveCount(0);
+    await expect(marker).toHaveAttribute('data-bs-island-error', '1');
+
+    await errorPage.close();
+    await errorContext.close();
+  });
 });
