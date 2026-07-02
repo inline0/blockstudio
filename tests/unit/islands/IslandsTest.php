@@ -96,6 +96,13 @@ class IslandsTest extends TestCase {
 		$_COOKIE[ $key ] = $value;
 	}
 
+	private function is_same_origin_browser_request(): bool {
+		$method = new ReflectionMethod( Islands::class, 'is_same_origin_browser_request' );
+		$method->setAccessible( true );
+
+		return (bool) $method->invoke( null );
+	}
+
 	private function render_endpoint_item( string $name, array $attributes, string $signature = '' ) {
 		$props = Islands::filter_attributes( $name, $attributes );
 		if ( '' === $signature ) {
@@ -472,6 +479,24 @@ class IslandsTest extends TestCase {
 		}
 	}
 
+	public function test_same_origin_check_requires_browser_origin_signal(): void {
+		$this->set_server_var( 'HTTP_ORIGIN', '' );
+		$this->set_server_var( 'HTTP_SEC_FETCH_SITE', '' );
+
+		$this->assertFalse( $this->is_same_origin_browser_request() );
+	}
+
+	public function test_same_origin_check_compares_scheme_host_and_port(): void {
+		$this->set_server_var( 'HTTP_ORIGIN', home_url() );
+		$this->set_server_var( 'HTTP_SEC_FETCH_SITE', 'same-origin' );
+
+		$this->assertTrue( $this->is_same_origin_browser_request() );
+
+		$this->set_server_var( 'HTTP_ORIGIN', 'http://localhost:9999' );
+
+		$this->assertFalse( $this->is_same_origin_browser_request() );
+	}
+
 	public function test_runtime_is_injected_only_when_islands_are_present(): void {
 		$this->assertSame( '<html><body>No island</body></html>', Islands::inject_runtime( '<html><body>No island</body></html>' ) );
 
@@ -479,5 +504,6 @@ class IslandsTest extends TestCase {
 
 		$this->assertStringContainsString( 'data-bs-islands-runtime', $html );
 		$this->assertStringContainsString( 'blockstudio/v1/island/render', str_replace( '\\/', '/', $html ) );
+		$this->assertStringContainsString( 'createContextualFragment', $html );
 	}
 }

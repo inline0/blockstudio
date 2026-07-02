@@ -311,7 +311,7 @@ final class Field_Type_Registry {
 		if ( 'array' === $value_type ) {
 			return array(
 				'type'  => 'array',
-				'items' => array(),
+				'items' => $this->array_item_schema( $field ),
 			);
 		}
 
@@ -342,10 +342,33 @@ final class Field_Type_Registry {
 		}
 
 		if ( 'array' === $value_type && ! isset( $schema['items'] ) ) {
-			$schema['items'] = array();
+			$schema['items'] = array( 'type' => self::ATTRIBUTE_TYPES );
 		}
 
 		return $schema;
+	}
+
+	/**
+	 * Build a permissive REST schema for array item values.
+	 *
+	 * @param array $field Field configuration.
+	 *
+	 * @return array<string, mixed> Item schema.
+	 */
+	private function array_item_schema( array $field ): array {
+		$type      = $field['type'] ?? '';
+		$item_type = is_string( $type ) ? Field_Type_Config::get_attribute_type( $type ) : null;
+
+		if ( in_array( $item_type, self::ATTRIBUTE_TYPES, true ) && 'array' !== $item_type ) {
+			return 'object' === $item_type
+				? array(
+					'type'                 => 'object',
+					'additionalProperties' => true,
+				)
+				: array( 'type' => $item_type );
+		}
+
+		return array( 'type' => self::ATTRIBUTE_TYPES );
 	}
 
 	/**

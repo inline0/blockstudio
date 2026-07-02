@@ -101,16 +101,31 @@ class Content_Sync {
 					continue;
 				}
 
-				$changed = $this->write_json_file( $source, $projection );
+				$json_status = $this->write_json_file_status( $source, $projection );
+				$body_status = 'unchanged';
+
 				if ( '' !== $body ) {
-					$changed = $this->write_file( $body_path, $body ) || $changed;
+					$body_status = $this->write_file_status( $body_path, $body );
 				} elseif ( file_exists( $body_path ) ) {
 					wp_delete_file( $body_path );
-					$changed = true;
+					$body_status = file_exists( $body_path ) ? 'failed' : 'written';
+				}
+
+				if ( 'failed' === $json_status || 'failed' === $body_status ) {
+					$failed_path = 'failed' === $json_status ? $source : $body_path;
+					$rows[]      = $this->row(
+						'error',
+						'post',
+						(string) $post->ID,
+						$uid,
+						'Failed to write ' . $this->relative_path( $failed_path ) . '.'
+					);
+					continue;
 				}
 
 				$this->update_entity_state( 'post', $post->ID, $uid, $source, $fingerprint );
-				$rows[] = $this->row( $changed ? 'written' : 'unchanged', 'post', (string) $post->ID, $uid, $this->relative_path( $source ) );
+				$changed = in_array( 'written', array( $json_status, $body_status ), true );
+				$rows[]  = $this->row( $changed ? 'written' : 'unchanged', 'post', (string) $post->ID, $uid, $this->relative_path( $source ) );
 			}
 		}
 
@@ -983,9 +998,21 @@ class Content_Sync {
 				continue;
 			}
 
-			$changed = $this->write_json_file( $source, $projection );
+			$status = $this->write_json_file_status( $source, $projection );
+			if ( 'failed' === $status ) {
+				$rows[] = $this->row(
+					'error',
+					'term',
+					(string) $term->term_id,
+					$uid,
+					'Failed to write ' . $this->relative_path( $source ) . '.'
+				);
+				continue;
+			}
+
 			$this->update_entity_state( 'term', $term->term_id, $uid, $source, $fingerprint );
-			$rows[] = $this->row( $changed ? 'written' : 'unchanged', 'term', (string) $term->term_id, $uid, $this->relative_path( $source ) );
+			$changed = 'written' === $status;
+			$rows[]  = $this->row( $changed ? 'written' : 'unchanged', 'term', (string) $term->term_id, $uid, $this->relative_path( $source ) );
 		}
 
 		return $rows;
@@ -2583,7 +2610,22 @@ class Content_Sync {
 	 * @return bool True when the file changed.
 	 */
 	private function write_json_file( string $file, array $data ): bool {
-		return $this->write_file( $file, wp_json_encode( $data, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE ) . "\n" );
+		return 'written' === $this->write_json_file_status( $file, $data );
+	}
+
+	/**
+	 * Write JSON file and return write status.
+	 *
+	 * @param string $file File path.
+	 * @param array  $data Data.
+	 *
+	 * @return string written, unchanged, or failed.
+	 */
+	private function write_json_file_status( string $file, array $data ): string {
+		return $this->write_file_status(
+			$file,
+			wp_json_encode( $data, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE ) . "\n"
+		);
 	}
 
 	/**
@@ -2595,17 +2637,33 @@ class Content_Sync {
 	 * @return bool True when the file changed.
 	 */
 	private function write_file( string $file, string $content ): bool {
+		return 'written' === $this->write_file_status( $file, $content );
+	}
+
+	/**
+	 * Write file and return write status.
+	 *
+	 * @param string $file    File path.
+	 * @param string $content Content.
+	 *
+	 * @return string written, unchanged, or failed.
+	 */
+	private function write_file_status( string $file, string $content ): string {
 		if ( file_exists( $file ) ) {
 			// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Reading local content sync file before deciding whether to rewrite it.
 			$existing = file_get_contents( $file );
 			if ( $content === $existing ) {
-				return false;
+				return 'unchanged';
 			}
 		}
 
-		wp_mkdir_p( dirname( $file ) );
+		$directory = dirname( $file );
+		if ( ! is_dir( $directory ) && ! wp_mkdir_p( $directory ) ) {
+			return 'failed';
+		}
+
 		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents -- Writing local content sync file.
-		return false !== file_put_contents( $file, $content, LOCK_EX );
+		return false !== file_put_contents( $file, $content, LOCK_EX ) ? 'written' : 'failed';
 	}
 
 	/**

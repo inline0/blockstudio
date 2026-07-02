@@ -7,6 +7,7 @@ use PHPUnit\Framework\TestCase;
 class OptionStorageTest extends TestCase {
 
 	private array $registered_keys = array();
+	private array $created_users = array();
 
 	protected function setUp(): void {
 		Field_Type_Registry::instance()->reset();
@@ -16,8 +17,15 @@ class OptionStorageTest extends TestCase {
 		foreach ( $this->registered_keys as $key ) {
 			unregister_setting( 'blockstudio', $key );
 		}
+
+		foreach ( $this->created_users as $user_id ) {
+			wp_delete_user( $user_id );
+		}
+
 		$this->registered_keys = array();
+		$this->created_users   = array();
 		Field_Type_Registry::instance()->reset();
+		wp_set_current_user( 0 );
 	}
 
 	public function test_register_array_field_has_items_schema(): void {
@@ -155,5 +163,59 @@ class OptionStorageTest extends TestCase {
 		$this->assertArrayHasKey( 'test_opt_custom_array', $settings );
 		$this->assertSame( 'array', $settings['test_opt_custom_array']['type'] );
 		$this->assertArrayHasKey( 'items', $settings['test_opt_custom_array']['show_in_rest']['schema'] );
+	}
+
+	public function test_custom_scalar_array_field_saves_through_settings_rest_api(): void {
+		$handler = new Option_Storage();
+
+		Field_Type_Registry::instance()->register(
+			'test/badge',
+			array(
+				'attribute' => 'string',
+			)
+		);
+
+		$field = array(
+			'id'                              => 'badges',
+			'type'                            => 'test/badge',
+			'storage'                         => array( 'type' => 'option', 'optionKey' => 'test_opt_custom_scalar_array' ),
+			'__blockstudio_storage_value_type' => 'array',
+		);
+
+		$this->registered_keys[] = 'test_opt_custom_scalar_array';
+
+		$notices = array();
+		$capture = static function ( string $function_name ) use ( &$notices ): void {
+			$notices[] = $function_name;
+		};
+		add_action( 'doing_it_wrong_run', $capture );
+
+		$handler->register( 'test/block', $field );
+
+		$user_id               = wp_create_user( 'rest-option-' . wp_generate_uuid4(), wp_generate_password(), 'rest-option@example.test' );
+		$this->created_users[] = $user_id;
+		$user                  = new WP_User( $user_id );
+		$user->set_role( 'administrator' );
+		wp_set_current_user( $user_id );
+
+		$this->ensure_rest_server();
+
+		$request = new WP_REST_Request( 'POST', '/wp/v2/settings' );
+		$request->set_param( 'test_opt_custom_scalar_array', array( 'alpha', 'beta' ) );
+
+		$response = rest_do_request( $request );
+
+		remove_action( 'doing_it_wrong_run', $capture );
+
+		$this->assertSame( 200, $response->get_status(), wp_json_encode( $response->get_data() ) );
+		$this->assertSame( array( 'alpha', 'beta' ), get_option( 'test_opt_custom_scalar_array' ) );
+		$this->assertNotContains( 'rest_validate_value_from_schema', $notices );
+	}
+
+	private function ensure_rest_server(): void {
+		global $wp_rest_server;
+
+		$wp_rest_server = new WP_REST_Server();
+		do_action( 'rest_api_init' );
 	}
 }

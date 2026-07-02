@@ -312,6 +312,31 @@ class FieldTypeRegistryTest extends TestCase {
 			'array'
 		);
 
-		$this->assertSame( array( 'type' => 'array', 'items' => array() ), $schema );
+		$this->assertSame(
+			array(
+				'type'  => 'array',
+				'items' => array( 'type' => array( 'string', 'number', 'boolean', 'object', 'array' ) ),
+			),
+			$schema
+		);
+	}
+
+	public function test_custom_scalar_array_storage_schema_infers_item_type(): void {
+		$this->registry->register(
+			'test/badge',
+			array(
+				'attribute' => 'string',
+			)
+		);
+
+		$schema = $this->registry->get_storage_rest_schema(
+			array(
+				'id'   => 'badges',
+				'type' => 'test/badge',
+			),
+			'array'
+		);
+
+		$this->assertSame( array( 'type' => 'string' ), $schema['items'] );
 	}
 }

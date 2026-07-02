@@ -253,6 +253,40 @@ class ContentSyncTest extends TestCase {
 	}
 
 	/**
+	 * Pull reports write failures and does not stamp sync state.
+	 *
+	 * @return void
+	 */
+	public function test_pull_reports_write_failure_without_stamping_state(): void {
+		$post_id = $this->insert_post(
+			array(
+				'post_title' => 'Blocked Source',
+				'post_name'  => 'blocked-source',
+			)
+		);
+
+		$root = $this->content_root();
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents
+		file_put_contents( $root, 'not a directory' );
+
+		try {
+			$sync = new Content_Sync( $this->config() );
+			$rows = $sync->pull();
+
+			$this->assertContains( 'error', wp_list_pluck( $rows, 'action' ) );
+			$this->assertSame( '', (string) get_post_meta( $post_id, Content_Sync::META_FINGERPRINT, true ) );
+			$this->assertStringContainsString(
+				'Failed to write',
+				implode( ' ', wp_list_pluck( $rows, 'message' ) )
+			);
+		} finally {
+			if ( file_exists( $root ) && ! is_dir( $root ) ) {
+				wp_delete_file( $root );
+			}
+		}
+	}
+
+	/**
 	 * Pull reports stale files whose database source no longer exists.
 	 *
 	 * @return void

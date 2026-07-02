@@ -79,19 +79,29 @@ final class Site_Templates {
 	 * @return array Template objects.
 	 */
 	public static function filter_block_templates( array $templates, array $query, string $template_type ): array {
-		if ( isset( $query['wp_id'] ) || ! in_array( $template_type, array( 'wp_template', 'wp_template_part' ), true ) ) {
+		if ( ! in_array( $template_type, array( 'wp_template', 'wp_template_part' ), true ) ) {
 			return $templates;
 		}
 
 		self::ensure_loaded();
 
-		$items          = 'wp_template' === $template_type ? self::templates() : self::parts();
-		$existing_slugs = array();
+		$items            = 'wp_template' === $template_type ? self::templates() : self::parts();
+		$existing_slugs   = array();
+		$append_templates = ! isset( $query['wp_id'] );
 
 		foreach ( $templates as $template ) {
 			if ( is_object( $template ) && isset( $template->slug ) ) {
-				$existing_slugs[] = (string) $template->slug;
+				$slug             = self::template_object_slug( $template );
+				$existing_slugs[] = $slug;
+
+				if ( isset( $items[ $slug ] ) ) {
+					self::mark_as_file_backed( $template, $items[ $slug ] );
+				}
 			}
+		}
+
+		if ( ! $append_templates ) {
+			return $templates;
 		}
 
 		foreach ( $items as $item ) {
@@ -110,6 +120,45 @@ final class Site_Templates {
 		}
 
 		return $templates;
+	}
+
+	/**
+	 * Mark a customized database template as having a matching file source.
+	 *
+	 * @param object $template Template object.
+	 * @param array  $item     File-backed template data.
+	 *
+	 * @return void
+	 */
+	private static function mark_as_file_backed( object $template, array $item ): void {
+		$template->origin         = 'theme';
+		$template->has_theme_file = true;
+
+		if ( 'wp_template' === $item['type'] && ! empty( $item['postTypes'] ) ) {
+			$template->post_types = $item['postTypes'];
+		}
+
+		if ( 'wp_template_part' === $item['type'] && ! empty( $item['area'] ) ) {
+			$template->area = $item['area'];
+		}
+	}
+
+	/**
+	 * Extract a comparable slug from a WordPress template object.
+	 *
+	 * @param object $template Template object.
+	 *
+	 * @return string Template slug.
+	 */
+	private static function template_object_slug( object $template ): string {
+		$slug = (string) $template->slug;
+
+		if ( str_contains( $slug, '//' ) ) {
+			$parts = explode( '//', $slug, 2 );
+			return $parts[1];
+		}
+
+		return $slug;
 	}
 
 	/**

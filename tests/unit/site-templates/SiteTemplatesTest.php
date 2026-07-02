@@ -142,6 +142,9 @@ class SiteTemplatesTest extends TestCase {
 		$this->assertStringContainsString( 'Database customized template.', $template->content );
 		$this->assertCount( 1, $list );
 		$this->assertSame( $post_id, $list[0]->wp_id );
+		$this->assertSame( 'custom', $list[0]->source );
+		$this->assertSame( 'theme', $list[0]->origin );
+		$this->assertTrue( $list[0]->has_theme_file );
 	}
 
 	public function test_database_template_part_customization_wins_over_file_source(): void {
@@ -167,6 +170,9 @@ class SiteTemplatesTest extends TestCase {
 		$this->assertStringContainsString( 'Database customized header.', $part->content );
 		$this->assertCount( 1, $list );
 		$this->assertSame( $post_id, $list[0]->wp_id );
+		$this->assertSame( 'custom', $list[0]->source );
+		$this->assertSame( 'theme', $list[0]->origin );
+		$this->assertTrue( $list[0]->has_theme_file );
 	}
 
 	public function test_request_memoizes_discovery(): void {

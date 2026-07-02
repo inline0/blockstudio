@@ -115,7 +115,7 @@ export const WYSIWYG = ({
 
     skipNextChange.current = true;
     setVal(nextValue);
-    editor.commands.setContent(nextValue, false);
+    editor.commands.setContent(nextValue, { emitUpdate: false });
   }, [editor, value]);
 
   useEffect(() => {

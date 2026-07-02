@@ -700,7 +700,9 @@ final class Islands {
           return;
         }
         entry.elements.forEach((el) => {
-          el.innerHTML = rendered;
+          const range = document.createRange();
+          range.selectNodeContents(el);
+          el.replaceChildren(range.createContextualFragment(rendered));
           delete el.dataset.bsIslandError;
           dispatch(el, 'blockstudio:island:rendered', { name: entry.name });
           init(el);
@@ -963,13 +965,50 @@ JS;
 			return false;
 		}
 
-		$origin = (string) wp_parse_url( esc_url_raw( wp_unslash( $_SERVER['HTTP_ORIGIN'] ?? '' ) ), PHP_URL_HOST );
-		if ( '' === $origin ) {
+		$origin_header = esc_url_raw( wp_unslash( $_SERVER['HTTP_ORIGIN'] ?? '' ) );
+		if ( '' === $fetch_site && '' === $origin_header ) {
+			return false;
+		}
+
+		if ( '' === $origin_header ) {
 			return true;
 		}
 
-		$home = (string) wp_parse_url( home_url(), PHP_URL_HOST );
-		return '' !== $home && strtolower( $origin ) === strtolower( $home );
+		$origin = wp_parse_url( $origin_header );
+		$home   = wp_parse_url( home_url() );
+
+		return self::origin_parts( $origin ) === self::origin_parts( $home );
+	}
+
+	/**
+	 * Normalize URL origin parts.
+	 *
+	 * @param array|false $parts Parsed URL parts.
+	 *
+	 * @return array{scheme:string,host:string,port:int}
+	 */
+	private static function origin_parts( $parts ): array {
+		if ( ! is_array( $parts ) ) {
+			return array(
+				'scheme' => '',
+				'host'   => '',
+				'port'   => 0,
+			);
+		}
+
+		$scheme = strtolower( (string) ( $parts['scheme'] ?? '' ) );
+		$host   = strtolower( (string) ( $parts['host'] ?? '' ) );
+		$port   = isset( $parts['port'] ) ? (int) $parts['port'] : 0;
+
+		if ( 0 === $port ) {
+			$port = 'https' === $scheme ? 443 : ( 'http' === $scheme ? 80 : 0 );
+		}
+
+		return array(
+			'scheme' => $scheme,
+			'host'   => $host,
+			'port'   => $port,
+		);
 	}
 
 	/**

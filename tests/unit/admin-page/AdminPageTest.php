@@ -71,4 +71,61 @@ class AdminPageTest extends TestCase {
 		$this->assertSame( 'invalid_registry_file', $result->get_error_code() );
 		$this->assertFileDoesNotExist( WP_CONTENT_DIR . '/mu-plugins/payload.php' );
 	}
+
+	/**
+	 * Registry imports validate every path before writing any file.
+	 *
+	 * @return void
+	 */
+	public function test_registry_import_rejects_later_invalid_path_before_writing(): void {
+		$file_requests = 0;
+
+		add_filter(
+			'pre_http_request',
+			static function ( $preempt, array $args, string $url ) use ( &$file_requests ) {
+				if ( false !== strpos( $url, '/e2e/registry' ) ) {
+					return array(
+						'headers'  => array(),
+						'body'     => wp_json_encode(
+							array(
+								'baseUrl' => 'https://registry.example.test/files',
+								'blocks'  => array(
+									array(
+										'name'  => 'partial-block',
+										'files' => array( 'block.json', '../payload.php' ),
+									),
+								),
+							)
+						),
+						'response' => array(
+							'code'    => 200,
+							'message' => 'OK',
+						),
+						'cookies'  => array(),
+						'filename' => null,
+					);
+				}
+
+				if ( false !== strpos( $url, '/files/partial-block/' ) ) {
+					++$file_requests;
+				}
+
+				return $preempt;
+			},
+			10,
+			3
+		);
+
+		$request = new WP_REST_Request( 'POST', '/blockstudio/v1/registry/import' );
+		$request->set_param( 'registry', 'test' );
+		$request->set_param( 'block', 'partial-block' );
+
+		$result = ( new Admin_Page() )->handle_import( $request );
+		$target = get_stylesheet_directory() . '/blockstudio/partial-block/block.json';
+
+		$this->assertInstanceOf( WP_Error::class, $result );
+		$this->assertSame( 'invalid_registry_file', $result->get_error_code() );
+		$this->assertSame( 0, $file_requests );
+		$this->assertFileDoesNotExist( $target );
+	}
 }

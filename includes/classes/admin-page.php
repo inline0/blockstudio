@@ -679,15 +679,17 @@ class Admin_Page {
 		$base_url  = $registry['baseUrl'] ?? '';
 		$directory = $config['directory'] ?? 'blockstudio';
 		$target    = get_stylesheet_directory() . '/' . $directory . '/' . $block_name;
+		$files     = array_map( 'strval', $block['files'] ?? array() );
 
-		$written = 0;
-
-		foreach ( $block['files'] ?? array() as $file ) {
-			$file = (string) $file;
+		foreach ( $files as $file ) {
 			if ( ! $this->is_safe_import_file_path( $file, $target ) ) {
 				return new \WP_Error( 'invalid_registry_file', 'Registry file path is not allowed.', array( 'status' => 502 ) );
 			}
+		}
 
+		$written = 0;
+
+		foreach ( $files as $file ) {
 			$file_url      = $base_url . '/' . $block_name . '/' . $file;
 			$file_response = wp_remote_get(
 				$file_url,
