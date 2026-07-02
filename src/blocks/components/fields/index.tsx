@@ -130,10 +130,12 @@ export const Fields = ({
     __unstableMarkNextChangeAsNotPersistent: () => void;
   };
   const { setRichText } = useDispatch('blockstudio/blocks');
-  const richText = useSelect(
+  const richTextEntries = useSelect(
     (select) =>
-      (select('blockstudio/blocks') as typeof selectors).getRichText(),
-    [],
+      (select('blockstudio/blocks') as typeof selectors).getRichText()?.[
+        clientId
+      ] as Record<string, string> | undefined,
+    [clientId],
   );
 
   const defaultsRepeaters = useRef(false);
@@ -535,13 +537,9 @@ export const Fields = ({
       unset(newAttributes, key);
 
       const removedRepeaterInfo = getRemovedRepeaterInfo(id);
-      const richTextEntries = richText?.[clientId] as
-        | Record<string, string>
-        | undefined;
 
       if (removedRepeaterInfo && richTextEntries) {
         setRichText({
-          ...richText,
           [clientId]: remapRichTextAfterRepeaterRemove(
             richTextEntries,
             removedRepeaterInfo.repeaterPath,

@@ -101,25 +101,23 @@ const registerSingleBlock = (block: BlockstudioBlock) => {
       };
       const [isLoaded, setIsLoaded] = useState(false);
       const [isExpandedEditorOpen, setIsExpandedEditorOpen] = useState(false);
-      const richText = useSelect(
+      const richTextEntries = useSelect(
         (select) =>
-          (select('blockstudio/blocks') as typeof selectors).getRichText(),
-        [],
+          (select('blockstudio/blocks') as typeof selectors).getRichText()?.[
+            clientId
+          ] as Record<string, string> | undefined,
+        [clientId],
       );
 
       useEffect(() => {
         const clickSave = () => {
           if (
-            !richText?.[clientId] ||
-            Object.values(richText?.[clientId] || {}).length === 0
+            !richTextEntries ||
+            Object.values(richTextEntries || {}).length === 0
           ) {
             return;
           }
 
-          const richTextEntries = richText[clientId] as unknown as Record<
-            string,
-            string
-          >;
           const clonedAttrs = cloneDeep(
             attributes.blockstudio?.attributes ?? {},
           ) as unknown as Record<string, unknown>;
@@ -177,7 +175,7 @@ const registerSingleBlock = (block: BlockstudioBlock) => {
           );
           document.removeEventListener('keydown', keydown);
         };
-      }, [richText, attributes]);
+      }, [richTextEntries, attributes]);
 
       useEffect(() => {
         if (renderedIds.includes(clientId)) return;
@@ -225,7 +223,6 @@ const registerSingleBlock = (block: BlockstudioBlock) => {
           });
 
         setRichText({
-          ...richText,
           [clientId]: richTexts,
         });
 

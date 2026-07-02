@@ -27,10 +27,12 @@ export const RichText = ({
   hasOwnBlockProps: boolean;
 }) => {
   const { setRichText } = useDispatch('blockstudio/blocks');
-  const richText = useSelect(
+  const richTextEntries = useSelect(
     (select) =>
-      (select('blockstudio/blocks') as typeof selectors).getRichText(),
-    [],
+      (select('blockstudio/blocks') as typeof selectors).getRichText()?.[
+        clientId
+      ] as Record<string, string> | undefined,
+    [clientId],
   );
 
   const { tag, ...rest } = data;
@@ -63,9 +65,8 @@ export const RichText = ({
 
   const setter = (value: string) => {
     const obj = {
-      ...richText,
       [clientId]: {
-        ...((richText?.[clientId] as NonNullable<unknown>) || {}),
+        ...(richTextEntries || {}),
         [data.attribute]: value,
       },
     };
@@ -81,11 +82,7 @@ export const RichText = ({
   return (
     <WordPressRichText
       {...props}
-      value={
-        (richText?.[clientId] as unknown as Record<string, string>)?.[
-          data?.attribute
-        ] || ''
-      }
+      value={richTextEntries?.[data?.attribute] || ''}
       onChange={(value: string) => setter(value)}
     />
   );
