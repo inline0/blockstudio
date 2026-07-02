@@ -29,10 +29,6 @@ import { css } from '@/utils/css';
 const border = '1px dashed #b9b9b9';
 const postId = window.blockstudioAdmin?.postId;
 
-// Shared per-tree registry of each list's rows, keyed by droppableId. Nested
-// repeaters render without their own DragDropContext, so the top-level list's
-// onDragEnd must resolve any descendant list. Scoping the registry to the
-// top-level repeater's React subtree keeps separate block instances isolated.
 const RepeaterRegistryContext = createContext<Record<string, string[]> | null>(
   null,
 );
@@ -480,7 +476,6 @@ export const Repeater = ({
   const innerId = id === '' ? item.id : id;
   const listId = id || item.id || '';
 
-  // Inherit the ancestor registry when nested; the top-level repeater owns one.
   const parentRegistry = useContext(RepeaterRegistryContext);
   const ownRegistry = useRef<Record<string, string[]>>({});
   const registry = parentRegistry ?? ownRegistry.current;

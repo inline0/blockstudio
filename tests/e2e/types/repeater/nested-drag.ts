@@ -1,10 +1,6 @@
 import { expect, Page, Frame } from '@playwright/test';
 import { testType } from '../../utils/playwright-utils';
 
-// @hello-pangea/dnd needs a real pointer gesture: press, cross the drag
-// threshold, move onto the target, settle, release. Keyboard reorder uses a
-// separate code path (moveUp/moveDown), so a drag is the only way to exercise
-// the top-level DragDropContext's onDragEnd for a nested list.
 const dragRowAfter = async (page: Page, source: string, target: string) => {
   const sourceEl = page.locator(source).first();
   await sourceEl.scrollIntoViewIfNeeded();
@@ -25,9 +21,6 @@ const dragRowAfter = async (page: Page, source: string, target: string) => {
   await page.mouse.up();
 };
 
-// A repeater nested inside another repeater renders without its own
-// DragDropContext, so dragging one of its rows is handled by the ancestor
-// list. This guards against that ancestor losing the nested list's row data.
 testType('repeater-nested-drag', false, () => [
   {
     description: 'reorders nested rows via drag',
