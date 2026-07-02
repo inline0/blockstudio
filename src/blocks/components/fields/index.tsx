@@ -54,8 +54,6 @@ import {
 import { css } from '@/utils/css';
 import { isNumeric } from '@/utils/is-numeric';
 
-let isDeleting = false;
-
 const escapeRegExp = (value: string) =>
   value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
@@ -140,6 +138,7 @@ export const Fields = ({
 
   const defaultsRepeaters = useRef(false);
   const defaultValue = useRef(false);
+  const isDeleting = useRef(false);
 
   const defaults = useMemo(
     () => getDefaults(Object.values(block?.attributes || {}), attributes),
@@ -300,7 +299,7 @@ export const Fields = ({
       }
     }
 
-    if (item.type === 'repeater' && !v && !isDeleting) {
+    if (item.type === 'repeater' && !v && !isDeleting.current) {
       if (Array.isArray(item?.default) && item.default.length > 0) {
         v = item.default;
       } else if (item?.min && item.min >= 1) {
@@ -472,7 +471,7 @@ export const Fields = ({
     };
 
     const add: BlockstudioFieldsRepeaterAddRemove = (id) => {
-      isDeleting = false;
+      isDeleting.current = false;
       const key = `blockstudio.attributes.${id}`;
       const newAttributes = JSON.parse(JSON.stringify(attributes));
       const values = result(
@@ -531,7 +530,7 @@ export const Fields = ({
     };
 
     const remove: BlockstudioFieldsRepeaterAddRemove = (id) => {
-      isDeleting = true;
+      isDeleting.current = true;
       const key = `blockstudio.attributes.${id}`;
       const newAttributes = JSON.parse(JSON.stringify(attributes));
       unset(newAttributes, key);
