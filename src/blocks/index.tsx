@@ -153,6 +153,10 @@ const registerSingleBlock = (block: BlockstudioBlock) => {
         );
 
         const keydown = (e: KeyboardEvent) => {
+          if (e.key.toLowerCase() !== 's') {
+            return;
+          }
+
           if (
             navigator.userAgent.indexOf('Mac OS X') !== -1
               ? e.metaKey
