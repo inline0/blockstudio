@@ -178,9 +178,19 @@ const AdvancedSelect = ({
     }
   };
 
+  const fetcherRef = useRef(fetcher);
+  fetcherRef.current = fetcher;
+
   const debouncedApiFetch = useMemo(() => {
-    return debounce((searchValue: string) => fetcher(searchValue), 250);
+    return debounce(
+      (searchValue: string) => fetcherRef.current(searchValue),
+      250,
+    );
   }, []);
+
+  useEffect(() => {
+    return () => debouncedApiFetch.cancel();
+  }, [debouncedApiFetch]);
 
   const onChange = (val: string | null | undefined) => {
     if (multiple) {
