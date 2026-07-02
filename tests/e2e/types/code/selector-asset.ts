@@ -1,10 +1,18 @@
-import { Page, Frame } from '@playwright/test';
+import { Page, Frame, expect } from '@playwright/test';
 import {
   checkStyle,
   getEditorCanvas,
+  removeBlocks,
   saveAndReload,
   testType,
 } from '../../utils/playwright-utils';
+
+const injectedSelectorAssetStyles = async (canvas: Frame) =>
+  canvas.evaluate(() => {
+    return Array.from(document.querySelectorAll('style[id^="blockstudio-"]'))
+      .filter((style) => style.textContent?.includes('background: black'))
+      .length;
+  });
 
 testType('code-selector-asset', false, () => {
   return [
@@ -77,6 +85,23 @@ testType('code-selector-asset', false, () => {
         );
         await page.reload();
         await getEditorCanvas(page);
+      },
+    },
+    {
+      description: 'removes injected editor style after block removal',
+      testFunction: async (page: Page, canvas: Frame) => {
+        await expect
+          .poll(() => injectedSelectorAssetStyles(canvas), { timeout: 15000 })
+          .toBeGreaterThan(0);
+
+        await removeBlocks(page);
+        const nextCanvas = await getEditorCanvas(page);
+
+        await expect
+          .poll(() => injectedSelectorAssetStyles(nextCanvas), {
+            timeout: 15000,
+          })
+          .toBe(0);
       },
     },
   ];
