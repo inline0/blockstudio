@@ -21,7 +21,6 @@ import { css } from '@/utils/css';
 
 const border = '1px dashed #b9b9b9';
 const postId = window.blockstudioAdmin?.postId;
-let repeaters = {};
 
 const getItemStyle = (
   isDragging: boolean,
@@ -464,6 +463,7 @@ export const Repeater = ({
 }) => {
   const [groups, setGroups] = useState<Any[]>([]);
   const innerId = id === '' ? item.id : id;
+  const listId = id || item.id || '';
 
   useEffect(() => {
     if (v?.length) {
@@ -481,10 +481,6 @@ export const Repeater = ({
       newGroups = [...newGroups, attributes];
     });
     setGroups(newGroups);
-    repeaters = {
-      ...repeaters,
-      [innerId ?? '']: newGroups,
-    };
   };
 
   const getId = (index: number) => {
@@ -502,8 +498,9 @@ export const Repeater = ({
       })}
     >
       <List
-        {...{ ids, context, repeaters }}
-        id={id || item.id}
+        {...{ ids, context }}
+        repeaters={{ [listId]: groups as string[] }}
+        id={listId}
         style={{
           marginLeft: '8px',
         }}
