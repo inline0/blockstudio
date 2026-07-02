@@ -406,6 +406,8 @@ export const Block = ({
   };
 
   const debouncedFetchSingle = useDebounce(fetchSingle, 500);
+  const debouncedFetchSingleRef = useRef(debouncedFetchSingle);
+  debouncedFetchSingleRef.current = debouncedFetchSingle;
 
   useEffect(function onMount() {
     const mode = getRenderMode();
@@ -497,17 +499,15 @@ export const Block = ({
   );
 
   useEffect(function onRefreshEvent() {
-    document.addEventListener(
-      `blockstudio/${block.name}/refresh`,
-      debouncedFetchSingle,
-    );
+    const refresh = () => debouncedFetchSingleRef.current();
+    document.addEventListener(`blockstudio/${block.name}/refresh`, refresh);
 
     return () =>
       document.removeEventListener(
         `blockstudio/${block.name}/refresh`,
-        debouncedFetchSingle,
+        refresh,
       );
-  }, [disableLoading]);
+  }, [block.name, disableLoading]);
 
   useEffect(
     function onMarkupChange() {
