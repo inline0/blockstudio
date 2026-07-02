@@ -68,6 +68,24 @@
             }
           ]
         ]
+      },
+      {
+        "id": "emptySource",
+        "type": "text",
+        "label": "Empty Source"
+      },
+      {
+        "id": "textOnEmpty",
+        "type": "text",
+        "label": "Text on empty",
+        "conditions": [
+          [
+            {
+              "id": "emptySource",
+              "operator": "empty"
+            }
+          ]
+        ]
       }
     ]
   }
