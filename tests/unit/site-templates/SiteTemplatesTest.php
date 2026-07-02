@@ -243,6 +243,32 @@ class SiteTemplatesTest extends TestCase {
 		$this->assertStringContainsString( 'External Template', $templates['external-template']['content'] );
 	}
 
+	public function test_explicit_manifest_title_is_preserved(): void {
+		$root = $this->create_temp_template_root();
+		file_put_contents(
+			$root . '/external-template/template.json',
+			wp_json_encode(
+				array(
+					'slug'  => 'external-template',
+					'title' => 'Two-Column',
+				)
+			)
+		);
+
+		$filter = static function () use ( $root ): array {
+			return array( $root );
+		};
+
+		add_filter( 'blockstudio/site_templates/template_paths', $filter );
+		Site_Templates::reset();
+
+		$templates = Site_Templates::templates();
+
+		remove_filter( 'blockstudio/site_templates/template_paths', $filter );
+
+		$this->assertSame( 'Two-Column', $templates['external-template']['title'] );
+	}
+
 	public function test_invalid_manifest_records_error(): void {
 		$root = $this->create_temp_template_root( false );
 

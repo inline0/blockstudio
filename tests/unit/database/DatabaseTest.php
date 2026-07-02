@@ -16,6 +16,8 @@ class DatabaseTest extends TestCase {
 	 */
 	private array $cpt_post_ids = array();
 
+	private array $temporary_schemas = array();
+
 	protected function tearDown(): void {
 		foreach ( $this->created_ids as $key => $ids ) {
 			foreach ( $ids as $id ) {
@@ -30,11 +32,42 @@ class DatabaseTest extends TestCase {
 		}
 
 		$this->cpt_post_ids = array();
+
+		$this->remove_temporary_schemas();
+		wp_set_current_user( 0 );
 	}
 
 	private function track_record( string $key, array $record ): array {
 		$this->created_ids[ $key ][] = $record['id'];
 		return $record;
+	}
+
+	private function register_temporary_schema( string $key, array $schema ): void {
+		$property = new ReflectionProperty( Database::class, 'schemas' );
+		$property->setAccessible( true );
+
+		$schemas         = $property->getValue();
+		$schemas[ $key ] = $schema;
+		$property->setValue( null, $schemas );
+
+		$this->temporary_schemas[] = $key;
+	}
+
+	private function remove_temporary_schemas(): void {
+		if ( empty( $this->temporary_schemas ) ) {
+			return;
+		}
+
+		$property = new ReflectionProperty( Database::class, 'schemas' );
+		$property->setAccessible( true );
+
+		$schemas = $property->getValue();
+		foreach ( $this->temporary_schemas as $key ) {
+			unset( $schemas[ $key ] );
+		}
+
+		$property->setValue( null, $schemas );
+		$this->temporary_schemas = array();
 	}
 
 	// Database::get_all()
@@ -297,6 +330,97 @@ class DatabaseTest extends TestCase {
 
 		$list = $db->list( array(), 2 );
 		$this->assertLessThanOrEqual( 2, count( $list ) );
+	}
+
+	public function test_list_clamps_negative_limit(): void {
+		$db = Db::get( 'blockstudio/type-db-table' );
+		$r1 = $db->create( array( 'title' => 'Negative Limit 1' ) );
+		$r2 = $db->create( array( 'title' => 'Negative Limit 2' ) );
+		$this->track_record( 'blockstudio/type-db-table:default', $r1 );
+		$this->track_record( 'blockstudio/type-db-table:default', $r2 );
+
+		$list = $db->list( array(), -1 );
+		$this->assertCount( 1, $list );
+	}
+
+	public function test_unknown_filters_are_ignored_for_list_queries(): void {
+		$db     = Db::get( 'blockstudio/type-db-table' );
+		$record = $db->create( array( 'title' => 'Locale Filter' ) );
+		$this->track_record( 'blockstudio/type-db-table:default', $record );
+
+		$list = $db->list( array( '_locale' => 'user' ) );
+		$ids  = array_column( $list, 'id' );
+
+		$this->assertContains( $record['id'], $ids );
+	}
+
+	public function test_text_fields_preserve_newlines(): void {
+		$db      = Db::get( 'blockstudio/type-db-builder' );
+		$content = "Line one\nLine two";
+		$record  = $db->create(
+			array(
+				'title' => 'Text Area',
+				'notes' => $content,
+			)
+		);
+		$this->track_record( 'blockstudio/type-db-builder:default', $record );
+
+		$this->assertSame( $content, $record['notes'] );
+	}
+
+	public function test_meta_storage_user_scoped_list_matches_query_param_strings(): void {
+		$post_id = wp_insert_post(
+			array(
+				'post_type'   => 'post',
+				'post_status' => 'publish',
+				'post_title'  => 'Meta Storage Owner',
+			),
+			true
+		);
+		$this->assertIsInt( $post_id );
+		$this->cpt_post_ids[] = $post_id;
+
+		$key = 'blockstudio/test-meta-db:default';
+		$this->register_temporary_schema(
+			$key,
+			array(
+				'storage'    => 'meta',
+				'postId'     => $post_id,
+				'userScoped' => true,
+				'fields'     => array(
+					'title'   => array( 'type' => 'string' ),
+					'count'   => array( 'type' => 'integer' ),
+					'user_id' => array( 'type' => 'integer' ),
+				),
+			)
+		);
+
+		wp_set_current_user( 0 );
+		$record = Database::execute(
+			'create',
+			$key,
+			array(
+				'data' => array(
+					'title' => 'Meta row',
+					'count' => 5,
+				),
+			)
+		);
+		$this->track_record( $key, $record );
+
+		$list = Database::execute(
+			'list',
+			$key,
+			array(
+				'filters' => array(
+					'count'   => '5',
+					'_locale' => 'user',
+				),
+			)
+		);
+
+		$this->assertCount( 1, $list );
+		$this->assertSame( $record['id'], $list[0]['id'] );
 	}
 
 	public function test_table_list_with_offset(): void {

@@ -1,7 +1,9 @@
 <?php
 
 use Blockstudio\Attribute_Builder;
+use Blockstudio\Block_Registry;
 use Blockstudio\Build;
+use Blockstudio\Field_Registry;
 use Blockstudio\Field_Type_Registry;
 use Blockstudio\Interfaces\Field_Handler_Interface;
 use PHPUnit\Framework\TestCase;
@@ -11,12 +13,16 @@ class AttributeBuilderTest extends TestCase {
 	private Attribute_Builder $builder;
 
 	protected function setUp(): void {
+		Field_Registry::instance()->reset();
 		Field_Type_Registry::instance()->reset();
+		Block_Registry::instance()->set_tailwind_active( false );
 		$this->builder = new Attribute_Builder();
 	}
 
 	protected function tearDown(): void {
+		Field_Registry::instance()->reset();
 		Field_Type_Registry::instance()->reset();
+		Block_Registry::instance()->set_tailwind_active( false );
 	}
 
 	// build() - empty input
@@ -986,10 +992,10 @@ class AttributeBuilderTest extends TestCase {
 		$this->assertArrayHasKey( 'storage', $result['active'] );
 	}
 
-	// is_tailwind_active() and reset_tailwind_active()
+	// Tailwind active state.
 
 	public function test_tailwind_inactive_by_default(): void {
-		$this->assertFalse( $this->builder->is_tailwind_active() );
+		$this->assertFalse( Block_Registry::instance()->is_tailwind_active() );
 	}
 
 	public function test_tailwind_activated_by_classes_field_with_tailwind_true(): void {
@@ -1003,7 +1009,7 @@ class AttributeBuilderTest extends TestCase {
 
 		$this->builder->build( $fields );
 
-		$this->assertTrue( $this->builder->is_tailwind_active() );
+		$this->assertTrue( Block_Registry::instance()->is_tailwind_active() );
 	}
 
 	public function test_tailwind_not_activated_by_classes_field_without_tailwind(): void {
@@ -1016,7 +1022,7 @@ class AttributeBuilderTest extends TestCase {
 
 		$this->builder->build( $fields );
 
-		$this->assertFalse( $this->builder->is_tailwind_active() );
+		$this->assertFalse( Block_Registry::instance()->is_tailwind_active() );
 	}
 
 	public function test_tailwind_not_activated_by_non_classes_field(): void {
@@ -1030,10 +1036,10 @@ class AttributeBuilderTest extends TestCase {
 
 		$this->builder->build( $fields );
 
-		$this->assertFalse( $this->builder->is_tailwind_active() );
+		$this->assertFalse( Block_Registry::instance()->is_tailwind_active() );
 	}
 
-	public function test_reset_tailwind_active(): void {
+	public function test_tailwind_active_state_can_be_reset(): void {
 		$fields = array(
 			array(
 				'id'       => 'styles',
@@ -1043,10 +1049,10 @@ class AttributeBuilderTest extends TestCase {
 		);
 
 		$this->builder->build( $fields );
-		$this->assertTrue( $this->builder->is_tailwind_active() );
+		$this->assertTrue( Block_Registry::instance()->is_tailwind_active() );
 
-		$this->builder->reset_tailwind_active();
-		$this->assertFalse( $this->builder->is_tailwind_active() );
+		Block_Registry::instance()->set_tailwind_active( false );
+		$this->assertFalse( Block_Registry::instance()->is_tailwind_active() );
 	}
 
 	// register_handler()
@@ -1172,6 +1178,8 @@ class AttributeBuilderTest extends TestCase {
 		$this->assertArrayHasKey( 1, $attributes );
 		$this->assertSame( 'text', $attributes[0]['field'] );
 		$this->assertSame( 'number', $attributes[1]['field'] );
+		$this->assertSame( 'name', $attributes[0]['id'] );
+		$this->assertSame( 'age', $attributes[1]['id'] );
 	}
 
 	// Nested groups
@@ -1328,10 +1336,10 @@ class AttributeBuilderTest extends TestCase {
 		);
 
 		$this->builder->build( $fields );
-		$this->assertTrue( $this->builder->is_tailwind_active() );
+		$this->assertTrue( Block_Registry::instance()->is_tailwind_active() );
 
 		$this->builder->build( array() );
-		$this->assertTrue( $this->builder->is_tailwind_active() );
+		$this->assertTrue( Block_Registry::instance()->is_tailwind_active() );
 	}
 
 	// build() - select field with 'set' property
@@ -1349,6 +1357,107 @@ class AttributeBuilderTest extends TestCase {
 		$result = $this->builder->build( $fields );
 
 		$this->assertSame( 'className', $result['variant']['set'] );
+	}
+
+	public function test_build_text_with_set_property_for_extensions(): void {
+		$set = array(
+			array(
+				'attribute' => 'class',
+				'value'     => 'text-{attributes.textClass}',
+			),
+		);
+
+		$result = $this->builder->build(
+			array(
+				array(
+					'id'   => 'textClass',
+					'type' => 'text',
+					'set'  => $set,
+				),
+			),
+			false,
+			true
+		);
+
+		$this->assertSame( $set, $result['textClass']['set'] );
+	}
+
+	public function test_build_text_preserves_block_field_metadata(): void {
+		$result = $this->builder->build(
+			array(
+				array(
+					'id'           => 'card',
+					'type'         => 'text',
+					'_blockField'  => true,
+					'_blockName'   => 'blockstudio/component-card',
+					'_blockIds'    => array(
+						'card_heading' => 'heading',
+					),
+					'_idStructure' => 'card_{id}',
+					'returnFormat' => 'data',
+				),
+			)
+		);
+
+		$this->assertTrue( $result['card']['_blockField'] );
+		$this->assertSame( 'blockstudio/component-card', $result['card']['_blockName'] );
+		$this->assertSame( array( 'card_heading' => 'heading' ), $result['card']['_blockIds'] );
+		$this->assertSame( 'card_{id}', $result['card']['_idStructure'] );
+		$this->assertSame( 'data', $result['card']['returnFormat'] );
+	}
+
+	public function test_nested_repeater_override_preserves_original_color_options_after_merge(): void {
+		$base = $this->builder->build(
+			array(
+				array(
+					'id'         => 'repeater',
+					'type'       => 'repeater',
+					'attributes' => array(
+						array(
+							'id'      => 'color',
+							'type'    => 'color',
+							'options' => array(
+								array(
+									'name'  => 'red',
+									'value' => '#f00',
+									'slug'  => 'red',
+								),
+								array(
+									'name'  => 'blue',
+									'value' => '#00f',
+									'slug'  => 'blue',
+								),
+							),
+							'default' => '#f00',
+						),
+					),
+				),
+			)
+		);
+		$override = $this->builder->build(
+			array(
+				array(
+					'id'         => 'repeater',
+					'type'       => 'repeater',
+					'attributes' => array(
+						array(
+							'id'    => 'color',
+							'type'  => 'color',
+							'label' => 'Override color',
+						),
+					),
+				),
+			),
+			true
+		);
+
+		$this->assertSame( 'blue', $base['repeater']['attributes'][0]['options'][1]['slug'] );
+		$this->assertArrayNotHasKey( 'options', $override['repeater']['attributes'][0] );
+
+		Build::merge_attributes( $base, $override );
+
+		$this->assertSame( 'color', $base['repeater']['attributes'][0]['id'] );
+		$this->assertSame( 'blue', $base['repeater']['attributes'][0]['options'][1]['slug'] );
 	}
 
 	// build() - color field with default matching an option
@@ -1484,6 +1593,15 @@ class AttributeBuilderTest extends TestCase {
 						'type' => 'text',
 					),
 					array(
+						'type'       => 'group',
+						'attributes' => array(
+							array(
+								'id'   => 'inner_idless',
+								'type' => 'text',
+							),
+						),
+					),
+					array(
 						'id'         => 'nested_group',
 						'type'       => 'group',
 						'attributes' => array(
@@ -1501,6 +1619,87 @@ class AttributeBuilderTest extends TestCase {
 
 		$this->assertArrayHasKey( 'items', $result );
 		$this->assertSame( 'array', $result['items']['type'] );
+		$this->assertSame( 'label', $result['items']['attributes'][0]['id'] );
+		$this->assertSame( 'inner_idless', $result['items']['attributes'][1]['id'] );
+		$this->assertCount( 2, $result['items']['attributes'] );
+	}
+
+	public function test_repeater_custom_field_keeps_nested_repeater_attribute_ids_from_idless_groups(): void {
+		Field_Registry::instance()->register(
+			'sample-media-group',
+			array(
+				'attributes' => array(
+					array(
+						'id'      => 'media_type',
+						'type'    => 'select',
+						'default' => 'none',
+						'options' => array(
+							array(
+								'value' => 'none',
+								'label' => 'None',
+							),
+							array(
+								'value' => 'image',
+								'label' => 'Image',
+							),
+						),
+					),
+					array(
+						'type'       => 'group',
+						'conditions' => array(
+							array(
+								array(
+									'id'       => 'media_type',
+									'operator' => '==',
+									'value'    => 'image',
+								),
+							),
+						),
+						'attributes' => array(
+							array(
+								'id'         => 'image_sources',
+								'type'       => 'repeater',
+								'textButton' => 'Add grouped picture source',
+								'attributes' => array(
+									array(
+										'id'   => 'source_image',
+										'type' => 'files',
+									),
+									array(
+										'id'   => 'source_media',
+										'type' => 'text',
+									),
+								),
+							),
+						),
+					),
+				),
+			)
+		);
+
+		$fields = array(
+			array(
+				'id'         => 'group_cards',
+				'type'       => 'repeater',
+				'attributes' => array(
+					array(
+						'type' => 'custom/sample-media-group',
+					),
+				),
+			),
+		);
+
+		Build::expand_custom_fields( $fields );
+
+		$result = $this->builder->build( $fields );
+
+		$this->assertArrayHasKey( 'group_cards', $result );
+		$this->assertArrayHasKey( 'attributes', $result['group_cards'] );
+		$this->assertSame( 'media_type', $result['group_cards']['attributes'][0]['id'] );
+		$this->assertSame( 'image_sources', $result['group_cards']['attributes'][1]['id'] );
+		$this->assertSame( 'repeater', $result['group_cards']['attributes'][1]['field'] );
+		$this->assertSame( 'source_image', $result['group_cards']['attributes'][1]['attributes'][0]['id'] );
+		$this->assertSame( 'source_media', $result['group_cards']['attributes'][1]['attributes'][1]['id'] );
 	}
 
 	// build() - files field without default or storage has no extra keys
@@ -1561,11 +1760,11 @@ class AttributeBuilderTest extends TestCase {
 		$this->assertSame( $default, $result['link']['default'] );
 	}
 
-	// build() - new builder instance starts clean
+	// build() - new builder instance leaves Tailwind inactive
 
-	public function test_new_builder_has_no_tailwind(): void {
-		$builder = new Attribute_Builder();
-		$this->assertFalse( $builder->is_tailwind_active() );
+	public function test_new_builder_does_not_activate_tailwind(): void {
+		new Attribute_Builder();
+		$this->assertFalse( Block_Registry::instance()->is_tailwind_active() );
 	}
 
 	// build() - gradient field with matching default
@@ -1739,12 +1938,9 @@ class AttributeBuilderTest extends TestCase {
 			),
 		);
 
-		$modern = $this->builder->build( $fields );
-		$legacy = array();
-		Build::build_attributes( $fields, $legacy );
+		$attributes = $this->builder->build( $fields );
 
-		$this->assertSame( array(), $modern );
-		$this->assertSame( $modern, $legacy );
+		$this->assertSame( array(), $attributes );
 	}
 
 	public function test_unregistered_namespaced_custom_field_produces_no_attribute(): void {
@@ -1755,15 +1951,12 @@ class AttributeBuilderTest extends TestCase {
 			),
 		);
 
-		$modern = $this->builder->build( $fields );
-		$legacy = array();
-		Build::build_attributes( $fields, $legacy );
+		$attributes = $this->builder->build( $fields );
 
-		$this->assertSame( array(), $modern );
-		$this->assertSame( $modern, $legacy );
+		$this->assertSame( array(), $attributes );
 	}
 
-	public function test_legacy_build_attributes_matches_attribute_builder_for_custom_field(): void {
+	public function test_custom_field_builds_registered_attribute(): void {
 		Field_Type_Registry::instance()->register(
 			'test/dimensions',
 			array(
@@ -1780,10 +1973,20 @@ class AttributeBuilderTest extends TestCase {
 			),
 		);
 
-		$modern = $this->builder->build( $fields );
-		$legacy = array();
-		Build::build_attributes( $fields, $legacy );
+		$attributes = $this->builder->build( $fields );
 
-		$this->assertSame( $modern, $legacy );
+		$this->assertSame(
+			array(
+				'margin' => array(
+					'blockstudio' => true,
+					'type'        => 'object',
+					'field'       => 'test/dimensions',
+					'id'          => 'margin',
+					'default'     => array( 'top' => 'md' ),
+					'fallback'    => array( 'top' => 'none' ),
+				),
+			),
+			$attributes
+		);
 	}
 }

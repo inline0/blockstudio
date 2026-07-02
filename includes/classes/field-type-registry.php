@@ -295,7 +295,7 @@ final class Field_Type_Registry {
 	 */
 	public function get_storage_rest_schema( array $field, string $value_type ): ?array {
 		if ( isset( $field['storage']['rest_schema'] ) && is_array( $field['storage']['rest_schema'] ) ) {
-			return $field['storage']['rest_schema'];
+			return $this->normalize_storage_rest_schema( $field['storage']['rest_schema'], $value_type );
 		}
 
 		$type = $field['type'] ?? '';
@@ -304,14 +304,14 @@ final class Field_Type_Registry {
 			$storage    = $definition['storage'] ?? array();
 
 			if ( is_array( $storage ) && isset( $storage['rest_schema'] ) && is_array( $storage['rest_schema'] ) ) {
-				return $storage['rest_schema'];
+				return $this->normalize_storage_rest_schema( $storage['rest_schema'], $value_type );
 			}
 		}
 
 		if ( 'array' === $value_type ) {
 			return array(
 				'type'  => 'array',
-				'items' => array( 'type' => 'object' ),
+				'items' => array(),
 			);
 		}
 
@@ -323,6 +323,29 @@ final class Field_Type_Registry {
 		}
 
 		return null;
+	}
+
+	/**
+	 * Normalize a custom storage REST schema for the resolved storage value type.
+	 *
+	 * @param array  $schema     REST schema.
+	 * @param string $value_type Storage value type.
+	 *
+	 * @return array<string, mixed>
+	 */
+	private function normalize_storage_rest_schema( array $schema, string $value_type ): array {
+		if ( 'array' === $value_type && 'array' !== ( $schema['type'] ?? '' ) ) {
+			return array(
+				'type'  => 'array',
+				'items' => $schema,
+			);
+		}
+
+		if ( 'array' === $value_type && ! isset( $schema['items'] ) ) {
+			$schema['items'] = array();
+		}
+
+		return $schema;
 	}
 
 	/**

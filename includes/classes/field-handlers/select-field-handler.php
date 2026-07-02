@@ -90,6 +90,7 @@ class Select_Field_Handler extends Abstract_Field_Handler {
 
 		$is_multiple = $this->is_multiple_options( $type, $field );
 		$attr_type   = $this->get_attribute_type( $type, $is_multiple );
+		$is_override = (bool) ( $field['_blockstudio_is_override'] ?? false );
 
 		$attribute = $this->create_base_attribute( $type, $attr_type );
 
@@ -99,7 +100,10 @@ class Select_Field_Handler extends Abstract_Field_Handler {
 		}
 
 		// Handle options.
-		if ( in_array( $type, $this->option_types, true ) ) {
+		if (
+			in_array( $type, $this->option_types, true ) &&
+			( ! $is_override || isset( $field['options'] ) || isset( $field['populate'] ) )
+		) {
 			$this->build_options( $field, $attribute );
 		}
 
@@ -116,13 +120,10 @@ class Select_Field_Handler extends Abstract_Field_Handler {
 		// Apply defaults with special handling for options.
 		$this->apply_option_defaults( $field, $attribute, $is_multiple );
 		$this->apply_storage( $field, $attribute );
+		$this->apply_set( $field, $attribute );
+		$this->apply_block_field_metadata( $field, $attribute );
 
-		$attribute['id'] = $field_id;
-
-		// Handle set property for extensions.
-		if ( $field['set'] ?? false ) {
-			$attribute['set'] = $field['set'];
-		}
+		$attribute['id'] = $this->get_attribute_id( $field, $prefix );
 
 		$attributes[ $field_id ] = $attribute;
 	}
@@ -180,11 +181,16 @@ class Select_Field_Handler extends Abstract_Field_Handler {
 
 		// Handle populate.
 		if ( isset( $field['populate'] ) ) {
-			$populate_type = $field['populate']['type'] ?? false;
-			$should_defer  = $is_fetch_populate && ! ( $field['fromEditor'] ?? false );
+			$populate_type    = $field['populate']['type'] ?? false;
+			$should_defer     = $is_fetch_populate && ! ( $field['fromEditor'] ?? false );
+			$has_dynamic_args = str_contains(
+				wp_json_encode( $field['populate'] ?? array() ),
+				'{attributes.'
+			);
 
 			if (
 				! $should_defer &&
+				! $has_dynamic_args &&
 				(
 					'query' === $populate_type ||
 					'custom' === $populate_type ||

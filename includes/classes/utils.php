@@ -70,14 +70,23 @@ class Utils {
 			) {
 				continue;
 			}
-			$key   = preg_replace( '/([a-z])([A-Z])/', '$1_$2', $key );
-			$key   = strtolower( $key );
-			$key   = str_replace( '_', '-', $key );
-			$value = $value['value'] ?? ( is_array( $value ) ? esc_attr( wp_json_encode( $value ) ) : $value );
+			$key = preg_replace( '/([a-z])([A-Z])/', '$1_$2', $key );
+			$key = strtolower( $key );
+			$key = str_replace( '_', '-', $key );
+
+			if ( is_array( $value ) && array_key_exists( 'value', $value ) ) {
+				$value = $value['value'];
+			}
+
+			if ( is_array( $value ) ) {
+				$value = wp_json_encode( $value );
+			}
+
+			$value = esc_attr( (string) $value );
 
 			if ( ! $variables ) {
 				$attributes .= 'data-' . $key . '="' . $value . '" ';
-			} elseif ( ! is_array( $value ) ) {
+			} else {
 				$attributes .= '--' . $key . ': ' . $value . ';';
 			}
 		}
@@ -120,5 +129,118 @@ class Utils {
 	 */
 	public static function console_log( $data ): void {
 		echo '<script>console.log(' . wp_json_encode( $data ) . ')</script>';
+	}
+
+	/**
+	 * Read and decode a JSON file.
+	 *
+	 * @param string $path  The file path.
+	 * @param string $error Optional error output.
+	 *
+	 * @return array|null Decoded JSON object/array, or null on failure.
+	 */
+	public static function read_json_file( string $path, string &$error = '' ): ?array {
+		if ( ! is_file( $path ) ) {
+			$error = 'File does not exist.';
+			return null;
+		}
+
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Reading local JSON file.
+		$content = file_get_contents( $path );
+		if ( false === $content ) {
+			$error = 'File is not readable.';
+			return null;
+		}
+
+		$data = json_decode( $content, true );
+		if ( JSON_ERROR_NONE !== json_last_error() ) {
+			$error = json_last_error_msg();
+			return null;
+		}
+
+		if ( ! is_array( $data ) ) {
+			$error = 'JSON root must be an object.';
+			return null;
+		}
+
+		return $data;
+	}
+
+	/**
+	 * Build theme subdirectory paths.
+	 *
+	 * @param string $folder        Folder name relative to the theme root.
+	 * @param bool   $parent_first  Whether parent theme paths should come first.
+	 * @param bool   $existing_only Whether to include only existing directories.
+	 *
+	 * @return array<int, string>
+	 */
+	public static function theme_subdir_paths(
+		string $folder,
+		bool $parent_first = true,
+		bool $existing_only = true
+	): array {
+		$folder = trim( $folder, '/' );
+		$paths  = array();
+
+		$stylesheet_path = get_stylesheet_directory() . '/' . $folder;
+		$template_path   = get_template_directory() . '/' . $folder;
+
+		foreach (
+			$parent_first
+				? array( $template_path, $stylesheet_path )
+				: array( $stylesheet_path, $template_path )
+			as $path
+		) {
+			if ( in_array( $path, $paths, true ) ) {
+				continue;
+			}
+
+			if ( $existing_only && ! is_dir( $path ) ) {
+				continue;
+			}
+
+			$paths[] = $path;
+		}
+
+		return $paths;
+	}
+
+	/**
+	 * Build conventional index source candidates for a directory.
+	 *
+	 * @param string $directory       Source directory.
+	 * @param array  $extra_filenames Additional filenames after PHP/Blade/Twig.
+	 *
+	 * @return array<int, string>
+	 */
+	public static function index_source_candidates( string $directory, array $extra_filenames = array() ): array {
+		$directory = rtrim( $directory, '/\\' );
+		$filenames = array_merge(
+			array( 'index.php', 'index.blade.php', 'index.twig' ),
+			$extra_filenames
+		);
+
+		return array_map(
+			static fn( string $filename ): string => $directory . '/' . ltrim( $filename, '/\\' ),
+			$filenames
+		);
+	}
+
+	/**
+	 * Return the first existing path from a candidate list.
+	 *
+	 * @param array $candidates Candidate paths.
+	 *
+	 * @return string|null Normalized path or null.
+	 */
+	public static function first_existing_path( array $candidates ): ?string {
+		foreach ( $candidates as $candidate ) {
+			if ( is_string( $candidate ) && file_exists( $candidate ) ) {
+				return wp_normalize_path( $candidate );
+			}
+		}
+
+		return null;
 	}
 }

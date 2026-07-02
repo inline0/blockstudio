@@ -219,7 +219,7 @@ class Block_Discovery {
 		// Get name from block.json in editor mode.
 		$name_file = false;
 		if ( $is_editor && file_exists( $file_dir . '/block.json' ) ) {
-			$dir_block_json = $this->read_json_file( $file_dir . '/block.json' );
+			$dir_block_json = Utils::read_json_file( $file_dir . '/block.json' ) ?? array();
 			$name_file      = $dir_block_json['name'] ?? false;
 			if ( ! $name_file ) {
 				$block_json = array( 'name' => 'test/test' );
@@ -413,22 +413,7 @@ class Block_Discovery {
 				$file_path
 			);
 
-		return $this->read_json_file( $json_path );
-	}
-
-	/**
-	 * Read a JSON file.
-	 *
-	 * @param string $path The file path.
-	 *
-	 * @return array The decoded JSON or empty array.
-	 */
-	private function read_json_file( string $path ): array {
-		if ( ! file_exists( $path ) ) {
-			return array();
-		}
-		$contents = file_get_contents( $path ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents
-		return $this->decode_json( $contents );
+		return Utils::read_json_file( $json_path ) ?? array();
 	}
 
 	/**

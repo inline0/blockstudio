@@ -225,17 +225,8 @@ final class Site_Templates {
 	 * @return array{templates: array<int, string>, parts: array<int, string>} Paths.
 	 */
 	public static function get_paths(): array {
-		$template_paths = array(
-			get_stylesheet_directory() . '/templates',
-		);
-		$part_paths     = array(
-			get_stylesheet_directory() . '/parts',
-		);
-
-		if ( get_stylesheet_directory() !== get_template_directory() ) {
-			$template_paths[] = get_template_directory() . '/templates';
-			$part_paths[]     = get_template_directory() . '/parts';
-		}
+		$template_paths = Utils::theme_subdir_paths( 'templates', false, false );
+		$part_paths     = Utils::theme_subdir_paths( 'parts', false, false );
 
 		/**
 		 * Filter file-backed Site Editor template paths.
@@ -385,21 +376,13 @@ final class Site_Templates {
 			return '';
 		}
 
-		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Reading local template source.
-		$content = file_get_contents( $source_path );
+		$content = Template_Compiler::compile(
+			$source_path,
+			is_string( $item['directory'] ?? null ) ? $item['directory'] : null
+		);
 
-		if ( false === $content ) {
+		if ( null === $content ) {
 			return '';
-		}
-
-		if ( ! empty( $item['is_blade'] ) && class_exists( 'Jenssegers\Blade\Blade' ) ) {
-			$blade = new \Jenssegers\Blade\Blade( $item['directory'], sys_get_temp_dir() );
-			$view  = basename( $source_path, '.blade.php' );
-
-			$content = $blade->render( $view, array() );
-		} elseif ( ! empty( $item['is_twig'] ) && class_exists( 'Timber\Timber' ) ) {
-			\Timber\Timber::init();
-			$content = \Timber\Timber::compile_string( $content, array() );
 		}
 
 		$filter = 'wp_template_part' === ( $item['type'] ?? '' )
@@ -629,10 +612,12 @@ final class Site_Templates {
 		$payload = $registry->to_array();
 		$files   = array();
 
-		foreach ( array_merge( $payload['templates'], $payload['parts'] ) as $item ) {
-			foreach ( array( 'manifest_path', 'source_path' ) as $path_key ) {
-				if ( is_string( $item[ $path_key ] ?? null ) && '' !== $item[ $path_key ] ) {
-					$files[] = $item[ $path_key ];
+		foreach ( array( 'templates', 'parts' ) as $group ) {
+			foreach ( $payload[ $group ] as $item ) {
+				foreach ( array( 'manifest_path', 'source_path' ) as $path_key ) {
+					if ( is_string( $item[ $path_key ] ?? null ) && '' !== $item[ $path_key ] ) {
+						$files[] = $item[ $path_key ];
+					}
 				}
 			}
 		}

@@ -492,8 +492,7 @@ class Admin_Page {
 			return null;
 		}
 
-		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Local file read.
-		$config = json_decode( file_get_contents( $path ), true );
+		$config = Utils::read_json_file( $path );
 
 		if ( ! is_array( $config ) ) {
 			return null;
@@ -684,6 +683,11 @@ class Admin_Page {
 		$written = 0;
 
 		foreach ( $block['files'] ?? array() as $file ) {
+			$file = (string) $file;
+			if ( ! $this->is_safe_import_file_path( $file, $target ) ) {
+				return new \WP_Error( 'invalid_registry_file', 'Registry file path is not allowed.', array( 'status' => 502 ) );
+			}
+
 			$file_url      = $base_url . '/' . $block_name . '/' . $file;
 			$file_response = wp_remote_get(
 				$file_url,
@@ -716,6 +720,32 @@ class Admin_Page {
 				'files'   => $written,
 			)
 		);
+	}
+
+	/**
+	 * Check whether a registry import file path stays inside the block target.
+	 *
+	 * @param string $file   Registry file path.
+	 * @param string $target Target block directory.
+	 *
+	 * @return bool
+	 */
+	private function is_safe_import_file_path( string $file, string $target ): bool {
+		$file = wp_normalize_path( $file );
+
+		if ( '' === $file || false !== strpos( $file, "\0" ) || str_starts_with( $file, '/' ) || preg_match( '/^[a-zA-Z]:\//', $file ) ) {
+			return false;
+		}
+
+		if ( in_array( '..', explode( '/', $file ), true ) ) {
+			return false;
+		}
+
+		$target    = trailingslashit( wp_normalize_path( $target ) );
+		$candidate = wp_normalize_path( $target . $file );
+		$directory = trailingslashit( wp_normalize_path( dirname( $candidate ) ) );
+
+		return str_starts_with( $candidate, $target ) && str_starts_with( $directory, $target );
 	}
 
 	/**

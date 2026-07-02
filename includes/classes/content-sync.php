@@ -171,7 +171,7 @@ class Content_Sync {
 		}
 
 		if ( ! empty( $args['prune'] ) && ! $this->has_error_rows( $rows ) ) {
-			$rows = array_merge( $rows, $this->prune_missing( $plan ) );
+			$rows = array_merge( $rows, $this->prune_missing( $plan, $args ) );
 		}
 
 		return $rows;
@@ -213,7 +213,7 @@ class Content_Sync {
 			$rows[] = $this->status_term_file( $item, false );
 		}
 
-		return array_merge( $rows, $this->preview_prune_missing( $plan, 'orphaned' ), $this->status_meta_secret_warnings( $plan ), $this->status_body_reference_warnings( $plan ), $plan['errors'] );
+		return array_merge( $rows, $this->preview_prune_missing( $plan, 'orphaned', $args ), $this->status_meta_secret_warnings( $plan ), $this->status_body_reference_warnings( $plan ), $plan['errors'] );
 	}
 
 	/**
@@ -363,24 +363,26 @@ class Content_Sync {
 	 */
 	private function build_push_plan( array $args ): array {
 		$this->dry_run = ! empty( $args['dry-run'] );
+		$file_errors   = array();
 
 		$plan = array(
-			'posts'  => $this->read_post_files( $args ),
-			'terms'  => $this->read_term_files( $args ),
+			'posts'  => $this->read_post_files( $args, $file_errors ),
+			'terms'  => $this->read_term_files( $args, $file_errors ),
 			'rows'   => array(),
-			'errors' => array(),
+			'errors' => $file_errors,
 		);
 
 		$post_uids = $this->collect_plan_uids( $plan['posts'] );
 		$term_uids = $this->collect_plan_uids( $plan['terms'] );
 
 		$plan['errors'] = array_merge(
+			$plan['errors'],
 			$this->validate_post_files( $plan['posts'], $post_uids, $term_uids ),
 			$this->validate_term_files( $plan['terms'], $term_uids )
 		);
 
 		if ( $this->dry_run && false !== ( $args['preview'] ?? true ) ) {
-			$plan['rows'] = $this->preview_push_plan( $plan, ! empty( $args['prune'] ) );
+			$plan['rows'] = $this->preview_push_plan( $plan, ! empty( $args['prune'] ), $args );
 		}
 
 		return $plan;
@@ -391,10 +393,11 @@ class Content_Sync {
 	 *
 	 * @param array $plan          Push plan.
 	 * @param bool  $include_prune Whether to preview prune candidates.
+	 * @param array $args          Push options.
 	 *
 	 * @return array
 	 */
-	private function preview_push_plan( array $plan, bool $include_prune ): array {
+	private function preview_push_plan( array $plan, bool $include_prune, array $args ): array {
 		$rows = array();
 
 		foreach ( $this->sort_terms_by_parent( $plan['terms'] ) as $item ) {
@@ -406,7 +409,7 @@ class Content_Sync {
 		}
 
 		if ( $include_prune ) {
-			$rows = array_merge( $rows, $this->preview_prune_missing( $plan ) );
+			$rows = array_merge( $rows, $this->preview_prune_missing( $plan, 'would-prune', $args ) );
 		}
 
 		return $rows;
@@ -436,7 +439,7 @@ class Content_Sync {
 
 		$file_fingerprint = $this->fingerprint_projection( $data, (string) ( $item['body'] ?? '' ) );
 		$stored           = (string) get_post_meta( $existing->ID, self::META_FINGERPRINT, true );
-		$live             = $this->fingerprint_post( $existing, $data );
+		$live             = $this->fingerprint_post_for_file( $existing, $data, (string) ( $item['body'] ?? '' ) );
 
 		if ( '' !== $stored && ! hash_equals( $stored, $live ) ) {
 			return $this->row( 'conflict', 'post', (string) $existing->ID, $uid, 'Database changed since last sync.' );
@@ -490,12 +493,13 @@ class Content_Sync {
 	/**
 	 * Preview content-set entities missing from the file plan.
 	 *
-	 * @param array  $plan        Push plan.
-	 * @param string $row_action  Row action. Use orphaned for status output.
+	 * @param array  $plan       Push plan.
+	 * @param string $row_action Row action. Use orphaned for status output.
+	 * @param array  $args       Selection options.
 	 *
 	 * @return array
 	 */
-	private function preview_prune_missing( array $plan, string $row_action = 'would-prune' ): array {
+	private function preview_prune_missing( array $plan, string $row_action = 'would-prune', array $args = array() ): array {
 		$rows      = array();
 		$post_uids = array();
 		$term_uids = array();
@@ -508,7 +512,7 @@ class Content_Sync {
 			$term_uids[] = (string) ( $item['data']['uid'] ?? '' );
 		}
 
-		foreach ( $this->query_prunable_posts() as $post ) {
+		foreach ( $this->query_prunable_posts( $args ) as $post ) {
 			$uid = (string) get_post_meta( $post->ID, self::META_UID, true );
 			if ( '' === $uid || in_array( $uid, $post_uids, true ) ) {
 				continue;
@@ -519,7 +523,7 @@ class Content_Sync {
 			$rows[]  = $this->row( 'orphaned' === $row_action ? 'orphaned' : $row_action . '-' . $action, 'post', (string) $post->ID, $uid, $message );
 		}
 
-		foreach ( $this->query_content_terms() as $term ) {
+		foreach ( $this->query_content_terms( $args ) as $term ) {
 			$uid = (string) get_term_meta( $term->term_id, self::META_UID, true );
 			if ( '' === $uid || in_array( $uid, $term_uids, true ) ) {
 				continue;
@@ -1172,7 +1176,7 @@ class Content_Sync {
 		$existing = $this->get_raw_meta( $type, $id );
 
 		foreach ( $existing as $key => $_values ) {
-			if ( $this->meta_key_allowed( $key ) && ! array_key_exists( $key, $meta ) ) {
+			if ( $this->meta_key_allowed( $key ) && ! $this->should_drop_meta_key( $key ) && ! array_key_exists( $key, $meta ) ) {
 				delete_metadata( $type, $id, $key );
 			}
 		}
@@ -1257,11 +1261,12 @@ class Content_Sync {
 	/**
 	 * Read post files.
 	 *
-	 * @param array $args Options.
+	 * @param array $args   Options.
+	 * @param array $errors Read errors.
 	 *
 	 * @return array
 	 */
-	private function read_post_files( array $args = array() ): array {
+	private function read_post_files( array $args = array(), array &$errors = array() ): array {
 		$items      = array();
 		$post_types = $this->selected_post_types( $args );
 
@@ -1273,8 +1278,10 @@ class Content_Sync {
 
 			$files = glob( $dir . '/*.json' );
 			foreach ( false !== $files ? $files : array() as $file ) {
-				$data = $this->read_json_file( $file );
+				$error = '';
+				$data  = Utils::read_json_file( $file, $error );
 				if ( ! is_array( $data ) ) {
+					$errors[] = $this->row( 'error', 'post', basename( $file ), '', $this->relative_path( $file ) . ' could not be read: ' . $error );
 					continue;
 				}
 
@@ -1296,11 +1303,12 @@ class Content_Sync {
 	/**
 	 * Read term files.
 	 *
-	 * @param array $args Options.
+	 * @param array $args   Options.
+	 * @param array $errors Read errors.
 	 *
 	 * @return array
 	 */
-	private function read_term_files( array $args = array() ): array {
+	private function read_term_files( array $args = array(), array &$errors = array() ): array {
 		$items = array();
 
 		foreach ( $this->selected_taxonomies( $args ) as $taxonomy ) {
@@ -1311,8 +1319,10 @@ class Content_Sync {
 
 			$files = glob( $dir . '/*.json' );
 			foreach ( false !== $files ? $files : array() as $file ) {
-				$data = $this->read_json_file( $file );
+				$error = '';
+				$data  = Utils::read_json_file( $file, $error );
 				if ( ! is_array( $data ) ) {
+					$errors[] = $this->row( 'error', 'term', basename( $file ), '', $this->relative_path( $file ) . ' could not be read: ' . $error );
 					continue;
 				}
 
@@ -1370,7 +1380,7 @@ class Content_Sync {
 				continue;
 			}
 
-			$data   = $this->read_json_file( $file );
+			$data   = Utils::read_json_file( $file );
 			$uid    = is_array( $data ) ? (string) ( $data['uid'] ?? '' ) : '';
 			$rows[] = $this->row( 'stale', $entity, '', $uid, $this->relative_path( $file ) );
 		}
@@ -2245,10 +2255,11 @@ class Content_Sync {
 	 * Prune missing entities.
 	 *
 	 * @param array $plan Push plan.
+	 * @param array $args Options.
 	 *
 	 * @return array
 	 */
-	private function prune_missing( array $plan ): array {
+	private function prune_missing( array $plan, array $args = array() ): array {
 		$rows      = array();
 		$post_uids = array();
 		$term_uids = array();
@@ -2261,7 +2272,7 @@ class Content_Sync {
 			$term_uids[] = (string) $item['data']['uid'];
 		}
 
-		foreach ( $this->query_prunable_posts() as $post ) {
+		foreach ( $this->query_prunable_posts( $args ) as $post ) {
 			$uid = (string) get_post_meta( $post->ID, self::META_UID, true );
 			if ( '' !== $uid && ! in_array( $uid, $post_uids, true ) ) {
 				$action = $this->orphan_action( 'post', $post->ID );
@@ -2270,7 +2281,7 @@ class Content_Sync {
 			}
 		}
 
-		foreach ( $this->query_content_terms() as $term ) {
+		foreach ( $this->query_content_terms( $args ) as $term ) {
 			$uid = (string) get_term_meta( $term->term_id, self::META_UID, true );
 			if ( '' !== $uid && ! in_array( $uid, $term_uids, true ) ) {
 				$action = $this->orphan_action( 'term', $term->term_id );
@@ -2306,16 +2317,18 @@ class Content_Sync {
 	/**
 	 * Query posts that prune is allowed to remove.
 	 *
+	 * @param array $args Options.
+	 *
 	 * @return array
 	 */
-	private function query_prunable_posts(): array {
+	private function query_prunable_posts( array $args = array() ): array {
 		if ( empty( $this->config['postTypes'] ) ) {
 			return array();
 		}
 
 		return get_posts(
 			array(
-				'post_type'      => $this->config['postTypes'],
+				'post_type'      => $this->selected_post_types( $args ),
 				'post_status'    => 'any',
 				'posts_per_page' => -1,
 				'meta_query'     => array( // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query
@@ -2331,12 +2344,14 @@ class Content_Sync {
 	/**
 	 * Query content-owned terms.
 	 *
+	 * @param array $args Options.
+	 *
 	 * @return array
 	 */
-	private function query_content_terms(): array {
+	private function query_content_terms( array $args = array() ): array {
 		$terms = array();
 
-		foreach ( $this->config['taxonomies'] as $taxonomy ) {
+		foreach ( $this->selected_taxonomies( $args ) as $taxonomy ) {
 			$result = get_terms(
 				array(
 					'taxonomy'   => $taxonomy,
@@ -2560,24 +2575,6 @@ class Content_Sync {
 	}
 
 	/**
-	 * Read JSON file.
-	 *
-	 * @param string $file File path.
-	 *
-	 * @return array|null
-	 */
-	private function read_json_file( string $file ): ?array {
-		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Reading local content sync file.
-		$content = file_get_contents( $file );
-		if ( false === $content ) {
-			return null;
-		}
-
-		$data = json_decode( $content, true );
-		return is_array( $data ) ? $data : null;
-	}
-
-	/**
 	 * Write JSON file.
 	 *
 	 * @param string $file File path.
@@ -2608,8 +2605,7 @@ class Content_Sync {
 
 		wp_mkdir_p( dirname( $file ) );
 		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents -- Writing local content sync file.
-		file_put_contents( $file, $content );
-		return true;
+		return false !== file_put_contents( $file, $content, LOCK_EX );
 	}
 
 	/**

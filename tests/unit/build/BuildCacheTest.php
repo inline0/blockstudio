@@ -176,6 +176,28 @@ class BuildCacheTest extends TestCase {
 		);
 	}
 
+	public function test_write_prunes_stale_scope_files(): void {
+		$scope = 'unit-prune-' . uniqid();
+		$dir   = Build_Cache::get_cache_dir( $scope );
+		$this->temporary_directories[] = $dir;
+
+		$filter = static fn(): int => 2;
+		add_filter( 'blockstudio/cache/max_files_per_scope', $filter );
+
+		try {
+			Build_Cache::write( $scope, 'one', array( 'watch' => array() ) );
+			Build_Cache::write( $scope, 'two', array( 'watch' => array() ) );
+			Build_Cache::write( $scope, 'three', array( 'watch' => array() ) );
+
+			$files = glob( $dir . '/*.php' );
+			$this->assertIsArray( $files );
+			$this->assertLessThanOrEqual( 2, count( $files ) );
+			$this->assertFileExists( Build_Cache::get_cache_dir( $scope ) . '/three.php' );
+		} finally {
+			remove_filter( 'blockstudio/cache/max_files_per_scope', $filter );
+		}
+	}
+
 	/**
 	 * Cache files use a compact payload format when zlib is available.
 	 *

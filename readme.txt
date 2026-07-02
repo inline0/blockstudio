@@ -57,6 +57,15 @@ Download the latest release zip from [GitHub Releases](https://github.com/inline
 * New: custom field types let themes and plugins register namespaced editor controls with primitive, array, or object values, including storage schemas, repeaters, reusable custom fields, templates, and extension paths
 * New: file-backed Site Editor templates and template parts can be authored with `template.json`, `part.json`, PHP/Twig/Blade/HTML sources, and normal Blockstudio block tags while preserving WordPress customization/reset behavior
 * New: block islands let dynamic blocks render cache-safe placeholders first, then batch-render request-specific fragments through a signed frontend endpoint; hydrated islands get a mount event without a REST request
+* Enhancement: runtime, editor asset, and Tailwind caches now prune stale entries automatically to prevent unbounded cache growth
+* Fix: registry imports now reject unsafe remote file paths, and generated HTML attributes are escaped consistently
+* Fix: Content Sync no longer prunes outside selected post types or taxonomies, now blocks destructive pushes when source JSON is malformed, and preserves attachment-reference meta when media download is disabled
+* Fix: raw Markdown page sources now respect post visibility and password protection
+* Fix: block islands now ignore unsigned request context during rendering, restore same-origin logged-in visitors, verify signatures before request attribute filters, and avoid anonymous per-user cache collisions
+* Fix: Canvas sync endpoints now stay disabled when Canvas is off, and draft page hierarchies keep their parent relationships during sync
+* Fix: database storage filters and user-scoped meta reads now compare typed values consistently
+* Fix: custom field type REST schemas now save correctly inside repeater and array storage fields
+* Fix: file-backed page, pattern, and Site Editor template rendering now share the same PHP/Twig/Blade compiler path for consistent template output
 
 = 7.4.2 =
 * Enhancement: collection loader `paths` can now mount external page directories under logical prefixes, with path-level metadata and collision-safe generated page names

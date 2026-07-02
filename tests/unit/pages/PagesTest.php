@@ -806,6 +806,92 @@ class PagesTest extends TestCase {
 		$this->assertFileExists( $path );
 	}
 
+	public function test_raw_markdown_access_requires_publicly_viewable_or_readable_post(): void {
+		$method = new ReflectionMethod( Pages::class, 'can_serve_markdown_post' );
+		$method->setAccessible( true );
+
+		$public_id   = wp_insert_post(
+			array(
+				'post_type'    => 'page',
+				'post_status'  => 'publish',
+				'post_title'   => 'Public Markdown Source',
+				'post_content' => '',
+			),
+			true
+		);
+		$draft_id    = wp_insert_post(
+			array(
+				'post_type'    => 'page',
+				'post_status'  => 'draft',
+				'post_title'   => 'Draft Markdown Source',
+				'post_content' => '',
+			),
+			true
+		);
+		$password_id = wp_insert_post(
+			array(
+				'post_type'     => 'page',
+				'post_status'   => 'publish',
+				'post_title'    => 'Password Markdown Source',
+				'post_content'  => '',
+				'post_password' => 'secret',
+			),
+			true
+		);
+
+		$this->assertIsInt( $public_id );
+		$this->assertIsInt( $draft_id );
+		$this->assertIsInt( $password_id );
+
+		try {
+			wp_set_current_user( 0 );
+
+			$this->assertTrue( $method->invoke( null, get_post( $public_id ) ) );
+			$this->assertFalse( $method->invoke( null, get_post( $draft_id ) ) );
+			$this->assertFalse( $method->invoke( null, get_post( $password_id ) ) );
+		} finally {
+			wp_delete_post( $public_id, true );
+			wp_delete_post( $draft_id, true );
+			wp_delete_post( $password_id, true );
+		}
+	}
+
+	public function test_parent_resolution_falls_back_to_draft_parent_meta(): void {
+		$registry = Page_Registry::instance();
+		$registry->reset();
+
+		$parent_id = wp_insert_post(
+			array(
+				'post_type'   => 'page',
+				'post_status' => 'draft',
+				'post_title'  => 'Draft Parent',
+				'post_name'   => 'draft-parent',
+			),
+			true
+		);
+		$this->assertIsInt( $parent_id );
+		update_post_meta( $parent_id, '_blockstudio_page_key', 'draft-parent-key' );
+		update_post_meta( $parent_id, '_blockstudio_page_name', 'draft-parent-key' );
+
+		$method = new ReflectionMethod( Page_Sync::class, 'resolve_parent_id' );
+		$method->setAccessible( true );
+
+		try {
+			$this->assertSame(
+				$parent_id,
+				$method->invoke(
+					new Page_Sync(),
+					array(
+						'parent_key' => 'draft-parent-key',
+						'postType'   => 'page',
+					)
+				)
+			);
+		} finally {
+			wp_delete_post( $parent_id, true );
+		}
+	}
+
 	public function test_collection_helpers_include_synced_permalink(): void {
 		$page = Pages::get_page( 'docs-install' );
 
@@ -855,7 +941,7 @@ class PagesTest extends TestCase {
 
 		Pages::reset();
 
-		$this->assertEmpty( Pages::pages() );
+		$this->assertNotEmpty( Pages::pages() );
 	}
 
 	public function test_init_context_blocks_frontend_without_force(): void {
@@ -931,9 +1017,6 @@ class PagesTest extends TestCase {
 
 		$registry = Page_Registry::instance();
 		$registry->reset();
-		$this->assertEmpty( $registry->get_pages() );
-
-		$registry->hydrate_from_posts();
 
 		$pages = $registry->get_pages();
 		$this->assertNotEmpty( $pages );

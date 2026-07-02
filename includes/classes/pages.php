@@ -890,23 +890,7 @@ class Pages {
 	 * @return array<string> Array of directory paths.
 	 */
 	public static function get_paths(): array {
-		$paths = array();
-
-		$theme_path = get_template_directory() . '/pages';
-
-		if ( is_dir( $theme_path ) ) {
-			$paths[] = $theme_path;
-		}
-
-		if ( is_child_theme() ) {
-			$child_path = get_stylesheet_directory() . '/pages';
-
-			if ( is_dir( $child_path ) ) {
-				$paths[] = $child_path;
-			}
-		}
-
-		return $paths;
+		return Utils::theme_subdir_paths( 'pages' );
 	}
 
 	/**
@@ -1186,6 +1170,13 @@ class Pages {
 		}
 
 		$file = $post ? (string) get_post_meta( $post->ID, '_blockstudio_page_content_path', true ) : '';
+		if ( ! $post || ! self::can_serve_markdown_post( $post ) ) {
+			if ( $is_md_ext ) {
+				self::serve_markdown_not_found();
+			}
+			return;
+		}
+
 		if ( '' === $file || ! is_file( $file ) ) {
 			if ( $is_md_ext ) {
 				self::serve_markdown_not_found();
@@ -1199,8 +1190,8 @@ class Pages {
 			return;
 		}
 
-		$markdown = preg_replace( '/^---\R.*?\R---\R?/s', '', $markdown, 1 );
-		$markdown = ltrim( (string) $markdown );
+		$parts    = Page_Markdown::split_frontmatter( (string) $markdown );
+		$markdown = ltrim( (string) $parts['body'] );
 
 		nocache_headers();
 		status_header( 200 );
@@ -1214,6 +1205,21 @@ class Pages {
 
 		echo $markdown; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
 		exit;
+	}
+
+	/**
+	 * Check whether a raw markdown response may expose this post source.
+	 *
+	 * @param \WP_Post $post Post object.
+	 *
+	 * @return bool
+	 */
+	private static function can_serve_markdown_post( \WP_Post $post ): bool {
+		if ( '' !== (string) $post->post_password ) {
+			return current_user_can( 'read_post', $post->ID );
+		}
+
+		return is_post_publicly_viewable( $post ) || current_user_can( 'read_post', $post->ID );
 	}
 
 	/**

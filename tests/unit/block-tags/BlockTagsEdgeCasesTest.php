@@ -19,6 +19,30 @@ class BlockTagsEdgeCasesTest extends TestCase {
 		$this->assertSame( 'core/paragraph', $blocks[0]['innerBlocks'][0]['innerBlocks'][0]['blockName'] );
 	}
 
+	public function test_pullquote_builder_uses_trait_markup(): void {
+		$block = Block_Tags::build_block_array( 'core/pullquote', array(), 'Plain quote' );
+
+		$this->assertSame( 'core/pullquote', $block['blockName'] );
+		$this->assertStringContainsString( '<blockquote><p>Plain quote</p></blockquote>', $block['innerHTML'] );
+	}
+
+	public function test_more_builder_uses_trait_attribute_remap(): void {
+		$block = Block_Tags::build_block_array(
+			'core/more',
+			array(
+				'customtext' => 'Read more',
+				'noteaser'   => true,
+			),
+			''
+		);
+
+		$this->assertSame( 'core/more', $block['blockName'] );
+		$this->assertSame( 'Read more', $block['attrs']['customText'] );
+		$this->assertTrue( $block['attrs']['noTeaser'] );
+		$this->assertStringContainsString( '<!--more Read more-->', $block['innerHTML'] );
+		$this->assertStringContainsString( '<!--noteaser-->', $block['innerHTML'] );
+	}
+
 	public function test_nested_groups_block_syntax(): void {
 		$blocks = Block_Tags::parse_inner_blocks(
 			'<block name="core/group"><block name="core/group"><block name="core/paragraph">Deep</block></block></block>'

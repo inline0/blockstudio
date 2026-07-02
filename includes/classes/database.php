@@ -539,6 +539,8 @@ class Database {
 				return (float) $value;
 			case 'boolean':
 				return (bool) $value;
+			case 'text':
+				return sanitize_textarea_field( $value );
 			default:
 				if ( 'email' === ( $def['format'] ?? '' ) ) {
 					return sanitize_email( $value );
@@ -594,14 +596,22 @@ class Database {
 	 * @return void
 	 */
 	private static function ensure_storage( string $key, array $schema ): void {
-		$storage = $schema['storage'] ?? 'table';
+		static $ensured = array();
+
+		$storage   = $schema['storage'] ?? 'table';
+		$signature = $key . ':' . md5( wp_json_encode( array( $storage, $schema ) ) );
+		if ( isset( $ensured[ $signature ] ) ) {
+			return;
+		}
 
 		if ( 'sqlite' === $storage ) {
 			self::sqlite_ensure( $key, $schema );
+			$ensured[ $signature ] = true;
 			return;
 		}
 
 		if ( 'table' !== $storage ) {
+			$ensured[ $signature ] = true;
 			return;
 		}
 
@@ -630,6 +640,7 @@ class Database {
 
 		require_once ABSPATH . 'wp-admin/includes/upgrade.php';
 		dbDelta( $sql );
+		$ensured[ $signature ] = true;
 	}
 
 	/**
@@ -709,8 +720,8 @@ class Database {
 		$schema    = self::$schemas[ $key ];
 		$storage   = self::storage_type( $key );
 		$params    = $request->get_query_params();
-		$limit     = min( (int) ( $params['limit'] ?? 50 ), 100 );
-		$offset    = (int) ( $params['offset'] ?? 0 );
+		$limit     = self::normalize_limit( $params['limit'] ?? 50 );
+		$offset    = max( 0, (int) ( $params['offset'] ?? 0 ) );
 		$hash_only = ! empty( $params['_hash'] );
 
 		unset( $params['limit'], $params['offset'], $params['_hash'] );
@@ -760,6 +771,7 @@ class Database {
 	 */
 	private static function handle_create( string $key, array $schema, $request ) {
 		$data  = $request->get_json_params();
+		$data  = is_array( $data ) ? $data : array();
 		$valid = self::validate( $data, $schema );
 
 		if ( is_wp_error( $valid ) ) {
@@ -785,6 +797,7 @@ class Database {
 	private static function handle_update( string $key, array $schema, $request ) {
 		$id    = (int) $request->get_param( 'id' );
 		$data  = $request->get_json_params();
+		$data  = is_array( $data ) ? $data : array();
 		$valid = self::validate( $data, $schema, true );
 
 		if ( is_wp_error( $valid ) ) {
@@ -869,6 +882,10 @@ class Database {
 	 * @return array The records.
 	 */
 	private static function storage_list( string $key, string $storage, array $schema, array $filters, int $limit, int $offset ): array {
+		$filters = self::filter_schema_filters( $filters, $schema );
+		$limit   = self::normalize_limit( $limit );
+		$offset  = max( 0, $offset );
+
 		if ( self::is_user_scoped( $key ) ) {
 			$filters['user_id'] = (string) get_current_user_id();
 		}
@@ -900,6 +917,10 @@ class Database {
 	 * @return array{items: array<int, array<string, mixed>>, total: int}
 	 */
 	private static function storage_paginate( string $key, string $storage, array $schema, array $filters, int $limit, int $offset ): array {
+		$filters = self::filter_schema_filters( $filters, $schema );
+		$limit   = self::normalize_limit( $limit );
+		$offset  = max( 0, $offset );
+
 		if ( self::is_user_scoped( $key ) ) {
 			$filters['user_id'] = (string) get_current_user_id();
 		}
@@ -928,6 +949,8 @@ class Database {
 	 * @return int The total number of matching records.
 	 */
 	private static function storage_count( string $key, string $storage, array $schema, array $filters ): int {
+		$filters = self::filter_schema_filters( $filters, $schema );
+
 		if ( self::is_user_scoped( $key ) ) {
 			$filters['user_id'] = (string) get_current_user_id();
 		}
@@ -944,6 +967,38 @@ class Database {
 			default:
 				return self::table_count( $key, $schema, $filters );
 		}
+	}
+
+	/**
+	 * Normalize a requested row limit.
+	 *
+	 * @param mixed $limit Requested limit.
+	 *
+	 * @return int
+	 */
+	private static function normalize_limit( $limit ): int {
+		return max( 1, min( (int) $limit, 100 ) );
+	}
+
+	/**
+	 * Keep only schema-backed filters.
+	 *
+	 * @param array $filters Field equality filters.
+	 * @param array $schema  Storage schema.
+	 *
+	 * @return array
+	 */
+	private static function filter_schema_filters( array $filters, array $schema ): array {
+		$fields     = $schema['fields'] ?? array();
+		$normalized = array();
+
+		foreach ( $filters as $field => $value ) {
+			if ( isset( $fields[ $field ] ) ) {
+				$normalized[ $field ] = $value;
+			}
+		}
+
+		return $normalized;
 	}
 
 	/**
@@ -1330,7 +1385,7 @@ class Database {
 				$entries,
 				function ( $entry ) use ( $filters ) {
 					foreach ( $filters as $k => $val ) {
-						if ( ( $entry[ $k ] ?? null ) !== $val ) {
+						if ( ( $entry[ $k ] ?? null ) != $val ) { // phpcs:ignore Universal.Operators.StrictComparisons.LooseNotEqual -- Intentional loose comparison for query param strings.
 							return false;
 						}
 					}
@@ -1363,7 +1418,7 @@ class Database {
 				$entries,
 				function ( $entry ) use ( $filters ) {
 					foreach ( $filters as $k => $val ) {
-						if ( ( $entry[ $k ] ?? null ) !== $val ) {
+						if ( ( $entry[ $k ] ?? null ) != $val ) { // phpcs:ignore Universal.Operators.StrictComparisons.LooseNotEqual -- Intentional loose comparison for query param strings.
 							return false;
 						}
 					}
@@ -1403,7 +1458,7 @@ class Database {
 				$entries,
 				function ( $entry ) use ( $filters ) {
 					foreach ( $filters as $k => $val ) {
-						if ( ( $entry[ $k ] ?? null ) !== $val ) {
+						if ( ( $entry[ $k ] ?? null ) != $val ) { // phpcs:ignore Universal.Operators.StrictComparisons.LooseNotEqual -- Intentional loose comparison for query param strings.
 							return false;
 						}
 					}
@@ -1604,7 +1659,7 @@ class Database {
 			$lines[] = wp_json_encode( $record, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE );
 		}
 
-		file_put_contents( $path, implode( "\n", $lines ) . "\n" ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents
+		file_put_contents( $path, implode( "\n", $lines ) . "\n", LOCK_EX ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents
 	}
 
 	/**

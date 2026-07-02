@@ -11,6 +11,7 @@ use Blockstudio\Build;
 use Blockstudio\Pages;
 use Blockstudio\Site_Templates;
 use Blockstudio\Field_Type_Registry;
+use Blockstudio\Utils;
 
 /**
  * Render block.
@@ -143,8 +144,7 @@ function bs_render_icon( $args ) {
 
 		if ( false === $data ) {
 			if ( file_exists( $complete_path ) ) {
-				// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Reading local icon file.
-				$data = json_decode( file_get_contents( $complete_path ), true );
+				$data = Utils::read_json_file( $complete_path );
 
 				set_transient( $set_icon_transient_key, $data, $expiration_time );
 			}

@@ -1,22 +1,4 @@
-interface Page {
-  title: string;
-  slug: string;
-  name: string;
-  content: string;
-}
-
-interface BlockItem {
-  title: string;
-  name: string;
-  content: string;
-}
-
-interface PreloadEntry {
-  rendered: string;
-  blockName: string;
-  attributes?: unknown;
-  mode?: string;
-}
+import type { BlockItem, Page, PreloadEntry } from './types';
 
 export interface QueueEntry {
   fingerprint: string;

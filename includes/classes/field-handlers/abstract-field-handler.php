@@ -85,6 +85,18 @@ abstract class Abstract_Field_Handler implements Field_Handler_Interface {
 			return (string) $field['_blockstudio_field_id'];
 		}
 
+		return $this->get_attribute_id( $field, $prefix );
+	}
+
+	/**
+	 * Get the public attribute ID without repeater key remapping.
+	 *
+	 * @param array  $field  The field configuration.
+	 * @param string $prefix The prefix.
+	 *
+	 * @return string The attribute ID.
+	 */
+	protected function get_attribute_id( array $field, string $prefix ): string {
 		$id = $field['id'] ?? '';
 		return '' === $prefix ? $id : $prefix . '_' . $id;
 	}
@@ -157,5 +169,42 @@ abstract class Abstract_Field_Handler implements Field_Handler_Interface {
 		}
 
 		$attribute['storage'] = $field['storage'];
+	}
+
+	/**
+	 * Apply extension set rules to attribute.
+	 *
+	 * @param array $field     The field configuration.
+	 * @param array $attribute The attribute array (passed by reference).
+	 *
+	 * @return void
+	 */
+	protected function apply_set( array $field, array &$attribute ): void {
+		if ( array_key_exists( 'set', $field ) ) {
+			$attribute['set'] = $field['set'];
+		}
+	}
+
+	/**
+	 * Apply block-field reference metadata to attribute.
+	 *
+	 * @param array $field     The field configuration.
+	 * @param array $attribute The attribute array (passed by reference).
+	 *
+	 * @return void
+	 */
+	protected function apply_block_field_metadata( array $field, array &$attribute ): void {
+		if ( empty( $field['_blockField'] ) ) {
+			return;
+		}
+
+		$attribute['_blockField']  = true;
+		$attribute['_blockName']   = $field['_blockName'] ?? '';
+		$attribute['_blockIds']    = $field['_blockIds'] ?? array();
+		$attribute['_idStructure'] = $field['_idStructure'] ?? '{id}';
+
+		if ( isset( $field['returnFormat'] ) ) {
+			$attribute['returnFormat'] = $field['returnFormat'];
+		}
 	}
 }

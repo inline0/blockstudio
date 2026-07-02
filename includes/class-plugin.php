@@ -74,7 +74,6 @@ class Plugin {
 
 		// Interfaces.
 		require_once BLOCKSTUDIO_DIR . '/includes/interfaces/field-handler-interface.php';
-		require_once BLOCKSTUDIO_DIR . '/includes/interfaces/settings-loader-interface.php';
 		require_once BLOCKSTUDIO_DIR . '/includes/interfaces/storage-handler-interface.php';
 
 		// Field handlers.
@@ -104,16 +103,11 @@ class Plugin {
 		// Block discovery and registration (Phase 5).
 		require_once $classes_dir . 'file-classifier.php';
 		require_once $classes_dir . 'block-discovery.php';
-		require_once $classes_dir . 'asset-discovery.php';
 		require_once $classes_dir . 'block-registrar.php';
 
 		// Settings loaders (Phase 6).
-		require_once $classes_dir . 'settings-loaders/options-loader.php';
-		require_once $classes_dir . 'settings-loaders/json-loader.php';
-		require_once $classes_dir . 'settings-loaders/filter-loader.php';
 
 		// Abstract classes (Phase 6).
-		require_once $classes_dir . 'abstract-esmodule.php';
 
 		// Error handling (Phase 6).
 		require_once $classes_dir . 'error-handler.php';
@@ -137,6 +131,7 @@ class Plugin {
 		require_once $classes_dir . 'llm.php';
 		require_once $classes_dir . 'admin-page.php';
 		require_once $classes_dir . 'utils.php';
+		require_once $classes_dir . 'template-compiler.php';
 		require_once $classes_dir . 'admin.php';
 		require_once $classes_dir . 'devtools.php';
 		require_once $classes_dir . 'canvas.php';

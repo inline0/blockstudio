@@ -21,10 +21,7 @@ trait Heading_Renderer {
 	 * @return array The block array.
 	 */
 	public function render_heading( array $attrs, string $inner_content ): array {
-		$level = isset( $attrs['level'] ) ? (int) $attrs['level'] : 2;
-		if ( $level < 1 || $level > 6 ) {
-			$level = 2;
-		}
+		$level = isset( $attrs['level'] ) ? max( 1, min( 6, (int) $attrs['level'] ) ) : 2;
 
 		$anchor = $attrs['anchor'] ?? $attrs['id'] ?? '';
 

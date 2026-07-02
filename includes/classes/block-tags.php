@@ -1749,21 +1749,19 @@ class Block_Tags {
 			unset( $attrs['key'] );
 		}
 
-		if ( null === $builders ) {
-			$builders = self::get_block_builders();
-		}
-
-		// Static builders first (leaf blocks).
-		if ( isset( $builders[ $block_name ] ) ) {
-			return call_user_func( $builders[ $block_name ], $attrs, $inner_content );
-		}
-
-		// Trait renderers (container blocks with proper HTML wrappers).
 		if ( null === $trait_renderers ) {
 			$trait_renderers = self::get_renderers( new Html_Parser() );
 		}
 		if ( isset( $trait_renderers[ $block_name ] ) ) {
 			return call_user_func( $trait_renderers[ $block_name ], $attrs, $inner_content );
+		}
+
+		if ( null === $builders ) {
+			$builders = self::get_block_builders();
+		}
+
+		if ( isset( $builders[ $block_name ] ) ) {
+			return call_user_func( $builders[ $block_name ], $attrs, $inner_content );
 		}
 
 		// Generic fallback.
@@ -2351,36 +2349,11 @@ class Block_Tags {
 	 *
 	 * @param string $block_name    Full block name.
 	 * @param array  $block_attrs   Block attributes.
-	 * @param string $inner_content Inner content.
-	 *
-	 * @return string Rendered HTML.
-	 */
-	/**
-	 * In-memory render cache for self-closing block tags.
-	 *
-	 * @var array<string, string>
-	 */
-	private static array $render_cache = array();
-
-	/**
-	 * Render a Blockstudio block.
-	 *
-	 * @param string $block_name    Full block name.
-	 * @param array  $block_attrs   Block attributes.
 	 * @param string $inner_content Inner content from paired tags.
 	 *
 	 * @return string Rendered HTML.
 	 */
 	private static function render_bs_block( string $block_name, array $block_attrs, string $inner_content ): string {
-		// Cache self-closing blocks (no inner content) by name + attributes.
-		$cache_key = '';
-		if ( '' === $inner_content ) {
-			$cache_key = $block_name . ':' . md5( wp_json_encode( $block_attrs ) );
-			if ( isset( self::$render_cache[ $cache_key ] ) ) {
-				return self::$render_cache[ $cache_key ];
-			}
-		}
-
 		$parent = \WP_Block_Supports::$block_to_render;
 
 		\WP_Block_Supports::$block_to_render = array(
@@ -2412,10 +2385,6 @@ class Block_Tags {
 		\WP_Block_Supports::$block_to_render = $parent;
 
 		$result = is_string( $result ) ? $result : '';
-
-		if ( '' !== $cache_key ) {
-			self::$render_cache[ $cache_key ] = $result;
-		}
 
 		return $result;
 	}

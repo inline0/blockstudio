@@ -37,12 +37,15 @@ class Custom_Field_Handler extends Abstract_Field_Handler {
 	 * @return void
 	 */
 	public function build( array $field, array &$attributes, string $prefix = '' ): void {
-		$field_id  = $this->get_field_id( $field, $prefix );
-		$attribute = Field_Type_Registry::instance()->build_attribute( $field, $field_id );
+		$field_id     = $this->get_field_id( $field, $prefix );
+		$attribute_id = $this->get_attribute_id( $field, $prefix );
+		$attribute    = Field_Type_Registry::instance()->build_attribute( $field, $attribute_id );
 
 		if ( null === $attribute ) {
 			return;
 		}
+
+		$this->apply_block_field_metadata( $field, $attribute );
 
 		$attributes[ $field_id ] = $attribute;
 	}

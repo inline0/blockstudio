@@ -171,7 +171,7 @@ final class Site_Template_Discovery {
 	 */
 	private function process_manifest( string $manifest_path, string $root_path, string $type ): ?array {
 		$directory = self::normalize_path( dirname( $manifest_path ) );
-		$manifest  = $this->read_json_file( $manifest_path );
+		$manifest  = Utils::read_json_file( $manifest_path );
 
 		if ( ! is_array( $manifest ) ) {
 			$this->add_error(
@@ -241,7 +241,7 @@ final class Site_Template_Discovery {
 		$data = array(
 			'slug'          => $slug,
 			'name'          => $slug,
-			'title'         => self::title_from_slug( $manifest['title'] ?? $slug ),
+			'title'         => is_scalar( $manifest['title'] ?? null ) ? (string) $manifest['title'] : self::title_from_slug( $slug ),
 			'description'   => is_scalar( $manifest['description'] ?? null ) ? (string) $manifest['description'] : '',
 			'type'          => $type,
 			'status'        => is_scalar( $manifest['status'] ?? null ) ? sanitize_key( (string) $manifest['status'] ) : 'publish',
@@ -267,30 +267,6 @@ final class Site_Template_Discovery {
 	}
 
 	/**
-	 * Read a JSON file.
-	 *
-	 * @param string $path JSON path.
-	 *
-	 * @return array|null Decoded JSON.
-	 */
-	private function read_json_file( string $path ): ?array {
-		if ( ! is_file( $path ) ) {
-			return null;
-		}
-
-		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Reading local manifest file.
-		$contents = file_get_contents( $path );
-
-		if ( false === $contents ) {
-			return null;
-		}
-
-		$decoded = json_decode( $contents, true );
-
-		return is_array( $decoded ) ? $decoded : null;
-	}
-
-	/**
 	 * Resolve the source file for a manifest.
 	 *
 	 * @param string $directory Manifest directory.
@@ -305,12 +281,7 @@ final class Site_Template_Discovery {
 			return $this->resolve_relative_source( $directory, (string) $explicit );
 		}
 
-		$candidates = array(
-			$directory . '/index.php',
-			$directory . '/index.blade.php',
-			$directory . '/index.twig',
-			$directory . '/index.html',
-		);
+		$candidates = Utils::index_source_candidates( $directory, array( 'index.html' ) );
 
 		/**
 		 * Filter source candidates for Site Editor templates and template parts.
@@ -321,13 +292,7 @@ final class Site_Template_Discovery {
 		 */
 		$candidates = apply_filters( 'blockstudio/site_templates/template_candidates', $candidates, $directory, $manifest );
 
-		foreach ( $candidates as $candidate ) {
-			if ( is_string( $candidate ) && is_file( $candidate ) ) {
-				return self::normalize_path( $candidate );
-			}
-		}
-
-		return null;
+		return Utils::first_existing_path( $candidates );
 	}
 
 	/**

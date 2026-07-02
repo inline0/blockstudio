@@ -6,13 +6,7 @@ import { BlockPreview } from '@wordpress/block-editor';
 import { parse } from '@wordpress/blocks';
 
 import { waitForIframeReady } from './wait-for-iframe';
-
-interface Page {
-  title: string;
-  slug: string;
-  name: string;
-  content: string;
-}
+import type { Page } from './types';
 
 interface ArtboardProps {
   page: Page;

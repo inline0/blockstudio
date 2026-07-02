@@ -185,6 +185,8 @@ final class Page_Registry {
 	 * @return array<string, array> The pages.
 	 */
 	public function get_pages(): array {
+		$this->maybe_hydrate();
+
 		return $this->pages;
 	}
 

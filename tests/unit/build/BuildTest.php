@@ -1,5 +1,6 @@
 <?php
 
+use Blockstudio\Attribute_Builder;
 use Blockstudio\Build;
 use Blockstudio\Block_Registry;
 use Blockstudio\Files;
@@ -95,9 +96,7 @@ class BuildTest extends TestCase {
 	}
 
 	public function test_fetch_query_populate_is_not_baked_during_build(): void {
-		$attributes = array();
-
-		Build::build_attributes(
+		$attributes = ( new Attribute_Builder() )->build(
 			array(
 				array(
 					'id'       => 'liveUsers',
@@ -111,8 +110,7 @@ class BuildTest extends TestCase {
 						),
 					),
 				),
-			),
-			$attributes
+			)
 		);
 
 		$this->assertSame( array(), $attributes['liveUsers']['options'] );
@@ -121,9 +119,7 @@ class BuildTest extends TestCase {
 	}
 
 	public function test_fetch_query_populate_resolves_for_editor_requests(): void {
-		$attributes = array();
-
-		Build::build_attributes(
+		$attributes = ( new Attribute_Builder() )->build(
 			array(
 				array(
 					'id'         => 'liveUsers',
@@ -138,8 +134,7 @@ class BuildTest extends TestCase {
 						),
 					),
 				),
-			),
-			$attributes
+			)
 		);
 
 		$this->assertNotEmpty( $attributes['liveUsers']['options'] );
@@ -148,9 +143,7 @@ class BuildTest extends TestCase {
 	}
 
 	public function test_fetch_query_populate_preserves_defaults_without_baked_options(): void {
-		$attributes = array();
-
-		Build::build_attributes(
+		$attributes = ( new Attribute_Builder() )->build(
 			array(
 				array(
 					'id'       => 'liveUsers',
@@ -163,8 +156,7 @@ class BuildTest extends TestCase {
 						'query' => 'users',
 					),
 				),
-			),
-			$attributes
+			)
 		);
 
 		$this->assertSame( array(), $attributes['liveUsers']['options'] );
@@ -275,6 +267,22 @@ class BuildTest extends TestCase {
 	public function test_assets_global_returns_array(): void {
 		$assets = Build::assets_global();
 		$this->assertIsArray( $assets );
+	}
+
+	public function test_get_instance_name_handles_paths_outside_wordpress_root(): void {
+		$path = wp_normalize_path( sys_get_temp_dir() . '/blockstudio-outside-root' );
+
+		$this->assertSame( trim( $path, '/\\' ), Build::get_instance_name( $path ) );
+	}
+
+	public function test_reserved_asset_prefix_requires_boundary(): void {
+		$method = new ReflectionMethod( Build::class, 'asset_basename_matches_prefix' );
+		$method->setAccessible( true );
+
+		$this->assertTrue( $method->invoke( null, 'global.css', 'global' ) );
+		$this->assertTrue( $method->invoke( null, 'global-view.js', 'global' ) );
+		$this->assertFalse( $method->invoke( null, 'globals.css', 'global' ) );
+		$this->assertFalse( $method->invoke( null, 'administration.css', 'admin' ) );
 	}
 
 	// blade()

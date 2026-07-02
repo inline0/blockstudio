@@ -44,20 +44,6 @@ class Html_Parser {
 	use Query_Renderer;
 
 	/**
-	 * Block renderers registry.
-	 *
-	 * @var array<string, callable>
-	 */
-	private array $block_renderers = array();
-
-	/**
-	 * Constructor.
-	 */
-	public function __construct() {
-		$this->block_renderers = Block_Tags::get_renderers( $this );
-	}
-
-	/**
 	 * Parse HTML content to serialized WordPress blocks.
 	 *
 	 * @param string $html The HTML content to parse.

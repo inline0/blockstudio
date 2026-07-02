@@ -75,15 +75,6 @@ class Storage_Registry {
 	}
 
 	/**
-	 * Get all registered handlers.
-	 *
-	 * @return array<string, Storage_Handler_Interface>
-	 */
-	public function get_handlers(): array {
-		return $this->handlers;
-	}
-
-	/**
 	 * Get storage types for a field.
 	 *
 	 * Normalizes the storage configuration to always return an array.
@@ -99,18 +90,6 @@ class Storage_Registry {
 
 		$types = $field['storage']['type'] ?? array( 'block' );
 		return is_array( $types ) ? $types : array( $types );
-	}
-
-	/**
-	 * Check if a field has a specific storage type.
-	 *
-	 * @param array  $field The field configuration.
-	 * @param string $type  The storage type to check.
-	 *
-	 * @return bool Whether the field has the storage type.
-	 */
-	public function has_storage_type( array $field, string $type ): bool {
-		return in_array( $type, $this->get_storage_types( $field ), true );
 	}
 
 	/**

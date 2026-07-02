@@ -275,4 +275,43 @@ class FieldTypeRegistryTest extends TestCase {
 		$this->assertFalse( wp_script_is( 'test-field-missing', 'enqueued' ) );
 		$this->assertFalse( wp_style_is( 'test-field-missing', 'enqueued' ) );
 	}
+
+	public function test_custom_object_rest_schema_wraps_for_array_storage(): void {
+		$this->registry->register(
+			'test/dimensions',
+			array(
+				'attribute' => 'object',
+				'storage'   => array(
+					'rest_schema' => array(
+						'type'                 => 'object',
+						'additionalProperties' => array( 'type' => 'string' ),
+					),
+				),
+			)
+		);
+
+		$schema = $this->registry->get_storage_rest_schema(
+			array(
+				'id'   => 'dimensions',
+				'type' => 'test/dimensions',
+			),
+			'array'
+		);
+
+		$this->assertSame( 'array', $schema['type'] );
+		$this->assertSame( 'object', $schema['items']['type'] );
+		$this->assertSame( array( 'type' => 'string' ), $schema['items']['additionalProperties'] );
+	}
+
+	public function test_generic_array_storage_schema_does_not_force_object_items(): void {
+		$schema = $this->registry->get_storage_rest_schema(
+			array(
+				'id'   => 'tags',
+				'type' => 'test/string-list',
+			),
+			'array'
+		);
+
+		$this->assertSame( array( 'type' => 'array', 'items' => array() ), $schema );
+	}
 }

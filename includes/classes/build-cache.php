@@ -334,7 +334,42 @@ final class Build_Cache {
 			opcache_invalidate( $file, true );
 		}
 
+		self::prune_scope( $scope, $file );
+
 		return true;
+	}
+
+	/**
+	 * Prune stale cache files in one scope.
+	 *
+	 * @param string $scope     Cache scope.
+	 * @param string $keep_file File that must not be pruned.
+	 *
+	 * @return void
+	 */
+	private static function prune_scope( string $scope, string $keep_file ): void {
+		$dir   = self::get_cache_dir( $scope );
+		$files = glob( $dir . '/*.php' );
+
+		if ( ! is_array( $files ) || empty( $files ) ) {
+			return;
+		}
+
+		$max_files = max( 1, (int) apply_filters( 'blockstudio/cache/max_files_per_scope', 20, $scope ) );
+		$files     = array_values(
+			array_filter(
+				$files,
+				static fn( string $file ): bool => $file !== $keep_file
+			)
+		);
+		usort(
+			$files,
+			static fn( string $a, string $b ): int => (int) filemtime( $b ) <=> (int) filemtime( $a )
+		);
+
+		foreach ( array_slice( $files, max( 0, $max_files - 1 ) ) as $file ) {
+			wp_delete_file( $file );
+		}
 	}
 
 	/**

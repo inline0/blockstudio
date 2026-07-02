@@ -187,29 +187,22 @@ class Page_Sync {
 			return '';
 		}
 
-		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Reading local page source file.
-		$template_content = file_get_contents( $content_path );
-
-		if ( false === $template_content ) {
-			return '';
-		}
-
 		if ( 'markdown' === ( $page_data['contentType'] ?? '' ) ) {
+			// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Reading local page source file.
+			$template_content = file_get_contents( $content_path );
+
+			if ( false === $template_content ) {
+				return '';
+			}
+
 			$parts = Page_Markdown::split_frontmatter( $template_content );
 			return $parts['body'];
 		}
 
-		if ( ! empty( $page_data['is_blade'] ) && class_exists( 'Jenssegers\Blade\Blade' ) ) {
-			$blade = new \Jenssegers\Blade\Blade( $page_data['directory'], sys_get_temp_dir() );
-			return $blade->render( 'index', array() );
-		}
-
-		if ( ! empty( $page_data['is_twig'] ) && class_exists( 'Timber\Timber' ) ) {
-			\Timber\Timber::init();
-			return \Timber\Timber::compile_string( $template_content, array() );
-		}
-
-		return $template_content;
+		return Template_Compiler::compile(
+			$content_path,
+			is_string( $page_data['directory'] ?? null ) ? $page_data['directory'] : null
+		) ?? '';
 	}
 
 	/**
@@ -692,7 +685,7 @@ class Page_Sync {
 						'value' => $collection,
 					),
 				),
-				'post_type'      => 'any',
+				'post_type'      => $post_types,
 				'posts_per_page' => -1,
 				'post_status'    => $this->synced_post_statuses(),
 			)
@@ -786,8 +779,31 @@ class Page_Sync {
 		}
 
 		$parent = Page_Registry::instance()->get_page( (string) $page_data['parent_key'] );
+		if ( ! empty( $parent['post_id'] ) ) {
+			return (int) $parent['post_id'];
+		}
 
-		return (int) ( $parent['post_id'] ?? 0 );
+		$posts = get_posts(
+			array(
+				'post_type'      => (string) $page_data['postType'],
+				'post_status'    => 'any',
+				'posts_per_page' => 1,
+				'fields'         => 'ids',
+				'meta_query'     => array( // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query
+					'relation' => 'OR',
+					array(
+						'key'   => '_blockstudio_page_key',
+						'value' => (string) $page_data['parent_key'],
+					),
+					array(
+						'key'   => '_blockstudio_page_name',
+						'value' => (string) $page_data['parent_key'],
+					),
+				),
+			)
+		);
+
+		return ! empty( $posts ) ? (int) $posts[0] : 0;
 	}
 
 	/**
@@ -871,33 +887,5 @@ class Page_Sync {
 		}
 
 		return hash( 'sha256', $encoded );
-	}
-
-	/**
-	 * Delete a synced post.
-	 *
-	 * @param string $source_path The source path of the page.
-	 * @param string $post_type   The post type.
-	 *
-	 * @return bool Whether the post was deleted.
-	 */
-	public function delete_synced_post( string $source_path, string $post_type = 'page' ): bool {
-		$posts = get_posts(
-			array(
-				'meta_key'       => '_blockstudio_page_source', // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_key
-				'meta_value'     => $source_path, // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_value
-				'post_type'      => $post_type,
-				'posts_per_page' => 1,
-				'post_status'    => 'any',
-			)
-		);
-
-		if ( empty( $posts ) ) {
-			return false;
-		}
-
-		$result = wp_delete_post( $posts[0]->ID, true );
-
-		return false !== $result;
 	}
 }

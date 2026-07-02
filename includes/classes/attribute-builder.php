@@ -84,13 +84,6 @@ class Attribute_Builder {
 	private ?Container_Field_Handler $container_handler = null;
 
 	/**
-	 * Whether Tailwind is active.
-	 *
-	 * @var bool
-	 */
-	private bool $tailwind_active = false;
-
-	/**
 	 * Constructor.
 	 */
 	public function __construct() {
@@ -204,6 +197,14 @@ class Attribute_Builder {
 					continue;
 				}
 
+				if ( $is_override ) {
+					$v['_blockstudio_is_override'] = true;
+				}
+
+				if ( $is_extend ) {
+					$v['_blockstudio_is_extend'] = true;
+				}
+
 				// Handle tabs at top level.
 				if ( 'tabs' === $type && ! $from_group && ! $from_repeater ) {
 					$handler = $this->get_handler_for_type( $type );
@@ -224,7 +225,7 @@ class Attribute_Builder {
 
 				// Check for Tailwind activation.
 				if ( 'classes' === $type && ( $v['tailwind'] ?? false ) ) {
-					$this->tailwind_active = true;
+					Block_Registry::instance()->set_tailwind_active( true );
 				}
 
 				// Get handler and build attribute.
@@ -264,23 +265,5 @@ class Attribute_Builder {
 			}
 		}
 		return null;
-	}
-
-	/**
-	 * Check if Tailwind is active.
-	 *
-	 * @return bool Whether Tailwind is active.
-	 */
-	public function is_tailwind_active(): bool {
-		return $this->tailwind_active;
-	}
-
-	/**
-	 * Reset the Tailwind active flag.
-	 *
-	 * @return void
-	 */
-	public function reset_tailwind_active(): void {
-		$this->tailwind_active = false;
 	}
 }

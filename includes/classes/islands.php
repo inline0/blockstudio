@@ -764,47 +764,70 @@ JS;
 	 * @return WP_REST_Response|WP_Error Response.
 	 */
 	public static function render_endpoint( WP_REST_Request $request ) {
-		$islands = $request->get_param( 'islands' );
-		if ( ! is_array( $islands ) ) {
-			return new WP_Error( 'blockstudio_islands_invalid_request', __( 'Invalid islands request.', 'blockstudio' ), array( 'status' => 400 ) );
-		}
+		self::maybe_restore_cookie_user();
 
-		$max = (int) apply_filters( 'blockstudio/islands/max_per_request', self::MAX_ISLANDS_PER_REQUEST );
-		if ( count( $islands ) > $max ) {
-			return new WP_Error( 'blockstudio_islands_too_many', __( 'Too many islands requested.', 'blockstudio' ), array( 'status' => 413 ) );
-		}
+		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Temporarily preserving ambient front-end query context before render.
+		$had_mode = array_key_exists( 'blockstudioMode', $_GET );
+		// phpcs:ignore WordPress.Security.NonceVerification.Recommended,WordPress.Security.ValidatedSanitizedInput.InputNotSanitized,WordPress.Security.ValidatedSanitizedInput.MissingUnslash -- Restored exactly after render, not trusted.
+		$mode = $had_mode ? $_GET['blockstudioMode'] : null;
+		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Temporarily preserving ambient front-end query context before render.
+		$had_post = array_key_exists( 'postId', $_GET );
+		// phpcs:ignore WordPress.Security.NonceVerification.Recommended,WordPress.Security.ValidatedSanitizedInput.InputNotSanitized,WordPress.Security.ValidatedSanitizedInput.MissingUnslash -- Restored exactly after render, not trusted.
+		$post_id = $had_post ? $_GET['postId'] : null;
 
-		$rendered = array();
-		foreach ( $islands as $island ) {
-			if ( ! is_array( $island ) ) {
-				continue;
+		unset( $_GET['blockstudioMode'], $_GET['postId'] );
+
+		try {
+			$islands = $request->get_param( 'islands' );
+			if ( ! is_array( $islands ) ) {
+				return new WP_Error( 'blockstudio_islands_invalid_request', __( 'Invalid islands request.', 'blockstudio' ), array( 'status' => 400 ) );
 			}
 
-			$client_id  = isset( $island['clientId'] ) ? sanitize_key( (string) $island['clientId'] ) : '';
-			$name       = isset( $island['name'] ) ? sanitize_text_field( (string) $island['name'] ) : '';
-			$attributes = isset( $island['attributes'] ) && is_array( $island['attributes'] ) ? $island['attributes'] : array();
-			$signature  = isset( $island['signature'] ) ? (string) $island['signature'] : '';
-
-			if ( '' === $client_id ) {
-				continue;
+			$max = (int) apply_filters( 'blockstudio/islands/max_per_request', self::MAX_ISLANDS_PER_REQUEST );
+			if ( count( $islands ) > $max ) {
+				return new WP_Error( 'blockstudio_islands_too_many', __( 'Too many islands requested.', 'blockstudio' ), array( 'status' => 413 ) );
 			}
 
-			$result = self::render_endpoint_item( $name, $attributes, $signature );
-			if ( is_wp_error( $result ) ) {
-				$rendered[ $client_id ] = array(
-					'error' => $result->get_error_code(),
-				);
-			} else {
-				$rendered[ $client_id ] = $result;
+			$rendered = array();
+			foreach ( $islands as $island ) {
+				if ( ! is_array( $island ) ) {
+					continue;
+				}
+
+				$client_id  = isset( $island['clientId'] ) ? sanitize_key( (string) $island['clientId'] ) : '';
+				$name       = isset( $island['name'] ) ? sanitize_text_field( (string) $island['name'] ) : '';
+				$attributes = isset( $island['attributes'] ) && is_array( $island['attributes'] ) ? $island['attributes'] : array();
+				$signature  = isset( $island['signature'] ) ? (string) $island['signature'] : '';
+
+				if ( '' === $client_id ) {
+					continue;
+				}
+
+				$result = self::render_endpoint_item( $name, $attributes, $signature );
+				if ( is_wp_error( $result ) ) {
+					$rendered[ $client_id ] = array(
+						'error' => $result->get_error_code(),
+					);
+				} else {
+					$rendered[ $client_id ] = $result;
+				}
+			}
+
+			$response = rest_ensure_response( $rendered );
+			$response->header( 'Cache-Control', 'no-store, no-cache, must-revalidate, max-age=0' );
+			$response->header( 'Pragma', 'no-cache' );
+			$response->header( 'X-Robots-Tag', 'noindex' );
+
+			return $response;
+		} finally {
+			if ( $had_mode ) {
+				$_GET['blockstudioMode'] = $mode;
+			}
+
+			if ( $had_post ) {
+				$_GET['postId'] = $post_id;
 			}
 		}
-
-		$response = rest_ensure_response( $rendered );
-		$response->header( 'Cache-Control', 'no-store, no-cache, must-revalidate, max-age=0' );
-		$response->header( 'Pragma', 'no-cache' );
-		$response->header( 'X-Robots-Tag', 'noindex' );
-
-		return $response;
 	}
 
 	/**
@@ -821,17 +844,19 @@ JS;
 			return new WP_Error( 'blockstudio_island_not_allowed', __( 'Invalid island block.', 'blockstudio' ), array( 'status' => 403 ) );
 		}
 
+		$signature_attributes = self::filter_attributes( $name, $attributes );
+		$payload              = self::signature_payload( $name, $signature_attributes );
+		if ( ! self::verify_signature( $payload, $signature ) ) {
+			return new WP_Error( 'blockstudio_island_invalid_signature', __( 'Invalid island signature.', 'blockstudio' ), array( 'status' => 403 ) );
+		}
+
 		$attributes = apply_filters(
 			'blockstudio/islands/request_attributes',
-			self::filter_attributes( $name, $attributes ),
+			$signature_attributes,
 			$name,
 			$attributes
 		);
 		$attributes = is_array( $attributes ) ? $attributes : array();
-		$payload    = self::signature_payload( $name, $attributes );
-		if ( ! self::verify_signature( $payload, $signature ) ) {
-			return new WP_Error( 'blockstudio_island_invalid_signature', __( 'Invalid island signature.', 'blockstudio' ), array( 'status' => 403 ) );
-		}
 
 		$cached = self::get_cached_fragment( $name, $attributes );
 		if ( null !== $cached ) {
@@ -878,6 +903,10 @@ JS;
 			return null;
 		}
 
+		if ( 'user' === ( $cache['per'] ?? 'global' ) && 0 === get_current_user_id() ) {
+			return null;
+		}
+
 		$key   = self::cache_key( $name, $attributes, $cache );
 		$value = get_transient( $key );
 
@@ -900,7 +929,47 @@ JS;
 			return;
 		}
 
+		if ( 'user' === ( $cache['per'] ?? 'global' ) && 0 === get_current_user_id() ) {
+			return;
+		}
+
 		set_transient( self::cache_key( $name, $attributes, $cache ), $rendered, (int) $cache['ttl'] );
+	}
+
+	/**
+	 * Restore cookie-authenticated users for same-origin island renders.
+	 *
+	 * @return void
+	 */
+	private static function maybe_restore_cookie_user(): void {
+		if ( is_user_logged_in() || ! self::is_same_origin_browser_request() ) {
+			return;
+		}
+
+		$user_id = wp_validate_auth_cookie( '', 'logged_in' );
+		if ( $user_id > 0 ) {
+			wp_set_current_user( $user_id );
+		}
+	}
+
+	/**
+	 * Check whether the REST request came from the same site.
+	 *
+	 * @return bool
+	 */
+	private static function is_same_origin_browser_request(): bool {
+		$fetch_site = strtolower( sanitize_text_field( wp_unslash( $_SERVER['HTTP_SEC_FETCH_SITE'] ?? '' ) ) );
+		if ( '' !== $fetch_site && ! in_array( $fetch_site, array( 'same-origin', 'same-site', 'none' ), true ) ) {
+			return false;
+		}
+
+		$origin = (string) wp_parse_url( esc_url_raw( wp_unslash( $_SERVER['HTTP_ORIGIN'] ?? '' ) ), PHP_URL_HOST );
+		if ( '' === $origin ) {
+			return true;
+		}
+
+		$home = (string) wp_parse_url( home_url(), PHP_URL_HOST );
+		return '' !== $home && strtolower( $origin ) === strtolower( $home );
 	}
 
 	/**

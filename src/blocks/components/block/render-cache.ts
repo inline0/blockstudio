@@ -1,12 +1,6 @@
 import { cloneDeep } from 'lodash-es';
 import { replaceEmptyStringsWithFalse } from '@/blocks/utils/replace-empty-strings-with-false';
-
-interface PreloadEntry {
-  rendered: string;
-  blockName: string;
-  attributes?: unknown;
-  mode?: string;
-}
+import type { PreloadEntry } from '../../../canvas/types';
 
 const cache = new Map<string, string>();
 const cacheByBlock = new Map<string, Set<string>>();

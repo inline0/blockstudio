@@ -77,16 +77,8 @@ class Pattern_Discovery {
 	 * @return array|null The pattern data or null if invalid.
 	 */
 	private function process_pattern_json( string $json_path, string $base_path ): ?array {
-		$directory = dirname( $json_path );
-
-		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Reading local JSON file.
-		$contents = file_get_contents( $json_path );
-
-		if ( false === $contents ) {
-			return null;
-		}
-
-		$pattern_json = json_decode( $contents, true );
+		$directory    = dirname( $json_path );
+		$pattern_json = Utils::read_json_file( $json_path );
 
 		if ( ! is_array( $pattern_json ) || empty( $pattern_json['name'] ) || empty( $pattern_json['title'] ) ) {
 			return null;
@@ -130,27 +122,8 @@ class Pattern_Discovery {
 	 * @return string|null The template path or null if not found.
 	 */
 	private function find_template( string $directory ): ?string {
-		$templates = array(
-			$directory . '/index.php',
-			$directory . '/index.blade.php',
-			$directory . '/index.twig',
+		return Utils::first_existing_path(
+			Utils::index_source_candidates( $directory )
 		);
-
-		foreach ( $templates as $template ) {
-			if ( file_exists( $template ) ) {
-				return $template;
-			}
-		}
-
-		return null;
-	}
-
-	/**
-	 * Get discovered patterns.
-	 *
-	 * @return array<string, array> The discovered patterns.
-	 */
-	public function get_patterns(): array {
-		return $this->patterns;
 	}
 }

@@ -168,7 +168,9 @@ class ESModulesCSS {
 		}
 
 		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents -- Writing cached module file.
-		file_put_contents( $filename, $data );
+		if ( false === file_put_contents( $filename, $data, LOCK_EX ) ) {
+			return false;
+		}
 
 		return $filename;
 	}

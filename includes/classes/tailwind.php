@@ -146,7 +146,9 @@ class Tailwind {
 				}
 
 				// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents -- Writing compiled CSS to cache file.
-				file_put_contents( $cache_path, $compiled );
+				if ( false !== file_put_contents( $cache_path, $compiled, LOCK_EX ) ) {
+					self::prune_cache( $cache_path );
+				}
 			}
 		}
 
@@ -230,11 +232,44 @@ class Tailwind {
 				}
 
 				// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents -- Writing compiled CSS to cache file.
-				file_put_contents( $cache_path, $compiled );
+				if ( false !== file_put_contents( $cache_path, $compiled, LOCK_EX ) ) {
+					self::prune_cache( $cache_path );
+				}
 			}
 		}
 
 		return ! empty( $compiled ) ? $compiled : '';
+	}
+
+	/**
+	 * Prune stale Tailwind cache files.
+	 *
+	 * @param string $keep_file File that must not be pruned.
+	 *
+	 * @return void
+	 */
+	private static function prune_cache( string $keep_file ): void {
+		$files = glob( self::get_cache_dir() . '/*.css' );
+
+		if ( ! is_array( $files ) || empty( $files ) ) {
+			return;
+		}
+
+		$max_files = max( 1, (int) apply_filters( 'blockstudio/tailwind/cache_max_files', 20 ) );
+		$files     = array_values(
+			array_filter(
+				$files,
+				static fn( string $file ): bool => $file !== $keep_file
+			)
+		);
+		usort(
+			$files,
+			static fn( string $a, string $b ): int => (int) filemtime( $b ) <=> (int) filemtime( $a )
+		);
+
+		foreach ( array_slice( $files, max( 0, $max_files - 1 ) ) as $file ) {
+			wp_delete_file( $file );
+		}
 	}
 
 	/**

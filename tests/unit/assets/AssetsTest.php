@@ -109,35 +109,6 @@ class AssetsTest extends TestCase {
 		return $count;
 	}
 
-	public function test_get_interactivity_api_import_map_returns_importmap_script(): void {
-		$result = Assets::get_interactivity_api_import_map();
-
-		$this->assertStringContainsString( '<script type="importmap">', $result );
-		$this->assertStringContainsString( '</script>', $result );
-		$this->assertStringContainsString( '@wordpress/interactivity', $result );
-	}
-
-	public function test_get_interactivity_api_import_map_contains_preact(): void {
-		$result = Assets::get_interactivity_api_import_map();
-
-		$this->assertStringContainsString( 'preact', $result );
-		$this->assertStringContainsString( 'preact/hooks', $result );
-	}
-
-	public function test_get_interactivity_api_import_map_contains_preact_signals(): void {
-		$result = Assets::get_interactivity_api_import_map();
-
-		$this->assertStringContainsString( '@preact/signals', $result );
-		$this->assertStringContainsString( '@preact/signals-core', $result );
-	}
-
-	public function test_get_interactivity_api_import_map_resolves_path_placeholder(): void {
-		$result = Assets::get_interactivity_api_import_map();
-
-		$this->assertStringNotContainsString( '@path', $result );
-		$this->assertStringContainsString( BLOCKSTUDIO_URL, $result );
-	}
-
 	public function test_get_interactivity_editor_assets_returns_string(): void {
 		$result = Assets::get_interactivity_editor_assets();
 
@@ -309,6 +280,42 @@ class AssetsTest extends TestCase {
 		clearstatcache( true, $dependency );
 
 		$this->assertNotSame( $first, Assets::get_asset_version( $path ) );
+	}
+
+	public function test_get_asset_version_changes_when_minify_setting_changes(): void {
+		$path = $this->create_temporary_asset( 'script.js', 'console.log("asset");' );
+
+		$this->add_filter( 'blockstudio/settings/assets/minify/js', static fn() => false );
+		$unminified = Assets::get_asset_version( $path );
+
+		$this->add_filter( 'blockstudio/settings/assets/minify/js', static fn() => true, 20 );
+		$minified = Assets::get_asset_version( $path );
+
+		$this->assertNotSame( $unminified, $minified );
+	}
+
+	public function test_preview_assets_bucket_by_file_extension(): void {
+		$css = $this->create_temporary_asset( 'custom.css', '.preview { color: red; }' );
+		$js  = $this->create_temporary_asset( 'style-switcher.js', 'console.log("preview");' );
+
+		$block = array(
+			'name'   => 'test/block',
+			'assets' => array(
+				'custom.css'        => array(
+					'type' => 'file',
+					'path' => $css,
+					'key'  => filemtime( $css ),
+				),
+				'style-switcher.js' => array(
+					'type' => 'file',
+					'path' => $js,
+					'key'  => filemtime( $js ),
+				),
+			),
+		);
+
+		$this->assertStringContainsString( "rel='stylesheet'", Assets::get_preview_assets( $block, true ) );
+		$this->assertStringContainsString( '<script ', Assets::get_preview_assets( $block, false ) );
 	}
 
 	public function test_process_clears_cached_compiled_asset_lookup(): void {

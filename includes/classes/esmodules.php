@@ -79,11 +79,10 @@ class ESModules {
 	 * Match all modules in a string.
 	 *
 	 * @param string $str The input string.
-	 * @param bool   $obj Whether to return object data.
 	 *
-	 * @return array|string Module data or transformed string.
+	 * @return array Module data.
 	 */
-	public static function get_module_matches( $str, bool $obj = false ) {
+	public static function get_module_matches( string $str ): array {
 		$replacer = function ( $str ) {
 			$str = str_replace( 'from"npm:', 'from "npm:', $str );
 			$str = str_replace( "from'npm:", "from 'npm:", $str );
@@ -109,23 +108,7 @@ class ESModules {
 			);
 		};
 
-		if ( $obj ) {
-			return $getter( $str );
-		}
-
-		$str = $replacer( $str );
-
-		preg_match_all( self::get_blockstudio_regex(), $str, $matches );
-		foreach ( $matches[0] as $item ) {
-			$module_obj = $getter( $item );
-			$str        = str_replace(
-				str_replace( 'from ', '', $item ),
-				"\"https://esm.sh/{$module_obj['nameVersion']}?bundle\"",
-				$str
-			);
-		}
-
-		return $str;
+		return $getter( $str );
 	}
 
 	/**
@@ -149,7 +132,7 @@ class ESModules {
 	 * @return string|false Module content or false on failure.
 	 */
 	public static function fetch_module( $str ) {
-		$module = self::get_module_matches( $str, true );
+		$module = self::get_module_matches( $str );
 
 		try {
 			$response = wp_remote_get(
@@ -164,6 +147,9 @@ class ESModules {
 			$http_matcher = self::get_http_regex();
 			preg_match_all( $http_matcher, $e, $matches );
 			$match = reset( $matches[1] );
+			if ( ! is_string( $match ) || '' === $match ) {
+				return false;
+			}
 
 			$url          = 0 === strpos( $match, 'http' )
 				? $match
@@ -195,7 +181,7 @@ class ESModules {
 	 * @return string|false The filename or false on failure.
 	 */
 	public static function fetch_module_and_write_to_file( $str, $folder ) {
-		$module         = self::get_module_matches( $str, true );
+		$module         = self::get_module_matches( $str );
 		$folder_dist    = $folder . '/_dist';
 		$folder_modules = $folder_dist . '/modules';
 		$folder_module  = $folder_modules . '/' . $module['nameTransformed'];
@@ -228,7 +214,9 @@ class ESModules {
 		}
 
 		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents -- Writing cached module file.
-		file_put_contents( $filename, $data );
+		if ( false === file_put_contents( $filename, $data, LOCK_EX ) ) {
+			return false;
+		}
 
 		return $filename;
 	}
@@ -248,7 +236,7 @@ class ESModules {
 
 		try {
 			foreach ( $modules as $module ) {
-				$objects[]   = self::get_module_matches( $module, true );
+				$objects[]   = self::get_module_matches( $module );
 				$filenames[] = self::fetch_module_and_write_to_file( $module, $folder );
 			}
 		} catch ( Exception $error ) {

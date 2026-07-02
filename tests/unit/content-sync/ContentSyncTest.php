@@ -491,6 +491,42 @@ class ContentSyncTest extends TestCase {
 		$post = $this->get_post_by_uid( $incoming_uid );
 		$this->assertInstanceOf( WP_Post::class, $post );
 		$this->assertSame( '', (string) get_post_meta( $post->ID, '_thumbnail_id', true ) );
+
+		$existing_uid = wp_generate_uuid4();
+		$existing_id  = $this->insert_post(
+			array(
+				'post_title' => 'Media None Existing',
+				'post_name'  => 'media-none-existing',
+			)
+		);
+
+		update_post_meta( $existing_id, Content_Sync::META_UID, $existing_uid );
+		update_post_meta( $existing_id, Content_Sync::META_SET, 'unit' );
+		update_post_meta( $existing_id, '_thumbnail_id', $attachment_id );
+
+		$this->write_post_file(
+			'media-none-existing',
+			array(
+				'uid'          => $existing_uid,
+				'type'         => $this->post_type,
+				'status'       => 'publish',
+				'slug'         => 'media-none-existing',
+				'title'        => 'Media None Existing Updated',
+				'parent'       => null,
+				'menuOrder'    => 0,
+				'meta'         => array(
+					'_thumbnail_id' => wp_generate_uuid4(),
+				),
+				'metaEncoding' => array(
+					'_thumbnail_id' => 'scalar',
+				),
+			),
+			''
+		);
+
+		$rows = $sync->push();
+		$this->assertNotContains( 'error', wp_list_pluck( $rows, 'action' ) );
+		$this->assertSame( (string) $attachment_id, (string) get_post_meta( $existing_id, '_thumbnail_id', true ) );
 	}
 
 	/**
@@ -983,6 +1019,110 @@ class ContentSyncTest extends TestCase {
 		$this->assertNull( get_post( $owned_id ) );
 		$this->assertInstanceOf( WP_Post::class, get_post( $other_id ) );
 		$this->assertInstanceOf( WP_Post::class, get_post( $attachment_id ) );
+	}
+
+	/**
+	 * Prune respects an explicit post type selector.
+	 *
+	 * @return void
+	 */
+	public function test_push_prune_is_scoped_to_selected_post_type(): void {
+		$other_post_type = 'bs_content_other';
+
+		if ( ! post_type_exists( $other_post_type ) ) {
+			register_post_type(
+				$other_post_type,
+				array(
+					'public' => true,
+					'label'  => 'Content Sync Other',
+				)
+			);
+		}
+
+		$selected_uid = wp_generate_uuid4();
+		$other_uid    = wp_generate_uuid4();
+		$selected_id  = $this->insert_post(
+			array(
+				'post_title' => 'Selected Orphan',
+				'post_name'  => 'selected-orphan',
+			)
+		);
+		$other_id     = wp_insert_post(
+			array(
+				'post_type'   => $other_post_type,
+				'post_status' => 'publish',
+				'post_title'  => 'Other Type Orphan',
+				'post_name'   => 'other-type-orphan',
+			),
+			true
+		);
+
+		$this->assertIsInt( $other_id );
+		$this->post_ids[] = $other_id;
+
+		update_post_meta( $selected_id, Content_Sync::META_UID, $selected_uid );
+		update_post_meta( $selected_id, Content_Sync::META_SET, 'unit' );
+		update_post_meta( $other_id, Content_Sync::META_UID, $other_uid );
+		update_post_meta( $other_id, Content_Sync::META_SET, 'unit' );
+
+		$filter = static fn() => 'delete';
+		add_filter( 'blockstudio/content/orphan_action', $filter );
+
+		try {
+			$sync = new Content_Sync( $this->config( array( 'postTypes' => array( $this->post_type, $other_post_type ) ) ) );
+			$rows = $sync->push(
+				array(
+					'prune'     => true,
+					'post-type' => $this->post_type,
+				)
+			);
+		} finally {
+			remove_filter( 'blockstudio/content/orphan_action', $filter );
+		}
+
+		$this->assertContains( 'pruned-delete', wp_list_pluck( $rows, 'action' ) );
+		$this->assertNull( get_post( $selected_id ) );
+		$this->assertInstanceOf( WP_Post::class, get_post( $other_id ) );
+
+		$status = $sync->status( array( 'post-type' => $this->post_type ) );
+		$this->assertNotContains( $other_uid, wp_list_pluck( $status, 'uid' ) );
+	}
+
+	/**
+	 * Malformed content JSON blocks prune instead of orphaning the DB entity.
+	 *
+	 * @return void
+	 */
+	public function test_malformed_post_json_blocks_prune(): void {
+		$orphan_uid = wp_generate_uuid4();
+		$orphan_id  = $this->insert_post(
+			array(
+				'post_title' => 'Malformed Protected',
+				'post_name'  => 'malformed-protected',
+			)
+		);
+		$dir        = $this->content_root() . '/posts/' . $this->post_type;
+
+		update_post_meta( $orphan_id, Content_Sync::META_UID, $orphan_uid );
+		update_post_meta( $orphan_id, Content_Sync::META_SET, 'unit' );
+
+		wp_mkdir_p( $dir );
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents -- Writing malformed local content sync fixture.
+		file_put_contents( $dir . '/broken.json', '{broken' );
+
+		$filter = static fn() => 'delete';
+		add_filter( 'blockstudio/content/orphan_action', $filter );
+
+		try {
+			$sync = new Content_Sync( $this->config() );
+			$rows = $sync->push( array( 'prune' => true ) );
+		} finally {
+			remove_filter( 'blockstudio/content/orphan_action', $filter );
+		}
+
+		$this->assertContains( 'error', wp_list_pluck( $rows, 'action' ) );
+		$this->assertStringContainsString( 'Syntax error', implode( ' ', wp_list_pluck( $rows, 'message' ) ) );
+		$this->assertInstanceOf( WP_Post::class, get_post( $orphan_id ) );
 	}
 
 	/**

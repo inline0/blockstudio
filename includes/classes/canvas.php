@@ -366,6 +366,10 @@ class Canvas {
 	 * @return void
 	 */
 	public function register_endpoints(): void {
+		if ( ! Settings::get( 'dev/canvas/enabled' ) ) {
+			return;
+		}
+
 		$permission = function () {
 			return current_user_can( 'edit_posts' );
 		};
@@ -413,6 +417,15 @@ class Canvas {
 	 * @return WP_REST_Response
 	 */
 	public function refresh( \WP_REST_Request $request ): WP_REST_Response {
+		if ( ! Settings::get( 'dev/canvas/enabled' ) ) {
+			return new WP_REST_Response(
+				array(
+					'message' => __( 'Canvas is disabled.', 'blockstudio' ),
+				),
+				404
+			);
+		}
+
 		$query_params    = $request->get_query_params();
 		$blocks_targeted = array_key_exists( 'blocks', $query_params );
 		$blocks_param    = $blocks_targeted ? $request->get_param( 'blocks' ) : '';
@@ -503,6 +516,12 @@ class Canvas {
 	 * @return void
 	 */
 	public function stream(): void {
+		if ( ! Settings::get( 'dev/canvas/enabled' ) ) {
+			status_header( 404 );
+			nocache_headers();
+			return;
+		}
+
 		header( 'Content-Type: text/event-stream' );
 		header( 'Cache-Control: no-cache' );
 		header( 'X-Accel-Buffering: no' );

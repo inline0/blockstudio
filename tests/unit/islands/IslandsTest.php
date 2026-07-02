@@ -9,6 +9,8 @@ use PHPUnit\Framework\TestCase;
 class IslandsTest extends TestCase {
 
 	private array $filters = array();
+	private array $server_vars = array();
+	private array $cookie_vars = array();
 
 	protected function setUp(): void {
 		unset( $_GET['blockstudioMode'], $_GET['postId'] );
@@ -23,8 +25,27 @@ class IslandsTest extends TestCase {
 			remove_filter( $filter[0], $filter[1], $filter[2] );
 		}
 
+		foreach ( $this->server_vars as $key => $value ) {
+			if ( null === $value ) {
+				unset( $_SERVER[ $key ] );
+			} else {
+				$_SERVER[ $key ] = $value;
+			}
+		}
+
+		foreach ( $this->cookie_vars as $key => $value ) {
+			if ( null === $value ) {
+				unset( $_COOKIE[ $key ] );
+			} else {
+				$_COOKIE[ $key ] = $value;
+			}
+		}
+
 		$this->filters = array();
+		$this->server_vars = array();
+		$this->cookie_vars = array();
 		unset( $_GET['blockstudioMode'], $_GET['postId'] );
+		wp_set_current_user( 0 );
 	}
 
 	private function require_block( string $name ): void {
@@ -57,6 +78,22 @@ class IslandsTest extends TestCase {
 	private function add_filter_callback( string $hook, callable $callback, int $priority = 10, int $args = 1 ): void {
 		add_filter( $hook, $callback, $priority, $args );
 		$this->filters[] = array( $hook, $callback, $priority );
+	}
+
+	private function set_server_var( string $key, string $value ): void {
+		if ( ! array_key_exists( $key, $this->server_vars ) ) {
+			$this->server_vars[ $key ] = $_SERVER[ $key ] ?? null;
+		}
+
+		$_SERVER[ $key ] = $value;
+	}
+
+	private function set_cookie_var( string $key, string $value ): void {
+		if ( ! array_key_exists( $key, $this->cookie_vars ) ) {
+			$this->cookie_vars[ $key ] = $_COOKIE[ $key ] ?? null;
+		}
+
+		$_COOKIE[ $key ] = $value;
 	}
 
 	private function render_endpoint_item( string $name, array $attributes, string $signature = '' ) {
@@ -263,6 +300,44 @@ class IslandsTest extends TestCase {
 		$this->assertSame( array( 'error' => 'blockstudio_island_invalid_signature' ), $result );
 	}
 
+	public function test_endpoint_ignores_unsigned_get_context_during_render(): void {
+		$_GET['blockstudioMode'] = 'editor';
+		$_GET['postId']          = '99999';
+
+		$this->add_filter_callback(
+			'blockstudio/islands/fragment',
+			static function ( string $rendered ): string {
+				return $rendered . ( isset( $_GET['blockstudioMode'], $_GET['postId'] ) ? ' leaked-get-context' : ' clean-get-context' );
+			},
+			10,
+			1
+		);
+
+		$result = $this->render_endpoint_item( 'blockstudio/island-dynamic', array( 'message' => 'GET context' ) );
+
+		$this->assertIsString( $result );
+		$this->assertStringContainsString( 'clean-get-context', $result );
+		$this->assertSame( 'editor', $_GET['blockstudioMode'] );
+		$this->assertSame( '99999', $_GET['postId'] );
+	}
+
+	public function test_request_attributes_filter_runs_after_signature_verification(): void {
+		$this->add_filter_callback(
+			'blockstudio/islands/request_attributes',
+			static function ( array $attributes ): array {
+				$attributes['message'] = 'Changed after signature';
+				return $attributes;
+			},
+			10,
+			1
+		);
+
+		$result = $this->render_endpoint_item( 'blockstudio/island-dynamic', array( 'message' => 'Signed message' ) );
+
+		$this->assertIsString( $result );
+		$this->assertStringContainsString( 'Changed after signature', $result );
+	}
+
 	public function test_endpoint_rejects_oversized_batches(): void {
 		$this->add_filter_callback(
 			'blockstudio/islands/max_per_request',
@@ -332,20 +407,28 @@ class IslandsTest extends TestCase {
 				'ttl' => 60,
 				'per' => 'user',
 			);
+			$this->add_filter_callback(
+				'blockstudio/islands/fragment',
+				static fn( string $rendered ): string => $rendered . '<span class="cache-token">' . esc_html( (string) microtime( true ) ) . '</span>',
+				10,
+				1
+			);
 
 			$message = 'Per user ' . wp_generate_uuid4();
 
 			wp_set_current_user( 0 );
 			$guest_first  = $this->render_endpoint_item( 'blockstudio/island-dynamic', array( 'message' => $message ) );
+			usleep( 1000 );
 			$guest_second = $this->render_endpoint_item( 'blockstudio/island-dynamic', array( 'message' => $message ) );
 
 			wp_set_current_user( $user_id );
 			$user_first  = $this->render_endpoint_item( 'blockstudio/island-dynamic', array( 'message' => $message ) );
+			usleep( 1000 );
 			$user_second = $this->render_endpoint_item( 'blockstudio/island-dynamic', array( 'message' => $message ) );
 
 			$this->assertIsString( $guest_first );
 			$this->assertIsString( $user_first );
-			$this->assertSame( $guest_first, $guest_second );
+			$this->assertNotSame( $guest_first, $guest_second );
 			$this->assertSame( $user_first, $user_second );
 			$this->assertStringContainsString( 'guest', $guest_first );
 			$this->assertStringContainsString( $user_login, $user_first );
@@ -353,6 +436,38 @@ class IslandsTest extends TestCase {
 		} finally {
 			$block->blockstudio['island']['cache'] = $previous_cache;
 			wp_set_current_user( 0 );
+			wp_delete_user( $user_id );
+		}
+	}
+
+	public function test_endpoint_restores_same_origin_cookie_user_for_fragments(): void {
+		$user_login = 'island_cookie_' . wp_generate_password( 8, false, false );
+		$user_id    = wp_insert_user(
+			array(
+				'user_login' => $user_login,
+				'user_pass'  => wp_generate_password( 24, true, true ),
+				'user_email' => $user_login . '@example.com',
+				'role'       => 'subscriber',
+			)
+		);
+
+		$this->assertIsInt( $user_id );
+
+		if ( ! function_exists( 'wp_delete_user' ) ) {
+			require_once ABSPATH . 'wp-admin/includes/user.php';
+		}
+
+		$this->set_cookie_var( LOGGED_IN_COOKIE, wp_generate_auth_cookie( $user_id, time() + HOUR_IN_SECONDS, 'logged_in' ) );
+		$this->set_server_var( 'HTTP_ORIGIN', home_url() );
+		$this->set_server_var( 'REQUEST_METHOD', 'POST' );
+		$this->set_server_var( 'HTTP_SEC_FETCH_SITE', 'same-origin' );
+		wp_set_current_user( 0 );
+
+		try {
+			$result = $this->render_endpoint_item( 'blockstudio/island-dynamic', array( 'message' => 'Cookie user' ) );
+			$this->assertIsString( $result );
+			$this->assertStringContainsString( $user_login, $result );
+		} finally {
 			wp_delete_user( $user_id );
 		}
 	}

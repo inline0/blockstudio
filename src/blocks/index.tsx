@@ -22,6 +22,7 @@ import { isAllowedToRender } from '@/blocks/utils/is-allowed-to-render';
 import { sendEvents } from '@/blocks/utils/send-events';
 import { store as tailwindStore } from '@/tailwind/store';
 import { useTailwind } from '@/tailwind/use-tailwind';
+import type { PreloadEntry } from '../canvas/types';
 import { BlockstudioAttribute } from '@/types/block';
 import { BlockstudioBlock, BlockstudioBlockAttributes } from '@/types/types';
 import { css } from '@/utils/css';
@@ -299,25 +300,11 @@ window.blockstudio.registerBlock = (block: BlockstudioBlock) => {
   registerSingleBlock(block);
 };
 
-window.blockstudio.addPreloads = (
-  entries: Array<{
-    rendered: string;
-    blockName: string;
-    attributes?: unknown;
-    mode?: string;
-  }>,
-) => {
+window.blockstudio.addPreloads = (entries: PreloadEntry[]) => {
   renderCache.addPreloads(entries);
 };
 
-window.blockstudio.replacePreloads = (
-  entries: Array<{
-    rendered: string;
-    blockName: string;
-    attributes?: unknown;
-    mode?: string;
-  }>,
-) => {
+window.blockstudio.replacePreloads = (entries: PreloadEntry[]) => {
   renderCache.replacePreloads(entries);
 };
 

@@ -87,7 +87,7 @@ class Page_Discovery {
 				continue;
 			}
 
-			$manifest = self::read_json_file( $manifest_path );
+			$manifest = Utils::read_json_file( $manifest_path );
 
 			if ( ! is_array( $manifest ) ) {
 				$this->add_error( 'invalid_manifest', 'Invalid pages.json manifest.', array( 'path' => $manifest_path ) );
@@ -153,7 +153,7 @@ class Page_Discovery {
 				continue;
 			}
 
-			$manifest = self::read_json_file( $manifest_path );
+			$manifest = Utils::read_json_file( $manifest_path );
 
 			if ( ! is_array( $manifest ) ) {
 				continue;
@@ -188,15 +188,6 @@ class Page_Discovery {
 	 */
 	public function get_errors(): array {
 		return $this->errors;
-	}
-
-	/**
-	 * Get discovered pages.
-	 *
-	 * @return array<string, array> The discovered pages.
-	 */
-	public function get_pages(): array {
-		return $this->pages;
 	}
 
 	/**
@@ -384,7 +375,7 @@ class Page_Discovery {
 	 */
 	private function process_page_json( string $json_path, string $base_path, ?array $collection, array $extra_source_mtime_paths = array(), array $loader_context = array() ): ?array {
 		$directory = self::normalize_filesystem_path( dirname( $json_path ) );
-		$page_json = self::read_json_file( $json_path );
+		$page_json = Utils::read_json_file( $json_path );
 
 		if ( ! is_array( $page_json ) ) {
 			$this->add_error( 'invalid_page_json', 'Invalid page.json file.', array( 'path' => $json_path ) );
@@ -1220,12 +1211,7 @@ class Page_Discovery {
 	 * @return string|null The template path or null if not found.
 	 */
 	private function find_template( string $directory ): ?string {
-		$templates = array(
-			$directory . '/index.php',
-			$directory . '/index.blade.php',
-			$directory . '/index.twig',
-			$directory . '/index.md',
-		);
+		$templates = Utils::index_source_candidates( $directory, array( 'index.md' ) );
 
 		/**
 		 * Filter candidate template paths for file-based pages.
@@ -1235,13 +1221,7 @@ class Page_Discovery {
 		 */
 		$templates = apply_filters( 'blockstudio/pages/template_candidates', $templates, $directory );
 
-		foreach ( $templates as $template ) {
-			if ( is_string( $template ) && file_exists( $template ) ) {
-				return self::normalize_filesystem_path( $template );
-			}
-		}
-
-		return null;
+		return Utils::first_existing_path( $templates );
 	}
 
 	/**
@@ -1542,26 +1522,6 @@ class Page_Discovery {
 		);
 
 		return $paths;
-	}
-
-	/**
-	 * Read a JSON file.
-	 *
-	 * @param string $path JSON path.
-	 *
-	 * @return array|null JSON data.
-	 */
-	private static function read_json_file( string $path ): ?array {
-		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Reading local JSON file.
-		$contents = file_get_contents( $path );
-
-		if ( false === $contents ) {
-			return null;
-		}
-
-		$data = json_decode( $contents, true );
-
-		return is_array( $data ) ? $data : null;
 	}
 
 	/**

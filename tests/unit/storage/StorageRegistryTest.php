@@ -67,29 +67,6 @@ class StorageRegistryTest extends TestCase {
 		$this->assertSame( $second, $registry->get_handler( 'block' ) );
 	}
 
-	// get_handlers()
-
-	public function test_get_handlers_empty_initially(): void {
-		$registry = Storage_Registry::instance();
-
-		$this->assertSame( array(), $registry->get_handlers() );
-	}
-
-	public function test_get_handlers_returns_all_registered(): void {
-		$block_handler  = $this->create_handler( 'block' );
-		$option_handler = $this->create_handler( 'option' );
-
-		$registry = Storage_Registry::instance();
-		$registry->register_handler( $block_handler );
-		$registry->register_handler( $option_handler );
-
-		$handlers = $registry->get_handlers();
-
-		$this->assertCount( 2, $handlers );
-		$this->assertArrayHasKey( 'block', $handlers );
-		$this->assertArrayHasKey( 'option', $handlers );
-	}
-
 	// get_storage_types()
 
 	public function test_get_storage_types_defaults_to_block(): void {
@@ -127,34 +104,6 @@ class StorageRegistryTest extends TestCase {
 		);
 
 		$this->assertSame( array( 'block' ), $registry->get_storage_types( $field ) );
-	}
-
-	// has_storage_type()
-
-	public function test_has_storage_type_true_for_default_block(): void {
-		$registry = Storage_Registry::instance();
-		$field    = array( 'id' => 'title' );
-
-		$this->assertTrue( $registry->has_storage_type( $field, 'block' ) );
-	}
-
-	public function test_has_storage_type_false_for_missing_type(): void {
-		$registry = Storage_Registry::instance();
-		$field    = array( 'id' => 'title' );
-
-		$this->assertFalse( $registry->has_storage_type( $field, 'postMeta' ) );
-	}
-
-	public function test_has_storage_type_true_for_explicit_type(): void {
-		$registry = Storage_Registry::instance();
-		$field    = array(
-			'id'      => 'title',
-			'storage' => array( 'type' => array( 'block', 'postMeta' ) ),
-		);
-
-		$this->assertTrue( $registry->has_storage_type( $field, 'block' ) );
-		$this->assertTrue( $registry->has_storage_type( $field, 'postMeta' ) );
-		$this->assertFalse( $registry->has_storage_type( $field, 'option' ) );
 	}
 
 	// process_field()
