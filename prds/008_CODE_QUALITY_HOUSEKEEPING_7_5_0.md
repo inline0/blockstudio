@@ -68,12 +68,50 @@ TODO/FIXME/HACK markers · version constants at 7.4.2 across `blockstudio.php` /
 | P1-7 | P1 | database.php | Meta storage strict comparison → `userScoped` meta lists always empty; typed filters never match |
 | P1-8 | P1 | block-tags.php | Static builders shadow trait renderers and have drifted; pullquote builder emits save-invalid markup |
 | P1-9 | P1 | field-type-registry.php | Custom field type `rest_schema` breaks repeater/array storage saves (new 7.5.0) |
-| P1-10 | P1 | block/index.tsx | `refreshOn` listener refetches with stale mount-time attributes, clobbering correct markup |
-| P1-11 | P1 | wysiwyg.tsx + repeater.tsx | WYSIWYG shows/writes stale content after repeater reorder/remove/duplicate |
-| P1-12 | P1 | block/index.tsx | `fetchSingle` has no out-of-order guard and no `.catch` (stale markup, permanent spinner) |
-| P1-13 | P1 | repeater.tsx | Module-global `repeaters` registry corrupts sort across same-block instances |
-| P2 | P2 | various | 20+ lower-impact correctness/robustness bugs (table) |
-| P3 | P3 | various | Duplication clusters + dead code (tables) |
+| P2 | P2 | PHP only | ~20 lower-impact PHP correctness/robustness bugs (table). React P2 rows are deferred. |
+| P3 | P3 | PHP + safe TS | Duplication clusters + dead code (tables). TS limited to dead-code + type/pure DRY. |
+| — | **Deferred** | React client (`src/`) | Behavioral React/rendering fixes are **out of scope** this release. See "Deferred". |
+
+---
+
+## TypeScript / client-side scope (read before touching `src/`)
+
+A prior attempt at the React behavioral fixes in this PRD **broke the entire E2E
+suite**. The editor's block-rendering pipeline (server-side-render fetch loop,
+richtext flush, repeater instance reuse, effect/ref timing) is more subtle than
+the individual findings suggest, and small "correct-looking" changes to hooks,
+effects, refs, or event handlers have large, non-obvious blast radius. For 7.5.0
+we do **not** fix client-side behavior.
+
+**In scope for `src/` (safe, non-behavioral only):**
+
+- Dead-code removal — deleting verified-unused files, exports, props, branches,
+  types, and empty directories (P3d TypeScript list). Deleting truly dead code
+  cannot change runtime behavior.
+- Pure DRY that is provably behavior-preserving by inspection: **type-only**
+  dedup (shared interfaces) and extraction of **pure, side-effect-free helper
+  functions** that are byte-for-byte equivalent to their call sites.
+- Cosmetic cleanup (imports, obvious no-ops) that does not alter control flow.
+
+**Explicitly OUT of scope for `src/` (do not touch in 7.5.0):**
+
+- `useEffect`/`useMemo`/`useCallback` — adding, removing, or changing deps.
+- Refs — introducing refs or "moving a function into a ref."
+- `useState` init/sync, `useSelect`/`useDispatch` selectors, memoization.
+- Event handlers, MutationObservers, debounce/throttle timing, async ordering.
+- Anything in the block render / SSR-fetch / richtext / repeater data path.
+- Merging or restructuring React components (even thin wrappers).
+
+**Hard rules:** Every `src/` change must leave the E2E suite green in CI **without
+any logical edit to E2E tests** (renaming/formatting only, if anything). E2E is
+the guardrail, not something to adjust so a refactor "passes." If a TS change
+cannot be shown safe by reading alone, or if it turns E2E red, revert it — it was
+not in scope. When unsure whether a `src/` change is behavioral, treat it as
+behavioral and skip it.
+
+The known client-side bugs are still documented (see "Deferred") so they are not
+lost; they need a dedicated effort with deep rendering-system knowledge and full
+E2E validation, not this housekeeping pass.
 
 ---
 
@@ -414,82 +452,21 @@ auto-vivifies a phantom attribute, while `Attribute_Builder` produces nothing.
 Move the guard above `:926`. (Best resolved together with P3's legacy-path
 consolidation.)
 
-### P1-10. `refreshOn` listener refetches with stale mount-time attributes
-
-**File:** `src/blocks/components/block/index.tsx:499-510` (effect deps
-`[disableLoading]`) + `:408` (`useDebounce(fetchSingle, 500)`).
-
-`fetchSingle` is recreated every render and `useDebounce` returns a new debounced
-instance per render, but the `blockstudio/${name}/refresh` listener is registered
-once and keeps the first-render instance, whose closure captures first-render
-`attributes`/`memoizedRenderContext`/`postId`. Trigger: a block with
-`refreshOn: ["save"]`, edit a field, save the post → it refetches with pre-edit
-attributes, caches under the stale hash, and `updateRender` replaces the correct
-markup with old-attribute markup.
-
-**Fix:** Route the listener through a ref (`fetchRef.current = fetchSingle`) or add
-`debouncedFetchSingle` to the effect deps.
-
-### P1-11. WYSIWYG field shows/writes stale content after repeater reorder
-
-**File:** `src/blocks/components/fields/components/wysiwyg.tsx:57` (`useState(value)`),
-`:92-101` (writes `val` back, sets content once); repeater rows keyed by position
-(`repeater.tsx:415`, `key=${draggableId}.${e.id}`).
-
-`value` is read into state once; later prop changes are ignored. Because rows are
-keyed by position, sort/remove/duplicate reuses the component instance at each
-position. Trigger: a repeater with a wysiwyg field, two rows with different
-content, drag to reorder → editors keep pre-sort content and the next edit writes
-the wrong content into the new row.
-
-**Fix:** Key repeater rows by stable row identity, or sync `val` when the `value`
-prop changes (guarded against the onChange feedback loop).
-
-### P1-12. `fetchSingle` has no out-of-order guard and no `.catch`
-
-**File:** `src/blocks/components/block/index.tsx:389-406`.
-
-Two in-flight renders (an attribute edit while a previous >500ms fetch is pending,
-or a refresh-event fetch overlapping an attribute fetch) resolve in arbitrary
-order and the older response clobbers the newer markup. There is also no
-`.catch`: a failed render leaves an unhandled rejection and, on the first render,
-a permanent spinner. `select.tsx` already has the pattern to copy (a
-`fetchRequest` counter).
-
-**Fix:** Add a per-component monotonic request id checked before `updateRender`;
-add a `.catch` that clears the loading state.
-
-### P1-13. Module-global `repeaters` registry corrupts sort across same-block instances
-
-**File:** `src/blocks/components/fields/components/repeater.tsx:24,484-488` +
-`src/blocks/components/list/index.tsx:33-37`.
-
-`let repeaters = {}` is module scope, keyed by the repeater field id (e.g.
-`items`), not by clientId. Two instances of the same block on one page overwrite
-each other; `List.repeaterData(droppableId)` then derives the reorder index list
-from the other instance's row count. Trigger: two blocks with the same repeater
-id and different row counts, drag-sort the one with more rows → `reorder()`
-operates on a shorter array and rows are misordered/lost.
-
-**Fix:** Scope the registry key by clientId, or pass the instance's own group
-count via props instead of module state.
+The four highest-impact client-side (React) bugs found in the audit —
+`refreshOn` stale-attribute refetch, WYSIWYG stale-after-reorder, `fetchSingle`
+out-of-order/no-catch, and the module-global `repeaters` sort corruption — are
+real but **deferred**. Their fixes all live in the render/effect/ref path that a
+prior attempt broke. See the "Deferred" section; do not attempt them in 7.5.0.
 
 ---
 
-## P2 — Lower-impact bugs and robustness
+## P2 — Lower-impact bugs and robustness (PHP)
 
 Real, verified, concrete trigger, smaller blast radius. Fix opportunistically.
+These are all PHP; the React P2 items are moved to "Deferred".
 
 | Area | File:line | Issue |
 |------|-----------|-------|
-| Conditions | `src/blocks/utils/is-allowed-to-render.ts:54-56` | `empty` operator can never be true (`v && v === ''` is always falsy) → documented operator permanently hides the field. |
-| Fields | `src/blocks/components/fields/index.tsx:57,301` | Module-global `isDeleting` (only `add()` resets it) suppresses repeater `min`/default seeding across all blocks after any row delete. |
-| Editor | `src/blocks/index.tsx:154-162` | `clickSave` runs on any Cmd/Ctrl chord (no `e.key === 's'` check) → spurious attribute writes + debounced re-render on Cmd+C/B, one listener per block. |
-| Checkbox | `src/blocks/components/fields/components/checkbox.tsx:31-36` | "Toggle all" stores `{value,label,disabled,innerBlocks}` objects vs `{value,label}` for individual toggles → hash/payload divergence, extra keys leak into saved content. |
-| Classes field | `src/blocks/components/fields/components/classes/index.tsx:75` | MutationObserver spreads stale first-render `attributes` (should use `attributesRef.current`) → re-submits mount-time align/className/anchor. |
-| Perf (editor) | `src/blocks/index.tsx:103`, `fields/index.tsx:133`, `block/rich-text.tsx:30` | Three `useSelect` subscribers read the whole richtext map → every keystroke re-renders every block's edit component. Select `getRichText()?.[clientId]`. |
-| Code field | `src/blocks/components/fields/components/code.tsx:180-200` | Injected `<style>`/`<script>` never removed on unmount (sibling `extensions.tsx:243` has cleanup) → deleted block's CSS stays active in the editor. |
-| Select | `src/blocks/components/fields/components/select.tsx:181-183` | `debounce` memoized with `[]` pins mount-time `fetcher` → `{attributes.x}` populate search resolves against stale attrs; missing `.cancel()` on unmount. |
 | Assets | `includes/classes/assets.php:1525-1530`, `:1605-1614` | Toggling `assets/minify/*` never recompiles existing `_dist` files (compiled filename hash excludes settings). Mix setting flags into `get_asset_version()`. |
 | Assets | `includes/classes/assets.php:1084-1091` | `get_assets_html` drops any asset whose filename merely *contains* `view` (e.g. `preview.css`, `overview.js`). Match `/[-.]view\./`. |
 | Assets | `includes/classes/assets.php:960-975` | `get_preview_assets` buckets by `strpos($k,'style')` not `is_css()` → `custom.css` treated as script, `style-switcher.js` as style. |
@@ -573,8 +550,12 @@ first-party caller (see P3d), plus internal `build.php:2486,2642`.
 | ESModules fetch-and-write | `esmodules.php:197-234` ≈ `esmodulescss.php:142-174` | Wire the unused `Abstract_ESModule` base (P3d) which was written for exactly this, or one shared helper. |
 | `Build::process_block_assets` vs `register_cached_assets` | `build.php:1993-2125` ≈ `:1440-1505` (~55 lines) | `register_asset_with_registry($asset,$data,$registry)`. |
 | option-storage vs post-meta-storage | `option-storage.php:90` ≈ `post-meta-storage.php:91` (31-line clone) | Shared base/trait for the common tail. |
-| React CSS hooks | `use-get-css-classes.ts` ≈ `use-get-css-variables.ts` (59 lines each) | `useGetCssData(extractor, ...)`; also normalize the return-type drift (`string[]` vs `Set`). Fixes the shared cache-pollution bug (P2 candidate). |
-| React duplication | `waitForMedia` (`canvas.tsx:220-292` ≈ `wait-for-iframe.ts:33-70`); group renderer (`repeater.tsx:131-236` ≈ `panel/index.tsx:32-80`); `blockVisibility` stripping ×3 (`render-cache.ts:175`, `block/index.tsx:377`, `batch-fetcher.ts:34` — must stay in sync with hashing); `PreloadEntry` interface ×4, `Page`/`BlockItem` ×3; `text.tsx` == `textarea.tsx` | Extract shared helpers/types. |
+| React **types** (safe) | `PreloadEntry` interface ×4 (`render-cache.ts:4`, `canvas.tsx:39`, `update-queue.ts:14`, inline in `blocks/index.tsx:302`), `Page`/`BlockItem` ×3 (`canvas.tsx:14`, `update-queue.ts:1`, `artboard.tsx:10`) | Type-only dedup into a shared types module. No runtime code changes — safe. This is the only React DRY item in scope. |
+
+> **Deferred React DRY:** the `use-get-css-*` hook merge, `waitForMedia`, the
+> repeater/panel group-renderer merge, the `blockVisibility` stripping helper, and
+> `text.tsx`/`textarea.tsx` all touch hooks, components, or the render/hash path.
+> They are **out of scope** — see "Deferred". Do not extract them in 7.5.0.
 
 ### P3d. Dead code (verified zero callers across `includes/`, `src/`, `tests/`, built bundles, `docs/`; accounts for hook/REST/CLI/dynamic usage)
 
@@ -620,7 +601,8 @@ first-party caller (see P3d), plus internal `build.php:2486,2642`.
   `page-markdown.php:51` `has_frontmatter`. (Caveat: `Page_Registry` is passed to the
   public `blockstudio/pages/synced` action, so treat its getters as maybe-public.)
 
-**TypeScript (verified against webpack entry points and dynamic-import strings):**
+**TypeScript — Tier 1, safe standalone deletions (verified against webpack entry
+points and dynamic-import strings). These are the primary in-scope TS work:**
 - `src/utils/`: `capitalize-first-letter.ts`, `download-file.ts`, `is-css.ts`,
   `log.ts`, `unique-object-array-by.ts`, `get-filename.ts`.
 - `src/blocks/utils/get-asset-id.ts`, `src/blocks/utils/replace-placeholders.ts`.
@@ -628,24 +610,70 @@ first-party caller (see P3d), plus internal `build.php:2486,2642`.
 - `src/types/blockstudio.ts` (1,020 lines, generated by `scripts/generate-types.ts`,
   never imported — stop tracking or exclude from build).
 - `src/tools/` — two empty directories, untracked. Delete.
+
+**TypeScript — Tier 2, deletions inside render-path files (only if you can prove
+the deadness by reading, and E2E stays green; otherwise skip):** These live in
+hot editor components, which is exactly where the prior attempt caused breakage.
+Removing genuinely dead code here is safe, but the deadness analysis must be
+certain and re-checked against E2E. When in doubt, leave them.
 - The `<Fields config>` prop path (`fields/index.tsx` early return `:125`,
   seeding effect `:147-163`, `files.tsx` branch) — `config` is never passed.
 - `block/index.tsx` `response` prop (`:99`, never passed) + empty `if (event) {}`
   (`:373`); `select.tsx:210-216` no-op `onFilterChange` filter.
 
-### P3e. Consistency notes (fix while nearby, not standalone work)
+### P3e. Consistency notes (PHP only — fix while nearby, not standalone work)
 
 - `error_log()` used raw in new code (`field-type-registry.php:597`) while the
   plugin has `Error_Handler` gating on `WP_DEBUG_LOG`.
-- `code.tsx:153-165` uses raw `window.fetch` + manual nonce for `/scss/compile`
-  while every other call uses `apiFetch`.
-- ESLint config has no `react-hooks` plugin, so the latent conditional-hook
-  patterns (`rich-text.tsx:37`, `inner-blocks.tsx:53` ternary `useBlockProps`;
-  `fields/index.tsx:125` early return before hooks) are uncaught. Adding the
-  plugin is optional but would prevent a class of the bugs above.
 - camelCase attribute remapping is applied by some block-tag renderers
   (media-text, accordion, more) but not others (cover, group); unify when
   introducing the container-renderer helper (P3c).
+
+(The `code.tsx` raw-fetch-vs-`apiFetch` inconsistency and the missing
+`react-hooks` ESLint plugin are client-side and moved to "Deferred".)
+
+---
+
+## Deferred — client-side (React) behavior (out of scope for 7.5.0)
+
+These are **real, verified** bugs, but every fix lives in the editor's
+render/effect/ref/state path. A prior attempt at them broke the whole E2E suite.
+They are recorded here so they are not lost, and are **not to be fixed in 7.5.0**.
+They need a dedicated effort by someone with deep knowledge of the block
+render/SSR-fetch pipeline, changed one at a time, each validated against a full
+green E2E run. Do not touch these as part of this housekeeping pass.
+
+**High-impact (were P1):**
+
+| Was | File | Bug | Eventual direction (not now) |
+|-----|------|-----|------------------------------|
+| P1-10 | `block/index.tsx:499-510,408` | `refreshOn` listener keeps the first-render debounced `fetchSingle` → refetches with stale mount-time `attributes`/context and clobbers correct markup | ref-forward the handler or correct effect deps |
+| P1-11 | `wysiwyg.tsx:57,92-101` + `repeater.tsx:415` | WYSIWYG reads `value` once; position-keyed repeater rows reuse instances → stale content after reorder/remove/duplicate, next edit writes wrong row | stable row identity keys, or sync on `value` change |
+| P1-12 | `block/index.tsx:389-406` | `fetchSingle` has no out-of-order guard and no `.catch` → older response clobbers newer markup; failed first render = permanent spinner | monotonic request id + catch (pattern exists in `select.tsx`) |
+| P1-13 | `repeater.tsx:24,484-488` + `list/index.tsx:33-37` | Module-global `repeaters` registry keyed by field id, not clientId → same-block instances corrupt each other's drag-sort | scope the key by clientId |
+
+**Lower-impact (were React P2):**
+
+| Area | File:line | Bug |
+|------|-----------|-----|
+| Conditions | `is-allowed-to-render.ts:54-56` | `empty` operator can never be true → documented operator permanently hides the field |
+| Fields | `fields/index.tsx:57,301` | Module-global `isDeleting` (only `add()` resets) suppresses repeater `min`/default seeding across all blocks after any delete |
+| Editor | `blocks/index.tsx:154-162` | `clickSave` runs on any Cmd/Ctrl chord (no `e.key==='s'`) → spurious writes + re-render on Cmd+C/B |
+| Checkbox | `checkbox.tsx:31-36` | "Toggle all" stores `{value,label,disabled,innerBlocks}` vs `{value,label}` → hash/payload divergence, keys leak into saved content |
+| Classes field | `classes/index.tsx:75` | Observer spreads stale first-render `attributes` (should use `attributesRef.current`) |
+| Perf (editor) | `blocks/index.tsx:103`, `fields/index.tsx:133`, `block/rich-text.tsx:30` | Three `useSelect` subscribers read the whole richtext map → every keystroke re-renders every block's edit component |
+| Code field | `code.tsx:180-200` | Injected `<style>`/`<script>` never removed on unmount (sibling `extensions.tsx:243` has cleanup) |
+| Select | `select.tsx:181-183` | `debounce` memoized `[]` pins mount-time `fetcher` (stale `{attributes.x}` populate); missing `.cancel()` |
+
+**Deferred React DRY / tooling:** `use-get-css-classes.ts` ≈ `use-get-css-variables.ts`
+(hook merge + shared cache-pollution bug); `waitForMedia` (`canvas.tsx:220-292` ≈
+`wait-for-iframe.ts:33-70`); group renderer (`repeater.tsx:131-236` ≈
+`panel/index.tsx:32-80`); `blockVisibility` stripping ×3 (`render-cache.ts:175`,
+`block/index.tsx:377`, `batch-fetcher.ts:34`, must stay in sync with hashing);
+`text.tsx` == `textarea.tsx`; `code.tsx:153-165` raw `window.fetch` vs `apiFetch`;
+and adding the `react-hooks` ESLint plugin (would flag the conditional-hook
+patterns at `rich-text.tsx:37` / `inner-blocks.tsx:53` / `fields/index.tsx:125`).
+All touch hooks/components/render paths — defer with the bugs above.
 
 ---
 
@@ -655,14 +683,17 @@ first-party caller (see P3d), plus internal `build.php:2486,2642`.
    Add a regression test with each.
 2. **P1 by subsystem** so a fixer stays in one area: islands (P0-2, P1-3, P1-4,
    plus islands P2 items), canvas/pages (P1-5, P1-6, pages P2), database (P1-7,
-   P1-9 storage, DB P2), block-tags (P1-8 + P3c leaf/container helpers together),
-   editor React (P1-10..P1-13 + React P2).
+   P1-9 storage, DB P2), block-tags (P1-8 + P3c leaf/container helpers together).
+   All P1 work is PHP — the React P1 items are deferred (see "Deferred").
 3. **P1-1 cache pruning** on its own (touches build-cache + tailwind).
 4. **P3 consolidation**, largest wins first: the legacy `build_attributes`
    deletion (P3a, unblocked once the dead REST routes in P3d go), then the
    block-tags helper extraction (folds P1-8), then database.php backend helpers
    (folds P1-7), then the shared `read_json_file`/`get_paths`/`Template_Compiler`
    utils. Delete the three dead whole-classes (P3d) early — pure removal, no risk.
+5. **TS housekeeping last and standalone** (Tier-1 dead-code deletions + the
+   type-only dedup). No behavioral React changes. Run E2E in CI after this batch
+   and confirm it is still green before considering the TS work done.
 
 ## Definition of done
 
@@ -673,9 +704,13 @@ first-party caller (see P3d), plus internal `build.php:2486,2642`.
   local runs, is the acceptance gate.
 - The islands logged-in path (P1-3) and the prune-selector path (P0-3) have new
   automated coverage, since both were entirely untested.
-- Duplication scan re-run shows the P3c clusters gone; `Asset_Discovery`,
+- Duplication scan re-run shows the **in-scope** P3c clusters gone; `Asset_Discovery`,
   `Abstract_ESModule`, and the settings-loaders are deleted.
 - `readme.txt` has a consolidated `= 7.5.0 =` changelog entry for the user-visible
   fixes.
+- **No React behavioral changes were made.** `src/` work is limited to Tier-1
+  dead-code deletion and type-only dedup; the editor E2E suite is green in CI
+  after the TS batch, with no logical edits to E2E tests. Everything in "Deferred"
+  is untouched.
 - No behavior change beyond restoring documented/intended behavior; the 7.5.0
   feature set is unchanged from a user's perspective.
