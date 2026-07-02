@@ -65,6 +65,7 @@ Download the latest release zip from [GitHub Releases](https://github.com/inline
 * Fix: Canvas sync endpoints now stay disabled when Canvas is off, and draft page hierarchies keep their parent relationships during sync
 * Fix: database storage filters and user-scoped meta reads now compare typed values consistently
 * Fix: custom field type REST schemas now save correctly inside repeater and array storage fields
+* Fix: editor fields now handle empty conditions, checkbox toggle-all values, async option refreshes, dynamic render races, and repeater RichText/WYSIWYG state more reliably
 * Fix: file-backed page, pattern, and Site Editor template rendering now share the same PHP/Twig/Blade compiler path for consistent template output
 
 = 7.4.2 =
