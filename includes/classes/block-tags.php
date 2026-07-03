@@ -1737,8 +1737,6 @@ class Block_Tags {
 	 * @return array WordPress block array.
 	 */
 	public static function build_block_array( string $block_name, array $attrs, string $inner_content = '' ): array {
-		static $trait_renderers = null;
-
 		// Remap key → __BLOCKSTUDIO_KEY for keyed block merging.
 		if (
 			array_key_exists( 'key', $attrs ) &&
@@ -1749,11 +1747,9 @@ class Block_Tags {
 			unset( $attrs['key'] );
 		}
 
-		if ( null === $trait_renderers ) {
-			$trait_renderers = self::get_renderers( new Html_Parser() );
-		}
-		if ( isset( $trait_renderers[ $block_name ] ) ) {
-			return call_user_func( $trait_renderers[ $block_name ], $attrs, $inner_content );
+		$renderers = self::get_renderers( new Html_Parser() );
+		if ( isset( $renderers[ $block_name ] ) ) {
+			return call_user_func( $renderers[ $block_name ], $attrs, $inner_content );
 		}
 
 		// Generic fallback.
