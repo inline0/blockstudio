@@ -2,6 +2,7 @@
 
 use Blockstudio\Assets;
 use Blockstudio\Block;
+use Blockstudio\Block_Registry;
 use Blockstudio\Build;
 use PHPUnit\Framework\Attributes\PreserveGlobalState;
 use PHPUnit\Framework\Attributes\RunInSeparateProcess;
@@ -398,6 +399,20 @@ class AssetsTest extends TestCase {
 		$this->assertStringContainsString( '</head>', $result );
 		$this->assertStringContainsString( '</body>', $result );
 		$this->assertStringContainsString( '<p>Content</p>', $result );
+	}
+
+	public function test_parse_output_includes_registered_global_assets(): void {
+		Block_Registry::instance()->add_global_asset( 'blockstudio-test-global-style-css', 'https://example.test/global-style.css' );
+		Block_Registry::instance()->add_global_asset( 'blockstudio-test-global-script-js', 'https://example.test/global-script.js' );
+
+		$result = ( new Assets() )->parse_output( '<html><head></head><body></body></html>' );
+
+		$this->assertStringContainsString( "id='blockstudio-test-global-style-css'", $result );
+		$this->assertStringContainsString( "href='https://example.test/global-style.css'", $result );
+		$this->assertStringContainsString( '</head>', $result );
+		$this->assertStringContainsString( "id='blockstudio-test-global-script-js'", $result );
+		$this->assertStringContainsString( "src='https://example.test/global-script.js'", $result );
+		$this->assertStringContainsString( '</body>', $result );
 	}
 
 	public function test_parse_output_keeps_frontend_assets_when_render_filter_replaces_output(): void {

@@ -398,6 +398,38 @@ class Assets {
 		$footer = implode( '', $script_matches[0] );
 		$html   = preg_replace( $script_pattern, '', $html );
 
+		foreach ( Build::assets_global() as $handle => $url ) {
+			if ( ! is_string( $url ) || '' === $url ) {
+				continue;
+			}
+
+			$handle = sanitize_title( (string) $handle );
+			if ( '' === $handle ) {
+				continue;
+			}
+
+			$asset_id = 'global:' . $handle;
+			if (
+				in_array( $asset_id, $asset_ids, true ) ||
+				str_contains( $html, "id='{$handle}'" ) ||
+				str_contains( $html, 'id="' . $handle . '"' ) ||
+				str_contains( $head, "id='{$handle}'" ) ||
+				str_contains( $head, 'id="' . $handle . '"' ) ||
+				str_contains( $footer, "id='{$handle}'" ) ||
+				str_contains( $footer, 'id="' . $handle . '"' )
+			) {
+				continue;
+			}
+
+			$asset_ids[] = $asset_id;
+
+			if ( self::is_css( $url ) ) {
+				$head .= "<link rel='stylesheet' id='{$handle}' href='{$url}'>";
+			} else {
+				$footer .= "<script type='module' id='{$handle}' src='{$url}'></script>";
+			}
+		}
+
 		foreach ( $blocks as $block ) {
 			$id    = Block::comment( $block['name'] );
 			$ids[] = $id;
