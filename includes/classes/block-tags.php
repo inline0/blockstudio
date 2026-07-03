@@ -86,6 +86,7 @@ class Block_Tags {
 			'core/comments'          => array( $parser, 'render_comments' ),
 		);
 
+		$renderers = apply_filters( 'blockstudio/block_tags/builders', $renderers, $parser );
 		$renderers = apply_filters( 'blockstudio/block_tags/renderers', $renderers, $parser );
 		$renderers = apply_filters( 'blockstudio/parser/renderers', $renderers, $parser );
 
