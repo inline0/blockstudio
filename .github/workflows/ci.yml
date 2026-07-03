@@ -8,6 +8,10 @@ concurrency:
   group: ci-${{ github.ref }}
   cancel-in-progress: true
 
+# Readable wp-env Docker project name for raw wp-env steps; the empty/impl npm scripts override it.
+env:
+  COMPOSE_PROJECT_NAME: blockstudio
+
 jobs:
   lint:
     name: Lint
