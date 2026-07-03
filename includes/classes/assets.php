@@ -408,9 +408,7 @@ class Assets {
 				continue;
 			}
 
-			$asset_id = 'global:' . $handle;
 			if (
-				in_array( $asset_id, $asset_ids, true ) ||
 				str_contains( $html, "id='{$handle}'" ) ||
 				str_contains( $html, 'id="' . $handle . '"' ) ||
 				str_contains( $head, "id='{$handle}'" ) ||
@@ -420,8 +418,6 @@ class Assets {
 			) {
 				continue;
 			}
-
-			$asset_ids[] = $asset_id;
 
 			if ( self::is_css( $url ) ) {
 				$head .= "<link rel='stylesheet' id='{$handle}' href='{$url}'>";
