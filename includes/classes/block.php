@@ -1497,7 +1497,7 @@ class Block {
 				// phpcs:enable WordPress.Security.EscapeOutput.ExceptionNotEscaped
 			}
 
-			if ( str_contains( $compiled_string, '<bs:' ) || str_contains( $compiled_string, '<block ' ) ) {
+			if ( Block_Tags::output_has_tags( $compiled_string ) ) {
 				$compiled_string = Block_Tags::render( $compiled_string );
 			}
 
@@ -1560,7 +1560,7 @@ class Block {
 				$perf_phase = microtime( true );
 			}
 
-			if ( str_contains( $php_output, '<bs:' ) || str_contains( $php_output, '<block ' ) ) {
+			if ( Block_Tags::output_has_tags( $php_output ) ) {
 				$php_output = Block_Tags::render( $php_output );
 			}
 
