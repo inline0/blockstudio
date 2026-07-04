@@ -24,13 +24,6 @@ namespace Blockstudio;
 class Block_Tags {
 
 	/**
-	 * Memoized "<prefix-" and "<alias" probe tokens for output_has_tags().
-	 *
-	 * @var array<string>|null
-	 */
-	private static $tag_probe_tokens = null;
-
-	/**
 	 * Initialize page-level block tag rendering.
 	 *
 	 * @return void
@@ -896,6 +889,7 @@ class Block_Tags {
 
 		// Nested prefixes: a brand prefix can compose over a namespace prefix,
 		// so <dv-ui-input> falls through to <ui-input> and resolves bsui/input.
+		// Recursion is on the strictly shorter slug, so it always terminates.
 		$nested_hyphen = strpos( $slug, '-' );
 		if ( false !== $nested_hyphen ) {
 			$nested_prefix = substr( $slug, 0, $nested_hyphen );
@@ -910,9 +904,12 @@ class Block_Tags {
 	/**
 	 * Whether rendered output contains any block tag worth parsing.
 	 *
-	 * Covers the built-in <bs:...> / <block ...> syntaxes plus every
-	 * registered prefix (<dv-..., <ui-...) and alias tag, so block templates
-	 * can emit those tags instead of calling render helpers directly.
+	 * Mirrors render()'s own short-circuit guard: covers the built-in
+	 * <bs:...> / <block ...> syntaxes plus every registered prefix
+	 * (<dv-..., <ui-...) and alias tag, so block templates can emit those
+	 * tags instead of calling render helpers directly. Prefixes and aliases
+	 * are resolved fresh so a filter registered after the first probe is
+	 * always seen.
 	 *
 	 * @param string $string The rendered output.
 	 *
@@ -923,24 +920,8 @@ class Block_Tags {
 			return true;
 		}
 
-		if ( null === self::$tag_probe_tokens ) {
-			$tokens = array();
-			foreach ( array_keys( self::get_tag_prefixes() ) as $prefix ) {
-				$tokens[] = '<' . $prefix . '-';
-			}
-			foreach ( array_keys( self::get_tag_aliases() ) as $alias ) {
-				$tokens[] = '<' . $alias;
-			}
-			self::$tag_probe_tokens = $tokens;
-		}
-
-		foreach ( self::$tag_probe_tokens as $token ) {
-			if ( str_contains( $string, $token ) ) {
-				return true;
-			}
-		}
-
-		return false;
+		return self::has_prefix_tags( $string, self::get_tag_prefixes() )
+			|| self::has_alias_tags( $string, self::get_tag_aliases() );
 	}
 
 	/**

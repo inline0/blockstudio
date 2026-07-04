@@ -45,6 +45,14 @@ class BlockTagsAllowDenyTest extends TestCase {
 		$this->filter_callbacks[] = array( 'blockstudio/block_tags/tag_aliases', $cb );
 	}
 
+	private function set_prefixes( array $prefixes ): void {
+		$cb = function () use ( $prefixes ) {
+			return $prefixes;
+		};
+		add_filter( 'blockstudio/block_tags/prefixes', $cb );
+		$this->filter_callbacks[] = array( 'blockstudio/block_tags/prefixes', $cb );
+	}
+
 	private function assert_contains_paragraph( string $html, string $text ): void {
 		$this->assertMatchesRegularExpression(
 			'/<p(?:\s[^>]*)?>' . preg_quote( $text, '/' ) . '<\/p>/',
@@ -153,6 +161,38 @@ class BlockTagsAllowDenyTest extends TestCase {
 		$result = Block_Tags::render( $input );
 
 		$this->assertSame( $input, $result );
+	}
+
+	// Nested prefix resolution must enforce allow/deny on the final block name.
+
+	public function test_deny_applies_to_nested_prefix_resolution(): void {
+		$this->set_prefixes(
+			array(
+				'dv' => array( 'divine-homepage' ),
+				'ui' => array( 'bsui' ),
+			)
+		);
+		$this->set_deny( array( 'bsui/*' ) );
+
+		// dv-ui-button resolves bsui/button via the nested path, which is denied.
+		$input = '<dv-ui-button label="Denied" />';
+
+		$this->assertSame( $input, Block_Tags::render( $input ) );
+	}
+
+	public function test_allow_applies_to_nested_prefix_resolution(): void {
+		$this->set_prefixes(
+			array(
+				'dv' => array( 'divine-homepage' ),
+				'ui' => array( 'bsui' ),
+			)
+		);
+		$this->set_allow( array( 'core/*' ) );
+
+		// bsui/button is outside the allow list, so the nested match is dropped.
+		$input = '<dv-ui-button label="Not allowed" />';
+
+		$this->assertSame( $input, Block_Tags::render( $input ) );
 	}
 
 	public function test_allow_works_with_block_syntax(): void {
