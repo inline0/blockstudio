@@ -1957,7 +1957,7 @@ class Build {
 			}
 
 			$attributes = ( new Attribute_Builder() )->build(
-				$block_json['blockstudio']['attributes'],
+				$is_override ? $block_json['blockstudio']['attributes'] : $filtered_attributes,
 				false,
 				$is_extend
 			);

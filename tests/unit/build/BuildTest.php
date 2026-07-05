@@ -540,6 +540,77 @@ class BuildTest extends TestCase {
 		}
 	}
 
+	public function test_blocks_attributes_filter_reaches_built_render_attributes(): void {
+		$tmp_dir   = sys_get_temp_dir() . '/bs-attr-filter-' . uniqid();
+		$block_dir = $tmp_dir . '/filtered-select';
+		mkdir( $block_dir, 0755, true );
+
+		$name = 'blockstudio-test/filtered-select';
+		file_put_contents(
+			$block_dir . '/block.json',
+			wp_json_encode(
+				array(
+					'name'        => $name,
+					'title'       => 'Filtered Select',
+					'blockstudio' => array(
+						'attributes' => array(
+							array(
+								'id'      => 'variant',
+								'type'    => 'select',
+								'options' => array(
+									array(
+										'label' => 'Default',
+										'value' => 'default',
+									),
+								),
+								'default' => 'default',
+							),
+						),
+					),
+				)
+			)
+		);
+		file_put_contents( $block_dir . '/index.php', '<?php // render' );
+
+		$filter = function ( $attribute, $block ) use ( $name ) {
+			if ( ( $block['name'] ?? '' ) === $name && ( $attribute['id'] ?? '' ) === 'variant' ) {
+				$attribute['options'][] = array(
+					'label' => 'Brand',
+					'value' => 'brand',
+				);
+			}
+
+			return $attribute;
+		};
+		add_filter( 'blockstudio/blocks/attributes', $filter, 10, 2 );
+
+		try {
+			Build::init(
+				array(
+					'dir' => $tmp_dir,
+				)
+			);
+
+			$block = Build::blocks()[ $name ] ?? null;
+			$this->assertInstanceOf( WP_Block_Type::class, $block );
+
+			$options = array_column( $block->attributes['variant']['options'] ?? array(), 'value' );
+			$this->assertContains( 'brand', $options, 'Filter-added select options must reach the built render attributes.' );
+		} finally {
+			remove_filter( 'blockstudio/blocks/attributes', $filter, 10 );
+
+			if ( is_dir( $tmp_dir ) ) {
+				Files::delete_all_files( $tmp_dir );
+			}
+
+			Build::refresh_blocks();
+
+			if ( WP_Block_Type_Registry::get_instance()->is_registered( $name ) ) {
+				WP_Block_Type_Registry::get_instance()->unregister( $name );
+			}
+		}
+	}
+
 	// refresh_blocks()
 
 	public function test_refresh_blocks_does_not_break_registry(): void {
