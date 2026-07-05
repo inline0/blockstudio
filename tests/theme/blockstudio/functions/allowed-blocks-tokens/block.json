@@ -3,5 +3,6 @@
   "name": "blockstudio/function-allowed-blocks-tokens",
   "title": "Allowed Blocks Tokens",
   "category": "blockstudio-test-native",
-  "icon": "star-filled"
+  "icon": "star-filled",
+  "blockstudio": true
 }
