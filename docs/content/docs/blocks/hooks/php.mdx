@@ -242,6 +242,12 @@ add_filter('blockstudio/block_tags/prefixes', function($prefixes) {
 `blockstudio/block_tags/tag_aliases` entries take precedence for the same tag,
 and unresolved prefixed tags are left unchanged.
 
+Prefixes compose: if a prefixed tag does not resolve directly and its slug is
+itself a registered prefix tag, resolution recurses. With `dv => ['divine-homepage']`
+and `ui => ['bsui']`, `<dv-ui-input>` falls through to the `ui` prefix and
+resolves `bsui/input`. Registered prefix and alias tags also render in
+block-template output, not only in page content.
+
 ## Settings
 
 ### path

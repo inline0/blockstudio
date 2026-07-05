@@ -1,14 +1,13 @@
 ---
 title: Blockstudio 7.5
 description: Custom field types, file-backed Site Editor templates, block islands, Storh database storage, and bsui/parser refinements.
-date: 2026-06-30
+date: 2026-07-05
 author: Dennis
 ---
 
-Blockstudio 7.5 starts with five pieces that make Blockstudio's file-first
-workflow more complete: custom field types, file-backed Site Editor templates,
-block islands, Storh database storage, and a set of parser plus `bsui/*`
-refinements.
+Blockstudio 7.5 rounds out Blockstudio's file-first workflow: custom field
+types, file-backed Site Editor templates, block islands, Storh database storage,
+composable block tags, and a set of parser plus `bsui/*` refinements.
 
 Reusable custom fields already let projects define a group of existing fields
 once and reuse it with `type: "custom/{name}"`. Custom field types solve a
@@ -43,6 +42,11 @@ The short version:
   parser glue, `InnerBlocks` can use tokenized `allowedBlocks`, nested
   `bs_render_block()` output matches frontend rendering in editor previews,
   and `bsui/button` gains icons plus easier styling hooks.
+- **Composable block tags**: prefix tags can resolve through another prefix
+  (`<dv-ui-input>` to `bsui/input`), and prefix and alias tags render in
+  block-template output, not only in page content.
+- **Automatic cache pruning**: the runtime, editor asset, and Tailwind caches
+  prune stale entries so long-running projects do not accumulate cache files.
 
 ## File-backed Site Editor templates
 
@@ -236,6 +240,16 @@ For bundled UI, `bsui/button` now supports an `icon` attribute and
 cascade layer, and button variants can be extended with
 `blockstudio/ui/button/variants-style` plus the existing
 `blockstudio/blocks/attributes` filter.
+
+Block tags compose further, too. A prefix can resolve through another prefix, so
+`<dv-ui-input />` with a `dv` brand prefix over a `ui` namespace prefix resolves
+`bsui/input`. Registered prefix and alias tags now also render in block-template
+output, not just page content, so a template can emit them directly instead of
+calling `bs_render_block()`.
+
+Finally, the runtime, editor asset, and Tailwind caches now prune stale entries
+automatically, so long-running projects no longer accumulate unbounded cache
+files on disk.
 
 ## Why custom field types?
 

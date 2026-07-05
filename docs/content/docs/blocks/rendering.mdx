@@ -150,8 +150,10 @@ in pages, patterns, and Site Templates produce native blocks.
 ### In block templates
 
 Block tags render automatically inside Twig and PHP templates. No setting
-needed. The output is rendered HTML embedded directly into the block's
-template output:
+needed. This includes the `<bs:>` and `<block>` syntaxes as well as any
+registered [prefix](#prefix-shorthands) and alias tags, so a template can emit
+them directly instead of calling `bs_render_block()`. The output is rendered
+HTML embedded directly into the block's template output:
 
 ```twig title="index.twig"
 <div class="my-page">
@@ -159,6 +161,7 @@ template output:
   <block name="core/separator" />
   <bs:core-paragraph>Rendered by WordPress</bs:core-paragraph>
   <block name="core/heading" level="2">Also WordPress</block>
+  <dv-card title="Prefix shorthand" />
 </div>
 ```
 
@@ -232,6 +235,27 @@ add_filter('blockstudio/block_tags/prefixes', function($prefixes) {
 ```
 
 With the example above, `<dv-card>` resolves to `divine-homepage/card`, `<dv-button>` falls back to `bsui/button` when `divine-homepage/button` is not registered, and `<dv-onumia-feature-matrix>` resolves to `divine-homepage/onumia-feature-matrix`.
+
+Prefixes can also compose. When a prefixed tag does not resolve directly and the
+remaining slug is itself a registered prefix tag, resolution recurses, so a
+brand prefix can sit on top of a namespace prefix:
+
+```php title="functions.php"
+add_filter('blockstudio/block_tags/prefixes', function($prefixes) {
+  $prefixes['dv'] = ['divine-homepage'];
+  $prefixes['ui'] = ['bsui'];
+
+  return $prefixes;
+});
+```
+
+```html
+<dv-ui-input />
+```
+
+`<dv-ui-input>` has no `divine-homepage/ui-input` block, so it falls through to
+the `ui` prefix and resolves `bsui/input`. Direct matches always win over nested
+resolution, and allow/deny rules apply to the final resolved block.
 
 You can also configure prefixes in `blockstudio.json`:
 
