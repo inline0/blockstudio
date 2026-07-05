@@ -60,6 +60,110 @@ class AssetsTest extends TestCase {
 		rmdir( $directory );
 	}
 
+	public function test_bsui_inline_styles_are_wrapped_in_layer(): void {
+		$path = $this->create_temporary_asset( 'style.inline.css', '[data-bsui-button] { color: red; }' );
+
+		$output = Assets::render_inline(
+			'style.inline.css',
+			array( 'path' => $path ),
+			array(
+				'name' => 'bsui/button',
+				'file' => array( 'dirname' => dirname( $path ) ),
+			),
+			true
+		);
+
+		$this->assertStringContainsString( '@layer bsui {', $output );
+		$this->assertStringContainsString( '[data-bsui-button] { color: red; }', $output );
+	}
+
+	public function test_non_bsui_inline_styles_are_not_wrapped_in_layer(): void {
+		$path = $this->create_temporary_asset( 'style.inline.css', '.custom-block { color: red; }' );
+
+		$output = Assets::render_inline(
+			'style.inline.css',
+			array( 'path' => $path ),
+			array(
+				'name' => 'custom/block',
+				'file' => array( 'dirname' => dirname( $path ) ),
+			),
+			true
+		);
+
+		$this->assertStringNotContainsString( '@layer bsui', $output );
+		$this->assertStringContainsString( '.custom-block { color: red; }', $output );
+	}
+
+	public function test_button_variants_style_filter_is_appended_inside_layer(): void {
+		$this->add_filter(
+			'blockstudio/ui/button/variants-style',
+			static function ( string $css, array $block ): string {
+				if ( 'bsui/button' !== ( $block['name'] ?? '' ) ) {
+					return $css;
+				}
+
+				return $css . '[data-bsui-button][data-variant="brand"] { color: hotpink; }';
+			},
+			10,
+			2
+		);
+
+		$path = $this->create_temporary_asset( 'style.inline.css', '[data-bsui-button] { color: red; }' );
+
+		$output = Assets::render_inline(
+			'style.inline.css',
+			array( 'path' => $path ),
+			array(
+				'name' => 'bsui/button',
+				'file' => array( 'dirname' => dirname( $path ) ),
+			),
+			true
+		);
+
+		$this->assertMatchesRegularExpression( '/@layer bsui \{.*data-variant="brand".*\}/s', $output );
+	}
+
+	public function test_button_variant_options_can_be_extended_with_attributes_filter(): void {
+		$this->add_filter(
+			'blockstudio/blocks/attributes',
+			static function ( array $attribute, array $block ): array {
+				if ( 'bsui/button' === ( $block['name'] ?? '' ) && 'variant' === ( $attribute['id'] ?? '' ) ) {
+					$attribute['options'][] = array(
+						'label' => 'Brand',
+						'value' => 'brand',
+					);
+				}
+
+				return $attribute;
+			},
+			10,
+			2
+		);
+
+		$attributes = array(
+			'variant' => array(
+				'id'      => 'variant',
+				'type'    => 'select',
+				'options' => array(
+					array(
+						'label' => 'Default',
+						'value' => 'default',
+					),
+				),
+			),
+		);
+
+		Build::filter_attributes( array( 'name' => 'bsui/button' ), $attributes, $attributes );
+
+		$this->assertContains(
+			array(
+				'label' => 'Brand',
+				'value' => 'brand',
+			),
+			$attributes['variant']['options']
+		);
+	}
+
 	#[RunInSeparateProcess]
 	#[PreserveGlobalState(false)]
 	public function test_plugin_bootstrap_registers_editor_asset_footer_once(): void {

@@ -14,7 +14,11 @@ use Blockstudio\Field_Type_Registry;
 use Blockstudio\Utils;
 
 /**
- * Render block.
+ * Render a Blockstudio block as frontend-resolved HTML.
+ *
+ * When called inside another block's editor preview, embedded blocks still
+ * render through the frontend path so pseudo-components like RichText and
+ * InnerBlocks are resolved before output.
  *
  * @since 2.1.2
  *
@@ -27,7 +31,11 @@ function blockstudio_render_block( $value ) {
 }
 
 /**
- * Get block.
+ * Get a Blockstudio block as frontend-resolved HTML.
+ *
+ * When called inside another block's editor preview, embedded blocks still
+ * render through the frontend path so pseudo-components like RichText and
+ * InnerBlocks are resolved before output.
  *
  * @since 2.1.2
  *
@@ -48,7 +56,11 @@ function bs_block( $value ) {
 }
 
 /**
- * Render block.
+ * Render a Blockstudio block as frontend-resolved HTML.
+ *
+ * When called inside another block's editor preview, embedded blocks still
+ * render through the frontend path so pseudo-components like RichText and
+ * InnerBlocks are resolved before output.
  *
  * @since 2.1.2
  *

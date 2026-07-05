@@ -42,6 +42,28 @@ the `InnerBlocks` component.
   </Tab>
 </Tabs>
 
+`allowedBlocks` also accepts server-expanded tokens. Tokens are expanded before
+the editor receives the template, while literal block names stay unchanged.
+
+| Token | Description |
+|-------|-------------|
+| `namespace/*` | Every registered block in that namespace |
+| `category:<slug>` | Every registered block in that WordPress block category |
+| `@theme` | Every Blockstudio block registered from the active theme |
+
+Expanded entries are de-duplicated in author order:
+
+```php title="index.php"
+<InnerBlocks allowedBlocks="<?php echo esc_attr(wp_json_encode([
+  'core/paragraph',
+  'category:content',
+  'bsui/field',
+])); ?>" />
+```
+
+Tokens that resolve to no blocks are ignored. Frontend output is unchanged,
+because `allowedBlocks` is only used by the editor.
+
 ### tag
 
 By default, the `InnerBlocks` component is rendered as a `div` element. You can

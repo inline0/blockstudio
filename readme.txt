@@ -58,6 +58,11 @@ Download the latest release zip from [GitHub Releases](https://github.com/inline
 * New: file-backed Site Editor templates and template parts can be authored with `template.json`, `part.json`, PHP/Twig/Blade/HTML sources, and normal Blockstudio block tags while preserving WordPress customization/reset behavior
 * New: block islands let dynamic blocks render cache-safe placeholders first, then batch-render request-specific fragments through a signed frontend endpoint; hydrated islands get a mount event without a REST request
 * New: `bs.db` schemas can use `storage: "storh"` for indexed file-per-record storage in uploads, with integer IDs preserved and a JSONC-to-Storh migration command
+* Enhancement: mapped richtext paragraph blocks now receive simple `<p>` inner text through their `content` attribute without a custom parser builder
+* Enhancement: `InnerBlocks` allowed-block lists now support `namespace/*`, `category:<slug>`, and `@theme` tokens in editor templates
+* Enhancement: nested `bs_render_block()` and `bs_block()` calls now output frontend-resolved markup inside editor previews
+* Enhancement: bundled `bsui/*` inline styles now emit in the `bsui` cascade layer so theme CSS can override them without `!important`
+* Enhancement: `bsui/button` now supports icon and icon position attributes, plus a variant CSS extension hook
 * Enhancement: runtime, editor asset, and Tailwind caches now prune stale entries automatically to prevent unbounded cache growth
 * Fix: registry imports now reject unsafe remote file paths, and generated HTML attributes are escaped consistently
 * Fix: Content Sync no longer prunes outside selected post types or taxonomies, now blocks destructive pushes when source JSON is malformed, and preserves attachment-reference meta when media download is disabled

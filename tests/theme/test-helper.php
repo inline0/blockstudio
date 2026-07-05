@@ -1038,7 +1038,8 @@ add_action(
 					// Component test page with bs: block tags and bs_render_block()
 					$comp_content = '<bs:blockstudio-type-component heading="String Rendered" content="Via bs tag" />'
 						. '<bs:blockstudio-type-component heading="Paired Tag" content="Via paired tag"></bs:blockstudio-type-component>'
-						. '[bs_test_render name="blockstudio/type-component" heading="PHP Rendered" content="Via bs_render_block"]';
+						. '[bs_test_render name="blockstudio/type-component" heading="PHP Rendered" content="Via bs_render_block"]'
+						. '[bs_test_render name="blockstudio/function-nested-render" label="Nested shortcode label"]';
 					if ( ! get_post( 3200 ) ) {
 						$wpdb->insert( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery
 							$wpdb->posts,

@@ -73,6 +73,11 @@ echo bs_block([
 
 The button block will be rendered in place of the `$content` variable inside the block template.
 
+Embedded blocks rendered with `bs_render_block()` or `bs_block()` always output
+frontend-resolved HTML, even when the parent block is currently rendering an
+editor preview. Template pseudo-components such as `<RichText />` and
+`<InnerBlocks />` are resolved before the embedded block is returned.
+
 ### Multiple Slots
 
 It is also possible to create multiple content slots by simply making the `$content` variable an associative array and calling its appropriate keys in the `bs_block` function.
@@ -385,3 +390,8 @@ attribute lowercasing.
 For [Pages, Patterns, and Site Templates](/docs/pages-and-patterns), the same parser also
 handles raw HTML elements (`<p>`, `<div>`, `<h1>`, etc.), mapping them to
 their corresponding WordPress core blocks.
+
+When an element mapping points `<p>` to a registered non-core Blockstudio block
+that declares a `content` richtext attribute, simple inner text is routed into
+that `content` attribute automatically. Nested block tags, mapped child
+elements, or block-level HTML still fall back to normal inner-block parsing.

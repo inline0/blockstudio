@@ -79,7 +79,22 @@ Simple components render as a single block:
 <block name="bsui/spinner"></block>
 ```
 
-Attributes map directly to each component's `block.json` attributes. For example, `bsui/button` supports `label`, `href`, `variant`, `size`, and `disabled`.
+Attributes map directly to each component's `block.json` attributes. For example, `bsui/button` supports `label`, `icon`, `iconPosition`, `href`, `variant`, `size`, and `disabled`.
+
+```php title="template.php"
+bs_render_block([
+  'name' => 'bsui/button',
+  'data' => [
+    'label' => 'Continue',
+    'icon' => [
+      'set' => 'heroicons',
+      'subSet' => 'outline',
+      'icon' => 'arrow-right',
+    ],
+    'iconPosition' => 'right',
+  ],
+]);
+```
 
 ## Compound Components
 
@@ -190,6 +205,40 @@ UI components ship with their own CSS custom properties using the `--bs-ui-*` pr
 ```
 
 The components are headless in behavior, but opinionated enough to be usable out of the box. Override tokens first, then add component-specific CSS where needed.
+
+Bundled component CSS is emitted in the named `bsui` cascade layer. Unlayered
+theme CSS can override component rules without `!important`:
+
+```css title="style.css"
+.button-brand {
+  background: var(--brand-primary);
+}
+```
+
+To add a custom `bsui/button` variant, append the select option with the
+existing attributes filter and provide the variant CSS with
+`blockstudio/ui/button/variants-style`:
+
+```php title="functions.php"
+add_filter('blockstudio/blocks/attributes', function($attribute, $block) {
+  if (($block['name'] ?? '') === 'bsui/button' && ($attribute['id'] ?? '') === 'variant') {
+    $attribute['options'][] = [
+      'label' => 'Brand',
+      'value' => 'brand',
+    ];
+  }
+
+  return $attribute;
+}, 10, 2);
+
+add_filter('blockstudio/ui/button/variants-style', function($css) {
+  return $css . '
+[data-bsui-button][data-variant="brand"] {
+  background: var(--brand-primary);
+  color: white;
+}';
+});
+```
 
 ## Related
 

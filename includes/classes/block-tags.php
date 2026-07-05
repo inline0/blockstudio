@@ -1306,6 +1306,147 @@ class Block_Tags {
 	}
 
 	/**
+	 * Whether a mapped element's inner HTML should become a content attribute.
+	 *
+	 * @param string                        $html_tag          HTML tag name.
+	 * @param string                        $block_name        Target block name.
+	 * @param array                         $attrs             Parsed attributes.
+	 * @param string                        $inner             Inner HTML.
+	 * @param array                         $registered_blocks Registered Blockstudio blocks.
+	 * @param array<string,string|callable> $map               HTML tag map.
+	 * @param array<string,string>          $aliases           Custom tag aliases.
+	 * @param array<string,array<string>>   $prefixes          Prefix namespace map.
+	 *
+	 * @return bool True when content should be routed.
+	 */
+	private static function should_route_inner_content_to_attribute(
+		string $html_tag,
+		string $block_name,
+		array $attrs,
+		string $inner,
+		array $registered_blocks,
+		array $map,
+		array $aliases,
+		array $prefixes
+	): bool {
+		$text_tags = array(
+			'p' => true,
+		);
+
+		if (
+			! isset( $text_tags[ $html_tag ] )
+			|| isset( $attrs['content'] )
+			|| '' === trim( $inner )
+			|| str_starts_with( $block_name, 'core/' )
+			|| ! self::block_declares_richtext_content_attribute( $block_name, $registered_blocks )
+		) {
+			return false;
+		}
+
+		return ! self::inner_content_has_nested_block_tags( $inner, $map, $aliases, $prefixes, $registered_blocks );
+	}
+
+	/**
+	 * Whether a registered Blockstudio block declares content as richtext.
+	 *
+	 * @param string $block_name        Block name.
+	 * @param array  $registered_blocks Registered Blockstudio blocks.
+	 *
+	 * @return bool True when the block has a content richtext attribute.
+	 */
+	private static function block_declares_richtext_content_attribute( string $block_name, array $registered_blocks ): bool {
+		if ( ! isset( $registered_blocks[ $block_name ] ) ) {
+			return false;
+		}
+
+		$block      = $registered_blocks[ $block_name ];
+		$attributes = array();
+
+		if ( is_object( $block ) ) {
+			$attributes = $block->blockstudio['attributes'] ?? array();
+		} elseif ( is_array( $block ) ) {
+			$attributes = $block['blockstudio']['attributes'] ?? array();
+		}
+
+		foreach ( $attributes as $attribute ) {
+			if (
+				is_array( $attribute )
+				&& 'content' === ( $attribute['id'] ?? null )
+				&& 'richtext' === ( $attribute['type'] ?? $attribute['field'] ?? null )
+			) {
+				return true;
+			}
+		}
+
+		return false;
+	}
+
+	/**
+	 * Whether routed richtext content contains nested block-level structures.
+	 *
+	 * @param string                        $inner             Inner HTML.
+	 * @param array<string,string|callable> $map               HTML tag map.
+	 * @param array<string,string>          $aliases           Custom tag aliases.
+	 * @param array<string,array<string>>   $prefixes          Prefix namespace map.
+	 * @param array                         $registered_blocks Registered Blockstudio blocks.
+	 *
+	 * @return bool True when nested blocks or mapped elements are present.
+	 */
+	private static function inner_content_has_nested_block_tags(
+		string $inner,
+		array $map,
+		array $aliases,
+		array $prefixes,
+		array $registered_blocks
+	): bool {
+		if (
+			false !== strpos( $inner, '<bs:' )
+			|| false !== strpos( $inner, '<block ' )
+			|| self::has_alias_tags( $inner, $aliases )
+			|| self::has_prefix_tags( $inner, $prefixes )
+		) {
+			return true;
+		}
+
+		if ( ! preg_match_all( '/<\s*\/?\s*([a-z][a-z0-9]*)\b/i', $inner, $matches ) ) {
+			return false;
+		}
+
+		$inline_tags = array(
+			'a'      => true,
+			'b'      => true,
+			'br'     => true,
+			'code'   => true,
+			'del'    => true,
+			'em'     => true,
+			'i'      => true,
+			'ins'    => true,
+			'mark'   => true,
+			's'      => true,
+			'small'  => true,
+			'span'   => true,
+			'strong' => true,
+			'sub'    => true,
+			'sup'    => true,
+			'u'      => true,
+		);
+
+		foreach ( $matches[1] as $tag ) {
+			$tag = strtolower( $tag );
+
+			if ( isset( $map[ $tag ] ) ) {
+				return true;
+			}
+
+			if ( ! isset( $inline_tags[ $tag ] ) ) {
+				return true;
+			}
+		}
+
+		return false;
+	}
+
+	/**
 	 * Parse all elements including raw HTML tags (for pages/patterns).
 	 *
 	 * Like parse_inner_blocks but also recognizes raw HTML elements
@@ -1521,13 +1662,19 @@ class Block_Tags {
 						continue;
 					}
 
+					$inner_for_block = $inner;
+
 					// Heading level from tag name.
 					if ( preg_match( '/^h[1-6]$/', $html_tag ) ) {
 						$attrs['level'] = (int) substr( $html_tag, 1 );
 
 						if ( 'core/heading' !== $block_name && '' !== trim( $inner ) && ! isset( $attrs['content'] ) ) {
 							$attrs['content'] = trim( $inner );
+							$inner_for_block  = '';
 						}
+					} elseif ( self::should_route_inner_content_to_attribute( $html_tag, $block_name, $attrs, $inner, $registered_blocks, $map, $aliases, $prefixes ) ) {
+						$attrs['content'] = trim( $inner );
+						$inner_for_block  = '';
 					}
 
 					// Ordered list.
@@ -1591,7 +1738,7 @@ class Block_Tags {
 						$block_array['innerContent'] = $new_ic;
 						$blocks[]                    = $block_array;
 					} else {
-						$blocks[] = self::build_block_array( $block_name, $attrs, $inner );
+						$blocks[] = self::build_block_array( $block_name, $attrs, $inner_for_block );
 					}
 					continue;
 				}

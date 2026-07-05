@@ -1,6 +1,7 @@
 <?php
 
 use Blockstudio\Block_Tags;
+use Blockstudio\Block_Registry;
 use PHPUnit\Framework\TestCase;
 
 /**
@@ -57,6 +58,18 @@ class BlockTagsExtensionPointsTest extends TestCase {
 		);
 	}
 
+	private function register_blockstudio_block( string $name, array $attributes ): void {
+		$block              = new WP_Block_Type( $name, array( 'category' => 'blockstudio-test-unit' ) );
+		$block->blockstudio = array(
+			'attributes' => $attributes,
+			'data'       => array(
+				'path' => get_stylesheet_directory() . '/blockstudio/unit/' . str_replace( '/', '-', $name ),
+			),
+		);
+
+		Block_Registry::instance()->register_block( $name, $block );
+	}
+
 	private static function content_of( array $block ): mixed {
 		return $block['attrs']['blockstudio']['attributes']['content'] ?? null;
 	}
@@ -100,6 +113,139 @@ class BlockTagsExtensionPointsTest extends TestCase {
 
 		$this->assertSame( 'custom/paragraph', $children[1]['blockName'] );
 		$this->assertSame( 'Body', self::content_of( $children[1] ) );
+	}
+
+	public function test_mapped_registered_paragraph_routes_inner_text_to_richtext_content(): void {
+		$this->register_blockstudio_block(
+			'custom/richtext-leaf',
+			array(
+				array(
+					'id'   => 'content',
+					'type' => 'richtext',
+				),
+			)
+		);
+		$this->add(
+			'blockstudio/parser/element_mapping',
+			static function ( array $mapping ): array {
+				$mapping['p'] = 'custom/richtext-leaf';
+				return $mapping;
+			}
+		);
+
+		$blocks = Block_Tags::parse_all_elements( '<p>Hello <strong>world</strong></p>' );
+
+		$this->assertSame( 'custom/richtext-leaf', $blocks[0]['blockName'] );
+		$this->assertSame( 'Hello <strong>world</strong>', self::content_of( $blocks[0] ) );
+		$this->assertSame( array(), $blocks[0]['innerBlocks'] );
+		$this->assertSame( array(), $blocks[0]['innerContent'] );
+	}
+
+	public function test_mapped_registered_paragraph_with_nested_tag_keeps_inner_block_parsing(): void {
+		$this->register_blockstudio_block(
+			'custom/richtext-nested-fallback',
+			array(
+				array(
+					'id'   => 'content',
+					'type' => 'richtext',
+				),
+			)
+		);
+		$this->add(
+			'blockstudio/parser/element_mapping',
+			static function ( array $mapping ): array {
+				$mapping['p'] = 'custom/richtext-nested-fallback';
+				return $mapping;
+			}
+		);
+
+		$blocks = Block_Tags::parse_all_elements( '<p><bs:core-paragraph>Nested</bs:core-paragraph></p>' );
+
+		$this->assertSame( 'custom/richtext-nested-fallback', $blocks[0]['blockName'] );
+		$this->assertNull( self::content_of( $blocks[0] ) );
+		$this->assertSame( 'core/paragraph', $blocks[0]['innerBlocks'][0]['blockName'] ?? null );
+	}
+
+	public function test_core_paragraph_mapping_does_not_route_content_attribute(): void {
+		$this->add(
+			'blockstudio/parser/element_mapping',
+			static function ( array $mapping ): array {
+				$mapping['p'] = 'core/paragraph';
+				return $mapping;
+			}
+		);
+
+		$blocks = Block_Tags::parse_all_elements( '<p>Hello world</p>' );
+
+		$this->assertSame( 'core/paragraph', $blocks[0]['blockName'] );
+		$this->assertArrayNotHasKey( 'content', $blocks[0]['attrs'] );
+		$this->assertSame( '<p>Hello world</p>', $blocks[0]['innerHTML'] );
+	}
+
+	public function test_non_core_block_without_richtext_content_keeps_inner_block_parsing(): void {
+		$this->register_blockstudio_block(
+			'custom/no-content-leaf',
+			array(
+				array(
+					'id'   => 'title',
+					'type' => 'richtext',
+				),
+			)
+		);
+		$this->add(
+			'blockstudio/parser/element_mapping',
+			static function ( array $mapping ): array {
+				$mapping['p'] = 'custom/no-content-leaf';
+				return $mapping;
+			}
+		);
+
+		$blocks = Block_Tags::parse_all_elements( '<p><bs:core-paragraph>Fallback body</bs:core-paragraph></p>' );
+
+		$this->assertSame( 'custom/no-content-leaf', $blocks[0]['blockName'] );
+		$this->assertNull( self::content_of( $blocks[0] ) );
+		$this->assertSame( 'core/paragraph', $blocks[0]['innerBlocks'][0]['blockName'] ?? null );
+	}
+
+	public function test_custom_builder_can_decorate_routed_content(): void {
+		$this->register_blockstudio_block(
+			'custom/richtext-builder',
+			array(
+				array(
+					'id'   => 'content',
+					'type' => 'richtext',
+				),
+			)
+		);
+		$this->add(
+			'blockstudio/parser/element_mapping',
+			static function ( array $mapping ): array {
+				$mapping['p'] = 'custom/richtext-builder';
+				return $mapping;
+			}
+		);
+		$this->add(
+			'blockstudio/block_tags/builders',
+			static function ( array $builders ): array {
+				$builders['custom/richtext-builder'] = static function ( array $attributes, string $inner ): array {
+					$attributes['content'] = 'Decorated: ' . ( $attributes['content'] ?? trim( $inner ) );
+
+					return array(
+						'blockName'    => 'custom/richtext-builder',
+						'attrs'        => array( 'blockstudio' => array( 'attributes' => $attributes ) ),
+						'innerBlocks'  => array(),
+						'innerHTML'    => '',
+						'innerContent' => array(),
+					);
+				};
+				return $builders;
+			}
+		);
+
+		$blocks = Block_Tags::parse_all_elements( '<p>Builder body</p>' );
+
+		$this->assertSame( 'Decorated: Builder body', self::content_of( $blocks[0] ) );
+		$this->assertSame( array(), $blocks[0]['innerBlocks'] );
 	}
 
 	public function test_all_block_tag_extension_point_filters_fire(): void {

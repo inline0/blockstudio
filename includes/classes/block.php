@@ -497,15 +497,18 @@ class Block {
 				class_exists( 'WP_HTML_Tag_Processor' ) &&
 				false !== strpos( $content, 'useBlockProps' )
 			) {
-				$content = new WP_HTML_Tag_Processor( $content );
-				if ( $content->next_tag() ) {
-					$classes = $content->get_attribute( 'class' );
-					$content->set_attribute(
+				$processor = new WP_HTML_Tag_Processor( $content );
+				if ( $processor->next_tag() ) {
+					$classes = $processor->get_attribute( 'class' );
+					$processor->set_attribute(
 						'class',
 						$classes . ' wp-block block-editor-block-list__block'
 					);
 				}
+				$content = $processor->get_updated_html();
 			}
+
+			$content = self::expand_inner_blocks_allowed_blocks( $content );
 
 			return str_replace(
 				'useBlockProps',
@@ -682,6 +685,291 @@ class Block {
 		}
 
 		return $content;
+	}
+
+	/**
+	 * Expand supported InnerBlocks allowedBlocks tokens.
+	 *
+	 * @param array $list Allowed block names and tokens.
+	 *
+	 * @return array Expanded block names.
+	 */
+	public static function expand_allowed_blocks_tokens( array $list ): array {
+		$expanded = array();
+
+		foreach ( $list as $entry ) {
+			if ( ! is_string( $entry ) ) {
+				continue;
+			}
+
+			$entry = trim( $entry );
+			if ( '' === $entry ) {
+				continue;
+			}
+
+			$resolved = self::resolve_allowed_blocks_token( $entry );
+			$names    = null === $resolved ? array( $entry ) : $resolved;
+
+			foreach ( $names as $name ) {
+				if ( is_string( $name ) && '' !== $name && ! in_array( $name, $expanded, true ) ) {
+					$expanded[] = $name;
+				}
+			}
+		}
+
+		return $expanded;
+	}
+
+	/**
+	 * Expand allowedBlocks JSON attributes on editor InnerBlocks tags.
+	 *
+	 * @param string $content Rendered editor handoff content.
+	 *
+	 * @return string Content with expanded allowedBlocks attributes.
+	 */
+	private static function expand_inner_blocks_allowed_blocks( string $content ): string {
+		if ( false === strpos( $content, 'allowedBlocks' ) || false === strpos( $content, '<InnerBlocks' ) ) {
+			return $content;
+		}
+
+		return preg_replace_callback(
+			'/<InnerBlocks\b[^>]*>/i',
+			static function ( array $matches ): string {
+				$tag = $matches[0];
+
+				if ( ! preg_match( '/\ballowedBlocks\s*=\s*([\'"])(.*?)\1/s', $tag, $attribute_match ) ) {
+					return $tag;
+				}
+
+				$quote   = $attribute_match[1];
+				$raw     = $attribute_match[2];
+				$decoded = html_entity_decode( $raw, ENT_QUOTES, 'UTF-8' );
+				$list    = json_decode( $decoded, true );
+
+				if ( ! is_array( $list ) ) {
+					return $tag;
+				}
+
+				$expanded = self::expand_allowed_blocks_tokens( $list );
+				if ( $expanded === $list ) {
+					return $tag;
+				}
+
+				$replacement = 'allowedBlocks=' . $quote . esc_attr( wp_json_encode( $expanded ) ) . $quote;
+
+				return preg_replace( '/\ballowedBlocks\s*=\s*([\'"])(.*?)\1/s', $replacement, $tag, 1 ) ?? $tag;
+			},
+			$content
+		) ?? $content;
+	}
+
+	/**
+	 * Resolve a single allowedBlocks token.
+	 *
+	 * @param string $token Token or literal block name.
+	 *
+	 * @return array|null Expanded names, or null when the token is a literal.
+	 */
+	private static function resolve_allowed_blocks_token( string $token ): ?array {
+		if ( '@theme' === $token ) {
+			return self::get_theme_allowed_block_names();
+		}
+
+		if ( str_starts_with( $token, 'category:' ) ) {
+			$category = substr( $token, strlen( 'category:' ) );
+			if ( '' === $category ) {
+				return array();
+			}
+
+			return self::get_allowed_block_names_by_category( $category );
+		}
+
+		if ( str_ends_with( $token, '/*' ) ) {
+			$namespace = substr( $token, 0, -2 );
+			if ( ! preg_match( '/^[a-z][a-z0-9-]*$/', $namespace ) ) {
+				return array();
+			}
+
+			return self::get_allowed_block_names_by_namespace( $namespace );
+		}
+
+		return null;
+	}
+
+	/**
+	 * Get all registered block names in a namespace.
+	 *
+	 * @param string $namespace Block namespace.
+	 *
+	 * @return array Block names.
+	 */
+	private static function get_allowed_block_names_by_namespace( string $namespace ): array {
+		return array_values(
+			array_map(
+				static fn( array $block ): string => $block['name'],
+				array_filter(
+					self::get_registered_allowed_blocks(),
+					static fn( array $block ): bool => str_starts_with( $block['name'], $namespace . '/' )
+				)
+			)
+		);
+	}
+
+	/**
+	 * Get all registered block names in a category.
+	 *
+	 * @param string $category Block category.
+	 *
+	 * @return array Block names.
+	 */
+	private static function get_allowed_block_names_by_category( string $category ): array {
+		return array_values(
+			array_map(
+				static fn( array $block ): string => $block['name'],
+				array_filter(
+					self::get_registered_allowed_blocks(),
+					static fn( array $block ): bool => $category === $block['category']
+				)
+			)
+		);
+	}
+
+	/**
+	 * Get all active-theme Blockstudio block names.
+	 *
+	 * @return array Block names.
+	 */
+	private static function get_theme_allowed_block_names(): array {
+		$theme_roots = array_filter(
+			array_unique(
+				array_map(
+					'wp_normalize_path',
+					array(
+						get_stylesheet_directory(),
+						get_template_directory(),
+					)
+				)
+			)
+		);
+
+		return array_values(
+			array_map(
+				static fn( array $block ): string => $block['name'],
+				array_filter(
+					self::get_registered_allowed_blocks(),
+					static function ( array $block ) use ( $theme_roots ): bool {
+						if ( '' === $block['path'] ) {
+							return false;
+						}
+
+						foreach ( $theme_roots as $theme_root ) {
+							if ( str_starts_with( $block['path'], trailingslashit( $theme_root ) ) || $block['path'] === $theme_root ) {
+								return true;
+							}
+						}
+
+						return false;
+					}
+				)
+			)
+		);
+	}
+
+	/**
+	 * Return normalized registered block metadata for allowedBlocks expansion.
+	 *
+	 * @return array<int, array{name:string, category:string, path:string}>
+	 */
+	private static function get_registered_allowed_blocks(): array {
+		$items = array();
+		$data  = Build::data();
+
+		foreach ( Build::blocks() as $name => $block ) {
+			self::add_registered_allowed_block( $items, (string) $name, $block, $data[ $name ] ?? array() );
+		}
+
+		$registry = \WP_Block_Type_Registry::get_instance();
+		if ( method_exists( $registry, 'get_all_registered' ) ) {
+			foreach ( $registry->get_all_registered() as $name => $block ) {
+				self::add_registered_allowed_block( $items, (string) $name, $block, $data[ $name ] ?? array() );
+			}
+		}
+
+		return array_values( $items );
+	}
+
+	/**
+	 * Add normalized block data if it has not already been added.
+	 *
+	 * @param array  $items Block metadata map, passed by reference.
+	 * @param string $name  Block name.
+	 * @param mixed  $block Block object or array.
+	 * @param array  $data  Blockstudio build data.
+	 *
+	 * @return void
+	 */
+	private static function add_registered_allowed_block( array &$items, string $name, mixed $block, array $data = array() ): void {
+		if ( '' === $name || isset( $items[ $name ] ) ) {
+			return;
+		}
+
+		$items[ $name ] = array(
+			'name'     => $name,
+			'category' => self::get_registered_block_category( $block, $data ),
+			'path'     => self::get_registered_block_path( $block, $data ),
+		);
+	}
+
+	/**
+	 * Get a block category from any known registry shape.
+	 *
+	 * @param mixed $block Block object or array.
+	 * @param array $data  Blockstudio build data.
+	 *
+	 * @return string Category slug.
+	 */
+	private static function get_registered_block_category( mixed $block, array $data ): string {
+		if ( is_object( $block ) ) {
+			$category = (string) ( $block->category ?? ( $block->blockstudio['category'] ?? '' ) );
+			return '' === $category ? (string) ( $data['category'] ?? '' ) : $category;
+		}
+
+		if ( is_array( $block ) ) {
+			$category = (string) ( $block['category'] ?? ( $block['blockstudio']['category'] ?? '' ) );
+			return '' === $category ? (string) ( $data['category'] ?? '' ) : $category;
+		}
+
+		return (string) ( $data['category'] ?? '' );
+	}
+
+	/**
+	 * Get a block source path from any known registry shape.
+	 *
+	 * @param mixed $block Block object or array.
+	 * @param array $data  Blockstudio build data.
+	 *
+	 * @return string Normalized path.
+	 */
+	private static function get_registered_block_path( mixed $block, array $data ): string {
+		$path = '';
+
+		if ( is_object( $block ) ) {
+			$path = $block->blockstudio['data']['path']
+				?? $block->blockstudio['path']
+				?? $block->file['dirname']
+				?? '';
+		} elseif ( is_array( $block ) ) {
+			$path = $block['blockstudio']['data']['path']
+				?? $block['blockstudio']['path']
+				?? $block['file']['dirname']
+				?? '';
+		}
+
+		if ( '' === $path ) {
+			$path = $data['path'] ?? ( $data['file']['dirname'] ?? '' );
+		}
+
+		return '' === $path ? '' : wp_normalize_path( $path );
 	}
 
 	/**

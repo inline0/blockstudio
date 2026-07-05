@@ -3516,6 +3516,28 @@ the `InnerBlocks` component.
 <InnerBlocks allowedBlocks="{{ ['core/heading', 'core/paragraph']|json_encode|escape('html_attr') }}" />
 ```
 
+`allowedBlocks` also accepts server-expanded tokens. Tokens are expanded before
+the editor receives the template, while literal block names stay unchanged.
+
+| Token | Description |
+|-------|-------------|
+| `namespace/*` | Every registered block in that namespace |
+| `category:<slug>` | Every registered block in that WordPress block category |
+| `@theme` | Every Blockstudio block registered from the active theme |
+
+Expanded entries are de-duplicated in author order:
+
+```php
+<InnerBlocks allowedBlocks="<?php echo esc_attr(wp_json_encode([
+  'core/paragraph',
+  'category:content',
+  'bsui/field',
+])); ?>" />
+```
+
+Tokens that resolve to no blocks are ignored. Frontend output is unchanged,
+because `allowedBlocks` is only used by the editor.
+
 ### tag
 
 By default, the `InnerBlocks` component is rendered as a `div` element. You can
@@ -4165,7 +4187,22 @@ Simple components render as a single block:
 <block name="bsui/spinner"></block>
 ```
 
-Attributes map directly to each component's `block.json` attributes. For example, `bsui/button` supports `label`, `href`, `variant`, `size`, and `disabled`.
+Attributes map directly to each component's `block.json` attributes. For example, `bsui/button` supports `label`, `icon`, `iconPosition`, `href`, `variant`, `size`, and `disabled`.
+
+```php
+bs_render_block([
+  'name' => 'bsui/button',
+  'data' => [
+    'label' => 'Continue',
+    'icon' => [
+      'set' => 'heroicons',
+      'subSet' => 'outline',
+      'icon' => 'arrow-right',
+    ],
+    'iconPosition' => 'right',
+  ],
+]);
+```
 
 ## Compound Components
 
@@ -4276,6 +4313,40 @@ UI components ship with their own CSS custom properties using the `--bs-ui-*` pr
 ```
 
 The components are headless in behavior, but opinionated enough to be usable out of the box. Override tokens first, then add component-specific CSS where needed.
+
+Bundled component CSS is emitted in the named `bsui` cascade layer. Unlayered
+theme CSS can override component rules without `!important`:
+
+```css
+.button-brand {
+  background: var(--brand-primary);
+}
+```
+
+To add a custom `bsui/button` variant, append the select option with the
+existing attributes filter and provide the variant CSS with
+`blockstudio/ui/button/variants-style`:
+
+```php
+add_filter('blockstudio/blocks/attributes', function($attribute, $block) {
+  if (($block['name'] ?? '') === 'bsui/button' && ($attribute['id'] ?? '') === 'variant') {
+    $attribute['options'][] = [
+      'label' => 'Brand',
+      'value' => 'brand',
+    ];
+  }
+
+  return $attribute;
+}, 10, 2);
+
+add_filter('blockstudio/ui/button/variants-style', function($css) {
+  return $css . '
+[data-bsui-button][data-variant="brand"] {
+  background: var(--brand-primary);
+  color: white;
+}';
+});
+```
 
 ## Related
 
@@ -5092,6 +5163,11 @@ echo bs_block([
 
 The button block will be rendered in place of the `$content` variable inside the block template.
 
+Embedded blocks rendered with `bs_render_block()` or `bs_block()` always output
+frontend-resolved HTML, even when the parent block is currently rendering an
+editor preview. Template pseudo-components such as `<RichText />` and
+`<InnerBlocks />` are resolved before the embedded block is returned.
+
 ### Multiple Slots
 
 It is also possible to create multiple content slots by simply making the `$content` variable an associative array and calling its appropriate keys in the `bs_block` function.
@@ -5404,6 +5480,11 @@ attribute lowercasing.
 For Pages, Patterns, and Site Templates, the same parser also
 handles raw HTML elements (`<p>`, `<div>`, `<h1>`, etc.), mapping them to
 their corresponding WordPress core blocks.
+
+When an element mapping points `<p>` to a registered non-core Blockstudio block
+that declares a `content` richtext attribute, simple inner text is routed into
+that `content` attribute automatically. Nested block tags, mapped child
+elements, or block-level HTML still fall back to normal inner-block parsing.
 
 ### Islands
 
@@ -8550,6 +8631,12 @@ With this filter active, every `<h1>` in your templates will produce a `custom/h
 
 This is useful when your theme or plugin provides custom block types that should replace the defaults across all page and pattern templates.
 
+For simple `<p>` mappings, Blockstudio can route inner text directly into a
+registered non-core Blockstudio block's `content` richtext attribute. The target
+block must declare an attribute with `id: "content"` and `type: "richtext"`.
+Nested block tags, mapped child elements, and block-level HTML continue to parse
+as inner blocks.
+
 Mapping values may also be callables when the target block depends on element
 attributes:
 
@@ -8878,6 +8965,12 @@ add_filter( 'blockstudio/parser/element_mapping', function( $mapping ) {
 With this filter active, every `<h1>` in your templates will produce a `custom/heading` block instead of `core/heading`. The element's attributes are passed through to the target block. If a renderer is registered for the target block name, it will be used. Otherwise, a generic block structure is created.
 
 This is useful when your theme or plugin provides custom block types that should replace the defaults across all page and pattern templates.
+
+For simple `<p>` mappings, Blockstudio can route inner text directly into a
+registered non-core Blockstudio block's `content` richtext attribute. The target
+block must declare an attribute with `id: "content"` and `type: "richtext"`.
+Nested block tags, mapped child elements, and block-level HTML continue to parse
+as inner blocks.
 
 Mapping values may also be callables when the target block depends on element
 attributes:
@@ -10091,6 +10184,10 @@ add_filter( 'blockstudio/parser/element_mapping', function( $mapping ) {
     return $mapping;
 }, 10, 2 );
 ```
+
+If `<p>` maps to a registered non-core Blockstudio block with a `content`
+richtext attribute, simple inner text is copied to that attribute. Nested block
+tags or mapped child elements keep the normal inner-block parsing behavior.
 
 ## Pages
 

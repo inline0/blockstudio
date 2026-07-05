@@ -1711,6 +1711,10 @@ class Assets {
 			$contents = self::prefix_editor_styles( $contents );
 		}
 
+		if ( ! $is_script ) {
+			$contents = self::prepare_ui_inline_style( $contents, $block );
+		}
+
 		if ( $is_script ) {
 			preg_match_all( "/[\"'](.\/modules\/)([a-zA-Z0-9.-@_-]*)[\"']/", $contents, $modules );
 
@@ -1744,6 +1748,33 @@ class Assets {
 
 		// phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Asset output.
 		echo $string;
+	}
+
+	/**
+	 * Prepare bundled UI inline CSS for output.
+	 *
+	 * @param string $contents CSS contents.
+	 * @param array  $block    Block data.
+	 *
+	 * @return string Prepared CSS.
+	 */
+	private static function prepare_ui_inline_style( string $contents, array $block ): string {
+		$block_name = $block['name'] ?? '';
+
+		if ( ! is_string( $block_name ) || ! str_starts_with( $block_name, 'bsui/' ) ) {
+			return $contents;
+		}
+
+		$component = sanitize_key( substr( $block_name, strlen( 'bsui/' ) ) );
+		if ( '' !== $component ) {
+			$variants_style = apply_filters( 'blockstudio/ui/' . $component . '/variants-style', '', $block );
+
+			if ( is_string( $variants_style ) && '' !== trim( $variants_style ) ) {
+				$contents .= "\n" . trim( $variants_style );
+			}
+		}
+
+		return "@layer bsui {\n" . $contents . "\n}";
 	}
 
 	/**

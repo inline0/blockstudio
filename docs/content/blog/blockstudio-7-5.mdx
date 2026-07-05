@@ -1,13 +1,14 @@
 ---
 title: Blockstudio 7.5
-description: Custom field types, file-backed Site Editor templates, block islands, and Storh database storage.
+description: Custom field types, file-backed Site Editor templates, block islands, Storh database storage, and bsui/parser refinements.
 date: 2026-06-30
 author: Dennis
 ---
 
-Blockstudio 7.5 starts with four pieces that make Blockstudio's file-first
+Blockstudio 7.5 starts with five pieces that make Blockstudio's file-first
 workflow more complete: custom field types, file-backed Site Editor templates,
-block islands, and Storh database storage.
+block islands, Storh database storage, and a set of parser plus `bsui/*`
+refinements.
 
 Reusable custom fields already let projects define a group of existing fields
 once and reuse it with `type: "custom/{name}"`. Custom field types solve a
@@ -38,6 +39,10 @@ The short version:
 - **Storh database storage**: `bs.db` can use an indexed file-per-record store
   in uploads, with public integer IDs preserved and JSONC-to-Storh migration
   through WP-CLI.
+- **Parser and bsui refinements**: mapped richtext paragraphs need less custom
+  parser glue, `InnerBlocks` can use tokenized `allowedBlocks`, nested
+  `bs_render_block()` output matches frontend rendering in editor previews,
+  and `bsui/button` gains icons plus easier styling hooks.
 
 ## File-backed Site Editor templates
 
@@ -195,6 +200,42 @@ wp bs db migrate my-theme/app subscribers --to=storh
 That gives JSONC a clearer role as a simple, committable seed/config format,
 while Storh becomes the better default file backend for writable production
 data.
+
+## Parser and bsui refinements
+
+7.5 also rounds off smaller pieces that tend to show up once a project leans
+harder on file-backed templates and bundled UI.
+
+Element mapping can now handle the common richtext paragraph case without a
+custom builder. If `<p>` maps to a registered non-core Blockstudio block with a
+`content` richtext attribute, simple inner text is copied to that attribute.
+Nested tags and mapped child elements still parse as inner blocks.
+
+`InnerBlocks` accepts tokenized `allowedBlocks` in templates:
+
+```php title="index.php"
+<InnerBlocks allowedBlocks="<?php echo esc_attr(wp_json_encode([
+  'core/paragraph',
+  'category:content',
+  'bsui/field',
+])); ?>" />
+```
+
+Supported tokens are `namespace/*`, `category:<slug>`, and `@theme`. They are
+expanded on the server before the editor receives the template, so the frontend
+render path stays unchanged.
+
+Programmatic embeds are also more predictable. `bs_render_block()` and
+`bs_block()` now render embedded blocks as frontend-resolved HTML even when
+called from inside another block's editor preview. That means nested blocks do
+not leak raw `<RichText />` or `<InnerBlocks />` pseudo-components into preview
+markup.
+
+For bundled UI, `bsui/button` now supports an `icon` attribute and
+`iconPosition`. Bundled `bsui/*` inline styles are emitted in an `@layer bsui`
+cascade layer, and button variants can be extended with
+`blockstudio/ui/button/variants-style` plus the existing
+`blockstudio/blocks/attributes` filter.
 
 ## Why custom field types?
 

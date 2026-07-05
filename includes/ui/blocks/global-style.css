@@ -1,3 +1,5 @@
+@layer bsui;
+
 :root {
 	--bs-ui-radius: 0.5rem;
 	--bs-ui-radius-sm: calc(var(--bs-ui-radius) - 2px);

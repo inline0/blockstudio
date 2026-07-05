@@ -110,6 +110,24 @@ wp_interactivity_state( 'app/kitchen-sink', array() );
 			<bs:bsui-button size="sm" label="Small" />
 			<bs:bsui-button label="Default" />
 			<bs:bsui-button size="lg" label="Large" />
+			<?php
+			// phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- bs_block() returns rendered block markup.
+			echo bs_block(
+				array(
+					'name' => 'bsui/button',
+					'data' => array(
+						'label'        => 'Icon right',
+						'icon'         => array(
+							'set'    => 'heroicons',
+							'subSet' => 'outline',
+							'icon'   => 'arrow-right',
+						),
+						'iconPosition' => 'right',
+						'variant'      => 'outline',
+					),
+				)
+			);
+			?>
 		</bs:bsui-stack>
 	</bs:bsui-stack>
 </bs:bsui-stack>
