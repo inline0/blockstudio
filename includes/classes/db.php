@@ -94,6 +94,56 @@ class Db {
 	}
 
 	/**
+	 * Paginate records.
+	 *
+	 * @param array $filters Optional field equality filters.
+	 * @param int   $limit   Maximum records (default 50, max 100).
+	 * @param int   $offset  Record offset.
+	 *
+	 * @return array{items: array<int, array<string, mixed>>, total: int}
+	 */
+	public function paginate( array $filters = array(), int $limit = 50, int $offset = 0 ): array {
+		$result = Database::execute(
+			'paginate',
+			$this->key,
+			array(
+				'filters' => $filters,
+				'limit'   => min( $limit, 100 ),
+				'offset'  => $offset,
+			)
+		);
+
+		if ( ! is_array( $result ) ) {
+			return array(
+				'items' => array(),
+				'total' => 0,
+			);
+		}
+
+		return array(
+			'items' => $result['items'] ?? array(),
+			'total' => (int) ( $result['total'] ?? 0 ),
+		);
+	}
+
+	/**
+	 * Count records.
+	 *
+	 * @param array $filters Optional field equality filters.
+	 *
+	 * @return int The number of matching records.
+	 */
+	public function count( array $filters = array() ): int {
+		return (int) Database::execute(
+			'count',
+			$this->key,
+			array(
+				'filters' => $filters,
+			)
+		);
+	}
+
+	/**
 	 * Get a single record by ID.
 	 *
 	 * @param int $id The record ID.

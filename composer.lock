@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "3c67acc0fef21a330559db935da3778c",
+    "content-hash": "c1b9a3b4298366dba258f845c0bc992b",
     "packages": [
         {
             "name": "dflydev/dot-access-data",
@@ -477,6 +477,68 @@
                 "source": "https://github.com/php-fig/event-dispatcher/tree/1.0.0"
             },
             "time": "2019-01-08T18:20:26+00:00"
+        },
+        {
+            "name": "storh/storh",
+            "version": "v0.0.2",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/inline0/storh.git",
+                "reference": "cc7c9fd316d1baaf6d6df4b1314a67ed3988ddfd"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/inline0/storh/zipball/cc7c9fd316d1baaf6d6df4b1314a67ed3988ddfd",
+                "reference": "cc7c9fd316d1baaf6d6df4b1314a67ed3988ddfd",
+                "shasum": ""
+            },
+            "require": {
+                "ext-json": "*",
+                "php": "^8.2"
+            },
+            "require-dev": {
+                "phpstan/phpstan": "^2.0",
+                "phpunit/phpunit": "^13.1",
+                "squizlabs/php_codesniffer": "^3.11"
+            },
+            "bin": [
+                "bin/storh"
+            ],
+            "type": "library",
+            "autoload": {
+                "psr-4": {
+                    "Storh\\": "src/"
+                }
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "MIT"
+            ],
+            "authors": [
+                {
+                    "name": "inline0",
+                    "homepage": "https://github.com/inline0"
+                }
+            ],
+            "description": "File-first records for PHP: JSONC document store, append-only segmented log, and log-backed queue. Zero dependencies.",
+            "homepage": "https://github.com/inline0/storh",
+            "keywords": [
+                "append-only-log",
+                "datastore",
+                "document-store",
+                "file-storage",
+                "jsonc",
+                "php",
+                "queue",
+                "storage",
+                "uuidv7",
+                "zero-dependency"
+            ],
+            "support": {
+                "issues": "https://github.com/inline0/storh/issues",
+                "source": "https://github.com/inline0/storh"
+            },
+            "time": "2026-07-05T07:42:16+00:00"
         },
         {
             "name": "symfony/deprecation-contracts",

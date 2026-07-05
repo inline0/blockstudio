@@ -89,6 +89,7 @@ jobs:
               'BlockstudioVendor\\\MatthiasMullie\\\Minify\\\CSS',
               'BlockstudioVendor\\\ScssPhp\\\ScssPhp\\\Compiler',
               'BlockstudioVendor\\\League\\\Uri\\\Uri',
+              'BlockstudioVendor\\\Storh\\\DocStore',
             ];
             foreach (\$classes as \$class) {
               if (!class_exists(\$class)) {

@@ -6381,7 +6381,7 @@ Each schema gets its own endpoints, storage, and access control.
 
 ## Storage modes
 
-Five storage backends, each suited for different use cases.
+Six storage backends, each suited for different use cases.
 
 ### Custom table (`storage: "table"`)
 
@@ -6423,7 +6423,72 @@ blocks/my-block/
     └── subscribers.jsonc    ← one record per line
 ```
 
-Best for: small datasets, config-like data, version-controllable records.
+Best for: small datasets, config-like data, seed records, and
+version-controllable examples. JSONC is intentionally a single file in your
+block folder. Use it when you want the data to travel with the code, not when
+you expect many concurrent writes.
+
+### Storh files (`storage: "storh"`)
+
+Storh stores each record as an individual file under WordPress uploads:
+
+```
+wp-content/uploads/blockstudio/db/
+└── my-theme-my-block/
+    └── subscribers/
+        ├── data/
+        │   └── 00/
+        │       ├── 00000000-0000-7000-8000-000000000001.jsonc
+        │       └── 00000000-0000-7000-8000-000000000002.jsonc
+        ├── .storh/
+        │   └── indexes/
+        └── .blockstudio/
+            └── sequence.json
+```
+
+Public record IDs stay the same integer IDs used by the rest of `bs.db()`.
+Blockstudio maps those IDs to Storh's internal UUIDv7 file IDs and stores the
+integer `id` in the record data, so JavaScript, REST, and PHP callers do not
+need to handle UUIDs.
+
+```php
+return [
+    'storage' => 'storh',
+    'fields'  => [
+        'title'  => ['type' => 'string', 'required' => true],
+        'status' => ['type' => 'string'],
+        'count'  => ['type' => 'integer'],
+    ],
+];
+```
+
+Blockstudio builds Storh indexes from your schema. Since every declared field
+can be used as a list filter, every declared field is indexed. Integer, number,
+and date-like fields use range indexes; fields marked with `'unique' => true`
+or `'index' => 'unique'` use unique indexes.
+
+Best for: file-backed production data that needs safer concurrent writes,
+schema-derived indexes, and portable uploads-level storage without committing
+live records to the block source tree.
+
+### Migrating JSONC to Storh
+
+If you started with a `.jsonc` file and want the same records in Storh, run:
+
+```bash
+wp bs db migrate my-theme/app subscribers --to=storh
+```
+
+For single-schema blocks:
+
+```bash
+wp bs db migrate my-theme/app --to=storh
+```
+
+The migration reads the existing `db/{schema}.jsonc`, writes records to Storh
+while preserving integer IDs, reindexes, verifies the target store, and leaves
+the JSONC file untouched. Rollback is just changing the schema's `storage` back
+to `"jsonc"`.
 
 ### Post meta (`storage: "meta"`)
 
@@ -6523,8 +6588,8 @@ const subscribers = await bs.query('subscribers', () =>
 The first argument is a cache key (any string). The second is a function that
 returns a promise. The third is an optional options object:
 
-| Option | Type | Description |
-|--------|------|-------------|
+| Option      | Type     | Description                                                                          |
+| ----------- | -------- | ------------------------------------------------------------------------------------ |
 | `staleTime` | `number` | Milliseconds before cached data is considered stale. `0` (default) always refetches. |
 
 If the cache has data for the key and it is younger than `staleTime`, the
@@ -6546,7 +6611,8 @@ await bs.mutate({
   key: 'todos',
   action: 'create',
   optimistic: { text: 'New todo', done: false },
-  fn: () => bs.db('my-theme/app', 'todos').create({ text: 'New todo', done: false }),
+  fn: () =>
+    bs.db('my-theme/app', 'todos').create({ text: 'New todo', done: false }),
 });
 
 // Optimistic update: field changes instantly, reverts on failure
@@ -6600,18 +6666,18 @@ await bs.mutate({
 });
 ```
 
-| Option | Type | Mode | Description |
-|--------|------|------|-------------|
-| `fn` | `function` | Both | The async function that performs the mutation. Required. |
-| `state` | `object` | Auto | Reactive state object (e.g., Alpine `$data`). |
-| `key` | `string` | Auto | Property name on state that holds the array. Also used as cache key. |
-| `action` | `string` | Auto | One of `create`, `update`, or `delete`. |
-| `id` | `any` | Auto | Record ID for `update` and `delete` actions. |
-| `optimistic` | `object` | Auto | Data to apply optimistically before the server responds. |
-| `before` | `function` | Manual | Called before `fn`. Return value is passed to `onSuccess`/`onError` as `snapshot`. |
-| `onSuccess` | `function` | Manual | Called with `(result, snapshot)` on success. |
-| `onError` | `function` | Manual | Called with `(error, snapshot)` on failure. |
-| `invalidate` | `string` | Manual | Cache key to invalidate on success. |
+| Option       | Type       | Mode   | Description                                                                        |
+| ------------ | ---------- | ------ | ---------------------------------------------------------------------------------- |
+| `fn`         | `function` | Both   | The async function that performs the mutation. Required.                           |
+| `state`      | `object`   | Auto   | Reactive state object (e.g., Alpine `$data`).                                      |
+| `key`        | `string`   | Auto   | Property name on state that holds the array. Also used as cache key.               |
+| `action`     | `string`   | Auto   | One of `create`, `update`, or `delete`.                                            |
+| `id`         | `any`      | Auto   | Record ID for `update` and `delete` actions.                                       |
+| `optimistic` | `object`   | Auto   | Data to apply optimistically before the server responds.                           |
+| `before`     | `function` | Manual | Called before `fn`. Return value is passed to `onSuccess`/`onError` as `snapshot`. |
+| `onSuccess`  | `function` | Manual | Called with `(result, snapshot)` on success.                                       |
+| `onError`    | `function` | Manual | Called with `(error, snapshot)` on failure.                                        |
+| `invalidate` | `string`   | Manual | Cache key to invalidate on success.                                                |
 
 ## PHP API
 
@@ -6629,6 +6695,10 @@ $record = $db->create(['email' => 'a@b.com', 'plan' => 'pro']);
 // List with filters
 $all  = $db->list();
 $pros = $db->list(['plan' => 'pro'], limit: 10, offset: 0);
+
+// Count and paginate
+$count = $db->count(['plan' => 'pro']);
+$page  = $db->paginate(['plan' => 'pro'], limit: 10, offset: 20);
 
 // Get by ID
 $one = $db->get_record(1);
@@ -6676,10 +6746,10 @@ return [
 ];
 ```
 
-| Option | Type | Default | Description |
-|--------|------|---------|-------------|
-| `key` | `string` | schema name | Property name on `state` that holds the data array |
-| `interval` | `number` | `3000` | Polling interval in milliseconds |
+| Option     | Type     | Default     | Description                                        |
+| ---------- | -------- | ----------- | -------------------------------------------------- |
+| `key`      | `string` | schema name | Property name on `state` that holds the data array |
+| `interval` | `number` | `3000`      | Polling interval in milliseconds                   |
 
 ### How it works
 
@@ -6723,13 +6793,13 @@ a separate `user_id` column.
 
 Each CRUD operation has its own permission level:
 
-| Value | Behavior |
-|-------|----------|
-| `true` | Public with CSRF protection (logged-out users allowed, `X-BS-Token` required) |
-| `'open'` | Truly public, no CSRF, no auth (for webhooks and external APIs) |
-| `'edit_posts'` | WordPress capability check |
-| `['cap_a', 'cap_b']` | User needs any one of the listed capabilities |
-| omitted / `null` | Requires authentication (logged-in user) |
+| Value                | Behavior                                                                      |
+| -------------------- | ----------------------------------------------------------------------------- |
+| `true`               | Public with CSRF protection (logged-out users allowed, `X-BS-Token` required) |
+| `'open'`             | Truly public, no CSRF, no auth (for webhooks and external APIs)               |
+| `'edit_posts'`       | WordPress capability check                                                    |
+| `['cap_a', 'cap_b']` | User needs any one of the listed capabilities                                 |
+| omitted / `null`     | Requires authentication (logged-in user)                                      |
 
 ```php
 'capability' => [
@@ -6752,13 +6822,13 @@ example for incoming webhooks from external services.
 
 ## Field types
 
-| Type | MySQL Column | PHP Type | Description |
-|------|-------------|----------|-------------|
-| `string` | `varchar(maxLength)` | `string` | Text, default maxLength 255 |
-| `integer` | `bigint(20)` | `int` | Whole numbers |
-| `number` | `decimal(20,6)` | `float` | Decimal numbers |
-| `boolean` | `tinyint(1)` | `bool` | True/false |
-| `text` | `longtext` | `string` | Long-form text content |
+| Type      | MySQL Column         | PHP Type | Description                 |
+| --------- | -------------------- | -------- | --------------------------- |
+| `string`  | `varchar(maxLength)` | `string` | Text, default maxLength 255 |
+| `integer` | `bigint(20)`         | `int`    | Whole numbers               |
+| `number`  | `decimal(20,6)`      | `float`  | Decimal numbers             |
+| `boolean` | `tinyint(1)`         | `bool`   | True/false                  |
+| `text`    | `longtext`           | `string` | Long-form text content      |
 
 ## Validation
 
@@ -6768,15 +6838,15 @@ from `bs.db()`, the REST API, or `Db::get()`.
 
 ### Built-in rules
 
-| Rule | Example | Description |
-|------|---------|-------------|
-| `required` | `'required' => true` | Field must be present on create |
-| `type` | `'type' => 'integer'` | Value must match the declared type |
-| `enum` | `'enum' => ['a', 'b']` | Value must be one of the listed options |
-| `maxLength` | `'maxLength' => 100` | String cannot exceed this length |
-| `minLength` | `'minLength' => 3` | String must be at least this long |
-| `format: "email"` | `'format' => 'email'` | Must be a valid email address |
-| `format: "url"` | `'format' => 'url'` | Must be a valid URL |
+| Rule              | Example                | Description                             |
+| ----------------- | ---------------------- | --------------------------------------- |
+| `required`        | `'required' => true`   | Field must be present on create         |
+| `type`            | `'type' => 'integer'`  | Value must match the declared type      |
+| `enum`            | `'enum' => ['a', 'b']` | Value must be one of the listed options |
+| `maxLength`       | `'maxLength' => 100`   | String cannot exceed this length        |
+| `minLength`       | `'minLength' => 3`     | String must be at least this long       |
+| `format: "email"` | `'format' => 'email'`  | Must be a valid email address           |
+| `format: "url"`   | `'format' => 'url'`    | Must be a valid URL                     |
 
 ### Custom validation
 
@@ -6813,7 +6883,10 @@ it straightforward to map errors to form fields:
   "data": {
     "status": 400,
     "errors": {
-      "email": ["Must be a valid email address.", "Disposable email addresses are not allowed."],
+      "email": [
+        "Must be a valid email address.",
+        "Disposable email addresses are not allowed."
+      ],
       "plan": ["Must be one of: free, pro."]
     }
   }
@@ -6845,21 +6918,21 @@ All endpoints are under the `blockstudio/v1/db/` namespace:
 The block name has `/` replaced by `-`. For single-schema blocks, the schema
 name is `default`.
 
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| `GET` | `/db/{block}/{schema}` | List records |
-| `POST` | `/db/{block}/{schema}` | Create a record |
-| `GET` | `/db/{block}/{schema}/{id}` | Get a single record |
-| `PUT` | `/db/{block}/{schema}/{id}` | Update a record |
-| `DELETE` | `/db/{block}/{schema}/{id}` | Delete a record |
+| Method   | Endpoint                    | Description         |
+| -------- | --------------------------- | ------------------- |
+| `GET`    | `/db/{block}/{schema}`      | List records        |
+| `POST`   | `/db/{block}/{schema}`      | Create a record     |
+| `GET`    | `/db/{block}/{schema}/{id}` | Get a single record |
+| `PUT`    | `/db/{block}/{schema}/{id}` | Update a record     |
+| `DELETE` | `/db/{block}/{schema}/{id}` | Delete a record     |
 
 ### Query parameters (list)
 
-| Parameter | Description |
-|-----------|-------------|
-| `limit` | Maximum records to return (default 50, max 100) |
-| `offset` | Number of records to skip |
-| Any field name | Filter by exact value match |
+| Parameter      | Description                                     |
+| -------------- | ----------------------------------------------- |
+| `limit`        | Maximum records to return (default 50, max 100) |
+| `offset`       | Number of records to skip                       |
+| Any field name | Filter by exact value match                     |
 
 Example: `GET /db/my-theme-app/subscribers?plan=pro&limit=10`
 
@@ -7013,6 +7086,11 @@ my-app/
 ```
 
 No database migrations, no export/import steps. Just copy the folder.
+
+Storh storage is portable too, but it lives under `uploads/blockstudio/db/`
+instead of the block folder. That keeps live, writable data out of your source
+tree while still giving each schema a plain-file store that can be backed up,
+copied, or migrated independently.
 
 ## Filter
 
@@ -7337,6 +7415,7 @@ wp bs db schemas
 +-------------------+-------------+---------+---------------------+
 | my-theme/app      | subscribers | table   | email, name, plan   |
 | my-theme/app      | logs        | jsonc   | action, details     |
+| my-theme/app      | events      | storh   | title, status       |
 +-------------------+-------------+---------+---------------------+
 ```
 
@@ -7367,6 +7446,25 @@ For single-schema blocks, the schema name defaults to `default`:
 ```bash
 wp bs db list my-theme/leads
 ```
+
+### Migrate JSONC records to Storh
+
+Use `migrate` when a schema already has a `db/{schema}.jsonc` file and you want
+to move those records into the Storh file backend:
+
+```bash
+wp bs db migrate my-theme/app subscribers --to=storh
+```
+
+For single-schema blocks:
+
+```bash
+wp bs db migrate my-theme/app --to=storh
+```
+
+The command preserves integer record IDs, writes to
+`uploads/blockstudio/db/{block-scope}/{schema}/`, rebuilds Storh indexes,
+verifies the target store, and leaves the source `.jsonc` file in place.
 
 ### Output formats
 

@@ -53,6 +53,7 @@ wp bs db schemas
 +-------------------+-------------+---------+---------------------+
 | my-theme/app      | subscribers | table   | email, name, plan   |
 | my-theme/app      | logs        | jsonc   | action, details     |
+| my-theme/app      | events      | storh   | title, status       |
 +-------------------+-------------+---------+---------------------+
 ```
 
@@ -83,6 +84,25 @@ For single-schema blocks, the schema name defaults to `default`:
 ```bash
 wp bs db list my-theme/leads
 ```
+
+### Migrate JSONC records to Storh
+
+Use `migrate` when a schema already has a `db/{schema}.jsonc` file and you want
+to move those records into the Storh file backend:
+
+```bash
+wp bs db migrate my-theme/app subscribers --to=storh
+```
+
+For single-schema blocks:
+
+```bash
+wp bs db migrate my-theme/app --to=storh
+```
+
+The command preserves integer record IDs, writes to
+`uploads/blockstudio/db/{block-scope}/{schema}/`, rebuilds Storh indexes,
+verifies the target store, and leaves the source `.jsonc` file in place.
 
 ### Output formats
 

@@ -57,6 +57,7 @@ Download the latest release zip from [GitHub Releases](https://github.com/inline
 * New: custom field types let themes and plugins register namespaced editor controls with primitive, array, or object values, including storage schemas, repeaters, reusable custom fields, templates, and extension paths
 * New: file-backed Site Editor templates and template parts can be authored with `template.json`, `part.json`, PHP/Twig/Blade/HTML sources, and normal Blockstudio block tags while preserving WordPress customization/reset behavior
 * New: block islands let dynamic blocks render cache-safe placeholders first, then batch-render request-specific fragments through a signed frontend endpoint; hydrated islands get a mount event without a REST request
+* New: `bs.db` schemas can use `storage: "storh"` for indexed file-per-record storage in uploads, with integer IDs preserved and a JSONC-to-Storh migration command
 * Enhancement: runtime, editor asset, and Tailwind caches now prune stale entries automatically to prevent unbounded cache growth
 * Fix: registry imports now reject unsafe remote file paths, and generated HTML attributes are escaped consistently
 * Fix: Content Sync no longer prunes outside selected post types or taxonomies, now blocks destructive pushes when source JSON is malformed, and preserves attachment-reference meta when media download is disabled

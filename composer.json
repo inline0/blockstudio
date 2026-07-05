@@ -14,7 +14,8 @@
     "php": ">=8.2",
     "yahnis-elsts/plugin-update-checker": "^5.6",
     "league/commonmark": "^2.7",
-    "symfony/yaml": "^7.0"
+    "symfony/yaml": "^7.0",
+    "storh/storh": "0.0.2"
   },
   "require-dev": {
     "squizlabs/php_codesniffer": "^3.7",
@@ -31,6 +32,7 @@
       "lib/"
     ],
     "files": [
+      "lib/storh-autoload.php",
       "bootstrap.php"
     ]
   },
