@@ -1346,6 +1346,10 @@ class Build {
 			$registry->add_path( $instance, $default_path );
 		}
 
+		if ( self::refresh_runtime_cache_is_current( $registry ) ) {
+			return;
+		}
+
 		$existing_block_names = array_keys( $registry->get_blocks() );
 		$discovered_names     = array();
 
@@ -1430,6 +1434,62 @@ class Build {
 				}
 			}
 		}
+	}
+
+	/**
+	 * Check whether the current registry still matches valid runtime caches.
+	 *
+	 * Refresh_blocks() exists to detect filesystem changes after init. When the
+	 * runtime cache watch data is valid and the cached block names match the
+	 * hydrated registry, the recursive discovery pass would be redundant.
+	 *
+	 * @param Block_Registry $registry Block registry.
+	 *
+	 * @return bool Whether refresh can be skipped.
+	 */
+	private static function refresh_runtime_cache_is_current( Block_Registry $registry ): bool {
+		$instances = $registry->get_instances();
+
+		if ( empty( $instances ) ) {
+			return false;
+		}
+
+		$cached_block_names = array();
+
+		foreach ( $instances as $instance_data ) {
+			$path = isset( $instance_data['path'] ) && is_string( $instance_data['path'] )
+				? wp_normalize_path( $instance_data['path'] )
+				: '';
+
+			if ( '' === $path || ! is_dir( $path ) ) {
+				return false;
+			}
+
+			$instance = self::get_instance_name( $path );
+			$cached   = Build_Cache::load_runtime( $path, $instance );
+
+			if ( ! is_array( $cached ) ) {
+				return false;
+			}
+
+			$registered = $cached['registeredBlockTypes'] ?? array();
+
+			if ( ! is_array( $registered ) ) {
+				return false;
+			}
+
+			foreach ( array_keys( $registered ) as $name ) {
+				if ( is_string( $name ) && '' !== $name ) {
+					$cached_block_names[ $name ] = true;
+				}
+			}
+		}
+
+		$current_block_names = array_fill_keys( array_keys( $registry->get_blocks() ), true );
+		ksort( $cached_block_names );
+		ksort( $current_block_names );
+
+		return array_keys( $cached_block_names ) === array_keys( $current_block_names );
 	}
 
 	/**

@@ -497,6 +497,15 @@ class BuildCacheTest extends TestCase {
 			$warm = $this->snapshot_runtime_registry( $block_name );
 
 			$this->assertSame( $cold, $warm );
+
+			$reflection = new ReflectionClass( Build::class );
+			$method     = $reflection->getMethod( 'refresh_runtime_cache_is_current' );
+			$this->assertTrue( $method->invoke( null, $registry ) );
+
+			$this->write_file( $style, '.cache-parity { color: blue; }' );
+			clearstatcache();
+
+			$this->assertFalse( $method->invoke( null, $registry ) );
 		} finally {
 			$registry->reset();
 

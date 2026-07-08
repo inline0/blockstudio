@@ -263,4 +263,53 @@ class BlockTest extends TestCase {
 		$this->assertStringNotContainsString( '<RichText', $result, 'RichText pseudo-component should be resolved' );
 		$this->assertStringNotContainsString( '<richtext', strtolower( $result ), 'RichText should not appear as raw HTML element' );
 	}
+
+	public function test_component_cleanup_attribute_detection_ignores_plain_text_substrings(): void {
+		$method = new ReflectionMethod( Block::class, 'content_has_component_cleanup_attribute' );
+		$method->setAccessible( true );
+		$attributes = array( 'useBlockProps', 'tag', 'allowedBlocks', 'attribute', 'placeholder' );
+
+		$this->assertFalse(
+			$method->invoke(
+				null,
+				'<span class="vintage-stage">Resolved text without component attributes.</span>',
+				$attributes
+			)
+		);
+		$this->assertTrue(
+			$method->invoke(
+				null,
+				'<section useBlockProps class="hero">Content</section>',
+				$attributes
+			)
+		);
+		$this->assertTrue(
+			$method->invoke(
+				null,
+				'<InnerBlocks allowedBlocks="[&quot;core/paragraph&quot;]" />',
+				$attributes
+			)
+		);
+	}
+
+	public function test_get_option_value_preserves_float_option_keys(): void {
+		$data = array(
+			'options' => array(
+				array(
+					'value' => 1.5,
+					'label' => 'One and a half',
+				),
+			),
+		);
+
+		$this->assertSame( 'One and a half', Block::get_option_value( $data, 'label', 1.5 ) );
+		$this->assertSame( 1.5, Block::get_option_value( $data, 'value', 1.5 ) );
+		$this->assertSame(
+			array(
+				'value' => 1.5,
+				'label' => 'One and a half',
+			),
+			Block::get_option_value( $data, 'both', 1.5 )
+		);
+	}
 }

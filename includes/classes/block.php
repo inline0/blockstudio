@@ -159,12 +159,12 @@ class Block {
 			}
 
 			if ( isset( $option['value'] ) ) {
-				$options_map[ $option['value'] ] = array(
+				$options_map[ self::option_map_key( $option['value'] ) ] = array(
 					'value' => $value,
 					'label' => $option['label'] ?? $value,
 				);
-			} elseif ( ! $fetch ) {
-				$options_map[ $option ] = array(
+			} elseif ( ! $fetch && is_scalar( $option ) ) {
+				$options_map[ self::option_map_key( $option ) ] = array(
 					'value' => $option,
 					'label' => $option,
 				);
@@ -172,17 +172,44 @@ class Block {
 		}
 
 		try {
+			$key = self::option_map_key( $v['value'] ?? $v );
 			if ( 'label' === $return_format ) {
-				return $options_map[ $v['value'] ?? $v ]['label'] ?? false;
+				return $options_map[ $key ]['label'] ?? false;
 			}
 			if ( 'both' === $return_format ) {
-				return $options_map[ $v['value'] ?? $v ] ?? false;
+				return $options_map[ $key ] ?? false;
 			}
 
-			return $options_map[ $v['value'] ?? $v ]['value'] ?? false;
+			return $options_map[ $key ]['value'] ?? false;
 		} catch ( Throwable $err ) {
 			return false;
 		}
+	}
+
+	/**
+	 * Normalize option values before using them as array keys.
+	 *
+	 * PHP casts float keys to integers, which loses precision for values such
+	 * as `1.5` and emits deprecation warnings on modern runtimes.
+	 *
+	 * @param mixed $value Option value.
+	 *
+	 * @return int|string Array key.
+	 */
+	private static function option_map_key( mixed $value ): int|string {
+		if ( is_int( $value ) || is_string( $value ) ) {
+			return $value;
+		}
+
+		if ( is_float( $value ) ) {
+			return (string) $value;
+		}
+
+		if ( is_bool( $value ) ) {
+			return $value ? 1 : 0;
+		}
+
+		return (string) $value;
 	}
 
 	/**
@@ -589,13 +616,7 @@ class Block {
 			'withoutInteractiveFormatting',
 		);
 
-		$has_attribute = false;
-		foreach ( $attributes_to_remove as $attribute ) {
-			if ( false !== strpos( $content, $attribute ) ) {
-				$has_attribute = true;
-				break;
-			}
-		}
+		$has_attribute = self::content_has_component_cleanup_attribute( $content, $attributes_to_remove );
 
 		if ( $has_attribute ) {
 			$content = str_replace(
@@ -677,14 +698,42 @@ class Block {
 					}
 				}
 			}
-			$trim_off_front = strpos( $doc->saveHTML(), '<body>' ) + 6;
-			$trim_off_end   =
-				strrpos( $doc->saveHTML(), '</body>' ) - strlen( $doc->saveHTML() );
+			$html           = $doc->saveHTML();
+			$trim_off_front = strpos( $html, '<body>' ) + 6;
+			$trim_off_end   = strrpos( $html, '</body>' ) - strlen( $html );
 
-			$content = substr( $doc->saveHTML(), $trim_off_front, $trim_off_end );
+			$content = substr( $html, $trim_off_front, $trim_off_end );
 		}
 
 		return $content;
+	}
+
+	/**
+	 * Check whether rendered component HTML still contains cleanup attributes.
+	 *
+	 * A broad substring scan makes common words like "stage" match the `tag`
+	 * cleanup attribute and forces DOMDocument parsing for blocks that no
+	 * longer contain component attributes after RichText/InnerBlocks handling.
+	 *
+	 * @param string $content    Rendered content.
+	 * @param array  $attributes Attribute names to remove.
+	 *
+	 * @return bool Whether DOM cleanup is required.
+	 */
+	private static function content_has_component_cleanup_attribute( string $content, array $attributes ): bool {
+		if ( array() === $attributes ) {
+			return false;
+		}
+
+		$attribute_pattern = implode(
+			'|',
+			array_map(
+				static fn( string $attribute ): string => preg_quote( $attribute, '/' ),
+				$attributes
+			)
+		);
+
+		return 1 === preg_match( '/\s(?:' . $attribute_pattern . ')(?:\s*=\s*|(?=\s|\/?>))/i', $content );
 	}
 
 	/**
@@ -1574,8 +1623,13 @@ class Block {
 			++self::$count_by_block[ $name ];
 		}
 
+		$blocks               = Build::blocks();
+		$block_data_map       = Build::data();
+		$overrides            = Build::overrides();
+		$blade                = Build::blade();
+		$extensions           = Build::extensions();
 		$extension_attributes = array();
-		$matches              = Extensions::get_matches( $name, Build::extensions() );
+		$matches              = Extensions::get_matches( $name, $extensions );
 		if ( count( $matches ) >= 1 ) {
 			foreach ( $matches as $match ) {
 				foreach ( $match->attributes as $key => $value ) {
@@ -1587,9 +1641,9 @@ class Block {
 		}
 
 		$blockstudio_id    = self::comment( $name );
-		$block_data        = Build::data()[ $name ];
-		$data              = Build::blocks()[ $name ] ?? false;
-		$override_data     = Build::overrides()[ $name ] ?? false;
+		$block_data        = $block_data_map[ $name ];
+		$data              = $blocks[ $name ] ?? false;
+		$override_data     = $overrides[ $name ] ?? false;
 		$has_override_path =
 			$override_data &&
 			isset( $override_data->path ) &&
@@ -1628,10 +1682,9 @@ class Block {
 		$block['isIslandFragment']    = 'fragment' === $island_phase;
 
 		$compiled_context = array();
-		$block_names      = array_keys( Build::blocks() );
 		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- WordPress block API property.
 		foreach ( $data->usesContext ?? array() as $context_provider ) {
-			if ( ! in_array( $context_provider, $block_names, true ) ) {
+			if ( ! isset( $blocks[ $context_provider ] ) ) {
 				continue;
 			}
 
@@ -1648,7 +1701,7 @@ class Block {
 					$context_provider,
 					$editor,
 					$is_preview,
-					Build::blocks()[ $context_provider ]->attributes
+					$blocks[ $context_provider ]->attributes
 				);
 				$compiled_context[ $context_provider ] = $trace_attributes;
 			} else {
@@ -1664,7 +1717,7 @@ class Block {
 							$context_provider,
 							$editor,
 							$is_preview,
-							Build::blocks()[ $context_provider ]->attributes
+							$blocks[ $context_provider ]->attributes
 						);
 						$compiled_context[ $context_provider ] = $trace_attributes;
 					}
@@ -1687,7 +1740,7 @@ class Block {
 			$name,
 			$editor,
 			$is_preview,
-			Build::blocks()[ $name ]->attributes + $extension_attributes
+			$blocks[ $name ]->attributes + $extension_attributes
 		);
 		$assets         = Assets::render_code_field_assets( $attribute_data, 'assetsAsset' );
 
@@ -1702,7 +1755,7 @@ class Block {
 			$filter_data->blockstudio['data']['attributes'] = $attributes;
 			$filter_data->blockstudio['data']['path']       = $path;
 			$filter_data->blockstudio['data']['blade']      =
-				Build::blade()[ $block_data['instance'] ] ?? array();
+				$blade[ $block_data['instance'] ] ?? array();
 		}
 
 		if (
