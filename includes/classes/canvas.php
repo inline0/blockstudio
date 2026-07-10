@@ -556,9 +556,10 @@ class Canvas {
 
 			clearstatcache();
 
-			$new_mtimes      = array();
-			$new_fingerprint = $this->compute_fingerprint_with_mtimes( $new_mtimes );
-			Build::refresh_blocks();
+			$new_mtimes          = array();
+			$new_fingerprint     = $this->compute_fingerprint_with_mtimes( $new_mtimes );
+			$fingerprint_changed = $new_fingerprint !== $fingerprint;
+			Build::refresh_blocks( ! $fingerprint_changed );
 			$new_dir_to_blocks  = $this->build_dir_to_blocks_map();
 			$new_dir_to_pages   = $this->build_dir_to_pages_map();
 			$blocks_map_changed = ! empty( array_diff_assoc( $new_dir_to_blocks, $dir_to_blocks ) )
@@ -567,7 +568,7 @@ class Canvas {
 				|| ! empty( array_diff_assoc( $dir_to_pages, $new_dir_to_pages ) );
 			$dir_maps_changed   = $blocks_map_changed || $pages_map_changed;
 
-			if ( $new_fingerprint !== $fingerprint || $dir_maps_changed ) {
+			if ( $fingerprint_changed || $dir_maps_changed ) {
 				// Directory map changes can lag behind mtime-based fingerprint updates
 				// when files are written in quick batches. Flush once maps catch up.
 

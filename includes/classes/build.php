@@ -1323,9 +1323,11 @@ class Build {
 	 *
 	 * @since 7.0.0
 	 *
+	 * @param bool $allow_cached Whether a valid runtime cache may skip discovery.
+	 *
 	 * @return void
 	 */
-	public static function refresh_blocks(): void {
+	public static function refresh_blocks( bool $allow_cached = false ): void {
 		$registry = Block_Registry::instance();
 
 		// If the default build dir was created after init (e.g. during a live
@@ -1346,7 +1348,7 @@ class Build {
 			$registry->add_path( $instance, $default_path );
 		}
 
-		if ( self::refresh_runtime_cache_is_current( $registry ) ) {
+		if ( $allow_cached && self::refresh_runtime_cache_is_current( $registry ) ) {
 			return;
 		}
 
@@ -1439,9 +1441,9 @@ class Build {
 	/**
 	 * Check whether the current registry still matches valid runtime caches.
 	 *
-	 * Refresh_blocks() exists to detect filesystem changes after init. When the
-	 * runtime cache watch data is valid and the cached block names match the
-	 * hydrated registry, the recursive discovery pass would be redundant.
+	 * Callers may use this only after independently observing an unchanged
+	 * filesystem fingerprint. Runtime cache directory mtimes alone are too
+	 * coarse to replace an explicit refresh after files change.
 	 *
 	 * @param Block_Registry $registry Block registry.
 	 *

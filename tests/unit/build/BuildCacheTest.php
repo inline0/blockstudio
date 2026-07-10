@@ -518,6 +518,100 @@ class BuildCacheTest extends TestCase {
 	}
 
 	/**
+	 * Forced refresh discovers blocks hidden by coarse directory mtimes.
+	 *
+	 * @return void
+	 */
+	public function test_forced_refresh_discovers_new_block_when_runtime_cache_appears_current(): void {
+		$directory       = $this->create_temporary_directory();
+		$block_directory = $directory . '/existing';
+		wp_mkdir_p( $block_directory );
+
+		$existing_name = 'blockstudio-test/cache-refresh-existing';
+		$new_name      = 'blockstudio-test/cache-refresh-new';
+
+		$this->write_file(
+			$block_directory . '/block.json',
+			wp_json_encode(
+				array(
+					'$schema'     => 'https://blockstudio.dev/schema/block',
+					'name'        => $existing_name,
+					'title'       => 'Cache Refresh Existing',
+					'category'    => 'widgets',
+					'blockstudio' => true,
+				)
+			)
+		);
+		$this->write_file( $block_directory . '/index.php', '<?php echo "Existing";' );
+
+		$path        = wp_normalize_path( $directory );
+		$instance    = Build::get_instance_name( $path );
+		$key         = Build_Cache::get_runtime_key( $path, $instance );
+		$registry    = Block_Registry::instance();
+		$path_filter = static fn(): string => $path;
+
+		$this->track_cache_file( 'runtime', $key );
+		add_filter( 'blockstudio/path', $path_filter );
+
+		try {
+			$registry->reset();
+			Build::init( array( 'dir' => $path ) );
+
+			$cached_mtime = filemtime( $directory );
+			$this->assertIsInt( $cached_mtime );
+
+			$new_block_directory = $directory . '/new';
+			wp_mkdir_p( $new_block_directory );
+			$this->write_file(
+				$new_block_directory . '/block.json',
+				wp_json_encode(
+					array(
+						'$schema'     => 'https://blockstudio.dev/schema/block',
+						'name'        => $new_name,
+						'title'       => 'Cache Refresh New',
+						'category'    => 'widgets',
+						'blockstudio' => true,
+					)
+				)
+			);
+			$this->write_file( $new_block_directory . '/index.php', '<?php echo "New";' );
+
+			$this->touch_directory( $directory, $cached_mtime );
+			clearstatcache( true, $directory );
+
+			$cached_runtime = Build_Cache::load_runtime( $path, $instance );
+			$this->assertIsArray( $cached_runtime );
+
+			$reflection = new ReflectionClass( Build::class );
+			$method     = $reflection->getMethod( 'refresh_runtime_cache_is_current' );
+			$this->assertTrue(
+				$method->invoke( null, $registry ),
+				wp_json_encode(
+					array(
+						'cached'  => array_keys( $cached_runtime['registeredBlockTypes'] ?? array() ),
+						'current' => array_keys( Build::blocks() ),
+					)
+				)
+			);
+
+			Build::refresh_blocks( true );
+			$this->assertArrayNotHasKey( $new_name, Build::blocks() );
+
+			Build::refresh_blocks();
+			$this->assertArrayHasKey( $new_name, Build::blocks() );
+		} finally {
+			remove_filter( 'blockstudio/path', $path_filter );
+			$registry->reset();
+
+			$default_build_dir = Build::get_build_dir();
+
+			if ( is_dir( $default_build_dir ) ) {
+				Build::init( $default_build_dir );
+			}
+		}
+	}
+
+	/**
 	 * Editor asset fingerprints use cached metadata before file snapshots.
 	 *
 	 * @return void
