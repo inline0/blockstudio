@@ -526,7 +526,23 @@ class Block {
 			) {
 				$processor = new WP_HTML_Tag_Processor( $content );
 				if ( $processor->next_tag() ) {
-					$classes = $processor->get_attribute( 'class' );
+					$classes = (string) $processor->get_attribute( 'class' );
+
+					$wrapper_attributes = apply_filters(
+						'blockstudio/blocks/components/use_block_props/render',
+						'class="' . esc_attr( $classes ) . '"',
+						$block
+					);
+					$wrapper_attributes = apply_filters(
+						'blockstudio/blocks/components/useblockprops/render',
+						$wrapper_attributes,
+						$block
+					);
+
+					if ( preg_match( '/class="([^"]*)"/', $wrapper_attributes, $matches ) ) {
+						$classes = html_entity_decode( $matches[1], ENT_QUOTES, 'UTF-8' );
+					}
+
 					$processor->set_attribute(
 						'class',
 						$classes . ' wp-block block-editor-block-list__block'

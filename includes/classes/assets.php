@@ -152,6 +152,36 @@ class Assets {
 	}
 
 	/**
+	 * Expose frontend body classes to the block editor canvas.
+	 *
+	 * @param array $settings The block editor settings.
+	 *
+	 * @return array The block editor settings.
+	 */
+	public function add_canvas_body_classes( $settings ) {
+		if ( ! self::is_reset_enabled() ) {
+			return $settings;
+		}
+
+		$classes = apply_filters( 'body_class', array(), '' );
+		$classes = is_array( $classes ) ? $classes : array();
+		$classes = array_values(
+			array_unique(
+				array_filter(
+					array_map( 'sanitize_html_class', $classes )
+				)
+			)
+		);
+
+		$settings['blockstudioCanvasBodyClasses'] = apply_filters(
+			'blockstudio/editor/canvas/body_class',
+			$classes
+		);
+
+		return $settings;
+	}
+
+	/**
 	 * Constructor.
 	 */
 	public function __construct() {
@@ -163,6 +193,7 @@ class Assets {
 		add_action( 'admin_head', array( $this, 'render_parent_editor_enhancement_styles' ) );
 		add_filter( 'admin_body_class', array( $this, 'add_parent_editor_enhancement_body_class' ) );
 		add_filter( 'block_editor_settings_all', array( $this, 'maybe_reset_editor_styles' ) );
+		add_filter( 'block_editor_settings_all', array( $this, 'add_canvas_body_classes' ) );
 		add_filter( 'block_editor_settings_all', array( $this, 'maybe_fullwidth_editor' ), 10, 2 );
 		add_filter(
 			'block_editor_settings_all',

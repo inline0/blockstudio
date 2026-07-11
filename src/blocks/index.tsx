@@ -10,6 +10,7 @@ import { renderCache } from '@/blocks/components/block/render-cache';
 import { ExpandedEditor } from '@/blocks/components/expanded-editor';
 import { Fields } from '@/blocks/components/fields';
 import { initializeEditorReadinessGate } from '@/blocks/editor-readiness';
+import { initializeCanvasBodyClasses } from '@/blocks/canvas-body-classes';
 import '@/blocks/filters/custom-class';
 import '@/blocks/filters/default';
 import { getMatches } from '@/blocks/filters/extensions';
@@ -36,6 +37,7 @@ register(tailwindStore);
 renderCache.initFromPreload();
 mediaModal();
 initializeEditorReadinessGate();
+initializeCanvasBodyClasses();
 
 const blocks = window.blockstudioAdmin.data.blocksNative;
 
