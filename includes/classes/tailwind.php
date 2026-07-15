@@ -38,11 +38,27 @@ use BlockstudioVendor\TailwindPHP\Tailwind as TailwindPHP;
 class Tailwind {
 
 	/**
-	 * Whether compilation has already run for this request.
+	 * Request generation in which this instance last compiled.
 	 *
-	 * @var bool
+	 * @var int
 	 */
-	private bool $compiled = false;
+	private int $compiled_generation = -1;
+
+	/**
+	 * Current batch request generation.
+	 *
+	 * @var int
+	 */
+	private static int $request_generation = 0;
+
+	/**
+	 * Allow every long-lived Tailwind instance to compile the next request.
+	 *
+	 * @return void
+	 */
+	public static function reset_request_state(): void {
+		++self::$request_generation;
+	}
 
 	/**
 	 * Filter candidates to strings only.
@@ -111,12 +127,12 @@ class Tailwind {
 	 * @return string The modified HTML with injected Tailwind CSS.
 	 */
 	public function compile( string $html ): string {
-		if ( ! Settings::get( 'tailwind/enabled' ) || $this->compiled ) {
+		if ( ! Settings::get( 'tailwind/enabled' ) || self::$request_generation === $this->compiled_generation ) {
 			return $html;
 		}
 
 		Perf::start( 'tailwind' );
-		$this->compiled = true;
+		$this->compiled_generation = self::$request_generation;
 
 		self::load_autoloader();
 
@@ -249,26 +265,44 @@ class Tailwind {
 	 * @return void
 	 */
 	private static function prune_cache( string $keep_file ): void {
-		$files = glob( self::get_cache_dir() . '/*.css' );
+		$cache_dir = self::get_cache_dir();
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_fopen -- A native handle is required for cross-process flock().
+		$lock = fopen( $cache_dir . '/.prune.lock', 'c' );
 
-		if ( ! is_array( $files ) || empty( $files ) ) {
+		if ( false === $lock || ! flock( $lock, LOCK_EX ) ) {
+			if ( is_resource( $lock ) ) {
+				// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_fclose -- Closing the native flock() handle.
+				fclose( $lock );
+			}
 			return;
 		}
 
-		$max_files = max( 1, (int) apply_filters( 'blockstudio/tailwind/cache_max_files', 20 ) );
-		$files     = array_values(
-			array_filter(
-				$files,
-				static fn( string $file ): bool => $file !== $keep_file
-			)
-		);
-		usort(
-			$files,
-			static fn( string $a, string $b ): int => (int) filemtime( $b ) <=> (int) filemtime( $a )
-		);
+		try {
+			$files = glob( $cache_dir . '/*.css' );
 
-		foreach ( array_slice( $files, max( 0, $max_files - 1 ) ) as $file ) {
-			wp_delete_file( $file );
+			if ( ! is_array( $files ) || empty( $files ) ) {
+				return;
+			}
+
+			$max_files = max( 1, (int) apply_filters( 'blockstudio/tailwind/cache_max_files', 20 ) );
+			$files     = array_values(
+				array_filter(
+					$files,
+					static fn( string $file ): bool => $file !== $keep_file && is_file( $file )
+				)
+			);
+			usort(
+				$files,
+				static fn( string $a, string $b ): int => (int) filemtime( $b ) <=> (int) filemtime( $a )
+			);
+
+			foreach ( array_slice( $files, max( 0, $max_files - 1 ) ) as $file ) {
+				wp_delete_file( $file );
+			}
+		} finally {
+			flock( $lock, LOCK_UN );
+			// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_fclose -- Closing the native flock() handle.
+			fclose( $lock );
 		}
 	}
 

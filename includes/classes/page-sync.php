@@ -559,6 +559,12 @@ class Page_Sync {
 		update_post_meta( $post_id, '_blockstudio_page_generated', ! empty( $page_data['generated'] ) );
 		update_post_meta( $post_id, '_blockstudio_page_content_type', $page_data['contentType'] ?? 'php' );
 		update_post_meta( $post_id, '_blockstudio_page_stale', false );
+		$dependencies = array_values( array_filter( $page_data['source_mtime_paths'] ?? array(), 'is_string' ) );
+		if ( ! empty( $dependencies ) ) {
+			update_post_meta( $post_id, '_blockstudio_page_dependencies', $dependencies );
+		} else {
+			delete_post_meta( $post_id, '_blockstudio_page_dependencies' );
+		}
 
 		$content_path = $page_data['content_path'] ?? $page_data['template_path'] ?? '';
 		if ( 'markdown' === ( $page_data['contentType'] ?? '' ) && is_string( $content_path ) && '' !== $content_path ) {

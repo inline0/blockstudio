@@ -26,6 +26,15 @@ final class Islands {
 	private static string $phase = 'normal';
 
 	/**
+	 * Reset the request-local island render phase.
+	 *
+	 * @return void
+	 */
+	public static function reset_request_state(): void {
+		self::$phase = 'normal';
+	}
+
+	/**
 	 * Whether hooks are registered.
 	 *
 	 * @var bool

@@ -88,6 +88,17 @@ class Pages {
 	private static bool $rendering_layout = false;
 
 	/**
+	 * Reset frontend page layout state without rebuilding the page registry.
+	 *
+	 * @return void
+	 */
+	public static function reset_request_state(): void {
+		self::$current_page         = null;
+		self::$current_page_content = '';
+		self::$rendering_layout     = false;
+	}
+
+	/**
 	 * Initialize the pages system.
 	 *
 	 * @param array $args Optional arguments.

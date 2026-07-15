@@ -110,6 +110,23 @@ class TailwindTest extends TestCase {
 		$this->assertSame( $first, $second );
 	}
 
+	public function test_request_reset_allows_a_long_lived_instance_to_compile_again(): void {
+		if ( ! Settings::get( 'tailwind/enabled' ) ) {
+			$this->markTestSkipped( 'Tailwind is not enabled in test theme settings.' );
+		}
+
+		$tailwind = new Tailwind();
+		$first    = '<html><head></head><body><p class="flex">First</p></body></html>';
+		$next     = '<html><head></head><body><p class="grid">Next</p></body></html>';
+
+		$this->assertStringContainsString( '<style id="blockstudio-tailwind">', $tailwind->compile( $first ) );
+		$this->assertSame( $next, $tailwind->compile( $next ) );
+
+		Tailwind::reset_request_state();
+
+		$this->assertStringContainsString( '<style id="blockstudio-tailwind">', $tailwind->compile( $next ) );
+	}
+
 	public function test_compile_editor_css_includes_registered_page_template_candidates(): void {
 		$cb = function () {
 			return true;

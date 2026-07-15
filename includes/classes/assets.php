@@ -103,6 +103,17 @@ class Assets {
 	public static bool $force_editor_screen = false;
 
 	/**
+	 * Reset request-local asset state for in-process batch rendering.
+	 *
+	 * @return void
+	 */
+	public static function reset_request_state(): void {
+		self::$modules             = array();
+		self::$parsed_asset_ids    = array();
+		self::$force_editor_screen = false;
+	}
+
+	/**
 	 * Whether the editor reset is enabled.
 	 *
 	 * @return bool

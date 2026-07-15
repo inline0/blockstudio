@@ -72,6 +72,16 @@ class Block {
 	private static array $count_by_block = array();
 
 	/**
+	 * Reset counters that are scoped to one rendered request.
+	 *
+	 * @return void
+	 */
+	public static function reset_request_state(): void {
+		self::$count          = 0;
+		self::$count_by_block = array();
+	}
+
+	/**
 	 * Get unique ID.
 	 *
 	 * @since 5.5.0
@@ -1680,6 +1690,34 @@ class Block {
 				$path = $placeholder_path;
 			}
 		}
+
+		$dependencies = array( $path );
+		foreach ( $block_data['filesPaths'] ?? array() as $dependency_path ) {
+			if ( is_string( $dependency_path ) && '' !== $dependency_path ) {
+				$dependencies[] = $dependency_path;
+			}
+		}
+		foreach ( $block_data['assets'] ?? array() as $asset ) {
+			$dependency_path = is_array( $asset ) ? $asset['path'] ?? '' : '';
+			if ( is_string( $dependency_path ) && '' !== $dependency_path ) {
+				$dependencies[] = $dependency_path;
+			}
+		}
+		$dependencies = array_values( array_unique( $dependencies ) );
+
+		/**
+		 * Filters the resolved dependencies for a rendered block.
+		 *
+		 * Collectors can observe the returned paths to build a page dependency
+		 * graph, and integrations can append files loaded indirectly.
+		 *
+		 * @param array<int, string> $dependencies Resolved source and template paths.
+		 * @param string             $name         Block name.
+		 * @param array              $block_data   Block definition data.
+		 * @param bool               $is_editor    Whether this is an editor render.
+		 * @param bool               $is_preview   Whether this is a preview render.
+		 */
+		apply_filters( 'blockstudio/render/dependencies', $dependencies, $name, $block_data, $is_editor, $is_preview );
 
 		$editor = $attributes['blockstudio']['editor'] ?? false;
 

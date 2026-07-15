@@ -71,6 +71,15 @@ class Build {
 	private static bool $interactivity_api_rendered = false;
 
 	/**
+	 * Reset request-local render state for in-process batch rendering.
+	 *
+	 * @return void
+	 */
+	public static function reset_request_state(): void {
+		self::$interactivity_api_rendered = false;
+	}
+
+	/**
 	 * Check if a block's blockstudio data has interactivity enabled.
 	 *
 	 * @param array $blockstudio_data The blockstudio data array.
