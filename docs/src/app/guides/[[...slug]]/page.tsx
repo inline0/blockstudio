@@ -2,7 +2,6 @@ import type { MDXComponents } from 'mdx/types';
 import { notFound } from 'next/navigation';
 import { DocsPage, mdxComponents } from 'onedocs';
 import { ArchiveCard } from '@/components/archive-card';
-import { GuideBanner } from '@/components/guide-banner';
 import { guidesSource } from '@/lib/source';
 
 function GuidesIndex() {
@@ -44,7 +43,7 @@ export default async function Page(props: {
 
   return (
     <DocsPage toc={page.data.toc}>
-      <MDX components={{ ...mdxComponents, GuideBanner } as MDXComponents} />
+      <MDX components={mdxComponents as MDXComponents} />
     </DocsPage>
   );
 }

@@ -1,0 +1,89 @@
+---
+title: Canvas
+description: A Figma-like overview of all Blockstudio pages as artboards.
+path: "dev/canvas"
+order: 60
+section: "Dev"
+meta_title: "Canvas"
+meta_description: "A Figma-like overview of all Blockstudio pages as artboards."
+---
+
+# Canvas
+
+The canvas provides a zoomed-out, Figma-like overview of all Blockstudio-managed pages. Each page renders as a live iframe artboard in a single horizontal row. Pan with your trackpad, zoom with pinch or Ctrl+scroll.
+
+## Activation
+
+The canvas is available as a hidden admin page. Navigate to:
+
+```
+/wp-admin/admin.php?page=blockstudio-canvas
+```
+
+The page is only accessible when `dev.canvas.enabled` is `true` and the current user has the `edit_posts` capability.
+
+## Settings
+
+Enable the canvas and configure its behavior in your theme's `blockstudio.json`:
+
+```json title="blockstudio.json"
+{
+  "dev": {
+    "canvas": {
+      "enabled": true,
+      "adminBar": false
+    }
+  }
+}
+```
+
+| Property | Type | Default | Description |
+|----------|------|---------|-------------|
+| `enabled` | `boolean` | `false` | Enable the canvas feature. |
+| `adminBar` | `boolean` | `true` | Show the WordPress admin bar inside artboard iframes. Set to `false` for a cleaner preview. |
+
+Both settings are also available as filters:
+
+```php
+add_filter('blockstudio/settings/dev/canvas/enabled', '__return_true');
+add_filter('blockstudio/settings/dev/canvas/admin_bar', '__return_false');
+```
+
+## Views
+
+Switch between views using the dropdown menu in the top-right corner.
+
+- **Pages**: All Blockstudio-managed pages as full-width artboards in a single row.
+- **Blocks**: All registered Blockstudio blocks in a grid layout, each rendered with its default attribute values.
+
+## Live Mode
+
+Live mode uses Server-Sent Events (SSE) to detect file changes and update the canvas in real-time. When you edit a block template, page template, or stylesheet, the affected artboards refresh automatically within about one second.
+
+Toggle live mode from the dropdown menu. A green pulsing indicator appears when active. The setting persists across sessions via localStorage.
+
+Live mode tracks changes to `.php`, `.json`, `.css`, `.scss`, `.js`, `.twig`, and `.html` files inside block and page directories. Only changed blocks and pages are refreshed, keeping updates fast even with many artboards.
+
+## Focus Mode
+
+Click any artboard label to enter focus mode. The selected artboard fills the viewport at full width with vertical scrolling. Press Escape or click the close button to return to the overview.
+
+## Controls
+
+| Action | Input |
+|--------|-------|
+| Pan | Scroll / trackpad two-finger drag |
+| Zoom | Ctrl+scroll or pinch |
+| Fit to view | Dropdown menu |
+| Zoom to 100% | Dropdown menu |
+| Focus artboard | Click artboard label |
+| Exit focus | Escape / close button |
+
+## Security
+
+The canvas script and page data are only loaded when all conditions are met:
+
+- The `dev.canvas.enabled` setting is `true`.
+- The current user has the `edit_posts` capability.
+
+Public visitors never see the canvas script or page metadata.

@@ -1,0 +1,207 @@
+---
+title: Registration
+description: Learn how to register custom blocks with Blockstudio.
+path: "blocks/registration"
+order: 3
+section: "Blocks"
+meta_title: "Registration"
+meta_description: "Learn how to register custom blocks with Blockstudio."
+---
+
+# Registration
+
+Composing your own blocks with Blockstudio is extremely easy. The plugin will
+look for a `blockstudio` folder within your currently activated theme. Inside
+it, all subfolders that contain a `block.json` file with a `blockstudio` key
+will be registered.
+
+## block.json
+
+```json title="block.json"
+{
+  "name": "blockstudio/native",
+  "title": "Native Block",
+  "category": "text",
+  "icon": "star-filled",
+  "description": "Native Blockstudio block.",
+  "blockstudio": true
+}
+```
+
+## Template
+
+So far, the custom block is not going to be registered since it is missing a
+template. To fix that just create an `index.php` in the same folder as your
+block.json file and its contents will automatically be rendered when your block
+is used.
+
+```php title="index.php"
+<h1>My first native block.</h1>
+```
+
+## Conditional logic
+
+Blocks can be registered conditionally using the `conditions` key. It supports
+all the global variables which are also available for attributes.
+
+[See all conditions](/docs/blocks/attributes/conditional-logic#global)
+
+The following example will only register the block if the current post type is a
+page:
+
+```json title="block.json"
+{
+  "blockstudio": {
+    "conditions": [
+      [
+        {
+          "type": "postType",
+          "operator": "==",
+          "value": "page"
+        }
+      ]
+    ]
+  }
+}
+```
+
+## Plugin dependencies
+
+Blocks can depend on active WordPress plugins using the `pluginDependencies`
+key. If one of the listed plugins is inactive, the block is skipped during
+registration.
+
+Dependencies use WordPress plugin slugs:
+
+```json title="block.json"
+{
+  "blockstudio": {
+    "pluginDependencies": [
+      "woocommerce",
+      "advanced-custom-fields"
+    ]
+  }
+}
+```
+
+Use the object form to require a plugin version. Version constraints use the
+same operators as PHP's `version_compare()`; a version without an operator is
+treated as `>=`.
+
+```json title="block.json"
+{
+  "blockstudio": {
+    "pluginDependencies": {
+      "woocommerce": {
+        "version": ">6"
+      }
+    }
+  }
+}
+```
+
+## Custom icon
+
+Custom SVGs icons for blocks can be registered like so:
+
+```json title="block.json"
+{
+  "blockstudio": {
+    "icon": "<svg></svg>"
+  }
+}
+```
+
+WordPress doesn't allow for custom SVG icons inside its own block.json `icon`
+key, only
+[Dashicons](https://developer.wordpress.org/resource/dashicons/#editor-video)
+IDs are allowed here.
+
+## Standard WordPress Blocks
+
+Blockstudio also auto-registers standard WordPress blocks found in your
+Blockstudio directories. Any `block.json` without a `blockstudio` key but with a
+valid `name` property is registered via WordPress's native `register_block_type()`.
+
+This means you can place blocks scaffolded with `@wordpress/create-block`
+directly inside your `blockstudio/` folder and they will be auto-registered
+alongside your Blockstudio blocks. No separate plugin registration code needed.
+
+```
+blockstudio/
+├── hero/
+│   ├── block.json          ← Blockstudio block (has "blockstudio" key)
+│   └── index.twig
+├── my-js-block/
+│   ├── block.json          ← Standard WP block (no "blockstudio" key)
+│   ├── index.js            ← Compiled editor script
+│   ├── index.css
+│   ├── style-index.css
+│   └── render.php
+```
+
+Build your block with `npx wp-scripts build`, then drop the output folder into
+your Blockstudio directory. It will be registered automatically.
+
+### HTML
+
+Blockstudio is using a React element parser to render the icon element, so it is
+possible to use HTML inside the icon string.
+
+```json title="block.json"
+{
+  "blockstudio": {
+    "icon": "<div>:-)</div>"
+  }
+}
+```
+
+## Custom paths
+
+By default, Blockstudio will recursively look through the `blockstudio` folder
+inside your current theme or child theme for blocks. You can change that
+behaviour in two ways.
+
+### Filter
+
+```php title="functions.php"
+// Custom path within your theme.
+add_filter('blockstudio/path', function () {
+    return get_template_directory() . '/blocks';
+});
+
+// Custom path within a plugin.
+add_filter('blockstudio/path', function () {
+    return WP_PLUGIN_DIR . '/my-custom-plugin/blocks';
+});
+```
+
+### Instances
+
+If the above options are not enough, it is possible to initiate the
+`Blockstudio\Build` class on various folders of your choice:
+
+```php title="functions.php"
+add_action('init', function () {
+  Blockstudio\Build::init([
+    'dir' => get_template_directory() . '/client-blocks'
+  ]);
+});
+```
+
+## Filter metadata
+
+Metadata can be filtered before the block is being registered using the
+`blockstudio/blocks/meta` filter:
+
+```php title="functions.php"
+add_filter('blockstudio/blocks/meta', function ($meta, $block) {
+    if (str_starts_with($block['name'], 'marketing')) {
+        $meta['icon'] = 'megaphone';
+    }
+    return $meta;
+}, 10, 2);
+```
+
+The example above is being used internally to give all Blockstudio library
+elements the same icon.

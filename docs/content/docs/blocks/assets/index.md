@@ -1,0 +1,17 @@
+---
+title: General
+description: Automatically enqueue and process CSS, SCSS, and JavaScript files for your blocks.
+path: "blocks/assets"
+order: 7
+section: "Assets"
+meta_title: "General"
+meta_description: "Automatically enqueue and process CSS, SCSS, and JavaScript files for your blocks."
+---
+
+# Assets
+
+Blockstudio provides a zero-config asset pipeline for your blocks. Drop CSS, SCSS, or JavaScript files next to your block and they get compiled, minified, and enqueued automatically.
+
+- [Registering Assets](/docs/blocks/assets/registering):File naming conventions and enqueue behavior
+- [Processing](/docs/blocks/assets/processing):SCSS compilation, ES module imports, and minification
+- [Code Field](/docs/blocks/assets/code-field):Inline code editing via the code field type

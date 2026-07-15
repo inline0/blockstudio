@@ -1,0 +1,267 @@
+---
+title: Cron
+description: Define scheduled background tasks per block using WordPress Cron.
+path: "blocks/block-api/cron"
+order: 47
+section: "Block API"
+meta_title: "Cron"
+meta_description: "Define scheduled background tasks per block using WordPress Cron."
+---
+
+# Cron
+
+The cron system lets you define scheduled tasks that run in the background on a
+recurring interval. Add a `cron.php` file to your block directory and Blockstudio
+registers the jobs with WordPress Cron, manages their lifecycle, and cleans
+them up when the plugin is deactivated.
+
+This is the final piece of the full-stack block pattern: your block can have a
+UI (`index.twig`), server logic (`rpc.php`), persistent data (`db.php`), and
+now background processing (`cron.php`).
+
+## How it works
+
+1. You create `cron.php` in your block directory
+2. It returns an associative array of named jobs
+3. On each page load, Blockstudio checks if the jobs are scheduled
+4. Missing schedules are registered with `wp_schedule_event()`
+5. WordPress Cron fires the callbacks on the defined interval
+6. On plugin deactivation, all Blockstudio cron events are unscheduled
+
+```
+blocks/my-block/
+├── block.json
+├── index.twig
+├── rpc.php       ← custom endpoints
+├── db.php        ← data model
+├── cron.php      ← background tasks
+└── style.css
+```
+
+## Defining jobs
+
+Return an associative array of jobs. Each job can be a direct callback (defaults
+to `daily`) or an array with `schedule` and `callback`:
+
+```php title="cron.php"
+return [
+    // Expanded format with custom schedule
+    'cleanup' => [
+        'schedule' => 'hourly',
+        'callback' => function () {
+            // runs every hour
+        },
+    ],
+
+    // Shorthand: just a callback, defaults to daily
+    'heartbeat' => function () {
+        update_option('my_block_last_heartbeat', time());
+    },
+];
+```
+
+### PHP-native definitions
+
+`cron.php` can also return an object with attributed methods. That gives you a
+cleaner PHP-native surface while keeping the existing array syntax intact.
+
+```php title="cron.php"
+<?php
+use Blockstudio\Attributes\Cron;
+use Blockstudio\Cron\Schedule;
+
+return new class {
+    #[Cron(schedule: Schedule::Hourly)]
+    public function heartbeat(): void {
+        update_option('my_block_last_heartbeat', time());
+    }
+
+    #[Cron]
+    public function cleanupOldEntries(): void {
+        // defaults to daily
+    }
+};
+```
+
+Method names are normalized to lowercase snake case by default, so
+`cleanupOldEntries()` becomes `cleanup_old_entries`. Use `name:` when you want
+an explicit job name.
+
+## Schedules
+
+### Built-in
+
+WordPress provides these schedules out of the box:
+
+| Schedule | Interval |
+|----------|----------|
+| `hourly` | Every hour |
+| `twicedaily` | Every 12 hours |
+| `daily` | Every 24 hours |
+| `weekly` | Every 7 days |
+
+### Custom intervals
+
+Register custom intervals via the WordPress `cron_schedules` filter, then
+reference them in `cron.php`:
+
+```php title="functions.php"
+add_filter('cron_schedules', function ($schedules) {
+    $schedules['every_five_minutes'] = [
+        'interval' => 300,
+        'display'  => 'Every 5 Minutes',
+    ];
+    $schedules['every_fifteen_minutes'] = [
+        'interval' => 900,
+        'display'  => 'Every 15 Minutes',
+    ];
+    return $schedules;
+});
+```
+
+```php title="cron.php"
+return [
+    'check_external_api' => [
+        'schedule' => 'every_five_minutes',
+        'callback' => function () { /* ... */ },
+    ],
+];
+```
+
+## Common patterns
+
+### Data maintenance
+
+Clean up old records, expire trials, archive inactive entries:
+
+```php title="cron.php"
+use Blockstudio\Db;
+
+return [
+    'expire_trials' => [
+        'schedule' => 'daily',
+        'callback' => function () {
+            $db     = Db::get('my-theme/app', 'subscribers');
+            $trials = $db->list(['plan' => 'trial']);
+
+            foreach ($trials as $trial) {
+                if (strtotime($trial['created_at']) < strtotime('-14 days')) {
+                    $db->update((int) $trial['id'], ['plan' => 'expired']);
+                }
+            }
+        },
+    ],
+    'purge_old_logs' => [
+        'schedule' => 'weekly',
+        'callback' => function () {
+            $db   = Db::get('my-theme/app', 'activity_log');
+            $logs = $db->list();
+
+            foreach ($logs as $log) {
+                if (strtotime($log['created_at']) < strtotime('-90 days')) {
+                    $db->delete((int) $log['id']);
+                }
+            }
+        },
+    ],
+];
+```
+
+### External API sync
+
+Pull data from third-party services on a schedule:
+
+```php title="cron.php"
+return [
+    'sync_products' => [
+        'schedule' => 'hourly',
+        'callback' => function () {
+            $response = wp_remote_get('https://api.example.com/products');
+
+            if (is_wp_error($response)) {
+                return;
+            }
+
+            $products = json_decode(wp_remote_retrieve_body($response), true);
+            $db       = \Blockstudio\Db::get('my-theme/shop', 'products');
+
+            foreach ($products as $product) {
+                $existing = $db->list(['external_id' => $product['id']]);
+
+                if (empty($existing)) {
+                    $db->create($product);
+                } else {
+                    $db->update((int) $existing[0]['id'], $product);
+                }
+            }
+        },
+    ],
+];
+```
+
+### Notifications and digests
+
+Send periodic reports or notification emails:
+
+```php title="cron.php"
+use Blockstudio\Db;
+
+return [
+    'weekly_digest' => [
+        'schedule' => 'weekly',
+        'callback' => function () {
+            $db   = Db::get('my-theme/app', 'subscribers');
+            $new  = count($db->list(['status' => 'active']));
+            $admin = get_option('admin_email');
+
+            wp_mail($admin, 'Weekly Digest', "Active subscribers: $new");
+        },
+    ],
+];
+```
+
+## Deactivation
+
+All cron events registered by Blockstudio are automatically unscheduled when
+the plugin is deactivated. This prevents orphaned cron jobs from persisting in
+the database after the plugin is removed.
+
+## Filter
+
+Modify or disable jobs programmatically:
+
+```php title="functions.php"
+add_filter('blockstudio/cron', function (array $jobs): array {
+    // Disable a specific job
+    unset($jobs['my-theme/app']['cleanup']);
+
+    // Change a schedule
+    if (isset($jobs['my-theme/app']['sync'])) {
+        $jobs['my-theme/app']['sync']['schedule'] = 'twicedaily';
+    }
+
+    return $jobs;
+});
+```
+
+## Debugging
+
+WordPress Cron is triggered by page visits, not by a system-level scheduler.
+On low-traffic sites, jobs may not fire exactly on schedule. For reliable timing,
+set up a real system cron that hits `wp-cron.php`:
+
+```bash
+*/5 * * * * curl -s https://yoursite.com/wp-cron.php > /dev/null 2>&1
+```
+
+Then disable WordPress's built-in cron trigger in `wp-config.php`:
+
+```php
+define('DISABLE_WP_CRON', true);
+```
+
+To check scheduled events, use WP-CLI:
+
+```bash
+wp cron event list | grep blockstudio
+```

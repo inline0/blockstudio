@@ -9,7 +9,9 @@ export const metadata: Metadata = {
 };
 
 export default function BlogIndex() {
-  const posts = [...blog].sort((a, b) => b.date.getTime() - a.date.getTime());
+  const posts = [...blog]
+    .filter((post) => !post.archive)
+    .sort((a, b) => b.date.getTime() - a.date.getTime());
 
   return (
     <DocsPage className="archive-page">

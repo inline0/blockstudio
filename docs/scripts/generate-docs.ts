@@ -232,7 +232,7 @@ function generateFieldTypeDocs(fieldTypes: SchemaProperty[]): string {
   return lines.join('\n');
 }
 
-function updateMdxFile(
+function updateMarkdownFile(
   filePath: string,
   startMarker: string,
   endMarker: string,
@@ -270,20 +270,20 @@ function generateSettingsDoc() {
     blockstudioSchema as unknown as Schema,
   );
 
-  const outputPath = join(DATA_DIR, 'generated-settings-filters.mdx');
+  const outputPath = join(DATA_DIR, 'generated-settings-filters.md');
   writeFileSync(outputPath, content);
   console.log(`  Generated: ${outputPath}`);
 
-  const mdxPath = join(BLOCKS_CONTENT_DIR, 'hooks/php.mdx');
+  const markdownPath = join(BLOCKS_CONTENT_DIR, 'hooks/php.md');
   if (
-    updateMdxFile(
-      mdxPath,
-      '{/* GENERATED_SETTINGS_START */}',
-      '{/* GENERATED_SETTINGS_END */}',
+    updateMarkdownFile(
+      markdownPath,
+      '<!-- GENERATED_SETTINGS_START -->',
+      '<!-- GENERATED_SETTINGS_END -->',
       content,
     )
   ) {
-    console.log(`  Updated: ${mdxPath}`);
+    console.log(`  Updated: ${markdownPath}`);
   }
 }
 
@@ -300,21 +300,21 @@ async function generateFieldTypesDoc() {
 
   const content = generateFieldTypeDocs(fieldTypes);
 
-  const outputPath = join(DATA_DIR, 'generated-field-types.mdx');
+  const outputPath = join(DATA_DIR, 'generated-field-types.md');
   writeFileSync(outputPath, content);
   console.log(`  Generated: ${outputPath}`);
   console.log(`  Found ${fieldTypes.length} field types`);
 
-  const mdxPath = join(BLOCKS_CONTENT_DIR, 'attributes/field-types.mdx');
+  const markdownPath = join(BLOCKS_CONTENT_DIR, 'attributes/field-types.md');
   if (
-    updateMdxFile(
-      mdxPath,
-      '{/* GENERATED_FIELD_TYPES_START */}',
-      '{/* GENERATED_FIELD_TYPES_END */}',
+    updateMarkdownFile(
+      markdownPath,
+      '<!-- GENERATED_FIELD_TYPES_START -->',
+      '<!-- GENERATED_FIELD_TYPES_END -->',
       content,
     )
   ) {
-    console.log(`  Updated: ${mdxPath}`);
+    console.log(`  Updated: ${markdownPath}`);
   }
 }
 

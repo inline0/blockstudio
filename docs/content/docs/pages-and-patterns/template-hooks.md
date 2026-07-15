@@ -1,0 +1,200 @@
+---
+title: Hooks
+description: PHP filters and actions for pages, patterns, Site Templates, and the HTML parser.
+path: "pages-and-patterns/template-hooks"
+order: 55
+section: "Pages & Patterns"
+meta_title: "Hooks"
+meta_description: "PHP filters and actions for pages, patterns, Site Templates, and the HTML parser."
+---
+
+# Hooks
+
+Filters and actions available for customizing pages, patterns, Site Templates, and the HTML parser.
+
+## Parser
+
+### blockstudio/parser/renderers
+
+Filter the block renderer registry. Add custom renderers or override how blocks are parsed from HTML. See [Custom Block Renderers](/docs/pages-and-patterns#custom-block-renderers) for examples.
+
+```php
+add_filter( 'blockstudio/parser/renderers', function( $renderers, $parser ) {
+    $renderers['acf/hero'] = function( $element, $attrs, $parser ) {
+        $inner_blocks = $parser->parse_children( $element );
+
+        return array(
+            'blockName'    => 'acf/hero',
+            'attrs'        => $attrs,
+            'innerBlocks'  => $inner_blocks,
+            'innerHTML'    => '',
+            'innerContent' => array(),
+        );
+    };
+
+    return $renderers;
+}, 10, 2 );
+```
+
+### blockstudio/parser/element_mapping
+
+Override the default HTML element to block mapping. By default, standard HTML elements like `<h1>`, `<p>`, and `<img>` map to core WordPress blocks. Use this filter to point any element to a different block.
+
+```php
+add_filter( 'blockstudio/parser/element_mapping', function( $mapping ) {
+    $mapping['h1']  = 'custom/heading';
+    $mapping['h2']  = 'custom/heading';
+    $mapping['p']   = 'custom/paragraph';
+    $mapping['img'] = 'custom/image';
+
+    return $mapping;
+}, 10, 2 );
+```
+
+If `<p>` maps to a registered non-core Blockstudio block with a `content`
+richtext attribute, simple inner text is copied to that attribute. Nested block
+tags or mapped child elements keep the normal inner-block parsing behavior.
+
+## Pages
+
+### blockstudio/pages/paths
+
+Filter the directories scanned for page templates.
+
+```php
+add_filter( 'blockstudio/pages/paths', function( $paths ) {
+    $paths[] = get_template_directory() . '/custom-pages';
+    $paths[] = MY_PLUGIN_DIR . '/pages';
+    return $paths;
+} );
+```
+
+### blockstudio/pages/create_post_data
+
+Filter post data before creating a new page.
+
+```php
+add_filter( 'blockstudio/pages/create_post_data', function( $post_data, $page_data ) {
+    $post_data['post_author'] = 1;
+    return $post_data;
+}, 10, 2 );
+```
+
+### blockstudio/pages/update_post_data
+
+Filter post data before updating an existing page.
+
+```php
+add_filter( 'blockstudio/pages/update_post_data', function( $post_data, $post, $page_data ) {
+    return $post_data;
+}, 10, 3 );
+```
+
+### blockstudio/pages/synced
+
+Action fired after all pages have been synced.
+
+```php
+add_action( 'blockstudio/pages/synced', function( $registry ) {
+    // $registry is the Page_Registry instance
+} );
+```
+
+### blockstudio/pages/post_created
+
+Action fired after a page post is created.
+
+```php
+add_action( 'blockstudio/pages/post_created', function( $post_id, $page_data ) {
+    // Do something after page creation
+}, 10, 2 );
+```
+
+### blockstudio/pages/post_updated
+
+Action fired after a page post is updated.
+
+```php
+add_action( 'blockstudio/pages/post_updated', function( $post_id, $page_data ) {
+    // Do something after page update
+}, 10, 2 );
+```
+
+## Patterns
+
+### blockstudio/patterns/paths
+
+Filter the directories scanned for pattern templates.
+
+```php
+add_filter( 'blockstudio/patterns/paths', function( $paths ) {
+    $paths[] = get_stylesheet_directory() . '/custom-patterns';
+    $paths[] = MY_PLUGIN_PATH . '/patterns';
+    return $paths;
+} );
+```
+
+### blockstudio/patterns/registered
+
+Action fired after all patterns have been registered.
+
+```php
+add_action( 'blockstudio/patterns/registered', function( $registry ) {
+    // $registry is the Pattern_Registry instance
+} );
+```
+
+## Site Templates
+
+### blockstudio/site_templates/template_paths
+
+Filter the directories scanned for `template.json` files.
+
+```php
+add_filter( 'blockstudio/site_templates/template_paths', function( $paths ) {
+    $paths[] = get_stylesheet_directory() . '/site-templates';
+    return $paths;
+} );
+```
+
+### blockstudio/site_templates/part_paths
+
+Filter the directories scanned for `part.json` files.
+
+```php
+add_filter( 'blockstudio/site_templates/part_paths', function( $paths ) {
+    $paths[] = get_stylesheet_directory() . '/site-parts';
+    return $paths;
+} );
+```
+
+### blockstudio/site_templates/template_content
+
+Filter a template source string before Blockstudio parses it into blocks.
+
+```php
+add_filter( 'blockstudio/site_templates/template_content', function( $content, $template ) {
+    return $content;
+}, 10, 2 );
+```
+
+### blockstudio/site_templates/part_content
+
+Filter a template part source string before Blockstudio parses it into blocks.
+
+```php
+add_filter( 'blockstudio/site_templates/part_content', function( $content, $part ) {
+    return $content;
+}, 10, 2 );
+```
+
+### blockstudio/site_templates/registered
+
+Action fired after file-backed Site Editor templates have been discovered and
+registered for the request.
+
+```php
+add_action( 'blockstudio/site_templates/registered', function( $registry ) {
+    // $registry is the Site_Template_Registry instance
+} );
+```

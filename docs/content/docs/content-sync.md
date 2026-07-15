@@ -1,0 +1,195 @@
+---
+title: Content Sync
+description: Add database content to Blockstudio's file-first workflow by projecting allowlisted WordPress records to portable files.
+path: "content-sync"
+order: 56
+section: "Documentation"
+meta_title: "Content Sync"
+meta_description: "Add database content to Blockstudio's file-first workflow by projecting allowlisted WordPress records to portable files."
+---
+
+# Content Sync
+
+Blockstudio is built around a file-first workflow: blocks, fields, templates, assets, patterns, and file-based pages can all live in your project. Content Sync extends that model to selected WordPress database content for teams that also want curated posts, terms, relationships, and declared metadata in git.
+
+It is a WP-CLI workflow, not live database replication. On pull, Content Sync projects allowlisted posts, postmeta, terms, termmeta, and post-term relationships to portable files in your theme. On push, it applies those files to another environment, using stable UIDs and only rewriting references you explicitly declare.
+
+
+> **Note**
+>
+> Content Sync is on-demand. It does not run on every admin request. Commands return a skipped row until `content.enabled` is `true`.
+
+
+## When to Use Content Sync
+
+Use Content Sync for content sets that are important to version, review, and move between environments:
+
+- structured content such as team members, locations, case studies, products, documentation entries, or campaign pages
+- taxonomies and relationships that belong with those content sets
+- allowlisted metadata that is safe to commit and needs stable references
+- small to medium content sets where reviewing files in git is still practical
+
+As a rule of thumb, Content Sync is comfortable for dozens or hundreds of rows, and can work into the low thousands when the data is structured, low-churn, and split into focused post types. It is not meant to mirror an entire production database, high-traffic editorial content, logs, orders, analytics, form submissions, sessions, or other high-volume or high-churn data. If the generated files become noisy to review, pushes take too long to reason about, or most rows change outside your deployment workflow, use a database backup, migration, or import/export tool instead.
+
+Media binaries are not copied in 7.4. Attachment references can be recorded in a manifest and validated, but the files themselves need to exist in the target environment.
+
+## Configuration
+
+Enable Content Sync in `blockstudio.json`:
+
+```json title="blockstudio.json"
+{
+  "$schema": "https://blockstudio.dev/schema/blockstudio",
+  "content": {
+    "enabled": true,
+    "id": "default",
+    "path": "content",
+    "includePageSyncManaged": false,
+    "authors": "ignore",
+    "postTypes": ["team_member"],
+    "meta": {
+      "include": ["_my_*"],
+      "exclude": ["_edit_lock", "_edit_last", "_wp_old_slug"],
+      "references": {
+        "_thumbnail_id": { "kind": "attachment" },
+        "_related_posts": { "kind": "post", "path": "*" },
+        "_hero": { "kind": "attachment", "path": "image.id" }
+      }
+    },
+    "taxonomies": [],
+    "media": "manifest"
+  }
+}
+```
+
+`postTypes` is an allowlist. Empty means Content Sync does not touch posts. `taxonomies` is an allowlist of already registered taxonomies whose terms and post relationships should sync. Blockstudio does not register taxonomy definitions from Content Sync files. Postmeta and termmeta are allowlisted through `meta.include`; `meta.exclude` always wins.
+
+
+> **Warning**
+>
+> Treat `meta.include` as a commit boundary. Synced files are meant to live in git, so do not include keys that hold secrets, tokens, credentials, or PII. `wp bs content status` reports warning rows when an allowlisted meta key looks sensitive.
+
+
+`content.id` is stored on synced entities as `_blockstudio_content_set`. Prune and ownership checks are scoped to that value, so one content set cannot delete another set's content.
+
+Page Sync managed posts are excluded by default. If `includePageSyncManaged` is enabled, Content Sync can sync their configured meta but Page Sync still owns their `post_content`.
+
+Authors are ignored by default because users are not synced. Set `authors: "login"` to store the author's login in post files and resolve that login to an existing user on push. Missing users are a preflight error; Content Sync does not create users.
+
+## Commands
+
+```bash
+wp bs content pull [--post-type=<type>] [--taxonomy=<taxonomy>] [--dry-run]
+wp bs content push [--dry-run] [--prune] [--yes]
+wp bs content status
+```
+
+`pull` captures database content into files. It assigns `_blockstudio_content_uid` to in-scope posts that do not have one yet and reports stale files whose database source no longer exists. Stale files are not deleted by pull.
+
+`push` applies files to the current database. It validates the plan before writing and blocks unresolved declared references, slug conflicts, locked entities, and missing post types.
+
+`status` compares files with the database and reports each entity as `unchanged`, `would-update`, `missing-db`, `conflict`, `locked`, or `orphaned`. It also warns about allowlisted meta keys that look like secrets before those values are committed, and about numeric IDs inside block markup bodies because Content Sync does not rewrite IDs in `.html` files.
+
+Use `--dry-run` to inspect a pull or push without writing. Use `push --prune --yes` to remove content-set owned database entities that no longer exist in the files.
+
+## Files
+
+Content Sync writes files under the configured `content.path`:
+
+```
+content/
+  posts/
+    team_member/
+      jane.9b1c0e6e.json
+      jane.9b1c0e6e.html
+  terms/
+    category/
+      leadership.5e900000.json
+  media/
+    manifest.json
+```
+
+Post `.json` files store identity, post fields, term relationships, declared meta, and meta encoding. The sibling `.html` file stores `post_content` as raw block markup and is omitted when the content is empty. Term `.json` files store identity, taxonomy, slug, name, description, parent UID, declared termmeta, and meta encoding.
+
+```json title="content/posts/team_member/jane.9b1c0e6e.json"
+{
+  "uid": "9b1c0e6e-0000-4000-9000-000000000000",
+  "type": "team_member",
+  "status": "publish",
+  "slug": "jane",
+  "title": "Jane",
+  "parent": null,
+  "menuOrder": 0,
+  "terms": {
+    "category": ["5e900000-0000-4000-9000-000000000000"]
+  },
+  "meta": {
+    "_my_subtitle": "Creative Director",
+    "_thumbnail_id": "a1b2c3d4-0000-4000-9000-000000000000"
+  },
+  "metaEncoding": {
+    "_my_subtitle": "scalar",
+    "_thumbnail_id": "scalar"
+  }
+}
+```
+
+The stored sync state is:
+
+| Meta key | Purpose |
+| -------- | ------- |
+| `_blockstudio_content_uid` | Portable content identity |
+| `_blockstudio_content_set` | Content-set namespace from `content.id` |
+| `_blockstudio_content_source` | Theme-relative source file path |
+| `_blockstudio_content_fingerprint` | Last synced file/database fingerprint |
+| `_blockstudio_content_locked` | Truthy value prevents push from overwriting the entity |
+
+## References
+
+Content Sync never guesses that an integer is an ID. References are rewritten only when configured in `meta.references`.
+
+```json title="blockstudio.json"
+{
+  "meta": {
+    "references": {
+      "_related_posts": { "kind": "post", "path": "*" },
+      "_topic": { "kind": "term" },
+      "_hero": { "kind": "attachment", "path": "image.id" }
+    }
+  }
+}
+```
+
+On pull, local IDs at those paths become portable UIDs. On push, the UIDs are resolved back to local IDs in the current database.
+
+Post parents, term parents, and post-term relationships are structural references owned by Content Sync and are stored as UIDs automatically. Configured taxonomies are written to post files even when empty; an empty array clears that taxonomy's relationships on push.
+
+Attachment references are validated, not imported. With `media: "manifest"`, referenced attachments are listed in `content/media/manifest.json`; push requires the referenced attachment UID to exist locally. With `media: "none"`, declared attachment references are dropped.
+
+## Portability Workflow
+
+1. Register the target post type in every environment.
+2. Configure `content.postTypes`, `meta.include`, and any declared references.
+3. Run `wp bs content pull` in the source environment.
+4. Commit the generated files.
+5. Run `wp bs content push` in the target environment.
+6. Run `wp bs content status` to verify the database matches the files.
+
+Files are the source of truth for `push`. The database is captured back to files with `pull`.
+
+## Scope
+
+Content Sync in 7.4 supports:
+
+- posts from allowlisted post types
+- allowlisted postmeta
+- terms from allowlisted registered taxonomies
+- allowlisted termmeta
+- post-term relationships
+- declared `post`, `attachment`, and `term` references
+- portable post and term UIDs and content-set ownership
+- Page Sync exclusion by default
+- attachment manifest and preflight validation
+- `pull`, `push`, `status`, `--dry-run`, `--prune`, and locked-entity handling
+
+Taxonomy definition capture, media binary copying, and block-markup ID rewriting are not supported.

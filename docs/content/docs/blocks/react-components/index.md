@@ -1,0 +1,18 @@
+---
+title: General
+description: Use React-powered editor components directly in your PHP, Twig, or Blade templates.
+path: "blocks/react-components"
+order: 26
+section: "React Components"
+meta_title: "General"
+meta_description: "Use React-powered editor components directly in your PHP, Twig, or Blade templates."
+---
+
+# React Components
+
+Blockstudio provides template components that map to native WordPress editor features. In the editor, they become interactive React components. On the frontend, they render as plain HTML.
+
+- [useBlockProps](/docs/blocks/react-components/useblockprops):Mark the block wrapper element
+- [InnerBlocks](/docs/blocks/react-components/innerblocks):Allow nested blocks within your block
+- [RichText](/docs/blocks/react-components/richtext):Inline rich text editing
+- [MediaPlaceholder](/docs/blocks/react-components/mediaplaceholder):Media upload and selection

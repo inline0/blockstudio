@@ -1,0 +1,327 @@
+---
+title: Blockstudio 7.4
+description: Page collections, Markdown page sources, Content Sync, block tag prefixes, and runtime and editor fixes.
+date: 2026-06-21
+author: Dennis
+path: "blockstudio-7-4"
+order: 2
+section: "Blog"
+meta_title: "Blockstudio 7.4"
+meta_description: "Page collections, Markdown page sources, Content Sync, block tag prefixes, and runtime and editor fixes."
+---
+
+Blockstudio 7.4 is about making file-backed projects more portable. Where 7.2
+made larger projects easier to inspect and distribute and 7.3 added a UI layer
+on top, 7.4 focuses on getting more of a project, its pages and its curated
+content, out of the database and into version-controlled files.
+
+The headline feature is page collections: a way to point Blockstudio at a folder
+of page sources and generate a complete nested WordPress page structure from it.
+That source can be PHP, Twig, Blade, HTML, Markdown, or a trusted loader that
+returns pages from another local source.
+
+The short version:
+
+- **Page collections**: `pages.json` can define a complete set of nested pages,
+  defaults, post type behavior, layouts, loaders, and collection metadata.
+- **Markdown pages**: `index.md` works as page content, either with
+  `page.json` or by itself with frontmatter.
+- **Frontend page layouts**: `layout.php` can wrap synced page content and use
+  helpers such as `blockstudio_page_tree()` and `blockstudio_page_content()`.
+- **External docs sources**: collection loaders can generate pages from local
+  files or returned Markdown/HTML.
+- **Raw Markdown output**: Markdown page sources can be served as `.md` or via
+  `Accept: text/markdown`.
+- **Collection custom post types**: collections can own clean URLs, automatic
+  rewrite flushing, raw Markdown routes, and page-to-CPT migrations without
+  theme-side shims.
+- **Content Sync**: `wp bs content pull`, `wp bs content push`, and
+  `wp bs content status` project allowlisted posts, terms, relationships, and
+  declared meta references to portable files.
+- **Block tag prefixes**: project prefixes such as `<dv-card>` can resolve
+  across ordered namespaces without per-block aliases.
+- **More reliable syncing**: page changes are detected across manifests,
+  loaders, layouts, metadata, and source files.
+- **Runtime and editor fixes**: dynamic options stay fresh, query block
+  classes survive programmatic rendering, `bsui/select` behaves better in dense
+  forms, RichText props reach the editor, and repeater row deletion with
+  RichText now persists after saving.
+
+## Page collections
+
+Before 7.4, file-based pages were mostly a folder-level feature: create a
+`page.json`, add an `index.php` or `index.twig`, and Blockstudio syncs that
+single page into WordPress.
+
+That still works. 7.4 adds a second mode for larger structures.
+
+Add a `pages.json` manifest to a folder and that folder becomes a collection:
+
+```txt
+pages/
+  docs/
+    pages.json
+    layout.php
+    index.md
+    guide/
+      install/
+        index.md
+    reference/
+      page.json
+      index.md
+```
+
+```json title="pages/docs/pages.json"
+{
+  "collection": "docs",
+  "title": "Documentation",
+  "postType": "bs_docs",
+  "postTypeArgs": {
+    "label": "Docs",
+    "rewrite": {
+      "slug": "docs"
+    },
+    "supports": ["title", "editor", "page-attributes"]
+  },
+  "defaults": {
+    "postStatus": "publish",
+    "templateLock": "contentOnly"
+  }
+}
+```
+
+Every page source inside the collection is discovered, normalized, synced, and
+linked by path. A page at `guide/install` becomes a child of `guide`; if the
+`guide` page is missing, Blockstudio creates a generated container page so the
+WordPress hierarchy still matches the filesystem structure.
+
+Collections can use the native `page` post type or their own post type. When a
+collection declares a post type that does not exist yet, Blockstudio registers
+it from `postTypeArgs`. The manifest `postType` also becomes the default for
+every page in that collection, so projects do not need to repeat it in
+`defaults`.
+
+Collection post types use the collection slug as their public URL base. A
+`docs` collection resolves its root page at `/docs/`, a page with
+`path: "getting-started"` at `/docs/getting-started/`, and nested paths under
+the same base. Doubled URLs such as `/docs/docs/` redirect to the
+canonical location. Rewrite rules are flushed automatically when collection post
+type routing changes, so a new collection does not require a manual permalink
+save.
+
+This is the piece that makes external docs, product manuals, knowledge bases,
+and page libraries feel natural in WordPress: the source stays in files, but
+the result is still real editable WordPress content.
+
+## Markdown as page content
+
+Markdown is now a first-class page source.
+
+Standalone Markdown pages use frontmatter:
+
+```md title="pages/about/index.md"
+---
+name: about
+title: About
+slug: about
+postStatus: publish
+---
+
+# About
+
+This Markdown content is synced as native WordPress blocks.
+```
+
+You can also pair `page.json` with `index.md` when you want configuration and
+content split across files. Frontmatter in `index.md` can override matching
+`page.json` fields and unknown frontmatter keys are preserved as metadata.
+
+Markdown is converted to HTML and then passed through the same page parser as
+PHP, Twig, and Blade templates, so the final content is native block markup.
+
+## Layouts and page helpers
+
+Collections can ship a `layout.php` file. On the frontend, Blockstudio wraps
+the synced page content with that layout.
+
+```php title="pages/docs/layout.php"
+<main class="docs-layout">
+  <aside>
+    <?php foreach (blockstudio_page_tree('docs') as $item) : ?>
+      <a href="<?php echo esc_url($item['permalink'] ?? '#'); ?>">
+        <?php echo esc_html($item['title']); ?>
+      </a>
+    <?php endforeach; ?>
+  </aside>
+
+  <article>
+    <?php echo blockstudio_page_content(); ?>
+  </article>
+</main>
+```
+
+The new helpers expose the collection as structured data:
+
+```php
+blockstudio_pages('docs');
+blockstudio_page_tree('docs');
+blockstudio_page_children('docs-guide', 'docs');
+blockstudio_page_collection('docs');
+blockstudio_page_content();
+blockstudio_current_page();
+```
+
+That gives you the pieces needed to build a full documentation shell:
+navigation from the page tree, page metadata from frontmatter, and the synced
+WordPress block content as the main outlet.
+
+## Loaders and raw Markdown
+
+Collections can include a trusted local `loader.php` file. It can return pages
+directly, or point Blockstudio at additional local directories to discover.
+
+```php title="pages/docs/loader.php"
+<?php
+
+return [
+  'pages' => [
+    [
+      'name' => 'docs-api',
+      'title' => 'API',
+      'path' => 'api',
+      'content' => "# API\n\nGenerated markdown content.",
+      'contentType' => 'markdown',
+    ],
+  ],
+];
+```
+
+This is useful when the source is already generated elsewhere: a package docs
+folder, a Markdown export, or a build step that returns a list of pages.
+
+Markdown page sources can also serve their raw Markdown source. Request the
+page with a `.md` suffix, or send `Accept: text/markdown`. Frontmatter is
+removed from the response, so tools get the readable document body. This works
+for collection post types too, including URLs such as `/docs.md` and
+`/docs/getting-started.md`.
+
+[Read the Pages docs](/docs/pages-and-patterns/pages)
+
+## Content Sync
+
+7.4 also introduces Content Sync, a WP-CLI workflow for teams that want more of
+their WordPress project represented as files.
+
+```bash
+wp bs content pull
+wp bs content push --dry-run
+wp bs content status
+```
+
+Blockstudio already keeps blocks, fields, templates, patterns, and file-based
+pages in your project. Content Sync adds selected database content to that
+file-first workflow: allowlisted posts, terms, relationships, and declared meta
+can be pulled into files, reviewed in git, and pushed into another environment.
+
+It is intentionally explicit. You enable it in `blockstudio.json`, allowlist the
+post types and taxonomies you want to manage, and declare the meta references
+that should be rewritten between environments.
+
+On pull, Blockstudio writes portable posts, terms, relationships, and
+allowlisted meta into files in your theme. On push, it validates the plan before
+writing and resolves declared `post`, `term`, and `attachment` references back
+to local database IDs. It does not guess that arbitrary integers are IDs.
+
+The 7.4 scope is conservative by design: posts, terms, term relationships,
+allowlisted meta, portable UIDs, attachment manifests, dry runs, prune handling,
+locked entities, and status reporting. Taxonomy definition capture, media binary
+copying, and block-markup ID rewriting are intentionally left out of this first
+version.
+
+That gives teams a clean way to version curated content such as team members,
+case studies, locations, documentation entries, or other structured records
+without turning the whole production database into a migration. It is meant for
+content sets you can still review as files: dozens or hundreds of rows, and in
+some projects low thousands when the content is structured and low-churn. It is
+not a replacement for database backups, ecommerce/order sync, analytics, logs,
+form submissions, or other high-volume data.
+
+[Read the Content Sync docs](/docs/content-sync)
+
+## More reliable syncing
+
+Blockstudio now detects changes across page sources, collection manifests,
+loader files, layout files, metadata, and related paths. If any of those
+change, the synced WordPress page is updated.
+
+The page pipeline also handles the details that make file-backed docs practical
+in real projects:
+
+- Markdown page sources sync as native block content, including block attributes
+- frontmatter metadata is available to frontend helpers and layouts
+- collection pages keep stable identity across syncs
+- nested non-collection pages link to their parent page
+- non-collection nested pages can inherit the nearest ancestor `layout.php`
+- removed collection sources clean up their generated WordPress pages
+- changing a collection from `page` to a custom post type migrates existing
+  synced posts instead of creating duplicates
+- page order is persisted through `menu_order`
+
+## Block tag prefixes
+
+Block tags now support configurable namespace prefixes. A project can register
+one short prefix and let Blockstudio resolve the block inside one or more
+namespaces:
+
+```php
+add_filter('blockstudio/block_tags/prefixes', function ($prefixes) {
+  $prefixes['dv'] = ['divine-homepage', 'bsui'];
+
+  return $prefixes;
+});
+```
+
+With that in place, `<dv-card>` can resolve to `divine-homepage/card`,
+`<dv-button>` can fall back to `bsui/button`, and
+`<dv-onumia-feature-matrix>` can resolve to
+`divine-homepage/onumia-feature-matrix`.
+
+Explicit `tag_aliases` still win when a project needs a one-off override.
+Unknown prefix tags are left untouched, and the existing block tag allow/deny
+filters still apply to prefix-resolved blocks.
+
+[Read the Block Tags docs](/docs/blocks/rendering#prefix-shorthands)
+
+## Runtime and editor fixes
+
+7.4 also includes a set of fixes that came out of real project usage.
+
+- Dynamic query-populated options stay fresh when posts, terms, users, or
+  related meta change, and `populate.fetch: true` query selects fetch live
+  options for empty editor searches.
+- Programmatic `core/query` and `core/comments` block tags preserve `className`
+  in the generated wrapper markup.
+- Template pseudo-components preserve camelCase props, so props such as
+  `allowedFormats` and `withoutInteractiveFormatting` reach the editor component
+  instead of being dropped beforehand.
+- `bsui/select` handles option data and overflowing menus more reliably,
+  especially inside denser editor controls.
+- `blockstudio/phpstan` recognizes fields declared inside `tabs` containers, so
+  template, Twig/Blade, and block tag validation understand the same field shape
+  Blockstudio uses in projects.
+- Deleting a repeater row with RichText persists after saving. Stale RichText
+  values can no longer bring the deleted row back.
+
+## Why this release matters
+
+The theme of 7.4 is portability.
+
+Page collections turn whole documentation sites into folders of source files.
+Markdown pages make that content easy to write and easy to read back out.
+Content Sync extends the same file-first model to curated database content, so
+posts, terms, and relationships can live in git and move between environments.
+Block tag prefixes keep large block libraries readable in templates.
+
+Blockstudio is still file-based. Blocks are still folders. Pages are still
+files. 7.4 just lets more of a project, its page structures and its curated
+content, live in those files and travel with them.

@@ -176,11 +176,9 @@ Your block is now ready to use in the WordPress editor. Continue exploring the d
 - Tailwind Integration - Using Tailwind CSS
 - Hooks - Extending functionality with filters and actions
 
-<GuideBanner
-  href="/guides/block-library"
-  title="Building a Block Library"
-  description="Go from a single block to a full library: design tokens, the section pattern, repeaters, images, and page composition."
-/>
+> Building a Block Library
+>
+> Go from a single block to a full library: design tokens, the section pattern, repeaters, images, and page composition.
 
 ### Settings
 
@@ -468,11 +466,9 @@ Use `blockEditor.media` for global media inserter policy.
 }
 ```
 
-<GuideBanner
-  href="/docs/blocks/ui-components"
-  title="UI Components"
-  description="Enable and compose the bundled headless UI components introduced in Blockstudio 7.3."
-/>
+> UI Components
+>
+> Enable and compose the bundled headless UI components introduced in Blockstudio 7.3.
 
 ### Registration
 
@@ -886,8 +882,10 @@ Inside block CSS and SCSS files, `%selector%` expands to the block's scoped wrap
 | `.editor.js`     | Enqueues as a `<script>` tag in the editor only                                       |
 | `.view.js`       | Enqueues as a `<script>` tag on the frontend only                                     |
 
-  The dash notation (`-inline.css`, `*-editor.css`, etc.) is still supported
-  for backward compatibility but is deprecated. Use dot notation for new blocks.
+> Note
+>
+> The dash notation (`-inline.css`, `*-editor.css`, etc.) is still supported
+> for backward compatibility but is deprecated. Use dot notation for new blocks.
 
 ## Inline
 
@@ -974,12 +972,14 @@ Block editor assets are enqueued only in the block editor. The `block-editor-` p
 - `block-editor-styles.(s)css`
 - `block-editor-scripts.js`
 
-  If WordPress disables the editor iframe because a client-side block is
-  registered with `apiVersion` lower than 3, the editor canvas and WordPress
-  admin chrome share the same document. Global or editor scripts that bind to
-  `window`, `document`, `body`, wheel events, or document scrolling should guard
-  against `body.block-editor-page` or exclude WordPress editor regions such as
-  `.interface-complementary-area` and `.interface-navigable-region`.
+> Note
+>
+> If WordPress disables the editor iframe because a client-side block is
+> registered with `apiVersion` lower than 3, the editor canvas and WordPress
+> admin chrome share the same document. Global or editor scripts that bind to
+> `window`, `document`, `body`, wheel events, or document scrolling should guard
+> against `body.block-editor-page` or exclude WordPress editor regions such as
+> `.interface-complementary-area` and `.interface-navigable-region`.
 
 ## Disable Enqueuing
 
@@ -996,6 +996,8 @@ add_filter('blockstudio/settings', function($settings) {
 
 When a block templates returns nothing, Blockstudio will not enqueue any assets for that particular block. This method comes in handy to disable enqueueing when a certain condition is met.
 
+#### PHP
+
 ```php
 <?php
   if ( !$a['slides'] ) {
@@ -1006,6 +1008,8 @@ When a block templates returns nothing, Blockstudio will not enqueue any assets 
 
 <div>my slider</div>
 ```
+
+#### Twig
 
 ```twig
 {% if not a.slides %}
@@ -1093,7 +1097,9 @@ Block assets will be recompiled when any of the imported files change.
 
 All scripts (inline and default) in Blockstudio load with `type="module"` applied to them by default. This means that it is possible to make use of the import syntax for your blocks' scripts without any additional setup.
 
-For a more in-depth look into ES modules, visit the MDN web docs.
+> Note
+>
+> For a more in-depth look into ES modules, visit the MDN web docs.
 
 Let's imagine the following code inside a script.js:
 
@@ -1131,7 +1137,9 @@ import confetti from "npm:canvas-confetti@1.6.0";
 
 This syntax aligns with Deno's npm specifier convention.
 
-The legacy `blockstudio/` prefix (e.g., `blockstudio/preact@10.15.1`) is still supported for backward compatibility, but we recommend using the `npm:` prefix for new projects. See the migration guide for details.
+> Note
+>
+> The legacy `blockstudio/` prefix (e.g., `blockstudio/preact@10.15.1`) is still supported for backward compatibility, but we recommend using the `npm:` prefix for new projects. See the migration guide for details.
 
 Blockstudio will automatically check changed .js files for imports and download them to the local block directory. The downloaded files will be placed in a `modules` folder in the block directory.
 
@@ -1175,12 +1183,16 @@ Beside static styles and scripts as files, Blockstudio also supports dynamic ass
 
 At the most basic level, you can manually render the code field content in your template.
 
+#### PHP
+
 ```php
 <div useBlockProps>
   <h1>My block</h1>
 </div>
 <style><?php echo $attributes['css']; ?></style>
 ```
+
+#### Twig
 
 ```twig
 <div useBlockProps>
@@ -1435,10 +1447,7 @@ Or in Twig:
 <p>{{ a.content }}</p>
 ```
 
-<GuideBanner
-  href="/guides/field-patterns"
-  title="Field Patterns Cookbook"
-/>
+> Field Patterns Cookbook
 
 #### Expanded Editor
 
@@ -1482,10 +1491,14 @@ edit.
 
 Inside template files, all attributes can be accessed using the `$attributes` or `$a` variables and the respective ID of the field.
 
+#### PHP
+
 ```php
 <h1><?php echo $attributes['message']; ?></h1>
 <h1><?php echo $a['message']; ?></h1>
 ```
+
+#### Twig
 
 ```twig
 <h1>{{ attributes.message }}</h1>
@@ -1496,11 +1509,15 @@ Inside template files, all attributes can be accessed using the `$attributes` or
 
 Attribute values return `false` if the field is empty or no option has been selected.
 
+#### PHP
+
 ```php
 <?php if ($a['message']) : ?>
   <h1><?php echo $a['message']; ?></h1>
 <?php endif; ?>
 ```
+
+#### Twig
 
 ```twig
 {% if a.message %}
@@ -1514,6 +1531,8 @@ Attribute values return `false` if the field is empty or no option has been sele
 
 The files field returns an array with file data:
 
+#### PHP
+
 ```php
 <?php if ($a['image']) : ?>
   <img
@@ -1524,6 +1543,8 @@ The files field returns an array with file data:
   />
 <?php endif; ?>
 ```
+
+#### Twig
 
 ```twig
 {% if a.image %}
@@ -1540,6 +1561,8 @@ The files field returns an array with file data:
 
 The link field returns an object with URL and attributes:
 
+#### PHP
+
 ```php
 <?php if ($a['link']) : ?>
   <a
@@ -1550,6 +1573,8 @@ The link field returns an object with URL and attributes:
   </a>
 <?php endif; ?>
 ```
+
+#### Twig
 
 ```twig
 {% if a.link %}
@@ -1563,6 +1588,8 @@ The link field returns an object with URL and attributes:
 
 The icon field returns an object with `set`, `subSet`, and `icon` keys. Use the `bs_render_icon()` and `bs_icon()` helper functions to output the SVG:
 
+#### PHP
+
 ```php
 <?php if ($a['icon']) : ?>
   <div class="icon">
@@ -1570,6 +1597,8 @@ The icon field returns an object with `set`, `subSet`, and `icon` keys. Use the 
   </div>
 <?php endif; ?>
 ```
+
+#### Twig
 
 ```twig
 {% if a.icon %}
@@ -1585,11 +1614,15 @@ The icon field returns an object with `set`, `subSet`, and `icon` keys. Use the 
 
 The attributes field type returns an array of `{attribute, value}` pairs for rendering as HTML attributes. Use `bs_render_data_attributes()` to output them:
 
+#### PHP
+
 ```php
 <div <?php bs_render_data_attributes($a['attributes']); ?>>
   Content
 </div>
 ```
+
+#### Twig
 
 ```twig
 <div {{ fn('bs_render_data_attributes', a.attributes) }}>
@@ -1603,11 +1636,15 @@ The attributes field type returns an array of `{attribute, value}` pairs for ren
 
 Group fields prefix their child attribute IDs with the group name. Use `bs_get_group()` to extract group fields into a clean array:
 
+#### PHP
+
 ```php
 <?php $group = bs_get_group($a, 'settings'); ?>
 <h1><?php echo $group['title']; ?></h1>
 <p><?php echo $group['description']; ?></p>
 ```
+
+#### Twig
 
 ```twig
 {% set group = fn('bs_get_group', a, 'settings') %}
@@ -1655,6 +1692,8 @@ The helper also works when the group comes from a reused custom field:
 
 Loop through repeater items:
 
+#### PHP
+
 ```php
 <?php foreach ($a['items'] as $item) : ?>
   <div class="item">
@@ -1663,6 +1702,8 @@ Loop through repeater items:
   </div>
 <?php endforeach; ?>
 ```
+
+#### Twig
 
 ```twig
 {% for item in a.items %}
@@ -1673,10 +1714,7 @@ Loop through repeater items:
 {% endfor %}
 ```
 
-<GuideBanner
-  href="/guides/field-patterns"
-  title="Field Patterns Cookbook"
-/>
+> Field Patterns Cookbook
 
 #### Filtering Attributes
 
@@ -1766,6 +1804,8 @@ The same principle works for individual items in the files attribute type. You c
 
 In your templates, you can check if an attribute is disabled:
 
+#### PHP
+
 ```php
 <?php if (!empty($a['_disabled']) && in_array('title', $a['_disabled'])) : ?>
   <!-- Title is disabled -->
@@ -1773,6 +1813,8 @@ In your templates, you can check if an attribute is disabled:
   <h1><?php echo $a['title']; ?></h1>
 <?php endif; ?>
 ```
+
+#### Twig
 
 ```twig
 {% if '_disabled' in a|keys and 'title' in a._disabled %}
@@ -2041,10 +2083,7 @@ To check against the toggle outside the repeater, add `"context": "main"` to the
 }
 ```
 
-<GuideBanner
-  href="/guides/field-patterns"
-  title="Field Patterns Cookbook"
-/>
+> Field Patterns Cookbook
 
 #### Populating Options
 
@@ -2288,7 +2327,9 @@ Combine static options with populated data:
 
 The `position` option (`before` or `after`) controls where populated options appear relative to static options.
 
-Mixing options and populate data is not supported when using fetch mode.
+> Warning
+>
+> Mixing options and populate data is not supported when using fetch mode.
 
 ## Custom Data
 
@@ -2404,10 +2445,14 @@ The `$attributes` or `$a` variables only give you access to data registered in t
 
 ## Rendering
 
+#### PHP
+
 ```php
 <h1>The block is aligned: <?php echo $block['align']; ?></h1>
 <h1>The block is aligned: <?php echo $b['align']; ?></h1>
 ```
+
+#### Twig
 
 ```twig
 <h1>The block is aligned: {{ block.align }}</h1>
@@ -2672,17 +2717,23 @@ Custom field type values are stored directly. They do not pass through native
 
 Object values are available like any other Blockstudio attribute.
 
+#### PHP
+
 ```php
 <div class="<?php echo esc_attr('mt-' . ($a['margin']['top'] ?? '')); ?>">
   <?php echo esc_html($a['title'] ?? ''); ?>
 </div>
 ```
 
+#### Twig
+
 ```twig
 <div class="mt-{{ a.margin.top }}">
   {{ a.title }}
 </div>
 ```
+
+#### Blade
 
 ```blade
 <div class="mt-{{ $a['margin']['top'] ?? '' }}">
@@ -3101,11 +3152,15 @@ Let's imagine a block with the following attributes:
 
 The `bs_render_attributes` function renders attributes as data attributes:
 
+#### PHP
+
 ```php
 <h1 <?php bs_render_attributes($a); ?>>
   <?php echo $a['message']; ?>
 </h1>
 ```
+
+#### Twig
 
 ```twig
 <h1 {{ fn('bs_render_attributes', a) }}>
@@ -3125,11 +3180,15 @@ Output:
 
 Pass a second parameter to specify which attributes to render:
 
+#### PHP
+
 ```php
 <h1 <?php bs_render_attributes($a, ['color']); ?>>
   <?php echo $a['message']; ?>
 </h1>
 ```
+
+#### Twig
 
 ```twig
 <h1 {{ fn('bs_render_attributes', a, ['color']) }}>
@@ -3157,11 +3216,15 @@ Use `bs_attributes` to get the string without echoing:
 
 The `bs_render_variables` function renders attributes as CSS variables:
 
+#### PHP
+
 ```php
 <h1 style="<?php bs_render_variables($a); ?>">
   <?php echo $a['message']; ?>
 </h1>
 ```
+
+#### Twig
 
 ```twig
 <h1 style="{{ fn('bs_render_variables', a) }}">
@@ -3508,9 +3571,13 @@ as you want or just use it by itself.
 The `allowedBlocks` prop allows you to define which blocks can be inserted into
 the `InnerBlocks` component.
 
+#### PHP
+
 ```php
 <InnerBlocks allowedBlocks="<?php echo esc_attr(wp_json_encode(['core/heading', 'core/paragraph'])); ?>" />
 ```
+
+#### Twig
 
 ```twig
 <InnerBlocks allowedBlocks="{{ ['core/heading', 'core/paragraph']|json_encode|escape('html_attr') }}" />
@@ -3552,12 +3619,16 @@ change this by using the `tag` prop.
 The `template` prop allows you to define a template for the `InnerBlocks`
 component.
 
+#### PHP
+
 ```php
 <InnerBlocks template="<?php echo esc_attr(wp_json_encode([
   ['core/heading', ['placeholder' => 'Book Title']],
   ['core/paragraph', ['placeholder' => 'Summary']]
 ])); ?>" />
 ```
+
+#### Twig
 
 ```twig
 <InnerBlocks template="{{ [
@@ -3649,6 +3720,8 @@ The `$context` and `$c` variables are available inside your block templates to
 access all parent attributes. Child blocks will automatically reload in the
 editor if parent data changes.
 
+#### PHP
+
 ```php
 <?php $container = $context['blockstudio/container']; ?>
 
@@ -3658,6 +3731,8 @@ editor if parent data changes.
       : 'no full width'; ?>
 </h1>
 ```
+
+#### Twig
 
 ```twig
 {% set container = context['blockstudio/container'] %}
@@ -3781,11 +3856,9 @@ To do so, simply add an `innerBlocks` key to the options array with the template
 }
 ```
 
-<GuideBanner
-  href="/guides/block-context"
-  title="Block Context and Communication"
-  description="Learn how parent and child blocks share data using context."
-/>
+> Block Context and Communication
+>
+> Learn how parent and child blocks share data using context.
 
 #### RichText
 
@@ -3826,9 +3899,13 @@ You can use an unlimited number of RichText components in your block.
 
 You can limit the formats that can be used in the RichText component by using the `allowedFormats` prop.
 
+#### PHP
+
 ```php
 <RichText attribute="myRichText" allowedFormats="<?php echo esc_attr(wp_json_encode(['core/bold', 'core/italic'])); ?>" />
 ```
+
+#### Twig
 
 ```twig
 <RichText attribute="myRichText" allowedFormats="{{ ['core/bold', 'core/italic']|json_encode|escape('html_attr') }}" />
@@ -3930,12 +4007,16 @@ To use `MediaPlaceholder` in its most basic form, you need to add the appropriat
 }
 ```
 
+#### PHP
+
 ```php
 <MediaPlaceholder attribute="media" />
 <?php foreach ($a['media'] as $file) {
   echo wp_get_attachment_image($file['ID']);
 } ?>
 ```
+
+#### Twig
 
 ```twig
 <MediaPlaceholder attribute="media" />
@@ -3956,9 +4037,13 @@ A string passed to FormFileUpload that tells the browser which file types can be
 
 Array with the types of the media to upload/select from the media library. Each type is a string that can contain the general mime type e.g.: image, audio, text, or the complete mime type e.g.: `audio/mpeg`, `image/gif`. If allowedTypes is unset, all mime types should be allowed.
 
+#### PHP
+
 ```php
 <MediaPlaceholder allowedTypes="<?php echo esc_attr(wp_json_encode(['image', 'video'])); ?>" />
 ```
+
+#### Twig
 
 ```twig
 <MediaPlaceholder allowedTypes="{{ ['image', 'video']|json_encode|escape('html_attr') }}" />
@@ -3992,9 +4077,13 @@ If true, only the Drop Zone will be rendered. No UI controls to upload the media
 
 An object that can contain a title and instructions properties.
 
+#### PHP
+
 ```php
 <MediaPlaceholder labels="<?php echo esc_attr(wp_json_encode(['title' => 'Custom title', 'instructions' => 'Custom instructions'])); ?>" />
 ```
+
+#### Twig
 
 ```twig
 <MediaPlaceholder labels="{{ {title: 'Custom title', instructions: 'Custom instructions'}|json_encode|escape('html_attr') }}" />
@@ -4117,9 +4206,11 @@ Since components never appear in the editor:
 
 Blockstudio 7.3 includes a bundled set of headless UI blocks powered by the WordPress Interactivity API. They are registered under the `bsui/` namespace and can be composed in templates, file-based pages, patterns, and post content.
 
-  UI components are in beta while we gather feedback on the component set,
-  naming, behavior, and project usage patterns. They are ready to try in 7.3,
-  but the API surface may still be refined before it is marked stable.
+> Note
+>
+> UI components are in beta while we gather feedback on the component set,
+> naming, behavior, and project usage patterns. They are ready to try in 7.3,
+> but the API surface may still be refined before it is marked stable.
 
 ## Enable UI Components
 
@@ -4360,6 +4451,8 @@ Sometimes it is necessary to show content in your blocks exclusively when it is 
 
 ## Editor
 
+#### PHP
+
 ```php
 <?php if ($isEditor) : ?>
   This content is only going to be rendered inside the editor.
@@ -4367,6 +4460,8 @@ Sometimes it is necessary to show content in your blocks exclusively when it is 
   This content is only going to be rendered on the frontend.
 <?php endif; ?>
 ```
+
+#### Twig
 
 ```twig
 {% if isEditor %}
@@ -4380,6 +4475,8 @@ Sometimes it is necessary to show content in your blocks exclusively when it is 
 
 Blockstudio adds another environment variable that will come in handy for block developers. `$isPreview` allows you to conditionally render content inside the block preview window when hovering over a block inside the block inserter.
 
+#### PHP
+
 ```php
 <?php if ($isPreview) : ?>
   This content is only going to be rendered inside the block preview.
@@ -4387,6 +4484,8 @@ Blockstudio adds another environment variable that will come in handy for block 
   This content is only going to be rendered on the frontend and editor.
 <?php endif; ?>
 ```
+
+#### Twig
 
 ```twig
 {% if isPreview %}
@@ -4399,6 +4498,8 @@ Blockstudio adds another environment variable that will come in handy for block 
 ### Context
 
 When blocks are used inside a loop (for example, a Query block), the block is executed once for each iteration of the loop. Blockstudio provides handy shortcuts for accessing the current loop and outer context.
+
+#### PHP
 
 ```php
 <div>
@@ -4415,6 +4516,8 @@ When blocks are used inside a loop (for example, a Query block), the block is ex
   </h1>
 </div>
 ```
+
+#### Twig
 
 ```twig
 <div>
@@ -4472,11 +4575,9 @@ Blockstudio handles `providesContext` automatically. You only need to add `usesC
 
 See InnerBlocks Context for more details.
 
-<GuideBanner
-  href="/guides/block-context"
-  title="Block Context and Communication"
-  description="Practical patterns: card grids, pricing tables, and section wrappers where blocks need to share data."
-/>
+> Block Context and Communication
+>
+> Practical patterns: card grids, pricing tables, and section wrappers where blocks need to share data.
 
 ### Preview
 
@@ -4514,9 +4615,13 @@ It is also possible to provide structured data in the `example` key, so any cust
 }
 ```
 
+#### PHP
+
 ```php
 <h1><?php echo $a['title']; ?></h1>
 ```
+
+#### Twig
 
 ```twig
 <h1>{{ a.title }}</h1>
@@ -4553,12 +4658,16 @@ Since block templates are just normal PHP files, you can use any PHP code you wa
 
 Blockstudio provides four different ways to access the current post ID in the editor and the frontend.
 
+#### PHP
+
 ```php
 echo $post_id;
 echo $postId;
 echo $block['postId'];
 echo $b['postId'];
 ```
+
+#### Twig
 
 ```twig
 {{ post_id }}
@@ -4573,9 +4682,13 @@ All common custom field plugins and WordPress itself provide the possibility to 
 
 ### ACF
 
+#### PHP
+
 ```php
 echo get_field('field_name', $post_id);
 ```
+
+#### Twig
 
 ```twig
 {{ fn('get_field', 'field_name', postId) }}
@@ -4583,9 +4696,13 @@ echo get_field('field_name', $post_id);
 
 ### Metabox
 
+#### PHP
+
 ```php
 echo rwmb_get_value('field_id', null, $post_id);
 ```
+
+#### Twig
 
 ```twig
 {{ fn('rwmb_get_value', 'field_id', postId) }}
@@ -4630,7 +4747,9 @@ Block attributes are stored inside HTML comments in the post content, which mean
 | `postMeta` | `wp_postmeta` table | Per post | Queryable post-specific data |
 | `option` | `wp_options` table | Global (site-wide) | Site settings, shared values |
 
-Block attribute storage (in the post content HTML comment) always happens automatically. The `storage` property adds additional storage locations - it doesn't replace block storage.
+> Note
+>
+> Block attribute storage (in the post content HTML comment) always happens automatically. The `storage` property adds additional storage locations - it doesn't replace block storage.
 
 ## Configuration
 
@@ -4684,7 +4803,9 @@ Add the `storage` property to any field definition:
 2. Editing: Values are managed as block attributes in the editor (always stored in block)
 3. Saving: When the post is saved, values are synced to configured storage locations
 
-Values are synced on every post save. If you update a value in the block editor and save, all storage locations are updated automatically.
+> Note
+>
+> Values are synced on every post save. If you update a value in the block editor and save, all storage locations are updated automatically.
 
 ## Accessing Stored Values
 
@@ -4692,11 +4813,15 @@ Values are synced on every post save. If you update a value in the block editor 
 
 Inside your block template, field values are always available via `$attributes`:
 
+#### PHP
+
 ```php
 <div>
   <h1><?php echo $a['subtitle']; ?></h1>
 </div>
 ```
+
+#### Twig
 
 ```twig
 <div>
@@ -4708,6 +4833,8 @@ Inside your block template, field values are always available via `$attributes`:
 
 Values stored in `postMeta` can be accessed anywhere in WordPress:
 
+#### PHP
+
 ```php
 // Get meta value
 $subtitle = get_post_meta( $post_id, 'my_subtitle', true );
@@ -4718,6 +4845,8 @@ $posts = get_posts([
   'meta_value' => 'Hello World',
 ]);
 ```
+
+#### Twig
 
 ```twig
 {# Using Timber #}
@@ -4738,9 +4867,13 @@ GET /wp-json/wp/v2/posts/123
 
 Values stored in `option` are accessible site-wide:
 
+#### PHP
+
 ```php
 $company_name = get_option( 'site_company_name' );
 ```
+
+#### Twig
 
 ```twig
 {{ function('get_option', 'site_company_name') }}
@@ -4884,7 +5017,9 @@ When you don't specify a custom key, Blockstudio generates one automatically:
 
 The block name is sanitized (slashes replaced with underscores).
 
-Custom keys are recommended for production use. Default keys may change if you rename your block.
+> Warning
+>
+> Custom keys are recommended for production use. Default keys may change if you rename your block.
 
 ### Overrides
 
@@ -4936,7 +5071,9 @@ Attributes can either be overridden by `id` or added additionally. For example, 
 
 When an attribute with the same `id` is found, the data will be merged with the original attribute. Attributes which are not found will be added to the block.
 
-When overriding attributes, you have to provide the `type` of the original attribute, even if it stays the same.
+> Warning
+>
+> When overriding attributes, you have to provide the `type` of the original attribute, even if it stays the same.
 
 ### Complex Structures
 
@@ -5240,8 +5377,10 @@ in pages, patterns, and Site Templates produce native blocks.
 ### In block templates
 
 Block tags render automatically inside Twig and PHP templates. No setting
-needed. The output is rendered HTML embedded directly into the block's
-template output:
+needed. This includes the `<bs:>` and `<block>` syntaxes as well as any
+registered prefix and alias tags, so a template can emit
+them directly instead of calling `bs_render_block()`. The output is rendered
+HTML embedded directly into the block's template output:
 
 ```twig
 <div class="my-page">
@@ -5249,6 +5388,7 @@ template output:
   <block name="core/separator" />
   <bs:core-paragraph>Rendered by WordPress</bs:core-paragraph>
   <block name="core/heading" level="2">Also WordPress</block>
+  <dv-card title="Prefix shorthand" />
 </div>
 ```
 
@@ -5322,6 +5462,27 @@ add_filter('blockstudio/block_tags/prefixes', function($prefixes) {
 ```
 
 With the example above, `<dv-card>` resolves to `divine-homepage/card`, `<dv-button>` falls back to `bsui/button` when `divine-homepage/button` is not registered, and `<dv-onumia-feature-matrix>` resolves to `divine-homepage/onumia-feature-matrix`.
+
+Prefixes can also compose. When a prefixed tag does not resolve directly and the
+remaining slug is itself a registered prefix tag, resolution recurses, so a
+brand prefix can sit on top of a namespace prefix:
+
+```php
+add_filter('blockstudio/block_tags/prefixes', function($prefixes) {
+  $prefixes['dv'] = ['divine-homepage'];
+  $prefixes['ui'] = ['bsui'];
+
+  return $prefixes;
+});
+```
+
+```html
+<dv-ui-input />
+```
+
+`<dv-ui-input>` has no `divine-homepage/ui-input` block, so it falls through to
+the `ui` prefix and resolves `bsui/input`. Direct matches always win over nested
+resolution, and allow/deny rules apply to the final resolved block.
 
 You can also configure prefixes in `blockstudio.json`:
 
@@ -5919,11 +6080,9 @@ store('myBlock', {
 
 The Interactivity API is loaded inside the block editor iframe, so interactive directives work in editor previews. This includes `data-wp-context`, `data-wp-bind--`, `data-wp-on--*`, `data-wp-text`, and custom store actions defined in `script.js`.
 
-<GuideBanner
-  href="/guides/interactive-components"
-  title="Building Interactive Components"
-  description="Complete examples with accordions, tabs, modals, and like buttons."
-/>
+> Building Interactive Components
+>
+> Complete examples with accordions, tabs, modals, and like buttons.
 
 ### SEO
 
@@ -5931,7 +6090,9 @@ Blockstudio blocks are dynamic. The `save` function stores attribute data but no
 
 Blockstudio automatically detects supported SEO plugins and injects field content into their analysis pipeline. No configuration is needed.
 
-  Frontend SEO is unaffected. Dynamic blocks render via `render_callback`, so search engine crawlers and server-side meta generation always see the full content.
+> Note
+>
+> Frontend SEO is unaffected. Dynamic blocks render via `render_callback`, so search engine crawlers and server-side meta generation always see the full content.
 
 ## Supported Plugins
 
@@ -8016,6 +8177,12 @@ add_filter('blockstudio/block_tags/prefixes', function($prefixes) {
 `blockstudio/block_tags/tag_aliases` entries take precedence for the same tag,
 and unresolved prefixed tags are left unchanged.
 
+Prefixes compose: if a prefixed tag does not resolve directly and its slug is
+itself a registered prefix tag, resolution recurses. With `dv => ['divine-homepage']`
+and `ui => ['bsui']`, `<dv-ui-input>` falls through to the `ui` prefix and
+resolves `bsui/input`. Registered prefix and alias tags also render in
+block-template output, not only in page content.
+
 ## Settings
 
 ### path
@@ -8374,11 +8541,9 @@ Blockstudio lets you define WordPress pages, block patterns, and Site Editor tem
 
 All three features share the same HTML parser and block syntax.
 
-<GuideBanner
-  href="/guides/file-based-pages"
-  title="Building File-Based Pages"
-  description="A practical walkthrough of file-based page templates, syncing, and locking."
-/>
+> Building File-Based Pages
+>
+> A practical walkthrough of file-based page templates, syncing, and locking.
 
 ## Folder Structure
 
@@ -8709,11 +8874,9 @@ Blockstudio lets you define WordPress pages, block patterns, and Site Editor tem
 
 All three features share the same HTML parser and block syntax.
 
-<GuideBanner
-  href="/guides/file-based-pages"
-  title="Building File-Based Pages"
-  description="A practical walkthrough of file-based page templates, syncing, and locking."
-/>
+> Building File-Based Pages
+>
+> A practical walkthrough of file-based page templates, syncing, and locking.
 
 ## Folder Structure
 
@@ -9792,11 +9955,9 @@ blockstudio_current_page();
 
 Page arrays returned by `Blockstudio\Pages::pages()`, `Blockstudio\Pages::tree()`, `Blockstudio\Pages::children()`, and the global helpers include a `permalink` key after sync. There is no separate `Pages::permalink()` method.
 
-<GuideBanner
-  href="/guides/file-based-pages"
-  title="Building File-Based Pages"
-  description="Template locking, block editing modes, keyed merging, and controlling what clients can edit."
-/>
+> Building File-Based Pages
+>
+> Template locking, block editing modes, keyed merging, and controlling what clients can edit.
 
 ### Patterns
 
@@ -10339,7 +10500,9 @@ Blockstudio is built around a file-first workflow: blocks, fields, templates, as
 
 It is a WP-CLI workflow, not live database replication. On pull, Content Sync projects allowlisted posts, postmeta, terms, termmeta, and post-term relationships to portable files in your theme. On push, it applies those files to another environment, using stable UIDs and only rewriting references you explicitly declare.
 
-Content Sync is on-demand. It does not run on every admin request. Commands return a skipped row until `content.enabled` is `true`.
+> Note
+>
+> Content Sync is on-demand. It does not run on every admin request. Commands return a skipped row until `content.enabled` is `true`.
 
 ## When to Use Content Sync
 
@@ -10385,7 +10548,9 @@ Enable Content Sync in `blockstudio.json`:
 
 `postTypes` is an allowlist. Empty means Content Sync does not touch posts. `taxonomies` is an allowlist of already registered taxonomies whose terms and post relationships should sync. Blockstudio does not register taxonomy definitions from Content Sync files. Postmeta and termmeta are allowlisted through `meta.include`; `meta.exclude` always wins.
 
-Treat `meta.include` as a commit boundary. Synced files are meant to live in git, so do not include keys that hold secrets, tokens, credentials, or PII. `wp bs content status` reports warning rows when an allowlisted meta key looks sensitive.
+> Warning
+>
+> Treat `meta.include` as a commit boundary. Synced files are meant to live in git, so do not include keys that hold secrets, tokens, credentials, or PII. `wp bs content status` reports warning rows when an allowlisted meta key looks sensitive.
 
 `content.id` is stored on synced entities as `_blockstudio_content_set`. Prune and ownership checks are scoped to that value, so one content set cannot delete another set's content.
 
@@ -10879,11 +11044,9 @@ A complete working setup with custom theme colors and a block that uses them:
 
 This renders on the frontend with all Tailwind utilities and custom theme colors compiled into a single inline `<style>` tag.
 
-<GuideBanner
-  href="/guides/block-library"
-  title="Building a Block Library"
-  description="Design tokens, custom utilities, and the complete Tailwind v4 setup for a production theme."
-/>
+> Building a Block Library
+>
+> Design tokens, custom utilities, and the complete Tailwind v4 setup for a production theme.
 
 ## Extensions
 

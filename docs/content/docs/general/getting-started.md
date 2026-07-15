@@ -1,0 +1,131 @@
+---
+title: Getting Started
+description: Set up your first Blockstudio project.
+path: "general/getting-started"
+order: 1
+section: "General"
+meta_title: "Getting Started"
+meta_description: "Set up your first Blockstudio project."
+---
+
+# Getting Started
+
+This guide will help you set up Blockstudio and create your first custom block.
+
+## Installation
+
+### Via Composer (Recommended)
+
+```bash
+composer require blockstudio/blockstudio
+```
+
+Blockstudio can be installed as a plugin via `composer/installers` or bundled directly inside a theme. See the [Composer documentation](/docs/dev/composer) for all installation methods.
+
+Composer installations receive updates through Composer. The built-in GitHub updater is automatically disabled.
+
+### Manual Installation
+
+<a
+  href="https://github.com/inline0/blockstudio/releases"
+  target="_blank"
+  rel="noopener noreferrer"
+  className="flex items-center gap-2 no-underline rounded-lg border border-fd-border bg-fd-secondary/50 px-4 py-3 text-sm font-medium text-fd-foreground transition-colors hover:bg-fd-secondary w-fit"
+>
+  Download latest release from GitHub
+  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/></svg>
+</a>
+
+Upload the zip to your WordPress plugins directory and activate the plugin. Manual installations receive automatic update notifications in the WordPress dashboard via the built-in GitHub updater.
+
+## Creating Your First Block
+
+### 1. Create a Block Directory
+
+Create a new directory in your theme:
+
+```
+my-theme/
+  blockstudio/
+    my-first-block/
+      block.json
+      index.php
+```
+
+### 2. Define the Block Schema
+
+Create `block.json` with your block configuration:
+
+```json title="block.json"
+{
+  "$schema": "https://blockstudio.dev/schema/block",
+  "name": "my-theme/my-first-block",
+  "title": "My First Block",
+  "category": "common",
+  "icon": "star-filled",
+  "blockstudio": {
+    "attributes": [
+      {
+        "id": "heading",
+        "type": "text",
+        "label": "Heading",
+        "default": "Hello World"
+      },
+      {
+        "id": "content",
+        "type": "textarea",
+        "label": "Content"
+      }
+    ]
+  }
+}
+```
+
+### 3. Create the Template
+
+Create `index.php` for rendering:
+
+```php title="index.php"
+<div class="my-first-block">
+  <h2><?php echo $a['heading']; ?></h2>
+  <p><?php echo $a['content']; ?></p>
+</div>
+```
+
+## Using Twig Templates
+
+Blockstudio supports Twig templates out of the box. Simply use `index.twig` instead:
+
+```twig title="index.twig"
+<div class="my-first-block">
+  <h2>{{ a.heading }}</h2>
+  <p>{{ a.content }}</p>
+</div>
+```
+
+## Adding Styles
+
+Create a `style.css` file in the same folder:
+
+```css title="style.css"
+.my-first-block {
+  padding: 2rem;
+  background: #f5f5f5;
+}
+```
+
+Blockstudio will automatically enqueue this stylesheet when the block is used.
+
+## Next Steps
+
+Your block is now ready to use in the WordPress editor. Continue exploring the documentation to learn about:
+
+- [Field Types](/docs/blocks/attributes/field-types) - All available field types
+- [Components](/docs/blocks/react-components/innerblocks) - InnerBlocks, RichText, and more
+- [Tailwind Integration](/docs/tailwind) - Using Tailwind CSS
+- [Hooks](/docs/blocks/hooks/php) - Extending functionality with filters and actions
+
+
+> **[Building a Block Library](/guides/block-library)**
+>
+> Go from a single block to a full library: design tokens, the section pattern, repeaters, images, and page composition.

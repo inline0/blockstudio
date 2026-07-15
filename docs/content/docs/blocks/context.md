@@ -1,0 +1,95 @@
+---
+title: Context
+description: Access loop and post context data in your block templates.
+path: "blocks/context"
+order: 34
+section: "Blocks"
+meta_title: "Context"
+meta_description: "Access loop and post context data in your block templates."
+---
+
+# Context
+
+When blocks are used inside a loop (for example, a Query block), the block is executed once for each iteration of the loop. Blockstudio provides handy shortcuts for accessing the current loop and outer context.
+
+
+#### PHP
+
+```php title="index.php"
+<div>
+  <h1>
+    This is the data of current
+    element inside the loop:
+    <?php echo $block['context']['postId'] ?>
+    <?php echo $block['context']['postType'] ?>
+  </h1>
+  <h1>
+    This is the data the current post:
+    <?php echo $block['postId'] ?>
+    <?php echo $block['postType'] ?>
+  </h1>
+</div>
+```
+
+#### Twig
+
+```twig title="index.twig"
+<div>
+  <h1>
+    This is the data of current
+    element inside the loop:
+    {{ block.context.postId }}
+    {{ block.context.postType }}
+  </h1>
+  <h1>
+    This is the data the current post:
+    {{ block.postId }}
+    {{ block.postType }}
+  </h1>
+</div>
+```
+
+## Available Variables
+
+Inside your block templates, you have access to these variables:
+
+| Variable | Shorthand | Description |
+|----------|-----------|-------------|
+| `$attributes` | `$a` | Block attributes |
+| `$block` | `$b` | Block data (name, title, postId, postType, context, etc.) |
+| `$context` | `$c` | Parent block context |
+| `$innerBlocks` | - | InnerBlocks content |
+
+## Block Data
+
+The `$block` / `$b` variable contains:
+
+| Property | Description |
+|----------|-------------|
+| `name` | Block name (e.g., `my-theme/my-block`) |
+| `title` | Block title |
+| `dir` | Block directory path |
+| `url` | Block directory URL |
+| `postId` | Current post ID |
+| `postType` | Current post type |
+| `context` | Loop context (when inside a Query block) |
+
+## Parent Context
+
+When using `usesContext`, access parent block data via `$context`:
+
+```php title="index.php"
+<?php
+$parent = $context['parent-block/name'];
+echo $parent['someAttribute'];
+?>
+```
+
+Blockstudio handles `providesContext` automatically. You only need to add `usesContext` to the child block. There is no need to manually declare `providesContext` in the parent block's block.json, as Blockstudio registers it for all attributes.
+
+See [InnerBlocks Context](/docs/blocks/react-components/innerblocks#context) for more details.
+
+
+> **[Block Context and Communication](/guides/block-context)**
+>
+> Practical patterns: card grids, pricing tables, and section wrappers where blocks need to share data.
