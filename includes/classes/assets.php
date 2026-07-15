@@ -174,7 +174,7 @@ class Assets {
 			return $settings;
 		}
 
-		$classes = apply_filters( 'body_class', array(), '' );
+		$classes = apply_filters( 'body_class', array(), '' ); // phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedHooknameFound -- Core WordPress hook.
 		$classes = is_array( $classes ) ? $classes : array();
 		$classes = array_values(
 			array_unique(
