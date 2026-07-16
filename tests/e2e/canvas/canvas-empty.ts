@@ -571,6 +571,13 @@ test.describe('Canvas - empty theme', () => {
         '<block name="blockstudio/flash-base-block" /><p>Second artboard</p>',
       );
 
+      const reconcileResponse = await fetch(
+        'http://localhost:8890/wp-json/blockstudio-test/v1/pages/reconcile',
+        { method: 'POST' },
+      );
+      const reconcileBody = await reconcileResponse.text();
+      expect(reconcileResponse.ok, reconcileBody).toBe(true);
+
       await page.evaluate(() =>
         localStorage.removeItem('blockstudio-canvas-settings'),
       );

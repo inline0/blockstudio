@@ -833,6 +833,33 @@ add_action(
 
 					switch_theme( 'theme' );
 
+					// File-page discovery is intentionally explicit in WP-CLI and REST.
+					// Reconcile after the destructive fixture reset so the test database
+					// and collection rewrite rules reflect the checked-out theme files.
+					\Blockstudio\Pages::reset();
+					$page_reconciliation = \Blockstudio\Pages::reconcile(
+						array(
+							'authoritative' => true,
+							'full'          => true,
+							'plan_valid'    => true,
+							'source'        => array(
+								'commit'    => 'e2e-fixture',
+								'dirtyHash' => '',
+							),
+						)
+					);
+
+					if ( ! empty( $page_reconciliation['failed'] ) ) {
+						return new WP_Error(
+							'page_reconciliation_failed',
+							'File-page reconciliation failed while preparing the E2E fixture.',
+							array(
+								'status' => 500,
+								'report' => $page_reconciliation,
+							)
+						);
+					}
+
 					global $wp_rewrite;
 					$wp_rewrite->set_permalink_structure( '/%postname%/' );
 					$wp_rewrite->flush_rules( true );
@@ -1464,9 +1491,10 @@ add_action(
 					delete_transient( 'blockstudio_editor_expected_capture_assets_id' );
 
 					return array(
-						'success' => true,
-						'created' => $created,
-						'message' => 'E2E test data created successfully',
+						'success'            => true,
+						'created'            => $created,
+						'pageReconciliation' => $page_reconciliation,
+						'message'            => 'E2E test data created successfully',
 					);
 				},
 				'permission_callback' => '__return_true',
