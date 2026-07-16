@@ -1597,6 +1597,8 @@ class Build {
 	 * @return array Cached registration payloads.
 	 */
 	private static function register_discovered_blocks( array $registerable, Block_Registry $registry ): array {
+		$registerable = self::sort_registerable_blocks( $registerable );
+
 		$registered   = array();
 		$block_lookup = array();
 		foreach ( $registerable as $reg_name => $reg_item ) {
@@ -1621,6 +1623,74 @@ class Build {
 		}
 
 		return array_filter( $registered );
+	}
+
+	/**
+	 * Sort registerable blocks for deterministic inserter ordering.
+	 *
+	 * Sorts blocks alphabetically by title within the same category while preserving
+	 * original relative order across different categories. Native block entries are
+	 * kept at the end so their registration behavior remains unchanged.
+	 *
+	 * @param array $registerable Registerable block payload.
+	 *
+	 * @return array Sorted registerable payload.
+	 */
+	private static function sort_registerable_blocks( array $registerable ): array {
+		$position = 0;
+
+		foreach ( $registerable as &$item ) {
+			$item['__blockstudio_sort_index'] = $position;
+			++$position;
+		}
+		unset( $item );
+
+		uasort(
+			$registerable,
+			static function ( array $a, array $b ): int {
+				$a_is_native = (bool) ( $a['classification']['is_native'] ?? false );
+				$b_is_native = (bool) ( $b['classification']['is_native'] ?? false );
+
+				if ( $a_is_native !== $b_is_native ) {
+					return $a_is_native ? 1 : -1;
+				}
+
+				$a_category = (string) ( $a['block_json']['category'] ?? '' );
+				$b_category = (string) ( $b['block_json']['category'] ?? '' );
+
+				if ( $a_category === $b_category ) {
+					$a_title = (string) ( $a['block_json']['title'] ?? ( $a['block_json']['name'] ?? '' ) );
+					$b_title = (string) ( $b['block_json']['title'] ?? ( $b['block_json']['name'] ?? '' ) );
+
+					$by_title = strcasecmp( $a_title, $b_title );
+					if ( 0 !== $by_title ) {
+						return $by_title;
+					}
+
+					$a_name = (string) ( $a['block_json']['name'] ?? '' );
+					$b_name = (string) ( $b['block_json']['name'] ?? '' );
+
+					$by_name = strcasecmp( $a_name, $b_name );
+					if ( 0 !== $by_name ) {
+						return $by_name;
+					}
+				}
+
+				return (int) ( $a['__blockstudio_sort_index'] ?? 0 ) <=> (int) ( $b['__blockstudio_sort_index'] ?? 0 );
+			}
+		);
+
+		foreach ( $registerable as &$item ) {
+			unset( $item['__blockstudio_sort_index'] );
+		}
+		unset( $item );
+
+		/**
+		 * Filter registerable blocks before registration.
+		 *
+		 * @param array $registerable Sorted registerable block payload.
+		 */
+		return apply_filters( 'blockstudio/blocks/registerable/sort', $registerable );
 	}
 
 	/**
