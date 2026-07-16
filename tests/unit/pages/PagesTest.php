@@ -958,12 +958,11 @@ class PagesTest extends TestCase {
 		$this->assertTrue( $method->invoke( null, array( 'force' => true ), false, false ) );
 	}
 
-	public function test_init_context_allows_admin_and_cli_without_force(): void {
+	public function test_init_context_allows_admin_but_blocks_cli_without_force(): void {
 		$method = new ReflectionMethod( Pages::class, 'can_init_in_current_context' );
-		$method->setAccessible( true );
 
 		$this->assertTrue( $method->invoke( null, array(), true, false ) );
-		$this->assertTrue( $method->invoke( null, array(), false, true ) );
+		$this->assertFalse( $method->invoke( null, array(), false, true ) );
 	}
 
 	// Block content slashing

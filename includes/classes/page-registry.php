@@ -191,6 +191,19 @@ final class Page_Registry {
 	}
 
 	/**
+	 * Get only pages registered by filesystem discovery in this request.
+	 *
+	 * Unlike get_pages(), this method never hydrates from the database. Reconcile
+	 * uses it so an empty desired inventory can safely remove managed posts rather
+	 * than accidentally treating the previous database inventory as desired.
+	 *
+	 * @return array<string, array> Discovered pages.
+	 */
+	public function get_registered_pages(): array {
+		return $this->pages;
+	}
+
+	/**
 	 * Get a single page by name.
 	 *
 	 * @param string $name The page name.

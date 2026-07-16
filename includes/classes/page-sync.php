@@ -21,6 +21,11 @@ use WP_Post;
 class Page_Sync {
 
 	/**
+	 * Version of the page serialization and managed-meta contract.
+	 */
+	public const SYNC_ENGINE_VERSION = '2';
+
+	/**
 	 * The HTML parser instance.
 	 *
 	 * @var Html_Parser
@@ -44,66 +49,252 @@ class Page_Sync {
 	 * @return int|WP_Error The post ID or WP_Error on failure.
 	 */
 	public function sync( array $page_data ): int|WP_Error {
+		$result = $this->reconcile( $page_data );
+
+		return $result['error'] instanceof WP_Error ? $result['error'] : $result['post_id'];
+	}
+
+	/**
+	 * Reconcile one desired page and report whether WordPress changed.
+	 *
+	 * @param array $page_data Desired page data from discovery.
+	 * @param array $args      Optional existing post, fingerprints, and authority flags.
+	 *
+	 * @return array{status:string,post_id:int,error:WP_Error|null,locked:bool}
+	 */
+	public function reconcile( array $page_data, array $args = array() ): array {
 		$page_data    = $this->prepare_page_data( $page_data );
 		$sync_enabled = $page_data['sync'] ?? true;
+		$existing     = array_key_exists( 'existing', $args )
+			? ( $args['existing'] instanceof WP_Post ? $args['existing'] : null )
+			: $this->find_existing_post( $page_data );
 
 		if ( ! $sync_enabled ) {
-			$existing = $this->find_existing_post( $page_data );
-			return $existing ? $existing->ID : 0;
+			return $this->reconcile_result( 'unchanged', $existing ? $existing->ID : 0 );
 		}
 
-		$existing    = $this->find_existing_post( $page_data );
-		$file_mtime  = $this->get_source_mtime( $page_data );
-		$fingerprint = $this->build_fingerprint( $page_data );
+		$file_mtime         = $this->get_source_mtime( $page_data );
+		$fingerprint        = isset( $args['fingerprint'] ) && is_string( $args['fingerprint'] ) ? $args['fingerprint'] : $this->build_fingerprint( $page_data );
+		$engine_fingerprint = isset( $args['engine_fingerprint'] ) && is_string( $args['engine_fingerprint'] ) ? $args['engine_fingerprint'] : self::engine_fingerprint();
 
 		if ( $existing ) {
 			$stored_fingerprint = (string) get_post_meta( $existing->ID, '_blockstudio_page_fingerprint', true );
-			$stored_mtime       = (int) get_post_meta( $existing->ID, '_blockstudio_page_mtime', true );
+			$stored_engine      = (string) get_post_meta( $existing->ID, '_blockstudio_page_engine_fingerprint', true );
+			$parent_matches     = (int) $existing->post_parent === $this->resolve_parent_id( $page_data );
+			$equal              = '' !== $stored_fingerprint
+				&& '' !== $stored_engine
+				&& hash_equals( $stored_fingerprint, $fingerprint )
+				&& hash_equals( $stored_engine, $engine_fingerprint )
+				&& $parent_matches;
 
-			if ( '' !== $stored_fingerprint && hash_equals( $stored_fingerprint, $fingerprint ) ) {
-				$this->update_post_meta( $existing->ID, $page_data, $file_mtime, $fingerprint );
-				$this->prune_duplicate_posts( $page_data, $existing->ID );
-				return $existing->ID;
+			if ( $equal && empty( $args['always_update'] ) ) {
+				return $this->reconcile_result( 'unchanged', $existing->ID );
 			}
 
-			if ( '' === $stored_fingerprint && $stored_mtime >= $file_mtime ) {
-				$this->update_post_meta( $existing->ID, $page_data, $file_mtime, $fingerprint );
-				$this->prune_duplicate_posts( $page_data, $existing->ID );
-				return $existing->ID;
+			$is_locked = (bool) get_post_meta( $existing->ID, '_blockstudio_page_locked', true );
+			if ( $is_locked && empty( $args['authoritative'] ) ) {
+				return $this->reconcile_result( 'unchanged', $existing->ID, null, true );
+			}
+			if ( $is_locked ) {
+				delete_post_meta( $existing->ID, '_blockstudio_page_locked' );
 			}
 
-			$new_blocks = $this->get_parsed_blocks( $page_data );
-
-			if ( $this->blocks_have_keys( $new_blocks ) ) {
-				$old_blocks = parse_blocks( $existing->post_content );
-				$merger     = new Block_Merger();
-				$merged     = $merger->merge( $new_blocks, $old_blocks );
-				$content    = serialize_blocks( $merged );
+			if ( ! empty( $args['authoritative'] ) || ! empty( $args['always_update'] ) ) {
+				$content = $this->get_parsed_content( $page_data );
 			} else {
-				$content = serialize_blocks( $new_blocks );
+				$new_blocks = $this->get_parsed_blocks( $page_data );
+
+				if ( $this->blocks_have_keys( $new_blocks ) ) {
+					$old_blocks = parse_blocks( $existing->post_content );
+					$merger     = new Block_Merger();
+					$merged     = $merger->merge( $new_blocks, $old_blocks );
+					$content    = serialize_blocks( $merged );
+				} else {
+					$content = serialize_blocks( $new_blocks );
+				}
 			}
 
-			$result = $this->update_post( $existing, $page_data, $content, $file_mtime, $fingerprint );
+			$result = $this->update_post( $existing, $page_data, $content, $file_mtime, $fingerprint, $engine_fingerprint );
 
 			if ( is_int( $result ) && $result > 0 ) {
 				$this->prune_duplicate_posts( $page_data, $result );
+				return $this->reconcile_result( 'updated', $result );
 			}
 
-			return $result;
+			return $this->reconcile_result( 'failed', $existing->ID, $result instanceof WP_Error ? $result : null );
 		}
 
 		if ( $this->has_slug_conflict( $page_data ) ) {
-			return 0;
+			return $this->reconcile_result( 'failed', 0 );
 		}
 
 		$content = $this->get_parsed_content( $page_data );
-		$result  = $this->create_post( $page_data, $content, $file_mtime, $fingerprint );
+		$result  = $this->create_post( $page_data, $content, $file_mtime, $fingerprint, $engine_fingerprint );
 
 		if ( is_int( $result ) && $result > 0 ) {
 			$this->prune_duplicate_posts( $page_data, $result );
+			return $this->reconcile_result( 'created', $result );
 		}
 
-		return $result;
+		return $this->reconcile_result( 'failed', 0, $result instanceof WP_Error ? $result : null );
+	}
+
+	/**
+	 * Build the current page-sync engine fingerprint.
+	 *
+	 * @return string Engine fingerprint.
+	 */
+	public static function engine_fingerprint(): string {
+		$inputs = array(
+			'pageSync'      => self::SYNC_ENGINE_VERSION,
+			'pageDiscovery' => '1',
+			'htmlParser'    => '1',
+			'blockTags'     => '1',
+		);
+
+		/**
+		 * Filters inputs that affect serialized file-page content.
+		 *
+		 * Themes may add an element-mapping or migration version. CSS and normal
+		 * block renderer changes should not be added because they do not require
+		 * post-content writes.
+		 *
+		 * @param array $inputs Engine input versions.
+		 */
+		$inputs  = apply_filters( 'blockstudio/pages/sync_engine_inputs', $inputs );
+		$encoded = wp_json_encode( is_array( $inputs ) ? $inputs : array() );
+
+		return hash( 'sha256', false === $encoded ? '' : $encoded );
+	}
+
+	/**
+	 * Build the desired content fingerprint without parsing blocks.
+	 *
+	 * @param array $page_data Desired page data.
+	 *
+	 * @return string Page fingerprint.
+	 */
+	public function fingerprint( array $page_data ): string {
+		return $this->build_fingerprint( $this->prepare_page_data( $page_data ) );
+	}
+
+	/**
+	 * Get the normalized dependency identities used by deployment plans.
+	 *
+	 * Absolute paths are intentionally excluded. A theme can be built in one
+	 * checkout and reconciled from another without changing the page identity.
+	 *
+	 * @param array $page_data Desired page data.
+	 *
+	 * @return array<int, string> Stable dependency identities.
+	 */
+	public function dependency_ids( array $page_data ): array {
+		$dependencies = array();
+
+		foreach ( $this->source_paths( $page_data ) as $path ) {
+			$dependencies[] = $this->dependency_id( $path, $page_data );
+			$portable_path  = $this->portable_theme_path( $path );
+			if ( null !== $portable_path ) {
+				$dependencies[] = $portable_path;
+			}
+		}
+
+		return array_values( array_unique( $dependencies ) );
+	}
+
+	/**
+	 * Load the complete inventory of Blockstudio-managed page posts once.
+	 *
+	 * @return array<int, WP_Post> Managed posts.
+	 */
+	public function managed_posts(): array {
+		$posts = get_posts(
+			array(
+				'meta_query'        => array( // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query
+					'relation' => 'OR',
+					array(
+						'key'     => '_blockstudio_page_key',
+						'compare' => 'EXISTS',
+					),
+					array(
+						'key'     => '_blockstudio_page_source',
+						'compare' => 'EXISTS',
+					),
+				),
+				'post_type'         => 'any',
+				'posts_per_page'    => -1,
+				'post_status'       => $this->synced_post_statuses(),
+				'orderby'           => 'ID',
+				'order'             => 'ASC',
+				'suppress_filters'  => false,
+				'update_meta_cache' => true,
+			)
+		);
+
+		return array_values(
+			array_filter(
+				$posts,
+				static fn ( mixed $post ): bool => $post instanceof WP_Post
+			)
+		);
+	}
+
+	/**
+	 * Prune managed posts absent from the complete desired inventory.
+	 *
+	 * @param array      $active_keys    Desired managed keys.
+	 * @param array      $active_sources Desired managed source identities.
+	 * @param array|null $managed_posts  Optional preloaded managed inventory.
+	 *
+	 * @return int Number of posts removed from the active inventory.
+	 */
+	public function prune_missing( array $active_keys, array $active_sources, ?array $managed_posts = null ): int {
+		$active_keys    = array_fill_keys( array_map( 'strval', $active_keys ), true );
+		$active_sources = array_fill_keys( array_map( 'strval', $active_sources ), true );
+		$removed        = 0;
+
+		foreach ( $managed_posts ?? $this->managed_posts() as $post ) {
+			if ( ! $post instanceof WP_Post ) {
+				continue;
+			}
+
+			$key    = (string) get_post_meta( $post->ID, '_blockstudio_page_key', true );
+			$source = (string) get_post_meta( $post->ID, '_blockstudio_page_source', true );
+
+			if ( ( '' !== $key && isset( $active_keys[ $key ] ) ) || ( '' !== $source && isset( $active_sources[ $source ] ) ) ) {
+				continue;
+			}
+
+			if ( '' === $key && '' === $source ) {
+				continue;
+			}
+
+			update_post_meta( $post->ID, '_blockstudio_page_stale', true );
+			if ( $this->prune_orphan( $post ) ) {
+				++$removed;
+			}
+		}
+
+		return $removed;
+	}
+
+	/**
+	 * Build one normalized reconciliation result.
+	 *
+	 * @param string        $status  Result status.
+	 * @param int           $post_id Synced post ID.
+	 * @param WP_Error|null $error   Optional error.
+	 * @param bool          $locked  Whether a changed page was kept locked.
+	 *
+	 * @return array{status:string,post_id:int,error:WP_Error|null,locked:bool}
+	 */
+	private function reconcile_result( string $status, int $post_id, ?WP_Error $error = null, bool $locked = false ): array {
+		return array(
+			'status'  => $status,
+			'post_id' => $post_id,
+			'error'   => $error,
+			'locked'  => $locked,
+		);
 	}
 
 	/**
@@ -418,11 +609,12 @@ class Page_Sync {
 	 * @param array  $page_data  The page data.
 	 * @param string $content    The parsed block content.
 	 * @param int    $file_mtime The file modification time.
-	 * @param string $fingerprint Source fingerprint.
+	 * @param string $fingerprint        Source fingerprint.
+	 * @param string $engine_fingerprint Sync-engine fingerprint.
 	 *
 	 * @return int|WP_Error The post ID or WP_Error on failure.
 	 */
-	private function create_post( array $page_data, string $content, int $file_mtime, string $fingerprint ): int|WP_Error {
+	private function create_post( array $page_data, string $content, int $file_mtime, string $fingerprint, string $engine_fingerprint ): int|WP_Error {
 		$post_data = array(
 			'post_title'   => $page_data['title'],
 			'post_name'    => $page_data['slug'],
@@ -459,7 +651,7 @@ class Page_Sync {
 			return $post_id;
 		}
 
-		$this->update_post_meta( $post_id, $page_data, $file_mtime, $fingerprint );
+		$this->update_post_meta( $post_id, $page_data, $file_mtime, $fingerprint, $engine_fingerprint );
 
 		/**
 		 * Fires after a page post is created.
@@ -479,11 +671,12 @@ class Page_Sync {
 	 * @param array   $page_data  The page data.
 	 * @param string  $content    The parsed block content.
 	 * @param int     $file_mtime The file modification time.
-	 * @param string  $fingerprint Source fingerprint.
+	 * @param string  $fingerprint        Source fingerprint.
+	 * @param string  $engine_fingerprint Sync-engine fingerprint.
 	 *
 	 * @return int|WP_Error The post ID or WP_Error on failure.
 	 */
-	private function update_post( WP_Post $post, array $page_data, string $content, int $file_mtime, string $fingerprint ): int|WP_Error {
+	private function update_post( WP_Post $post, array $page_data, string $content, int $file_mtime, string $fingerprint, string $engine_fingerprint ): int|WP_Error {
 		$is_locked = (bool) get_post_meta( $post->ID, '_blockstudio_page_locked', true );
 
 		if ( $is_locked ) {
@@ -524,7 +717,7 @@ class Page_Sync {
 			return $result;
 		}
 
-		$this->update_post_meta( $post->ID, $page_data, $file_mtime, $fingerprint );
+		$this->update_post_meta( $post->ID, $page_data, $file_mtime, $fingerprint, $engine_fingerprint );
 
 		/**
 		 * Fires after a page post is updated.
@@ -543,23 +736,25 @@ class Page_Sync {
 	 * @param int    $post_id     The post ID.
 	 * @param array  $page_data   The page data.
 	 * @param int    $file_mtime  The file modification time.
-	 * @param string $fingerprint Source fingerprint.
+	 * @param string $fingerprint        Source fingerprint.
+	 * @param string $engine_fingerprint Sync-engine fingerprint.
 	 *
 	 * @return void
 	 */
-	private function update_post_meta( int $post_id, array $page_data, int $file_mtime, string $fingerprint ): void {
+	private function update_post_meta( int $post_id, array $page_data, int $file_mtime, string $fingerprint, string $engine_fingerprint ): void {
 		update_post_meta( $post_id, '_blockstudio_page_source', $page_data['source_path'] );
 		update_post_meta( $post_id, '_blockstudio_page_mtime', $file_mtime );
 		update_post_meta( $post_id, '_blockstudio_page_name', $page_data['name'] );
 		update_post_meta( $post_id, '_blockstudio_page_key', $page_data['key'] ?? $page_data['name'] );
 		update_post_meta( $post_id, '_blockstudio_page_fingerprint', $fingerprint );
+		update_post_meta( $post_id, '_blockstudio_page_engine_fingerprint', $engine_fingerprint );
 		update_post_meta( $post_id, '_blockstudio_page_collection', $page_data['collection'] ?? '' );
 		update_post_meta( $post_id, '_blockstudio_page_path', $page_data['path'] ?? '' );
 		update_post_meta( $post_id, '_blockstudio_page_route', ( $page_data['collection'] ?? '' ) . ':' . ( $page_data['path'] ?? '' ) );
 		update_post_meta( $post_id, '_blockstudio_page_generated', ! empty( $page_data['generated'] ) );
 		update_post_meta( $post_id, '_blockstudio_page_content_type', $page_data['contentType'] ?? 'php' );
 		update_post_meta( $post_id, '_blockstudio_page_stale', false );
-		$dependencies = array_values( array_filter( $page_data['source_mtime_paths'] ?? array(), 'is_string' ) );
+		$dependencies = $this->dependency_ids( $page_data );
 		if ( ! empty( $dependencies ) ) {
 			update_post_meta( $post_id, '_blockstudio_page_dependencies', $dependencies );
 		} else {
@@ -634,34 +829,15 @@ class Page_Sync {
 	 * @return int|WP_Error The post ID or WP_Error on failure.
 	 */
 	public function force_sync( array $page_data ): int|WP_Error {
-		$page_data   = $this->prepare_page_data( $page_data );
-		$existing    = $this->find_existing_post( $page_data );
-		$content     = $this->get_parsed_content( $page_data );
-		$file_mtime  = $this->get_source_mtime( $page_data );
-		$fingerprint = $this->build_fingerprint( $page_data );
+		$result = $this->reconcile(
+			$page_data,
+			array(
+				'authoritative' => true,
+				'always_update' => true,
+			)
+		);
 
-		if ( $existing ) {
-			delete_post_meta( $existing->ID, '_blockstudio_page_locked' );
-			$result = $this->update_post( $existing, $page_data, $content, $file_mtime, $fingerprint );
-
-			if ( is_int( $result ) && $result > 0 ) {
-				$this->prune_duplicate_posts( $page_data, $result );
-			}
-
-			return $result;
-		}
-
-		if ( $this->has_slug_conflict( $page_data ) ) {
-			return 0;
-		}
-
-		$result = $this->create_post( $page_data, $content, $file_mtime, $fingerprint );
-
-		if ( is_int( $result ) && $result > 0 ) {
-			$this->prune_duplicate_posts( $page_data, $result );
-		}
-
-		return $result;
+		return $result['error'] instanceof WP_Error ? $result['error'] : $result['post_id'];
 	}
 
 	/**
@@ -676,12 +852,14 @@ class Page_Sync {
 	 * @param string|null $collection     Collection slug.
 	 * @param array       $post_types     Active post types.
 	 *
-	 * @return void
+	 * @return int Number of posts removed.
 	 */
-	public function mark_stale_missing( array $active_sources, ?string $collection, array $post_types ): void {
+	public function mark_stale_missing( array $active_sources, ?string $collection, array $post_types ): int {
 		if ( ! $collection || empty( $post_types ) ) {
-			return;
+			return 0;
 		}
+
+		$removed = 0;
 
 		$posts = get_posts(
 			array(
@@ -705,8 +883,12 @@ class Page_Sync {
 			}
 
 			update_post_meta( $post->ID, '_blockstudio_page_stale', true );
-			$this->prune_orphan( $post );
+			if ( $this->prune_orphan( $post ) ) {
+				++$removed;
+			}
 		}
+
+		return $removed;
 	}
 
 	/**
@@ -717,9 +899,9 @@ class Page_Sync {
 	 *
 	 * @param \WP_Post $post The orphaned post.
 	 *
-	 * @return void
+	 * @return bool Whether the post was removed from the active inventory.
 	 */
-	private function prune_orphan( \WP_Post $post ): void {
+	private function prune_orphan( \WP_Post $post ): bool {
 		/**
 		 * Filters how an orphaned synced page is handled.
 		 *
@@ -729,10 +911,12 @@ class Page_Sync {
 		$action = apply_filters( 'blockstudio/pages/orphan_action', 'trash', $post );
 
 		if ( 'delete' === $action ) {
-			wp_delete_post( $post->ID, true );
+			return false !== wp_delete_post( $post->ID, true );
 		} elseif ( 'trash' === $action ) {
-			wp_trash_post( $post->ID );
+			return false !== wp_trash_post( $post->ID );
 		}
+
+		return false;
 	}
 
 	/**
@@ -867,24 +1051,14 @@ class Page_Sync {
 			'contentType'  => $page_data['contentType'] ?? '',
 			'parent_key'   => $page_data['parent_key'] ?? '',
 			'generated'    => ! empty( $page_data['generated'] ),
+			'order'        => isset( $page_data['order'] ) && is_numeric( $page_data['order'] ) ? (int) $page_data['order'] : null,
+			'templateFor'  => $page_data['templateFor'] ?? '',
+			'blockMode'    => $page_data['blockEditingMode'] ?? '',
+			'sanitize'     => ! empty( $page_data['sanitize_content'] ),
 			'inline'       => $page_data['inline_content'] ?? null,
-			'source'       => $page_data['source'] ?? null,
-			'layout_path'  => $page_data['layout_path'] ?? '',
-			'meta'         => $page_data['meta'] ?? array(),
+			'meta'         => $this->normalize_fingerprint_value( $page_data['meta'] ?? array() ),
+			'files'        => $this->fingerprint_files( $page_data ),
 		);
-
-		$fingerprint_paths = $page_data['source_mtime_paths'] ?? array();
-
-		if ( ! empty( $page_data['layout_path'] ) ) {
-			$fingerprint_paths[] = $page_data['layout_path'];
-		}
-
-		foreach ( $fingerprint_paths as $path ) {
-			if ( is_string( $path ) && file_exists( $path ) ) {
-				// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Local source fingerprint.
-				$parts['files'][ $path ] = file_get_contents( $path );
-			}
-		}
 
 		$encoded = wp_json_encode( $parts );
 
@@ -893,5 +1067,147 @@ class Page_Sync {
 		}
 
 		return hash( 'sha256', $encoded );
+	}
+
+	/**
+	 * Normalize machine-local values before they enter a content fingerprint.
+	 *
+	 * Loader metadata can contain absolute candidate directories. Their basename
+	 * is stable across the authoring checkout and deployed theme; the source file
+	 * hashes still provide the actual content boundary.
+	 *
+	 * @param mixed $value Fingerprint value.
+	 *
+	 * @return mixed Stable value.
+	 */
+	private function normalize_fingerprint_value( mixed $value ): mixed {
+		if ( is_array( $value ) ) {
+			$normalized = array();
+			foreach ( $value as $key => $item ) {
+				$normalized[ $key ] = $this->normalize_fingerprint_value( $item );
+			}
+
+			if ( ! array_is_list( $normalized ) ) {
+				ksort( $normalized, SORT_STRING );
+			}
+
+			return $normalized;
+		}
+
+		if ( is_string( $value ) && ( str_starts_with( $value, '/' ) || preg_match( '/^[A-Za-z]:[\\\\\/]/', $value ) ) ) {
+			return 'path:' . basename( wp_normalize_path( $value ) );
+		}
+
+		return $value;
+	}
+
+	/**
+	 * Hash source files with machine-independent identities.
+	 *
+	 * @param array $page_data Page data.
+	 *
+	 * @return array<int, array{id:string,hash:string}> Fingerprint file records.
+	 */
+	private function fingerprint_files( array $page_data ): array {
+		$records = array();
+		foreach ( $this->source_paths( $page_data ) as $path ) {
+			if ( ! is_file( $path ) || ! is_readable( $path ) ) {
+				continue;
+			}
+
+			$hash = hash_file( 'sha256', $path );
+			if ( false === $hash ) {
+				continue;
+			}
+
+			$records[] = array(
+				'id'   => $this->dependency_id( $path, $page_data ),
+				'hash' => $hash,
+			);
+		}
+
+		usort(
+			$records,
+			static fn ( array $a, array $b ): int => ( $a['id'] . ':' . $a['hash'] ) <=> ( $b['id'] . ':' . $b['hash'] )
+		);
+
+		return $records;
+	}
+
+	/**
+	 * Get unique source paths contributing to a page fingerprint.
+	 *
+	 * @param array $page_data Page data.
+	 *
+	 * @return array<int, string> Source paths.
+	 */
+	private function source_paths( array $page_data ): array {
+		$paths = array_values( array_filter( $page_data['source_mtime_paths'] ?? array(), 'is_string' ) );
+
+		if ( ! empty( $page_data['layout_path'] ) && is_string( $page_data['layout_path'] ) ) {
+			$paths[] = $page_data['layout_path'];
+		}
+
+		return array_values( array_unique( $paths ) );
+	}
+
+	/**
+	 * Build a stable identity for one source dependency.
+	 *
+	 * @param string $path      Absolute source path.
+	 * @param array  $page_data Page data.
+	 *
+	 * @return string Stable dependency identity.
+	 */
+	private function dependency_id( string $path, array $page_data ): string {
+		$path = wp_normalize_path( $path );
+
+		$roles = array(
+			'definition' => $page_data['json_path'] ?? null,
+			'content'    => $page_data['content_path'] ?? $page_data['template_path'] ?? null,
+			'layout'     => $page_data['layout_path'] ?? null,
+		);
+
+		foreach ( $roles as $role => $role_path ) {
+			if ( is_string( $role_path ) && wp_normalize_path( $role_path ) === $path ) {
+				return 'page:' . $role . ':' . basename( $path );
+			}
+		}
+
+		$basename = basename( $path );
+		if ( 'pages.json' === $basename ) {
+			return 'collection:manifest';
+		}
+		if ( 'loader.php' === $basename ) {
+			return 'collection:loader';
+		}
+
+		return 'external:' . $basename;
+	}
+
+	/**
+	 * Convert a path inside the active theme to a portable plan identity.
+	 *
+	 * @param string $path Absolute dependency path.
+	 *
+	 * @return string|null Portable path or null for external sources.
+	 */
+	private function portable_theme_path( string $path ): ?string {
+		$path  = wp_normalize_path( $path );
+		$roots = array_filter(
+			array(
+				function_exists( 'get_stylesheet_directory' ) ? get_stylesheet_directory() : null,
+				function_exists( 'get_template_directory' ) ? get_template_directory() : null,
+			)
+		);
+
+		foreach ( $roots as $root ) {
+			$root = trailingslashit( wp_normalize_path( (string) $root ) );
+			if ( str_starts_with( $path, $root ) ) {
+				return 'theme:' . ltrim( substr( $path, strlen( $root ) ), '/' );
+			}
+		}
+
+		return null;
 	}
 }
