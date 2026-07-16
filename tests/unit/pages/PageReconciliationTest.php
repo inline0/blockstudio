@@ -254,7 +254,7 @@ class PageReconciliationTest extends TestCase {
 	}
 
 	/**
-	 * Generic WP-CLI bootstrap is not an implicit filesystem authoring context.
+	 * Generic WP-CLI bootstrap is not an implicit filesystem sync context.
 	 *
 	 * @return void
 	 */
@@ -265,19 +265,6 @@ class PageReconciliationTest extends TestCase {
 		$this->assertFalse( $method->invoke( null, array(), false, true ) );
 		$this->assertFalse( $method->invoke( null, array(), true, true ) );
 		$this->assertTrue( $method->invoke( null, array( 'force' => true ), false, true ) );
-
-		$path_filter_calls = 0;
-		$counter           = static function ( array $paths ) use ( &$path_filter_calls ): array {
-			++$path_filter_calls;
-			return $paths;
-		};
-		add_filter( 'blockstudio/pages/paths', $counter, 1 );
-		Pages::maybe_register_collection_post_types();
-		remove_filter( 'blockstudio/pages/paths', $counter, 1 );
-
-		if ( defined( 'WP_CLI' ) && WP_CLI ) {
-			$this->assertSame( 0, $path_filter_calls );
-		}
 	}
 
 	/**

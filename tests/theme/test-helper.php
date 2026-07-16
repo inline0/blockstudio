@@ -823,6 +823,14 @@ add_action(
 							'fields'      => 'ids',
 						)
 					);
+					$managed_pages = $wpdb->get_col( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching
+						$wpdb->prepare(
+							"SELECT post_id FROM {$wpdb->postmeta} WHERE meta_key = %s",
+							'_blockstudio_page_key'
+						)
+					);
+					$all_posts = array_unique( array_merge( $all_posts, array_map( 'intval', $managed_pages ) ) );
+
 					foreach ( $all_posts as $post_id ) {
 						wp_delete_post( $post_id, true );
 					}
@@ -832,37 +840,6 @@ add_action(
 					delete_option( 'blockstudio_e2e_assets_reset_enabled' );
 
 					switch_theme( 'theme' );
-
-					// File-page discovery is intentionally explicit in WP-CLI and REST.
-					// Reconcile after the destructive fixture reset so the test database
-					// and collection rewrite rules reflect the checked-out theme files.
-					\Blockstudio\Pages::reset();
-					$page_reconciliation = \Blockstudio\Pages::reconcile(
-						array(
-							'authoritative' => true,
-							'full'          => true,
-							'plan_valid'    => true,
-							'source'        => array(
-								'commit'    => 'e2e-fixture',
-								'dirtyHash' => '',
-							),
-						)
-					);
-
-					if ( ! empty( $page_reconciliation['failed'] ) ) {
-						return new WP_Error(
-							'page_reconciliation_failed',
-							'File-page reconciliation failed while preparing the E2E fixture.',
-							array(
-								'status' => 500,
-								'report' => $page_reconciliation,
-							)
-						);
-					}
-
-					global $wp_rewrite;
-					$wp_rewrite->set_permalink_structure( '/%postname%/' );
-					$wp_rewrite->flush_rules( true );
 
 					$created = array(
 						'posts' => array(),
@@ -1353,6 +1330,16 @@ add_action(
 					$image3_file = $create_dummy_image( 'test-image-3081.png', 200, 200 );
 					$create_attachment_with_id( 3081, 'test-image-3081.png', 'image/png', $image3_file );
 
+					foreach ( array( 8, 1604, 1605, 3081 ) as $attachment_id ) {
+						if ( 'attachment' !== get_post_type( $attachment_id ) ) {
+							return new WP_Error(
+								'e2e_attachment_fixture_failed',
+								sprintf( 'Unable to reserve attachment fixture ID %d.', $attachment_id ),
+								array( 'status' => 500 )
+							);
+						}
+					}
+
 					// Helper to create user with specific ID
 					$create_user_with_id = function ( $id, $login, $email, $display_name ) use ( $wpdb, &$created ) {
 						if ( ! get_user_by( 'id', $id ) ) {
@@ -1480,6 +1467,36 @@ add_action(
 					// Mark Rank Math setup as completed so it enqueues editor scripts
 					update_option( 'rank_math_wizard_completed', 1 );
 					update_option( 'rank_math_registration_skip', 1 );
+
+					// Reserve deterministic fixture IDs before file pages allocate posts.
+					// Reconciliation is explicit in REST and also refreshes collection routes.
+					\Blockstudio\Pages::reset();
+					$page_reconciliation = \Blockstudio\Pages::reconcile(
+						array(
+							'authoritative' => true,
+							'full'          => true,
+							'plan_valid'    => true,
+							'source'        => array(
+								'commit'    => 'e2e-fixture',
+								'dirtyHash' => '',
+							),
+						)
+					);
+
+					if ( ! empty( $page_reconciliation['failed'] ) ) {
+						return new WP_Error(
+							'page_reconciliation_failed',
+							'File-page reconciliation failed while preparing the E2E fixture.',
+							array(
+								'status' => 500,
+								'report' => $page_reconciliation,
+							)
+						);
+					}
+
+					global $wp_rewrite;
+					$wp_rewrite->set_permalink_structure( '/%postname%/' );
+					$wp_rewrite->flush_rules( true );
 
 					// Clean caches
 					wp_cache_flush();

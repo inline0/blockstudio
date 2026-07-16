@@ -4,6 +4,8 @@ use Blockstudio\Page_Discovery;
 use Blockstudio\Page_Registry;
 use Blockstudio\Page_Sync;
 use Blockstudio\Pages;
+use PHPUnit\Framework\Attributes\PreserveGlobalState;
+use PHPUnit\Framework\Attributes\RunInSeparateProcess;
 use PHPUnit\Framework\TestCase;
 
 class PagesTest extends TestCase {
@@ -677,6 +679,33 @@ class PagesTest extends TestCase {
 		$rewrite_changed[0]['postTypeArgs']['rewrite']['slug'] = ( $rewrite_changed[0]['postTypeArgs']['rewrite']['slug'] ?? $rewrite_changed[0]['slug'] ) . '-next';
 
 		$this->assertNotSame( $signature, $signature_method->invoke( null, $rewrite_changed ) );
+	}
+
+	#[RunInSeparateProcess]
+	#[PreserveGlobalState(false)]
+	public function test_cli_rewrite_generation_preserves_collection_routes(): void {
+		define( 'WP_CLI', true );
+
+		global $wp_rewrite;
+
+		$extra_rules_top = $wp_rewrite->extra_rules_top;
+
+		try {
+			$wp_rewrite->extra_rules_top = array();
+			Pages::reset();
+			Pages::maybe_register_collection_post_types();
+
+			$rules = $wp_rewrite->rewrite_rules();
+
+			$this->assertIsArray( $rules );
+			$this->assertArrayHasKey( '^docs/?$', $rules );
+			$this->assertSame(
+				'index.php?blockstudio_collection=docs&blockstudio_collection_path=.',
+				$rules['^docs/?$']
+			);
+		} finally {
+			$wp_rewrite->extra_rules_top = $extra_rules_top;
+		}
 	}
 
 	public function test_explicit_post_id_migrates_empty_target_post_in_place(): void {

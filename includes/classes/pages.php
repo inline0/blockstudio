@@ -581,18 +581,15 @@ class Pages {
 	}
 
 	/**
-	 * Register collection post types during normal WordPress bootstrap when safe.
+	 * Register collection post types during WordPress bootstrap.
 	 *
-	 * Arbitrary WP-CLI commands must not scan collection manifests. Explicit
-	 * authoring and reconciliation callers use register_collection_post_types().
+	 * Collection routes must also exist during arbitrary WP-CLI commands because
+	 * those commands may rebuild rewrite rules. Generic CLI bootstrap reads the
+	 * persistent manifest cache; explicit reconciliation refreshes it from disk.
 	 *
 	 * @return void
 	 */
 	public static function maybe_register_collection_post_types(): void {
-		if ( defined( 'WP_CLI' ) && WP_CLI && ! self::$reconciling ) {
-			return;
-		}
-
 		self::register_collection_post_types();
 	}
 
@@ -1038,7 +1035,7 @@ class Pages {
 	 * @return bool Whether to bypass persistent manifest caches.
 	 */
 	private static function should_refresh_collection_manifest_cache(): bool {
-		return is_admin() || ( defined( 'WP_CLI' ) && WP_CLI );
+		return is_admin() || self::$reconciling;
 	}
 
 	/**
