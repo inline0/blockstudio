@@ -231,6 +231,8 @@ class Pages {
 						'fingerprint'        => $identity['fingerprint'],
 						'engine_fingerprint' => $engine,
 						'authoritative'      => ! empty( $args['authoritative'] ),
+						'prune_duplicates'   => count( $indexes['key'][ $identity['key'] ] ?? array() ) > 1
+							|| count( $indexes['source'][ $identity['source'] ] ?? array() ) > 1,
 					)
 				);
 

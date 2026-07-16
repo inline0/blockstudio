@@ -65,8 +65,8 @@ class Page_Sync {
 	public function reconcile( array $page_data, array $args = array() ): array {
 		$page_data    = $this->prepare_page_data( $page_data );
 		$sync_enabled = $page_data['sync'] ?? true;
-		$existing     = array_key_exists( 'existing', $args )
-			? ( $args['existing'] instanceof WP_Post ? $args['existing'] : null )
+		$existing     = isset( $args['existing'] ) && $args['existing'] instanceof WP_Post
+			? $args['existing']
 			: $this->find_existing_post( $page_data );
 
 		if ( ! $sync_enabled ) {
@@ -80,15 +80,19 @@ class Page_Sync {
 		if ( $existing ) {
 			$stored_fingerprint = (string) get_post_meta( $existing->ID, '_blockstudio_page_fingerprint', true );
 			$stored_engine      = (string) get_post_meta( $existing->ID, '_blockstudio_page_engine_fingerprint', true );
-			$parent_matches     = (int) $existing->post_parent === $this->resolve_parent_id( $page_data );
 			$equal              = '' !== $stored_fingerprint
 				&& '' !== $stored_engine
 				&& hash_equals( $stored_fingerprint, $fingerprint )
 				&& hash_equals( $stored_engine, $engine_fingerprint )
-				&& $parent_matches;
+				&& $this->post_matches_page_data( $existing, $page_data );
 
 			if ( $equal && empty( $args['always_update'] ) ) {
-				return $this->reconcile_result( 'unchanged', $existing->ID );
+				$post_id = $existing->ID;
+				if ( ! empty( $args['prune_duplicates'] ) ) {
+					$post_id = $this->prune_duplicate_posts( $page_data, $post_id, $fingerprint, $engine_fingerprint );
+				}
+
+				return $this->reconcile_result( 'unchanged', $post_id );
 			}
 
 			$is_locked = (bool) get_post_meta( $existing->ID, '_blockstudio_page_locked', true );
@@ -117,8 +121,8 @@ class Page_Sync {
 			$result = $this->update_post( $existing, $page_data, $content, $file_mtime, $fingerprint, $engine_fingerprint );
 
 			if ( is_int( $result ) && $result > 0 ) {
-				$this->prune_duplicate_posts( $page_data, $result );
-				return $this->reconcile_result( 'updated', $result );
+				$post_id = $this->prune_duplicate_posts( $page_data, $result, $fingerprint, $engine_fingerprint );
+				return $this->reconcile_result( 'updated', $post_id );
 			}
 
 			return $this->reconcile_result( 'failed', $existing->ID, $result instanceof WP_Error ? $result : null );
@@ -132,8 +136,8 @@ class Page_Sync {
 		$result  = $this->create_post( $page_data, $content, $file_mtime, $fingerprint, $engine_fingerprint );
 
 		if ( is_int( $result ) && $result > 0 ) {
-			$this->prune_duplicate_posts( $page_data, $result );
-			return $this->reconcile_result( 'created', $result );
+			$post_id = $this->prune_duplicate_posts( $page_data, $result, $fingerprint, $engine_fingerprint );
+			return $this->reconcile_result( 'created', $post_id );
 		}
 
 		return $this->reconcile_result( 'failed', 0, $result instanceof WP_Error ? $result : null );
@@ -519,6 +523,8 @@ class Page_Sync {
 					'post_type'      => $post_type,
 					'posts_per_page' => 1,
 					'post_status'    => 'any',
+					'orderby'        => 'ID',
+					'order'          => 'ASC',
 				)
 			);
 
@@ -534,6 +540,8 @@ class Page_Sync {
 				'post_type'      => $post_type,
 				'posts_per_page' => 1,
 				'post_status'    => 'any',
+				'orderby'        => 'ID',
+				'order'          => 'ASC',
 			)
 		);
 
@@ -561,6 +569,8 @@ class Page_Sync {
 				'post_type'      => $post_type,
 				'posts_per_page' => 1,
 				'post_status'    => 'any',
+				'orderby'        => 'ID',
+				'order'          => 'ASC',
 			)
 		);
 
@@ -665,24 +675,46 @@ class Page_Sync {
 	}
 
 	/**
-	 * Update an existing post.
+	 * Check whether the WordPress fields managed by page sync still match.
 	 *
-	 * @param WP_Post $post       The existing post.
-	 * @param array   $page_data  The page data.
-	 * @param string  $content    The parsed block content.
-	 * @param int     $file_mtime The file modification time.
-	 * @param string  $fingerprint        Source fingerprint.
-	 * @param string  $engine_fingerprint Sync-engine fingerprint.
+	 * Source fingerprints describe the desired files, not the current database
+	 * row. A trashed or otherwise modified post must therefore leave the
+	 * zero-write path even when its stored source fingerprint is current.
 	 *
-	 * @return int|WP_Error The post ID or WP_Error on failure.
+	 * @param WP_Post $post      Existing post.
+	 * @param array   $page_data Desired page data.
+	 *
+	 * @return bool Whether the managed post fields match.
 	 */
-	private function update_post( WP_Post $post, array $page_data, string $content, int $file_mtime, string $fingerprint, string $engine_fingerprint ): int|WP_Error {
-		$is_locked = (bool) get_post_meta( $post->ID, '_blockstudio_page_locked', true );
+	private function post_matches_page_data( WP_Post $post, array $page_data ): bool {
+		$post_data = $this->build_update_post_data( $post, $page_data, $post->post_content, false );
 
-		if ( $is_locked ) {
-			return $post->ID;
+		if ( $this->post_matches_update_data( $post, $post_data ) ) {
+			return true;
 		}
 
+		$update_post_data = apply_filters( 'blockstudio/pages/update_post_data', $post_data, $post, $page_data );
+		if ( is_array( $update_post_data ) && $this->post_matches_update_data( $post, $update_post_data ) ) {
+			return true;
+		}
+
+		unset( $post_data['ID'] );
+		$create_post_data = apply_filters( 'blockstudio/pages/create_post_data', $post_data, $page_data );
+
+		return is_array( $create_post_data ) && $this->post_matches_update_data( $post, $create_post_data );
+	}
+
+	/**
+	 * Build the post fields controlled by page sync.
+	 *
+	 * @param WP_Post $post          Existing post.
+	 * @param array   $page_data     Desired page data.
+	 * @param string  $content       Desired serialized content.
+	 * @param bool    $apply_filters Whether to apply the public update filter.
+	 *
+	 * @return array Post data for wp_update_post().
+	 */
+	private function build_update_post_data( WP_Post $post, array $page_data, string $content, bool $apply_filters = true ): array {
 		$post_data = array(
 			'ID'           => $post->ID,
 			'post_title'   => $page_data['title'],
@@ -702,14 +734,69 @@ class Page_Sync {
 			$post_data['post_parent'] = $post_parent;
 		}
 
-		/**
-		 * Filter the post data before updating a page.
-		 *
-		 * @param array   $post_data The post data.
-		 * @param WP_Post $post      The existing post.
-		 * @param array   $page_data The page definition data.
-		 */
-		$post_data = apply_filters( 'blockstudio/pages/update_post_data', $post_data, $post, $page_data );
+		if ( $apply_filters ) {
+			/**
+			 * Filter the post data before updating a page.
+			 *
+			 * @param array   $post_data The post data.
+			 * @param WP_Post $post      The existing post.
+			 * @param array   $page_data The page definition data.
+			 */
+			$post_data = apply_filters( 'blockstudio/pages/update_post_data', $post_data, $post, $page_data );
+		}
+
+		return is_array( $post_data ) ? $post_data : array();
+	}
+
+	/**
+	 * Compare managed WP_Post fields with prepared update data.
+	 *
+	 * Post content is intentionally excluded because keyed pages may preserve
+	 * editor changes while retaining the source fingerprint.
+	 *
+	 * @param WP_Post $post      Existing post.
+	 * @param array   $post_data Prepared update data.
+	 *
+	 * @return bool Whether every managed field matches.
+	 */
+	private function post_matches_update_data( WP_Post $post, array $post_data ): bool {
+		$string_fields = array( 'post_title', 'post_name', 'post_type', 'post_status' );
+		$int_fields    = array( 'post_parent', 'menu_order' );
+
+		foreach ( $string_fields as $field ) {
+			if ( array_key_exists( $field, $post_data ) && (string) $post->{$field} !== (string) $post_data[ $field ] ) {
+				return false;
+			}
+		}
+		foreach ( $int_fields as $field ) {
+			if ( array_key_exists( $field, $post_data ) && (int) $post->{$field} !== (int) $post_data[ $field ] ) {
+				return false;
+			}
+		}
+
+		return true;
+	}
+
+	/**
+	 * Update an existing post.
+	 *
+	 * @param WP_Post $post       The existing post.
+	 * @param array   $page_data  The page data.
+	 * @param string  $content    The parsed block content.
+	 * @param int     $file_mtime The file modification time.
+	 * @param string  $fingerprint        Source fingerprint.
+	 * @param string  $engine_fingerprint Sync-engine fingerprint.
+	 *
+	 * @return int|WP_Error The post ID or WP_Error on failure.
+	 */
+	private function update_post( WP_Post $post, array $page_data, string $content, int $file_mtime, string $fingerprint, string $engine_fingerprint ): int|WP_Error {
+		$is_locked = (bool) get_post_meta( $post->ID, '_blockstudio_page_locked', true );
+
+		if ( $is_locked ) {
+			return $post->ID;
+		}
+
+		$post_data = $this->build_update_post_data( $post, $page_data, $content );
 
 		$result = wp_update_post( wp_slash( $post_data ), true );
 
@@ -922,14 +1009,16 @@ class Page_Sync {
 	/**
 	 * Prune synced duplicate posts for the same page identity.
 	 *
-	 * @param array $page_data    Page data.
-	 * @param int   $keep_post_id Post ID to keep.
+	 * @param array  $page_data    Page data.
+	 * @param int    $keep_post_id Post ID to keep.
+	 * @param string $fingerprint        Desired source fingerprint.
+	 * @param string $engine_fingerprint Desired sync-engine fingerprint.
 	 *
-	 * @return void
+	 * @return int Canonical managed post ID.
 	 */
-	private function prune_duplicate_posts( array $page_data, int $keep_post_id ): void {
+	private function prune_duplicate_posts( array $page_data, int $keep_post_id, string $fingerprint, string $engine_fingerprint ): int {
 		if ( empty( $page_data['key'] ) ) {
-			return;
+			return $keep_post_id;
 		}
 
 		$posts = get_posts(
@@ -939,21 +1028,44 @@ class Page_Sync {
 				'post_type'      => 'any',
 				'posts_per_page' => -1,
 				'post_status'    => $this->synced_post_statuses(),
+				'orderby'        => 'ID',
+				'order'          => 'ASC',
 			)
 		);
 
-		foreach ( $posts as $post ) {
-			if ( (int) $post->ID === $keep_post_id ) {
-				continue;
-			}
+		$posts = array_values(
+			array_filter(
+				$posts,
+				static fn ( mixed $post ): bool => $post instanceof WP_Post
+					&& (string) get_post_meta( $post->ID, '_blockstudio_page_collection', true ) === (string) ( $page_data['collection'] ?? '' )
+			)
+		);
 
-			if ( (string) get_post_meta( $post->ID, '_blockstudio_page_collection', true ) !== (string) ( $page_data['collection'] ?? '' ) ) {
+		$canonical_post_id = $keep_post_id;
+		$explicit_post_id  = isset( $page_data['postId'] ) ? (int) $page_data['postId'] : 0;
+		if ( $explicit_post_id <= 0 || $explicit_post_id !== $keep_post_id ) {
+			foreach ( $posts as $post ) {
+				if (
+					hash_equals( $fingerprint, (string) get_post_meta( $post->ID, '_blockstudio_page_fingerprint', true ) )
+					&& hash_equals( $engine_fingerprint, (string) get_post_meta( $post->ID, '_blockstudio_page_engine_fingerprint', true ) )
+					&& $this->post_matches_page_data( $post, $page_data )
+				) {
+					$canonical_post_id = (int) $post->ID;
+					break;
+				}
+			}
+		}
+
+		foreach ( $posts as $post ) {
+			if ( (int) $post->ID === $canonical_post_id ) {
 				continue;
 			}
 
 			update_post_meta( $post->ID, '_blockstudio_page_stale', true );
 			$this->prune_orphan( $post );
 		}
+
+		return $canonical_post_id;
 	}
 
 	/**

@@ -128,6 +128,79 @@ class PageReconciliationTest extends TestCase {
 	}
 
 	/**
+	 * A matching source fingerprint must not hide database-row drift.
+	 *
+	 * @return void
+	 */
+	public function test_reconciliation_restores_trashed_fingerprint_match(): void {
+		$this->write_page( 'alpha', 'Alpha' );
+		$first   = $this->reconcile( true );
+		$post_id = $first['pages']['alpha']['postId'];
+
+		wp_trash_post( $post_id );
+		$this->assertSame( 'trash', get_post_status( $post_id ) );
+		$this->assertSame( 'alpha__trashed', get_post_field( 'post_name', $post_id ) );
+
+		$second = $this->reconcile();
+
+		$this->assertSame( 0, $second['created'] );
+		$this->assertSame( 1, $second['updated'] );
+		$this->assertSame( 0, $second['unchanged'] );
+		$this->assertSame( $post_id, $second['pages']['alpha']['postId'] );
+		$this->assertSame( 'publish', get_post_status( $post_id ) );
+		$this->assertSame( 'alpha', get_post_field( 'post_name', $post_id ) );
+	}
+
+	/**
+	 * A stale preloaded inventory rechecks identity before creating a duplicate.
+	 *
+	 * @return void
+	 */
+	public function test_reconciliation_rechecks_identity_after_stale_inventory(): void {
+		$this->write_page( 'alpha', 'Alpha' );
+		$first     = $this->reconcile( true );
+		$post_id   = $first['pages']['alpha']['postId'];
+		$page_data = Pages::get_page( 'alpha' );
+
+		$result = ( new Page_Sync() )->reconcile(
+			$page_data,
+			array( 'existing' => null )
+		);
+
+		$this->assertSame( 'unchanged', $result['status'] );
+		$this->assertSame( $post_id, $result['post_id'] );
+		$this->assertNull( $result['error'] );
+	}
+
+	/**
+	 * Create-only post data customizations remain valid on unchanged sources.
+	 *
+	 * @return void
+	 */
+	public function test_reconciliation_accepts_create_post_data_customization(): void {
+		$filter = static function ( array $post_data ): array {
+			$post_data['post_title'] = 'Customized Alpha';
+
+			return $post_data;
+		};
+		add_filter( 'blockstudio/pages/create_post_data', $filter );
+
+		try {
+			$this->write_page( 'alpha', 'Alpha' );
+			$first   = $this->reconcile( true );
+			$post_id = $first['pages']['alpha']['postId'];
+			$second  = $this->reconcile();
+
+			$this->assertSame( 'Customized Alpha', get_post_field( 'post_title', $post_id ) );
+			$this->assertSame( 0, $second['updated'] );
+			$this->assertSame( 1, $second['unchanged'] );
+			$this->assertSame( $post_id, $second['pages']['alpha']['postId'] );
+		} finally {
+			remove_filter( 'blockstudio/pages/create_post_data', $filter );
+		}
+	}
+
+	/**
 	 * A single changed source updates only its managed post.
 	 *
 	 * @return void

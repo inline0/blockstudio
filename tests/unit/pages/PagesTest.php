@@ -790,6 +790,46 @@ class PagesTest extends TestCase {
 		}
 	}
 
+	public function test_duplicate_cleanup_keeps_one_deterministic_healthy_post(): void {
+		$page_data    = Pages::get_page( 'docs-getting-started' );
+		$keep_post_id = Pages::get_post_id( 'docs-getting-started' );
+		$sync         = new Page_Sync();
+		$fingerprint  = $sync->fingerprint( $page_data );
+		$engine        = Page_Sync::engine_fingerprint();
+		$duplicate_id  = wp_insert_post(
+			array(
+				'post_title'   => $page_data['title'],
+				'post_name'    => $page_data['slug'],
+				'post_type'    => $page_data['postType'],
+				'post_status'  => $page_data['postStatus'],
+				'post_content' => get_post_field( 'post_content', $keep_post_id ),
+			)
+		);
+
+		$this->assertIsInt( $duplicate_id );
+		$this->assertGreaterThan( $keep_post_id, $duplicate_id );
+
+		update_post_meta( $duplicate_id, '_blockstudio_page_key', $page_data['key'] );
+		update_post_meta( $duplicate_id, '_blockstudio_page_name', $page_data['name'] );
+		update_post_meta( $duplicate_id, '_blockstudio_page_source', $page_data['source_path'] );
+		update_post_meta( $duplicate_id, '_blockstudio_page_collection', $page_data['collection'] );
+		update_post_meta( $duplicate_id, '_blockstudio_page_path', $page_data['path'] );
+		update_post_meta( $duplicate_id, '_blockstudio_page_fingerprint', $fingerprint );
+		update_post_meta( $duplicate_id, '_blockstudio_page_engine_fingerprint', $engine );
+
+		$method = new ReflectionMethod( Page_Sync::class, 'prune_duplicate_posts' );
+
+		try {
+			$canonical_id = $method->invoke( $sync, $page_data, $duplicate_id, $fingerprint, $engine );
+
+			$this->assertSame( $keep_post_id, $canonical_id );
+			$this->assertSame( 'publish', get_post_status( $keep_post_id ) );
+			$this->assertSame( 'trash', get_post_status( $duplicate_id ) );
+		} finally {
+			wp_delete_post( $duplicate_id, true );
+		}
+	}
+
 	public function test_collection_duplicate_auto_draft_posts_are_pruned(): void {
 		$page_data    = Pages::get_page( 'docs-getting-started' );
 		$keep_post_id = Pages::get_post_id( 'docs-getting-started' );
