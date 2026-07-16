@@ -299,7 +299,6 @@ function bs_get_scoped_class( $name ): string {
 }
 
 /**
-<<<<<<< HEAD
  * Get registered file-based pages.
  *
  * @since 7.3.4
@@ -375,8 +374,6 @@ function blockstudio_current_page(): ?array {
 }
 
 /**
-=======
->>>>>>> 7506723849d6e936f1d3579feac8c3ca23318c2c
  * Register a custom field type.
  *
  * @since 7.3.3
