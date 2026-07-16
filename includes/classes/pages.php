@@ -37,14 +37,14 @@ class Pages {
 	private static bool $reconciling = false;
 
 	/**
-	 * Whether page hooks have been registered.
+	 * Whether discovery-dependent page hooks have been registered.
 	 *
 	 * @var bool
 	 */
 	private static bool $hooks_registered = false;
 
 	/**
-	 * Whether frontend runtime hooks have been registered.
+	 * Whether request-safe frontend and editor runtime hooks have been registered.
 	 *
 	 * @var bool
 	 */
@@ -138,8 +138,6 @@ class Pages {
 
 		if ( ! self::$hooks_registered ) {
 			self::register_template_for_hooks();
-			self::register_template_lock_hooks();
-			self::register_block_editing_mode_hooks();
 
 			self::$hooks_registered = true;
 		}
@@ -1535,6 +1533,8 @@ class Pages {
 			return;
 		}
 		self::$runtime_hooks_registered = true;
+		self::register_template_lock_hooks();
+		self::register_block_editing_mode_hooks();
 		add_filter( 'the_content', array( __CLASS__, 'render_layout_content' ), 20 );
 		add_action( 'template_redirect', array( __CLASS__, 'serve_markdown' ), 1 );
 	}

@@ -965,6 +965,20 @@ class PagesTest extends TestCase {
 		$this->assertFalse( $method->invoke( null, array(), false, true ) );
 	}
 
+	/**
+	 * Request-safe editor hooks remain available when discovery is gated.
+	 */
+	public function test_editor_assets_register_without_page_reconciliation(): void {
+		if ( ! function_exists( 'get_current_screen' ) ) {
+			require_once ABSPATH . 'wp-admin/includes/class-wp-screen.php';
+			require_once ABSPATH . 'wp-admin/includes/screen.php';
+		}
+		set_current_screen( 'post' );
+		do_action( 'enqueue_block_editor_assets' );
+
+		$this->assertTrue( wp_script_is( 'blockstudio-pages', 'registered' ) );
+	}
+
 	// Block content slashing
 
 	public function test_sync_preserves_hex_escaped_html_in_block_attributes(): void {
