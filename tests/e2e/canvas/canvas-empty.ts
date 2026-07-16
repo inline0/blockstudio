@@ -518,6 +518,9 @@ test.describe('Canvas - empty theme', () => {
       }
     };
 
+    // The preceding test leaves Canvas live mode active. Close that document
+    // before changing fixtures so its SSE reconciliation cannot race this one.
+    await page.goto('about:blank');
     cleanup();
 
     try {
