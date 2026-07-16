@@ -242,7 +242,7 @@ class Plugin {
 			'init',
 			function () {
 				if ( class_exists( 'Blockstudio\Pages' ) ) {
-					Pages::register_collection_post_types();
+					Pages::maybe_register_collection_post_types();
 				}
 			},
 			1

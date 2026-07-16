@@ -65,6 +65,7 @@ Download the latest release zip from [GitHub Releases](https://github.com/inline
 * Enhancement: bundled `bsui/*` inline styles now emit in the `bsui` cascade layer so theme CSS can override them without `!important`
 * Enhancement: `bsui/button` now supports icon and icon position attributes, plus a variant CSS extension hook
 * Enhancement: runtime, editor asset, and Tailwind caches now prune stale entries automatically to prevent unbounded cache growth
+* Enhancement: file-page deployments can reconcile a complete desired inventory incrementally, report created/updated/unchanged/removed work, and persist a verified source identity
 * Fix: registry imports now reject unsafe remote file paths, and generated HTML attributes are escaped consistently
 * Fix: Content Sync no longer prunes outside selected post types or taxonomies, now blocks destructive pushes when source JSON is malformed, and preserves attachment-reference meta when media download is disabled
 * Fix: raw Markdown page sources now respect post visibility and password protection
@@ -74,6 +75,7 @@ Download the latest release zip from [GitHub Releases](https://github.com/inline
 * Fix: custom field type REST schemas now save correctly inside repeater and array storage fields
 * Fix: editor fields now handle empty conditions, checkbox toggle-all values, async option refreshes, dynamic render races, and repeater RichText/WYSIWYG state more reliably
 * Fix: file-backed page, pattern, and Site Editor template rendering now share the same PHP/Twig/Blade compiler path for consistent template output
+* Fix: ordinary WP-CLI commands no longer discover or resync every file-backed page, and equal page fingerprints now perform zero post or postmeta writes
 
 = 7.4.2 =
 * Enhancement: collection loader `paths` can now mount external page directories under logical prefixes, with path-level metadata and collision-safe generated page names

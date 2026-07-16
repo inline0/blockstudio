@@ -712,9 +712,11 @@ Page discovery, sync, and collection routing expose these extension points:
 | `blockstudio/pages/allow_external_loader_path` | Filter | Allow loader `paths` outside the collection root. |
 | `blockstudio/pages/create_post_data` | Filter | Modify post data before a synced page is created. |
 | `blockstudio/pages/update_post_data` | Filter | Modify post data before a synced page is updated. |
+| `blockstudio/pages/sync_engine_inputs` | Filter | Add a parser, mapping, or migration version that should deliberately broaden reconciliation once. |
 | `blockstudio/pages/post_created` | Action | Runs after a synced page post is created. |
 | `blockstudio/pages/post_updated` | Action | Runs after a synced page post is updated. |
 | `blockstudio/pages/synced` | Action | Runs after the page registry has finished syncing. |
+| `blockstudio/pages/reconciled` | Action | Runs after an explicit reconciliation with its machine-readable report. |
 
 ## PHP API
 
@@ -746,12 +748,29 @@ Blockstudio\Pages::force_sync('about');
 // Force sync all pages.
 Blockstudio\Pages::force_sync_all();
 
+// Reconcile a complete deployment inventory without rewriting equal pages.
+$report = Blockstudio\Pages::reconcile([
+  'authoritative' => true,
+  'plan_valid' => true,
+  'source' => [
+    'commit' => $commit,
+    'dirtyHash' => $dirtyHash,
+  ],
+]);
+
+// Store this only after the matching static artifact and routes verify.
+Blockstudio\Pages::store_successful_source_identity($report['sourceIdentity']);
+
 // Lock a page to prevent automatic updates.
 Blockstudio\Pages::lock('about');
 
 // Unlock a page.
 Blockstudio\Pages::unlock('about');
 ```
+
+`reconcile()` always discovers the complete desired inventory and uses content plus sync-engine fingerprints as the correctness boundary. Git paths and renames may be supplied as candidate hints, but they never replace inventory comparison. Equal fingerprints return without parsing blocks, writing posts or metadata, clearing locks, or firing update hooks. Set `full: true` for recovery from an unknown deployment base; it still skips byte-equal pages.
+
+Normal WP-CLI bootstrap does not discover or sync pages. Deployment and authoring commands must call `reconcile()` explicitly. The successful source identity is intentionally separate: reconciliation never advances it, because deployment tooling must first activate and verify the matching static artifact.
 
 Global helper functions are available for templates and layouts:
 
