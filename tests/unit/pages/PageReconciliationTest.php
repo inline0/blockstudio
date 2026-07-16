@@ -201,6 +201,35 @@ class PageReconciliationTest extends TestCase {
 	}
 
 	/**
+	 * Force sync remains an explicit override for sync-disabled pages.
+	 *
+	 * @return void
+	 */
+	public function test_force_sync_creates_and_updates_sync_disabled_page(): void {
+		$this->write_page( 'alpha', 'Alpha', false );
+		$initial = $this->reconcile( true );
+
+		$this->assertSame( 0, $initial['created'] );
+		$this->assertSame( 1, $initial['unchanged'] );
+		$this->assertSame( 0, $initial['pages']['alpha']['postId'] );
+
+		$post_id = Pages::force_sync( 'alpha' );
+		$this->assertIsInt( $post_id );
+		$this->assertGreaterThan( 0, $post_id );
+		$this->assertStringContainsString( 'Alpha', (string) get_post_field( 'post_content', $post_id ) );
+
+		$this->write_page( 'alpha', 'Alpha changed', false );
+		$normal = $this->reconcile( false, 'changed-source' );
+		$this->assertSame( 0, $normal['updated'] );
+		$this->assertSame( 1, $normal['unchanged'] );
+		$this->assertStringNotContainsString( 'Alpha changed', (string) get_post_field( 'post_content', $post_id ) );
+
+		$forced = Pages::force_sync( 'alpha' );
+		$this->assertSame( $post_id, $forced );
+		$this->assertStringContainsString( 'Alpha changed', (string) get_post_field( 'post_content', $post_id ) );
+	}
+
+	/**
 	 * A single changed source updates only its managed post.
 	 *
 	 * @return void
@@ -369,24 +398,26 @@ class PageReconciliationTest extends TestCase {
 	 *
 	 * @param string $name  Page name.
 	 * @param string $title Page title/content.
+	 * @param bool   $sync  Whether automatic synchronization is enabled.
 	 *
 	 * @return void
 	 */
-	private function write_page( string $name, string $title ): void {
+	private function write_page( string $name, string $title, bool $sync = true ): void {
 		$directory = $this->pages_path . '/' . $name;
 		wp_mkdir_p( $directory );
+		$definition = array(
+			'name'       => $name,
+			'title'      => $title,
+			'slug'       => $name,
+			'postType'   => 'page',
+			'postStatus' => 'publish',
+		);
+		if ( ! $sync ) {
+			$definition['sync'] = false;
+		}
 		file_put_contents(
 			$directory . '/page.json',
-			wp_json_encode(
-				array(
-					'name'       => $name,
-					'title'      => $title,
-					'slug'       => $name,
-					'postType'   => 'page',
-					'postStatus' => 'publish',
-				),
-				JSON_PRETTY_PRINT
-			)
+			wp_json_encode( $definition, JSON_PRETTY_PRINT )
 		);
 		file_put_contents( $directory . '/index.php', '<h1>' . esc_html( $title ) . '</h1>' );
 	}

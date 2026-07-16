@@ -69,7 +69,7 @@ class Page_Sync {
 			? $args['existing']
 			: $this->find_existing_post( $page_data );
 
-		if ( ! $sync_enabled ) {
+		if ( ! $sync_enabled && empty( $args['always_update'] ) ) {
 			return $this->reconcile_result( 'unchanged', $existing ? $existing->ID : 0 );
 		}
 
