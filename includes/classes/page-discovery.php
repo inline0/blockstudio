@@ -378,10 +378,11 @@ class Page_Discovery {
 	 * @param string     $base_path  Base path for the page source.
 	 * @param array|null $collection Collection data.
 	 * @param array      $extra_source_mtime_paths Additional fingerprint source paths.
+	 * @param array      $loader_context Loader path context.
 	 *
 	 * @return array|null The page data or null if invalid.
 	 */
-	private function process_page_json( string $json_path, string $base_path, ?array $collection, array $extra_source_mtime_paths = array() ): ?array {
+	private function process_page_json( string $json_path, string $base_path, ?array $collection, array $extra_source_mtime_paths = array(), array $loader_context = array() ): ?array {
 		$directory = self::normalize_filesystem_path( dirname( $json_path ) );
 		$page_json = self::read_json_file( $json_path );
 
@@ -427,7 +428,10 @@ class Page_Discovery {
 			return null;
 		}
 
-		$name = isset( $page_json['name'] ) && is_scalar( $page_json['name'] )
+		$path = $this->loader_context_prefixed_path( $path, $loader_context );
+
+		$preserve_name = empty( $loader_context['prefix'] ) || ! empty( $loader_context['preserveNames'] );
+		$name          = $preserve_name && isset( $page_json['name'] ) && is_scalar( $page_json['name'] )
 			? sanitize_key( (string) $page_json['name'] )
 			: self::name_from_path( $path, $collection['slug'] ?? null );
 
@@ -439,6 +443,7 @@ class Page_Discovery {
 		$defaults = $this->collection_page_defaults( $collection );
 
 		$page_data = wp_parse_args( $page_json, $defaults );
+		$page_data = $this->merge_loader_context_meta( $page_data, $loader_context );
 		$page_data = $this->normalize_page_data(
 			$page_data,
 			array(
@@ -449,7 +454,7 @@ class Page_Discovery {
 				'content_path'       => $template_path,
 				'contentType'        => $content_type,
 				'directory'          => $directory,
-				'source_path'        => $collection ? $collection['slug'] . '/' . self::relative_path( $base_path, '' !== $relative_dir ? $directory : $json_path ) : $relative_dir,
+				'source_path'        => $collection ? $this->collection_source_path( $collection, self::relative_path( $base_path, '' !== $relative_dir ? $directory : $json_path ), $loader_context ) : $relative_dir,
 				'collection_data'    => $collection,
 				'source_mtime_paths' => array_values(
 					array_filter(
@@ -485,10 +490,11 @@ class Page_Discovery {
 	 * @param array|null $collection          Collection data.
 	 * @param bool       $require_frontmatter Whether standalone legacy markdown needs frontmatter.
 	 * @param array      $extra_source_mtime_paths Additional fingerprint source paths.
+	 * @param array      $loader_context Loader path context.
 	 *
 	 * @return array|null Page data.
 	 */
-	private function process_markdown_file( string $markdown_path, string $base_path, ?array $collection, bool $require_frontmatter, array $extra_source_mtime_paths = array() ): ?array {
+	private function process_markdown_file( string $markdown_path, string $base_path, ?array $collection, bool $require_frontmatter, array $extra_source_mtime_paths = array(), array $loader_context = array() ): ?array {
 		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Reading local markdown file.
 		$contents = file_get_contents( $markdown_path );
 
@@ -523,7 +529,10 @@ class Page_Discovery {
 			return null;
 		}
 
-		$name = isset( $frontmatter['name'] ) && is_scalar( $frontmatter['name'] )
+		$path = $this->loader_context_prefixed_path( $path, $loader_context );
+
+		$preserve_name = empty( $loader_context['prefix'] ) || ! empty( $loader_context['preserveNames'] );
+		$name          = $preserve_name && isset( $frontmatter['name'] ) && is_scalar( $frontmatter['name'] )
 			? sanitize_key( (string) $frontmatter['name'] )
 			: self::name_from_path( $path, $collection['slug'] ?? null );
 
@@ -534,6 +543,7 @@ class Page_Discovery {
 		$defaults = $this->collection_page_defaults( $collection );
 
 		$page_data = wp_parse_args( $frontmatter, $defaults );
+		$page_data = $this->merge_loader_context_meta( $page_data, $loader_context );
 
 		return $this->normalize_page_data(
 			$page_data,
@@ -545,7 +555,7 @@ class Page_Discovery {
 				'content_path'       => $markdown_path,
 				'contentType'        => 'markdown',
 				'directory'          => $directory,
-				'source_path'        => $collection ? $collection['slug'] . '/' . $relative : ( '' === $relative_dir ? $name : $relative_dir ),
+				'source_path'        => $collection ? $this->collection_source_path( $collection, $relative, $loader_context ) : ( '' === $relative_dir ? $name : $relative_dir ),
 				'collection_data'    => $collection,
 				'source_mtime_paths' => array_values(
 					array_filter(
@@ -735,17 +745,20 @@ class Page_Discovery {
 	 */
 	private function process_loader_paths( array $paths, string $loader_path, array $collection ): void {
 		foreach ( $paths as $path ) {
-			if ( ! is_scalar( $path ) ) {
+			$path_config = $this->normalize_loader_path_config( $path, $loader_path );
+
+			if ( null === $path_config ) {
 				$this->add_error( 'invalid_loader_path', 'Loader path must be a local filesystem path.', array( 'path' => $loader_path ) );
 				continue;
 			}
 
 			$resolved = $this->resolve_loader_path(
-				(string) $path,
+				$path_config['path'],
 				$collection['root'],
 				array(
 					'loader_path' => $loader_path,
 					'path_type'   => 'discovery',
+					'path_config' => $path_config,
 				)
 			);
 
@@ -755,7 +768,7 @@ class Page_Discovery {
 					'Loader path must resolve to an allowed local directory.',
 					array(
 						'path'  => $loader_path,
-						'value' => (string) $path,
+						'value' => $path_config['path'],
 					)
 				);
 				continue;
@@ -765,7 +778,7 @@ class Page_Discovery {
 				continue;
 			}
 
-			$this->discover_loader_path( $resolved, $collection, array( $loader_path ) );
+			$this->discover_loader_path( $resolved, $collection, array( $loader_path ), $path_config );
 		}
 	}
 
@@ -775,10 +788,11 @@ class Page_Discovery {
 	 * @param string $root                     Discovery root.
 	 * @param array  $collection               Collection data.
 	 * @param array  $extra_source_mtime_paths Additional fingerprint sources.
+	 * @param array  $loader_context           Loader path context.
 	 *
 	 * @return void
 	 */
-	private function discover_loader_path( string $root, array $collection, array $extra_source_mtime_paths ): void {
+	private function discover_loader_path( string $root, array $collection, array $extra_source_mtime_paths, array $loader_context = array() ): void {
 		$iterator = new RecursiveIteratorIterator(
 			new RecursiveDirectoryIterator( $root, RecursiveDirectoryIterator::SKIP_DOTS )
 		);
@@ -796,7 +810,7 @@ class Page_Discovery {
 			}
 
 			if ( 'page.json' === $basename ) {
-				$page_data = $this->process_page_json( $file_path, $root, $collection, $extra_source_mtime_paths );
+				$page_data = $this->process_page_json( $file_path, $root, $collection, $extra_source_mtime_paths, $loader_context );
 
 				if ( $page_data ) {
 					$this->register_page_data( $page_data );
@@ -810,13 +824,147 @@ class Page_Discovery {
 					continue;
 				}
 
-				$page_data = $this->process_markdown_file( $file_path, $root, $collection, false, $extra_source_mtime_paths );
+				$page_data = $this->process_markdown_file( $file_path, $root, $collection, false, $extra_source_mtime_paths, $loader_context );
 
 				if ( $page_data ) {
 					$this->register_page_data( $page_data );
 				}
 			}
 		}
+	}
+
+	/**
+	 * Normalize one loader path entry.
+	 *
+	 * Scalar entries keep the historical behavior. Array entries may provide:
+	 * - path: local path to discover.
+	 * - prefix/pathPrefix: logical collection path prefix for discovered pages.
+	 * - preserveNames: keep source names instead of deriving names from prefixed paths.
+	 * - meta: metadata merged into each discovered page.
+	 *
+	 * @param mixed  $entry       Loader path entry.
+	 * @param string $loader_path Loader file path.
+	 *
+	 * @return array|null Normalized config or null when invalid.
+	 */
+	private function normalize_loader_path_config( mixed $entry, string $loader_path ): ?array {
+		if ( is_scalar( $entry ) ) {
+			return array(
+				'path'          => (string) $entry,
+				'prefix'        => '',
+				'preserveNames' => true,
+				'meta'          => array(),
+			);
+		}
+
+		if ( ! is_array( $entry ) ) {
+			return null;
+		}
+
+		$path = $entry['path'] ?? $entry['root'] ?? $entry['source'] ?? null;
+		if ( ! is_scalar( $path ) || '' === trim( (string) $path ) ) {
+			return null;
+		}
+
+		$prefix_value = $entry['prefix'] ?? $entry['pathPrefix'] ?? $entry['mount'] ?? '';
+		$prefix       = '';
+		if ( is_scalar( $prefix_value ) && '' !== trim( (string) $prefix_value ) ) {
+			$prefix = self::normalize_logical_path( $prefix_value );
+
+			if ( null === $prefix ) {
+				$this->add_error(
+					'invalid_loader_path_prefix',
+					'Loader path prefix must be a safe logical path.',
+					array(
+						'path'  => $loader_path,
+						'value' => (string) $prefix_value,
+					)
+				);
+				return null;
+			}
+
+			if ( '.' === $prefix ) {
+				$prefix = '';
+			}
+		}
+
+		$preserve_names = array_key_exists( 'preserveNames', $entry )
+			? (bool) $entry['preserveNames']
+			: ( array_key_exists( 'preserve_names', $entry ) ? (bool) $entry['preserve_names'] : '' === $prefix );
+
+		return array(
+			'path'          => (string) $path,
+			'prefix'        => $prefix,
+			'preserveNames' => $preserve_names,
+			'meta'          => isset( $entry['meta'] ) && is_array( $entry['meta'] ) ? $entry['meta'] : array(),
+		);
+	}
+
+	/**
+	 * Prefix a page's logical collection path for mounted loader directories.
+	 *
+	 * @param string $path           Logical page path.
+	 * @param array  $loader_context Loader path context.
+	 *
+	 * @return string Prefixed logical path.
+	 */
+	private function loader_context_prefixed_path( string $path, array $loader_context ): string {
+		$prefix = isset( $loader_context['prefix'] ) && is_string( $loader_context['prefix'] )
+			? $loader_context['prefix']
+			: '';
+
+		if ( '' === $prefix ) {
+			return $path;
+		}
+
+		return '.' === $path ? $prefix : $prefix . '/' . $path;
+	}
+
+	/**
+	 * Merge loader path metadata into discovered page data.
+	 *
+	 * @param array $page_data      Page data.
+	 * @param array $loader_context Loader path context.
+	 *
+	 * @return array Page data with loader metadata.
+	 */
+	private function merge_loader_context_meta( array $page_data, array $loader_context ): array {
+		$context_meta = isset( $loader_context['meta'] ) && is_array( $loader_context['meta'] )
+			? $loader_context['meta']
+			: array();
+
+		if ( empty( $context_meta ) ) {
+			return $page_data;
+		}
+
+		$page_meta         = isset( $page_data['meta'] ) && is_array( $page_data['meta'] ) ? $page_data['meta'] : array();
+		$page_data['meta'] = array_merge( $context_meta, $page_meta );
+
+		return $page_data;
+	}
+
+	/**
+	 * Build a stable collection source path for external loader sources.
+	 *
+	 * @param array  $collection     Collection data.
+	 * @param string $relative       Relative source path.
+	 * @param array  $loader_context Loader path context.
+	 *
+	 * @return string Source identity path.
+	 */
+	private function collection_source_path( array $collection, string $relative, array $loader_context ): string {
+		$parts = array( (string) $collection['slug'] );
+
+		if ( isset( $loader_context['prefix'] ) && is_string( $loader_context['prefix'] ) && '' !== $loader_context['prefix'] ) {
+			$parts[] = $loader_context['prefix'];
+		}
+
+		$relative = trim( wp_normalize_path( $relative ), '/' );
+		if ( '' !== $relative ) {
+			$parts[] = $relative;
+		}
+
+		return implode( '/', $parts );
 	}
 
 	/**

@@ -257,6 +257,13 @@ return array(
   ),
   'paths' => array(
     __DIR__ . '/external-docs',
+    array(
+      'path' => __DIR__ . '/cli-docs',
+      'prefix' => 'cli',
+      'meta' => array(
+        'doc_set' => 'cli',
+      ),
+    ),
   ),
   'pages' => array(
     array(
@@ -282,7 +289,7 @@ A loader can return an array with `pages`, `meta`, and `paths` keys:
 | --- | --- |
 | `pages` | A list of page arrays. Each page supports the same recognized keys as `page.json` and Markdown frontmatter. |
 | `meta` | Metadata merged into every loader-generated page's `meta` array. |
-| `paths` | Extra local directories to discover as part of this collection. |
+| `paths` | Extra local directories to discover as part of this collection. Entries can be strings or path objects. |
 
 As a shorthand, the loader may return a bare list of page arrays.
 
@@ -301,6 +308,31 @@ Loader file references can point to PHP, Blade, Twig, Markdown, or HTML sources.
 Loader pages default to `generated: true`. When a generated loader page disappears from loader output, Blockstudio treats the synced post as an orphan on the next sync, cleaned up according to the `blockstudio/pages/orphan_action` filter.
 
 Directories listed in `paths` are discovered like normal collection folders. They can contain Markdown files or `page.json` folders. If those paths are outside the collection root, the same external path filter applies.
+
+Use a string entry when the external directory should keep its own logical paths. Use an object entry when the directory should be mounted under a collection path prefix:
+
+```php
+'paths' => array(
+  array(
+    'path' => __DIR__ . '/cli-docs',
+    'prefix' => 'cli',
+    'meta' => array(
+      'doc_set' => 'cli',
+    ),
+  ),
+),
+```
+
+With that configuration, `cli-docs/index.md` becomes `path: "cli"` and `cli-docs/getting-started.md` becomes `path: "cli/getting-started"` in the collection. Prefixes also make generated page names collision-safe, so multiple mounted directories can each contain `index.md` or `getting-started.md`. Set `preserveNames` to `true` on the path object if explicit `name` values from `page.json` or Markdown frontmatter should be kept instead.
+
+Path object properties:
+
+| Property | Type | Description |
+| --- | --- | --- |
+| `path` | `string` | Local directory to discover. Relative paths resolve from the collection root. |
+| `prefix` | `string` | Optional logical path prefix inside the collection. |
+| `preserveNames` | `boolean` | Keep explicit page names instead of generating names from the prefixed path. Defaults to `false` when `prefix` is set. |
+| `meta` | `object` | Metadata merged into every page discovered from this path. Page-level metadata wins on duplicate keys. |
 
 ## Layouts
 
