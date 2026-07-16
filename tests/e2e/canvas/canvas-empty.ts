@@ -520,6 +520,9 @@ test.describe('Canvas - empty theme', () => {
 
     // The preceding test leaves Canvas live mode active. Close that document
     // before changing fixtures so its SSE reconciliation cannot race this one.
+    await page.evaluate(() =>
+      localStorage.removeItem('blockstudio-canvas-settings'),
+    );
     await page.goto('about:blank');
     cleanup();
 
@@ -581,9 +584,6 @@ test.describe('Canvas - empty theme', () => {
       const reconcileBody = await reconcileResponse.text();
       expect(reconcileResponse.ok, reconcileBody).toBe(true);
 
-      await page.evaluate(() =>
-        localStorage.removeItem('blockstudio-canvas-settings'),
-      );
       await page.goto(canvasUrl, { waitUntil: 'domcontentloaded' });
 
       const root = page.locator('#blockstudio-canvas');
