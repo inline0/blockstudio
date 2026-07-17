@@ -1588,12 +1588,7 @@ class Assets {
 			$data = $minifier->minify();
 		}
 
-		if ( ! is_dir( $dist_folder ) ) {
-			wp_mkdir_p( $dist_folder );
-		}
-
-		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents -- Writing compiled file.
-		if ( false === file_put_contents( $compiled_filename, $data, LOCK_EX ) ) {
+		if ( ! Single_Flight::publish( $compiled_filename, $data ) ) {
 			return;
 		}
 
@@ -1659,12 +1654,7 @@ class Assets {
 			! file_exists( $compiled_filename ) &&
 			( $minify_js || $has_es_modules || $has_css_modules )
 		) {
-			if ( ! is_dir( $dist_folder ) ) {
-				wp_mkdir_p( $dist_folder );
-			}
-
-			// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents -- Writing compiled file.
-			if ( false === file_put_contents( $compiled_filename, $data, LOCK_EX ) ) {
+			if ( ! Single_Flight::publish( $compiled_filename, $data ) ) {
 				return;
 			}
 

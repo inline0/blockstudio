@@ -342,6 +342,11 @@ final class Build_Cache {
 	/**
 	 * Prune stale cache files in one scope.
 	 *
+	 * Temp files orphaned by a writer killed between write and rename are
+	 * swept after an hour of idleness; an active writer's temp file is
+	 * seconds old. Build lock files are path-keyed and bounded, so they are
+	 * never swept.
+	 *
 	 * @param string $scope     Cache scope.
 	 * @param string $keep_file File that must not be pruned.
 	 *
@@ -349,6 +354,22 @@ final class Build_Cache {
 	 */
 	private static function prune_scope( string $scope, string $keep_file ): void {
 		$dir   = self::get_cache_dir( $scope );
+		$stale = glob( $dir . '/*.php.tmp-*' );
+
+		if ( is_array( $stale ) ) {
+			foreach ( $stale as $file ) {
+				if ( ! is_file( $file ) ) {
+					continue;
+				}
+
+				$mtime = (int) filemtime( $file );
+
+				if ( $mtime > 0 && time() - $mtime > HOUR_IN_SECONDS ) {
+					wp_delete_file( $file );
+				}
+			}
+		}
+
 		$files = glob( $dir . '/*.php' );
 
 		if ( ! is_array( $files ) || empty( $files ) ) {
@@ -452,7 +473,7 @@ final class Build_Cache {
 	 *
 	 * @return string Cache file path.
 	 */
-	private static function get_cache_file( string $scope, string $key ): string {
+	public static function get_cache_file( string $scope, string $key ): string {
 		return self::get_cache_dir( $scope ) . '/' . sanitize_file_name( $key ) . '.php';
 	}
 

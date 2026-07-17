@@ -64,6 +64,13 @@ use WP_Block_Type;
 class Build {
 
 	/**
+	 * Wait budget in milliseconds for requests that lose the builder election.
+	 *
+	 * @var int
+	 */
+	private const BUILD_WAIT_BUDGET_MS = 5000;
+
+	/**
 	 * Whether interactivity API has been rendered.
 	 *
 	 * @var bool
@@ -620,6 +627,12 @@ class Build {
 	/**
 	 * Initialize the build.
 	 *
+	 * On a cold runtime cache one request per instance is elected builder via
+	 * a Single_Flight lock. The elected builder rechecks the cache under the
+	 * lock before building. Concurrent requests wait briefly for the published
+	 * runtime payload and hydrate from it; a request whose wait budget expires
+	 * builds unguarded so block registration always completes.
+	 *
 	 * @since 1.0.0
 	 *
 	 * @param bool|string|array $args The arguments.
@@ -654,6 +667,8 @@ class Build {
 
 		$registry->set_blade_instance( $instance, $path );
 
+		$build_lock = null;
+
 		if ( ! $editor ) {
 			$cached_runtime = Build_Cache::load_runtime( $path, $instance );
 
@@ -664,6 +679,41 @@ class Build {
 					$registry
 				);
 				return;
+			}
+
+			if ( Build_Cache::is_enabled() ) {
+				$build_lock = Single_Flight::acquire(
+					Build_Cache::get_cache_dir( 'runtime' ) . '/' . md5( $path ) . '.build.lock'
+				);
+
+				if ( is_resource( $build_lock ) ) {
+					$cached_runtime = Build_Cache::load_runtime( $path, $instance );
+
+					if ( is_array( $cached_runtime ) ) {
+						Single_Flight::release( $build_lock );
+						self::hydrate_cached_runtime_build(
+							$cached_runtime,
+							$instance,
+							$registry
+						);
+						return;
+					}
+				}
+
+				if ( false === $build_lock ) {
+					$cached_runtime = self::wait_for_published_runtime( $path, $instance );
+
+					if ( is_array( $cached_runtime ) ) {
+						self::hydrate_cached_runtime_build(
+							$cached_runtime,
+							$instance,
+							$registry
+						);
+						return;
+					}
+
+					$build_lock = null;
+				}
 			}
 		}
 
@@ -801,6 +851,10 @@ class Build {
 			)
 		);
 
+		if ( is_resource( $build_lock ) ) {
+			Single_Flight::release( $build_lock );
+		}
+
 		$registry->merge_data( $store );
 
 		foreach ( $registry->get_data() as $file ) {
@@ -827,6 +881,46 @@ class Build {
 
 		do_action( 'blockstudio/init' );
 		do_action( "blockstudio/init/$instance" );
+	}
+
+	/**
+	 * Wait for a concurrent builder to publish the runtime cache payload.
+	 *
+	 * The probe stats the cache file and only includes and validates the
+	 * payload when its mtime or size changed since the previous poll, so
+	 * waiters do not deserialize a stale payload every 25ms while the
+	 * elected builder runs.
+	 *
+	 * @param string $path     Build path.
+	 * @param string $instance Build instance.
+	 *
+	 * @return array|null Runtime payload or null when the wait budget expired.
+	 */
+	private static function wait_for_published_runtime( string $path, string $instance ): ?array {
+		$key      = Build_Cache::get_runtime_key( $path, $instance );
+		$file     = Build_Cache::get_cache_file( 'runtime', $key );
+		$snapshot = null;
+
+		return Single_Flight::wait(
+			static function () use ( $key, $file, &$snapshot ): ?array {
+				clearstatcache( true, $file );
+
+				if ( ! is_file( $file ) ) {
+					return null;
+				}
+
+				$current = array( (int) filemtime( $file ), (int) filesize( $file ) );
+
+				if ( $current === $snapshot ) {
+					return null;
+				}
+
+				$snapshot = $current;
+
+				return Build_Cache::load( 'runtime', $key );
+			},
+			self::BUILD_WAIT_BUDGET_MS
+		);
 	}
 
 	/**

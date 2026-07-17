@@ -21,9 +21,13 @@ use BlockstudioVendor\TailwindPHP\Tailwind as TailwindPHP;
  *
  * Cache Strategy:
  * - Extract CSS class candidates from HTML via TailwindPHP::extractCandidates()
- * - Sort candidates and hash with CSS config to create cache key
+ * - Sort candidates and hash with CSS config and plugin version to create cache key
  * - Cache files stored in uploads/blockstudio/tailwind/cache/
  * - Dynamic HTML (nonces, timestamps) does NOT bust the cache
+ * - Cold keys compile once across processes via Single_Flight: one request is
+ *   elected builder and publishes atomically, concurrent requests wait briefly
+ *   and serve the most recent cached CSS as last-good output for one request
+ *   when the publish does not arrive
  *
  * Filter: blockstudio/tailwind/css
  * Customize the CSS input for Tailwind compilation:
@@ -36,6 +40,13 @@ use BlockstudioVendor\TailwindPHP\Tailwind as TailwindPHP;
  * @since 5.0.0
  */
 class Tailwind {
+
+	/**
+	 * Wait budget in milliseconds for requests that lose the builder election.
+	 *
+	 * @var int
+	 */
+	private const WAIT_BUDGET_MS = 4000;
 
 	/**
 	 * Request generation in which this instance last compiled.
@@ -120,7 +131,11 @@ class Tailwind {
 	 * Compile Tailwind CSS from the buffered HTML output.
 	 *
 	 * Extracts CSS class candidates, checks the file cache, compiles on miss,
-	 * and injects the result as an inline style tag before </head>.
+	 * and injects the result as an inline style tag before </head>. On a cold
+	 * key one request compiles while concurrent requests wait briefly for the
+	 * published file; a request whose wait budget expires injects the most
+	 * recent cached CSS as last-good output and the next request hits the
+	 * cache.
 	 *
 	 * @param string $html The full page HTML.
 	 *
@@ -139,33 +154,28 @@ class Tailwind {
 		$css_input  = self::build_css_input();
 		$candidates = self::filter_candidates( TailwindPHP::extractCandidates( $html ) );
 		sort( $candidates );
-		$cache_key  = md5( implode( ',', $candidates ) . $css_input );
+		$cache_key  = md5( self::get_engine_version() . implode( ',', $candidates ) . $css_input );
 		$cache_path = self::get_cache_dir() . '/' . $cache_key . '.css';
 
-		if ( file_exists( $cache_path ) ) {
-			// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Reading cached CSS file.
-			$compiled = file_get_contents( $cache_path );
-		} else {
-			$compiled = TailwindPHP::generate(
-				array(
-					'content' => self::candidates_to_content( $candidates ),
-					'css'     => $css_input,
-					'minify'  => true,
-				)
-			);
-
-			if ( ! empty( $compiled ) ) {
-				$dir = self::get_cache_dir();
-
-				if ( ! is_dir( $dir ) ) {
-					wp_mkdir_p( $dir );
-				}
-
-				// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents -- Writing compiled CSS to cache file.
-				if ( false !== file_put_contents( $cache_path, $compiled, LOCK_EX ) ) {
-					self::prune_cache( $cache_path );
-				}
+		$compiled = Single_Flight::read_or_build(
+			$cache_path,
+			static function () use ( $candidates, $css_input ): string {
+				return (string) TailwindPHP::generate(
+					array(
+						'content' => self::candidates_to_content( $candidates ),
+						'css'     => $css_input,
+						'minify'  => true,
+					)
+				);
+			},
+			self::WAIT_BUDGET_MS,
+			static function () use ( $cache_path ): void {
+				self::prune_cache( $cache_path );
 			}
+		);
+
+		if ( null === $compiled ) {
+			$compiled = self::read_last_good_css();
 		}
 
 		if ( empty( $compiled ) ) {
@@ -229,32 +239,105 @@ class Tailwind {
 		sort( $candidates );
 
 		$css_input  = self::build_css_input();
-		$cache_key  = md5( 'editor:' . implode( ',', $candidates ) . $css_input );
+		$cache_key  = md5( 'editor:' . self::get_engine_version() . implode( ',', $candidates ) . $css_input );
 		$cache_path = self::get_cache_dir() . '/' . $cache_key . '.css';
 
-		if ( file_exists( $cache_path ) ) {
+		$compiled = Single_Flight::read_or_build(
+			$cache_path,
+			static function () use ( $candidates, $css_input ): string {
+				$compiler = TailwindPHP::compile( $css_input );
+				$compiled = $compiler->css( $candidates );
+
+				return ! empty( $compiled ) ? TailwindPHP::minify( $compiled ) : '';
+			},
+			self::WAIT_BUDGET_MS,
+			static function () use ( $cache_path ): void {
+				self::prune_cache( $cache_path );
+			}
+		);
+
+		return $compiled ?? '';
+	}
+
+	/**
+	 * Get the engine version component of Tailwind cache keys.
+	 *
+	 * A plugin update ships a new TailwindPHP engine, so keying on the plugin
+	 * version busts compiled CSS from previous engines.
+	 *
+	 * @return string Engine version.
+	 */
+	private static function get_engine_version(): string {
+		return defined( 'BLOCKSTUDIO_VERSION' ) ? BLOCKSTUDIO_VERSION : '';
+	}
+
+	/**
+	 * Read the most recently published cache file as last-good output.
+	 *
+	 * A request that loses the builder election and exhausts its wait budget
+	 * serves the newest cached CSS for one request instead of unstyled HTML.
+	 * The near-match is not published under the cold key, so a later request
+	 * still compiles the exact CSS.
+	 *
+	 * @return string|null Most recent cached CSS, or null when none exists.
+	 */
+	private static function read_last_good_css(): ?string {
+		$files = glob( self::get_cache_dir() . '/*.css' );
+
+		if ( ! is_array( $files ) || empty( $files ) ) {
+			return null;
+		}
+
+		usort(
+			$files,
+			static fn( string $a, string $b ): int => (int) filemtime( $b ) <=> (int) filemtime( $a )
+		);
+
+		foreach ( $files as $file ) {
 			// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Reading cached CSS file.
-			$compiled = file_get_contents( $cache_path );
-		} else {
-			$compiler = TailwindPHP::compile( $css_input );
-			$compiled = $compiler->css( $candidates );
+			$content = is_file( $file ) ? file_get_contents( $file ) : false;
 
-			if ( ! empty( $compiled ) ) {
-				$compiled = TailwindPHP::minify( $compiled );
-				$dir      = self::get_cache_dir();
-
-				if ( ! is_dir( $dir ) ) {
-					wp_mkdir_p( $dir );
-				}
-
-				// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents -- Writing compiled CSS to cache file.
-				if ( false !== file_put_contents( $cache_path, $compiled, LOCK_EX ) ) {
-					self::prune_cache( $cache_path );
-				}
+			if ( false !== $content && '' !== $content ) {
+				return $content;
 			}
 		}
 
-		return ! empty( $compiled ) ? $compiled : '';
+		return null;
+	}
+
+	/**
+	 * Delete crash-orphaned temp files and long-idle lock files.
+	 *
+	 * Cache keys churn with content changes, so lock and temp files would
+	 * otherwise accumulate one inode per historical key. Both are swept only
+	 * after an hour of idleness: an active builder's temp file is seconds
+	 * old, and sweeping a lock file that is re-contended in the same instant
+	 * costs at worst one duplicate build with an atomic publish, never a
+	 * torn cache file.
+	 *
+	 * @param string $cache_dir Cache directory.
+	 *
+	 * @return void
+	 */
+	private static function sweep_stale_files( string $cache_dir ): void {
+		$locks = glob( $cache_dir . '/*.css.lock' );
+		$temps = glob( $cache_dir . '/*.css.tmp-*' );
+		$stale = array_merge(
+			is_array( $locks ) ? $locks : array(),
+			is_array( $temps ) ? $temps : array()
+		);
+
+		foreach ( $stale as $file ) {
+			if ( ! is_file( $file ) ) {
+				continue;
+			}
+
+			$mtime = (int) filemtime( $file );
+
+			if ( $mtime > 0 && time() - $mtime > HOUR_IN_SECONDS ) {
+				wp_delete_file( $file );
+			}
+		}
 	}
 
 	/**
@@ -278,6 +361,8 @@ class Tailwind {
 		}
 
 		try {
+			self::sweep_stale_files( $cache_dir );
+
 			$files = glob( $cache_dir . '/*.css' );
 
 			if ( ! is_array( $files ) || empty( $files ) ) {

@@ -209,12 +209,7 @@ class ESModules {
 			wp_mkdir_p( $folder_module );
 		}
 
-		if ( ! is_dir( dirname( $filename ) ) ) {
-			wp_mkdir_p( dirname( $filename ) );
-		}
-
-		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents -- Writing cached module file.
-		if ( false === file_put_contents( $filename, $data, LOCK_EX ) ) {
+		if ( ! Single_Flight::publish( $filename, $data ) ) {
 			return false;
 		}
 

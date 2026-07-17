@@ -115,6 +115,7 @@ class Plugin {
 		require_once $classes_dir . 'perf.php';
 		require_once $classes_dir . 'migrate.php';
 		require_once $classes_dir . 'files.php';
+		require_once $classes_dir . 'single-flight.php';
 		require_once $classes_dir . 'settings.php';
 		require_once $classes_dir . 'build-cache.php';
 		require_once $classes_dir . 'block-editor-policy.php';
