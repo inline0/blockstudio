@@ -542,15 +542,19 @@ function loadDefaultTheme(): Theme
  *   - `onDependency`: Callback invoked when a file dependency is detected
  *
  * @return array{
- *     build: callable(array<string>): string,
+ *     build: callable(array<string>, bool=): string,
+ *     buildExact: callable(array<string>, bool=): string,
  *     sources: array<string>,
  *     root: array,
- *     features: int
+ *     features: int,
+ *     designSystem: \BlockstudioVendor\TailwindPHP\DesignSystem\DesignSystem
  * } Compilation result:
- *   - `build`: Function that takes candidate class names and returns CSS
+ *   - `build`: Function that takes candidate class names and returns CSS (cumulative across calls)
+ *   - `buildExact`: Function that compiles exactly the given candidate set per call
  *   - `sources`: Detected content source patterns
  *   - `root`: Compiled AST root
  *   - `features`: Bitmask of detected features
+ *   - `designSystem`: The design system built during compilation
  *
  * @throws \Exception When CSS parsing fails
  * @throws \Exception When @utility or @custom-variant directives are invalid
@@ -579,7 +583,7 @@ function compile(string $css, array $options = []): array
  *
  * @param array $ast CSS AST
  * @param array $options Compilation options
- * @return array{build: callable, sources: array, root: mixed, features: int}
+ * @return array{build: callable, buildExact: callable, sources: array, root: mixed, features: int, designSystem: \BlockstudioVendor\TailwindPHP\DesignSystem\DesignSystem}
  */
 function compileAst(array $ast, array $options = []): array
 {
@@ -640,11 +644,39 @@ function compileAst(array $ast, array $options = []): array
         });
     };
 
+    // Optimize the shared AST with the given utility nodes substituted into
+    // the utilities context node. The invariant-chunk cache is built once per
+    // compiler lifetime; the shared AST is never mutated, which is what keys
+    // the cache to this compiler's root AST. Falls back to the full pipeline
+    // on a working copy when the AST shape rules out the incremental path.
+    $optimizeCache = null;
+    $optimize = function (array $utilityNodes) use (
+        &$optimizeCache,
+        &$ast,
+        $designSystem,
+        $options,
+        $updateUtilitiesNode
+    ): array {
+        $polyfills = $options['polyfills'] ?? POLYFILL_ALL;
+        if ($optimizeCache === null) {
+            $optimizeCache = optimizeAstPrepareIncremental($ast, $designSystem, $polyfills) ?? false;
+        }
+        if ($optimizeCache !== false && !astContainsAtRuleNamed($utilityNodes, '@custom-media')) {
+            return optimizeAstIncremental($optimizeCache, $utilityNodes, $designSystem, $polyfills);
+        }
+
+        $fullAst = $ast;
+        $updateUtilitiesNode($fullAst, $utilityNodes);
+
+        return optimizeAst($fullAst, $designSystem, $polyfills);
+    };
+
     return [
         'sources' => $sources,
         'root' => $root,
         'features' => $features,
-        'build' => function (array $newRawCandidates) use (
+        'designSystem' => $designSystem,
+        'build' => function (array $newRawCandidates, bool $minify = false) use (
             &$allValidCandidates,
             &$compiled,
             &$previousAstNodeCount,
@@ -653,10 +685,10 @@ function compileAst(array $ast, array $options = []): array
             &$ast,
             $features,
             $options,
-            $updateUtilitiesNode
+            $optimize
         ) {
             if ($features === FEATURE_NONE) {
-                return toCss($ast);
+                return toCss($ast, $minify);
             }
 
             if ($utilitiesNodePath === null) {
@@ -664,7 +696,7 @@ function compileAst(array $ast, array $options = []): array
                     $compiled = optimizeAst($ast, $designSystem, $options['polyfills'] ?? POLYFILL_ALL);
                 }
 
-                return toCss($compiled);
+                return toCss($compiled, $minify);
             }
 
             // Track if this is the first build call with inline candidates
@@ -688,10 +720,10 @@ function compileAst(array $ast, array $options = []): array
             // If no new candidates were added and no inline candidates to process, return cached result
             if (!$didChange) {
                 if ($compiled === null) {
-                    $compiled = optimizeAst($ast, $designSystem, $options['polyfills'] ?? POLYFILL_ALL);
+                    $compiled = $optimize([]);
                 }
 
-                return toCss($compiled);
+                return toCss($compiled, $minify);
             }
 
             $compileResult = \BlockstudioVendor\TailwindPHP\Compile\compileCandidates(
@@ -710,20 +742,73 @@ function compileAst(array $ast, array $options = []): array
             // If no new nodes were generated, return cached result
             if ($previousAstNodeCount === count($newNodes)) {
                 if ($compiled === null) {
-                    $compiled = optimizeAst($ast, $designSystem, $options['polyfills'] ?? POLYFILL_ALL);
+                    $compiled = $optimize([]);
                 }
 
-                return toCss($compiled);
+                return toCss($compiled, $minify);
             }
 
             $previousAstNodeCount = count($newNodes);
 
-            // Update the context node with the compiled utilities
-            $updateUtilitiesNode($ast, $newNodes);
+            $compiled = $optimize($newNodes);
 
-            $compiled = optimizeAst($ast, $designSystem, $options['polyfills'] ?? POLYFILL_ALL);
+            return toCss($compiled, $minify);
+        },
+        // Exact per-call build: compiles exactly the given candidate set (plus
+        // inline candidates from @source inline()) against the shared design
+        // system. Unlike `build`, it does not accumulate candidates across
+        // calls and never returns a cached result, so the output matches a
+        // cold compile of the same candidate set byte for byte while still
+        // reusing the design system's parse/compile memos.
+        'buildExact' => function (array $rawCandidates, bool $minify = false) use (
+            $designSystem,
+            $utilitiesNodePath,
+            &$ast,
+            $features,
+            $options,
+            $optimize,
+            $inlineCandidates
+        ) {
+            if ($features === FEATURE_NONE) {
+                return toCss($ast, $minify);
+            }
 
-            return toCss($compiled);
+            if ($utilitiesNodePath === null) {
+                return toCss(optimizeAst($ast, $designSystem, $options['polyfills'] ?? POLYFILL_ALL), $minify);
+            }
+
+            $validCandidates = [];
+
+            foreach ($inlineCandidates as $candidate) {
+                if (!$designSystem->hasInvalidCandidate($candidate)) {
+                    $validCandidates[$candidate] = true;
+                }
+            }
+
+            foreach ($rawCandidates as $candidate) {
+                if (!$designSystem->hasInvalidCandidate($candidate)) {
+                    if (str_starts_with($candidate, '--')) {
+                        $designSystem->getTheme()->markUsedVariable($candidate);
+                    } else {
+                        $validCandidates[$candidate] = true;
+                    }
+                }
+            }
+
+            $compileResult = \BlockstudioVendor\TailwindPHP\Compile\compileCandidates(
+                array_keys($validCandidates),
+                $designSystem,
+                ['onInvalidCandidate' => function ($candidate) use ($designSystem) {
+                    $designSystem->addInvalidCandidate($candidate);
+                }],
+            );
+
+            $newNodes = $compileResult['astNodes'];
+
+            // Apply CSS function substitution to compiled utilities (resolves theme() etc.)
+            substituteFunctions($newNodes, $designSystem);
+
+            return toCss($optimize($newNodes), $minify);
         },
     ];
 }
@@ -1530,24 +1615,16 @@ function cloneAstNode(array $node): array
 }
 
 /**
- * Optimize AST by flattening context nodes and other optimizations.
+ * Collect used variables and keyframe names from a node list.
  *
- * @param array $ast
- * @param DesignSystem $designSystem
- * @param int $polyfills
- * @return array
+ * @param array $nodes
+ * @param array &$usedVariables
+ * @param array &$usedKeyframeNames
+ * @return void
  */
-function optimizeAst(array $ast, DesignSystem $designSystem, int $polyfills = POLYFILL_ALL): array
+function optimizeAstCollectUsed(array $nodes, array &$usedVariables, array &$usedKeyframeNames): void
 {
-    $result = [];
-    $usedVariables = [];
-    $usedKeyframeNames = [];
-    $theme = $designSystem->getTheme();
-    $atRoots = []; // Collect at-root nodes to hoist
-    $seenAtProperties = []; // Track seen @property rules to dedupe
-
-    // First pass: collect used variables and keyframe names
-    $collectUsed = function (array $node) use (&$collectUsed, &$usedVariables, &$usedKeyframeNames) {
+    foreach ($nodes as $node) {
         if ($node['kind'] === 'declaration') {
             $value = $node['value'] ?? '';
             // Extract variables from var() functions
@@ -1566,17 +1643,23 @@ function optimizeAst(array $ast, DesignSystem $designSystem, int $polyfills = PO
                 }
             }
         }
-        foreach ($node['nodes'] ?? [] as $child) {
-            $collectUsed($child);
+        if (!empty($node['nodes'])) {
+            optimizeAstCollectUsed($node['nodes'], $usedVariables, $usedKeyframeNames);
         }
-    };
-
-    foreach ($ast as $node) {
-        $collectUsed($node);
     }
+}
 
-    // Also mark theme variables that reference other variables
-    // Iterate until no new variables are found
+/**
+ * Mark theme variables that reference other variables as used, iterating
+ * until no new variables are found.
+ *
+ * @param Theme $theme
+ * @param array &$usedVariables
+ * @param array &$usedKeyframeNames
+ * @return void
+ */
+function optimizeAstExpandThemeUsed(Theme $theme, array &$usedVariables, array &$usedKeyframeNames): void
+{
     do {
         $changed = false;
         foreach ($theme->entries() as [$key, $value]) {
@@ -1603,6 +1686,25 @@ function optimizeAst(array $ast, DesignSystem $designSystem, int $polyfills = PO
             }
         }
     } while ($changed);
+}
+
+/**
+ * Run the structural optimizeAst transform over a node list: flatten context
+ * nodes, hoist at-root nodes into the shared collector, drop --tw-sort
+ * declarations, filter :root/:host variables and theme keyframes to used
+ * ones, and prune empty rules.
+ *
+ * @param array $nodes
+ * @param Theme $theme
+ * @param array $usedVariables
+ * @param array $usedKeyframeNames
+ * @param array &$atRoots Shared collector for hoisted at-root nodes
+ * @param array &$seenAtProperties Shared @property dedupe set
+ * @return array
+ */
+function optimizeAstTransformNodes(array $nodes, Theme $theme, array $usedVariables, array $usedKeyframeNames, array &$atRoots, array &$seenAtProperties): array
+{
+    $result = [];
 
     $transform = function (array $node, array &$parent) use (&$transform, $usedVariables, $usedKeyframeNames, $theme, &$atRoots, &$seenAtProperties) {
         // Handle context nodes - lift their children to parent
@@ -1713,17 +1815,21 @@ function optimizeAst(array $ast, DesignSystem $designSystem, int $polyfills = PO
         $parent[] = $node;
     };
 
-    foreach ($ast as $node) {
+    foreach ($nodes as $node) {
         $transform($node, $result);
     }
 
-    // Transform CSS nesting (flatten & selectors, hoist @media)
-    $result = LightningCss::transformNesting($result);
+    return $result;
+}
 
-    // Add vendor prefixes to declarations that need them
-    $result = LightningCss::addVendorPrefixes($result);
-
-    // Apply LightningCSS value optimizations to all declarations
+/**
+ * Apply LightningCSS value optimizations to all declarations in a node list.
+ *
+ * @param array &$nodes
+ * @return void
+ */
+function optimizeAstOptimizeValues(array &$nodes): void
+{
     $optimizeValues = function (array &$node) use (&$optimizeValues): void {
         if ($node['kind'] === 'declaration' && isset($node['value'])) {
             $node['value'] = LightningCss::optimizeValue($node['value'], $node['property'] ?? '');
@@ -1735,15 +1841,21 @@ function optimizeAst(array $ast, DesignSystem $designSystem, int $polyfills = PO
         }
     };
 
-    foreach ($result as &$node) {
+    foreach ($nodes as &$node) {
         $optimizeValues($node);
     }
+}
 
-    // Apply color-mix polyfill - convert color-mix with variables to @supports fallback
-    if ($polyfills & POLYFILL_COLOR_MIX) {
-        $result = applyColorMixPolyfill($result, $designSystem);
-    }
-
+/**
+ * Split hoisted at-root nodes into the @property fallback block and the
+ * nodes to append after the main result.
+ *
+ * @param array $atRoots
+ * @param int $polyfills
+ * @return array{fallback: ?array, append: array}
+ */
+function optimizeAstProcessAtRoots(array $atRoots, int $polyfills): array
+{
     // Process atRoots - separate @property rules from others
     $atPropertyRules = [];
     $otherAtRoots = [];
@@ -1754,6 +1866,8 @@ function optimizeAst(array $ast, DesignSystem $designSystem, int $polyfills = PO
             $otherAtRoots[] = $atRoot;
         }
     }
+
+    $fallback = null;
 
     // If we have @property rules, wrap their fallbacks in @layer properties + @supports
     if (!empty($atPropertyRules) && ($polyfills & POLYFILL_AT_PROPERTY)) {
@@ -1792,15 +1906,57 @@ function optimizeAst(array $ast, DesignSystem $designSystem, int $polyfills = PO
 
             $fallbackRule = Ast\styleRule($universalSelector, $fallbackDeclarations);
             $supportsRule = Ast\atRule('@supports', $supportsCondition, [$fallbackRule]);
-            $layerProperties = Ast\atRule('@layer', 'properties', [$supportsRule]);
-
-            // Prepend to result
-            array_unshift($result, $layerProperties);
+            $fallback = Ast\atRule('@layer', 'properties', [$supportsRule]);
         }
     }
 
+    return ['fallback' => $fallback, 'append' => array_merge($otherAtRoots, $atPropertyRules)];
+}
+
+/**
+ * Optimize AST by flattening context nodes and other optimizations.
+ *
+ * @param array $ast
+ * @param DesignSystem $designSystem
+ * @param int $polyfills
+ * @return array
+ */
+function optimizeAst(array $ast, DesignSystem $designSystem, int $polyfills = POLYFILL_ALL): array
+{
+    $usedVariables = [];
+    $usedKeyframeNames = [];
+    $theme = $designSystem->getTheme();
+    $atRoots = []; // Collect at-root nodes to hoist
+    $seenAtProperties = []; // Track seen @property rules to dedupe
+
+    // First pass: collect used variables and keyframe names
+    optimizeAstCollectUsed($ast, $usedVariables, $usedKeyframeNames);
+    optimizeAstExpandThemeUsed($theme, $usedVariables, $usedKeyframeNames);
+
+    $result = optimizeAstTransformNodes($ast, $theme, $usedVariables, $usedKeyframeNames, $atRoots, $seenAtProperties);
+
+    // Transform CSS nesting (flatten & selectors, hoist @media)
+    $result = LightningCss::transformNesting($result);
+
+    // Add vendor prefixes to declarations that need them
+    $result = LightningCss::addVendorPrefixes($result);
+
+    // Apply LightningCSS value optimizations to all declarations
+    optimizeAstOptimizeValues($result);
+
+    // Apply color-mix polyfill - convert color-mix with variables to @supports fallback
+    if ($polyfills & POLYFILL_COLOR_MIX) {
+        $result = applyColorMixPolyfill($result, $designSystem);
+    }
+
+    $roots = optimizeAstProcessAtRoots($atRoots, $polyfills);
+    if ($roots['fallback'] !== null) {
+        // Prepend to result
+        array_unshift($result, $roots['fallback']);
+    }
+
     // Append other atRoots (non-@property) and @property rules
-    $result = array_merge($result, $otherAtRoots, $atPropertyRules);
+    $result = array_merge($result, $roots['append']);
 
     // Merge adjacent rules with same declarations (selector merging)
     // Process @custom-media definitions and substitute them
@@ -1812,6 +1968,425 @@ function optimizeAst(array $ast, DesignSystem $designSystem, int $polyfills = PO
     $result = LightningCss::mergeRulesWithSameDeclarations($result);
 
     return $result;
+}
+
+/**
+ * Detect whether a node list contains an at-rule with the given name.
+ *
+ * @param array $nodes
+ * @param string $name
+ * @return bool
+ */
+function astContainsAtRuleNamed(array $nodes, string $name): bool
+{
+    foreach ($nodes as $node) {
+        if ($node['kind'] === 'at-rule' && ($node['name'] ?? '') === $name) {
+            return true;
+        }
+        if (!empty($node['nodes']) && astContainsAtRuleNamed($node['nodes'], $name)) {
+            return true;
+        }
+    }
+
+    return false;
+}
+
+/**
+ * Find the index path to the context node holding the sentinel comment.
+ *
+ * @param array $nodes
+ * @param string $sentinelValue
+ * @return ?array<int>
+ */
+function optimizeAstFindSentinelPath(array $nodes, string $sentinelValue): ?array
+{
+    foreach ($nodes as $i => $node) {
+        if ($node['kind'] === 'context'
+            && count($node['nodes'] ?? []) === 1
+            && ($node['nodes'][0]['kind'] ?? '') === 'comment'
+            && ($node['nodes'][0]['value'] ?? '') === $sentinelValue) {
+            return [$i];
+        }
+        if (!empty($node['nodes'])) {
+            $sub = optimizeAstFindSentinelPath($node['nodes'], $sentinelValue);
+            if ($sub !== null) {
+                return [$i, ...$sub];
+            }
+        }
+    }
+
+    return null;
+}
+
+/**
+ * Split the AST into an ordered chunk list mirroring how the transform pass
+ * lifts top-level context nodes: one chunk per effective top-level node. The
+ * chunk whose subtree holds the utilities context node becomes the bridge
+ * chunk and records the relative index path to that node.
+ *
+ * @param array $nodes
+ * @param array<int> $bridgePath
+ * @param array<int> $prefix
+ * @return array
+ */
+function optimizeAstSplitChunks(array $nodes, array $bridgePath, array $prefix = []): array
+{
+    $chunks = [];
+
+    foreach ($nodes as $i => $node) {
+        $path = [...$prefix, $i];
+        if ($path === $bridgePath) {
+            $chunks[] = ['type' => 'bridge', 'node' => $node, 'path' => []];
+
+            continue;
+        }
+        if ($node['kind'] === 'context' && empty($node['context']['reference'])) {
+            $chunks = array_merge($chunks, optimizeAstSplitChunks($node['nodes'] ?? [], $bridgePath, $path));
+
+            continue;
+        }
+        $isPrefixOfBridge = count($path) < count($bridgePath) && array_slice($bridgePath, 0, count($path)) === $path;
+        if ($isPrefixOfBridge) {
+            $chunks[] = ['type' => 'bridge', 'node' => $node, 'path' => array_slice($bridgePath, count($path))];
+
+            continue;
+        }
+        $chunks[] = ['type' => 'node', 'node' => $node];
+    }
+
+    return $chunks;
+}
+
+/**
+ * Whether a chunk's optimized output is independent of the per-build used
+ * variable and keyframe sets. Rules hoisted through at-root nodes are
+ * checked recursively; their replay handles the global @property dedupe.
+ *
+ * @param array $node
+ * @param Theme $theme
+ * @return bool
+ */
+function optimizeAstChunkIsInvariant(array $node, Theme $theme): bool
+{
+    if ($node['kind'] === 'rule' && ($node['selector'] ?? '') === ':root, :host') {
+        return false;
+    }
+    if ($node['kind'] === 'at-rule' && ($node['name'] ?? '') === '@keyframes' && $theme->hasKeyframe(trim($node['params'] ?? ''))) {
+        return false;
+    }
+    foreach ($node['nodes'] ?? [] as $child) {
+        if (!optimizeAstChunkIsInvariant($child, $theme)) {
+            return false;
+        }
+    }
+
+    return true;
+}
+
+/**
+ * Build the per-compiler cache for incremental optimizeAst: locate the
+ * utilities context node, split the AST into chunks, precompute the fully
+ * optimized output of every invariant chunk (body nodes, hoisted at-rules,
+ * hoisted at-root nodes, and per-rule declaration keys for the final merge
+ * scan), and record the used-variable and keyframe sets contributed by
+ * everything except the per-build utility nodes. Returns null when the AST
+ * shape rules out the incremental path.
+ *
+ * @param array $ast
+ * @param DesignSystem $designSystem
+ * @param int $polyfills
+ * @return ?array
+ */
+function optimizeAstPrepareIncremental(array $ast, DesignSystem $designSystem, int $polyfills): ?array
+{
+    // @custom-media substitution runs before the range-syntax and merge
+    // passes on the whole tree; the chunked pipeline cannot replay that
+    // ordering against cached output, so fall back to the full path.
+    if (astContainsAtRuleNamed($ast, '@custom-media')) {
+        return null;
+    }
+
+    $theme = $designSystem->getTheme();
+
+    // Locate the utilities context node with the exact walk the build
+    // closure's updateUtilitiesNode uses, via a sentinel probe on a copy.
+    $sentinelValue = '__tailwindphp_utilities_sentinel_'.bin2hex(random_bytes(8));
+    $probe = $ast;
+    walk($probe, function (&$node) use ($sentinelValue) {
+        if ($node['kind'] === 'context' && isset($node['context']) && is_array($node['context'])) {
+            $node['nodes'] = [['kind' => 'comment', 'value' => $sentinelValue]];
+
+            return WalkAction::Stop;
+        }
+
+        return WalkAction::Continue;
+    });
+
+    $bridgePath = optimizeAstFindSentinelPath($probe, $sentinelValue);
+    if ($bridgePath === null) {
+        return null;
+    }
+
+    // The pristine utilities context must be empty so the cached used-set
+    // scan plus the per-build utility-node scan equals a full-AST scan.
+    $cursor = ['kind' => 'context', 'nodes' => $ast];
+    foreach ($bridgePath as $idx) {
+        if (!isset($cursor['nodes'][$idx])) {
+            return null;
+        }
+        $cursor = $cursor['nodes'][$idx];
+    }
+    if ($cursor['kind'] !== 'context' || ($cursor['nodes'] ?? []) !== []) {
+        return null;
+    }
+
+    $chunks = optimizeAstSplitChunks($ast, $bridgePath);
+    $bridgeCount = count(array_filter($chunks, fn (array $chunk) => $chunk['type'] === 'bridge'));
+    if ($bridgeCount !== 1) {
+        return null;
+    }
+
+    $usedVariables = [];
+    $usedKeyframeNames = [];
+    optimizeAstCollectUsed($ast, $usedVariables, $usedKeyframeNames);
+
+    $prepared = [];
+    $staticAtRules = [];
+    foreach ($chunks as $chunk) {
+        if ($chunk['type'] !== 'node') {
+            $prepared[] = $chunk;
+
+            continue;
+        }
+        if (!optimizeAstChunkIsInvariant($chunk['node'], $theme)) {
+            $prepared[] = ['type' => 'variant', 'node' => $chunk['node']];
+
+            continue;
+        }
+
+        // Invariant chunk: run every per-node pipeline stage now. Hoisted
+        // at-rules stay raw so the per-build merge and its later stages see
+        // them exactly as a full pass would; hoisted at-root nodes stay raw
+        // for the per-build global @property dedupe replay.
+        $atRoots = [];
+        $seenAtProperties = [];
+        $stage = optimizeAstTransformNodes([$chunk['node']], $theme, [], [], $atRoots, $seenAtProperties);
+        $chunkAtRules = [];
+        $flat = LightningCss::flattenNodes($stage, $chunkAtRules);
+        $flat = LightningCss::addVendorPrefixes($flat);
+        optimizeAstOptimizeValues($flat);
+        if ($polyfills & POLYFILL_COLOR_MIX) {
+            $flat = applyColorMixPolyfill($flat, $designSystem);
+        }
+        $flat = LightningCss::processQueryRangeSyntax($flat);
+        $declKeys = [];
+        foreach ($flat as &$node) {
+            if ($node['kind'] === 'at-rule' && isset($node['nodes'])) {
+                $node['nodes'] = LightningCss::mergeRulesWithSameDeclarations($node['nodes']);
+            }
+            $declKeys[] = $node['kind'] === 'rule' ? LightningCss::serializeDeclarations($node['nodes'] ?? []) : null;
+        }
+        unset($node);
+
+        $staticAtRules = array_merge($staticAtRules, $chunkAtRules);
+        $prepared[] = [
+            'type' => 'static',
+            'nodes' => $flat,
+            'declKeys' => $declKeys,
+            'atRules' => $chunkAtRules,
+            'atRoots' => $atRoots,
+        ];
+    }
+
+    // Precompute the merged hoisted at-rules for builds where no variant or
+    // bridge chunk hoists any: merge order then equals static chunk order,
+    // so the whole merge-plus-value pipeline is invariant too.
+    $staticMergedAtRules = LightningCss::mergeCollectedAtRules($staticAtRules);
+    $staticMergedAtRules = LightningCss::addVendorPrefixes($staticMergedAtRules);
+    optimizeAstOptimizeValues($staticMergedAtRules);
+    if ($polyfills & POLYFILL_COLOR_MIX) {
+        $staticMergedAtRules = applyColorMixPolyfill($staticMergedAtRules, $designSystem);
+    }
+    $staticMergedAtRules = LightningCss::processQueryRangeSyntax($staticMergedAtRules);
+    foreach ($staticMergedAtRules as &$node) {
+        if ($node['kind'] === 'at-rule' && isset($node['nodes'])) {
+            $node['nodes'] = LightningCss::mergeRulesWithSameDeclarations($node['nodes']);
+        }
+    }
+    unset($node);
+
+    return [
+        'polyfills' => $polyfills,
+        'usedVariables' => $usedVariables,
+        'usedKeyframeNames' => $usedKeyframeNames,
+        'chunks' => $prepared,
+        'staticMergedAtRules' => $staticMergedAtRules,
+    ];
+}
+
+/**
+ * Incremental optimizeAst: reuse the cached invariant chunk output and
+ * re-optimize only the used-set collection, the bridge chunk holding the
+ * per-build utility nodes, and the used-set-dependent chunks. Produces the
+ * same node list as optimizeAst() over the substituted AST.
+ *
+ * @param array $cache Cache built by optimizeAstPrepareIncremental()
+ * @param array $utilityNodes Compiled utility nodes for this build
+ * @param DesignSystem $designSystem
+ * @param int $polyfills
+ * @return array
+ */
+function optimizeAstIncremental(array $cache, array $utilityNodes, DesignSystem $designSystem, int $polyfills): array
+{
+    $theme = $designSystem->getTheme();
+
+    $usedVariables = $cache['usedVariables'];
+    $usedKeyframeNames = $cache['usedKeyframeNames'];
+    optimizeAstCollectUsed($utilityNodes, $usedVariables, $usedKeyframeNames);
+    optimizeAstExpandThemeUsed($theme, $usedVariables, $usedKeyframeNames);
+
+    $result = [];
+    $fresh = [];
+    $declKeys = [];
+    $atRules = [];
+    $hasFreshAtRules = false;
+    $atRoots = [];
+    $seenAtProperties = [];
+
+    foreach ($cache['chunks'] as $chunk) {
+        if ($chunk['type'] === 'static') {
+            foreach ($chunk['nodes'] as $j => $node) {
+                $result[] = $node;
+                $fresh[] = false;
+                $declKeys[] = $chunk['declKeys'][$j];
+            }
+            foreach ($chunk['atRules'] as $atRule) {
+                $atRules[] = $atRule;
+            }
+            // Replay the chunk's hoisted at-root nodes with the global
+            // @property dedupe the transform pass would have applied.
+            foreach ($chunk['atRoots'] as $atRoot) {
+                if ($atRoot['kind'] === 'at-rule' && $atRoot['name'] === '@property') {
+                    $propName = trim($atRoot['params'] ?? '');
+                    if (isset($seenAtProperties[$propName])) {
+                        continue;
+                    }
+                    $seenAtProperties[$propName] = true;
+                }
+                $atRoots[] = $atRoot;
+            }
+
+            continue;
+        }
+
+        $node = $chunk['node'];
+        if ($chunk['type'] === 'bridge') {
+            $target = &$node;
+            foreach ($chunk['path'] as $idx) {
+                $target = &$target['nodes'][$idx];
+            }
+            $target['nodes'] = $utilityNodes;
+            unset($target);
+        }
+
+        $stage = optimizeAstTransformNodes([$node], $theme, $usedVariables, $usedKeyframeNames, $atRoots, $seenAtProperties);
+        $atRulesBefore = count($atRules);
+        $flat = LightningCss::flattenNodes($stage, $atRules);
+        if (count($atRules) !== $atRulesBefore) {
+            $hasFreshAtRules = true;
+        }
+        $flat = LightningCss::addVendorPrefixes($flat);
+        optimizeAstOptimizeValues($flat);
+        if ($polyfills & POLYFILL_COLOR_MIX) {
+            $flat = applyColorMixPolyfill($flat, $designSystem);
+        }
+        foreach ($flat as $flatNode) {
+            $result[] = $flatNode;
+            $fresh[] = true;
+            $declKeys[] = null;
+        }
+    }
+
+    if ($hasFreshAtRules) {
+        // Merge hoisted at-rules across all chunks in collection order, then
+        // run the value stages on them, matching the full pipeline's order.
+        $merged = LightningCss::mergeCollectedAtRules($atRules);
+        $merged = LightningCss::addVendorPrefixes($merged);
+        optimizeAstOptimizeValues($merged);
+        if ($polyfills & POLYFILL_COLOR_MIX) {
+            $merged = applyColorMixPolyfill($merged, $designSystem);
+        }
+        foreach ($merged as $node) {
+            $result[] = $node;
+            $fresh[] = true;
+            $declKeys[] = null;
+        }
+    } else {
+        foreach ($cache['staticMergedAtRules'] as $node) {
+            $result[] = $node;
+            $fresh[] = false;
+            $declKeys[] = null;
+        }
+    }
+
+    $roots = optimizeAstProcessAtRoots($atRoots, $polyfills);
+    if ($roots['fallback'] !== null) {
+        array_unshift($result, $roots['fallback']);
+        array_unshift($fresh, true);
+        array_unshift($declKeys, null);
+    }
+    foreach ($roots['append'] as $node) {
+        $result[] = $node;
+        $fresh[] = true;
+        $declKeys[] = null;
+    }
+
+    // No @custom-media can be present (prepare bails otherwise), so this is
+    // a cheap top-level scan kept for exact stage parity.
+    $result = LightningCss::processCustomMedia($result);
+
+    foreach ($result as $i => $node) {
+        if ($fresh[$i]) {
+            $result[$i] = LightningCss::processQueryRangeSyntax([$node])[0];
+        }
+    }
+
+    // Final pass: replay mergeRulesWithSameDeclarations' top-level scan,
+    // recursing only into fresh at-rules; cached chunks are pre-merged and
+    // carry precomputed declaration keys.
+    $final = [];
+    $lastDeclKey = null;
+    $lastIndex = -1;
+    $lastSelectors = [];
+
+    foreach ($result as $i => $node) {
+        if ($node['kind'] === 'rule') {
+            $declKey = $declKeys[$i] ?? LightningCss::serializeDeclarations($node['nodes'] ?? []);
+            $currentSelector = $node['selector'];
+
+            if ($lastDeclKey === $declKey && $lastIndex === count($final) - 1 && $lastIndex >= 0) {
+                if (!isset($lastSelectors[$currentSelector])) {
+                    $final[$lastIndex]['selector'] .= ', '.$currentSelector;
+                    $lastSelectors[$currentSelector] = true;
+                }
+            } else {
+                $final[] = $node;
+                $lastDeclKey = $declKey;
+                $lastIndex = count($final) - 1;
+                $lastSelectors = [$currentSelector => true];
+            }
+        } else {
+            if ($node['kind'] === 'at-rule' && isset($node['nodes']) && $fresh[$i]) {
+                $node['nodes'] = LightningCss::mergeRulesWithSameDeclarations($node['nodes']);
+            }
+            $final[] = $node;
+            $lastDeclKey = null;
+            $lastIndex = -1;
+            $lastSelectors = [];
+        }
+    }
+
+    return $final;
 }
 
 /**
@@ -2050,14 +2625,8 @@ function generateWithoutCache(string $content, string $css, array $compileOption
     // Compile
     $compiled = compile($css, $compileOptions);
 
-    $result = $compiled['build']($candidates);
-
-    // Optionally minify output
-    if ($minify) {
-        $result = \BlockstudioVendor\TailwindPHP\Minifier\CssMinifier::minify($result);
-    }
-
-    return $result;
+    // Minified output is emitted directly during serialization
+    return $compiled['build']($candidates, $minify);
 }
 
 /**
@@ -2514,11 +3083,8 @@ class TailwindCompiler
         // compileAst internally calls parseCss and returns the compiled result with build()
         $this->compiled = compileAst($ast, $options);
 
-        // Get design system from a fresh parse (compileAst already processed it)
-        // We need to re-parse to get the design system for properties() etc.
-        $ast2 = parse($css);
-        $result = parseCss($ast2, $options);
-        $this->designSystem = $result['designSystem'];
+        // Reuse the design system that compileAst already built for properties() etc.
+        $this->designSystem = $this->compiled['designSystem'];
         $this->theme = $this->designSystem->getTheme();
     }
 
@@ -2526,24 +3092,58 @@ class TailwindCompiler
      * Generate CSS from content containing Tailwind classes.
      *
      * @param string $content HTML string to extract classes from
+     * @param bool $minify Emit minified CSS during serialization
      * @return string Generated CSS
      */
-    public function generate(string $content): string
+    public function generate(string $content, bool $minify = false): string
     {
         $candidates = extractCandidates($content);
 
-        return $this->compiled['build']($candidates);
+        return $this->compiled['build']($candidates, $minify);
     }
 
     /**
      * Generate CSS from an array of class candidates.
      *
      * @param array<string> $candidates Array of class names
+     * @param bool $minify Emit minified CSS during serialization
      * @return string Generated CSS
      */
-    public function css(array $candidates): string
+    public function css(array $candidates, bool $minify = false): string
     {
-        return $this->compiled['build']($candidates);
+        return $this->compiled['build']($candidates, $minify);
+    }
+
+    /**
+     * Generate CSS for exactly the given content, without accumulating
+     * candidates from previous generate()/css() calls on this compiler.
+     *
+     * The output matches what a cold generate() of the same content would
+     * produce, while still reusing this compiler's parsed design system.
+     *
+     * @param string $content HTML string to extract classes from
+     * @param bool $minify Emit minified CSS during serialization
+     * @return string Generated CSS
+     */
+    public function generateExact(string $content, bool $minify = false): string
+    {
+        $candidates = extractCandidates($content);
+
+        return $this->compiled['buildExact']($candidates, $minify);
+    }
+
+    /**
+     * Generate CSS for exactly the given class candidates, without
+     * accumulating candidates from previous generate()/css() calls on this
+     * compiler.
+     *
+     * @param array<string> $candidates Array of class names
+     * @param bool $minify Emit minified CSS during serialization
+     * @return string Generated CSS
+     */
+    public function cssExact(array $candidates, bool $minify = false): string
+    {
+        return $this->compiled['buildExact']($candidates, $minify);
     }
 
     /**
@@ -2680,7 +3280,7 @@ class TailwindCompiler
     /**
      * Get the compiled build function result.
      *
-     * @return array{build: callable, sources: array, root: array, features: int}
+     * @return array{build: callable, buildExact: callable, sources: array, root: array, features: int, designSystem: \BlockstudioVendor\TailwindPHP\DesignSystem\DesignSystem}
      */
     public function getCompiled(): array
     {

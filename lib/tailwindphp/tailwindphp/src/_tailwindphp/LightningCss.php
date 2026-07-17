@@ -60,6 +60,49 @@ class LightningCss
     }
 
     /**
+     * Minify a CSS declaration value for compact serialization.
+     *
+     * Applies the value-level wins the string CssMinifier used to apply over
+     * the full output: shorten 6-digit hex colors to 3 digits, drop units
+     * from zero lengths (time units are preserved), and shorten font-weight
+     * keywords to their numeric values. Unlike optimizeValue(), this is only
+     * used for minified output, so pretty output stays byte-identical.
+     *
+     * @param string $value The CSS value to minify
+     * @param string $property The CSS property name (for font-weight handling)
+     * @return string Minified value
+     */
+    public static function minifyValue(string $value, string $property = ''): string
+    {
+        if ($property === 'font-weight' || str_ends_with($property, '-font-weight')) {
+            if ($value === 'normal') {
+                return '400';
+            }
+            if ($value === 'bold') {
+                return '700';
+            }
+        }
+
+        if (str_contains($value, '#')) {
+            $value = preg_replace_callback(
+                '/#([0-9a-fA-F])\1([0-9a-fA-F])\2([0-9a-fA-F])\3\b/',
+                fn ($m) => '#' . strtolower($m[1] . $m[2] . $m[3]),
+                $value,
+            );
+        }
+
+        if (str_contains($value, '0')) {
+            $value = preg_replace(
+                '/\b0(px|rem|em|ex|ch|vw|vh|vmin|vmax|cm|mm|in|pt|pc)\b/',
+                '0',
+                $value,
+            );
+        }
+
+        return $value;
+    }
+
+    /**
      * Normalize URL quoting.
      *
      * LightningCSS adds quotes around URL values if not already quoted.
@@ -437,18 +480,44 @@ class LightningCss
      */
     public static function transformNesting(array $ast): array
     {
-        $result = [];
         $atRules = []; // Collected @media and other at-rules
 
-        foreach ($ast as $node) {
+        $result = self::flattenNodes($ast, $atRules);
+
+        // Append at-rules at the end (they should come after regular rules)
+        return array_merge($result, self::mergeCollectedAtRules($atRules));
+    }
+
+    /**
+     * Flatten a list of nodes, collecting hoistable at-rules into the shared
+     * collector instead of appending them. Callers that process the AST in
+     * segments use this with one collector so hoisting order matches a single
+     * transformNesting() pass over the concatenated list.
+     *
+     * @param array $nodes The nodes to flatten
+     * @param array &$atRules Shared collector for hoisted at-rules
+     * @return array Flattened nodes without the hoisted at-rules
+     */
+    public static function flattenNodes(array $nodes, array &$atRules): array
+    {
+        $result = [];
+
+        foreach ($nodes as $node) {
             self::flattenNode($node, $result, $atRules, null);
         }
 
-        // Merge at-rules with same params
-        $mergedAtRules = self::mergeAtRules($atRules);
+        return $result;
+    }
 
-        // Append at-rules at the end (they should come after regular rules)
-        return array_merge($result, $mergedAtRules);
+    /**
+     * Merge at-rules collected by flattenNodes() with same name and params.
+     *
+     * @param array $atRules
+     * @return array
+     */
+    public static function mergeCollectedAtRules(array $atRules): array
+    {
+        return self::mergeAtRules($atRules);
     }
 
     /**
@@ -780,7 +849,7 @@ class LightningCss
      * @param array $nodes
      * @return string
      */
-    private static function serializeDeclarations(array $nodes): string
+    public static function serializeDeclarations(array $nodes): string
     {
         $parts = [];
         foreach ($nodes as $node) {

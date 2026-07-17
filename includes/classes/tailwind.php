@@ -8,6 +8,7 @@
 namespace Blockstudio;
 
 use BlockstudioVendor\TailwindPHP\Tailwind as TailwindPHP;
+use BlockstudioVendor\TailwindPHP\TailwindCompiler;
 
 /**
  * Tailwind CSS integration for Blockstudio.
@@ -63,6 +64,13 @@ class Tailwind {
 	private static int $request_generation = 0;
 
 	/**
+	 * Warm compilers for this process, keyed by CSS input hash.
+	 *
+	 * @var array<string, TailwindCompiler>
+	 */
+	private static array $compilers = array();
+
+	/**
 	 * Allow every long-lived Tailwind instance to compile the next request.
 	 *
 	 * @return void
@@ -103,6 +111,52 @@ class Tailwind {
 	 */
 	private static function candidates_to_content( array $candidates ): string {
 		return '<div class="' . implode( ' ', $candidates ) . '"></div>';
+	}
+
+	/**
+	 * Get the warm compiler for a CSS input, creating it on first use.
+	 *
+	 * The compiler parses the design system once per process, so batch
+	 * renders across many pages reuse it instead of paying the full engine
+	 * pipeline per page.
+	 *
+	 * @param string $css_input The CSS input string.
+	 *
+	 * @return TailwindCompiler Warm compiler for the CSS input.
+	 */
+	private static function get_compiler( string $css_input ): TailwindCompiler {
+		$key = md5( $css_input );
+
+		if ( ! isset( self::$compilers[ $key ] ) ) {
+			self::$compilers[ $key ] = TailwindPHP::compile( $css_input );
+		}
+
+		return self::$compilers[ $key ];
+	}
+
+	/**
+	 * Compile candidates against a CSS input via the warm compiler.
+	 *
+	 * Falls back to a cold TailwindPHP::generate run when the warm compiler
+	 * cannot be created; both paths produce byte-identical output.
+	 *
+	 * @param string[] $candidates Filtered, sorted candidates.
+	 * @param string   $css_input  The CSS input string.
+	 *
+	 * @return string Minified CSS.
+	 */
+	private static function build_css( array $candidates, string $css_input ): string {
+		try {
+			return self::get_compiler( $css_input )->cssExact( $candidates, true );
+		} catch ( \Throwable ) {
+			return (string) TailwindPHP::generate(
+				array(
+					'content' => self::candidates_to_content( $candidates ),
+					'css'     => $css_input,
+					'minify'  => true,
+				)
+			);
+		}
 	}
 
 	/**
@@ -160,13 +214,7 @@ class Tailwind {
 		$compiled = Single_Flight::read_or_build(
 			$cache_path,
 			static function () use ( $candidates, $css_input ): string {
-				return (string) TailwindPHP::generate(
-					array(
-						'content' => self::candidates_to_content( $candidates ),
-						'css'     => $css_input,
-						'minify'  => true,
-					)
-				);
+				return self::build_css( $candidates, $css_input );
 			},
 			self::WAIT_BUDGET_MS,
 			static function () use ( $cache_path ): void {
@@ -245,10 +293,7 @@ class Tailwind {
 		$compiled = Single_Flight::read_or_build(
 			$cache_path,
 			static function () use ( $candidates, $css_input ): string {
-				$compiler = TailwindPHP::compile( $css_input );
-				$compiled = $compiler->css( $candidates );
-
-				return ! empty( $compiled ) ? TailwindPHP::minify( $compiled ) : '';
+				return self::build_css( $candidates, $css_input );
 			},
 			self::WAIT_BUDGET_MS,
 			static function () use ( $cache_path ): void {
