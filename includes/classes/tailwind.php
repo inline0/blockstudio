@@ -369,13 +369,25 @@ class Tailwind {
 				return;
 			}
 
-			$max_files = max( 1, (int) apply_filters( 'blockstudio/tailwind/cache_max_files', 20 ) );
+			$max_files = max( 1, (int) apply_filters( 'blockstudio/tailwind/cache_max_files', 1000 ) );
+			$max_age   = max( HOUR_IN_SECONDS, (int) apply_filters( 'blockstudio/tailwind/cache_max_age', MONTH_IN_SECONDS ) );
 			$files     = array_values(
 				array_filter(
 					$files,
 					static fn( string $file ): bool => $file !== $keep_file && is_file( $file )
 				)
 			);
+
+			foreach ( $files as $index => $file ) {
+				$mtime = (int) filemtime( $file );
+
+				if ( $mtime > 0 && time() - $mtime > $max_age ) {
+					wp_delete_file( $file );
+					unset( $files[ $index ] );
+				}
+			}
+
+			$files = array_values( $files );
 			usort(
 				$files,
 				static fn( string $a, string $b ): int => (int) filemtime( $b ) <=> (int) filemtime( $a )
