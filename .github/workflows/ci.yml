@@ -15,7 +15,7 @@ env:
 jobs:
   lint:
     name: Lint
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, Linux, X64, inline0-blockstudio]
     steps:
       - uses: actions/checkout@v5
 
@@ -45,7 +45,7 @@ jobs:
   unit:
     name: Unit Tests
     if: contains(github.event.head_commit.message, '[unit]') || contains(github.event.head_commit.message, '[all]')
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, Linux, X64, inline0-blockstudio]
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@v5
@@ -80,7 +80,7 @@ jobs:
   e2e:
     name: E2E Tests (Shard ${{ matrix.shard }}/${{ matrix.total_shards }})
     if: contains(github.event.head_commit.message, '[e2e]') || contains(github.event.head_commit.message, '[all]')
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, Linux, X64, inline0-blockstudio]
     timeout-minutes: 120
     strategy:
       fail-fast: false
