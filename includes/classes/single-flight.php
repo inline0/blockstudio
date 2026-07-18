@@ -146,8 +146,8 @@ class Single_Flight {
 		}
 
 		ftruncate( $lock, 0 );
-		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_fwrite -- Writing diagnostic lock metadata.
-		fwrite( $lock, getmypid() . ' ' . time() );
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_fwrite -- Writing diagnostic lock metadata; getmypid is guarded because shared hosts disable it.
+		fwrite( $lock, ( function_exists( 'getmypid' ) ? (int) getmypid() : 0 ) . ' ' . time() );
 
 		return $lock;
 	}
