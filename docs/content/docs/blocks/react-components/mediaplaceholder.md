@@ -3,7 +3,8 @@ title: MediaPlaceholder
 description: Add a media upload placeholder to your blocks.
 path: "blocks/react-components/mediaplaceholder"
 order: 30
-section: "React Components"
+section: "Blocks"
+subsection: "React Components"
 meta_title: "MediaPlaceholder"
 meta_description: "Add a media upload placeholder to your blocks."
 ---

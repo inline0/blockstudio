@@ -3,7 +3,8 @@ title: Code Field Assets
 description: Dynamic asset blocks via the code field.
 path: "blocks/assets/code-field"
 order: 10
-section: "Assets"
+section: "Blocks"
+subsection: "Assets"
 meta_title: "Code Field Assets"
 meta_description: "Dynamic asset blocks via the code field."
 ---

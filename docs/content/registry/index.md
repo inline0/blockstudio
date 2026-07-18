@@ -3,7 +3,7 @@ title: General
 description: A shadcn-style CLI for WordPress blocks. No packages, no builds. Just source code copied into your project.
 path: "."
 order: 0
-section: "Registry"
+section: "Introduction"
 meta_title: "General"
 meta_description: "A shadcn-style CLI for WordPress blocks. No packages, no builds. Just source code copied into your project."
 ---

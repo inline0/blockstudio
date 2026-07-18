@@ -3,7 +3,8 @@ title: Field Types
 description: All available field types and their properties in Blockstudio.
 path: "blocks/attributes/field-types"
 order: 19
-section: "Attributes"
+section: "Blocks"
+subsection: "Attributes"
 meta_title: "Field Types"
 meta_description: "All available field types and their properties in Blockstudio."
 ---

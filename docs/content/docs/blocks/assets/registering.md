@@ -3,7 +3,8 @@ title: Registering Assets
 description: Automatically enqueue CSS and JavaScript files for your blocks.
 path: "blocks/assets/registering"
 order: 8
-section: "Assets"
+section: "Blocks"
+subsection: "Assets"
 meta_title: "Registering Assets"
 meta_description: "Automatically enqueue CSS and JavaScript files for your blocks."
 ---

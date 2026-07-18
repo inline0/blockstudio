@@ -3,7 +3,8 @@ title: Expanded Editor
 description: Edit Blockstudio fields in a wider drawer when the inspector sidebar is too narrow.
 path: "blocks/attributes/expanded-editor"
 order: 12
-section: "Attributes"
+section: "Blocks"
+subsection: "Attributes"
 meta_title: "Expanded Editor"
 meta_description: "Edit Blockstudio fields in a wider drawer when the inspector sidebar is too narrow."
 ---

@@ -3,7 +3,8 @@ title: Filtering Attributes
 description: Filter and modify block attributes with PHP hooks.
 path: "blocks/attributes/filtering"
 order: 14
-section: "Attributes"
+section: "Blocks"
+subsection: "Attributes"
 meta_title: "Filtering Attributes"
 meta_description: "Filter and modify block attributes with PHP hooks."
 ---

@@ -3,7 +3,8 @@ title: RPC
 description: Call server-side PHP functions from the frontend with a lightweight RPC system inspired by tRPC.
 path: "blocks/block-api/rpc"
 order: 45
-section: "Block API"
+section: "Blocks"
+subsection: "Block API"
 meta_title: "RPC"
 meta_description: "Call server-side PHP functions from the frontend with a lightweight RPC system inspired by tRPC."
 ---

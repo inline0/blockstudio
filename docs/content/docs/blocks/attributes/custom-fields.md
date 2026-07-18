@@ -3,7 +3,8 @@ title: Custom Fields
 description: Reusable field definitions for Blockstudio blocks.
 path: "blocks/attributes/custom-fields"
 order: 21
-section: "Attributes"
+section: "Blocks"
+subsection: "Attributes"
 meta_title: "Custom Fields"
 meta_description: "Reusable field definitions for Blockstudio blocks."
 ---

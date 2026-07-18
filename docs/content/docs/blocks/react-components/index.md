@@ -3,7 +3,8 @@ title: General
 description: Use React-powered editor components directly in your PHP, Twig, or Blade templates.
 path: "blocks/react-components"
 order: 26
-section: "React Components"
+section: "Blocks"
+subsection: "React Components"
 meta_title: "General"
 meta_description: "Use React-powered editor components directly in your PHP, Twig, or Blade templates."
 ---

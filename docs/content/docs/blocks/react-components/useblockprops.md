@@ -3,7 +3,8 @@ title: useBlockProps
 description: Create markup parity between editor and frontend.
 path: "blocks/react-components/useblockprops"
 order: 27
-section: "React Components"
+section: "Blocks"
+subsection: "React Components"
 meta_title: "useBlockProps"
 meta_description: "Create markup parity between editor and frontend."
 ---

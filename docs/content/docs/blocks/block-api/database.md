@@ -3,7 +3,8 @@ title: Database
 description: Define a data model for your block with automatic CRUD endpoints, validation, and multiple storage backends.
 path: "blocks/block-api/database"
 order: 46
-section: "Block API"
+section: "Blocks"
+subsection: "Block API"
 meta_title: "Database"
 meta_description: "Define a data model for your block with automatic CRUD endpoints, validation, and multiple storage backends."
 ---

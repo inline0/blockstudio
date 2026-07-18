@@ -3,7 +3,8 @@ title: Cron
 description: Define scheduled background tasks per block using WordPress Cron.
 path: "blocks/block-api/cron"
 order: 47
-section: "Block API"
+section: "Blocks"
+subsection: "Block API"
 meta_title: "Cron"
 meta_description: "Define scheduled background tasks per block using WordPress Cron."
 ---

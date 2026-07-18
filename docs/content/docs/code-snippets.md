@@ -3,7 +3,7 @@ title: Code Snippets
 description: Use Blockstudio's file-first approach for code snippets.
 path: "code-snippets"
 order: 59
-section: "Documentation"
+section: "Platform"
 meta_title: "Code Snippets"
 meta_description: "Use Blockstudio's file-first approach for code snippets."
 ---

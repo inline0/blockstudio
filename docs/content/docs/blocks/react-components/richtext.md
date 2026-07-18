@@ -3,7 +3,8 @@ title: RichText
 description: Add editable text fields directly in your block templates.
 path: "blocks/react-components/richtext"
 order: 29
-section: "React Components"
+section: "Blocks"
+subsection: "React Components"
 meta_title: "RichText"
 meta_description: "Add editable text fields directly in your block templates."
 ---

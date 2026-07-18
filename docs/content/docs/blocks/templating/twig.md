@@ -3,7 +3,8 @@ title: Twig
 description: Use Twig templates for your Blockstudio blocks.
 path: "blocks/templating/twig"
 order: 4
-section: "Templating"
+section: "Blocks"
+subsection: "Templating"
 meta_title: "Twig"
 meta_description: "Use Twig templates for your Blockstudio blocks."
 ---

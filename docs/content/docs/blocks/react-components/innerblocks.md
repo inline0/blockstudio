@@ -3,7 +3,8 @@ title: InnerBlocks
 description: Allow nested blocks within your custom blocks.
 path: "blocks/react-components/innerblocks"
 order: 28
-section: "React Components"
+section: "Blocks"
+subsection: "React Components"
 meta_title: "InnerBlocks"
 meta_description: "Allow nested blocks within your custom blocks."
 ---

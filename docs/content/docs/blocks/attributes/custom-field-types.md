@@ -3,7 +3,8 @@ title: Custom Field Types
 description: Register custom editor controls and structured attribute values.
 path: "blocks/attributes/custom-field-types"
 order: 20
-section: "Attributes"
+section: "Blocks"
+subsection: "Attributes"
 meta_title: "Custom Field Types"
 meta_description: "Register custom editor controls and structured attribute values."
 ---

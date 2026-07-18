@@ -3,7 +3,7 @@ title: Getting Started
 description: Set up the Blockstudio Registry CLI in your project and install your first block.
 path: "getting-started"
 order: 1
-section: "Registry"
+section: "Introduction"
 meta_title: "Getting Started"
 meta_description: "Set up the Blockstudio Registry CLI in your project and install your first block."
 ---

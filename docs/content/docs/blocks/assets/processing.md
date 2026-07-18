@@ -3,7 +3,8 @@ title: Processing Assets
 description: Minification, SCSS compilation, and ES modules support.
 path: "blocks/assets/processing"
 order: 9
-section: "Assets"
+section: "Blocks"
+subsection: "Assets"
 meta_title: "Processing Assets"
 meta_description: "Minification, SCSS compilation, and ES modules support."
 ---

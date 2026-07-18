@@ -3,7 +3,8 @@ title: Rendering Attributes
 description: Access attribute values in your block templates.
 path: "blocks/attributes/rendering"
 order: 13
-section: "Attributes"
+section: "Blocks"
+subsection: "Attributes"
 meta_title: "Rendering Attributes"
 meta_description: "Access attribute values in your block templates."
 ---

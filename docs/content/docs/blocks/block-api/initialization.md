@@ -3,7 +3,8 @@ title: Initialization
 description: Execute code during WordPress initialization.
 path: "blocks/block-api/initialization"
 order: 44
-section: "Block API"
+section: "Blocks"
+subsection: "Block API"
 meta_title: "Initialization"
 meta_description: "Execute code during WordPress initialization."
 ---

@@ -3,7 +3,8 @@ title: Blade
 description: Use Laravel Blade templates for your Blockstudio blocks.
 path: "blocks/templating/blade"
 order: 5
-section: "Templating"
+section: "Blocks"
+subsection: "Templating"
 meta_title: "Blade"
 meta_description: "Use Laravel Blade templates for your Blockstudio blocks."
 ---

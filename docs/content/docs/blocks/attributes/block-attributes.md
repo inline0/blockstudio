@@ -3,7 +3,8 @@ title: Block Attributes
 description: Access standard WordPress block attributes like alignment and typography.
 path: "blocks/attributes/block-attributes"
 order: 18
-section: "Attributes"
+section: "Blocks"
+subsection: "Attributes"
 meta_title: "Block Attributes"
 meta_description: "Access standard WordPress block attributes like alignment and typography."
 ---
