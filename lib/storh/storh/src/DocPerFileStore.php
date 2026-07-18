@@ -90,7 +90,7 @@ final class DocPerFileStore implements FileStoreInterface
         $this->collection_path = rtrim($this->root, '/\\') . '/' . $this->collection;
         $this->cache_scope     = hash(self::CACHE_HASH_ALGORITHM, $this->collection_path);
         $this->data_path       = $this->collection_path . '/data';
-        $this->temp_prefix     = getmypid() . '.' . bin2hex(random_bytes(4));
+        $this->temp_prefix     = (function_exists('getmypid') ? (string) getmypid() : 'p' . bin2hex(random_bytes(4))) . '.' . bin2hex(random_bytes(4));
         $this->validated_record_cache_max_bytes = self::default_validated_record_cache_max_bytes();
         AtomicFilesystem::cleanup_temp_files($this->collection_root());
         if (! is_dir($this->data_root())) {

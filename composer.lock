@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "c1b9a3b4298366dba258f845c0bc992b",
+    "content-hash": "679b3f48f000f031a87c66769143d68b",
     "packages": [
         {
             "name": "dflydev/dot-access-data",
@@ -480,16 +480,16 @@
         },
         {
             "name": "storh/storh",
-            "version": "v0.0.2",
+            "version": "v0.0.3",
             "source": {
                 "type": "git",
                 "url": "https://github.com/inline0/storh.git",
-                "reference": "cc7c9fd316d1baaf6d6df4b1314a67ed3988ddfd"
+                "reference": "1d42acfb8fcef931b0477a7c96e7a72319f0959c"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/inline0/storh/zipball/cc7c9fd316d1baaf6d6df4b1314a67ed3988ddfd",
-                "reference": "cc7c9fd316d1baaf6d6df4b1314a67ed3988ddfd",
+                "url": "https://api.github.com/repos/inline0/storh/zipball/1d42acfb8fcef931b0477a7c96e7a72319f0959c",
+                "reference": "1d42acfb8fcef931b0477a7c96e7a72319f0959c",
                 "shasum": ""
             },
             "require": {
@@ -538,7 +538,7 @@
                 "issues": "https://github.com/inline0/storh/issues",
                 "source": "https://github.com/inline0/storh"
             },
-            "time": "2026-07-05T07:42:16+00:00"
+            "time": "2026-07-18T06:40:50+00:00"
         },
         {
             "name": "symfony/deprecation-contracts",
