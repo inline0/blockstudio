@@ -1,7 +1,7 @@
 ---
 title: Blockstudio 7.5
 description: Custom field types, file-backed Site Editor templates, block islands, Storh database storage, and bsui/parser refinements.
-date: 2026-07-05
+date: "2026-07-05"
 author: Dennis
 path: "blockstudio-7-5"
 order: 1

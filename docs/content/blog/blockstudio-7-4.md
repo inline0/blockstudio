@@ -1,7 +1,7 @@
 ---
 title: Blockstudio 7.4
 description: Page collections, Markdown page sources, Content Sync, block tag prefixes, and runtime and editor fixes.
-date: 2026-06-21
+date: "2026-06-21"
 author: Dennis
 path: "blockstudio-7-4"
 order: 2
