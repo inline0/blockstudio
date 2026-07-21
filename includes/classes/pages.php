@@ -346,15 +346,10 @@ class Pages {
 		 */
 		$paths = apply_filters( 'blockstudio/pages/paths', $paths );
 
-		foreach ( $paths as $path ) {
-			if ( ! is_string( $path ) || ! is_dir( $path ) ) {
-				continue;
-			}
-
-			$path      = untrailingslashit( wp_normalize_path( $path ) );
+		foreach ( Discovery_Sources::for_paths( 'pages', $paths ) as $source ) {
 			$discovery = new Page_Discovery();
-			$registry->add_path( $path );
-			$pages = $discovery->discover( $path );
+			$registry->add_path( $source->root() );
+			$pages = $discovery->discover( $source );
 
 			foreach ( $discovery->get_collections() as $collection => $collection_data ) {
 				$registry->register_collection( $collection, $collection_data );
@@ -996,7 +991,8 @@ class Pages {
 		$paths = self::get_paths();
 
 		/** This filter is documented in init(). */
-		$paths = apply_filters( 'blockstudio/pages/paths', $paths );
+		$paths   = apply_filters( 'blockstudio/pages/paths', $paths );
+		$sources = Discovery_Sources::for_paths( 'pages', $paths );
 
 		$cache_key = self::collection_manifests_cache_key( $paths );
 		$cached    = wp_cache_get( $cache_key, 'blockstudio' );
@@ -1016,12 +1012,8 @@ class Pages {
 
 		$collections = array();
 
-		foreach ( $paths as $path ) {
-			if ( ! is_dir( $path ) ) {
-				continue;
-			}
-
-			foreach ( Page_Discovery::discover_manifests( $path ) as $collection ) {
+		foreach ( $sources as $source ) {
+			foreach ( Page_Discovery::discover_manifests( $source ) as $collection ) {
 				$collections[] = $collection;
 			}
 		}
@@ -1110,6 +1102,7 @@ class Pages {
 			array(
 				'paths'     => $paths,
 				'signature' => (string) get_option( 'blockstudio_collection_post_types_signature', '' ),
+				'context'   => Runtime_Context::hash( 'page-manifests', array( 'pages' ) ),
 			)
 		);
 

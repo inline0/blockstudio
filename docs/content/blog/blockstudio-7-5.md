@@ -22,6 +22,10 @@ Blockstudio data.
 
 The short version:
 
+- **Logical discovery sources**: runtimes can supply a composed logical theme
+  inventory, including provenance and cache identity, while Blockstudio keeps
+  ownership of discovery, sibling resolution, generated assets, Canvas, and
+  Tailwind behavior.
 - **PHP field type registry**: themes and plugins can register namespaced field
   types such as `acme/dimensions` with `bs_register_field_type()` or the
   `blockstudio/field_types` filter.

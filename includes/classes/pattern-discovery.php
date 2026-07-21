@@ -7,9 +7,6 @@
 
 namespace Blockstudio;
 
-use RecursiveDirectoryIterator;
-use RecursiveIteratorIterator;
-
 /**
  * Discovers Blockstudio patterns by scanning filesystem directories.
  *
@@ -28,37 +25,38 @@ class Pattern_Discovery {
 	private array $patterns = array();
 
 	/**
+	 * Active logical discovery source.
+	 *
+	 * @var Discovery_Source|null
+	 */
+	private ?Discovery_Source $source = null;
+
+	/**
 	 * Discover patterns in a directory path.
 	 *
 	 * Recursively scans the given path for pattern.json files and their
 	 * associated template files.
 	 *
-	 * @param string $base_path Absolute path to scan for patterns.
+	 * @param string|Discovery_Source $base_path Absolute path or logical discovery source.
 	 *
 	 * @return array<string, array> Array of discovered pattern definitions.
 	 */
-	public function discover( string $base_path ): array {
+	public function discover( string|Discovery_Source $base_path ): array {
 		$this->patterns = array();
+		$this->source   = is_string( $base_path )
+			? Discovery_Sources::for_path( 'patterns', $base_path )
+			: $base_path;
 
-		if ( ! is_dir( $base_path ) ) {
-			return $this->patterns;
-		}
-
-		$base_path = wp_normalize_path( $base_path );
-
-		$iterator = new RecursiveIteratorIterator(
-			new RecursiveDirectoryIterator( $base_path )
-		);
-
-		foreach ( $iterator as $file ) {
-			$file_path = wp_normalize_path( $file->getPathname() );
-			$basename  = $file->getBasename();
+		foreach ( $this->source->entries() as $entry ) {
+			$file_path    = wp_normalize_path( $entry->physical_path() );
+			$logical_path = $entry->logical_path();
+			$basename     = basename( $logical_path );
 
 			if ( 'pattern.json' !== $basename ) {
 				continue;
 			}
 
-			$pattern_data = $this->process_pattern_json( $file_path, $base_path );
+			$pattern_data = $this->process_pattern_json( $file_path, $logical_path );
 
 			if ( $pattern_data ) {
 				$this->patterns[ $pattern_data['name'] ] = $pattern_data;
@@ -71,20 +69,21 @@ class Pattern_Discovery {
 	/**
 	 * Process a pattern.json file.
 	 *
-	 * @param string $json_path  Path to the pattern.json file.
-	 * @param string $base_path  Base path for the discovery.
+	 * @param string $json_path   Path to the pattern.json file.
+	 * @param string $logical_path Logical path to the pattern.json file.
 	 *
 	 * @return array|null The pattern data or null if invalid.
 	 */
-	private function process_pattern_json( string $json_path, string $base_path ): ?array {
-		$directory    = dirname( $json_path );
+	private function process_pattern_json( string $json_path, string $logical_path ): ?array {
+		$logical_dir  = dirname( $logical_path );
+		$logical_dir  = '.' === $logical_dir ? '' : $logical_dir;
 		$pattern_json = Utils::read_json_file( $json_path );
 
 		if ( ! is_array( $pattern_json ) || empty( $pattern_json['name'] ) || empty( $pattern_json['title'] ) ) {
 			return null;
 		}
 
-		$template_path = $this->find_template( $directory );
+		$template_path = $this->find_template( $logical_dir );
 
 		if ( ! $template_path ) {
 			return null;
@@ -106,8 +105,10 @@ class Pattern_Discovery {
 
 		$pattern_data['json_path']     = $json_path;
 		$pattern_data['template_path'] = $template_path;
-		$pattern_data['directory']     = $directory;
-		$pattern_data['source_path']   = str_replace( $base_path . '/', '', $directory );
+		$pattern_data['directory']     = dirname( $template_path );
+		$pattern_data['source_path']   = $logical_dir;
+		$pattern_data['source_id']     = $this->source?->id() ?? '';
+		$pattern_data['provenance']    = $this->source?->resolve( $logical_path )?->provenance() ?? array();
 		$pattern_data['is_twig']       = str_ends_with( $template_path, '.twig' );
 		$pattern_data['is_blade']      = str_ends_with( $template_path, '.blade.php' );
 
@@ -117,13 +118,22 @@ class Pattern_Discovery {
 	/**
 	 * Find the template file for a pattern.
 	 *
-	 * @param string $directory The pattern directory.
+	 * @param string $logical_directory Logical pattern directory.
 	 *
 	 * @return string|null The template path or null if not found.
 	 */
-	private function find_template( string $directory ): ?string {
-		return Utils::first_existing_path(
-			Utils::index_source_candidates( $directory )
-		);
+	private function find_template( string $logical_directory ): ?string {
+		$candidates = array( 'index.php', 'index.blade.php', 'index.twig' );
+
+		foreach ( $candidates as $candidate ) {
+			$logical = '' === $logical_directory ? $candidate : $logical_directory . '/' . $candidate;
+			$entry   = $this->source?->resolve( $logical );
+
+			if ( $entry ) {
+				return $entry->physical_path();
+			}
+		}
+
+		return null;
 	}
 }

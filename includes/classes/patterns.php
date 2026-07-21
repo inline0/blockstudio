@@ -56,14 +56,10 @@ class Patterns {
 		$discovery = new Pattern_Discovery();
 		$parser    = Html_Parser::from_settings();
 
-		foreach ( $paths as $path ) {
-			if ( ! is_dir( $path ) ) {
-				continue;
-			}
+		foreach ( Discovery_Sources::for_paths( 'patterns', $paths ) as $source ) {
+			$registry->add_path( $source->root() );
 
-			$registry->add_path( $path );
-
-			$patterns = $discovery->discover( $path );
+			$patterns = $discovery->discover( $source );
 
 			foreach ( $patterns as $name => $pattern_data ) {
 				$registry->register( $name, $pattern_data );

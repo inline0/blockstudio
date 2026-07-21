@@ -28,6 +28,58 @@ if ( class_exists( 'Timber\Timber' ) ) {
 	Timber\Timber::init();
 }
 
+add_action(
+	'rest_api_init',
+	function () {
+		register_rest_route(
+			'blockstudio-test/v1',
+			'/discovery-overlay',
+			array(
+				'methods'             => 'GET',
+				'permission_callback' => '__return_true',
+				'callback'            => function () {
+					$root    = get_stylesheet_directory() . '/discovery-overlay';
+					$parent  = $root . '/parent';
+					$overlay = $root . '/overlay';
+					$blocks  = new Blockstudio\Inventory_Discovery_Source(
+						'e2e:blocks',
+						$overlay . '/blocks',
+						array(
+							'card/block.json' => $parent . '/blocks/card/block.json',
+							'card/style.css'  => $parent . '/blocks/card/style.css',
+							'card/index.php'  => $overlay . '/blocks/card/index.php',
+						)
+					);
+					$pages   = new Blockstudio\Inventory_Discovery_Source(
+						'e2e:pages',
+						$overlay . '/pages',
+						array(
+							'docs/pages.json'      => $parent . '/pages/docs/pages.json',
+							'docs/layout.php'      => $parent . '/pages/docs/layout.php',
+							'docs/start/page.json' => $parent . '/pages/docs/start/page.json',
+							'docs/start/index.php' => $overlay . '/pages/docs/start/index.php',
+						)
+					);
+
+					$block_results = ( new Blockstudio\Block_Discovery() )->discover( $blocks, 'e2e-overlay' );
+					$page_results  = ( new Blockstudio\Page_Discovery() )->discover( $pages );
+					$block         = $block_results['store']['test/overlay-card'] ?? array();
+					$page           = $page_results['overlay-docs:overlay-docs-start'] ?? array();
+
+					return rest_ensure_response(
+						array(
+							'blockTemplate' => $block['renderTemplate'] ?? null,
+							'blockStyle'    => $block['filesMap']['style.css'] ?? null,
+							'pageTemplate'  => $page['template_path'] ?? null,
+							'pageLayout'    => $page['layout_path'] ?? null,
+						)
+					);
+				},
+			)
+		);
+	}
+);
+
 // Shortcode for testing bs_render_block() in post content.
 add_shortcode(
 	'bs_test_render',

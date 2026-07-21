@@ -137,6 +137,7 @@ final class Build_Cache {
 					'template'     => function_exists( 'get_template' ) ? get_template() : '',
 					'wpVersion'    => get_bloginfo( 'version' ),
 					'phpVersion'   => PHP_VERSION,
+					'context'      => Runtime_Context::hash( 'runtime', array( 'blocks', 'fields' ) ),
 				)
 			)
 		);
@@ -238,6 +239,7 @@ final class Build_Cache {
 					'disabled'     => self::get_disabled_assets_fingerprint(),
 					'settings'     => self::get_settings_fingerprint(),
 					'wpVersion'    => get_bloginfo( 'version' ),
+					'context'      => Runtime_Context::hash( 'editor-assets', array( 'blocks' ) ),
 				)
 			)
 		);
@@ -595,7 +597,7 @@ final class Build_Cache {
 	 * @return array File paths.
 	 */
 	private static function collect_runtime_watch_paths( string $path, array $payload ): array {
-		$paths = array();
+		$paths = array_filter( Discovery_Sources::active_watch_paths( 'blocks' ), 'is_file' );
 
 		foreach ( $payload['store'] ?? array() as $data ) {
 			if ( isset( $data['path'] ) ) {
@@ -659,7 +661,10 @@ final class Build_Cache {
 	 * @return array Directory paths.
 	 */
 	private static function collect_runtime_watch_dirs( string $path, array $payload ): array {
-		$dirs = array( $path );
+		$dirs = array_merge(
+			array( $path ),
+			array_filter( Discovery_Sources::active_watch_paths( 'blocks' ), 'is_dir' )
+		);
 
 		foreach ( $payload['fieldDirs'] ?? array() as $field_dir ) {
 			$dirs[] = $field_dir;

@@ -208,7 +208,7 @@ class Tailwind {
 		$css_input  = self::build_css_input();
 		$candidates = self::filter_candidates( TailwindPHP::extractCandidates( $html ) );
 		sort( $candidates );
-		$cache_key  = md5( self::get_engine_version() . implode( ',', $candidates ) . $css_input );
+		$cache_key  = md5( Runtime_Context::hash( 'tailwind', array( 'blocks', 'pages' ) ) . self::get_engine_version() . implode( ',', $candidates ) . $css_input );
 		$cache_path = self::get_cache_dir() . '/' . $cache_key . '.css';
 
 		$compiled = Single_Flight::read_or_build(
@@ -287,7 +287,7 @@ class Tailwind {
 		sort( $candidates );
 
 		$css_input  = self::build_css_input();
-		$cache_key  = md5( 'editor:' . self::get_engine_version() . implode( ',', $candidates ) . $css_input );
+		$cache_key  = md5( Runtime_Context::hash( 'tailwind', array( 'blocks', 'pages' ) ) . 'editor:' . self::get_engine_version() . implode( ',', $candidates ) . $css_input );
 		$cache_path = self::get_cache_dir() . '/' . $cache_key . '.css';
 
 		$compiled = Single_Flight::read_or_build(
@@ -502,7 +502,10 @@ class Tailwind {
 	 * @return string The cache directory path.
 	 */
 	public static function get_cache_dir(): string {
-		return wp_upload_dir()['basedir'] . '/blockstudio/tailwind/cache';
+		$directory = wp_upload_dir()['basedir'] . '/blockstudio/tailwind/cache';
+		$namespace = Runtime_Context::namespace( 'tailwind', array( 'blocks', 'pages' ) );
+
+		return 'default' === $namespace ? $directory : $directory . '/' . $namespace;
 	}
 
 	/**

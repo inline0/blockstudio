@@ -697,6 +697,11 @@ add_filter( 'blockstudio/pages/paths', function( $paths ) {
 } );
 ```
 
+Runtime integrations that compose files from several roots can replace the
+filesystem scan with a [logical discovery source](/docs/dev/discovery-sources).
+Page manifests, layouts, loaders, and source templates are then resolved by
+logical path, even when their selected files live in different roots.
+
 ## Filters and Actions
 
 Page discovery, sync, and collection routing expose these extension points:

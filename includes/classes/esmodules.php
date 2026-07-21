@@ -182,7 +182,7 @@ class ESModules {
 	 */
 	public static function fetch_module_and_write_to_file( $str, $folder ) {
 		$module         = self::get_module_matches( $str );
-		$folder_dist    = $folder . '/_dist';
+		$folder_dist    = Runtime_Context::output_path( $folder . '/_dist', $folder, 'assets', array( 'type' => 'directory' ) );
 		$folder_modules = $folder_dist . '/modules';
 		$folder_module  = $folder_modules . '/' . $module['nameTransformed'];
 		$filename       = $folder_module . '/' . $module['version'] . '.js';

@@ -647,14 +647,16 @@ class Build {
 			$args = $p['dir'] ?? false;
 		}
 		$path               = false === $args ? self::get_build_dir() : $args;
+		$source             = Discovery_Sources::for_path( 'blocks', $path );
 		$empty_dist_folders = array();
 
 		$registry = Block_Registry::instance();
 
-		if ( ! is_dir( $path ) ) {
+		if ( empty( $source->entries() ) ) {
 			return;
 		}
 
+		$path = $source->root();
 		$registry->add_instance( $path );
 
 		$path     = wp_normalize_path( $path );
@@ -683,7 +685,7 @@ class Build {
 
 			if ( Build_Cache::is_enabled() ) {
 				$build_lock = Single_Flight::acquire(
-					Build_Cache::get_cache_dir( 'runtime' ) . '/' . md5( $path ) . '.build.lock'
+					Build_Cache::get_cache_dir( 'runtime' ) . '/' . Build_Cache::get_runtime_key( $path, $instance ) . '.build.lock'
 				);
 
 				if ( is_resource( $build_lock ) ) {
@@ -720,9 +722,9 @@ class Build {
 		// Phase 1: Discover blocks using Block_Discovery.
 		$results = Perf::measure(
 			'build:discovery',
-			static function () use ( $path, $instance, $editor ): array {
+			static function () use ( $source, $instance, $editor ): array {
 				$discovery = new Block_Discovery();
-				return $discovery->discover( $path, $instance, $editor );
+				return $discovery->discover( $source, $instance, $editor );
 			}
 		);
 
@@ -752,8 +754,6 @@ class Build {
 			'build:assets',
 			static function () use ( &$store, $instance, $editor, $registry, &$empty_dist_folders ): void {
 				foreach ( $store as $name => &$data ) {
-					$file_dir = dirname( $data['path'] );
-
 					if ( Settings::get( 'assets/enqueue' ) || $editor ) {
 						$processed_assets = self::process_block_assets(
 							$data,
@@ -763,38 +763,30 @@ class Build {
 							$registry
 						);
 
-						// Cleanup dist folder.
-						$dist_folder          = $file_dir . '/_dist';
-						$all_processed_assets = Files::get_files_recursively_and_delete_empty_folders(
-							$dist_folder
+						$source_paths = array_filter(
+							$data['filesPaths'] ?? array(),
+							static fn( mixed $source_path ): bool => is_string( $source_path ) && ( Assets::is_css( $source_path ) || str_ends_with( $source_path, '.js' ) )
+						);
+						$dist_folders = array_unique(
+							array_map(
+								static fn( string $source_path ): string => Assets::get_dist_folder( $source_path ),
+								$source_paths
+							)
 						);
 
-						if ( ! $editor ) {
-							foreach ( $all_processed_assets as $file_path ) {
-								if (
-									! in_array( $file_path, $processed_assets, true ) &&
-									file_exists( $file_path )
-								) {
-									unlink( $file_path ); // phpcs:ignore WordPress.WP.AlternativeFunctions.unlink_unlink
-								}
-							}
+						foreach ( $dist_folders as $dist_folder ) {
+							$all_processed_assets = Files::get_files_recursively_and_delete_empty_folders( $dist_folder );
 
-							foreach ( $all_processed_assets as $file_path ) {
-								$directory = dirname( $file_path );
-								if (
-									false !== glob( $directory . '/*' ) &&
-									0 !== count( glob( $directory . '/*' ) )
-								) {
-									continue;
+							if ( ! $editor ) {
+								foreach ( $all_processed_assets as $file_path ) {
+									if ( ! in_array( $file_path, $processed_assets, true ) && file_exists( $file_path ) ) {
+										unlink( $file_path ); // phpcs:ignore WordPress.WP.AlternativeFunctions.unlink_unlink
+									}
 								}
 
-								if ( is_dir( $directory ) ) {
-									rmdir( $directory ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_rmdir
+								if ( Files::is_directory_empty( $dist_folder ) ) {
+									$empty_dist_folders[] = $dist_folder;
 								}
-							}
-
-							if ( Files::is_directory_empty( $dist_folder ) ) {
-								$empty_dist_folders[] = $dist_folder;
 							}
 						}
 					}
@@ -804,7 +796,7 @@ class Build {
 		unset( $data ); // Break reference.
 
 		// Phase 2.5: Discover custom fields.
-		$local_fields = self::discover_local_custom_fields( $path );
+		$local_fields = self::discover_local_custom_fields( $path, $source );
 		self::register_custom_field_definitions( $local_fields['fields'] );
 		self::register_filtered_custom_fields();
 
@@ -1084,37 +1076,30 @@ class Build {
 	/**
 	 * Discover fields in the local build directory.
 	 *
-	 * @param string $path Build path.
+	 * @param string           $path Build path.
+	 * @param Discovery_Source $source Active block source.
 	 *
 	 * @return array Fields, watched field paths, and watched field dirs.
 	 */
-	private static function discover_local_custom_fields( string $path ): array {
-		$fields_path = $path . '/fields';
-		$result      = array(
+	private static function discover_local_custom_fields( string $path, Discovery_Source $source ): array {
+		$fields_path  = $path . '/fields';
+		$field_source = Discovery_Sources::scope( $source, 'fields', $fields_path );
+		$result       = array(
 			'fields' => array(),
 			'paths'  => array(),
 			'dirs'   => array(),
 		);
 
-		if ( ! is_dir( $fields_path ) ) {
+		if ( empty( $field_source->entries() ) ) {
 			return $result;
 		}
 
 		$field_discovery  = new Field_Discovery();
-		$result['fields'] = $field_discovery->discover( $fields_path );
-		$result['dirs'][] = $fields_path;
+		$result['fields'] = $field_discovery->discover( $field_source );
+		$result['dirs']   = $field_source->watch_paths();
 
-		$iterator = new \RecursiveIteratorIterator(
-			new \RecursiveDirectoryIterator(
-				$fields_path,
-				\FilesystemIterator::SKIP_DOTS
-			)
-		);
-
-		foreach ( $iterator as $file ) {
-			if ( $file->isFile() ) {
-				$result['paths'][] = wp_normalize_path( $file->getPathname() );
-			}
+		foreach ( $field_source->entries() as $entry ) {
+			$result['paths'][] = wp_normalize_path( $entry->physical_path() );
 		}
 
 		return $result;
@@ -1158,12 +1143,10 @@ class Build {
 		if ( ! empty( $extra_field_paths ) ) {
 			$field_discovery = new Field_Discovery();
 
-			foreach ( $extra_field_paths as $extra_path ) {
-				if ( is_dir( $extra_path ) ) {
-					self::register_custom_field_definitions(
-						$field_discovery->discover( $extra_path )
-					);
-				}
+			foreach ( Discovery_Sources::for_paths( 'fields', $extra_field_paths ) as $source ) {
+				self::register_custom_field_definitions(
+					$field_discovery->discover( $source )
+				);
 			}
 		}
 
@@ -1461,13 +1444,14 @@ class Build {
 		foreach ( $registry->get_instances() as $instance_data ) {
 			$path     = wp_normalize_path( $instance_data['path'] );
 			$instance = self::get_instance_name( $path );
+			$source   = Discovery_Sources::for_path( 'blocks', $path );
 
-			if ( ! is_dir( $path ) ) {
+			if ( empty( $source->entries() ) ) {
 				continue;
 			}
 
 			$discovery = new Block_Discovery();
-			$results   = $discovery->discover( $path, $instance, false );
+			$results   = $discovery->discover( $source, $instance, false );
 
 			self::filter_missing_plugin_dependencies(
 				$results['store'],
@@ -1617,7 +1601,6 @@ class Build {
 		bool $editor,
 		Block_Registry $registry
 	): array {
-		$file_dir         = dirname( $data['path'] );
 		$block_arr_files  = $data['files'];
 		$processed_assets = array();
 
@@ -1631,13 +1614,9 @@ class Build {
 		foreach ( $assets as $asset ) {
 			$is_css = Assets::is_css( $asset );
 
-			$asset_fn = fn( $relative ) => $relative
-				? Files::get_relative_url( $file_dir . '/' . $asset )
-				: $file_dir . '/' . $asset;
-
-			$asset_file  = pathinfo( $asset_fn( false ) );
-			$asset_path  = $asset_fn( false );
-			$asset_url   = $asset_fn( true );
+			$asset_path  = $data['filesMap'][ $asset ] ?? dirname( $data['path'] ) . '/' . $asset;
+			$asset_file  = pathinfo( $asset_path );
+			$asset_url   = Files::get_relative_url( $asset_path );
 			$asset_mtime = filemtime( $asset_path );
 			$asset_key   = Assets::get_asset_version(
 				$asset_path,
@@ -1745,7 +1724,7 @@ class Build {
 						'style',
 						$handle,
 						array(
-							'path'  => $asset_fn( true ),
+							'path'  => $asset_url,
 							'mtime' => $asset_key,
 						)
 					);
@@ -1754,7 +1733,7 @@ class Build {
 						'script',
 						$handle,
 						array(
-							'path'  => $asset_fn( true ),
+							'path'  => $asset_url,
 							'mtime' => $asset_key,
 						)
 					);
@@ -2104,7 +2083,7 @@ class Build {
 
 		$native_path = $is_override && ! $is_block
 			? $data['path']
-			: Files::get_render_template( $data['path'] );
+			: ( $data['renderTemplate'] ?? Files::get_render_template( $data['path'] ) );
 
 		$attributes          = array();
 		$filtered_attributes = array();

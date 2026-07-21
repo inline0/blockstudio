@@ -114,7 +114,7 @@ class Block_Registrar {
 
 		$native_path = $is_override && ! ( $classification['is_block'] ?? false )
 			? $block_data['path']
-			: Files::get_render_template( $block_data['path'] );
+			: ( $block_data['renderTemplate'] ?? Files::get_render_template( $block_data['path'] ) );
 
 		// Build attributes.
 		$attributes          = array();

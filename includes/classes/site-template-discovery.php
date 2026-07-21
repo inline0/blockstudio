@@ -7,10 +7,6 @@
 
 namespace Blockstudio;
 
-use RecursiveDirectoryIterator;
-use RecursiveIteratorIterator;
-use SplFileInfo;
-
 /**
  * Discovers file-backed Site Editor templates and template parts.
  *
@@ -97,43 +93,21 @@ final class Site_Template_Discovery {
 	 * @return void
 	 */
 	private function discover_type( array $paths, string $type, string $manifest ): void {
-		foreach ( $paths as $path ) {
-			if ( ! is_string( $path ) || '' === $path ) {
-				continue;
-			}
+		$context = 'wp_template' === $type ? 'site-templates' : 'site-template-parts';
+		$sources = $this->normalize_sources( $paths, $context );
 
-			$path                 = self::normalize_path( $path );
-			$this->scanned_dirs[] = $path;
+		foreach ( $sources as $source ) {
+			$this->scanned_dirs = array_merge( $this->scanned_dirs, $source->watch_paths() );
 
-			if ( ! is_dir( $path ) ) {
-				continue;
-			}
+			foreach ( $source->entries() as $entry ) {
+				$file_path    = self::normalize_path( $entry->physical_path() );
+				$logical_path = $entry->logical_path();
 
-			$iterator = new RecursiveIteratorIterator(
-				new RecursiveDirectoryIterator( $path ),
-				RecursiveIteratorIterator::SELF_FIRST
-			);
-
-			foreach ( $iterator as $file ) {
-				if ( ! $file instanceof SplFileInfo ) {
+				if ( basename( $logical_path ) !== $manifest ) {
 					continue;
 				}
 
-				$file_path = self::normalize_path( $file->getPathname() );
-
-				if ( $file->isDir() ) {
-					$basename = $file->getBasename();
-					if ( '.' !== $basename && '..' !== $basename ) {
-						$this->scanned_dirs[] = $file_path;
-					}
-					continue;
-				}
-
-				if ( $manifest !== $file->getBasename() ) {
-					continue;
-				}
-
-				$data = $this->process_manifest( $file_path, $path, $type );
+				$data = $this->process_manifest( $file_path, $logical_path, $source, $type );
 
 				if ( null === $data ) {
 					continue;
@@ -163,15 +137,18 @@ final class Site_Template_Discovery {
 	/**
 	 * Process one manifest.
 	 *
-	 * @param string $manifest_path Manifest path.
-	 * @param string $root_path     Root discovery path.
-	 * @param string $type          Template type.
+	 * @param string           $manifest_path Manifest path.
+	 * @param string           $logical_path Logical manifest path.
+	 * @param Discovery_Source $source Discovery source.
+	 * @param string           $type Template type.
 	 *
 	 * @return array|null Template data.
 	 */
-	private function process_manifest( string $manifest_path, string $root_path, string $type ): ?array {
-		$directory = self::normalize_path( dirname( $manifest_path ) );
-		$manifest  = Utils::read_json_file( $manifest_path );
+	private function process_manifest( string $manifest_path, string $logical_path, Discovery_Source $source, string $type ): ?array {
+		$directory   = self::normalize_path( dirname( $manifest_path ) );
+		$logical_dir = dirname( $logical_path );
+		$logical_dir = '.' === $logical_dir ? '' : $logical_dir;
+		$manifest    = Utils::read_json_file( $manifest_path );
 
 		if ( ! is_array( $manifest ) ) {
 			$this->add_error(
@@ -200,7 +177,7 @@ final class Site_Template_Discovery {
 			return null;
 		}
 
-		$source_path = $this->resolve_source_path( $directory, $manifest );
+		$source_path = $this->resolve_source_path( $logical_dir, $directory, $manifest, $source );
 
 		if ( null === $source_path ) {
 			$this->add_error(
@@ -247,8 +224,11 @@ final class Site_Template_Discovery {
 			'status'        => is_scalar( $manifest['status'] ?? null ) ? sanitize_key( (string) $manifest['status'] ) : 'publish',
 			'manifest_path' => $manifest_path,
 			'source_path'   => $source_path,
-			'directory'     => $directory,
-			'root_path'     => $root_path,
+			'directory'     => self::normalize_path( dirname( $source_path ) ),
+			'root_path'     => $source->root(),
+			'logical_path'  => $logical_path,
+			'source_id'     => $source->id(),
+			'provenance'    => $source->resolve( $logical_path )?->provenance() ?? array(),
 			'source_type'   => self::source_type_from_path( $source_path ),
 			'is_twig'       => str_ends_with( $source_path, '.twig' ),
 			'is_blade'      => str_ends_with( $source_path, '.blade.php' ),
@@ -269,19 +249,31 @@ final class Site_Template_Discovery {
 	/**
 	 * Resolve the source file for a manifest.
 	 *
-	 * @param string $directory Manifest directory.
-	 * @param array  $manifest  Manifest data.
+	 * @param string           $logical_directory Logical manifest directory.
+	 * @param string           $directory Physical manifest directory.
+	 * @param array            $manifest Manifest data.
+	 * @param Discovery_Source $source Discovery source.
 	 *
 	 * @return string|null Source path.
 	 */
-	private function resolve_source_path( string $directory, array $manifest ): ?string {
+	private function resolve_source_path( string $logical_directory, string $directory, array $manifest, Discovery_Source $source ): ?string {
 		$explicit = $manifest['source'] ?? $manifest['template'] ?? $manifest['file'] ?? null;
 
 		if ( is_scalar( $explicit ) && '' !== (string) $explicit ) {
-			return $this->resolve_relative_source( $directory, (string) $explicit );
+			return $this->resolve_relative_source( $logical_directory, (string) $explicit, $source );
 		}
 
-		$candidates = Utils::index_source_candidates( $directory, array( 'index.html' ) );
+		$filenames  = array( 'index.php', 'index.blade.php', 'index.twig', 'index.html' );
+		$candidates = array();
+
+		foreach ( $filenames as $filename ) {
+			$logical = '' === $logical_directory ? $filename : $logical_directory . '/' . $filename;
+			$entry   = $source->resolve( $logical );
+
+			if ( $entry ) {
+				$candidates[] = $entry->physical_path();
+			}
+		}
 
 		/**
 		 * Filter source candidates for Site Editor templates and template parts.
@@ -298,38 +290,59 @@ final class Site_Template_Discovery {
 	/**
 	 * Resolve a relative source path inside the manifest directory.
 	 *
-	 * @param string $directory Manifest directory.
-	 * @param string $source    Source value.
+	 * @param string           $directory Logical manifest directory.
+	 * @param string           $source_path Source value.
+	 * @param Discovery_Source $source Discovery source.
 	 *
 	 * @return string|null Source path.
 	 */
-	private function resolve_relative_source( string $directory, string $source ): ?string {
-		$source = trim( str_replace( '\\', '/', $source ) );
+	private function resolve_relative_source( string $directory, string $source_path, Discovery_Source $source ): ?string {
+		$source_path = trim( str_replace( '\\', '/', $source_path ) );
+
+		$segments = explode( '/', $source_path );
 
 		if (
-			'' === $source ||
-			str_starts_with( $source, '/' ) ||
-			str_contains( $source, '?' ) ||
-			str_contains( $source, '#' ) ||
-			preg_match( '/^[A-Za-z][A-Za-z0-9+.-]*:/', $source )
+			'' === $source_path ||
+			str_starts_with( $source_path, '/' ) ||
+			str_contains( $source_path, '?' ) ||
+			str_contains( $source_path, '#' ) ||
+			in_array( '..', $segments, true ) ||
+			preg_match( '/^[A-Za-z][A-Za-z0-9+.-]*:/', $source_path )
 		) {
 			return null;
 		}
 
-		$path = realpath( $directory . '/' . $source );
+		$logical = Discovery_Sources::normalize_logical_path(
+			implode( '/', array_filter( array( $directory, $source_path ), 'strlen' ) )
+		);
+		$entry   = $source->resolve( $logical );
 
-		if ( false === $path ) {
-			return null;
+		return $entry?->physical_path();
+	}
+
+	/**
+	 * Normalize physical paths and source objects into discovery sources.
+	 *
+	 * @param array  $values Paths or sources.
+	 * @param string $context Discovery context.
+	 *
+	 * @return array<int, Discovery_Source> Discovery sources.
+	 */
+	private function normalize_sources( array $values, string $context ): array {
+		$sources = array();
+		$paths   = array();
+
+		foreach ( $values as $value ) {
+			if ( $value instanceof Discovery_Source ) {
+				$sources[] = $value;
+			} elseif ( is_string( $value ) && '' !== $value ) {
+				$paths[] = $value;
+			}
 		}
 
-		$path      = self::normalize_path( $path );
-		$directory = trailingslashit( self::normalize_path( $directory ) );
-
-		if ( ! str_starts_with( $path, $directory ) || ! is_file( $path ) ) {
-			return null;
-		}
-
-		return $path;
+		return empty( $paths )
+			? $sources
+			: array_merge( $sources, Discovery_Sources::for_paths( $context, $paths ) );
 	}
 
 	/**

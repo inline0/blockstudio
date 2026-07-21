@@ -86,6 +86,10 @@ Cache entries are invalidated when their inputs change, including watched block
 files, field files, asset files and dependencies, settings, active plugins,
 WordPress, PHP, and Blockstudio versions.
 
+[Logical discovery sources](/docs/dev/discovery-sources) also contribute their
+source ID, content fingerprint, and watch inputs. Alternate runtime selections
+can add a `blockstudio/cache/context` value to isolate all cache scopes.
+
 Disable the persistent caches in `blockstudio.json`:
 
 ```json title="blockstudio.json"

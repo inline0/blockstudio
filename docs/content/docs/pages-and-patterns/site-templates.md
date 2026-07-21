@@ -196,6 +196,11 @@ Template discovery is cached per request and persisted with file-watch metadata.
 Changing a manifest or source file invalidates the cached compiled content.
 Database customizations are not cached over: WordPress still checks them first.
 
+Runtime integrations that compose files from several roots can supply a
+[logical discovery source](/docs/dev/discovery-sources) for templates and
+template parts. Manifests and selected source templates may live in different
+physical roots while retaining one logical theme tree.
+
 ## PHP API
 
 ```php

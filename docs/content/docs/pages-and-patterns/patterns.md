@@ -80,6 +80,11 @@ add_filter( 'blockstudio/patterns/paths', function( $paths ) {
 } );
 ```
 
+Runtime integrations that compose files from several roots can replace the
+filesystem scan with a [logical discovery source](/docs/dev/discovery-sources).
+Pattern manifests and source templates are resolved from the final visible
+logical inventory.
+
 ## PHP API
 
 ```php

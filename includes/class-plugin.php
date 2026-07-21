@@ -65,6 +65,14 @@ class Plugin {
 	private function load_classes(): void {
 		$classes_dir = BLOCKSTUDIO_DIR . '/includes/classes/';
 
+		require_once $classes_dir . 'discovery-entry.php';
+		require_once $classes_dir . 'discovery-source.php';
+		require_once $classes_dir . 'filesystem-discovery-source.php';
+		require_once $classes_dir . 'inventory-discovery-source.php';
+		require_once $classes_dir . 'scoped-discovery-source.php';
+		require_once $classes_dir . 'discovery-sources.php';
+		require_once $classes_dir . 'runtime-context.php';
+
 		// Core configuration classes.
 		require_once $classes_dir . 'constants.php';
 		require_once $classes_dir . 'field-type-config.php';

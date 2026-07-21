@@ -350,10 +350,12 @@ final class Site_Templates {
 			return;
 		}
 
-		$registry = Site_Template_Registry::instance();
-		$paths    = self::get_paths();
-		$key      = self::cache_key( $paths );
-		$payload  = Build_Cache::is_enabled() ? Build_Cache::load( self::CACHE_SCOPE, $key ) : null;
+		$registry         = Site_Template_Registry::instance();
+		$paths            = self::get_paths();
+		$template_sources = Discovery_Sources::for_paths( 'site-templates', $paths['templates'] );
+		$part_sources     = Discovery_Sources::for_paths( 'site-template-parts', $paths['parts'] );
+		$key              = self::cache_key( $paths );
+		$payload          = Build_Cache::is_enabled() ? Build_Cache::load( self::CACHE_SCOPE, $key ) : null;
 
 		if ( is_array( $payload ) && ( $payload['siteTemplatesVersion'] ?? null ) === self::CACHE_VERSION ) {
 			$registry->load( $payload );
@@ -364,7 +366,7 @@ final class Site_Templates {
 		++self::$discovery_runs;
 
 		$discovery = new Site_Template_Discovery();
-		$found     = $discovery->discover( $paths['templates'], $paths['parts'] );
+		$found     = $discovery->discover( $template_sources, $part_sources );
 		$registry->set_paths( $paths );
 
 		foreach ( self::compile_items( $found['templates'] ) as $slug => $template ) {
@@ -632,6 +634,7 @@ final class Site_Templates {
 					'stylesheet'          => get_stylesheet(),
 					'template'            => get_template(),
 					'paths'               => $paths,
+					'context'             => Runtime_Context::hash( self::CACHE_SCOPE, array( 'site-templates', 'site-template-parts' ) ),
 					'blockTags'           => Settings::get( 'blockTags' ),
 					'filters'             => array(
 						'candidates'       => has_filter( 'blockstudio/site_templates/template_candidates' ),

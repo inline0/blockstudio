@@ -176,6 +176,11 @@ add_filter('blockstudio/path', function () {
 });
 ```
 
+For composed or virtual filesystems, use a logical discovery source instead of
+adding independent parent and overlay paths. Logical sources support per-path
+shadowing, inherited sibling files, deletions, cache identity, and provenance.
+See [Logical Discovery Sources](/docs/dev/discovery-sources).
+
 ### Instances
 
 If the above options are not enough, it is possible to initiate the

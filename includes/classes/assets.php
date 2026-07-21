@@ -849,7 +849,7 @@ class Assets {
 	 */
 	public static function get_compiled_filename( $path, string $scoped_class = '' ): string {
 		$file = pathinfo( $path );
-		$dir  = $file['dirname'];
+		$dir  = self::get_dist_folder( $path );
 		$file = $file['filename'];
 
 		$ext               = pathinfo( $path, PATHINFO_EXTENSION );
@@ -864,7 +864,27 @@ class Assets {
 			$ext = 'css';
 		}
 
-		return $dir . '/_dist/' . $file . '-' . $id . '.' . $ext;
+		return $dir . '/' . $file . '-' . $id . '.' . $ext;
+	}
+
+	/**
+	 * Resolve the generated distribution directory for a source path.
+	 *
+	 * @param string $source_path Asset source file or directory.
+	 *
+	 * @return string Distribution directory.
+	 */
+	public static function get_dist_folder( string $source_path ): string {
+		$source_path = wp_normalize_path( $source_path );
+		$directory   = is_dir( $source_path ) ? $source_path : dirname( $source_path );
+		$suggested   = rtrim( $directory, '/' ) . '/_dist';
+
+		return Runtime_Context::output_path(
+			$suggested,
+			$source_path,
+			'assets',
+			array( 'type' => 'directory' )
+		);
 	}
 
 	/**
@@ -882,7 +902,7 @@ class Assets {
 		}
 
 		$file = pathinfo( $path );
-		$dir  = $file['dirname'] . '/_dist';
+		$dir  = self::get_dist_folder( $path );
 		$name = $file['filename'];
 		$ext  = $file['extension'];
 
@@ -1027,12 +1047,23 @@ class Assets {
 	 * @return void
 	 */
 	public static function get_module_css_assets( $block, &$asset_ids, &$element ): void {
-		foreach (
-			Files::get_files_with_extension(
-				$block['file']['dirname'] . '/_dist/modules',
-				'css'
-			) as $filename
-		) {
+		$source_paths = array( $block['path'] ?? '' );
+
+		foreach ( $block['assets'] ?? array() as $asset ) {
+			if ( is_array( $asset ) && is_string( $asset['path'] ?? null ) ) {
+				$source_paths[] = $asset['path'];
+			}
+		}
+
+		$filenames = array();
+		foreach ( array_unique( array_filter( $source_paths ) ) as $source_path ) {
+			$filenames = array_merge(
+				$filenames,
+				Files::get_files_with_extension( self::get_dist_folder( $source_path ) . '/modules', 'css' )
+			);
+		}
+
+		foreach ( array_unique( $filenames ) as $filename ) {
 			$file = pathinfo( $filename );
 
 			if ( in_array( $file['filename'], $asset_ids, true ) ) {
@@ -1677,7 +1708,7 @@ class Assets {
 	public static function process( $path, string $scoped_class ) {
 		$pathinfo    = pathinfo( $path );
 		$ext         = $pathinfo['extension'];
-		$dist_folder = $pathinfo['dirname'] . '/_dist';
+		$dist_folder = self::get_dist_folder( $path );
 		$result      = null;
 
 		if ( self::is_css_extension( $ext ) ) {
@@ -1751,10 +1782,11 @@ class Assets {
 			preg_match_all( "/[\"'](.\/modules\/)([a-zA-Z0-9.-@_-]*)[\"']/", $contents, $modules );
 
 			foreach ( $modules[2] as $module ) {
-				$name        = explode( '/', $module )[0];
-				$version     = str_replace( '.js', '', explode( '/', $module )[1] );
-				$module_path = $block['file']['dirname'] . '/_dist/modules/' . $name . '/' . $version . '.js';
-				$module_id   = $name . '-' . $version;
+				$name          = explode( '/', $module )[0];
+				$version       = str_replace( '.js', '', explode( '/', $module )[1] );
+				$module_source = is_string( $data['path'] ?? null ) ? $data['path'] : $block['path'];
+				$module_path   = self::get_dist_folder( $module_source ) . '/modules/' . $name . '/' . $version . '.js';
+				$module_id     = $name . '-' . $version;
 
 				if ( file_exists( $module_path ) ) {
 					if ( ! isset( self::$modules[ $module_id ] ) ) {

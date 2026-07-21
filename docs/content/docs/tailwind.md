@@ -213,6 +213,11 @@ This means:
 - Dynamic content like nonces, logged-in user bars, comment counts, and timestamps do not bust the cache
 - The cache only invalidates when the set of CSS classes on a page changes or the Tailwind config changes
 
+When a runtime uses a [logical discovery source](/docs/dev/discovery-sources),
+the selected source and runtime context also participate in the cache
+namespace. Last-good CSS is isolated between previews and cannot leak from one
+source selection into another.
+
 ### Cache Location
 
 Cache files are stored in:
