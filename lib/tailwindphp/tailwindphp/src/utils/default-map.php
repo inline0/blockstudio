@@ -1,7 +1,6 @@
 <?php
 
-declare(strict_types=1);
-
+declare (strict_types=1);
 namespace BlockstudioVendor\TailwindPHP\Utils;
 
 /**
@@ -25,12 +24,10 @@ class DefaultMap
      * @var array<TKey, TValue>
      */
     private array $map = [];
-
     /**
      * @var callable(TKey, DefaultMap<TKey, TValue>): TValue
      */
     private $factory;
-
     /**
      * @param callable(TKey, DefaultMap<TKey, TValue>): TValue $factory
      */
@@ -38,7 +35,6 @@ class DefaultMap
     {
         $this->factory = $factory;
     }
-
     /**
      * Normalize key for array storage (PHP arrays can't have array keys).
      *
@@ -50,10 +46,8 @@ class DefaultMap
         if (is_array($key)) {
             return serialize($key);
         }
-
         return $key;
     }
-
     /**
      * @param TKey $key
      * @return TValue
@@ -64,10 +58,8 @@ class DefaultMap
         if (!array_key_exists($normalizedKey, $this->map)) {
             $this->map[$normalizedKey] = ($this->factory)($key, $this);
         }
-
         return $this->map[$normalizedKey];
     }
-
     /**
      * @param TKey $key
      * @param TValue $value
@@ -76,7 +68,6 @@ class DefaultMap
     {
         $this->map[$this->normalizeKey($key)] = $value;
     }
-
     /**
      * @param TKey $key
      * @return bool
@@ -85,7 +76,6 @@ class DefaultMap
     {
         return array_key_exists($this->normalizeKey($key), $this->map);
     }
-
     /**
      * @param TKey $key
      */
@@ -93,17 +83,14 @@ class DefaultMap
     {
         unset($this->map[$this->normalizeKey($key)]);
     }
-
     public function clear(): void
     {
         $this->map = [];
     }
-
     public function size(): int
     {
         return count($this->map);
     }
-
     /**
      * @return array<TKey, TValue>
      */

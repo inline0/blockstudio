@@ -606,7 +606,7 @@ class Pages {
 		}
 
 		self::maybe_flush_collection_rewrite_rules( $collections );
-		self::set_collection_manifests_cache( $collections );
+		self::set_collection_manifests_cache( $collections, false );
 	}
 
 	/**
@@ -991,25 +991,28 @@ class Pages {
 		$paths = self::get_paths();
 
 		/** This filter is documented in init(). */
-		$paths   = apply_filters( 'blockstudio/pages/paths', $paths );
-		$sources = Discovery_Sources::for_paths( 'pages', $paths );
+		$paths = apply_filters( 'blockstudio/pages/paths', $paths );
 
 		$cache_key = self::collection_manifests_cache_key( $paths );
-		$cached    = wp_cache_get( $cache_key, 'blockstudio' );
 
-		if ( ! $refresh && is_array( $cached ) ) {
-			self::set_collection_manifests_cache( $cached, false );
-			return self::$collection_manifests_cache ?? array();
+		if ( ! $refresh ) {
+			$cached = wp_cache_get( $cache_key, 'blockstudio' );
+
+			if ( self::collection_manifests_payload_fresh( $cached ) ) {
+				self::set_collection_manifests_cache( $cached['collections'], false );
+				return self::$collection_manifests_cache ?? array();
+			}
+
+			$transient = get_transient( $cache_key );
+
+			if ( self::collection_manifests_payload_fresh( $transient ) ) {
+				self::set_collection_manifests_cache( $transient['collections'], false );
+				wp_cache_set( $cache_key, $transient, 'blockstudio', HOUR_IN_SECONDS );
+				return self::$collection_manifests_cache ?? array();
+			}
 		}
 
-		$transient = get_transient( $cache_key );
-
-		if ( ! $refresh && is_array( $transient ) ) {
-			self::set_collection_manifests_cache( $transient, false );
-			wp_cache_set( $cache_key, $transient, 'blockstudio', HOUR_IN_SECONDS );
-			return self::$collection_manifests_cache ?? array();
-		}
-
+		$sources     = Discovery_Sources::for_paths( 'pages', $paths );
 		$collections = array();
 
 		foreach ( $sources as $source ) {
@@ -1021,6 +1024,54 @@ class Pages {
 		self::set_collection_manifests_cache( $collections );
 
 		return self::$collection_manifests_cache ?? array();
+	}
+
+	/**
+	 * Check whether a persistent manifest payload is still trustworthy.
+	 *
+	 * Manifest edits and removals are caught by the payload watch snapshot,
+	 * which stats only the known manifest files and source roots. Brand-new
+	 * collections in previously manifest-free trees are only visible to a
+	 * scan, so payloads older than the scan interval rebuild. Admin and
+	 * reconcile requests bypass this cache entirely.
+	 *
+	 * @param mixed $payload Cached payload.
+	 *
+	 * @return bool Whether the payload may be served.
+	 */
+	private static function collection_manifests_payload_fresh( mixed $payload ): bool {
+		if ( ! is_array( $payload ) || ! is_array( $payload['collections'] ?? null ) ) {
+			return false;
+		}
+
+		$scanned_at = (int) ( $payload['scannedAt'] ?? 0 );
+		$interval   = self::collection_manifest_scan_interval();
+		$age        = time() - $scanned_at;
+
+		if ( $age < 0 || $age >= $interval ) {
+			return false;
+		}
+
+		return Build_Cache::is_watch_valid( is_array( $payload['watch'] ?? null ) ? $payload['watch'] : array() );
+	}
+
+	/**
+	 * Get the collection manifest scan interval in seconds.
+	 *
+	 * @return int Scan interval.
+	 */
+	private static function collection_manifest_scan_interval(): int {
+		$environment = function_exists( 'wp_get_environment_type' ) ? wp_get_environment_type() : 'production';
+		$default     = in_array( $environment, array( 'local', 'development' ), true ) ? 5 : 20;
+
+		/**
+		 * Filter how often frontend requests rescan page trees for new collection manifests.
+		 *
+		 * @since 7.5.0
+		 *
+		 * @param int $seconds Scan interval in seconds.
+		 */
+		return max( 1, (int) apply_filters( 'blockstudio/pages/manifest_scan_interval', $default ) );
 	}
 
 	/**
@@ -1078,9 +1129,25 @@ class Pages {
 		/** This filter is documented in init(). */
 		$paths = apply_filters( 'blockstudio/pages/paths', $paths );
 
+		$watch_files = array();
+		$watch_dirs  = $paths;
+
+		foreach ( self::$collection_manifests_cache as $collection ) {
+			if ( is_string( $collection['manifest_path'] ?? null ) && '' !== $collection['manifest_path'] ) {
+				$watch_files[] = $collection['manifest_path'];
+				$watch_dirs[]  = dirname( $collection['manifest_path'] );
+			}
+		}
+
+		$payload = array(
+			'collections' => self::$collection_manifests_cache,
+			'watch'       => Build_Cache::create_watch_snapshot( $watch_files, $watch_dirs ),
+			'scannedAt'   => time(),
+		);
+
 		$cache_key = self::collection_manifests_cache_key( $paths );
-		wp_cache_set( $cache_key, self::$collection_manifests_cache, 'blockstudio', HOUR_IN_SECONDS );
-		set_transient( $cache_key, self::$collection_manifests_cache, HOUR_IN_SECONDS );
+		wp_cache_set( $cache_key, $payload, 'blockstudio', HOUR_IN_SECONDS );
+		set_transient( $cache_key, $payload, HOUR_IN_SECONDS );
 	}
 
 	/**

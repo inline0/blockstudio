@@ -109,13 +109,13 @@ Point `@source` at the templates to scan in your input CSS:
 
 Full documentation lives at [tailwindphp.com](https://tailwindphp.com) (or in [`docs/`](./docs) if you're reading the repo).
 
-- [Getting Started](./docs/content/docs/getting-started.mdx) — install and generate your first stylesheet
-- [Usage](./docs/content/docs/usage/) — content scanning, theme, directives, imports, and `@source`
-- [Class Utilities](./docs/content/docs/class-utilities/) — `cn()`, `merge()`, `join()`, and `variants()`
-- [Plugins](./docs/content/docs/plugins/) — typography, forms, and writing your own
-- [API](./docs/content/docs/api.mdx) — the full `tw` surface and the `TailwindCompiler` instance
-- [CLI](./docs/content/docs/cli.mdx) — `bin/tailwindphp` reference
-- [Advanced](./docs/content/docs/advanced/) — architecture, caching, and performance
+- [Getting Started](./docs/getting-started.md) — install and generate your first stylesheet
+- [Usage](./docs/usage/) — content scanning, theme, directives, imports, and `@source`
+- [Class Utilities](./docs/class-utilities/) — `cn()`, `merge()`, `join()`, and `variants()`
+- [Plugins](./docs/plugins/) — typography, forms, and writing your own
+- [API](./docs/api.md) — the full `tw` surface and the `TailwindCompiler` instance
+- [CLI](./docs/cli.md) — `bin/tailwindphp` reference
+- [Advanced](./docs/advanced/) — architecture, caching, and performance
 
 ## Credits
 

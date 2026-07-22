@@ -39,22 +39,29 @@ final class Runtime_Context {
 	/**
 	 * Get a stable context hash.
 	 *
+	 * The hash covers only the consumer-provided cache context. Per the
+	 * blockstudio/cache/context contract, that value must change whenever the
+	 * logical inventory or runtime selection changes, so traversing discovery
+	 * sources here would duplicate the consumer's identity at the cost of a
+	 * full tree walk on every cache-key computation. Content freshness is
+	 * validated separately by each cache's watch snapshot or input hash, and
+	 * keys must not depend on whether sources happen to be constructed yet.
+	 *
 	 * @param string $scope Cache scope.
-	 * @param array  $discovery_contexts Discovery contexts to fingerprint.
+	 * @param array  $discovery_contexts Discovery contexts named for key hygiene.
 	 *
 	 * @return string Context hash.
 	 */
 	public static function hash( string $scope, array $discovery_contexts = array() ): string {
 		$identity = array(
 			'context'   => self::cache( $scope ),
-			'discovery' => array(),
+			'discovery' => array_values(
+				array_filter(
+					$discovery_contexts,
+					static fn( $discovery_context ): bool => is_string( $discovery_context ) && '' !== $discovery_context
+				)
+			),
 		);
-
-		foreach ( $discovery_contexts as $discovery_context ) {
-			if ( is_string( $discovery_context ) && '' !== $discovery_context ) {
-				$identity['discovery'][ $discovery_context ] = Discovery_Sources::active_identity( $discovery_context );
-			}
-		}
 
 		$encoded = wp_json_encode( $identity );
 
@@ -64,26 +71,31 @@ final class Runtime_Context {
 	/**
 	 * Get a filesystem-safe namespace for the consumer runtime selection.
 	 *
+	 * Namespaces derive from the consumer cache context alone so a request that
+	 * hydrates from cache (no sources constructed) and a request that rebuilds
+	 * (sources active) resolve the same generated-output locations.
+	 *
 	 * @param string $scope Runtime scope.
-	 * @param array  $discovery_contexts Discovery source selections to namespace.
+	 * @param array  $discovery_contexts Discovery contexts named for key hygiene.
 	 *
 	 * @return string Context namespace.
 	 */
 	public static function namespace( string $scope, array $discovery_contexts = array() ): string {
-		$identity = array(
-			'context'   => self::cache( $scope ),
-			'discovery' => array(),
-		);
+		$context = self::cache( $scope );
 
-		foreach ( $discovery_contexts as $discovery_context ) {
-			if ( is_string( $discovery_context ) && '' !== $discovery_context ) {
-				$identity['discovery'][ $discovery_context ] = Discovery_Sources::active_selection( $discovery_context );
-			}
-		}
-
-		if ( ( '' === $identity['context'] || null === $identity['context'] || array() === $identity['context'] ) && empty( array_filter( $identity['discovery'] ) ) ) {
+		if ( '' === $context || null === $context || array() === $context ) {
 			return 'default';
 		}
+
+		$identity = array(
+			'context'   => $context,
+			'discovery' => array_values(
+				array_filter(
+					$discovery_contexts,
+					static fn( $discovery_context ): bool => is_string( $discovery_context ) && '' !== $discovery_context
+				)
+			),
+		);
 
 		$encoded = wp_json_encode( $identity );
 

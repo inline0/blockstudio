@@ -128,10 +128,31 @@ class Tailwind {
 		$key = md5( $css_input );
 
 		if ( ! isset( self::$compilers[ $key ] ) ) {
-			self::$compilers[ $key ] = TailwindPHP::compile( $css_input );
+			self::$compilers[ $key ] = TailwindPHP::compile(
+				$css_input,
+				array(
+					'stateCacheFile' => self::get_state_cache_file( $css_input ),
+				)
+			);
 		}
 
 		return self::$compilers[ $key ];
+	}
+
+	/**
+	 * Resolve the compiler construction-state cache file for a CSS input.
+	 *
+	 * Compiler construction re-parses the framework on every compile miss;
+	 * TailwindPHP persists that construction state per CSS input so page-level
+	 * cache misses only pay for compiling their candidate set. The engine
+	 * validates the state file itself; the key only namespaces inputs.
+	 *
+	 * @param string $css_input The CSS input string.
+	 *
+	 * @return string State cache file path.
+	 */
+	private static function get_state_cache_file( string $css_input ): string {
+		return Build_Cache::get_cache_dir( 'tailwind-state' ) . '/' . md5( self::get_engine_version() . $css_input ) . '.php';
 	}
 
 	/**

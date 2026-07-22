@@ -647,10 +647,33 @@ class Build {
 			$args = $p['dir'] ?? false;
 		}
 		$path               = false === $args ? self::get_build_dir() : $args;
-		$source             = Discovery_Sources::for_path( 'blocks', $path );
 		$empty_dist_folders = array();
 
 		$registry = Block_Registry::instance();
+
+		if ( ! $editor && is_string( $path ) && '' !== $path ) {
+			$cached_path     = untrailingslashit( wp_normalize_path( $path ) );
+			$cached_instance = self::get_instance_name( $cached_path );
+			$cached_runtime  = Build_Cache::load_runtime( $cached_path, $cached_instance );
+
+			if ( is_array( $cached_runtime ) ) {
+				$registry->add_instance( $cached_path );
+				$registry->add_path( $cached_instance, $cached_path );
+
+				do_action( 'blockstudio/init/before' );
+				do_action( "blockstudio/init/before/$cached_instance" );
+
+				$registry->set_blade_instance( $cached_instance, $cached_path );
+				self::hydrate_cached_runtime_build(
+					$cached_runtime,
+					$cached_instance,
+					$registry
+				);
+				return;
+			}
+		}
+
+		$source = Discovery_Sources::for_path( 'blocks', $path );
 
 		if ( empty( $source->entries() ) ) {
 			return;

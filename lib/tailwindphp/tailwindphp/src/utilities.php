@@ -1,22 +1,18 @@
 <?php
 
-declare(strict_types=1);
-
+declare (strict_types=1);
 namespace BlockstudioVendor\TailwindPHP\Utilities;
 
 use function BlockstudioVendor\TailwindPHP\Ast\atRule;
 use function BlockstudioVendor\TailwindPHP\Ast\decl;
-
 use BlockstudioVendor\TailwindPHP\Candidate\UtilitiesInterface;
 use BlockstudioVendor\TailwindPHP\Theme;
 use BlockstudioVendor\TailwindPHP\Utils\DefaultMap;
-
 use function BlockstudioVendor\TailwindPHP\Utils\isPositiveInteger;
 use function BlockstudioVendor\TailwindPHP\Utils\isStrictPositiveInteger;
 use function BlockstudioVendor\TailwindPHP\Utils\isValidOpacityValue;
 use function BlockstudioVendor\TailwindPHP\Utils\isValidSpacingMultiplier;
 use function BlockstudioVendor\TailwindPHP\Utils\segment;
-
 /**
  * Utilities - Utility registry and core utility functions.
  *
@@ -33,16 +29,9 @@ use function BlockstudioVendor\TailwindPHP\Utils\segment;
  *
  * @port-deviation:types PHP uses UtilitiesInterface for candidate.php integration.
  */
-
 const IS_VALID_STATIC_UTILITY_NAME = '/^-?[a-z][a-zA-Z0-9\/%._-]*$/';
 const IS_VALID_FUNCTIONAL_UTILITY_NAME = '/^-?[a-z][a-zA-Z0-9\/%._-]*-\*$/';
-
-const DEFAULT_SPACING_SUGGESTIONS = [
-    '0', '0.5', '1', '1.5', '2', '2.5', '3', '3.5', '4', '5', '6', '7', '8', '9',
-    '10', '11', '12', '14', '16', '20', '24', '28', '32', '36', '40', '44', '48',
-    '52', '56', '60', '64', '72', '80', '96',
-];
-
+const DEFAULT_SPACING_SUGGESTIONS = ['0', '0.5', '1', '1.5', '2', '2.5', '3', '3.5', '4', '5', '6', '7', '8', '9', '10', '11', '12', '14', '16', '20', '24', '28', '32', '36', '40', '44', '48', '52', '56', '60', '64', '72', '80', '96'];
 /**
  * Utility class to manage utility registrations.
  */
@@ -52,17 +41,14 @@ class Utilities implements UtilitiesInterface
      * @var DefaultMap<string, array<array{kind: string, compileFn: callable, options?: array}>>
      */
     private DefaultMap $utilities;
-
     /**
      * @var array<string, callable>
      */
     private array $completions = [];
-
     public function __construct()
     {
-        $this->utilities = new DefaultMap(fn () => []);
+        $this->utilities = new DefaultMap(fn() => []);
     }
-
     /**
      * Register a static utility.
      *
@@ -76,7 +62,6 @@ class Utilities implements UtilitiesInterface
         $utilities[] = ['kind' => 'static', 'compileFn' => $compileFn];
         $this->utilities->set($name, $utilities);
     }
-
     /**
      * Register a functional utility.
      *
@@ -95,7 +80,6 @@ class Utilities implements UtilitiesInterface
         $utilities[] = $utility;
         $this->utilities->set($name, $utilities);
     }
-
     /**
      * Check if a utility exists with a given kind.
      *
@@ -106,19 +90,16 @@ class Utilities implements UtilitiesInterface
     public function has(string $name, string $kind): bool
     {
         if (!$this->utilities->has($name)) {
-            return false;
+            return \false;
         }
-
         $utils = $this->utilities->get($name);
         foreach ($utils as $util) {
             if ($util['kind'] === $kind) {
-                return true;
+                return \true;
             }
         }
-
-        return false;
+        return \false;
     }
-
     /**
      * Get all utilities for a name.
      *
@@ -130,10 +111,8 @@ class Utilities implements UtilitiesInterface
         if (!$this->utilities->has($name)) {
             return [];
         }
-
         return $this->utilities->get($name);
     }
-
     /**
      * Get completions for a utility.
      *
@@ -144,19 +123,15 @@ class Utilities implements UtilitiesInterface
     {
         if ($this->has($name, 'static')) {
             if (isset($this->completions[$name])) {
-                return ($this->completions[$name])();
+                return $this->completions[$name]();
             }
-
-            return [['supportsNegative' => false, 'values' => [], 'modifiers' => []]];
+            return [['supportsNegative' => \false, 'values' => [], 'modifiers' => []]];
         }
-
         if (isset($this->completions[$name])) {
-            return ($this->completions[$name])();
+            return $this->completions[$name]();
         }
-
         return [];
     }
-
     /**
      * Register suggestion groups for a utility.
      *
@@ -168,12 +143,11 @@ class Utilities implements UtilitiesInterface
     {
         if (isset($this->completions[$name])) {
             $existingGroups = $this->completions[$name];
-            $this->completions[$name] = fn () => array_merge($existingGroups(), $groups());
+            $this->completions[$name] = fn() => array_merge($existingGroups(), $groups());
         } else {
             $this->completions[$name] = $groups;
         }
     }
-
     /**
      * Get all utility keys of a specific kind.
      *
@@ -183,7 +157,6 @@ class Utilities implements UtilitiesInterface
     public function keys(string $kind): array
     {
         $keys = [];
-
         foreach ($this->utilities->entries() as [$key, $fns]) {
             foreach ($fns as $fn) {
                 if ($fn['kind'] === $kind) {
@@ -192,20 +165,16 @@ class Utilities implements UtilitiesInterface
                 }
             }
         }
-
         return $keys;
     }
-
     /**
      * @var array<string, array{callback: callable, options: array}>
      */
     private array $functionalPluginUtilities = [];
-
     /**
      * @var array<string, array{declarations: array, options: array}>
      */
     private array $pluginUtilities = [];
-
     /**
      * Add a utility from a plugin (static utility).
      *
@@ -215,17 +184,12 @@ class Utilities implements UtilitiesInterface
      */
     public function addPluginUtility(string $name, array $declarations, array $options = []): void
     {
-        $this->pluginUtilities[$name] = [
-            'declarations' => $declarations,
-            'options' => $options,
-        ];
-
+        $this->pluginUtilities[$name] = ['declarations' => $declarations, 'options' => $options];
         // Also register as static utility for compilation
         $this->static($name, function () use ($declarations) {
             return $this->declarationsToAst($declarations);
         });
     }
-
     /**
      * Add a functional utility from a plugin (matchUtilities).
      *
@@ -235,12 +199,8 @@ class Utilities implements UtilitiesInterface
      */
     public function addFunctional(string $name, callable $callback, array $options = []): void
     {
-        $this->functionalPluginUtilities[$name] = [
-            'callback' => $callback,
-            'options' => $options,
-        ];
+        $this->functionalPluginUtilities[$name] = ['callback' => $callback, 'options' => $options];
     }
-
     /**
      * Check if a plugin utility exists.
      *
@@ -251,7 +211,6 @@ class Utilities implements UtilitiesInterface
     {
         return isset($this->pluginUtilities[$name]);
     }
-
     /**
      * Get a plugin utility.
      *
@@ -262,7 +221,6 @@ class Utilities implements UtilitiesInterface
     {
         return $this->pluginUtilities[$name] ?? null;
     }
-
     /**
      * Get all plugin utilities.
      *
@@ -272,7 +230,6 @@ class Utilities implements UtilitiesInterface
     {
         return $this->pluginUtilities;
     }
-
     /**
      * Get all functional plugin utilities.
      *
@@ -282,7 +239,6 @@ class Utilities implements UtilitiesInterface
     {
         return $this->functionalPluginUtilities;
     }
-
     /**
      * Convert declarations array to AST nodes.
      *
@@ -292,7 +248,6 @@ class Utilities implements UtilitiesInterface
     private function declarationsToAst(array $declarations): array
     {
         $nodes = [];
-
         foreach ($declarations as $property => $value) {
             if (is_int($property)) {
                 // Tuple format [$property, $value] - this must come first
@@ -306,11 +261,9 @@ class Utilities implements UtilitiesInterface
                 $nodes[] = decl($property, (string) $value);
             }
         }
-
         return $nodes;
     }
 }
-
 /**
  * Create a @property at-rule for CSS custom properties.
  *
@@ -321,11 +274,7 @@ class Utilities implements UtilitiesInterface
  */
 function property(string $ident, ?string $initialValue = null, ?string $syntax = null): array
 {
-    $nodes = [
-        decl('syntax', $syntax ? "\"{$syntax}\"" : '"*"'),
-        decl('inherits', 'false'),
-    ];
-
+    $nodes = [decl('syntax', $syntax ? "\"{$syntax}\"" : '"*"'), decl('inherits', 'false')];
     // initial-value must come after inherits
     if ($initialValue !== null) {
         // For <length> syntax, LightningCSS strips units from zero values
@@ -336,10 +285,8 @@ function property(string $ident, ?string $initialValue = null, ?string $syntax =
         }
         $nodes[] = decl('initial-value', $optimizedValue);
     }
-
     return atRule('@property', $ident, $nodes);
 }
-
 /**
  * Apply opacity to a color using `color-mix`.
  *
@@ -353,68 +300,53 @@ function property(string $ident, ?string $initialValue = null, ?string $syntax =
  * @param bool $inline If true, compute the oklab value instead of using color-mix
  * @return string|null
  */
-function withAlpha(string $value, ?string $alpha, bool $inline = false): ?string
+function withAlpha(string $value, ?string $alpha, bool $inline = \false): ?string
 {
     if ($alpha === null || $alpha === '') {
         return $value;
     }
-
     // Check if alpha contains a CSS variable - handle separately
     if (str_contains($alpha, 'var(')) {
         // Normalize the color for consistency
         $normalizedValue = \BlockstudioVendor\TailwindPHP\LightningCss\LightningCss::normalizeColors($value);
-
         // Return color-mix with the variable opacity
         return "color-mix(in oklab, {$normalizedValue} {$alpha}, transparent)";
     }
-
     // Convert alpha to a decimal (0-1 range)
     $alphaDecimal = parseAlphaToDecimal($alpha);
-
     // Invalid alpha value - silently fail (return null)
     if ($alphaDecimal === null) {
         return null;
     }
-
     // No need for color-mix if the alpha is 100%
     if ($alphaDecimal === 1.0) {
         return $value;
     }
-
     // Check if the value is an oklab with an existing alpha
     // e.g., oklab(62.7955% .224 .125 / .5)
     if (preg_match('/^oklab\(([^\/]+)\/\s*([\d.]+%?)\s*\)$/i', $value, $match)) {
         $oklabComponents = trim($match[1]);
         $existingAlpha = parseAlphaToDecimal($match[2]);
-
         // Invalid existing alpha - return original value
         if ($existingAlpha === null) {
             return $value;
         }
-
         // Compute stacked opacity
         $stackedAlpha = $existingAlpha * $alphaDecimal;
-
         // Format the stacked alpha (keep precision, remove trailing zeros)
         $stackedAlphaStr = formatAlpha($stackedAlpha);
-
         return "oklab({$oklabComponents} / {$stackedAlphaStr})";
     }
-
     // For inline mode, compute the actual oklab value with alpha
     if ($inline) {
-        return \BlockstudioVendor\TailwindPHP\LightningCss\LightningCss::colorToOklabWithOpacity($value, $alphaDecimal, true);
+        return \BlockstudioVendor\TailwindPHP\LightningCss\LightningCss::colorToOklabWithOpacity($value, $alphaDecimal, \true);
     }
-
     // Normalize the color (e.g., #f00 -> red) for consistency with TailwindCSS output
     $normalizedValue = \BlockstudioVendor\TailwindPHP\LightningCss\LightningCss::normalizeColors($value);
-
     // Convert alpha back to percentage for color-mix
-    $alphaPercent = ($alphaDecimal * 100) . '%';
-
+    $alphaPercent = $alphaDecimal * 100 . '%';
     return "color-mix(in oklab, {$normalizedValue} {$alphaPercent}, transparent)";
 }
-
 /**
  * Parse an alpha value to a decimal (0-1 range).
  *
@@ -426,32 +358,26 @@ function withAlpha(string $value, ?string $alpha, bool $inline = false): ?string
 function parseAlphaToDecimal(string $alpha): ?float
 {
     $alpha = trim($alpha);
-
     // Skip non-numeric values (e.g., CSS variables, calc expressions)
     // These are handled elsewhere
     if (!is_numeric(rtrim($alpha, '%'))) {
         return null;
     }
-
     if (str_ends_with($alpha, '%')) {
         $val = floatval(substr($alpha, 0, -1)) / 100;
     } else {
         $val = floatval($alpha);
-
         // If value > 1, assume it's a percentage
         if ($val > 1) {
             $val = $val / 100;
         }
     }
-
     // Validate range: must be 0-1
     if ($val < 0 || $val > 1) {
         return null;
     }
-
     return $val;
 }
-
 /**
  * Format an alpha value for oklab output.
  *
@@ -462,15 +388,12 @@ function formatAlpha(float $alpha): string
 {
     // Format with enough precision, removing trailing zeros
     $str = rtrim(rtrim(number_format($alpha, 6, '.', ''), '0'), '.');
-
     // Ensure we have a leading zero or the decimal point itself
     if ($str === '' || $str === '.') {
         return '0';
     }
-
     return '.' . ltrim($str, '0.');
 }
-
 /**
  * Replace the alpha channel of a color.
  *
@@ -482,12 +405,10 @@ function replaceAlpha(string $value, string $alpha): string
 {
     // Convert numeric values to percentages
     if (is_numeric($alpha)) {
-        $alpha = (floatval($alpha) * 100) . '%';
+        $alpha = floatval($alpha) * 100 . '%';
     }
-
     return "oklab(from {$value} l a b / {$alpha})";
 }
-
 /**
  * Resolve a color value + optional opacity modifier to a final color.
  *
@@ -501,25 +422,20 @@ function asColor(string $value, ?array $modifier, Theme $theme): ?string
     if ($modifier === null) {
         return $value;
     }
-
     if ($modifier['kind'] === 'arbitrary') {
         return withAlpha($value, $modifier['value']);
     }
-
     // Check if the modifier exists in the `opacity` theme configuration
     $alpha = $theme->resolve($modifier['value'], ['--opacity']);
     if ($alpha) {
         return withAlpha($value, $alpha);
     }
-
     if (!isValidOpacityValue($modifier['value'])) {
         return null;
     }
-
     // The modifier is a bare value like `50`, so convert that to `50%`.
     return withAlpha($value, $modifier['value'] . '%');
 }
-
 /**
  * Resolve a theme color for a candidate.
  *
@@ -533,9 +449,7 @@ function resolveThemeColor(array $candidate, Theme $theme, array $themeKeys): ?s
     if (!isset($candidate['value']) || $candidate['value']['kind'] !== 'named') {
         return null;
     }
-
     $value = null;
-
     switch ($candidate['value']['value']) {
         case 'inherit':
             $value = 'inherit';
@@ -550,10 +464,8 @@ function resolveThemeColor(array $candidate, Theme $theme, array $themeKeys): ?s
             $value = $theme->resolve($candidate['value']['value'], $themeKeys);
             break;
     }
-
     return $value ? asColor($value, $candidate['modifier'] ?? null, $theme) : null;
 }
-
 /**
  * Helper class for registering utilities with a theme.
  */
@@ -561,13 +473,11 @@ class UtilityBuilder
 {
     private Utilities $utilities;
     private Theme $theme;
-
     public function __construct(Utilities $utilities, Theme $theme)
     {
         $this->utilities = $utilities;
         $this->theme = $theme;
     }
-
     /**
      * Get the utilities instance.
      */
@@ -575,7 +485,6 @@ class UtilityBuilder
     {
         return $this->utilities;
     }
-
     /**
      * Get the theme instance.
      */
@@ -583,7 +492,6 @@ class UtilityBuilder
     {
         return $this->theme;
     }
-
     /**
      * Register a static utility class like `justify-center`.
      *
@@ -598,7 +506,6 @@ class UtilityBuilder
             }, $declarations);
         });
     }
-
     /**
      * Register a functional utility class like `max-w-*`.
      *
@@ -609,17 +516,14 @@ class UtilityBuilder
     {
         $theme = $this->theme;
         $utilities = $this->utilities;
-
         $handleFunctionalUtility = function (bool $negative) use ($theme, $desc) {
             return function (array $candidate) use ($theme, $desc, $negative) {
                 $value = null;
                 $dataType = null;
-
                 if (!isset($candidate['value']) || $candidate['value'] === null) {
                     if (isset($candidate['modifier']) && $candidate['modifier'] !== null) {
                         return null;
                     }
-
                     // Use defaultValue or resolve from theme
                     if (array_key_exists('defaultValue', $desc)) {
                         $value = $desc['defaultValue'];
@@ -634,15 +538,10 @@ class UtilityBuilder
                     $dataType = $candidate['value']['dataType'] ?? null;
                 } else {
                     // Check for numeric fractions (like flex-1/2)
-                    $hasNumericFraction = isset($candidate['value']['fraction']) &&
-                        isset($candidate['modifier']['value']) &&
-                        ctype_digit($candidate['modifier']['value']);
-
+                    $hasNumericFraction = isset($candidate['value']['fraction']) && isset($candidate['modifier']['value']) && ctype_digit($candidate['modifier']['value']);
                     $lookupValue = $candidate['value']['fraction'] ?? $candidate['value']['value'];
-
                     // Theme resolution first (matches original TailwindCSS order)
                     $value = $theme->resolve($lookupValue, $desc['themeKeys'] ?? []);
-
                     // If we have a modifier and no theme value resolved:
                     // - For named fractions (foo/bar): if theme value exists, modifier is consumed by fraction
                     // - For numeric fractions (1/2): modifier is consumed by fraction
@@ -654,9 +553,8 @@ class UtilityBuilder
                             return null;
                         }
                     }
-
                     // Handle fractions like w-1/2
-                    if ($value === null && ($desc['supportsFractions'] ?? false) && isset($candidate['value']['fraction'])) {
+                    if ($value === null && ($desc['supportsFractions'] ?? \false) && isset($candidate['value']['fraction'])) {
                         $parts = segment($candidate['value']['fraction'], '/');
                         // Numerator can be 0+, but denominator must be > 0 to avoid division by zero
                         if (count($parts) === 2 && isPositiveInteger($parts[0]) && isStrictPositiveInteger($parts[1])) {
@@ -664,72 +562,55 @@ class UtilityBuilder
                             $value = "calc({$parts[0]} / {$parts[1]} * 100%)";
                         }
                     }
-
                     // Handle bare values with negative handler
                     if ($value === null && $negative && isset($desc['handleNegativeBareValue'])) {
                         $value = $desc['handleNegativeBareValue']($candidate['value']);
-                        if ($value !== null && strpos($value, '/') === false && isset($candidate['modifier'])) {
+                        if ($value !== null && strpos($value, '/') === \false && isset($candidate['modifier'])) {
                             return null;
                         }
                         if ($value !== null) {
                             return $desc['handle']($value, null);
                         }
                     }
-
                     // Handle bare values (fallback after theme resolution)
                     if ($value === null && isset($desc['handleBareValue'])) {
                         $value = $desc['handleBareValue']($candidate['value']);
                         // If we got a value but there's an unconsumed modifier, reject it
                         // Exception: if it was a numeric fraction, the modifier was consumed
-                        if ($value !== null && strpos($value, '/') === false && isset($candidate['modifier']) && !$hasNumericFraction) {
+                        if ($value !== null && strpos($value, '/') === \false && isset($candidate['modifier']) && !$hasNumericFraction) {
                             return null;
                         }
                     }
-
                     // Handle static values as fallback
                     if ($value === null && !$negative && isset($desc['staticValues']) && !isset($candidate['modifier'])) {
                         $fallback = $desc['staticValues'][$candidate['value']['value']] ?? null;
                         if ($fallback !== null) {
-                            return array_map('BlockstudioVendor\\TailwindPHP\\Ast\\cloneAstNode', $fallback);
+                            return array_map('BlockstudioVendor\TailwindPHP\Ast\cloneAstNode', $fallback);
                         }
                     }
                 }
-
                 if ($value === null) {
                     return null;
                 }
-
                 // Negate the value if needed
                 if ($negative) {
                     $value = "calc({$value} * -1)";
                 }
-
                 return $desc['handle']($value, $dataType);
             };
         };
-
-        if ($desc['supportsNegative'] ?? false) {
-            $utilities->functional("-{$classRoot}", $handleFunctionalUtility(true));
+        if ($desc['supportsNegative'] ?? \false) {
+            $utilities->functional("-{$classRoot}", $handleFunctionalUtility(\true));
         }
-        $utilities->functional($classRoot, $handleFunctionalUtility(false));
-
+        $utilities->functional($classRoot, $handleFunctionalUtility(\false));
         // Add suggestions
-        $this->suggest($classRoot, fn () => [
-            [
-                'supportsNegative' => $desc['supportsNegative'] ?? false,
-                'valueThemeKeys' => $desc['themeKeys'] ?? [],
-                'hasDefaultValue' => array_key_exists('defaultValue', $desc) && $desc['defaultValue'] !== null,
-                'supportsFractions' => $desc['supportsFractions'] ?? false,
-            ],
-        ]);
-
+        $this->suggest($classRoot, fn() => [['supportsNegative' => $desc['supportsNegative'] ?? \false, 'valueThemeKeys' => $desc['themeKeys'] ?? [], 'hasDefaultValue' => array_key_exists('defaultValue', $desc) && $desc['defaultValue'] !== null, 'supportsFractions' => $desc['supportsFractions'] ?? \false]]);
         // Add static value suggestions
         if (isset($desc['staticValues']) && count($desc['staticValues']) > 0) {
             $values = array_keys($desc['staticValues']);
-            $this->suggest($classRoot, fn () => [['values' => $values]]);
+            $this->suggest($classRoot, fn() => [['values' => $values]]);
         }
     }
-
     /**
      * Register a color utility class.
      *
@@ -739,37 +620,24 @@ class UtilityBuilder
     public function colorUtility(string $classRoot, array $desc): void
     {
         $theme = $this->theme;
-
         $this->utilities->functional($classRoot, function (array $candidate) use ($theme, $desc) {
             if (!isset($candidate['value'])) {
                 return null;
             }
-
             $value = null;
-
             if ($candidate['value']['kind'] === 'arbitrary') {
                 $value = $candidate['value']['value'];
                 $value = asColor($value, $candidate['modifier'] ?? null, $theme);
             } else {
                 $value = resolveThemeColor($candidate, $theme, $desc['themeKeys']);
             }
-
             if ($value === null) {
                 return null;
             }
-
             return $desc['handle']($value);
         });
-
-        $this->suggest($classRoot, fn () => [
-            [
-                'values' => ['current', 'inherit', 'transparent'],
-                'valueThemeKeys' => $desc['themeKeys'],
-                'modifiers' => array_map(fn ($i) => (string)($i * 5), range(0, 20)),
-            ],
-        ]);
+        $this->suggest($classRoot, fn() => [['values' => ['current', 'inherit', 'transparent'], 'valueThemeKeys' => $desc['themeKeys'], 'modifiers' => array_map(fn($i) => (string) ($i * 5), range(0, 20))]]);
     }
-
     /**
      * Register a spacing utility.
      *
@@ -780,49 +648,35 @@ class UtilityBuilder
      */
     public function spacingUtility(string $name, array $themeKeys, callable $handle, array $options = []): void
     {
-        $supportsNegative = $options['supportsNegative'] ?? false;
-        $supportsFractions = $options['supportsFractions'] ?? false;
+        $supportsNegative = $options['supportsNegative'] ?? \false;
+        $supportsFractions = $options['supportsFractions'] ?? \false;
         $staticValues = $options['staticValues'] ?? null;
         $theme = $this->theme;
-
         if ($supportsNegative) {
-            $this->utilities->static("-{$name}-px", fn () => $handle('-1px'));
+            $this->utilities->static("-{$name}-px", fn() => $handle('-1px'));
         }
-        $this->utilities->static("{$name}-px", fn () => $handle('1px'));
-
-        $this->functionalUtility($name, [
-            'themeKeys' => $themeKeys,
-            'supportsFractions' => $supportsFractions,
-            'supportsNegative' => $supportsNegative,
-            'defaultValue' => null,
-            'handleBareValue' => function ($value) use ($theme) {
-                // Fallback: if no theme value found, use calc(var(--spacing) * N)
-                $multiplier = $theme->resolve(null, ['--spacing']);
-                if ($multiplier === null) {
-                    return null;
-                }
-                if (!isValidSpacingMultiplier($value['value'])) {
-                    return null;
-                }
-
-                return "calc({$multiplier} * {$value['value']})";
-            },
-            'handleNegativeBareValue' => function ($value) use ($theme) {
-                $multiplier = $theme->resolve(null, ['--spacing']);
-                if ($multiplier === null) {
-                    return null;
-                }
-                if (!isValidSpacingMultiplier($value['value'])) {
-                    return null;
-                }
-
-                return "calc({$multiplier} * -{$value['value']})";
-            },
-            'staticValues' => $staticValues,
-            'handle' => $handle,
-        ]);
+        $this->utilities->static("{$name}-px", fn() => $handle('1px'));
+        $this->functionalUtility($name, ['themeKeys' => $themeKeys, 'supportsFractions' => $supportsFractions, 'supportsNegative' => $supportsNegative, 'defaultValue' => null, 'handleBareValue' => function ($value) use ($theme) {
+            // Fallback: if no theme value found, use calc(var(--spacing) * N)
+            $multiplier = $theme->resolve(null, ['--spacing']);
+            if ($multiplier === null) {
+                return null;
+            }
+            if (!isValidSpacingMultiplier($value['value'])) {
+                return null;
+            }
+            return "calc({$multiplier} * {$value['value']})";
+        }, 'handleNegativeBareValue' => function ($value) use ($theme) {
+            $multiplier = $theme->resolve(null, ['--spacing']);
+            if ($multiplier === null) {
+                return null;
+            }
+            if (!isValidSpacingMultiplier($value['value'])) {
+                return null;
+            }
+            return "calc({$multiplier} * -{$value['value']})";
+        }, 'staticValues' => $staticValues, 'handle' => $handle]);
     }
-
     /**
      * Register suggestions for a utility.
      *
@@ -834,7 +688,6 @@ class UtilityBuilder
         $this->utilities->suggest($name, $groups);
     }
 }
-
 /**
  * Create utilities with the given theme.
  *
@@ -845,7 +698,6 @@ function createUtilities(Theme $theme): Utilities
 {
     $utilities = new Utilities();
     $builder = new UtilityBuilder($utilities, $theme);
-
     // Register all utilities by loading individual utility files
     registerAccessibilityUtilities($builder);
     registerLayoutUtilities($builder);
@@ -863,10 +715,8 @@ function createUtilities(Theme $theme): Utilities
     registerInteractivityUtilities($builder);
     registerSvgUtilities($builder);
     registerMaskUtilities($builder);
-
     return $utilities;
 }
-
 // Include individual utility registration files
 require_once __DIR__ . '/utilities/accessibility.php';
 require_once __DIR__ . '/utilities/layout.php';

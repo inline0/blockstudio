@@ -42,6 +42,17 @@ final class Build_Cache {
 	private static bool $hooks_registered = false;
 
 	/**
+	 * Per-blog memo of runtime key inputs that are stable within a request.
+	 *
+	 * Multiple Build::init instances share one request; recomputing the
+	 * settings, field-type, and active-plugin fingerprints per instance
+	 * repeats option reads and one filesystem stat per active plugin.
+	 *
+	 * @var array<int, array<string, mixed>>
+	 */
+	private static array $key_input_memo = array();
+
+	/**
 	 * Register cache invalidation hooks.
 	 *
 	 * @return void
@@ -122,6 +133,16 @@ final class Build_Cache {
 	 * @return string Cache key.
 	 */
 	public static function get_runtime_key( string $path, string $instance ): string {
+		$blog = function_exists( 'get_current_blog_id' ) ? (int) get_current_blog_id() : 0;
+
+		if ( ! isset( self::$key_input_memo[ $blog ] ) ) {
+			self::$key_input_memo[ $blog ] = array(
+				'settings'   => self::get_settings_fingerprint(),
+				'fieldTypes' => class_exists( Field_Type_Registry::class ) ? Field_Type_Registry::instance()->fingerprint() : '',
+				'plugins'    => self::get_active_plugins_fingerprint(),
+			);
+		}
+
 		return md5(
 			wp_json_encode(
 				array(
@@ -129,9 +150,9 @@ final class Build_Cache {
 					'cacheVersion' => self::VERSION,
 					'path'         => wp_normalize_path( $path ),
 					'instance'     => $instance,
-					'settings'     => self::get_settings_fingerprint(),
-					'fieldTypes'   => class_exists( Field_Type_Registry::class ) ? Field_Type_Registry::instance()->fingerprint() : '',
-					'plugins'      => self::get_active_plugins_fingerprint(),
+					'settings'     => self::$key_input_memo[ $blog ]['settings'],
+					'fieldTypes'   => self::$key_input_memo[ $blog ]['fieldTypes'],
+					'plugins'      => self::$key_input_memo[ $blog ]['plugins'],
 					'populate'     => self::get_populate_cache_version(),
 					'stylesheet'   => function_exists( 'get_stylesheet' ) ? get_stylesheet() : '',
 					'template'     => function_exists( 'get_template' ) ? get_template() : '',
@@ -141,6 +162,18 @@ final class Build_Cache {
 				)
 			)
 		);
+	}
+
+	/**
+	 * Reset per-request memoized key inputs.
+	 *
+	 * Field types register during init and settings filters can attach late, so
+	 * long-lived processes that mutate either between builds reset the memo.
+	 *
+	 * @return void
+	 */
+	public static function reset_key_input_memo(): void {
+		self::$key_input_memo = array();
 	}
 
 	/**
@@ -294,11 +327,51 @@ final class Build_Cache {
 			return null;
 		}
 
+		$stamp = $file . '.ok';
+		$ttl   = self::get_watch_debounce();
+
+		if ( $ttl > 0 && is_file( $stamp ) ) {
+			$age = time() - (int) filemtime( $stamp );
+
+			if ( $age >= 0 && $age < $ttl ) {
+				return $payload;
+			}
+		}
+
 		if ( ! self::is_watch_valid( $payload['watch'] ?? array() ) ) {
 			return null;
 		}
 
+		if ( $ttl > 0 ) {
+			@touch( $stamp ); // phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged, WordPress.WP.AlternativeFunctions.file_system_operations_touch -- Best-effort debounce stamp.
+		}
+
 		return $payload;
+	}
+
+	/**
+	 * Get the watch validation debounce window in seconds.
+	 *
+	 * Watch snapshots stat every recorded file and directory, which is the
+	 * dominant cache-hit cost on hosts with slow filesystem metadata. Within
+	 * the debounce window a validated payload is trusted without re-statting.
+	 * Local and development environments default to zero so authors see file
+	 * edits immediately.
+	 *
+	 * @return int Debounce window in seconds.
+	 */
+	public static function get_watch_debounce(): int {
+		$environment = function_exists( 'wp_get_environment_type' ) ? wp_get_environment_type() : 'production';
+		$default     = in_array( $environment, array( 'local', 'development' ), true ) ? 0 : 20;
+
+		/**
+		 * Filter the watch validation debounce window.
+		 *
+		 * @since 7.5.0
+		 *
+		 * @param int $seconds Debounce window in seconds. Zero validates on every load.
+		 */
+		return max( 0, (int) apply_filters( 'blockstudio/cache/watch_debounce', $default ) );
 	}
 
 	/**
@@ -334,6 +407,10 @@ final class Build_Cache {
 
 		if ( function_exists( 'opcache_invalidate' ) ) {
 			opcache_invalidate( $file, true );
+		}
+
+		if ( self::get_watch_debounce() > 0 ) {
+			@touch( $file . '.ok' ); // phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged, WordPress.WP.AlternativeFunctions.file_system_operations_touch -- Best-effort debounce stamp.
 		}
 
 		self::prune_scope( $scope, $file );
@@ -392,6 +469,10 @@ final class Build_Cache {
 
 		foreach ( array_slice( $files, max( 0, $max_files - 1 ) ) as $file ) {
 			wp_delete_file( $file );
+
+			if ( is_file( $file . '.ok' ) ) {
+				wp_delete_file( $file . '.ok' );
+			}
 		}
 	}
 

@@ -1,7 +1,6 @@
 <?php
 
-declare(strict_types=1);
-
+declare (strict_types=1);
 namespace BlockstudioVendor\TailwindPHP\Utils;
 
 /**
@@ -18,69 +17,43 @@ namespace BlockstudioVendor\TailwindPHP\Utils;
 function escape(string $value): string
 {
     $length = strlen($value);
-
     if ($length === 0) {
         return $value;
     }
-
     $result = '';
     $firstCodeUnit = ord($value[0]);
-
     // If the character is the first character and is a `-` (U+002D), and
     // there is no second character, […]
-    if ($length === 1 && $firstCodeUnit === 0x002d) {
+    if ($length === 1 && $firstCodeUnit === 0x2d) {
         return '\\' . $value;
     }
-
     for ($index = 0; $index < $length; $index++) {
         $codeUnit = ord($value[$index]);
-
         // If the character is NULL (U+0000), then the REPLACEMENT CHARACTER (U+FFFD).
-        if ($codeUnit === 0x0000) {
-            $result .= "\u{FFFD}";
+        if ($codeUnit === 0x0) {
+            $result .= "�";
             continue;
         }
-
-        if (
-            // If the character is in the range [\1-\1F] (U+0001 to U+001F) or is U+007F, […]
-            ($codeUnit >= 0x0001 && $codeUnit <= 0x001f) ||
-            $codeUnit === 0x007f ||
-            // If the character is the first character and is in the range [0-9] (U+0030 to U+0039), […]
-            ($index === 0 && $codeUnit >= 0x0030 && $codeUnit <= 0x0039) ||
-            // If the character is the second character and is in the range [0-9]
-            // (U+0030 to U+0039) and the first character is a `-` (U+002D), […]
-            ($index === 1 && $codeUnit >= 0x0030 && $codeUnit <= 0x0039 && $firstCodeUnit === 0x002d)
-        ) {
+        if ($codeUnit >= 0x1 && $codeUnit <= 0x1f || $codeUnit === 0x7f || $index === 0 && $codeUnit >= 0x30 && $codeUnit <= 0x39 || $index === 1 && $codeUnit >= 0x30 && $codeUnit <= 0x39 && $firstCodeUnit === 0x2d) {
             // https://drafts.csswg.org/cssom/#escape-a-character-as-code-point
             $result .= '\\' . dechex($codeUnit) . ' ';
             continue;
         }
-
         // If the character is not handled by one of the above rules and is
         // greater than or equal to U+0080, is `-` (U+002D) or `_` (U+005F), or
         // is in one of the ranges [0-9] (U+0030 to U+0039), [A-Z] (U+0041 to
         // U+005A), or [a-z] (U+0061 to U+007A), […]
-        if (
-            $codeUnit >= 0x0080 ||
-            $codeUnit === 0x002d ||
-            $codeUnit === 0x005f ||
-            ($codeUnit >= 0x0030 && $codeUnit <= 0x0039) ||
-            ($codeUnit >= 0x0041 && $codeUnit <= 0x005a) ||
-            ($codeUnit >= 0x0061 && $codeUnit <= 0x007a)
-        ) {
+        if ($codeUnit >= 0x80 || $codeUnit === 0x2d || $codeUnit === 0x5f || $codeUnit >= 0x30 && $codeUnit <= 0x39 || $codeUnit >= 0x41 && $codeUnit <= 0x5a || $codeUnit >= 0x61 && $codeUnit <= 0x7a) {
             // the character itself
             $result .= $value[$index];
             continue;
         }
-
         // Otherwise, the escaped character.
         // https://drafts.csswg.org/cssom/#escape-a-character
         $result .= '\\' . $value[$index];
     }
-
     return $result;
 }
-
 /**
  * Unescape a CSS identifier.
  *
@@ -89,18 +62,12 @@ function escape(string $value): string
  */
 function unescape(string $escaped): string
 {
-    return preg_replace_callback(
-        '/\\\\([\\dA-Fa-f]{1,6}[\\t\\n\\f\\r ]?|[\\S\\s])/',
-        function ($match) {
-            if (strlen($match[0]) > 2) {
-                // It's a hex escape sequence
-                $hex = trim($match[1]);
-
-                return mb_chr((int) hexdec($hex), 'UTF-8');
-            }
-
-            return $match[1];
-        },
-        $escaped,
-    );
+    return preg_replace_callback('/\\\\([\dA-Fa-f]{1,6}[\t\n\f\r ]?|[\S\s])/', function ($match) {
+        if (strlen($match[0]) > 2) {
+            // It's a hex escape sequence
+            $hex = trim($match[1]);
+            return mb_chr((int) hexdec($hex), 'UTF-8');
+        }
+        return $match[1];
+    }, $escaped);
 }
