@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.6.0] - 2026-07-22
+
+### Added
+
+- Persistent construction-state cache. `TailwindCompiler` (and `tw::compile()`) accept a `stateCacheFile` option: the expensive, deterministic phase of compiler construction (framework import resolution, resource parsing, theme accumulation) is persisted per CSS input as an OPcache-shareable PHP file and rehydrated on later constructions, dropping warm construction from roughly 25ms to 6ms with byte-identical output. Cache files validate against an engine fingerprint, the input key, and the mtime/size of any filesystem imports; inputs using a custom `importResolver` bypass the cache. `TailwindPHP\StateCache\compileCssCached()` exposes the same behavior around `compile()`'s array API.
+- `TailwindPHP\parseCssState()` and `TailwindPHP\finalizeCssState()` split `parseCss()` into its serializable phase and its closure-rebuilding phase, and `TailwindPHP\compileParsed()` assembles the compiled build API from a parse result. `parseCss()` and `compileAst()` behave exactly as before.
+
 ## [1.5.0] - 2026-07-18
 
 ### Added
