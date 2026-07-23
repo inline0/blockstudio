@@ -10,19 +10,7 @@ import { STORE_NAME, store } from './store';
 import type { CanvasView } from './store';
 import { createUpdateQueue } from './update-queue';
 import type { QueueEntry } from './update-queue';
-
-interface Page {
-  title: string;
-  slug: string;
-  name: string;
-  content: string;
-}
-
-interface BlockItem {
-  title: string;
-  name: string;
-  content: string;
-}
+import type { BlockItem, Page, PreloadEntry } from './types';
 
 interface CanvasProps {
   pages: Page[];
@@ -34,13 +22,6 @@ interface Transform {
   x: number;
   y: number;
   scale: number;
-}
-
-interface PreloadEntry {
-  rendered: string;
-  blockName: string;
-  attributes?: unknown;
-  mode?: string;
 }
 
 interface SSEChangedData {

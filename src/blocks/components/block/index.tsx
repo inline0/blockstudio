@@ -222,6 +222,7 @@ export const Block = ({
   const renderedModeRef = useRef<'editor' | 'preview' | null>(null);
   const ref = useRef<HTMLDivElement | null>(null);
   const attributesRef = useRef(attributes);
+  const renderRequestId = useRef(0);
   const [disableLoading, setDisableLoading] = useState(
     block?.blockstudio?.blockEditor?.disableLoading,
   );
@@ -323,6 +324,16 @@ export const Block = ({
     setRenderState(computeRender(rendered));
   };
 
+  const handleRenderError = () => {
+    setRenderState((current) =>
+      current.hasMarkup
+        ? current
+        : { markup: null, hasMarkup: true, hasBlockProps: null },
+    );
+    loaded();
+    firstRenderDone.current = true;
+  };
+
   const getRenderMode = (): 'editor' | 'preview' => {
     const frameElement = getDocumentFrameElement();
     if (frameElement?.getAttribute('name') === 'editor-canvas') {
@@ -343,6 +354,7 @@ export const Block = ({
   });
 
   const renderForMode = (mode: 'editor' | 'preview') => {
+    const requestId = ++renderRequestId.current;
     const hash = computeHash(block.name, attributes, mode);
     const cached = renderCache.get(hash);
 
@@ -362,11 +374,20 @@ export const Block = ({
         getPostParams(mode),
       )
       .then((rendered) => {
+        if (requestId !== renderRequestId.current) {
+          return;
+        }
+
         updateRender(rendered, mode);
         loaded();
         firstRenderDone.current = true;
       })
       .catch(() => {
+        if (requestId !== renderRequestId.current) {
+          return;
+        }
+
+        handleRenderError();
       });
   };
 
@@ -385,6 +406,7 @@ export const Block = ({
     const params = new URLSearchParams({
       ...getPostParams(renderMode),
     }).toString();
+    const requestId = ++renderRequestId.current;
 
     apiFetch({
       path: `/blockstudio/v1/gutenberg/block/render/${block.name}?${params}`,
@@ -395,17 +417,28 @@ export const Block = ({
       },
     })
       .then((response) => {
+        if (requestId !== renderRequestId.current) {
+          return;
+        }
+
         const res = response as { rendered: string };
         const hash = computeHash(block.name, attributes, renderMode);
         renderCache.set(hash, res.rendered, block.name);
         updateRender(res.rendered, renderMode);
-      })
-      .then(() => {
         loaded();
+      })
+      .catch(() => {
+        if (requestId !== renderRequestId.current) {
+          return;
+        }
+
+        handleRenderError();
       });
   };
 
   const debouncedFetchSingle = useDebounce(fetchSingle, 500);
+  const debouncedFetchSingleRef = useRef(debouncedFetchSingle);
+  debouncedFetchSingleRef.current = debouncedFetchSingle;
 
   useEffect(function onMount() {
     const mode = getRenderMode();
@@ -472,6 +505,7 @@ export const Block = ({
       const cached = renderCache.get(nextHash);
 
       if (cached) {
+        renderRequestId.current += 1;
         updateRender(cached, mode);
         loaded();
         return;
@@ -497,17 +531,15 @@ export const Block = ({
   );
 
   useEffect(function onRefreshEvent() {
-    document.addEventListener(
-      `blockstudio/${block.name}/refresh`,
-      debouncedFetchSingle,
-    );
+    const refresh = () => debouncedFetchSingleRef.current();
+    document.addEventListener(`blockstudio/${block.name}/refresh`, refresh);
 
     return () =>
       document.removeEventListener(
         `blockstudio/${block.name}/refresh`,
-        debouncedFetchSingle,
+        refresh,
       );
-  }, [disableLoading]);
+  }, [block.name, disableLoading]);
 
   useEffect(
     function onMarkupChange() {

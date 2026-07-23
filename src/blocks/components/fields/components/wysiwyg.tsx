@@ -50,6 +50,7 @@ export const WYSIWYG = ({
   value: string;
 }) => {
   const originalVal = useRef(false);
+  const skipNextChange = useRef(false);
   const [codeMode, setCodeMode] = useState(item?.mode === 'code');
   const [openLink, setOpenLink] = useState(false);
   const [opensInNewTab, setOpensInNewTab] = useState(false);
@@ -90,7 +91,13 @@ export const WYSIWYG = ({
   });
 
   useEffect(() => {
-    originalVal.current && onChange(val);
+    if (!originalVal.current) return;
+    if (skipNextChange.current) {
+      skipNextChange.current = false;
+      return;
+    }
+
+    onChange(val);
   }, [val]);
 
   useEffect(() => {
@@ -99,6 +106,17 @@ export const WYSIWYG = ({
       originalVal.current = true;
     }
   }, [editor]);
+
+  useEffect(() => {
+    if (!editor) return;
+
+    const nextValue = value || '';
+    if (nextValue === val) return;
+
+    skipNextChange.current = true;
+    setVal(nextValue);
+    editor.commands.setContent(nextValue, { emitUpdate: false });
+  }, [editor, value]);
 
   useEffect(() => {
     if (!editor) return;

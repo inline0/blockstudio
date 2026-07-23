@@ -71,7 +71,9 @@ class Text_Field_Handler extends Abstract_Field_Handler {
 		// Apply defaults, storage, and set ID.
 		$this->apply_defaults( $field, $attribute );
 		$this->apply_storage( $field, $attribute );
-		$attribute['id'] = $field_id;
+		$this->apply_set( $field, $attribute );
+		$this->apply_block_field_metadata( $field, $attribute );
+		$attribute['id'] = $this->get_attribute_id( $field, $prefix );
 
 		$attributes[ $field_id ] = $attribute;
 	}

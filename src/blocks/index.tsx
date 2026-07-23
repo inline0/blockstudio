@@ -10,6 +10,7 @@ import { renderCache } from '@/blocks/components/block/render-cache';
 import { ExpandedEditor } from '@/blocks/components/expanded-editor';
 import { Fields } from '@/blocks/components/fields';
 import { initializeEditorReadinessGate } from '@/blocks/editor-readiness';
+import { initializeCanvasBodyClasses } from '@/blocks/canvas-body-classes';
 import '@/blocks/filters/custom-class';
 import '@/blocks/filters/default';
 import { getMatches } from '@/blocks/filters/extensions';
@@ -22,6 +23,7 @@ import { isAllowedToRender } from '@/blocks/utils/is-allowed-to-render';
 import { sendEvents } from '@/blocks/utils/send-events';
 import { store as tailwindStore } from '@/tailwind/store';
 import { useTailwind } from '@/tailwind/use-tailwind';
+import type { PreloadEntry } from '../canvas/types';
 import { BlockstudioAttribute } from '@/types/block';
 import { BlockstudioBlock, BlockstudioBlockAttributes } from '@/types/types';
 import { css } from '@/utils/css';
@@ -35,6 +37,7 @@ register(tailwindStore);
 renderCache.initFromPreload();
 mediaModal();
 initializeEditorReadinessGate();
+initializeCanvasBodyClasses();
 
 const blocks = window.blockstudioAdmin.data.blocksNative;
 
@@ -100,25 +103,23 @@ const registerSingleBlock = (block: BlockstudioBlock) => {
       };
       const [isLoaded, setIsLoaded] = useState(false);
       const [isExpandedEditorOpen, setIsExpandedEditorOpen] = useState(false);
-      const richText = useSelect(
+      const richTextEntries = useSelect(
         (select) =>
-          (select('blockstudio/blocks') as typeof selectors).getRichText(),
-        [],
+          (select('blockstudio/blocks') as typeof selectors).getRichText()?.[
+            clientId
+          ] as Record<string, string> | undefined,
+        [clientId],
       );
 
       useEffect(() => {
         const clickSave = () => {
           if (
-            !richText?.[clientId] ||
-            Object.values(richText?.[clientId] || {}).length === 0
+            !richTextEntries ||
+            Object.values(richTextEntries || {}).length === 0
           ) {
             return;
           }
 
-          const richTextEntries = richText[clientId] as unknown as Record<
-            string,
-            string
-          >;
           const clonedAttrs = cloneDeep(
             attributes.blockstudio?.attributes ?? {},
           ) as unknown as Record<string, unknown>;
@@ -152,6 +153,10 @@ const registerSingleBlock = (block: BlockstudioBlock) => {
         );
 
         const keydown = (e: KeyboardEvent) => {
+          if (e.key.toLowerCase() !== 's') {
+            return;
+          }
+
           if (
             navigator.userAgent.indexOf('Mac OS X') !== -1
               ? e.metaKey
@@ -172,7 +177,7 @@ const registerSingleBlock = (block: BlockstudioBlock) => {
           );
           document.removeEventListener('keydown', keydown);
         };
-      }, [richText, attributes]);
+      }, [richTextEntries, attributes]);
 
       useEffect(() => {
         if (renderedIds.includes(clientId)) return;
@@ -220,7 +225,6 @@ const registerSingleBlock = (block: BlockstudioBlock) => {
           });
 
         setRichText({
-          ...richText,
           [clientId]: richTexts,
         });
 
@@ -299,25 +303,11 @@ window.blockstudio.registerBlock = (block: BlockstudioBlock) => {
   registerSingleBlock(block);
 };
 
-window.blockstudio.addPreloads = (
-  entries: Array<{
-    rendered: string;
-    blockName: string;
-    attributes?: unknown;
-    mode?: string;
-  }>,
-) => {
+window.blockstudio.addPreloads = (entries: PreloadEntry[]) => {
   renderCache.addPreloads(entries);
 };
 
-window.blockstudio.replacePreloads = (
-  entries: Array<{
-    rendered: string;
-    blockName: string;
-    attributes?: unknown;
-    mode?: string;
-  }>,
-) => {
+window.blockstudio.replacePreloads = (entries: PreloadEntry[]) => {
   renderCache.replacePreloads(entries);
 };
 

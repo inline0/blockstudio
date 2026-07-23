@@ -28,7 +28,7 @@ function stripFrontmatter(content: string): string {
 
 function stripGeneratedBlocks(content: string): string {
   return content.replace(
-    /\{\/\* GENERATED_\w+_START \*\/\}[\s\S]*?\{\/\* GENERATED_\w+_END \*\/\}/g,
+    /<!-- GENERATED_\w+_START -->[\s\S]*?<!-- GENERATED_\w+_END -->/g,
     '',
   );
 }
@@ -50,7 +50,7 @@ function compactMarkdown(content: string): string {
   return content;
 }
 
-function cleanMdx(content: string): string {
+function cleanMarkdown(content: string): string {
   content = stripFrontmatter(content);
   content = stripGeneratedBlocks(content);
   content = content.replace(/^# .+\n*/, '');
@@ -89,15 +89,15 @@ function collectDocs(dir: string, meta: MetaJson, depth: number): DocEntry[] {
     if (page.startsWith('---') && page.endsWith('---')) continue;
     if (skip.has(page)) continue;
 
-    const mdxPath = join(dir, `${page}.mdx`);
+    const markdownPath = join(dir, `${page}.md`);
     const subDir = join(dir, page);
     const subMeta = join(subDir, 'meta.json');
-    const subIndex = join(subDir, 'index.mdx');
+    const subIndex = join(subDir, 'index.md');
 
-    if (existsSync(mdxPath)) {
-      const raw = readFileSync(mdxPath, 'utf-8');
+    if (existsSync(markdownPath)) {
+      const raw = readFileSync(markdownPath, 'utf-8');
       const title = extractTitle(raw) || slugToTitle(page);
-      const content = cleanMdx(raw);
+      const content = cleanMarkdown(raw);
       if (content) entries.push({ title, content, depth });
     }
 
@@ -108,7 +108,7 @@ function collectDocs(dir: string, meta: MetaJson, depth: number): DocEntry[] {
       if (existsSync(subIndex)) {
         const raw = readFileSync(subIndex, 'utf-8');
         const title = extractTitle(raw) || sectionTitle;
-        const content = cleanMdx(raw);
+        const content = cleanMarkdown(raw);
         if (content) entries.push({ title, content, depth });
       }
 

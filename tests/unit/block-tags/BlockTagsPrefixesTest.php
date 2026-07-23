@@ -148,4 +148,104 @@ class BlockTagsPrefixesTest extends TestCase {
 		$this->assertCount( 1, $blocks[0]['innerBlocks'] );
 		$this->assertSame( 'core/paragraph', $blocks[0]['innerBlocks'][0]['blockName'] );
 	}
+
+	// Nested prefix resolution: a brand prefix composing over a namespace prefix.
+
+	public function test_nested_prefix_resolves_through_inner_prefix(): void {
+		$this->set_prefixes(
+			array(
+				'dv' => array( 'divine-homepage' ),
+				'ui' => array( 'bsui' ),
+			)
+		);
+
+		// divine-homepage/ui-button is not registered, so dv-ui-button falls
+		// through to the ui prefix and resolves bsui/button.
+		$blocks = Block_Tags::parse_inner_blocks( '<dv-ui-button label="Nested" />' );
+
+		$this->assertCount( 1, $blocks );
+		$this->assertSame( 'bsui/button', $blocks[0]['blockName'] );
+		$this->assertSame( 'Nested', $this->get_blockstudio_attributes( $blocks[0] )['label'] ?? null );
+	}
+
+	public function test_direct_resolution_takes_precedence_over_nested(): void {
+		// onumia is a registered prefix, but the direct divine-homepage match
+		// must win: dv-onumia-feature-matrix stays divine-homepage/onumia-feature-matrix
+		// and never recurses into the onumia prefix.
+		$this->set_prefixes(
+			array(
+				'dv'     => array( 'divine-homepage' ),
+				'onumia' => array( 'bsui' ),
+			)
+		);
+
+		$blocks = Block_Tags::parse_inner_blocks( '<dv-onumia-feature-matrix title="Direct" />' );
+
+		$this->assertCount( 1, $blocks );
+		$this->assertSame( 'divine-homepage/onumia-feature-matrix', $blocks[0]['blockName'] );
+	}
+
+	public function test_deep_nested_prefix_chain_resolves(): void {
+		$this->set_prefixes(
+			array(
+				'xy' => array( 'divine-homepage' ),
+				'dv' => array( 'divine-homepage' ),
+				'ui' => array( 'bsui' ),
+			)
+		);
+
+		// xy-dv-ui-button peels one registered prefix per level until bsui/button.
+		$blocks = Block_Tags::parse_inner_blocks( '<xy-dv-ui-button label="Deep" />' );
+
+		$this->assertCount( 1, $blocks );
+		$this->assertSame( 'bsui/button', $blocks[0]['blockName'] );
+	}
+
+	public function test_nested_unknown_inner_slug_left_untouched(): void {
+		$this->set_prefixes(
+			array(
+				'dv' => array( 'divine-homepage' ),
+				'ui' => array( 'bsui' ),
+			)
+		);
+
+		// ui is a registered prefix but bsui/nope does not exist, so nothing resolves.
+		$input = '<dv-ui-nope title="Nope" />';
+
+		$this->assertSame( $input, Block_Tags::render( $input ) );
+	}
+
+	public function test_nested_requires_registered_inner_prefix(): void {
+		// ui is not a registered prefix, so the nested branch is never taken.
+		$this->set_prefixes( array( 'dv' => array( 'divine-homepage' ) ) );
+
+		$input = '<dv-ui-button label="No inner prefix" />';
+
+		$this->assertSame( $input, Block_Tags::render( $input ) );
+	}
+
+	public function test_repeated_prefix_does_not_recurse(): void {
+		// dv-dv-button: the inner segment repeats the outer prefix, so the guard
+		// blocks recursion and the tag is left untouched.
+		$this->set_prefixes( array( 'dv' => array( 'divine-homepage' ) ) );
+
+		$input = '<dv-dv-button label="Loop" />';
+
+		$this->assertSame( $input, Block_Tags::render( $input ) );
+	}
+
+	public function test_pathological_nested_chain_terminates(): void {
+		// Alternating registered prefixes that never resolve must terminate and
+		// leave the tag untouched (guards against runaway recursion).
+		$this->set_prefixes(
+			array(
+				'dv' => array( 'divine-homepage' ),
+				'ui' => array( 'bsui' ),
+			)
+		);
+
+		$input = '<dv-ui-dv-ui-dv-ui-nope title="Deep miss" />';
+
+		$this->assertSame( $input, Block_Tags::render( $input ) );
+	}
 }

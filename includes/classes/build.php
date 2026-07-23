@@ -64,11 +64,27 @@ use WP_Block_Type;
 class Build {
 
 	/**
+	 * Wait budget in milliseconds for requests that lose the builder election.
+	 *
+	 * @var int
+	 */
+	private const BUILD_WAIT_BUDGET_MS = 5000;
+
+	/**
 	 * Whether interactivity API has been rendered.
 	 *
 	 * @var bool
 	 */
 	private static bool $interactivity_api_rendered = false;
+
+	/**
+	 * Reset request-local render state for in-process batch rendering.
+	 *
+	 * @return void
+	 */
+	public static function reset_request_state(): void {
+		self::$interactivity_api_rendered = false;
+	}
 
 	/**
 	 * Check if a block's blockstudio data has interactivity enabled.
@@ -446,501 +462,6 @@ class Build {
 	}
 
 	/**
-	 * Build attributes.
-	 *
-	 * @since 2.4.0
-	 *
-	 * @param array  $attrs         The attributes to build.
-	 * @param array  $attributes    The attributes array (passed by reference).
-	 * @param string $id            The ID prefix.
-	 * @param bool   $from_group    Whether from a group.
-	 * @param bool   $from_repeater Whether from a repeater.
-	 * @param bool   $is_override   Whether an override.
-	 * @param bool   $is_extend     Whether an extension.
-	 *
-	 * @return void
-	 */
-	public static function build_attributes(
-		$attrs,
-		&$attributes,
-		string $id = '',
-		bool $from_group = false,
-		bool $from_repeater = false,
-		bool $is_override = false,
-		bool $is_extend = false
-	) {
-		$index = 0;
-		foreach ( $attrs as $data ) {
-			$data = array( 'attributes' => $data );
-
-			foreach ( $data as $v ) {
-				$i        = '' === $id ? '' : $id . '_';
-				$field_id = $from_repeater ? $index : $i . ( $v['id'] ?? '' );
-				++$index;
-
-				if (
-					isset( $v['type'] ) &&
-					'message' !== $v['type'] &&
-					( ( ! isset( $v['id'] ) &&
-						( 'group' === $v['type'] || 'tabs' === $v['type'] ) ) ||
-						isset( $v['id'] ) )
-				) {
-					$type = $v['type'];
-
-					$is_multiple_options =
-						'checkbox' === $type ||
-						'token' === $type ||
-						( 'select' === $type && ( $v['multiple'] ?? false ) );
-
-					if ( 'tabs' === $type && ! $from_group && ! $from_repeater ) {
-						foreach ( $v['tabs'] as $tab ) {
-							self::build_attributes(
-								array_values( $tab['attributes'] ),
-								$attributes,
-								'',
-								false,
-								false,
-								$is_override
-							);
-						}
-					}
-
-					if (
-						( 'group' === $type && ! $from_group ) ||
-						'repeater' === $type
-					) {
-						if (
-							isset( $v['attributes'] ) &&
-							count( $v['attributes'] ) >= 1
-						) {
-							$v['attributes'] = self::flatten_idless_groups(
-								$v['attributes']
-							);
-							self::filter_not_key(
-								$v['attributes'],
-								'type',
-								'group'
-							);
-						}
-
-						if ( 'group' === $type ) {
-							self::build_attributes(
-								array_values( $v['attributes'] ),
-								$attributes,
-								$i . ( $v['id'] ?? '' ),
-								true,
-								false,
-								$is_override,
-								$is_extend
-							);
-						}
-
-						if ( 'repeater' === $type ) {
-							$attributes[ $field_id ] = array(
-								'blockstudio' => true,
-								'type'        => 'array',
-								'field'       => $type,
-								'attributes'  =>
-									count( $v['attributes'] ?? array() ) >= 1
-										? array_values(
-											array_filter(
-												self::flatten_idless_groups(
-													$v['attributes']
-												),
-												fn( $val ) => 'group' !== $val['type']
-											)
-										)
-										: array(),
-							);
-
-							if ( isset( $v['default'] ) ) {
-								$attributes[ $field_id ]['default'] = $v['default'];
-							}
-
-							if ( isset( $v['min'] ) ) {
-								$attributes[ $field_id ]['min'] = $v['min'];
-							}
-
-							if (
-								count(
-									$attributes[ $field_id ]['attributes'] ?? array()
-								) >= 1
-							) {
-								self::build_attributes(
-									$attributes[ $field_id ]['attributes'],
-									$attributes[ $field_id ]['attributes'],
-									'',
-									false,
-									true,
-									$is_override,
-									$is_extend
-								);
-							}
-						}
-					}
-
-					if ( 'attributes' === $type ) {
-						$attributes[ $field_id ] = array(
-							'blockstudio' => true,
-							'type'        => 'array',
-							'field'       => $type,
-						);
-					}
-
-					if (
-						'code' === $type ||
-						'date' === $type ||
-						'datetime' === $type ||
-						'html-tag' === $type ||
-						'text' === $type ||
-						'textarea' === $type ||
-						'unit' === $type ||
-						'classes' === $type
-					) {
-						$attributes[ $field_id ] = array(
-							'blockstudio' => true,
-							'type'        => 'string',
-							'field'       => $type,
-						);
-
-						if ( 'classes' === $type && ( $v['tailwind'] ?? false ) ) {
-							Block_Registry::instance()->set_tailwind_active( true );
-						}
-					}
-
-					if ( 'code' === $type ) {
-						$attributes[ $field_id ]['language'] =
-							$v['language'] ?? 'html';
-						$attributes[ $field_id ]['asset']    = $v['asset'] ?? false;
-					}
-
-					if ( 'number' === $type || 'range' === $type ) {
-						$attributes[ $field_id ] = array(
-							'blockstudio' => true,
-							'type'        => 'number',
-							'field'       => $type,
-						);
-					}
-
-					if ( 'toggle' === $type ) {
-						$attributes[ $field_id ] = array(
-							'blockstudio' => true,
-							'type'        => 'boolean',
-							'field'       => $type,
-						);
-					}
-
-					if ( $is_multiple_options ) {
-						$attributes[ $field_id ] = array(
-							'blockstudio' => true,
-							'type'        => 'array',
-							'field'       => $type,
-						);
-
-						if ( 'select' === $type ) {
-							$attributes[ $field_id ]['multiple'] = true;
-						}
-					}
-
-					if (
-						'color' === $type ||
-						'gradient' === $type ||
-						'icon' === $type ||
-						'link' === $type ||
-						'radio' === $type ||
-						( 'select' === $type &&
-							( ! isset( $v['multiple'] ) ||
-								false === $v['multiple'] ) )
-					) {
-						$attributes[ $field_id ] = array(
-							'blockstudio' => true,
-							'type'        => 'object',
-							'field'       => $type,
-						);
-					}
-
-					if ( 'files' === $type ) {
-						$attributes[ $field_id ] = array(
-							'blockstudio' => true,
-							'type'        => array( 'number', 'object', 'array' ),
-							'field'       => $type,
-							'multiple'    => $v['multiple'] ?? false,
-							'returnSize'  => $v['returnSize'] ?? 'full',
-						);
-					}
-
-					if (
-						'select' === $type ||
-						'radio' === $type ||
-						'checkbox' === $type ||
-						'color' === $type ||
-						'gradient' === $type
-					) {
-						if (
-							( $is_override && isset( $v['options'] ) ) ||
-							! $is_override
-						) {
-							$options                            = $v['options'] ?? array();
-							$attributes[ $field_id ]['options'] = $options;
-						}
-					}
-
-					if (
-						'select' === $type ||
-						'radio' === $type ||
-						'checkbox' === $type ||
-						'color' === $type ||
-						'gradient' === $type
-					) {
-						if (
-							( $is_override && isset( $v['populate'] ) ) ||
-							! $is_override
-						) {
-							$is_fetch_populate                  =
-								'select' === $type &&
-								( $v['populate']['fetch'] ?? false );
-							$should_defer_fetch_populate        =
-								$is_fetch_populate &&
-								! ( $v['fromEditor'] ?? false );
-							$options                            =
-								$is_fetch_populate
-									? array()
-									: $v['options'] ?? array();
-							$attributes[ $field_id ]['options'] = $options;
-							$populate_type                      = $v['populate']['type'] ?? false;
-
-							$has_dynamic_args = str_contains(
-								wp_json_encode( $v['populate'] ?? array() ),
-								'{attributes.'
-							);
-
-							if (
-								! $should_defer_fetch_populate &&
-								! $has_dynamic_args &&
-								(
-									'query' === $populate_type ||
-									'custom' === $populate_type ||
-									'function' === $populate_type
-								)
-							) {
-								$options_addons        = Populate::init(
-									$v['populate'],
-									$v['default'] ?? false
-								);
-								$options_transformed   = array();
-								$options_populate      = array();
-								$options_populate_full = array();
-
-								if ( 'query' === $v['populate']['type'] ) {
-									$q                = $v['populate']['query'];
-									$return_map_value = array(
-										'posts' => 'ID',
-										'users' => 'ID',
-										'terms' => 'term_id',
-									);
-									$return_map_label = array(
-										'posts' => 'post_title',
-										'users' => 'display_name',
-										'terms' => 'name',
-									);
-
-									foreach ( $options_addons as $opt ) {
-										$val = $opt->{$return_map_value[ $q ]};
-
-										$options_populate[]            = $val;
-										$options_transformed[]         = array(
-											'value' => $val,
-											'label' =>
-												$opt->{$v['populate']['returnFormat']['label'] ??
-													$return_map_label[ $q ]},
-										);
-										$options_populate_full[ $val ] = $opt;
-									}
-								}
-
-								if ( 'function' === $v['populate']['type'] ) {
-									$val   =
-										$v['populate']['returnFormat']['value'] ?? false;
-									$label =
-										$v['populate']['returnFormat']['label'] ?? false;
-
-									if ( ! $val && ! $label ) {
-										$options_addons = array_values(
-											$options_addons
-										);
-									}
-
-									foreach ( $options_addons as $opt ) {
-										$opt = (array) $opt;
-
-										$val                   =
-											$opt[ $val ] ??
-											( $opt['value'] ??
-												( array_values( $opt )[0] ??
-													$opt ) );
-										$options_populate[]    = $val;
-										$options_transformed[] = array(
-											'value' => $val,
-											'label' =>
-												$opt[ $label ] ??
-												( $opt['label'] ?? $val ),
-										);
-									}
-								}
-
-								if ( count( $options_populate ) >= 1 ) {
-									$attributes[ $field_id ]['optionsPopulate']     = $options_populate;
-									$attributes[ $field_id ]['optionsPopulateFull'] = $options_populate_full;
-								}
-
-								$is_transform =
-									'query' === $v['populate']['type'] ||
-									'function' === $v['populate']['type'];
-
-								$attributes[ $field_id ]['options'] =
-									isset( $v['populate']['position'] ) &&
-									'before' === $v['populate']['position']
-										? array_merge(
-											$is_transform
-												? $options_transformed
-												: $options_addons,
-											$options
-										)
-										: array_merge(
-											$options,
-											$is_transform
-												? $options_transformed
-												: $options_addons
-										);
-							}
-						}
-					}
-
-					if ( 'richtext' === $type || 'wysiwyg' === $type ) {
-						$attributes[ $field_id ] = array(
-							'blockstudio' => true,
-							'type'        => 'string',
-							'field'       => $type,
-							'source'      => 'html',
-						);
-					}
-
-					foreach ( array( 'default', 'fallback' ) as $item ) {
-						if ( isset( $v[ $item ] ) ) {
-							if (
-								'code' === $type ||
-								'date' === $type ||
-								'datetime' === $type ||
-								'files' === $type ||
-								'html-tag' === $type ||
-								'icon' === $type ||
-								'link' === $type ||
-								'richtext' === $type ||
-								'text' === $type ||
-								'textarea' === $type ||
-								'toggle' === $type ||
-								'unit' === $type ||
-								'wysiwyg' === $type ||
-								'classes' === $type
-							) {
-								$attributes[ $field_id ][ $item ] = $v[ $item ];
-							}
-							if ( 'number' === $type || 'range' === $type ) {
-								$attributes[ $field_id ][ $item ] =
-									0 === $v[ $item ] ? '0' : $v[ $item ];
-							}
-							if ( 'color' === $type || 'gradient' === $type ) {
-								foreach ( $v['options'] ?? array() as $value ) {
-									if ( $value['value'] === $v[ $item ] ) {
-										$attributes[ $field_id ][ $item ] = $value;
-									}
-								}
-							}
-							if (
-								'checkbox' === $type ||
-								'radio' === $type ||
-								'select' === $type ||
-								'token' === $type
-							) {
-								$default_select = array();
-
-								foreach (
-									is_array( $v[ $item ] )
-										? $v[ $item ]
-										: array( $v[ $item ] )
-									as $value
-								) {
-									if (
-										'select' === $type &&
-										( $v['populate']['fetch'] ?? false )
-									) {
-										$default_value = is_array( $value ) && array_key_exists( 'value', $value )
-											? $value['value']
-											: $value;
-										$default_label = is_array( $value ) && array_key_exists( 'label', $value )
-											? $value['label']
-											: ( is_scalar( $default_value ) ? (string) $default_value : '' );
-
-										$default_select[] = array(
-											'value' => $default_value,
-											'label' => $default_label,
-										);
-										continue;
-									}
-
-									$option = fn( $val ) => Block::get_option_value(
-										array(
-											'options' =>
-													$attributes[ $field_id ]['options'] ?? $v['options'],
-										),
-										$val,
-										array(
-											'value' => $value,
-										)
-									);
-
-									$default_select[] = array(
-										'value' => $option( 'value' ),
-										'label' => $option( 'label' ),
-									);
-								}
-
-								$attributes[ $field_id ][ $item ] = $is_multiple_options
-									? $default_select
-									: $default_select[0];
-							}
-						}
-					}
-
-					if ( isset( $v['returnFormat'] ) ) {
-						$attributes[ $field_id ]['returnFormat'] =
-							$v['returnFormat'] ?? 'value';
-					}
-
-					if ( isset( $v['populate'] ) ) {
-						$attributes[ $field_id ]['populate'] = $v['populate'];
-					}
-
-					if ( ! empty( $v['_blockField'] ) ) {
-						$attributes[ $field_id ]['_blockField']  = true;
-						$attributes[ $field_id ]['_blockName']   = $v['_blockName'] ?? '';
-						$attributes[ $field_id ]['_blockIds']    = $v['_blockIds'] ?? array();
-						$attributes[ $field_id ]['_idStructure'] = $v['_idStructure'] ?? '{id}';
-					}
-
-					if ( 'tabs' !== $type && 'group' !== $type ) {
-						$attributes[ $field_id ]['id'] = $i . ( $v['id'] ?? '' );
-					}
-
-					if ( $v['set'] ?? false ) {
-						$attributes[ $field_id ]['set'] = $v['set'];
-					}
-				}
-			}
-		}
-	}
-
-	/**
 	 * Filter attributes.
 	 *
 	 * @since 4.0.3
@@ -967,32 +488,6 @@ class Build {
 					$attributes[ $k ]['attributes'],
 					$attributes[ $k ]['attributes']
 				);
-			}
-		}
-	}
-
-	/**
-	 * Build attributes IDs.
-	 *
-	 * @since 3.1.0
-	 *
-	 * @param array $attributes The attributes (passed by reference).
-	 *
-	 * @return void
-	 */
-	public static function build_attribute_ids( &$attributes ) {
-		foreach ( $attributes as &$b ) {
-			if ( isset( $b['type'] ) && isset( $b['id'] ) ) {
-				if ( 'group' === $b['type'] ) {
-					foreach ( $b['attributes'] as &$d ) {
-						$id      = $d['id'];
-						$d['id'] = $b['id'] . '_' . $id;
-
-						if ( isset( $d['attributes'] ) ) {
-							self::build_attribute_ids( $d['attributes'] );
-						}
-					}
-				}
 			}
 		}
 	}
@@ -1083,9 +578,27 @@ class Build {
 	 * @return string The instance name.
 	 */
 	public static function get_instance_name( $path ): string {
-		return wp_normalize_path(
-			trim( explode( Files::get_root_folder(), $path )[1], '/\\' )
-		);
+		$root = wp_normalize_path( Files::get_root_folder() );
+		$path = wp_normalize_path( (string) $path );
+
+		if ( '' !== $root && str_contains( $path, $root ) ) {
+			$parts = explode( $root, $path, 2 );
+			return trim( $parts[1] ?? '', '/\\' );
+		}
+
+		return trim( $path, '/\\' );
+	}
+
+	/**
+	 * Check whether an asset basename has a reserved prefix with a boundary.
+	 *
+	 * @param string $basename Asset basename.
+	 * @param string $prefix   Reserved prefix.
+	 *
+	 * @return bool
+	 */
+	private static function asset_basename_matches_prefix( string $basename, string $prefix ): bool {
+		return 1 === preg_match( '/^' . preg_quote( $prefix, '/' ) . '(?:[.-]|$)/', $basename );
 	}
 
 	/**
@@ -1114,6 +627,12 @@ class Build {
 	/**
 	 * Initialize the build.
 	 *
+	 * On a cold runtime cache one request per instance is elected builder via
+	 * a Single_Flight lock. The elected builder rechecks the cache under the
+	 * lock before building. Concurrent requests wait briefly for the published
+	 * runtime payload and hydrate from it; a request whose wait budget expires
+	 * builds unguarded so block registration always completes.
+	 *
 	 * @since 1.0.0
 	 *
 	 * @param bool|string|array $args The arguments.
@@ -1132,10 +651,35 @@ class Build {
 
 		$registry = Block_Registry::instance();
 
-		if ( ! is_dir( $path ) ) {
+		if ( ! $editor && is_string( $path ) && '' !== $path ) {
+			$cached_path     = untrailingslashit( wp_normalize_path( $path ) );
+			$cached_instance = self::get_instance_name( $cached_path );
+			$cached_runtime  = Build_Cache::load_runtime( $cached_path, $cached_instance );
+
+			if ( is_array( $cached_runtime ) ) {
+				$registry->add_instance( $cached_path );
+				$registry->add_path( $cached_instance, $cached_path );
+
+				do_action( 'blockstudio/init/before' );
+				do_action( "blockstudio/init/before/$cached_instance" );
+
+				$registry->set_blade_instance( $cached_instance, $cached_path );
+				self::hydrate_cached_runtime_build(
+					$cached_runtime,
+					$cached_instance,
+					$registry
+				);
+				return;
+			}
+		}
+
+		$source = Discovery_Sources::for_path( 'blocks', $path );
+
+		if ( empty( $source->entries() ) ) {
 			return;
 		}
 
+		$path = $source->root();
 		$registry->add_instance( $path );
 
 		$path     = wp_normalize_path( $path );
@@ -1148,6 +692,8 @@ class Build {
 
 		$registry->set_blade_instance( $instance, $path );
 
+		$build_lock = null;
+
 		if ( ! $editor ) {
 			$cached_runtime = Build_Cache::load_runtime( $path, $instance );
 
@@ -1159,14 +705,49 @@ class Build {
 				);
 				return;
 			}
+
+			if ( Build_Cache::is_enabled() ) {
+				$build_lock = Single_Flight::acquire(
+					Build_Cache::get_cache_dir( 'runtime' ) . '/' . Build_Cache::get_runtime_key( $path, $instance ) . '.build.lock'
+				);
+
+				if ( is_resource( $build_lock ) ) {
+					$cached_runtime = Build_Cache::load_runtime( $path, $instance );
+
+					if ( is_array( $cached_runtime ) ) {
+						Single_Flight::release( $build_lock );
+						self::hydrate_cached_runtime_build(
+							$cached_runtime,
+							$instance,
+							$registry
+						);
+						return;
+					}
+				}
+
+				if ( false === $build_lock ) {
+					$cached_runtime = self::wait_for_published_runtime( $path, $instance );
+
+					if ( is_array( $cached_runtime ) ) {
+						self::hydrate_cached_runtime_build(
+							$cached_runtime,
+							$instance,
+							$registry
+						);
+						return;
+					}
+
+					$build_lock = null;
+				}
+			}
 		}
 
 		// Phase 1: Discover blocks using Block_Discovery.
 		$results = Perf::measure(
 			'build:discovery',
-			static function () use ( $path, $instance, $editor ): array {
+			static function () use ( $source, $instance, $editor ): array {
 				$discovery = new Block_Discovery();
-				return $discovery->discover( $path, $instance, $editor );
+				return $discovery->discover( $source, $instance, $editor );
 			}
 		);
 
@@ -1196,8 +777,6 @@ class Build {
 			'build:assets',
 			static function () use ( &$store, $instance, $editor, $registry, &$empty_dist_folders ): void {
 				foreach ( $store as $name => &$data ) {
-					$file_dir = dirname( $data['path'] );
-
 					if ( Settings::get( 'assets/enqueue' ) || $editor ) {
 						$processed_assets = self::process_block_assets(
 							$data,
@@ -1207,38 +786,30 @@ class Build {
 							$registry
 						);
 
-						// Cleanup dist folder.
-						$dist_folder          = $file_dir . '/_dist';
-						$all_processed_assets = Files::get_files_recursively_and_delete_empty_folders(
-							$dist_folder
+						$source_paths = array_filter(
+							$data['filesPaths'] ?? array(),
+							static fn( mixed $source_path ): bool => is_string( $source_path ) && ( Assets::is_css( $source_path ) || str_ends_with( $source_path, '.js' ) )
+						);
+						$dist_folders = array_unique(
+							array_map(
+								static fn( string $source_path ): string => Assets::get_dist_folder( $source_path ),
+								$source_paths
+							)
 						);
 
-						if ( ! $editor ) {
-							foreach ( $all_processed_assets as $file_path ) {
-								if (
-									! in_array( $file_path, $processed_assets, true ) &&
-									file_exists( $file_path )
-								) {
-									unlink( $file_path ); // phpcs:ignore WordPress.WP.AlternativeFunctions.unlink_unlink
-								}
-							}
+						foreach ( $dist_folders as $dist_folder ) {
+							$all_processed_assets = Files::get_files_recursively_and_delete_empty_folders( $dist_folder );
 
-							foreach ( $all_processed_assets as $file_path ) {
-								$directory = dirname( $file_path );
-								if (
-									false !== glob( $directory . '/*' ) &&
-									0 !== count( glob( $directory . '/*' ) )
-								) {
-									continue;
+							if ( ! $editor ) {
+								foreach ( $all_processed_assets as $file_path ) {
+									if ( ! in_array( $file_path, $processed_assets, true ) && file_exists( $file_path ) ) {
+										unlink( $file_path ); // phpcs:ignore WordPress.WP.AlternativeFunctions.unlink_unlink
+									}
 								}
 
-								if ( is_dir( $directory ) ) {
-									rmdir( $directory ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_rmdir
+								if ( Files::is_directory_empty( $dist_folder ) ) {
+									$empty_dist_folders[] = $dist_folder;
 								}
-							}
-
-							if ( Files::is_directory_empty( $dist_folder ) ) {
-								$empty_dist_folders[] = $dist_folder;
 							}
 						}
 					}
@@ -1248,7 +819,7 @@ class Build {
 		unset( $data ); // Break reference.
 
 		// Phase 2.5: Discover custom fields.
-		$local_fields = self::discover_local_custom_fields( $path );
+		$local_fields = self::discover_local_custom_fields( $path, $source );
 		self::register_custom_field_definitions( $local_fields['fields'] );
 		self::register_filtered_custom_fields();
 
@@ -1295,6 +866,10 @@ class Build {
 			)
 		);
 
+		if ( is_resource( $build_lock ) ) {
+			Single_Flight::release( $build_lock );
+		}
+
 		$registry->merge_data( $store );
 
 		foreach ( $registry->get_data() as $file ) {
@@ -1324,6 +899,46 @@ class Build {
 	}
 
 	/**
+	 * Wait for a concurrent builder to publish the runtime cache payload.
+	 *
+	 * The probe stats the cache file and only includes and validates the
+	 * payload when its mtime or size changed since the previous poll, so
+	 * waiters do not deserialize a stale payload every 25ms while the
+	 * elected builder runs.
+	 *
+	 * @param string $path     Build path.
+	 * @param string $instance Build instance.
+	 *
+	 * @return array|null Runtime payload or null when the wait budget expired.
+	 */
+	private static function wait_for_published_runtime( string $path, string $instance ): ?array {
+		$key      = Build_Cache::get_runtime_key( $path, $instance );
+		$file     = Build_Cache::get_cache_file( 'runtime', $key );
+		$snapshot = null;
+
+		return Single_Flight::wait(
+			static function () use ( $key, $file, &$snapshot ): ?array {
+				clearstatcache( true, $file );
+
+				if ( ! is_file( $file ) ) {
+					return null;
+				}
+
+				$current = array( (int) filemtime( $file ), (int) filesize( $file ) );
+
+				if ( $current === $snapshot ) {
+					return null;
+				}
+
+				$snapshot = $current;
+
+				return Build_Cache::load( 'runtime', $key );
+			},
+			self::BUILD_WAIT_BUDGET_MS
+		);
+	}
+
+	/**
 	 * Hydrate a cached runtime build payload.
 	 *
 	 * @param array          $payload  Cached runtime payload.
@@ -1341,15 +956,6 @@ class Build {
 		$registerable = $payload['registerable'] ?? array();
 		$overrides    = $payload['overrides'] ?? array();
 		$registered   = $payload['registeredBlockTypes'] ?? array();
-
-		if ( empty( $registered ) ) {
-			self::filter_missing_plugin_dependencies(
-				$store,
-				$registerable,
-				$overrides,
-				$payload['blockJsonData'] ?? array()
-			);
-		}
 
 		self::register_blade_templates(
 			$payload['bladeTemplates'] ?? array(),
@@ -1448,7 +1054,7 @@ class Build {
 					continue;
 				}
 
-				if ( str_starts_with( $file['basename'], 'admin' ) ) {
+				if ( self::asset_basename_matches_prefix( $file['basename'], 'admin' ) ) {
 					$registry->add_admin_asset(
 						sanitize_title( $path ),
 						array(
@@ -1458,7 +1064,7 @@ class Build {
 					);
 				}
 
-				if ( str_starts_with( $file['basename'], 'block-editor' ) ) {
+				if ( self::asset_basename_matches_prefix( $file['basename'], 'block-editor' ) ) {
 					$registry->add_block_editor_asset(
 						sanitize_title( $path ),
 						array(
@@ -1468,7 +1074,7 @@ class Build {
 					);
 				}
 
-				if ( str_starts_with( $file['basename'], 'global' ) ) {
+				if ( self::asset_basename_matches_prefix( $file['basename'], 'global' ) ) {
 					$registry->add_global_asset(
 						sanitize_title( $path ),
 						$asset['url'] ?? ''
@@ -1493,37 +1099,30 @@ class Build {
 	/**
 	 * Discover fields in the local build directory.
 	 *
-	 * @param string $path Build path.
+	 * @param string           $path Build path.
+	 * @param Discovery_Source $source Active block source.
 	 *
 	 * @return array Fields, watched field paths, and watched field dirs.
 	 */
-	private static function discover_local_custom_fields( string $path ): array {
-		$fields_path = $path . '/fields';
-		$result      = array(
+	private static function discover_local_custom_fields( string $path, Discovery_Source $source ): array {
+		$fields_path  = $path . '/fields';
+		$field_source = Discovery_Sources::scope( $source, 'fields', $fields_path );
+		$result       = array(
 			'fields' => array(),
 			'paths'  => array(),
 			'dirs'   => array(),
 		);
 
-		if ( ! is_dir( $fields_path ) ) {
+		if ( empty( $field_source->entries() ) ) {
 			return $result;
 		}
 
 		$field_discovery  = new Field_Discovery();
-		$result['fields'] = $field_discovery->discover( $fields_path );
-		$result['dirs'][] = $fields_path;
+		$result['fields'] = $field_discovery->discover( $field_source );
+		$result['dirs']   = $field_source->watch_paths();
 
-		$iterator = new \RecursiveIteratorIterator(
-			new \RecursiveDirectoryIterator(
-				$fields_path,
-				\FilesystemIterator::SKIP_DOTS
-			)
-		);
-
-		foreach ( $iterator as $file ) {
-			if ( $file->isFile() ) {
-				$result['paths'][] = wp_normalize_path( $file->getPathname() );
-			}
+		foreach ( $field_source->entries() as $entry ) {
+			$result['paths'][] = wp_normalize_path( $entry->physical_path() );
 		}
 
 		return $result;
@@ -1567,12 +1166,10 @@ class Build {
 		if ( ! empty( $extra_field_paths ) ) {
 			$field_discovery = new Field_Discovery();
 
-			foreach ( $extra_field_paths as $extra_path ) {
-				if ( is_dir( $extra_path ) ) {
-					self::register_custom_field_definitions(
-						$field_discovery->discover( $extra_path )
-					);
-				}
+			foreach ( Discovery_Sources::for_paths( 'fields', $extra_field_paths ) as $source ) {
+				self::register_custom_field_definitions(
+					$field_discovery->discover( $source )
+				);
 			}
 		}
 
@@ -1685,6 +1282,8 @@ class Build {
 			$block = self::hydrate_cached_block_type( $item['block'] );
 
 			if ( ! empty( $item['storageAttributes'] ) ) {
+				Field_Type_Registry::instance()->mark_used_fields( $item['storageAttributes'] );
+
 				foreach ( (array) $block->name as $storage_block_name ) {
 					if ( is_string( $storage_block_name ) ) {
 						Storage_Registry::instance()->process_block_fields(
@@ -1833,9 +1432,11 @@ class Build {
 	 *
 	 * @since 7.0.0
 	 *
+	 * @param bool $allow_cached Whether a valid runtime cache may skip discovery.
+	 *
 	 * @return void
 	 */
-	public static function refresh_blocks(): void {
+	public static function refresh_blocks( bool $allow_cached = false ): void {
 		$registry = Block_Registry::instance();
 
 		// If the default build dir was created after init (e.g. during a live
@@ -1856,19 +1457,24 @@ class Build {
 			$registry->add_path( $instance, $default_path );
 		}
 
+		if ( $allow_cached && self::refresh_runtime_cache_is_current( $registry ) ) {
+			return;
+		}
+
 		$existing_block_names = array_keys( $registry->get_blocks() );
 		$discovered_names     = array();
 
 		foreach ( $registry->get_instances() as $instance_data ) {
 			$path     = wp_normalize_path( $instance_data['path'] );
 			$instance = self::get_instance_name( $path );
+			$source   = Discovery_Sources::for_path( 'blocks', $path );
 
-			if ( ! is_dir( $path ) ) {
+			if ( empty( $source->entries() ) ) {
 				continue;
 			}
 
 			$discovery = new Block_Discovery();
-			$results   = $discovery->discover( $path, $instance, false );
+			$results   = $discovery->discover( $source, $instance, false );
 
 			self::filter_missing_plugin_dependencies(
 				$results['store'],
@@ -1943,6 +1549,62 @@ class Build {
 	}
 
 	/**
+	 * Check whether the current registry still matches valid runtime caches.
+	 *
+	 * Callers may use this only after independently observing an unchanged
+	 * filesystem fingerprint. Runtime cache directory mtimes alone are too
+	 * coarse to replace an explicit refresh after files change.
+	 *
+	 * @param Block_Registry $registry Block registry.
+	 *
+	 * @return bool Whether refresh can be skipped.
+	 */
+	private static function refresh_runtime_cache_is_current( Block_Registry $registry ): bool {
+		$instances = $registry->get_instances();
+
+		if ( empty( $instances ) ) {
+			return false;
+		}
+
+		$cached_block_names = array();
+
+		foreach ( $instances as $instance_data ) {
+			$path = isset( $instance_data['path'] ) && is_string( $instance_data['path'] )
+				? wp_normalize_path( $instance_data['path'] )
+				: '';
+
+			if ( '' === $path || ! is_dir( $path ) ) {
+				return false;
+			}
+
+			$instance = self::get_instance_name( $path );
+			$cached   = Build_Cache::load_runtime( $path, $instance );
+
+			if ( ! is_array( $cached ) ) {
+				return false;
+			}
+
+			$registered = $cached['registeredBlockTypes'] ?? array();
+
+			if ( ! is_array( $registered ) ) {
+				return false;
+			}
+
+			foreach ( array_keys( $registered ) as $name ) {
+				if ( is_string( $name ) && '' !== $name ) {
+					$cached_block_names[ $name ] = true;
+				}
+			}
+		}
+
+		$current_block_names = array_fill_keys( array_keys( $registry->get_blocks() ), true );
+		ksort( $cached_block_names );
+		ksort( $current_block_names );
+
+		return array_keys( $cached_block_names ) === array_keys( $current_block_names );
+	}
+
+	/**
 	 * Process assets for a block.
 	 *
 	 * @since 7.0.0
@@ -1962,7 +1624,6 @@ class Build {
 		bool $editor,
 		Block_Registry $registry
 	): array {
-		$file_dir         = dirname( $data['path'] );
 		$block_arr_files  = $data['files'];
 		$processed_assets = array();
 
@@ -1976,13 +1637,9 @@ class Build {
 		foreach ( $assets as $asset ) {
 			$is_css = Assets::is_css( $asset );
 
-			$asset_fn = fn( $relative ) => $relative
-				? Files::get_relative_url( $file_dir . '/' . $asset )
-				: $file_dir . '/' . $asset;
-
-			$asset_file  = pathinfo( $asset_fn( false ) );
-			$asset_path  = $asset_fn( false );
-			$asset_url   = $asset_fn( true );
+			$asset_path  = $data['filesMap'][ $asset ] ?? dirname( $data['path'] ) . '/' . $asset;
+			$asset_file  = pathinfo( $asset_path );
+			$asset_url   = Files::get_relative_url( $asset_path );
 			$asset_mtime = filemtime( $asset_path );
 			$asset_key   = Assets::get_asset_version(
 				$asset_path,
@@ -2025,7 +1682,7 @@ class Build {
 				preg_replace( '/(?<!^)[A-Z]/', '-$0', $asset )
 			);
 
-			if ( str_starts_with( $asset_file['basename'], 'admin' ) && ! $editor ) {
+			if ( self::asset_basename_matches_prefix( $asset_file['basename'], 'admin' ) && ! $editor ) {
 				$registry->add_admin_asset(
 					sanitize_title( $asset_path ),
 					array(
@@ -2035,7 +1692,7 @@ class Build {
 				);
 			}
 
-			if ( str_starts_with( $asset_file['basename'], 'block-editor' ) && ! $editor ) {
+			if ( self::asset_basename_matches_prefix( $asset_file['basename'], 'block-editor' ) && ! $editor ) {
 				$registry->add_block_editor_asset(
 					sanitize_title( $asset_path ),
 					array(
@@ -2045,7 +1702,7 @@ class Build {
 				);
 			}
 
-			if ( str_starts_with( $asset_file['basename'], 'global' ) && ! $editor ) {
+			if ( self::asset_basename_matches_prefix( $asset_file['basename'], 'global' ) && ! $editor ) {
 				$registry->add_global_asset(
 					sanitize_title( $asset_path ),
 					$asset_url
@@ -2090,7 +1747,7 @@ class Build {
 						'style',
 						$handle,
 						array(
-							'path'  => $asset_fn( true ),
+							'path'  => $asset_url,
 							'mtime' => $asset_key,
 						)
 					);
@@ -2099,7 +1756,7 @@ class Build {
 						'script',
 						$handle,
 						array(
-							'path'  => $asset_fn( true ),
+							'path'  => $asset_url,
 							'mtime' => $asset_key,
 						)
 					);
@@ -2449,13 +2106,14 @@ class Build {
 
 		$native_path = $is_override && ! $is_block
 			? $data['path']
-			: Files::get_render_template( $data['path'] );
+			: ( $data['renderTemplate'] ?? Files::get_render_template( $data['path'] ) );
 
 		$attributes          = array();
 		$filtered_attributes = array();
 
 		if ( isset( $block_json['blockstudio']['attributes'] ) ) {
 			self::expand_custom_fields( $block_json['blockstudio']['attributes'], $block_lookup );
+			Field_Type_Registry::instance()->mark_used_fields( $block_json['blockstudio']['attributes'] );
 
 			if ( ! $is_override ) {
 				self::filter_attributes(
@@ -2465,12 +2123,8 @@ class Build {
 				);
 			}
 
-			self::build_attributes(
-				$block_json['blockstudio']['attributes'],
-				$attributes,
-				'',
-				false,
-				false,
+			$attributes = ( new Attribute_Builder() )->build(
+				$is_override ? $block_json['blockstudio']['attributes'] : $filtered_attributes,
 				false,
 				$is_extend
 			);
@@ -2564,6 +2218,9 @@ class Build {
 			'group'              => $block->blockstudio['group'] ?? false,
 			'icon'               => $block->blockstudio['icon'] ?? null,
 			'interactivity'      => $block->blockstudio['interactivity'] ?? false,
+			'island'             => Islands::normalize_config(
+				$blockstudio_settings['island'] ?? false
+			),
 			'refreshOn'          => $block->blockstudio['refreshOn'] ?? false,
 			'transforms'         => $block->blockstudio['transforms'] ?? false,
 			'variations'         => $block->variations ?? false,
@@ -2617,13 +2274,8 @@ class Build {
 						$override_attributes
 					);
 
-					$override_built_attributes = array();
-					self::build_attributes(
+					$override_built_attributes = ( new Attribute_Builder() )->build(
 						$override_attributes,
-						$override_built_attributes,
-						'',
-						false,
-						false,
 						true
 					);
 

@@ -1,0 +1,8 @@
+<div
+  class="blockstudio-test__block custom-field-type-missing-output"
+  data-settings-top="{{ a.settings.top|default('') }}"
+  data-settings-bottom="{{ a.settings.bottom|default('') }}"
+>
+  <h1>ID: {{ b.name|replace({'/': '-'}) }}</h1>
+  <code>Attributes: {{ a|json_encode }}</code>
+</div>

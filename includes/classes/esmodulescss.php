@@ -140,7 +140,7 @@ class ESModulesCSS {
 	 * @return string|false The filename or false on failure.
 	 */
 	public static function fetch_module_and_write_to_file( $module, $folder ) {
-		$folder_dist    = $folder . '/_dist';
+		$folder_dist    = Runtime_Context::output_path( $folder . '/_dist', $folder, 'assets', array( 'type' => 'directory' ) );
 		$folder_modules = $folder_dist . '/modules';
 		$folder_module  = $folder_modules . '/' . $module['nameTransformed'];
 		$filename       = $folder_module . '/' . $module['version'] . '-' . str_replace( '/', '-', $module['filename'] );
@@ -163,12 +163,9 @@ class ESModulesCSS {
 			wp_mkdir_p( $folder_modules );
 		}
 
-		if ( ! is_dir( $folder_module ) ) {
-			wp_mkdir_p( $folder_module );
+		if ( ! Single_Flight::publish( $filename, $data ) ) {
+			return false;
 		}
-
-		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents -- Writing cached module file.
-		file_put_contents( $filename, $data );
 
 		return $filename;
 	}

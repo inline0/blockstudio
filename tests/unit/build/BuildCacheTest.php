@@ -123,18 +123,95 @@ class BuildCacheTest extends TestCase {
 	}
 
 	/**
-	 * Cache directory uses the WordPress uploads directory.
+	 * Cache directory uses a non-uploads directory under wp-content.
 	 *
 	 * @return void
 	 */
-	public function test_cache_directory_uses_wordpress_uploads(): void {
-		$uploads = wp_upload_dir();
-
-		$this->assertStringStartsWith(
-			rtrim( wp_normalize_path( $uploads['basedir'] ), '/' ),
+	public function test_cache_directory_defaults_to_wordpress_content_directory(): void {
+		$this->assertSame(
+			wp_normalize_path( WP_CONTENT_DIR . '/blockstudio/cache' ),
 			Build_Cache::get_cache_dir()
 		);
-		$this->assertStringEndsWith( '/blockstudio/cache', Build_Cache::get_cache_dir() );
+	}
+
+	public function test_relative_cache_setting_resolves_from_wordpress_content_directory(): void {
+		$filter = static fn (): string => 'custom-cache/blockstudio';
+		add_filter( 'blockstudio/settings/cache/path', $filter );
+
+		try {
+			$this->assertSame(
+				wp_normalize_path( WP_CONTENT_DIR . '/custom-cache/blockstudio/runtime' ),
+				Build_Cache::get_cache_dir( 'runtime' )
+			);
+		} finally {
+			remove_filter( 'blockstudio/settings/cache/path', $filter );
+		}
+	}
+
+	public function test_absolute_cache_setting_is_preserved(): void {
+		$path   = wp_normalize_path( sys_get_temp_dir() . '/blockstudio-custom-cache' );
+		$filter = static fn (): string => $path;
+		add_filter( 'blockstudio/settings/cache/path', $filter );
+
+		try {
+			$this->assertSame( $path, Build_Cache::get_cache_dir() );
+		} finally {
+			remove_filter( 'blockstudio/settings/cache/path', $filter );
+		}
+	}
+
+	public function test_cache_directory_filter_overrides_setting(): void {
+		$setting_path = static fn (): string => 'ignored-cache';
+		$filter_path  = wp_normalize_path( sys_get_temp_dir() . '/blockstudio-filtered-cache' );
+		$dir_filter   = static fn (): string => $filter_path;
+
+		add_filter( 'blockstudio/settings/cache/path', $setting_path );
+		add_filter( 'blockstudio/cache/dir', $dir_filter );
+
+		try {
+			$this->assertSame(
+				$filter_path . '/editor-assets',
+				Build_Cache::get_cache_dir( 'editor-assets' )
+			);
+		} finally {
+			remove_filter( 'blockstudio/settings/cache/path', $setting_path );
+			remove_filter( 'blockstudio/cache/dir', $dir_filter );
+		}
+	}
+
+	public function test_relative_cache_setting_cannot_escape_wordpress_content_directory(): void {
+		$filter = static fn (): string => '../outside';
+		add_filter( 'blockstudio/settings/cache/path', $filter );
+
+		try {
+			$this->assertSame(
+				wp_normalize_path( WP_CONTENT_DIR . '/blockstudio/cache' ),
+				Build_Cache::get_cache_dir()
+			);
+		} finally {
+			remove_filter( 'blockstudio/settings/cache/path', $filter );
+		}
+	}
+
+	public function test_failed_atomic_rename_returns_false_without_warning(): void {
+		$directory  = $this->create_temporary_directory();
+		$dir_filter = static fn (): string => $directory;
+		$target     = $directory . '/runtime/rename-collision.php';
+
+		wp_mkdir_p( $target );
+		add_filter( 'blockstudio/cache/dir', $dir_filter );
+
+		try {
+			$this->assertFalse(
+				Build_Cache::write(
+					'runtime',
+					'rename-collision',
+					array( 'value' => 'not-written' )
+				)
+			);
+		} finally {
+			remove_filter( 'blockstudio/cache/dir', $dir_filter );
+		}
 	}
 
 	/**
@@ -174,6 +251,28 @@ class BuildCacheTest extends TestCase {
 			'cached',
 			Build_Cache::load( 'runtime', $key )['value'] ?? null
 		);
+	}
+
+	public function test_write_prunes_stale_scope_files(): void {
+		$scope = 'unit-prune-' . uniqid();
+		$dir   = Build_Cache::get_cache_dir( $scope );
+		$this->temporary_directories[] = $dir;
+
+		$filter = static fn(): int => 2;
+		add_filter( 'blockstudio/cache/max_files_per_scope', $filter );
+
+		try {
+			Build_Cache::write( $scope, 'one', array( 'watch' => array() ) );
+			Build_Cache::write( $scope, 'two', array( 'watch' => array() ) );
+			Build_Cache::write( $scope, 'three', array( 'watch' => array() ) );
+
+			$files = glob( $dir . '/*.php' );
+			$this->assertIsArray( $files );
+			$this->assertLessThanOrEqual( 2, count( $files ) );
+			$this->assertFileExists( Build_Cache::get_cache_dir( $scope ) . '/three.php' );
+		} finally {
+			remove_filter( 'blockstudio/cache/max_files_per_scope', $filter );
+		}
 	}
 
 	/**
@@ -475,7 +574,110 @@ class BuildCacheTest extends TestCase {
 			$warm = $this->snapshot_runtime_registry( $block_name );
 
 			$this->assertSame( $cold, $warm );
+
+			$reflection = new ReflectionClass( Build::class );
+			$method     = $reflection->getMethod( 'refresh_runtime_cache_is_current' );
+			$this->assertTrue( $method->invoke( null, $registry ) );
+
+			$this->write_file( $style, '.cache-parity { color: blue; }' );
+			clearstatcache();
+
+			$this->assertFalse( $method->invoke( null, $registry ) );
 		} finally {
+			$registry->reset();
+
+			$default_build_dir = Build::get_build_dir();
+
+			if ( is_dir( $default_build_dir ) ) {
+				Build::init( $default_build_dir );
+			}
+		}
+	}
+
+	/**
+	 * Forced refresh discovers blocks hidden by coarse directory mtimes.
+	 *
+	 * @return void
+	 */
+	public function test_forced_refresh_discovers_new_block_when_runtime_cache_appears_current(): void {
+		$directory       = $this->create_temporary_directory();
+		$block_directory = $directory . '/existing';
+		wp_mkdir_p( $block_directory );
+
+		$existing_name = 'blockstudio-test/cache-refresh-existing';
+		$new_name      = 'blockstudio-test/cache-refresh-new';
+
+		$this->write_file(
+			$block_directory . '/block.json',
+			wp_json_encode(
+				array(
+					'$schema'     => 'https://blockstudio.dev/schema/block',
+					'name'        => $existing_name,
+					'title'       => 'Cache Refresh Existing',
+					'category'    => 'widgets',
+					'blockstudio' => true,
+				)
+			)
+		);
+		$this->write_file( $block_directory . '/index.php', '<?php echo "Existing";' );
+
+		$path        = wp_normalize_path( $directory );
+		$instance    = Build::get_instance_name( $path );
+		$key         = Build_Cache::get_runtime_key( $path, $instance );
+		$registry    = Block_Registry::instance();
+		$path_filter = static fn(): string => $path;
+
+		$this->track_cache_file( 'runtime', $key );
+		add_filter( 'blockstudio/path', $path_filter );
+
+		try {
+			$registry->reset();
+			Build::init( array( 'dir' => $path ) );
+
+			$cached_mtime = filemtime( $directory );
+			$this->assertIsInt( $cached_mtime );
+
+			$new_block_directory = $directory . '/new';
+			wp_mkdir_p( $new_block_directory );
+			$this->write_file(
+				$new_block_directory . '/block.json',
+				wp_json_encode(
+					array(
+						'$schema'     => 'https://blockstudio.dev/schema/block',
+						'name'        => $new_name,
+						'title'       => 'Cache Refresh New',
+						'category'    => 'widgets',
+						'blockstudio' => true,
+					)
+				)
+			);
+			$this->write_file( $new_block_directory . '/index.php', '<?php echo "New";' );
+
+			$this->touch_directory( $directory, $cached_mtime );
+			clearstatcache( true, $directory );
+
+			$cached_runtime = Build_Cache::load_runtime( $path, $instance );
+			$this->assertIsArray( $cached_runtime );
+
+			$reflection = new ReflectionClass( Build::class );
+			$method     = $reflection->getMethod( 'refresh_runtime_cache_is_current' );
+			$this->assertTrue(
+				$method->invoke( null, $registry ),
+				wp_json_encode(
+					array(
+						'cached'  => array_keys( $cached_runtime['registeredBlockTypes'] ?? array() ),
+						'current' => array_keys( Build::blocks() ),
+					)
+				)
+			);
+
+			Build::refresh_blocks( true );
+			$this->assertArrayNotHasKey( $new_name, Build::blocks() );
+
+			Build::refresh_blocks();
+			$this->assertArrayHasKey( $new_name, Build::blocks() );
+		} finally {
+			remove_filter( 'blockstudio/path', $path_filter );
 			$registry->reset();
 
 			$default_build_dir = Build::get_build_dir();

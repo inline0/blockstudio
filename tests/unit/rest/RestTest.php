@@ -12,30 +12,6 @@ class RestTest extends TestCase {
 		$this->assertContains( 'blockstudio/v1', $namespaces );
 	}
 
-	public function test_data_route_exists(): void {
-		$routes = rest_get_server()->get_routes( 'blockstudio/v1' );
-
-		$this->assertArrayHasKey( '/blockstudio/v1/data', $routes );
-	}
-
-	public function test_blocks_route_exists(): void {
-		$routes = rest_get_server()->get_routes( 'blockstudio/v1' );
-
-		$this->assertArrayHasKey( '/blockstudio/v1/blocks', $routes );
-	}
-
-	public function test_blocks_sorted_route_exists(): void {
-		$routes = rest_get_server()->get_routes( 'blockstudio/v1' );
-
-		$this->assertArrayHasKey( '/blockstudio/v1/blocks-sorted', $routes );
-	}
-
-	public function test_files_route_exists(): void {
-		$routes = rest_get_server()->get_routes( 'blockstudio/v1' );
-
-		$this->assertArrayHasKey( '/blockstudio/v1/files', $routes );
-	}
-
 	public function test_icons_route_exists(): void {
 		$routes = rest_get_server()->get_routes( 'blockstudio/v1' );
 
@@ -49,16 +25,22 @@ class RestTest extends TestCase {
 		$this->assertIsCallable( $route['permission_callback'] );
 	}
 
-	public function test_editor_options_save_route_exists(): void {
+	public function test_dead_routes_are_not_registered(): void {
 		$routes = rest_get_server()->get_routes( 'blockstudio/v1' );
 
-		$this->assertArrayHasKey( '/blockstudio/v1/editor/options/save', $routes );
-	}
-
-	public function test_attributes_build_route_exists(): void {
-		$routes = rest_get_server()->get_routes( 'blockstudio/v1' );
-
-		$this->assertArrayHasKey( '/blockstudio/v1/attributes/build', $routes );
+		foreach (
+			array(
+				'/blockstudio/v1/data',
+				'/blockstudio/v1/blocks',
+				'/blockstudio/v1/blocks-sorted',
+				'/blockstudio/v1/files',
+				'/blockstudio/v1/editor/options/save',
+				'/blockstudio/v1/attributes/build',
+				'/blockstudio/v1/gutenberg/block/update',
+			) as $route
+		) {
+			$this->assertArrayNotHasKey( $route, $routes );
+		}
 	}
 
 	public function test_attributes_populate_route_exists(): void {
@@ -72,12 +54,6 @@ class RestTest extends TestCase {
 		$route  = $routes['/blockstudio/v1/attributes/populate'][0];
 
 		$this->assertIsCallable( $route['permission_callback'] );
-	}
-
-	public function test_gutenberg_block_update_route_exists(): void {
-		$routes = rest_get_server()->get_routes( 'blockstudio/v1' );
-
-		$this->assertArrayHasKey( '/blockstudio/v1/gutenberg/block/update', $routes );
 	}
 
 	public function test_gutenberg_block_render_route_exists(): void {
@@ -99,41 +75,6 @@ class RestTest extends TestCase {
 		$routes = rest_get_server()->get_routes( 'blockstudio/v1' );
 
 		$this->assertArrayHasKey( '/blockstudio/v1/scss/compile', $routes );
-	}
-
-	public function test_data_route_is_get(): void {
-		$routes = rest_get_server()->get_routes( 'blockstudio/v1' );
-		$route  = $routes['/blockstudio/v1/data'][0];
-
-		$this->assertSame( array( 'GET' => true ), $route['methods'] );
-	}
-
-	public function test_blocks_route_is_get(): void {
-		$routes = rest_get_server()->get_routes( 'blockstudio/v1' );
-		$route  = $routes['/blockstudio/v1/blocks'][0];
-
-		$this->assertSame( array( 'GET' => true ), $route['methods'] );
-	}
-
-	public function test_editor_options_save_route_is_post(): void {
-		$routes = rest_get_server()->get_routes( 'blockstudio/v1' );
-		$route  = $routes['/blockstudio/v1/editor/options/save'][0];
-
-		$this->assertSame( array( 'POST' => true ), $route['methods'] );
-	}
-
-	public function test_attributes_build_route_is_post(): void {
-		$routes = rest_get_server()->get_routes( 'blockstudio/v1' );
-		$route  = $routes['/blockstudio/v1/attributes/build'][0];
-
-		$this->assertSame( array( 'POST' => true ), $route['methods'] );
-	}
-
-	public function test_gutenberg_block_update_route_is_post(): void {
-		$routes = rest_get_server()->get_routes( 'blockstudio/v1' );
-		$route  = $routes['/blockstudio/v1/gutenberg/block/update'][0];
-
-		$this->assertSame( array( 'POST' => true ), $route['methods'] );
 	}
 
 	public function test_scss_compile_route_is_post(): void {
@@ -219,39 +160,6 @@ class RestTest extends TestCase {
 		$this->assertSame( 'It failed', $result->get_error_message() );
 	}
 
-	// Endpoint callbacks return arrays
-
-	public function test_data_endpoint_returns_array(): void {
-		$rest = new Rest();
-		$data = $rest->data();
-
-		$this->assertIsArray( $data );
-		$this->assertArrayHasKey( 'data', $data );
-		$this->assertArrayHasKey( 'dataSorted', $data );
-		$this->assertArrayHasKey( 'files', $data );
-	}
-
-	public function test_blocks_endpoint_returns_array(): void {
-		$rest = new Rest();
-		$data = $rest->blocks();
-
-		$this->assertIsArray( $data );
-	}
-
-	public function test_blocks_sorted_endpoint_returns_array(): void {
-		$rest = new Rest();
-		$data = $rest->blocks_sorted();
-
-		$this->assertIsArray( $data );
-	}
-
-	public function test_files_endpoint_returns_array(): void {
-		$rest = new Rest();
-		$data = $rest->files();
-
-		$this->assertIsArray( $data );
-	}
-
 	public function test_route_count(): void {
 		$routes    = rest_get_server()->get_routes( 'blockstudio/v1' );
 		$bs_routes = array_filter(
@@ -259,6 +167,6 @@ class RestTest extends TestCase {
 			fn( $r ) => str_starts_with( $r, '/blockstudio/v1/' )
 		);
 
-		$this->assertGreaterThanOrEqual( 13, count( $bs_routes ) );
+		$this->assertGreaterThanOrEqual( 6, count( $bs_routes ) );
 	}
 }

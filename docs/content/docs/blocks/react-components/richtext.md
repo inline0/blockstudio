@@ -1,0 +1,131 @@
+---
+title: RichText
+description: Add editable text fields directly in your block templates.
+path: "blocks/react-components/richtext"
+order: 29
+section: "Blocks"
+subsection: "React Components"
+meta_title: "RichText"
+meta_description: "Add editable text fields directly in your block templates."
+---
+
+# RichText
+
+The `RichText` component allows rendering an editable input inside the editor and a static HTML Element in the frontend. It is based on the [RichText](https://developer.wordpress.org/block-editor/reference-guides/richtext/) component WordPress provides.
+
+## Basic Usage
+
+To use `RichText` in its most basic form, you need to add the appropriate attribute to your block.json and add the `RichText` component to your block.
+
+```json title="block.json"
+{
+  "$schema": "https://blockstudio.dev/schema/block",
+  "name": "blockstudio/rich-text",
+  "title": "Native Block",
+  "category": "text",
+  "icon": "star-filled",
+  "description": "Native Blockstudio RichText block.",
+  "blockstudio": {
+    "attributes": [
+      {
+        "id": "myRichText",
+        "type": "richtext"
+      }
+    ]
+  }
+}
+```
+
+```php title="index.php"
+<RichText attribute="myRichText" />
+```
+
+You can use an unlimited number of RichText components in your block.
+
+## Properties
+
+### allowedFormats
+
+You can limit the formats that can be used in the RichText component by using the `allowedFormats` prop.
+
+
+#### PHP
+
+```php title="index.php"
+<RichText attribute="myRichText" allowedFormats="<?php echo esc_attr(wp_json_encode(['core/bold', 'core/italic'])); ?>" />
+```
+
+#### Twig
+
+```twig title="index.twig"
+<RichText attribute="myRichText" allowedFormats="{{ ['core/bold', 'core/italic']|json_encode|escape('html_attr') }}" />
+```
+
+### placeholder
+
+You can set a placeholder for the RichText component by using the `placeholder` prop.
+
+```php title="index.php"
+<RichText attribute="myRichText" placeholder="Enter some text" />
+```
+
+### preserveWhiteSpace
+
+Whether to preserve white space characters in the value. Normally tab, newline and space characters are collapsed to a single space. If turned on, soft line breaks will be saved as newline characters, not as line break elements.
+
+```php title="index.php"
+<RichText attribute="myRichText" preserveWhiteSpace="true" />
+```
+
+### tag
+
+By default, the `RichText` content is rendered inside a `p` element. You can change this by using the `tag` prop.
+
+```php title="index.php"
+<RichText attribute="myRichText" tag="h1" />
+```
+
+### withoutInteractiveFormatting
+
+By default, all formatting controls are present. This setting can be used to remove formatting controls that would make content interactive.
+
+```php title="index.php"
+<RichText attribute="myRichText" withoutInteractiveFormatting="true" />
+```
+
+## Repeater fields
+
+RichText works inside repeater fields. Use bracket notation with the loop index to target the correct row.
+
+```json title="block.json"
+{
+  "blockstudio": {
+    "attributes": [
+      {
+        "id": "items",
+        "type": "repeater",
+        "attributes": [
+          {
+            "id": "heading",
+            "type": "richtext"
+          }
+        ]
+      }
+    ]
+  }
+}
+```
+
+```php title="index.php"
+<?php foreach ($a['items'] as $index => $item) : ?>
+  <RichText tag="h2" attribute="items[<?php echo $index; ?>].heading" placeholder="Enter heading" />
+<?php endforeach; ?>
+```
+
+```twig title="index.twig"
+{% for item in a.items %}
+  <RichText tag="h2" attribute="items[{{ loop.index0 }}].heading" placeholder="Enter heading" />
+{% endfor %}
+```
+
+The `attribute` value follows the pattern `repeaterId[index].fieldId`, where `index` is the zero-based row number from the loop.

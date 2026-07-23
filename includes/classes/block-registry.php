@@ -263,17 +263,6 @@ final class Block_Registry {
 	}
 
 	/**
-	 * Check if a block exists.
-	 *
-	 * @param string $name The block name.
-	 *
-	 * @return bool Whether the block exists.
-	 */
-	public function has_block( string $name ): bool {
-		return isset( $this->blocks[ $name ] );
-	}
-
-	/**
 	 * Get all block data.
 	 *
 	 * @return array<string, array> The data.
@@ -343,32 +332,12 @@ final class Block_Registry {
 	}
 
 	/**
-	 * Get all override configs.
-	 *
-	 * @return array<string, array> The override configs.
-	 */
-	public function get_override_configs(): array {
-		return $this->override_configs;
-	}
-
-	/**
 	 * Get Blade templates.
 	 *
 	 * @return array<string, array> The blade templates.
 	 */
 	public function get_blade(): array {
 		return $this->blade;
-	}
-
-	/**
-	 * Get Blade templates for a specific instance.
-	 *
-	 * @param string $instance The instance name.
-	 *
-	 * @return array|null The blade templates or null.
-	 */
-	public function get_blade_for_instance( string $instance ): ?array {
-		return $this->blade[ $instance ] ?? null;
 	}
 
 	/**
@@ -478,17 +447,6 @@ final class Block_Registry {
 	 */
 	public function register_extension( WP_Block_Type $extension ): void {
 		$this->extensions[] = $extension;
-	}
-
-	/**
-	 * Set files.
-	 *
-	 * @param array<string, array> $files The files.
-	 *
-	 * @return void
-	 */
-	public function set_files( array $files ): void {
-		$this->files = $files;
 	}
 
 	/**
@@ -643,17 +601,6 @@ final class Block_Registry {
 	}
 
 	/**
-	 * Set assets.
-	 *
-	 * @param array<string, array> $assets The assets.
-	 *
-	 * @return void
-	 */
-	public function set_assets( array $assets ): void {
-		$this->assets = $assets;
-	}
-
-	/**
 	 * Add an asset.
 	 *
 	 * @param string $type   The asset type ('style' or 'script').
@@ -723,21 +670,6 @@ final class Block_Registry {
 	public function remove_block( string $name ): void {
 		unset( $this->blocks[ $name ] );
 		unset( $this->data[ $name ] );
-	}
-
-	/**
-	 * Update block data for a specific block.
-	 *
-	 * @param string $name The block name.
-	 * @param string $key  The data key.
-	 * @param mixed  $value The value.
-	 *
-	 * @return void
-	 */
-	public function update_block_data( string $name, string $key, mixed $value ): void {
-		if ( isset( $this->data[ $name ] ) ) {
-			$this->data[ $name ][ $key ] = $value;
-		}
 	}
 
 	/**

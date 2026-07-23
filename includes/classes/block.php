@@ -72,6 +72,16 @@ class Block {
 	private static array $count_by_block = array();
 
 	/**
+	 * Reset counters that are scoped to one rendered request.
+	 *
+	 * @return void
+	 */
+	public static function reset_request_state(): void {
+		self::$count          = 0;
+		self::$count_by_block = array();
+	}
+
+	/**
 	 * Get unique ID.
 	 *
 	 * @since 5.5.0
@@ -159,12 +169,12 @@ class Block {
 			}
 
 			if ( isset( $option['value'] ) ) {
-				$options_map[ $option['value'] ] = array(
+				$options_map[ self::option_map_key( $option['value'] ) ] = array(
 					'value' => $value,
 					'label' => $option['label'] ?? $value,
 				);
-			} elseif ( ! $fetch ) {
-				$options_map[ $option ] = array(
+			} elseif ( ! $fetch && is_scalar( $option ) ) {
+				$options_map[ self::option_map_key( $option ) ] = array(
 					'value' => $option,
 					'label' => $option,
 				);
@@ -172,17 +182,44 @@ class Block {
 		}
 
 		try {
+			$key = self::option_map_key( $v['value'] ?? $v );
 			if ( 'label' === $return_format ) {
-				return $options_map[ $v['value'] ?? $v ]['label'] ?? false;
+				return $options_map[ $key ]['label'] ?? false;
 			}
 			if ( 'both' === $return_format ) {
-				return $options_map[ $v['value'] ?? $v ] ?? false;
+				return $options_map[ $key ] ?? false;
 			}
 
-			return $options_map[ $v['value'] ?? $v ]['value'] ?? false;
+			return $options_map[ $key ]['value'] ?? false;
 		} catch ( Throwable $err ) {
 			return false;
 		}
+	}
+
+	/**
+	 * Normalize option values before using them as array keys.
+	 *
+	 * PHP casts float keys to integers, which loses precision for values such
+	 * as `1.5` and emits deprecation warnings on modern runtimes.
+	 *
+	 * @param mixed $value Option value.
+	 *
+	 * @return int|string Array key.
+	 */
+	private static function option_map_key( mixed $value ): int|string {
+		if ( is_int( $value ) || is_string( $value ) ) {
+			return $value;
+		}
+
+		if ( is_float( $value ) ) {
+			return (string) $value;
+		}
+
+		if ( is_bool( $value ) ) {
+			return $value ? 1 : 0;
+		}
+
+		return (string) $value;
 	}
 
 	/**
@@ -497,15 +534,34 @@ class Block {
 				class_exists( 'WP_HTML_Tag_Processor' ) &&
 				false !== strpos( $content, 'useBlockProps' )
 			) {
-				$content = new WP_HTML_Tag_Processor( $content );
-				if ( $content->next_tag() ) {
-					$classes = $content->get_attribute( 'class' );
-					$content->set_attribute(
+				$processor = new WP_HTML_Tag_Processor( $content );
+				if ( $processor->next_tag() ) {
+					$classes = (string) $processor->get_attribute( 'class' );
+
+					$wrapper_attributes = apply_filters(
+						'blockstudio/blocks/components/use_block_props/render',
+						'class="' . esc_attr( $classes ) . '"',
+						$block
+					);
+					$wrapper_attributes = apply_filters(
+						'blockstudio/blocks/components/useblockprops/render',
+						$wrapper_attributes,
+						$block
+					);
+
+					if ( preg_match( '/class="([^"]*)"/', $wrapper_attributes, $matches ) ) {
+						$classes = html_entity_decode( $matches[1], ENT_QUOTES, 'UTF-8' );
+					}
+
+					$processor->set_attribute(
 						'class',
 						$classes . ' wp-block block-editor-block-list__block'
 					);
 				}
+				$content = $processor->get_updated_html();
 			}
+
+			$content = self::expand_inner_blocks_allowed_blocks( $content );
 
 			return str_replace(
 				'useBlockProps',
@@ -586,13 +642,7 @@ class Block {
 			'withoutInteractiveFormatting',
 		);
 
-		$has_attribute = false;
-		foreach ( $attributes_to_remove as $attribute ) {
-			if ( false !== strpos( $content, $attribute ) ) {
-				$has_attribute = true;
-				break;
-			}
-		}
+		$has_attribute = self::content_has_component_cleanup_attribute( $content, $attributes_to_remove );
 
 		if ( $has_attribute ) {
 			$content = str_replace(
@@ -674,14 +724,327 @@ class Block {
 					}
 				}
 			}
-			$trim_off_front = strpos( $doc->saveHTML(), '<body>' ) + 6;
-			$trim_off_end   =
-				strrpos( $doc->saveHTML(), '</body>' ) - strlen( $doc->saveHTML() );
+			$html           = $doc->saveHTML();
+			$trim_off_front = strpos( $html, '<body>' ) + 6;
+			$trim_off_end   = strrpos( $html, '</body>' ) - strlen( $html );
 
-			$content = substr( $doc->saveHTML(), $trim_off_front, $trim_off_end );
+			$content = substr( $html, $trim_off_front, $trim_off_end );
 		}
 
 		return $content;
+	}
+
+	/**
+	 * Check whether rendered component HTML still contains cleanup attributes.
+	 *
+	 * A broad substring scan makes common words like "stage" match the `tag`
+	 * cleanup attribute and forces DOMDocument parsing for blocks that no
+	 * longer contain component attributes after RichText/InnerBlocks handling.
+	 *
+	 * @param string $content    Rendered content.
+	 * @param array  $attributes Attribute names to remove.
+	 *
+	 * @return bool Whether DOM cleanup is required.
+	 */
+	private static function content_has_component_cleanup_attribute( string $content, array $attributes ): bool {
+		if ( array() === $attributes ) {
+			return false;
+		}
+
+		$attribute_pattern = implode(
+			'|',
+			array_map(
+				static fn( string $attribute ): string => preg_quote( $attribute, '/' ),
+				$attributes
+			)
+		);
+
+		return 1 === preg_match( '/\s(?:' . $attribute_pattern . ')(?:\s*=\s*|(?=\s|\/?>))/i', $content );
+	}
+
+	/**
+	 * Expand supported InnerBlocks allowedBlocks tokens.
+	 *
+	 * @param array $list Allowed block names and tokens.
+	 *
+	 * @return array Expanded block names.
+	 */
+	public static function expand_allowed_blocks_tokens( array $list ): array {
+		$expanded = array();
+
+		foreach ( $list as $entry ) {
+			if ( ! is_string( $entry ) ) {
+				continue;
+			}
+
+			$entry = trim( $entry );
+			if ( '' === $entry ) {
+				continue;
+			}
+
+			$resolved = self::resolve_allowed_blocks_token( $entry );
+			$names    = null === $resolved ? array( $entry ) : $resolved;
+
+			foreach ( $names as $name ) {
+				if ( is_string( $name ) && '' !== $name && ! in_array( $name, $expanded, true ) ) {
+					$expanded[] = $name;
+				}
+			}
+		}
+
+		return $expanded;
+	}
+
+	/**
+	 * Expand allowedBlocks JSON attributes on editor InnerBlocks tags.
+	 *
+	 * @param string $content Rendered editor handoff content.
+	 *
+	 * @return string Content with expanded allowedBlocks attributes.
+	 */
+	private static function expand_inner_blocks_allowed_blocks( string $content ): string {
+		if ( false === strpos( $content, 'allowedBlocks' ) || false === strpos( $content, '<InnerBlocks' ) ) {
+			return $content;
+		}
+
+		return preg_replace_callback(
+			'/<InnerBlocks\b[^>]*>/i',
+			static function ( array $matches ): string {
+				$tag = $matches[0];
+
+				if ( ! preg_match( '/\ballowedBlocks\s*=\s*([\'"])(.*?)\1/s', $tag, $attribute_match ) ) {
+					return $tag;
+				}
+
+				$quote   = $attribute_match[1];
+				$raw     = $attribute_match[2];
+				$decoded = html_entity_decode( $raw, ENT_QUOTES, 'UTF-8' );
+				$list    = json_decode( $decoded, true );
+
+				if ( ! is_array( $list ) ) {
+					return $tag;
+				}
+
+				$expanded = self::expand_allowed_blocks_tokens( $list );
+				if ( $expanded === $list ) {
+					return $tag;
+				}
+
+				$replacement = 'allowedBlocks=' . $quote . esc_attr( wp_json_encode( $expanded ) ) . $quote;
+
+				return preg_replace( '/\ballowedBlocks\s*=\s*([\'"])(.*?)\1/s', $replacement, $tag, 1 ) ?? $tag;
+			},
+			$content
+		) ?? $content;
+	}
+
+	/**
+	 * Resolve a single allowedBlocks token.
+	 *
+	 * @param string $token Token or literal block name.
+	 *
+	 * @return array|null Expanded names, or null when the token is a literal.
+	 */
+	private static function resolve_allowed_blocks_token( string $token ): ?array {
+		if ( '@theme' === $token ) {
+			return self::get_theme_allowed_block_names();
+		}
+
+		if ( str_starts_with( $token, 'category:' ) ) {
+			$category = substr( $token, strlen( 'category:' ) );
+			if ( '' === $category ) {
+				return array();
+			}
+
+			return self::get_allowed_block_names_by_category( $category );
+		}
+
+		if ( str_ends_with( $token, '/*' ) ) {
+			$namespace = substr( $token, 0, -2 );
+			if ( ! preg_match( '/^[a-z][a-z0-9-]*$/', $namespace ) ) {
+				return array();
+			}
+
+			return self::get_allowed_block_names_by_namespace( $namespace );
+		}
+
+		return null;
+	}
+
+	/**
+	 * Get all registered block names in a namespace.
+	 *
+	 * @param string $namespace Block namespace.
+	 *
+	 * @return array Block names.
+	 */
+	private static function get_allowed_block_names_by_namespace( string $namespace ): array {
+		return array_values(
+			array_map(
+				static fn( array $block ): string => $block['name'],
+				array_filter(
+					self::get_registered_allowed_blocks(),
+					static fn( array $block ): bool => str_starts_with( $block['name'], $namespace . '/' )
+				)
+			)
+		);
+	}
+
+	/**
+	 * Get all registered block names in a category.
+	 *
+	 * @param string $category Block category.
+	 *
+	 * @return array Block names.
+	 */
+	private static function get_allowed_block_names_by_category( string $category ): array {
+		return array_values(
+			array_map(
+				static fn( array $block ): string => $block['name'],
+				array_filter(
+					self::get_registered_allowed_blocks(),
+					static fn( array $block ): bool => $category === $block['category']
+				)
+			)
+		);
+	}
+
+	/**
+	 * Get all active-theme Blockstudio block names.
+	 *
+	 * @return array Block names.
+	 */
+	private static function get_theme_allowed_block_names(): array {
+		$theme_roots = array_filter(
+			array_unique(
+				array_map(
+					'wp_normalize_path',
+					array(
+						get_stylesheet_directory(),
+						get_template_directory(),
+					)
+				)
+			)
+		);
+
+		return array_values(
+			array_map(
+				static fn( array $block ): string => $block['name'],
+				array_filter(
+					self::get_registered_allowed_blocks(),
+					static function ( array $block ) use ( $theme_roots ): bool {
+						if ( '' === $block['path'] ) {
+							return false;
+						}
+
+						foreach ( $theme_roots as $theme_root ) {
+							if ( str_starts_with( $block['path'], trailingslashit( $theme_root ) ) || $block['path'] === $theme_root ) {
+								return true;
+							}
+						}
+
+						return false;
+					}
+				)
+			)
+		);
+	}
+
+	/**
+	 * Return normalized registered block metadata for allowedBlocks expansion.
+	 *
+	 * @return array<int, array{name:string, category:string, path:string}>
+	 */
+	private static function get_registered_allowed_blocks(): array {
+		$items = array();
+		$data  = Build::data();
+
+		foreach ( Build::blocks() as $name => $block ) {
+			self::add_registered_allowed_block( $items, (string) $name, $block, $data[ $name ] ?? array() );
+		}
+
+		$registry = \WP_Block_Type_Registry::get_instance();
+		if ( method_exists( $registry, 'get_all_registered' ) ) {
+			foreach ( $registry->get_all_registered() as $name => $block ) {
+				self::add_registered_allowed_block( $items, (string) $name, $block, $data[ $name ] ?? array() );
+			}
+		}
+
+		return array_values( $items );
+	}
+
+	/**
+	 * Add normalized block data if it has not already been added.
+	 *
+	 * @param array  $items Block metadata map, passed by reference.
+	 * @param string $name  Block name.
+	 * @param mixed  $block Block object or array.
+	 * @param array  $data  Blockstudio build data.
+	 *
+	 * @return void
+	 */
+	private static function add_registered_allowed_block( array &$items, string $name, mixed $block, array $data = array() ): void {
+		if ( '' === $name || isset( $items[ $name ] ) ) {
+			return;
+		}
+
+		$items[ $name ] = array(
+			'name'     => $name,
+			'category' => self::get_registered_block_category( $block, $data ),
+			'path'     => self::get_registered_block_path( $block, $data ),
+		);
+	}
+
+	/**
+	 * Get a block category from any known registry shape.
+	 *
+	 * @param mixed $block Block object or array.
+	 * @param array $data  Blockstudio build data.
+	 *
+	 * @return string Category slug.
+	 */
+	private static function get_registered_block_category( mixed $block, array $data ): string {
+		if ( is_object( $block ) ) {
+			$category = (string) ( $block->category ?? ( $block->blockstudio['category'] ?? '' ) );
+			return '' === $category ? (string) ( $data['category'] ?? '' ) : $category;
+		}
+
+		if ( is_array( $block ) ) {
+			$category = (string) ( $block['category'] ?? ( $block['blockstudio']['category'] ?? '' ) );
+			return '' === $category ? (string) ( $data['category'] ?? '' ) : $category;
+		}
+
+		return (string) ( $data['category'] ?? '' );
+	}
+
+	/**
+	 * Get a block source path from any known registry shape.
+	 *
+	 * @param mixed $block Block object or array.
+	 * @param array $data  Blockstudio build data.
+	 *
+	 * @return string Normalized path.
+	 */
+	private static function get_registered_block_path( mixed $block, array $data ): string {
+		$path = '';
+
+		if ( is_object( $block ) ) {
+			$path = $block->blockstudio['data']['path']
+				?? $block->blockstudio['path']
+				?? $block->file['dirname']
+				?? '';
+		} elseif ( is_array( $block ) ) {
+			$path = $block['blockstudio']['data']['path']
+				?? $block['blockstudio']['path']
+				?? $block['file']['dirname']
+				?? '';
+		}
+
+		if ( '' === $path ) {
+			$path = $data['path'] ?? ( $data['file']['dirname'] ?? '' );
+		}
+
+		return '' === $path ? '' : wp_normalize_path( $path );
 	}
 
 	/**
@@ -1267,6 +1630,16 @@ class Block {
 			return false;
 		}
 
+		$raw_blockstudio_attributes =
+			isset( $attributes['blockstudio']['attributes'] ) &&
+			is_array( $attributes['blockstudio']['attributes'] )
+				? $attributes['blockstudio']['attributes']
+				: array_filter(
+					$attributes,
+					static fn( $key ) => ! in_array( $key, array( 'blockstudio', '_BLOCKSTUDIO_CONTEXT' ), true ),
+					ARRAY_FILTER_USE_KEY
+				);
+
 		$perf_start = Perf::active() ? microtime( true ) : 0;
 
 		++self::$count;
@@ -1276,8 +1649,13 @@ class Block {
 			++self::$count_by_block[ $name ];
 		}
 
+		$blocks               = Build::blocks();
+		$block_data_map       = Build::data();
+		$overrides            = Build::overrides();
+		$blade                = Build::blade();
+		$extensions           = Build::extensions();
 		$extension_attributes = array();
-		$matches              = Extensions::get_matches( $name, Build::extensions() );
+		$matches              = Extensions::get_matches( $name, $extensions );
 		if ( count( $matches ) >= 1 ) {
 			foreach ( $matches as $match ) {
 				foreach ( $match->attributes as $key => $value ) {
@@ -1289,9 +1667,9 @@ class Block {
 		}
 
 		$blockstudio_id    = self::comment( $name );
-		$block_data        = Build::data()[ $name ];
-		$data              = Build::blocks()[ $name ] ?? false;
-		$override_data     = Build::overrides()[ $name ] ?? false;
+		$block_data        = $block_data_map[ $name ];
+		$data              = $blocks[ $name ] ?? false;
+		$override_data     = $overrides[ $name ] ?? false;
 		$has_override_path =
 			$override_data &&
 			isset( $override_data->path ) &&
@@ -1305,23 +1683,62 @@ class Block {
 			return null;
 		}
 
+		$island_phase = Islands::render_phase( $name, $is_editor, $is_preview );
+		if ( 'placeholder' === $island_phase ) {
+			$placeholder_path = Islands::placeholder_path( $name, $block_data );
+			if ( $placeholder_path ) {
+				$path = $placeholder_path;
+			}
+		}
+
+		$dependencies = array( $path );
+		foreach ( $block_data['filesPaths'] ?? array() as $dependency_path ) {
+			if ( is_string( $dependency_path ) && '' !== $dependency_path ) {
+				$dependencies[] = $dependency_path;
+			}
+		}
+		foreach ( $block_data['assets'] ?? array() as $asset ) {
+			$dependency_path = is_array( $asset ) ? $asset['path'] ?? '' : '';
+			if ( is_string( $dependency_path ) && '' !== $dependency_path ) {
+				$dependencies[] = $dependency_path;
+			}
+		}
+		$dependencies = array_values( array_unique( $dependencies ) );
+
+		/**
+		 * Filters the resolved dependencies for a rendered block.
+		 *
+		 * Collectors can observe the returned paths to build a page dependency
+		 * graph, and integrations can append files loaded indirectly.
+		 *
+		 * @param array<int, string> $dependencies Resolved source and template paths.
+		 * @param string             $name         Block name.
+		 * @param array              $block_data   Block definition data.
+		 * @param bool               $is_editor    Whether this is an editor render.
+		 * @param bool               $is_preview   Whether this is a preview render.
+		 */
+		apply_filters( 'blockstudio/render/dependencies', $dependencies, $name, $block_data, $is_editor, $is_preview );
+
 		$editor = $attributes['blockstudio']['editor'] ?? false;
 
 		$block = $attributes;
 		unset( $block['blockstudio'] );
 		unset( $block['__internalWidgetId'] );
-		$block['id']         = self::id( $block, $attributes );
-		$block['name']       = $name;
-		$block['postId']     = $object_id;
-		$block['postType']   = get_post_type( $object_id );
-		$block['index']      = self::$count_by_block[ $name ];
-		$block['indexTotal'] = self::$count;
+		$block['id']                  = self::id( $block, $attributes );
+		$block['name']                = $name;
+		$block['postId']              = $object_id;
+		$block['postType']            = get_post_type( $object_id );
+		$block['index']               = self::$count_by_block[ $name ];
+		$block['indexTotal']          = self::$count;
+		$block['islandPhase']         = $island_phase;
+		$block['isIsland']            = in_array( $island_phase, array( 'hydrate', 'placeholder', 'fragment' ), true );
+		$block['isIslandPlaceholder'] = 'placeholder' === $island_phase;
+		$block['isIslandFragment']    = 'fragment' === $island_phase;
 
 		$compiled_context = array();
-		$block_names      = array_keys( Build::blocks() );
 		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- WordPress block API property.
 		foreach ( $data->usesContext ?? array() as $context_provider ) {
-			if ( ! in_array( $context_provider, $block_names, true ) ) {
+			if ( ! isset( $blocks[ $context_provider ] ) ) {
 				continue;
 			}
 
@@ -1338,7 +1755,7 @@ class Block {
 					$context_provider,
 					$editor,
 					$is_preview,
-					Build::blocks()[ $context_provider ]->attributes
+					$blocks[ $context_provider ]->attributes
 				);
 				$compiled_context[ $context_provider ] = $trace_attributes;
 			} else {
@@ -1354,7 +1771,7 @@ class Block {
 							$context_provider,
 							$editor,
 							$is_preview,
-							Build::blocks()[ $context_provider ]->attributes
+							$blocks[ $context_provider ]->attributes
 						);
 						$compiled_context[ $context_provider ] = $trace_attributes;
 					}
@@ -1377,7 +1794,7 @@ class Block {
 			$name,
 			$editor,
 			$is_preview,
-			Build::blocks()[ $name ]->attributes + $extension_attributes
+			$blocks[ $name ]->attributes + $extension_attributes
 		);
 		$assets         = Assets::render_code_field_assets( $attribute_data, 'assetsAsset' );
 
@@ -1392,7 +1809,7 @@ class Block {
 			$filter_data->blockstudio['data']['attributes'] = $attributes;
 			$filter_data->blockstudio['data']['path']       = $path;
 			$filter_data->blockstudio['data']['blade']      =
-				Build::blade()[ $block_data['instance'] ] ?? array();
+				$blade[ $block_data['instance'] ] ?? array();
 		}
 
 		if (
@@ -1406,17 +1823,21 @@ class Block {
 			Timber::init();
 			$twig_context = Timber::context();
 
-			$twig_context['attributes'] = $attributes;
-			$twig_context['a']          = $attributes;
-			$twig_context['block']      = $block;
-			$twig_context['b']          = $block;
-			$twig_context['context']    = $context;
-			$twig_context['c']          = $context;
-			$twig_context['content']    = $content;
-			$twig_context['isEditor']   = $is_editor;
-			$twig_context['isPreview']  = $is_preview;
-			$twig_context['postId']     = $post_id;
-			$twig_context['post_id']    = $post_id;
+			$twig_context['attributes']          = $attributes;
+			$twig_context['a']                   = $attributes;
+			$twig_context['block']               = $block;
+			$twig_context['b']                   = $block;
+			$twig_context['context']             = $context;
+			$twig_context['c']                   = $context;
+			$twig_context['content']             = $content;
+			$twig_context['isEditor']            = $is_editor;
+			$twig_context['isPreview']           = $is_preview;
+			$twig_context['isIsland']            = $block['isIsland'];
+			$twig_context['isIslandPlaceholder'] = $block['isIslandPlaceholder'];
+			$twig_context['isIslandFragment']    = $block['isIslandFragment'];
+			$twig_context['islandPhase']         = $island_phase;
+			$twig_context['postId']              = $post_id;
+			$twig_context['post_id']             = $post_id;
 
 			$add_custom_path = function ( $paths ) use (
 				$has_override_path,
@@ -1471,7 +1892,7 @@ class Block {
 				// phpcs:enable WordPress.Security.EscapeOutput.ExceptionNotEscaped
 			}
 
-			if ( str_contains( $compiled_string, '<bs:' ) || str_contains( $compiled_string, '<block ' ) ) {
+			if ( Block_Tags::output_has_tags( $compiled_string ) ) {
 				$compiled_string = Block_Tags::render( $compiled_string );
 			}
 
@@ -1502,11 +1923,15 @@ class Block {
 			}
 
 			ob_start();
-			$a         = $attributes;
-			$b         = $block;
-			$c         = $context;
-			$isEditor  = $is_editor; // phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- backward-compatible template alias.
-			$isPreview = $is_preview; // phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- backward-compatible template alias.
+			$a                   = $attributes;
+			$b                   = $block;
+			$c                   = $context;
+			$isEditor            = $is_editor; // phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- backward-compatible template alias.
+			$isPreview           = $is_preview; // phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- backward-compatible template alias.
+			$isIsland            = $block['isIsland']; // phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- template alias.
+			$isIslandPlaceholder = $block['isIslandPlaceholder']; // phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- template alias.
+			$isIslandFragment    = $block['isIslandFragment']; // phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- template alias.
+			$islandPhase         = $island_phase; // phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase -- template alias.
 
 			$render = true;
 
@@ -1530,7 +1955,7 @@ class Block {
 				$perf_phase = microtime( true );
 			}
 
-			if ( str_contains( $php_output, '<bs:' ) || str_contains( $php_output, '<block ' ) ) {
+			if ( Block_Tags::output_has_tags( $php_output ) ) {
 				$php_output = Block_Tags::render( $php_output );
 			}
 
@@ -1551,7 +1976,9 @@ class Block {
 			}
 		}
 
-		$rendered_block = $rendered_block . ( ! $is_editor ? $assets : '' );
+		if ( ! $is_editor && 'fragment' !== $island_phase ) {
+			$rendered_block .= $assets;
+		}
 
 		if ( $is_editor && str_contains( $rendered_block, 'data-wp-interactive' ) ) {
 			$rendered_block = wp_interactivity_process_directives( $rendered_block );
@@ -1629,9 +2056,26 @@ class Block {
 				$result = $blockstudio_id . $result;
 			}
 
-			if ( is_string( $assets ) && '' !== $assets && ! str_contains( $result, $assets ) ) {
+			if (
+				'fragment' !== $island_phase &&
+				is_string( $assets ) &&
+				'' !== $assets &&
+				! str_contains( $result, $assets )
+			) {
 				$result .= $assets;
 			}
+		}
+
+		if (
+			is_string( $result ) &&
+			in_array( $island_phase, array( 'hydrate', 'placeholder' ), true )
+		) {
+			$result = Islands::marker(
+				$name,
+				$raw_blockstudio_attributes,
+				$result,
+				$island_phase
+			);
 		}
 
 		return $result;

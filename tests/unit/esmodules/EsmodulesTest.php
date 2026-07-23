@@ -108,10 +108,10 @@ class EsmodulesTest extends TestCase {
 		$this->assertDoesNotMatchRegularExpression( $pattern, $input );
 	}
 
-	// ESModules::get_module_matches() with $obj = true
+	// ESModules::get_module_matches()
 
 	public function test_get_module_matches_obj_npm_prefix(): void {
-		$result = ESModules::get_module_matches( 'npm:lodash@4.17.21', true );
+		$result = ESModules::get_module_matches( 'npm:lodash@4.17.21' );
 
 		$this->assertSame( 'lodash', $result['name'] );
 		$this->assertSame( 'lodash', $result['nameTransformed'] );
@@ -120,14 +120,14 @@ class EsmodulesTest extends TestCase {
 	}
 
 	public function test_get_module_matches_obj_blockstudio_prefix(): void {
-		$result = ESModules::get_module_matches( 'blockstudio/lodash@4.17.21', true );
+		$result = ESModules::get_module_matches( 'blockstudio/lodash@4.17.21' );
 
 		$this->assertSame( 'lodash', $result['name'] );
 		$this->assertSame( '4.17.21', $result['version'] );
 	}
 
 	public function test_get_module_matches_obj_scoped_package(): void {
-		$result = ESModules::get_module_matches( 'npm:@scope/package@1.0.0', true );
+		$result = ESModules::get_module_matches( 'npm:@scope/package@1.0.0' );
 
 		$this->assertSame( '@scope/package', $result['name'] );
 		$this->assertSame( '@scope-package', $result['nameTransformed'] );
@@ -167,39 +167,6 @@ class EsmodulesTest extends TestCase {
 
 		$this->assertSame( $expected, $filename );
 		$this->assertFileExists( $expected );
-	}
-
-	// ESModules::get_module_matches() string replacement mode
-
-	public function test_get_module_matches_replaces_npm_import(): void {
-		$input  = 'import lodash from "npm:lodash@4.17.21"';
-		$result = ESModules::get_module_matches( $input );
-
-		$this->assertIsString( $result );
-		$this->assertStringNotContainsString( '"npm:', $result );
-	}
-
-	public function test_get_module_matches_replaces_blockstudio_import(): void {
-		$input  = 'import { motion } from "blockstudio/framer-motion@10.16.4"';
-		$result = ESModules::get_module_matches( $input );
-
-		$this->assertIsString( $result );
-		$this->assertStringNotContainsString( '"blockstudio/', $result );
-	}
-
-	public function test_get_module_matches_returns_string_type(): void {
-		$input  = 'import x from "npm:pkg@1.0.0"';
-		$result = ESModules::get_module_matches( $input );
-
-		$this->assertIsString( $result );
-		$this->assertStringContainsString( 'esm.sh', $result );
-	}
-
-	public function test_get_module_matches_no_change_for_regular_import(): void {
-		$input  = 'import React from "react"';
-		$result = ESModules::get_module_matches( $input );
-
-		$this->assertSame( $input, $result );
 	}
 
 	// ESModules::get_module_strings()

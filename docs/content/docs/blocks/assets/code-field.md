@@ -1,0 +1,158 @@
+---
+title: Code Field Assets
+description: Dynamic asset blocks via the code field.
+path: "blocks/assets/code-field"
+order: 10
+section: "Blocks"
+subsection: "Assets"
+meta_title: "Code Field Assets"
+meta_description: "Dynamic asset blocks via the code field."
+---
+
+# Code Field Assets
+
+Beside static styles and scripts as files, Blockstudio also supports dynamic asset blocks via the [code field](/docs/blocks/attributes/field-types#code). Depending on your use case, these can be scoped to the block.
+
+## Basic Usage
+
+At the most basic level, you can manually render the code field content in your template.
+
+
+#### PHP
+
+```php title="index.php"
+<div useBlockProps>
+  <h1>My block</h1>
+</div>
+<style><?php echo $attributes['css']; ?></style>
+```
+
+#### Twig
+
+```twig title="index.twig"
+<div useBlockProps>
+  <h1>My block</h1>
+</div>
+<style>{{ attributes.css }}</style>
+```
+
+## Scoped Selector
+
+To avoid conflicts with other blocks, you can use the `%selector%` variable inside the code field alongside [useBlockProps](/docs/blocks/react-components/useblockprops) in your rendering template.
+
+In code fields, `%selector%` targets the individual block instance. In CSS and SCSS files, `%selector%` targets the block's shared scoped class instead.
+
+### Example
+
+Let's imagine that we want to target the `h1` tag from the example above in our code field.
+
+```css
+%selector% h1 {
+  color: red;
+}
+```
+
+Now, Blockstudio will do three things:
+
+- Create a unique id for that block instance
+- Replace `%selector%` with the unique id
+- Add the same selector to the element marked with `useBlockProps`
+
+The final output will be something like this:
+
+```html
+<div data-assets="c9abe0d95c2b">
+  <h1>My block</h1>
+</div>
+<style>
+  [data-assets='c9abe0d95c2b'] h1 {
+    color: red;
+  }
+</style>
+```
+
+## Automatic Rendering
+
+Always having to render the style tag manually can be cumbersome. To make this process easier, you can use the `asset` attribute inside the code field.
+
+```json title="block.json"
+{
+  "blockstudio": {
+    "attributes": [
+      {
+        "type": "code",
+        "id": "code",
+        "label": "Custom CSS",
+        "language": "css",
+        "asset": true
+      }
+    ]
+  }
+}
+```
+
+This will automatically create `style` tags for code blocks marked as `css` and move them to the head of the document. For fields marked with `javascript` as the language, `script` tags will be created instead and placed at the bottom of the body.
+
+## In Extensions
+
+When using code fields inside of [extensions](/docs/extensions), the `asset` attribute is not necessary. Blockstudio will automatically render the code field content as an asset if the language is `css` or `javascript`.
+
+### Example
+
+```json title="core.json"
+{
+  "$schema": "https://blockstudio.dev/schema/extend",
+  "name": "core/*",
+  "blockstudio": {
+    "extend": true,
+    "attributes": [
+      {
+        "id": "customCss",
+        "type": "code",
+        "label": "Custom css",
+        "language": "css"
+      }
+    ]
+  }
+}
+```
+
+No additional configuration is needed. The above will show a code field for every `core/*` block in the sidebar and automatically render the content as an asset to the page.
+
+## SCSS
+
+Code fields support SCSS compilation. Set the language to `scss` and Blockstudio will compile the value through ScssPhp before rendering it as CSS.
+
+```json title="block.json"
+{
+  "blockstudio": {
+    "attributes": [
+      {
+        "type": "code",
+        "id": "styles",
+        "label": "Styles",
+        "language": "scss",
+        "asset": true
+      }
+    ]
+  }
+}
+```
+
+SCSS features like variables, nesting, and mixins all work:
+
+```scss
+%selector% {
+  $primary: #3b82f6;
+
+  h1 {
+    color: $primary;
+  }
+
+  &:hover {
+    background: lighten($primary, 40%);
+  }
+}
+```
+
+In the editor, SCSS is compiled server-side in real time so you see the result as you type. On the frontend, compilation happens during block rendering.

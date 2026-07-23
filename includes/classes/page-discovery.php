@@ -58,43 +58,59 @@ class Page_Discovery {
 	private string $discover_base = '';
 
 	/**
+	 * Active logical discovery source.
+	 *
+	 * @var Discovery_Source|null
+	 */
+	private ?Discovery_Source $source = null;
+
+	/**
+	 * Physical-to-logical path lookup for the active source.
+	 *
+	 * @var array<string, string>
+	 */
+	private array $logical_paths = array();
+
+	/**
 	 * Discover pages in a directory path.
 	 *
-	 * @param string $base_path Absolute path to scan for pages.
+	 * @param string|Discovery_Source $base_path Absolute path or logical discovery source.
 	 *
 	 * @return array<string, array> Array of discovered page definitions.
 	 */
-	public function discover( string $base_path ): array {
+	public function discover( string|Discovery_Source $base_path ): array {
 		$this->pages       = array();
 		$this->collections = array();
 		$this->errors      = array();
 		$this->path_index  = array();
+		$this->source      = is_string( $base_path )
+			? Discovery_Sources::for_path( 'pages', $base_path )
+			: $base_path;
+		$this->index_source_paths();
 
-		if ( ! is_dir( $base_path ) ) {
-			return $this->pages;
-		}
-
-		$base_path           = self::normalize_filesystem_path( $base_path );
+		$base_path           = self::normalize_filesystem_path( $this->source->root() );
 		$this->discover_base = $base_path;
 		$collection_roots    = array();
 		$claimed_roots       = array();
-		$manifest_paths      = self::find_manifest_paths( $base_path );
+		$manifest_entries    = self::find_manifest_entries( $this->source );
 
-		foreach ( $manifest_paths as $manifest_path ) {
-			$root = self::normalize_filesystem_path( dirname( $manifest_path ) );
+		foreach ( $manifest_entries as $manifest_entry ) {
+			$manifest_path    = $manifest_entry->physical_path();
+			$manifest_logical = $manifest_entry->logical_path();
+			$root             = self::logical_directory( $manifest_logical );
 
-			if ( self::is_inside_any_path( $root, $claimed_roots ) ) {
+			if ( self::is_inside_any_logical_path( $root, $claimed_roots ) ) {
 				continue;
 			}
 
-			$manifest = self::read_json_file( $manifest_path );
+			$manifest = Utils::read_json_file( $manifest_path );
 
 			if ( ! is_array( $manifest ) ) {
 				$this->add_error( 'invalid_manifest', 'Invalid pages.json manifest.', array( 'path' => $manifest_path ) );
 				continue;
 			}
 
-			$collection = self::normalize_collection_manifest( $manifest, $manifest_path, $base_path );
+			$collection = self::normalize_collection_manifest( $manifest, $manifest_entry, $this->source );
 
 			if ( null === $collection ) {
 				$this->add_error( 'invalid_collection', 'Collection manifest has an invalid collection slug or post type.', array( 'path' => $manifest_path ) );
@@ -114,8 +130,8 @@ class Page_Discovery {
 			}
 
 			$this->collections[ $collection['slug'] ] = $collection;
-			$collection_roots[]                       = $collection['root'];
-			$claimed_roots[]                          = $collection['root'];
+			$collection_roots[]                       = $collection['logical_root'];
+			$claimed_roots[]                          = $collection['logical_root'];
 
 			$this->discover_collection( $collection );
 		}
@@ -131,42 +147,39 @@ class Page_Discovery {
 	/**
 	 * Discover collection manifests without loading page sources.
 	 *
-	 * @param string $base_path Absolute path to scan.
+	 * @param string|Discovery_Source $base_path Absolute path or logical discovery source.
 	 *
 	 * @return array<string, array> Collection data indexed by collection slug.
 	 */
-	public static function discover_manifests( string $base_path ): array {
-		$collections = array();
+	public static function discover_manifests( string|Discovery_Source $base_path ): array {
+		$collections   = array();
+		$source        = is_string( $base_path )
+			? Discovery_Sources::for_path( 'pages', $base_path )
+			: $base_path;
+		$claimed_roots = array();
 
-		if ( ! is_dir( $base_path ) ) {
-			return $collections;
-		}
+		foreach ( self::find_manifest_entries( $source ) as $manifest_entry ) {
+			$manifest_path = $manifest_entry->physical_path();
+			$root          = self::logical_directory( $manifest_entry->logical_path() );
 
-		$base_path      = self::normalize_filesystem_path( $base_path );
-		$manifest_paths = self::find_manifest_paths( $base_path );
-		$claimed_roots  = array();
-
-		foreach ( $manifest_paths as $manifest_path ) {
-			$root = self::normalize_filesystem_path( dirname( $manifest_path ) );
-
-			if ( self::is_inside_any_path( $root, $claimed_roots ) ) {
+			if ( self::is_inside_any_logical_path( $root, $claimed_roots ) ) {
 				continue;
 			}
 
-			$manifest = self::read_json_file( $manifest_path );
+			$manifest = Utils::read_json_file( $manifest_path );
 
 			if ( ! is_array( $manifest ) ) {
 				continue;
 			}
 
-			$collection = self::normalize_collection_manifest( $manifest, $manifest_path, $base_path );
+			$collection = self::normalize_collection_manifest( $manifest, $manifest_entry, $source );
 
 			if ( null === $collection ) {
 				continue;
 			}
 
 			$collections[ $collection['slug'] ] = $collection;
-			$claimed_roots[]                    = $collection['root'];
+			$claimed_roots[]                    = $collection['logical_root'];
 		}
 
 		return $collections;
@@ -188,15 +201,6 @@ class Page_Discovery {
 	 */
 	public function get_errors(): array {
 		return $this->errors;
-	}
-
-	/**
-	 * Get discovered pages.
-	 *
-	 * @return array<string, array> The discovered pages.
-	 */
-	public function get_pages(): array {
-		return $this->pages;
 	}
 
 	/**
@@ -278,31 +282,26 @@ class Page_Discovery {
 	 * @return void
 	 */
 	private function discover_collection( array $collection ): void {
-		$root        = $collection['root'];
-		$loader_path = $root . '/loader.php';
+		$root           = $collection['root'];
+		$logical_root   = $collection['logical_root'];
+		$loader_logical = '' === $logical_root ? 'loader.php' : $logical_root . '/loader.php';
+		$loader_entry   = $this->source?->resolve( $loader_logical );
 
-		if ( file_exists( $loader_path ) ) {
-			$this->process_loader( $loader_path, $collection );
+		if ( $loader_entry ) {
+			$this->process_loader( $loader_entry->physical_path(), $collection );
 		}
 
-		$iterator = new RecursiveIteratorIterator(
-			new RecursiveDirectoryIterator( $root, RecursiveDirectoryIterator::SKIP_DOTS )
-		);
-
-		foreach ( $iterator as $file ) {
-			if ( ! $file->isFile() ) {
-				continue;
-			}
-
-			$file_path = self::normalize_filesystem_path( $file->getPathname() );
-			$basename  = $file->getBasename();
+		foreach ( $this->source?->entries( $logical_root ) ?? array() as $entry ) {
+			$file_path    = self::normalize_filesystem_path( $entry->physical_path() );
+			$logical_path = $entry->logical_path();
+			$basename     = basename( $logical_path );
 
 			if ( in_array( $basename, array( 'pages.json', 'loader.php', 'layout.php' ), true ) ) {
 				continue;
 			}
 
 			if ( 'page.json' === $basename ) {
-				$page_data = $this->process_page_json( $file_path, $root, $collection );
+				$page_data = $this->process_page_json( $file_path, $root, $collection, array(), array(), $logical_path, $logical_root );
 
 				if ( $page_data ) {
 					$this->register_page_data( $page_data );
@@ -311,12 +310,13 @@ class Page_Discovery {
 				continue;
 			}
 
-			if ( 'md' === strtolower( $file->getExtension() ) ) {
-				if ( 'index.md' === $basename && file_exists( dirname( $file_path ) . '/page.json' ) ) {
+			if ( 'md' === strtolower( pathinfo( $logical_path, PATHINFO_EXTENSION ) ) ) {
+				$page_manifest = $this->resolve_logical_sibling( $logical_path, 'page.json' );
+				if ( 'index.md' === $basename && $page_manifest ) {
 					continue;
 				}
 
-				$page_data = $this->process_markdown_file( $file_path, $root, $collection, false );
+				$page_data = $this->process_markdown_file( $file_path, $root, $collection, false, array(), array(), $logical_path, $logical_root );
 
 				if ( $page_data ) {
 					$this->register_page_data( $page_data );
@@ -334,25 +334,18 @@ class Page_Discovery {
 	 * @return void
 	 */
 	private function discover_legacy_pages( string $base_path, array $collection_roots ): void {
-		$iterator = new RecursiveIteratorIterator(
-			new RecursiveDirectoryIterator( $base_path, RecursiveDirectoryIterator::SKIP_DOTS )
-		);
+		foreach ( $this->source?->entries() ?? array() as $entry ) {
+			$file_path    = self::normalize_filesystem_path( $entry->physical_path() );
+			$logical_path = $entry->logical_path();
 
-		foreach ( $iterator as $file ) {
-			if ( ! $file->isFile() ) {
+			if ( self::is_inside_any_logical_path( $logical_path, $collection_roots ) ) {
 				continue;
 			}
 
-			$file_path = self::normalize_filesystem_path( $file->getPathname() );
-
-			if ( self::is_inside_any_path( $file_path, $collection_roots ) ) {
-				continue;
-			}
-
-			$basename = $file->getBasename();
+			$basename = basename( $logical_path );
 
 			if ( 'page.json' === $basename ) {
-				$page_data = $this->process_page_json( $file_path, $base_path, null );
+				$page_data = $this->process_page_json( $file_path, $base_path, null, array(), array(), $logical_path, '' );
 
 				if ( $page_data ) {
 					$this->register_page_data( $page_data );
@@ -361,8 +354,8 @@ class Page_Discovery {
 				continue;
 			}
 
-			if ( 'index.md' === $basename && ! file_exists( dirname( $file_path ) . '/page.json' ) ) {
-				$page_data = $this->process_markdown_file( $file_path, $base_path, null, true );
+			if ( 'index.md' === $basename && ! $this->resolve_logical_sibling( $logical_path, 'page.json' ) ) {
+				$page_data = $this->process_markdown_file( $file_path, $base_path, null, true, array(), array(), $logical_path, '' );
 
 				if ( $page_data ) {
 					$this->register_page_data( $page_data );
@@ -374,24 +367,28 @@ class Page_Discovery {
 	/**
 	 * Process a page.json file.
 	 *
-	 * @param string     $json_path  Path to the page.json file.
-	 * @param string     $base_path  Base path for the page source.
-	 * @param array|null $collection Collection data.
-	 * @param array      $extra_source_mtime_paths Additional fingerprint source paths.
-	 * @param array      $loader_context Loader path context.
+	 * @param string      $json_path  Path to the page.json file.
+	 * @param string      $base_path  Base path for the page source.
+	 * @param array|null  $collection Collection data.
+	 * @param array       $extra_source_mtime_paths Additional fingerprint source paths.
+	 * @param array       $loader_context Loader path context.
+	 * @param string|null $logical_path Logical source path.
+	 * @param string      $logical_base Logical discovery base.
 	 *
 	 * @return array|null The page data or null if invalid.
 	 */
-	private function process_page_json( string $json_path, string $base_path, ?array $collection, array $extra_source_mtime_paths = array(), array $loader_context = array() ): ?array {
-		$directory = self::normalize_filesystem_path( dirname( $json_path ) );
-		$page_json = self::read_json_file( $json_path );
+	private function process_page_json( string $json_path, string $base_path, ?array $collection, array $extra_source_mtime_paths = array(), array $loader_context = array(), ?string $logical_path = null, string $logical_base = '' ): ?array {
+		$logical_path = $logical_path ?? $this->logical_path_for_physical( $json_path );
+		$logical_dir  = null !== $logical_path ? self::logical_directory( $logical_path ) : null;
+		$directory    = self::normalize_filesystem_path( dirname( $json_path ) );
+		$page_json    = Utils::read_json_file( $json_path );
 
 		if ( ! is_array( $page_json ) ) {
 			$this->add_error( 'invalid_page_json', 'Invalid page.json file.', array( 'path' => $json_path ) );
 			return null;
 		}
 
-		$template_path = $this->find_template( $directory );
+		$template_path = $this->find_template( $directory, $logical_dir );
 		$content_type  = $this->detect_content_type( $template_path, $page_json );
 
 		if ( ! $template_path && ! isset( $page_json['markdown'], $page_json['html'] ) ) {
@@ -412,7 +409,9 @@ class Page_Discovery {
 			}
 		}
 
-		$relative_dir = self::relative_path( $base_path, $directory );
+		$relative_dir = null !== $logical_path
+			? self::relative_logical_path( $logical_base, $logical_dir )
+			: self::relative_path( $base_path, $directory );
 		$raw_path     = $page_json['path'] ?? ( $collection ? ( '' === $relative_dir ? '.' : $relative_dir ) : ( $page_json['slug'] ?? $relative_dir ) );
 		$path         = self::normalize_logical_path( $raw_path );
 
@@ -453,8 +452,12 @@ class Page_Discovery {
 				'template_path'      => $template_path,
 				'content_path'       => $template_path,
 				'contentType'        => $content_type,
-				'directory'          => $directory,
-				'source_path'        => $collection ? $this->collection_source_path( $collection, self::relative_path( $base_path, '' !== $relative_dir ? $directory : $json_path ), $loader_context ) : $relative_dir,
+				'directory'          => $template_path ? self::normalize_filesystem_path( dirname( $template_path ) ) : $directory,
+				'logical_directory'  => $logical_dir,
+				'logical_path'       => $logical_path,
+				'source_id'          => $this->source?->id() ?? '',
+				'provenance'         => null !== $logical_path ? ( $this->source?->resolve( $logical_path )?->provenance() ?? array() ) : array(),
+				'source_path'        => $collection ? $this->collection_source_path( $collection, '' !== $relative_dir ? $relative_dir : basename( $logical_path ?? $json_path ), $loader_context ) : $relative_dir,
 				'collection_data'    => $collection,
 				'source_mtime_paths' => array_values(
 					array_filter(
@@ -485,16 +488,18 @@ class Page_Discovery {
 	/**
 	 * Process a markdown source file.
 	 *
-	 * @param string     $markdown_path       Markdown file path.
-	 * @param string     $base_path           Base path.
-	 * @param array|null $collection          Collection data.
-	 * @param bool       $require_frontmatter Whether standalone legacy markdown needs frontmatter.
-	 * @param array      $extra_source_mtime_paths Additional fingerprint source paths.
-	 * @param array      $loader_context Loader path context.
+	 * @param string      $markdown_path       Markdown file path.
+	 * @param string      $base_path           Base path.
+	 * @param array|null  $collection          Collection data.
+	 * @param bool        $require_frontmatter Whether standalone legacy markdown needs frontmatter.
+	 * @param array       $extra_source_mtime_paths Additional fingerprint source paths.
+	 * @param array       $loader_context Loader path context.
+	 * @param string|null $logical_path Logical source path.
+	 * @param string      $logical_base Logical discovery base.
 	 *
 	 * @return array|null Page data.
 	 */
-	private function process_markdown_file( string $markdown_path, string $base_path, ?array $collection, bool $require_frontmatter, array $extra_source_mtime_paths = array(), array $loader_context = array() ): ?array {
+	private function process_markdown_file( string $markdown_path, string $base_path, ?array $collection, bool $require_frontmatter, array $extra_source_mtime_paths = array(), array $loader_context = array(), ?string $logical_path = null, string $logical_base = '' ): ?array {
 		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Reading local markdown file.
 		$contents = file_get_contents( $markdown_path );
 
@@ -508,10 +513,16 @@ class Page_Discovery {
 			return null;
 		}
 
+		$logical_path = $logical_path ?? $this->logical_path_for_physical( $markdown_path );
+		$logical_dir  = null !== $logical_path ? self::logical_directory( $logical_path ) : null;
 		$frontmatter  = is_array( $parts['data'] ) ? $parts['data'] : array();
 		$directory    = self::normalize_filesystem_path( dirname( $markdown_path ) );
-		$relative     = self::relative_path( $base_path, $markdown_path );
-		$relative_dir = self::relative_path( $base_path, $directory );
+		$relative     = null !== $logical_path
+			? self::relative_logical_path( $logical_base, $logical_path )
+			: self::relative_path( $base_path, $markdown_path );
+		$relative_dir = null !== $logical_path
+			? self::relative_logical_path( $logical_base, $logical_dir )
+			: self::relative_path( $base_path, $directory );
 		$is_index     = 'index.md' === basename( $markdown_path );
 		$default_path = $is_index ? ( '' === $relative_dir ? '.' : $relative_dir ) : preg_replace( '/\.md$/i', '', $relative );
 		$raw_path     = $frontmatter['path'] ?? $default_path;
@@ -555,6 +566,10 @@ class Page_Discovery {
 				'content_path'       => $markdown_path,
 				'contentType'        => 'markdown',
 				'directory'          => $directory,
+				'logical_directory'  => $logical_dir,
+				'logical_path'       => $logical_path,
+				'source_id'          => $this->source?->id() ?? '',
+				'provenance'         => null !== $logical_path ? ( $this->source?->resolve( $logical_path )?->provenance() ?? array() ) : array(),
 				'source_path'        => $collection ? $this->collection_source_path( $collection, $relative, $loader_context ) : ( '' === $relative_dir ? $name : $relative_dir ),
 				'collection_data'    => $collection,
 				'source_mtime_paths' => array_values(
@@ -682,7 +697,7 @@ class Page_Discovery {
 			$file = $loader_page['file'] ?? $loader_page['template'] ?? null;
 
 			if ( is_scalar( $file ) ) {
-				$template_path = $this->resolve_loader_path( (string) $file, $collection['root'], $loader_page );
+				$template_path = $this->resolve_loader_path( (string) $file, $collection['root'], $loader_page, $collection['logical_root'] ?? '' );
 				$content_type  = $this->detect_content_type( $template_path, $loader_page );
 			}
 		}
@@ -752,6 +767,35 @@ class Page_Discovery {
 				continue;
 			}
 
+			$logical_root = $this->resolve_loader_logical_directory(
+				$path_config['path'],
+				$collection['logical_root'] ?? ''
+			);
+
+			if ( null !== $logical_root && $this->source ) {
+				$logical_entries = $this->source->entries( $logical_root );
+				$is_internal     = self::is_same_or_inside_logical_path( $logical_root, $collection['logical_root'] ?? '' );
+
+				if ( ! empty( $logical_entries ) && ! $is_internal ) {
+					$allowed = (bool) apply_filters(
+						'blockstudio/pages/allow_external_loader_path',
+						false,
+						$logical_entries[0]->physical_path(),
+						$collection['root'],
+						array(
+							'loader_path' => $loader_path,
+							'path_type'   => 'discovery',
+							'path_config' => $path_config,
+						)
+					);
+
+					if ( $allowed ) {
+						$this->discover_logical_loader_path( $logical_root, $collection, array( $loader_path ), $path_config );
+						continue;
+					}
+				}
+			}
+
 			$resolved = $this->resolve_loader_path(
 				$path_config['path'],
 				$collection['root'],
@@ -759,7 +803,8 @@ class Page_Discovery {
 					'loader_path' => $loader_path,
 					'path_type'   => 'discovery',
 					'path_config' => $path_config,
-				)
+				),
+				$collection['logical_root'] ?? ''
 			);
 
 			if ( null === $resolved || ! is_dir( $resolved ) ) {
@@ -825,6 +870,67 @@ class Page_Discovery {
 				}
 
 				$page_data = $this->process_markdown_file( $file_path, $root, $collection, false, $extra_source_mtime_paths, $loader_context );
+
+				if ( $page_data ) {
+					$this->register_page_data( $page_data );
+				}
+			}
+		}
+	}
+
+	/**
+	 * Discover page sources in a loader-provided logical directory.
+	 *
+	 * @param string $logical_root Logical discovery root.
+	 * @param array  $collection Collection data.
+	 * @param array  $extra_source_mtime_paths Additional fingerprint sources.
+	 * @param array  $loader_context Loader path context.
+	 *
+	 * @return void
+	 */
+	private function discover_logical_loader_path( string $logical_root, array $collection, array $extra_source_mtime_paths, array $loader_context = array() ): void {
+		foreach ( $this->source?->entries( $logical_root ) ?? array() as $entry ) {
+			$file_path    = self::normalize_filesystem_path( $entry->physical_path() );
+			$logical_path = $entry->logical_path();
+			$basename     = basename( $logical_path );
+
+			if ( in_array( $basename, array( 'pages.json', 'loader.php', 'layout.php' ), true ) ) {
+				continue;
+			}
+
+			if ( 'page.json' === $basename ) {
+				$page_data = $this->process_page_json(
+					$file_path,
+					$this->source?->root() ?? '',
+					$collection,
+					$extra_source_mtime_paths,
+					$loader_context,
+					$logical_path,
+					$logical_root
+				);
+
+				if ( $page_data ) {
+					$this->register_page_data( $page_data );
+				}
+
+				continue;
+			}
+
+			if ( 'md' === strtolower( pathinfo( $logical_path, PATHINFO_EXTENSION ) ) ) {
+				if ( 'index.md' === $basename && $this->resolve_logical_sibling( $logical_path, 'page.json' ) ) {
+					continue;
+				}
+
+				$page_data = $this->process_markdown_file(
+					$file_path,
+					$this->source?->root() ?? '',
+					$collection,
+					false,
+					$extra_source_mtime_paths,
+					$loader_context,
+					$logical_path,
+					$logical_root
+				);
 
 				if ( $page_data ) {
 					$this->register_page_data( $page_data );
@@ -1010,7 +1116,8 @@ class Page_Discovery {
 			$page_data['layout_path'] = $collection['layout_path'] ?? null;
 		} else {
 			$directory                = isset( $page_data['directory'] ) && is_string( $page_data['directory'] ) ? $page_data['directory'] : '';
-			$page_data['layout_path'] = '' !== $directory ? $this->find_nearest_layout( $directory ) : null;
+			$logical_directory        = isset( $page_data['logical_directory'] ) && is_string( $page_data['logical_directory'] ) ? $page_data['logical_directory'] : null;
+			$page_data['layout_path'] = '' !== $directory ? $this->find_nearest_layout( $directory, $logical_directory ) : null;
 		}
 		$page_data['paths'] = array(
 			'base'       => $collection['base_path'] ?? null,
@@ -1215,17 +1322,26 @@ class Page_Discovery {
 	/**
 	 * Find the template file for a page.
 	 *
-	 * @param string $directory The page directory.
+	 * @param string      $directory Physical page directory.
+	 * @param string|null $logical_directory Logical page directory.
 	 *
 	 * @return string|null The template path or null if not found.
 	 */
-	private function find_template( string $directory ): ?string {
-		$templates = array(
-			$directory . '/index.php',
-			$directory . '/index.blade.php',
-			$directory . '/index.twig',
-			$directory . '/index.md',
-		);
+	private function find_template( string $directory, ?string $logical_directory = null ): ?string {
+		if ( null !== $logical_directory && $this->source ) {
+			$templates = array();
+
+			foreach ( array( 'index.php', 'index.blade.php', 'index.twig', 'index.md' ) as $filename ) {
+				$logical_path = '' === $logical_directory ? $filename : $logical_directory . '/' . $filename;
+				$entry        = $this->source->resolve( $logical_path );
+
+				if ( $entry ) {
+					$templates[] = $entry->physical_path();
+				}
+			}
+		} else {
+			$templates = Utils::index_source_candidates( $directory, array( 'index.md' ) );
+		}
 
 		/**
 		 * Filter candidate template paths for file-based pages.
@@ -1235,13 +1351,7 @@ class Page_Discovery {
 		 */
 		$templates = apply_filters( 'blockstudio/pages/template_candidates', $templates, $directory );
 
-		foreach ( $templates as $template ) {
-			if ( is_string( $template ) && file_exists( $template ) ) {
-				return self::normalize_filesystem_path( $template );
-			}
-		}
-
-		return null;
+		return Utils::first_existing_path( $templates );
 	}
 
 	/**
@@ -1294,10 +1404,24 @@ class Page_Discovery {
 	 * @param string $path            Requested path.
 	 * @param string $collection_root Collection root.
 	 * @param array  $loader_page     Loader page data.
+	 * @param string $logical_root Logical collection root.
 	 *
 	 * @return string|null Resolved path.
 	 */
-	private function resolve_loader_path( string $path, string $collection_root, array $loader_page ): ?string {
+	private function resolve_loader_path( string $path, string $collection_root, array $loader_page, string $logical_root = '' ): ?string {
+		if ( ! str_starts_with( $path, '/' ) && $this->source ) {
+			$logical_path = implode( '/', array_filter( array( $logical_root, ltrim( $path, '/' ) ), 'strlen' ) );
+			$logical_path = Discovery_Sources::normalize_logical_path( $logical_path );
+			$entry        = $this->source->resolve( $logical_path );
+
+			if ( $entry ) {
+				$allowed = self::is_same_or_inside_logical_path( $logical_path, $logical_root );
+				$allowed = (bool) apply_filters( 'blockstudio/pages/allow_external_loader_path', $allowed, $entry->physical_path(), $collection_root, $loader_page );
+
+				return $allowed ? $entry->physical_path() : null;
+			}
+		}
+
 		$candidate = str_starts_with( $path, '/' ) ? $path : $collection_root . '/' . ltrim( $path, '/' );
 		$real      = realpath( $candidate );
 
@@ -1451,15 +1575,18 @@ class Page_Discovery {
 	/**
 	 * Normalize collection manifest data.
 	 *
-	 * @param array  $manifest      Raw manifest.
-	 * @param string $manifest_path Manifest path.
-	 * @param string $base_path     Registered base path.
+	 * @param array            $manifest Raw manifest.
+	 * @param Discovery_Entry  $manifest_entry Manifest entry.
+	 * @param Discovery_Source $source Discovery source.
 	 *
 	 * @return array|null Collection data.
 	 */
-	private static function normalize_collection_manifest( array $manifest, string $manifest_path, string $base_path ): ?array {
-		$root = self::normalize_filesystem_path( dirname( $manifest_path ) );
-		$slug = $manifest['collection'] ?? $manifest['slug'] ?? $manifest['name'] ?? basename( $root );
+	private static function normalize_collection_manifest( array $manifest, Discovery_Entry $manifest_entry, Discovery_Source $source ): ?array {
+		$manifest_path = $manifest_entry->physical_path();
+		$logical_path  = $manifest_entry->logical_path();
+		$logical_root  = self::logical_directory( $logical_path );
+		$root          = self::normalize_filesystem_path( dirname( $manifest_path ) );
+		$slug          = $manifest['collection'] ?? $manifest['slug'] ?? $manifest['name'] ?? basename( $root );
 
 		if ( ! is_scalar( $slug ) ) {
 			return null;
@@ -1492,76 +1619,54 @@ class Page_Discovery {
 			}
 		}
 
+		$layout_logical = '' === $logical_root ? 'layout.php' : $logical_root . '/layout.php';
+		$layout_entry   = $source->resolve( $layout_logical );
+
 		return array(
 			'slug'          => $slug,
 			'title'         => $title,
 			'root'          => $root,
-			'base_path'     => self::normalize_filesystem_path( $base_path ),
+			'logical_root'  => $logical_root,
+			'base_path'     => self::normalize_filesystem_path( $source->root() ),
 			'manifest_path' => self::normalize_filesystem_path( $manifest_path ),
+			'logical_path'  => $logical_path,
+			'source_id'     => $source->id(),
+			'provenance'    => $manifest_entry->provenance(),
 			'postType'      => $post_type,
 			'postTypeArgs'  => isset( $manifest['postTypeArgs'] ) && is_array( $manifest['postTypeArgs'] ) ? $manifest['postTypeArgs'] : array(),
 			'defaults'      => isset( $manifest['defaults'] ) && is_array( $manifest['defaults'] ) ? $manifest['defaults'] : array(),
 			'source'        => isset( $manifest['source'] ) && is_array( $manifest['source'] ) ? $manifest['source'] : array(),
 			'order'         => isset( $manifest['order'] ) && is_numeric( $manifest['order'] ) ? (int) $manifest['order'] : null,
 			'meta'          => $meta,
-			'layout_path'   => file_exists( $root . '/layout.php' ) ? $root . '/layout.php' : null,
+			'layout_path'   => $layout_entry?->physical_path(),
 		);
 	}
 
 	/**
-	 * Find pages.json manifest paths.
+	 * Find pages.json manifest entries.
 	 *
-	 * @param string $base_path Base path.
+	 * @param Discovery_Source $source Discovery source.
 	 *
-	 * @return array<int, string> Manifest paths.
+	 * @return array<int, Discovery_Entry> Manifest entries.
 	 */
-	private static function find_manifest_paths( string $base_path ): array {
-		$paths = array();
-
-		if ( file_exists( $base_path . '/pages.json' ) ) {
-			$paths[] = $base_path . '/pages.json';
-		}
-
-		$iterator = new RecursiveIteratorIterator(
-			new RecursiveDirectoryIterator( $base_path, RecursiveDirectoryIterator::SKIP_DOTS )
+	private static function find_manifest_entries( Discovery_Source $source ): array {
+		$entries = array_values(
+			array_filter(
+				$source->entries(),
+				static fn( Discovery_Entry $entry ): bool => 'pages.json' === basename( $entry->logical_path() )
+			)
 		);
-
-		foreach ( $iterator as $file ) {
-			if ( $file->isFile() && 'pages.json' === $file->getBasename() ) {
-				$paths[] = self::normalize_filesystem_path( $file->getPathname() );
-			}
-		}
-
-		$paths = array_values( array_unique( $paths ) );
 
 		usort(
-			$paths,
-			function ( string $a, string $b ): int {
-				return strlen( $a ) <=> strlen( $b );
+			$entries,
+			static function ( Discovery_Entry $a, Discovery_Entry $b ): int {
+				$depth = strlen( $a->logical_path() ) <=> strlen( $b->logical_path() );
+
+				return 0 !== $depth ? $depth : strcmp( $a->logical_path(), $b->logical_path() );
 			}
 		);
 
-		return $paths;
-	}
-
-	/**
-	 * Read a JSON file.
-	 *
-	 * @param string $path JSON path.
-	 *
-	 * @return array|null JSON data.
-	 */
-	private static function read_json_file( string $path ): ?array {
-		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Reading local JSON file.
-		$contents = file_get_contents( $path );
-
-		if ( false === $contents ) {
-			return null;
-		}
-
-		$data = json_decode( $contents, true );
-
-		return is_array( $data ) ? $data : null;
+		return $entries;
 	}
 
 	/**
@@ -1632,11 +1737,32 @@ class Page_Discovery {
 	/**
 	 * Find the nearest layout.php for a non-collection page by walking up to the discovery base.
 	 *
-	 * @param string $directory Page directory.
+	 * @param string      $directory Physical page directory.
+	 * @param string|null $logical_directory Logical page directory.
 	 *
 	 * @return string|null Layout path or null.
 	 */
-	private function find_nearest_layout( string $directory ): ?string {
+	private function find_nearest_layout( string $directory, ?string $logical_directory = null ): ?string {
+		if ( null !== $logical_directory && $this->source ) {
+			$current = Discovery_Sources::normalize_logical_path( $logical_directory );
+
+			while ( true ) {
+				$logical_path = '' === $current ? 'layout.php' : $current . '/layout.php';
+				$entry        = $this->source->resolve( $logical_path );
+
+				if ( $entry ) {
+					return $entry->physical_path();
+				}
+
+				if ( '' === $current ) {
+					return null;
+				}
+
+				$parent  = dirname( $current );
+				$current = '.' === $parent ? '' : $parent;
+			}
+		}
+
 		$current = self::normalize_filesystem_path( $directory );
 		$base    = $this->discover_base;
 
@@ -1682,6 +1808,144 @@ class Page_Discovery {
 		}
 
 		return $path;
+	}
+
+	/**
+	 * Index physical paths exposed by the active logical source.
+	 *
+	 * @return void
+	 */
+	private function index_source_paths(): void {
+		$this->logical_paths = array();
+
+		foreach ( $this->source?->entries() ?? array() as $entry ) {
+			$this->logical_paths[ self::normalize_filesystem_path( $entry->physical_path() ) ] = $entry->logical_path();
+		}
+	}
+
+	/**
+	 * Find the logical path for a physical source file.
+	 *
+	 * @param string $path Physical path.
+	 *
+	 * @return string|null Logical path.
+	 */
+	private function logical_path_for_physical( string $path ): ?string {
+		return $this->logical_paths[ self::normalize_filesystem_path( $path ) ] ?? null;
+	}
+
+	/**
+	 * Resolve a logical sibling of a source file.
+	 *
+	 * @param string $logical_path Logical source path.
+	 * @param string $filename Sibling file name.
+	 *
+	 * @return Discovery_Entry|null Resolved sibling.
+	 */
+	private function resolve_logical_sibling( string $logical_path, string $filename ): ?Discovery_Entry {
+		$directory = self::logical_directory( $logical_path );
+		$sibling   = '' === $directory ? $filename : $directory . '/' . $filename;
+
+		return $this->source?->resolve( $sibling );
+	}
+
+	/**
+	 * Get a normalized logical directory for a file.
+	 *
+	 * @param string $logical_path Logical file path.
+	 *
+	 * @return string Logical directory.
+	 */
+	private static function logical_directory( string $logical_path ): string {
+		$directory = dirname( Discovery_Sources::normalize_logical_path( $logical_path ) );
+
+		return '.' === $directory ? '' : $directory;
+	}
+
+	/**
+	 * Build a relative logical path.
+	 *
+	 * @param string $base Logical base.
+	 * @param string $path Logical path.
+	 *
+	 * @return string Relative logical path.
+	 */
+	private static function relative_logical_path( string $base, string $path ): string {
+		$base = Discovery_Sources::normalize_logical_path( $base );
+		$path = Discovery_Sources::normalize_logical_path( $path );
+
+		if ( $base === $path ) {
+			return '';
+		}
+
+		if ( '' !== $base && str_starts_with( $path, $base . '/' ) ) {
+			return substr( $path, strlen( $base ) + 1 );
+		}
+
+		return $path;
+	}
+
+	/**
+	 * Resolve a loader directory against a logical collection root.
+	 *
+	 * @param string $path Loader directory value.
+	 * @param string $logical_root Logical collection root.
+	 *
+	 * @return string|null Resolved logical directory.
+	 */
+	private function resolve_loader_logical_directory( string $path, string $logical_root ): ?string {
+		$path = trim( str_replace( '\\', '/', $path ) );
+
+		if (
+			'' === $path ||
+			str_starts_with( $path, '/' ) ||
+			str_contains( $path, '?' ) ||
+			str_contains( $path, '#' ) ||
+			preg_match( '/^[A-Za-z][A-Za-z0-9+.-]*:/', $path )
+		) {
+			return null;
+		}
+
+		return Discovery_Sources::normalize_logical_path(
+			implode( '/', array_filter( array( $logical_root, $path ), 'strlen' ) )
+		);
+	}
+
+	/**
+	 * Check whether a logical path is at or below a logical root.
+	 *
+	 * @param string $path Logical path.
+	 * @param string $root Logical root.
+	 *
+	 * @return bool Whether the path is inside the root.
+	 */
+	private static function is_same_or_inside_logical_path( string $path, string $root ): bool {
+		$path = Discovery_Sources::normalize_logical_path( $path );
+		$root = Discovery_Sources::normalize_logical_path( $root );
+
+		return '' === $root || $path === $root || str_starts_with( $path, $root . '/' );
+	}
+
+	/**
+	 * Check whether a logical path is inside any logical root.
+	 *
+	 * @param string $path Logical path.
+	 * @param array  $roots Logical roots.
+	 *
+	 * @return bool Whether the path is inside a root.
+	 */
+	private static function is_inside_any_logical_path( string $path, array $roots ): bool {
+		$path = Discovery_Sources::normalize_logical_path( $path );
+
+		foreach ( $roots as $root ) {
+			$root = Discovery_Sources::normalize_logical_path( (string) $root );
+
+			if ( '' === $root || $path === $root || str_starts_with( $path, $root . '/' ) ) {
+				return true;
+			}
+		}
+
+		return false;
 	}
 
 	/**

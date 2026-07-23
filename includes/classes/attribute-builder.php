@@ -14,6 +14,7 @@ use Blockstudio\Field_Handlers\Boolean_Field_Handler;
 use Blockstudio\Field_Handlers\Select_Field_Handler;
 use Blockstudio\Field_Handlers\Media_Field_Handler;
 use Blockstudio\Field_Handlers\Container_Field_Handler;
+use Blockstudio\Field_Handlers\Custom_Field_Handler;
 
 /**
  * Builds WordPress block attributes from Blockstudio field configurations.
@@ -83,13 +84,6 @@ class Attribute_Builder {
 	private ?Container_Field_Handler $container_handler = null;
 
 	/**
-	 * Whether Tailwind is active.
-	 *
-	 * @var bool
-	 */
-	private bool $tailwind_active = false;
-
-	/**
 	 * Constructor.
 	 */
 	public function __construct() {
@@ -113,6 +107,9 @@ class Attribute_Builder {
 		$this->container_handler = new Container_Field_Handler();
 		$this->container_handler->set_build_callback( array( $this, 'build_attributes_recursive' ) );
 		$this->register_handler( $this->container_handler );
+
+		// Custom field types run last so built-in handlers always win.
+		$this->register_handler( new Custom_Field_Handler() );
 	}
 
 	/**
@@ -184,6 +181,10 @@ class Attribute_Builder {
 				$field_id = $from_repeater ? (string) $index : $this->get_field_id( $v, $prefix );
 				++$index;
 
+				if ( $from_repeater ) {
+					$v['_blockstudio_field_id'] = $field_id;
+				}
+
 				$type = $v['type'] ?? '';
 
 				// Skip message type.
@@ -194,6 +195,14 @@ class Attribute_Builder {
 				// Must have ID or be a container type.
 				if ( ! isset( $v['id'] ) && ! in_array( $type, array( 'group', 'tabs' ), true ) ) {
 					continue;
+				}
+
+				if ( $is_override ) {
+					$v['_blockstudio_is_override'] = true;
+				}
+
+				if ( $is_extend ) {
+					$v['_blockstudio_is_extend'] = true;
 				}
 
 				// Handle tabs at top level.
@@ -216,7 +225,7 @@ class Attribute_Builder {
 
 				// Check for Tailwind activation.
 				if ( 'classes' === $type && ( $v['tailwind'] ?? false ) ) {
-					$this->tailwind_active = true;
+					Block_Registry::instance()->set_tailwind_active( true );
 				}
 
 				// Get handler and build attribute.
@@ -256,23 +265,5 @@ class Attribute_Builder {
 			}
 		}
 		return null;
-	}
-
-	/**
-	 * Check if Tailwind is active.
-	 *
-	 * @return bool Whether Tailwind is active.
-	 */
-	public function is_tailwind_active(): bool {
-		return $this->tailwind_active;
-	}
-
-	/**
-	 * Reset the Tailwind active flag.
-	 *
-	 * @return void
-	 */
-	public function reset_tailwind_active(): void {
-		$this->tailwind_active = false;
 	}
 }

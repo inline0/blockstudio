@@ -78,7 +78,90 @@ test.describe('Component', () => {
     );
   });
 
+  test('renders nested bs_render_block() output on the frontend', async () => {
+    const block = page.locator('.nested-render-helper');
+    await expect(block).toBeVisible();
+    await expect(block).toContainText('Nested shortcode label');
+    await expect(block).not.toContainText('<RichText');
+  });
+
+  test('renders nested bs_render_block() output in editor preview', async () => {
+    await page.goto(
+      'http://localhost:8888/wp-admin/post-new.php?post_type=page',
+      { waitUntil: 'domcontentloaded' }
+    );
+    await page.waitForFunction(() => Boolean((window as any).blockstudioAdmin?.nonceRest));
+
+    const result = await page.evaluate(async () => {
+      const res = await fetch(
+        '/wp-json/blockstudio/v1/gutenberg/block/render/blockstudio/function-nested-render?blockstudioMode=editor',
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-WP-Nonce': (window as any).blockstudioAdmin.nonceRest,
+          },
+          body: JSON.stringify({
+            context: 'edit',
+            attributes: {
+              blockstudio: {
+                attributes: {
+                  label: 'Nested editor E2E label',
+                },
+              },
+            },
+          }),
+        }
+      );
+
+      return { status: res.status, body: await res.json() };
+    });
+
+    expect(result.status).toBe(200);
+    expect(result.body.rendered).toContain('Nested editor E2E label');
+    expect(result.body.rendered).not.toContain('<RichText');
+    expect(result.body.rendered).not.toContain('<InnerBlocks');
+    expect(result.body.rendered).not.toContain('useblockprops="true"');
+  });
+
+  test('expands allowedBlocks tokens before editor handoff', async () => {
+    await page.goto(
+      'http://localhost:8888/wp-admin/post-new.php?post_type=page',
+      { waitUntil: 'domcontentloaded' }
+    );
+    await page.waitForFunction(() => Boolean((window as any).blockstudioAdmin?.nonceRest));
+
+    const result = await page.evaluate(async () => {
+      const res = await fetch(
+        '/wp-json/blockstudio/v1/gutenberg/block/render/blockstudio/function-allowed-blocks-tokens?blockstudioMode=editor',
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-WP-Nonce': (window as any).blockstudioAdmin.nonceRest,
+          },
+          body: JSON.stringify({
+            context: 'edit',
+            attributes: {},
+          }),
+        }
+      );
+
+      return { status: res.status, body: await res.json() };
+    });
+
+    expect(result.status).toBe(200);
+    expect(result.body.rendered).toContain('allowedBlocks');
+    expect(result.body.rendered).toMatch(/core\\?\/paragraph/);
+    expect(result.body.rendered).toMatch(/blockstudio\\?\/type-text/);
+    expect(result.body.rendered).not.toContain('category:blockstudio-test-native');
+  });
+
   test('loads component CSS asset', async () => {
+    await page.goto('http://localhost:8888/component-test/', {
+      waitUntil: 'domcontentloaded',
+    });
+
     const styleTag = page.locator(
       'link[id*="type-component"][rel="stylesheet"]'
     );

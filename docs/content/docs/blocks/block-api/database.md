@@ -1,0 +1,838 @@
+---
+title: Database
+description: Define a data model for your block with automatic CRUD endpoints, validation, and multiple storage backends.
+path: "blocks/block-api/database"
+order: 46
+section: "Blocks"
+subsection: "Block API"
+meta_title: "Database"
+meta_description: "Define a data model for your block with automatic CRUD endpoints, validation, and multiple storage backends."
+---
+
+# Database
+
+The database layer lets you define a data model for your block in a `db.php`
+file. Blockstudio generates REST CRUD endpoints, validates input against the
+schema, manages storage automatically, and provides both a JavaScript client
+(`bs.db()`) and a PHP API (`Db` class).
+
+This is the data backbone for full-stack blocks. Where
+[RPC](/docs/blocks/block-api/rpc) handles custom logic, the database layer
+handles structured data with zero boilerplate.
+
+## How it works
+
+1. You create `db.php` in your block directory
+2. It returns a schema: fields, types, validation rules, access control
+3. Blockstudio creates the storage (table, file, or post meta)
+4. Five REST endpoints are generated automatically (list, get, create, update, delete)
+5. `bs.db()` and `Db::get()` provide client and server access
+
+No migrations, no controllers, no route registration.
+
+## Defining schemas
+
+### Single schema
+
+The simplest form: a single data model per block.
+
+```php title="db.php"
+return [
+    'storage'    => 'table',
+    'capability' => [
+        'create' => true,
+        'read'   => true,
+        'update' => 'edit_posts',
+        'delete' => 'manage_options',
+    ],
+    'fields' => [
+        'email' => ['type' => 'string', 'format' => 'email', 'required' => true],
+        'name'  => ['type' => 'string', 'maxLength' => 100],
+        'plan'  => ['type' => 'string', 'enum' => ['free', 'pro'], 'default' => 'free'],
+    ],
+];
+```
+
+### PHP-native builder syntax
+
+`db.php` can also use a small builder API built on named arguments and readonly
+definition objects. Arrays stay as the default format, but this gives you a
+more discoverable PHP-native option when the schema starts getting larger.
+
+```php title="db.php"
+<?php
+use Blockstudio\Db\Field;
+use Blockstudio\Db\Schema;
+use Blockstudio\Db\Storage;
+
+return Schema::make(
+    storage: Storage::Table,
+    capability: [
+        'create' => true,
+        'read'   => true,
+        'update' => 'edit_posts',
+        'delete' => 'manage_options',
+    ],
+    fields: [
+        'email' => Field::string(required: true, format: 'email'),
+        'name'  => Field::string(maxLength: 100),
+        'plan'  => Field::string(enum: ['free', 'pro'], default: 'free'),
+    ],
+);
+```
+
+Use `Schema::make()` for a single schema, or return an array of named
+`Schema::make(...)` calls for multi-schema blocks.
+
+### Multiple schemas
+
+A single block can own multiple data models. Return a named array:
+
+```php title="db.php"
+return [
+    'subscribers' => [
+        'storage' => 'table',
+        'fields'  => [
+            'email' => ['type' => 'string', 'format' => 'email', 'required' => true],
+            'plan'  => ['type' => 'string', 'enum' => ['free', 'pro']],
+        ],
+    ],
+    'activity_log' => [
+        'storage' => 'jsonc',
+        'fields'  => [
+            'action'  => ['type' => 'string', 'required' => true],
+            'details' => ['type' => 'string'],
+        ],
+    ],
+];
+```
+
+Each schema gets its own endpoints, storage, and access control.
+
+## Storage modes
+
+Six storage backends, each suited for different use cases.
+
+### Custom table (`storage: "table"`)
+
+Each record is a row in a dedicated MySQL table. Blockstudio creates and manages
+the table automatically using WordPress's `dbDelta()` function. Adding new fields
+to the schema adds columns on the next page load. Existing columns are never
+removed.
+
+Best for: structured data, queries, production applications.
+
+### SQLite (`storage: "sqlite"`)
+
+Each schema gets its own SQLite database file in a `db/` subfolder. Blockstudio
+creates the file and table automatically, and adds missing columns when the
+schema changes (like `dbDelta` for MySQL). Uses WAL journal mode for concurrent
+read performance.
+
+```
+blocks/my-block/
+├── db.php
+└── db/
+    └── subscribers.sqlite   ← single-file database
+```
+
+Best for: structured data that needs real SQL queries but should stay portable.
+Handles thousands of records efficiently without loading everything into memory.
+Copy the folder to move the data.
+
+### JSONC files (`storage: "jsonc"`)
+
+Records are stored as one JSON object per line in a `.jsonc` file inside a `db/`
+subfolder. The file is created automatically on first write. Lines starting with
+`//` are treated as comments and preserved.
+
+```
+blocks/my-block/
+├── db.php
+└── db/
+    └── subscribers.jsonc    ← one record per line
+```
+
+Best for: small datasets, config-like data, seed records, and
+version-controllable examples. JSONC is intentionally a single file in your
+block folder. Use it when you want the data to travel with the code, not when
+you expect many concurrent writes.
+
+### Storh files (`storage: "storh"`)
+
+Storh stores each record as an individual file under WordPress uploads:
+
+```
+wp-content/uploads/blockstudio/db/
+└── my-theme-my-block/
+    └── subscribers/
+        ├── data/
+        │   └── 00/
+        │       ├── 00000000-0000-7000-8000-000000000001.jsonc
+        │       └── 00000000-0000-7000-8000-000000000002.jsonc
+        ├── .storh/
+        │   └── indexes/
+        └── .blockstudio/
+            └── sequence.json
+```
+
+Public record IDs stay the same integer IDs used by the rest of `bs.db()`.
+Blockstudio maps those IDs to Storh's internal UUIDv7 file IDs and stores the
+integer `id` in the record data, so JavaScript, REST, and PHP callers do not
+need to handle UUIDs.
+
+```php title="db.php"
+return [
+    'storage' => 'storh',
+    'fields'  => [
+        'title'  => ['type' => 'string', 'required' => true],
+        'status' => ['type' => 'string'],
+        'count'  => ['type' => 'integer'],
+    ],
+];
+```
+
+Blockstudio builds Storh indexes from your schema. Since every declared field
+can be used as a list filter, every declared field is indexed. Integer, number,
+and date-like fields use range indexes; fields marked with `'unique' => true`
+or `'index' => 'unique'` use unique indexes.
+
+Best for: file-backed production data that needs safer concurrent writes,
+schema-derived indexes, and portable uploads-level storage without committing
+live records to the block source tree.
+
+### Migrating JSONC to Storh
+
+If you started with a `.jsonc` file and want the same records in Storh, run:
+
+```bash
+wp bs db migrate my-theme/app subscribers --to=storh
+```
+
+For single-schema blocks:
+
+```bash
+wp bs db migrate my-theme/app --to=storh
+```
+
+The migration reads the existing `db/{schema}.jsonc`, writes records to Storh
+while preserving integer IDs, reindexes, verifies the target store, and leaves
+the JSONC file untouched. Rollback is just changing the schema's `storage` back
+to `"jsonc"`.
+
+### Post meta (`storage: "meta"`)
+
+Records are stored as a JSON array in WordPress post meta, tied to a specific
+post via `postId`.
+
+```php title="db.php"
+return [
+    'storage' => 'meta',
+    'postId'  => 42,
+    'fields'  => [ /* ... */ ],
+];
+```
+
+Best for: data that belongs to a specific post or page.
+
+### Custom post type (`storage: "post_type"`)
+
+Each record is a WordPress post in an auto-registered custom post type. Each
+field in the schema becomes a separate `post_meta` entry. This makes records
+queryable with `WP_Query`, compatible with REST API plugins, and visible to
+tools like GraphQL.
+
+Best for: data that should integrate with WordPress natively. Each field is
+independently queryable and indexable.
+
+## JavaScript client
+
+Blockstudio injects `bs.db()` on pages with database blocks. It returns an
+object with five methods:
+
+```js
+const db = bs.db('my-theme/block', 'subscribers');
+
+// Create a record
+const record = await db.create({ email: 'a@b.com', plan: 'pro' });
+
+// List all records (with optional filters)
+const all = await db.list();
+const pros = await db.list({ plan: 'pro', limit: 10, offset: 0 });
+
+// Get a single record
+const one = await db.get(record.id);
+
+// Update specific fields
+const updated = await db.update(record.id, { plan: 'enterprise' });
+
+// Delete a record
+await db.delete(record.id);
+```
+
+The first argument is the block name (with `/`), the second is the schema name.
+For single-schema blocks, omit the schema name (defaults to `"default"`).
+
+### Cache
+
+`bs.cache` is an in-memory query cache shared across all `bs.query` and
+`bs.mutate` calls. You can also use it directly:
+
+```js
+// Read a cached value
+const data = bs.cache.get('my-key');
+
+// Write to the cache
+bs.cache.set('my-key', { items: [...] });
+
+// Invalidate a single key
+bs.cache.invalidate('my-key');
+
+// Clear all cached entries
+bs.cache.clear();
+```
+
+Cache entries are stored in memory and cleared on page navigation. They are
+primarily used internally by `bs.query` and `bs.mutate`, but direct access is
+useful for pre-populating data or manually invalidating after custom operations.
+
+### Query
+
+`bs.query()` wraps any async function with caching, deduplication, and
+staleness control. Multiple calls with the same key while a request is in
+flight return the same promise (no duplicate fetches).
+
+```js
+// Basic cached fetch
+const subscribers = await bs.query('subscribers', () =>
+  bs.db('my-theme/app', 'subscribers').list()
+);
+
+// With staleTime: skip the fetch if cached data is younger than 30 seconds
+const subscribers = await bs.query('subscribers', () =>
+  bs.db('my-theme/app', 'subscribers').list(),
+  { staleTime: 30000 }
+);
+```
+
+The first argument is a cache key (any string). The second is a function that
+returns a promise. The third is an optional options object:
+
+| Option      | Type     | Description                                                                          |
+| ----------- | -------- | ------------------------------------------------------------------------------------ |
+| `staleTime` | `number` | Milliseconds before cached data is considered stale. `0` (default) always refetches. |
+
+If the cache has data for the key and it is younger than `staleTime`, the
+cached value is returned immediately without calling the function.
+
+### Mutate
+
+`bs.mutate()` handles write operations with optimistic updates and automatic
+rollback on failure. It has two modes: auto mode for common CRUD patterns, and
+manual mode for full control.
+
+**Auto mode** works with a reactive state object (like Alpine.js `$data`). Pass
+`state`, `key`, `action`, and optionally `optimistic`:
+
+```js
+// Optimistic create: item appears instantly, gets real ID on success
+await bs.mutate({
+  state: $data,
+  key: 'todos',
+  action: 'create',
+  optimistic: { text: 'New todo', done: false },
+  fn: () =>
+    bs.db('my-theme/app', 'todos').create({ text: 'New todo', done: false }),
+});
+
+// Optimistic update: field changes instantly, reverts on failure
+await bs.mutate({
+  state: $data,
+  key: 'todos',
+  action: 'update',
+  id: todoId,
+  optimistic: { done: true },
+  fn: () => bs.db('my-theme/app', 'todos').update(todoId, { done: true }),
+});
+
+// Delete: item removed from the array immediately
+await bs.mutate({
+  state: $data,
+  key: 'todos',
+  action: 'delete',
+  id: todoId,
+  fn: () => bs.db('my-theme/app', 'todos').delete(todoId),
+});
+```
+
+On success, the optimistic data is replaced with the server response. On
+failure, the state rolls back to a snapshot taken before the mutation. The
+cache key is automatically invalidated after every successful mutation.
+
+For create operations, a temporary `id` (like `__temp_1`) is assigned to the
+optimistic item. When the server responds, the temporary item is patched with
+the real data including the server-assigned `id`.
+
+**Manual mode** gives you full control with `before`, `onSuccess`, and
+`onError` callbacks:
+
+```js
+await bs.mutate({
+  fn: () => bs.db('my-theme/app', 'todos').create({ text: 'New' }),
+  invalidate: 'todos',
+  before: () => {
+    // Take a snapshot, return it for use in onError
+    const snapshot = [...$data.todos];
+    $data.todos.push({ id: '__temp', text: 'New' });
+    return snapshot;
+  },
+  onSuccess: (result, snapshot) => {
+    // Replace temp item with server response
+  },
+  onError: (error, snapshot) => {
+    // Restore from snapshot
+    $data.todos = snapshot;
+  },
+});
+```
+
+| Option       | Type       | Mode   | Description                                                                        |
+| ------------ | ---------- | ------ | ---------------------------------------------------------------------------------- |
+| `fn`         | `function` | Both   | The async function that performs the mutation. Required.                           |
+| `state`      | `object`   | Auto   | Reactive state object (e.g., Alpine `$data`).                                      |
+| `key`        | `string`   | Auto   | Property name on state that holds the array. Also used as cache key.               |
+| `action`     | `string`   | Auto   | One of `create`, `update`, or `delete`.                                            |
+| `id`         | `any`      | Auto   | Record ID for `update` and `delete` actions.                                       |
+| `optimistic` | `object`   | Auto   | Data to apply optimistically before the server responds.                           |
+| `before`     | `function` | Manual | Called before `fn`. Return value is passed to `onSuccess`/`onError` as `snapshot`. |
+| `onSuccess`  | `function` | Manual | Called with `(result, snapshot)` on success.                                       |
+| `onError`    | `function` | Manual | Called with `(error, snapshot)` on failure.                                        |
+| `invalidate` | `string`   | Manual | Cache key to invalidate on success.                                                |
+
+## PHP API
+
+The `Db` class provides the same operations server-side. Use it in `rpc.php`,
+`cron.php`, templates, or any PHP code.
+
+```php
+use Blockstudio\Db;
+
+$db = Db::get('my-theme/block', 'subscribers');
+
+// Create
+$record = $db->create(['email' => 'a@b.com', 'plan' => 'pro']);
+
+// List with filters
+$all  = $db->list();
+$pros = $db->list(['plan' => 'pro'], limit: 10, offset: 0);
+
+// Count and paginate
+$count = $db->count(['plan' => 'pro']);
+$page  = $db->paginate(['plan' => 'pro'], limit: 10, offset: 20);
+
+// Get by ID
+$one = $db->get_record(1);
+
+// Update
+$db->update(1, ['plan' => 'enterprise']);
+
+// Delete
+$db->delete(1);
+```
+
+For single-schema blocks:
+
+```php
+$db = Db::get('my-theme/block');
+```
+
+## Realtime polling
+
+Add `realtime` to your schema to enable automatic polling. When data changes
+on the server, the UI updates automatically through the Interactivity API
+store. No JavaScript changes needed.
+
+```php title="db.php"
+return [
+    'storage'  => 'table',
+    'realtime' => true,
+    'fields'   => [ /* ... */ ],
+];
+```
+
+With `true`, Blockstudio polls every 3 seconds using the schema name as the
+Interactivity API state key (`default` for single-schema blocks).
+
+### Custom configuration
+
+```php title="db.php"
+return [
+    'storage'  => 'table',
+    'realtime' => [
+        'key'      => 'todos',
+        'interval' => 5000,
+    ],
+    'fields' => [ /* ... */ ],
+];
+```
+
+| Option     | Type     | Default     | Description                                        |
+| ---------- | -------- | ----------- | -------------------------------------------------- |
+| `key`      | `string` | schema name | Property name on `state` that holds the data array |
+| `interval` | `number` | `3000`      | Polling interval in milliseconds                   |
+
+### How it works
+
+1. On page load, the client fetches a lightweight hash of the current data
+2. Every `interval` milliseconds, it re-fetches the hash
+3. If the hash changed, it fetches the full dataset
+4. The new data is pushed into the Interactivity API store via `store()`
+5. Any directives bound to that state property re-render automatically
+
+Polling only runs on pages where a matching `data-wp-interactive` element
+exists. It pauses when the browser tab is hidden and resumes when visible.
+
+The hash endpoint (`?_hash=1`) returns only an md5 checksum and record count,
+keeping poll requests lightweight.
+
+## User-scoped data
+
+Set `userScoped: true` to automatically scope all records to the current user.
+Blockstudio adds a `user_id` column, sets it on create, and filters all
+operations to only the current user's records:
+
+```php title="db.php"
+return [
+    'storage'    => 'sqlite',
+    'userScoped' => true,
+    'fields'     => [
+        'text' => ['type' => 'string', 'required' => true],
+        'done' => ['type' => 'boolean', 'default' => false],
+    ],
+];
+```
+
+No manual `user_id` field, no `before_create` hook, no filtering in RPC. Users
+can only see, edit, and delete their own records. The `user_id` column is
+managed entirely by Blockstudio.
+
+When using `post_type` storage, `userScoped` maps to `post_author` instead of
+a separate `user_id` column.
+
+## Access control
+
+Each CRUD operation has its own permission level:
+
+| Value                | Behavior                                                                      |
+| -------------------- | ----------------------------------------------------------------------------- |
+| `true`               | Public with CSRF protection (logged-out users allowed, `X-BS-Token` required) |
+| `'open'`             | Truly public, no CSRF, no auth (for webhooks and external APIs)               |
+| `'edit_posts'`       | WordPress capability check                                                    |
+| `['cap_a', 'cap_b']` | User needs any one of the listed capabilities                                 |
+| omitted / `null`     | Requires authentication (logged-in user)                                      |
+
+```php title="db.php"
+'capability' => [
+    'create' => true,                               // public + CSRF protected
+    'read'   => 'open',                             // truly open, no protection
+    'update' => 'edit_posts',                       // editors and above
+    'delete' => ['delete_posts', 'manage_options'], // either capability works
+],
+```
+
+### CSRF protection
+
+Public endpoints (`true`) are protected by a `X-BS-Token` header. Blockstudio
+generates the token on page render and injects it into the `bs.db()` and
+`bs.fn()` clients automatically. External forms or scripts without the token
+get a `403` response.
+
+Use `'open'` when you need truly unauthenticated access without CSRF, for
+example for incoming webhooks from external services.
+
+## Field types
+
+| Type      | MySQL Column         | PHP Type | Description                 |
+| --------- | -------------------- | -------- | --------------------------- |
+| `string`  | `varchar(maxLength)` | `string` | Text, default maxLength 255 |
+| `integer` | `bigint(20)`         | `int`    | Whole numbers               |
+| `number`  | `decimal(20,6)`      | `float`  | Decimal numbers             |
+| `boolean` | `tinyint(1)`         | `bool`   | True/false                  |
+| `text`    | `longtext`           | `string` | Long-form text content      |
+
+## Validation
+
+All writes (create and update) are validated against the schema before touching
+storage. Validation happens server-side regardless of whether the request comes
+from `bs.db()`, the REST API, or `Db::get()`.
+
+### Built-in rules
+
+| Rule              | Example                | Description                             |
+| ----------------- | ---------------------- | --------------------------------------- |
+| `required`        | `'required' => true`   | Field must be present on create         |
+| `type`            | `'type' => 'integer'`  | Value must match the declared type      |
+| `enum`            | `'enum' => ['a', 'b']` | Value must be one of the listed options |
+| `maxLength`       | `'maxLength' => 100`   | String cannot exceed this length        |
+| `minLength`       | `'minLength' => 3`     | String must be at least this long       |
+| `format: "email"` | `'format' => 'email'`  | Must be a valid email address           |
+| `format: "url"`   | `'format' => 'url'`    | Must be a valid URL                     |
+
+### Custom validation
+
+Add a `validate` callback to any field for server-side checks that go beyond
+the built-in rules. Return `true` to pass, or a string with the error message:
+
+```php title="db.php"
+'email' => [
+    'type'     => 'string',
+    'format'   => 'email',
+    'required' => true,
+    'validate' => function ($value, $data) {
+        if (str_ends_with($value, '@disposable.com')) {
+            return 'Disposable email addresses are not allowed.';
+        }
+        return true;
+    },
+],
+```
+
+The callback receives the field value and the full data array, so you can do
+cross-field validation.
+
+### Error response format
+
+Validation errors return a `400` status with per-field error arrays. This format
+is inspired by [Zod's `fieldErrors`](https://zod.dev/error-formatting) and makes
+it straightforward to map errors to form fields:
+
+```json
+{
+  "code": "blockstudio_db_validation",
+  "message": "Validation failed.",
+  "data": {
+    "status": 400,
+    "errors": {
+      "email": [
+        "Must be a valid email address.",
+        "Disposable email addresses are not allowed."
+      ],
+      "plan": ["Must be one of: free, pro."]
+    }
+  }
+}
+```
+
+Each field maps to an array of error strings. Multiple rules can fail on the
+same field. On the frontend:
+
+```js
+const result = await db.create({ email: 'bad', plan: 'invalid' });
+
+if (result.data?.errors) {
+  // { email: ["Must be a valid email address."], plan: ["Must be one of: free, pro."] }
+  Object.entries(result.data.errors).forEach(([field, messages]) => {
+    showFieldError(field, messages[0]);
+  });
+}
+```
+
+## REST endpoints
+
+All endpoints are under the `blockstudio/v1/db/` namespace:
+
+```
+/db/{block-name}/{schema-name}
+```
+
+The block name has `/` replaced by `-`. For single-schema blocks, the schema
+name is `default`.
+
+| Method   | Endpoint                    | Description         |
+| -------- | --------------------------- | ------------------- |
+| `GET`    | `/db/{block}/{schema}`      | List records        |
+| `POST`   | `/db/{block}/{schema}`      | Create a record     |
+| `GET`    | `/db/{block}/{schema}/{id}` | Get a single record |
+| `PUT`    | `/db/{block}/{schema}/{id}` | Update a record     |
+| `DELETE` | `/db/{block}/{schema}/{id}` | Delete a record     |
+
+### Query parameters (list)
+
+| Parameter      | Description                                     |
+| -------------- | ----------------------------------------------- |
+| `limit`        | Maximum records to return (default 50, max 100) |
+| `offset`       | Number of records to skip                       |
+| Any field name | Filter by exact value match                     |
+
+Example: `GET /db/my-theme-app/subscribers?plan=pro&limit=10`
+
+## Form rendering
+
+Fields can define a `component` key that references a Blockstudio block. Call
+`bs_db_form()` in your template to render all fields as a form using their
+component blocks.
+
+```php title="db.php"
+'fields' => [
+    'email' => [
+        'type'     => 'string',
+        'format'   => 'email',
+        'required' => true,
+        'component' => [
+            'name' => 'my-theme/field',
+            'attributes' => ['label' => 'Email', 'type' => 'email'],
+            'innerBlocks' => [
+                [
+                    'name' => 'my-theme/input',
+                    'attributes' => ['placeholder' => 'Enter your email'],
+                ],
+            ],
+        ],
+    ],
+    'plan' => [
+        'type' => 'string',
+        'enum' => ['free', 'pro'],
+        'component' => [
+            'name' => 'my-theme/field',
+            'attributes' => ['label' => 'Plan'],
+            'innerBlocks' => [
+                [
+                    'name' => 'my-theme/select',
+                    'attributes' => ['options' => ['free', 'pro']],
+                ],
+            ],
+        ],
+    ],
+],
+```
+
+```php title="index.php"
+<form>
+  <?php bs_db_form('my-theme/app', 'subscribers'); ?>
+  <button type="submit">Subscribe</button>
+</form>
+```
+
+Each component receives the full field definition as `field` in its attributes,
+so components can adapt their rendering based on the schema. For example,
+`$a['field']['name']` gives the field name, `$a['field']['type']` the type,
+`$a['field']['required']` whether it's required, etc.
+
+The component structure follows the same `name`, `attributes`, `innerBlocks`
+format as WordPress blocks. Inner blocks render first and are passed as
+`$content` to the parent.
+
+For PHP usage without echoing:
+
+```php
+use Blockstudio\Db;
+
+$db   = Db::get('my-theme/app', 'subscribers');
+$html = $db->form();
+```
+
+## Hooks
+
+Actions fire before and after every write operation. All hooks receive a single
+`$params` array. See the [PHP Hooks](/docs/blocks/hooks/php#database) reference
+for the full list.
+
+### Inline hooks
+
+Define hooks directly in `db.php`. They are scoped to that schema automatically,
+so you don't need to check the block/schema name:
+
+```php title="db.php"
+return [
+    'storage' => 'table',
+    'fields'  => [ /* ... */ ],
+    'hooks' => [
+        'after_create' => function ($params) {
+            // $params['record'] is the created record
+            wp_mail($params['record']['email'], 'Welcome!', 'Thanks for subscribing.');
+        },
+        'before_delete' => function ($params) {
+            // $params['id'] is the record being deleted
+            error_log('Deleting subscriber ' . $params['id']);
+        },
+    ],
+];
+```
+
+### Global hooks
+
+Listen across all schemas from anywhere:
+
+```php title="functions.php"
+add_action('blockstudio/db/after_create', function ($params) {
+    // $params['block'] and $params['schema'] identify the source
+    if ('my-theme/app' === $params['block'] && 'subscribers' === $params['schema']) {
+        // sync to external CRM
+    }
+});
+```
+
+## Combining with RPC
+
+`db.php` and `rpc.php` are independent systems. `db.php` generates CRUD
+endpoints from a schema definition. `rpc.php` defines custom server functions.
+Either works on its own.
+
+Use them together when you need standard data operations plus custom business
+logic:
+
+```php title="rpc.php"
+use Blockstudio\Db;
+
+return [
+    'export' => [
+        'callback'   => function (array $params): array {
+            $db   = Db::get('my-theme/app', 'subscribers');
+            $rows = $db->list(['plan' => 'pro']);
+            // custom CSV generation, email sending, etc.
+            return ['exported' => count($rows)];
+        },
+        'capability' => 'manage_options',
+    ],
+];
+```
+
+## Portability
+
+With JSONC storage, data lives alongside code. Copy the block folder to another
+site and everything travels together: the UI, the logic, the access control,
+and the data itself.
+
+```
+my-app/
+├── block.json
+├── index.twig
+├── style.css
+├── rpc.php        ← custom endpoints
+├── db.php         ← data schema
+├── cron.php       ← scheduled tasks
+└── db/
+    └── entries.jsonc  ← the actual data
+```
+
+No database migrations, no export/import steps. Just copy the folder.
+
+Storh storage is portable too, but it lives under `uploads/blockstudio/db/`
+instead of the block folder. That keeps live, writable data out of your source
+tree while still giving each schema a plain-file store that can be backed up,
+copied, or migrated independently.
+
+## Filter
+
+Modify schemas programmatically from outside the block:
+
+```php
+add_filter('blockstudio/database', function (array $schemas): array {
+    // Add a field to an existing schema
+    $schemas['my-theme/app:subscribers']['fields']['source'] = [
+        'type'    => 'string',
+        'default' => 'website',
+    ];
+    return $schemas;
+});
+```

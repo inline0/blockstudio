@@ -1,7 +1,6 @@
 <?php
 
-declare(strict_types=1);
-
+declare (strict_types=1);
 namespace BlockstudioVendor\TailwindPHP;
 
 use function BlockstudioVendor\TailwindPHP\Ast\atRule;
@@ -10,16 +9,12 @@ use function BlockstudioVendor\TailwindPHP\Ast\styleRule;
 use function BlockstudioVendor\TailwindPHP\Ast\toCss;
 use function BlockstudioVendor\TailwindPHP\CssParser\parse;
 use function BlockstudioVendor\TailwindPHP\DesignSystem\buildDesignSystem;
-
 use BlockstudioVendor\TailwindPHP\DesignSystem\DesignSystem;
 use BlockstudioVendor\TailwindPHP\LightningCss\LightningCss;
 use BlockstudioVendor\TailwindPHP\Utilities\Utilities;
 use BlockstudioVendor\TailwindPHP\Variants\Variants;
-
 use function BlockstudioVendor\TailwindPHP\Walk\walk;
-
 use BlockstudioVendor\TailwindPHP\Walk\WalkAction;
-
 /**
  * TailwindPHP - CSS-first Tailwind CSS compiler for PHP.
  *
@@ -40,13 +35,11 @@ use BlockstudioVendor\TailwindPHP\Walk\WalkAction;
  * @port-deviation:lightningcss TypeScript uses lightningcss (Rust) for CSS transforms.
  * PHP uses LightningCss.php class for equivalent transformations in pure PHP.
  */
-
 // Polyfill flags
 const POLYFILL_NONE = 0;
 const POLYFILL_AT_PROPERTY = 1 << 0;
 const POLYFILL_COLOR_MIX = 1 << 1;
 const POLYFILL_ALL = POLYFILL_AT_PROPERTY | POLYFILL_COLOR_MIX;
-
 // Feature flags
 const FEATURE_NONE = 0;
 const FEATURE_AT_APPLY = 1 << 0;
@@ -56,24 +49,12 @@ const FEATURE_THEME_FUNCTION = 1 << 3;
 const FEATURE_UTILITIES = 1 << 4;
 const FEATURE_VARIANTS = 1 << 5;
 const FEATURE_AT_THEME = 1 << 6;
-
 /** @var Theme|null Cached default theme instance */
 $_defaultThemeCache = null;
-
 /**
  * Virtual modules that should not be resolved from the filesystem.
  */
-const VIRTUAL_MODULES = [
-    'tailwindcss',
-    'tailwindcss/theme',
-    'tailwindcss/theme.css',
-    'tailwindcss/preflight',
-    'tailwindcss/preflight.css',
-    'tailwindcss/utilities',
-    'tailwindcss/utilities.css',
-    'tw-animate-css',
-];
-
+const VIRTUAL_MODULES = ['tailwindcss', 'tailwindcss/theme', 'tailwindcss/theme.css', 'tailwindcss/preflight', 'tailwindcss/preflight.css', 'tailwindcss/utilities', 'tailwindcss/utilities.css', 'tw-animate-css'];
 /**
  * Pre-compiled regex patterns for performance.
  *
@@ -101,7 +82,6 @@ const REGEX_TIME_VALUE = '/^-?[\d.]+(?:s|ms|%)$/';
 const REGEX_CAMEL_TO_KEBAB = '/([A-Z])/';
 const REGEX_COLOR_MIX_VAR = '/color-mix\s*\(\s*in\s+oklab\s*,\s*([^,]+)\s+var\s*\([^)]+\)\s*,\s*transparent\s*\)/i';
 const REGEX_COLOR_MIX_OPACITY = '/color-mix\s*\(\s*in\s+oklab\s*,\s*var\s*\(\s*([^)]+)\s*\)\s+(\d+(?:\.\d+)?%?)\s*,\s*transparent\s*\)/i';
-
 /**
  * Split a string by comma, respecting parenthesis depth.
  *
@@ -119,7 +99,6 @@ function splitByCommaRespectingParens(string $str): array
     $chars = [];
     $depth = 0;
     $len = strlen($str);
-
     for ($i = 0; $i < $len; $i++) {
         $char = $str[$i];
         if ($char === '(') {
@@ -127,7 +106,6 @@ function splitByCommaRespectingParens(string $str): array
         } elseif ($char === ')') {
             $depth--;
         }
-
         if ($char === ',' && $depth === 0) {
             $parts[] = trim(implode('', $chars));
             $chars = [];
@@ -135,14 +113,11 @@ function splitByCommaRespectingParens(string $str): array
             $chars[] = $char;
         }
     }
-
     if (!empty($chars)) {
         $parts[] = trim(implode('', $chars));
     }
-
     return $parts;
 }
-
 /**
  * Resolve import paths and load CSS content.
  *
@@ -160,25 +135,20 @@ function resolveImportPaths(string|array|callable|null $importPaths): array
     if ($importPaths === null) {
         return ['css' => '', 'paths' => []];
     }
-
     // Callable resolver - call with null to get root CSS
     if (is_callable($importPaths)) {
         $css = $importPaths(null, null) ?? '';
-
         return ['css' => $css, 'paths' => []];
     }
-
     $paths = is_array($importPaths) ? $importPaths : [$importPaths];
     $css = '';
     $resolvedPaths = [];
-
     foreach ($paths as $path) {
         $path = rtrim($path, '/\\');
-
         if (str_ends_with($path, '.css') && is_file($path)) {
             // Single CSS file
             $content = file_get_contents($path);
-            if ($content !== false) {
+            if ($content !== \false) {
                 $css .= $content . "\n";
                 $resolvedPaths[] = dirname($path);
             }
@@ -190,7 +160,7 @@ function resolveImportPaths(string|array|callable|null $importPaths): array
                 sort($files);
                 foreach ($files as $file) {
                     $content = file_get_contents($file);
-                    if ($content !== false) {
+                    if ($content !== \false) {
                         $css .= $content . "\n";
                     }
                 }
@@ -198,10 +168,8 @@ function resolveImportPaths(string|array|callable|null $importPaths): array
             }
         }
     }
-
     return ['css' => $css, 'paths' => $resolvedPaths];
 }
-
 /**
  * Check if a URI is a virtual module.
  *
@@ -210,9 +178,8 @@ function resolveImportPaths(string|array|callable|null $importPaths): array
  */
 function isVirtualModule(string $uri): bool
 {
-    return in_array($uri, VIRTUAL_MODULES, true);
+    return in_array($uri, VIRTUAL_MODULES, \true);
 }
-
 /**
  * Resolve a file import URI to an absolute path.
  *
@@ -227,53 +194,44 @@ function resolveImportUri(string $uri, ?string $fromFile, array $searchPaths): ?
     if (isVirtualModule($uri)) {
         return null;
     }
-
     // Skip data URIs and remote URLs
     if (str_starts_with($uri, 'data:') || str_starts_with($uri, 'http://') || str_starts_with($uri, 'https://')) {
         return null;
     }
-
     // Handle absolute paths (Unix style starting with /)
     if (str_starts_with($uri, '/')) {
         $resolved = realpath($uri);
-        if ($resolved !== false && is_file($resolved)) {
+        if ($resolved !== \false && is_file($resolved)) {
             return $resolved;
         }
-
         return null;
     }
-
     // Relative import - resolve from the importing file's directory
     if ((str_starts_with($uri, './') || str_starts_with($uri, '../')) && $fromFile !== null) {
         $fromDir = dirname($fromFile);
         $resolved = realpath($fromDir . '/' . $uri);
-        if ($resolved !== false && is_file($resolved)) {
+        if ($resolved !== \false && is_file($resolved)) {
             return $resolved;
         }
     }
-
     // Search in import paths
     foreach ($searchPaths as $searchPath) {
         $searchPath = rtrim($searchPath, '/\\');
-
         // Try direct path
         $resolved = realpath($searchPath . '/' . $uri);
-        if ($resolved !== false && is_file($resolved)) {
+        if ($resolved !== \false && is_file($resolved)) {
             return $resolved;
         }
-
         // Try without leading ./
         if (str_starts_with($uri, './')) {
             $resolved = realpath($searchPath . '/' . substr($uri, 2));
-            if ($resolved !== false && is_file($resolved)) {
+            if ($resolved !== \false && is_file($resolved)) {
                 return $resolved;
             }
         }
     }
-
     return null;
 }
-
 /**
  * Parse @import modifiers into layer, supports, and media components.
  *
@@ -292,9 +250,7 @@ function parseImportModifiers(string $modifiers): array
     $layer = null;
     $supports = null;
     $media = null;
-
     $remaining = trim($modifiers);
-
     // Extract layer(name) - must come first per CSS spec
     if (preg_match(REGEX_LAYER_MOD, $remaining, $layerMatch)) {
         $layer = $layerMatch[1];
@@ -304,25 +260,17 @@ function parseImportModifiers(string $modifiers): array
         $layer = '';
         $remaining = trim(preg_replace(REGEX_LAYER_BARE, '', $remaining, 1));
     }
-
     // Extract supports(condition)
     if (preg_match(REGEX_SUPPORTS_MOD, $remaining, $supportsMatch)) {
         $supports = $supportsMatch[1];
         $remaining = trim(preg_replace(REGEX_SUPPORTS_MOD, '', $remaining, 1));
     }
-
     // Everything remaining is the media query
     if (!empty($remaining)) {
         $media = $remaining;
     }
-
-    return [
-        'layer' => $layer,
-        'supports' => $supports,
-        'media' => $media,
-    ];
+    return ['layer' => $layer, 'supports' => $supports, 'media' => $media];
 }
-
 /**
  * Wrap AST nodes with layer, media, and supports at-rules.
  *
@@ -338,26 +286,21 @@ function parseImportModifiers(string $modifiers): array
 function wrapImportedAst(array $ast, ?string $layer, ?string $supports, ?string $media): array
 {
     $root = $ast;
-
     // Layer wrapping (innermost)
     if ($layer !== null) {
         $root = [atRule('@layer', $layer, $root)];
     }
-
     // Media query wrapping
     if ($media !== null) {
         $root = [atRule('@media', $media, $root)];
     }
-
     // Supports wrapping (outermost)
     if ($supports !== null) {
         $supportsValue = $supports[0] === '(' ? $supports : "({$supports})";
         $root = [atRule('@supports', $supportsValue, $root)];
     }
-
     return $root;
 }
-
 /**
  * Create a file loader function for substituteAtImports.
  *
@@ -371,13 +314,8 @@ function createFileLoader(array $searchPaths, array &$seenFiles, ?callable $cust
     return function (string $uri, string $base) use ($searchPaths, &$seenFiles, $customResolver): array {
         // Skip virtual modules - they're handled elsewhere
         if (isVirtualModule($uri)) {
-            return [
-                'path' => $uri,
-                'base' => $base,
-                'content' => '',
-            ];
+            return ['path' => $uri, 'base' => $base, 'content' => ''];
         }
-
         // Custom resolver takes precedence
         if ($customResolver !== null) {
             $content = $customResolver($uri, $base);
@@ -387,57 +325,30 @@ function createFileLoader(array $searchPaths, array &$seenFiles, ?callable $cust
                 if (isset($seenFiles[$path])) {
                     return ['path' => $path, 'base' => $base, 'content' => ''];
                 }
-                $seenFiles[$path] = true;
-
-                return [
-                    'path' => $path,
-                    'base' => dirname($path),
-                    'content' => $content,
-                ];
+                $seenFiles[$path] = \true;
+                return ['path' => $path, 'base' => dirname($path), 'content' => $content];
             }
         }
-
         // Try to resolve the file path
         $fromFile = $base !== '' ? $base . '/dummy.css' : null;
         $resolved = resolveImportUri($uri, $fromFile, $searchPaths);
-
         if ($resolved === null) {
             // File not found - return empty (silently skip like Tailwind)
-            return [
-                'path' => $uri,
-                'base' => $base,
-                'content' => '',
-            ];
+            return ['path' => $uri, 'base' => $base, 'content' => ''];
         }
-
         // Check if already seen (deduplication)
         if (isset($seenFiles[$resolved])) {
-            return [
-                'path' => $resolved,
-                'base' => dirname($resolved),
-                'content' => '',
-            ];
+            return ['path' => $resolved, 'base' => dirname($resolved), 'content' => ''];
         }
-        $seenFiles[$resolved] = true;
-
+        $seenFiles[$resolved] = \true;
         // Read the file
         $content = file_get_contents($resolved);
-        if ($content === false) {
-            return [
-                'path' => $resolved,
-                'base' => dirname($resolved),
-                'content' => '',
-            ];
+        if ($content === \false) {
+            return ['path' => $resolved, 'base' => dirname($resolved), 'content' => ''];
         }
-
-        return [
-            'path' => $resolved,
-            'base' => dirname($resolved),
-            'content' => $content,
-        ];
+        return ['path' => $resolved, 'base' => dirname($resolved), 'content' => $content];
     };
 }
-
 /**
  * Static cache for resource files.
  *
@@ -446,7 +357,6 @@ function createFileLoader(array $searchPaths, array &$seenFiles, ?callable $cust
  * relies on Node.js module caching for similar behavior.
  */
 $_resourceFileCache = [];
-
 /**
  * Read a resource file with error checking.
  *
@@ -457,25 +367,20 @@ $_resourceFileCache = [];
 function readResourceFile(string $filename): string
 {
     global $_resourceFileCache;
-
     if (isset($_resourceFileCache[$filename])) {
         return $_resourceFileCache[$filename];
     }
-
     $path = __DIR__ . '/../resources/' . $filename;
     if (!file_exists($path)) {
         throw new \RuntimeException("Resource file not found: {$path}");
     }
     $contents = file_get_contents($path);
-    if ($contents === false) {
+    if ($contents === \false) {
         throw new \RuntimeException("Failed to read resource file: {$path}");
     }
-
     $_resourceFileCache[$filename] = $contents;
-
     return $contents;
 }
-
 /**
  * Load and parse the default Tailwind theme from theme.css.
  *
@@ -484,25 +389,20 @@ function readResourceFile(string $filename): string
 function loadDefaultTheme(): Theme
 {
     global $_defaultThemeCache;
-
     if ($_defaultThemeCache !== null) {
         // Return a clone so modifications don't affect the cached instance
         return clone $_defaultThemeCache;
     }
-
     $css = readResourceFile('theme.css');
     $ast = parse($css);
     $theme = new Theme();
-
     // Walk AST to extract @theme declarations
     walk($ast, function (&$node) use ($theme) {
         if ($node['kind'] !== 'at-rule' || $node['name'] !== '@theme') {
             return WalkAction::Continue;
         }
-
         // Parse theme options from params (e.g., "default", "default inline reference")
         [$themeOptions, $themePrefix] = parseThemeOptions($node['params'] ?? '');
-
         // Process declarations and keyframes
         foreach ($node['nodes'] ?? [] as $child) {
             if ($child['kind'] === 'declaration' && str_starts_with($child['property'], '--')) {
@@ -513,15 +413,11 @@ function loadDefaultTheme(): Theme
                 $theme->addKeyframes($child, $themeOptions);
             }
         }
-
         return WalkAction::Continue;
     });
-
     $_defaultThemeCache = $theme;
-
     return clone $_defaultThemeCache;
 }
-
 /**
  * Compile CSS with Tailwind utilities.
  *
@@ -542,15 +438,19 @@ function loadDefaultTheme(): Theme
  *   - `onDependency`: Callback invoked when a file dependency is detected
  *
  * @return array{
- *     build: callable(array<string>): string,
+ *     build: callable(array<string>, bool=): string,
+ *     buildExact: callable(array<string>, bool=): string,
  *     sources: array<string>,
  *     root: array,
- *     features: int
+ *     features: int,
+ *     designSystem: \TailwindPHP\DesignSystem\DesignSystem
  * } Compilation result:
- *   - `build`: Function that takes candidate class names and returns CSS
+ *   - `build`: Function that takes candidate class names and returns CSS (cumulative across calls)
+ *   - `buildExact`: Function that compiles exactly the given candidate set per call
  *   - `sources`: Detected content source patterns
  *   - `root`: Compiled AST root
  *   - `features`: Bitmask of detected features
+ *   - `designSystem`: The design system built during compilation
  *
  * @throws \Exception When CSS parsing fails
  * @throws \Exception When @utility or @custom-variant directives are invalid
@@ -570,107 +470,115 @@ function loadDefaultTheme(): Theme
 function compile(string $css, array $options = []): array
 {
     $ast = parse($css);
-
     return compileAst($ast, $options);
 }
-
 /**
  * Compile AST with Tailwind utilities.
  *
  * @param array $ast CSS AST
  * @param array $options Compilation options
- * @return array{build: callable, sources: array, root: mixed, features: int}
+ * @return array{build: callable, buildExact: callable, sources: array, root: mixed, features: int, designSystem: \TailwindPHP\DesignSystem\DesignSystem}
  */
 function compileAst(array $ast, array $options = []): array
 {
     $result = parseCss($ast, $options);
-
+    return compileParsed($ast, $result, $options);
+}
+/**
+ * Assemble the compiled build API from a parsed CSS result.
+ *
+ * Shared tail of compileAst(): runs the post-parse substitutions and returns
+ * the build closures. The state-cache restore path calls this directly with a
+ * rehydrated parse result so both construction paths stay byte-identical.
+ *
+ * @param array $ast Import-substituted CSS AST, mutated in place and captured
+ *                   by reference in the returned build closures
+ * @param array $result parseCss() result
+ * @param array $options Compilation options
+ * @return array
+ */
+function compileParsed(array &$ast, array $result, array $options = []): array
+{
     $designSystem = $result['designSystem'];
     $sources = $result['sources'];
     $root = $result['root'];
     $utilitiesNodePath = $result['utilitiesNodePath'];
     $features = $result['features'];
     $inlineCandidates = $result['inlineCandidates'];
-
     // Substitute CSS functions (theme(), --theme(), --spacing(), --alpha())
     $features |= substituteFunctions($ast, $designSystem);
-
     // Process @apply directives first (this also handles @utility with @apply inside)
     // substituteAtApply will:
     // 1. Process @apply inside @utility definitions (topological order)
     // 2. Register @utility definitions with the design system
     // 3. Process remaining @apply rules
     $features |= substituteAtApply($ast, $designSystem);
-
     // Remove @utility nodes from AST (after @apply has processed them)
     walk($ast, function (&$node) {
         if ($node['kind'] !== 'at-rule') {
             return WalkAction::Continue;
         }
-
         if ($node['name'] === '@utility') {
             return WalkAction::Replace([]);
         }
-
         // @utility has to be top-level, so we don't need to traverse into nested trees
         return WalkAction::Skip;
     });
-
     $allValidCandidates = [];
     $compiled = null;
     $previousAstNodeCount = 0;
-
     foreach ($inlineCandidates as $candidate) {
         if (!$designSystem->hasInvalidCandidate($candidate)) {
-            $allValidCandidates[$candidate] = true;
+            $allValidCandidates[$candidate] = \true;
         }
     }
-
     // Helper to find and update the utilities context node
     $updateUtilitiesNode = function (array &$ast, array $newNodes) {
         walk($ast, function (&$node) use ($newNodes) {
             // Find the context node that was converted from @tailwind utilities
             if ($node['kind'] === 'context' && isset($node['context']) && is_array($node['context'])) {
                 $node['nodes'] = $newNodes;
-
                 return WalkAction::Stop;
             }
-
             return WalkAction::Continue;
         });
     };
-
+    // Optimize the shared AST with the given utility nodes substituted into
+    // the utilities context node. The invariant-chunk cache is built once per
+    // compiler lifetime; the shared AST is never mutated, which is what keys
+    // the cache to this compiler's root AST. Falls back to the full pipeline
+    // on a working copy when the AST shape rules out the incremental path.
+    $optimizeCache = null;
+    $optimize = function (array $utilityNodes) use (&$optimizeCache, &$ast, $designSystem, $options, $updateUtilitiesNode): array {
+        $polyfills = $options['polyfills'] ?? POLYFILL_ALL;
+        if ($optimizeCache === null) {
+            $optimizeCache = optimizeAstPrepareIncremental($ast, $designSystem, $polyfills) ?? \false;
+        }
+        if ($optimizeCache !== \false && !astContainsAtRuleNamed($utilityNodes, '@custom-media')) {
+            return optimizeAstIncremental($optimizeCache, $utilityNodes, $designSystem, $polyfills);
+        }
+        $fullAst = $ast;
+        $updateUtilitiesNode($fullAst, $utilityNodes);
+        return optimizeAst($fullAst, $designSystem, $polyfills);
+    };
     return [
         'sources' => $sources,
         'root' => $root,
         'features' => $features,
-        'build' => function (array $newRawCandidates) use (
-            &$allValidCandidates,
-            &$compiled,
-            &$previousAstNodeCount,
-            $designSystem,
-            $utilitiesNodePath,
-            &$ast,
-            $features,
-            $options,
-            $updateUtilitiesNode
-        ) {
+        'designSystem' => $designSystem,
+        'build' => function (array $newRawCandidates, bool $minify = \false) use (&$allValidCandidates, &$compiled, &$previousAstNodeCount, $designSystem, $utilitiesNodePath, &$ast, $features, $options, $optimize) {
             if ($features === FEATURE_NONE) {
-                return toCss($ast);
+                return toCss($ast, $minify);
             }
-
             if ($utilitiesNodePath === null) {
                 if ($compiled === null) {
                     $compiled = optimizeAst($ast, $designSystem, $options['polyfills'] ?? POLYFILL_ALL);
                 }
-
-                return toCss($compiled);
+                return toCss($compiled, $minify);
             }
-
             // Track if this is the first build call with inline candidates
             $hasInlineCandidates = !empty($allValidCandidates) && $compiled === null;
             $didChange = $hasInlineCandidates;
-
             // Add all new candidates unless we know they are invalid
             $prevSize = count($allValidCandidates);
             foreach ($newRawCandidates as $candidate) {
@@ -679,55 +587,73 @@ function compileAst(array $ast, array $options = []): array
                         $didMarkVariableAsUsed = $designSystem->getTheme()->markUsedVariable($candidate);
                         $didChange = $didChange || $didMarkVariableAsUsed;
                     } else {
-                        $allValidCandidates[$candidate] = true;
-                        $didChange = $didChange || (count($allValidCandidates) !== $prevSize);
+                        $allValidCandidates[$candidate] = \true;
+                        $didChange = $didChange || count($allValidCandidates) !== $prevSize;
                     }
                 }
             }
-
             // If no new candidates were added and no inline candidates to process, return cached result
             if (!$didChange) {
                 if ($compiled === null) {
-                    $compiled = optimizeAst($ast, $designSystem, $options['polyfills'] ?? POLYFILL_ALL);
+                    $compiled = $optimize([]);
                 }
-
-                return toCss($compiled);
+                return toCss($compiled, $minify);
             }
-
-            $compileResult = \BlockstudioVendor\TailwindPHP\Compile\compileCandidates(
-                array_keys($allValidCandidates),
-                $designSystem,
-                ['onInvalidCandidate' => function ($candidate) use ($designSystem) {
-                    $designSystem->addInvalidCandidate($candidate);
-                }],
-            );
-
+            $compileResult = \BlockstudioVendor\TailwindPHP\Compile\compileCandidates(array_keys($allValidCandidates), $designSystem, ['onInvalidCandidate' => function ($candidate) use ($designSystem) {
+                $designSystem->addInvalidCandidate($candidate);
+            }]);
             $newNodes = $compileResult['astNodes'];
-
             // Apply CSS function substitution to compiled utilities (resolves theme() etc.)
             substituteFunctions($newNodes, $designSystem);
-
             // If no new nodes were generated, return cached result
             if ($previousAstNodeCount === count($newNodes)) {
                 if ($compiled === null) {
-                    $compiled = optimizeAst($ast, $designSystem, $options['polyfills'] ?? POLYFILL_ALL);
+                    $compiled = $optimize([]);
                 }
-
-                return toCss($compiled);
+                return toCss($compiled, $minify);
             }
-
             $previousAstNodeCount = count($newNodes);
-
-            // Update the context node with the compiled utilities
-            $updateUtilitiesNode($ast, $newNodes);
-
-            $compiled = optimizeAst($ast, $designSystem, $options['polyfills'] ?? POLYFILL_ALL);
-
-            return toCss($compiled);
+            $compiled = $optimize($newNodes);
+            return toCss($compiled, $minify);
+        },
+        // Exact per-call build: compiles exactly the given candidate set (plus
+        // inline candidates from @source inline()) against the shared design
+        // system. Unlike `build`, it does not accumulate candidates across
+        // calls and never returns a cached result, so the output matches a
+        // cold compile of the same candidate set byte for byte while still
+        // reusing the design system's parse/compile memos.
+        'buildExact' => function (array $rawCandidates, bool $minify = \false) use ($designSystem, $utilitiesNodePath, &$ast, $features, $options, $optimize, $inlineCandidates) {
+            if ($features === FEATURE_NONE) {
+                return toCss($ast, $minify);
+            }
+            if ($utilitiesNodePath === null) {
+                return toCss(optimizeAst($ast, $designSystem, $options['polyfills'] ?? POLYFILL_ALL), $minify);
+            }
+            $validCandidates = [];
+            foreach ($inlineCandidates as $candidate) {
+                if (!$designSystem->hasInvalidCandidate($candidate)) {
+                    $validCandidates[$candidate] = \true;
+                }
+            }
+            foreach ($rawCandidates as $candidate) {
+                if (!$designSystem->hasInvalidCandidate($candidate)) {
+                    if (str_starts_with($candidate, '--')) {
+                        $designSystem->getTheme()->markUsedVariable($candidate);
+                    } else {
+                        $validCandidates[$candidate] = \true;
+                    }
+                }
+            }
+            $compileResult = \BlockstudioVendor\TailwindPHP\Compile\compileCandidates(array_keys($validCandidates), $designSystem, ['onInvalidCandidate' => function ($candidate) use ($designSystem) {
+                $designSystem->addInvalidCandidate($candidate);
+            }]);
+            $newNodes = $compileResult['astNodes'];
+            // Apply CSS function substitution to compiled utilities (resolves theme() etc.)
+            substituteFunctions($newNodes, $designSystem);
+            return toCss($optimize($newNodes), $minify);
         },
     ];
 }
-
 /**
  * Parse CSS and extract theme, utilities, variants, etc.
  *
@@ -737,9 +663,27 @@ function compileAst(array $ast, array $options = []): array
  */
 function parseCss(array &$ast, array $options = []): array
 {
+    $state = parseCssState($ast, $options);
+    return finalizeCssState($ast, $state, $options);
+}
+/**
+ * Run the expensive, deterministic phase of parseCss().
+ *
+ * Resolves imports, accumulates the theme, and applies every AST rewrite that
+ * depends only on the CSS input and engine resources. The returned state is
+ * pure data (the Theme carries no closures), so callers may persist it along
+ * with the mutated AST and later rebuild an identical compiler through
+ * finalizeCssState() without re-running this phase.
+ *
+ * @param array $ast CSS AST, mutated in place
+ * @param array $options Parse options
+ * @return array Serializable parse state
+ */
+function parseCssState(array &$ast, array $options = []): array
+{
     $features = FEATURE_NONE;
     // Use default theme unless 'loadDefaultTheme' option is explicitly false
-    $loadDefaultTheme = $options['loadDefaultTheme'] ?? true;
+    $loadDefaultTheme = $options['loadDefaultTheme'] ?? \true;
     $theme = $loadDefaultTheme ? loadDefaultTheme() : new Theme();
     $utilitiesNodePath = null;
     $sources = [];
@@ -747,34 +691,30 @@ function parseCss(array &$ast, array $options = []): array
     $ignoredCandidates = [];
     $root = null;
     $firstThemeRule = null;
-    $important = false;
-    $customVariants = []; // Collect @custom-variant definitions
-    $plugins = []; // Collect @plugin directives
-
+    $important = \false;
+    $customVariants = [];
+    // Collect @custom-variant definitions
+    $plugins = [];
+    // Collect @plugin directives
     // Import deduplication tracking (persists across walk iterations)
     $seenFiles = [];
     $seenVirtualModules = [];
-
     // Walk AST to find @tailwind utilities, @theme, @source, @utility, @custom-variant, @plugin, @media important
     walk($ast, function (&$node, $ctx) use (&$features, &$theme, &$utilitiesNodePath, &$sources, &$inlineCandidates, &$ignoredCandidates, &$firstThemeRule, &$important, &$customVariants, &$plugins, $options, &$seenFiles, &$seenVirtualModules) {
         if ($node['kind'] !== 'at-rule') {
             return WalkAction::Continue;
         }
-
         // Handle @tailwind utilities - can be nested (e.g., inside #app {})
-        if ($node['name'] === '@tailwind' &&
-            ($node['params'] === 'utilities' || str_starts_with($node['params'], 'utilities'))
-        ) {
+        if ($node['name'] === '@tailwind' && ($node['params'] === 'utilities' || str_starts_with($node['params'], 'utilities'))) {
             // Any additional @tailwind utilities nodes can be removed
             if ($utilitiesNodePath !== null) {
                 return WalkAction::Replace([]);
             }
-
             // Store the path to this node for later modification
             $utilitiesNodePath = $ctx->path();
-            $utilitiesNodePath[] = $node; // Add current node to path
+            $utilitiesNodePath[] = $node;
+            // Add current node to path
             $features |= FEATURE_UTILITIES;
-
             // Convert the @tailwind node to a context node in place
             // This is how the TypeScript does it - mutate in place
             $node['kind'] = 'context';
@@ -782,33 +722,25 @@ function parseCss(array &$ast, array $options = []): array
             $node['nodes'] = [];
             unset($node['name']);
             unset($node['params']);
-
             return WalkAction::Skip;
         }
-
         // Handle @theme
         if ($node['name'] === '@theme') {
             $features |= FEATURE_AT_THEME;
-
             [$themeOptions, $themePrefix] = parseThemeOptions($node['params']);
-
             // Validate and apply prefix
             if ($themePrefix !== null) {
                 if (!preg_match(IS_VALID_PREFIX, $themePrefix)) {
-                    throw new \Exception(
-                        "The prefix \"{$themePrefix}\" is invalid. Prefixes must be lowercase ASCII letters (a-z) only.",
-                    );
+                    throw new \Exception("The prefix \"{$themePrefix}\" is invalid. Prefixes must be lowercase ASCII letters (a-z) only.");
                 }
                 $theme->prefix = $themePrefix;
             }
-
             // Process theme declarations and keyframes
             foreach ($node['nodes'] ?? [] as $child) {
                 if ($child['kind'] === 'declaration' && str_starts_with($child['property'], '--')) {
                     // Unescape CSS escape sequences in property names (e.g., \* -> *)
                     $property = preg_replace(REGEX_UNESCAPE, '$1', $child['property']);
                     $value = $child['value'] ?? '';
-
                     // Store the raw value including --theme() calls
                     // They will be resolved later by substituteFunctions()
                     $theme->add($property, $value, $themeOptions);
@@ -816,57 +748,43 @@ function parseCss(array &$ast, array $options = []): array
                     $theme->addKeyframes($child, $themeOptions);
                 }
             }
-
             // Keep a reference to the first @theme rule to update with the full
             // theme later, and delete any other @theme rules.
             if ($firstThemeRule === null) {
                 $firstThemeRule = styleRule(':root, :host', []);
-
                 return WalkAction::ReplaceSkip($firstThemeRule);
             } else {
                 return WalkAction::ReplaceSkip([]);
             }
         }
-
         // Handle @source
         if ($node['name'] === '@source') {
             // Validate: @source cannot have a body
             if (!empty($node['nodes'])) {
                 throw new \Exception('`@source` cannot have a body.');
             }
-
             // Validate: @source cannot be nested
             if ($ctx->parent !== null) {
                 throw new \Exception('`@source` cannot be nested.');
             }
-
-            $not = false;
-            $inline = false;
+            $not = \false;
+            $inline = \false;
             $path = $node['params'];
-
             // Check for 'not' prefix
             if (str_starts_with($path, 'not ')) {
-                $not = true;
+                $not = \true;
                 $path = substr($path, 4);
             }
-
             // Check for 'inline()' wrapper
             if (str_starts_with($path, 'inline(') && str_ends_with($path, ')')) {
-                $inline = true;
+                $inline = \true;
                 $path = substr($path, 7, -1);
             }
-
             // Validate: paths must be quoted
-            if (
-                ($path[0] === '"' && $path[strlen($path) - 1] !== '"') ||
-                ($path[0] === "'" && $path[strlen($path) - 1] !== "'") ||
-                ($path[0] !== "'" && $path[0] !== '"')
-            ) {
+            if ($path[0] === '"' && $path[strlen($path) - 1] !== '"' || $path[0] === "'" && $path[strlen($path) - 1] !== "'" || $path[0] !== "'" && $path[0] !== '"') {
                 throw new \Exception('`@source` paths must be quoted.');
             }
-
             $source = substr($path, 1, -1);
-
             if ($inline) {
                 // Inline candidates: expand brace patterns and add to appropriate list
                 $destination = $not ? 'ignored' : 'inline';
@@ -882,27 +800,19 @@ function parseCss(array &$ast, array $options = []): array
                 }
             } else {
                 // File/directory source pattern
-                $sources[] = [
-                    'base' => $options['base'] ?? '',
-                    'pattern' => $source,
-                    'negated' => $not,
-                ];
+                $sources[] = ['base' => $options['base'] ?? '', 'pattern' => $source, 'negated' => $not];
             }
-
             return WalkAction::ReplaceSkip([]);
         }
-
         // Handle @import - especially for 'tailwindcss' module
         if ($node['name'] === '@import') {
             $params = $node['params'];
             // Parse the import path and modifiers
             // e.g., "'tailwindcss' theme(inline)" or "'tailwindcss/utilities' important"
             preg_match(REGEX_IMPORT_PARTS, $params, $matches);
-
             if ($matches) {
                 $importPath = $matches[1];
                 $modifiers = trim($matches[2] ?? '');
-
                 // Deduplicate virtual module imports (tailwindcss, tailwindcss/*)
                 // This applies to all virtual module imports, not just file-based ones
                 if (isVirtualModule($importPath)) {
@@ -910,250 +820,166 @@ function parseCss(array &$ast, array $options = []): array
                         // Already imported - remove duplicate
                         return WalkAction::Replace([]);
                     }
-                    $seenVirtualModules[$importPath] = true;
+                    $seenVirtualModules[$importPath] = \true;
                 }
-
                 // Handle 'tailwindcss' virtual module - full Tailwind CSS (theme + preflight + utilities)
                 if ($importPath === 'tailwindcss') {
                     // Load theme.css
                     $themeCss = readResourceFile('theme.css');
                     $themeAst = parse($themeCss);
-
                     // Load preflight.css
                     $preflightCss = readResourceFile('preflight.css');
                     $preflightAst = parse($preflightCss);
-
                     // Create utilities node
                     $utilitiesNode = atRule('@tailwind', 'utilities', []);
-
                     // Apply modifiers to theme if present
                     if (str_contains($modifiers, 'theme(')) {
                         $themeAst = [atRule('@media', $modifiers, $themeAst)];
                     }
-
                     // Match Tailwind's canonical index.css expansion so cascade layer priority is preserved.
-                    $fullContent = [
-                        atRule('@layer', 'theme, base, components, utilities', []),
-                        atRule('@layer', 'theme', $themeAst),
-                        atRule('@layer', 'base', $preflightAst),
-                        atRule('@layer', 'utilities', [$utilitiesNode]),
-                    ];
-
+                    $fullContent = [atRule('@layer', 'theme, base, components, utilities', []), atRule('@layer', 'theme', $themeAst), atRule('@layer', 'base', $preflightAst), atRule('@layer', 'utilities', [$utilitiesNode])];
                     return WalkAction::Replace($fullContent);
                 }
-
                 // Handle 'tailwindcss/theme' or 'tailwindcss/theme.css' - theme variables
                 if ($importPath === 'tailwindcss/theme' || $importPath === 'tailwindcss/theme.css') {
                     $themeCss = readResourceFile('theme.css');
                     $themeAst = parse($themeCss);
-
                     // Check for prefix() modifier
                     if (preg_match(REGEX_PREFIX_MOD, $modifiers, $prefixMatch)) {
-                        $themeAst = [atRule('@media', 'prefix('.$prefixMatch[1].')', $themeAst)];
+                        $themeAst = [atRule('@media', 'prefix(' . $prefixMatch[1] . ')', $themeAst)];
                     }
-
                     // Check for theme(static) modifier - theme values always included
                     if (str_contains($modifiers, 'theme(static)')) {
                         $themeAst = [atRule('@media', 'theme(static)', $themeAst)];
                     }
-
                     // Check for theme(inline) modifier - theme values inlined, not as variables
                     if (str_contains($modifiers, 'theme(inline)')) {
                         $themeAst = [atRule('@media', 'theme(inline)', $themeAst)];
                     }
-
                     // source(none) is a no-op in TailwindPHP since we don't do file scanning
                     // It's accepted for compatibility with official Tailwind CSS syntax
-
                     // Check for layer() modifier
                     if (preg_match(REGEX_LAYER_MOD, $modifiers, $layerMatch)) {
-                        return WalkAction::Replace([
-                            atRule('@layer', $layerMatch[1], $themeAst),
-                        ]);
+                        return WalkAction::Replace([atRule('@layer', $layerMatch[1], $themeAst)]);
                     }
-
                     return WalkAction::Replace($themeAst);
                 }
-
                 // Handle 'tailwindcss/utilities' or 'tailwindcss/utilities.css'
                 if ($importPath === 'tailwindcss/utilities' || $importPath === 'tailwindcss/utilities.css') {
                     $utilityNode = atRule('@tailwind', 'utilities', []);
-
                     // If there's an 'important' modifier
                     if (str_contains($modifiers, 'important')) {
                         $utilityNode = atRule('@media', 'important', [$utilityNode]);
                     }
-
                     // If there's a prefix() modifier, wrap in @media prefix()
                     if (preg_match(REGEX_PREFIX_MOD, $modifiers, $prefixMatch)) {
-                        $utilityNode = atRule('@media', 'prefix('.$prefixMatch[1].')', [$utilityNode]);
+                        $utilityNode = atRule('@media', 'prefix(' . $prefixMatch[1] . ')', [$utilityNode]);
                     }
-
                     // If there's a layer() modifier, wrap in @layer
                     if (preg_match(REGEX_LAYER_MOD, $modifiers, $layerMatch)) {
-                        return WalkAction::Replace([
-                            atRule('@layer', $layerMatch[1], [$utilityNode]),
-                        ]);
+                        return WalkAction::Replace([atRule('@layer', $layerMatch[1], [$utilityNode])]);
                     }
-
                     return WalkAction::Replace([$utilityNode]);
                 }
-
                 // Handle 'tailwindcss/preflight' - CSS reset/base styles
                 if ($importPath === 'tailwindcss/preflight' || $importPath === 'tailwindcss/preflight.css') {
                     $preflightCss = readResourceFile('preflight.css');
                     $preflightAst = parse($preflightCss);
-
                     // Check for layer(base) modifier
                     if (str_contains($modifiers, 'layer(base)')) {
-                        return WalkAction::Replace([
-                            atRule('@layer', 'base', $preflightAst),
-                        ]);
+                        return WalkAction::Replace([atRule('@layer', 'base', $preflightAst)]);
                     }
-
                     return WalkAction::Replace($preflightAst);
                 }
-
                 // Handle 'tw-animate-css' - animation utilities for shadcn/ui
                 if ($importPath === 'tw-animate-css') {
                     $animateCss = readResourceFile('tw-animate.css');
                     $animateAst = parse($animateCss);
-
                     return WalkAction::Replace($animateAst);
                 }
-
                 // Handle file-based imports if import resolution is enabled
                 $searchPaths = $options['importSearchPaths'] ?? [];
                 $importResolver = $options['importResolver'] ?? null;
-
                 if (!empty($searchPaths) || $importResolver !== null) {
                     // Virtual modules are already deduplicated above, so skip them here
                     if (isVirtualModule($importPath)) {
                         return WalkAction::Continue;
                     }
-
                     // Try to resolve file-based import
                     // Note: $seenFiles is captured by reference from outer scope
                     $loader = createFileLoader($searchPaths, $seenFiles, $importResolver);
                     $loaded = $loader($importPath, $options['base'] ?? '');
-
                     if (!empty($loaded['content'])) {
                         // Parse the imported CSS
                         $importedAst = parse($loaded['content']);
-
                         // Recursively resolve imports in the loaded file
-                        substituteAtImports(
-                            $importedAst,
-                            $loaded['base'],
-                            $loader,
-                            0,
-                            false,
-                        );
-
+                        substituteAtImports($importedAst, $loaded['base'], $loader, 0, \false);
                         // Parse all import modifiers (layer, supports, media)
                         $parsedMods = parseImportModifiers($modifiers);
-
                         // Wrap with all applicable modifiers
-                        $wrappedAst = wrapImportedAst(
-                            $importedAst,
-                            $parsedMods['layer'],
-                            $parsedMods['supports'],
-                            $parsedMods['media'],
-                        );
-
+                        $wrappedAst = wrapImportedAst($importedAst, $parsedMods['layer'], $parsedMods['supports'], $parsedMods['media']);
                         return WalkAction::Replace($wrappedAst);
                     }
                 }
             }
-
             // For other imports, leave as-is (will be output in final CSS)
             return WalkAction::Continue;
         }
-
         // Handle @utility - validate name but don't register yet
         // Registration happens AFTER @apply processing in compileAst
         if ($node['name'] === '@utility') {
             if ($ctx->parent !== null) {
                 throw new \Exception('`@utility` cannot be nested.');
             }
-
             if (empty($node['nodes'])) {
-                throw new \Exception(
-                    "`@utility {$node['params']}` is empty. Utilities should include at least one property.",
-                );
+                throw new \Exception("`@utility {$node['params']}` is empty. Utilities should include at least one property.");
             }
-
             // Validate utility name
             $name = $node['params'];
             if (!preg_match(IS_VALID_FUNCTIONAL_UTILITY_NAME, $name) && !preg_match(IS_VALID_STATIC_UTILITY_NAME, $name)) {
                 if (str_ends_with($name, '-*')) {
-                    throw new \Exception(
-                        "`@utility {$name}` defines an invalid utility name. Utilities should be alphanumeric and start with a lowercase letter.",
-                    );
+                    throw new \Exception("`@utility {$name}` defines an invalid utility name. Utilities should be alphanumeric and start with a lowercase letter.");
                 } elseif (str_contains($name, '*')) {
-                    throw new \Exception(
-                        "`@utility {$name}` defines an invalid utility name. The dynamic portion marked by `-*` must appear once at the end.",
-                    );
+                    throw new \Exception("`@utility {$name}` defines an invalid utility name. The dynamic portion marked by `-*` must appear once at the end.");
                 }
-                throw new \Exception(
-                    "`@utility {$name}` defines an invalid utility name. Utilities should be alphanumeric and start with a lowercase letter.",
-                );
+                throw new \Exception("`@utility {$name}` defines an invalid utility name. Utilities should be alphanumeric and start with a lowercase letter.");
             }
-
             // Mark as having custom utilities feature
             $features |= FEATURE_AT_APPLY;
-
             // Don't remove or register yet - will be done after @apply processing
             return WalkAction::Skip;
         }
-
         // Handle @custom-variant
         if ($node['name'] === '@custom-variant') {
             if ($ctx->parent !== null) {
                 throw new \Exception('`@custom-variant` cannot be nested.');
             }
-
             $params = $node['params'] ?? '';
             $parts = \BlockstudioVendor\TailwindPHP\Utils\segment($params, ' ');
             $name = $parts[0] ?? '';
             $selector = isset($parts[1]) ? implode(' ', array_slice($parts, 1)) : null;
-
             if (!preg_match(\BlockstudioVendor\TailwindPHP\Variants\IS_VALID_VARIANT_NAME, $name)) {
-                throw new \Exception(
-                    "`@custom-variant {$name}` defines an invalid variant name. Variants should only contain alphanumeric, dashes, or underscore characters and start with a lowercase letter or number.",
-                );
+                throw new \Exception("`@custom-variant {$name}` defines an invalid variant name. Variants should only contain alphanumeric, dashes, or underscore characters and start with a lowercase letter or number.");
             }
-
             $nodes = $node['nodes'] ?? [];
             if (count($nodes) > 0 && $selector) {
                 throw new \Exception("`@custom-variant {$name}` cannot have both a selector and a body.");
             }
-
             // Store for later registration
-            $customVariants[] = [
-                'name' => $name,
-                'selector' => $selector,
-                'nodes' => $nodes,
-            ];
-
+            $customVariants[] = ['name' => $name, 'selector' => $selector, 'nodes' => $nodes];
             $features |= FEATURE_VARIANTS;
-
             return WalkAction::ReplaceSkip([]);
         }
-
         // Handle @plugin
         if ($node['name'] === '@plugin') {
             if ($ctx->parent !== null) {
                 throw new \Exception('`@plugin` cannot be nested.');
             }
-
             // Extract plugin name from params (remove quotes)
             $pluginName = trim($node['params'], "\"'");
-
             if (empty($pluginName)) {
                 throw new \Exception('`@plugin` requires a plugin name.');
             }
-
             // Parse any options from nested declarations
             $pluginOptions = [];
             foreach ($node['nodes'] ?? [] as $child) {
@@ -1161,34 +987,21 @@ function parseCss(array &$ast, array $options = []): array
                     $pluginOptions[$child['property']] = parsePluginOptionValue($child['value'] ?? '');
                 }
             }
-
-            $plugins[] = [
-                'name' => $pluginName,
-                'options' => $pluginOptions,
-            ];
-
+            $plugins[] = ['name' => $pluginName, 'options' => $pluginOptions];
             $features |= FEATURE_JS_PLUGIN_COMPAT;
-
             return WalkAction::ReplaceSkip([]);
         }
-
         // Handle @media important, @media theme(...), @media prefix(...)
         if ($node['name'] === '@media') {
             $params = \BlockstudioVendor\TailwindPHP\Utils\segment($node['params'], ' ');
             $unknownParams = [];
-
             foreach ($params as $param) {
                 if ($param === 'important') {
-                    $important = true;
-                }
-                // Handle @media theme(…)
-                // We support `@import "tailwindcss" theme(reference)` as a way to
-                // import an external theme file as a reference, which becomes `@media
-                // theme(reference) { … }` when the `@import` is processed.
-                elseif (str_starts_with($param, 'theme(')) {
-                    $themeParams = substr($param, 6, -1); // extract from theme(...)
+                    $important = \true;
+                } elseif (str_starts_with($param, 'theme(')) {
+                    $themeParams = substr($param, 6, -1);
+                    // extract from theme(...)
                     $hasReference = str_contains($themeParams, 'reference');
-
                     // Walk children and append theme params to @theme blocks
                     if (isset($node['nodes'])) {
                         walk($node['nodes'], function (&$child) use ($themeParams, $hasReference) {
@@ -1197,30 +1010,20 @@ function parseCss(array &$ast, array $options = []): array
                             }
                             if ($child['kind'] !== 'at-rule') {
                                 if ($hasReference) {
-                                    throw new \Exception(
-                                        "Files imported with `@import \"…\" theme(reference)` must only contain `@theme` blocks.\nUse `@reference \"…\";` instead.",
-                                    );
+                                    throw new \Exception("Files imported with `@import \"…\" theme(reference)` must only contain `@theme` blocks.\nUse `@reference \"…\";` instead.");
                                 }
-
                                 return WalkAction::Continue;
                             }
-
                             if ($child['name'] === '@theme') {
                                 $child['params'] = trim($child['params'] . ' ' . $themeParams);
-
                                 return WalkAction::Skip;
                             }
-
                             return WalkAction::Continue;
                         });
                     }
-                }
-                // Handle @media prefix(…)
-                // We support `@import "tailwindcss/theme" prefix(tw)` as a way to
-                // prefix theme variables, which becomes `@media prefix(tw) { … }`
-                elseif (str_starts_with($param, 'prefix(')) {
-                    $prefixValue = substr($param, 7, -1); // extract from prefix(...)
-
+                } elseif (str_starts_with($param, 'prefix(')) {
+                    $prefixValue = substr($param, 7, -1);
+                    // extract from prefix(...)
                     // Walk children and append prefix to @theme blocks
                     if (isset($node['nodes'])) {
                         walk($node['nodes'], function (&$child) use ($prefixValue, $theme) {
@@ -1230,13 +1033,10 @@ function parseCss(array &$ast, array $options = []): array
                             if ($child['kind'] !== 'at-rule') {
                                 return WalkAction::Continue;
                             }
-
                             if ($child['name'] === '@theme') {
                                 $child['params'] = trim($child['params'] . ' prefix(' . $prefixValue . ')');
-
                                 return WalkAction::Skip;
                             }
-
                             return WalkAction::Continue;
                         });
                     }
@@ -1248,7 +1048,6 @@ function parseCss(array &$ast, array $options = []): array
                     $unknownParams[] = $param;
                 }
             }
-
             if (count($unknownParams) > 0) {
                 $node['params'] = implode(' ', $unknownParams);
             } elseif (count($params) > 0) {
@@ -1256,10 +1055,8 @@ function parseCss(array &$ast, array $options = []): array
                 return WalkAction::Replace($node['nodes'] ?? []);
             }
         }
-
         return WalkAction::Continue;
     });
-
     // Populate the first theme rule with theme values
     if ($firstThemeRule !== null) {
         walk($ast, function (&$node) use ($theme) {
@@ -1282,54 +1079,64 @@ function parseCss(array &$ast, array $options = []): array
                     $nodes[] = decl(\BlockstudioVendor\TailwindPHP\Utils\escape($key), $value['value']);
                 }
                 $node['nodes'] = $nodes;
-
                 return WalkAction::Stop;
             }
-
             return WalkAction::Continue;
         });
-
         // Add keyframes to the AST (they get hoisted to top level during output)
         foreach ($theme->getKeyframes() as $keyframes) {
             $ast[] = $keyframes;
         }
     }
-
+    return ['theme' => $theme, 'features' => $features, 'utilitiesNodePath' => $utilitiesNodePath, 'sources' => $sources, 'root' => $root, 'inlineCandidates' => $inlineCandidates, 'ignoredCandidates' => $ignoredCandidates, 'important' => $important, 'customVariants' => $customVariants, 'plugins' => $plugins, 'files' => array_keys($seenFiles)];
+}
+/**
+ * Build the design system and registrations from parsed CSS state.
+ *
+ * The cheap finalization phase of parseCss(): everything here rebuilds
+ * closures and registries that cannot be persisted, from state that can.
+ *
+ * @param array $ast Import-substituted CSS AST, mutated in place
+ * @param array $state parseCssState() result
+ * @param array $options Parse options
+ * @return array
+ */
+function finalizeCssState(array &$ast, array $state, array $options = []): array
+{
+    $theme = $state['theme'];
+    $features = $state['features'];
+    $utilitiesNodePath = $state['utilitiesNodePath'];
+    $sources = $state['sources'];
+    $root = $state['root'];
+    $inlineCandidates = $state['inlineCandidates'];
+    $ignoredCandidates = $state['ignoredCandidates'];
+    $important = $state['important'];
+    $customVariants = $state['customVariants'];
+    $plugins = $state['plugins'];
     // Build the design system
     $designSystem = buildDesignSystem($theme);
-
     // Set important flag on design system
     if ($important) {
-        $designSystem->setImportant(true);
+        $designSystem->setImportant(\true);
     }
-
     // Add ignored candidates (from @source not inline("...")) to design system
     if (!empty($ignoredCandidates)) {
         foreach ($ignoredCandidates as $candidate) {
             $designSystem->addInvalidCandidate($candidate);
         }
     }
-
     // Apply plugins
     if (!empty($plugins)) {
         $pluginManager = getPluginManager();
         // Pass theme config from options for plugins to access via theme('...')
         $themeConfig = $options['theme'] ?? [];
-        $api = $pluginManager->createAPI(
-            $theme,
-            $designSystem->getUtilities(),
-            $designSystem->getVariants(),
-            ['theme' => $themeConfig],
-        );
-
+        $api = $pluginManager->createAPI($theme, $designSystem->getUtilities(), $designSystem->getVariants(), ['theme' => $themeConfig]);
         foreach ($plugins as $pluginRef) {
             $pluginName = $pluginRef['name'];
             $pluginOptions = $pluginRef['options'];
-
             if (!$pluginManager->has($pluginName)) {
                 throw new \Exception("Plugin \"{$pluginName}\" is not registered. Make sure the plugin is installed and registered.");
             }
-
             // Apply theme extensions first
             // Note: Complex nested theme extensions (like typography's styles) are skipped
             // The actual plugin functionality comes from addComponents/addUtilities
@@ -1352,33 +1159,19 @@ function parseCss(array &$ast, array $options = []): array
                     }
                 }
             }
-
             // Execute the plugin
             $pluginManager->execute($pluginName, $api, $pluginOptions);
         }
     }
-
     // Register custom variants
     foreach ($customVariants as $customVariant) {
         registerCustomVariant($designSystem, $customVariant['name'], $customVariant['selector'], $customVariant['nodes']);
     }
-
     // Note: @utility registration and removal is deferred to compileAst
     // This is because @apply inside @utility needs to be processed first
-
-    return [
-        'designSystem' => $designSystem,
-        'ast' => $ast,
-        'sources' => $sources,
-        'root' => $root,
-        'utilitiesNodePath' => $utilitiesNodePath,
-        'features' => $features,
-        'inlineCandidates' => $inlineCandidates,
-    ];
+    return ['designSystem' => $designSystem, 'ast' => $ast, 'sources' => $sources, 'root' => $root, 'utilitiesNodePath' => $utilitiesNodePath, 'features' => $features, 'inlineCandidates' => $inlineCandidates];
 }
-
 const IS_VALID_PREFIX = '/^[a-z]+$/';
-
 /**
  * Parse @theme options from params string.
  *
@@ -1389,7 +1182,6 @@ function parseThemeOptions(string $params): array
 {
     $options = Theme::OPTIONS_NONE;
     $prefix = null;
-
     foreach (\BlockstudioVendor\TailwindPHP\Utils\segment($params, ' ') as $option) {
         if ($option === 'reference') {
             $options |= Theme::OPTIONS_REFERENCE;
@@ -1403,10 +1195,8 @@ function parseThemeOptions(string $params): array
             $prefix = substr($option, 7, -1);
         }
     }
-
     return [$options, $prefix];
 }
-
 /**
  * Register a custom variant with the design system.
  *
@@ -1418,24 +1208,19 @@ function parseThemeOptions(string $params): array
 function registerCustomVariant($designSystem, string $name, ?string $selector, array $nodes): void
 {
     $variants = $designSystem->getVariants();
-
     // Simple selector-based variant: @custom-variant hocus (&:hover, &:focus);
     if ($selector !== null && empty($nodes)) {
         if (!str_starts_with($selector, '(') || !str_ends_with($selector, ')')) {
             throw new \Exception("`@custom-variant {$name}` selector must be wrapped in parentheses.");
         }
-
         // Parse selectors from "(sel1, sel2, ...)"
         $selectorContent = substr($selector, 1, -1);
         $selectors = array_map('trim', \BlockstudioVendor\TailwindPHP\Utils\segment($selectorContent, ','));
-
-        if (empty($selectors) || in_array('', $selectors, true)) {
+        if (empty($selectors) || in_array('', $selectors, \true)) {
             throw new \Exception("`@custom-variant {$name} {$selector}` selector is invalid.");
         }
-
         $atRuleParams = [];
         $styleRuleSelectors = [];
-
         foreach ($selectors as $sel) {
             if (str_starts_with($sel, '@')) {
                 $atRuleParams[] = $sel;
@@ -1443,14 +1228,12 @@ function registerCustomVariant($designSystem, string $name, ?string $selector, a
                 $styleRuleSelectors[] = $sel;
             }
         }
-
         // Build the variant apply function
         $variants->static($name, function (&$r) use ($atRuleParams, $styleRuleSelectors) {
             // Wrap in style rule selectors first
             if (!empty($styleRuleSelectors)) {
                 $r['nodes'] = [styleRule(implode(', ', $styleRuleSelectors), $r['nodes'])];
             }
-
             // Then wrap in at-rules
             foreach (array_reverse($atRuleParams) as $atRuleParam) {
                 // Parse at-rule name and params
@@ -1459,19 +1242,15 @@ function registerCustomVariant($designSystem, string $name, ?string $selector, a
                 }
             }
         }, ['compounds' => \BlockstudioVendor\TailwindPHP\Variants\compoundsForSelectors($selectors)]);
-    }
-    // Body-based variant: @custom-variant hocus { &:hover, &:focus { @slot; } }
-    elseif (!empty($nodes)) {
+    } elseif (!empty($nodes)) {
         $variants->fromAst($name, $nodes, $designSystem);
     } else {
         throw new \Exception("`@custom-variant {$name}` has no selector or body.");
     }
 }
-
 // Regex patterns for utility name validation
 const IS_VALID_STATIC_UTILITY_NAME = '/^-?[a-z][a-zA-Z0-9\/%._-]*$/';
 const IS_VALID_FUNCTIONAL_UTILITY_NAME = '/^-?[a-z][a-zA-Z0-9\/%._-]*-\*$/';
-
 /**
  * Create a CSS utility from an @utility at-rule.
  *
@@ -1481,38 +1260,33 @@ const IS_VALID_FUNCTIONAL_UTILITY_NAME = '/^-?[a-z][a-zA-Z0-9\/%._-]*-\*$/';
 function createCssUtility(array $node): ?callable
 {
     $name = $node['params'];
-
     // Functional utilities. E.g.: `tab-size-*`
     if (preg_match(IS_VALID_FUNCTIONAL_UTILITY_NAME, $name)) {
         // For now, just support static functional utilities (no --value/--modifier)
         return function (DesignSystem $designSystem) use ($name, $node) {
-            $utilityName = substr($name, 0, -2); // Remove trailing -*
-
+            $utilityName = substr($name, 0, -2);
+            // Remove trailing -*
             $designSystem->getUtilities()->functional($utilityName, function (array $candidate) use ($node) {
                 // A value is required for functional utilities
                 if (!isset($candidate['value'])) {
                     return null;
                 }
-
                 // Return all nodes (declarations, nested rules, etc.)
                 // Deep clone to avoid mutation
-                return array_map(fn ($child) => cloneAstNode($child), $node['nodes'] ?? []);
+                return array_map(fn($child) => cloneAstNode($child), $node['nodes'] ?? []);
             });
         };
     }
-
     // Static utilities. E.g.: `my-utility`
     if (preg_match(IS_VALID_STATIC_UTILITY_NAME, $name)) {
         return function (DesignSystem $designSystem) use ($name, $node) {
             // Return all nodes (declarations, nested rules, etc.)
             // Deep clone to avoid mutation
-            $designSystem->getUtilities()->static($name, fn () => array_map(fn ($child) => cloneAstNode($child), $node['nodes'] ?? []));
+            $designSystem->getUtilities()->static($name, fn() => array_map(fn($child) => cloneAstNode($child), $node['nodes'] ?? []));
         };
     }
-
     return null;
 }
-
 /**
  * Deep clone an AST node.
  *
@@ -1523,31 +1297,21 @@ function cloneAstNode(array $node): array
 {
     $cloned = $node;
     if (isset($cloned['nodes'])) {
-        $cloned['nodes'] = array_map(fn ($child) => cloneAstNode($child), $cloned['nodes']);
+        $cloned['nodes'] = array_map(fn($child) => cloneAstNode($child), $cloned['nodes']);
     }
-
     return $cloned;
 }
-
 /**
- * Optimize AST by flattening context nodes and other optimizations.
+ * Collect used variables and keyframe names from a node list.
  *
- * @param array $ast
- * @param DesignSystem $designSystem
- * @param int $polyfills
- * @return array
+ * @param array $nodes
+ * @param array &$usedVariables
+ * @param array &$usedKeyframeNames
+ * @return void
  */
-function optimizeAst(array $ast, DesignSystem $designSystem, int $polyfills = POLYFILL_ALL): array
+function optimizeAstCollectUsed(array $nodes, array &$usedVariables, array &$usedKeyframeNames): void
 {
-    $result = [];
-    $usedVariables = [];
-    $usedKeyframeNames = [];
-    $theme = $designSystem->getTheme();
-    $atRoots = []; // Collect at-root nodes to hoist
-    $seenAtProperties = []; // Track seen @property rules to dedupe
-
-    // First pass: collect used variables and keyframe names
-    $collectUsed = function (array $node) use (&$collectUsed, &$usedVariables, &$usedKeyframeNames) {
+    foreach ($nodes as $node) {
         if ($node['kind'] === 'declaration') {
             $value = $node['value'] ?? '';
             // Extract variables from var() functions
@@ -1556,37 +1320,42 @@ function optimizeAst(array $ast, DesignSystem $designSystem, int $polyfills = PO
             if (preg_match_all(REGEX_VAR_EXTRACT, $value, $matches)) {
                 foreach ($matches[1] as $var) {
                     // Unescape the variable name (e.g., --width-1\/2 -> --width-1/2)
-                    $usedVariables[preg_replace(REGEX_UNESCAPE, '$1', $var)] = true;
+                    $usedVariables[preg_replace(REGEX_UNESCAPE, '$1', $var)] = \true;
                 }
             }
             // Extract keyframe names from animation property
             if ($node['property'] === 'animation' || $node['property'] === 'animation-name') {
                 foreach (extractKeyframeNames($value) as $name) {
-                    $usedKeyframeNames[$name] = true;
+                    $usedKeyframeNames[$name] = \true;
                 }
             }
         }
-        foreach ($node['nodes'] ?? [] as $child) {
-            $collectUsed($child);
+        if (!empty($node['nodes'])) {
+            optimizeAstCollectUsed($node['nodes'], $usedVariables, $usedKeyframeNames);
         }
-    };
-
-    foreach ($ast as $node) {
-        $collectUsed($node);
     }
-
-    // Also mark theme variables that reference other variables
-    // Iterate until no new variables are found
+}
+/**
+ * Mark theme variables that reference other variables as used, iterating
+ * until no new variables are found.
+ *
+ * @param Theme $theme
+ * @param array &$usedVariables
+ * @param array &$usedKeyframeNames
+ * @return void
+ */
+function optimizeAstExpandThemeUsed(Theme $theme, array &$usedVariables, array &$usedKeyframeNames): void
+{
     do {
-        $changed = false;
+        $changed = \false;
         foreach ($theme->entries() as [$key, $value]) {
             if (isset($usedVariables[$key])) {
                 // Extract variables this value depends on
                 if (preg_match_all(REGEX_VAR_SIMPLE, $value['value'], $matches)) {
                     foreach ($matches[1] as $var) {
                         if (!isset($usedVariables[$var])) {
-                            $usedVariables[$var] = true;
-                            $changed = true;
+                            $usedVariables[$var] = \true;
+                            $changed = \true;
                         }
                     }
                 }
@@ -1595,15 +1364,32 @@ function optimizeAst(array $ast, DesignSystem $designSystem, int $polyfills = PO
                 if (preg_match(REGEX_ANIMATE_KEY, $key)) {
                     foreach (extractKeyframeNames($value['value']) as $name) {
                         if (!isset($usedKeyframeNames[$name])) {
-                            $usedKeyframeNames[$name] = true;
-                            $changed = true;
+                            $usedKeyframeNames[$name] = \true;
+                            $changed = \true;
                         }
                     }
                 }
             }
         }
     } while ($changed);
-
+}
+/**
+ * Run the structural optimizeAst transform over a node list: flatten context
+ * nodes, hoist at-root nodes into the shared collector, drop --tw-sort
+ * declarations, filter :root/:host variables and theme keyframes to used
+ * ones, and prune empty rules.
+ *
+ * @param array $nodes
+ * @param Theme $theme
+ * @param array $usedVariables
+ * @param array $usedKeyframeNames
+ * @param array &$atRoots Shared collector for hoisted at-root nodes
+ * @param array &$seenAtProperties Shared @property dedupe set
+ * @return array
+ */
+function optimizeAstTransformNodes(array $nodes, Theme $theme, array $usedVariables, array $usedKeyframeNames, array &$atRoots, array &$seenAtProperties): array
+{
+    $result = [];
     $transform = function (array $node, array &$parent) use (&$transform, $usedVariables, $usedKeyframeNames, $theme, &$atRoots, &$seenAtProperties) {
         // Handle context nodes - lift their children to parent
         if ($node['kind'] === 'context') {
@@ -1615,10 +1401,8 @@ function optimizeAst(array $ast, DesignSystem $designSystem, int $polyfills = PO
             foreach ($node['nodes'] ?? [] as $child) {
                 $transform($child, $parent);
             }
-
             return;
         }
-
         // Handle at-root nodes - hoist their children to top level
         if ($node['kind'] === 'at-root') {
             foreach ($node['nodes'] ?? [] as $child) {
@@ -1629,7 +1413,7 @@ function optimizeAst(array $ast, DesignSystem $designSystem, int $polyfills = PO
                     if ($hoistedNode['kind'] === 'at-rule' && $hoistedNode['name'] === '@property') {
                         $propName = trim($hoistedNode['params'] ?? '');
                         if (!isset($seenAtProperties[$propName])) {
-                            $seenAtProperties[$propName] = true;
+                            $seenAtProperties[$propName] = \true;
                             $atRoots[] = $hoistedNode;
                         }
                     } else {
@@ -1637,15 +1421,12 @@ function optimizeAst(array $ast, DesignSystem $designSystem, int $polyfills = PO
                     }
                 }
             }
-
             return;
         }
-
         // Skip --tw-sort declarations (internal sorting only)
         if ($node['kind'] === 'declaration' && ($node['property'] ?? '') === '--tw-sort') {
             return;
         }
-
         // Filter :root, :host declarations to only used variables
         if ($node['kind'] === 'rule' && $node['selector'] === ':root, :host') {
             $filteredNodes = [];
@@ -1669,14 +1450,13 @@ function optimizeAst(array $ast, DesignSystem $designSystem, int $polyfills = PO
                 }
             }
             if (empty($filteredNodes)) {
-                return; // Skip empty :root, :host
+                return;
+                // Skip empty :root, :host
             }
             $node['nodes'] = $filteredNodes;
             $parent[] = $node;
-
             return;
         }
-
         // Filter keyframes to only used ones (but only for theme keyframes)
         if ($node['kind'] === 'at-rule' && $node['name'] === '@keyframes') {
             $keyframeName = trim($node['params'] ?? '');
@@ -1689,11 +1469,11 @@ function optimizeAst(array $ast, DesignSystem $designSystem, int $polyfills = PO
                 if ($keyframeOptions & Theme::OPTIONS_STATIC) {
                     // Keep it - static keyframes are always included
                 } else {
-                    return; // Skip unused theme keyframes
+                    return;
+                    // Skip unused theme keyframes
                 }
             }
         }
-
         // Handle rules with children
         if (($node['kind'] === 'rule' || $node['kind'] === 'at-rule') && isset($node['nodes'])) {
             $children = [];
@@ -1701,7 +1481,6 @@ function optimizeAst(array $ast, DesignSystem $designSystem, int $polyfills = PO
                 $transform($child, $children);
             }
             $node['nodes'] = $children;
-
             // Skip empty rules (no declarations or nested rules)
             // But keep @layer, @charset, @custom-media, @namespace, @import (they can be empty)
             $name = $node['name'] ?? '';
@@ -1709,21 +1488,21 @@ function optimizeAst(array $ast, DesignSystem $designSystem, int $polyfills = PO
                 return;
             }
         }
-
         $parent[] = $node;
     };
-
-    foreach ($ast as $node) {
+    foreach ($nodes as $node) {
         $transform($node, $result);
     }
-
-    // Transform CSS nesting (flatten & selectors, hoist @media)
-    $result = LightningCss::transformNesting($result);
-
-    // Add vendor prefixes to declarations that need them
-    $result = LightningCss::addVendorPrefixes($result);
-
-    // Apply LightningCSS value optimizations to all declarations
+    return $result;
+}
+/**
+ * Apply LightningCSS value optimizations to all declarations in a node list.
+ *
+ * @param array &$nodes
+ * @return void
+ */
+function optimizeAstOptimizeValues(array &$nodes): void
+{
     $optimizeValues = function (array &$node) use (&$optimizeValues): void {
         if ($node['kind'] === 'declaration' && isset($node['value'])) {
             $node['value'] = LightningCss::optimizeValue($node['value'], $node['property'] ?? '');
@@ -1734,16 +1513,20 @@ function optimizeAst(array $ast, DesignSystem $designSystem, int $polyfills = PO
             }
         }
     };
-
-    foreach ($result as &$node) {
+    foreach ($nodes as &$node) {
         $optimizeValues($node);
     }
-
-    // Apply color-mix polyfill - convert color-mix with variables to @supports fallback
-    if ($polyfills & POLYFILL_COLOR_MIX) {
-        $result = applyColorMixPolyfill($result, $designSystem);
-    }
-
+}
+/**
+ * Split hoisted at-root nodes into the @property fallback block and the
+ * nodes to append after the main result.
+ *
+ * @param array $atRoots
+ * @param int $polyfills
+ * @return array{fallback: ?array, append: array}
+ */
+function optimizeAstProcessAtRoots(array $atRoots, int $polyfills): array
+{
     // Process atRoots - separate @property rules from others
     $atPropertyRules = [];
     $otherAtRoots = [];
@@ -1754,9 +1537,9 @@ function optimizeAst(array $ast, DesignSystem $designSystem, int $polyfills = PO
             $otherAtRoots[] = $atRoot;
         }
     }
-
+    $fallback = null;
     // If we have @property rules, wrap their fallbacks in @layer properties + @supports
-    if (!empty($atPropertyRules) && ($polyfills & POLYFILL_AT_PROPERTY)) {
+    if (!empty($atPropertyRules) && $polyfills & POLYFILL_AT_PROPERTY) {
         // Extract initial values for fallback declarations
         $fallbackDeclarations = [];
         foreach ($atPropertyRules as $property) {
@@ -1772,48 +1555,434 @@ function optimizeAst(array $ast, DesignSystem $designSystem, int $polyfills = PO
                     }
                 }
             }
-
             // For <length> syntax with bare "0", add "px" unit in fallback
             // This is because @property strips units from zero but fallbacks need them
             $fallbackValue = $initialValue ?? 'initial';
             if ($fallbackValue === '0' && $syntax === '"<length>"') {
                 $fallbackValue = '0px';
             }
-
             $fallbackDeclarations[] = decl($propName, $fallbackValue);
         }
-
         if (!empty($fallbackDeclarations)) {
             // Create @layer properties with @supports fallback
             // @supports (((-webkit-hyphens: none)) and (not (margin-trim: inline))) or ((-moz-orient: inline) and (not (color:rgb(from red r g b))))
             // Note: Extra parens around -webkit-hyphens test for specificity
             $supportsCondition = '(((-webkit-hyphens: none)) and (not (margin-trim: inline))) or ((-moz-orient: inline) and (not (color: rgb(from red r g b))))';
             $universalSelector = '*, :before, :after, ::backdrop';
-
             $fallbackRule = Ast\styleRule($universalSelector, $fallbackDeclarations);
             $supportsRule = Ast\atRule('@supports', $supportsCondition, [$fallbackRule]);
-            $layerProperties = Ast\atRule('@layer', 'properties', [$supportsRule]);
-
-            // Prepend to result
-            array_unshift($result, $layerProperties);
+            $fallback = Ast\atRule('@layer', 'properties', [$supportsRule]);
         }
     }
-
+    return ['fallback' => $fallback, 'append' => array_merge($otherAtRoots, $atPropertyRules)];
+}
+/**
+ * Optimize AST by flattening context nodes and other optimizations.
+ *
+ * @param array $ast
+ * @param DesignSystem $designSystem
+ * @param int $polyfills
+ * @return array
+ */
+function optimizeAst(array $ast, DesignSystem $designSystem, int $polyfills = POLYFILL_ALL): array
+{
+    $usedVariables = [];
+    $usedKeyframeNames = [];
+    $theme = $designSystem->getTheme();
+    $atRoots = [];
+    // Collect at-root nodes to hoist
+    $seenAtProperties = [];
+    // Track seen @property rules to dedupe
+    // First pass: collect used variables and keyframe names
+    optimizeAstCollectUsed($ast, $usedVariables, $usedKeyframeNames);
+    optimizeAstExpandThemeUsed($theme, $usedVariables, $usedKeyframeNames);
+    $result = optimizeAstTransformNodes($ast, $theme, $usedVariables, $usedKeyframeNames, $atRoots, $seenAtProperties);
+    // Transform CSS nesting (flatten & selectors, hoist @media)
+    $result = LightningCss::transformNesting($result);
+    // Add vendor prefixes to declarations that need them
+    $result = LightningCss::addVendorPrefixes($result);
+    // Apply LightningCSS value optimizations to all declarations
+    optimizeAstOptimizeValues($result);
+    // Apply color-mix polyfill - convert color-mix with variables to @supports fallback
+    if ($polyfills & POLYFILL_COLOR_MIX) {
+        $result = applyColorMixPolyfill($result, $designSystem);
+    }
+    $roots = optimizeAstProcessAtRoots($atRoots, $polyfills);
+    if ($roots['fallback'] !== null) {
+        // Prepend to result
+        array_unshift($result, $roots['fallback']);
+    }
     // Append other atRoots (non-@property) and @property rules
-    $result = array_merge($result, $otherAtRoots, $atPropertyRules);
-
+    $result = array_merge($result, $roots['append']);
     // Merge adjacent rules with same declarations (selector merging)
     // Process @custom-media definitions and substitute them
     $result = LightningCss::processCustomMedia($result);
-
     // Transform media query range syntax (width >= X → min-width: X)
     $result = LightningCss::processQueryRangeSyntax($result);
-
     $result = LightningCss::mergeRulesWithSameDeclarations($result);
-
     return $result;
 }
-
+/**
+ * Detect whether a node list contains an at-rule with the given name.
+ *
+ * @param array $nodes
+ * @param string $name
+ * @return bool
+ */
+function astContainsAtRuleNamed(array $nodes, string $name): bool
+{
+    foreach ($nodes as $node) {
+        if ($node['kind'] === 'at-rule' && ($node['name'] ?? '') === $name) {
+            return \true;
+        }
+        if (!empty($node['nodes']) && astContainsAtRuleNamed($node['nodes'], $name)) {
+            return \true;
+        }
+    }
+    return \false;
+}
+/**
+ * Find the index path to the context node holding the sentinel comment.
+ *
+ * @param array $nodes
+ * @param string $sentinelValue
+ * @return ?array<int>
+ */
+function optimizeAstFindSentinelPath(array $nodes, string $sentinelValue): ?array
+{
+    foreach ($nodes as $i => $node) {
+        if ($node['kind'] === 'context' && count($node['nodes'] ?? []) === 1 && ($node['nodes'][0]['kind'] ?? '') === 'comment' && ($node['nodes'][0]['value'] ?? '') === $sentinelValue) {
+            return [$i];
+        }
+        if (!empty($node['nodes'])) {
+            $sub = optimizeAstFindSentinelPath($node['nodes'], $sentinelValue);
+            if ($sub !== null) {
+                return [$i, ...$sub];
+            }
+        }
+    }
+    return null;
+}
+/**
+ * Split the AST into an ordered chunk list mirroring how the transform pass
+ * lifts top-level context nodes: one chunk per effective top-level node. The
+ * chunk whose subtree holds the utilities context node becomes the bridge
+ * chunk and records the relative index path to that node.
+ *
+ * @param array $nodes
+ * @param array<int> $bridgePath
+ * @param array<int> $prefix
+ * @return array
+ */
+function optimizeAstSplitChunks(array $nodes, array $bridgePath, array $prefix = []): array
+{
+    $chunks = [];
+    foreach ($nodes as $i => $node) {
+        $path = [...$prefix, $i];
+        if ($path === $bridgePath) {
+            $chunks[] = ['type' => 'bridge', 'node' => $node, 'path' => []];
+            continue;
+        }
+        if ($node['kind'] === 'context' && empty($node['context']['reference'])) {
+            $chunks = array_merge($chunks, optimizeAstSplitChunks($node['nodes'] ?? [], $bridgePath, $path));
+            continue;
+        }
+        $isPrefixOfBridge = count($path) < count($bridgePath) && array_slice($bridgePath, 0, count($path)) === $path;
+        if ($isPrefixOfBridge) {
+            $chunks[] = ['type' => 'bridge', 'node' => $node, 'path' => array_slice($bridgePath, count($path))];
+            continue;
+        }
+        $chunks[] = ['type' => 'node', 'node' => $node];
+    }
+    return $chunks;
+}
+/**
+ * Whether a chunk's optimized output is independent of the per-build used
+ * variable and keyframe sets. Rules hoisted through at-root nodes are
+ * checked recursively; their replay handles the global @property dedupe.
+ *
+ * @param array $node
+ * @param Theme $theme
+ * @return bool
+ */
+function optimizeAstChunkIsInvariant(array $node, Theme $theme): bool
+{
+    if ($node['kind'] === 'rule' && ($node['selector'] ?? '') === ':root, :host') {
+        return \false;
+    }
+    if ($node['kind'] === 'at-rule' && ($node['name'] ?? '') === '@keyframes' && $theme->hasKeyframe(trim($node['params'] ?? ''))) {
+        return \false;
+    }
+    foreach ($node['nodes'] ?? [] as $child) {
+        if (!optimizeAstChunkIsInvariant($child, $theme)) {
+            return \false;
+        }
+    }
+    return \true;
+}
+/**
+ * Build the per-compiler cache for incremental optimizeAst: locate the
+ * utilities context node, split the AST into chunks, precompute the fully
+ * optimized output of every invariant chunk (body nodes, hoisted at-rules,
+ * hoisted at-root nodes, and per-rule declaration keys for the final merge
+ * scan), and record the used-variable and keyframe sets contributed by
+ * everything except the per-build utility nodes. Returns null when the AST
+ * shape rules out the incremental path.
+ *
+ * @param array $ast
+ * @param DesignSystem $designSystem
+ * @param int $polyfills
+ * @return ?array
+ */
+function optimizeAstPrepareIncremental(array $ast, DesignSystem $designSystem, int $polyfills): ?array
+{
+    // @custom-media substitution runs before the range-syntax and merge
+    // passes on the whole tree; the chunked pipeline cannot replay that
+    // ordering against cached output, so fall back to the full path.
+    if (astContainsAtRuleNamed($ast, '@custom-media')) {
+        return null;
+    }
+    $theme = $designSystem->getTheme();
+    // Locate the utilities context node with the exact walk the build
+    // closure's updateUtilitiesNode uses, via a sentinel probe on a copy.
+    $sentinelValue = '__tailwindphp_utilities_sentinel_' . bin2hex(random_bytes(8));
+    $probe = $ast;
+    walk($probe, function (&$node) use ($sentinelValue) {
+        if ($node['kind'] === 'context' && isset($node['context']) && is_array($node['context'])) {
+            $node['nodes'] = [['kind' => 'comment', 'value' => $sentinelValue]];
+            return WalkAction::Stop;
+        }
+        return WalkAction::Continue;
+    });
+    $bridgePath = optimizeAstFindSentinelPath($probe, $sentinelValue);
+    if ($bridgePath === null) {
+        return null;
+    }
+    // The pristine utilities context must be empty so the cached used-set
+    // scan plus the per-build utility-node scan equals a full-AST scan.
+    $cursor = ['kind' => 'context', 'nodes' => $ast];
+    foreach ($bridgePath as $idx) {
+        if (!isset($cursor['nodes'][$idx])) {
+            return null;
+        }
+        $cursor = $cursor['nodes'][$idx];
+    }
+    if ($cursor['kind'] !== 'context' || ($cursor['nodes'] ?? []) !== []) {
+        return null;
+    }
+    $chunks = optimizeAstSplitChunks($ast, $bridgePath);
+    $bridgeCount = count(array_filter($chunks, fn(array $chunk) => $chunk['type'] === 'bridge'));
+    if ($bridgeCount !== 1) {
+        return null;
+    }
+    $usedVariables = [];
+    $usedKeyframeNames = [];
+    optimizeAstCollectUsed($ast, $usedVariables, $usedKeyframeNames);
+    $prepared = [];
+    $staticAtRules = [];
+    foreach ($chunks as $chunk) {
+        if ($chunk['type'] !== 'node') {
+            $prepared[] = $chunk;
+            continue;
+        }
+        if (!optimizeAstChunkIsInvariant($chunk['node'], $theme)) {
+            $prepared[] = ['type' => 'variant', 'node' => $chunk['node']];
+            continue;
+        }
+        // Invariant chunk: run every per-node pipeline stage now. Hoisted
+        // at-rules stay raw so the per-build merge and its later stages see
+        // them exactly as a full pass would; hoisted at-root nodes stay raw
+        // for the per-build global @property dedupe replay.
+        $atRoots = [];
+        $seenAtProperties = [];
+        $stage = optimizeAstTransformNodes([$chunk['node']], $theme, [], [], $atRoots, $seenAtProperties);
+        $chunkAtRules = [];
+        $flat = LightningCss::flattenNodes($stage, $chunkAtRules);
+        $flat = LightningCss::addVendorPrefixes($flat);
+        optimizeAstOptimizeValues($flat);
+        if ($polyfills & POLYFILL_COLOR_MIX) {
+            $flat = applyColorMixPolyfill($flat, $designSystem);
+        }
+        $flat = LightningCss::processQueryRangeSyntax($flat);
+        $declKeys = [];
+        foreach ($flat as &$node) {
+            if ($node['kind'] === 'at-rule' && isset($node['nodes'])) {
+                $node['nodes'] = LightningCss::mergeRulesWithSameDeclarations($node['nodes']);
+            }
+            $declKeys[] = $node['kind'] === 'rule' ? LightningCss::serializeDeclarations($node['nodes'] ?? []) : null;
+        }
+        unset($node);
+        $staticAtRules = array_merge($staticAtRules, $chunkAtRules);
+        $prepared[] = ['type' => 'static', 'nodes' => $flat, 'declKeys' => $declKeys, 'atRules' => $chunkAtRules, 'atRoots' => $atRoots];
+    }
+    // Precompute the merged hoisted at-rules for builds where no variant or
+    // bridge chunk hoists any: merge order then equals static chunk order,
+    // so the whole merge-plus-value pipeline is invariant too.
+    $staticMergedAtRules = LightningCss::mergeCollectedAtRules($staticAtRules);
+    $staticMergedAtRules = LightningCss::addVendorPrefixes($staticMergedAtRules);
+    optimizeAstOptimizeValues($staticMergedAtRules);
+    if ($polyfills & POLYFILL_COLOR_MIX) {
+        $staticMergedAtRules = applyColorMixPolyfill($staticMergedAtRules, $designSystem);
+    }
+    $staticMergedAtRules = LightningCss::processQueryRangeSyntax($staticMergedAtRules);
+    foreach ($staticMergedAtRules as &$node) {
+        if ($node['kind'] === 'at-rule' && isset($node['nodes'])) {
+            $node['nodes'] = LightningCss::mergeRulesWithSameDeclarations($node['nodes']);
+        }
+    }
+    unset($node);
+    return ['polyfills' => $polyfills, 'usedVariables' => $usedVariables, 'usedKeyframeNames' => $usedKeyframeNames, 'chunks' => $prepared, 'staticMergedAtRules' => $staticMergedAtRules];
+}
+/**
+ * Incremental optimizeAst: reuse the cached invariant chunk output and
+ * re-optimize only the used-set collection, the bridge chunk holding the
+ * per-build utility nodes, and the used-set-dependent chunks. Produces the
+ * same node list as optimizeAst() over the substituted AST.
+ *
+ * @param array $cache Cache built by optimizeAstPrepareIncremental()
+ * @param array $utilityNodes Compiled utility nodes for this build
+ * @param DesignSystem $designSystem
+ * @param int $polyfills
+ * @return array
+ */
+function optimizeAstIncremental(array $cache, array $utilityNodes, DesignSystem $designSystem, int $polyfills): array
+{
+    $theme = $designSystem->getTheme();
+    $usedVariables = $cache['usedVariables'];
+    $usedKeyframeNames = $cache['usedKeyframeNames'];
+    optimizeAstCollectUsed($utilityNodes, $usedVariables, $usedKeyframeNames);
+    optimizeAstExpandThemeUsed($theme, $usedVariables, $usedKeyframeNames);
+    $result = [];
+    $fresh = [];
+    $declKeys = [];
+    $atRules = [];
+    $hasFreshAtRules = \false;
+    $atRoots = [];
+    $seenAtProperties = [];
+    foreach ($cache['chunks'] as $chunk) {
+        if ($chunk['type'] === 'static') {
+            foreach ($chunk['nodes'] as $j => $node) {
+                $result[] = $node;
+                $fresh[] = \false;
+                $declKeys[] = $chunk['declKeys'][$j];
+            }
+            foreach ($chunk['atRules'] as $atRule) {
+                $atRules[] = $atRule;
+            }
+            // Replay the chunk's hoisted at-root nodes with the global
+            // @property dedupe the transform pass would have applied.
+            foreach ($chunk['atRoots'] as $atRoot) {
+                if ($atRoot['kind'] === 'at-rule' && $atRoot['name'] === '@property') {
+                    $propName = trim($atRoot['params'] ?? '');
+                    if (isset($seenAtProperties[$propName])) {
+                        continue;
+                    }
+                    $seenAtProperties[$propName] = \true;
+                }
+                $atRoots[] = $atRoot;
+            }
+            continue;
+        }
+        $node = $chunk['node'];
+        if ($chunk['type'] === 'bridge') {
+            $target =& $node;
+            foreach ($chunk['path'] as $idx) {
+                $target =& $target['nodes'][$idx];
+            }
+            $target['nodes'] = $utilityNodes;
+            unset($target);
+        }
+        $stage = optimizeAstTransformNodes([$node], $theme, $usedVariables, $usedKeyframeNames, $atRoots, $seenAtProperties);
+        $atRulesBefore = count($atRules);
+        $flat = LightningCss::flattenNodes($stage, $atRules);
+        if (count($atRules) !== $atRulesBefore) {
+            $hasFreshAtRules = \true;
+        }
+        $flat = LightningCss::addVendorPrefixes($flat);
+        optimizeAstOptimizeValues($flat);
+        if ($polyfills & POLYFILL_COLOR_MIX) {
+            $flat = applyColorMixPolyfill($flat, $designSystem);
+        }
+        foreach ($flat as $flatNode) {
+            $result[] = $flatNode;
+            $fresh[] = \true;
+            $declKeys[] = null;
+        }
+    }
+    if ($hasFreshAtRules) {
+        // Merge hoisted at-rules across all chunks in collection order, then
+        // run the value stages on them, matching the full pipeline's order.
+        $merged = LightningCss::mergeCollectedAtRules($atRules);
+        $merged = LightningCss::addVendorPrefixes($merged);
+        optimizeAstOptimizeValues($merged);
+        if ($polyfills & POLYFILL_COLOR_MIX) {
+            $merged = applyColorMixPolyfill($merged, $designSystem);
+        }
+        foreach ($merged as $node) {
+            $result[] = $node;
+            $fresh[] = \true;
+            $declKeys[] = null;
+        }
+    } else {
+        foreach ($cache['staticMergedAtRules'] as $node) {
+            $result[] = $node;
+            $fresh[] = \false;
+            $declKeys[] = null;
+        }
+    }
+    $roots = optimizeAstProcessAtRoots($atRoots, $polyfills);
+    if ($roots['fallback'] !== null) {
+        array_unshift($result, $roots['fallback']);
+        array_unshift($fresh, \true);
+        array_unshift($declKeys, null);
+    }
+    foreach ($roots['append'] as $node) {
+        $result[] = $node;
+        $fresh[] = \true;
+        $declKeys[] = null;
+    }
+    // No @custom-media can be present (prepare bails otherwise), so this is
+    // a cheap top-level scan kept for exact stage parity.
+    $result = LightningCss::processCustomMedia($result);
+    foreach ($result as $i => $node) {
+        if ($fresh[$i]) {
+            $result[$i] = LightningCss::processQueryRangeSyntax([$node])[0];
+        }
+    }
+    // Final pass: replay mergeRulesWithSameDeclarations' top-level scan,
+    // recursing only into fresh at-rules; cached chunks are pre-merged and
+    // carry precomputed declaration keys.
+    $final = [];
+    $lastDeclKey = null;
+    $lastIndex = -1;
+    $lastSelectors = [];
+    foreach ($result as $i => $node) {
+        if ($node['kind'] === 'rule') {
+            $declKey = $declKeys[$i] ?? LightningCss::serializeDeclarations($node['nodes'] ?? []);
+            $currentSelector = $node['selector'];
+            if ($lastDeclKey === $declKey && $lastIndex === count($final) - 1 && $lastIndex >= 0) {
+                if (!isset($lastSelectors[$currentSelector])) {
+                    $final[$lastIndex]['selector'] .= ', ' . $currentSelector;
+                    $lastSelectors[$currentSelector] = \true;
+                }
+            } else {
+                $final[] = $node;
+                $lastDeclKey = $declKey;
+                $lastIndex = count($final) - 1;
+                $lastSelectors = [$currentSelector => \true];
+            }
+        } else {
+            if ($node['kind'] === 'at-rule' && isset($node['nodes']) && $fresh[$i]) {
+                $node['nodes'] = LightningCss::mergeRulesWithSameDeclarations($node['nodes']);
+            }
+            $final[] = $node;
+            $lastDeclKey = null;
+            $lastIndex = -1;
+            $lastSelectors = [];
+        }
+    }
+    return $final;
+}
 /**
  * Extract keyframe names from an animation CSS value.
  *
@@ -1825,13 +1994,9 @@ function extractKeyframeNames(string $value): array
     $names = [];
     // Animation value format: name duration timing-function delay iteration-count direction fill-mode play-state
     // Keyframe name is a custom identifier (not a keyword)
-    $keywords = ['none', 'infinite', 'normal', 'reverse', 'alternate', 'alternate-reverse',
-        'forwards', 'backwards', 'both', 'running', 'paused', 'ease', 'ease-in', 'ease-out',
-        'ease-in-out', 'linear', 'step-start', 'step-end', 'initial', 'inherit'];
-
+    $keywords = ['none', 'infinite', 'normal', 'reverse', 'alternate', 'alternate-reverse', 'forwards', 'backwards', 'both', 'running', 'paused', 'ease', 'ease-in', 'ease-out', 'ease-in-out', 'linear', 'step-start', 'step-end', 'initial', 'inherit'];
     // Split by comma for multiple animations
     $animations = preg_split('/\s*,\s*/', $value);
-
     foreach ($animations as $animation) {
         // Split by whitespace
         $parts = preg_split(REGEX_WHITESPACE, trim($animation));
@@ -1840,7 +2005,6 @@ function extractKeyframeNames(string $value): array
             if (empty($part)) {
                 continue;
             }
-
             // Skip timing values (numbers, percentages, seconds)
             if (preg_match(REGEX_NUMERIC_START, $part)) {
                 continue;
@@ -1848,30 +2012,24 @@ function extractKeyframeNames(string $value): array
             if (preg_match(REGEX_TIME_VALUE, $part)) {
                 continue;
             }
-
             // Skip keywords
             if (in_array(strtolower($part), $keywords)) {
                 continue;
             }
-
             // Skip functions (like cubic-bezier, steps)
             if (str_contains($part, '(')) {
                 continue;
             }
-
             // Skip var() references - the variable value will be resolved
             if (str_starts_with($part, 'var(')) {
                 continue;
             }
-
             // This is likely a keyframe name
             $names[] = $part;
         }
     }
-
     return array_unique($names);
 }
-
 /**
  * Generate CSS from content containing Tailwind classes.
  *
@@ -1959,24 +2117,21 @@ function extractKeyframeNames(string $value): array
  */
 function generate(string|array $input, string $css = '@import "tailwindcss";'): string
 {
-    $minify = false;
+    $minify = \false;
     $cache = null;
     $cacheTtl = null;
-
     // Handle array input
     if (is_array($input)) {
         $content = $input['content'] ?? '';
         $inlineCss = $input['css'] ?? '';
         $importPaths = $input['importPaths'] ?? null;
-        $minify = $input['minify'] ?? false;
+        $minify = $input['minify'] ?? \false;
         $cache = $input['cache'] ?? null;
         $cacheTtl = $input['cacheTtl'] ?? null;
-
         // Resolve import paths to CSS content
         $resolved = resolveImportPaths($importPaths);
         $importedCss = $resolved['css'];
         $searchPaths = $resolved['paths'];
-
         // Combine: inline CSS first, then imported CSS
         // If neither is provided, default to @import "tailwindcss"
         if ($inlineCss === '' && $importedCss === '') {
@@ -1984,7 +2139,6 @@ function generate(string|array $input, string $css = '@import "tailwindcss";'): 
         } else {
             $css = $inlineCss . "\n" . $importedCss;
         }
-
         // Store search paths for @import resolution within files
         $compileOptions = !empty($searchPaths) ? ['importSearchPaths' => $searchPaths] : [];
         if (is_callable($importPaths)) {
@@ -1994,45 +2148,35 @@ function generate(string|array $input, string $css = '@import "tailwindcss";'): 
         $content = $input;
         $compileOptions = [];
     }
-
     // Handle caching
     if ($cache !== null) {
-        $cacheDir = $cache === true ? sys_get_temp_dir() . '/tailwindphp' : $cache;
-
+        $cacheDir = $cache === \true ? sys_get_temp_dir() . '/tailwindphp' : $cache;
         // Create cache directory if it doesn't exist
         if (!is_dir($cacheDir)) {
-            mkdir($cacheDir, 0755, true);
+            mkdir($cacheDir, 0755, \true);
         }
-
         // Create hash from inputs (content + css + minify flag)
         $cacheKey = md5($content . $css . ($minify ? '1' : '0'));
         $cachePath = $cacheDir . '/tailwind_' . $cacheKey . '.css';
-
         // Check for cache hit
         if (file_exists($cachePath)) {
-            $isValid = true;
-
+            $isValid = \true;
             // Check TTL if specified
             if ($cacheTtl !== null) {
                 $fileAge = time() - (int) filemtime($cachePath);
                 $isValid = $fileAge < $cacheTtl;
             }
-
             if ($isValid) {
                 return file_get_contents($cachePath);
             }
         }
-
         // Cache miss - compile, cache, and return
         $result = generateWithoutCache($content, $css, $compileOptions, $minify);
         file_put_contents($cachePath, $result);
-
         return $result;
     }
-
     return generateWithoutCache($content, $css, $compileOptions, $minify);
 }
-
 /**
  * Internal helper to generate CSS without caching.
  *
@@ -2046,20 +2190,11 @@ function generateWithoutCache(string $content, string $css, array $compileOption
 {
     // Extract class names from content
     $candidates = extractCandidates($content);
-
     // Compile
     $compiled = compile($css, $compileOptions);
-
-    $result = $compiled['build']($candidates);
-
-    // Optionally minify output
-    if ($minify) {
-        $result = \BlockstudioVendor\TailwindPHP\Minifier\CssMinifier::minify($result);
-    }
-
-    return $result;
+    // Minified output is emitted directly during serialization
+    return $compiled['build']($candidates, $minify);
 }
-
 /**
  * Clear the TailwindPHP CSS cache.
  *
@@ -2074,34 +2209,27 @@ function generateWithoutCache(string $content, string $css, array $compileOption
  * // Clear cache in custom directory
  * clearCache('/path/to/cache');
  */
-function clearCache(string|bool|null $cache = true): int
+function clearCache(string|bool|null $cache = \true): int
 {
-    if ($cache === null || $cache === false) {
+    if ($cache === null || $cache === \false) {
         return 0;
     }
-
-    $cacheDir = $cache === true ? sys_get_temp_dir() . '/tailwindphp' : $cache;
-
+    $cacheDir = $cache === \true ? sys_get_temp_dir() . '/tailwindphp' : $cache;
     if (!is_dir($cacheDir)) {
         return 0;
     }
-
     $deleted = 0;
     $files = glob($cacheDir . '/tailwind_*.css');
-
-    if ($files === false) {
+    if ($files === \false) {
         return 0;
     }
-
     foreach ($files as $file) {
         if (is_file($file) && unlink($file)) {
             $deleted++;
         }
     }
-
     return $deleted;
 }
-
 /**
  * Extract class name candidates from HTML content.
  *
@@ -2111,13 +2239,11 @@ function clearCache(string|bool|null $cache = true): int
 function extractCandidates(string $html): array
 {
     $candidates = [];
-
     // Extract from class and className attributes
     foreach ([REGEX_CLASS_ATTR, REGEX_CLASSNAME_ATTR] as $pattern) {
         if (preg_match_all($pattern, $html, $matches)) {
             foreach ($matches[1] as $classAttr) {
-                $classAttr = html_entity_decode($classAttr, ENT_QUOTES | ENT_HTML5, 'UTF-8');
-
+                $classAttr = html_entity_decode($classAttr, \ENT_QUOTES | \ENT_HTML5, 'UTF-8');
                 foreach (preg_split(REGEX_WHITESPACE, $classAttr) as $class) {
                     $class = trim($class);
                     if ($class !== '') {
@@ -2127,10 +2253,8 @@ function extractCandidates(string $html): array
             }
         }
     }
-
     return array_unique($candidates);
 }
-
 /**
  * Extract class name candidates from string literals in source code.
  *
@@ -2145,7 +2269,6 @@ function extractCandidates(string $html): array
 function extractCandidatesFromStrings(string $source): array
 {
     $candidates = [];
-
     // Match all single and double-quoted strings
     if (preg_match_all('/["\']([^"\']+)["\']/', $source, $matches)) {
         foreach ($matches[1] as $str) {
@@ -2161,10 +2284,8 @@ function extractCandidatesFromStrings(string $source): array
             }
         }
     }
-
     return array_values(array_unique($candidates));
 }
-
 /**
  * Check if a theme value containing --theme() calls would resolve to 'initial'.
  *
@@ -2180,38 +2301,29 @@ function themeValueResolvesToInitial(string $value, Theme $theme): bool
 {
     // Simple regex to extract --theme() arguments
     if (!preg_match(REGEX_THEME_CALL_FULL, trim($value), $match)) {
-        return false;
+        return \false;
     }
-
     $args = $match[1];
-
     // Parse the arguments (uses optimized helper with array accumulation)
     $parts = splitByCommaRespectingParens($args);
-
     $path = $parts[0];
     $fallback = count($parts) > 1 ? trim(implode(', ', array_slice($parts, 1))) : null;
-
     // Handle 'inline' modifier
     if (str_ends_with($path, ' inline')) {
         $path = substr($path, 0, -7);
     }
-
     // The path should start with --
     if (!str_starts_with($path, '--')) {
-        return false;
+        return \false;
     }
-
     // Look up the value in the theme (without prefix - theme stores unprefixed)
     $themeValue = $theme->get([$path]);
-
     // If the referenced variable doesn't exist and the fallback is 'initial', then resolves to initial
     if ($themeValue === null && $fallback === 'initial') {
-        return true;
+        return \true;
     }
-
-    return false;
+    return \false;
 }
-
 /**
  * Resolve --theme() calls within a value string during @theme processing.
  *
@@ -2226,62 +2338,49 @@ function resolveThemeCallsInValue(string $value, Theme $theme): string
 {
     // Match --theme(path[, fallback]) patterns
     // This is a simplified regex that handles basic cases
-    if (!preg_match_all(REGEX_THEME_CALL, $value, $matches, PREG_SET_ORDER)) {
+    if (!preg_match_all(REGEX_THEME_CALL, $value, $matches, \PREG_SET_ORDER)) {
         return $value;
     }
-
     foreach ($matches as $match) {
         $fullMatch = $match[0];
         $args = $match[1];
-
         // Parse the arguments (uses optimized helper with array accumulation)
         $parts = splitByCommaRespectingParens($args);
-
         $path = $parts[0];
         $fallback = count($parts) > 1 ? implode(', ', array_slice($parts, 1)) : null;
-
         // Handle 'inline' modifier
-        $inline = false;
+        $inline = \false;
         if (str_ends_with($path, ' inline')) {
-            $inline = true;
+            $inline = \true;
             $path = substr($path, 0, -7);
         }
-
         // The path should start with --
         if (!str_starts_with($path, '--')) {
             continue;
         }
-
         // Try to get the value from the theme
         $prefix = $theme->getPrefix();
         $prefixedPath = $path;
-        if ($prefix !== null && str_starts_with($path, '--')) {
+        if ($prefix !== null) {
             $prefixedPath = '--' . $prefix . '-' . substr($path, 2);
         }
-
         $themeValue = $theme->get([$prefixedPath]) ?? $theme->get([$path]);
-
         if ($themeValue === null) {
             // Value doesn't exist - use fallback
             if ($fallback !== null) {
                 $value = str_replace($fullMatch, $fallback, $value);
             }
             // If no fallback, leave as-is (will cause error or be handled later)
+        } else if ($inline) {
+            // Return the actual value
+            $value = str_replace($fullMatch, $themeValue, $value);
         } else {
-            // Value exists
-            if ($inline) {
-                // Return the actual value
-                $value = str_replace($fullMatch, $themeValue, $value);
-            } else {
-                // Return var() reference
-                $value = str_replace($fullMatch, "var({$prefixedPath})", $value);
-            }
+            // Return var() reference
+            $value = str_replace($fullMatch, "var({$prefixedPath})", $value);
         }
     }
-
     return $value;
 }
-
 /**
  * Apply color-mix polyfill to AST.
  *
@@ -2297,39 +2396,31 @@ function resolveThemeCallsInValue(string $value, Theme $theme): string
 function applyColorMixPolyfill(array $ast, DesignSystem $designSystem): array
 {
     $result = [];
-
     foreach ($ast as $node) {
         if ($node['kind'] === 'rule') {
             // Process each declaration in the rule
             $newNodes = [];
             $supportsDeclarations = [];
-
             foreach ($node['nodes'] ?? [] as $decl) {
                 if ($decl['kind'] === 'declaration' && isset($decl['value'])) {
                     $value = $decl['value'];
-
                     // Check if this declaration has color-mix that needs polyfill
                     // Pattern 1: color-mix with var() in opacity position
                     // Pattern 2: color-mix with var() in color position (from --theme)
-                    $needsPolyfill = false;
+                    $needsPolyfill = \false;
                     $fallbackColor = null;
-
                     // Pattern: color-mix(in oklab, COLOR VAR_OPACITY, transparent)
                     if (preg_match(REGEX_COLOR_MIX_VAR, $value, $match)) {
-                        $needsPolyfill = true;
+                        $needsPolyfill = \true;
                         $fallbackColor = trim($match[1]);
                         $fallbackColor = LightningCss::optimizeValue($fallbackColor, $decl['property']);
-                    }
-                    // Pattern: color-mix(in oklab, var(--var) OPACITY%, transparent)
-                    elseif (preg_match(REGEX_COLOR_MIX_OPACITY, $value, $match)) {
-                        $needsPolyfill = true;
+                    } elseif (preg_match(REGEX_COLOR_MIX_OPACITY, $value, $match)) {
+                        $needsPolyfill = \true;
                         $varName = '--' . ltrim(trim($match[1]), '-');
                         $opacityStr = $match[2];
-
                         // Get the color value from theme
                         $theme = $designSystem->getTheme();
                         $colorValue = $theme->get([$varName]);
-
                         if ($colorValue !== null) {
                             // Calculate hex with alpha
                             $opacity = floatval(rtrim($opacityStr, '%'));
@@ -2339,20 +2430,13 @@ function applyColorMixPolyfill(array $ast, DesignSystem $designSystem): array
                             $fallbackColor = LightningCss::colorWithAlpha($colorValue, $opacity);
                         } else {
                             // Unknown variable (arbitrary property) - fallback to just the variable
-                            $fallbackColor = "var($varName)";
+                            $fallbackColor = "var({$varName})";
                         }
                     }
-
                     if ($needsPolyfill && $fallbackColor !== null) {
                         // Create fallback with the computed color
-                        $fallbackDecl = [
-                            'kind' => 'declaration',
-                            'property' => $decl['property'],
-                            'value' => $fallbackColor,
-                            'important' => $decl['important'] ?? false,
-                        ];
+                        $fallbackDecl = ['kind' => 'declaration', 'property' => $decl['property'], 'value' => $fallbackColor, 'important' => $decl['important'] ?? \false];
                         $newNodes[] = $fallbackDecl;
-
                         // Keep original for @supports
                         $supportsDeclarations[] = $decl;
                     } else {
@@ -2362,21 +2446,15 @@ function applyColorMixPolyfill(array $ast, DesignSystem $designSystem): array
                     $newNodes[] = $decl;
                 }
             }
-
             // Add the rule with fallback declarations
             if (!empty($newNodes)) {
                 $fallbackRule = $node;
                 $fallbackRule['nodes'] = $newNodes;
                 $result[] = $fallbackRule;
             }
-
             // Add @supports block if we have color-mix declarations
             if (!empty($supportsDeclarations)) {
-                $supportsRule = [
-                    'kind' => 'rule',
-                    'selector' => $node['selector'],
-                    'nodes' => $supportsDeclarations,
-                ];
+                $supportsRule = ['kind' => 'rule', 'selector' => $node['selector'], 'nodes' => $supportsDeclarations];
                 $supports = Ast\atRule('@supports', '(color: color-mix(in lab, red, red))', [$supportsRule]);
                 $result[] = $supports;
             }
@@ -2388,19 +2466,14 @@ function applyColorMixPolyfill(array $ast, DesignSystem $designSystem): array
             $result[] = $node;
         }
     }
-
     return $result;
 }
-
 // ==================================================
 // Plugin System
 // ==================================================
-
 use BlockstudioVendor\TailwindPHP\Plugin\PluginManager;
-
-/** @var \BlockstudioVendor\TailwindPHP\Plugin\PluginManager|null Global plugin manager instance */
+/** @var \TailwindPHP\Plugin\PluginManager|null Global plugin manager instance */
 $_pluginManager = null;
-
 /**
  * Get the global plugin manager instance.
  *
@@ -2409,24 +2482,20 @@ $_pluginManager = null;
 function getPluginManager(): PluginManager
 {
     global $_pluginManager;
-
     if ($_pluginManager === null) {
         $_pluginManager = new PluginManager();
     }
-
     return $_pluginManager;
 }
-
 /**
  * Register a plugin with the global plugin manager.
  *
- * @param \BlockstudioVendor\TailwindPHP\Plugin\PluginInterface $plugin The plugin to register
+ * @param \TailwindPHP\Plugin\PluginInterface $plugin The plugin to register
  */
 function registerPlugin(\BlockstudioVendor\TailwindPHP\Plugin\PluginInterface $plugin): void
 {
     getPluginManager()->register($plugin);
 }
-
 /**
  * Parse a plugin option value from CSS.
  *
@@ -2442,40 +2511,32 @@ function registerPlugin(\BlockstudioVendor\TailwindPHP\Plugin\PluginInterface $p
 function parsePluginOptionValue(string $value): mixed
 {
     $value = trim($value);
-
     // Empty value
     if ($value === '') {
         return '';
     }
-
     // Quoted string
-    if ((str_starts_with($value, '"') && str_ends_with($value, '"')) ||
-        (str_starts_with($value, "'") && str_ends_with($value, "'"))) {
+    if (str_starts_with($value, '"') && str_ends_with($value, '"') || str_starts_with($value, "'") && str_ends_with($value, "'")) {
         return substr($value, 1, -1);
     }
-
     // Boolean
     if ($value === 'true') {
-        return true;
+        return \true;
     }
     if ($value === 'false') {
-        return false;
+        return \false;
     }
-
     // Number
     if (is_numeric($value)) {
         return str_contains($value, '.') ? (float) $value : (int) $value;
     }
-
     // Check for comma-separated list
     if (str_contains($value, ',')) {
         return array_map('trim', explode(',', $value));
     }
-
     // Plain string
     return $value;
 }
-
 /**
  * TailwindCompiler - Compiled Tailwind instance for reuse.
  *
@@ -2484,7 +2545,7 @@ function parsePluginOptionValue(string $value): mixed
  *
  * Usage:
  * ```php
- * use BlockstudioVendor\TailwindPHP\tw;
+ * use TailwindPHP\tw;
  *
  * // Compile once
  * $tw = tw::compile('@import "tailwindcss"; @theme { --color-brand: #3b82f6; }');
@@ -2500,52 +2561,82 @@ class TailwindCompiler
     private array $compiled;
     private object $designSystem;
     private Theme $theme;
-
     /**
      * Create a new TailwindCompiler instance.
+     *
+     * Pass a `stateCacheFile` option to persist the expensive construction
+     * state across processes; see StateCache\compileCssCached().
      *
      * @param string $css CSS input with @import, @theme, @utility directives
      * @param array $options Compilation options
      */
     public function __construct(string $css = '@import "tailwindcss";', array $options = [])
     {
-        $ast = parse($css);
-
-        // compileAst internally calls parseCss and returns the compiled result with build()
-        $this->compiled = compileAst($ast, $options);
-
-        // Get design system from a fresh parse (compileAst already processed it)
-        // We need to re-parse to get the design system for properties() etc.
-        $ast2 = parse($css);
-        $result = parseCss($ast2, $options);
-        $this->designSystem = $result['designSystem'];
+        $stateCacheFile = $options['stateCacheFile'] ?? null;
+        unset($options['stateCacheFile']);
+        if (is_string($stateCacheFile) && $stateCacheFile !== '') {
+            $this->compiled = StateCache\compileCssCached($css, $stateCacheFile, $options);
+        } else {
+            $ast = parse($css);
+            // compileAst internally calls parseCss and returns the compiled result with build()
+            $this->compiled = compileAst($ast, $options);
+        }
+        // Reuse the design system that compileAst already built for properties() etc.
+        $this->designSystem = $this->compiled['designSystem'];
         $this->theme = $this->designSystem->getTheme();
     }
-
     /**
      * Generate CSS from content containing Tailwind classes.
      *
      * @param string $content HTML string to extract classes from
+     * @param bool $minify Emit minified CSS during serialization
      * @return string Generated CSS
      */
-    public function generate(string $content): string
+    public function generate(string $content, bool $minify = \false): string
     {
         $candidates = extractCandidates($content);
-
-        return $this->compiled['build']($candidates);
+        return $this->compiled['build']($candidates, $minify);
     }
-
     /**
      * Generate CSS from an array of class candidates.
      *
      * @param array<string> $candidates Array of class names
+     * @param bool $minify Emit minified CSS during serialization
      * @return string Generated CSS
      */
-    public function css(array $candidates): string
+    public function css(array $candidates, bool $minify = \false): string
     {
-        return $this->compiled['build']($candidates);
+        return $this->compiled['build']($candidates, $minify);
     }
-
+    /**
+     * Generate CSS for exactly the given content, without accumulating
+     * candidates from previous generate()/css() calls on this compiler.
+     *
+     * The output matches what a cold generate() of the same content would
+     * produce, while still reusing this compiler's parsed design system.
+     *
+     * @param string $content HTML string to extract classes from
+     * @param bool $minify Emit minified CSS during serialization
+     * @return string Generated CSS
+     */
+    public function generateExact(string $content, bool $minify = \false): string
+    {
+        $candidates = extractCandidates($content);
+        return $this->compiled['buildExact']($candidates, $minify);
+    }
+    /**
+     * Generate CSS for exactly the given class candidates, without
+     * accumulating candidates from previous generate()/css() calls on this
+     * compiler.
+     *
+     * @param array<string> $candidates Array of class names
+     * @param bool $minify Emit minified CSS during serialization
+     * @return string Generated CSS
+     */
+    public function cssExact(array $candidates, bool $minify = \false): string
+    {
+        return $this->compiled['buildExact']($candidates, $minify);
+    }
     /**
      * Get raw CSS properties for a utility class.
      *
@@ -2559,7 +2650,6 @@ class TailwindCompiler
         if (is_string($utilities)) {
             $utilities = [$utilities];
         }
-
         $result = [];
         foreach ($utilities as $utility) {
             $declarations = $this->getDeclarations($utility);
@@ -2567,10 +2657,8 @@ class TailwindCompiler
                 $result[$decl['property']] = $decl['value'];
             }
         }
-
         return $result;
     }
-
     /**
      * Get computed CSS properties for a utility class.
      *
@@ -2584,7 +2672,6 @@ class TailwindCompiler
         if (is_string($utilities)) {
             $utilities = [$utilities];
         }
-
         $result = [];
         foreach ($utilities as $utility) {
             $declarations = $this->getDeclarations($utility);
@@ -2592,10 +2679,8 @@ class TailwindCompiler
                 $result[$decl['property']] = $this->resolveValue($decl['value']);
             }
         }
-
         return $result;
     }
-
     /**
      * Get raw value for a utility class.
      *
@@ -2612,7 +2697,6 @@ class TailwindCompiler
         if (empty($declarations)) {
             return null;
         }
-
         // If the first property is a CSS variable, find the first non-variable property
         $first = $declarations[0];
         if (str_starts_with($first['property'], '--')) {
@@ -2622,10 +2706,8 @@ class TailwindCompiler
                 }
             }
         }
-
         return $first['value'];
     }
-
     /**
      * Get computed value for a utility class.
      *
@@ -2640,10 +2722,8 @@ class TailwindCompiler
         if ($value === null) {
             return null;
         }
-
         return $this->resolveValue($value);
     }
-
     /**
      * Extract class name candidates from HTML content.
      *
@@ -2654,7 +2734,6 @@ class TailwindCompiler
     {
         return extractCandidates($html);
     }
-
     /**
      * Extract class name candidates from string literals in source code.
      *
@@ -2665,7 +2744,6 @@ class TailwindCompiler
     {
         return extractCandidatesFromStrings($source);
     }
-
     /**
      * Minify CSS output.
      *
@@ -2676,17 +2754,15 @@ class TailwindCompiler
     {
         return \BlockstudioVendor\TailwindPHP\Minifier\CssMinifier::minify($css);
     }
-
     /**
      * Get the compiled build function result.
      *
-     * @return array{build: callable, sources: array, root: array, features: int}
+     * @return array{build: callable, buildExact: callable, sources: array, root: array, features: int, designSystem: \TailwindPHP\DesignSystem\DesignSystem}
      */
     public function getCompiled(): array
     {
         return $this->compiled;
     }
-
     /**
      * Get the design system instance.
      *
@@ -2696,7 +2772,6 @@ class TailwindCompiler
     {
         return $this->designSystem;
     }
-
     /**
      * Get the theme instance.
      *
@@ -2706,7 +2781,6 @@ class TailwindCompiler
     {
         return $this->theme;
     }
-
     /**
      * Get all color values from the theme.
      *
@@ -2718,7 +2792,6 @@ class TailwindCompiler
     {
         return $this->getThemeNamespace('color');
     }
-
     /**
      * Get all breakpoint values from the theme.
      *
@@ -2728,7 +2801,6 @@ class TailwindCompiler
     {
         return $this->getThemeNamespace('breakpoint');
     }
-
     /**
      * Get all spacing values from the theme.
      *
@@ -2741,7 +2813,6 @@ class TailwindCompiler
     {
         return $this->getThemeNamespace('spacing');
     }
-
     /**
      * Get all values from a theme namespace.
      *
@@ -2752,7 +2823,6 @@ class TailwindCompiler
     {
         $prefix = "--{$namespace}-";
         $result = [];
-
         foreach ($this->theme->entries() as [$key, $entry]) {
             if (str_starts_with($key, $prefix)) {
                 $name = substr($key, strlen($prefix));
@@ -2760,10 +2830,8 @@ class TailwindCompiler
                 $result[$name] = $value;
             }
         }
-
         return $result;
     }
-
     /**
      * Get CSS declarations for a utility class.
      *
@@ -2776,32 +2844,26 @@ class TailwindCompiler
         if (empty($candidates)) {
             return [];
         }
-
         $declarations = [];
         foreach ($candidates as $candidate) {
             $rules = $this->designSystem->compileAstNodes($candidate, \BlockstudioVendor\TailwindPHP\Compile\COMPILE_FLAG_NONE);
             if (empty($rules)) {
                 continue;
             }
-
             foreach ($rules as $ruleInfo) {
                 if (!isset($ruleInfo['node'])) {
                     continue;
                 }
-
                 $node = $ruleInfo['node'];
                 $this->extractDeclarations($node, $declarations);
             }
-
             // Only use first valid candidate
             if (!empty($declarations)) {
                 break;
             }
         }
-
         return $declarations;
     }
-
     /**
      * Recursively extract declarations from AST node.
      *
@@ -2817,29 +2879,21 @@ class TailwindCompiler
         if ($node['kind'] === 'at-rule' && ($node['name'] ?? '') === '@property') {
             return;
         }
-
         if ($node['kind'] === 'declaration' && isset($node['property'], $node['value'])) {
             // Skip @property internal properties
             $prop = $node['property'];
             if ($prop === 'syntax' || $prop === 'inherits' || $prop === 'initial-value') {
                 return;
             }
-
-            $declarations[] = [
-                'property' => $prop,
-                'value' => $node['value'],
-            ];
-
+            $declarations[] = ['property' => $prop, 'value' => $node['value']];
             return;
         }
-
         if (isset($node['nodes']) && is_array($node['nodes'])) {
             foreach ($node['nodes'] as $child) {
                 $this->extractDeclarations($child, $declarations);
             }
         }
     }
-
     /**
      * Resolve CSS variables in a value.
      *
@@ -2860,21 +2914,19 @@ class TailwindCompiler
                     $computed = $baseValue * $multiplier;
                     // Format nicely - remove trailing zeros
                     $formatted = rtrim(rtrim(number_format($computed, 4, '.', ''), '0'), '.');
-
                     return $formatted . $unit;
                 }
             }
         }
-
         // Handle simple var(--name) pattern
         if (preg_match('/^var\(--([^)]+)\)$/', $value, $matches)) {
             $varName = '--' . $matches[1];
             $resolved = $this->theme->get([$varName]);
             if ($resolved !== null) {
-                return $this->resolveValue($resolved); // Recursively resolve
+                return $this->resolveValue($resolved);
+                // Recursively resolve
             }
         }
-
         // Handle var(--name, fallback) pattern
         if (preg_match('/^var\(--([^,)]+),\s*([^)]+)\)$/', $value, $matches)) {
             $varName = '--' . $matches[1];
@@ -2883,10 +2935,8 @@ class TailwindCompiler
             if ($resolved !== null) {
                 return $this->resolveValue($resolved);
             }
-
             return $this->resolveValue($fallback);
         }
-
         // Handle calc() with var() inside
         if (str_contains($value, 'var(')) {
             $value = preg_replace_callback('/var\(--([^,)]+)(?:,\s*([^)]+))?\)/', function ($m) {
@@ -2899,16 +2949,14 @@ class TailwindCompiler
                 if ($fallback !== null) {
                     return $this->resolveValue(trim($fallback));
                 }
-
-                return $m[0]; // Keep original if can't resolve
+                return $m[0];
+                // Keep original if can't resolve
             }, $value) ?? $value;
         }
-
         // Run through LightningCSS optimizations for consistent output with compiled CSS
         return \BlockstudioVendor\TailwindPHP\LightningCss\LightningCss::optimizeValue($value);
     }
 }
-
 /**
  * TailwindPHP - Main facade class for CSS generation.
  *
@@ -2917,7 +2965,7 @@ class TailwindCompiler
  *
  * Basic usage:
  * ```php
- * use BlockstudioVendor\TailwindPHP\tw;
+ * use TailwindPHP\tw;
  *
  * // Simple generation from HTML
  * $css = tw::generate('<div class="flex p-4">Hello</div>');
@@ -2957,7 +3005,6 @@ class Tailwind
     {
         return generate($input, $css);
     }
-
     /**
      * Compile CSS and return a TailwindCompiler instance for reuse.
      *
@@ -2969,7 +3016,6 @@ class Tailwind
     {
         return new TailwindCompiler($css, $options);
     }
-
     /**
      * Get raw CSS properties for utility class(es).
      *
@@ -2984,10 +3030,8 @@ class Tailwind
     {
         [$utilities, $cssConfig] = self::parseInput($input, $css);
         $compiler = new TailwindCompiler($cssConfig);
-
         return $compiler->properties($utilities);
     }
-
     /**
      * Get computed CSS properties for utility class(es).
      *
@@ -2999,10 +3043,8 @@ class Tailwind
     {
         [$utilities, $cssConfig] = self::parseInput($input, $css);
         $compiler = new TailwindCompiler($cssConfig);
-
         return $compiler->computedProperties($utilities);
     }
-
     /**
      * Get raw value for a single utility class.
      *
@@ -3015,10 +3057,8 @@ class Tailwind
         [$utilities, $cssConfig] = self::parseInput($input, $css);
         $compiler = new TailwindCompiler($cssConfig);
         $utility = is_array($utilities) ? $utilities[0] : $utilities;
-
         return $compiler->value($utility);
     }
-
     /**
      * Get computed value for a single utility class.
      *
@@ -3031,10 +3071,8 @@ class Tailwind
         [$utilities, $cssConfig] = self::parseInput($input, $css);
         $compiler = new TailwindCompiler($cssConfig);
         $utility = is_array($utilities) ? $utilities[0] : $utilities;
-
         return $compiler->computedValue($utility);
     }
-
     /**
      * Extract class name candidates from HTML content.
      *
@@ -3045,7 +3083,6 @@ class Tailwind
     {
         return extractCandidates($html);
     }
-
     /**
      * Extract class name candidates from string literals in source code.
      *
@@ -3056,7 +3093,6 @@ class Tailwind
     {
         return extractCandidatesFromStrings($source);
     }
-
     /**
      * Minify CSS output.
      *
@@ -3067,18 +3103,16 @@ class Tailwind
     {
         return \BlockstudioVendor\TailwindPHP\Minifier\CssMinifier::minify($css);
     }
-
     /**
      * Clear the CSS cache.
      *
      * @param string|bool|null $cache Cache directory path, true for default, or null
      * @return int Number of cache files deleted
      */
-    public static function clearCache(string|bool|null $cache = true): int
+    public static function clearCache(string|bool|null $cache = \true): int
     {
         return clearCache($cache);
     }
-
     /**
      * Get all color values from the theme.
      *
@@ -3088,10 +3122,8 @@ class Tailwind
     public static function colors(string $css = '@import "tailwindcss";'): array
     {
         $compiler = new TailwindCompiler($css);
-
         return $compiler->colors();
     }
-
     /**
      * Get all breakpoint values from the theme.
      *
@@ -3101,10 +3133,8 @@ class Tailwind
     public static function breakpoints(string $css = '@import "tailwindcss";'): array
     {
         $compiler = new TailwindCompiler($css);
-
         return $compiler->breakpoints();
     }
-
     /**
      * Get all spacing values from the theme.
      *
@@ -3114,10 +3144,8 @@ class Tailwind
     public static function spacing(string $css = '@import "tailwindcss";'): array
     {
         $compiler = new TailwindCompiler($css);
-
         return $compiler->spacing();
     }
-
     /**
      * Build a reverse map from CSS declarations to Tailwind utility class names.
      *
@@ -3132,241 +3160,144 @@ class Tailwind
     {
         $compiler = new TailwindCompiler($css);
         $map = [];
-
         // All candidate utility class names to resolve
         $candidates = [];
-
         // Static utilities: display, position, overflow, text-align, etc.
-        $statics = [
-            'flex', 'inline-flex', 'block', 'inline-block', 'inline', 'grid', 'inline-grid',
-            'contents', 'hidden', 'table', 'table-row', 'table-cell', 'table-caption',
-            'table-column', 'table-column-group', 'table-footer-group', 'table-header-group',
-            'table-row-group', 'list-item', 'flow-root',
-            'relative', 'absolute', 'fixed', 'sticky', 'static',
-            'visible', 'invisible', 'collapse',
-            'isolate', 'isolation-auto',
-            'overflow-hidden', 'overflow-auto', 'overflow-scroll', 'overflow-visible',
-            'overflow-clip', 'overflow-x-auto', 'overflow-x-hidden', 'overflow-x-scroll',
-            'overflow-y-auto', 'overflow-y-hidden', 'overflow-y-scroll',
-            'items-start', 'items-end', 'items-center', 'items-baseline', 'items-stretch',
-            'justify-start', 'justify-end', 'justify-center', 'justify-between',
-            'justify-around', 'justify-evenly', 'justify-stretch', 'justify-normal',
-            'justify-items-start', 'justify-items-end', 'justify-items-center', 'justify-items-stretch',
-            'self-auto', 'self-start', 'self-end', 'self-center', 'self-stretch', 'self-baseline',
-            'flex-row', 'flex-col', 'flex-row-reverse', 'flex-col-reverse',
-            'flex-wrap', 'flex-nowrap', 'flex-wrap-reverse',
-            'flex-1', 'flex-auto', 'flex-initial', 'flex-none',
-            'grow', 'grow-0', 'shrink', 'shrink-0',
-            'text-left', 'text-center', 'text-right', 'text-justify', 'text-start', 'text-end',
-            'text-wrap', 'text-nowrap', 'text-balance', 'text-pretty',
-            'underline', 'no-underline', 'line-through', 'overline',
-            'uppercase', 'lowercase', 'capitalize', 'normal-case',
-            'italic', 'not-italic',
-            'whitespace-normal', 'whitespace-nowrap', 'whitespace-pre', 'whitespace-pre-line',
-            'whitespace-pre-wrap', 'whitespace-break-spaces',
-            'break-normal', 'break-words', 'break-all', 'break-keep',
-            'truncate',
-            'antialiased', 'subpixel-antialiased',
-            'list-none', 'list-disc', 'list-decimal', 'list-inside', 'list-outside',
-            'object-contain', 'object-cover', 'object-fill', 'object-none', 'object-scale-down',
-            'object-bottom', 'object-center', 'object-left', 'object-right', 'object-top',
-            'float-left', 'float-right', 'float-none', 'float-start', 'float-end',
-            'clear-left', 'clear-right', 'clear-both', 'clear-none', 'clear-start', 'clear-end',
-            'box-border', 'box-content',
-            'cursor-auto', 'cursor-default', 'cursor-pointer', 'cursor-wait', 'cursor-text',
-            'cursor-move', 'cursor-help', 'cursor-not-allowed', 'cursor-none', 'cursor-grab',
-            'cursor-grabbing',
-            'pointer-events-none', 'pointer-events-auto',
-            'resize', 'resize-none', 'resize-x', 'resize-y',
-            'select-none', 'select-text', 'select-all', 'select-auto',
-            'touch-auto', 'touch-none', 'touch-manipulation',
-            'appearance-none', 'appearance-auto',
-            'border-solid', 'border-dashed', 'border-dotted', 'border-double', 'border-none',
-            'border-collapse', 'border-separate',
-            'outline-none',
-            'table-auto', 'table-fixed',
-            'will-change-auto', 'will-change-scroll', 'will-change-contents', 'will-change-transform',
-            'backface-visible', 'backface-hidden',
-            'mix-blend-normal', 'mix-blend-multiply', 'mix-blend-screen', 'mix-blend-overlay',
-            'bg-blend-normal', 'bg-blend-multiply', 'bg-blend-screen', 'bg-blend-overlay',
-            'bg-clip-border', 'bg-clip-padding', 'bg-clip-content', 'bg-clip-text',
-            'bg-origin-border', 'bg-origin-padding', 'bg-origin-content',
-            'bg-repeat', 'bg-no-repeat', 'bg-repeat-x', 'bg-repeat-y', 'bg-repeat-round', 'bg-repeat-space',
-            'bg-auto', 'bg-cover', 'bg-contain',
-            'bg-center', 'bg-top', 'bg-bottom', 'bg-left', 'bg-right',
-            'bg-fixed', 'bg-local', 'bg-scroll',
-            'transition', 'transition-all', 'transition-colors', 'transition-opacity',
-            'transition-shadow', 'transition-transform', 'transition-none',
-            'ease-linear', 'ease-in', 'ease-out', 'ease-in-out',
-            'animate-spin', 'animate-ping', 'animate-pulse', 'animate-bounce', 'animate-none',
-            'sr-only', 'not-sr-only',
-            'forced-color-adjust-auto', 'forced-color-adjust-none',
-            'content-none',
-        ];
+        $statics = ['flex', 'inline-flex', 'block', 'inline-block', 'inline', 'grid', 'inline-grid', 'contents', 'hidden', 'table', 'table-row', 'table-cell', 'table-caption', 'table-column', 'table-column-group', 'table-footer-group', 'table-header-group', 'table-row-group', 'list-item', 'flow-root', 'relative', 'absolute', 'fixed', 'sticky', 'static', 'visible', 'invisible', 'collapse', 'isolate', 'isolation-auto', 'overflow-hidden', 'overflow-auto', 'overflow-scroll', 'overflow-visible', 'overflow-clip', 'overflow-x-auto', 'overflow-x-hidden', 'overflow-x-scroll', 'overflow-y-auto', 'overflow-y-hidden', 'overflow-y-scroll', 'items-start', 'items-end', 'items-center', 'items-baseline', 'items-stretch', 'justify-start', 'justify-end', 'justify-center', 'justify-between', 'justify-around', 'justify-evenly', 'justify-stretch', 'justify-normal', 'justify-items-start', 'justify-items-end', 'justify-items-center', 'justify-items-stretch', 'self-auto', 'self-start', 'self-end', 'self-center', 'self-stretch', 'self-baseline', 'flex-row', 'flex-col', 'flex-row-reverse', 'flex-col-reverse', 'flex-wrap', 'flex-nowrap', 'flex-wrap-reverse', 'flex-1', 'flex-auto', 'flex-initial', 'flex-none', 'grow', 'grow-0', 'shrink', 'shrink-0', 'text-left', 'text-center', 'text-right', 'text-justify', 'text-start', 'text-end', 'text-wrap', 'text-nowrap', 'text-balance', 'text-pretty', 'underline', 'no-underline', 'line-through', 'overline', 'uppercase', 'lowercase', 'capitalize', 'normal-case', 'italic', 'not-italic', 'whitespace-normal', 'whitespace-nowrap', 'whitespace-pre', 'whitespace-pre-line', 'whitespace-pre-wrap', 'whitespace-break-spaces', 'break-normal', 'break-words', 'break-all', 'break-keep', 'truncate', 'antialiased', 'subpixel-antialiased', 'list-none', 'list-disc', 'list-decimal', 'list-inside', 'list-outside', 'object-contain', 'object-cover', 'object-fill', 'object-none', 'object-scale-down', 'object-bottom', 'object-center', 'object-left', 'object-right', 'object-top', 'float-left', 'float-right', 'float-none', 'float-start', 'float-end', 'clear-left', 'clear-right', 'clear-both', 'clear-none', 'clear-start', 'clear-end', 'box-border', 'box-content', 'cursor-auto', 'cursor-default', 'cursor-pointer', 'cursor-wait', 'cursor-text', 'cursor-move', 'cursor-help', 'cursor-not-allowed', 'cursor-none', 'cursor-grab', 'cursor-grabbing', 'pointer-events-none', 'pointer-events-auto', 'resize', 'resize-none', 'resize-x', 'resize-y', 'select-none', 'select-text', 'select-all', 'select-auto', 'touch-auto', 'touch-none', 'touch-manipulation', 'appearance-none', 'appearance-auto', 'border-solid', 'border-dashed', 'border-dotted', 'border-double', 'border-none', 'border-collapse', 'border-separate', 'outline-none', 'table-auto', 'table-fixed', 'will-change-auto', 'will-change-scroll', 'will-change-contents', 'will-change-transform', 'backface-visible', 'backface-hidden', 'mix-blend-normal', 'mix-blend-multiply', 'mix-blend-screen', 'mix-blend-overlay', 'bg-blend-normal', 'bg-blend-multiply', 'bg-blend-screen', 'bg-blend-overlay', 'bg-clip-border', 'bg-clip-padding', 'bg-clip-content', 'bg-clip-text', 'bg-origin-border', 'bg-origin-padding', 'bg-origin-content', 'bg-repeat', 'bg-no-repeat', 'bg-repeat-x', 'bg-repeat-y', 'bg-repeat-round', 'bg-repeat-space', 'bg-auto', 'bg-cover', 'bg-contain', 'bg-center', 'bg-top', 'bg-bottom', 'bg-left', 'bg-right', 'bg-fixed', 'bg-local', 'bg-scroll', 'transition', 'transition-all', 'transition-colors', 'transition-opacity', 'transition-shadow', 'transition-transform', 'transition-none', 'ease-linear', 'ease-in', 'ease-out', 'ease-in-out', 'animate-spin', 'animate-ping', 'animate-pulse', 'animate-bounce', 'animate-none', 'sr-only', 'not-sr-only', 'forced-color-adjust-auto', 'forced-color-adjust-none', 'content-none'];
         $candidates = array_merge($candidates, $statics);
-
         // Font weights
         foreach (['thin', 'extralight', 'light', 'normal', 'medium', 'semibold', 'bold', 'extrabold', 'black'] as $w) {
-            $candidates[] = "font-$w";
+            $candidates[] = "font-{$w}";
         }
-
         // Font sizes
         foreach (['xs', '2xs', 'sm', 'base', 'lg', 'xl', '2xl', '3xl', '4xl', '5xl', '6xl', '7xl', '8xl', '9xl'] as $s) {
-            $candidates[] = "text-$s";
+            $candidates[] = "text-{$s}";
         }
-
         // Line height
         foreach ([3, 4, 5, 6, 7, 8, 9, 10] as $n) {
-            $candidates[] = "leading-$n";
+            $candidates[] = "leading-{$n}";
         }
         foreach (['none', 'tight', 'snug', 'normal', 'relaxed', 'loose'] as $l) {
-            $candidates[] = "leading-$l";
+            $candidates[] = "leading-{$l}";
         }
-
         // Letter spacing
         foreach (['tighter', 'tight', 'normal', 'wide', 'wider', 'widest'] as $t) {
-            $candidates[] = "tracking-$t";
+            $candidates[] = "tracking-{$t}";
         }
-
         // Border radius
         foreach (['none', 'sm', '', 'md', 'lg', 'xl', '2xl', '3xl', 'full'] as $r) {
-            $candidates[] = 'rounded' . ($r ? "-$r" : '');
+            $candidates[] = 'rounded' . ($r ? "-{$r}" : '');
         }
-
         // Spacing: gap, padding, margin (0-96)
-        $spacingValues = [
-            '0', 'px', '0.5', '1', '1.5', '2', '2.5', '3', '3.5', '4', '5', '6', '7', '8',
-            '9', '10', '11', '12', '14', '16', '20', '24', '28', '32', '36', '40', '44',
-            '48', '52', '56', '60', '64', '72', '80', '96',
-        ];
+        $spacingValues = ['0', 'px', '0.5', '1', '1.5', '2', '2.5', '3', '3.5', '4', '5', '6', '7', '8', '9', '10', '11', '12', '14', '16', '20', '24', '28', '32', '36', '40', '44', '48', '52', '56', '60', '64', '72', '80', '96'];
         $spacingPrefixes = ['p', 'px', 'py', 'pt', 'pr', 'pb', 'pl', 'm', 'mx', 'my', 'mt', 'mr', 'mb', 'ml', 'gap', 'gap-x', 'gap-y'];
         foreach ($spacingPrefixes as $prefix) {
             foreach ($spacingValues as $val) {
-                $candidates[] = "$prefix-$val";
+                $candidates[] = "{$prefix}-{$val}";
             }
             if (str_starts_with($prefix, 'm')) {
-                $candidates[] = "$prefix-auto";
+                $candidates[] = "{$prefix}-auto";
             }
         }
-
         // Width/height/size
         $sizingValues = ['0', 'px', '0.5', '1', '1.5', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11', '12', '14', '16', '20', '24', '28', '32', '36', '40', '44', '48', '52', '56', '60', '64', '72', '80', '96'];
         foreach (['w', 'h', 'size', 'min-w', 'min-h', 'max-w', 'max-h'] as $prefix) {
             foreach ($sizingValues as $val) {
-                $candidates[] = "$prefix-$val";
+                $candidates[] = "{$prefix}-{$val}";
             }
         }
-
         // Named max-widths (containers)
         foreach (['xs', 'sm', 'md', 'lg', 'xl', '2xl', '3xl', '4xl', '5xl', '6xl', '7xl'] as $s) {
-            $candidates[] = "max-w-$s";
+            $candidates[] = "max-w-{$s}";
         }
-
         // Fractional widths
         foreach (['1/2', '1/3', '2/3', '1/4', '2/4', '3/4', '1/5', '2/5', '3/5', '4/5', '1/6', '5/6', 'full', 'screen', 'auto', 'min', 'max', 'fit'] as $f) {
-            $candidates[] = "w-$f";
-            $candidates[] = "h-$f";
+            $candidates[] = "w-{$f}";
+            $candidates[] = "h-{$f}";
         }
-
         // Inset
         foreach (['inset', 'inset-x', 'inset-y', 'top', 'right', 'bottom', 'left', 'start', 'end'] as $prefix) {
             foreach (['0', 'px', '0.5', '1', '2', '3', '4', '5', '6', '8', '10', '12', '16', '20', 'auto', 'full', '1/2'] as $val) {
-                $candidates[] = "$prefix-$val";
+                $candidates[] = "{$prefix}-{$val}";
             }
         }
-
         // Z-index
         foreach (['0', '10', '20', '30', '40', '50', 'auto'] as $z) {
-            $candidates[] = "z-$z";
+            $candidates[] = "z-{$z}";
         }
-
         // Opacity
         foreach (['0', '5', '10', '15', '20', '25', '30', '40', '50', '60', '70', '75', '80', '90', '95', '100'] as $o) {
-            $candidates[] = "opacity-$o";
+            $candidates[] = "opacity-{$o}";
         }
-
         // Transition duration
         foreach (['0', '75', '100', '150', '200', '300', '500', '700', '1000'] as $d) {
-            $candidates[] = "duration-$d";
+            $candidates[] = "duration-{$d}";
         }
-
         // Transition delay
         foreach (['0', '75', '100', '150', '200', '300', '500', '700', '1000'] as $d) {
-            $candidates[] = "delay-$d";
+            $candidates[] = "delay-{$d}";
         }
-
         // Grid
         foreach (range(1, 12) as $n) {
-            $candidates[] = "grid-cols-$n";
-            $candidates[] = "grid-rows-$n";
-            $candidates[] = "col-span-$n";
-            $candidates[] = "row-span-$n";
+            $candidates[] = "grid-cols-{$n}";
+            $candidates[] = "grid-rows-{$n}";
+            $candidates[] = "col-span-{$n}";
+            $candidates[] = "row-span-{$n}";
         }
-
         // Colors: text, bg, border with default palette
         $defaultColors = ['black', 'white', 'transparent', 'current', 'inherit'];
         foreach (['text', 'bg', 'border', 'accent', 'caret', 'fill', 'stroke'] as $prefix) {
             foreach ($defaultColors as $color) {
-                $candidates[] = "$prefix-$color";
+                $candidates[] = "{$prefix}-{$color}";
             }
         }
-
         // Border widths
         foreach (['', '0', '2', '4', '8'] as $w) {
-            $candidates[] = 'border' . ($w ? "-$w" : '');
-            $candidates[] = 'border-t' . ($w ? "-$w" : '');
-            $candidates[] = 'border-r' . ($w ? "-$w" : '');
-            $candidates[] = 'border-b' . ($w ? "-$w" : '');
-            $candidates[] = 'border-l' . ($w ? "-$w" : '');
-            $candidates[] = 'border-x' . ($w ? "-$w" : '');
-            $candidates[] = 'border-y' . ($w ? "-$w" : '');
+            $candidates[] = 'border' . ($w ? "-{$w}" : '');
+            $candidates[] = 'border-t' . ($w ? "-{$w}" : '');
+            $candidates[] = 'border-r' . ($w ? "-{$w}" : '');
+            $candidates[] = 'border-b' . ($w ? "-{$w}" : '');
+            $candidates[] = 'border-l' . ($w ? "-{$w}" : '');
+            $candidates[] = 'border-x' . ($w ? "-{$w}" : '');
+            $candidates[] = 'border-y' . ($w ? "-{$w}" : '');
         }
-
         // Outline widths
         foreach (['0', '1', '2', '4', '8'] as $w) {
-            $candidates[] = "outline-$w";
+            $candidates[] = "outline-{$w}";
         }
-
         // Ring
         foreach (['', '0', '1', '2', '4', '8'] as $w) {
-            $candidates[] = 'ring' . ($w ? "-$w" : '');
+            $candidates[] = 'ring' . ($w ? "-{$w}" : '');
         }
-
         // Order
         foreach (range(1, 12) as $n) {
-            $candidates[] = "order-$n";
+            $candidates[] = "order-{$n}";
         }
         $candidates[] = 'order-first';
         $candidates[] = 'order-last';
         $candidates[] = 'order-none';
-
         // Columns
         foreach (range(1, 12) as $n) {
-            $candidates[] = "columns-$n";
+            $candidates[] = "columns-{$n}";
         }
-
         // Aspect ratio
         $candidates[] = 'aspect-auto';
         $candidates[] = 'aspect-square';
         $candidates[] = 'aspect-video';
-
         // Shadow
         foreach (['', 'sm', 'md', 'lg', 'xl', '2xl', 'none', 'inner'] as $s) {
-            $candidates[] = 'shadow' . ($s ? "-$s" : '');
+            $candidates[] = 'shadow' . ($s ? "-{$s}" : '');
         }
-
         // Blur
         foreach (['', 'sm', 'md', 'lg', 'xl', '2xl', '3xl', 'none'] as $b) {
-            $candidates[] = 'blur' . ($b ? "-$b" : '');
+            $candidates[] = 'blur' . ($b ? "-{$b}" : '');
         }
-
         // Build the map by resolving each candidate
         foreach ($candidates as $candidate) {
             $computed = $compiler->computedProperties($candidate);
             if (empty($computed)) {
                 continue;
             }
-
             // Filter out internal CSS variables (--tw-*) and line-height from text utilities
             $filtered = [];
             foreach ($computed as $prop => $val) {
@@ -3377,61 +3308,55 @@ class Tailwind
                 $val = preg_replace('/^\.(\d)/', '0.$1', $val);
                 $filtered[$prop] = $val;
             }
-
             if (empty($filtered)) {
                 continue;
             }
-
             // For text-* font-size utilities, store under just font-size (drop line-height)
             if (str_starts_with($candidate, 'text-') && isset($filtered['font-size']) && isset($filtered['line-height'])) {
                 $key = "font-size: {$filtered['font-size']}";
                 $map[$key] = $candidate;
                 continue;
             }
-
             // Single-property utilities get a simple key
             if (count($filtered) === 1) {
                 $prop = array_key_first($filtered);
                 $val = $filtered[$prop];
-                $key = "$prop: $val";
+                $key = "{$prop}: {$val}";
                 // Store with normalized value
                 $map[$key] = $candidate;
                 // Also store common aliases
                 if ($val === '#fff') {
-                    $map["$prop: white"] = $candidate;
-                    $map["$prop: #FFF"] = $candidate;
-                    $map["$prop: #ffffff"] = $candidate;
+                    $map["{$prop}: white"] = $candidate;
+                    $map["{$prop}: #FFF"] = $candidate;
+                    $map["{$prop}: #ffffff"] = $candidate;
                 } elseif ($val === '#000') {
-                    $map["$prop: black"] = $candidate;
-                    $map["$prop: #000000"] = $candidate;
+                    $map["{$prop}: black"] = $candidate;
+                    $map["{$prop}: #000000"] = $candidate;
                 } elseif ($val === '3.40282e38px' || $val === '3.40282e+38px') {
-                    $map["$prop: 9999px"] = $candidate;
-                    $map["$prop: 999px"] = $candidate;
-                    $map["$prop: 99999px"] = $candidate;
+                    $map["{$prop}: 9999px"] = $candidate;
+                    $map["{$prop}: 999px"] = $candidate;
+                    $map["{$prop}: 99999px"] = $candidate;
                 }
             } else {
                 // Multi-property: store under a compound key
                 $parts = [];
                 foreach ($filtered as $prop => $val) {
-                    $parts[] = "$prop: $val";
+                    $parts[] = "{$prop}: {$val}";
                 }
                 $key = implode('; ', $parts);
                 $map[$key] = $candidate;
                 // Also store each property individually for partial matching
                 foreach ($filtered as $prop => $val) {
-                    $partialKey = "$prop: $val";
+                    $partialKey = "{$prop}: {$val}";
                     if (!isset($map[$partialKey])) {
                         $map[$partialKey] = $candidate;
                     }
                 }
             }
         }
-
         ksort($map);
-
         return $map;
     }
-
     /**
      * Parse input into utilities and CSS config.
      *
@@ -3444,20 +3369,16 @@ class Tailwind
         if (is_string($input)) {
             return [$input, $css];
         }
-
         // Array with 'content' key
         if (isset($input['content'])) {
             $utilities = $input['content'];
             $cssConfig = $input['css'] ?? $css;
-
             return [$utilities, $cssConfig];
         }
-
         // Plain array of utilities
         return [$input, $css];
     }
 }
-
 /**
  * Short alias for the Tailwind class.
  *
@@ -3466,17 +3387,14 @@ class Tailwind
  *
  * @see Tailwind
  */
-class_alias(Tailwind::class, 'BlockstudioVendor\\TailwindPHP\\tw');
-
+class_alias(Tailwind::class, 'BlockstudioVendor\TailwindPHP\tw');
 // ==================================================
 // Class Name Utilities
 // ==================================================
 // PHP ports of popular Tailwind companion libraries (clsx, tailwind-merge).
-
 require_once __DIR__ . '/_tailwindphp/lib/clsx/clsx.php';
 require_once __DIR__ . '/_tailwindphp/lib/tailwind-merge/index.php';
 require_once __DIR__ . '/_tailwindphp/lib/cva/cva.php';
-
 /**
  * The ultimate class name utility: conditional classes + conflict resolution.
  *
@@ -3496,7 +3414,6 @@ function cn(mixed ...$inputs): string
 {
     return \BlockstudioVendor\TailwindPHP\Lib\TailwindMerge\cn(...$inputs);
 }
-
 /**
  * Merge Tailwind CSS classes, resolving conflicts.
  *
@@ -3514,7 +3431,6 @@ function merge(mixed ...$args): string
 {
     return \BlockstudioVendor\TailwindPHP\Lib\TailwindMerge\twMerge(...$args);
 }
-
 /**
  * Join class names without conflict resolution.
  *
@@ -3531,13 +3447,11 @@ function join(mixed ...$args): string
 {
     return \BlockstudioVendor\TailwindPHP\Lib\TailwindMerge\twJoin(...$args);
 }
-
 // ==================================================
 // Variants (CVA Port)
 // ==================================================
 // PHP port of CVA (Class Variance Authority) for creating component variants.
 // https://github.com/joe-bell/cva
-
 /**
  * Create component style variants.
  *
@@ -3585,7 +3499,6 @@ function variants(?array $config = null): callable
 {
     return \BlockstudioVendor\TailwindPHP\Lib\Cva\cva($config);
 }
-
 /**
  * Compose multiple variant components into one.
  *

@@ -231,6 +231,8 @@ declare global {
           mode?: string;
         }>,
       ) => void;
+      registerFieldType?: (name: string, registration: any) => boolean;
+      unregisterFieldType?: (name: string) => boolean;
     };
     blockstudioAdmin: BlockstudioAdmin;
     pagenow?: string;

@@ -86,6 +86,7 @@ class Block_Tags {
 			'core/comments'          => array( $parser, 'render_comments' ),
 		);
 
+		$renderers = apply_filters( 'blockstudio/block_tags/builders', $renderers, $parser );
 		$renderers = apply_filters( 'blockstudio/block_tags/renderers', $renderers, $parser );
 		$renderers = apply_filters( 'blockstudio/parser/renderers', $renderers, $parser );
 
@@ -886,7 +887,41 @@ class Block_Tags {
 			}
 		}
 
+		// Nested prefixes: a brand prefix can compose over a namespace prefix,
+		// so <dv-ui-input> falls through to <ui-input> and resolves bsui/input.
+		// Recursion is on the strictly shorter slug, so it always terminates.
+		$nested_hyphen = strpos( $slug, '-' );
+		if ( false !== $nested_hyphen ) {
+			$nested_prefix = substr( $slug, 0, $nested_hyphen );
+			if ( $nested_prefix !== $prefix && ! empty( $prefixes[ $nested_prefix ] ) ) {
+				return self::resolve_prefix_tag_name( $slug, $prefixes, $blocks );
+			}
+		}
+
 		return false;
+	}
+
+	/**
+	 * Whether rendered output contains any block tag worth parsing.
+	 *
+	 * Mirrors render()'s own short-circuit guard: covers the built-in
+	 * <bs:...> / <block ...> syntaxes plus every registered prefix
+	 * (<dv-..., <ui-...) and alias tag, so block templates can emit those
+	 * tags instead of calling render helpers directly. Prefixes and aliases
+	 * are resolved fresh so a filter registered after the first probe is
+	 * always seen.
+	 *
+	 * @param string $string The rendered output.
+	 *
+	 * @return bool
+	 */
+	public static function output_has_tags( string $string ): bool {
+		if ( str_contains( $string, '<bs:' ) || str_contains( $string, '<block ' ) ) {
+			return true;
+		}
+
+		return self::has_prefix_tags( $string, self::get_tag_prefixes() )
+			|| self::has_alias_tags( $string, self::get_tag_aliases() );
 	}
 
 	/**
@@ -1271,6 +1306,147 @@ class Block_Tags {
 	}
 
 	/**
+	 * Whether a mapped element's inner HTML should become a content attribute.
+	 *
+	 * @param string                        $html_tag          HTML tag name.
+	 * @param string                        $block_name        Target block name.
+	 * @param array                         $attrs             Parsed attributes.
+	 * @param string                        $inner             Inner HTML.
+	 * @param array                         $registered_blocks Registered Blockstudio blocks.
+	 * @param array<string,string|callable> $map               HTML tag map.
+	 * @param array<string,string>          $aliases           Custom tag aliases.
+	 * @param array<string,array<string>>   $prefixes          Prefix namespace map.
+	 *
+	 * @return bool True when content should be routed.
+	 */
+	private static function should_route_inner_content_to_attribute(
+		string $html_tag,
+		string $block_name,
+		array $attrs,
+		string $inner,
+		array $registered_blocks,
+		array $map,
+		array $aliases,
+		array $prefixes
+	): bool {
+		$text_tags = array(
+			'p' => true,
+		);
+
+		if (
+			! isset( $text_tags[ $html_tag ] )
+			|| isset( $attrs['content'] )
+			|| '' === trim( $inner )
+			|| str_starts_with( $block_name, 'core/' )
+			|| ! self::block_declares_richtext_content_attribute( $block_name, $registered_blocks )
+		) {
+			return false;
+		}
+
+		return ! self::inner_content_has_nested_block_tags( $inner, $map, $aliases, $prefixes, $registered_blocks );
+	}
+
+	/**
+	 * Whether a registered Blockstudio block declares content as richtext.
+	 *
+	 * @param string $block_name        Block name.
+	 * @param array  $registered_blocks Registered Blockstudio blocks.
+	 *
+	 * @return bool True when the block has a content richtext attribute.
+	 */
+	private static function block_declares_richtext_content_attribute( string $block_name, array $registered_blocks ): bool {
+		if ( ! isset( $registered_blocks[ $block_name ] ) ) {
+			return false;
+		}
+
+		$block      = $registered_blocks[ $block_name ];
+		$attributes = array();
+
+		if ( is_object( $block ) ) {
+			$attributes = $block->blockstudio['attributes'] ?? array();
+		} elseif ( is_array( $block ) ) {
+			$attributes = $block['blockstudio']['attributes'] ?? array();
+		}
+
+		foreach ( $attributes as $attribute ) {
+			if (
+				is_array( $attribute )
+				&& 'content' === ( $attribute['id'] ?? null )
+				&& 'richtext' === ( $attribute['type'] ?? $attribute['field'] ?? null )
+			) {
+				return true;
+			}
+		}
+
+		return false;
+	}
+
+	/**
+	 * Whether routed richtext content contains nested block-level structures.
+	 *
+	 * @param string                        $inner             Inner HTML.
+	 * @param array<string,string|callable> $map               HTML tag map.
+	 * @param array<string,string>          $aliases           Custom tag aliases.
+	 * @param array<string,array<string>>   $prefixes          Prefix namespace map.
+	 * @param array                         $registered_blocks Registered Blockstudio blocks.
+	 *
+	 * @return bool True when nested blocks or mapped elements are present.
+	 */
+	private static function inner_content_has_nested_block_tags(
+		string $inner,
+		array $map,
+		array $aliases,
+		array $prefixes,
+		array $registered_blocks
+	): bool {
+		if (
+			false !== strpos( $inner, '<bs:' )
+			|| false !== strpos( $inner, '<block ' )
+			|| self::has_alias_tags( $inner, $aliases )
+			|| self::has_prefix_tags( $inner, $prefixes )
+		) {
+			return true;
+		}
+
+		if ( ! preg_match_all( '/<\s*\/?\s*([a-z][a-z0-9]*)\b/i', $inner, $matches ) ) {
+			return false;
+		}
+
+		$inline_tags = array(
+			'a'      => true,
+			'b'      => true,
+			'br'     => true,
+			'code'   => true,
+			'del'    => true,
+			'em'     => true,
+			'i'      => true,
+			'ins'    => true,
+			'mark'   => true,
+			's'      => true,
+			'small'  => true,
+			'span'   => true,
+			'strong' => true,
+			'sub'    => true,
+			'sup'    => true,
+			'u'      => true,
+		);
+
+		foreach ( $matches[1] as $tag ) {
+			$tag = strtolower( $tag );
+
+			if ( isset( $map[ $tag ] ) ) {
+				return true;
+			}
+
+			if ( ! isset( $inline_tags[ $tag ] ) ) {
+				return true;
+			}
+		}
+
+		return false;
+	}
+
+	/**
 	 * Parse all elements including raw HTML tags (for pages/patterns).
 	 *
 	 * Like parse_inner_blocks but also recognizes raw HTML elements
@@ -1486,13 +1662,19 @@ class Block_Tags {
 						continue;
 					}
 
+					$inner_for_block = $inner;
+
 					// Heading level from tag name.
 					if ( preg_match( '/^h[1-6]$/', $html_tag ) ) {
 						$attrs['level'] = (int) substr( $html_tag, 1 );
 
 						if ( 'core/heading' !== $block_name && '' !== trim( $inner ) && ! isset( $attrs['content'] ) ) {
 							$attrs['content'] = trim( $inner );
+							$inner_for_block  = '';
 						}
+					} elseif ( self::should_route_inner_content_to_attribute( $html_tag, $block_name, $attrs, $inner, $registered_blocks, $map, $aliases, $prefixes ) ) {
+						$attrs['content'] = trim( $inner );
+						$inner_for_block  = '';
 					}
 
 					// Ordered list.
@@ -1556,7 +1738,7 @@ class Block_Tags {
 						$block_array['innerContent'] = $new_ic;
 						$blocks[]                    = $block_array;
 					} else {
-						$blocks[] = self::build_block_array( $block_name, $attrs, $inner );
+						$blocks[] = self::build_block_array( $block_name, $attrs, $inner_for_block );
 					}
 					continue;
 				}
@@ -1736,9 +1918,6 @@ class Block_Tags {
 	 * @return array WordPress block array.
 	 */
 	public static function build_block_array( string $block_name, array $attrs, string $inner_content = '' ): array {
-		static $builders        = null;
-		static $trait_renderers = null;
-
 		// Remap key → __BLOCKSTUDIO_KEY for keyed block merging.
 		if (
 			array_key_exists( 'key', $attrs ) &&
@@ -1749,21 +1928,9 @@ class Block_Tags {
 			unset( $attrs['key'] );
 		}
 
-		if ( null === $builders ) {
-			$builders = self::get_block_builders();
-		}
-
-		// Static builders first (leaf blocks).
-		if ( isset( $builders[ $block_name ] ) ) {
-			return call_user_func( $builders[ $block_name ], $attrs, $inner_content );
-		}
-
-		// Trait renderers (container blocks with proper HTML wrappers).
-		if ( null === $trait_renderers ) {
-			$trait_renderers = self::get_renderers( new Html_Parser() );
-		}
-		if ( isset( $trait_renderers[ $block_name ] ) ) {
-			return call_user_func( $trait_renderers[ $block_name ], $attrs, $inner_content );
+		$renderers = self::get_renderers( new Html_Parser() );
+		if ( isset( $renderers[ $block_name ] ) ) {
+			return call_user_func( $renderers[ $block_name ], $attrs, $inner_content );
 		}
 
 		// Generic fallback.
@@ -1773,7 +1940,12 @@ class Block_Tags {
 			$inner_content_arr[] = null;
 		}
 
-		// Blockstudio blocks expect attrs under blockstudio.attributes.
+		// Blockstudio blocks expect field attrs under blockstudio.attributes.
+		$has_blockstudio_key = array_key_exists( '__BLOCKSTUDIO_KEY', $attrs );
+		$blockstudio_key     = $attrs['__BLOCKSTUDIO_KEY'] ?? null;
+
+		unset( $attrs['__BLOCKSTUDIO_KEY'] );
+
 		$block_attrs = $attrs;
 		if ( ! empty( $attrs ) && ! isset( $attrs['blockstudio'] ) ) {
 			$bs_blocks = Build::blocks();
@@ -1786,6 +1958,13 @@ class Block_Tags {
 			}
 		}
 
+		if ( $has_blockstudio_key ) {
+			$block_attrs = array_merge(
+				array( '__BLOCKSTUDIO_KEY' => $blockstudio_key ),
+				$block_attrs
+			);
+		}
+
 		return array(
 			'blockName'    => $block_name,
 			'attrs'        => $block_attrs,
@@ -1796,47 +1975,11 @@ class Block_Tags {
 	}
 
 	/**
-	 * Get the string-based block builder registry.
-	 *
-	 * Each builder takes (array $attrs, string $inner_content) and
-	 * returns a WordPress block array.
-	 *
-	 * @return array<string, callable> Block name => builder callable.
-	 */
-	private static function get_block_builders(): array {
-		$b = array(
-			'core/paragraph'    => array( __CLASS__, 'build_paragraph' ),
-			'core/heading'      => array( __CLASS__, 'build_heading' ),
-			'core/code'         => array( __CLASS__, 'build_code' ),
-			'core/preformatted' => array( __CLASS__, 'build_preformatted' ),
-			'core/verse'        => array( __CLASS__, 'build_verse' ),
-			'core/separator'    => array( __CLASS__, 'build_separator' ),
-			'core/spacer'       => array( __CLASS__, 'build_spacer' ),
-			'core/image'        => array( __CLASS__, 'build_image' ),
-			'core/audio'        => array( __CLASS__, 'build_audio' ),
-			'core/video'        => array( __CLASS__, 'build_video' ),
-			'core/embed'        => array( __CLASS__, 'build_embed' ),
-			'core/button'       => array( __CLASS__, 'build_button' ),
-			'core/more'         => array( __CLASS__, 'build_more' ),
-			'core/nextpage'     => array( __CLASS__, 'build_nextpage' ),
-			'core/table'        => array( __CLASS__, 'build_table' ),
-			'core/social-link'  => array( __CLASS__, 'build_social_link' ),
-			'core/list'         => array( __CLASS__, 'build_list' ),
-			'core/pullquote'    => array( __CLASS__, 'build_pullquote' ),
-		);
-
-		return apply_filters( 'blockstudio/block_tags/builders', $b );
-	}
-
-	// -------------------------------------------------------------------------
-	// Block array builders
-	// -------------------------------------------------------------------------
-
-	/**
-	 * Build core/paragraph block array.
+	 * Build a core/paragraph block array.
 	 *
 	 * @param array  $attrs Block attributes.
 	 * @param string $inner Inner content.
+	 *
 	 * @return array Block array.
 	 */
 	private static function build_paragraph( array $attrs, string $inner ): array {
@@ -1849,381 +1992,6 @@ class Block_Tags {
 			'innerContent' => array( $html ),
 		);
 	}
-
-	/**
-	 * Block array builder.
-	 *
-	 * @param array  $attrs Block attributes.
-	 * @param string $inner Inner content.
-	 * @return array Block array.
-	 */
-	private static function build_heading( array $attrs, string $inner ): array {
-		$level          = isset( $attrs['level'] ) ? max( 1, min( 6, (int) $attrs['level'] ) ) : 2;
-		$attrs['level'] = $level;
-		$anchor         = $attrs['anchor'] ?? $attrs['id'] ?? '';
-
-		if ( '' !== $anchor ) {
-			$attrs['anchor'] = $anchor;
-			unset( $attrs['id'] );
-		}
-
-		$tag     = 'h' . $level;
-		$id_attr = '' !== $anchor ? ' id="' . esc_attr( $anchor ) . '"' : '';
-		$html    = "<{$tag}{$id_attr} class=\"wp-block-heading\">{$inner}</{$tag}>";
-		return array(
-			'blockName'    => 'core/heading',
-			'attrs'        => $attrs,
-			'innerBlocks'  => array(),
-			'innerHTML'    => $html,
-			'innerContent' => array( $html ),
-		);
-	}
-
-	/**
-	 * Block array builder.
-	 *
-	 * @param array  $attrs Block attributes.
-	 * @param string $inner Inner content.
-	 * @return array Block array.
-	 */
-	private static function build_code( array $attrs, string $inner ): array {
-		$html = '<pre class="wp-block-code"><code>' . $inner . '</code></pre>';
-		return array(
-			'blockName'    => 'core/code',
-			'attrs'        => $attrs,
-			'innerBlocks'  => array(),
-			'innerHTML'    => $html,
-			'innerContent' => array( $html ),
-		);
-	}
-
-	/**
-	 * Block array builder.
-	 *
-	 * @param array  $attrs Block attributes.
-	 * @param string $inner Inner content.
-	 * @return array Block array.
-	 */
-	private static function build_preformatted( array $attrs, string $inner ): array {
-		$html = '<pre class="wp-block-preformatted">' . $inner . '</pre>';
-		return array(
-			'blockName'    => 'core/preformatted',
-			'attrs'        => $attrs,
-			'innerBlocks'  => array(),
-			'innerHTML'    => $html,
-			'innerContent' => array( $html ),
-		);
-	}
-
-	/**
-	 * Block array builder.
-	 *
-	 * @param array  $attrs Block attributes.
-	 * @param string $inner Inner content.
-	 * @return array Block array.
-	 */
-	private static function build_verse( array $attrs, string $inner ): array {
-		$html = '<pre class="wp-block-verse">' . $inner . '</pre>';
-		return array(
-			'blockName'    => 'core/verse',
-			'attrs'        => $attrs,
-			'innerBlocks'  => array(),
-			'innerHTML'    => $html,
-			'innerContent' => array( $html ),
-		);
-	}
-
-	/**
-	 * Block array builder.
-	 *
-	 * @param array  $attrs Block attributes.
-	 * @param string $inner Inner content.
-	 * @return array Block array.
-	 */
-	private static function build_separator( array $attrs, string $inner ): array {
-		$html = '<hr class="wp-block-separator has-alpha-channel-opacity"/>';
-		return array(
-			'blockName'    => 'core/separator',
-			'attrs'        => $attrs,
-			'innerBlocks'  => array(),
-			'innerHTML'    => $html,
-			'innerContent' => array( $html ),
-		);
-	}
-
-	/**
-	 * Block array builder.
-	 *
-	 * @param array  $attrs Block attributes.
-	 * @param string $inner Inner content.
-	 * @return array Block array.
-	 */
-	private static function build_spacer( array $attrs, string $inner ): array {
-		$height = $attrs['height'] ?? '100px';
-		$html   = '<div style="height:' . esc_attr( $height ) . '" aria-hidden="true" class="wp-block-spacer"></div>';
-		return array(
-			'blockName'    => 'core/spacer',
-			'attrs'        => $attrs,
-			'innerBlocks'  => array(),
-			'innerHTML'    => $html,
-			'innerContent' => array( $html ),
-		);
-	}
-
-	/**
-	 * Block array builder.
-	 *
-	 * @param array  $attrs Block attributes.
-	 * @param string $inner Inner content.
-	 * @return array Block array.
-	 */
-	private static function build_image( array $attrs, string $inner ): array {
-		if ( isset( $attrs['src'] ) && ! isset( $attrs['url'] ) ) {
-			$attrs['url'] = $attrs['src'];
-			unset( $attrs['src'] );
-		}
-		$url  = $attrs['url'] ?? '';
-		$alt  = $attrs['alt'] ?? '';
-		$html = '<figure class="wp-block-image"><img src="' . esc_attr( $url ) . '" alt="' . esc_attr( $alt ) . '"/></figure>';
-		return array(
-			'blockName'    => 'core/image',
-			'attrs'        => $attrs,
-			'innerBlocks'  => array(),
-			'innerHTML'    => $html,
-			'innerContent' => array( $html ),
-		);
-	}
-
-	/**
-	 * Block array builder.
-	 *
-	 * @param array  $attrs Block attributes.
-	 * @param string $inner Inner content.
-	 * @return array Block array.
-	 */
-	private static function build_audio( array $attrs, string $inner ): array {
-		$src  = $attrs['src'] ?? '';
-		$html = '<figure class="wp-block-audio"><audio controls src="' . esc_attr( $src ) . '"></audio></figure>';
-		return array(
-			'blockName'    => 'core/audio',
-			'attrs'        => $attrs,
-			'innerBlocks'  => array(),
-			'innerHTML'    => $html,
-			'innerContent' => array( $html ),
-		);
-	}
-
-	/**
-	 * Block array builder.
-	 *
-	 * @param array  $attrs Block attributes.
-	 * @param string $inner Inner content.
-	 * @return array Block array.
-	 */
-	private static function build_video( array $attrs, string $inner ): array {
-		$src  = $attrs['src'] ?? '';
-		$html = '<figure class="wp-block-video"><video controls src="' . esc_attr( $src ) . '"></video></figure>';
-		return array(
-			'blockName'    => 'core/video',
-			'attrs'        => $attrs,
-			'innerBlocks'  => array(),
-			'innerHTML'    => $html,
-			'innerContent' => array( $html ),
-		);
-	}
-
-	/**
-	 * Block array builder.
-	 *
-	 * @param array  $attrs Block attributes.
-	 * @param string $inner Inner content.
-	 * @return array Block array.
-	 */
-	private static function build_embed( array $attrs, string $inner ): array {
-		$url      = $attrs['url'] ?? '';
-		$provider = $attrs['providerNameSlug'] ?? 'youtube';
-		$html     = '<figure class="wp-block-embed is-type-video is-provider-' . esc_attr( $provider ) . ' wp-block-embed-' . esc_attr( $provider ) . '"><div class="wp-block-embed__wrapper">' . esc_html( $url ) . '</div></figure>';
-		return array(
-			'blockName'    => 'core/embed',
-			'attrs'        => $attrs,
-			'innerBlocks'  => array(),
-			'innerHTML'    => $html,
-			'innerContent' => array( $html ),
-		);
-	}
-
-	/**
-	 * Block array builder.
-	 *
-	 * @param array  $attrs Block attributes.
-	 * @param string $inner Inner content.
-	 * @return array Block array.
-	 */
-	private static function build_button( array $attrs, string $inner ): array {
-		if ( isset( $attrs['href'] ) && ! isset( $attrs['url'] ) ) {
-			$attrs['url'] = $attrs['href'];
-			unset( $attrs['href'] );
-		}
-		$url  = $attrs['url'] ?? '';
-		$html = '<div class="wp-block-button"><a class="wp-block-button__link wp-element-button" href="' . esc_attr( $url ) . '">' . $inner . '</a></div>';
-		return array(
-			'blockName'    => 'core/button',
-			'attrs'        => $attrs,
-			'innerBlocks'  => array(),
-			'innerHTML'    => $html,
-			'innerContent' => array( $html ),
-		);
-	}
-
-	/**
-	 * Block array builder.
-	 *
-	 * @param array  $attrs Block attributes.
-	 * @param string $inner Inner content.
-	 * @return array Block array.
-	 */
-	private static function build_more( array $attrs, string $inner ): array {
-		$custom = $attrs['customText'] ?? '';
-		$html   = '' !== $custom ? '<!--more ' . esc_html( $custom ) . '-->' : '<!--more-->';
-		if ( ! empty( $attrs['noTeaser'] ) ) {
-			$html .= "\n<!--noteaser-->";
-		}
-		return array(
-			'blockName'    => 'core/more',
-			'attrs'        => $attrs,
-			'innerBlocks'  => array(),
-			'innerHTML'    => $html,
-			'innerContent' => array( $html ),
-		);
-	}
-
-	/**
-	 * Block array builder.
-	 *
-	 * @param array  $attrs Block attributes.
-	 * @param string $inner Inner content.
-	 * @return array Block array.
-	 */
-	private static function build_nextpage( array $attrs, string $inner ): array {
-		return array(
-			'blockName'    => 'core/nextpage',
-			'attrs'        => $attrs,
-			'innerBlocks'  => array(),
-			'innerHTML'    => '<!--nextpage-->',
-			'innerContent' => array( '<!--nextpage-->' ),
-		);
-	}
-
-	/**
-	 * Block array builder.
-	 *
-	 * @param array  $attrs Block attributes.
-	 * @param string $inner Inner content.
-	 * @return array Block array.
-	 */
-	private static function build_table( array $attrs, string $inner ): array {
-		$html = '<figure class="wp-block-table"><table>' . $inner . '</table></figure>';
-		return array(
-			'blockName'    => 'core/table',
-			'attrs'        => $attrs,
-			'innerBlocks'  => array(),
-			'innerHTML'    => $html,
-			'innerContent' => array( $html ),
-		);
-	}
-
-	/**
-	 * Block array builder.
-	 *
-	 * @param array  $attrs Block attributes.
-	 * @param string $inner Inner content.
-	 * @return array Block array.
-	 */
-	private static function build_social_link( array $attrs, string $inner ): array {
-		return array(
-			'blockName'    => 'core/social-link',
-			'attrs'        => $attrs,
-			'innerBlocks'  => array(),
-			'innerHTML'    => '',
-			'innerContent' => array(),
-		);
-	}
-
-	/**
-	 * Block array builder.
-	 *
-	 * @param array  $attrs Block attributes.
-	 * @param string $inner Inner content.
-	 * @return array Block array.
-	 */
-	private static function build_list( array $attrs, string $inner ): array {
-		$ordered      = ! empty( $attrs['ordered'] );
-		$inner_blocks = array();
-
-		if ( preg_match_all( '/<li>(.*?)<\/li>/si', $inner, $matches ) ) {
-			foreach ( $matches[1] as $item_content ) {
-				$li_html        = '<li>' . $item_content . '</li>';
-				$inner_blocks[] = array(
-					'blockName'    => 'core/list-item',
-					'attrs'        => array(),
-					'innerBlocks'  => array(),
-					'innerHTML'    => $li_html,
-					'innerContent' => array( $li_html ),
-				);
-			}
-		}
-
-		$tag     = $ordered ? 'ol' : 'ul';
-		$content = array( "<{$tag} class=\"wp-block-list\">" );
-		foreach ( $inner_blocks as $item ) {
-			$content[] = null;
-		}
-		$content[] = "</{$tag}>";
-
-		return array(
-			'blockName'    => 'core/list',
-			'attrs'        => array( 'ordered' => $ordered ),
-			'innerBlocks'  => $inner_blocks,
-			'innerHTML'    => "<{$tag} class=\"wp-block-list\"></{$tag}>",
-			'innerContent' => $content,
-		);
-	}
-
-	/**
-	 * Block array builder.
-	 *
-	 * @param array  $attrs Block attributes.
-	 * @param string $inner Inner content.
-	 * @return array Block array.
-	 */
-	private static function build_pullquote( array $attrs, string $inner ): array {
-		$citation = $attrs['citation'] ?? '';
-		$content  = $inner;
-
-		if ( preg_match( '/<cite>(.*?)<\/cite>/si', $inner, $match ) ) {
-			$citation = $match[1];
-			$content  = str_replace( $match[0], '', $inner );
-		}
-
-		if ( ! empty( $citation ) ) {
-			$attrs['citation'] = $citation;
-		}
-
-		$html = '<figure class="wp-block-pullquote"><blockquote>' . trim( $content );
-		if ( '' !== $citation ) {
-			$html .= '<cite>' . esc_html( $citation ) . '</cite>';
-		}
-		$html .= '</blockquote></figure>';
-
-		return array(
-			'blockName'    => 'core/pullquote',
-			'attrs'        => $attrs,
-			'innerBlocks'  => array(),
-			'innerHTML'    => $html,
-			'innerContent' => array( $html ),
-		);
-	}
-
 
 	/**
 	 * Parse HTML-style attributes from a tag string.
@@ -2351,36 +2119,11 @@ class Block_Tags {
 	 *
 	 * @param string $block_name    Full block name.
 	 * @param array  $block_attrs   Block attributes.
-	 * @param string $inner_content Inner content.
-	 *
-	 * @return string Rendered HTML.
-	 */
-	/**
-	 * In-memory render cache for self-closing block tags.
-	 *
-	 * @var array<string, string>
-	 */
-	private static array $render_cache = array();
-
-	/**
-	 * Render a Blockstudio block.
-	 *
-	 * @param string $block_name    Full block name.
-	 * @param array  $block_attrs   Block attributes.
 	 * @param string $inner_content Inner content from paired tags.
 	 *
 	 * @return string Rendered HTML.
 	 */
 	private static function render_bs_block( string $block_name, array $block_attrs, string $inner_content ): string {
-		// Cache self-closing blocks (no inner content) by name + attributes.
-		$cache_key = '';
-		if ( '' === $inner_content ) {
-			$cache_key = $block_name . ':' . md5( wp_json_encode( $block_attrs ) );
-			if ( isset( self::$render_cache[ $cache_key ] ) ) {
-				return self::$render_cache[ $cache_key ];
-			}
-		}
-
 		$parent = \WP_Block_Supports::$block_to_render;
 
 		\WP_Block_Supports::$block_to_render = array(
@@ -2412,10 +2155,6 @@ class Block_Tags {
 		\WP_Block_Supports::$block_to_render = $parent;
 
 		$result = is_string( $result ) ? $result : '';
-
-		if ( '' !== $cache_key ) {
-			self::$render_cache[ $cache_key ] = $result;
-		}
 
 		return $result;
 	}

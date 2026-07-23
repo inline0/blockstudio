@@ -8,10 +8,14 @@ concurrency:
   group: ci-${{ github.ref }}
   cancel-in-progress: true
 
+# Readable wp-env Docker project name for raw wp-env steps; the empty/impl npm scripts override it.
+env:
+  COMPOSE_PROJECT_NAME: blockstudio
+
 jobs:
   lint:
     name: Lint
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, Linux, X64, inline0-blockstudio]
     steps:
       - uses: actions/checkout@v5
 
@@ -41,7 +45,7 @@ jobs:
   unit:
     name: Unit Tests
     if: contains(github.event.head_commit.message, '[unit]') || contains(github.event.head_commit.message, '[all]')
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, Linux, X64, inline0-blockstudio]
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@v5
@@ -71,12 +75,12 @@ jobs:
         run: |
           PLUGIN_DIR=$(cd tests/wp-env && npx @wordpress/env run cli -- wp eval 'echo BLOCKSTUDIO_DIR;' 2>/dev/null | tr -d '\r\n')
           echo "Plugin dir: $PLUGIN_DIR"
-          cd tests/wp-env && npx @wordpress/env run cli --env-cwd="$PLUGIN_DIR" vendor/bin/phpunit
+          cd tests/wp-env && npx @wordpress/env run cli --env-cwd="$PLUGIN_DIR" vendor/bin/phpunit --testdox --display-errors --display-warnings
 
   e2e:
     name: E2E Tests (Shard ${{ matrix.shard }}/${{ matrix.total_shards }})
     if: contains(github.event.head_commit.message, '[e2e]') || contains(github.event.head_commit.message, '[all]')
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, Linux, X64, inline0-blockstudio]
     timeout-minutes: 120
     strategy:
       fail-fast: false

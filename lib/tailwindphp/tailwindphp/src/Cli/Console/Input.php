@@ -16,9 +16,7 @@
  *
  * @credits Tailwind Labs (https://tailwindcss.com)
  */
-
-declare(strict_types=1);
-
+declare (strict_types=1);
 namespace BlockstudioVendor\TailwindPHP\Cli\Console;
 
 /**
@@ -30,16 +28,12 @@ namespace BlockstudioVendor\TailwindPHP\Cli\Console;
 class Input
 {
     private string $command = '';
-
     /** @var array<string> */
     private array $arguments = [];
-
     /** @var array<string, string|bool> */
     private array $options = [];
-
     /** @var array<string> */
     private array $rawArgs;
-
     /**
      * @param array<string>|null $argv Command line arguments (defaults to $_SERVER['argv'])
      */
@@ -48,40 +42,34 @@ class Input
         $this->rawArgs = $argv ?? $_SERVER['argv'] ?? [];
         $this->parse();
     }
-
     /**
      * Parse the command line arguments.
      */
     private function parse(): void
     {
         $args = $this->rawArgs;
-
         // Remove script name
         array_shift($args);
-
         // Re-index the array
         $args = array_values($args);
-
         // First non-option argument is the command
-        $foundCommand = false;
+        $foundCommand = \false;
         $count = count($args);
-
         for ($i = 0; $i < $count; $i++) {
             $arg = $args[$i];
-
             if (str_starts_with($arg, '--')) {
                 // Long option: --name or --name=value
                 $this->parseLongOption($arg);
             } elseif (str_starts_with($arg, '-') && $arg !== '-' && strlen($arg) === 2) {
                 // Short option with potential value: -c value or -c=value
                 $char = $arg[1];
-
                 // Check if next arg is a value (not starting with -)
                 if ($i + 1 < $count && !str_starts_with($args[$i + 1], '-')) {
                     $this->options[$char] = $args[$i + 1];
-                    $i++; // Skip the value
+                    $i++;
+                    // Skip the value
                 } else {
-                    $this->options[$char] = true;
+                    $this->options[$char] = \true;
                 }
             } elseif (str_starts_with($arg, '-') && $arg !== '-') {
                 // Multiple short options like -vvv (only flags, no values)
@@ -89,48 +77,40 @@ class Input
             } elseif (!$foundCommand) {
                 // First positional argument is the command
                 $this->command = $arg;
-                $foundCommand = true;
+                $foundCommand = \true;
             } else {
                 // Additional positional arguments
                 $this->arguments[] = $arg;
             }
         }
     }
-
     /**
      * Parse a long option (--name or --name=value).
      */
     private function parseLongOption(string $arg): void
     {
         $option = substr($arg, 2);
-
         if (str_contains($option, '=')) {
             [$name, $value] = explode('=', $option, 2);
             $this->options[$name] = $value;
+        } else if (str_starts_with($option, 'no-')) {
+            $this->options[substr($option, 3)] = \false;
         } else {
-            // Check for --no-xxx pattern
-            if (str_starts_with($option, 'no-')) {
-                $this->options[substr($option, 3)] = false;
-            } else {
-                $this->options[$option] = true;
-            }
+            $this->options[$option] = \true;
         }
     }
-
     /**
      * Parse short options (-v, -vvv).
      */
     private function parseShortOption(string $arg): void
     {
         $chars = substr($arg, 1);
-
         // Handle multiple short options like -vvv
         for ($i = 0; $i < strlen($chars); $i++) {
             $char = $chars[$i];
-            $this->options[$char] = true;
+            $this->options[$char] = \true;
         }
     }
-
     /**
      * Get the command name.
      */
@@ -138,7 +118,6 @@ class Input
     {
         return $this->command;
     }
-
     /**
      * Get positional arguments.
      *
@@ -148,7 +127,6 @@ class Input
     {
         return $this->arguments;
     }
-
     /**
      * Get a specific positional argument.
      */
@@ -156,7 +134,6 @@ class Input
     {
         return $this->arguments[$index] ?? $default;
     }
-
     /**
      * Check if an option exists.
      */
@@ -164,7 +141,6 @@ class Input
     {
         return array_key_exists($name, $this->options);
     }
-
     /**
      * Get an option value.
      *
@@ -175,35 +151,28 @@ class Input
     {
         return $this->options[$name] ?? $default;
     }
-
     /**
      * Get a string option value.
      */
     public function getStringOption(string $name, string $default = ''): string
     {
         $value = $this->options[$name] ?? $default;
-
         return is_string($value) ? $value : $default;
     }
-
     /**
      * Get a boolean option value.
      */
-    public function getBoolOption(string $name, bool $default = false): bool
+    public function getBoolOption(string $name, bool $default = \false): bool
     {
         if (!array_key_exists($name, $this->options)) {
             return $default;
         }
-
         $value = $this->options[$name];
-
         if (is_bool($value)) {
             return $value;
         }
-
-        return in_array(strtolower((string) $value), ['true', '1', 'yes', 'on'], true);
+        return in_array(strtolower((string) $value), ['true', '1', 'yes', 'on'], \true);
     }
-
     /**
      * Get all options.
      *
@@ -213,7 +182,6 @@ class Input
     {
         return $this->options;
     }
-
     /**
      * Check for help option.
      */
@@ -221,7 +189,6 @@ class Input
     {
         return $this->hasOption('help') || $this->hasOption('h');
     }
-
     /**
      * Check for version option.
      */
@@ -229,7 +196,6 @@ class Input
     {
         return $this->hasOption('version') || $this->hasOption('V');
     }
-
     /**
      * Check for verbose option.
      */
@@ -237,7 +203,6 @@ class Input
     {
         return $this->hasOption('verbose') || $this->hasOption('v');
     }
-
     /**
      * Check for quiet option.
      */
@@ -245,7 +210,6 @@ class Input
     {
         return $this->hasOption('quiet') || $this->hasOption('q');
     }
-
     /**
      * Get the raw arguments.
      *

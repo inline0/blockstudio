@@ -94,6 +94,9 @@ class Container_Field_Handler extends Abstract_Field_Handler {
 			return;
 		}
 
+		$is_override = (bool) ( $field['_blockstudio_is_override'] ?? false );
+		$is_extend   = (bool) ( $field['_blockstudio_is_extend'] ?? false );
+
 		foreach ( $field['tabs'] as $tab ) {
 			if ( isset( $tab['attributes'] ) ) {
 				call_user_func_array(
@@ -104,7 +107,8 @@ class Container_Field_Handler extends Abstract_Field_Handler {
 						$prefix,
 						false, // from_group.
 						false, // from_repeater.
-						false, // is_override.
+						$is_override,
+						$is_extend,
 					)
 				);
 			}
@@ -126,13 +130,16 @@ class Container_Field_Handler extends Abstract_Field_Handler {
 			return;
 		}
 
-		// Filter out nested groups.
-		$filtered_attributes = $field['attributes'];
+		// Flatten id-less groups and filter out remaining nested groups.
+		$filtered_attributes = $this->flatten_idless_groups( $field['attributes'] );
 		Build::filter_not_key( $filtered_attributes, 'type', 'group' );
 
 		$new_prefix = '' === $prefix
 			? ( $field['id'] ?? '' )
 			: $prefix . '_' . ( $field['id'] ?? '' );
+
+		$is_override = (bool) ( $field['_blockstudio_is_override'] ?? false );
+		$is_extend   = (bool) ( $field['_blockstudio_is_extend'] ?? false );
 
 		call_user_func_array(
 			$this->build_callback,
@@ -142,7 +149,8 @@ class Container_Field_Handler extends Abstract_Field_Handler {
 				$new_prefix,
 				true,  // from_group.
 				false, // from_repeater.
-				false, // is_override.
+				$is_override,
+				$is_extend,
 			)
 		);
 	}
@@ -162,8 +170,8 @@ class Container_Field_Handler extends Abstract_Field_Handler {
 			return;
 		}
 
-		// Filter out nested groups from attributes.
-		$inner_attributes = $field['attributes'] ?? array();
+		// Flatten id-less groups and filter out remaining nested groups from attributes.
+		$inner_attributes = $this->flatten_idless_groups( $field['attributes'] ?? array() );
 		if ( count( $inner_attributes ) >= 1 ) {
 			$inner_attributes = array_values(
 				array_filter(
@@ -177,11 +185,15 @@ class Container_Field_Handler extends Abstract_Field_Handler {
 			'blockstudio' => true,
 			'type'        => 'array',
 			'field'       => 'repeater',
+			'id'          => $this->get_attribute_id( $field, $prefix ),
 			'attributes'  => $inner_attributes,
 		);
 
 		// Recursively build inner attributes.
 		if ( count( $inner_attributes ) >= 1 && $this->build_callback ) {
+			$is_override = (bool) ( $field['_blockstudio_is_override'] ?? false );
+			$is_extend   = (bool) ( $field['_blockstudio_is_extend'] ?? false );
+
 			call_user_func_array(
 				$this->build_callback,
 				array(
@@ -190,12 +202,15 @@ class Container_Field_Handler extends Abstract_Field_Handler {
 					'',
 					false, // from_group.
 					true,  // from_repeater.
-					false, // is_override.
+					$is_override,
+					$is_extend,
 				)
 			);
 		}
 
 		$this->apply_defaults( $field, $attribute );
+		$this->apply_set( $field, $attribute );
+		$this->apply_block_field_metadata( $field, $attribute );
 
 		$attributes[ $field_id ] = $attribute;
 	}
@@ -221,7 +236,9 @@ class Container_Field_Handler extends Abstract_Field_Handler {
 			'field'       => 'attributes',
 		);
 
-		$attribute['id'] = $field_id;
+		$attribute['id'] = $this->get_attribute_id( $field, $prefix );
+		$this->apply_set( $field, $attribute );
+		$this->apply_block_field_metadata( $field, $attribute );
 
 		$attributes[ $field_id ] = $attribute;
 	}
@@ -241,5 +258,34 @@ class Container_Field_Handler extends Abstract_Field_Handler {
 		}
 
 		return null;
+	}
+
+	/**
+	 * Flatten groups without IDs while preserving ID-bearing groups.
+	 *
+	 * @param array $attributes The attributes to flatten.
+	 *
+	 * @return array The flattened attributes.
+	 */
+	private function flatten_idless_groups( array $attributes ): array {
+		$flattened = array();
+
+		foreach ( $attributes as $attribute ) {
+			if (
+				'group' === ( $attribute['type'] ?? '' ) &&
+				empty( $attribute['id'] ) &&
+				isset( $attribute['attributes'] )
+			) {
+				$flattened = array_merge(
+					$flattened,
+					$this->flatten_idless_groups( $attribute['attributes'] )
+				);
+				continue;
+			}
+
+			$flattened[] = $attribute;
+		}
+
+		return $flattened;
 	}
 }

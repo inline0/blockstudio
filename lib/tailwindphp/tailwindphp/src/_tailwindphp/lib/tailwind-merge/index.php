@@ -1,22 +1,18 @@
 <?php
 
-declare(strict_types=1);
-
+declare (strict_types=1);
 /**
  * Port of: https://github.com/dcastil/tailwind-merge
  *
  * Main entry point for tailwind-merge PHP port.
  * Exports twMerge, twJoin, and cn functions.
  */
-
 namespace BlockstudioVendor\TailwindPHP\Lib\TailwindMerge;
 
 require_once __DIR__ . '/tw-merge.php';
 require_once __DIR__ . '/tw-join.php';
 require_once __DIR__ . '/../clsx/clsx.php';
-
 use function BlockstudioVendor\TailwindPHP\Lib\Clsx\clsx;
-
 /**
  * Combines clsx and twMerge for the ultimate class name utility.
  *

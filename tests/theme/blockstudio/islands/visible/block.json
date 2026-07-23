@@ -1,0 +1,23 @@
+{
+  "$schema": "https://blockstudio.dev/schema/block",
+  "name": "blockstudio/island-visible",
+  "title": "Island Visible",
+  "category": "blockstudio-test-native",
+  "icon": "update",
+  "description": "Visible loading dynamic island fixture.",
+  "blockstudio": {
+    "island": {
+      "mode": "dynamic",
+      "loading": "visible",
+      "attributes": ["message"]
+    },
+    "attributes": [
+      {
+        "id": "message",
+        "type": "text",
+        "label": "Message",
+        "default": "Visible"
+      }
+    ]
+  }
+}

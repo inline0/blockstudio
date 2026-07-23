@@ -98,6 +98,11 @@ class Cli {
 			return;
 		}
 
+		if ( 'migrate' === $subcommand ) {
+			self::db_migrate( $args, $assoc_args );
+			return;
+		}
+
 		$block  = $args[1] ?? '';
 		$schema = $args[2] ?? 'default';
 
@@ -186,8 +191,52 @@ class Cli {
 				break;
 
 			default:
-				\WP_CLI::error( "Unknown subcommand: $subcommand. Use: list, get, create, update, delete, schemas" );
+				\WP_CLI::error( "Unknown subcommand: $subcommand. Use: list, get, create, update, delete, migrate, schemas" );
 		}
+	}
+
+	/**
+	 * Migrate database storage.
+	 *
+	 * @param array $args       Positional arguments.
+	 * @param array $assoc_args Associative arguments.
+	 *
+	 * @return void
+	 */
+	private static function db_migrate( $args, $assoc_args ): void {
+		$block  = $args[1] ?? '';
+		$schema = $assoc_args['schema'] ?? ( $args[2] ?? 'default' );
+		$to     = $assoc_args['to'] ?? '';
+
+		if ( empty( $block ) ) {
+			\WP_CLI::error( 'Block name required. Usage: wp bs db migrate <block> [schema] --to=storh' );
+			return;
+		}
+
+		if ( 'storh' !== $to ) {
+			\WP_CLI::error( 'Only --to=storh is supported.' );
+			return;
+		}
+
+		$result = Database::migrate_to_storh( $block, $schema );
+
+		if ( is_wp_error( $result ) ) {
+			\WP_CLI::error( $result->get_error_message() );
+			return;
+		}
+
+		\WP_CLI::log( 'Source: ' . $result['source_path'] );
+		\WP_CLI::log( 'Target: ' . $result['target_path'] );
+		\WP_CLI::log( 'Verify: ' . ( ! empty( $result['verify']['ok'] ) ? 'ok' : 'failed' ) );
+		\WP_CLI::success(
+			sprintf(
+				'Migrated %d records from jsonc to storh for %s:%s. Target count: %d.',
+				$result['source_count'],
+				$result['block'],
+				$result['schema'],
+				$result['target_count']
+			)
+		);
 	}
 
 	/**

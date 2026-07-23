@@ -7,9 +7,6 @@
 
 namespace Blockstudio;
 
-use Jenssegers\Blade\Blade;
-use Timber\Timber;
-
 /**
  * Main orchestration class for file-based patterns.
  *
@@ -59,14 +56,10 @@ class Patterns {
 		$discovery = new Pattern_Discovery();
 		$parser    = Html_Parser::from_settings();
 
-		foreach ( $paths as $path ) {
-			if ( ! is_dir( $path ) ) {
-				continue;
-			}
+		foreach ( Discovery_Sources::for_paths( 'patterns', $paths ) as $source ) {
+			$registry->add_path( $source->root() );
 
-			$registry->add_path( $path );
-
-			$patterns = $discovery->discover( $path );
+			$patterns = $discovery->discover( $source );
 
 			foreach ( $patterns as $name => $pattern_data ) {
 				$registry->register( $name, $pattern_data );
@@ -90,23 +83,7 @@ class Patterns {
 	 * @return array<string> Array of directory paths.
 	 */
 	public static function get_paths(): array {
-		$paths = array();
-
-		$theme_path = get_template_directory() . '/patterns';
-
-		if ( is_dir( $theme_path ) ) {
-			$paths[] = $theme_path;
-		}
-
-		if ( is_child_theme() ) {
-			$child_path = get_stylesheet_directory() . '/patterns';
-
-			if ( is_dir( $child_path ) ) {
-				$paths[] = $child_path;
-			}
-		}
-
-		return $paths;
+		return Utils::theme_subdir_paths( 'patterns' );
 	}
 
 	/**
@@ -118,19 +95,13 @@ class Patterns {
 	 * @return void
 	 */
 	private static function register_pattern( array $pattern, Html_Parser $parser ): void {
-		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Reading local template file.
-		$template = file_get_contents( $pattern['template_path'] );
+		$template = Template_Compiler::compile(
+			$pattern['template_path'],
+			is_string( $pattern['directory'] ?? null ) ? $pattern['directory'] : null
+		);
 
-		if ( false === $template ) {
+		if ( null === $template ) {
 			return;
-		}
-
-		if ( ! empty( $pattern['is_blade'] ) && class_exists( 'Jenssegers\Blade\Blade' ) ) {
-			$blade    = new Blade( $pattern['directory'], sys_get_temp_dir() );
-			$template = $blade->render( 'index', array() );
-		} elseif ( $pattern['is_twig'] && class_exists( 'Timber\Timber' ) ) {
-			Timber::init();
-			$template = Timber::compile_string( $template, array() );
 		}
 
 		$content = $parser->parse( $template );

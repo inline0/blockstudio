@@ -88,7 +88,7 @@ export const Classes = ({
       [`${clientId}-${attributeId}`]: temporaryVal,
     });
     setAttributes?.({
-      ...attributes,
+      ...attributesRef.current,
       blockstudio: clone?.blockstudio,
     } as BlockstudioBlockAttributes);
   };

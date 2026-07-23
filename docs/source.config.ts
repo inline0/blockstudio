@@ -19,5 +19,6 @@ export const blog = defineCollections({
   schema: frontmatterSchema.extend({
     date: z.date(),
     author: z.string(),
+    archive: z.boolean().optional(),
   }),
 });

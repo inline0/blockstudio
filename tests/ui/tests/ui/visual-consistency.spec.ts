@@ -81,3 +81,41 @@ test.describe('Component screenshots', () => {
 		});
 	}
 });
+
+test.describe('Layered styles', () => {
+	test('button CSS emits in the bsui layer', async ({ page }) => {
+		const styleText = await page.locator('style').evaluateAll((styles) =>
+			styles.map((style) => style.textContent || '').join('\n')
+		);
+
+		expect(styleText).toContain('@layer bsui');
+		expect(styleText).toContain('[data-bsui-button]');
+	});
+
+	test('unlayered theme utility overrides bsui button styles', async ({ page }) => {
+		await page.addStyleTag({
+			content: '.bsui-layer-override { background-color: rgb(255, 0, 0); }',
+		});
+
+		const button = page.locator('[data-bsui-button]').first();
+		await expect(button).toBeVisible();
+		await button.evaluate((element) => element.classList.add('bsui-layer-override'));
+
+		await expect(button).toHaveCSS('background-color', 'rgb(255, 0, 0)');
+	});
+
+	test('button icon renders in the requested position', async ({ page }) => {
+		const button = page.locator('[data-bsui-button]').filter({ hasText: 'Icon right' }).first();
+		await expect(button).toBeVisible();
+
+		const children = await button.evaluate((element) =>
+			Array.from(element.children).map((child) =>
+				child.hasAttribute('data-bsui-button-icon') ? 'icon' : child.textContent?.trim()
+			)
+		);
+
+		expect(children).toEqual(['Icon right', 'icon']);
+		await expect(button.locator('[data-bsui-button-icon]')).toHaveCSS('width', '16px');
+		await expect(button.locator('[data-bsui-button-icon] svg')).toHaveCSS('width', '16px');
+	});
+});

@@ -49,6 +49,10 @@ const CodePopoutContext = createContext<{
   Popout: ({ children }: { children: ReactNode }) => ReactNode;
 } | null>(null);
 
+type CleanupElement = HTMLElement & {
+  __blockstudioCleanupUnsubscribe?: () => void;
+};
+
 export const CodeActions = ({
   item,
   children,
@@ -136,6 +140,7 @@ export const Code = ({
   const scssEnabled = item.language === 'scss';
   const [compiledCss, setCompiledCss] = useState<string>(replacedVal);
   const debounceRef = useRef<ReturnType<typeof setTimeout>>();
+  const cleanupReadyRef = useRef(false);
 
   useEffect(() => {
     if (!scssEnabled) {
@@ -198,6 +203,103 @@ export const Code = ({
     const injectedValue = scssEnabled ? compiledCss : replacedVal;
     element.innerHTML = injectedValue;
   }, [compiledCss, replacedVal, clientId]);
+
+  useEffect(() => {
+    if (!isCssLike && item.language !== 'javascript') return;
+    if (!item.asset && !extensions) return;
+
+    const id = `blockstudio-${clientId}-${inRepeater ? repeaterId : item.id}`;
+    const doc = getEditorDocument();
+    const win = doc.defaultView;
+    const element = doc.getElementById(id) as CleanupElement | null;
+
+    if (element?.__blockstudioCleanupUnsubscribe) {
+      element.__blockstudioCleanupUnsubscribe();
+      element.__blockstudioCleanupUnsubscribe = undefined;
+    }
+
+    cleanupReadyRef.current = false;
+    const readyTimer = win?.setTimeout(() => {
+      cleanupReadyRef.current = true;
+    }, 0);
+
+    return () => {
+      if (readyTimer) {
+        win?.clearTimeout(readyTimer);
+      }
+
+      if (!cleanupReadyRef.current) {
+        return;
+      }
+
+      const removeIfBlockGone = () => {
+        const blockEditor = (window as any).wp?.data?.select?.(
+          'core/block-editor',
+        );
+        const blockExists =
+          clientId && typeof blockEditor?.getBlock === 'function'
+            ? !!blockEditor.getBlock(clientId)
+            : !!doc.querySelector(`[data-block="${clientId}"]`);
+
+        if (!blockExists) {
+          const element = doc.getElementById(id) as CleanupElement | null;
+          element?.__blockstudioCleanupUnsubscribe?.();
+          element?.remove();
+          return true;
+        }
+
+        return false;
+      };
+
+      if (!win) {
+        removeIfBlockGone();
+        return;
+      }
+
+      win.setTimeout(() => {
+        if (removeIfBlockGone()) {
+          return;
+        }
+
+        const subscribe = (window as any).wp?.data?.subscribe;
+        if (typeof subscribe === 'function') {
+          const unsubscribe = subscribe(() => {
+            if (removeIfBlockGone()) {
+              unsubscribe();
+            }
+          });
+          const element = doc.getElementById(id) as CleanupElement | null;
+          if (element) {
+            element.__blockstudioCleanupUnsubscribe = unsubscribe;
+          }
+          return;
+        }
+
+        const observer = new win.MutationObserver(() => {
+          if (removeIfBlockGone()) {
+            observer.disconnect();
+          }
+        });
+        observer.observe(doc.body, {
+          childList: true,
+          subtree: true,
+        });
+        const element = doc.getElementById(id) as CleanupElement | null;
+        if (element) {
+          element.__blockstudioCleanupUnsubscribe = () => observer.disconnect();
+        }
+      }, 0);
+    };
+  }, [
+    clientId,
+    extensions,
+    inRepeater,
+    isCssLike,
+    item.asset,
+    item.id,
+    item.language,
+    repeaterId,
+  ]);
 
   const editorProps = {
     ...rest,

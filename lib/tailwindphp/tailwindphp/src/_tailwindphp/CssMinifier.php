@@ -1,7 +1,6 @@
 <?php
 
-declare(strict_types=1);
-
+declare (strict_types=1);
 namespace BlockstudioVendor\TailwindPHP\Minifier;
 
 /**
@@ -35,10 +34,8 @@ class CssMinifier
         $css = self::removeZeroUnits($css);
         $css = self::shortenFontWeight($css);
         $css = self::removeEmptyRules($css);
-
         return trim($css);
     }
-
     /**
      * Remove CSS comments.
      */
@@ -46,50 +43,38 @@ class CssMinifier
     {
         return preg_replace('/\/\*[\s\S]*?\*\//', '', $css);
     }
-
     /**
      * Remove unnecessary whitespace.
      */
     private static function removeWhitespace(string $css): string
     {
         $css = preg_replace('/\s+/', ' ', $css);
-
         $out = '';
         $depth = 0;
         $len = strlen($css);
-
         for ($i = 0; $i < $len; $i++) {
             $ch = $css[$i];
-
             if ($ch === '(') {
                 $depth++;
                 $out .= $ch;
-
                 continue;
             }
-
             if ($ch === ')') {
                 $depth = max(0, $depth - 1);
                 $out .= $ch;
-
                 continue;
             }
-
             if ($ch === ' ') {
                 $prev = $out !== '' ? substr($out, -1) : '';
                 $next = $i + 1 < $len ? $css[$i + 1] : '';
-
                 $stripAfter = '{};:(';
                 $stripBefore = '{};:,)';
-
                 if ($depth === 0) {
                     $stripAfter .= ',';
                 }
-
                 if (str_contains($stripAfter, $prev) || str_contains($stripBefore, $next)) {
                     continue;
                 }
-
                 // Only strip around selector combinators at depth 0
                 if ($depth === 0) {
                     $combinators = '>~+';
@@ -98,26 +83,18 @@ class CssMinifier
                     }
                 }
             }
-
             $out .= $ch;
         }
-
         return str_replace(';}', '}', $out);
     }
-
     /**
      * Shorten 6-digit hex colors to 3-digit where possible.
      * #ffffff → #fff, #aabbcc → #abc
      */
     private static function shortenHexColors(string $css): string
     {
-        return preg_replace_callback(
-            '/#([0-9a-fA-F])\1([0-9a-fA-F])\2([0-9a-fA-F])\3\b/',
-            fn ($m) => '#' . strtolower($m[1] . $m[2] . $m[3]),
-            $css,
-        );
+        return preg_replace_callback('/#([0-9a-fA-F])\1([0-9a-fA-F])\2([0-9a-fA-F])\3\b/', fn($m) => '#' . strtolower($m[1] . $m[2] . $m[3]), $css);
     }
-
     /**
      * Remove units from zero values.
      * 0px → 0, 0rem → 0, 0em → 0
@@ -128,13 +105,8 @@ class CssMinifier
     {
         // Match 0 followed by a unit, but not 0s or 0ms (time units)
         // Also preserve 0% in some contexts (gradients, etc.)
-        return preg_replace(
-            '/\b0(px|rem|em|ex|ch|vw|vh|vmin|vmax|cm|mm|in|pt|pc)\b/',
-            '0',
-            $css,
-        );
+        return preg_replace('/\b0(px|rem|em|ex|ch|vw|vh|vmin|vmax|cm|mm|in|pt|pc)\b/', '0', $css);
     }
-
     /**
      * Shorten font-weight keywords to numeric values.
      * normal → 400, bold → 700
@@ -143,10 +115,8 @@ class CssMinifier
     {
         $css = preg_replace('/font-weight:normal\b/', 'font-weight:400', $css);
         $css = preg_replace('/font-weight:bold\b/', 'font-weight:700', $css);
-
         return $css;
     }
-
     /**
      * Remove empty rules.
      * .foo {} → (removed)

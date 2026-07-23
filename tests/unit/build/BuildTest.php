@@ -1,5 +1,6 @@
 <?php
 
+use Blockstudio\Attribute_Builder;
 use Blockstudio\Build;
 use Blockstudio\Block_Registry;
 use Blockstudio\Files;
@@ -95,9 +96,7 @@ class BuildTest extends TestCase {
 	}
 
 	public function test_fetch_query_populate_is_not_baked_during_build(): void {
-		$attributes = array();
-
-		Build::build_attributes(
+		$attributes = ( new Attribute_Builder() )->build(
 			array(
 				array(
 					'id'       => 'liveUsers',
@@ -111,8 +110,7 @@ class BuildTest extends TestCase {
 						),
 					),
 				),
-			),
-			$attributes
+			)
 		);
 
 		$this->assertSame( array(), $attributes['liveUsers']['options'] );
@@ -121,9 +119,7 @@ class BuildTest extends TestCase {
 	}
 
 	public function test_fetch_query_populate_resolves_for_editor_requests(): void {
-		$attributes = array();
-
-		Build::build_attributes(
+		$attributes = ( new Attribute_Builder() )->build(
 			array(
 				array(
 					'id'         => 'liveUsers',
@@ -138,8 +134,7 @@ class BuildTest extends TestCase {
 						),
 					),
 				),
-			),
-			$attributes
+			)
 		);
 
 		$this->assertNotEmpty( $attributes['liveUsers']['options'] );
@@ -148,9 +143,7 @@ class BuildTest extends TestCase {
 	}
 
 	public function test_fetch_query_populate_preserves_defaults_without_baked_options(): void {
-		$attributes = array();
-
-		Build::build_attributes(
+		$attributes = ( new Attribute_Builder() )->build(
 			array(
 				array(
 					'id'       => 'liveUsers',
@@ -163,8 +156,7 @@ class BuildTest extends TestCase {
 						'query' => 'users',
 					),
 				),
-			),
-			$attributes
+			)
 		);
 
 		$this->assertSame( array(), $attributes['liveUsers']['options'] );
@@ -275,6 +267,22 @@ class BuildTest extends TestCase {
 	public function test_assets_global_returns_array(): void {
 		$assets = Build::assets_global();
 		$this->assertIsArray( $assets );
+	}
+
+	public function test_get_instance_name_handles_paths_outside_wordpress_root(): void {
+		$path = wp_normalize_path( sys_get_temp_dir() . '/blockstudio-outside-root' );
+
+		$this->assertSame( trim( $path, '/\\' ), Build::get_instance_name( $path ) );
+	}
+
+	public function test_reserved_asset_prefix_requires_boundary(): void {
+		$method = new ReflectionMethod( Build::class, 'asset_basename_matches_prefix' );
+		$method->setAccessible( true );
+
+		$this->assertTrue( $method->invoke( null, 'global.css', 'global' ) );
+		$this->assertTrue( $method->invoke( null, 'global-view.js', 'global' ) );
+		$this->assertFalse( $method->invoke( null, 'globals.css', 'global' ) );
+		$this->assertFalse( $method->invoke( null, 'administration.css', 'admin' ) );
 	}
 
 	// blade()
@@ -529,6 +537,77 @@ class BuildTest extends TestCase {
 			}
 
 			wp_cache_delete( 'plugins', 'plugins' );
+		}
+	}
+
+	public function test_blocks_attributes_filter_reaches_built_render_attributes(): void {
+		$tmp_dir   = sys_get_temp_dir() . '/bs-attr-filter-' . uniqid();
+		$block_dir = $tmp_dir . '/filtered-select';
+		mkdir( $block_dir, 0755, true );
+
+		$name = 'blockstudio-test/filtered-select';
+		file_put_contents(
+			$block_dir . '/block.json',
+			wp_json_encode(
+				array(
+					'name'        => $name,
+					'title'       => 'Filtered Select',
+					'blockstudio' => array(
+						'attributes' => array(
+							array(
+								'id'      => 'variant',
+								'type'    => 'select',
+								'options' => array(
+									array(
+										'label' => 'Default',
+										'value' => 'default',
+									),
+								),
+								'default' => 'default',
+							),
+						),
+					),
+				)
+			)
+		);
+		file_put_contents( $block_dir . '/index.php', '<?php // render' );
+
+		$filter = function ( $attribute, $block ) use ( $name ) {
+			if ( ( $block['name'] ?? '' ) === $name && ( $attribute['id'] ?? '' ) === 'variant' ) {
+				$attribute['options'][] = array(
+					'label' => 'Brand',
+					'value' => 'brand',
+				);
+			}
+
+			return $attribute;
+		};
+		add_filter( 'blockstudio/blocks/attributes', $filter, 10, 2 );
+
+		try {
+			Build::init(
+				array(
+					'dir' => $tmp_dir,
+				)
+			);
+
+			$block = Build::blocks()[ $name ] ?? null;
+			$this->assertInstanceOf( WP_Block_Type::class, $block );
+
+			$options = array_column( $block->attributes['variant']['options'] ?? array(), 'value' );
+			$this->assertContains( 'brand', $options, 'Filter-added select options must reach the built render attributes.' );
+		} finally {
+			remove_filter( 'blockstudio/blocks/attributes', $filter, 10 );
+
+			if ( is_dir( $tmp_dir ) ) {
+				Files::delete_all_files( $tmp_dir );
+			}
+
+			Build::refresh_blocks();
+
+			if ( WP_Block_Type_Registry::get_instance()->is_registered( $name ) ) {
+				WP_Block_Type_Registry::get_instance()->unregister( $name );
+			}
 		}
 	}
 

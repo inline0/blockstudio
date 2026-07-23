@@ -1,6 +1,13 @@
 import { Draggable } from '@hello-pangea/dnd';
 import { Button } from '@wordpress/components';
-import { Fragment, useEffect, useState } from '@wordpress/element';
+import {
+  Fragment,
+  createContext,
+  useContext,
+  useEffect,
+  useRef,
+  useState,
+} from '@wordpress/element';
 import { Icon, closeSmall, chevronDown, create } from '@wordpress/icons';
 import { result } from 'lodash-es';
 import { Base } from '@/blocks/components/base';
@@ -21,7 +28,10 @@ import { css } from '@/utils/css';
 
 const border = '1px dashed #b9b9b9';
 const postId = window.blockstudioAdmin?.postId;
-let repeaters = {};
+
+const RepeaterRegistryContext = createContext<Record<string, string[]> | null>(
+  null,
+);
 
 const getItemStyle = (
   isDragging: boolean,
@@ -464,6 +474,18 @@ export const Repeater = ({
 }) => {
   const [groups, setGroups] = useState<Any[]>([]);
   const innerId = id === '' ? item.id : id;
+  const listId = id || item.id || '';
+
+  const parentRegistry = useContext(RepeaterRegistryContext);
+  const ownRegistry = useRef<Record<string, string[]>>({});
+  const registry = parentRegistry ?? ownRegistry.current;
+
+  useEffect(() => {
+    registry[listId] = groups as string[];
+    return () => {
+      delete registry[listId];
+    };
+  }, [groups, listId, registry]);
 
   useEffect(() => {
     if (v?.length) {
@@ -481,10 +503,6 @@ export const Repeater = ({
       newGroups = [...newGroups, attributes];
     });
     setGroups(newGroups);
-    repeaters = {
-      ...repeaters,
-      [innerId ?? '']: newGroups,
-    };
   };
 
   const getId = (index: number) => {
@@ -494,64 +512,69 @@ export const Repeater = ({
   const ids = groups.map((_, index) => getId(index));
 
   return (
-    <Base
-      css={css({
-        '& > div > .components-base-control__label': {
-          marginBottom: '12px',
-        },
-      })}
-    >
-      <List
-        {...{ ids, context, repeaters }}
-        id={id || item.id}
-        style={{
-          marginLeft: '8px',
-        }}
-        onChange={(items, repeaterId: string) => sort(items, repeaterId)}
-      >
-        {({ moveUp, moveDown }) =>
-          v &&
-          groups
-            .filter((e: Any) => e.type !== 'group')
-            .map((group: Any, index: number) => {
-              const draggableId = getId(index);
-              return (
-                <DragElement
-                  attributes={attributes}
-                  block={block}
-                  draggableId={draggableId}
-                  duplicate={duplicate}
-                  element={element}
-                  getId={getId}
-                  group={group}
-                  index={index}
-                  innerId={innerId ?? ''}
-                  item={item}
-                  length={groups.filter((e: Any) => e.type !== 'group').length}
-                  moveDown={moveDown}
-                  moveUp={moveUp}
-                  remove={remove}
-                  transformed={transformed as Any}
-                  key={draggableId}
-                />
-              );
-            })
-        }
-      </List>
-      <Button
-        variant="secondary"
-        onClick={() => add(innerId ?? '')}
+    <RepeaterRegistryContext.Provider value={registry}>
+      <Base
         css={css({
-          marginTop: '16px',
-          marginLeft: '-4px',
+          '& > div > .components-base-control__label': {
+            marginBottom: '12px',
+          },
         })}
-        disabled={!!(item?.max && item.max <= v?.length)}
       >
-        {__(
-          item?.textButton || 'Add row',
-          item?.textButton as unknown as boolean,
-        )}
-      </Button>
-    </Base>
+        <List
+          {...{ ids, context }}
+          repeaters={registry}
+          id={listId}
+          style={{
+            marginLeft: '8px',
+          }}
+          onChange={(items, repeaterId: string) => sort(items, repeaterId)}
+        >
+          {({ moveUp, moveDown }) =>
+            v &&
+            groups
+              .filter((e: Any) => e.type !== 'group')
+              .map((group: Any, index: number) => {
+                const draggableId = getId(index);
+                return (
+                  <DragElement
+                    attributes={attributes}
+                    block={block}
+                    draggableId={draggableId}
+                    duplicate={duplicate}
+                    element={element}
+                    getId={getId}
+                    group={group}
+                    index={index}
+                    innerId={innerId ?? ''}
+                    item={item}
+                    length={
+                      groups.filter((e: Any) => e.type !== 'group').length
+                    }
+                    moveDown={moveDown}
+                    moveUp={moveUp}
+                    remove={remove}
+                    transformed={transformed as Any}
+                    key={draggableId}
+                  />
+                );
+              })
+          }
+        </List>
+        <Button
+          variant="secondary"
+          onClick={() => add(innerId ?? '')}
+          css={css({
+            marginTop: '16px',
+            marginLeft: '-4px',
+          })}
+          disabled={!!(item?.max && item.max <= v?.length)}
+        >
+          {__(
+            item?.textButton || 'Add row',
+            item?.textButton as unknown as boolean,
+          )}
+        </Button>
+      </Base>
+    </RepeaterRegistryContext.Provider>
   );
 };

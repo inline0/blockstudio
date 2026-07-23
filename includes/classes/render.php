@@ -54,6 +54,9 @@ class Render {
 	/**
 	 * Render a block by name or configuration.
 	 *
+	 * Programmatic embeds render frontend-resolved HTML even when called from
+	 * another block's editor preview.
+	 *
 	 * @param string|array $value Block name or configuration array.
 	 *
 	 * @return false|string|void Returns HTML string, false on failure, or void when echoing.
@@ -90,35 +93,46 @@ class Render {
 		);
 
 		if ( $editor ) {
-			$result = Block::render(
-				array(
-					'blockstudio' => array(
-						'editor'     => $editor,
-						'name'       => $name,
-						'attributes' => $data,
-					),
-				)
-			);
-
-			\WP_Block_Supports::$block_to_render = $parent;
+			try {
+				$result = Block::render(
+					array(
+						'blockstudio' => array(
+							'editor'     => $editor,
+							'name'       => $name,
+							'attributes' => $data,
+						),
+					)
+				);
+			} finally {
+				\WP_Block_Supports::$block_to_render = $parent;
+			}
 
 			return $result;
 		} else {
-			// phpcs:disable WordPress.Security.EscapeOutput.OutputNotEscaped -- Block render handles escaping.
-			echo Block::render(
-				array(
-					'blockstudio' => array(
-						'name'       => $name,
-						'attributes' => $data,
-					),
-				),
-				'',
-				'',
-				$content
-			);
-			// phpcs:enable WordPress.Security.EscapeOutput.OutputNotEscaped
+			$mode = isset( $_GET['blockstudioMode'] ) ? sanitize_text_field( wp_unslash( $_GET['blockstudioMode'] ) ) : null; // phpcs:ignore WordPress.Security.NonceVerification.Recommended
+			unset( $_GET['blockstudioMode'] );
 
-			\WP_Block_Supports::$block_to_render = $parent;
+			try {
+				// phpcs:disable WordPress.Security.EscapeOutput.OutputNotEscaped -- Block render handles escaping.
+				echo Block::render(
+					array(
+						'blockstudio' => array(
+							'name'       => $name,
+							'attributes' => $data,
+						),
+					),
+					'',
+					'',
+					$content
+				);
+				// phpcs:enable WordPress.Security.EscapeOutput.OutputNotEscaped
+			} finally {
+				if ( null !== $mode ) {
+					$_GET['blockstudioMode'] = $mode; // phpcs:ignore WordPress.Security.NonceVerification.Recommended
+				}
+
+				\WP_Block_Supports::$block_to_render = $parent;
+			}
 		}
 	}
 }

@@ -27,6 +27,45 @@ class TailwindTest extends TestCase {
 		$this->assertStringStartsWith( $uploads['basedir'], $result );
 	}
 
+	public function test_prune_cache_keeps_new_file_and_removes_stale_files(): void {
+		$dir    = Tailwind::get_cache_dir();
+		$prefix = 'unit-prune-' . uniqid();
+		$files  = array(
+			$dir . '/' . $prefix . '-one.css',
+			$dir . '/' . $prefix . '-two.css',
+			$dir . '/' . $prefix . '-three.css',
+		);
+
+		wp_mkdir_p( $dir );
+		foreach ( $files as $index => $file ) {
+			// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents -- Writing temporary Tailwind cache fixtures.
+			file_put_contents( $file, '/* ' . $index . ' */' );
+		}
+
+		$filter = static fn(): int => 2;
+		add_filter( 'blockstudio/tailwind/cache_max_files', $filter );
+
+		try {
+			$method = new ReflectionMethod( Tailwind::class, 'prune_cache' );
+			$method->setAccessible( true );
+			$method->invoke( null, $files[2] );
+
+			$remaining = array_values( array_filter( $files, 'is_file' ) );
+
+			$this->assertFileExists( $files[2] );
+			$this->assertLessThanOrEqual( 2, count( $remaining ) );
+		} finally {
+			remove_filter( 'blockstudio/tailwind/cache_max_files', $filter );
+
+			foreach ( $files as $file ) {
+				if ( is_file( $file ) ) {
+					// phpcs:ignore WordPress.WP.AlternativeFunctions.unlink_unlink -- Removing temporary Tailwind cache fixtures.
+					unlink( $file );
+				}
+			}
+		}
+	}
+
 	public function test_compile_returns_html_unchanged_when_tailwind_disabled(): void {
 		$cb = function () {
 			return false;
@@ -69,6 +108,23 @@ class TailwindTest extends TestCase {
 		$second = $tailwind->compile( $first );
 
 		$this->assertSame( $first, $second );
+	}
+
+	public function test_request_reset_allows_a_long_lived_instance_to_compile_again(): void {
+		if ( ! Settings::get( 'tailwind/enabled' ) ) {
+			$this->markTestSkipped( 'Tailwind is not enabled in test theme settings.' );
+		}
+
+		$tailwind = new Tailwind();
+		$first    = '<html><head></head><body><p class="flex">First</p></body></html>';
+		$next     = '<html><head></head><body><p class="grid">Next</p></body></html>';
+
+		$this->assertStringContainsString( '<style id="blockstudio-tailwind">', $tailwind->compile( $first ) );
+		$this->assertSame( $next, $tailwind->compile( $next ) );
+
+		Tailwind::reset_request_state();
+
+		$this->assertStringContainsString( '<style id="blockstudio-tailwind">', $tailwind->compile( $next ) );
 	}
 
 	public function test_compile_editor_css_includes_registered_page_template_candidates(): void {

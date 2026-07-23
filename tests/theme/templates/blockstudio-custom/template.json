@@ -1,0 +1,6 @@
+{
+  "slug": "blockstudio-custom",
+  "title": "Blockstudio Custom",
+  "description": "File-backed custom template fixture",
+  "postTypes": ["page"]
+}

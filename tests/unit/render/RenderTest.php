@@ -1,6 +1,7 @@
 <?php
 
 use Blockstudio\Render;
+use Blockstudio\Build;
 use PHPUnit\Framework\TestCase;
 
 class RenderTest extends TestCase {
@@ -35,5 +36,54 @@ class RenderTest extends TestCase {
 			)
 		);
 		$this->assertFalse( $result );
+	}
+
+	public function test_nested_render_helper_resolves_pseudo_components_in_editor_mode(): void {
+		if ( ! isset( Build::data()['blockstudio/function-nested-render'] ) ) {
+			$this->markTestSkipped( 'Nested render fixture is not registered.' );
+		}
+
+		$had_mode = array_key_exists( 'blockstudioMode', $_GET );
+		$mode     = $_GET['blockstudioMode'] ?? null;
+
+		try {
+			$_GET['blockstudioMode'] = 'editor';
+
+			ob_start();
+			Render::block(
+				array(
+					'name' => 'blockstudio/function-nested-render',
+					'data' => array(
+						'label' => 'Nested editor label',
+					),
+				)
+			);
+			$editor_output = ob_get_clean();
+
+			unset( $_GET['blockstudioMode'] );
+
+			ob_start();
+			Render::block(
+				array(
+					'name' => 'blockstudio/function-nested-render',
+					'data' => array(
+						'label' => 'Nested frontend label',
+					),
+				)
+			);
+			$frontend_output = ob_get_clean();
+		} finally {
+			if ( $had_mode ) {
+				$_GET['blockstudioMode'] = $mode;
+			} else {
+				unset( $_GET['blockstudioMode'] );
+			}
+		}
+
+		$this->assertStringContainsString( 'Nested editor label', $editor_output );
+		$this->assertStringContainsString( 'Nested frontend label', $frontend_output );
+		$this->assertStringNotContainsString( '<RichText', $editor_output );
+		$this->assertStringNotContainsString( '<InnerBlocks', $editor_output );
+		$this->assertStringNotContainsString( 'useblockprops="true"', $editor_output );
 	}
 }

@@ -1,9 +1,18 @@
 <?php
 
 use Blockstudio\Field_Type_Config;
+use Blockstudio\Field_Type_Registry;
 use PHPUnit\Framework\TestCase;
 
 class FieldTypeConfigTest extends TestCase {
+
+	protected function setUp(): void {
+		Field_Type_Registry::instance()->reset();
+	}
+
+	protected function tearDown(): void {
+		Field_Type_Registry::instance()->reset();
+	}
 
 	// TYPES constant
 
@@ -213,6 +222,18 @@ class FieldTypeConfigTest extends TestCase {
 		$this->assertFalse( Field_Type_Config::has_options( 'unknown' ) );
 	}
 
+	public function test_has_options_true_for_custom_type_with_support_flag(): void {
+		Field_Type_Registry::instance()->register(
+			'test/options',
+			array(
+				'attribute' => 'string',
+				'supports'  => array( 'options' => true ),
+			)
+		);
+
+		$this->assertTrue( Field_Type_Config::has_options( 'test/options' ) );
+	}
+
 	// is_multiple_option_type()
 
 	public function test_is_multiple_option_type_true_for_checkbox(): void {
@@ -234,6 +255,18 @@ class FieldTypeConfigTest extends TestCase {
 	public function test_is_multiple_option_type_false_for_non_option_types(): void {
 		$this->assertFalse( Field_Type_Config::is_multiple_option_type( 'text' ) );
 		$this->assertFalse( Field_Type_Config::is_multiple_option_type( 'unknown' ) );
+	}
+
+	public function test_is_multiple_option_type_true_for_custom_type_with_support_flag(): void {
+		Field_Type_Registry::instance()->register(
+			'test/options',
+			array(
+				'attribute' => 'array',
+				'supports'  => array( 'multiple' => true ),
+			)
+		);
+
+		$this->assertTrue( Field_Type_Config::is_multiple_option_type( 'test/options' ) );
 	}
 
 	// is_container_type()

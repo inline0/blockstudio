@@ -51,10 +51,16 @@ export const isAllowedToRender = (
             valueOrVal(checkValue) && valueOrVal(checkValue).includes(value),
           '!includes': (checkValue: string[], value: string) =>
             valueOrVal(checkValue) && !valueOrVal(checkValue).includes(value),
-          empty: (checkValue: string) =>
-            valueOrVal(checkValue) && valueOrVal(checkValue) === '',
-          '!empty': (checkValue: string) =>
-            valueOrVal(checkValue) && valueOrVal(checkValue) !== '',
+          empty: (checkValue: string | boolean | undefined) => {
+            const value = valueOrVal(checkValue);
+
+            return value === '' || value === undefined || value === false;
+          },
+          '!empty': (checkValue: string | boolean | undefined) => {
+            const value = valueOrVal(checkValue);
+
+            return value !== '' && value !== undefined && value !== false;
+          },
           '<': (checkValue: string, value: string) =>
             parseInt(valueOrVal(checkValue)) < parseInt(value),
           '>': (checkValue: string, value: string) =>

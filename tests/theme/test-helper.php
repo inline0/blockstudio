@@ -28,6 +28,58 @@ if ( class_exists( 'Timber\Timber' ) ) {
 	Timber\Timber::init();
 }
 
+add_action(
+	'rest_api_init',
+	function () {
+		register_rest_route(
+			'blockstudio-test/v1',
+			'/discovery-overlay',
+			array(
+				'methods'             => 'GET',
+				'permission_callback' => '__return_true',
+				'callback'            => function () {
+					$root    = get_stylesheet_directory() . '/discovery-overlay';
+					$parent  = $root . '/parent';
+					$overlay = $root . '/overlay';
+					$blocks  = new Blockstudio\Inventory_Discovery_Source(
+						'e2e:blocks',
+						$overlay . '/blocks',
+						array(
+							'card/block.json' => $parent . '/blocks/card/block.json',
+							'card/style.css'  => $parent . '/blocks/card/style.css',
+							'card/index.php'  => $overlay . '/blocks/card/index.php',
+						)
+					);
+					$pages   = new Blockstudio\Inventory_Discovery_Source(
+						'e2e:pages',
+						$overlay . '/pages',
+						array(
+							'docs/pages.json'      => $parent . '/pages/docs/pages.json',
+							'docs/layout.php'      => $parent . '/pages/docs/layout.php',
+							'docs/start/page.json' => $parent . '/pages/docs/start/page.json',
+							'docs/start/index.php' => $overlay . '/pages/docs/start/index.php',
+						)
+					);
+
+					$block_results = ( new Blockstudio\Block_Discovery() )->discover( $blocks, 'e2e-overlay' );
+					$page_results  = ( new Blockstudio\Page_Discovery() )->discover( $pages );
+					$block         = $block_results['store']['test/overlay-card'] ?? array();
+					$page           = $page_results['overlay-docs:overlay-docs-start'] ?? array();
+
+					return rest_ensure_response(
+						array(
+							'blockTemplate' => $block['renderTemplate'] ?? null,
+							'blockStyle'    => $block['filesMap']['style.css'] ?? null,
+							'pageTemplate'  => $page['template_path'] ?? null,
+							'pageLayout'    => $page['layout_path'] ?? null,
+						)
+					);
+				},
+			)
+		);
+	}
+);
+
 // Shortcode for testing bs_render_block() in post content.
 add_shortcode(
 	'bs_test_render',
@@ -47,6 +99,23 @@ add_shortcode(
 	}
 );
 
+// Shortcode for testing bs_block() in post content.
+add_shortcode(
+	'bs_test_block',
+	function ( $atts ) {
+		$atts       = is_array( $atts ) ? $atts : array();
+		$block_name = $atts['name'] ?? '';
+		unset( $atts['name'] );
+
+		return bs_block(
+			array(
+				'name' => $block_name,
+				'data' => $atts,
+			)
+		);
+	}
+);
+
 add_filter(
 	'blockstudio/block_tags/prefixes',
 	function ( $prefixes ) {
@@ -54,6 +123,47 @@ add_filter(
 		$prefixes['dv'] = array( 'divine-homepage', 'bsui' );
 
 		return $prefixes;
+	}
+);
+
+add_action(
+	'init',
+	function () {
+		if ( ! function_exists( 'bs_register_field_type' ) ) {
+			return;
+		}
+
+		wp_register_script(
+			'blockstudio-test-custom-field-type',
+			get_stylesheet_directory_uri() . '/custom-field-type.js',
+			array( 'blockstudio-blocks', 'wp-components', 'wp-element' ),
+			'1.0.0',
+			true
+		);
+
+		bs_register_field_type(
+			'test/dimensions',
+			array(
+				'attribute'     => 'object',
+				'default'       => array(),
+				'editor_script' => 'blockstudio-test-custom-field-type',
+				'storage'       => array(
+					'type'        => 'object',
+					'rest_schema' => array(
+						'type'                 => 'object',
+						'additionalProperties' => array( 'type' => 'string' ),
+					),
+				),
+			)
+		);
+
+		bs_register_field_type(
+			'test/no-control',
+			array(
+				'attribute' => 'object',
+				'default'   => array(),
+			)
+		);
 	}
 );
 
@@ -765,6 +875,14 @@ add_action(
 							'fields'      => 'ids',
 						)
 					);
+					$managed_pages = $wpdb->get_col( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching
+						$wpdb->prepare(
+							"SELECT post_id FROM {$wpdb->postmeta} WHERE meta_key = %s",
+							'_blockstudio_page_key'
+						)
+					);
+					$all_posts = array_unique( array_merge( $all_posts, array_map( 'intval', $managed_pages ) ) );
+
 					foreach ( $all_posts as $post_id ) {
 						wp_delete_post( $post_id, true );
 					}
@@ -774,10 +892,6 @@ add_action(
 					delete_option( 'blockstudio_e2e_assets_reset_enabled' );
 
 					switch_theme( 'theme' );
-
-					global $wp_rewrite;
-					$wp_rewrite->set_permalink_structure( '/%postname%/' );
-					$wp_rewrite->flush_rules( true );
 
 					$created = array(
 						'posts' => array(),
@@ -980,7 +1094,8 @@ add_action(
 					// Component test page with bs: block tags and bs_render_block()
 					$comp_content = '<bs:blockstudio-type-component heading="String Rendered" content="Via bs tag" />'
 						. '<bs:blockstudio-type-component heading="Paired Tag" content="Via paired tag"></bs:blockstudio-type-component>'
-						. '[bs_test_render name="blockstudio/type-component" heading="PHP Rendered" content="Via bs_render_block"]';
+						. '[bs_test_render name="blockstudio/type-component" heading="PHP Rendered" content="Via bs_render_block"]'
+						. '[bs_test_render name="blockstudio/function-nested-render" label="Nested shortcode label"]';
 					if ( ! get_post( 3200 ) ) {
 						$wpdb->insert( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery
 							$wpdb->posts,
@@ -998,6 +1113,35 @@ add_action(
 							)
 						);
 						$created['posts'][] = 3200;
+					}
+
+					// Island test page with block comments, helpers, and block tags.
+					$island_content = '<!-- wp:blockstudio/island-dynamic {"blockstudio":{"name":"blockstudio/island-dynamic","attributes":{"message":"Native island","secret":"Should not be signed"}}} /-->'
+						. '<!-- wp:blockstudio/island-dynamic {"blockstudio":{"name":"blockstudio/island-dynamic","attributes":{"message":"Native island","secret":"Duplicate should not be signed"}}} /-->'
+						. '<!-- wp:blockstudio/island-hydrated {"blockstudio":{"name":"blockstudio/island-hydrated","attributes":{"message":"Hydrated island"}}} /-->'
+						. '<div style="height: 1400px"></div>'
+						. '<!-- wp:blockstudio/island-visible {"blockstudio":{"name":"blockstudio/island-visible","attributes":{"message":"Visible island"}}} /-->'
+						. '<!-- wp:blockstudio/island-event {"blockstudio":{"name":"blockstudio/island-event","attributes":{"message":"Event island"}}} /-->'
+						. '[bs_test_render name="blockstudio/island-dynamic" message="Render helper" secret="Helper secret"]'
+						. '[bs_test_block name="blockstudio/island-fallback" message="Buffered helper"]'
+						. '<bs:blockstudio-island-dynamic message="Block tag" secret="Tag secret" />';
+					if ( ! get_post( 4100 ) ) {
+						$wpdb->insert( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery
+							$wpdb->posts,
+							array(
+								'ID'            => 4100,
+								'post_author'   => 1,
+								'post_date'     => current_time( 'mysql' ),
+								'post_date_gmt' => current_time( 'mysql', 1 ),
+								'post_content'  => $island_content,
+								'post_title'    => 'Island Test',
+								'post_status'   => 'publish',
+								'post_name'     => 'island-test',
+								'post_type'     => 'page',
+								'guid'          => home_url( '/?p=4100' ),
+							)
+						);
+						$created['posts'][] = 4100;
 					}
 
 					// Block field test page (default + override)
@@ -1238,6 +1382,16 @@ add_action(
 					$image3_file = $create_dummy_image( 'test-image-3081.png', 200, 200 );
 					$create_attachment_with_id( 3081, 'test-image-3081.png', 'image/png', $image3_file );
 
+					foreach ( array( 8, 1604, 1605, 3081 ) as $attachment_id ) {
+						if ( 'attachment' !== get_post_type( $attachment_id ) ) {
+							return new WP_Error(
+								'e2e_attachment_fixture_failed',
+								sprintf( 'Unable to reserve attachment fixture ID %d.', $attachment_id ),
+								array( 'status' => 500 )
+							);
+						}
+					}
+
 					// Helper to create user with specific ID
 					$create_user_with_id = function ( $id, $login, $email, $display_name ) use ( $wpdb, &$created ) {
 						if ( ! get_user_by( 'id', $id ) ) {
@@ -1366,6 +1520,36 @@ add_action(
 					update_option( 'rank_math_wizard_completed', 1 );
 					update_option( 'rank_math_registration_skip', 1 );
 
+					// Reserve deterministic fixture IDs before file pages allocate posts.
+					// Reconciliation is explicit in REST and also refreshes collection routes.
+					\Blockstudio\Pages::reset();
+					$page_reconciliation = \Blockstudio\Pages::reconcile(
+						array(
+							'authoritative' => true,
+							'full'          => true,
+							'plan_valid'    => true,
+							'source'        => array(
+								'commit'    => 'e2e-fixture',
+								'dirtyHash' => '',
+							),
+						)
+					);
+
+					if ( ! empty( $page_reconciliation['failed'] ) ) {
+						return new WP_Error(
+							'page_reconciliation_failed',
+							'File-page reconciliation failed while preparing the E2E fixture.',
+							array(
+								'status' => 500,
+								'report' => $page_reconciliation,
+							)
+						);
+					}
+
+					global $wp_rewrite;
+					$wp_rewrite->set_permalink_structure( '/%postname%/' );
+					$wp_rewrite->flush_rules( true );
+
 					// Clean caches
 					wp_cache_flush();
 
@@ -1376,9 +1560,10 @@ add_action(
 					delete_transient( 'blockstudio_editor_expected_capture_assets_id' );
 
 					return array(
-						'success' => true,
-						'created' => $created,
-						'message' => 'E2E test data created successfully',
+						'success'            => true,
+						'created'            => $created,
+						'pageReconciliation' => $page_reconciliation,
+						'message'            => 'E2E test data created successfully',
 					);
 				},
 				'permission_callback' => '__return_true',

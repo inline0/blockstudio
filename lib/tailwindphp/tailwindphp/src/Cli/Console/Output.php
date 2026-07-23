@@ -16,9 +16,7 @@
  *
  * @credits Tailwind Labs (https://tailwindcss.com)
  */
-
-declare(strict_types=1);
-
+declare (strict_types=1);
 namespace BlockstudioVendor\TailwindPHP\Cli\Console;
 
 /**
@@ -30,93 +28,77 @@ namespace BlockstudioVendor\TailwindPHP\Cli\Console;
 class Output
 {
     private bool $supportsColor;
-
-    private bool $quiet = false;
-
-    private bool $verbose = false;
-
+    private bool $quiet = \false;
+    private bool $verbose = \false;
     /** @var resource */
     private $stdout;
-
     /** @var resource */
     private $stderr;
-
     // ANSI color codes
     private const COLORS = [
-        'reset' => "\033[0m",
-        'bold' => "\033[1m",
-        'dim' => "\033[2m",
-        'italic' => "\033[3m",
-        'underline' => "\033[4m",
-
+        'reset' => "\x1b[0m",
+        'bold' => "\x1b[1m",
+        'dim' => "\x1b[2m",
+        'italic' => "\x1b[3m",
+        'underline' => "\x1b[4m",
         // Foreground colors
-        'black' => "\033[30m",
-        'red' => "\033[31m",
-        'green' => "\033[32m",
-        'yellow' => "\033[33m",
-        'blue' => "\033[34m",
-        'magenta' => "\033[35m",
-        'cyan' => "\033[36m",
-        'white' => "\033[37m",
-        'gray' => "\033[90m",
-
+        'black' => "\x1b[30m",
+        'red' => "\x1b[31m",
+        'green' => "\x1b[32m",
+        'yellow' => "\x1b[33m",
+        'blue' => "\x1b[34m",
+        'magenta' => "\x1b[35m",
+        'cyan' => "\x1b[36m",
+        'white' => "\x1b[37m",
+        'gray' => "\x1b[90m",
         // Bright foreground
-        'bright_red' => "\033[91m",
-        'bright_green' => "\033[92m",
-        'bright_yellow' => "\033[93m",
-        'bright_blue' => "\033[94m",
-        'bright_magenta' => "\033[95m",
-        'bright_cyan' => "\033[96m",
-        'bright_white' => "\033[97m",
-
+        'bright_red' => "\x1b[91m",
+        'bright_green' => "\x1b[92m",
+        'bright_yellow' => "\x1b[93m",
+        'bright_blue' => "\x1b[94m",
+        'bright_magenta' => "\x1b[95m",
+        'bright_cyan' => "\x1b[96m",
+        'bright_white' => "\x1b[97m",
         // Background colors
-        'bg_red' => "\033[41m",
-        'bg_green' => "\033[42m",
-        'bg_yellow' => "\033[43m",
-        'bg_blue' => "\033[44m",
+        'bg_red' => "\x1b[41m",
+        'bg_green' => "\x1b[42m",
+        'bg_yellow' => "\x1b[43m",
+        'bg_blue' => "\x1b[44m",
     ];
-
     public function __construct()
     {
         $this->stdout = \STDOUT;
         $this->stderr = \STDERR;
         $this->supportsColor = $this->detectColorSupport();
     }
-
     /**
      * Detect if the terminal supports colors.
      */
     private function detectColorSupport(): bool
     {
         // Check for NO_COLOR environment variable
-        if (getenv('NO_COLOR') !== false) {
-            return false;
+        if (getenv('NO_COLOR') !== \false) {
+            return \false;
         }
-
         // Check for FORCE_COLOR
-        if (getenv('FORCE_COLOR') !== false) {
-            return true;
+        if (getenv('FORCE_COLOR') !== \false) {
+            return \true;
         }
-
         // Check if stdout is a TTY
         if (function_exists('stream_isatty')) {
             return stream_isatty($this->stdout);
         }
-
         // Fallback for older PHP
         if (function_exists('posix_isatty')) {
             return posix_isatty($this->stdout);
         }
-
         // Check TERM environment variable
         $term = getenv('TERM');
-        if ($term === false || $term === 'dumb') {
-            return false;
+        if ($term === \false || $term === 'dumb') {
+            return \false;
         }
-
-        return true;
+        return \true;
     }
-
     /**
      * Set quiet mode (suppress normal output).
      */
@@ -124,7 +106,6 @@ class Output
     {
         $this->quiet = $quiet;
     }
-
     /**
      * Set verbose mode.
      */
@@ -132,7 +113,6 @@ class Output
     {
         $this->verbose = $verbose;
     }
-
     /**
      * Check if in verbose mode.
      */
@@ -140,15 +120,13 @@ class Output
     {
         return $this->verbose;
     }
-
     /**
      * Write a line to stdout.
      */
     public function writeln(string $message = ''): void
     {
-        $this->write($message . PHP_EOL);
+        $this->write($message . \PHP_EOL);
     }
-
     /**
      * Write to stdout.
      */
@@ -157,10 +135,8 @@ class Output
         if ($this->quiet) {
             return;
         }
-
         fwrite($this->stdout, $this->format($message));
     }
-
     /**
      * Write to stderr.
      */
@@ -168,15 +144,13 @@ class Output
     {
         fwrite($this->stderr, $this->format($message));
     }
-
     /**
      * Write a line to stderr.
      */
     public function writeErrorln(string $message = ''): void
     {
-        $this->writeError($message . PHP_EOL);
+        $this->writeError($message . \PHP_EOL);
     }
-
     /**
      * Write a success message.
      */
@@ -184,7 +158,6 @@ class Output
     {
         $this->writeln($this->color('green', '  ✓ ') . $message);
     }
-
     /**
      * Write an error message.
      */
@@ -192,7 +165,6 @@ class Output
     {
         $this->writeErrorln($this->color('red', '  ✗ ') . $message);
     }
-
     /**
      * Write a warning message.
      */
@@ -200,7 +172,6 @@ class Output
     {
         $this->writeln($this->color('yellow', '  ! ') . $message);
     }
-
     /**
      * Write an info message.
      */
@@ -208,7 +179,6 @@ class Output
     {
         $this->writeln($this->color('cyan', '  → ') . $message);
     }
-
     /**
      * Write a verbose message (only shown in verbose mode).
      */
@@ -218,7 +188,6 @@ class Output
             $this->writeln($this->color('gray', '    ' . $message));
         }
     }
-
     /**
      * Write a title/header.
      */
@@ -228,7 +197,6 @@ class Output
         $this->writeln($this->color('bold', $message));
         $this->writeln();
     }
-
     /**
      * Write a section header.
      */
@@ -236,15 +204,13 @@ class Output
     {
         $this->writeln($this->color('yellow', $message));
     }
-
     /**
      * Write a newline.
      */
     public function newLine(int $count = 1): void
     {
-        $this->write(str_repeat(PHP_EOL, $count));
+        $this->write(str_repeat(\PHP_EOL, $count));
     }
-
     /**
      * Apply color to text.
      */
@@ -253,10 +219,8 @@ class Output
         if (!$this->supportsColor || !isset(self::COLORS[$color])) {
             return $text;
         }
-
         return self::COLORS[$color] . $text . self::COLORS['reset'];
     }
-
     /**
      * Format text with inline color tags.
      *
@@ -268,24 +232,15 @@ class Output
             // Strip all tags if no color support
             return preg_replace('/<\/?[a-z_]+>/i', '', $message) ?? $message;
         }
-
         // Replace opening tags
-        $message = preg_replace_callback(
-            '/<([a-z_]+)>/i',
-            function ($matches) {
-                $color = strtolower($matches[1]);
-
-                return self::COLORS[$color] ?? '';
-            },
-            $message,
-        ) ?? $message;
-
+        $message = preg_replace_callback('/<([a-z_]+)>/i', function ($matches) {
+            $color = strtolower($matches[1]);
+            return self::COLORS[$color] ?? '';
+        }, $message) ?? $message;
         // Replace closing tags
         $message = preg_replace('/<\/[a-z_]+>/i', self::COLORS['reset'], $message) ?? $message;
-
         return $message;
     }
-
     /**
      * Display a progress indicator.
      */
@@ -294,37 +249,30 @@ class Output
         if ($this->quiet) {
             return;
         }
-
         $width = 30;
-        $percent = $total > 0 ? ($current / $total) : 0;
+        $percent = $total > 0 ? $current / $total : 0;
         $filled = (int) ($width * $percent);
         $empty = $width - $filled;
-
         $bar = str_repeat('█', $filled) . str_repeat('░', $empty);
-        $percentStr = str_pad((string) (int) ($percent * 100), 3, ' ', STR_PAD_LEFT);
-
+        $percentStr = str_pad((string) (int) ($percent * 100), 3, ' ', \STR_PAD_LEFT);
         $output = "\r  {$bar} {$percentStr}%";
         if ($message !== '') {
             $output .= " {$message}";
         }
-
         fwrite($this->stdout, $this->format($output));
-
         if ($current >= $total) {
-            fwrite($this->stdout, PHP_EOL);
+            fwrite($this->stdout, \PHP_EOL);
         }
     }
-
     /**
      * Clear the current line.
      */
     public function clearLine(): void
     {
         if ($this->supportsColor) {
-            fwrite($this->stdout, "\r\033[K");
+            fwrite($this->stdout, "\r\x1b[K");
         }
     }
-
     /**
      * Display a spinner frame.
      */
@@ -333,14 +281,11 @@ class Output
         if ($this->quiet) {
             return;
         }
-
         $frames = ['⠋', '⠙', '⠹', '⠸', '⠼', '⠴', '⠦', '⠧', '⠇', '⠏'];
         $spinner = $frames[$frame % count($frames)];
-
         $this->clearLine();
         fwrite($this->stdout, $this->format("  {$spinner} {$message}"));
     }
-
     /**
      * Create a formatted table.
      *
@@ -359,7 +304,6 @@ class Output
                 $widths[$i] = max($widths[$i] ?? 0, mb_strlen((string) $cell));
             }
         }
-
         // Print headers
         $headerLine = '';
         $separator = '';
@@ -369,7 +313,6 @@ class Output
         }
         $this->writeln($this->color('bold', '  ' . $headerLine));
         $this->writeln($this->color('gray', '  ' . $separator));
-
         // Print rows
         foreach ($rows as $row) {
             $line = '  ';

@@ -1,7 +1,6 @@
 <?php
 
-declare(strict_types=1);
-
+declare (strict_types=1);
 /**
  * Port of: https://github.com/lukeed/clsx
  *
@@ -9,7 +8,6 @@ declare(strict_types=1);
  *
  * @port-deviation:types PHP uses mixed types instead of TypeScript generics
  */
-
 namespace BlockstudioVendor\TailwindPHP\Lib\Clsx;
 
 /**
@@ -28,21 +26,17 @@ namespace BlockstudioVendor\TailwindPHP\Lib\Clsx;
 function clsx(mixed ...$args): string
 {
     $result = '';
-
     foreach ($args as $arg) {
         if (!isTruthy($arg)) {
             continue;
         }
-
         $value = toValue($arg);
         if ($value !== '') {
             $result .= ($result !== '' ? ' ' : '') . $value;
         }
     }
-
     return $result;
 }
-
 /**
  * Convert a mixed value to a class string.
  *
@@ -55,22 +49,17 @@ function toValue(mixed $mix): string
     if (is_string($mix)) {
         return $mix;
     }
-
     if (is_numeric($mix)) {
         // NaN is considered numeric in PHP but should be ignored like in JS
         if (is_float($mix) && is_nan($mix)) {
             return '';
         }
-
         return (string) $mix;
     }
-
     if (!is_array($mix)) {
         return '';
     }
-
     $result = '';
-
     // Check if array is sequential (list) or associative
     // PHP 8.0 compatible check (array_is_list is 8.1+)
     if ($mix === [] || array_keys($mix) === range(0, count($mix) - 1)) {
@@ -93,10 +82,8 @@ function toValue(mixed $mix): string
             }
         }
     }
-
     return $result;
 }
-
 /**
  * Check if a value is truthy according to JavaScript semantics.
  *
@@ -110,26 +97,23 @@ function toValue(mixed $mix): string
 function isTruthy(mixed $value): bool
 {
     // null, false, 0, '', undefined are falsy in both JS and PHP
-    if ($value === null || $value === false || $value === 0 || $value === '' || $value === 0.0) {
-        return false;
+    if ($value === null || $value === \false || $value === 0 || $value === '' || $value === 0.0) {
+        return \false;
     }
-
     // NaN is falsy in JS
     if (is_float($value) && is_nan($value)) {
-        return false;
+        return \false;
     }
-
     // All non-empty strings are truthy in JS, including "0".
     if (is_string($value)) {
         return $value !== '';
     }
-
     // Empty arrays are truthy in JS but falsy in PHP
     // This is the key difference we need to handle
     if (is_array($value)) {
-        return true; // All arrays (including empty) are truthy in JS
+        return \true;
+        // All arrays (including empty) are truthy in JS
     }
-
     // Everything else follows PHP's truthiness
     return (bool) $value;
 }

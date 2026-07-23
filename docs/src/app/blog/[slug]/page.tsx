@@ -7,7 +7,9 @@ import { DocsPage, mdxComponents } from 'onedocs';
 import { blog, blogSlug } from '@/lib/source';
 
 function getPost(slug: string) {
-  return blog.find((post) => blogSlug(post.info.path) === slug);
+  return blog.find(
+    (post) => !post.archive && blogSlug(post.info.path) === slug,
+  );
 }
 
 export default async function BlogPost(props: {
@@ -52,7 +54,9 @@ export default async function BlogPost(props: {
 }
 
 export function generateStaticParams() {
-  return blog.map((post) => ({ slug: blogSlug(post.info.path) }));
+  return blog
+    .filter((post) => !post.archive)
+    .map((post) => ({ slug: blogSlug(post.info.path) }));
 }
 
 export async function generateMetadata(props: {

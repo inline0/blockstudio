@@ -1,11 +1,9 @@
 <?php
 
-declare(strict_types=1);
-
+declare (strict_types=1);
 namespace BlockstudioVendor\TailwindPHP;
 
 use BlockstudioVendor\TailwindPHP\DesignSystem\DesignSystem;
-
 /**
  * Canonicalize Candidates
  *
@@ -28,10 +26,8 @@ use BlockstudioVendor\TailwindPHP\DesignSystem\DesignSystem;
  * of complex canonicalization logic. This can be implemented when IDE tooling
  * support is needed for the PHP port.
  */
-
 const CANONICALIZE_FEATURES_NONE = 0;
 const CANONICALIZE_FEATURES_COLLAPSE_UTILITIES = 1 << 0;
-
 /**
  * Options for canonicalizing candidates.
  */
@@ -41,18 +37,15 @@ interface CanonicalizeOptions
      * The root font size in pixels. If provided, `rem` values will be normalized to `px`.
      */
     public function getRem(): ?int;
-
     /**
      * Whether to collapse multiple utilities into a single utility if possible.
      */
     public function getCollapse(): bool;
-
     /**
      * Whether to convert between logical and physical properties when collapsing.
      */
     public function getLogicalToPhysical(): bool;
 }
-
 /**
  * Canonicalize a list of utility class candidates.
  *
@@ -61,16 +54,12 @@ interface CanonicalizeOptions
  * @param array $options Canonicalization options
  * @return array Canonicalized candidates
  */
-function canonicalizeCandidates(
-    array $candidates,
-    DesignSystem $designSystem,
-    array $options = [],
-): array {
+function canonicalizeCandidates(array $candidates, DesignSystem $designSystem, array $options = []): array
+{
     // TODO: Implement full canonicalization logic
     // For now, return candidates as-is
     return $candidates;
 }
-
 /**
  * Canonicalize a single candidate.
  *
@@ -79,11 +68,8 @@ function canonicalizeCandidates(
  * @param array $options Canonicalization options
  * @return string The canonicalized candidate
  */
-function canonicalizeCandidate(
-    string $candidate,
-    DesignSystem $designSystem,
-    array $options = [],
-): string {
+function canonicalizeCandidate(string $candidate, DesignSystem $designSystem, array $options = []): string
+{
     // TODO: Implement full canonicalization logic
     // For now, return candidate as-is
     return $candidate;

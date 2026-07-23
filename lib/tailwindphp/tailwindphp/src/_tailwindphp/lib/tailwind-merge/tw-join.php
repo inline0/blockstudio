@@ -1,7 +1,6 @@
 <?php
 
-declare(strict_types=1);
-
+declare (strict_types=1);
 /**
  * Port of: https://github.com/dcastil/tailwind-merge/blob/main/src/lib/tw-join.ts
  *
@@ -12,7 +11,6 @@ declare(strict_types=1);
  *
  * @port-deviation:types Uses PHP mixed types
  */
-
 namespace BlockstudioVendor\TailwindPHP\Lib\TailwindMerge;
 
 /**
@@ -24,21 +22,17 @@ namespace BlockstudioVendor\TailwindPHP\Lib\TailwindMerge;
 function twJoin(mixed ...$classLists): string
 {
     $result = '';
-
     foreach ($classLists as $argument) {
         if (!$argument) {
             continue;
         }
-
         $resolvedValue = toValue($argument);
         if ($resolvedValue !== '') {
             $result .= ($result !== '' ? ' ' : '') . $resolvedValue;
         }
     }
-
     return $result;
 }
-
 /**
  * Convert a mixed value to a class string.
  *
@@ -51,13 +45,10 @@ function toValue(mixed $mix): string
     if (is_string($mix)) {
         return $mix;
     }
-
     if (!is_array($mix)) {
         return '';
     }
-
     $result = '';
-
     foreach ($mix as $item) {
         if ($item) {
             $resolvedValue = toValue($item);
@@ -66,6 +57,5 @@ function toValue(mixed $mix): string
             }
         }
     }
-
     return $result;
 }

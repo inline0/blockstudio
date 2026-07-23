@@ -135,20 +135,23 @@ class Files {
 	 * @return string The relative URL.
 	 */
 	public static function get_relative_url( string $url ): string {
-		$url = str_replace( '\\', '/', $url );
-		$str = substr(
-			$url,
-			strpos(
-				$url,
-				substr( WP_CONTENT_DIR, strrpos( WP_CONTENT_DIR, '/' ) + 1 )
-			)
-		);
+		$url              = str_replace( '\\', '/', $url );
+		$content_basename = substr( WP_CONTENT_DIR, strrpos( WP_CONTENT_DIR, '/' ) + 1 );
+		$content_position = strpos( $url, $content_basename );
 
-		return WP_CONTENT_URL .
+		if ( false === $content_position ) {
+			return Runtime_Context::file_url( '', $url );
+		}
+
+		$str = substr( $url, $content_position );
+
+		$relative = WP_CONTENT_URL .
 			substr(
 				$str,
 				strrpos( $str, self::get_root_folder() ) + strlen( self::get_root_folder() )
 			);
+
+		return Runtime_Context::file_url( $relative, $url );
 	}
 
 	/**

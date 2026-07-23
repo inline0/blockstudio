@@ -7,8 +7,6 @@
 
 namespace Blockstudio;
 
-use RecursiveDirectoryIterator;
-use RecursiveIteratorIterator;
 use Exception;
 
 /**
@@ -101,6 +99,13 @@ class Block_Discovery {
 	private array $overrides = array();
 
 	/**
+	 * Active logical discovery source.
+	 *
+	 * @var Discovery_Source|null
+	 */
+	private ?Discovery_Source $source = null;
+
+	/**
 	 * Discover blocks in a directory path.
 	 *
 	 * Recursively scans the given path for Blockstudio blocks, classifying
@@ -112,9 +117,9 @@ class Block_Discovery {
 	 * Editor mode: Processes ALL files for the code editor feature.
 	 * Every file gets an entry in the store, keyed by file path.
 	 *
-	 * @param string $base_path Absolute path to scan for blocks.
-	 * @param string $instance  Instance identifier (e.g., 'themes/mytheme/blockstudio').
-	 * @param bool   $is_editor Whether running in editor mode (discovers all files).
+	 * @param string|Discovery_Source $base_path Absolute path or logical discovery source.
+	 * @param string                  $instance Instance identifier (e.g., 'themes/mytheme/blockstudio').
+	 * @param bool                    $is_editor Whether running in editor mode (discovers all files).
 	 *
 	 * @return array{
 	 *     store: array<string, array>,
@@ -124,34 +129,30 @@ class Block_Discovery {
 	 *     overrides: array<string, array>
 	 * } Discovery results for Build::init() to process.
 	 */
-	public function discover( string $base_path, string $instance, bool $is_editor = false ): array {
+	public function discover( string|Discovery_Source $base_path, string $instance, bool $is_editor = false ): array {
 		$this->store           = array();
 		$this->registerable    = array();
 		$this->blade_templates = array();
 		$this->block_json_data = array();
 		$this->contents_cache  = array();
 		$this->overrides       = array();
+		$this->source          = is_string( $base_path )
+			? Discovery_Sources::for_path( 'blocks', $base_path )
+			: $base_path;
 
-		if ( ! is_dir( $base_path ) ) {
-			return $this->get_results();
-		}
+		$base_path = wp_normalize_path( $this->source->root() );
 
-		$base_path = wp_normalize_path( $base_path );
-
-		$iterator = new RecursiveIteratorIterator(
-			new RecursiveDirectoryIterator( $base_path )
-		);
-
-		foreach ( $iterator as $filename => $file ) {
-			$filename  = wp_normalize_path( $filename );
-			$file_path = wp_normalize_path( $file );
+		foreach ( $this->source->entries() as $entry ) {
+			$logical_path = $entry->logical_path();
+			$file_path    = wp_normalize_path( $entry->physical_path() );
 
 			$this->process_file(
 				$file_path,
-				$filename,
+				$logical_path,
 				$base_path,
 				$instance,
-				$is_editor
+				$is_editor,
+				$entry
 			);
 		}
 
@@ -161,27 +162,31 @@ class Block_Discovery {
 	/**
 	 * Process a single file.
 	 *
-	 * @param string $file_path  The file path.
-	 * @param string $filename   The filename from iterator.
-	 * @param string $base_path  The base path.
-	 * @param string $instance   The instance name.
-	 * @param bool   $is_editor  Whether in editor mode.
+	 * @param string          $file_path  The file path.
+	 * @param string          $logical_path Logical path in the active source.
+	 * @param string          $base_path  The base path.
+	 * @param string          $instance   The instance name.
+	 * @param bool            $is_editor  Whether in editor mode.
+	 * @param Discovery_Entry $entry Source entry.
 	 *
 	 * @return void
 	 */
 	private function process_file(
 		string $file_path,
-		string $filename,
+		string $logical_path,
 		string $base_path,
 		string $instance,
-		bool $is_editor
+		bool $is_editor,
+		Discovery_Entry $entry
 	): void {
-		$file_dir  = dirname( $file_path );
-		$path_info = pathinfo( $file_path );
-		$contents  = $this->get_file_contents( $file_path );
+		$file_dir    = dirname( $file_path );
+		$logical_dir = dirname( $logical_path );
+		$logical_dir = '.' === $logical_dir ? '' : $logical_dir;
+		$path_info   = pathinfo( $file_path );
+		$contents    = $this->get_file_contents( $file_path );
 
 		// Classify the file.
-		$classification = $this->classify_file( $file_path, $path_info, $contents );
+		$classification = $this->classify_file( $file_path, $logical_path, $path_info, $contents );
 
 		// Skip hidden files (unless editor mode and basename is '.').
 		if (
@@ -197,7 +202,7 @@ class Block_Discovery {
 		}
 
 		// Read block.json if needed.
-		$block_json = $this->read_block_json( $file_path, $classification );
+		$block_json = $this->read_block_json( $file_path, $logical_path );
 
 		// Determine paths.
 		$block_json_path = $this->get_block_json_path( $file_path, $classification );
@@ -207,7 +212,7 @@ class Block_Discovery {
 
 		// Handle blade templates separately.
 		if ( $classification['is_blade'] ) {
-			$this->register_blade_template( $filename, $base_path, $instance, $name );
+			$this->register_blade_template( $logical_path, $instance, $name );
 			return;
 		}
 
@@ -217,9 +222,10 @@ class Block_Discovery {
 		}
 
 		// Get name from block.json in editor mode.
-		$name_file = false;
-		if ( $is_editor && file_exists( $file_dir . '/block.json' ) ) {
-			$dir_block_json = $this->read_json_file( $file_dir . '/block.json' );
+		$name_file      = false;
+		$manifest_entry = $this->resolve_in_directory( $logical_dir, 'block.json' );
+		if ( $is_editor && $manifest_entry ) {
+			$dir_block_json = Utils::read_json_file( $manifest_entry->physical_path() ) ?? array();
 			$name_file      = $dir_block_json['name'] ?? false;
 			if ( ! $name_file ) {
 				$block_json = array( 'name' => 'test/test' );
@@ -227,12 +233,19 @@ class Block_Discovery {
 		}
 
 		// Build level and structure info.
-		$level                     = $this->calculate_level( $base_path, $filename );
-		$block_arr_files           = $this->get_directory_files( $file_dir );
-		$block_arr_files_paths     = array_map( fn( $item ) => $file_dir . '/' . $item, $block_arr_files );
-		$block_arr_folders         = $this->get_directory_folders( $file_path );
+		$level                     = '/' . $logical_path;
+		$directory_entries         = $this->source?->children( $logical_dir ) ?? array();
+		$block_arr_files           = array_map( static fn( Discovery_Entry $item ): string => basename( $item->logical_path() ), $directory_entries );
+		$block_arr_files_paths     = array_map( static fn( Discovery_Entry $item ): string => $item->physical_path(), $directory_entries );
+		$block_arr_files_map       = array_combine( $block_arr_files, $block_arr_files_paths );
+		$block_arr_provenance      = array_combine(
+			$block_arr_files,
+			array_map( static fn( Discovery_Entry $item ): array => $item->provenance(), $directory_entries )
+		);
+		$block_arr_folders         = $this->get_directory_folders( $logical_dir );
 		$block_arr_structure_array = $this->calculate_structure_array( $level, $path_info );
-		$block_arr_structure       = $this->calculate_structure( $base_path, $block_json_path );
+		$block_arr_structure       = $logical_path;
+		$render_template           = $this->find_render_template( $logical_dir );
 
 		// Handle init files.
 		if ( $classification['is_init'] ) {
@@ -243,24 +256,30 @@ class Block_Discovery {
 
 		// Build the data array (exact same structure as Build::init).
 		$data = array(
-			'directory'      => $classification['is_dir'],
-			'example'        => $block_json['example'] ?? false,
-			'extend'         => $classification['is_extend'],
-			'file'           => pathinfo( $block_json_path ),
-			'files'          => $block_arr_files,
-			'filesPaths'     => $block_arr_files_paths,
-			'folders'        => $block_arr_folders,
-			'init'           => $classification['is_init'],
-			'instance'       => $instance,
-			'instancePath'   => $base_path,
-			'level'          => substr_count( $level, '/' ),
-			'name'           => false !== $name_file ? $name_file : $name,
-			'path'           => $block_json_path,
-			'previewAssets'  => $block_json['blockstudio']['editor']['assets'] ?? array(),
-			'scopedClass'    => 'bs-' . md5( $name ),
-			'structure'      => $block_arr_structure,
-			'structureArray' => $block_arr_structure_array,
-			'twig'           => $classification['is_twig'],
+			'directory'       => $classification['is_dir'],
+			'example'         => $block_json['example'] ?? false,
+			'extend'          => $classification['is_extend'],
+			'file'            => pathinfo( $block_json_path ),
+			'files'           => $block_arr_files,
+			'filesMap'        => false === $block_arr_files_map ? array() : $block_arr_files_map,
+			'filesPaths'      => $block_arr_files_paths,
+			'filesProvenance' => false === $block_arr_provenance ? array() : $block_arr_provenance,
+			'folders'         => $block_arr_folders,
+			'init'            => $classification['is_init'],
+			'instance'        => $instance,
+			'instancePath'    => $base_path,
+			'logicalPath'     => $logical_path,
+			'level'           => substr_count( $level, '/' ),
+			'name'            => false !== $name_file ? $name_file : $name,
+			'path'            => $block_json_path,
+			'previewAssets'   => $block_json['blockstudio']['editor']['assets'] ?? array(),
+			'renderTemplate'  => $render_template,
+			'scopedClass'     => 'bs-' . md5( $name ),
+			'structure'       => $block_arr_structure,
+			'structureArray'  => $block_arr_structure_array,
+			'sourceId'        => $this->source?->id() ?? '',
+			'provenance'      => $entry->provenance(),
+			'twig'            => $classification['is_twig'],
 		);
 
 		// Add nameAlt if name equals path.
@@ -305,12 +324,13 @@ class Block_Discovery {
 	 * Classify a file.
 	 *
 	 * @param string $file_path The file path.
+	 * @param string $logical_path Logical path in the active source.
 	 * @param array  $path_info The pathinfo array.
 	 * @param string $contents  The file contents.
 	 *
 	 * @return array The classification.
 	 */
-	private function classify_file( string $file_path, array $path_info, string $contents ): array {
+	private function classify_file( string $file_path, string $logical_path, array $path_info, string $contents ): array {
 		$json_data      = $this->decode_json( $contents );
 		$is_block_json  = 'block.json' === $path_info['basename'];
 		$is_blockstudio = $is_block_json && isset( $json_data['blockstudio'] );
@@ -319,7 +339,9 @@ class Block_Discovery {
 		$is_extend    = $this->check_blockstudio_flag( $contents, 'extend' );
 		$is_override  = $is_blockstudio && $this->check_blockstudio_flag( $contents, 'override' );
 		$is_component = $is_blockstudio && $this->check_blockstudio_flag( $contents, 'component' );
-		$is_block     = $is_blockstudio && Files::get_render_template( $file_path ) && ! $is_extend;
+		$logical_dir  = dirname( $logical_path );
+		$logical_dir  = '.' === $logical_dir ? '' : $logical_dir;
+		$is_block     = $is_blockstudio && $this->find_render_template( $logical_dir ) && ! $is_extend;
 		$is_init      = 'php' === ( $path_info['extension'] ?? '' )
 			&& str_starts_with( $path_info['basename'], 'init' );
 		$is_dir       = is_dir( $file_path )
@@ -395,40 +417,22 @@ class Block_Discovery {
 	/**
 	 * Read block.json for a file.
 	 *
-	 * @param string $file_path      The file path.
-	 * @param array  $classification The classification.
+	 * @param string $file_path The file path.
+	 * @param string $logical_path Logical path in the active source.
 	 *
 	 * @return array The block.json data.
 	 */
-	private function read_block_json( string $file_path, array $classification ): array {
+	private function read_block_json( string $file_path, string $logical_path ): array {
 		if ( is_dir( $file_path ) ) {
 			return array();
 		}
 
-		$json_path = str_ends_with( $file_path, 'block.json' )
-			? $file_path
-			: str_replace(
-				array( 'index.blade.php', 'index.php', 'index.twig' ),
-				'block.json',
-				$file_path
-			);
+		$logical_dir = dirname( $logical_path );
+		$logical_dir = '.' === $logical_dir ? '' : $logical_dir;
+		$manifest    = $this->resolve_in_directory( $logical_dir, 'block.json' );
+		$json_path   = $manifest?->physical_path() ?? $file_path;
 
-		return $this->read_json_file( $json_path );
-	}
-
-	/**
-	 * Read a JSON file.
-	 *
-	 * @param string $path The file path.
-	 *
-	 * @return array The decoded JSON or empty array.
-	 */
-	private function read_json_file( string $path ): array {
-		if ( ! file_exists( $path ) ) {
-			return array();
-		}
-		$contents = file_get_contents( $path ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents
-		return $this->decode_json( $contents );
+		return Utils::read_json_file( $json_path ) ?? array();
 	}
 
 	/**
@@ -479,15 +483,14 @@ class Block_Discovery {
 	/**
 	 * Register a blade template.
 	 *
-	 * @param string $filename  The filename.
-	 * @param string $base_path The base path.
+	 * @param string $logical_path Logical template path.
 	 * @param string $instance  The instance name.
 	 * @param string $name      The template name.
 	 *
 	 * @return void
 	 */
-	private function register_blade_template( string $filename, string $base_path, string $instance, string $name ): void {
-		$relative_path = str_replace( array( $base_path, '.blade.php' ), '', $filename );
+	private function register_blade_template( string $logical_path, string $instance, string $name ): void {
+		$relative_path = str_replace( '.blade.php', '', $logical_path );
 		$relative_path = str_replace( DIRECTORY_SEPARATOR, '.', $relative_path );
 
 		$this->blade_templates[ $instance ][ $name ] = ltrim( $relative_path, '.' );
@@ -544,38 +547,68 @@ class Block_Discovery {
 	}
 
 	/**
-	 * Get files in a directory.
+	 * Get logical folders in a directory.
 	 *
-	 * @param string $directory The directory path.
+	 * @param string $directory Logical directory path.
 	 *
 	 * @return array The files.
 	 */
-	private function get_directory_files( string $directory ): array {
-		if ( ! is_dir( $directory ) ) {
-			return array();
+	private function get_directory_folders( string $directory ): array {
+		$prefix  = '' === $directory ? '' : $directory . '/';
+		$folders = array_fill_keys(
+			array_map(
+				'basename',
+				$this->source?->directories( $directory, false ) ?? array()
+			),
+			true
+		);
+
+		foreach ( $this->source?->entries( $directory ) ?? array() as $entry ) {
+			$relative = substr( $entry->logical_path(), strlen( $prefix ) );
+			$parts    = explode( '/', $relative );
+
+			if ( count( $parts ) > 1 && '' !== $parts[0] ) {
+				$folders[ $parts[0] ] = true;
+			}
 		}
 
-		return array_values(
-			array_filter(
-				scandir( $directory ),
-				fn( $item ) => ! is_dir( $directory . '/' . $item ) && '.' !== $item[0]
-			)
-		);
+		$folders = array_keys( $folders );
+		sort( $folders, SORT_STRING );
+
+		return $folders;
 	}
 
 	/**
-	 * Get folders in a directory.
+	 * Resolve a logical sibling in a directory.
 	 *
-	 * @param string $file_path The file path.
+	 * @param string $directory Logical directory.
+	 * @param string $filename File name.
 	 *
-	 * @return array The folders.
+	 * @return Discovery_Entry|null Resolved entry.
 	 */
-	private function get_directory_folders( string $file_path ): array {
-		$glob_result = glob( dirname( $file_path ) . '/*' );
-		if ( false === $glob_result ) {
-			return array();
+	private function resolve_in_directory( string $directory, string $filename ): ?Discovery_Entry {
+		$logical_path = '' === $directory ? $filename : $directory . '/' . $filename;
+
+		return $this->source?->resolve( $logical_path );
+	}
+
+	/**
+	 * Find a render template in a logical directory.
+	 *
+	 * @param string $directory Logical directory.
+	 *
+	 * @return string|null Physical template path.
+	 */
+	private function find_render_template( string $directory ): ?string {
+		foreach ( array( 'index.php', 'index.blade.php', 'index.twig' ) as $filename ) {
+			$entry = $this->resolve_in_directory( $directory, $filename );
+
+			if ( $entry ) {
+				return $entry->physical_path();
+			}
 		}
-		return array_values( array_map( 'basename', array_filter( $glob_result, 'is_dir' ) ) );
+
+		return null;
 	}
 
 	/**

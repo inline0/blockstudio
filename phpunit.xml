@@ -6,6 +6,9 @@
 	colors="true"
 	cacheDirectory=".phpunit.cache"
 >
+	<php>
+		<ini name="memory_limit" value="256M"/>
+	</php>
 	<testsuites>
 		<testsuite name="unit">
 			<directory suffix="Test.php">tests/unit</directory>

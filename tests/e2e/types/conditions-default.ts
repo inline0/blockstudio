@@ -37,5 +37,17 @@ testType('conditions-default', false, () => {
         await count(page, 'text=Background Image', 0);
       },
     },
+    {
+      description: 'empty operator responds to empty and filled values',
+      testFunction: async (page: Page, canvas: Frame) => {
+        await canvas.click('[data-type="blockstudio/type-conditions-default"]');
+
+        await count(page, 'text=Text on empty', 1);
+
+        await page.locator('[data-id="emptySource"] input').fill('filled');
+
+        await count(page, 'text=Text on empty', 0);
+      },
+    },
   ];
 });

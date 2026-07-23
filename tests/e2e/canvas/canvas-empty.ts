@@ -518,6 +518,12 @@ test.describe('Canvas - empty theme', () => {
       }
     };
 
+    // The preceding test leaves Canvas live mode active. Close that document
+    // before changing fixtures so its SSE reconciliation cannot race this one.
+    await page.evaluate(() =>
+      localStorage.removeItem('blockstudio-canvas-settings'),
+    );
+    await page.goto('about:blank');
     cleanup();
 
     try {
@@ -571,9 +577,13 @@ test.describe('Canvas - empty theme', () => {
         '<block name="blockstudio/flash-base-block" /><p>Second artboard</p>',
       );
 
-      await page.evaluate(() =>
-        localStorage.removeItem('blockstudio-canvas-settings'),
+      const reconcileResponse = await fetch(
+        'http://localhost:8890/wp-json/blockstudio-test/v1/pages/reconcile',
+        { method: 'POST' },
       );
+      const reconcileBody = await reconcileResponse.text();
+      expect(reconcileResponse.ok, reconcileBody).toBe(true);
+
       await page.goto(canvasUrl, { waitUntil: 'domcontentloaded' });
 
       const root = page.locator('#blockstudio-canvas');

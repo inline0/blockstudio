@@ -7,6 +7,7 @@
     "build": "npm run generate && next build",
     "start": "next start",
     "generate": "tsx scripts/generate-docs.ts",
+    "check:content": "node scripts/check-markdown-content.mjs",
     "lint": "../node_modules/.bin/eslint src/ && ../node_modules/.bin/prettier --write \"src/**/*.{ts,tsx,css}\""
   },
   "dependencies": {

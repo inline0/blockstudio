@@ -1,0 +1,374 @@
+---
+title: RPC
+description: Call server-side PHP functions from the frontend with a lightweight RPC system inspired by tRPC.
+path: "blocks/block-api/rpc"
+order: 45
+section: "Blocks"
+subsection: "Block API"
+meta_title: "RPC"
+meta_description: "Call server-side PHP functions from the frontend with a lightweight RPC system inspired by tRPC."
+---
+
+# RPC
+
+RPC (Remote Procedure Call) lets you define PHP functions in your block and call
+them from the frontend. Instead of manually registering REST API routes,
+creating controllers, and wiring up `fetch` calls, you write a function in
+`rpc.php` and call it with `bs.fn()`. Blockstudio handles the endpoint routing,
+authentication, nonce validation, and JSON serialization.
+
+The pattern is inspired by [tRPC](https://trpc.io): define your procedures
+server-side, call them from the client with a typed helper. No URL construction,
+no manual `fetch` boilerplate.
+
+## How it works
+
+1. You create `rpc.php` in your block directory
+2. It returns an associative array of named functions
+3. Blockstudio registers a REST endpoint for each function
+4. The `bs.fn()` client calls them by name
+5. Parameters go in, JSON comes out
+
+```
+blocks/my-block/
+├── block.json
+├── index.twig
+├── rpc.php             ← your server functions live here
+├── script-inline.js    ← call them from here
+└── style.css
+```
+
+## Defining functions
+
+Each key in the returned array is a function name. The simplest form is a
+direct callback:
+
+```php title="rpc.php"
+return [
+    'subscribe' => function (array $params): array {
+        $email = sanitize_email($params['email']);
+        // process subscription
+        return ['success' => true];
+    },
+    'load_more' => function (array $params): array {
+        $offset = (int) ($params['offset'] ?? 0);
+        $posts = get_posts(['offset' => $offset, 'numberposts' => 5]);
+        return ['posts' => $posts];
+    },
+];
+```
+
+Every function receives a single `$params` array and should return an array.
+The return value is sent to the client as JSON.
+
+For access control options, use the expanded format with `callback` and
+additional keys:
+
+```php title="rpc.php"
+return [
+    'admin_action' => [
+        'callback'   => function (array $params): array {
+            return ['ok' => true];
+        },
+        'capability' => 'manage_options',
+    ],
+];
+```
+
+### PHP-native definitions
+
+If you prefer PHP-native metadata over nested arrays, `rpc.php` can also return
+an object with attributed methods. Arrays still work exactly the same.
+
+```php title="rpc.php"
+<?php
+use Blockstudio\Attributes\Rpc;
+use Blockstudio\Rpc\Access;
+use Blockstudio\Rpc\Method;
+
+return new class {
+    #[Rpc(access: Access::Session)]
+    public function subscribe(array $params): array {
+        $email = sanitize_email($params['email'] ?? '');
+        return ['success' => !empty($email)];
+    }
+
+    #[Rpc(name: 'status', methods: [Method::Get, Method::Post])]
+    public function getStatus(array $params): array {
+        return ['status' => 'ok'];
+    }
+
+    #[Rpc(access: Access::Open)]
+    public function webhook(array $params): array {
+        return ['received' => true];
+    }
+};
+```
+
+Notes:
+
+- Method names are normalized to lowercase snake case by default, so
+  `getStatus()` becomes `get_status`
+- Use `name:` to override the endpoint name explicitly
+- `Access::Session` matches the old `'public' => true` behavior
+- `Access::Open` matches the old `'public' => 'open'` behavior
+- Omit `access:` for the default authenticated-only behavior
+
+## Calling from JavaScript
+
+Blockstudio auto-injects a `bs.fn()` helper on pages that have blocks with RPC
+functions.
+
+**Signature:** `bs.fn(functionName, params?, blockName?) -> Promise`
+
+### Inline scripts (recommended)
+
+Inline scripts (`script-inline.js` or `script.inline.js`) automatically know
+which block they belong to. Blockstudio adds a `data-block` attribute to the
+script tag, so `bs.fn()` resolves the block name without you passing it:
+
+```js title="script-inline.js"
+const result = await bs.fn('subscribe', { email: 'user@example.com' });
+console.log(result.success); // true
+```
+
+This works because inline scripts run synchronously and `document.currentScript`
+points to their `<script data-block="my-theme/newsletter">` tag. No manual
+wiring needed.
+
+### Module scripts
+
+Module scripts and external JS files don't have `document.currentScript` at
+call time. Pass the block name as the third argument:
+
+```js title="script.js"
+const posts = await bs.fn('load_more', { offset: 10 }, 'my-theme/blog-feed');
+```
+
+### Error handling
+
+RPC functions that throw or return a `WP_Error` result in a rejected promise
+on the client. Handle errors like any async call:
+
+```js
+try {
+  const result = await bs.fn('subscribe', { email });
+} catch (error) {
+  console.error('RPC failed:', error);
+}
+```
+
+## With the Interactivity API
+
+RPC pairs naturally with the WordPress Interactivity API. Your store actions
+call server functions and update reactive state with the response. The UI
+updates automatically:
+
+```js title="script-inline.js"
+import { store, getContext } from '@wordpress/interactivity';
+
+store('myTheme/newsletter', {
+  actions: {
+    subscribe: async () => {
+      const ctx = getContext();
+      ctx.loading = true;
+      ctx.error = '';
+
+      try {
+        ctx.result = await bs.fn('subscribe', { email: ctx.email });
+        ctx.success = true;
+      } catch (e) {
+        ctx.error = 'Something went wrong.';
+      }
+
+      ctx.loading = false;
+    },
+  },
+});
+```
+
+```php title="index.php"
+<div
+  data-wp-interactive="myTheme/newsletter"
+  data-wp-context='{"email":"","loading":false,"success":false,"error":"","result":null}'
+  useBlockProps
+>
+  <input
+    type="email"
+    data-wp-bind--value="context.email"
+    data-wp-on--input="actions.updateEmail"
+  />
+  <button
+    data-wp-on--click="actions.subscribe"
+    data-wp-bind--disabled="context.loading"
+  >Subscribe</button>
+  <p data-wp-if="context.error" data-wp-text="context.error"></p>
+  <p data-wp-if="context.success">Thanks for subscribing!</p>
+</div>
+```
+
+## Access control
+
+By default, functions require an authenticated (logged-in) user. This matches
+WordPress conventions where REST endpoints are protected by default.
+
+### Public functions
+
+Allow unauthenticated access with CSRF protection:
+
+```php title="rpc.php"
+return [
+    'get_count' => [
+        'callback' => function (array $params): array {
+            return ['count' => wp_count_posts()->publish];
+        },
+        'public' => true,    // public + CSRF protected via X-BS-Token
+    ],
+];
+```
+
+### Open functions
+
+For webhooks or external API callbacks that need truly open access without any
+token:
+
+```php title="rpc.php"
+return [
+    'webhook' => [
+        'callback' => function (array $params): array {
+            // Called by an external service
+            return ['received' => true];
+        },
+        'public' => 'open',  // no CSRF, no auth
+    ],
+];
+```
+
+### Capabilities
+
+Restrict to specific WordPress capabilities. Use a string for a single
+capability, or an array where the user needs any one:
+
+```php title="rpc.php"
+return [
+    'save_draft' => [
+        'callback'   => function (array $params): array { /* ... */ },
+        'capability' => 'edit_posts',
+    ],
+    'moderate' => [
+        'callback'   => function (array $params): array { /* ... */ },
+        'capability' => ['edit_others_posts', 'manage_options'],
+    ],
+];
+```
+
+### HTTP methods
+
+By default, functions only accept `POST` requests. This is the safest default
+for operations that modify state. Allow additional methods when needed:
+
+```php title="rpc.php"
+return [
+    'get_status' => [
+        'callback' => function (array $params): array {
+            return ['status' => 'ok'];
+        },
+        'methods' => ['GET', 'POST'],
+    ],
+];
+```
+
+## Cross-block calling
+
+### From JavaScript
+
+Any block can call functions on any other block by passing the block name as the
+third argument. This enables composition between blocks:
+
+```js
+// Block A calling a function defined in Block B
+const result = await bs.fn('load_more', { offset: 0 }, 'my-theme/blog-feed');
+```
+
+### From PHP
+
+Use `Rpc::call()` for server-side cross-block calls. This is useful when one
+RPC function needs to orchestrate calls to other blocks:
+
+```php title="rpc.php"
+use Blockstudio\Rpc;
+
+return [
+    'refresh_dashboard' => function (array $params): array {
+        $feed  = Rpc::call('my-theme/blog-feed', 'load_more', ['offset' => 0]);
+        $stats = Rpc::call('my-theme/analytics', 'get_summary', []);
+
+        return ['feed' => $feed, 'stats' => $stats];
+    },
+];
+```
+
+## REST endpoint
+
+Under the hood, each function maps to a REST route:
+
+```
+POST /wp-json/blockstudio/v1/fn/{namespace}/{block}/{function}
+```
+
+**Request body:** `{ "params": { ... } }`
+
+**Response:** The return value of the PHP function as JSON.
+
+You can call these endpoints directly from any HTTP client, but `bs.fn()` is the
+recommended way since it handles nonce authentication automatically.
+
+## Hooks
+
+Actions fire before and after every RPC call, both from REST and PHP. All hooks
+receive a single `$params` array:
+
+| Hook | Params |
+|------|--------|
+| `blockstudio/rpc/before_call` | `block`, `function`, `params` |
+| `blockstudio/rpc/after_call` | `block`, `function`, `params`, `result` |
+
+```php
+add_action('blockstudio/rpc/after_call', function ($params) {
+    // Log every RPC call
+    error_log($params['block'] . '::' . $params['function'] . ' called');
+});
+
+add_action('blockstudio/rpc/before_call', function ($params) {
+    // Rate limiting, audit logging, etc.
+});
+```
+
+## Filter
+
+Modify or add functions programmatically from outside the block:
+
+```php
+add_filter('blockstudio/rpc', function (array $functions): array {
+    $functions['my-theme/hero']['custom_action'] = [
+        'callback' => function (array $params): array {
+            return ['ok' => true];
+        },
+        'public' => false,
+    ];
+    return $functions;
+});
+```
+
+## When to use RPC vs Database
+
+[`db.php`](/docs/blocks/block-api/database) generates CRUD endpoints
+automatically from a schema. Use it when you need standard create/read/update/delete
+operations with validation.
+
+`rpc.php` is for custom logic: sending emails, calling external APIs,
+aggregating data across schemas, running complex queries, or anything that
+doesn't fit the CRUD pattern.
+
+The two systems are independent and complementary. Many blocks use both: `db.php`
+for the data model and `rpc.php` for business logic on top of it.

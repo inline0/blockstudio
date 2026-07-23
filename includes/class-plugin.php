@@ -65,15 +65,23 @@ class Plugin {
 	private function load_classes(): void {
 		$classes_dir = BLOCKSTUDIO_DIR . '/includes/classes/';
 
+		require_once $classes_dir . 'discovery-entry.php';
+		require_once $classes_dir . 'discovery-source.php';
+		require_once $classes_dir . 'filesystem-discovery-source.php';
+		require_once $classes_dir . 'inventory-discovery-source.php';
+		require_once $classes_dir . 'scoped-discovery-source.php';
+		require_once $classes_dir . 'discovery-sources.php';
+		require_once $classes_dir . 'runtime-context.php';
+
 		// Core configuration classes.
 		require_once $classes_dir . 'constants.php';
 		require_once $classes_dir . 'field-type-config.php';
+		require_once $classes_dir . 'field-type-registry.php';
 		require_once $classes_dir . 'block-registry.php';
 		require_once $classes_dir . 'option-value-resolver.php';
 
 		// Interfaces.
 		require_once BLOCKSTUDIO_DIR . '/includes/interfaces/field-handler-interface.php';
-		require_once BLOCKSTUDIO_DIR . '/includes/interfaces/settings-loader-interface.php';
 		require_once BLOCKSTUDIO_DIR . '/includes/interfaces/storage-handler-interface.php';
 
 		// Field handlers.
@@ -84,6 +92,7 @@ class Plugin {
 		require_once $classes_dir . 'field-handlers/select-field-handler.php';
 		require_once $classes_dir . 'field-handlers/media-field-handler.php';
 		require_once $classes_dir . 'field-handlers/container-field-handler.php';
+		require_once $classes_dir . 'field-handlers/custom-field-handler.php';
 
 		// Custom field system.
 		require_once $classes_dir . 'field-registry.php';
@@ -102,16 +111,11 @@ class Plugin {
 		// Block discovery and registration (Phase 5).
 		require_once $classes_dir . 'file-classifier.php';
 		require_once $classes_dir . 'block-discovery.php';
-		require_once $classes_dir . 'asset-discovery.php';
 		require_once $classes_dir . 'block-registrar.php';
 
 		// Settings loaders (Phase 6).
-		require_once $classes_dir . 'settings-loaders/options-loader.php';
-		require_once $classes_dir . 'settings-loaders/json-loader.php';
-		require_once $classes_dir . 'settings-loaders/filter-loader.php';
 
 		// Abstract classes (Phase 6).
-		require_once $classes_dir . 'abstract-esmodule.php';
 
 		// Error handling (Phase 6).
 		require_once $classes_dir . 'error-handler.php';
@@ -119,10 +123,12 @@ class Plugin {
 		require_once $classes_dir . 'perf.php';
 		require_once $classes_dir . 'migrate.php';
 		require_once $classes_dir . 'files.php';
+		require_once $classes_dir . 'single-flight.php';
 		require_once $classes_dir . 'settings.php';
 		require_once $classes_dir . 'build-cache.php';
 		require_once $classes_dir . 'block-editor-policy.php';
 		require_once $classes_dir . 'block.php';
+		require_once $classes_dir . 'islands.php';
 		require_once $classes_dir . 'render.php';
 		require_once $classes_dir . 'build.php';
 		require_once $classes_dir . 'populate.php';
@@ -134,6 +140,7 @@ class Plugin {
 		require_once $classes_dir . 'llm.php';
 		require_once $classes_dir . 'admin-page.php';
 		require_once $classes_dir . 'utils.php';
+		require_once $classes_dir . 'template-compiler.php';
 		require_once $classes_dir . 'admin.php';
 		require_once $classes_dir . 'devtools.php';
 		require_once $classes_dir . 'canvas.php';
@@ -195,6 +202,11 @@ class Plugin {
 		require_once $classes_dir . 'pattern-discovery.php';
 		require_once $classes_dir . 'pattern-registry.php';
 		require_once $classes_dir . 'patterns.php';
+
+		// File-based Site Editor templates system.
+		require_once $classes_dir . 'site-template-discovery.php';
+		require_once $classes_dir . 'site-template-registry.php';
+		require_once $classes_dir . 'site-templates.php';
 	}
 
 	/**
@@ -217,6 +229,10 @@ class Plugin {
 			Build_Cache::init();
 		}
 
+		if ( class_exists( 'Blockstudio\Islands' ) ) {
+			Islands::init();
+		}
+
 		add_action(
 			'init',
 			function () {
@@ -235,7 +251,7 @@ class Plugin {
 			'init',
 			function () {
 				if ( class_exists( 'Blockstudio\Pages' ) ) {
-					Pages::register_collection_post_types();
+					Pages::maybe_register_collection_post_types();
 				}
 			},
 			1
@@ -268,6 +284,16 @@ class Plugin {
 			function () {
 				if ( class_exists( 'Blockstudio\Patterns' ) ) {
 					Patterns::init();
+				}
+			},
+			PHP_INT_MAX
+		);
+
+		add_action(
+			'init',
+			function () {
+				if ( class_exists( 'Blockstudio\Site_Templates' ) ) {
+					Site_Templates::init();
 				}
 			},
 			PHP_INT_MAX

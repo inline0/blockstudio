@@ -1,0 +1,134 @@
+---
+title: AI Integration
+description: A static context file with full documentation and schemas for LLM coding assistants.
+path: "dev/ai"
+order: 64
+section: "Dev"
+meta_title: "AI Integration"
+meta_description: "A static context file with full documentation and schemas for LLM coding assistants."
+---
+
+# AI Integration
+
+Blockstudio ships a pre-built context file designed for LLM coding assistants.
+The file combines the current product documentation and JSON schemas in a
+single `blockstudio-llm.txt` that any AI tool can consume.
+
+## What's included
+
+The context file combines two sources:
+
+- **Documentation**: current product pages in navigation order, stripped of
+  navigation-only formatting with code examples preserved. Historical
+  migration material and pages duplicated by schemas are omitted.
+- **JSON schemas**: the block, settings, page, page collection, and extension
+  schemas. Repeated definitions such as field types shared between blocks and
+  extensions are deduplicated.
+
+## How it's built
+
+The file is assembled at build time by `npm run build:llm`, which runs `scripts/build-llm.ts`. The script:
+
+1. Walks the Markdown docs tree using each folder's `meta.json` to determine
+   page order.
+2. Strips frontmatter and navigation-only Markdown while preserving headings
+   and code examples.
+3. Imports the canonical schemas from `docs/src/schemas`, adds the page and
+   page-collection schemas, trims the block schema to the `blockstudio` key,
+   and deduplicates definitions shared with extensions.
+4. Writes the combined output to `includes/llm/blockstudio-llm.txt`.
+
+## How to use it
+
+1. Enable the `ai/enableContextGeneration` setting in your `blockstudio.json`:
+
+```json title="blockstudio.json"
+{
+  "ai": {
+    "enableContextGeneration": true
+  }
+}
+```
+
+2. The context file is now available at `your-site.com/blockstudio-llm.txt`.
+
+3. Point your AI tool to that URL:
+   - **Cursor**: add the URL as a doc in your project settings.
+   - **Claude Code**: reference the URL or download the file and add it to your project context.
+   - **GitHub Copilot**: include the file in your repository or reference it in your instructions.
+
+Any tool that accepts a URL or text file as context will work. The file is static and does not include site-specific data like your registered blocks or current settings.
+
+## Evals
+
+The Blockstudio repository includes an eval suite for development purposes. It is not part of the plugin itself and is not shipped to users. The suite verifies that LLMs given the context file can generate correct Blockstudio code across all framework domains. It requires the [Claude Code CLI](https://docs.anthropic.com/en/docs/claude-code) to be installed locally.
+
+Each eval case sends a prompt to the CLI with the context file as a system prompt, then runs deterministic scorers against the output (JSON schema validation, PHP syntax checks, structural checks).
+
+### Running evals
+
+These commands are run from the repository root during development:
+
+```bash
+# Run all 81 cases
+npm run eval
+
+# Run a specific domain
+npm run eval:blocks
+npm run eval:templates
+npm run eval:pages
+npm run eval:patterns
+npm run eval:config
+npm run eval:extensions
+npm run eval:hooks
+
+# Run a single case
+npm run eval:blocks -- --case=5
+
+# Use a different model
+npm run eval:blocks -- --model=opus
+```
+
+Results print to the console and are written in full to `evals/results/`.
+
+### Domains
+
+| Domain | Cases | What it tests |
+|---|---|---|
+| Block definitions | 24 | Field types (text, number, toggle, color, select, textarea, checkbox, radio, range, unit, date, datetime, gradient, icon, link, code, wysiwyg, richtext, classes, attributes, message), groups, repeaters, tabs, conditions, switch, storage, interactivity, custom types, fallback/help, populate, hidden, variations, transforms, block conditions, SVG icons, init files |
+| Templates | 15 | `$a` access, `useBlockProps`, RichText, InnerBlocks, repeater loops, conditionals, group prefixes, Tailwind classes, `$b` metadata, `$c` parent context, `$innerBlocks`, MediaPlaceholder, escape functions, link fields, files fields |
+| Pages | 10 | Page config, template locking, editing modes, keyed merging, block bindings, post ID pinning, templateFor, sync, custom postType, contentOnly |
+| Patterns | 7 | Pattern config, categories/keywords, multi-block HTML, viewportWidth, blockTypes/postTypes, inserter visibility, HTML-to-block elements |
+| Configuration | 5 | Tailwind, asset settings, editor settings, block editor settings, full combined config |
+| Extensions | 8 | Extending core blocks, multiple fields, conditions, set with style, set with data attributes, wildcard matching, priority/group, multiple block targets |
+| Hooks | 12 | useBlockProps filter, parser renderers, element mapping, Tailwind CSS filter, block/render, block/meta, block/attributes, block/conditions, settings filters, init actions, component render filters, path filters |
+
+### Scorers
+
+All scoring is deterministic (no LLM-as-judge):
+
+- **JsonParse**: all JSON code blocks parse successfully.
+- **JsonSchema**: block.json, page.json, or pattern.json validates against the corresponding JSON schema.
+- **PhpSyntax**: matching PHP tags, correct variable usage (`$a`/`$b`), no ACF patterns.
+- **TemplateVars**: expected strings appear in template output.
+- **HookPresence**: correct filter/action names and `add_filter` calls present.
+- **Structure checks**: field types, field IDs, conditions, switch, storage, extension structure, config keys, pattern properties.
+
+### Adding a case
+
+Each domain has an `evals/{domain}.eval.ts` file that exports an array of cases. A case is a prompt string and an array of scorer functions:
+
+```ts
+{
+  name: "My new case",
+  prompt: 'Create a Blockstudio block called "acme/example" with ...',
+  scorers: [
+    jsonParse(),
+    jsonSchema("block"),
+    hasFieldTypes("text", "number"),
+    hasFieldIds("title", "count"),
+  ],
+}
+```
+
+Scorer functions are in `evals/scorers/`. Each takes the raw LLM output string and returns `{ name, score, details }`.

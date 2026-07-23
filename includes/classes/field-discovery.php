@@ -7,9 +7,6 @@
 
 namespace Blockstudio;
 
-use RecursiveDirectoryIterator;
-use RecursiveIteratorIterator;
-
 /**
  * Discovers custom field definitions by scanning filesystem directories.
  *
@@ -25,26 +22,19 @@ class Field_Discovery {
 	 *
 	 * Recursively scans the given path for field.json files.
 	 *
-	 * @param string $base_path Absolute path to scan for fields.
+	 * @param string|Discovery_Source $base_path Absolute path or logical discovery source.
 	 *
 	 * @return array<string, array> Array of discovered field definitions indexed by name.
 	 */
-	public function discover( string $base_path ): array {
+	public function discover( string|Discovery_Source $base_path ): array {
 		$fields = array();
+		$source = is_string( $base_path )
+			? Discovery_Sources::for_path( 'fields', $base_path )
+			: $base_path;
 
-		if ( ! is_dir( $base_path ) ) {
-			return $fields;
-		}
-
-		$base_path = wp_normalize_path( $base_path );
-
-		$iterator = new RecursiveIteratorIterator(
-			new RecursiveDirectoryIterator( $base_path )
-		);
-
-		foreach ( $iterator as $file ) {
-			$file_path = wp_normalize_path( $file->getPathname() );
-			$basename  = $file->getBasename();
+		foreach ( $source->entries() as $entry ) {
+			$file_path = wp_normalize_path( $entry->physical_path() );
+			$basename  = basename( $entry->logical_path() );
 
 			if ( 'field.json' !== $basename ) {
 				continue;

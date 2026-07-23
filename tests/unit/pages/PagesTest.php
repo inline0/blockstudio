@@ -4,6 +4,8 @@ use Blockstudio\Page_Discovery;
 use Blockstudio\Page_Registry;
 use Blockstudio\Page_Sync;
 use Blockstudio\Pages;
+use PHPUnit\Framework\Attributes\PreserveGlobalState;
+use PHPUnit\Framework\Attributes\RunInSeparateProcess;
 use PHPUnit\Framework\TestCase;
 
 class PagesTest extends TestCase {
@@ -679,6 +681,33 @@ class PagesTest extends TestCase {
 		$this->assertNotSame( $signature, $signature_method->invoke( null, $rewrite_changed ) );
 	}
 
+	#[RunInSeparateProcess]
+	#[PreserveGlobalState(false)]
+	public function test_cli_rewrite_generation_preserves_collection_routes(): void {
+		define( 'WP_CLI', true );
+
+		global $wp_rewrite;
+
+		$extra_rules_top = $wp_rewrite->extra_rules_top;
+
+		try {
+			$wp_rewrite->extra_rules_top = array();
+			Pages::reset();
+			Pages::maybe_register_collection_post_types();
+
+			$rules = $wp_rewrite->rewrite_rules();
+
+			$this->assertIsArray( $rules );
+			$this->assertArrayHasKey( '^docs/?$', $rules );
+			$this->assertSame(
+				'index.php?blockstudio_collection=docs&blockstudio_collection_path=.',
+				$rules['^docs/?$']
+			);
+		} finally {
+			$wp_rewrite->extra_rules_top = $extra_rules_top;
+		}
+	}
+
 	public function test_explicit_post_id_migrates_empty_target_post_in_place(): void {
 		$target_id = wp_insert_post(
 			array(
@@ -708,6 +737,60 @@ class PagesTest extends TestCase {
 			$this->assertSame( 'docs:docs-explicit-postid', get_post_meta( $target_id, '_blockstudio_page_key', true ) );
 		} finally {
 			wp_delete_post( $target_id, true );
+		}
+	}
+
+	public function test_keyed_custom_block_migrates_legacy_key_and_preserves_editor_fields(): void {
+		$page_data                   = Pages::get_page( 'blockstudio-keyed-merge-test' );
+		$page_data['name']           = 'blockstudio-keyed-custom-block-unit';
+		$page_data['title']          = 'Blockstudio Keyed Custom Block Unit';
+		$page_data['slug']           = 'blockstudio-keyed-custom-block-unit';
+		$page_data['source_path']    = 'unit/blockstudio-keyed-custom-block-unit';
+		$page_data['inline_content'] = '<block name="blockstudio/type-text" key="hero" text="Template v1" /><p>Sentinel v1</p>';
+
+		$sync    = new Page_Sync();
+		$post_id = $sync->force_sync( $page_data );
+
+		$this->assertIsInt( $post_id );
+
+		try {
+			$blocks = parse_blocks( get_post_field( 'post_content', $post_id ) );
+
+			$this->assertSame( 'hero', $blocks[0]['attrs']['__BLOCKSTUDIO_KEY'] );
+			$this->assertSame( 'Template v1', $blocks[0]['attrs']['blockstudio']['attributes']['text'] );
+			$this->assertArrayNotHasKey(
+				'__BLOCKSTUDIO_KEY',
+				$blocks[0]['attrs']['blockstudio']['attributes']
+			);
+
+			unset( $blocks[0]['attrs']['__BLOCKSTUDIO_KEY'] );
+			$blocks[0]['attrs']['blockstudio']['attributes']['__BLOCKSTUDIO_KEY'] = 'hero';
+			$blocks[0]['attrs']['blockstudio']['attributes']['text']              = 'Editor value';
+
+			wp_update_post(
+				array(
+					'ID'           => $post_id,
+					'post_content' => serialize_blocks( $blocks ),
+				)
+			);
+
+			$page_data['inline_content'] = '<block name="blockstudio/type-text" key="hero" text="Template v2" /><p>Sentinel v2</p>';
+			$result                      = $sync->sync( $page_data );
+
+			$this->assertSame( $post_id, $result );
+
+			$synced = parse_blocks( get_post_field( 'post_content', $post_id ) );
+
+			$this->assertSame( 'hero', $synced[0]['attrs']['__BLOCKSTUDIO_KEY'] );
+			$this->assertSame( 'Editor value', $synced[0]['attrs']['blockstudio']['attributes']['text'] );
+			$this->assertArrayNotHasKey(
+				'__BLOCKSTUDIO_KEY',
+				$synced[0]['attrs']['blockstudio']['attributes']
+			);
+			$this->assertStringContainsString( 'Sentinel v2', $synced[1]['innerHTML'] );
+			$this->assertStringNotContainsString( 'Sentinel v1', $synced[1]['innerHTML'] );
+		} finally {
+			wp_delete_post( $post_id, true );
 		}
 	}
 
@@ -761,6 +844,46 @@ class PagesTest extends TestCase {
 		}
 	}
 
+	public function test_duplicate_cleanup_keeps_one_deterministic_healthy_post(): void {
+		$page_data    = Pages::get_page( 'docs-getting-started' );
+		$keep_post_id = Pages::get_post_id( 'docs-getting-started' );
+		$sync         = new Page_Sync();
+		$fingerprint  = $sync->fingerprint( $page_data );
+		$engine        = Page_Sync::engine_fingerprint();
+		$duplicate_id  = wp_insert_post(
+			array(
+				'post_title'   => $page_data['title'],
+				'post_name'    => $page_data['slug'],
+				'post_type'    => $page_data['postType'],
+				'post_status'  => $page_data['postStatus'],
+				'post_content' => get_post_field( 'post_content', $keep_post_id ),
+			)
+		);
+
+		$this->assertIsInt( $duplicate_id );
+		$this->assertGreaterThan( $keep_post_id, $duplicate_id );
+
+		update_post_meta( $duplicate_id, '_blockstudio_page_key', $page_data['key'] );
+		update_post_meta( $duplicate_id, '_blockstudio_page_name', $page_data['name'] );
+		update_post_meta( $duplicate_id, '_blockstudio_page_source', $page_data['source_path'] );
+		update_post_meta( $duplicate_id, '_blockstudio_page_collection', $page_data['collection'] );
+		update_post_meta( $duplicate_id, '_blockstudio_page_path', $page_data['path'] );
+		update_post_meta( $duplicate_id, '_blockstudio_page_fingerprint', $fingerprint );
+		update_post_meta( $duplicate_id, '_blockstudio_page_engine_fingerprint', $engine );
+
+		$method = new ReflectionMethod( Page_Sync::class, 'prune_duplicate_posts' );
+
+		try {
+			$canonical_id = $method->invoke( $sync, $page_data, $duplicate_id, $fingerprint, $engine );
+
+			$this->assertSame( $keep_post_id, $canonical_id );
+			$this->assertSame( 'publish', get_post_status( $keep_post_id ) );
+			$this->assertSame( 'trash', get_post_status( $duplicate_id ) );
+		} finally {
+			wp_delete_post( $duplicate_id, true );
+		}
+	}
+
 	public function test_collection_duplicate_auto_draft_posts_are_pruned(): void {
 		$page_data    = Pages::get_page( 'docs-getting-started' );
 		$keep_post_id = Pages::get_post_id( 'docs-getting-started' );
@@ -804,6 +927,92 @@ class PagesTest extends TestCase {
 		$this->assertNotEmpty( $path );
 		$this->assertStringEndsWith( '.md', $path );
 		$this->assertFileExists( $path );
+	}
+
+	public function test_raw_markdown_access_requires_publicly_viewable_or_readable_post(): void {
+		$method = new ReflectionMethod( Pages::class, 'can_serve_markdown_post' );
+		$method->setAccessible( true );
+
+		$public_id   = wp_insert_post(
+			array(
+				'post_type'    => 'page',
+				'post_status'  => 'publish',
+				'post_title'   => 'Public Markdown Source',
+				'post_content' => '',
+			),
+			true
+		);
+		$draft_id    = wp_insert_post(
+			array(
+				'post_type'    => 'page',
+				'post_status'  => 'draft',
+				'post_title'   => 'Draft Markdown Source',
+				'post_content' => '',
+			),
+			true
+		);
+		$password_id = wp_insert_post(
+			array(
+				'post_type'     => 'page',
+				'post_status'   => 'publish',
+				'post_title'    => 'Password Markdown Source',
+				'post_content'  => '',
+				'post_password' => 'secret',
+			),
+			true
+		);
+
+		$this->assertIsInt( $public_id );
+		$this->assertIsInt( $draft_id );
+		$this->assertIsInt( $password_id );
+
+		try {
+			wp_set_current_user( 0 );
+
+			$this->assertTrue( $method->invoke( null, get_post( $public_id ) ) );
+			$this->assertFalse( $method->invoke( null, get_post( $draft_id ) ) );
+			$this->assertFalse( $method->invoke( null, get_post( $password_id ) ) );
+		} finally {
+			wp_delete_post( $public_id, true );
+			wp_delete_post( $draft_id, true );
+			wp_delete_post( $password_id, true );
+		}
+	}
+
+	public function test_parent_resolution_falls_back_to_draft_parent_meta(): void {
+		$registry = Page_Registry::instance();
+		$registry->reset();
+
+		$parent_id = wp_insert_post(
+			array(
+				'post_type'   => 'page',
+				'post_status' => 'draft',
+				'post_title'  => 'Draft Parent',
+				'post_name'   => 'draft-parent',
+			),
+			true
+		);
+		$this->assertIsInt( $parent_id );
+		update_post_meta( $parent_id, '_blockstudio_page_key', 'draft-parent-key' );
+		update_post_meta( $parent_id, '_blockstudio_page_name', 'draft-parent-key' );
+
+		$method = new ReflectionMethod( Page_Sync::class, 'resolve_parent_id' );
+		$method->setAccessible( true );
+
+		try {
+			$this->assertSame(
+				$parent_id,
+				$method->invoke(
+					new Page_Sync(),
+					array(
+						'parent_key' => 'draft-parent-key',
+						'postType'   => 'page',
+					)
+				)
+			);
+		} finally {
+			wp_delete_post( $parent_id, true );
+		}
 	}
 
 	public function test_collection_helpers_include_synced_permalink(): void {
@@ -855,7 +1064,7 @@ class PagesTest extends TestCase {
 
 		Pages::reset();
 
-		$this->assertEmpty( Pages::pages() );
+		$this->assertNotEmpty( Pages::pages() );
 	}
 
 	public function test_init_context_blocks_frontend_without_force(): void {
@@ -872,12 +1081,25 @@ class PagesTest extends TestCase {
 		$this->assertTrue( $method->invoke( null, array( 'force' => true ), false, false ) );
 	}
 
-	public function test_init_context_allows_admin_and_cli_without_force(): void {
+	public function test_init_context_allows_admin_but_blocks_cli_without_force(): void {
 		$method = new ReflectionMethod( Pages::class, 'can_init_in_current_context' );
-		$method->setAccessible( true );
 
 		$this->assertTrue( $method->invoke( null, array(), true, false ) );
-		$this->assertTrue( $method->invoke( null, array(), false, true ) );
+		$this->assertFalse( $method->invoke( null, array(), false, true ) );
+	}
+
+	/**
+	 * Request-safe editor hooks remain available when discovery is gated.
+	 */
+	public function test_editor_assets_register_without_page_reconciliation(): void {
+		if ( ! function_exists( 'get_current_screen' ) ) {
+			require_once ABSPATH . 'wp-admin/includes/class-wp-screen.php';
+			require_once ABSPATH . 'wp-admin/includes/screen.php';
+		}
+		set_current_screen( 'post' );
+		do_action( 'enqueue_block_editor_assets' );
+
+		$this->assertTrue( wp_script_is( 'blockstudio-pages', 'registered' ) );
 	}
 
 	// Block content slashing
@@ -931,9 +1153,6 @@ class PagesTest extends TestCase {
 
 		$registry = Page_Registry::instance();
 		$registry->reset();
-		$this->assertEmpty( $registry->get_pages() );
-
-		$registry->hydrate_from_posts();
 
 		$pages = $registry->get_pages();
 		$this->assertNotEmpty( $pages );

@@ -103,6 +103,17 @@ class Assets {
 	public static bool $force_editor_screen = false;
 
 	/**
+	 * Reset request-local asset state for in-process batch rendering.
+	 *
+	 * @return void
+	 */
+	public static function reset_request_state(): void {
+		self::$modules             = array();
+		self::$parsed_asset_ids    = array();
+		self::$force_editor_screen = false;
+	}
+
+	/**
 	 * Whether the editor reset is enabled.
 	 *
 	 * @return bool
@@ -152,6 +163,36 @@ class Assets {
 	}
 
 	/**
+	 * Expose frontend body classes to the block editor canvas.
+	 *
+	 * @param array $settings The block editor settings.
+	 *
+	 * @return array The block editor settings.
+	 */
+	public function add_canvas_body_classes( $settings ) {
+		if ( ! self::is_reset_enabled() ) {
+			return $settings;
+		}
+
+		$classes = apply_filters( 'body_class', array(), '' ); // phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedHooknameFound -- Core WordPress hook.
+		$classes = is_array( $classes ) ? $classes : array();
+		$classes = array_values(
+			array_unique(
+				array_filter(
+					array_map( 'sanitize_html_class', $classes )
+				)
+			)
+		);
+
+		$settings['blockstudioCanvasBodyClasses'] = apply_filters(
+			'blockstudio/editor/canvas/body_class',
+			$classes
+		);
+
+		return $settings;
+	}
+
+	/**
 	 * Constructor.
 	 */
 	public function __construct() {
@@ -163,6 +204,7 @@ class Assets {
 		add_action( 'admin_head', array( $this, 'render_parent_editor_enhancement_styles' ) );
 		add_filter( 'admin_body_class', array( $this, 'add_parent_editor_enhancement_body_class' ) );
 		add_filter( 'block_editor_settings_all', array( $this, 'maybe_reset_editor_styles' ) );
+		add_filter( 'block_editor_settings_all', array( $this, 'add_canvas_body_classes' ) );
 		add_filter( 'block_editor_settings_all', array( $this, 'maybe_fullwidth_editor' ), 10, 2 );
 		add_filter(
 			'block_editor_settings_all',
@@ -486,18 +528,6 @@ class Assets {
 	}
 
 	/**
-	 * Get Interactivity API import map.
-	 *
-	 * @return string The import map HTML.
-	 */
-	public static function get_interactivity_api_import_map(): string {
-		$string = '<script type="importmap"> { "imports": { "@wordpress/interactivity": "@path/@wordpress/interactivity/build-module/index.js", "preact": "@path/preact/dist/preact.module.js", "preact/hooks": "@path/preact/hooks/dist/hooks.module.js", "@preact/signals": "@path/@preact/signals/dist/signals.module.js", "@preact/signals-core": "@path/@preact/signals-core/dist/signals-core.module.js" } } </script>';
-		$path   = BLOCKSTUDIO_URL . 'includes/assets/interactivity';
-
-		return str_replace( '@path', $path, $string );
-	}
-
-	/**
 	 * Get the importmap for blocks using the Interactivity API.
 	 *
 	 * Checks if any block on the page has interactivity enabled and returns
@@ -724,14 +754,23 @@ class Assets {
 	 * @return string The asset version string.
 	 */
 	public static function get_asset_version( string $path, string $scoped_class = '', ?int $source_mtime = null ): string {
-		$mtimes = array( (string) ( $source_mtime ?? filemtime( $path ) ) );
+		$mtimes       = array( (string) ( $source_mtime ?? filemtime( $path ) ) );
+		$is_js        = str_ends_with( $path, '.js' );
+		$process_scss = self::should_process_scss( $path );
 
 		if ( '' !== $scoped_class ) {
 			$mtimes[] = $scoped_class;
 		}
 
-		if ( str_ends_with( $path, '.js' ) || ! self::should_process_scss( $path ) ) {
-			return $mtimes[0];
+		if ( $is_js ) {
+			$mtimes[] = 'minify-js:' . ( Settings::get( 'assets/minify/js' ) ? '1' : '0' );
+		} else {
+			$mtimes[] = 'minify-css:' . ( Settings::get( 'assets/minify/css' ) ? '1' : '0' );
+			$mtimes[] = 'process-scss:' . ( $process_scss ? '1' : '0' );
+		}
+
+		if ( $is_js || ! $process_scss ) {
+			return md5( wp_json_encode( $mtimes ) );
 		}
 
 		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Reading local file.
@@ -810,7 +849,7 @@ class Assets {
 	 */
 	public static function get_compiled_filename( $path, string $scoped_class = '' ): string {
 		$file = pathinfo( $path );
-		$dir  = $file['dirname'];
+		$dir  = self::get_dist_folder( $path );
 		$file = $file['filename'];
 
 		$ext               = pathinfo( $path, PATHINFO_EXTENSION );
@@ -825,7 +864,27 @@ class Assets {
 			$ext = 'css';
 		}
 
-		return $dir . '/_dist/' . $file . '-' . $id . '.' . $ext;
+		return $dir . '/' . $file . '-' . $id . '.' . $ext;
+	}
+
+	/**
+	 * Resolve the generated distribution directory for a source path.
+	 *
+	 * @param string $source_path Asset source file or directory.
+	 *
+	 * @return string Distribution directory.
+	 */
+	public static function get_dist_folder( string $source_path ): string {
+		$source_path = wp_normalize_path( $source_path );
+		$directory   = is_dir( $source_path ) ? $source_path : dirname( $source_path );
+		$suggested   = rtrim( $directory, '/' ) . '/_dist';
+
+		return Runtime_Context::output_path(
+			$suggested,
+			$source_path,
+			'assets',
+			array( 'type' => 'directory' )
+		);
 	}
 
 	/**
@@ -843,7 +902,7 @@ class Assets {
 		}
 
 		$file = pathinfo( $path );
-		$dir  = $file['dirname'] . '/_dist';
+		$dir  = self::get_dist_folder( $path );
 		$name = $file['filename'];
 		$ext  = $file['extension'];
 
@@ -959,7 +1018,7 @@ class Assets {
 
 		foreach ( $block['assets'] ?? array() as $k => $v ) {
 			if ( 'inline' !== $v['type'] ) {
-				if ( false !== strpos( $k, 'style' ) ) {
+				if ( self::is_css( $k ) ) {
 					$style .= self::render_tag( $k, $v, $block );
 				} else {
 					$script .= self::render_tag( $k, $v, $block );
@@ -967,7 +1026,7 @@ class Assets {
 			} else {
 				$k = str_replace( array( '.inline', '-inline' ), '', $k );
 
-				if ( false !== strpos( $k, 'style' ) ) {
+				if ( self::is_css( $k ) ) {
 					$style .= self::render_inline( $k, $v, $block, true );
 				} else {
 					$script .= self::render_inline( $k, $v, $block, true );
@@ -988,12 +1047,23 @@ class Assets {
 	 * @return void
 	 */
 	public static function get_module_css_assets( $block, &$asset_ids, &$element ): void {
-		foreach (
-			Files::get_files_with_extension(
-				$block['file']['dirname'] . '/_dist/modules',
-				'css'
-			) as $filename
-		) {
+		$source_paths = array( $block['path'] ?? '' );
+
+		foreach ( $block['assets'] ?? array() as $asset ) {
+			if ( is_array( $asset ) && is_string( $asset['path'] ?? null ) ) {
+				$source_paths[] = $asset['path'];
+			}
+		}
+
+		$filenames = array();
+		foreach ( array_unique( array_filter( $source_paths ) ) as $source_path ) {
+			$filenames = array_merge(
+				$filenames,
+				Files::get_files_with_extension( self::get_dist_folder( $source_path ) . '/modules', 'css' )
+			);
+		}
+
+		foreach ( array_unique( $filenames ) as $filename ) {
 			$file = pathinfo( $filename );
 
 			if ( in_array( $file['filename'], $asset_ids, true ) ) {
@@ -1082,10 +1152,7 @@ class Assets {
 			if ( isset( $block['assets'] ) ) {
 				foreach ( $block['assets'] as $k => $v ) {
 					if (
-						false !== strpos(
-							$k,
-							'customizer' === $type ? 'editor' : 'view'
-						)
+						preg_match( '/(?:^|[-.])' . preg_quote( 'customizer' === $type ? 'editor' : 'view', '/' ) . '\.(?:css|scss|js)$/', (string) $k )
 					) {
 						continue;
 					}
@@ -1533,35 +1600,30 @@ class Assets {
 			return;
 		}
 
-		if ( $should_process ) {
-			// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Reading local file.
-			$data = apply_filters( 'blockstudio/assets/process/css/content', file_get_contents( $path ) );
-			$data = self::replace_selector_placeholder( $data, $scoped_class, $scope_css );
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Reading local file.
+		$data = apply_filters( 'blockstudio/assets/process/css/content', file_get_contents( $path ) );
+		$data = self::replace_selector_placeholder( $data, $scoped_class, $scope_css );
 
-			if ( $process_scss ) {
-				$data = self::compile_scss( $data, $path );
-			}
-
-			if ( $scope_css ) {
-				$data = self::prefix_css( $data, '.' . $scoped_class );
-				$data = self::resolve_scoped_selector_placeholder( $data, $scoped_class );
-			}
-
-			if ( $minify_css ) {
-				$minifier = new Minify\CSS();
-				$minifier->add( $data );
-				$data = $minifier->minify();
-			}
-
-			if ( ! is_dir( $dist_folder ) ) {
-				wp_mkdir_p( $dist_folder );
-			}
-
-			// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents -- Writing compiled file.
-			file_put_contents( $compiled_filename, $data );
-
-			return $compiled_filename;
+		if ( $process_scss ) {
+			$data = self::compile_scss( $data, $path );
 		}
+
+		if ( $scope_css ) {
+			$data = self::prefix_css( $data, '.' . $scoped_class );
+			$data = self::resolve_scoped_selector_placeholder( $data, $scoped_class );
+		}
+
+		if ( $minify_css ) {
+			$minifier = new Minify\CSS();
+			$minifier->add( $data );
+			$data = $minifier->minify();
+		}
+
+		if ( ! Single_Flight::publish( $compiled_filename, $data ) ) {
+			return;
+		}
+
+		return $compiled_filename;
 	}
 
 	/**
@@ -1623,12 +1685,9 @@ class Assets {
 			! file_exists( $compiled_filename ) &&
 			( $minify_js || $has_es_modules || $has_css_modules )
 		) {
-			if ( ! is_dir( $dist_folder ) ) {
-				wp_mkdir_p( $dist_folder );
+			if ( ! Single_Flight::publish( $compiled_filename, $data ) ) {
+				return;
 			}
-
-			// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents -- Writing compiled file.
-			file_put_contents( $compiled_filename, $data );
 
 			return array_merge(
 				$es_modules['filenames'],
@@ -1649,7 +1708,7 @@ class Assets {
 	public static function process( $path, string $scoped_class ) {
 		$pathinfo    = pathinfo( $path );
 		$ext         = $pathinfo['extension'];
-		$dist_folder = $pathinfo['dirname'] . '/_dist';
+		$dist_folder = self::get_dist_folder( $path );
 		$result      = null;
 
 		if ( self::is_css_extension( $ext ) ) {
@@ -1715,14 +1774,19 @@ class Assets {
 			$contents = self::prefix_editor_styles( $contents );
 		}
 
+		if ( ! $is_script ) {
+			$contents = self::prepare_ui_inline_style( $contents, $block );
+		}
+
 		if ( $is_script ) {
 			preg_match_all( "/[\"'](.\/modules\/)([a-zA-Z0-9.-@_-]*)[\"']/", $contents, $modules );
 
 			foreach ( $modules[2] as $module ) {
-				$name        = explode( '/', $module )[0];
-				$version     = str_replace( '.js', '', explode( '/', $module )[1] );
-				$module_path = $block['file']['dirname'] . '/_dist/modules/' . $name . '/' . $version . '.js';
-				$module_id   = $name . '-' . $version;
+				$name          = explode( '/', $module )[0];
+				$version       = str_replace( '.js', '', explode( '/', $module )[1] );
+				$module_source = is_string( $data['path'] ?? null ) ? $data['path'] : $block['path'];
+				$module_path   = self::get_dist_folder( $module_source ) . '/modules/' . $name . '/' . $version . '.js';
+				$module_id     = $name . '-' . $version;
 
 				if ( file_exists( $module_path ) ) {
 					if ( ! isset( self::$modules[ $module_id ] ) ) {
@@ -1751,6 +1815,33 @@ class Assets {
 	}
 
 	/**
+	 * Prepare bundled UI inline CSS for output.
+	 *
+	 * @param string $contents CSS contents.
+	 * @param array  $block    Block data.
+	 *
+	 * @return string Prepared CSS.
+	 */
+	private static function prepare_ui_inline_style( string $contents, array $block ): string {
+		$block_name = $block['name'] ?? '';
+
+		if ( ! is_string( $block_name ) || ! str_starts_with( $block_name, 'bsui/' ) ) {
+			return $contents;
+		}
+
+		$component = sanitize_key( substr( $block_name, strlen( 'bsui/' ) ) );
+		if ( '' !== $component ) {
+			$variants_style = apply_filters( 'blockstudio/ui/' . $component . '/variants-style', '', $block );
+
+			if ( is_string( $variants_style ) && '' !== trim( $variants_style ) ) {
+				$contents .= "\n" . trim( $variants_style );
+			}
+		}
+
+		return "@layer bsui {\n" . $contents . "\n}";
+	}
+
+	/**
 	 * Render tag asset.
 	 *
 	 * @param string $type  The asset type.
@@ -1769,7 +1860,7 @@ class Assets {
 		$path                = $data['path'];
 		$maybe_compiled_path = self::get_path( $path );
 
-		if ( 0 === filesize( $maybe_compiled_path ) ) {
+		if ( ! is_file( $maybe_compiled_path ) || 0 === filesize( $maybe_compiled_path ) ) {
 			return null;
 		}
 

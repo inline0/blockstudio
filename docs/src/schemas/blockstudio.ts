@@ -137,6 +137,15 @@ export const blockstudio = {
             'This filter allows you to enable/disable all Blockstudio file-backed runtime and editor asset caches.',
           example: false,
         },
+        path: {
+          type: 'string',
+          default: 'blockstudio/cache',
+          description:
+            'Cache directory. Relative paths resolve from WP_CONTENT_DIR; absolute paths are used as provided.',
+          descriptionFilter:
+            'This filter allows you to change the Blockstudio file-backed cache directory.',
+          example: 'cache/blockstudio',
+        },
       },
       additionalProperties: true,
     },

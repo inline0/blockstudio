@@ -15,6 +15,11 @@ export const Checkbox = ({
   v: BlockstudioAttribute;
   options: BlockstudioFieldsOptions[];
 }) => {
+  const optionValueLabels = options.map(({ value, label }) => ({
+    value,
+    label,
+  }));
+
   return (
     <Base>
       <div className={`blockstudio-space blockstudio-space--half`}>
@@ -31,7 +36,7 @@ export const Checkbox = ({
             onChange={() =>
               v?.length === options.length
                 ? change([], true)
-                : change(options, true)
+                : change(optionValueLabels, true)
             }
           />
         )}

@@ -891,6 +891,24 @@ class BlockTagsParserTest extends TestCase {
 		$this->assertArrayNotHasKey( 'key', $block['attrs'] );
 	}
 
+	public function test_custom_block_key_stays_outside_field_attributes(): void {
+		$block = Block_Tags::build_block_array(
+			'blockstudio/type-text',
+			array(
+				'key'  => 'hero',
+				'text' => 'Template heading',
+			),
+			''
+		);
+
+		$this->assertSame( 'hero', $block['attrs']['__BLOCKSTUDIO_KEY'] );
+		$this->assertSame( 'Template heading', $block['attrs']['blockstudio']['attributes']['text'] );
+		$this->assertArrayNotHasKey(
+			'__BLOCKSTUDIO_KEY',
+			$block['attrs']['blockstudio']['attributes']
+		);
+	}
+
 	// -------------------------------------------------------------------------
 	// Stress test
 	// -------------------------------------------------------------------------

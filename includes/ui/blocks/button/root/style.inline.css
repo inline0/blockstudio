@@ -22,6 +22,22 @@
 	pointer-events: none;
 }
 
+[data-bsui-button-icon] {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	width: 1em;
+	height: 1em;
+	flex-shrink: 0;
+	pointer-events: none;
+}
+
+[data-bsui-button-icon] svg {
+	display: block;
+	width: 1em;
+	height: 1em;
+}
+
 [data-bsui-button][data-size="default"] {
 	height: var(--bs-ui-control-height);
 	padding: 0 var(--bs-ui-control-padding);

@@ -8,6 +8,13 @@
 require_once __DIR__ . '/test-helper.php';
 
 add_action(
+	'after_setup_theme',
+	function () {
+		add_theme_support( 'block-templates' );
+	}
+);
+
+add_action(
 	'wp_footer',
 	function () {
 		if ( ! defined( 'BLOCKSTUDIO_VERSION' ) ) {

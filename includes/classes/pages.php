@@ -18,6 +18,11 @@ namespace Blockstudio;
 class Pages {
 
 	/**
+	 * Per-site option containing the last fully verified deployment source.
+	 */
+	private const SOURCE_IDENTITY_OPTION = 'blockstudio_pages_successful_source_identity';
+
+	/**
 	 * Whether pages have been initialized.
 	 *
 	 * @var bool
@@ -25,14 +30,21 @@ class Pages {
 	private static bool $initialized = false;
 
 	/**
-	 * Whether page hooks have been registered.
+	 * Whether an explicit reconciliation owns the current request.
+	 *
+	 * @var bool
+	 */
+	private static bool $reconciling = false;
+
+	/**
+	 * Whether discovery-dependent page hooks have been registered.
 	 *
 	 * @var bool
 	 */
 	private static bool $hooks_registered = false;
 
 	/**
-	 * Whether frontend runtime hooks have been registered.
+	 * Whether request-safe frontend and editor runtime hooks have been registered.
 	 *
 	 * @var bool
 	 */
@@ -88,6 +100,17 @@ class Pages {
 	private static bool $rendering_layout = false;
 
 	/**
+	 * Reset frontend page layout state without rebuilding the page registry.
+	 *
+	 * @return void
+	 */
+	public static function reset_request_state(): void {
+		self::$current_page         = null;
+		self::$current_page_content = '';
+		self::$rendering_layout     = false;
+	}
+
+	/**
 	 * Initialize the pages system.
 	 *
 	 * @param array $args Optional arguments.
@@ -104,7 +127,215 @@ class Pages {
 			return;
 		}
 
-		self::register_collection_post_types();
+		$report   = self::reconcile(
+			array(
+				'authoritative' => false,
+				'full'          => ! empty( $args['force'] ),
+				'plan_valid'    => false,
+			)
+		);
+		$registry = Page_Registry::instance();
+
+		if ( ! self::$hooks_registered ) {
+			self::register_template_for_hooks();
+
+			self::$hooks_registered = true;
+		}
+
+		self::$initialized = true;
+
+		/**
+		 * Fires after pages have been synced.
+		 *
+		 * @param Page_Registry $registry The page registry instance.
+		 */
+		do_action( 'blockstudio/pages/synced', $registry, $report );
+	}
+
+	/**
+	 * Reconcile the complete desired filesystem inventory with managed posts.
+	 *
+	 * This is the only deployment/CLI entry point that performs discovery and
+	 * synchronization. Git data in $args is an optimization and audit hint; the
+	 * desired content fingerprints and managed inventory remain authoritative.
+	 *
+	 * @param array $args Reconciliation and source-plan arguments.
+	 *
+	 * @return array Reconciliation report and source identity.
+	 */
+	public static function reconcile( array $args = array() ): array {
+		$was_reconciling   = self::$reconciling;
+		self::$reconciling = true;
+
+		try {
+			self::register_collection_post_types();
+
+			$registry = self::discover_registry();
+			$sync     = new Page_Sync();
+			$pages    = $registry->get_registered_pages();
+			$managed  = $sync->managed_posts();
+			$indexes  = self::managed_post_indexes( $managed );
+			$engine   = Page_Sync::engine_fingerprint();
+			$desired  = array();
+
+			foreach ( $pages as $name => $page_data ) {
+				$desired[ $name ] = array(
+					'fingerprint'  => $sync->fingerprint( $page_data ),
+					'dependencies' => $sync->dependency_ids( $page_data ),
+					'key'          => (string) ( $page_data['key'] ?? $name ),
+					'source'       => (string) ( $page_data['source_path'] ?? '' ),
+				);
+			}
+
+			if ( empty( $pages ) && ! empty( $managed ) && empty( $registry->get_paths() ) ) {
+				$registry->add_errors(
+					array(
+						array(
+							'code'    => 'no_page_paths',
+							'message' => 'No valid page discovery path was available; managed posts were preserved.',
+						),
+					)
+				);
+			}
+
+			$source_identity = self::build_source_identity( $desired, $engine, $args );
+			$previous        = self::successful_source_identity();
+			$full            = ! empty( $args['full'] )
+				|| empty( $args['plan_valid'] )
+				|| ! empty( $args['broad'] )
+				|| empty( $previous )
+				|| ! hash_equals( (string) ( $previous['engineFingerprint'] ?? '' ), $engine );
+
+			$report = array(
+				'discovered'         => count( $pages ),
+				'created'            => 0,
+				'updated'            => 0,
+				'unchanged'          => 0,
+				'removed'            => 0,
+				'failed'             => count( $registry->get_errors() ),
+				'fullReconciliation' => $full,
+				'sourceId'           => $source_identity['hash'],
+				'sourceIdentity'     => $source_identity,
+				'pages'              => array(),
+				'errors'             => $registry->get_errors(),
+			);
+
+			$used_post_ids = array();
+			foreach ( $pages as $name => $page_data ) {
+				$identity = $desired[ $name ];
+				$existing = self::resolve_managed_post( $page_data, $identity, $indexes, $args, $used_post_ids );
+				$result   = $sync->reconcile(
+					$page_data,
+					array(
+						'existing'           => $existing,
+						'fingerprint'        => $identity['fingerprint'],
+						'engine_fingerprint' => $engine,
+						'authoritative'      => ! empty( $args['authoritative'] ),
+						'prune_duplicates'   => count( $indexes['key'][ $identity['key'] ] ?? array() ) > 1
+							|| count( $indexes['source'][ $identity['source'] ] ?? array() ) > 1,
+					)
+				);
+
+				$status = in_array( $result['status'], array( 'created', 'updated', 'unchanged', 'failed' ), true ) ? $result['status'] : 'failed';
+				++$report[ $status ];
+				$report['pages'][ $name ] = array(
+					'status' => $status,
+					'postId' => $result['post_id'],
+					'locked' => $result['locked'],
+				);
+
+				if ( $result['error'] instanceof \WP_Error ) {
+					$report['errors'][] = array(
+						'page'    => $name,
+						'code'    => $result['error']->get_error_code(),
+						'message' => $result['error']->get_error_message(),
+					);
+				} elseif ( 'failed' === $status ) {
+					$report['errors'][] = array(
+						'page'    => $name,
+						'code'    => 'reconcile_failed',
+						'message' => 'The managed page could not be reconciled.',
+					);
+				}
+
+				if ( $result['post_id'] > 0 ) {
+					$used_post_ids[ $result['post_id'] ] = true;
+					self::hydrate_registry_page( $registry, $name, $page_data, $result['post_id'] );
+				}
+			}
+
+			if ( 0 === count( $registry->get_errors() ) ) {
+				$report['removed'] = $sync->prune_missing(
+					array_column( $desired, 'key' ),
+					array_column( $desired, 'source' ),
+					$managed
+				);
+			}
+
+			/**
+			 * Fires after one explicit page reconciliation pass.
+			 *
+			 * @param array         $report   Reconciliation report.
+			 * @param Page_Registry $registry Discovered registry.
+			 */
+			do_action( 'blockstudio/pages/reconciled', $report, $registry );
+
+			return $report;
+		} finally {
+			self::$reconciling = $was_reconciling;
+		}
+	}
+
+	/**
+	 * Read the last source identity stored after a verified deployment.
+	 *
+	 * @return array<string, string> Successful source identity or an empty array.
+	 */
+	public static function successful_source_identity(): array {
+		$identity = get_option( self::SOURCE_IDENTITY_OPTION, array() );
+
+		return is_array( $identity ) ? $identity : array();
+	}
+
+	/**
+	 * Store a source identity after reconciliation, artifact activation, and route verification.
+	 *
+	 * Reconcile deliberately never calls this method. Deployment orchestration owns
+	 * the success boundary so a later artifact failure cannot advance the marker.
+	 *
+	 * @param array $identity Source identity returned by reconcile().
+	 *
+	 * @return bool Whether a valid identity was stored.
+	 */
+	public static function store_successful_source_identity( array $identity ): bool {
+		$required = array( 'hash', 'inventoryHash', 'engineFingerprint' );
+
+		foreach ( $required as $key ) {
+			if ( ! isset( $identity[ $key ] ) || ! is_string( $identity[ $key ] ) || '' === $identity[ $key ] ) {
+				return false;
+			}
+		}
+
+		$normalized = array(
+			'commit'            => isset( $identity['commit'] ) && is_string( $identity['commit'] ) ? $identity['commit'] : '',
+			'dirtyHash'         => isset( $identity['dirtyHash'] ) && is_string( $identity['dirtyHash'] ) ? $identity['dirtyHash'] : '',
+			'inventoryHash'     => $identity['inventoryHash'],
+			'engineFingerprint' => $identity['engineFingerprint'],
+			'hash'              => $identity['hash'],
+		);
+
+		return update_option( self::SOURCE_IDENTITY_OPTION, $normalized, false )
+			|| self::successful_source_identity() === $normalized;
+	}
+
+	/**
+	 * Discover the desired page inventory into a fresh registry.
+	 *
+	 * @return Page_Registry Discovered registry.
+	 */
+	private static function discover_registry(): Page_Registry {
+		$registry = Page_Registry::instance();
+		$registry->reset();
 
 		$paths = self::get_paths();
 
@@ -115,27 +346,10 @@ class Pages {
 		 */
 		$paths = apply_filters( 'blockstudio/pages/paths', $paths );
 
-		$registry = Page_Registry::instance();
-		$sync     = new Page_Sync();
-
-		if ( ! empty( $args['force'] ) ) {
-			$registry->reset();
-		}
-
-		$active_sources = array();
-		$post_types     = array();
-
-		foreach ( $paths as $path ) {
-			if ( ! is_dir( $path ) ) {
-				continue;
-			}
-
-			$path      = untrailingslashit( wp_normalize_path( $path ) );
+		foreach ( Discovery_Sources::for_paths( 'pages', $paths ) as $source ) {
 			$discovery = new Page_Discovery();
-
-			$registry->add_path( $path );
-
-			$pages = $discovery->discover( $path );
+			$registry->add_path( $source->root() );
+			$pages = $discovery->discover( $source );
 
 			foreach ( $discovery->get_collections() as $collection => $collection_data ) {
 				$registry->register_collection( $collection, $collection_data );
@@ -148,44 +362,232 @@ class Pages {
 			}
 		}
 
-		foreach ( $registry->get_pages() as $name => $page_data ) {
-			$post_id = $sync->sync( $page_data );
+		return $registry;
+	}
 
-			if ( is_int( $post_id ) && $post_id > 0 ) {
-				$registry->set_synced_post( $page_data['source_path'], $post_id );
-				$registry->update_page_data( $name, 'post_id', $post_id );
-				$registry->update_page_data( $name, 'post_parent', (int) get_post_field( 'post_parent', $post_id ) );
-				$registry->update_page_data( $name, 'permalink', get_permalink( $post_id ) );
+	/**
+	 * Index a preloaded managed post inventory by stable identity.
+	 *
+	 * @param array $posts Managed posts.
+	 *
+	 * @return array<string, array> Post indexes.
+	 */
+	private static function managed_post_indexes( array $posts ): array {
+		$indexes = array(
+			'id'     => array(),
+			'key'    => array(),
+			'source' => array(),
+		);
 
-				$collection = $page_data['collection'] ?? null;
+		foreach ( $posts as $post ) {
+			if ( ! $post instanceof \WP_Post ) {
+				continue;
+			}
 
-				if ( $collection ) {
-					$active_sources[ $collection ][]                     = $page_data['source_path'];
-					$post_types[ $collection ][ $page_data['postType'] ] = true;
+			$indexes['id'][ $post->ID ] = $post;
+			$key                        = (string) get_post_meta( $post->ID, '_blockstudio_page_key', true );
+			$source                     = (string) get_post_meta( $post->ID, '_blockstudio_page_source', true );
+
+			if ( '' !== $key ) {
+				$indexes['key'][ $key ][] = $post;
+			}
+			if ( '' !== $source ) {
+				$indexes['source'][ $source ][] = $post;
+			}
+		}
+
+		return $indexes;
+	}
+
+	/**
+	 * Resolve one managed post, including an explicit Git rename rebind.
+	 *
+	 * @param array $page_data     Desired page data.
+	 * @param array $identity      Desired fingerprint identity.
+	 * @param array $indexes       Managed post indexes.
+	 * @param array $args          Reconciliation arguments.
+	 * @param array $used_post_ids Post IDs already claimed this pass.
+	 *
+	 * @return \WP_Post|null Existing managed post.
+	 */
+	private static function resolve_managed_post( array $page_data, array $identity, array $indexes, array $args, array $used_post_ids ): ?\WP_Post {
+		$candidates = array();
+
+		if ( ! empty( $page_data['postId'] ) && isset( $indexes['id'][ (int) $page_data['postId'] ] ) ) {
+			$candidates[] = $indexes['id'][ (int) $page_data['postId'] ];
+		}
+		foreach ( $indexes['key'][ $identity['key'] ] ?? array() as $post ) {
+			$candidates[] = $post;
+		}
+		foreach ( $indexes['source'][ $identity['source'] ] ?? array() as $post ) {
+			$candidates[] = $post;
+		}
+
+		foreach ( $candidates as $post ) {
+			if ( $post instanceof \WP_Post && empty( $used_post_ids[ $post->ID ] ) ) {
+				return $post;
+			}
+		}
+
+		$renames = self::normalize_renames( $args['renames'] ?? array() );
+		if ( empty( $renames ) ) {
+			return null;
+		}
+
+		$desired_dependencies = array_fill_keys(
+			array_map( array( __CLASS__, 'normalize_plan_path' ), $identity['dependencies'] ),
+			true
+		);
+		$desired_dependencies[ self::normalize_plan_path( $identity['source'] ) ] = true;
+
+		foreach ( $renames as $rename ) {
+			if ( ! isset( $desired_dependencies[ $rename['to'] ] ) ) {
+				continue;
+			}
+
+			foreach ( $indexes['id'] as $post ) {
+				if ( ! $post instanceof \WP_Post || ! empty( $used_post_ids[ $post->ID ] ) ) {
+					continue;
+				}
+
+				$dependencies   = get_post_meta( $post->ID, '_blockstudio_page_dependencies', true );
+				$dependencies   = is_array( $dependencies ) ? $dependencies : array();
+				$dependencies[] = (string) get_post_meta( $post->ID, '_blockstudio_page_source', true );
+				$dependencies   = array_map( array( __CLASS__, 'normalize_plan_path' ), $dependencies );
+
+				if ( in_array( $rename['from'], $dependencies, true ) ) {
+					return $post;
 				}
 			}
 		}
 
-		foreach ( $active_sources as $collection => $sources ) {
-			$sync->mark_stale_missing( $sources, $collection, array_keys( $post_types[ $collection ] ?? array() ) );
+		return null;
+	}
+
+	/**
+	 * Normalize Git rename records into comparable dependency paths.
+	 *
+	 * @param mixed $renames Rename map or record list.
+	 *
+	 * @return array<int, array{from:string,to:string}> Rename records.
+	 */
+	private static function normalize_renames( mixed $renames ): array {
+		if ( ! is_array( $renames ) ) {
+			return array();
 		}
 
-		if ( ! self::$hooks_registered ) {
-			self::register_template_for_hooks();
-			self::register_template_lock_hooks();
-			self::register_block_editing_mode_hooks();
+		$normalized = array();
+		foreach ( $renames as $from => $to ) {
+			if ( is_array( $to ) ) {
+				$from_value = $to['from'] ?? $to['old'] ?? null;
+				$to_value   = $to['to'] ?? $to['new'] ?? null;
+			} else {
+				$from_value = $from;
+				$to_value   = $to;
+			}
 
-			self::$hooks_registered = true;
+			if ( ! is_scalar( $from_value ) || ! is_scalar( $to_value ) ) {
+				continue;
+			}
+
+			$normalized[] = array(
+				'from' => self::normalize_plan_path( (string) $from_value ),
+				'to'   => self::normalize_plan_path( (string) $to_value ),
+			);
 		}
 
-		self::$initialized = true;
+		return $normalized;
+	}
 
-		/**
-		 * Fires after pages have been synced.
-		 *
-		 * @param Page_Registry $registry The page registry instance.
-		 */
-		do_action( 'blockstudio/pages/synced', $registry );
+	/**
+	 * Normalize local, production, and stored dependency paths for plan matching.
+	 *
+	 * @param mixed $path Path value.
+	 *
+	 * @return string Comparable path.
+	 */
+	private static function normalize_plan_path( mixed $path ): string {
+		$path = wp_normalize_path( is_scalar( $path ) ? (string) $path : '' );
+		$path = preg_replace( '#^\./#', '', $path ) ?? $path;
+
+		if ( str_starts_with( $path, 'theme:' ) ) {
+			return $path;
+		}
+
+		if ( preg_match( '#/(pages|assets|blocks|patterns|templates|inc)/(.+)$#', $path, $matches ) ) {
+			return 'theme:' . $matches[1] . '/' . $matches[2];
+		}
+
+		if ( preg_match( '#^(pages|assets|blocks|patterns|templates|inc)/(.+)$#', ltrim( $path, '/' ), $matches ) ) {
+			return 'theme:' . $matches[1] . '/' . $matches[2];
+		}
+
+		return $path;
+	}
+
+	/**
+	 * Build the deterministic desired-inventory and deployment source identity.
+	 *
+	 * @param array  $desired Desired page fingerprint records.
+	 * @param string $engine  Sync-engine fingerprint.
+	 * @param array  $args    Reconciliation arguments.
+	 *
+	 * @return array<string, string> Source identity.
+	 */
+	private static function build_source_identity( array $desired, string $engine, array $args ): array {
+		$inventory = array();
+		foreach ( $desired as $name => $identity ) {
+			$inventory[ (string) $name ] = array(
+				'key'         => $identity['key'],
+				'source'      => $identity['source'],
+				'fingerprint' => $identity['fingerprint'],
+			);
+		}
+		ksort( $inventory, SORT_STRING );
+
+		$inventory_json = wp_json_encode( $inventory );
+		$source         = isset( $args['source'] ) && is_array( $args['source'] ) ? $args['source'] : array();
+		$identity       = array(
+			'commit'            => isset( $source['commit'] ) && is_scalar( $source['commit'] ) ? (string) $source['commit'] : '',
+			'dirtyHash'         => isset( $source['dirtyHash'] ) && is_scalar( $source['dirtyHash'] ) ? (string) $source['dirtyHash'] : '',
+			'inventoryHash'     => hash( 'sha256', false === $inventory_json ? '' : $inventory_json ),
+			'engineFingerprint' => $engine,
+		);
+
+		$identity_json    = wp_json_encode( $identity );
+		$identity['hash'] = hash( 'sha256', false === $identity_json ? '' : $identity_json );
+
+		return $identity;
+	}
+
+	/**
+	 * Hydrate one discovered registry entry from its managed post.
+	 *
+	 * @param Page_Registry $registry  Registry.
+	 * @param string        $name      Registry key.
+	 * @param array         $page_data Page data.
+	 * @param int           $post_id   Managed post ID.
+	 *
+	 * @return void
+	 */
+	private static function hydrate_registry_page( Page_Registry $registry, string $name, array $page_data, int $post_id ): void {
+		$registry->set_synced_post( (string) $page_data['source_path'], $post_id );
+		$registry->update_page_data( $name, 'post_id', $post_id );
+		$registry->update_page_data( $name, 'post_parent', (int) get_post_field( 'post_parent', $post_id ) );
+		$registry->update_page_data( $name, 'permalink', get_permalink( $post_id ) );
+	}
+
+	/**
+	 * Register collection post types during WordPress bootstrap.
+	 *
+	 * Collection routes must also exist during arbitrary WP-CLI commands because
+	 * those commands may rebuild rewrite rules. Generic CLI bootstrap reads the
+	 * persistent manifest cache; explicit reconciliation refreshes it from disk.
+	 *
+	 * @return void
+	 */
+	public static function maybe_register_collection_post_types(): void {
+		self::register_collection_post_types();
 	}
 
 	/**
@@ -204,7 +606,7 @@ class Pages {
 		}
 
 		self::maybe_flush_collection_rewrite_rules( $collections );
-		self::set_collection_manifests_cache( $collections );
+		self::set_collection_manifests_cache( $collections, false );
 	}
 
 	/**
@@ -592,29 +994,29 @@ class Pages {
 		$paths = apply_filters( 'blockstudio/pages/paths', $paths );
 
 		$cache_key = self::collection_manifests_cache_key( $paths );
-		$cached    = wp_cache_get( $cache_key, 'blockstudio' );
 
-		if ( ! $refresh && is_array( $cached ) ) {
-			self::set_collection_manifests_cache( $cached, false );
-			return self::$collection_manifests_cache ?? array();
-		}
+		if ( ! $refresh ) {
+			$cached = wp_cache_get( $cache_key, 'blockstudio' );
 
-		$transient = get_transient( $cache_key );
-
-		if ( ! $refresh && is_array( $transient ) ) {
-			self::set_collection_manifests_cache( $transient, false );
-			wp_cache_set( $cache_key, $transient, 'blockstudio', HOUR_IN_SECONDS );
-			return self::$collection_manifests_cache ?? array();
-		}
-
-		$collections = array();
-
-		foreach ( $paths as $path ) {
-			if ( ! is_dir( $path ) ) {
-				continue;
+			if ( self::collection_manifests_payload_fresh( $cached ) ) {
+				self::set_collection_manifests_cache( $cached['collections'], false );
+				return self::$collection_manifests_cache ?? array();
 			}
 
-			foreach ( Page_Discovery::discover_manifests( $path ) as $collection ) {
+			$transient = get_transient( $cache_key );
+
+			if ( self::collection_manifests_payload_fresh( $transient ) ) {
+				self::set_collection_manifests_cache( $transient['collections'], false );
+				wp_cache_set( $cache_key, $transient, 'blockstudio', HOUR_IN_SECONDS );
+				return self::$collection_manifests_cache ?? array();
+			}
+		}
+
+		$sources     = Discovery_Sources::for_paths( 'pages', $paths );
+		$collections = array();
+
+		foreach ( $sources as $source ) {
+			foreach ( Page_Discovery::discover_manifests( $source ) as $collection ) {
 				$collections[] = $collection;
 			}
 		}
@@ -625,12 +1027,60 @@ class Pages {
 	}
 
 	/**
+	 * Check whether a persistent manifest payload is still trustworthy.
+	 *
+	 * Manifest edits and removals are caught by the payload watch snapshot,
+	 * which stats only the known manifest files and source roots. Brand-new
+	 * collections in previously manifest-free trees are only visible to a
+	 * scan, so payloads older than the scan interval rebuild. Admin and
+	 * reconcile requests bypass this cache entirely.
+	 *
+	 * @param mixed $payload Cached payload.
+	 *
+	 * @return bool Whether the payload may be served.
+	 */
+	private static function collection_manifests_payload_fresh( mixed $payload ): bool {
+		if ( ! is_array( $payload ) || ! is_array( $payload['collections'] ?? null ) ) {
+			return false;
+		}
+
+		$scanned_at = (int) ( $payload['scannedAt'] ?? 0 );
+		$interval   = self::collection_manifest_scan_interval();
+		$age        = time() - $scanned_at;
+
+		if ( $age < 0 || $age >= $interval ) {
+			return false;
+		}
+
+		return Build_Cache::is_watch_valid( is_array( $payload['watch'] ?? null ) ? $payload['watch'] : array() );
+	}
+
+	/**
+	 * Get the collection manifest scan interval in seconds.
+	 *
+	 * @return int Scan interval.
+	 */
+	private static function collection_manifest_scan_interval(): int {
+		$environment = function_exists( 'wp_get_environment_type' ) ? wp_get_environment_type() : 'production';
+		$default     = in_array( $environment, array( 'local', 'development' ), true ) ? 5 : 20;
+
+		/**
+		 * Filter how often frontend requests rescan page trees for new collection manifests.
+		 *
+		 * @since 7.5.0
+		 *
+		 * @param int $seconds Scan interval in seconds.
+		 */
+		return max( 1, (int) apply_filters( 'blockstudio/pages/manifest_scan_interval', $default ) );
+	}
+
+	/**
 	 * Determine whether manifest caches should be refreshed from disk.
 	 *
 	 * @return bool Whether to bypass persistent manifest caches.
 	 */
 	private static function should_refresh_collection_manifest_cache(): bool {
-		return is_admin() || ( defined( 'WP_CLI' ) && WP_CLI );
+		return is_admin() || self::$reconciling;
 	}
 
 	/**
@@ -679,9 +1129,25 @@ class Pages {
 		/** This filter is documented in init(). */
 		$paths = apply_filters( 'blockstudio/pages/paths', $paths );
 
+		$watch_files = array();
+		$watch_dirs  = $paths;
+
+		foreach ( self::$collection_manifests_cache as $collection ) {
+			if ( is_string( $collection['manifest_path'] ?? null ) && '' !== $collection['manifest_path'] ) {
+				$watch_files[] = $collection['manifest_path'];
+				$watch_dirs[]  = dirname( $collection['manifest_path'] );
+			}
+		}
+
+		$payload = array(
+			'collections' => self::$collection_manifests_cache,
+			'watch'       => Build_Cache::create_watch_snapshot( $watch_files, $watch_dirs ),
+			'scannedAt'   => time(),
+		);
+
 		$cache_key = self::collection_manifests_cache_key( $paths );
-		wp_cache_set( $cache_key, self::$collection_manifests_cache, 'blockstudio', HOUR_IN_SECONDS );
-		set_transient( $cache_key, self::$collection_manifests_cache, HOUR_IN_SECONDS );
+		wp_cache_set( $cache_key, $payload, 'blockstudio', HOUR_IN_SECONDS );
+		set_transient( $cache_key, $payload, HOUR_IN_SECONDS );
 	}
 
 	/**
@@ -703,6 +1169,7 @@ class Pages {
 			array(
 				'paths'     => $paths,
 				'signature' => (string) get_option( 'blockstudio_collection_post_types_signature', '' ),
+				'context'   => Runtime_Context::hash( 'page-manifests', array( 'pages' ) ),
 			)
 		);
 
@@ -863,7 +1330,7 @@ class Pages {
 	/**
 	 * Determine whether pages should initialize in the current request.
 	 *
-	 * Normal automatic initialization stays limited to admin and WP-CLI.
+	 * Normal automatic initialization stays limited to admin requests.
 	 * Explicit force initialization is allowed for trusted callers that need to
 	 * sync pages from controlled frontend contexts, such as local dev tooling.
 	 *
@@ -881,7 +1348,7 @@ class Pages {
 		$is_admin_request ??= is_admin();
 		$is_cli_request   ??= defined( 'WP_CLI' ) && WP_CLI;
 
-		return $is_admin_request || $is_cli_request;
+		return $is_admin_request && ! $is_cli_request;
 	}
 
 	/**
@@ -890,23 +1357,7 @@ class Pages {
 	 * @return array<string> Array of directory paths.
 	 */
 	public static function get_paths(): array {
-		$paths = array();
-
-		$theme_path = get_template_directory() . '/pages';
-
-		if ( is_dir( $theme_path ) ) {
-			$paths[] = $theme_path;
-		}
-
-		if ( is_child_theme() ) {
-			$child_path = get_stylesheet_directory() . '/pages';
-
-			if ( is_dir( $child_path ) ) {
-				$paths[] = $child_path;
-			}
-		}
-
-		return $paths;
+		return Utils::theme_subdir_paths( 'pages' );
 	}
 
 	/**
@@ -1141,6 +1592,8 @@ class Pages {
 			return;
 		}
 		self::$runtime_hooks_registered = true;
+		self::register_template_lock_hooks();
+		self::register_block_editing_mode_hooks();
 		add_filter( 'the_content', array( __CLASS__, 'render_layout_content' ), 20 );
 		add_action( 'template_redirect', array( __CLASS__, 'serve_markdown' ), 1 );
 	}
@@ -1186,6 +1639,13 @@ class Pages {
 		}
 
 		$file = $post ? (string) get_post_meta( $post->ID, '_blockstudio_page_content_path', true ) : '';
+		if ( ! $post || ! self::can_serve_markdown_post( $post ) ) {
+			if ( $is_md_ext ) {
+				self::serve_markdown_not_found();
+			}
+			return;
+		}
+
 		if ( '' === $file || ! is_file( $file ) ) {
 			if ( $is_md_ext ) {
 				self::serve_markdown_not_found();
@@ -1199,8 +1659,8 @@ class Pages {
 			return;
 		}
 
-		$markdown = preg_replace( '/^---\R.*?\R---\R?/s', '', $markdown, 1 );
-		$markdown = ltrim( (string) $markdown );
+		$parts    = Page_Markdown::split_frontmatter( (string) $markdown );
+		$markdown = ltrim( (string) $parts['body'] );
 
 		nocache_headers();
 		status_header( 200 );
@@ -1214,6 +1674,21 @@ class Pages {
 
 		echo $markdown; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
 		exit;
+	}
+
+	/**
+	 * Check whether a raw markdown response may expose this post source.
+	 *
+	 * @param \WP_Post $post Post object.
+	 *
+	 * @return bool
+	 */
+	private static function can_serve_markdown_post( \WP_Post $post ): bool {
+		if ( '' !== (string) $post->post_password ) {
+			return current_user_can( 'read_post', $post->ID );
+		}
+
+		return is_post_publicly_viewable( $post ) || current_user_can( 'read_post', $post->ID );
 	}
 
 	/**
@@ -1532,6 +2007,7 @@ class Pages {
 	public static function reset(): void {
 		Page_Registry::instance()->reset();
 		self::$initialized                        = false;
+		self::$reconciling                        = false;
 		self::$collection_manifests_cache         = null;
 		self::$collection_manifests_by_slug_cache = null;
 		self::$current_page                       = null;

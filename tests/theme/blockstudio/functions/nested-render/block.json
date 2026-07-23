@@ -1,0 +1,16 @@
+{
+  "$schema": "https://blockstudio.dev/schema/block",
+  "name": "blockstudio/function-nested-render",
+  "title": "Nested Render",
+  "category": "blockstudio-test-native",
+  "icon": "star-filled",
+  "blockstudio": {
+    "attributes": [
+      {
+        "id": "label",
+        "type": "text",
+        "default": "Nested rendered label"
+      }
+    ]
+  }
+}

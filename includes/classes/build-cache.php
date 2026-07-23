@@ -42,6 +42,17 @@ final class Build_Cache {
 	private static bool $hooks_registered = false;
 
 	/**
+	 * Per-blog memo of runtime key inputs that are stable within a request.
+	 *
+	 * Multiple Build::init instances share one request; recomputing the
+	 * settings, field-type, and active-plugin fingerprints per instance
+	 * repeats option reads and one filesystem stat per active plugin.
+	 *
+	 * @var array<int, array<string, mixed>>
+	 */
+	private static array $key_input_memo = array();
+
+	/**
 	 * Register cache invalidation hooks.
 	 *
 	 * @return void
@@ -93,15 +104,57 @@ final class Build_Cache {
 	 * @return string Cache directory.
 	 */
 	public static function get_cache_dir( string $scope = '' ): string {
-		$uploads = wp_upload_dir();
-		$base    = $uploads['basedir'] . '/blockstudio/cache';
-		$base    = rtrim( wp_normalize_path( $base ), '/' );
+		$default = wp_normalize_path( WP_CONTENT_DIR . '/blockstudio/cache' );
+		$base    = self::resolve_cache_base( Settings::get( 'cache/path', 'blockstudio/cache' ), $default );
+
+		/**
+		 * Filter the base directory used for file-backed caches.
+		 *
+		 * Relative paths resolve from WP_CONTENT_DIR. The scope is appended
+		 * after this filter runs.
+		 *
+		 * @param string $base Base cache directory.
+		 */
+		$filtered = apply_filters( 'blockstudio/cache/dir', $base );
+		$base     = self::resolve_cache_base( $filtered, $base );
 
 		if ( '' === $scope ) {
 			return $base;
 		}
 
 		return $base . '/' . sanitize_key( $scope );
+	}
+
+	/**
+	 * Resolve a configured cache path.
+	 *
+	 * Relative paths are contained within WP_CONTENT_DIR. Absolute paths are
+	 * accepted for hosts that expose a dedicated writable cache volume.
+	 *
+	 * @param mixed  $path     Configured path.
+	 * @param string $fallback Fallback path.
+	 *
+	 * @return string Resolved normalized path.
+	 */
+	private static function resolve_cache_base( mixed $path, string $fallback ): string {
+		if ( ! is_string( $path ) || '' === trim( $path ) || str_contains( $path, "\0" ) ) {
+			return rtrim( wp_normalize_path( $fallback ), '/' );
+		}
+
+		$path        = wp_normalize_path( trim( $path ) );
+		$is_absolute = str_starts_with( $path, '/' )
+			|| (bool) preg_match( '/^[A-Za-z]:\//', $path )
+			|| str_starts_with( $path, '//' );
+
+		if ( ! $is_absolute ) {
+			if ( in_array( '..', explode( '/', $path ), true ) ) {
+				return rtrim( wp_normalize_path( $fallback ), '/' );
+			}
+
+			$path = WP_CONTENT_DIR . '/' . ltrim( $path, '/' );
+		}
+
+		return rtrim( wp_normalize_path( $path ), '/' );
 	}
 
 	/**
@@ -122,6 +175,16 @@ final class Build_Cache {
 	 * @return string Cache key.
 	 */
 	public static function get_runtime_key( string $path, string $instance ): string {
+		$blog = function_exists( 'get_current_blog_id' ) ? (int) get_current_blog_id() : 0;
+
+		if ( ! isset( self::$key_input_memo[ $blog ] ) ) {
+			self::$key_input_memo[ $blog ] = array(
+				'settings'   => self::get_settings_fingerprint(),
+				'fieldTypes' => class_exists( Field_Type_Registry::class ) ? Field_Type_Registry::instance()->fingerprint() : '',
+				'plugins'    => self::get_active_plugins_fingerprint(),
+			);
+		}
+
 		return md5(
 			wp_json_encode(
 				array(
@@ -129,16 +192,30 @@ final class Build_Cache {
 					'cacheVersion' => self::VERSION,
 					'path'         => wp_normalize_path( $path ),
 					'instance'     => $instance,
-					'settings'     => self::get_settings_fingerprint(),
-					'plugins'      => self::get_active_plugins_fingerprint(),
+					'settings'     => self::$key_input_memo[ $blog ]['settings'],
+					'fieldTypes'   => self::$key_input_memo[ $blog ]['fieldTypes'],
+					'plugins'      => self::$key_input_memo[ $blog ]['plugins'],
 					'populate'     => self::get_populate_cache_version(),
 					'stylesheet'   => function_exists( 'get_stylesheet' ) ? get_stylesheet() : '',
 					'template'     => function_exists( 'get_template' ) ? get_template() : '',
 					'wpVersion'    => get_bloginfo( 'version' ),
 					'phpVersion'   => PHP_VERSION,
+					'context'      => Runtime_Context::hash( 'runtime', array( 'blocks', 'fields' ) ),
 				)
 			)
 		);
+	}
+
+	/**
+	 * Reset per-request memoized key inputs.
+	 *
+	 * Field types register during init and settings filters can attach late, so
+	 * long-lived processes that mutate either between builds reset the memo.
+	 *
+	 * @return void
+	 */
+	public static function reset_key_input_memo(): void {
+		self::$key_input_memo = array();
 	}
 
 	/**
@@ -233,9 +310,11 @@ final class Build_Cache {
 					'version'      => defined( 'BLOCKSTUDIO_VERSION' ) ? BLOCKSTUDIO_VERSION : '',
 					'cacheVersion' => self::VERSION,
 					'assets'       => self::get_editor_assets_fingerprint( Build::data() ),
+					'fieldTypes'   => class_exists( Field_Type_Registry::class ) ? Field_Type_Registry::instance()->fingerprint() : '',
 					'disabled'     => self::get_disabled_assets_fingerprint(),
 					'settings'     => self::get_settings_fingerprint(),
 					'wpVersion'    => get_bloginfo( 'version' ),
+					'context'      => Runtime_Context::hash( 'editor-assets', array( 'blocks' ) ),
 				)
 			)
 		);
@@ -290,11 +369,51 @@ final class Build_Cache {
 			return null;
 		}
 
+		$stamp = $file . '.ok';
+		$ttl   = self::get_watch_debounce();
+
+		if ( $ttl > 0 && is_file( $stamp ) ) {
+			$age = time() - (int) filemtime( $stamp );
+
+			if ( $age >= 0 && $age < $ttl ) {
+				return $payload;
+			}
+		}
+
 		if ( ! self::is_watch_valid( $payload['watch'] ?? array() ) ) {
 			return null;
 		}
 
+		if ( $ttl > 0 ) {
+			@touch( $stamp ); // phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged, WordPress.WP.AlternativeFunctions.file_system_operations_touch -- Best-effort debounce stamp.
+		}
+
 		return $payload;
+	}
+
+	/**
+	 * Get the watch validation debounce window in seconds.
+	 *
+	 * Watch snapshots stat every recorded file and directory, which is the
+	 * dominant cache-hit cost on hosts with slow filesystem metadata. Within
+	 * the debounce window a validated payload is trusted without re-statting.
+	 * Local and development environments default to zero so authors see file
+	 * edits immediately.
+	 *
+	 * @return int Debounce window in seconds.
+	 */
+	public static function get_watch_debounce(): int {
+		$environment = function_exists( 'wp_get_environment_type' ) ? wp_get_environment_type() : 'production';
+		$default     = in_array( $environment, array( 'local', 'development' ), true ) ? 0 : 20;
+
+		/**
+		 * Filter the watch validation debounce window.
+		 *
+		 * @since 7.5.0
+		 *
+		 * @param int $seconds Debounce window in seconds. Zero validates on every load.
+		 */
+		return max( 0, (int) apply_filters( 'blockstudio/cache/watch_debounce', $default ) );
 	}
 
 	/**
@@ -323,7 +442,7 @@ final class Build_Cache {
 			return false;
 		}
 
-		if ( ! rename( $tmp, $file ) ) { // phpcs:ignore WordPress.WP.AlternativeFunctions.rename_rename
+		if ( ! @rename( $tmp, $file ) ) { // phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged, WordPress.WP.AlternativeFunctions.rename_rename -- Cache writes are best-effort and failure is handled below.
 			@unlink( $tmp ); // phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged, WordPress.WP.AlternativeFunctions.unlink_unlink
 			return false;
 		}
@@ -332,7 +451,71 @@ final class Build_Cache {
 			opcache_invalidate( $file, true );
 		}
 
+		if ( self::get_watch_debounce() > 0 ) {
+			@touch( $file . '.ok' ); // phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged, WordPress.WP.AlternativeFunctions.file_system_operations_touch -- Best-effort debounce stamp.
+		}
+
+		self::prune_scope( $scope, $file );
+
 		return true;
+	}
+
+	/**
+	 * Prune stale cache files in one scope.
+	 *
+	 * Temp files orphaned by a writer killed between write and rename are
+	 * swept after an hour of idleness; an active writer's temp file is
+	 * seconds old. Build lock files are path-keyed and bounded, so they are
+	 * never swept.
+	 *
+	 * @param string $scope     Cache scope.
+	 * @param string $keep_file File that must not be pruned.
+	 *
+	 * @return void
+	 */
+	private static function prune_scope( string $scope, string $keep_file ): void {
+		$dir   = self::get_cache_dir( $scope );
+		$stale = glob( $dir . '/*.php.tmp-*' );
+
+		if ( is_array( $stale ) ) {
+			foreach ( $stale as $file ) {
+				if ( ! is_file( $file ) ) {
+					continue;
+				}
+
+				$mtime = (int) filemtime( $file );
+
+				if ( $mtime > 0 && time() - $mtime > HOUR_IN_SECONDS ) {
+					wp_delete_file( $file );
+				}
+			}
+		}
+
+		$files = glob( $dir . '/*.php' );
+
+		if ( ! is_array( $files ) || empty( $files ) ) {
+			return;
+		}
+
+		$max_files = max( 1, (int) apply_filters( 'blockstudio/cache/max_files_per_scope', 20, $scope ) );
+		$files     = array_values(
+			array_filter(
+				$files,
+				static fn( string $file ): bool => $file !== $keep_file
+			)
+		);
+		usort(
+			$files,
+			static fn( string $a, string $b ): int => (int) filemtime( $b ) <=> (int) filemtime( $a )
+		);
+
+		foreach ( array_slice( $files, max( 0, $max_files - 1 ) ) as $file ) {
+			wp_delete_file( $file );
+
+			if ( is_file( $file . '.ok' ) ) {
+				wp_delete_file( $file . '.ok' );
+			}
+		}
 	}
 
 	/**
@@ -415,7 +598,7 @@ final class Build_Cache {
 	 *
 	 * @return string Cache file path.
 	 */
-	private static function get_cache_file( string $scope, string $key ): string {
+	public static function get_cache_file( string $scope, string $key ): string {
 		return self::get_cache_dir( $scope ) . '/' . sanitize_file_name( $key ) . '.php';
 	}
 
@@ -537,7 +720,7 @@ final class Build_Cache {
 	 * @return array File paths.
 	 */
 	private static function collect_runtime_watch_paths( string $path, array $payload ): array {
-		$paths = array();
+		$paths = array_filter( Discovery_Sources::active_watch_paths( 'blocks' ), 'is_file' );
 
 		foreach ( $payload['store'] ?? array() as $data ) {
 			if ( isset( $data['path'] ) ) {
@@ -601,7 +784,10 @@ final class Build_Cache {
 	 * @return array Directory paths.
 	 */
 	private static function collect_runtime_watch_dirs( string $path, array $payload ): array {
-		$dirs = array( $path );
+		$dirs = array_merge(
+			array( $path ),
+			array_filter( Discovery_Sources::active_watch_paths( 'blocks' ), 'is_dir' )
+		);
 
 		foreach ( $payload['fieldDirs'] ?? array() as $field_dir ) {
 			$dirs[] = $field_dir;
@@ -779,6 +965,7 @@ final class Build_Cache {
 			'ui/enabled'        => Settings::get( 'ui/enabled' ),
 			'blockTags/enabled' => Settings::get( 'blockTags/enabled' ),
 			'cache/enabled'     => Settings::get( 'cache/enabled' ),
+			'cache/path'        => Settings::get( 'cache/path' ),
 		);
 	}
 

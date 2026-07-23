@@ -94,6 +94,7 @@ class Settings {
 		),
 		'cache'       => array(
 			'enabled' => true,
+			'path'    => 'blockstudio/cache',
 		),
 		'content'     => array(
 			'enabled'                => false,

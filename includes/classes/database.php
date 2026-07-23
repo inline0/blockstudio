@@ -11,6 +11,7 @@
 namespace Blockstudio;
 
 use Blockstudio\Db\Storage;
+use Blockstudio\Db\Storh_Record_Store;
 use Blockstudio\Definition;
 
 /**
@@ -539,6 +540,8 @@ class Database {
 				return (float) $value;
 			case 'boolean':
 				return (bool) $value;
+			case 'text':
+				return sanitize_textarea_field( $value );
 			default:
 				if ( 'email' === ( $def['format'] ?? '' ) ) {
 					return sanitize_email( $value );
@@ -579,7 +582,7 @@ class Database {
 	 *
 	 * @param string $key The schema key.
 	 *
-	 * @return string The storage type (table, meta, jsonc, sqlite, post_type).
+	 * @return string The storage type (table, meta, jsonc, sqlite, post_type, storh).
 	 */
 	private static function storage_type( string $key ): string {
 		return self::$schemas[ $key ]['storage'] ?? 'table';
@@ -594,14 +597,28 @@ class Database {
 	 * @return void
 	 */
 	private static function ensure_storage( string $key, array $schema ): void {
-		$storage = $schema['storage'] ?? 'table';
+		static $ensured = array();
+
+		$storage   = $schema['storage'] ?? 'table';
+		$signature = $key . ':' . md5( wp_json_encode( array( $storage, $schema ) ) );
+		if ( isset( $ensured[ $signature ] ) ) {
+			return;
+		}
 
 		if ( 'sqlite' === $storage ) {
 			self::sqlite_ensure( $key, $schema );
+			$ensured[ $signature ] = true;
+			return;
+		}
+
+		if ( 'storh' === $storage ) {
+			self::storh_store( $key, $schema );
+			$ensured[ $signature ] = true;
 			return;
 		}
 
 		if ( 'table' !== $storage ) {
+			$ensured[ $signature ] = true;
 			return;
 		}
 
@@ -630,6 +647,7 @@ class Database {
 
 		require_once ABSPATH . 'wp-admin/includes/upgrade.php';
 		dbDelta( $sql );
+		$ensured[ $signature ] = true;
 	}
 
 	/**
@@ -695,6 +713,94 @@ class Database {
 		return dirname( $block_path ) . '/db/' . $schema_name . '.jsonc';
 	}
 
+	/**
+	 * Get a Storh store for a schema key.
+	 *
+	 * @param string                    $key    The schema key.
+	 * @param array<string, mixed>|null $schema Optional schema override.
+	 *
+	 * @return Storh_Record_Store
+	 */
+	private static function storh_store( string $key, ?array $schema = null ): Storh_Record_Store {
+		static $stores = array();
+
+		$schema    = $schema ?? ( self::$schemas[ $key ] ?? array() );
+		$signature = $key . ':' . md5( wp_json_encode( $schema ) );
+
+		if ( ! isset( $stores[ $signature ] ) ) {
+			$stores[ $signature ] = new Storh_Record_Store( $key, $schema );
+		}
+
+		return $stores[ $signature ];
+	}
+
+	/**
+	 * Get the Storh collection directory for a schema.
+	 *
+	 * @param string $block_name  The block name.
+	 * @param string $schema_name The schema name.
+	 *
+	 * @return string
+	 */
+	public static function storh_directory( string $block_name, string $schema_name = 'default' ): string {
+		return Storh_Record_Store::directory_for_key( $block_name . ':' . $schema_name );
+	}
+
+	/**
+	 * Migrate an existing JSONC seed file to Storh.
+	 *
+	 * @param string $block_name  The block name.
+	 * @param string $schema_name The schema name.
+	 *
+	 * @return array<string, mixed>|\WP_Error Migration result.
+	 */
+	public static function migrate_to_storh( string $block_name, string $schema_name = 'default' ) {
+		self::load_all();
+
+		$key = $block_name . ':' . $schema_name;
+
+		if ( ! isset( self::$schemas[ $key ] ) ) {
+			return new \WP_Error( 'blockstudio_db_schema_not_found', sprintf( 'Schema not found: %s', $key ) );
+		}
+
+		$source_path = self::jsonc_path( $key );
+		$records     = self::jsonc_read( $key );
+
+		if ( ! is_file( $source_path ) ) {
+			return new \WP_Error( 'blockstudio_db_jsonc_not_found', sprintf( 'JSONC source file not found: %s', $source_path ) );
+		}
+
+		$target_schema            = self::$schemas[ $key ];
+		$target_schema['storage'] = 'storh';
+		$store                    = new Storh_Record_Store( $key, $target_schema );
+		$max_id                   = 0;
+
+		foreach ( $records as $record ) {
+			$id     = max( 1, (int) ( $record['id'] ?? 0 ) );
+			$max_id = max( $max_id, $id );
+			$store->put( $id, $record );
+		}
+
+		$store->sync_sequence( $max_id );
+		$reindex = $store->reindex();
+		$verify  = $store->verify();
+
+		return array(
+			'block'          => $block_name,
+			'schema'         => $schema_name,
+			'from'           => 'jsonc',
+			'to'             => 'storh',
+			'source_path'    => $source_path,
+			'target_path'    => Storh_Record_Store::directory_for_key( $key ),
+			'source_count'   => count( $records ),
+			'target_count'   => $store->count(),
+			'max_id'         => $max_id,
+			'reindex'        => $reindex,
+			'verify'         => $verify,
+			'source_storage' => self::$schemas[ $key ]['storage'] ?? 'table',
+		);
+	}
+
 	// REST handlers.
 
 	/**
@@ -709,8 +815,8 @@ class Database {
 		$schema    = self::$schemas[ $key ];
 		$storage   = self::storage_type( $key );
 		$params    = $request->get_query_params();
-		$limit     = min( (int) ( $params['limit'] ?? 50 ), 100 );
-		$offset    = (int) ( $params['offset'] ?? 0 );
+		$limit     = self::normalize_limit( $params['limit'] ?? 50 );
+		$offset    = max( 0, (int) ( $params['offset'] ?? 0 ) );
 		$hash_only = ! empty( $params['_hash'] );
 
 		unset( $params['limit'], $params['offset'], $params['_hash'] );
@@ -760,6 +866,7 @@ class Database {
 	 */
 	private static function handle_create( string $key, array $schema, $request ) {
 		$data  = $request->get_json_params();
+		$data  = is_array( $data ) ? $data : array();
 		$valid = self::validate( $data, $schema );
 
 		if ( is_wp_error( $valid ) ) {
@@ -785,6 +892,7 @@ class Database {
 	private static function handle_update( string $key, array $schema, $request ) {
 		$id    = (int) $request->get_param( 'id' );
 		$data  = $request->get_json_params();
+		$data  = is_array( $data ) ? $data : array();
 		$valid = self::validate( $data, $schema, true );
 
 		if ( is_wp_error( $valid ) ) {
@@ -869,6 +977,10 @@ class Database {
 	 * @return array The records.
 	 */
 	private static function storage_list( string $key, string $storage, array $schema, array $filters, int $limit, int $offset ): array {
+		$filters = self::filter_schema_filters( $filters, $schema );
+		$limit   = self::normalize_limit( $limit );
+		$offset  = max( 0, $offset );
+
 		if ( self::is_user_scoped( $key ) ) {
 			$filters['user_id'] = (string) get_current_user_id();
 		}
@@ -880,6 +992,8 @@ class Database {
 				return self::jsonc_list( $key, $filters, $limit, $offset );
 			case 'sqlite':
 				return self::sqlite_list( $key, $schema, $filters, $limit, $offset );
+			case 'storh':
+				return self::storh_store( $key, $schema )->query( $filters, $limit, $offset );
 			case 'post_type':
 				return self::cpt_list( $key, $schema, $filters, $limit, $offset );
 			default:
@@ -900,6 +1014,10 @@ class Database {
 	 * @return array{items: array<int, array<string, mixed>>, total: int}
 	 */
 	private static function storage_paginate( string $key, string $storage, array $schema, array $filters, int $limit, int $offset ): array {
+		$filters = self::filter_schema_filters( $filters, $schema );
+		$limit   = self::normalize_limit( $limit );
+		$offset  = max( 0, $offset );
+
 		if ( self::is_user_scoped( $key ) ) {
 			$filters['user_id'] = (string) get_current_user_id();
 		}
@@ -909,6 +1027,8 @@ class Database {
 				return self::meta_paginate( $key, $schema, $filters, $limit, $offset );
 			case 'jsonc':
 				return self::jsonc_paginate( $key, $filters, $limit, $offset );
+			case 'storh':
+				return self::storh_store( $key, $schema )->paginate( $filters, $limit, $offset );
 			default:
 				return array(
 					'items' => self::storage_list( $key, $storage, $schema, $filters, $limit, $offset ),
@@ -928,6 +1048,8 @@ class Database {
 	 * @return int The total number of matching records.
 	 */
 	private static function storage_count( string $key, string $storage, array $schema, array $filters ): int {
+		$filters = self::filter_schema_filters( $filters, $schema );
+
 		if ( self::is_user_scoped( $key ) ) {
 			$filters['user_id'] = (string) get_current_user_id();
 		}
@@ -939,11 +1061,45 @@ class Database {
 				return self::jsonc_count( $key, $filters );
 			case 'sqlite':
 				return self::sqlite_count( $key, $schema, $filters );
+			case 'storh':
+				return self::storh_store( $key, $schema )->count( $filters );
 			case 'post_type':
 				return self::cpt_count( $key, $schema, $filters );
 			default:
 				return self::table_count( $key, $schema, $filters );
 		}
+	}
+
+	/**
+	 * Normalize a requested row limit.
+	 *
+	 * @param mixed $limit Requested limit.
+	 *
+	 * @return int
+	 */
+	private static function normalize_limit( $limit ): int {
+		return max( 1, min( (int) $limit, 100 ) );
+	}
+
+	/**
+	 * Keep only schema-backed filters.
+	 *
+	 * @param array $filters Field equality filters.
+	 * @param array $schema  Storage schema.
+	 *
+	 * @return array
+	 */
+	private static function filter_schema_filters( array $filters, array $schema ): array {
+		$fields     = $schema['fields'] ?? array();
+		$normalized = array();
+
+		foreach ( $filters as $field => $value ) {
+			if ( isset( $fields[ $field ] ) ) {
+				$normalized[ $field ] = $value;
+			}
+		}
+
+		return $normalized;
 	}
 
 	/**
@@ -965,6 +1121,9 @@ class Database {
 				break;
 			case 'sqlite':
 				$record = self::sqlite_get( $key, $id );
+				break;
+			case 'storh':
+				$record = self::storh_store( $key )->get( $id );
 				break;
 			case 'post_type':
 				$record = self::cpt_get( $key, $id );
@@ -1015,6 +1174,9 @@ class Database {
 				break;
 			case 'sqlite':
 				$record = self::sqlite_create( $key, $data );
+				break;
+			case 'storh':
+				$record = self::storh_store( $key )->create( $data );
 				break;
 			case 'post_type':
 				$record = self::cpt_create( $key, $data );
@@ -1078,6 +1240,9 @@ class Database {
 			case 'sqlite':
 				$record = self::sqlite_update( $key, $id, $data );
 				break;
+			case 'storh':
+				$record = self::storh_store( $key )->update( $id, $data );
+				break;
 			case 'post_type':
 				$record = self::cpt_update( $key, $id, $data );
 				break;
@@ -1139,6 +1304,9 @@ class Database {
 				break;
 			case 'sqlite':
 				$deleted = self::sqlite_delete( $key, $id );
+				break;
+			case 'storh':
+				$deleted = self::storh_store( $key )->delete( $id );
 				break;
 			case 'post_type':
 				$deleted = self::cpt_delete( $key, $id );
@@ -1330,7 +1498,7 @@ class Database {
 				$entries,
 				function ( $entry ) use ( $filters ) {
 					foreach ( $filters as $k => $val ) {
-						if ( ( $entry[ $k ] ?? null ) !== $val ) {
+						if ( ( $entry[ $k ] ?? null ) != $val ) { // phpcs:ignore Universal.Operators.StrictComparisons.LooseNotEqual -- Intentional loose comparison for query param strings.
 							return false;
 						}
 					}
@@ -1363,7 +1531,7 @@ class Database {
 				$entries,
 				function ( $entry ) use ( $filters ) {
 					foreach ( $filters as $k => $val ) {
-						if ( ( $entry[ $k ] ?? null ) !== $val ) {
+						if ( ( $entry[ $k ] ?? null ) != $val ) { // phpcs:ignore Universal.Operators.StrictComparisons.LooseNotEqual -- Intentional loose comparison for query param strings.
 							return false;
 						}
 					}
@@ -1403,7 +1571,7 @@ class Database {
 				$entries,
 				function ( $entry ) use ( $filters ) {
 					foreach ( $filters as $k => $val ) {
-						if ( ( $entry[ $k ] ?? null ) !== $val ) {
+						if ( ( $entry[ $k ] ?? null ) != $val ) { // phpcs:ignore Universal.Operators.StrictComparisons.LooseNotEqual -- Intentional loose comparison for query param strings.
 							return false;
 						}
 					}
@@ -1604,7 +1772,7 @@ class Database {
 			$lines[] = wp_json_encode( $record, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE );
 		}
 
-		file_put_contents( $path, implode( "\n", $lines ) . "\n" ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents
+		file_put_contents( $path, implode( "\n", $lines ) . "\n", LOCK_EX ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents
 	}
 
 	/**
@@ -2633,6 +2801,10 @@ class Database {
 				);
 			}
 
+			if ( 'count' === $operation ) {
+				return 0;
+			}
+
 			return false;
 		}
 
@@ -2670,6 +2842,14 @@ class Database {
 					$args['offset'] ?? 0
 				);
 
+			case 'count':
+				return self::storage_count(
+					$key,
+					$storage,
+					$schema,
+					$args['filters'] ?? array()
+				);
+
 			case 'get':
 				return self::storage_get( $key, $storage, $args['id'] ?? 0 );
 
@@ -2683,6 +2863,12 @@ class Database {
 
 			case 'delete':
 				return self::storage_delete( $key, $storage, $args['id'] ?? 0 );
+
+			case 'explain':
+				if ( 'storh' !== $storage ) {
+					return false;
+				}
+				return self::storh_store( $key, $schema )->explain( self::filter_schema_filters( $args['filters'] ?? array(), $schema ) );
 
 			default:
 				return false;

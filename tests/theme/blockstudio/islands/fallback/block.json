@@ -1,0 +1,19 @@
+{
+  "$schema": "https://blockstudio.dev/schema/block",
+  "name": "blockstudio/island-fallback",
+  "title": "Island Fallback",
+  "category": "blockstudio-test-native",
+  "icon": "update",
+  "description": "Dynamic island fixture using template phase branches.",
+  "blockstudio": {
+    "island": "dynamic",
+    "attributes": [
+      {
+        "id": "message",
+        "type": "text",
+        "label": "Message",
+        "default": "Fallback"
+      }
+    ]
+  }
+}

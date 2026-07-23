@@ -1,0 +1,23 @@
+{
+  "$schema": "https://blockstudio.dev/schema/block",
+  "name": "blockstudio/island-explicit-placeholder",
+  "title": "Island Explicit Placeholder",
+  "category": "blockstudio-test-native",
+  "icon": "update",
+  "description": "Dynamic island fixture with explicit placeholder.",
+  "blockstudio": {
+    "island": {
+      "mode": "dynamic",
+      "placeholder": "shell.php",
+      "attributes": ["message"]
+    },
+    "attributes": [
+      {
+        "id": "message",
+        "type": "text",
+        "label": "Message",
+        "default": "Explicit"
+      }
+    ]
+  }
+}

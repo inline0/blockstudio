@@ -40,15 +40,19 @@ Blockstudio removes all of that. You write a JSON config and a PHP template. The
 - **26 field types** - text, repeater, tabs, code, classes, color, files, and more, all configured in JSON with conditions, validation, and defaults
 - **PHP, Twig, and Blade** - write templates in your preferred language with the same `$a` variable across all three
 - **File-based pages** - create WordPress pages from HTML templates with automatic syncing, keyed block merging, and editing controls
+- **Site Editor templates** - define WordPress templates and template parts from PHP, Twig, Blade, or HTML while preserving Site Editor customizations
 - **File-based patterns** - define block patterns as template files, auto-registered without any PHP code
+- **Block islands** - hydrate cache-safe blocks or batch-render dynamic fragments after the initial response
 - **HTML-to-block parser** - converts standard HTML into native WordPress block markup with extensible renderers and element mapping
 - **Extensions** - add custom fields to any core or third-party block via a JSON file
 - **Asset pipeline** - SCSS compilation, ES module imports from npm, automatic minification, and scoped loading by naming convention
 - **Tailwind CSS v4** - server-side compilation via TailwindPHP with candidate-based caching, no Node.js or CLI needed
+- **Database layer** - use REST and PHP/JS clients across MySQL, SQLite, JSONC, post meta, custom post types, or Storh
 - **Storage** - persist field values in post meta or site options, queryable via `WP_Query` and the REST API
 - **Custom fields** - reusable field definitions shared across multiple blocks via filesystem or PHP filter
+- **Custom field types** - register namespaced controls with primitive, array, or object values and typed storage schemas
 - **SEO integration** - block content visible to Yoast SEO and Rank Math for editor analysis
-- **AI-ready** - ships a pre-built context file with full documentation and JSON schemas (~48k tokens) for LLM coding assistants
+- **AI-ready** - ships a pre-built context file with documentation and JSON schemas for LLM coding assistants
 - **50+ PHP and JS hooks** - customize every aspect of the framework
 
 ## Quick start

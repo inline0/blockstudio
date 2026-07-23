@@ -1,0 +1,65 @@
+---
+title: blocks.json Schema
+description: Complete field reference for the blocks.json project config file.
+path: "reference/blocks-json-schema"
+order: 12
+section: "Reference"
+meta_title: "blocks.json Schema"
+meta_description: "Complete field reference for the blocks.json project config file."
+---
+
+# blocks.json Schema
+
+## Full schema
+
+```json
+{
+  "$schema": "https://blockstudio.dev/schema/blocks.json",
+  "directory": "blockstudio",
+  "registries": {
+    "public": "https://example.com/registry.json",
+    "private": {
+      "url": "https://private.example.com/registry.json",
+      "headers": {
+        "Authorization": "Bearer ${REGISTRY_TOKEN}"
+      }
+    }
+  }
+}
+```
+
+## Fields
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `$schema` | `string` | No | JSON Schema URL for editor validation. |
+| `directory` | `string` | Yes | Relative path from `blocks.json` where blocks are installed. Must be non-empty. |
+| `registries` | `Record<string, string \| RegistryRef>` | Yes | Map of namespace names to registry references. Can be empty. |
+
+### Registry reference formats
+
+Each value in `registries` is either a string URL or an object:
+
+**String**: a valid URL to a `registry.json` file.
+
+**Object**:
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `url` | `string` | Yes | Valid URL to a `registry.json` file. |
+| `headers` | `Record<string, string>` | No | HTTP headers sent with every request to this registry. Values support `${ENV_VAR}` interpolation. |
+
+## Validation rules
+
+- `directory` must be a non-empty string.
+- Each key in `registries` must be a non-empty string.
+- String registry values must be valid URLs.
+- Object registry values must have a valid `url` field.
+- `${ENV_VAR}` references in headers are resolved at runtime. Missing variables produce an error naming the variable and header.
+- The `registries` object can be empty, but `add`, `list`, and `search` commands will error with a message telling you to add one.
+
+## Config discovery
+
+The CLI searches for `blocks.json` starting from the current working
+directory, walking up parent directories up to 20 levels. The first
+`blocks.json` found is used.

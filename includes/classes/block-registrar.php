@@ -114,7 +114,7 @@ class Block_Registrar {
 
 		$native_path = $is_override && ! ( $classification['is_block'] ?? false )
 			? $block_data['path']
-			: Files::get_render_template( $block_data['path'] );
+			: ( $block_data['renderTemplate'] ?? Files::get_render_template( $block_data['path'] ) );
 
 		// Build attributes.
 		$attributes          = array();
@@ -122,6 +122,7 @@ class Block_Registrar {
 
 		if ( isset( $block_json['blockstudio']['attributes'] ) ) {
 			Build::expand_custom_fields( $block_json['blockstudio']['attributes'] );
+			Field_Type_Registry::instance()->mark_used_fields( $block_json['blockstudio']['attributes'] );
 
 			if ( ! $is_override ) {
 				Build::filter_attributes(
@@ -299,6 +300,9 @@ class Block_Registrar {
 			'extend'             => $block->blockstudio['extend'] ?? false,
 			'group'              => $block->blockstudio['group'] ?? false,
 			'icon'               => $block->blockstudio['icon'] ?? null,
+			'island'             => Islands::normalize_config(
+				$block_json['blockstudio']['island'] ?? false
+			),
 			'refreshOn'          => $block->blockstudio['refreshOn'] ?? false,
 			'transforms'         => $block->blockstudio['transforms'] ?? false,
 			'variations'         => $block->variations ?? false,

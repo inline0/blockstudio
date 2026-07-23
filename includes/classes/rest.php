@@ -22,22 +22,13 @@ use WP_REST_Response;
  * Endpoint Categories:
  *
  * 1. Data Retrieval (GET):
- *    - /data: Block data, sorted data, and files
- *    - /blocks: All block configurations
- *    - /blocks-sorted: Blocks organized by directory
- *    - /files: All discovered block files
  *    - /icons: Icon set data for icon picker
  *
- * 2. Settings (POST):
- *    - /editor/options/save: Save plugin options (DB or JSON)
- *
- * 3. Gutenberg Integration (POST):
+ * 2. Gutenberg Integration (POST):
  *    - /gutenberg/block/render/{name}: Server-side block render
  *    - /gutenberg/block/render/all: Batch render multiple blocks
- *    - /gutenberg/block/update: Live preview updates during editing
  *
- * 4. Attribute Building (POST):
- *    - /attributes/build: Convert block.json fields to WP attributes
+ * 3. Attribute Building (POST):
  *    - /attributes/populate: Fetch dynamic options for select fields
  *
  * Security:
@@ -202,36 +193,6 @@ class Rest {
 
 				register_rest_route(
 					'blockstudio/v1',
-					'/data',
-					array(
-						'methods'             => 'GET',
-						'callback'            => array( $this, 'data' ),
-						'permission_callback' => $permission,
-					)
-				);
-
-				register_rest_route(
-					'blockstudio/v1',
-					'/blocks',
-					array(
-						'methods'             => 'GET',
-						'callback'            => array( $this, 'blocks' ),
-						'permission_callback' => $permission,
-					)
-				);
-
-				register_rest_route(
-					'blockstudio/v1',
-					'/blocks-sorted',
-					array(
-						'methods'             => 'GET',
-						'callback'            => array( $this, 'blocks_sorted' ),
-						'permission_callback' => $permission,
-					)
-				);
-
-				register_rest_route(
-					'blockstudio/v1',
 					'/icons',
 					array(
 						'methods'             => 'GET',
@@ -256,75 +217,11 @@ class Rest {
 
 				register_rest_route(
 					'blockstudio/v1',
-					'/files',
-					array(
-						'methods'             => 'GET',
-						'callback'            => array( $this, 'files' ),
-						'permission_callback' => $permission,
-					)
-				);
-
-				register_rest_route(
-					'blockstudio/v1',
-					'/editor/options/save',
-					array(
-						'methods'             => 'POST',
-						'callback'            => array( $this, 'editor_options_save' ),
-						'permission_callback' => $permission,
-						'args'                => array(
-							'json'    => array(
-								'validate_callback' => function ( $param ) {
-									return is_bool( $param );
-								},
-							),
-							'options' => array(
-								'validate_callback' => function ( $param ) {
-									return is_string( $param );
-								},
-							),
-						),
-					)
-				);
-
-				register_rest_route(
-					'blockstudio/v1',
-					'/attributes/build',
-					array(
-						'methods'             => 'POST',
-						'callback'            => array( $this, 'attributes_build' ),
-						'permission_callback' => $permission,
-					)
-				);
-
-				register_rest_route(
-					'blockstudio/v1',
 					'/attributes/populate',
 					array(
 						'methods'             => 'POST',
 						'callback'            => array( $this, 'attributes_populate' ),
 						'permission_callback' => $permission_edit,
-					)
-				);
-
-				register_rest_route(
-					'blockstudio/v1',
-					'/gutenberg/block/update',
-					array(
-						'methods'             => 'POST',
-						'callback'            => array( $this, 'gutenberg_block_update' ),
-						'permission_callback' => $permission_edit,
-						'args'                => array(
-							'block'        => array(
-								'validate_callback' => function ( $param ) {
-									return is_array( $param );
-								},
-							),
-							'filesChanged' => array(
-								'validate_callback' => function ( $param ) {
-									return is_array( $param );
-								},
-							),
-						),
 					)
 				);
 
@@ -384,56 +281,26 @@ class Rest {
 						),
 					)
 				);
+
+				register_rest_route(
+					'blockstudio/v1',
+					'/island/render',
+					array(
+						'methods'             => 'POST',
+						'callback'            => array( $this, 'island_render' ),
+						'permission_callback' => '__return_true',
+						'args'                => array(
+							'islands' => array(
+								'required'          => true,
+								'validate_callback' => function ( $param ) {
+									return is_array( $param );
+								},
+							),
+						),
+					)
+				);
 			}
 		);
-	}
-
-	/**
-	 * /data Endpoint.
-	 *
-	 * @since 2.3.0
-	 *
-	 * @return array The data array.
-	 */
-	public function data(): array {
-		return array(
-			'data'       => Build::data(),
-			'dataSorted' => Build::data_sorted(),
-			'files'      => Build::files(),
-		);
-	}
-
-	/**
-	 * /blocks Endpoint.
-	 *
-	 * @since 2.3.0
-	 *
-	 * @return array The blocks data.
-	 */
-	public function blocks(): array {
-		return Build::data();
-	}
-
-	/**
-	 * /blocks-sorted Endpoint.
-	 *
-	 * @since 2.3.0
-	 *
-	 * @return array The sorted blocks data.
-	 */
-	public function blocks_sorted(): array {
-		return Build::data_sorted();
-	}
-
-	/**
-	 * /files Endpoint.
-	 *
-	 * @since 2.3.0
-	 *
-	 * @return array The files data.
-	 */
-	public function files(): array {
-		return Build::files();
 	}
 
 	/**
@@ -473,62 +340,6 @@ class Rest {
 	}
 
 	/**
-	 * /editor/options/save Endpoint.
-	 *
-	 * @since 5.2.0
-	 *
-	 * @param array $data The request data.
-	 *
-	 * @return WP_Error|WP_REST_Response The response or error.
-	 */
-	public function editor_options_save( $data ) {
-		global $wp_filesystem;
-		$code = 'save_options';
-		if ( ! $this->filesystem() ) {
-			return $this->error( $code, 'Unable to initialize WP_Filesystem' );
-		}
-
-		$message = array(
-			'success' => 'Options saved',
-			'error'   => 'Options saving failed',
-		);
-
-		delete_option( 'blockstudio_settings' );
-		$result = update_option(
-			'blockstudio_settings',
-			json_decode( urldecode( $data['options'] ) )
-		);
-
-		$json_path = Settings::json_path();
-		if ( $data['json'] ) {
-			$wp_filesystem->put_contents(
-				Settings::json_path(),
-				urldecode( $data['options'] )
-			);
-		} elseif ( $wp_filesystem->exists( $json_path ) ) {
-			$wp_filesystem->delete( $json_path );
-		}
-
-		return $this->response_or_error( $result, $code, $message );
-	}
-
-	/**
-	 * /attributes/build Endpoint.
-	 *
-	 * @since 5.2.0
-	 *
-	 * @param WP_REST_Request $arguments The REST request.
-	 *
-	 * @return array The built attributes.
-	 */
-	public function attributes_build( WP_REST_Request $arguments ): array {
-		$attributes = array();
-		Build::build_attributes( $arguments->get_params(), $attributes );
-
-		return $attributes;
-	}
-
-	/**
 	 * /attributes/populate Endpoint.
 	 *
 	 * @since 5.1.0
@@ -538,8 +349,9 @@ class Rest {
 	 * @return array The populated attributes.
 	 */
 	public function attributes_populate( WP_REST_Request $arguments ): array {
-		$attributes = array();
-		Build::build_attributes( array( $arguments->get_params() ), $attributes );
+		$attributes = ( new Attribute_Builder() )->build(
+			array( $arguments->get_params() )
+		);
 
 		return array_values( $attributes )[0]['options'] ?? array();
 	}
@@ -631,6 +443,19 @@ class Rest {
 	}
 
 	/**
+	 * /island/render Endpoint.
+	 *
+	 * @since 7.5.0
+	 *
+	 * @param WP_REST_Request $request The REST request.
+	 *
+	 * @return WP_Error|WP_REST_Response The response.
+	 */
+	public function island_render( WP_REST_Request $request ) {
+		return Islands::render_endpoint( $request );
+	}
+
+	/**
 	 * /scss/compile Endpoint.
 	 *
 	 * @since 7.1.0
@@ -644,62 +469,6 @@ class Rest {
 		$css  = Assets::compile_scss( $scss, '' );
 
 		return rest_ensure_response( array( 'css' => $css ) );
-	}
-
-	/**
-	 * /gutenberg/block/update Endpoint.
-	 *
-	 * @since 5.2.0
-	 *
-	 * @param array $data The request data.
-	 *
-	 * @return array The updated block data.
-	 */
-	public function gutenberg_block_update( $data ): array {
-		$files         = $data['filesChanged'] ?? array();
-		$block         = $data['block'];
-		$block_name    = $block['name'];
-		$block         = Build::data()[ $block_name ];
-		$files_changed = array();
-
-		foreach ( $files as $name => $content ) {
-			$file = pathinfo( $name );
-
-			if (
-				str_ends_with( $name, '.php' ) ||
-				str_ends_with( $name, '.twig' )
-			) {
-				set_transient(
-					'blockstudio_gutenberg_' .
-						$block_name .
-						'_' .
-						$file['basename'],
-					$content
-				);
-				$files_changed[ $name ] = $content;
-			}
-			if ( Assets::is_css( $name ) ) {
-				if ( Settings::get( 'assets/process/scss' ) ) {
-					$content = Assets::compile_scss( $content, $name );
-				}
-			}
-			if ( Assets::is_css( $name ) || str_ends_with( $name, '.js' ) ) {
-				$files_changed[ Assets::get_id( $file['filename'], $block ) .
-						'-' .
-						$file['extension'] ] = Assets::render_inline(
-							$file['basename'],
-							$content,
-							$block,
-							'gutenberg',
-							true
-						);
-			}
-		}
-
-		return array(
-			'block'        => $block,
-			'filesChanged' => $files_changed,
-		);
 	}
 }
 

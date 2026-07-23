@@ -1,0 +1,172 @@
+---
+title: Processing Assets
+description: Minification, SCSS compilation, and ES modules support.
+path: "blocks/assets/processing"
+order: 9
+section: "Blocks"
+subsection: "Assets"
+meta_title: "Processing Assets"
+meta_description: "Minification, SCSS compilation, and ES modules support."
+---
+
+# Processing Assets
+
+## Minification
+
+Blockstudio is able to automatically minify all CSS and JS files in a block.
+
+Compiled files will be saved to the `_dist` folder of the block and enqueued when a block is used. When the source file is updated, Blockstudio checks if a compiled file with that timestamp exists, if not, it will be created.
+
+The [minify](https://github.com/matthiasmullie/minify) library is used for this purpose.
+
+Minification can be enabled using the `assets/minify` setting:
+
+```php title="functions.php"
+add_filter('blockstudio/settings/assets/minify/css', function() {
+  return true;
+});
+
+add_filter('blockstudio/settings/assets/minify/js', function() {
+  return true;
+});
+```
+
+## SCSS
+
+If you prefer writing your styles in SCSS, you can enable SCSS processing:
+
+```php title="functions.php"
+add_filter('blockstudio/settings/assets/process/scss', function() {
+  return true;
+});
+```
+
+This will turn on SCSS processing for `.css` files.
+
+Alternatively, you can use the `.scss` extension and styles will automatically get processed even when the above setting is not `true`.
+
+### Import Paths
+
+When using SCSS, it is possible to import other SCSS files. Imports are relative to the file they are imported from.
+
+```css title="style.scss"
+@import "modules.scss";
+```
+
+Additionally, custom import paths can be defined using the `blockstudio/assets/process/scss/import_paths` filter, so files can be imported from other directories without specifying any folder structure.
+
+Please note that the `.scss` extension needs to be present for imports to work properly.
+
+```php title="functions.php"
+add_filter('blockstudio/assets/process/scss/import_paths', function($paths) {
+  $paths[] = get_template_directory() . '/scss';
+  return $paths;
+});
+```
+
+### Prelude
+
+If you want shared Sass functions, variables, mixins, or utilities available in
+every SCSS file, you can prepend a global prelude before compilation.
+
+This is useful for frameworks such as Bootstrap, where you may want access to
+shared mixins like breakpoints without repeating imports in every block asset.
+
+```php title="functions.php"
+add_filter('blockstudio/assets/process/scss/prelude', function($prelude, $path, $scss) {
+  return '@import "functions";' . "\n"
+    . '@import "variables";' . "\n"
+    . '@import "mixins";';
+}, 10, 3);
+```
+
+Combined with `blockstudio/assets/process/scss/import_paths`, this makes the
+referenced Sass surface available to every compiled file.
+
+Block assets will be recompiled when any of the imported files change.
+
+## ES Modules
+
+All scripts (inline and default) in Blockstudio load with `type="module"` applied to them by default. This means that it is possible to make use of the [import syntax](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Statements/import) for your blocks' scripts without any additional setup.
+
+
+> **Note**
+>
+> For a more in-depth look into ES modules, visit [the MDN web docs](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Guide/Modules).
+
+
+Let's imagine the following code inside a **script.js**:
+
+```javascript title="script.js"
+import { h, render } from "https://esm.sh/preact@10.15.1";
+import htm from "https://esm.sh/htm@3.1.1";
+import confetti from "https://esm.sh/canvas-confetti@1.6.0";
+
+const html = htm.bind(h);
+
+function App(props) {
+  confetti();
+  return html`<h1>Hello ${props.name}!</h1>`;
+}
+
+render(
+  html`<${App} name="Hello from Preact!" />`,
+  document.querySelector("#element")
+);
+```
+
+The example above would create a component using [Preact](https://preactjs.com/), importing all necessary components and functions from an ESM compatible CDN, in this case **esm.sh**. While there is nothing wrong with this approach, it has the disadvantage of needing to request the necessary assets from an external site, risking broken scripts if the CDN is down.
+
+Blockstudio includes a handy way to download ES Modules to the block, eliminating the need for external ESM CDNs during production.
+
+### Setup
+
+To download a module to your block directory, use the `npm:` prefix followed by the package name and version:
+
+```javascript title="script.js"
+import { h, render } from "npm:preact@10.15.1";
+import htm from "npm:htm@3.1.1";
+import confetti from "npm:canvas-confetti@1.6.0";
+```
+
+This syntax aligns with [Deno's npm specifier](https://docs.deno.com/runtime/fundamentals/node/#using-npm-packages) convention.
+
+
+> **Note**
+>
+> The legacy `blockstudio/` prefix (e.g., `blockstudio/preact@10.15.1`) is still supported for backward compatibility, but we recommend using the `npm:` prefix for new projects. See the [migration guide](/docs/dev/migration/v7) for details.
+
+
+Blockstudio will automatically check changed .js files for imports and download them to the local block directory. The downloaded files will be placed in a `modules` folder in the block directory.
+
+The script file will be rewritten on save to accustom for the locally hosted module:
+
+```javascript title="Generated script.js"
+import { h, render } from "./modules/preact/10.15.1.js";
+import htm from "./modules/htm/10.15.1.js";
+import confetti from "./modules/canvas-confetti/1.6.0.js";
+```
+
+When inside the editor, the CDN url will still be used (Blockstudio is using esm.sh) when previewing and working on the block.
+
+### Caveats
+
+#### Version
+
+Normally, modules can be used from CDNs without the version number. In this case, the newest version will always be used. Since Blockstudio is not saving any information into the database, a version number is required when using modules.
+
+#### Same Modules
+
+Modules are scoped to their blocks. Even if you use the same module with the same version number across multiple blocks, Blockstudio will still download the requested module to the block. This is mainly because blocks should be self-contained units that can easily be shared across other installations or sites.
+
+On top of that, the same module will be requested twice if both blocks are present on a page. This problem can be solved by using the `script-inline.js` instead of the `script.js` file. Blockstudio will rewrite each of the imports to point to the location of the first occurrence of the module if the name and version number are the same.
+
+## CSS Loader
+
+It is also possible to import CSS files using the same syntax as above.
+
+```javascript title="script.js"
+import "npm:swiper@11.0.0/swiper.min.css";
+```
+
+The CSS file will be downloaded to the `modules` folder and automatically enqueued when the block is used. As long as the version is the same, only a single version of the CSS file will be enqueued, even if it exists in multiple blocks.

@@ -42,17 +42,6 @@ class Page_Markdown {
 	}
 
 	/**
-	 * Whether a markdown document starts with frontmatter.
-	 *
-	 * @param string $content Markdown content.
-	 *
-	 * @return bool
-	 */
-	public static function has_frontmatter( string $content ): bool {
-		return (bool) preg_match( '/\A\xEF\xBB\xBF?---[ \t]*\r?\n/s', $content );
-	}
-
-	/**
 	 * Parse YAML using bundled Symfony YAML when available.
 	 *
 	 * @param string $yaml YAML string.

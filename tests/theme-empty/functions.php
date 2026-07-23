@@ -116,5 +116,45 @@ add_action(
 				'permission_callback' => '__return_true',
 			)
 		);
+
+		register_rest_route(
+			'blockstudio-test/v1',
+			'/pages/reconcile',
+			array(
+				'methods'             => 'POST',
+				'callback'            => function () {
+					if ( ! class_exists( 'Blockstudio\\Pages' ) ) {
+						return new WP_Error( 'not_loaded', 'Blockstudio pages are not loaded.', array( 'status' => 500 ) );
+					}
+
+					\Blockstudio\Pages::reset();
+					$report = \Blockstudio\Pages::reconcile(
+						array(
+							'authoritative' => true,
+							'full'          => true,
+							'plan_valid'    => true,
+							'source'        => array(
+								'commit'    => 'empty-e2e-fixture',
+								'dirtyHash' => '',
+							),
+						)
+					);
+
+					if ( ! empty( $report['failed'] ) ) {
+						return new WP_Error(
+							'page_reconciliation_failed',
+							'File-page reconciliation failed.',
+							array(
+								'status' => 500,
+								'report' => $report,
+							)
+						);
+					}
+
+					return $report;
+				},
+				'permission_callback' => '__return_true',
+			)
+		);
 	}
 );

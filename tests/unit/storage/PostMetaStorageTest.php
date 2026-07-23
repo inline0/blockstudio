@@ -2,14 +2,18 @@
 
 use Blockstudio\Storage_Handlers\Post_Meta_Storage;
 use Blockstudio\Interfaces\Storage_Handler_Interface;
+use Blockstudio\Field_Type_Registry;
 use PHPUnit\Framework\TestCase;
 
 class PostMetaStorageTest extends TestCase {
 
 	private Post_Meta_Storage $handler;
 	private array $registered_keys = array();
+	private array $created_posts = array();
+	private array $created_users = array();
 
 	protected function setUp(): void {
+		Field_Type_Registry::instance()->reset();
 		$this->handler = new Post_Meta_Storage();
 	}
 
@@ -17,7 +21,20 @@ class PostMetaStorageTest extends TestCase {
 		foreach ( $this->registered_keys as $key ) {
 			unregister_meta_key( 'post', $key );
 		}
+
+		foreach ( $this->created_posts as $post_id ) {
+			wp_delete_post( $post_id, true );
+		}
+
+		foreach ( $this->created_users as $user_id ) {
+			wp_delete_user( $user_id );
+		}
+
 		$this->registered_keys = array();
+		$this->created_posts   = array();
+		$this->created_users   = array();
+		Field_Type_Registry::instance()->reset();
+		wp_set_current_user( 0 );
 	}
 
 	// get_type()
@@ -355,6 +372,124 @@ class PostMetaStorageTest extends TestCase {
 		$this->assertSame( 'string', $meta['type'] );
 	}
 
+	public function test_register_custom_object_field_has_object_schema(): void {
+		$meta_key                = 'test_pm_custom_object';
+		$this->registered_keys[] = $meta_key;
+
+		Field_Type_Registry::instance()->register(
+			'test/dimensions',
+			array(
+				'attribute' => 'object',
+				'storage'   => array(
+					'type'        => 'object',
+					'rest_schema' => array(
+						'type'                 => 'object',
+						'additionalProperties' => array( 'type' => 'string' ),
+					),
+				),
+			)
+		);
+
+		$field = array(
+			'id'      => 'margin',
+			'type'    => 'test/dimensions',
+			'storage' => array( 'type' => 'postMeta', 'postMetaKey' => $meta_key ),
+		);
+
+		$this->handler->register( 'test/block', $field );
+
+		$meta = $this->get_registered_meta( $meta_key );
+		$this->assertSame( 'object', $meta['type'] );
+		$this->assertIsArray( $meta['show_in_rest'] );
+		$this->assertSame( 'object', $meta['show_in_rest']['schema']['type'] );
+		$this->assertSame(
+			array( 'type' => 'string' ),
+			$meta['show_in_rest']['schema']['additionalProperties']
+		);
+	}
+
+	public function test_register_custom_array_field_has_array_schema(): void {
+		$meta_key                = 'test_pm_custom_array';
+		$this->registered_keys[] = $meta_key;
+
+		Field_Type_Registry::instance()->register(
+			'test/token-list',
+			array(
+				'attribute' => 'array',
+				'storage'   => array( 'type' => 'array' ),
+			)
+		);
+
+		$field = array(
+			'id'      => 'tokens',
+			'type'    => 'test/token-list',
+			'storage' => array( 'type' => 'postMeta', 'postMetaKey' => $meta_key ),
+		);
+
+		$this->handler->register( 'test/block', $field );
+
+		$meta = $this->get_registered_meta( $meta_key );
+		$this->assertSame( 'array', $meta['type'] );
+		$this->assertIsArray( $meta['show_in_rest'] );
+		$this->assertSame( 'array', $meta['show_in_rest']['schema']['type'] );
+		$this->assertArrayHasKey( 'items', $meta['show_in_rest']['schema'] );
+	}
+
+	public function test_custom_scalar_array_field_saves_through_posts_rest_api(): void {
+		$meta_key                = 'test_pm_custom_scalar_array';
+		$this->registered_keys[] = $meta_key;
+
+		Field_Type_Registry::instance()->register(
+			'test/badge',
+			array(
+				'attribute' => 'string',
+			)
+		);
+
+		$field = array(
+			'id'                              => 'badges',
+			'type'                            => 'test/badge',
+			'storage'                         => array( 'type' => 'postMeta', 'postMetaKey' => $meta_key ),
+			'__blockstudio_storage_value_type' => 'array',
+		);
+
+		$notices = array();
+		$capture = static function ( string $function_name ) use ( &$notices ): void {
+			$notices[] = $function_name;
+		};
+		add_action( 'doing_it_wrong_run', $capture );
+
+		$this->handler->register( 'test/block', $field );
+
+		$post_id               = wp_insert_post(
+			array(
+				'post_title'  => 'Custom Scalar Array Meta',
+				'post_status' => 'publish',
+				'post_type'   => 'post',
+			)
+		);
+		$this->created_posts[] = $post_id;
+
+		$user_id               = wp_create_user( 'rest-meta-' . wp_generate_uuid4(), wp_generate_password(), 'rest-meta@example.test' );
+		$this->created_users[] = $user_id;
+		$user                  = new WP_User( $user_id );
+		$user->set_role( 'administrator' );
+		wp_set_current_user( $user_id );
+
+		$this->ensure_rest_server();
+
+		$request = new WP_REST_Request( 'POST', '/wp/v2/posts/' . $post_id );
+		$request->set_param( 'meta', array( $meta_key => array( 'alpha', 'beta' ) ) );
+
+		$response = rest_do_request( $request );
+
+		remove_action( 'doing_it_wrong_run', $capture );
+
+		$this->assertSame( 200, $response->get_status(), wp_json_encode( $response->get_data() ) );
+		$this->assertSame( array( 'alpha', 'beta' ), get_post_meta( $post_id, $meta_key, true ) );
+		$this->assertNotContains( 'rest_validate_value_from_schema', $notices );
+	}
+
 	// register() without explicit type
 
 	public function test_register_field_without_type_defaults_to_text(): void {
@@ -443,5 +578,12 @@ class PostMetaStorageTest extends TestCase {
 		}
 
 		return null;
+	}
+
+	private function ensure_rest_server(): void {
+		global $wp_rest_server;
+
+		$wp_rest_server = new WP_REST_Server();
+		do_action( 'rest_api_init' );
 	}
 }

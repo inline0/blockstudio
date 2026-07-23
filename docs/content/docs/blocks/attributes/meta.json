@@ -10,6 +10,7 @@
     "populating-options",
     "block-attributes",
     "field-types",
+    "custom-field-types",
     "custom-fields",
     "block-field",
     "html-utilities"

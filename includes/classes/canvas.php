@@ -366,6 +366,10 @@ class Canvas {
 	 * @return void
 	 */
 	public function register_endpoints(): void {
+		if ( ! Settings::get( 'dev/canvas/enabled' ) ) {
+			return;
+		}
+
 		$permission = function () {
 			return current_user_can( 'edit_posts' );
 		};
@@ -413,6 +417,15 @@ class Canvas {
 	 * @return WP_REST_Response
 	 */
 	public function refresh( \WP_REST_Request $request ): WP_REST_Response {
+		if ( ! Settings::get( 'dev/canvas/enabled' ) ) {
+			return new WP_REST_Response(
+				array(
+					'message' => __( 'Canvas is disabled.', 'blockstudio' ),
+				),
+				404
+			);
+		}
+
 		$query_params    = $request->get_query_params();
 		$blocks_targeted = array_key_exists( 'blocks', $query_params );
 		$blocks_param    = $blocks_targeted ? $request->get_param( 'blocks' ) : '';
@@ -428,12 +441,8 @@ class Canvas {
 			$discovery  = new Page_Discovery();
 			$sync       = new Page_Sync();
 
-			foreach ( $page_paths as $path ) {
-				if ( ! is_dir( $path ) ) {
-					continue;
-				}
-
-				$discovered = $discovery->discover( $path );
+			foreach ( Discovery_Sources::for_paths( 'pages', $page_paths ) as $source ) {
+				$discovered = $discovery->discover( $source );
 
 				foreach ( $discovered as $page_data ) {
 					if ( empty( $only_pages ) || in_array( $page_data['source_path'], $only_pages, true ) ) {
@@ -503,6 +512,12 @@ class Canvas {
 	 * @return void
 	 */
 	public function stream(): void {
+		if ( ! Settings::get( 'dev/canvas/enabled' ) ) {
+			status_header( 404 );
+			nocache_headers();
+			return;
+		}
+
 		header( 'Content-Type: text/event-stream' );
 		header( 'Cache-Control: no-cache' );
 		header( 'X-Accel-Buffering: no' );
@@ -537,9 +552,10 @@ class Canvas {
 
 			clearstatcache();
 
-			$new_mtimes      = array();
-			$new_fingerprint = $this->compute_fingerprint_with_mtimes( $new_mtimes );
-			Build::refresh_blocks();
+			$new_mtimes          = array();
+			$new_fingerprint     = $this->compute_fingerprint_with_mtimes( $new_mtimes );
+			$fingerprint_changed = $new_fingerprint !== $fingerprint;
+			Build::refresh_blocks( ! $fingerprint_changed );
 			$new_dir_to_blocks  = $this->build_dir_to_blocks_map();
 			$new_dir_to_pages   = $this->build_dir_to_pages_map();
 			$blocks_map_changed = ! empty( array_diff_assoc( $new_dir_to_blocks, $dir_to_blocks ) )
@@ -548,7 +564,7 @@ class Canvas {
 				|| ! empty( array_diff_assoc( $dir_to_pages, $new_dir_to_pages ) );
 			$dir_maps_changed   = $blocks_map_changed || $pages_map_changed;
 
-			if ( $new_fingerprint !== $fingerprint || $dir_maps_changed ) {
+			if ( $fingerprint_changed || $dir_maps_changed ) {
 				// Directory map changes can lag behind mtime-based fingerprint updates
 				// when files are written in quick batches. Flush once maps catch up.
 
@@ -607,9 +623,14 @@ class Canvas {
 	private function build_dir_to_blocks_map(): array {
 		$map = array();
 
-		foreach ( Build::blocks() as $name => $block ) {
-			if ( ! empty( $block->path ) ) {
-				$map[ dirname( $block->path ) ] = $name;
+		foreach ( Build::data() as $name => $block ) {
+			$paths = array_merge(
+				array( $block['path'] ?? null, $block['renderTemplate'] ?? null ),
+				$block['filesPaths'] ?? array()
+			);
+
+			foreach ( array_filter( $paths, static fn( mixed $path ): bool => is_string( $path ) && '' !== $path ) as $path ) {
+				$map[ dirname( $path ) ] = $name;
 			}
 		}
 
@@ -619,22 +640,37 @@ class Canvas {
 	/**
 	 * Build a mapping from page directories to source paths.
 	 *
-	 * @return array<string, string> Directory path => page source path.
+	 * @return array<string, array<int, string>> Directory path => page source paths.
 	 */
 	private function build_dir_to_pages_map(): array {
 		$map       = array();
 		$discovery = new Page_Discovery();
 
-		foreach ( Pages::get_paths() as $path ) {
-			if ( ! is_dir( $path ) ) {
-				continue;
-			}
-
-			$discovered = $discovery->discover( $path );
+		foreach ( Discovery_Sources::for_paths( 'pages', Pages::get_paths() ) as $source ) {
+			$discovered = $discovery->discover( $source );
 
 			foreach ( $discovered as $page_data ) {
-				if ( ! empty( $page_data['directory'] ) && isset( $page_data['source_path'] ) ) {
-					$map[ $page_data['directory'] ] = $page_data['source_path'];
+				if ( ! isset( $page_data['source_path'] ) ) {
+					continue;
+				}
+
+				$paths = array_merge(
+					array(
+						$page_data['directory'] ?? null,
+						$page_data['json_path'] ?? null,
+						$page_data['template_path'] ?? null,
+						$page_data['layout_path'] ?? null,
+					),
+					$page_data['source_mtime_paths'] ?? array()
+				);
+
+				foreach ( array_filter( $paths, static fn( mixed $path ): bool => is_string( $path ) && '' !== $path ) as $path ) {
+					$directory         = is_dir( $path ) ? $path : dirname( $path );
+					$map[ $directory ] = array_values(
+						array_unique(
+							array_merge( $map[ $directory ] ?? array(), array( $page_data['source_path'] ) )
+						)
+					);
 				}
 			}
 		}
@@ -669,9 +705,9 @@ class Canvas {
 	/**
 	 * Detect which page source paths were affected by file changes.
 	 *
-	 * @param array<string, int|false> $old_mtimes     Previous mtimes.
-	 * @param array<string, int|false> $new_mtimes     Current mtimes.
-	 * @param array<string, string>    $dir_to_pages   Directory-to-source-path map.
+	 * @param array<string, int|false>          $old_mtimes     Previous mtimes.
+	 * @param array<string, int|false>          $new_mtimes     Current mtimes.
+	 * @param array<string, array<int, string>> $dir_to_pages Directory-to-source-path map.
 	 * @return array<string> Affected page source paths.
 	 */
 	private function detect_changed_pages( array $old_mtimes, array $new_mtimes, array $dir_to_pages ): array {
@@ -679,9 +715,9 @@ class Canvas {
 		$pages         = array();
 
 		foreach ( $changed_files as $file ) {
-			foreach ( $dir_to_pages as $dir => $source_path ) {
+			foreach ( $dir_to_pages as $dir => $source_paths ) {
 				if ( str_starts_with( $file, $dir . '/' ) ) {
-					$pages[] = $source_path;
+					$pages = array_merge( $pages, $source_paths );
 					break;
 				}
 			}
@@ -715,12 +751,8 @@ class Canvas {
 		$sync       = new Page_Sync();
 
 		if ( $sync_all_pages || ! empty( $changed_pages ) ) {
-			foreach ( $page_paths as $path ) {
-				if ( ! is_dir( $path ) ) {
-					continue;
-				}
-
-				$discovered = $discovery->discover( $path );
+			foreach ( Discovery_Sources::for_paths( 'pages', $page_paths ) as $source ) {
+				$discovered = $discovery->discover( $source );
 
 				foreach ( $discovered as $page_data ) {
 					if ( $sync_all_pages || in_array( $page_data['source_path'], $changed_pages, true ) ) {
@@ -810,33 +842,56 @@ class Canvas {
 	private function compute_fingerprint_with_mtimes( array &$mtimes ): string {
 		$mtimes = array();
 
-		$scanned_paths = array();
+		$block_paths   = array_map(
+			static fn( array $path_info ): string => (string) ( $path_info['path'] ?? '' ),
+			Build::paths()
+		);
+		$block_paths[] = Build::get_build_dir();
+		$block_paths   = array_values( array_unique( array_filter( $block_paths ) ) );
 
-		foreach ( Build::paths() as $path_info ) {
-			$normalized                   = wp_normalize_path( $path_info['path'] );
-			$scanned_paths[ $normalized ] = true;
-			$this->collect_file_mtimes( $path_info['path'], $mtimes );
-		}
+		$sources = array_merge(
+			Discovery_Sources::for_paths( 'blocks', $block_paths ),
+			Discovery_Sources::for_paths( 'pages', Pages::get_paths() )
+		);
 
-		// Always scan the default build dir even if not yet registered, so we
-		// detect when a blockstudio directory is created during a live session.
-		$default_build_dir = wp_normalize_path( Build::get_build_dir() );
-
-		if ( ! isset( $scanned_paths[ $default_build_dir ] ) ) {
-			$this->collect_file_mtimes( $default_build_dir, $mtimes );
-		}
-
-		foreach ( Pages::get_paths() as $path ) {
-			$this->collect_file_mtimes( $path, $mtimes );
-		}
-
-		if ( empty( $mtimes ) ) {
-			return '';
+		foreach ( $sources as $source ) {
+			$this->collect_source_mtimes( $source, $mtimes );
 		}
 
 		ksort( $mtimes );
 
-		return md5( wp_json_encode( $mtimes ) );
+		return md5(
+			wp_json_encode(
+				array(
+					'context' => Runtime_Context::hash( 'canvas', array( 'blocks', 'pages' ) ),
+					'mtimes'  => $mtimes,
+				)
+			)
+		);
+	}
+
+	/**
+	 * Collect modification times from a logical discovery source.
+	 *
+	 * @param Discovery_Source         $source Discovery source.
+	 * @param array<string, int|false> $mtimes Reference to populate.
+	 *
+	 * @return void
+	 */
+	private function collect_source_mtimes( Discovery_Source $source, array &$mtimes ): void {
+		foreach ( $source->entries() as $entry ) {
+			$pathname = $entry->physical_path();
+
+			if ( str_contains( $pathname, '/_dist/' ) || str_contains( $pathname, '/node_modules/' ) ) {
+				continue;
+			}
+
+			if ( ! in_array( pathinfo( $pathname, PATHINFO_EXTENSION ), self::WATCHED_EXTENSIONS, true ) ) {
+				continue;
+			}
+
+			$mtimes[ $pathname ] = is_file( $pathname ) ? filemtime( $pathname ) : false;
+		}
 	}
 
 	/**

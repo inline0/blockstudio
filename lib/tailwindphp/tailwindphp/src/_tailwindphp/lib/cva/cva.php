@@ -11,9 +11,7 @@
  * @port-deviation:types TypeScript types are not ported (PHP uses runtime checks)
  * @port-deviation:generics PHP doesn't have generics, uses array config instead
  */
-
-declare(strict_types=1);
-
+declare (strict_types=1);
 namespace BlockstudioVendor\TailwindPHP\Lib\Cva;
 
 /**
@@ -33,12 +31,10 @@ namespace BlockstudioVendor\TailwindPHP\Lib\Cva;
 function cx(mixed ...$inputs): string
 {
     $classes = [];
-
     foreach ($inputs as $input) {
-        if ($input === null || $input === false || $input === '') {
+        if ($input === null || $input === \false || $input === '') {
             continue;
         }
-
         if (is_string($input)) {
             $classes[] = $input;
         } elseif (is_array($input)) {
@@ -51,10 +47,8 @@ function cx(mixed ...$inputs): string
             $classes[] = (string) $input;
         }
     }
-
     return implode(' ', $classes);
 }
-
 /**
  * Convert falsy values to string representation for variant key lookup.
  *
@@ -66,14 +60,11 @@ function falsyToString(mixed $value): mixed
     if (is_bool($value)) {
         return $value ? 'true' : 'false';
     }
-
     if ($value === 0) {
         return '0';
     }
-
     return $value;
 }
-
 /**
  * cva - Create a class variance authority component
  *
@@ -109,26 +100,21 @@ function cva(?array $config = null): callable
         $variants = $config['variants'] ?? null;
         $compoundVariants = $config['compoundVariants'] ?? [];
         $defaultVariants = $config['defaultVariants'] ?? [];
-
         // If no variants defined, just return base + class/className
         if ($variants === null) {
             return cx($base, $props['class'] ?? null, $props['className'] ?? null);
         }
-
         // Get variant class names
         $variantClassNames = [];
         foreach (array_keys($variants) as $variant) {
             $variantProp = $props[$variant] ?? null;
             $defaultVariantProp = $defaultVariants[$variant] ?? null;
-
             // Convert to string key (handle booleans and 0)
             $variantKey = falsyToString($variantProp) ?? falsyToString($defaultVariantProp);
-
             if ($variantKey !== null && isset($variants[$variant][$variantKey])) {
                 $variantClassNames[] = $variants[$variant][$variantKey];
             }
         }
-
         // Build merged props (defaults + provided, excluding undefined)
         $defaultsAndProps = $defaultVariants;
         if ($props !== null) {
@@ -138,36 +124,28 @@ function cva(?array $config = null): callable
                 }
             }
         }
-
         // Get compound variant class names
         $compoundVariantClassNames = [];
         foreach ($compoundVariants as $cv) {
             $cvClass = $cv['class'] ?? null;
             $cvClassName = $cv['className'] ?? null;
-
             // Get variant conditions from compound variant (excluding class/className)
             $cvConfig = array_diff_key($cv, ['class' => 1, 'className' => 1]);
-
             // Check if all conditions match
-            $allMatch = true;
+            $allMatch = \true;
             foreach ($cvConfig as $cvKey => $cvSelector) {
                 $selector = $defaultsAndProps[$cvKey] ?? null;
-
                 if (is_array($cvSelector)) {
                     // Array of values - check if selector matches any
-                    if (!in_array($selector, $cvSelector, true)) {
-                        $allMatch = false;
+                    if (!in_array($selector, $cvSelector, \true)) {
+                        $allMatch = \false;
                         break;
                     }
-                } else {
-                    // Single value - exact match
-                    if ($selector !== $cvSelector) {
-                        $allMatch = false;
-                        break;
-                    }
+                } else if ($selector !== $cvSelector) {
+                    $allMatch = \false;
+                    break;
                 }
             }
-
             if ($allMatch) {
                 if ($cvClass !== null) {
                     $compoundVariantClassNames[] = $cvClass;
@@ -177,19 +155,11 @@ function cva(?array $config = null): callable
                 }
             }
         }
-
         // Build the full list of values to pass to cx
-        $cxArgs = array_merge(
-            [$base],
-            $variantClassNames,
-            $compoundVariantClassNames,
-            [$props['class'] ?? null, $props['className'] ?? null],
-        );
-
+        $cxArgs = array_merge([$base], $variantClassNames, $compoundVariantClassNames, [$props['class'] ?? null, $props['className'] ?? null]);
         return cx(...$cxArgs);
     };
 }
-
 /**
  * compose - Merge multiple cva components into one
  *
@@ -215,23 +185,16 @@ function compose(callable ...$components): callable
                 }
             }
         }
-
         // Call each component with props (without class/className)
         $results = [];
         foreach ($components as $component) {
             $results[] = $component($propsWithoutClass ?: null);
         }
-
         // Combine results with class/className
-        $cxArgs = array_merge(
-            $results,
-            [$props['class'] ?? null, $props['className'] ?? null],
-        );
-
+        $cxArgs = array_merge($results, [$props['class'] ?? null, $props['className'] ?? null]);
         return cx(...$cxArgs);
     };
 }
-
 /**
  * defineConfig - Create configured versions of cva, cx, and compose with hooks
  *
@@ -250,65 +213,46 @@ function compose(callable ...$components): callable
 function defineConfig(array $options = []): array
 {
     $onComplete = $options['hooks']['onComplete'] ?? $options['hooks']['cx:done'] ?? null;
-
     // Configured cx
     $configuredCx = function (mixed ...$inputs) use ($onComplete): string {
         $result = cx(...$inputs);
-
         if ($onComplete !== null) {
             return $onComplete($result);
         }
-
         return $result;
     };
-
     // Configured cva
     $configuredCva = function (?array $config = null) use ($configuredCx): callable {
         $baseCva = cva($config);
-
         return function (?array $props = null) use ($baseCva, $configuredCx): string {
             // We need to rebuild the logic to use configuredCx
             $result = $baseCva($props);
-
             // The hook is applied in cx, but we need to apply it to the final result
             // Actually, let's check if onComplete was passed and apply it
             return $result;
         };
     };
-
     // For cva with hooks, we need to wrap the result
     $configuredCvaWithHook = function (?array $config = null) use ($onComplete): callable {
         $baseCva = cva($config);
-
         return function (?array $props = null) use ($baseCva, $onComplete): string {
             $result = $baseCva($props);
-
             if ($onComplete !== null) {
                 return $onComplete($result);
             }
-
             return $result;
         };
     };
-
     // Configured compose
     $configuredCompose = function (callable ...$components) use ($onComplete): callable {
         $baseCompose = compose(...$components);
-
         return function (?array $props = null) use ($baseCompose, $onComplete): string {
             $result = $baseCompose($props);
-
             if ($onComplete !== null) {
                 return $onComplete($result);
             }
-
             return $result;
         };
     };
-
-    return [
-        'cx' => $configuredCx,
-        'cva' => $configuredCvaWithHook,
-        'compose' => $configuredCompose,
-    ];
+    return ['cx' => $configuredCx, 'cva' => $configuredCvaWithHook, 'compose' => $configuredCompose];
 }

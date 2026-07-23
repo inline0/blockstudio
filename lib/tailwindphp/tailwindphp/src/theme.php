@@ -1,12 +1,10 @@
 <?php
 
-declare(strict_types=1);
-
+declare (strict_types=1);
 namespace BlockstudioVendor\TailwindPHP;
 
 use function BlockstudioVendor\TailwindPHP\Utils\escape;
 use function BlockstudioVendor\TailwindPHP\Utils\unescape;
-
 /**
  * Theme - Theme value management and resolution.
  *
@@ -21,34 +19,23 @@ use function BlockstudioVendor\TailwindPHP\Utils\unescape;
  * @port-deviation:enum TypeScript uses enum ThemeOptions.
  * PHP uses constants (THEME_OPTION_*) for PHP 8.1 compatibility.
  */
-
 // Theme option flags (using constants instead of enum for PHP 8.1 compatibility)
 const THEME_OPTION_NONE = 0;
-const THEME_OPTION_INLINE = 1 << 0;     // 1
-const THEME_OPTION_REFERENCE = 1 << 1;  // 2
-const THEME_OPTION_DEFAULT = 1 << 2;    // 4
-const THEME_OPTION_STATIC = 1 << 3;     // 8
-const THEME_OPTION_USED = 1 << 4;       // 16
-
+const THEME_OPTION_INLINE = 1 << 0;
+// 1
+const THEME_OPTION_REFERENCE = 1 << 1;
+// 2
+const THEME_OPTION_DEFAULT = 1 << 2;
+// 4
+const THEME_OPTION_STATIC = 1 << 3;
+// 8
+const THEME_OPTION_USED = 1 << 4;
+// 16
 /**
  * Map of theme keys to keys that should be ignored when looking up values.
  * For example, --font should not match --font-weight or --font-size.
  */
-const IGNORED_THEME_KEY_MAP = [
-    '--font' => ['--font-weight', '--font-size'],
-    '--inset' => ['--inset-shadow', '--inset-ring'],
-    '--text' => [
-        '--text-color',
-        '--text-decoration-color',
-        '--text-decoration-thickness',
-        '--text-indent',
-        '--text-shadow',
-        '--text-underline-offset',
-    ],
-    '--grid-column' => ['--grid-column-start', '--grid-column-end'],
-    '--grid-row' => ['--grid-row-start', '--grid-row-end'],
-];
-
+const IGNORED_THEME_KEY_MAP = ['--font' => ['--font-weight', '--font-size'], '--inset' => ['--inset-shadow', '--inset-ring'], '--text' => ['--text-color', '--text-decoration-color', '--text-decoration-thickness', '--text-indent', '--text-shadow', '--text-underline-offset'], '--grid-column' => ['--grid-column-start', '--grid-column-end'], '--grid-row' => ['--grid-row-start', '--grid-row-end']];
 /**
  * Check if a theme key should be ignored for a given namespace.
  *
@@ -61,13 +48,11 @@ function isIgnoredThemeKey(string $themeKey, string $namespace): bool
     $ignored = IGNORED_THEME_KEY_MAP[$namespace] ?? [];
     foreach ($ignored as $ignoredKey) {
         if ($themeKey === $ignoredKey || str_starts_with($themeKey, "{$ignoredKey}-")) {
-            return true;
+            return \true;
         }
     }
-
-    return false;
+    return \false;
 }
-
 /**
  * Theme class - manages theme values and provides resolution methods.
  *
@@ -84,21 +69,16 @@ class Theme
     public const OPTIONS_DEFAULT = THEME_OPTION_DEFAULT;
     public const OPTIONS_STATIC = THEME_OPTION_STATIC;
     public const OPTIONS_USED = THEME_OPTION_USED;
-
     private const CACHE_MAX_SIZE = 256;
-
     public ?string $prefix = null;
-
     /**
      * @var array<string, array{value: string, options: int, src: mixed}>
      */
     private array $values = [];
-
     /**
      * @var array<string, array{node: array, options: int}>
      */
     private array $keyframes = [];
-
     /**
      * Cache for resolveKey() lookups.
      * Key format: candidateValue|namespace1|namespace2|...
@@ -106,7 +86,6 @@ class Theme
      * @var array<string, string|null>
      */
     private array $resolveKeyCache = [];
-
     /**
      * @param array<string, array{value: string, options: int, src: mixed}> $values
      * @param array<string, array{node: array, options: int}> $keyframes
@@ -116,7 +95,6 @@ class Theme
         $this->values = $values;
         $this->keyframes = $keyframes;
     }
-
     /**
      * Get the number of theme values.
      *
@@ -126,7 +104,6 @@ class Theme
     {
         return count($this->values);
     }
-
     /**
      * Get the prefix.
      *
@@ -136,7 +113,6 @@ class Theme
     {
         return $this->prefix;
     }
-
     /**
      * Add a theme value.
      *
@@ -150,7 +126,6 @@ class Theme
     {
         // Clear resolve cache when values change
         $this->resolveKeyCache = [];
-
         // Handle namespace wildcards (e.g., --color-* to clear color namespace)
         if (str_ends_with($key, '-*')) {
             if ($value !== 'initial') {
@@ -162,11 +137,10 @@ class Theme
                 $this->clearNamespace(
                     substr($key, 0, -2),
                     // `--${key}-*: initial;` should clear _all_ theme values
-                    THEME_OPTION_NONE,
+                    THEME_OPTION_NONE
                 );
             }
         }
-
         // Default values should not override non-default values
         if ($options & THEME_OPTION_DEFAULT) {
             $existing = $this->values[$key] ?? null;
@@ -174,14 +148,12 @@ class Theme
                 return;
             }
         }
-
         if ($value === 'initial') {
             unset($this->values[$key]);
         } else {
             $this->values[$key] = ['value' => $value, 'options' => $options, 'src' => $src];
         }
     }
-
     /**
      * Get all keys in the given namespaces.
      *
@@ -191,31 +163,24 @@ class Theme
     public function keysInNamespaces(iterable $themeKeys): array
     {
         $keys = [];
-
         foreach ($themeKeys as $namespace) {
             $prefix = "{$namespace}-";
-
             foreach (array_keys($this->values) as $key) {
                 if (!str_starts_with($key, $prefix)) {
                     continue;
                 }
-
                 // Skip keys that have additional namespaces (e.g., --color-red-500--alpha)
-                if (strpos($key, '--', 2) !== false) {
+                if (strpos($key, '--', 2) !== \false) {
                     continue;
                 }
-
                 if (isIgnoredThemeKey($key, $namespace)) {
                     continue;
                 }
-
                 $keys[] = substr($key, strlen($prefix));
             }
         }
-
         return $keys;
     }
-
     /**
      * Get the first matching theme value.
      *
@@ -229,10 +194,8 @@ class Theme
                 return $this->values[$key]['value'];
             }
         }
-
         return null;
     }
-
     /**
      * Check if a key has default options.
      *
@@ -243,7 +206,6 @@ class Theme
     {
         return ($this->getOptions($key) & THEME_OPTION_DEFAULT) === THEME_OPTION_DEFAULT;
     }
-
     /**
      * Get options for a key.
      *
@@ -253,10 +215,8 @@ class Theme
     public function getOptions(string $key): int
     {
         $key = unescape($this->unprefixKey($key));
-
         return $this->values[$key]['options'] ?? THEME_OPTION_NONE;
     }
-
     /**
      * Get all entries, prefixed if a prefix is set.
      *
@@ -268,15 +228,12 @@ class Theme
             foreach ($this->values as $key => $value) {
                 yield [$key, $value];
             }
-
             return;
         }
-
         foreach ($this->values as $key => $value) {
             yield [$this->prefixKey($key), $value];
         }
     }
-
     /**
      * Prefix a key with the theme prefix.
      *
@@ -288,10 +245,8 @@ class Theme
         if (!$this->prefix) {
             return $key;
         }
-
         return "--{$this->prefix}-" . substr($key, 2);
     }
-
     /**
      * Remove the prefix from a key.
      *
@@ -303,10 +258,8 @@ class Theme
         if (!$this->prefix) {
             return $key;
         }
-
         return '--' . substr($key, 3 + strlen($this->prefix));
     }
-
     /**
      * Clear all values in a namespace.
      *
@@ -317,34 +270,29 @@ class Theme
     public function clearNamespace(string $namespace, int $clearOptions): void
     {
         $ignored = IGNORED_THEME_KEY_MAP[$namespace] ?? [];
-
         foreach (array_keys($this->values) as $key) {
             if (!str_starts_with($key, $namespace)) {
                 continue;
             }
-
             if ($clearOptions !== THEME_OPTION_NONE) {
                 $options = $this->getOptions($key);
                 if (($options & $clearOptions) !== $clearOptions) {
                     continue;
                 }
             }
-
-            $shouldSkip = false;
+            $shouldSkip = \false;
             foreach ($ignored as $ignoredNamespace) {
                 if (str_starts_with($key, $ignoredNamespace)) {
-                    $shouldSkip = true;
+                    $shouldSkip = \true;
                     break;
                 }
             }
             if ($shouldSkip) {
                 continue;
             }
-
             unset($this->values[$key]);
         }
     }
-
     /**
      * Resolve a theme key from candidate value and namespaces.
      *
@@ -356,23 +304,19 @@ class Theme
     {
         // Build cache key
         $cacheKey = ($candidateValue ?? '') . '|' . implode('|', $themeKeys);
-
         // Check cache first
         if (array_key_exists($cacheKey, $this->resolveKeyCache)) {
             return $this->resolveKeyCache[$cacheKey];
         }
-
         // Compute result
         $result = null;
         foreach ($themeKeys as $namespace) {
             $themeKey = $candidateValue !== null ? "{$namespace}-{$candidateValue}" : $namespace;
-
             if (!isset($this->values[$themeKey])) {
                 // If the exact theme key is not found, we might be trying to resolve a key containing a dot
                 // that was registered with an underscore instead:
                 if ($candidateValue !== null && str_contains($candidateValue, '.')) {
                     $themeKey = "{$namespace}-" . str_replace('.', '_', $candidateValue);
-
                     if (!isset($this->values[$themeKey])) {
                         continue;
                     }
@@ -380,24 +324,19 @@ class Theme
                     continue;
                 }
             }
-
             if (isIgnoredThemeKey($themeKey, $namespace)) {
                 continue;
             }
-
             $result = $themeKey;
             break;
         }
-
         // Cache with size limit (FIFO eviction)
         if (count($this->resolveKeyCache) >= self::CACHE_MAX_SIZE) {
             array_shift($this->resolveKeyCache);
         }
         $this->resolveKeyCache[$cacheKey] = $result;
-
         return $result;
     }
-
     /**
      * Get a CSS var() reference for a theme key.
      *
@@ -410,7 +349,6 @@ class Theme
         if (!$value) {
             return null;
         }
-
         // Since @theme blocks in reference mode do not emit the CSS variables, we can not assume that
         // the values will eventually be set up in the browser (e.g. when using `@apply` inside roots
         // that use `@reference`). Ensure we set up a fallback in these cases.
@@ -418,12 +356,9 @@ class Theme
         if ($value['options'] & THEME_OPTION_REFERENCE) {
             $fallback = $value['value'];
         }
-
         $prefixedKey = escape($this->prefixKey($themeKey));
-
         return "var({$prefixedKey}" . ($fallback ? ", {$fallback}" : '') . ')';
     }
-
     /**
      * Mark a theme variable as used.
      *
@@ -434,14 +369,12 @@ class Theme
     {
         $key = unescape($this->unprefixKey($themeKey));
         if (!isset($this->values[$key])) {
-            return false;
+            return \false;
         }
         $isUsed = $this->values[$key]['options'] & THEME_OPTION_USED;
         $this->values[$key]['options'] |= THEME_OPTION_USED;
-
         return !$isUsed;
     }
-
     /**
      * Resolve a theme value.
      *
@@ -453,20 +386,15 @@ class Theme
     public function resolve(?string $candidateValue, array $themeKeys, int $options = THEME_OPTION_NONE): ?string
     {
         $themeKey = $this->resolveKey($candidateValue, $themeKeys);
-
         if (!$themeKey) {
             return null;
         }
-
         $value = $this->values[$themeKey];
-
         if (($options | $value['options']) & THEME_OPTION_INLINE) {
             return $value['value'];
         }
-
         return $this->var($themeKey);
     }
-
     /**
      * Resolve the raw value (not a var() reference).
      *
@@ -477,14 +405,11 @@ class Theme
     public function resolveValue(?string $candidateValue, array $themeKeys): ?string
     {
         $themeKey = $this->resolveKey($candidateValue, $themeKeys);
-
         if (!$themeKey) {
             return null;
         }
-
         return $this->values[$themeKey]['value'];
     }
-
     /**
      * Resolve a theme value with nested keys.
      *
@@ -496,11 +421,9 @@ class Theme
     public function resolveWith(string $candidateValue, array $themeKeys, array $nestedKeys = []): ?array
     {
         $themeKey = $this->resolveKey($candidateValue, $themeKeys);
-
         if (!$themeKey) {
             return null;
         }
-
         $extra = [];
         foreach ($nestedKeys as $name) {
             $nestedKey = "{$themeKey}{$name}";
@@ -508,23 +431,18 @@ class Theme
             if (!$nestedValue) {
                 continue;
             }
-
             if ($nestedValue['options'] & THEME_OPTION_INLINE) {
                 $extra[$name] = $nestedValue['value'];
             } else {
                 $extra[$name] = $this->var($nestedKey);
             }
         }
-
         $value = $this->values[$themeKey];
-
         if ($value['options'] & THEME_OPTION_INLINE) {
             return [$value['value'], $extra];
         }
-
         return [$this->var($themeKey), $extra];
     }
-
     /**
      * Get all values in a namespace.
      *
@@ -535,7 +453,6 @@ class Theme
     {
         $values = [];
         $prefix = "{$namespace}-";
-
         foreach ($this->values as $key => $value) {
             if ($key === $namespace) {
                 $values[''] = $value['value'];
@@ -547,10 +464,8 @@ class Theme
                 $values[substr($key, strlen($prefix))] = $value['value'];
             }
         }
-
         return $values;
     }
-
     /**
      * Add keyframes to the theme.
      *
@@ -563,7 +478,6 @@ class Theme
         $name = trim($node['params'] ?? '');
         $this->keyframes[$name] = ['node' => $node, 'options' => $options];
     }
-
     /**
      * Get all keyframes.
      *
@@ -571,9 +485,8 @@ class Theme
      */
     public function getKeyframes(): array
     {
-        return array_map(fn ($kf) => $kf['node'], $this->keyframes);
+        return array_map(fn($kf) => $kf['node'], $this->keyframes);
     }
-
     /**
      * Get options for a keyframe.
      *
@@ -584,7 +497,6 @@ class Theme
     {
         return $this->keyframes[$name]['options'] ?? THEME_OPTION_NONE;
     }
-
     /**
      * Check if a keyframe is registered in the theme.
      *
@@ -595,7 +507,6 @@ class Theme
     {
         return isset($this->keyframes[$name]);
     }
-
     /**
      * Check if a value exists for a key.
      *

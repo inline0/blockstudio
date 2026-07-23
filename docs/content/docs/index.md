@@ -1,0 +1,65 @@
+---
+title: Introduction
+description: Welcome to the Blockstudio documentation.
+path: "."
+order: 0
+section: "Introduction"
+meta_title: "Introduction"
+meta_description: "Welcome to the Blockstudio documentation."
+---
+
+# Introduction
+
+Blockstudio enables you to create custom WordPress blocks with nothing but PHP
+using the WordPress
+[block.json](https://developer.wordpress.org/block-editor/reference-guides/block-api/block-metadata/)
+format. It greatly simplifies the developer experience in regard to block
+registration, lazy loading assets, and custom fields.
+
+## Philosophy
+
+### Core focused
+
+There is no secret sauce. Blockstudio is built on top of core WordPress features
+and Gutenberg components. It is designed to be a lightweight abstraction layer
+that helps you get started with custom blocks quickly.
+
+### Server side first
+
+When creating dynamic blocks using nothing but WordPress, there is duplication
+of logic between PHP and JS code. [There are
+discussions](https://github.com/WordPress/gutenberg/discussions/38224) about
+solving this issue, including hydrating blocks on the client side (not good for
+SEO) or introducing a JSX parser for PHP (complex).
+
+Blockstudio takes a different approach. You use PHP to write your block
+templates and sprinkle in interactivity like `<RichText />` or `<InnerBlocks />`
+using JSX-like tags. Inside the editor, those tags will be replaced with their
+React counterparts. On the frontend, the tags will be replaced with HTML
+content.
+
+This way, you get the best of both worlds: a server-side rendered block with
+great interactivity in the editor.
+
+### File system based
+
+While WordPress supports a file-based approach using the
+[WPDefinedPath](https://developer.wordpress.org/block-editor/reference-guides/block-api/block-metadata/#wpdefinedpath)
+string type, it is also possible to link assets or templates from other
+destinations. Blockstudio doubles down on the file-system as the primary (and
+only) way of registering blocks. This decision was not made to restrict, but to
+set a block structure in place that can't be argued with. For example, if a
+`style.css` or `script.js` file is found in the same folder as a block.json,
+then you can be sure that it belongs to this exact block only.
+
+### No setup
+
+Blockstudio just works. It is designed to remove friction when composing custom
+blocks and doesn't come in your way while doing so. Want to use Twig for your
+template? Simply rename the file extension. Need to include some CSS? Create a
+`style.css` file. Blockstudio will automatically enqueue it whenever the block
+is being used on your page, even when it is used outside the post_content with
+the [rendering function](/docs/blocks/rendering).
+
+Do you have feature requests or questions? [Message
+us](mailto:hi@blockstudio.dev).

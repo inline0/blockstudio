@@ -1,7 +1,6 @@
 <?php
 
-declare(strict_types=1);
-
+declare (strict_types=1);
 namespace BlockstudioVendor\TailwindPHP\PropertyOrder;
 
 /**
@@ -11,14 +10,11 @@ namespace BlockstudioVendor\TailwindPHP\PropertyOrder;
  *
  * @port-deviation:none This is a direct 1:1 port with no significant deviations.
  */
-
 const PROPERTY_ORDER = [
     'container-type',
-
     'pointer-events',
     'visibility',
     'position',
-
     // How do we make `inset-x-0` come before `top-0`?
     'inset',
     'inset-inline',
@@ -29,7 +25,6 @@ const PROPERTY_ORDER = [
     'right',
     'bottom',
     'left',
-
     'isolation',
     'z-index',
     'order',
@@ -41,11 +36,9 @@ const PROPERTY_ORDER = [
     'grid-row-end',
     'float',
     'clear',
-
     // Ensure that the included `container` class is always sorted before any
     // custom container extensions
     '--tw-container-component',
-
     // How do we make `mx-0` come before `mt-0`?
     // Idea: `margin-x` property that we compile away with a Visitor plugin?
     'margin',
@@ -57,10 +50,8 @@ const PROPERTY_ORDER = [
     'margin-right',
     'margin-bottom',
     'margin-left',
-
     'box-sizing',
     'display',
-
     'field-sizing',
     'aspect-ratio',
     'height',
@@ -69,23 +60,18 @@ const PROPERTY_ORDER = [
     'width',
     'max-width',
     'min-width',
-
     'flex',
     'flex-shrink',
     'flex-grow',
     'flex-basis',
-
     'table-layout',
     'caption-side',
     'border-collapse',
-
     // There's no `border-spacing-x` property, we use variables, how to sort?
     'border-spacing',
     // '--tw-border-spacing-x',
     // '--tw-border-spacing-y',
-
     'transform-origin',
-
     'translate',
     '--tw-translate-x',
     '--tw-translate-y',
@@ -101,18 +87,13 @@ const PROPERTY_ORDER = [
     '--tw-skew-x',
     '--tw-skew-y',
     'transform',
-
     'animation',
-
     'cursor',
-
     'touch-action',
     '--tw-pan-x',
     '--tw-pan-y',
     '--tw-pinch-zoom',
-
     'resize',
-
     'scroll-snap-type',
     '--tw-scroll-snap-strictness',
     'scroll-snap-align',
@@ -126,7 +107,6 @@ const PROPERTY_ORDER = [
     'scroll-margin-right',
     'scroll-margin-bottom',
     'scroll-margin-left',
-
     'scroll-padding',
     'scroll-padding-inline',
     'scroll-padding-block',
@@ -136,24 +116,19 @@ const PROPERTY_ORDER = [
     'scroll-padding-right',
     'scroll-padding-bottom',
     'scroll-padding-left',
-
     'list-style-position',
     'list-style-type',
     'list-style-image',
-
     'appearance',
-
     'columns',
     'break-before',
     'break-inside',
     'break-after',
-
     'grid-auto-columns',
     'grid-auto-flow',
     'grid-auto-rows',
     'grid-template-columns',
     'grid-template-rows',
-
     'flex-direction',
     'flex-wrap',
     'place-content',
@@ -167,35 +142,35 @@ const PROPERTY_ORDER = [
     'row-gap',
     '--tw-space-x-reverse',
     '--tw-space-y-reverse',
-
     // Is there a more "real" property we could use for this?
     'divide-x-width',
     'divide-y-width',
     '--tw-divide-y-reverse',
     'divide-style',
     'divide-color',
-
     'place-self',
     'align-self',
     'justify-self',
-
     'overflow',
     'overflow-x',
     'overflow-y',
-
     'overscroll-behavior',
     'overscroll-behavior-x',
     'overscroll-behavior-y',
-
     'scroll-behavior',
-
     'border-radius',
-    'border-start-radius', // Not real
-    'border-end-radius', // Not real
-    'border-top-radius', // Not real
-    'border-right-radius', // Not real
-    'border-bottom-radius', // Not real
-    'border-left-radius', // Not real
+    'border-start-radius',
+    // Not real
+    'border-end-radius',
+    // Not real
+    'border-top-radius',
+    // Not real
+    'border-right-radius',
+    // Not real
+    'border-bottom-radius',
+    // Not real
+    'border-left-radius',
+    // Not real
     'border-start-start-radius',
     'border-start-end-radius',
     'border-end-end-radius',
@@ -204,7 +179,6 @@ const PROPERTY_ORDER = [
     'border-top-right-radius',
     'border-bottom-right-radius',
     'border-bottom-left-radius',
-
     'border-width',
     'border-inline-width',
     'border-block-width',
@@ -214,7 +188,6 @@ const PROPERTY_ORDER = [
     'border-right-width',
     'border-bottom-width',
     'border-left-width',
-
     'border-style',
     'border-inline-style',
     'border-block-style',
@@ -224,7 +197,6 @@ const PROPERTY_ORDER = [
     'border-right-style',
     'border-bottom-style',
     'border-left-style',
-
     'border-color',
     'border-inline-color',
     'border-block-color',
@@ -234,9 +206,7 @@ const PROPERTY_ORDER = [
     'border-right-color',
     'border-bottom-color',
     'border-left-color',
-
     'background-color',
-
     'background-image',
     '--tw-gradient-position',
     '--tw-gradient-stops',
@@ -247,34 +217,28 @@ const PROPERTY_ORDER = [
     '--tw-gradient-via-position',
     '--tw-gradient-to',
     '--tw-gradient-to-position',
-
     'mask-image',
-
     // Edge masks
     '--tw-mask-top',
     '--tw-mask-top-from-color',
     '--tw-mask-top-from-position',
     '--tw-mask-top-to-color',
     '--tw-mask-top-to-position',
-
     '--tw-mask-right',
     '--tw-mask-right-from-color',
     '--tw-mask-right-from-position',
     '--tw-mask-right-to-color',
     '--tw-mask-right-to-position',
-
     '--tw-mask-bottom',
     '--tw-mask-bottom-from-color',
     '--tw-mask-bottom-from-position',
     '--tw-mask-bottom-to-color',
     '--tw-mask-bottom-to-position',
-
     '--tw-mask-left',
     '--tw-mask-left-from-color',
     '--tw-mask-left-from-position',
     '--tw-mask-left-to-color',
     '--tw-mask-left-to-position',
-
     // Linear masks
     '--tw-mask-linear',
     '--tw-mask-linear-position',
@@ -282,7 +246,6 @@ const PROPERTY_ORDER = [
     '--tw-mask-linear-from-position',
     '--tw-mask-linear-to-color',
     '--tw-mask-linear-to-position',
-
     // Radial masks
     '--tw-mask-radial',
     '--tw-mask-radial-shape',
@@ -292,7 +255,6 @@ const PROPERTY_ORDER = [
     '--tw-mask-radial-from-position',
     '--tw-mask-radial-to-color',
     '--tw-mask-radial-to-position',
-
     // Conic masks
     '--tw-mask-conic',
     '--tw-mask-conic-position',
@@ -300,16 +262,13 @@ const PROPERTY_ORDER = [
     '--tw-mask-conic-from-position',
     '--tw-mask-conic-to-color',
     '--tw-mask-conic-to-position',
-
     'box-decoration-break',
-
     'background-size',
     'background-attachment',
     'background-clip',
     'background-position',
     'background-repeat',
     'background-origin',
-
     'mask-composite',
     'mask-mode',
     'mask-type',
@@ -318,14 +277,11 @@ const PROPERTY_ORDER = [
     'mask-position',
     'mask-repeat',
     'mask-origin',
-
     'fill',
     'stroke',
     'stroke-width',
-
     'object-fit',
     'object-position',
-
     'padding',
     'padding-inline',
     'padding-block',
@@ -335,11 +291,9 @@ const PROPERTY_ORDER = [
     'padding-right',
     'padding-bottom',
     'padding-left',
-
     'text-align',
     'text-indent',
     'vertical-align',
-
     'font-family',
     'font-size',
     'line-height',
@@ -351,7 +305,6 @@ const PROPERTY_ORDER = [
     'text-overflow',
     'hyphens',
     'white-space',
-
     'color',
     'text-transform',
     'font-style',
@@ -363,19 +316,13 @@ const PROPERTY_ORDER = [
     'text-decoration-thickness',
     'text-underline-offset',
     '-webkit-font-smoothing',
-
     'placeholder-color',
-
     'caret-color',
     'accent-color',
-
     'color-scheme',
-
     'opacity',
-
     'background-blend-mode',
     'mix-blend-mode',
-
     'box-shadow',
     '--tw-shadow',
     '--tw-shadow-color',
@@ -387,12 +334,10 @@ const PROPERTY_ORDER = [
     '--tw-inset-ring-color',
     '--tw-ring-offset-width',
     '--tw-ring-offset-color',
-
     'outline',
     'outline-width',
     'outline-offset',
     'outline-color',
-
     '--tw-blur',
     '--tw-brightness',
     '--tw-contrast',
@@ -403,7 +348,6 @@ const PROPERTY_ORDER = [
     '--tw-saturate',
     '--tw-sepia',
     'filter',
-
     '--tw-backdrop-blur',
     '--tw-backdrop-brightness',
     '--tw-backdrop-contrast',
@@ -414,17 +358,13 @@ const PROPERTY_ORDER = [
     '--tw-backdrop-saturate',
     '--tw-backdrop-sepia',
     'backdrop-filter',
-
     'transition-property',
     'transition-behavior',
     'transition-delay',
     'transition-duration',
     'transition-timing-function',
-
     'will-change',
     'contain',
-
     'content',
-
     'forced-color-adjust',
 ];

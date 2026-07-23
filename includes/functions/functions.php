@@ -9,9 +9,16 @@ use Blockstudio\Db;
 use Blockstudio\Render;
 use Blockstudio\Build;
 use Blockstudio\Pages;
+use Blockstudio\Site_Templates;
+use Blockstudio\Field_Type_Registry;
+use Blockstudio\Utils;
 
 /**
- * Render block.
+ * Render a Blockstudio block as frontend-resolved HTML.
+ *
+ * When called inside another block's editor preview, embedded blocks still
+ * render through the frontend path so pseudo-components like RichText and
+ * InnerBlocks are resolved before output.
  *
  * @since 2.1.2
  *
@@ -24,7 +31,11 @@ function blockstudio_render_block( $value ) {
 }
 
 /**
- * Get block.
+ * Get a Blockstudio block as frontend-resolved HTML.
+ *
+ * When called inside another block's editor preview, embedded blocks still
+ * render through the frontend path so pseudo-components like RichText and
+ * InnerBlocks are resolved before output.
  *
  * @since 2.1.2
  *
@@ -45,7 +56,11 @@ function bs_block( $value ) {
 }
 
 /**
- * Render block.
+ * Render a Blockstudio block as frontend-resolved HTML.
+ *
+ * When called inside another block's editor preview, embedded blocks still
+ * render through the frontend path so pseudo-components like RichText and
+ * InnerBlocks are resolved before output.
  *
  * @since 2.1.2
  *
@@ -141,8 +156,7 @@ function bs_render_icon( $args ) {
 
 		if ( false === $data ) {
 			if ( file_exists( $complete_path ) ) {
-				// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Reading local icon file.
-				$data = json_decode( file_get_contents( $complete_path ), true );
+				$data = Utils::read_json_file( $complete_path );
 
 				set_transient( $set_icon_transient_key, $data, $expiration_time );
 			}
@@ -228,6 +242,39 @@ function bs_render_variables( $data, array $allowed = array() ) {
 	// phpcs:enable WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedFunctionFound
 	// phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Utils::attributes handles escaping.
 	echo Blockstudio\Utils::attributes( $data, $allowed, true );
+}
+
+/**
+ * Register a custom Blockstudio field type.
+ *
+ * @since 7.5.0
+ *
+ * @param string $name       Namespaced field type name, for example "acme/dimensions".
+ * @param array  $definition Field type definition.
+ *
+ * @return bool Whether registration succeeded.
+ *
+ * @phpcs:disable WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedFunctionFound -- Public API function.
+ */
+function bs_register_field_type( string $name, array $definition ): bool {
+	// phpcs:enable WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedFunctionFound
+	return Field_Type_Registry::instance()->register( $name, $definition );
+}
+
+/**
+ * Unregister a custom Blockstudio field type.
+ *
+ * @since 7.5.0
+ *
+ * @param string $name Namespaced field type name.
+ *
+ * @return bool Whether the field type existed.
+ *
+ * @phpcs:disable WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedFunctionFound -- Public API function.
+ */
+function bs_unregister_field_type( string $name ): bool {
+	// phpcs:enable WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedFunctionFound
+	return Field_Type_Registry::instance()->unregister( $name );
 }
 
 /**
@@ -371,4 +418,52 @@ function blockstudio_page_content(): string {
  */
 function blockstudio_current_page(): ?array {
 	return Pages::current_page();
+}
+
+/**
+ * Get file-backed Site Editor templates.
+ *
+ * @since 7.5.0
+ *
+ * @return array Registered templates.
+ */
+function blockstudio_site_templates(): array {
+	return Site_Templates::templates();
+}
+
+/**
+ * Get file-backed Site Editor template parts.
+ *
+ * @since 7.5.0
+ *
+ * @return array Registered template parts.
+ */
+function blockstudio_site_template_parts(): array {
+	return Site_Templates::parts();
+}
+
+/**
+ * Get a file-backed Site Editor template.
+ *
+ * @since 7.5.0
+ *
+ * @param string $slug Template slug.
+ *
+ * @return array|null Template data.
+ */
+function blockstudio_site_template( string $slug ): ?array {
+	return Site_Templates::get_template( $slug );
+}
+
+/**
+ * Get a file-backed Site Editor template part.
+ *
+ * @since 7.5.0
+ *
+ * @param string $slug Template part slug.
+ *
+ * @return array|null Template part data.
+ */
+function blockstudio_site_template_part( string $slug ): ?array {
+	return Site_Templates::get_part( $slug );
 }

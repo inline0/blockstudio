@@ -11,6 +11,20 @@
 				"type": "richtext"
 			},
 			{
+				"id": "icon",
+				"type": "icon"
+			},
+			{
+				"id": "iconPosition",
+				"type": "select",
+				"label": "Icon Position",
+				"options": [
+					{ "label": "Left", "value": "left" },
+					{ "label": "Right", "value": "right" }
+				],
+				"default": "left"
+			},
+			{
 				"id": "href",
 				"type": "text",
 				"label": "URL"

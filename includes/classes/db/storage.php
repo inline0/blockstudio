@@ -14,6 +14,7 @@ enum Storage: string {
 	case Table    = 'table';
 	case Sqlite   = 'sqlite';
 	case Jsonc    = 'jsonc';
+	case Storh    = 'storh';
 	case Meta     = 'meta';
 	case PostType = 'post_type';
 }

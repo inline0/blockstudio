@@ -60,6 +60,17 @@ class UtilsTest extends TestCase {
 		$this->assertStringContainsString( 'data-color="green"', $result );
 	}
 
+	public function test_attributes_escapes_scalar_values(): void {
+		$result = Utils::attributes(
+			array(
+				'title' => 'hello" onmouseover="alert(1)',
+			)
+		);
+
+		$this->assertStringContainsString( 'data-title="hello&quot; onmouseover=&quot;alert(1)"', $result );
+		$this->assertStringNotContainsString( 'onmouseover="alert(1)', $result );
+	}
+
 	public function test_attributes_returns_empty_string_for_empty_data(): void {
 		$this->assertSame( '', Utils::attributes( array() ) );
 	}
@@ -106,6 +117,19 @@ class UtilsTest extends TestCase {
 		$this->assertStringContainsString( '--color: blue;', $result );
 		$this->assertStringContainsString( '--display: flex;', $result );
 		$this->assertStringNotContainsString( '--size', $result );
+	}
+
+	public function test_attributes_css_variables_escape_scalar_values(): void {
+		$result = Utils::attributes(
+			array(
+				'color' => 'red";" onmouseover="alert(1)',
+			),
+			array(),
+			true
+		);
+
+		$this->assertStringContainsString( '--color: red&quot;;&quot; onmouseover=&quot;alert(1);', $result );
+		$this->assertStringNotContainsString( '" onmouseover="', $result );
 	}
 
 	// data_attributes()

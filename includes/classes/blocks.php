@@ -71,6 +71,8 @@ class Blocks {
 	public function enqueue_editor_assets(): void {
 		global $post;
 
+		Field_Type_Registry::instance()->enqueue_editor_assets();
+
 		$block_scripts = include BLOCKSTUDIO_DIR . '/includes/admin/assets/blocks/index.tsx.asset.php';
 		wp_enqueue_script(
 			'blockstudio-blocks',
