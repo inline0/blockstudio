@@ -54,7 +54,8 @@ class Block_Merger {
 		$merged = array();
 
 		foreach ( $new_blocks as $new_block ) {
-			$key = $this->normalize_key( $new_block['attrs']['__BLOCKSTUDIO_KEY'] ?? null );
+			$new_block = $this->canonicalize_block_key( $new_block );
+			$key       = $this->get_block_key( $new_block );
 
 			if ( null !== $key && isset( $this->old_key_map[ $key ] ) ) {
 				$merged[] = $this->merge_block( $new_block, $this->old_key_map[ $key ] );
@@ -87,6 +88,46 @@ class Block_Merger {
 		$key = (string) $key;
 
 		return '' === $key ? null : $key;
+	}
+
+	/**
+	 * Read a block key, including the legacy nested custom-block location.
+	 *
+	 * @param array $block Parsed block.
+	 *
+	 * @return string|null Normalized key.
+	 */
+	private function get_block_key( array $block ): ?string {
+		$key = $this->normalize_key( $block['attrs']['__BLOCKSTUDIO_KEY'] ?? null );
+
+		if ( null !== $key ) {
+			return $key;
+		}
+
+		return $this->normalize_key(
+			$block['attrs']['blockstudio']['attributes']['__BLOCKSTUDIO_KEY'] ?? null
+		);
+	}
+
+	/**
+	 * Move a legacy nested custom-block key to the canonical top level.
+	 *
+	 * @param array $block Parsed block.
+	 *
+	 * @return array Block with canonical key placement.
+	 */
+	private function canonicalize_block_key( array $block ): array {
+		$key = $this->get_block_key( $block );
+
+		if ( isset( $block['attrs']['blockstudio']['attributes'] ) && is_array( $block['attrs']['blockstudio']['attributes'] ) ) {
+			unset( $block['attrs']['blockstudio']['attributes']['__BLOCKSTUDIO_KEY'] );
+		}
+
+		if ( null !== $key ) {
+			$block['attrs']['__BLOCKSTUDIO_KEY'] = $key;
+		}
+
+		return $block;
 	}
 
 	/**
@@ -139,6 +180,8 @@ class Block_Merger {
 		$old_blockstudio_attributes = $old_attrs['blockstudio']['attributes'] ?? null;
 
 		if ( is_array( $old_blockstudio_attributes ) ) {
+			unset( $old_blockstudio_attributes['__BLOCKSTUDIO_KEY'] );
+
 			if ( ! isset( $merged['blockstudio'] ) || ! is_array( $merged['blockstudio'] ) ) {
 				$merged['blockstudio'] = array();
 			}
@@ -148,6 +191,8 @@ class Block_Merger {
 			if ( ! is_array( $new_blockstudio_attributes ) ) {
 				$new_blockstudio_attributes = array();
 			}
+
+			unset( $new_blockstudio_attributes['__BLOCKSTUDIO_KEY'] );
 
 			$merged['blockstudio']['attributes'] = array_merge(
 				$new_blockstudio_attributes,
@@ -181,7 +226,7 @@ class Block_Merger {
 		$map = array();
 
 		foreach ( $blocks as $block ) {
-			$key = $this->normalize_key( $block['attrs']['__BLOCKSTUDIO_KEY'] ?? null );
+			$key = $this->get_block_key( $block );
 
 			if ( null !== $key ) {
 				if ( isset( $map[ $key ] ) ) {

@@ -104,15 +104,57 @@ final class Build_Cache {
 	 * @return string Cache directory.
 	 */
 	public static function get_cache_dir( string $scope = '' ): string {
-		$uploads = wp_upload_dir();
-		$base    = $uploads['basedir'] . '/blockstudio/cache';
-		$base    = rtrim( wp_normalize_path( $base ), '/' );
+		$default = wp_normalize_path( WP_CONTENT_DIR . '/blockstudio/cache' );
+		$base    = self::resolve_cache_base( Settings::get( 'cache/path', 'blockstudio/cache' ), $default );
+
+		/**
+		 * Filter the base directory used for file-backed caches.
+		 *
+		 * Relative paths resolve from WP_CONTENT_DIR. The scope is appended
+		 * after this filter runs.
+		 *
+		 * @param string $base Base cache directory.
+		 */
+		$filtered = apply_filters( 'blockstudio/cache/dir', $base );
+		$base     = self::resolve_cache_base( $filtered, $base );
 
 		if ( '' === $scope ) {
 			return $base;
 		}
 
 		return $base . '/' . sanitize_key( $scope );
+	}
+
+	/**
+	 * Resolve a configured cache path.
+	 *
+	 * Relative paths are contained within WP_CONTENT_DIR. Absolute paths are
+	 * accepted for hosts that expose a dedicated writable cache volume.
+	 *
+	 * @param mixed  $path     Configured path.
+	 * @param string $fallback Fallback path.
+	 *
+	 * @return string Resolved normalized path.
+	 */
+	private static function resolve_cache_base( mixed $path, string $fallback ): string {
+		if ( ! is_string( $path ) || '' === trim( $path ) || str_contains( $path, "\0" ) ) {
+			return rtrim( wp_normalize_path( $fallback ), '/' );
+		}
+
+		$path        = wp_normalize_path( trim( $path ) );
+		$is_absolute = str_starts_with( $path, '/' )
+			|| (bool) preg_match( '/^[A-Za-z]:\//', $path )
+			|| str_starts_with( $path, '//' );
+
+		if ( ! $is_absolute ) {
+			if ( in_array( '..', explode( '/', $path ), true ) ) {
+				return rtrim( wp_normalize_path( $fallback ), '/' );
+			}
+
+			$path = WP_CONTENT_DIR . '/' . ltrim( $path, '/' );
+		}
+
+		return rtrim( wp_normalize_path( $path ), '/' );
 	}
 
 	/**
@@ -400,7 +442,7 @@ final class Build_Cache {
 			return false;
 		}
 
-		if ( ! rename( $tmp, $file ) ) { // phpcs:ignore WordPress.WP.AlternativeFunctions.rename_rename
+		if ( ! @rename( $tmp, $file ) ) { // phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged, WordPress.WP.AlternativeFunctions.rename_rename -- Cache writes are best-effort and failure is handled below.
 			@unlink( $tmp ); // phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged, WordPress.WP.AlternativeFunctions.unlink_unlink
 			return false;
 		}
@@ -923,6 +965,7 @@ final class Build_Cache {
 			'ui/enabled'        => Settings::get( 'ui/enabled' ),
 			'blockTags/enabled' => Settings::get( 'blockTags/enabled' ),
 			'cache/enabled'     => Settings::get( 'cache/enabled' ),
+			'cache/path'        => Settings::get( 'cache/path' ),
 		);
 	}
 

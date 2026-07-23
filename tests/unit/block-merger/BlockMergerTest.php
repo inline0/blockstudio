@@ -197,6 +197,52 @@ class BlockMergerTest extends TestCase {
 		$this->assertSame( array( 'author' ), $result[0]['attrs']['blockstudio']['disabled'] );
 	}
 
+	public function test_custom_block_migrates_legacy_nested_key_and_preserves_fields(): void {
+		$new = array(
+			$this->keyed_block(
+				'blockstudio/testimonial',
+				'quote',
+				'',
+				array(
+					'blockstudio' => array(
+						'attributes' => array(
+							'quote'  => 'Template quote',
+							'author' => 'Template author',
+						),
+					),
+				)
+			),
+		);
+		$old = array(
+			$this->block(
+				'blockstudio/testimonial',
+				array(
+					'blockstudio' => array(
+						'attributes' => array(
+							'__BLOCKSTUDIO_KEY' => 'quote',
+							'quote'             => 'Editor quote',
+						),
+					),
+				)
+			),
+		);
+
+		$result = $this->merger->merge( $new, $old );
+
+		$this->assertSame( 'quote', $result[0]['attrs']['__BLOCKSTUDIO_KEY'] );
+		$this->assertSame(
+			array(
+				'quote'  => 'Editor quote',
+				'author' => 'Template author',
+			),
+			$result[0]['attrs']['blockstudio']['attributes']
+		);
+		$this->assertArrayNotHasKey(
+			'__BLOCKSTUDIO_KEY',
+			$result[0]['attrs']['blockstudio']['attributes']
+		);
+	}
+
 	// Block type changed: template wins
 
 	public function test_block_type_changed_template_wins_entirely(): void {

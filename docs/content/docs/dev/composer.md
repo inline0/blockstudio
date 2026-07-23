@@ -100,7 +100,9 @@ require_once __DIR__ . '/vendor/autoload.php';
 Blockstudio bootstraps automatically through Composer's autoloader when it is
 loaded by WordPress. Asset URLs resolve to the correct theme directory. Blocks
 defined in your theme's `blockstudio/` folder work exactly as they would with a
-plugin install.
+plugin install. This also works when the public theme directory is a symlink:
+Blockstudio maps the package's physical path through the active or parent theme
+URL instead of exposing the server path.
 
 ## Bundled in a Plugin
 
@@ -125,6 +127,42 @@ require_once __DIR__ . '/vendor/autoload.php';
 ```
 
 Asset URLs resolve to the correct plugin vendor directory.
+
+## Custom Package URL
+
+Normal plugin, must-use plugin, bundled plugin, active theme, parent theme, and
+symlinked-theme installs resolve automatically. For a custom deployment where
+the package is exposed through another public URL, define `BLOCKSTUDIO_URL`
+before Composer loads Blockstudio. Include the trailing slash:
+
+```php title="functions.php"
+<?php
+define(
+    'BLOCKSTUDIO_URL',
+    get_stylesheet_directory_uri() . '/packages/blockstudio/'
+);
+
+require_once __DIR__ . '/vendor/autoload.php';
+```
+
+You can instead register `blockstudio/url` before loading the Composer
+autoloader:
+
+```php title="functions.php"
+<?php
+add_filter(
+    'blockstudio/url',
+    function (string $url, string $directory): string {
+        return get_stylesheet_directory_uri() . '/vendor/blockstudio/blockstudio/';
+    },
+    10,
+    2
+);
+
+require_once __DIR__ . '/vendor/autoload.php';
+```
+
+The filter receives the resolved URL and the physical package directory.
 
 ## Dependencies
 

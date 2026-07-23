@@ -369,6 +369,45 @@ add_filter('blockstudio/settings/cache/enabled', function() {
 });
 ```
 
+### cache/path
+
+This filter changes the configured file-backed cache path. Relative paths are
+resolved from `WP_CONTENT_DIR`; absolute paths are used directly.
+
+```php title="functions.php"
+add_filter('blockstudio/settings/cache/path', function() {
+  return 'cache/blockstudio';
+});
+```
+
+### blockstudio/cache/dir
+
+This filter receives the resolved cache base directory before a runtime,
+editor-assets, or other cache scope is appended.
+
+```php title="functions.php"
+add_filter('blockstudio/cache/dir', function(string $directory) {
+  return WP_CONTENT_DIR . '/cache/blockstudio';
+});
+```
+
+### blockstudio/url
+
+This filter changes the public URL used for Blockstudio's editor and admin
+assets. Composer integrations must register it before loading Blockstudio's
+autoload file. The second argument is the physical package directory.
+
+```php title="functions.php"
+add_filter(
+  'blockstudio/url',
+  function(string $url, string $directory) {
+    return get_stylesheet_directory_uri() . '/vendor/blockstudio/blockstudio/';
+  },
+  10,
+  2
+);
+```
+
 ### content/enabled
 
 This filter allows you to enable/disable Content Sync.

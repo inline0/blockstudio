@@ -194,6 +194,78 @@ test.describe('Keyed Block Merging', () => {
       }
     });
 
+    test('editor-saved Blockstudio fields survive template resync', async ({
+      page,
+      request,
+    }) => {
+      const template = `<block name="blockstudio/type-text" key="custom-text" text="Template field v1" />
+<p>Developer sentinel v1.</p>`;
+
+      try {
+        await forceSync(request, template);
+
+        let content = await getPostContent(request);
+        expect(content).toContain('"__BLOCKSTUDIO_KEY":"custom-text"');
+        expect(content).toContain('"text":"Template field v1"');
+        expect(content).not.toMatch(/"attributes":\{[^}]*"__BLOCKSTUDIO_KEY"/);
+
+        await login(page, BASE);
+        await page.goto(`${BASE}/wp-admin/post.php?post=${postId}&action=edit`);
+        await waitForEditorBlocks(page);
+
+        const editorValue = 'Editor persistence marker';
+        await page.evaluate((text) => {
+          const wp = (window as any).wp;
+          const block = wp.data
+            .select('core/block-editor')
+            .getBlocks()
+            .find(
+              ({ name }: { name: string }) => name === 'blockstudio/type-text',
+            );
+
+          if (!block) {
+            throw new Error(
+              'Blockstudio text block was not loaded in the editor',
+            );
+          }
+
+          const blockstudio = block.attributes.blockstudio ?? {};
+          wp.data
+            .dispatch('core/block-editor')
+            .updateBlockAttributes(block.clientId, {
+              blockstudio: {
+                ...blockstudio,
+                attributes: {
+                  ...(blockstudio.attributes ?? {}),
+                  text,
+                },
+              },
+            });
+        }, editorValue);
+        await saveEditorPost(page);
+
+        content = await getPostContent(request);
+        expect(content).toContain(editorValue);
+        expect(content).toContain('"__BLOCKSTUDIO_KEY":"custom-text"');
+
+        await triggerSync(
+          request,
+          `<block name="blockstudio/type-text" key="custom-text" text="Template field v2" />
+<p>Developer sentinel v2.</p>`,
+        );
+
+        content = await getPostContent(request);
+        expect(content).toContain(editorValue);
+        expect(content).not.toContain('Template field v2');
+        expect(content).toContain('Developer sentinel v2.');
+        expect(content).not.toContain('Developer sentinel v1.');
+        expect(content).toContain('"__BLOCKSTUDIO_KEY":"custom-text"');
+        expect(content).not.toMatch(/"attributes":\{[^}]*"__BLOCKSTUDIO_KEY"/);
+      } finally {
+        await forceSync(request, ORIGINAL_TEMPLATE);
+      }
+    });
+
     test('keyed leaf block preserves user text', async ({ request }) => {
       const content = await getPostContent(request);
 

@@ -23,7 +23,7 @@ class Page_Sync {
 	/**
 	 * Version of the page serialization and managed-meta contract.
 	 */
-	public const SYNC_ENGINE_VERSION = '2';
+	public const SYNC_ENGINE_VERSION = '3';
 
 	/**
 	 * The HTML parser instance.
@@ -467,6 +467,12 @@ class Page_Sync {
 			$key = $block['attrs']['__BLOCKSTUDIO_KEY'] ?? null;
 
 			if ( is_scalar( $key ) && '' !== (string) $key ) {
+				return true;
+			}
+
+			$legacy_key = $block['attrs']['blockstudio']['attributes']['__BLOCKSTUDIO_KEY'] ?? null;
+
+			if ( is_scalar( $legacy_key ) && '' !== (string) $legacy_key ) {
 				return true;
 			}
 

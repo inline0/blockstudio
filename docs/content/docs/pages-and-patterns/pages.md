@@ -477,9 +477,22 @@ Use the `key` attribute on any HTML element or `<block>` element:
   <h2>Hero Title</h2>
   <p>Hero description.</p>
 </block>
+
+<block
+  name="acme/testimonial"
+  key="featured-quote"
+  quote="Default quote"
+/>
 ```
 
 Keys must be globally unique across the entire template. A key protects the entire block and all of its content. You don't need to key individual children inside a keyed parent. Keyed blocks can be moved to any position or nesting level between template updates and their user content will still be preserved.
+
+Keys work the same way for Blockstudio custom blocks. The `key` is structural
+Page Sync metadata; custom field values remain normal Blockstudio attributes.
+When an editor changes those fields, a later template sync keeps the editor
+values while still applying independent template changes. Pages created by
+older versions with the key inside the custom field data are migrated
+automatically on the next sync.
 
 ### How Merging Works
 
@@ -487,7 +500,7 @@ When a template file changes and the page re-syncs:
 
 | Block | Behavior |
 | --- | --- |
-| **Keyed block** | User's content is preserved (innerHTML, innerContent, innerBlocks). Template's attributes are applied. |
+| **Keyed block** | User content and Blockstudio field values are preserved. Template-owned attributes and structure are applied. |
 | **Unkeyed block** | Replaced entirely with the template version (same as without keys) |
 
 ### Examples

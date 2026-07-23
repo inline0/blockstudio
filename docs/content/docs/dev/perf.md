@@ -74,13 +74,43 @@ Blockstudio also includes persistent file-backed caches. They are enabled by
 default through the `cache.enabled` setting and are written to:
 
 ```
-wp-content/uploads/blockstudio/cache/
+wp-content/blockstudio/cache/
 ```
 
 These caches store runtime build payloads, prebuilt block registration data,
 and resolved editor asset payloads. This avoids repeating block discovery,
 field parsing, asset dependency resolution, and editor asset assembly work on
 every request.
+
+The default deliberately sits outside `uploads`, where hardened hosts may
+block PHP cache payloads. Change the location with `cache.path`; relative paths
+resolve from `WP_CONTENT_DIR`, while absolute paths support dedicated writable
+cache volumes:
+
+```json title="blockstudio.json"
+{
+  "cache": {
+    "enabled": true,
+    "path": "cache/blockstudio"
+  }
+}
+```
+
+For environment-specific configuration, use either the setting filter or the
+resolved-directory filter:
+
+```php
+add_filter('blockstudio/settings/cache/path', function () {
+    return '/srv/wordpress-cache/blockstudio';
+});
+
+add_filter('blockstudio/cache/dir', function (string $directory): string {
+    return WP_CONTENT_DIR . '/cache/blockstudio';
+});
+```
+
+Changing the path starts with a cold cache. Old files under
+`wp-content/uploads/blockstudio/cache` are no longer read and can be removed.
 
 Cache entries are invalidated when their inputs change, including watched block
 files, field files, asset files and dependencies, settings, active plugins,

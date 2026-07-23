@@ -1940,7 +1940,12 @@ class Block_Tags {
 			$inner_content_arr[] = null;
 		}
 
-		// Blockstudio blocks expect attrs under blockstudio.attributes.
+		// Blockstudio blocks expect field attrs under blockstudio.attributes.
+		$has_blockstudio_key = array_key_exists( '__BLOCKSTUDIO_KEY', $attrs );
+		$blockstudio_key     = $attrs['__BLOCKSTUDIO_KEY'] ?? null;
+
+		unset( $attrs['__BLOCKSTUDIO_KEY'] );
+
 		$block_attrs = $attrs;
 		if ( ! empty( $attrs ) && ! isset( $attrs['blockstudio'] ) ) {
 			$bs_blocks = Build::blocks();
@@ -1951,6 +1956,13 @@ class Block_Tags {
 					),
 				);
 			}
+		}
+
+		if ( $has_blockstudio_key ) {
+			$block_attrs = array_merge(
+				array( '__BLOCKSTUDIO_KEY' => $blockstudio_key ),
+				$block_attrs
+			);
 		}
 
 		return array(

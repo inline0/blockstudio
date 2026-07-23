@@ -22,7 +22,37 @@ if ( defined( 'BLOCKSTUDIO_VERSION' ) ) {
 }
 
 /**
+ * Get a path relative to a containing directory.
+ *
+ * @param string $base_dir Base directory.
+ * @param string $path     Path that may be inside the base directory.
+ *
+ * @return string|null Relative path with a leading slash, or null when the
+ *                     path is outside the base directory.
+ */
+function blockstudio_get_relative_path( string $base_dir, string $path ): ?string {
+	$base_dir = rtrim( wp_normalize_path( $base_dir ), '/' );
+	$path     = rtrim( wp_normalize_path( $path ), '/' );
+
+	$is_windows_path = (bool) preg_match( '/^[A-Za-z]:\//', $base_dir );
+	$comparison_base = $is_windows_path ? strtolower( $base_dir ) : $base_dir;
+	$comparison_path = $is_windows_path ? strtolower( $path ) : $path;
+
+	if ( $comparison_path === $comparison_base ) {
+		return '';
+	}
+
+	if ( ! str_starts_with( $comparison_path, $comparison_base . '/' ) ) {
+		return null;
+	}
+
+	return substr( $path, strlen( $base_dir ) );
+}
+
+/**
  * Get the plugin path relative to the WordPress content directory.
+ *
+ * Kept for compatibility with integrations that use the bootstrap helper.
  *
  * @param string $content_dir WordPress content directory.
  * @param string $plugin_dir  Blockstudio plugin directory.
@@ -30,17 +60,89 @@ if ( defined( 'BLOCKSTUDIO_VERSION' ) ) {
  * @return string
  */
 function blockstudio_get_relative_plugin_path( string $content_dir, string $plugin_dir ): string {
-	return str_replace(
-		wp_normalize_path( $content_dir ),
-		'',
-		wp_normalize_path( $plugin_dir )
-	);
+	return blockstudio_get_relative_path( $content_dir, $plugin_dir )
+		?? wp_normalize_path( $plugin_dir );
+}
+
+/**
+ * Resolve a filesystem path against public directory-to-URL mappings.
+ *
+ * @param string $plugin_dir Blockstudio plugin directory.
+ * @param array  $locations  Public locations with dir and url keys.
+ *
+ * @return string|null Public URL, or null when no location contains the path.
+ */
+function blockstudio_resolve_plugin_url( string $plugin_dir, array $locations ): ?string {
+	foreach ( $locations as $location ) {
+		if (
+			! is_array( $location ) ||
+			! is_string( $location['dir'] ?? null ) ||
+			! is_string( $location['url'] ?? null )
+		) {
+			continue;
+		}
+
+		$relative = blockstudio_get_relative_path( $location['dir'], $plugin_dir );
+
+		if ( null !== $relative ) {
+			return trailingslashit( rtrim( $location['url'], '/' ) . $relative );
+		}
+	}
+
+	return null;
 }
 
 define( 'BLOCKSTUDIO_VERSION', '7.5.0' );
 define( 'BLOCKSTUDIO_FILE', __FILE__ );
 define( 'BLOCKSTUDIO_DIR', __DIR__ );
-define( 'BLOCKSTUDIO_URL', set_url_scheme( content_url( blockstudio_get_relative_plugin_path( WP_CONTENT_DIR, BLOCKSTUDIO_DIR ) . '/' ) ) );
+
+if ( ! defined( 'BLOCKSTUDIO_URL' ) ) {
+	$blockstudio_public_locations = array(
+		array(
+			'dir' => WP_CONTENT_DIR,
+			'url' => content_url(),
+		),
+	);
+
+	foreach (
+		array(
+			array( 'get_stylesheet_directory', 'get_stylesheet_directory_uri' ),
+			array( 'get_template_directory', 'get_template_directory_uri' ),
+		) as $blockstudio_theme_location
+	) {
+		if ( ! is_callable( $blockstudio_theme_location[0] ) || ! is_callable( $blockstudio_theme_location[1] ) ) {
+			continue;
+		}
+
+		$blockstudio_theme_dir      = call_user_func( $blockstudio_theme_location[0] );
+		$blockstudio_theme_real_dir = realpath( $blockstudio_theme_dir );
+
+		$blockstudio_public_locations[] = array(
+			'dir' => $blockstudio_theme_real_dir ? $blockstudio_theme_real_dir : $blockstudio_theme_dir,
+			'url' => call_user_func( $blockstudio_theme_location[1] ),
+		);
+	}
+
+	$blockstudio_url = blockstudio_resolve_plugin_url( BLOCKSTUDIO_DIR, $blockstudio_public_locations );
+
+	if ( null === $blockstudio_url ) {
+		$blockstudio_url = plugins_url( '', BLOCKSTUDIO_FILE );
+	}
+
+	/**
+	 * Filter the public Blockstudio package URL.
+	 *
+	 * @param string $url Public URL with a trailing slash.
+	 * @param string $dir Physical Blockstudio package directory.
+	 */
+	$blockstudio_url = apply_filters(
+		'blockstudio/url',
+		trailingslashit( set_url_scheme( $blockstudio_url ) ),
+		BLOCKSTUDIO_DIR
+	);
+
+	define( 'BLOCKSTUDIO_URL', trailingslashit( $blockstudio_url ) );
+}
 
 spl_autoload_register(
 	function ( $class_name ) {

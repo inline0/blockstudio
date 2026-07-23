@@ -740,6 +740,60 @@ class PagesTest extends TestCase {
 		}
 	}
 
+	public function test_keyed_custom_block_migrates_legacy_key_and_preserves_editor_fields(): void {
+		$page_data                   = Pages::get_page( 'blockstudio-keyed-merge-test' );
+		$page_data['name']           = 'blockstudio-keyed-custom-block-unit';
+		$page_data['title']          = 'Blockstudio Keyed Custom Block Unit';
+		$page_data['slug']           = 'blockstudio-keyed-custom-block-unit';
+		$page_data['source_path']    = 'unit/blockstudio-keyed-custom-block-unit';
+		$page_data['inline_content'] = '<block name="blockstudio/type-text" key="hero" text="Template v1" /><p>Sentinel v1</p>';
+
+		$sync    = new Page_Sync();
+		$post_id = $sync->force_sync( $page_data );
+
+		$this->assertIsInt( $post_id );
+
+		try {
+			$blocks = parse_blocks( get_post_field( 'post_content', $post_id ) );
+
+			$this->assertSame( 'hero', $blocks[0]['attrs']['__BLOCKSTUDIO_KEY'] );
+			$this->assertSame( 'Template v1', $blocks[0]['attrs']['blockstudio']['attributes']['text'] );
+			$this->assertArrayNotHasKey(
+				'__BLOCKSTUDIO_KEY',
+				$blocks[0]['attrs']['blockstudio']['attributes']
+			);
+
+			unset( $blocks[0]['attrs']['__BLOCKSTUDIO_KEY'] );
+			$blocks[0]['attrs']['blockstudio']['attributes']['__BLOCKSTUDIO_KEY'] = 'hero';
+			$blocks[0]['attrs']['blockstudio']['attributes']['text']              = 'Editor value';
+
+			wp_update_post(
+				array(
+					'ID'           => $post_id,
+					'post_content' => serialize_blocks( $blocks ),
+				)
+			);
+
+			$page_data['inline_content'] = '<block name="blockstudio/type-text" key="hero" text="Template v2" /><p>Sentinel v2</p>';
+			$result                      = $sync->sync( $page_data );
+
+			$this->assertSame( $post_id, $result );
+
+			$synced = parse_blocks( get_post_field( 'post_content', $post_id ) );
+
+			$this->assertSame( 'hero', $synced[0]['attrs']['__BLOCKSTUDIO_KEY'] );
+			$this->assertSame( 'Editor value', $synced[0]['attrs']['blockstudio']['attributes']['text'] );
+			$this->assertArrayNotHasKey(
+				'__BLOCKSTUDIO_KEY',
+				$synced[0]['attrs']['blockstudio']['attributes']
+			);
+			$this->assertStringContainsString( 'Sentinel v2', $synced[1]['innerHTML'] );
+			$this->assertStringNotContainsString( 'Sentinel v1', $synced[1]['innerHTML'] );
+		} finally {
+			wp_delete_post( $post_id, true );
+		}
+	}
+
 	public function test_collection_post_type_change_migrates_existing_post(): void {
 		$page_data = Pages::get_page( 'docs-reference' );
 		$post_id   = Pages::get_post_id( 'docs-reference' );

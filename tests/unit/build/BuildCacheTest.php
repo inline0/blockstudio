@@ -123,18 +123,95 @@ class BuildCacheTest extends TestCase {
 	}
 
 	/**
-	 * Cache directory uses the WordPress uploads directory.
+	 * Cache directory uses a non-uploads directory under wp-content.
 	 *
 	 * @return void
 	 */
-	public function test_cache_directory_uses_wordpress_uploads(): void {
-		$uploads = wp_upload_dir();
-
-		$this->assertStringStartsWith(
-			rtrim( wp_normalize_path( $uploads['basedir'] ), '/' ),
+	public function test_cache_directory_defaults_to_wordpress_content_directory(): void {
+		$this->assertSame(
+			wp_normalize_path( WP_CONTENT_DIR . '/blockstudio/cache' ),
 			Build_Cache::get_cache_dir()
 		);
-		$this->assertStringEndsWith( '/blockstudio/cache', Build_Cache::get_cache_dir() );
+	}
+
+	public function test_relative_cache_setting_resolves_from_wordpress_content_directory(): void {
+		$filter = static fn (): string => 'custom-cache/blockstudio';
+		add_filter( 'blockstudio/settings/cache/path', $filter );
+
+		try {
+			$this->assertSame(
+				wp_normalize_path( WP_CONTENT_DIR . '/custom-cache/blockstudio/runtime' ),
+				Build_Cache::get_cache_dir( 'runtime' )
+			);
+		} finally {
+			remove_filter( 'blockstudio/settings/cache/path', $filter );
+		}
+	}
+
+	public function test_absolute_cache_setting_is_preserved(): void {
+		$path   = wp_normalize_path( sys_get_temp_dir() . '/blockstudio-custom-cache' );
+		$filter = static fn (): string => $path;
+		add_filter( 'blockstudio/settings/cache/path', $filter );
+
+		try {
+			$this->assertSame( $path, Build_Cache::get_cache_dir() );
+		} finally {
+			remove_filter( 'blockstudio/settings/cache/path', $filter );
+		}
+	}
+
+	public function test_cache_directory_filter_overrides_setting(): void {
+		$setting_path = static fn (): string => 'ignored-cache';
+		$filter_path  = wp_normalize_path( sys_get_temp_dir() . '/blockstudio-filtered-cache' );
+		$dir_filter   = static fn (): string => $filter_path;
+
+		add_filter( 'blockstudio/settings/cache/path', $setting_path );
+		add_filter( 'blockstudio/cache/dir', $dir_filter );
+
+		try {
+			$this->assertSame(
+				$filter_path . '/editor-assets',
+				Build_Cache::get_cache_dir( 'editor-assets' )
+			);
+		} finally {
+			remove_filter( 'blockstudio/settings/cache/path', $setting_path );
+			remove_filter( 'blockstudio/cache/dir', $dir_filter );
+		}
+	}
+
+	public function test_relative_cache_setting_cannot_escape_wordpress_content_directory(): void {
+		$filter = static fn (): string => '../outside';
+		add_filter( 'blockstudio/settings/cache/path', $filter );
+
+		try {
+			$this->assertSame(
+				wp_normalize_path( WP_CONTENT_DIR . '/blockstudio/cache' ),
+				Build_Cache::get_cache_dir()
+			);
+		} finally {
+			remove_filter( 'blockstudio/settings/cache/path', $filter );
+		}
+	}
+
+	public function test_failed_atomic_rename_returns_false_without_warning(): void {
+		$directory  = $this->create_temporary_directory();
+		$dir_filter = static fn (): string => $directory;
+		$target     = $directory . '/runtime/rename-collision.php';
+
+		wp_mkdir_p( $target );
+		add_filter( 'blockstudio/cache/dir', $dir_filter );
+
+		try {
+			$this->assertFalse(
+				Build_Cache::write(
+					'runtime',
+					'rename-collision',
+					array( 'value' => 'not-written' )
+				)
+			);
+		} finally {
+			remove_filter( 'blockstudio/cache/dir', $dir_filter );
+		}
 	}
 
 	/**

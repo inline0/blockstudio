@@ -36,7 +36,8 @@ The following properties are available:
     }
   },
   "cache": {
-    "enabled": true
+    "enabled": true,
+    "path": "blockstudio/cache"
   },
   "content": {
     "enabled": false,
@@ -140,15 +141,30 @@ Options set via the `blockstudio/settings/${setting}` filter will override the o
 
 ### cache
 
-| Option    | Type    | Default | Description                           |
-| --------- | ------- | ------- | ------------------------------------- |
-| `enabled` | boolean | `true`  | Enable Blockstudio file-backed caches |
+| Option    | Type    | Default               | Description                                      |
+| --------- | ------- | --------------------- | ------------------------------------------------ |
+| `enabled` | boolean | `true`                | Enable Blockstudio file-backed caches            |
+| `path`    | string  | `"blockstudio/cache"` | Cache path, relative to `WP_CONTENT_DIR` or absolute |
 
-By default cache files are written to `wp-content/uploads/blockstudio/cache`.
+By default cache files are written to `wp-content/blockstudio/cache`, outside
+the uploads directory. A relative `path` is resolved from `WP_CONTENT_DIR`; an
+absolute path is used directly. This supports hosts that provide a dedicated
+writable cache volume.
+
 When enabled, Blockstudio caches runtime build payloads, prebuilt block
 registration data, and resolved editor assets. Runtime cache entries are
 invalidated when watched block files, field files, asset files, settings, active
 plugins, WordPress, PHP, or Blockstudio versions change.
+
+The `blockstudio/settings/cache/path` setting filter changes the configured
+value. For deployment-specific path resolution, `blockstudio/cache/dir` filters
+the resolved base directory:
+
+```php title="functions.php"
+add_filter('blockstudio/cache/dir', function (string $directory): string {
+    return WP_CONTENT_DIR . '/cache/blockstudio';
+});
+```
 
 ### content
 

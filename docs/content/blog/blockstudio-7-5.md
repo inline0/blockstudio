@@ -54,8 +54,9 @@ The short version:
 - **Composable block tags**: prefix tags can resolve through another prefix
   (`<dv-ui-input>` to `bsui/input`), and prefix and alias tags render in
   block-template output, not only in page content.
-- **Automatic cache pruning**: the runtime, editor asset, and Tailwind caches
-  prune stale entries so long-running projects do not accumulate cache files.
+- **Host-safe build caches**: runtime and editor caches now default outside
+  uploads, support configurable locations, and prune stale entries so
+  long-running projects do not accumulate cache files.
 
 ## File-backed Site Editor templates
 
@@ -256,9 +257,18 @@ Block tags compose further, too. A prefix can resolve through another prefix, so
 output, not just page content, so a template can emit them directly instead of
 calling `bs_render_block()`.
 
-Finally, the runtime, editor asset, and Tailwind caches now prune stale entries
-automatically, so long-running projects no longer accumulate unbounded cache
-files on disk.
+Finally, the runtime and editor caches now default to
+`wp-content/blockstudio/cache` instead of uploads. The location can be changed
+through `cache.path` or `blockstudio/cache/dir`, which keeps persistent caching
+available on hosts that block PHP payloads under uploads. Runtime, editor asset,
+and Tailwind caches also prune stale entries automatically, so long-running
+projects no longer accumulate unbounded cache files on disk.
+
+The release also hardens two integration paths. Composer packages bundled in a
+symlinked active or parent theme now derive editor asset URLs from the public
+theme URL, and keyed file pages now keep Blockstudio custom field values during
+template sync. Existing pages with the older nested key shape migrate on their
+next sync.
 
 ## Why custom field types?
 

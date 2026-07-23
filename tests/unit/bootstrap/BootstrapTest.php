@@ -54,4 +54,47 @@ PHP
 			)
 		);
 	}
+
+	public function test_relative_path_rejects_similar_non_parent_directory(): void {
+		$this->assertNull(
+			blockstudio_get_relative_path(
+				'/var/www/html/wp-content',
+				'/var/www/html/wp-content-backup/plugins/blockstudio'
+			)
+		);
+	}
+
+	public function test_plugin_url_resolves_from_content_directory(): void {
+		$this->assertSame(
+			'https://example.test/wp-content/plugins/blockstudio/',
+			blockstudio_resolve_plugin_url(
+				'/var/www/html/wp-content/plugins/blockstudio',
+				array(
+					array(
+						'dir' => '/var/www/html/wp-content',
+						'url' => 'https://example.test/wp-content',
+					),
+				)
+			)
+		);
+	}
+
+	public function test_plugin_url_resolves_from_symlinked_theme_realpath(): void {
+		$this->assertSame(
+			'https://example.test/wp-content/themes/example/vendor/blockstudio/blockstudio/',
+			blockstudio_resolve_plugin_url(
+				'/var/www/html/vendor/blockstudio/blockstudio',
+				array(
+					array(
+						'dir' => '/var/www/html/.wp/wp-content',
+						'url' => 'https://example.test/wp-content',
+					),
+					array(
+						'dir' => '/var/www/html',
+						'url' => 'https://example.test/wp-content/themes/example',
+					),
+				)
+			)
+		);
+	}
 }
