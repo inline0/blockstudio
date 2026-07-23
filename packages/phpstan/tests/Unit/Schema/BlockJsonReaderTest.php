@@ -46,6 +46,16 @@ final class BlockJsonReaderTest extends TestCase
         $this->assertStringNotContainsString("'cta'", $description);
     }
 
+    public function test_anonymous_group_flattens_into_parent_scope(): void
+    {
+        $type = $this->reader->getAttributeType($this->blocksDir . '/anonymous-group/block.json');
+
+        $this->assertNotNull($type);
+        $description = $type->describe(VerbosityLevel::precise());
+        $this->assertStringContainsString('heading', $description);
+        $this->assertStringContainsString('cta_text', $description);
+    }
+
     public function test_repeater_field_creates_list_of_inner_shape(): void
     {
         $type = $this->reader->getAttributeType($this->blocksDir . '/repeater/block.json');

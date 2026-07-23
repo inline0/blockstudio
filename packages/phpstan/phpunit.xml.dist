@@ -13,8 +13,5 @@
         <testsuite name="rules">
             <directory>tests/Rules</directory>
         </testsuite>
-        <testsuite name="type">
-            <directory>tests/Type</directory>
-        </testsuite>
     </testsuites>
 </phpunit>

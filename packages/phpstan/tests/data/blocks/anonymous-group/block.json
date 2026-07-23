@@ -1,0 +1,20 @@
+{
+  "name": "test/anonymous-group",
+  "blockstudio": {
+    "attributes": [
+      {
+        "type": "group",
+        "attributes": [
+          { "id": "heading", "type": "text" },
+          {
+            "id": "cta",
+            "type": "group",
+            "attributes": [
+              { "id": "text", "type": "text" }
+            ]
+          }
+        ]
+      }
+    ]
+  }
+}

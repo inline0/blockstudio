@@ -15,23 +15,18 @@ function stripJsonComments(text: string): string {
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const ajv = new Ajv({ allErrors: true, strict: false });
 
-// Load page schema from docs source of truth (static object, no dependencies)
 function loadPageSchema(): Record<string, unknown> {
-  const raw = readFileSync(
-    resolve(__dirname, "../../docs/src/schemas/page.ts"),
-    "utf-8"
-  );
-  const match = raw.match(/export const page = (\{[\s\S]*\});?\s*$/);
-  if (!match) throw new Error("Could not parse page schema from docs");
-  const schema = new Function(`return ${match[1]}`)() as Record<string, unknown>;
+  const schema = JSON.parse(
+    readFileSync(resolve(__dirname, "../../schemas/page.json"), "utf-8")
+  ) as Record<string, unknown>;
   // AJV doesn't support draft-04, strip the $schema property
   delete schema.$schema;
   return schema;
 }
 
 // Simplified block schema for eval validation.
-// The full schema in docs/src/schemas/schema.ts is async (fetches WP block.json
-// from GitHub at runtime) so we use a minimal version here.
+// The full schema includes the complete upstream WordPress block contract, so
+// evals use a focused version for generated Blockstudio examples.
 const blockSchema = {
   type: "object",
   required: ["name", "title", "blockstudio"],

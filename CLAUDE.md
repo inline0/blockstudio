@@ -46,8 +46,12 @@ blockstudio7/
 │   │   ├── components/  # React components (fields, editor, etc.)
 │   │   └── hooks/       # Custom hooks (usePopout, useMedia, etc.)
 │   └── types/           # TypeScript types (block.ts, types.ts)
-├── docs/                # Documentation (OneDocs/Next.js)
-│   └── src/schemas/     # JSON Schema definitions (block, blockstudio, extend)
+├── docs/                # Portable Markdown collections
+│   ├── docs/            # Product documentation
+│   ├── guides/          # Guides
+│   ├── registry/        # Registry documentation
+│   └── blog/            # Release posts
+├── schemas/             # Canonical static JSON Schemas
 ├── .claude/skills/      # Claude Code skills
 ├── readme.txt           # WordPress plugin readme with changelog
 ├── _reference/          # Legacy reference code (read-only)
@@ -65,38 +69,40 @@ Use `/feature` when implementing new features. This skill guides the complete wo
 
 1. Research codebase (if needed)
 2. Implement the feature
-3. Update schema if adding new field properties (`docs/src/schemas/`)
+3. Update schema if adding new field properties (`schemas/`)
 4. Update TypeScript types (`src/types/block.ts`)
 5. Add E2E test in `tests/e2e/types/`
 6. Add test block in `tests/theme/blockstudio/types/`
-7. Update documentation in `docs/content/docs/`
+7. Update documentation in `docs/docs/`
 8. Update changelog in `readme.txt`
 
 ## Schemas
 
-JSON Schemas are defined in `docs/src/schemas/` and served via Next.js routes:
+JSON Schemas are stored as deterministic JSON files in `schemas/`:
 
 - `/schema/block` - Block definition schema (extends WordPress block.json)
 - `/schema/blockstudio` - Blockstudio settings schema
 - `/schema/extend` - Block extension schema
 
 When adding new field properties:
-1. Add to `docs/src/schemas/schema.ts` in the appropriate field definition
+1. Update the appropriate JSON file in `schemas/` and its checksum in `schemas/manifest.json`
 2. Add TypeScript type to `src/types/block.ts`
+3. Run `npm run schemas:check` and `npm run types`
 
 ## Documentation
 
-The `docs/` folder contains the documentation site built with OneDocs (Fumadocs + Next.js).
+The `docs/` folder contains four portable Markdown collections consumed by the
+Blockstudio site and release tooling. It contains no application runtime.
 
 ```bash
-cd docs
-npm install
-npm run dev              # Start dev server on port 9700
-npm run generate         # Generate docs from local schemas
-npm run build            # Generate + build
+npm run docs:check       # Validate content, frontmatter, and navigation
+npm run docs:generate    # Refresh schema-generated documentation sections
+npm run build:llm        # Rebuild the bundled LLM context
 ```
 
-**Schema-driven docs:** Field types and settings filters are auto-generated from local schemas in `docs/src/schemas/`. Generated content is injected between `{/* GENERATED_*_START */}` and `{/* GENERATED_*_END */}` markers in MDX files.
+**Schema-driven docs:** Field types and settings filters are generated from
+`schemas/`. Generated content is injected between the existing generated
+section markers in Markdown files.
 
 ## Changelog Policy
 
@@ -141,17 +147,17 @@ npm run build            # Generate + build
 | `composer cs` | Check PHPCS |
 | `composer cs:fix` | Auto-fix PHPCS issues |
 
-### Docs Commands (run from `docs/`)
+### Docs Commands
 
 | Command | Description |
 |---------|-------------|
-| `npm run dev` | Start docs dev server (port 9700) |
-| `npm run generate` | Generate MDX from local schemas |
-| `npm run build` | Full build (generate + next build) |
+| `npm run docs:check` | Validate all portable Markdown collections |
+| `npm run docs:generate` | Refresh schema-generated documentation |
+| `npm run schemas:check` | Validate and checksum the static schemas |
+| `npm run build:llm` | Rebuild the bundled LLM context |
 
 ## Ports
 
 | Server | Port |
 |--------|------|
-| Docs | 9700 |
 | wp-env (E2E) | 8888 |

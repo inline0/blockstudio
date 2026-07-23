@@ -77,6 +77,21 @@ jobs:
           echo "Plugin dir: $PLUGIN_DIR"
           cd tests/wp-env && npx @wordpress/env run cli --env-cwd="$PLUGIN_DIR" vendor/bin/phpunit --testdox --display-errors --display-warnings
 
+  phpstan-package:
+    name: PHPStan Package Tests
+    if: contains(github.event.head_commit.message, '[unit]') || contains(github.event.head_commit.message, '[all]')
+    runs-on: [self-hosted, Linux, X64, inline0-blockstudio]
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: "8.4"
+
+      - run: composer install --no-interaction --working-dir=packages/phpstan
+      - run: packages/phpstan/vendor/bin/phpunit --configuration packages/phpstan/phpunit.xml.dist
+
   e2e:
     name: E2E Tests (Shard ${{ matrix.shard }}/${{ matrix.total_shards }})
     if: contains(github.event.head_commit.message, '[e2e]') || contains(github.event.head_commit.message, '[all]')

@@ -1105,11 +1105,15 @@ class Block {
 				}
 
 				if (
-					'select' === $type ||
-					'radio' === $type ||
-					'checkbox' === $type ||
-					'token' === $type
-				) {
+						'select' === $type ||
+						'radio' === $type ||
+						'checkbox' === $type ||
+						'token' === $type
+					) {
+					$is_multiple_option =
+						'checkbox' === $type ||
+						( 'select' === $type && ( $att['multiple'] ?? false ) );
+
 					if (
 						'select' === $type &&
 						isset( $populate['type'] ) &&
@@ -1117,7 +1121,10 @@ class Block {
 					) {
 						$attributes[ $k ] = $v;
 					} else {
-						if ( 'select' === $type || 'radio' === $type ) {
+						if (
+							( 'select' === $type || 'radio' === $type ) &&
+							! $is_multiple_option
+						) {
 							$attributes[ $k ] = self::get_option_value(
 								$att,
 								$return_format,
@@ -1125,10 +1132,7 @@ class Block {
 								$populate
 							);
 						}
-						if (
-							'checkbox' === $type ||
-							( 'select' === $type && ( $att['multiple'] ?? false ) )
-						) {
+						if ( $is_multiple_option ) {
 							$new_values = array();
 							foreach ( $v as $l ) {
 								$val = self::get_option_value(
