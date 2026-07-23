@@ -1,7 +1,7 @@
 ---
 title: Blockstudio 7.1
 description: RPC, database, cron, components, and more new features turning blocks into full-stack applications.
-date: "2026-03-14"
+date: 2026-03-14
 author: Dennis
 path: "blockstudio-7-1"
 order: 5

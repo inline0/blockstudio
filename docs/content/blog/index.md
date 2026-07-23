@@ -1,7 +1,7 @@
 ---
 title: Blog
 description: News and updates from the Blockstudio team.
-date: "1970-01-01"
+date: 1970-01-01
 author: Blockstudio
 archive: true
 path: "."

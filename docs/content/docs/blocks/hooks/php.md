@@ -119,13 +119,14 @@ add_filter('blockstudio/blocks/conditions', function($conditions) {
 
 ### attributes
 
-This filter allows you to adjust the attributes of a block before the block is
-registered. See [Filtering](/docs/blocks/attributes/filtering) for more information.
+This filter adjusts one field definition before the block is registered. The
+filtered definition drives the editor control and render-time value validation.
+See [Filtering](/docs/blocks/attributes/filtering) for more information.
 
 ```php title="functions.php"
-add_filter('blockstudio/blocks/attributes', function($attributes, $block) {
-  // Modify attributes before registration
-  return $attributes;
+add_filter('blockstudio/blocks/attributes', function($attribute, $block) {
+  // Modify this field definition before registration.
+  return $attribute;
 }, 10, 2);
 ```
 
@@ -201,6 +202,38 @@ add_filter('blockstudio/blocks/components/rich_text/render', function($content, 
 ```
 
 ## Block Tags
+
+### blockstudio/block_tags/builders
+
+This filter registers block-array builders used by block tags and by custom
+blocks selected through `blockstudio/parser/element_mapping`. Each builder
+receives parsed attributes and raw inner content.
+
+```php title="functions.php"
+add_filter('blockstudio/block_tags/builders', function($builders, $parser) {
+  $builders['theme/paragraph'] = function(array $attributes, string $inner) {
+    $attributes['content'] = trim($inner);
+
+    return [
+      'blockName' => 'theme/paragraph',
+      'attrs' => [
+        'blockstudio' => [
+          'attributes' => $attributes,
+        ],
+      ],
+      'innerBlocks' => [],
+      'innerHTML' => '',
+      'innerContent' => [],
+    ];
+  };
+
+  return $builders;
+}, 10, 2);
+```
+
+The compatible `blockstudio/block_tags/renderers` and
+`blockstudio/parser/renderers` filters run after this hook and can override the
+same block name.
 
 ### blockstudio/block_tags/tag_aliases
 
@@ -371,41 +404,12 @@ add_filter('blockstudio/settings/cache/enabled', function() {
 
 ### cache/path
 
-This filter changes the configured file-backed cache path. Relative paths are
-resolved from `WP_CONTENT_DIR`; absolute paths are used directly.
+This filter allows you to change the Blockstudio file-backed cache directory.
 
 ```php title="functions.php"
 add_filter('blockstudio/settings/cache/path', function() {
   return 'cache/blockstudio';
 });
-```
-
-### blockstudio/cache/dir
-
-This filter receives the resolved cache base directory before a runtime,
-editor-assets, or other cache scope is appended.
-
-```php title="functions.php"
-add_filter('blockstudio/cache/dir', function(string $directory) {
-  return WP_CONTENT_DIR . '/cache/blockstudio';
-});
-```
-
-### blockstudio/url
-
-This filter changes the public URL used for Blockstudio's editor and admin
-assets. Composer integrations must register it before loading Blockstudio's
-autoload file. The second argument is the physical package directory.
-
-```php title="functions.php"
-add_filter(
-  'blockstudio/url',
-  function(string $url, string $directory) {
-    return get_stylesheet_directory_uri() . '/vendor/blockstudio/blockstudio/';
-  },
-  10,
-  2
-);
 ```
 
 ### content/enabled
@@ -870,6 +874,96 @@ add_filter('blockstudio/settings/dev/canvas/admin_bar', function() {
 
 <!-- GENERATED_SETTINGS_END -->
 
+## Bootstrap
+
+### blockstudio/url
+
+This filter changes the public URL used for Blockstudio's editor and admin
+assets. Composer integrations must register it before loading Blockstudio's
+autoload file. The second argument is the physical package directory.
+
+```php title="functions.php"
+add_filter(
+  'blockstudio/url',
+  function(string $url, string $directory) {
+    return get_stylesheet_directory_uri() . '/vendor/blockstudio/blockstudio/';
+  },
+  10,
+  2
+);
+```
+
+## Runtime Cache
+
+### blockstudio/cache/dir
+
+This filter receives the resolved cache base directory before a runtime,
+editor-assets, or other cache scope is appended.
+
+```php title="functions.php"
+add_filter('blockstudio/cache/dir', function(string $directory) {
+  return WP_CONTENT_DIR . '/cache/blockstudio';
+});
+```
+
+### blockstudio/cache/context
+
+This filter adds a serializable runtime variant to cache identities. Use it
+when the same discovery source can select different logical inventories.
+
+```php title="functions.php"
+add_filter('blockstudio/cache/context', function($context, string $scope) {
+  return [
+    'preview' => get_query_var('preview_id'),
+    'site' => get_current_blog_id(),
+  ];
+}, 10, 2);
+```
+
+### blockstudio/cache/watch_debounce
+
+Filters the number of seconds a validated file-watch snapshot can be reused
+without another filesystem stat pass. The default is `0` in local and
+development environments and `20` elsewhere.
+
+```php title="functions.php"
+add_filter('blockstudio/cache/watch_debounce', function() {
+  return 30;
+});
+```
+
+### blockstudio/cache/max_files_per_scope
+
+Filters how many published payloads each runtime cache scope retains.
+
+```php title="functions.php"
+add_filter('blockstudio/cache/max_files_per_scope', function($maximum, $scope) {
+  return $scope === 'runtime' ? 50 : $maximum;
+}, 10, 2);
+```
+
+### blockstudio/tailwind/cache_max_files
+
+Filters the maximum number of compiled Tailwind CSS entries. The default is
+`1000`.
+
+```php title="functions.php"
+add_filter('blockstudio/tailwind/cache_max_files', function() {
+  return 1500;
+});
+```
+
+### blockstudio/tailwind/cache_max_age
+
+Filters the maximum age of compiled Tailwind CSS entries in seconds. The
+default is 30 days and the minimum is one hour.
+
+```php title="functions.php"
+add_filter('blockstudio/tailwind/cache_max_age', function() {
+  return 14 * DAY_IN_SECONDS;
+});
+```
+
 ## Admin
 
 ### enabled
@@ -884,6 +978,17 @@ add_filter('blockstudio/admin/enabled', function() {
 ```
 
 ## Assets
+
+### editor/canvas/body_class
+
+When the asset reset is enabled, this filter adjusts the sanitized frontend
+body classes copied into the block editor canvas.
+
+```php title="functions.php"
+add_filter('blockstudio/editor/canvas/body_class', function(array $classes) {
+  return array_values(array_diff($classes, ['logged-in']));
+});
+```
 
 ### enable
 
@@ -959,6 +1064,24 @@ add_filter('blockstudio/assets/process/js/content', function($content, $block) {
 ```
 
 ## Render
+
+### dependencies
+
+This filter reports the selected template and asset dependencies whenever
+Blockstudio renders a block. It is useful for static exporters and other
+in-process dependency collectors.
+
+```php title="functions.php"
+add_filter(
+  'blockstudio/render/dependencies',
+  function($paths, $name, $block, $isEditor, $isPreview) {
+    my_dependency_graph()->add($name, $paths);
+    return $paths;
+  },
+  10,
+  5
+);
+```
 
 ### global
 

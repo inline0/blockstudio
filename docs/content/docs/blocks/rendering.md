@@ -354,8 +354,8 @@ an attributes array and inner content string, and return a WordPress block
 array:
 
 ```php
-add_filter('blockstudio/block_tags/renderers', function ($renderers, $parser) {
-    $renderers['myplugin/custom-block'] = function (array $attrs, string $inner_content) {
+add_filter('blockstudio/block_tags/builders', function ($builders, $parser) {
+    $builders['myplugin/custom-block'] = function (array $attrs, string $inner_content) {
         $html = '<div class="my-block">' . $inner_content . '</div>';
         return [
             'blockName'    => 'myplugin/custom-block',
@@ -365,14 +365,15 @@ add_filter('blockstudio/block_tags/renderers', function ($renderers, $parser) {
             'innerContent' => [$html],
         ];
     };
-    return $renderers;
+    return $builders;
 }, 10, 2);
 ```
 
-For container blocks that need to parse inner content into child blocks:
+For container blocks that need to parse inner content into child blocks, add a
+second entry inside the same filter:
 
 ```php
-$renderers['myplugin/wrapper'] = function (array $attrs, string $inner_content) {
+$builders['myplugin/wrapper'] = function (array $attrs, string $inner_content) {
     $inner_blocks = Blockstudio\Block_Tags::parse_inner_blocks($inner_content);
     $content = ['<div class="my-wrapper">'];
     foreach ($inner_blocks as $block) {
@@ -388,6 +389,21 @@ $renderers['myplugin/wrapper'] = function (array $attrs, string $inner_content) 
     ];
 };
 ```
+
+`blockstudio/block_tags/builders` applies to both block tags and custom blocks
+selected through `blockstudio/parser/element_mapping`. This is the appropriate
+hook when an element-mapped project block needs to move inner text into a
+Blockstudio field or construct a custom block array.
+
+`blockstudio/block_tags/renderers` and `blockstudio/parser/renderers` receive
+the same registry and callback shape. They remain available for compatibility
+and final parser-level overrides. The filters run in this order:
+
+1. `blockstudio/block_tags/builders`
+2. `blockstudio/block_tags/renderers`
+3. `blockstudio/parser/renderers`
+
+A later filter can replace a renderer registered by an earlier one.
 
 ### Programmatic usage
 

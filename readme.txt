@@ -65,17 +65,22 @@ Download the latest release zip from [GitHub Releases](https://github.com/inline
 * Enhancement: nested `bs_render_block()` and `bs_block()` calls now output frontend-resolved markup inside editor previews
 * Enhancement: bundled `bsui/*` inline styles now emit in the `bsui` cascade layer so theme CSS can override them without `!important`
 * Enhancement: `bsui/button` now supports icon and icon position attributes, plus a variant CSS extension hook
+* Enhancement: custom block builders registered through `blockstudio/block_tags/builders` now apply consistently to block tags and mapped HTML elements
 * Enhancement: runtime, editor asset, and Tailwind caches now prune stale entries automatically to prevent unbounded cache growth
 * Enhancement: file-backed runtime and editor caches now default to `wp-content/blockstudio/cache` and support configurable relative or absolute directories
+* Enhancement: warm frontend requests now hydrate cached registrations before discovery, concurrent cold builds publish one atomic result, and Tailwind retains a site-sized cache with reusable compiler state
+* Enhancement: long-lived exporters can reset request-scoped state with `Blockstudio\Batch_Render::reset()` and collect block render dependencies
 * Enhancement: file-page deployments can reconcile a complete desired inventory incrementally, report created/updated/unchanged/removed work, and persist a verified source identity
 * Fix: registry imports now reject unsafe remote file paths, and generated HTML attributes are escaped consistently
-* Fix: Content Sync no longer prunes outside selected post types or taxonomies, now blocks destructive pushes when source JSON is malformed, and preserves attachment-reference meta when media download is disabled
+* Fix: Content Sync no longer prunes outside selected post types or taxonomies, blocks destructive pushes when source JSON is malformed, reports failed file writes without advancing sync state, and preserves existing target attachment meta when `media: "none"` omits it from portable files
 * Fix: raw Markdown page sources now respect post visibility and password protection
 * Fix: block islands now ignore unsigned request context during rendering, restore same-origin logged-in visitors, verify signatures before request attribute filters, and avoid anonymous per-user cache collisions
 * Fix: Canvas sync endpoints now stay disabled when Canvas is off, and draft page hierarchies keep their parent relationships during sync
 * Fix: database storage filters and user-scoped meta reads now compare typed values consistently
+* Fix: field definitions changed through `blockstudio/blocks/attributes` now reach render-time option validation, including numeric and boolean option values
 * Fix: custom field type REST schemas now save correctly inside repeater and array storage fields
 * Fix: editor fields now handle empty conditions, checkbox toggle-all values, async option refreshes, dynamic render races, and repeater RichText/WYSIWYG state more reliably
+* Fix: editor block wrappers and configured Canvas body classes now match frontend rendering
 * Fix: file-backed page, pattern, and Site Editor template rendering now share the same PHP/Twig/Blade compiler path for consistent template output
 * Fix: ordinary WP-CLI commands no longer discover or resync every file-backed page, and equal page fingerprints now perform zero post or postmeta writes
 * Fix: Composer-bundled installs now resolve editor asset URLs through symlinked active and parent themes

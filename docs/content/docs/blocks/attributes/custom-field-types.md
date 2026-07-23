@@ -177,6 +177,13 @@ window.blockstudio.registerFieldType('acme/dimensions', {
 });
 ```
 
+`registerFieldType()` returns `true` when the registration is accepted. Remove
+a client registration with:
+
+```js
+window.blockstudio.unregisterFieldType('acme/dimensions');
+```
+
 The component receives the field definition properties plus these stable props:
 
 | Prop           | Description                                  |

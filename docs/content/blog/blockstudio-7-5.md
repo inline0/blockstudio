@@ -1,18 +1,19 @@
 ---
 title: Blockstudio 7.5
-description: Custom field types, file-backed Site Editor templates, block islands, Storh database storage, and bsui/parser refinements.
-date: "2026-07-05"
+description: Custom field types, file-backed Site Editor templates, block islands, logical discovery sources, Storh storage, and faster warm rendering.
+date: 2026-07-23
 author: Dennis
 path: "blockstudio-7-5"
 order: 1
 section: "Blog"
 meta_title: "Blockstudio 7.5"
-meta_description: "Custom field types, file-backed Site Editor templates, block islands, Storh database storage, and bsui/parser refinements."
+meta_description: "Custom field types, file-backed Site Editor templates, block islands, logical discovery sources, Storh storage, and faster warm rendering."
 ---
 
 Blockstudio 7.5 rounds out Blockstudio's file-first workflow: custom field
 types, file-backed Site Editor templates, block islands, Storh database storage,
-composable block tags, and a set of parser plus `bsui/*` refinements.
+logical discovery sources, composable block tags, and faster deployment and
+runtime paths.
 
 Reusable custom fields already let projects define a group of existing fields
 once and reuse it with `type: "custom/{name}"`. Custom field types solve a
@@ -57,6 +58,64 @@ The short version:
 - **Host-safe build caches**: runtime and editor caches now default outside
   uploads, support configurable locations, and prune stale entries so
   long-running projects do not accumulate cache files.
+- **Incremental page reconciliation**: deployment tools can reconcile the
+  complete file-page inventory, skip unchanged posts, report exactly what
+  changed, and persist a verified source identity after activation.
+- **Faster warm rendering**: valid runtime caches hydrate before discovery,
+  concurrent cold requests publish one atomic result, and Tailwind keeps a
+  site-sized cache with reusable compiler state.
+- **Safe batch rendering**: exporters can reset request-scoped render state
+  between documents without rebuilding discovery and can collect source
+  dependencies while blocks render.
+
+## Logical discovery sources
+
+Blockstudio normally discovers files from physical theme directories. 7.5 adds
+a lower-level source API for runtimes that assemble a theme from overlays,
+previews, generated files, remote mounts, or other composed inventories.
+
+An integration can provide a final logical file tree while Blockstudio keeps
+ownership of block, field, page, pattern, Site Editor, Canvas, asset, and
+Tailwind behavior:
+
+```php title="functions.php"
+use Blockstudio\Inventory_Discovery_Source;
+
+add_filter(
+    'blockstudio/discovery/sources',
+    function (array $sources, string $context): array {
+        if ('blocks' !== $context) {
+            return $sources;
+        }
+
+        return [
+            new Inventory_Discovery_Source(
+                'preview:feature-card',
+                '/workspace/feature-card/blockstudio',
+                [
+                    'card/block.json' => [
+                        'path' => '/theme/blockstudio/card/block.json',
+                        'provenance' => ['layer' => 'parent'],
+                    ],
+                    'card/index.php' => [
+                        'path' => '/workspace/feature-card/blockstudio/card/index.php',
+                        'provenance' => ['layer' => 'preview'],
+                    ],
+                ],
+                'preview-fingerprint'
+            ),
+        ];
+    },
+    10,
+    2
+);
+```
+
+Logical paths remain stable even when sibling files come from different
+physical roots. Source IDs and fingerprints feed the runtime and Tailwind cache
+identities, watch inputs invalidate them, and provenance controls where
+generated files may be written. The default filesystem source is unchanged for
+normal themes.
 
 ## File-backed Site Editor templates
 
@@ -102,6 +161,33 @@ That last part matters. File-backed templates are the source fallback. If a user
 saves a template in the Site Editor, WordPress creates the normal
 `wp_template` or `wp_template_part` database customization and that version
 wins. Reset the customization, and the latest file source is visible again.
+
+## Incremental page deployment
+
+File-backed pages still sync automatically in normal authoring workflows. 7.5
+also gives deployment tooling an explicit reconciliation API:
+
+```php
+$report = Blockstudio\Pages::reconcile([
+  'authoritative' => true,
+  'plan_valid' => true,
+  'source' => [
+    'commit' => $commit,
+    'dirtyHash' => $dirtyHash,
+  ],
+]);
+```
+
+The pass discovers the complete desired page inventory, compares content and
+sync-engine fingerprints, and reports created, updated, unchanged, removed, and
+failed pages. Pages with equal fingerprints perform no post or postmeta writes.
+Missing managed pages are only pruned after discovery completes without errors.
+
+Reconciliation returns a deterministic source identity but does not mark a
+deployment successful. Deployment tooling stores that identity only after the
+matching files and routes are active and verified. Ordinary WP-CLI bootstrap
+registers cached collection post types and rewrites without discovering and
+syncing every page.
 
 ## Block islands
 
@@ -257,18 +343,63 @@ Block tags compose further, too. A prefix can resolve through another prefix, so
 output, not just page content, so a template can emit them directly instead of
 calling `bs_render_block()`.
 
-Finally, the runtime and editor caches now default to
+Custom block builders registered through
+`blockstudio/block_tags/builders` also participate in tag and mapped-element
+parsing consistently. Explicit renderer filters still run afterward and can
+override the builder.
+
+## Faster warm requests and exports
+
+The runtime and editor caches now default to
 `wp-content/blockstudio/cache` instead of uploads. The location can be changed
 through `cache.path` or `blockstudio/cache/dir`, which keeps persistent caching
 available on hosts that block PHP payloads under uploads. Runtime, editor asset,
 and Tailwind caches also prune stale entries automatically, so long-running
 projects no longer accumulate unbounded cache files on disk.
 
-The release also hardens two integration paths. Composer packages bundled in a
-symlinked active or parent theme now derive editor asset URLs from the public
-theme URL, and keyed file pages now keep Blockstudio custom field values during
-template sync. Existing pages with the older nested key shape migrate on their
-next sync.
+Warm frontend requests now hydrate a valid runtime registry before constructing
+discovery sources. That skips recursive source discovery, block construction,
+field parsing, and repeated cache-key tree walks. Production and staging
+requests trust a validated watch snapshot for 20 seconds by default, while
+local and development environments still check on every request.
+
+Cold cache creation is single-flight. One request builds and atomically
+publishes the payload while concurrent requests wait for the completed result.
+Tailwind now retains up to 1,000 compiled entries for 30 days by default and
+reuses warm compiler construction state, so a site-sized route set no longer
+churns through a tiny cache.
+
+Long-lived exporters can call `Blockstudio\Batch_Render::reset()` between
+documents. This clears request-scoped counters, assets, islands, layouts, and
+Tailwind generation without rebuilding discovery. The
+`blockstudio/render/dependencies` filter exposes the template and asset paths
+used by each rendered block for dependency graphs.
+
+## Reliability and compatibility
+
+Several fixes complete the release:
+
+- Field definitions changed through `blockstudio/blocks/attributes` now drive
+  render-time option validation as well as the editor schema. Typed numeric and
+  boolean option values also resolve consistently.
+- Editor block wrappers use the same generated classes as frontend renders,
+  and Canvas can copy the configured frontend body classes through the new
+  `blockstudio/editor/canvas/body_class` filter.
+- Content Sync validates the complete source plan before destructive writes,
+  keeps prune operations inside the configured content set, and reports file
+  write failures without advancing that entity's sync state.
+- Composer packages bundled in symlinked active or parent themes resolve editor
+  assets from the public theme URL.
+- Keyed file pages preserve editor-owned Blockstudio field values, migrate the
+  older nested key shape on sync, and accept numeric zero as a valid key.
+- Dynamic islands verify signatures before request attribute filters, ignore
+  unsigned request context, restore same-origin logged-in visitors, and avoid
+  anonymous per-user cache collisions.
+- Raw Markdown page endpoints now respect post visibility and password
+  protection.
+- Editor controls handle empty conditions, checkbox toggle-all values, async
+  option refreshes, dynamic render ordering, and repeater RichText or WYSIWYG
+  state more reliably.
 
 ## Why custom field types?
 

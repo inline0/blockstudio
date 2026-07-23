@@ -436,6 +436,58 @@ When a collection source is removed, Blockstudio removes the generated page so o
 
 On frontend requests, Blockstudio hydrates the page registry from already synced published posts. Draft and private pages are available in admin and sync contexts, but frontend helpers only hydrate published pages.
 
+### Deployment Reconciliation
+
+`Blockstudio\Pages::reconcile()` is the explicit deployment and WP-CLI entry
+point. It discovers the complete desired inventory, compares source and
+sync-engine fingerprints, and returns a machine-readable report:
+
+```php
+$report = Blockstudio\Pages::reconcile([
+  'authoritative' => true,
+  'plan_valid' => true,
+  'source' => [
+    'commit' => $commit,
+    'dirtyHash' => $dirtyHash,
+  ],
+  'renames' => [
+    [
+      'from' => 'pages/old/index.php',
+      'to' => 'pages/new/index.php',
+    ],
+  ],
+]);
+```
+
+The report contains `discovered`, `created`, `updated`, `unchanged`, `removed`,
+`failed`, `fullReconciliation`, per-page results, discovery errors, and a
+deterministic `sourceIdentity`.
+
+`authoritative: true` may clear a Page Sync lock and replaces content from the
+file definition instead of preserving keyed editor content. Leave it `false`
+for normal admin sync behavior. `plan_valid: false`, `full: true`, `broad:
+true`, a missing previous source identity, or a changed sync-engine fingerprint
+broadens the pass. Git rename records are identity hints only. They never
+replace complete inventory comparison.
+
+Equal fingerprints perform no post or postmeta writes and do not fire update
+hooks. Missing managed pages are pruned only after discovery completes without
+errors.
+
+Reconciliation does not mark a deployment successful. After activating and
+verifying the matching static artifact and routes, persist the returned
+identity explicitly:
+
+```php
+Blockstudio\Pages::store_successful_source_identity(
+  $report['sourceIdentity']
+);
+```
+
+Ordinary WP-CLI bootstrap registers cached collection post types and rewrites
+but does not discover or sync every page. Deployment and authoring commands
+must call `reconcile()` when they need a sync.
+
 ## Post ID Pinning
 
 By default, WordPress auto-assigns post IDs. If a page is deleted and re-created, the ID changes, breaking external references like menus or hardcoded links.
@@ -728,6 +780,7 @@ Page discovery, sync, and collection routing expose these extension points:
 | `blockstudio/pages/orphan_action` | Filter | Return `trash`, `delete`, or `keep` for orphan cleanup. |
 | `blockstudio/pages/docs_allowed_html` | Filter | Adjust allowed HTML for generated Markdown docs content. |
 | `blockstudio/pages/allow_external_loader_path` | Filter | Allow loader `paths` outside the collection root. |
+| `blockstudio/pages/manifest_scan_interval` | Filter | Change how often frontend requests rescan for brand-new collection manifests. Defaults to 5 seconds locally and 20 seconds elsewhere. |
 | `blockstudio/pages/create_post_data` | Filter | Modify post data before a synced page is created. |
 | `blockstudio/pages/update_post_data` | Filter | Modify post data before a synced page is updated. |
 | `blockstudio/pages/sync_engine_inputs` | Filter | Add a parser, mapping, or migration version that should deliberately broaden reconciliation once. |
@@ -786,9 +839,8 @@ Blockstudio\Pages::lock('about');
 Blockstudio\Pages::unlock('about');
 ```
 
-`reconcile()` always discovers the complete desired inventory and uses content plus sync-engine fingerprints as the correctness boundary. Git paths and renames may be supplied as candidate hints, but they never replace inventory comparison. Equal fingerprints return without parsing blocks, writing posts or metadata, clearing locks, or firing update hooks. Set `full: true` for recovery from an unknown deployment base; it still skips byte-equal pages.
-
-Normal WP-CLI bootstrap does not discover or sync pages. Deployment and authoring commands must call `reconcile()` explicitly. The successful source identity is intentionally separate: reconciliation never advances it, because deployment tooling must first activate and verify the matching static artifact.
+See [Deployment Reconciliation](#deployment-reconciliation) for argument
+semantics, report fields, and the verified source identity boundary.
 
 Global helper functions are available for templates and layouts:
 

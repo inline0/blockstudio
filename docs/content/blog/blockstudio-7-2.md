@@ -1,7 +1,7 @@
 ---
 title: Blockstudio 7.2
 description: An admin overview, a registry CLI for distributing blocks, a PHPStan extension for type-safe templates, and SCSS preludes.
-date: "2026-04-10"
+date: 2026-04-10
 author: Dennis
 path: "blockstudio-7-2"
 order: 4

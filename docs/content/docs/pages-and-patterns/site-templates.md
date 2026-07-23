@@ -224,6 +224,22 @@ blockstudio_site_template_part('header');
 
 ## Hooks
 
+The full Site Template extension surface is:
+
+| Hook | Type | Description |
+| --- | --- | --- |
+| `blockstudio/site_templates/template_paths` | Filter | Adjust full-template discovery roots. |
+| `blockstudio/site_templates/part_paths` | Filter | Adjust template-part discovery roots. |
+| `blockstudio/site_templates/paths` | Filter | Adjust both path lists as `templates` and `parts`. |
+| `blockstudio/site_templates/template_candidates` | Filter | Adjust source-file candidates for a manifest. |
+| `blockstudio/site_templates/templates` | Filter | Adjust templates returned by the registry API. |
+| `blockstudio/site_templates/parts` | Filter | Adjust template parts returned by the registry API. |
+| `blockstudio/site_templates/template_content` | Filter | Adjust compiled full-template source before parsing. |
+| `blockstudio/site_templates/part_content` | Filter | Adjust compiled template-part source before parsing. |
+| `blockstudio/site_templates/parser` | Filter | Replace the `Html_Parser` instance for one item. |
+| `blockstudio/site_templates/discovered` | Action | Runs after a cold discovery and compilation pass. |
+| `blockstudio/site_templates/registered` | Action | Runs after that rebuilt registry has been persisted. |
+
 Add or replace discovery paths:
 
 ```php
@@ -234,6 +250,10 @@ add_filter('blockstudio/site_templates/template_paths', function ($paths) {
 
 add_filter('blockstudio/site_templates/part_paths', function ($paths) {
     $paths[] = get_stylesheet_directory() . '/site-parts';
+    return $paths;
+});
+
+add_filter('blockstudio/site_templates/paths', function ($paths) {
     return $paths;
 });
 ```
@@ -261,3 +281,29 @@ add_filter('blockstudio/site_templates/part_content', function ($content, $part)
     return $content;
 }, 10, 2);
 ```
+
+Change source candidates or the parser:
+
+```php
+add_filter(
+    'blockstudio/site_templates/template_candidates',
+    function ($candidates, $directory, $manifest) {
+        $candidates[] = $directory . '/template.custom.php';
+        return $candidates;
+    },
+    10,
+    3
+);
+
+add_filter(
+    'blockstudio/site_templates/parser',
+    function ($parser, $item) {
+        return $parser;
+    },
+    10,
+    2
+);
+```
+
+`discovered` and `registered` are cache-rebuild lifecycle actions. They do not
+fire on a warm registry cache hit.

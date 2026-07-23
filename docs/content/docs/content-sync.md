@@ -31,7 +31,9 @@ Use Content Sync for content sets that are important to version, review, and mov
 
 As a rule of thumb, Content Sync is comfortable for dozens or hundreds of rows, and can work into the low thousands when the data is structured, low-churn, and split into focused post types. It is not meant to mirror an entire production database, high-traffic editorial content, logs, orders, analytics, form submissions, sessions, or other high-volume or high-churn data. If the generated files become noisy to review, pushes take too long to reason about, or most rows change outside your deployment workflow, use a database backup, migration, or import/export tool instead.
 
-Media binaries are not copied in 7.4. Attachment references can be recorded in a manifest and validated, but the files themselves need to exist in the target environment.
+Media binaries are not copied. Attachment references can be recorded in a
+manifest and validated, but the files themselves need to exist in the target
+environment.
 
 ## Configuration
 
@@ -91,6 +93,22 @@ wp bs content status
 `status` compares files with the database and reports each entity as `unchanged`, `would-update`, `missing-db`, `conflict`, `locked`, or `orphaned`. It also warns about allowlisted meta keys that look like secrets before those values are committed, and about numeric IDs inside block markup bodies because Content Sync does not rewrite IDs in `.html` files.
 
 Use `--dry-run` to inspect a pull or push without writing. Use `push --prune --yes` to remove content-set owned database entities that no longer exist in the files.
+
+### Failure Safety
+
+`push` parses and validates the complete source plan before it writes or
+prunes. Malformed JSON, unresolved declared references, invalid ownership, and
+other preflight failures block the destructive phase. Pruning remains limited
+to the configured post types, taxonomies, and `content.id`.
+
+`pull` writes each projected file before it records that entity as synced. A
+filesystem write failure is returned as an error row and does not advance the
+stored sync state for that entity.
+
+Attachment handling follows `content.media`. With `"manifest"`, referenced
+attachment UIDs must exist in the target environment. With `"none"`, declared
+attachment references are intentionally removed from the portable output
+instead of preserving environment-specific IDs.
 
 ## Files
 
@@ -164,7 +182,7 @@ On pull, local IDs at those paths become portable UIDs. On push, the UIDs are re
 
 Post parents, term parents, and post-term relationships are structural references owned by Content Sync and are stored as UIDs automatically. Configured taxonomies are written to post files even when empty; an empty array clears that taxonomy's relationships on push.
 
-Attachment references are validated, not imported. With `media: "manifest"`, referenced attachments are listed in `content/media/manifest.json`; push requires the referenced attachment UID to exist locally. With `media: "none"`, declared attachment references are dropped.
+Attachment references are validated, not imported. With `media: "manifest"`, referenced attachments are listed in `content/media/manifest.json`; push requires the referenced attachment UID to exist locally. With `media: "none"`, declared attachment references are omitted from portable files. Because an omitted key is not applied during push, an existing target post keeps its current attachment meta.
 
 ## Portability Workflow
 
@@ -179,7 +197,7 @@ Files are the source of truth for `push`. The database is captured back to files
 
 ## Scope
 
-Content Sync in 7.4 supports:
+Content Sync supports:
 
 - posts from allowlisted post types
 - allowlisted postmeta

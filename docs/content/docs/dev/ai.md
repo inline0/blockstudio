@@ -10,22 +10,32 @@ meta_description: "A static context file with full documentation and schemas for
 
 # AI Integration
 
-Blockstudio ships a pre-built context file designed for LLM coding assistants. The file contains the complete v7 documentation and all JSON schemas in a single `blockstudio-llm.txt` that any AI tool can consume.
+Blockstudio ships a pre-built context file designed for LLM coding assistants.
+The file combines the current product documentation and JSON schemas in a
+single `blockstudio-llm.txt` that any AI tool can consume.
 
 ## What's included
 
-The context file combines two sources into roughly 48k tokens:
+The context file combines two sources:
 
-- **Documentation**: every page from the v7 docs, stripped of formatting and navigation, with code examples preserved.
-- **JSON schemas**: the block, settings, page, and extension schemas. Repeated definitions (like field types shared between blocks and extensions) are deduplicated to save tokens.
+- **Documentation**: current product pages in navigation order, stripped of
+  navigation-only formatting with code examples preserved. Historical
+  migration material and pages duplicated by schemas are omitted.
+- **JSON schemas**: the block, settings, page, page collection, and extension
+  schemas. Repeated definitions such as field types shared between blocks and
+  extensions are deduplicated.
 
 ## How it's built
 
 The file is assembled at build time by `npm run build:llm`, which runs `scripts/build-llm.ts`. The script:
 
-1. Walks the docs directory tree using each folder's `meta.json` to determine page order.
-2. Strips MDX frontmatter, JSX components, link URLs, and bold/italic markers from each page.
-3. Reads the JSON schemas from `includes/schemas/`, trims the block schema to only the `blockstudio` key, and deduplicates field type definitions shared between the block and extension schemas.
+1. Walks the Markdown docs tree using each folder's `meta.json` to determine
+   page order.
+2. Strips frontmatter and navigation-only Markdown while preserving headings
+   and code examples.
+3. Imports the canonical schemas from `docs/src/schemas`, adds the page and
+   page-collection schemas, trims the block schema to the `blockstudio` key,
+   and deduplicates definitions shared with extensions.
 4. Writes the combined output to `includes/llm/blockstudio-llm.txt`.
 
 ## How to use it

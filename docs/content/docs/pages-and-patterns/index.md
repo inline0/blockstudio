@@ -195,23 +195,24 @@ HTML attributes on `<block>` elements are passed as block attributes. JSON value
 
 ## Custom Block Renderers
 
-The HTML parser uses a registry-based architecture. You can add custom renderers for any block using the `blockstudio/parser/renderers` filter:
+The HTML parser uses a registry-based architecture. Add a builder for a custom
+block with `blockstudio/block_tags/builders`:
 
 ```php
-add_filter( 'blockstudio/parser/renderers', function( $renderers, $parser ) {
-    $renderers['acf/hero'] = function( $element, $attrs, $parser ) {
-        $inner_blocks = $parser->parse_children( $element );
+add_filter( 'blockstudio/block_tags/builders', function( $builders, $parser ) {
+    $builders['acf/hero'] = function( array $attrs, string $inner_content ) {
+        $inner_blocks = Blockstudio\Block_Tags::parse_inner_blocks( $inner_content );
 
         return array(
             'blockName'    => 'acf/hero',
             'attrs'        => $attrs,
             'innerBlocks'  => $inner_blocks,
             'innerHTML'    => '',
-            'innerContent' => array(),
+            'innerContent' => array_fill( 0, count( $inner_blocks ), null ),
         );
     };
 
-    return $renderers;
+    return $builders;
 }, 10, 2 );
 ```
 
@@ -227,8 +228,8 @@ You can also override how core blocks are rendered:
 
 ```php
 add_filter( 'blockstudio/parser/renderers', function( $renderers, $parser ) {
-    $renderers['core/paragraph'] = function( $element, $attrs, $parser ) {
-        $content = $parser->get_inner_html( $element );
+    $renderers['core/paragraph'] = function( array $attrs, string $inner_content ) {
+        $content = trim( $inner_content );
         $attrs['align'] = $attrs['align'] ?? 'center';
 
         return array(
@@ -244,16 +245,20 @@ add_filter( 'blockstudio/parser/renderers', function( $renderers, $parser ) {
 }, 10, 2 );
 ```
 
-### Renderer Function Signature
+Builder callbacks receive the parsed attributes and raw inner content. They
+must return a WordPress block array. See
+[Custom renderers](/docs/blocks/rendering#custom-renderers) for the complete
+filter order and container example.
+
+### Builder Function Signature
 
 ```php
 /**
- * @param DOMElement    $element The DOM element being parsed.
- * @param array         $attrs   Attributes from the element.
- * @param Html_Parser   $parser  The parser instance (for recursive parsing).
- * @return array|null   WordPress block array or null to skip.
+ * @param array  $attrs         Parsed element or block-tag attributes.
+ * @param string $inner_content Raw inner content.
+ * @return array WordPress block array.
  */
-function my_renderer( DOMElement $element, array $attrs, $parser ): ?array {}
+function my_builder( array $attrs, string $inner_content ): array {}
 ```
 
 ## Element Mapping

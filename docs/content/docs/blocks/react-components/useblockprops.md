@@ -29,6 +29,11 @@ Simply add the `useBlockProps` attribute to the root element of your block.
 
 Blockstudio will automatically combine classes and attributes from the editor (alignment classes etc.) along with whatever is defined in the block templates. [get_block_wrapper_attributes](https://developer.wordpress.org/reference/functions/get_block_wrapper_attributes/) is being used under the hood for that.
 
+The `blockstudio/blocks/components/use_block_props/render` filter is applied to
+the wrapper in both the frontend and editor render paths. Classes added by a
+theme or a per-instance integration therefore appear in the editor canvas as
+well as the saved frontend markup.
+
 **Output:**
 
 ```html
@@ -76,3 +81,21 @@ To combat this issue, you can use the alternative syntax Alpine.js provides.
 ```
 
 The above will work inside Gutenberg and on the frontend.
+
+### Canvas Body Classes
+
+When `assets.reset.enabled` is active, Blockstudio also copies the sanitized
+classes returned by WordPress's `body_class` filter to the block editor canvas.
+This keeps theme selectors such as `.brand-a .site-card` working in both
+places.
+
+Filter the final class list when the editor needs a narrower set:
+
+```php title="functions.php"
+add_filter('blockstudio/editor/canvas/body_class', function(array $classes) {
+  return array_values(array_diff($classes, ['logged-in']));
+});
+```
+
+This filter only controls classes copied into the editor canvas. It does not
+change frontend body classes.

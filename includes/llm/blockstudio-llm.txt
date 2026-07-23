@@ -199,6 +199,10 @@ The following properties are available:
   },
   "assets": {
     "enqueue": true,
+    "reset": {
+      "enabled": false,
+      "fullWidth": []
+    },
     "minify": {
       "css": false,
       "js": false
@@ -304,12 +308,18 @@ Options set via the `blockstudio/settings/${setting}` filter will override the o
 
 ### assets
 
-| Option         | Type    | Default | Description               |
-| -------------- | ------- | ------- | ------------------------- |
-| `enqueue`      | boolean | `true`  | Auto-enqueue block assets |
-| `minify.css`   | boolean | `false` | Minify CSS output         |
-| `minify.js`    | boolean | `false` | Minify JS output          |
-| `process.scss` | boolean | `false` | Process SCSS files        |
+| Option          | Type    | Default | Description |
+| --------------- | ------- | ------- | ----------- |
+| `enqueue`       | boolean | `true`  | Auto-enqueue block assets |
+| `reset.enabled` | boolean | `false` | Remove core block styles and apply the editor utility reset |
+| `reset.fullWidth` | array | `[]` | Post types that use the full-width editor layout |
+| `minify.css`    | boolean | `false` | Minify CSS output |
+| `minify.js`     | boolean | `false` | Minify JS output |
+| `process.scss`  | boolean | `false` | Process SCSS files |
+
+With `reset.enabled` active, Blockstudio also copies sanitized frontend
+`body_class` values into the editor canvas. Use
+`blockstudio/editor/canvas/body_class` to adjust the editor-only class list.
 
 ### cache
 
@@ -1741,44 +1751,67 @@ Loop through repeater items:
 
 Blockstudio provides two methods to filter block attributes.
 
-## In Editor
+## Attribute Definitions
 
-The first method filters the attributes in the editor. This is useful if you want to adjust the default value of an attribute or its conditions.
+`blockstudio/blocks/attributes` filters each field definition while Blockstudio
+builds and registers a block. Use it to adjust editor controls, defaults,
+conditions, options, and the definition used to validate values during
+rendering.
 
 ```php
-add_filter('blockstudio/blocks/attributes', function($attributes, $block) {
-  if ($block['name'] === 'my-theme/code-block') {
-    foreach ($attributes as &$attribute) {
-      // Set default value
-      if ($attribute['id'] === 'lineNumbers') {
-        $attribute['default'] = true;
-      }
-
-      // Add condition
-      if ($attribute['id'] === 'lineNumbers') {
-        $attribute['conditions'] = [
-          [
-            [
-              'id' => 'language',
-              'operator' => '==',
-              'value' => 'css'
-            ]
-          ]
-        ];
-      }
-    }
+add_filter('blockstudio/blocks/attributes', function($attribute, $block) {
+  if (
+    ($block['name'] ?? '') === 'my-theme/code-block' &&
+    ($attribute['id'] ?? '') === 'lineNumbers'
+  ) {
+    $attribute['default'] = true;
+    $attribute['conditions'] = [
+      [
+        [
+          'id' => 'language',
+          'operator' => '==',
+          'value' => 'css'
+        ]
+      ]
+    ];
   }
-  return $attributes;
+
+  return $attribute;
 }, 10, 2);
 ```
 
-The code above will set the default value of the `lineNumbers` attribute to `true` and will hide the attribute if the `language` attribute is not set to `css`.
+The code above sets the default value of `lineNumbers` to `true` and hides the
+field unless `language` is set to `css`.
 
-Keep in mind that this filter is only evaluated when inserting blocks in the editor.
+The callback receives one field definition per invocation, including nested
+group and repeater fields. It runs during block registration, not once per
+frontend render.
 
-## On Frontend
+Filtered option definitions are also used by the render attribute map. For
+example, an option added to a `select`, `radio`, or `checkbox` field is
+available in the editor and remains valid when Blockstudio resolves the saved
+value for a template:
 
-The second method filters the attributes on the frontend. This is useful if you want to adjust the attributes before they are passed to the block template.
+```php
+add_filter('blockstudio/blocks/attributes', function($attribute, $block) {
+  if (
+    ($block['name'] ?? '') === 'bsui/button' &&
+    ($attribute['id'] ?? '') === 'variant'
+  ) {
+    $attribute['options'][] = [
+      'label' => 'Brand',
+      'value' => 'brand',
+    ];
+  }
+
+  return $attribute;
+}, 10, 2);
+```
+
+## Rendered Values
+
+`blockstudio/blocks/attributes/render` filters the resolved values immediately
+before they are passed to the block template.
 
 ```php
 add_filter('blockstudio/blocks/attributes/render', function($attributes, $block) {
@@ -1793,7 +1826,9 @@ add_filter('blockstudio/blocks/attributes/render', function($attributes, $block)
 }, 10, 2);
 ```
 
-Keep in mind that the above filter will override any values set in the editor.
+The example above overrides any value saved in the editor for
+`lineNumbers`. Use the definition filter when changing field configuration and
+the render filter when computing or overriding template values for a request.
 
 #### Disabling Attributes
 
@@ -2714,6 +2749,13 @@ window.blockstudio.registerFieldType('acme/dimensions', {
 });
 ```
 
+`registerFieldType()` returns `true` when the registration is accepted. Remove
+a client registration with:
+
+```js
+window.blockstudio.unregisterFieldType('acme/dimensions');
+```
+
 The component receives the field definition properties plus these stable props:
 
 | Prop           | Description                                  |
@@ -3518,6 +3560,11 @@ Simply add the `useBlockProps` attribute to the root element of your block.
 
 Blockstudio will automatically combine classes and attributes from the editor (alignment classes etc.) along with whatever is defined in the block templates. get_block_wrapper_attributes is being used under the hood for that.
 
+The `blockstudio/blocks/components/use_block_props/render` filter is applied to
+the wrapper in both the frontend and editor render paths. Classes added by a
+theme or a per-instance integration therefore appear in the editor canvas as
+well as the saved frontend markup.
+
 Output:
 
 ```html
@@ -3565,6 +3612,24 @@ To combat this issue, you can use the alternative syntax Alpine.js provides.
 ```
 
 The above will work inside Gutenberg and on the frontend.
+
+### Canvas Body Classes
+
+When `assets.reset.enabled` is active, Blockstudio also copies the sanitized
+classes returned by WordPress's `body_class` filter to the block editor canvas.
+This keeps theme selectors such as `.brand-a .site-card` working in both
+places.
+
+Filter the final class list when the editor needs a narrower set:
+
+```php
+add_filter('blockstudio/editor/canvas/body_class', function(array $classes) {
+  return array_values(array_diff($classes, ['logged-in']));
+});
+```
+
+This filter only controls classes copied into the editor canvas. It does not
+change frontend body classes.
 
 #### InnerBlocks
 
@@ -5597,8 +5662,8 @@ an attributes array and inner content string, and return a WordPress block
 array:
 
 ```php
-add_filter('blockstudio/block_tags/renderers', function ($renderers, $parser) {
-    $renderers['myplugin/custom-block'] = function (array $attrs, string $inner_content) {
+add_filter('blockstudio/block_tags/builders', function ($builders, $parser) {
+    $builders['myplugin/custom-block'] = function (array $attrs, string $inner_content) {
         $html = '<div class="my-block">' . $inner_content . '</div>';
         return [
             'blockName'    => 'myplugin/custom-block',
@@ -5608,14 +5673,15 @@ add_filter('blockstudio/block_tags/renderers', function ($renderers, $parser) {
             'innerContent' => [$html],
         ];
     };
-    return $renderers;
+    return $builders;
 }, 10, 2);
 ```
 
-For container blocks that need to parse inner content into child blocks:
+For container blocks that need to parse inner content into child blocks, add a
+second entry inside the same filter:
 
 ```php
-$renderers['myplugin/wrapper'] = function (array $attrs, string $inner_content) {
+$builders['myplugin/wrapper'] = function (array $attrs, string $inner_content) {
     $inner_blocks = Blockstudio\Block_Tags::parse_inner_blocks($inner_content);
     $content = ['<div class="my-wrapper">'];
     foreach ($inner_blocks as $block) {
@@ -5631,6 +5697,21 @@ $renderers['myplugin/wrapper'] = function (array $attrs, string $inner_content) 
     ];
 };
 ```
+
+`blockstudio/block_tags/builders` applies to both block tags and custom blocks
+selected through `blockstudio/parser/element_mapping`. This is the appropriate
+hook when an element-mapped project block needs to move inner text into a
+Blockstudio field or construct a custom block array.
+
+`blockstudio/block_tags/renderers` and `blockstudio/parser/renderers` receive
+the same registry and callback shape. They remain available for compatibility
+and final parser-level overrides. The filters run in this order:
+
+1. `blockstudio/block_tags/builders`
+2. `blockstudio/block_tags/renderers`
+3. `blockstudio/parser/renderers`
+
+A later filter can replace a renderer registered by an earlier one.
 
 ### Programmatic usage
 
@@ -5949,9 +6030,13 @@ Endpoint and rendering:
 
 ```php
 blockstudio/islands/allowed
+blockstudio/islands/max_per_request
 blockstudio/islands/request_attributes
 blockstudio/islands/fragment
 ```
+
+`blockstudio/islands/max_per_request` changes the maximum number of dynamic
+islands accepted by one batched endpoint request. The default is `50`.
 
 Runtime configuration:
 
@@ -8069,13 +8154,14 @@ add_filter('blockstudio/blocks/conditions', function($conditions) {
 
 ### attributes
 
-This filter allows you to adjust the attributes of a block before the block is
-registered. See Filtering for more information.
+This filter adjusts one field definition before the block is registered. The
+filtered definition drives the editor control and render-time value validation.
+See Filtering for more information.
 
 ```php
-add_filter('blockstudio/blocks/attributes', function($attributes, $block) {
-  // Modify attributes before registration
-  return $attributes;
+add_filter('blockstudio/blocks/attributes', function($attribute, $block) {
+  // Modify this field definition before registration.
+  return $attribute;
 }, 10, 2);
 ```
 
@@ -8152,6 +8238,38 @@ add_filter('blockstudio/blocks/components/rich_text/render', function($content, 
 
 ## Block Tags
 
+### blockstudio/block_tags/builders
+
+This filter registers block-array builders used by block tags and by custom
+blocks selected through `blockstudio/parser/element_mapping`. Each builder
+receives parsed attributes and raw inner content.
+
+```php
+add_filter('blockstudio/block_tags/builders', function($builders, $parser) {
+  $builders['theme/paragraph'] = function(array $attributes, string $inner) {
+    $attributes['content'] = trim($inner);
+
+    return [
+      'blockName' => 'theme/paragraph',
+      'attrs' => [
+        'blockstudio' => [
+          'attributes' => $attributes,
+        ],
+      ],
+      'innerBlocks' => [],
+      'innerHTML' => '',
+      'innerContent' => [],
+    ];
+  };
+
+  return $builders;
+}, 10, 2);
+```
+
+The compatible `blockstudio/block_tags/renderers` and
+`blockstudio/parser/renderers` filters run after this hook and can override the
+same block name.
+
 ### blockstudio/block_tags/tag_aliases
 
 This filter lets you register custom dashed authoring tags that resolve to real
@@ -8217,6 +8335,96 @@ add_filter('blockstudio/settings/path', function() {
 });
 ```
 
+## Bootstrap
+
+### blockstudio/url
+
+This filter changes the public URL used for Blockstudio's editor and admin
+assets. Composer integrations must register it before loading Blockstudio's
+autoload file. The second argument is the physical package directory.
+
+```php
+add_filter(
+  'blockstudio/url',
+  function(string $url, string $directory) {
+    return get_stylesheet_directory_uri() . '/vendor/blockstudio/blockstudio/';
+  },
+  10,
+  2
+);
+```
+
+## Runtime Cache
+
+### blockstudio/cache/dir
+
+This filter receives the resolved cache base directory before a runtime,
+editor-assets, or other cache scope is appended.
+
+```php
+add_filter('blockstudio/cache/dir', function(string $directory) {
+  return WP_CONTENT_DIR . '/cache/blockstudio';
+});
+```
+
+### blockstudio/cache/context
+
+This filter adds a serializable runtime variant to cache identities. Use it
+when the same discovery source can select different logical inventories.
+
+```php
+add_filter('blockstudio/cache/context', function($context, string $scope) {
+  return [
+    'preview' => get_query_var('preview_id'),
+    'site' => get_current_blog_id(),
+  ];
+}, 10, 2);
+```
+
+### blockstudio/cache/watch_debounce
+
+Filters the number of seconds a validated file-watch snapshot can be reused
+without another filesystem stat pass. The default is `0` in local and
+development environments and `20` elsewhere.
+
+```php
+add_filter('blockstudio/cache/watch_debounce', function() {
+  return 30;
+});
+```
+
+### blockstudio/cache/max_files_per_scope
+
+Filters how many published payloads each runtime cache scope retains.
+
+```php
+add_filter('blockstudio/cache/max_files_per_scope', function($maximum, $scope) {
+  return $scope === 'runtime' ? 50 : $maximum;
+}, 10, 2);
+```
+
+### blockstudio/tailwind/cache_max_files
+
+Filters the maximum number of compiled Tailwind CSS entries. The default is
+`1000`.
+
+```php
+add_filter('blockstudio/tailwind/cache_max_files', function() {
+  return 1500;
+});
+```
+
+### blockstudio/tailwind/cache_max_age
+
+Filters the maximum age of compiled Tailwind CSS entries in seconds. The
+default is 30 days and the minimum is one hour.
+
+```php
+add_filter('blockstudio/tailwind/cache_max_age', function() {
+  return 14 * DAY_IN_SECONDS;
+});
+```
+
 ## Admin
 
 ### enabled
@@ -8231,6 +8439,17 @@ add_filter('blockstudio/admin/enabled', function() {
 ```
 
 ## Assets
+
+### editor/canvas/body_class
+
+When the asset reset is enabled, this filter adjusts the sanitized frontend
+body classes copied into the block editor canvas.
+
+```php
+add_filter('blockstudio/editor/canvas/body_class', function(array $classes) {
+  return array_values(array_diff($classes, ['logged-in']));
+});
+```
 
 ### enable
 
@@ -8306,6 +8525,24 @@ add_filter('blockstudio/assets/process/js/content', function($content, $block) {
 ```
 
 ## Render
+
+### dependencies
+
+This filter reports the selected template and asset dependencies whenever
+Blockstudio renders a block. It is useful for static exporters and other
+in-process dependency collectors.
+
+```php
+add_filter(
+  'blockstudio/render/dependencies',
+  function($paths, $name, $block, $isEditor, $isPreview) {
+    my_dependency_graph()->add($name, $paths);
+    return $paths;
+  },
+  10,
+  5
+);
+```
 
 ### global
 
@@ -8737,23 +8974,24 @@ HTML attributes on `<block>` elements are passed as block attributes. JSON value
 
 ## Custom Block Renderers
 
-The HTML parser uses a registry-based architecture. You can add custom renderers for any block using the `blockstudio/parser/renderers` filter:
+The HTML parser uses a registry-based architecture. Add a builder for a custom
+block with `blockstudio/block_tags/builders`:
 
 ```php
-add_filter( 'blockstudio/parser/renderers', function( $renderers, $parser ) {
-    $renderers['acf/hero'] = function( $element, $attrs, $parser ) {
-        $inner_blocks = $parser->parse_children( $element );
+add_filter( 'blockstudio/block_tags/builders', function( $builders, $parser ) {
+    $builders['acf/hero'] = function( array $attrs, string $inner_content ) {
+        $inner_blocks = Blockstudio\Block_Tags::parse_inner_blocks( $inner_content );
 
         return array(
             'blockName'    => 'acf/hero',
             'attrs'        => $attrs,
             'innerBlocks'  => $inner_blocks,
             'innerHTML'    => '',
-            'innerContent' => array(),
+            'innerContent' => array_fill( 0, count( $inner_blocks ), null ),
         );
     };
 
-    return $renderers;
+    return $builders;
 }, 10, 2 );
 ```
 
@@ -8769,8 +9007,8 @@ You can also override how core blocks are rendered:
 
 ```php
 add_filter( 'blockstudio/parser/renderers', function( $renderers, $parser ) {
-    $renderers['core/paragraph'] = function( $element, $attrs, $parser ) {
-        $content = $parser->get_inner_html( $element );
+    $renderers['core/paragraph'] = function( array $attrs, string $inner_content ) {
+        $content = trim( $inner_content );
         $attrs['align'] = $attrs['align'] ?? 'center';
 
         return array(
@@ -8786,16 +9024,20 @@ add_filter( 'blockstudio/parser/renderers', function( $renderers, $parser ) {
 }, 10, 2 );
 ```
 
-### Renderer Function Signature
+Builder callbacks receive the parsed attributes and raw inner content. They
+must return a WordPress block array. See
+Custom renderers for the complete
+filter order and container example.
+
+### Builder Function Signature
 
 ```php
 /*
-  @param DOMElement    $element The DOM element being parsed.
-  @param array         $attrs   Attributes from the element.
-  @param Html_Parser   $parser  The parser instance (for recursive parsing).
-  @return array|null   WordPress block array or null to skip.
- /
-function my_renderer( DOMElement $element, array $attrs, $parser ): ?array {}
+  @param array  $attrs         Parsed element or block-tag attributes.
+  @param string $inner_content Raw inner content.
+  @return array WordPress block array.
+ */
+function my_builder( array $attrs, string $inner_content ): array {}
 ```
 
 ## Element Mapping
@@ -9070,23 +9312,24 @@ HTML attributes on `<block>` elements are passed as block attributes. JSON value
 
 ## Custom Block Renderers
 
-The HTML parser uses a registry-based architecture. You can add custom renderers for any block using the `blockstudio/parser/renderers` filter:
+The HTML parser uses a registry-based architecture. Add a builder for a custom
+block with `blockstudio/block_tags/builders`:
 
 ```php
-add_filter( 'blockstudio/parser/renderers', function( $renderers, $parser ) {
-    $renderers['acf/hero'] = function( $element, $attrs, $parser ) {
-        $inner_blocks = $parser->parse_children( $element );
+add_filter( 'blockstudio/block_tags/builders', function( $builders, $parser ) {
+    $builders['acf/hero'] = function( array $attrs, string $inner_content ) {
+        $inner_blocks = Blockstudio\Block_Tags::parse_inner_blocks( $inner_content );
 
         return array(
             'blockName'    => 'acf/hero',
             'attrs'        => $attrs,
             'innerBlocks'  => $inner_blocks,
             'innerHTML'    => '',
-            'innerContent' => array(),
+            'innerContent' => array_fill( 0, count( $inner_blocks ), null ),
         );
     };
 
-    return $renderers;
+    return $builders;
 }, 10, 2 );
 ```
 
@@ -9102,8 +9345,8 @@ You can also override how core blocks are rendered:
 
 ```php
 add_filter( 'blockstudio/parser/renderers', function( $renderers, $parser ) {
-    $renderers['core/paragraph'] = function( $element, $attrs, $parser ) {
-        $content = $parser->get_inner_html( $element );
+    $renderers['core/paragraph'] = function( array $attrs, string $inner_content ) {
+        $content = trim( $inner_content );
         $attrs['align'] = $attrs['align'] ?? 'center';
 
         return array(
@@ -9119,16 +9362,20 @@ add_filter( 'blockstudio/parser/renderers', function( $renderers, $parser ) {
 }, 10, 2 );
 ```
 
-### Renderer Function Signature
+Builder callbacks receive the parsed attributes and raw inner content. They
+must return a WordPress block array. See
+Custom renderers for the complete
+filter order and container example.
+
+### Builder Function Signature
 
 ```php
 /*
-  @param DOMElement    $element The DOM element being parsed.
-  @param array         $attrs   Attributes from the element.
-  @param Html_Parser   $parser  The parser instance (for recursive parsing).
-  @return array|null   WordPress block array or null to skip.
- /
-function my_renderer( DOMElement $element, array $attrs, $parser ): ?array {}
+  @param array  $attrs         Parsed element or block-tag attributes.
+  @param string $inner_content Raw inner content.
+  @return array WordPress block array.
+ */
+function my_builder( array $attrs, string $inner_content ): array {}
 ```
 
 ## Element Mapping
@@ -9646,6 +9893,58 @@ When a collection source is removed, Blockstudio removes the generated page so o
 
 On frontend requests, Blockstudio hydrates the page registry from already synced published posts. Draft and private pages are available in admin and sync contexts, but frontend helpers only hydrate published pages.
 
+### Deployment Reconciliation
+
+`Blockstudio\Pages::reconcile()` is the explicit deployment and WP-CLI entry
+point. It discovers the complete desired inventory, compares source and
+sync-engine fingerprints, and returns a machine-readable report:
+
+```php
+$report = Blockstudio\Pages::reconcile([
+  'authoritative' => true,
+  'plan_valid' => true,
+  'source' => [
+    'commit' => $commit,
+    'dirtyHash' => $dirtyHash,
+  ],
+  'renames' => [
+    [
+      'from' => 'pages/old/index.php',
+      'to' => 'pages/new/index.php',
+    ],
+  ],
+]);
+```
+
+The report contains `discovered`, `created`, `updated`, `unchanged`, `removed`,
+`failed`, `fullReconciliation`, per-page results, discovery errors, and a
+deterministic `sourceIdentity`.
+
+`authoritative: true` may clear a Page Sync lock and replaces content from the
+file definition instead of preserving keyed editor content. Leave it `false`
+for normal admin sync behavior. `plan_valid: false`, `full: true`, `broad:
+true`, a missing previous source identity, or a changed sync-engine fingerprint
+broadens the pass. Git rename records are identity hints only. They never
+replace complete inventory comparison.
+
+Equal fingerprints perform no post or postmeta writes and do not fire update
+hooks. Missing managed pages are pruned only after discovery completes without
+errors.
+
+Reconciliation does not mark a deployment successful. After activating and
+verifying the matching static artifact and routes, persist the returned
+identity explicitly:
+
+```php
+Blockstudio\Pages::store_successful_source_identity(
+  $report['sourceIdentity']
+);
+```
+
+Ordinary WP-CLI bootstrap registers cached collection post types and rewrites
+but does not discover or sync every page. Deployment and authoring commands
+must call `reconcile()` when they need a sync.
+
 ## Post ID Pinning
 
 By default, WordPress auto-assigns post IDs. If a page is deleted and re-created, the ID changes, breaking external references like menus or hardcoded links.
@@ -9938,6 +10237,7 @@ Page discovery, sync, and collection routing expose these extension points:
 | `blockstudio/pages/orphan_action` | Filter | Return `trash`, `delete`, or `keep` for orphan cleanup. |
 | `blockstudio/pages/docs_allowed_html` | Filter | Adjust allowed HTML for generated Markdown docs content. |
 | `blockstudio/pages/allow_external_loader_path` | Filter | Allow loader `paths` outside the collection root. |
+| `blockstudio/pages/manifest_scan_interval` | Filter | Change how often frontend requests rescan for brand-new collection manifests. Defaults to 5 seconds locally and 20 seconds elsewhere. |
 | `blockstudio/pages/create_post_data` | Filter | Modify post data before a synced page is created. |
 | `blockstudio/pages/update_post_data` | Filter | Modify post data before a synced page is updated. |
 | `blockstudio/pages/sync_engine_inputs` | Filter | Add a parser, mapping, or migration version that should deliberately broaden reconciliation once. |
@@ -9996,9 +10296,8 @@ Blockstudio\Pages::lock('about');
 Blockstudio\Pages::unlock('about');
 ```
 
-`reconcile()` always discovers the complete desired inventory and uses content plus sync-engine fingerprints as the correctness boundary. Git paths and renames may be supplied as candidate hints, but they never replace inventory comparison. Equal fingerprints return without parsing blocks, writing posts or metadata, clearing locks, or firing update hooks. Set `full: true` for recovery from an unknown deployment base; it still skips byte-equal pages.
-
-Normal WP-CLI bootstrap does not discover or sync pages. Deployment and authoring commands must call `reconcile()` explicitly. The successful source identity is intentionally separate: reconciliation never advances it, because deployment tooling must first activate and verify the matching static artifact.
+See Deployment Reconciliation for argument
+semantics, report fields, and the verified source identity boundary.
 
 Global helper functions are available for templates and layouts:
 
@@ -10333,6 +10632,22 @@ blockstudio_site_template_part('header');
 
 ## Hooks
 
+The full Site Template extension surface is:
+
+| Hook | Type | Description |
+| --- | --- | --- |
+| `blockstudio/site_templates/template_paths` | Filter | Adjust full-template discovery roots. |
+| `blockstudio/site_templates/part_paths` | Filter | Adjust template-part discovery roots. |
+| `blockstudio/site_templates/paths` | Filter | Adjust both path lists as `templates` and `parts`. |
+| `blockstudio/site_templates/template_candidates` | Filter | Adjust source-file candidates for a manifest. |
+| `blockstudio/site_templates/templates` | Filter | Adjust templates returned by the registry API. |
+| `blockstudio/site_templates/parts` | Filter | Adjust template parts returned by the registry API. |
+| `blockstudio/site_templates/template_content` | Filter | Adjust compiled full-template source before parsing. |
+| `blockstudio/site_templates/part_content` | Filter | Adjust compiled template-part source before parsing. |
+| `blockstudio/site_templates/parser` | Filter | Replace the `Html_Parser` instance for one item. |
+| `blockstudio/site_templates/discovered` | Action | Runs after a cold discovery and compilation pass. |
+| `blockstudio/site_templates/registered` | Action | Runs after that rebuilt registry has been persisted. |
+
 Add or replace discovery paths:
 
 ```php
@@ -10343,6 +10658,10 @@ add_filter('blockstudio/site_templates/template_paths', function ($paths) {
 
 add_filter('blockstudio/site_templates/part_paths', function ($paths) {
     $paths[] = get_stylesheet_directory() . '/site-parts';
+    return $paths;
+});
+
+add_filter('blockstudio/site_templates/paths', function ($paths) {
     return $paths;
 });
 ```
@@ -10371,33 +10690,65 @@ add_filter('blockstudio/site_templates/part_content', function ($content, $part)
 }, 10, 2);
 ```
 
+Change source candidates or the parser:
+
+```php
+add_filter(
+    'blockstudio/site_templates/template_candidates',
+    function ($candidates, $directory, $manifest) {
+        $candidates[] = $directory . '/template.custom.php';
+        return $candidates;
+    },
+    10,
+    3
+);
+
+add_filter(
+    'blockstudio/site_templates/parser',
+    function ($parser, $item) {
+        return $parser;
+    },
+    10,
+    2
+);
+```
+
+`discovered` and `registered` are cache-rebuild lifecycle actions. They do not
+fire on a warm registry cache hit.
+
 ### Hooks
 
 Filters and actions available for customizing pages, patterns, Site Templates, and the HTML parser.
 
 ## Parser
 
-### blockstudio/parser/renderers
+### blockstudio/block_tags/builders
 
-Filter the block renderer registry. Add custom renderers or override how blocks are parsed from HTML. See Custom Block Renderers for examples.
+Register block-array builders used by block tags and element-mapped custom
+blocks. The callback for each block receives an attributes array and raw inner
+content.
 
 ```php
-add_filter( 'blockstudio/parser/renderers', function( $renderers, $parser ) {
-    $renderers['acf/hero'] = function( $element, $attrs, $parser ) {
-        $inner_blocks = $parser->parse_children( $element );
+add_filter( 'blockstudio/block_tags/builders', function( $builders, $parser ) {
+    $builders['acf/hero'] = function( array $attrs, string $inner_content ) {
+        $inner_blocks = Blockstudio\Block_Tags::parse_inner_blocks( $inner_content );
 
         return array(
             'blockName'    => 'acf/hero',
             'attrs'        => $attrs,
             'innerBlocks'  => $inner_blocks,
             'innerHTML'    => '',
-            'innerContent' => array(),
+            'innerContent' => array_fill( 0, count( $inner_blocks ), null ),
         );
     };
 
-    return $renderers;
+    return $builders;
 }, 10, 2 );
 ```
+
+`blockstudio/block_tags/renderers` and `blockstudio/parser/renderers` receive
+the same registry. They run after `blockstudio/block_tags/builders`, in that
+order, and can replace an earlier builder for the same block.
 
 ### blockstudio/parser/element_mapping
 
@@ -10429,6 +10780,19 @@ add_filter( 'blockstudio/pages/paths', function( $paths ) {
     $paths[] = get_template_directory() . '/custom-pages';
     $paths[] = MY_PLUGIN_DIR . '/pages';
     return $paths;
+} );
+```
+
+### blockstudio/pages/manifest_scan_interval
+
+Filter how often frontend requests rescan page roots for a newly added
+collection manifest. Existing manifest changes are also guarded by file-watch
+metadata. The default is five seconds in local and development environments
+and 20 seconds elsewhere.
+
+```php
+add_filter( 'blockstudio/pages/manifest_scan_interval', function() {
+    return 10;
 } );
 ```
 
@@ -10531,6 +10895,54 @@ add_filter( 'blockstudio/site_templates/part_paths', function( $paths ) {
 } );
 ```
 
+### blockstudio/site_templates/paths
+
+Filter both discovery path lists together. The value contains `templates` and
+`parts` arrays.
+
+```php
+add_filter( 'blockstudio/site_templates/paths', function( $paths ) {
+    return $paths;
+} );
+```
+
+### blockstudio/site_templates/template_candidates
+
+Filter source-file candidates after the manifest and logical source tree have
+been resolved.
+
+```php
+add_filter(
+    'blockstudio/site_templates/template_candidates',
+    function( $candidates, $directory, $manifest ) {
+        $candidates[] = $directory . '/template.custom.php';
+        return $candidates;
+    },
+    10,
+    3
+);
+```
+
+### blockstudio/site_templates/templates
+
+Filter full templates returned by the registry API.
+
+```php
+add_filter( 'blockstudio/site_templates/templates', function( $templates ) {
+    return $templates;
+} );
+```
+
+### blockstudio/site_templates/parts
+
+Filter template parts returned by the registry API.
+
+```php
+add_filter( 'blockstudio/site_templates/parts', function( $parts ) {
+    return $parts;
+} );
+```
+
 ### blockstudio/site_templates/template_content
 
 Filter a template source string before Blockstudio parses it into blocks.
@@ -10551,16 +10963,46 @@ add_filter( 'blockstudio/site_templates/part_content', function( $content, $part
 }, 10, 2 );
 ```
 
+### blockstudio/site_templates/parser
+
+Filter the `Blockstudio\Html_Parser` instance used for one compiled template or
+part. Return an `Html_Parser`; other values fall back to the default parser.
+
+```php
+add_filter(
+    'blockstudio/site_templates/parser',
+    function( $parser, $item ) {
+        return $parser;
+    },
+    10,
+    2
+);
+```
+
+### blockstudio/site_templates/discovered
+
+Action fired after a cold discovery and compilation pass, before the rebuilt
+registry is persisted.
+
+```php
+add_action( 'blockstudio/site_templates/discovered', function( $registry ) {
+    // Inspect the rebuilt Site_Template_Registry.
+} );
+```
+
 ### blockstudio/site_templates/registered
 
-Action fired after file-backed Site Editor templates have been discovered and
-registered for the request.
+Action fired after a rebuilt file-backed Site Editor template registry has been
+persisted.
 
 ```php
 add_action( 'blockstudio/site_templates/registered', function( $registry ) {
     // $registry is the Site_Template_Registry instance
 } );
 ```
+
+The `discovered` and `registered` actions do not fire on a warm registry cache
+hit.
 
 ## Content Sync
 
@@ -10583,7 +11025,9 @@ Use Content Sync for content sets that are important to version, review, and mov
 
 As a rule of thumb, Content Sync is comfortable for dozens or hundreds of rows, and can work into the low thousands when the data is structured, low-churn, and split into focused post types. It is not meant to mirror an entire production database, high-traffic editorial content, logs, orders, analytics, form submissions, sessions, or other high-volume or high-churn data. If the generated files become noisy to review, pushes take too long to reason about, or most rows change outside your deployment workflow, use a database backup, migration, or import/export tool instead.
 
-Media binaries are not copied in 7.4. Attachment references can be recorded in a manifest and validated, but the files themselves need to exist in the target environment.
+Media binaries are not copied. Attachment references can be recorded in a
+manifest and validated, but the files themselves need to exist in the target
+environment.
 
 ## Configuration
 
@@ -10641,6 +11085,22 @@ wp bs content status
 `status` compares files with the database and reports each entity as `unchanged`, `would-update`, `missing-db`, `conflict`, `locked`, or `orphaned`. It also warns about allowlisted meta keys that look like secrets before those values are committed, and about numeric IDs inside block markup bodies because Content Sync does not rewrite IDs in `.html` files.
 
 Use `--dry-run` to inspect a pull or push without writing. Use `push --prune --yes` to remove content-set owned database entities that no longer exist in the files.
+
+### Failure Safety
+
+`push` parses and validates the complete source plan before it writes or
+prunes. Malformed JSON, unresolved declared references, invalid ownership, and
+other preflight failures block the destructive phase. Pruning remains limited
+to the configured post types, taxonomies, and `content.id`.
+
+`pull` writes each projected file before it records that entity as synced. A
+filesystem write failure is returned as an error row and does not advance the
+stored sync state for that entity.
+
+Attachment handling follows `content.media`. With `"manifest"`, referenced
+attachment UIDs must exist in the target environment. With `"none"`, declared
+attachment references are intentionally removed from the portable output
+instead of preserving environment-specific IDs.
 
 ## Files
 
@@ -10714,7 +11174,7 @@ On pull, local IDs at those paths become portable UIDs. On push, the UIDs are re
 
 Post parents, term parents, and post-term relationships are structural references owned by Content Sync and are stored as UIDs automatically. Configured taxonomies are written to post files even when empty; an empty array clears that taxonomy's relationships on push.
 
-Attachment references are validated, not imported. With `media: "manifest"`, referenced attachments are listed in `content/media/manifest.json`; push requires the referenced attachment UID to exist locally. With `media: "none"`, declared attachment references are dropped.
+Attachment references are validated, not imported. With `media: "manifest"`, referenced attachments are listed in `content/media/manifest.json`; push requires the referenced attachment UID to exist locally. With `media: "none"`, declared attachment references are omitted from portable files. Because an omitted key is not applied during push, an existing target post keeps its current attachment meta.
 
 ## Portability Workflow
 
@@ -10729,7 +11189,7 @@ Files are the source of truth for `push`. The database is captured back to files
 
 ## Scope
 
-Content Sync in 7.4 supports:
+Content Sync supports:
 
 - posts from allowlisted post types
 - allowlisted postmeta
@@ -11622,6 +12082,45 @@ Logical discovery sources also contribute their
 source ID, content fingerprint, and watch inputs. Alternate runtime selections
 can add a `blockstudio/cache/context` value to isolate all cache scopes.
 
+On a warm frontend request, Blockstudio hydrates the runtime registry before it
+constructs discovery sources. A valid cache hit therefore skips recursive
+source discovery, block construction, field parsing, and repeated cache-key
+tree walks.
+
+In `production` and `staging`, a validated watch snapshot is trusted for 20
+seconds before Blockstudio stats its files and directories again. `local` and
+`development` environments default to zero so source edits are visible
+immediately. Change that interval with:
+
+```php
+add_filter('blockstudio/cache/watch_debounce', function () {
+    return 30;
+});
+```
+
+The debounce can delay automatic source-change detection by at most the
+configured number of seconds. Set it to `0` when a production-like environment
+is also used for active file authoring.
+
+Cold cache keys use a single-flight lock. One request builds the payload while
+concurrent requests wait for the atomically published result instead of
+repeating the same discovery or compilation work. If a writer fails, no
+partial cache payload is exposed.
+
+Runtime scopes retain 20 published payloads by default. Adjust the cap per
+scope when an integration intentionally creates more cache contexts:
+
+```php
+add_filter(
+    'blockstudio/cache/max_files_per_scope',
+    function (int $maximum, string $scope): int {
+        return 'runtime' === $scope ? 50 : $maximum;
+    },
+    10,
+    2
+);
+```
+
 Disable the persistent caches in `blockstudio.json`:
 
 ```json
@@ -11640,6 +12139,82 @@ add_filter('blockstudio/settings/cache/enabled', '__return_false');
 
 This cache is separate from the per-request render cache below and from the
 Tailwind CSS cache.
+
+### Tailwind Cache
+
+Tailwind's compiled CSS cache remains under
+`wp-content/uploads/blockstudio/tailwind/cache`. It stores up to 1,000 entries
+for 30 days by default, enough to retain page-level keys for a complete site
+instead of evicting them after a small number of routes.
+
+Tailwind also reuses a warm compiler for the same CSS input inside long-lived
+processes and persists compiler construction state between processes. Cold
+page candidate sets still compile independently, but they do not need to
+rebuild the framework parser each time.
+
+Use these filters to change retention:
+
+```php
+add_filter('blockstudio/tailwind/cache_max_files', function () {
+    return 1500;
+});
+
+add_filter('blockstudio/tailwind/cache_max_age', function () {
+    return 14 * DAY_IN_SECONDS;
+});
+```
+
+The minimum age is one hour.
+
+## In-Process Batch Rendering
+
+Long-lived exporters and static-site builders can render several WordPress
+documents in one PHP process without rebuilding Blockstudio registrations.
+Reset request-scoped counters, assets, island state, page layout state, and
+Tailwind's per-document generation between documents:
+
+```php
+foreach ($routes as $route) {
+    Blockstudio\Batch_Render::reset();
+    $html = render_route($route);
+
+    write_static_page($route, $html);
+}
+```
+
+`Batch_Render::reset()` keeps discovery and registered block data warm. It is
+not a cache clear.
+
+To collect source dependencies for each rendered block, observe
+`blockstudio/render/dependencies`:
+
+```php
+$dependencies = [];
+
+add_filter(
+    'blockstudio/render/dependencies',
+    function (
+        array $paths,
+        string $name,
+        array $block,
+        bool $is_editor,
+        bool $is_preview
+    ) use (&$dependencies): array {
+        $dependencies[$name] = array_values(array_unique([
+            ...($dependencies[$name] ?? []),
+            ...$paths,
+        ]));
+
+        return $paths;
+    },
+    10,
+    5
+);
+```
+
+The reported paths include the selected render template, discovered template
+files, and registered block asset files. A collector can add separately loaded
+files to its own dependency graph.
 
 ## Render cache
 

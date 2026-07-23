@@ -1,7 +1,7 @@
 ---
 title: Blockstudio 7.3
 description: Bundled UI components, expanded editing, plugin dependencies, editor policies, and a more reliable parsing pipeline.
-date: "2026-05-19"
+date: 2026-05-19
 author: Dennis
 path: "blockstudio-7-3"
 order: 3

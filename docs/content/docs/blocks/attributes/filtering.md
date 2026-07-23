@@ -13,44 +13,67 @@ meta_description: "Filter and modify block attributes with PHP hooks."
 
 Blockstudio provides two methods to filter block attributes.
 
-## In Editor
+## Attribute Definitions
 
-The first method filters the attributes in the editor. This is useful if you want to adjust the default value of an attribute or its conditions.
+`blockstudio/blocks/attributes` filters each field definition while Blockstudio
+builds and registers a block. Use it to adjust editor controls, defaults,
+conditions, options, and the definition used to validate values during
+rendering.
 
 ```php title="functions.php"
-add_filter('blockstudio/blocks/attributes', function($attributes, $block) {
-  if ($block['name'] === 'my-theme/code-block') {
-    foreach ($attributes as &$attribute) {
-      // Set default value
-      if ($attribute['id'] === 'lineNumbers') {
-        $attribute['default'] = true;
-      }
-
-      // Add condition
-      if ($attribute['id'] === 'lineNumbers') {
-        $attribute['conditions'] = [
-          [
-            [
-              'id' => 'language',
-              'operator' => '==',
-              'value' => 'css'
-            ]
-          ]
-        ];
-      }
-    }
+add_filter('blockstudio/blocks/attributes', function($attribute, $block) {
+  if (
+    ($block['name'] ?? '') === 'my-theme/code-block' &&
+    ($attribute['id'] ?? '') === 'lineNumbers'
+  ) {
+    $attribute['default'] = true;
+    $attribute['conditions'] = [
+      [
+        [
+          'id' => 'language',
+          'operator' => '==',
+          'value' => 'css'
+        ]
+      ]
+    ];
   }
-  return $attributes;
+
+  return $attribute;
 }, 10, 2);
 ```
 
-The code above will set the default value of the `lineNumbers` attribute to `true` and will hide the attribute if the `language` attribute is not set to `css`.
+The code above sets the default value of `lineNumbers` to `true` and hides the
+field unless `language` is set to `css`.
 
-Keep in mind that this filter is only evaluated when inserting blocks in the editor.
+The callback receives one field definition per invocation, including nested
+group and repeater fields. It runs during block registration, not once per
+frontend render.
 
-## On Frontend
+Filtered option definitions are also used by the render attribute map. For
+example, an option added to a `select`, `radio`, or `checkbox` field is
+available in the editor and remains valid when Blockstudio resolves the saved
+value for a template:
 
-The second method filters the attributes on the frontend. This is useful if you want to adjust the attributes before they are passed to the block template.
+```php title="functions.php"
+add_filter('blockstudio/blocks/attributes', function($attribute, $block) {
+  if (
+    ($block['name'] ?? '') === 'bsui/button' &&
+    ($attribute['id'] ?? '') === 'variant'
+  ) {
+    $attribute['options'][] = [
+      'label' => 'Brand',
+      'value' => 'brand',
+    ];
+  }
+
+  return $attribute;
+}, 10, 2);
+```
+
+## Rendered Values
+
+`blockstudio/blocks/attributes/render` filters the resolved values immediately
+before they are passed to the block template.
 
 ```php title="functions.php"
 add_filter('blockstudio/blocks/attributes/render', function($attributes, $block) {
@@ -65,4 +88,6 @@ add_filter('blockstudio/blocks/attributes/render', function($attributes, $block)
 }, 10, 2);
 ```
 
-Keep in mind that the above filter will override any values set in the editor.
+The example above overrides any value saved in the editor for
+`lineNumbers`. Use the definition filter when changing field configuration and
+the render filter when computing or overriding template values for a request.

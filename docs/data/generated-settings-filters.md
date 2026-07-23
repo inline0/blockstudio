@@ -98,6 +98,16 @@ add_filter('blockstudio/settings/cache/enabled', function() {
 });
 ```
 
+### cache/path
+
+This filter allows you to change the Blockstudio file-backed cache directory.
+
+```php title="functions.php"
+add_filter('blockstudio/settings/cache/path', function() {
+  return 'cache/blockstudio';
+});
+```
+
 ### content/enabled
 
 This filter allows you to enable/disable Content Sync.

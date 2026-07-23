@@ -289,9 +289,13 @@ Endpoint and rendering:
 
 ```php
 blockstudio/islands/allowed
+blockstudio/islands/max_per_request
 blockstudio/islands/request_attributes
 blockstudio/islands/fragment
 ```
+
+`blockstudio/islands/max_per_request` changes the maximum number of dynamic
+islands accepted by one batched endpoint request. The default is `50`.
 
 Runtime configuration:
 

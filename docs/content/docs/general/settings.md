@@ -27,6 +27,10 @@ The following properties are available:
   },
   "assets": {
     "enqueue": true,
+    "reset": {
+      "enabled": false,
+      "fullWidth": []
+    },
     "minify": {
       "css": false,
       "js": false
@@ -132,12 +136,18 @@ Options set via the `blockstudio/settings/${setting}` filter will override the o
 
 ### assets
 
-| Option         | Type    | Default | Description               |
-| -------------- | ------- | ------- | ------------------------- |
-| `enqueue`      | boolean | `true`  | Auto-enqueue block assets |
-| `minify.css`   | boolean | `false` | Minify CSS output         |
-| `minify.js`    | boolean | `false` | Minify JS output          |
-| `process.scss` | boolean | `false` | Process SCSS files        |
+| Option          | Type    | Default | Description |
+| --------------- | ------- | ------- | ----------- |
+| `enqueue`       | boolean | `true`  | Auto-enqueue block assets |
+| `reset.enabled` | boolean | `false` | Remove core block styles and apply the editor utility reset |
+| `reset.fullWidth` | array | `[]` | Post types that use the full-width editor layout |
+| `minify.css`    | boolean | `false` | Minify CSS output |
+| `minify.js`     | boolean | `false` | Minify JS output |
+| `process.scss`  | boolean | `false` | Process SCSS files |
+
+With `reset.enabled` active, Blockstudio also copies sanitized frontend
+`body_class` values into the editor canvas. Use
+`blockstudio/editor/canvas/body_class` to adjust the editor-only class list.
 
 ### cache
 

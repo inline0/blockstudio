@@ -120,6 +120,45 @@ WordPress, PHP, and Blockstudio versions.
 source ID, content fingerprint, and watch inputs. Alternate runtime selections
 can add a `blockstudio/cache/context` value to isolate all cache scopes.
 
+On a warm frontend request, Blockstudio hydrates the runtime registry before it
+constructs discovery sources. A valid cache hit therefore skips recursive
+source discovery, block construction, field parsing, and repeated cache-key
+tree walks.
+
+In `production` and `staging`, a validated watch snapshot is trusted for 20
+seconds before Blockstudio stats its files and directories again. `local` and
+`development` environments default to zero so source edits are visible
+immediately. Change that interval with:
+
+```php
+add_filter('blockstudio/cache/watch_debounce', function () {
+    return 30;
+});
+```
+
+The debounce can delay automatic source-change detection by at most the
+configured number of seconds. Set it to `0` when a production-like environment
+is also used for active file authoring.
+
+Cold cache keys use a single-flight lock. One request builds the payload while
+concurrent requests wait for the atomically published result instead of
+repeating the same discovery or compilation work. If a writer fails, no
+partial cache payload is exposed.
+
+Runtime scopes retain 20 published payloads by default. Adjust the cap per
+scope when an integration intentionally creates more cache contexts:
+
+```php
+add_filter(
+    'blockstudio/cache/max_files_per_scope',
+    function (int $maximum, string $scope): int {
+        return 'runtime' === $scope ? 50 : $maximum;
+    },
+    10,
+    2
+);
+```
+
 Disable the persistent caches in `blockstudio.json`:
 
 ```json title="blockstudio.json"
@@ -138,6 +177,82 @@ add_filter('blockstudio/settings/cache/enabled', '__return_false');
 
 This cache is separate from the per-request render cache below and from the
 Tailwind CSS cache.
+
+### Tailwind Cache
+
+Tailwind's compiled CSS cache remains under
+`wp-content/uploads/blockstudio/tailwind/cache`. It stores up to 1,000 entries
+for 30 days by default, enough to retain page-level keys for a complete site
+instead of evicting them after a small number of routes.
+
+Tailwind also reuses a warm compiler for the same CSS input inside long-lived
+processes and persists compiler construction state between processes. Cold
+page candidate sets still compile independently, but they do not need to
+rebuild the framework parser each time.
+
+Use these filters to change retention:
+
+```php
+add_filter('blockstudio/tailwind/cache_max_files', function () {
+    return 1500;
+});
+
+add_filter('blockstudio/tailwind/cache_max_age', function () {
+    return 14 * DAY_IN_SECONDS;
+});
+```
+
+The minimum age is one hour.
+
+## In-Process Batch Rendering
+
+Long-lived exporters and static-site builders can render several WordPress
+documents in one PHP process without rebuilding Blockstudio registrations.
+Reset request-scoped counters, assets, island state, page layout state, and
+Tailwind's per-document generation between documents:
+
+```php
+foreach ($routes as $route) {
+    Blockstudio\Batch_Render::reset();
+    $html = render_route($route);
+
+    write_static_page($route, $html);
+}
+```
+
+`Batch_Render::reset()` keeps discovery and registered block data warm. It is
+not a cache clear.
+
+To collect source dependencies for each rendered block, observe
+`blockstudio/render/dependencies`:
+
+```php
+$dependencies = [];
+
+add_filter(
+    'blockstudio/render/dependencies',
+    function (
+        array $paths,
+        string $name,
+        array $block,
+        bool $is_editor,
+        bool $is_preview
+    ) use (&$dependencies): array {
+        $dependencies[$name] = array_values(array_unique([
+            ...($dependencies[$name] ?? []),
+            ...$paths,
+        ]));
+
+        return $paths;
+    },
+    10,
+    5
+);
+```
+
+The reported paths include the selected render template, discovered template
+files, and registered block asset files. A collector can add separately loaded
+files to its own dependency graph.
 
 ## Render cache
 

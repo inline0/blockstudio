@@ -14,27 +14,33 @@ Filters and actions available for customizing pages, patterns, Site Templates, a
 
 ## Parser
 
-### blockstudio/parser/renderers
+### blockstudio/block_tags/builders
 
-Filter the block renderer registry. Add custom renderers or override how blocks are parsed from HTML. See [Custom Block Renderers](/docs/pages-and-patterns#custom-block-renderers) for examples.
+Register block-array builders used by block tags and element-mapped custom
+blocks. The callback for each block receives an attributes array and raw inner
+content.
 
 ```php
-add_filter( 'blockstudio/parser/renderers', function( $renderers, $parser ) {
-    $renderers['acf/hero'] = function( $element, $attrs, $parser ) {
-        $inner_blocks = $parser->parse_children( $element );
+add_filter( 'blockstudio/block_tags/builders', function( $builders, $parser ) {
+    $builders['acf/hero'] = function( array $attrs, string $inner_content ) {
+        $inner_blocks = Blockstudio\Block_Tags::parse_inner_blocks( $inner_content );
 
         return array(
             'blockName'    => 'acf/hero',
             'attrs'        => $attrs,
             'innerBlocks'  => $inner_blocks,
             'innerHTML'    => '',
-            'innerContent' => array(),
+            'innerContent' => array_fill( 0, count( $inner_blocks ), null ),
         );
     };
 
-    return $renderers;
+    return $builders;
 }, 10, 2 );
 ```
+
+`blockstudio/block_tags/renderers` and `blockstudio/parser/renderers` receive
+the same registry. They run after `blockstudio/block_tags/builders`, in that
+order, and can replace an earlier builder for the same block.
 
 ### blockstudio/parser/element_mapping
 
@@ -66,6 +72,19 @@ add_filter( 'blockstudio/pages/paths', function( $paths ) {
     $paths[] = get_template_directory() . '/custom-pages';
     $paths[] = MY_PLUGIN_DIR . '/pages';
     return $paths;
+} );
+```
+
+### blockstudio/pages/manifest_scan_interval
+
+Filter how often frontend requests rescan page roots for a newly added
+collection manifest. Existing manifest changes are also guarded by file-watch
+metadata. The default is five seconds in local and development environments
+and 20 seconds elsewhere.
+
+```php
+add_filter( 'blockstudio/pages/manifest_scan_interval', function() {
+    return 10;
 } );
 ```
 
@@ -168,6 +187,54 @@ add_filter( 'blockstudio/site_templates/part_paths', function( $paths ) {
 } );
 ```
 
+### blockstudio/site_templates/paths
+
+Filter both discovery path lists together. The value contains `templates` and
+`parts` arrays.
+
+```php
+add_filter( 'blockstudio/site_templates/paths', function( $paths ) {
+    return $paths;
+} );
+```
+
+### blockstudio/site_templates/template_candidates
+
+Filter source-file candidates after the manifest and logical source tree have
+been resolved.
+
+```php
+add_filter(
+    'blockstudio/site_templates/template_candidates',
+    function( $candidates, $directory, $manifest ) {
+        $candidates[] = $directory . '/template.custom.php';
+        return $candidates;
+    },
+    10,
+    3
+);
+```
+
+### blockstudio/site_templates/templates
+
+Filter full templates returned by the registry API.
+
+```php
+add_filter( 'blockstudio/site_templates/templates', function( $templates ) {
+    return $templates;
+} );
+```
+
+### blockstudio/site_templates/parts
+
+Filter template parts returned by the registry API.
+
+```php
+add_filter( 'blockstudio/site_templates/parts', function( $parts ) {
+    return $parts;
+} );
+```
+
 ### blockstudio/site_templates/template_content
 
 Filter a template source string before Blockstudio parses it into blocks.
@@ -188,13 +255,43 @@ add_filter( 'blockstudio/site_templates/part_content', function( $content, $part
 }, 10, 2 );
 ```
 
+### blockstudio/site_templates/parser
+
+Filter the `Blockstudio\Html_Parser` instance used for one compiled template or
+part. Return an `Html_Parser`; other values fall back to the default parser.
+
+```php
+add_filter(
+    'blockstudio/site_templates/parser',
+    function( $parser, $item ) {
+        return $parser;
+    },
+    10,
+    2
+);
+```
+
+### blockstudio/site_templates/discovered
+
+Action fired after a cold discovery and compilation pass, before the rebuilt
+registry is persisted.
+
+```php
+add_action( 'blockstudio/site_templates/discovered', function( $registry ) {
+    // Inspect the rebuilt Site_Template_Registry.
+} );
+```
+
 ### blockstudio/site_templates/registered
 
-Action fired after file-backed Site Editor templates have been discovered and
-registered for the request.
+Action fired after a rebuilt file-backed Site Editor template registry has been
+persisted.
 
 ```php
 add_action( 'blockstudio/site_templates/registered', function( $registry ) {
     // $registry is the Site_Template_Registry instance
 } );
 ```
+
+The `discovered` and `registered` actions do not fire on a warm registry cache
+hit.
