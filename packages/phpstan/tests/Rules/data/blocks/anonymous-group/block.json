@@ -1,5 +1,5 @@
 {
-  "name": "mytheme/hero",
+  "name": "test/anonymous-group",
   "blockstudio": {
     "attributes": [
       {
@@ -11,8 +11,14 @@
               {
                 "type": "group",
                 "attributes": [
-                  { "id": "title", "type": "text" },
-                  { "id": "subtitle", "type": "text" }
+                  { "id": "heading", "type": "text" },
+                  {
+                    "id": "cta",
+                    "type": "group",
+                    "attributes": [
+                      { "id": "text", "type": "text" }
+                    ]
+                  }
                 ]
               }
             ]

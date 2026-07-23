@@ -71,6 +71,14 @@ final class BlockAttributeAccessRuleTest extends RuleTestCase
         );
     }
 
+    public function test_anonymous_group_fields_are_available_in_parent_scope(): void
+    {
+        $this->analyse(
+            [__DIR__ . '/data/blocks/anonymous-group/index.php'],
+            []
+        );
+    }
+
     public function test_attributes_variable_also_supported(): void
     {
         $this->analyse(

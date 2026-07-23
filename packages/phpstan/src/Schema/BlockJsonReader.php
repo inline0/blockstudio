@@ -119,20 +119,24 @@ final class BlockJsonReader
         }
 
         $id = (string) ($field['id'] ?? $field['key'] ?? '');
+
+        if ($type === 'group' && isset($field['attributes']) && is_array($field['attributes'])) {
+            $groupPrefix = $id === ''
+                ? $prefix
+                : ($prefix === '' ? $id : $prefix . '_' . $id);
+            foreach ($field['attributes'] as $child) {
+                if (is_array($child)) {
+                    $this->addFieldToShape($builder, $child, $groupPrefix);
+                }
+            }
+            return;
+        }
+
         if ($id === '') {
             return;
         }
 
         $key = $prefix === '' ? $id : $prefix . '_' . $id;
-
-        if ($type === 'group' && isset($field['attributes']) && is_array($field['attributes'])) {
-            foreach ($field['attributes'] as $child) {
-                if (is_array($child)) {
-                    $this->addFieldToShape($builder, $child, $key);
-                }
-            }
-            return;
-        }
 
         if ($type === 'repeater' && isset($field['attributes']) && is_array($field['attributes'])) {
             $childBuilder = ConstantArrayTypeBuilder::createEmpty();

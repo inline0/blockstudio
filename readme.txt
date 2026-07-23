@@ -3,7 +3,7 @@ Contributors: dnnsjsk
 Requires at least: 6.7
 Tested up to: 7.0.0
 Requires PHP: 8.2
-Stable tag: 7.5.0
+Stable tag: 7.5.1
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -52,6 +52,10 @@ Download the latest release zip from [GitHub Releases](https://github.com/inline
 * [Getting Started](https://blockstudio.dev/docs/getting-started)
 
 == Changelog ==
+
+= 7.5.1 =
+* Fix: Multiple select fields no longer emit array-to-string conversion warnings while preparing render values
+* Fix: `blockstudio/phpstan` v0.1.7 recognizes fields nested inside anonymous groups across PHP, Twig, Blade, and inferred template attribute shapes
 
 = 7.5.0 =
 * New: logical discovery sources let runtimes supply a deterministic composed theme inventory across blocks, fields, pages, patterns, Site Editor templates, Canvas, assets, and Tailwind while preserving the default filesystem behavior

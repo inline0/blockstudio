@@ -312,4 +312,59 @@ class BlockTest extends TestCase {
 			Block::get_option_value( $data, 'both', 1.5 )
 		);
 	}
+
+	public function test_transform_attributes_maps_multiple_select_without_array_conversion_warning(): void {
+		$attributes      = array(
+			'caseStudies' => array( 'curated', 'featured' ),
+		);
+		$attribute_names = array();
+		$attribute_data  = array();
+		$warning         = null;
+
+		set_error_handler(
+			static function ( int $severity, string $message ) use ( &$warning ): bool {
+				if ( E_WARNING === $severity && str_contains( $message, 'Array to string conversion' ) ) {
+					$warning = $message;
+					return true;
+				}
+
+				return false;
+			}
+		);
+
+		try {
+			Block::transform_attributes(
+				$attributes,
+				$attribute_names,
+				array(),
+				'test/multiple-select',
+				array( 'name' => 'test/multiple-select' ),
+				false,
+				array(
+					'caseStudies' => array(
+						'type'         => 'array',
+						'field'        => 'select',
+						'multiple'     => true,
+						'returnFormat' => 'label',
+						'options'      => array(
+							array(
+								'value' => 'curated',
+								'label' => 'Curated',
+							),
+							array(
+								'value' => 'featured',
+								'label' => 'Featured',
+							),
+						),
+					),
+				),
+				$attribute_data
+			);
+		} finally {
+			restore_error_handler();
+		}
+
+		$this->assertNull( $warning );
+		$this->assertSame( array( 'Curated', 'Featured' ), $attributes['caseStudies'] );
+	}
 }

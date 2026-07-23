@@ -12668,6 +12668,16 @@ echo $a['typo'];      // Error: Field "typo" does not exist in block.json
 Add `/* @var array<string, mixed> $a /` at the top of each PHP template so
 PHPStan knows `$a` exists. The extension handles the rest.
 
+Field keys follow Blockstudio's runtime flattening rules. `tabs` and anonymous
+`group` containers without an `id` are presentation-only, so their child fields
+remain in the parent scope. A named group prefixes its child keys with the group
+ID:
+
+```php
+echo $a['heading'];  // Anonymous group child.
+echo $a['cta_text']; // "text" inside the named "cta" group.
+```
+
 ### Twig template access
 
 Twig templates are scanned automatically. No annotation needed.
@@ -12845,7 +12855,7 @@ The extension maps every Blockstudio field type to a concrete PHP type:
 | `icon`                                                        | `array{set: string, subSet: string, icon: string}`                                          |
 | `files` (single)                                              | `array{id: int, url: string, alt: string\|null, mime_type: string\|null}`                   |
 | `files` (multiple)                                            | `list<array{id: int, url: string, ...}>`                                                    |
-| `group`                                                       | Flattened with underscore prefix: `cta_text`, `cta_url`                                     |
+| `group`                                                       | Named groups use underscore prefixes; anonymous groups flatten into the parent scope         |
 | `repeater`                                                    | `list<array{...child fields...}>`                                                           |
 | `tabs`                                                        | Flattened into parent scope                                                                 |
 

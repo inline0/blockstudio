@@ -8,8 +8,13 @@
           {
             "title": "Content",
             "attributes": [
-              { "id": "title", "type": "text" },
-              { "id": "subtitle", "type": "text" }
+              {
+                "type": "group",
+                "attributes": [
+                  { "id": "title", "type": "text" },
+                  { "id": "subtitle", "type": "text" }
+                ]
+              }
             ]
           }
         ]

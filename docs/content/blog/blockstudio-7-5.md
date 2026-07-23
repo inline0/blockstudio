@@ -537,3 +537,14 @@ If PHP registers a field type but its editor script does not register the
 matching control, Blockstudio keeps the saved value and shows a non-editable
 notice in the editor. If a field type is not registered in PHP, Blockstudio
 leaves it out of generated WordPress attributes.
+
+## 7.5.1 maintenance update
+
+7.5.1 removes an array-to-string conversion warning emitted while preparing
+multiple select values for rendering. The saved and rendered values were
+already correct, but debug logs could receive one warning per field render.
+
+The accompanying `blockstudio/phpstan` v0.1.7 update also recognizes fields
+nested inside anonymous groups across PHP, Twig, Blade, and inferred template
+attribute shapes. Existing projects can receive that package fix with
+`composer update blockstudio/phpstan`.

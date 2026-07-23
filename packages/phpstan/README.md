@@ -37,6 +37,11 @@ echo $a['subtitle'];  // OK
 echo $a['typo'];      // Error: Field "typo" does not exist in block.json
 ```
 
+Field keys follow Blockstudio's runtime flattening rules. `tabs` and anonymous
+`group` containers without an `id` keep their children in the parent scope.
+Named groups prefix child keys, so a `text` field inside a `cta` group is
+available as `$a['cta_text']`.
+
 Twig and Blade templates are checked too:
 
 ```twig

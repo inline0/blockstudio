@@ -160,15 +160,20 @@ final class TemplateAttributeAccessRule implements Rule
                 continue;
             }
             $id = (string) ($field['id'] ?? $field['key'] ?? '');
+
+            if ($type === 'group' && isset($field['attributes']) && is_array($field['attributes'])) {
+                $groupPrefix = $id === ''
+                    ? $prefix
+                    : ($prefix === '' ? $id : $prefix . '_' . $id);
+                $keys = array_merge($keys, $this->collectKeys($field['attributes'], $groupPrefix));
+                continue;
+            }
+
             if ($id === '') {
                 continue;
             }
             $key = $prefix === '' ? $id : $prefix . '_' . $id;
 
-            if ($type === 'group' && isset($field['attributes']) && is_array($field['attributes'])) {
-                $keys = array_merge($keys, $this->collectKeys($field['attributes'], $key));
-                continue;
-            }
             if ($type === 'message') {
                 continue;
             }
