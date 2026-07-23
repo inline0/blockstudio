@@ -4,7 +4,8 @@ import { fileURLToPath } from 'url';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const root = resolve(__dirname, '..');
-const docsDir = resolve(root, 'docs/content/docs');
+const docsDir = resolve(root, 'docs/docs');
+const schemasDir = resolve(root, 'schemas');
 const outputPath = resolve(root, 'includes/llm/blockstudio-llm.txt');
 
 interface MetaJson {
@@ -315,19 +316,19 @@ const rootMeta = readJson(join(docsDir, 'meta.json')) as MetaJson;
 const docs = collectDocs(docsDir, rootMeta, 0);
 
 (async () => {
-  const schemasDir = resolve(root, 'docs/src/schemas');
-  const { blockstudio: blockstudioSchema } = await import(
-    resolve(schemasDir, 'blockstudio.ts')
-  );
-  const { schema: blockSchemaFn } = await import(
-    resolve(schemasDir, 'schema.ts')
-  );
-  const { extend: extendSchemaFn } = await import(
-    resolve(schemasDir, 'extend.ts')
-  );
+  const blockstudioSchema = readJson(
+    resolve(schemasDir, 'blockstudio.json'),
+  ) as Record<string, any>;
+  const full = readJson(resolve(schemasDir, 'block.json')) as Record<
+    string,
+    any
+  >;
+  const ext = readJson(resolve(schemasDir, 'extend.json')) as Record<
+    string,
+    any
+  >;
 
   const schemas: { name: string; filename: string; content: string }[] = [];
-  const full = (await blockSchemaFn()) as Record<string, any>;
   const bs = full.properties.blockstudio;
 
   const bsFieldTypes = bs.properties?.attributes?.items?.anyOf;
@@ -375,7 +376,6 @@ const docs = collectDocs(docsDir, rootMeta, 0);
     filename: 'blockstudio.json',
     content: JSON.stringify(blockstudioSchema),
   });
-  const ext = (await extendSchemaFn()) as Record<string, any>;
   const extendProp = ext.properties?.blockstudio?.properties?.extend;
   const trimmedExt = {
     _note:
