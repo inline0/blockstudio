@@ -1,0 +1,9 @@
+{
+  "name": "mytheme/meta",
+  "attributes": [
+    {
+      "id": "summary",
+      "type": "textarea"
+    }
+  ]
+}

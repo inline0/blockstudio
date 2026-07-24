@@ -245,3 +245,15 @@ add_filter('blockstudio/fields/paths', function ($paths) {
     return $paths;
 });
 ```
+
+## Static Analysis
+
+The [`blockstudio/phpstan`](/docs/dev/phpstan) package expands file-backed
+`custom/*` references when validating PHP, Twig, Blade, block tags, and
+inferred attribute shapes. Its expansion follows the same nesting,
+`idStructure`, and `overrides` rules described above.
+
+For definitions outside the analyzed project, add the library directory to
+`blockstudioScanRoots` in `phpstan.neon`. Fields registered only through the
+`blockstudio/fields` PHP filter exist at runtime and cannot be inferred
+statically.

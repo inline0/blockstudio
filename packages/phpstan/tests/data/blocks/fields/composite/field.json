@@ -1,0 +1,46 @@
+{
+  "name": "test/composite",
+  "attributes": [
+    {
+      "id": "title",
+      "type": "text"
+    },
+    {
+      "type": "custom/test/base",
+      "idStructure": "base_{id}"
+    },
+    {
+      "id": "cta",
+      "type": "group",
+      "attributes": [
+        {
+          "id": "label",
+          "type": "text"
+        }
+      ]
+    },
+    {
+      "id": "items",
+      "type": "repeater",
+      "attributes": [
+        {
+          "id": "row",
+          "type": "text"
+        }
+      ]
+    },
+    {
+      "type": "tabs",
+      "tabs": [
+        {
+          "attributes": [
+            {
+              "id": "tab_value",
+              "type": "text"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

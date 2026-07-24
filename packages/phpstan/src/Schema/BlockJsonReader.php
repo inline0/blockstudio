@@ -16,10 +16,28 @@ use PHPStan\Type\Type;
  */
 final class BlockJsonReader
 {
-    /** @var array<string, array{mtime: int, type: Type, raw: array<string, mixed>}> */
+    /** @var array<string, array{mtime: int, raw: array<string, mixed>}> */
     private array $cache = [];
 
-    public function __construct(private readonly FieldTypeRegistry $registry) {}
+    /**
+     * @var array<string, array{
+     *     mtime: int,
+     *     result: array{
+     *         attributes: array<int, mixed>,
+     *         issues: list<array{
+     *             type: 'missing'|'ambiguous'|'cycle'|'invalid',
+     *             name: string,
+     *             paths: list<string>
+     *         }>
+     *     }
+     * }>
+     */
+    private array $attributeCache = [];
+
+    public function __construct(
+        private readonly FieldTypeRegistry $registry,
+        private readonly CustomFieldResolver $customFields
+    ) {}
 
     /**
      * Get the attribute shape type for a block.json file.
@@ -27,17 +45,40 @@ final class BlockJsonReader
      */
     public function getAttributeType(string $blockJsonPath): ?Type
     {
-        $data = $this->load($blockJsonPath);
-        if ($data === null) {
+        $result = $this->getResolvedAttributes($blockJsonPath);
+        if ($result === null) {
             return null;
         }
 
-        $attributes = $data['blockstudio']['attributes'] ?? [];
-        if (!is_array($attributes)) {
+        return $this->buildShape($result['attributes']);
+    }
+
+    /**
+     * Return flattened template keys after custom fields are expanded.
+     *
+     * @return list<string>|null
+     */
+    public function getAttributeKeys(string $blockJsonPath): ?array
+    {
+        $result = $this->getResolvedAttributes($blockJsonPath);
+        if ($result === null) {
             return null;
         }
 
-        return $this->buildShape($attributes);
+        return $this->collectKeys($result['attributes']);
+    }
+
+    /**
+     * @return list<array{
+     *     type: 'missing'|'ambiguous'|'cycle'|'invalid',
+     *     name: string,
+     *     paths: list<string>
+     * }>
+     */
+    public function getCustomFieldIssues(string $blockJsonPath): array
+    {
+        $result = $this->getResolvedAttributes($blockJsonPath);
+        return $result['issues'] ?? [];
     }
 
     /**
@@ -66,11 +107,101 @@ final class BlockJsonReader
 
         $this->cache[$path] = [
             'mtime' => $mtime,
-            'type' => $this->buildShape($decoded['blockstudio']['attributes'] ?? []),
             'raw' => $decoded,
         ];
 
         return $decoded;
+    }
+
+    /**
+     * @return array{
+     *     attributes: array<int, mixed>,
+     *     issues: list<array{
+     *         type: 'missing'|'ambiguous'|'cycle'|'invalid',
+     *         name: string,
+     *         paths: list<string>
+     *     }>
+     * }|null
+     */
+    private function getResolvedAttributes(string $blockJsonPath): ?array
+    {
+        $data = $this->load($blockJsonPath);
+        if ($data === null) {
+            return null;
+        }
+
+        $attributes = $data['blockstudio']['attributes'] ?? [];
+        if (!is_array($attributes)) {
+            return null;
+        }
+
+        $mtime = (int) filemtime($blockJsonPath);
+        if (
+            isset($this->attributeCache[$blockJsonPath])
+            && $this->attributeCache[$blockJsonPath]['mtime'] === $mtime
+        ) {
+            return $this->attributeCache[$blockJsonPath]['result'];
+        }
+
+        $result = $this->customFields->resolve($attributes);
+        $this->attributeCache[$blockJsonPath] = [
+            'mtime' => $mtime,
+            'result' => $result,
+        ];
+
+        return $result;
+    }
+
+    /**
+     * @param array<int, mixed> $attributes
+     * @return list<string>
+     */
+    private function collectKeys(array $attributes, string $prefix = ''): array
+    {
+        $keys = [];
+
+        foreach ($attributes as $field) {
+            if (!is_array($field)) {
+                continue;
+            }
+
+            $type = is_string($field['type'] ?? null) ? $field['type'] : 'text';
+
+            if ($type === 'tabs' && is_array($field['tabs'] ?? null)) {
+                foreach ($field['tabs'] as $tab) {
+                    if (is_array($tab) && is_array($tab['attributes'] ?? null)) {
+                        $keys = array_merge(
+                            $keys,
+                            $this->collectKeys($tab['attributes'], $prefix)
+                        );
+                    }
+                }
+                continue;
+            }
+
+            $id = is_string($field['id'] ?? null)
+                ? $field['id']
+                : (is_string($field['key'] ?? null) ? $field['key'] : '');
+
+            if ($type === 'group' && is_array($field['attributes'] ?? null)) {
+                $groupPrefix = $id === ''
+                    ? $prefix
+                    : ($prefix === '' ? $id : $prefix . '_' . $id);
+                $keys = array_merge(
+                    $keys,
+                    $this->collectKeys($field['attributes'], $groupPrefix)
+                );
+                continue;
+            }
+
+            if ($id === '' || $type === 'message') {
+                continue;
+            }
+
+            $keys[] = $prefix === '' ? $id : $prefix . '_' . $id;
+        }
+
+        return array_values(array_unique($keys));
     }
 
     /**

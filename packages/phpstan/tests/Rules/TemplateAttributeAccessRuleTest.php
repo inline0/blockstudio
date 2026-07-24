@@ -7,6 +7,7 @@ namespace Blockstudio\PHPStan\Tests\Rules;
 use Blockstudio\PHPStan\Reflection\FieldTypeRegistry;
 use Blockstudio\PHPStan\Rules\TemplateAttributeAccessRule;
 use Blockstudio\PHPStan\Schema\BlockJsonReader;
+use Blockstudio\PHPStan\Schema\CustomFieldResolver;
 use Blockstudio\PHPStan\Schema\ProjectScanner;
 use PHPStan\Rules\Rule;
 use PHPStan\Testing\RuleTestCase;
@@ -30,9 +31,14 @@ final class TemplateAttributeAccessRuleTest extends RuleTestCase
 
     protected function getRule(): Rule
     {
+        $scanner = new ProjectScanner($this->fixtureDir);
+
         return new TemplateAttributeAccessRule(
-            new ProjectScanner($this->fixtureDir),
-            new BlockJsonReader(new FieldTypeRegistry())
+            $scanner,
+            new BlockJsonReader(
+                new FieldTypeRegistry(),
+                new CustomFieldResolver($scanner)
+            )
         );
     }
 

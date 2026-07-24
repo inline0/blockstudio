@@ -6,6 +6,8 @@ namespace Blockstudio\PHPStan\Tests\Unit\Schema;
 
 use Blockstudio\PHPStan\Reflection\FieldTypeRegistry;
 use Blockstudio\PHPStan\Schema\BlockJsonReader;
+use Blockstudio\PHPStan\Schema\CustomFieldResolver;
+use Blockstudio\PHPStan\Schema\ProjectScanner;
 use PHPStan\Type\Constant\ConstantArrayType;
 use PHPStan\Type\VerbosityLevel;
 use PHPUnit\Framework\TestCase;
@@ -17,8 +19,12 @@ final class BlockJsonReaderTest extends TestCase
 
     protected function setUp(): void
     {
-        $this->reader = new BlockJsonReader(new FieldTypeRegistry());
         $this->blocksDir = __DIR__ . '/../../data/blocks';
+        $scanner = new ProjectScanner($this->blocksDir);
+        $this->reader = new BlockJsonReader(
+            new FieldTypeRegistry(),
+            new CustomFieldResolver($scanner)
+        );
     }
 
     public function test_simple_block_returns_shape_with_text_and_number(): void
@@ -76,6 +82,29 @@ final class BlockJsonReaderTest extends TestCase
         // Tabs flatten to top level (not prefixed with the tabs field id)
         $this->assertStringContainsString('title', $description);
         $this->assertStringContainsString('color', $description);
+    }
+
+    public function test_custom_fields_contribute_runtime_expanded_keys_and_shapes(): void
+    {
+        $path = $this->blocksDir . '/custom-field/block.json';
+        $type = $this->reader->getAttributeType($path);
+
+        $this->assertNotNull($type);
+        $description = $type->describe(VerbosityLevel::precise());
+        $this->assertStringContainsString('headline', $description);
+        $this->assertStringContainsString('hero_base_value', $description);
+        $this->assertStringContainsString('hero_cta_label', $description);
+        $this->assertStringContainsString('hero_items', $description);
+        $this->assertStringContainsString('row', $description);
+        $this->assertStringContainsString('hero_tab_value', $description);
+        $this->assertSame([], $this->reader->getCustomFieldIssues($path));
+        $this->assertSame([
+            'headline',
+            'hero_base_value',
+            'hero_cta_label',
+            'hero_items',
+            'hero_tab_value',
+        ], $this->reader->getAttributeKeys($path));
     }
 
     public function test_block_without_blockstudio_returns_empty_shape(): void

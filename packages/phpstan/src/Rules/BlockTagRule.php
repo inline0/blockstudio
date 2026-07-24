@@ -123,7 +123,11 @@ final class BlockTagRule implements Rule
             return [];
         }
 
-        $validKeys = $this->collectAttributeKeys($blockData['blockstudio']['attributes'] ?? []);
+        if ($this->reader->getCustomFieldIssues($blockJsonPath) !== []) {
+            return [];
+        }
+
+        $validKeys = $this->reader->getAttributeKeys($blockJsonPath) ?? [];
 
         // Skip "data-*" and "html-*" attributes (pass-through to HTML)
         $tagAttrs = array_filter(
@@ -149,49 +153,4 @@ final class BlockTagRule implements Rule
         return $errors;
     }
 
-    /**
-     * @param array<int, mixed> $attributes
-     * @return list<string>
-     */
-    private function collectAttributeKeys(array $attributes, string $prefix = ''): array
-    {
-        $keys = [];
-
-        foreach ($attributes as $field) {
-            if (!is_array($field)) {
-                continue;
-            }
-
-            $type = (string) ($field['type'] ?? 'text');
-
-            if ($type === 'tabs' && isset($field['tabs']) && is_array($field['tabs'])) {
-                foreach ($field['tabs'] as $tab) {
-                    if (is_array($tab) && isset($tab['attributes']) && is_array($tab['attributes'])) {
-                        $keys = array_merge($keys, $this->collectAttributeKeys($tab['attributes'], $prefix));
-                    }
-                }
-                continue;
-            }
-
-            $id = (string) ($field['id'] ?? $field['key'] ?? '');
-            if ($id === '') {
-                continue;
-            }
-
-            $key = $prefix === '' ? $id : $prefix . '_' . $id;
-
-            if ($type === 'group' && isset($field['attributes']) && is_array($field['attributes'])) {
-                $keys = array_merge($keys, $this->collectAttributeKeys($field['attributes'], $key));
-                continue;
-            }
-
-            if ($type === 'message') {
-                continue;
-            }
-
-            $keys[] = $key;
-        }
-
-        return $keys;
-    }
 }

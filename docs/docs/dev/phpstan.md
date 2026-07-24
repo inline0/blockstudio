@@ -52,6 +52,51 @@ echo $a['heading'];  // Anonymous group child.
 echo $a['cta_text']; // "text" inside the named "cta" group.
 ```
 
+### Reusable custom fields
+
+File-backed `custom/*` references are expanded before template keys and array
+shapes are checked. The extension reads the matching `field.json` and applies
+the same `idStructure`, `overrides`, nested reference, group, tabs, and repeater
+rules as Blockstudio:
+
+```json title="blockstudio/fields/hero/field.json"
+{
+  "name": "mytheme/hero",
+  "attributes": [
+    { "id": "heading", "type": "text" },
+    { "id": "description", "type": "textarea" }
+  ]
+}
+```
+
+```json title="block.json"
+{
+  "blockstudio": {
+    "attributes": [
+      {
+        "type": "custom/mytheme/hero",
+        "idStructure": "hero_{id}",
+        "overrides": {
+          "heading": { "id": "title" }
+        }
+      }
+    ]
+  }
+}
+```
+
+The resulting template keys are `title` and `hero_description`. They are
+recognized in PHP, Twig, Blade, block tags, and inferred attribute shapes.
+
+Missing, ambiguous, invalid, or cyclic file-backed definitions produce a
+specific `blockstudio.customField.*` error. Dependent key checks are skipped for
+that block so one unresolved definition does not create a second wave of false
+unknown-field errors.
+
+Definitions registered only at runtime through the `blockstudio/fields` PHP
+filter cannot be inferred by static analysis. Use a `field.json` definition when
+the field must contribute statically checked template keys.
+
 ### Twig template access
 
 Twig templates are scanned automatically. No annotation needed.
@@ -158,9 +203,11 @@ omit `id` when they only expand or wrap other fields.
 **field.json** (custom reusable fields):
 
 - Missing `name`
-- Missing field `type`
+- Missing or empty `attributes`
+- Invalid attribute objects or missing field `type`
 - Missing `id` on value fields that require one
 - Unknown field types
+- Missing, ambiguous, invalid, or cyclic nested `custom/*` references
 
 **Extension JSON** (block extensions in `extensions/`):
 
@@ -200,14 +247,15 @@ omit `id` when they only expand or wrap other fields.
 ## Configuration
 
 The extension discovers Blockstudio files in the analyzed project by default.
-When a project renders blocks from a library outside the project root, add that
-library path to `blockstudioScanRoots` so `<bs:*>` and `<block>` tags can be
-validated against those external block definitions too.
+When a project uses blocks or reusable fields from a library outside the
+project root, add the library path to `blockstudioScanRoots`. The path is
+scanned for both `block.json` and `field.json` definitions, so external block
+tags and their custom fields can be validated together.
 
 ```yaml title="phpstan.neon"
 parameters:
   blockstudioScanRoots:
-    - vendor/acme/block-library/blocks
+    - vendor/acme/block-library/blockstudio
 ```
 
 To ignore files, use PHPStan's standard `excludePaths` configuration.

@@ -1,0 +1,9 @@
+{
+  "name": "test/base",
+  "attributes": [
+    {
+      "id": "value",
+      "type": "text"
+    }
+  ]
+}

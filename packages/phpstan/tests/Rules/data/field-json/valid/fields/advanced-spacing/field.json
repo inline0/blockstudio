@@ -1,0 +1,9 @@
+{
+  "name": "advanced-spacing",
+  "attributes": [
+    {
+      "id": "fluid",
+      "type": "toggle"
+    }
+  ]
+}

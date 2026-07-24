@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Blockstudio\PHPStan\Rules;
 
 use Blockstudio\PHPStan\Schema\BlockJsonReader;
+use Blockstudio\PHPStan\Schema\CustomFieldResolver;
 use Blockstudio\PHPStan\Schema\ProjectScanner;
 use PhpParser\Node;
 use PHPStan\Analyser\Scope;
@@ -121,6 +122,13 @@ final class BlockJsonShapeRule implements Rule
 
         if (is_array($attributes)) {
             $errors = array_merge($errors, $this->validateAttributes($attributes, $path));
+            $errors = array_merge(
+                $errors,
+                $this->buildCustomFieldErrors(
+                    $this->reader->getCustomFieldIssues($path),
+                    $path
+                )
+            );
         }
 
         return $errors;
@@ -355,6 +363,30 @@ final class BlockJsonShapeRule implements Rule
         return $type !== 'group'
             && $type !== 'tabs'
             && !str_starts_with($type, 'custom/');
+    }
+
+    /**
+     * @param list<array{
+     *     type: 'missing'|'ambiguous'|'cycle'|'invalid',
+     *     name: string,
+     *     paths: list<string>
+     * }> $issues
+     * @return list<\PHPStan\Rules\IdentifierRuleError>
+     */
+    private function buildCustomFieldErrors(array $issues, string $path): array
+    {
+        $errors = [];
+
+        foreach ($issues as $issue) {
+            $errors[] = RuleErrorBuilder::message(
+                CustomFieldResolver::describeIssue($issue, 'block.json')
+            )
+                ->identifier('blockstudio.customField.' . $issue['type'])
+                ->file($path)
+                ->build();
+        }
+
+        return $errors;
     }
 
     /**

@@ -1,0 +1,8 @@
+{
+  "name": "test/second",
+  "attributes": [
+    {
+      "type": "custom/test/first"
+    }
+  ]
+}

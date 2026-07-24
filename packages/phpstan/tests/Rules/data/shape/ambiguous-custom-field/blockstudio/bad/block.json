@@ -1,0 +1,10 @@
+{
+  "name": "test/ambiguous-custom-field",
+  "blockstudio": {
+    "attributes": [
+      {
+        "type": "custom/test/shared"
+      }
+    ]
+  }
+}

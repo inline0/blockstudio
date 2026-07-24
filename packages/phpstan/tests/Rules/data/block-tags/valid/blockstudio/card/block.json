@@ -8,7 +8,11 @@
           {
             "title": "Content",
             "attributes": [
-              { "id": "title", "type": "text" }
+              { "id": "title", "type": "text" },
+              {
+                "type": "custom/mytheme/card-fields",
+                "idStructure": "card_{id}"
+              }
             ]
           }
         ]

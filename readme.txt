@@ -53,6 +53,9 @@ Download the latest release zip from [GitHub Releases](https://github.com/inline
 
 == Changelog ==
 
+= 7.5.2 =
+* Fix: `blockstudio/phpstan` expands file-backed custom field references across PHP, Twig, Blade, block tags, and inferred attribute shapes, including nested fields, ID transformations, and cycle-safe diagnostics
+
 = 7.5.1 =
 * Fix: Multiple select fields no longer emit array-to-string conversion warnings while preparing render values
 * Fix: `blockstudio/phpstan` v0.1.7 recognizes fields nested inside anonymous groups across PHP, Twig, Blade, and inferred template attribute shapes

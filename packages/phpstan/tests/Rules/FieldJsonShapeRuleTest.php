@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Blockstudio\PHPStan\Tests\Rules;
 
 use Blockstudio\PHPStan\Rules\FieldJsonShapeRule;
+use Blockstudio\PHPStan\Schema\CustomFieldResolver;
 use Blockstudio\PHPStan\Schema\ProjectScanner;
 use PHPStan\Rules\Rule;
 use PHPStan\Testing\RuleTestCase;
@@ -26,7 +27,8 @@ final class FieldJsonShapeRuleTest extends RuleTestCase
 
     protected function getRule(): Rule
     {
-        return new FieldJsonShapeRule(new ProjectScanner($this->fixtureDir));
+        $scanner = new ProjectScanner($this->fixtureDir);
+        return new FieldJsonShapeRule($scanner, new CustomFieldResolver($scanner));
     }
 
     public function test_valid_field_json_passes(): void
@@ -50,5 +52,27 @@ final class FieldJsonShapeRuleTest extends RuleTestCase
             }
         }
         $this->assertTrue($found, 'Expected field.json errors. Got: ' . implode("\n", $errors));
+    }
+
+    public function test_nested_custom_field_cycle_is_reported(): void
+    {
+        $this->fixtureDir = __DIR__ . '/data/field-json/cycle';
+        $errors = array_map(
+            static fn($e) => $e->getMessage(),
+            $this->gatherAnalyserErrors([
+                $this->fixtureDir . '/blockstudio/hero/index.php',
+            ])
+        );
+
+        $this->assertNotEmpty(
+            array_filter(
+                $errors,
+                static fn(string $error): bool => str_contains(
+                    $error,
+                    'creates a definition cycle'
+                )
+            ),
+            'Expected a custom field cycle error. Got: ' . implode("\n", $errors)
+        );
     }
 }

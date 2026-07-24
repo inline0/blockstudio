@@ -1,0 +1,9 @@
+{
+  "name": "mytheme/card-fields",
+  "attributes": [
+    {
+      "id": "badge",
+      "type": "text"
+    }
+  ]
+}

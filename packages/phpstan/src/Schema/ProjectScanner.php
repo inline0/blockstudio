@@ -7,8 +7,8 @@ namespace Blockstudio\PHPStan\Schema;
 /**
  * Discovers Blockstudio files in the user's project.
  *
- * Walks from the working directory looking for block.json files (and the
- * sibling db.php / rpc.php / template files).
+ * Walks from the working directory looking for block.json and field.json
+ * files (and sibling db.php / rpc.php / template files).
  */
 final class ProjectScanner
 {
@@ -17,6 +17,18 @@ final class ProjectScanner
 
     /** @var list<string> */
     private array $blockJsonPaths = [];
+
+    /** @var array<string, list<string>> fieldName => field.json paths */
+    private array $fields = [];
+
+    /** @var list<string> */
+    private array $fieldJsonPaths = [];
+
+    /** @var array<string, true> */
+    private array $seenBlockJsonPaths = [];
+
+    /** @var array<string, true> */
+    private array $seenFieldJsonPaths = [];
 
     private bool $scanned = false;
 
@@ -44,6 +56,29 @@ final class ProjectScanner
     {
         $this->scan();
         return $this->blocks[$blockName] ?? null;
+    }
+
+    /**
+     * @return list<string>
+     */
+    public function getFieldJsonPaths(): array
+    {
+        $this->scan();
+        return $this->fieldJsonPaths;
+    }
+
+    /**
+     * Return every file-backed definition for a custom field name.
+     *
+     * Multiple paths are returned so consumers can report ambiguous
+     * definitions instead of silently choosing one.
+     *
+     * @return list<string>
+     */
+    public function findFieldJsonPathsByName(string $fieldName): array
+    {
+        $this->scan();
+        return $this->fields[$fieldName] ?? [];
     }
 
     /**
@@ -81,15 +116,23 @@ final class ProjectScanner
             if (!is_dir($root)) {
                 continue;
             }
-            $this->walkDirectory($root, true);
+            $this->walkDirectory($root, true, false);
         }
 
         foreach ($this->additionalScanRoots as $root) {
             if (!is_dir($root)) {
                 continue;
             }
-            $this->walkDirectory($root, false);
+            $this->walkDirectory($root, false, true);
         }
+
+        sort($this->blockJsonPaths);
+        sort($this->fieldJsonPaths);
+
+        foreach ($this->fields as &$paths) {
+            sort($paths);
+        }
+        unset($paths);
     }
 
     /**
@@ -110,7 +153,11 @@ final class ProjectScanner
         )));
     }
 
-    private function walkDirectory(string $dir, bool $includeInProjectPaths): void
+    private function walkDirectory(
+        string $dir,
+        bool $includeInProjectPaths,
+        bool $includeAllFieldDefinitions
+    ): void
     {
         if ($this->shouldSkipDirectory($dir)) {
             return;
@@ -134,23 +181,60 @@ final class ProjectScanner
         }
 
         foreach ($iterator as $file) {
-            if (!$file instanceof \SplFileInfo || $file->getFilename() !== 'block.json') {
+            if (!$file instanceof \SplFileInfo) {
                 continue;
             }
-            $path = $file->getPathname();
 
-            if ($includeInProjectPaths) {
-                if (in_array($path, $this->blockJsonPaths, true)) {
-                    continue;
-                }
-                $this->blockJsonPaths[] = $path;
+            $filename = $file->getFilename();
+            if ($filename !== 'block.json' && $filename !== 'field.json') {
+                continue;
             }
 
-            $name = $this->extractBlockName($path);
-            if ($name !== null) {
-                $this->blocks[$name] = $path;
+            $path = $this->normalizePath($file->getPathname());
+
+            if ($filename === 'block.json') {
+                $this->indexBlockJson($path, $includeInProjectPaths);
+                continue;
+            }
+
+            if ($includeAllFieldDefinitions || $this->isFieldDefinitionPath($path)) {
+                $this->indexFieldJson($path);
             }
         }
+    }
+
+    private function indexBlockJson(string $path, bool $includeInProjectPaths): void
+    {
+        $identity = $this->pathIdentity($path);
+
+        if ($includeInProjectPaths && !isset($this->seenBlockJsonPaths[$identity])) {
+            $this->seenBlockJsonPaths[$identity] = true;
+            $this->blockJsonPaths[] = $path;
+        }
+
+        $name = $this->extractJsonName($path);
+        if ($name !== null) {
+            $this->blocks[$name] = $path;
+        }
+    }
+
+    private function indexFieldJson(string $path): void
+    {
+        $identity = $this->pathIdentity($path);
+        if (isset($this->seenFieldJsonPaths[$identity])) {
+            return;
+        }
+
+        $this->seenFieldJsonPaths[$identity] = true;
+        $this->fieldJsonPaths[] = $path;
+
+        $name = $this->extractJsonName($path);
+        if ($name === null) {
+            return;
+        }
+
+        $this->fields[$name] ??= [];
+        $this->fields[$name][] = $path;
     }
 
     private function shouldSkipDirectory(string $path): bool
@@ -166,9 +250,26 @@ final class ProjectScanner
         ], true);
     }
 
-    private function extractBlockName(string $blockJsonPath): ?string
+    private function isFieldDefinitionPath(string $path): bool
     {
-        $content = @file_get_contents($blockJsonPath);
+        $normalized = str_replace('\\', '/', $path);
+        return str_contains($normalized, '/fields/');
+    }
+
+    private function normalizePath(string $path): string
+    {
+        return str_replace('\\', '/', $path);
+    }
+
+    private function pathIdentity(string $path): string
+    {
+        $realPath = realpath($path);
+        return $this->normalizePath($realPath !== false ? $realPath : $path);
+    }
+
+    private function extractJsonName(string $jsonPath): ?string
+    {
+        $content = @file_get_contents($jsonPath);
         if ($content === false) {
             return null;
         }

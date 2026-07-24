@@ -1,0 +1,51 @@
+{
+  "name": "test/composite",
+  "attributes": [
+    {
+      "id": "title",
+      "type": "text"
+    },
+    {
+      "type": "group",
+      "attributes": [
+        {
+          "id": "summary",
+          "type": "textarea"
+        }
+      ]
+    },
+    {
+      "id": "cta",
+      "type": "group",
+      "attributes": [
+        {
+          "id": "label",
+          "type": "text"
+        }
+      ]
+    },
+    {
+      "type": "tabs",
+      "tabs": [
+        {
+          "attributes": [
+            {
+              "id": "eyebrow",
+              "type": "text"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "cards",
+      "type": "repeater",
+      "attributes": [
+        {
+          "id": "name",
+          "type": "text"
+        }
+      ]
+    }
+  ]
+}
