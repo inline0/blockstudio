@@ -1,7 +1,7 @@
 ---
 title: Blockstudio 7.3
 description: Bundled UI components, expanded editing, plugin dependencies, editor policies, and a more reliable parsing pipeline.
-date: 2026-05-19
+date: "2026-05-19"
 author: Dennis
 path: "blockstudio-7-3"
 order: 3
@@ -37,7 +37,11 @@ The short version:
 - **Page and editor fixes**: more reliable file-based page parsing, Tailwind
   candidate detection, reset mode, render cache isolation, and editor preloads.
 
-## UI components
+## UI library
+
+7.3 ships a bundled component library and example apps built on it.
+
+### UI components
 
 Blockstudio 7.3 ships with a bundled UI library under the `bsui/*` namespace.
 The components are normal Blockstudio blocks, so they can be rendered in
@@ -124,7 +128,7 @@ state, while child blocks such as `bsui/tabs-list`, `bsui/tabs-trigger`, and
 That keeps the markup readable, while the state and behavior are handled by the
 Interactivity API.
 
-## App examples
+### App examples
 
 The `app/*` namespace contains examples built from the same UI components.
 
@@ -147,7 +151,11 @@ The UI library also has its own documentation, visual coverage, and interaction
 test harness. Component behavior is not just a collection of templates. It is
 something the framework can keep verifying as it grows.
 
-## Expanded Editor
+## Authoring and editing
+
+Several changes make blocks easier to author and edit.
+
+### Expanded Editor
 
 Editing complex blocks in the inspector sidebar can get tight quickly. That is
 especially true for repeaters, code fields, rich text, and nested groups.
@@ -163,7 +171,7 @@ made in the normal sidebar.
 
 Use it when the sidebar is fine for scanning, but too cramped for actual input.
 
-## Scoped asset selectors
+### Scoped asset selectors
 
 Blockstudio already had `%selector%` support for code fields. In 7.3, block CSS
 and SCSS assets can use the same authoring pattern.
@@ -195,7 +203,7 @@ That makes it possible to style the actual wrapper element:
 Regular selectors in `*.scoped.css` still target descendants. `%selector%` is
 the explicit hook for the block root.
 
-## Plugin dependencies
+### Plugin dependencies
 
 Blocks can now declare WordPress plugin dependencies inside the `blockstudio`
 key of `block.json`.
@@ -236,7 +244,7 @@ This is useful for blocks that only make sense when a plugin is available:
 WooCommerce product cards, form integrations, SEO integrations, membership
 components, booking widgets, or admin UI tied to a third-party plugin.
 
-## Editor policies
+### Editor policies
 
 The `blockstudio.json` file is also becoming more useful as a project-level
 editor policy file.
@@ -289,7 +297,7 @@ It does not try to rewrite arbitrary core block defaults. Settings like
 registration flow, so they need a separate, more explicit API instead of being
 pretended into a JSON file.
 
-## Block tag aliases
+### Block tag aliases
 
 Block tags gained an alias filter:
 
@@ -310,7 +318,11 @@ canonical block name internally.
 This is especially useful when composing UI-heavy templates where the canonical
 block names are correct, but not always the nicest authoring surface.
 
-## Static analysis and generated docs
+## Tooling and reliability
+
+Static analysis, reliability, and performance tooling all moved forward.
+
+### Static analysis and generated docs
 
 The PHPStan extension gained support for explicit external block-library scan
 roots. That means a project can validate `<bs:*>` and `<block>` tags against
@@ -325,7 +337,7 @@ Documentation generation now includes filter references for settings and PHP
 hooks. That matters more as `blockstudio.json` becomes a real project policy
 file instead of just a few scattered toggles.
 
-## Page and editor reliability
+### Page and editor reliability
 
 7.3 also includes a set of fixes around file-based pages, editor rendering, and
 reset mode.
@@ -367,7 +379,7 @@ The regression coverage for complex InnerBlocks patterns was also expanded to
 include nested Blockstudio blocks, so the editor render path is checked against
 the pattern insertion cases that are hardest to see manually.
 
-## Performance tooling
+### Performance tooling
 
 Local anonymous `blockstudio-perf=1` probes can now emit `Server-Timing` headers
 without injecting the debug panel.

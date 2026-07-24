@@ -1,7 +1,7 @@
 ---
 title: Blockstudio 7.4
 description: Page collections, Markdown page sources, Content Sync, block tag prefixes, and runtime and editor fixes.
-date: 2026-06-21
+date: "2026-06-21"
 author: Dennis
 path: "blockstudio-7-4"
 order: 2
@@ -47,7 +47,11 @@ The short version:
   forms, RichText props reach the editor, and repeater row deletion with
   RichText now persists after saving.
 
-## Page collections
+## File-based pages
+
+Most of 7.4 builds on file-based pages.
+
+### Page collections
 
 Before 7.4, file-based pages were mostly a folder-level feature: create a
 `page.json`, add an `index.php` or `index.twig`, and Blockstudio syncs that
@@ -113,7 +117,7 @@ This is the piece that makes external docs, product manuals, knowledge bases,
 and page libraries feel natural in WordPress: the source stays in files, but
 the result is still real editable WordPress content.
 
-## Markdown as page content
+### Markdown as page content
 
 Markdown is now a first-class page source.
 
@@ -139,7 +143,7 @@ content split across files. Frontmatter in `index.md` can override matching
 Markdown is converted to HTML and then passed through the same page parser as
 PHP, Twig, and Blade templates, so the final content is native block markup.
 
-## Layouts and page helpers
+### Layouts and page helpers
 
 Collections can ship a `layout.php` file. On the frontend, Blockstudio wraps
 the synced page content with that layout.
@@ -175,7 +179,7 @@ That gives you the pieces needed to build a full documentation shell:
 navigation from the page tree, page metadata from frontmatter, and the synced
 WordPress block content as the main outlet.
 
-## Loaders and raw Markdown
+### Loaders and raw Markdown
 
 Collections can include a trusted local `loader.php` file. It can return pages
 directly, or point Blockstudio at additional local directories to discover.
@@ -248,7 +252,7 @@ form submissions, or other high-volume data.
 
 [Read the Content Sync docs](/docs/content-sync)
 
-## More reliable syncing
+### More reliable syncing
 
 Blockstudio now detects changes across page sources, collection manifests,
 loader files, layout files, metadata, and related paths. If any of those
