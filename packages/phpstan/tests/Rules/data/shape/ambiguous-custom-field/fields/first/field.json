@@ -1,0 +1,9 @@
+{
+  "name": "test/shared",
+  "attributes": [
+    {
+      "id": "first",
+      "type": "text"
+    }
+  ]
+}

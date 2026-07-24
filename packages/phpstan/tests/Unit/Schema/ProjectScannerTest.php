@@ -17,6 +17,9 @@ final class ProjectScannerTest extends TestCase
         mkdir($this->tempDir . '/blockstudio/hero', 0777, true);
         mkdir($this->tempDir . '/blockstudio/card', 0777, true);
         mkdir($this->tempDir . '/blockstudio/nested/deep/widget', 0777, true);
+        mkdir($this->tempDir . '/blockstudio/fields/hero', 0777, true);
+        mkdir($this->tempDir . '/blockstudio/fields/layout', 0777, true);
+        mkdir($this->tempDir . '/config/not-a-field', 0777, true);
         mkdir($this->tempDir . '/node_modules/some-package', 0777, true);
         mkdir($this->tempDir . '/vendor/some-vendor', 0777, true);
 
@@ -31,6 +34,18 @@ final class ProjectScannerTest extends TestCase
         file_put_contents(
             $this->tempDir . '/blockstudio/nested/deep/widget/block.json',
             json_encode(['name' => 'mytheme/widget'])
+        );
+        file_put_contents(
+            $this->tempDir . '/blockstudio/fields/hero/field.json',
+            json_encode(['name' => 'mytheme/hero', 'attributes' => [['id' => 'title', 'type' => 'text']]])
+        );
+        file_put_contents(
+            $this->tempDir . '/blockstudio/fields/layout/field.json',
+            json_encode(['name' => 'mytheme/layout', 'attributes' => [['id' => 'gap', 'type' => 'number']]])
+        );
+        file_put_contents(
+            $this->tempDir . '/config/not-a-field/field.json',
+            json_encode(['name' => 'ignored', 'attributes' => [['id' => 'value', 'type' => 'text']]])
         );
         file_put_contents(
             $this->tempDir . '/node_modules/some-package/block.json',
@@ -118,6 +133,53 @@ final class ProjectScannerTest extends TestCase
 
         $this->assertNotNull($path);
         $this->assertStringEndsWith('blockstudio/hero/block.json', $path);
+    }
+
+    public function test_finds_and_deduplicates_field_json_files(): void
+    {
+        $scanner = new ProjectScanner($this->tempDir);
+
+        $this->assertSame([
+            $this->tempDir . '/blockstudio/fields/hero/field.json',
+            $this->tempDir . '/blockstudio/fields/layout/field.json',
+        ], $scanner->getFieldJsonPaths());
+        $this->assertSame(
+            [$this->tempDir . '/blockstudio/fields/hero/field.json'],
+            $scanner->findFieldJsonPathsByName('mytheme/hero')
+        );
+        $this->assertSame([], $scanner->findFieldJsonPathsByName('ignored'));
+    }
+
+    public function test_returns_all_ambiguous_field_definitions_in_stable_order(): void
+    {
+        mkdir($this->tempDir . '/blockstudio/fields/duplicate', 0777, true);
+        file_put_contents(
+            $this->tempDir . '/blockstudio/fields/duplicate/field.json',
+            json_encode(['name' => 'mytheme/hero', 'attributes' => [['id' => 'copy', 'type' => 'text']]])
+        );
+
+        $scanner = new ProjectScanner($this->tempDir);
+
+        $this->assertSame([
+            $this->tempDir . '/blockstudio/fields/duplicate/field.json',
+            $this->tempDir . '/blockstudio/fields/hero/field.json',
+        ], $scanner->findFieldJsonPathsByName('mytheme/hero'));
+    }
+
+    public function test_additional_scan_root_indexes_field_json_directly(): void
+    {
+        $library = $this->tempDir . '/external-library/reusable';
+        mkdir($library, 0777, true);
+        $path = $library . '/field.json';
+        file_put_contents(
+            $path,
+            json_encode(['name' => 'vendor/card', 'attributes' => [['id' => 'title', 'type' => 'text']]])
+        );
+
+        $scanner = new ProjectScanner($this->tempDir, [$library]);
+
+        $this->assertSame([$path], $scanner->findFieldJsonPathsByName('vendor/card'));
+        $this->assertContains($path, $scanner->getFieldJsonPaths());
     }
 
     public function test_returns_null_for_unknown_block_name(): void

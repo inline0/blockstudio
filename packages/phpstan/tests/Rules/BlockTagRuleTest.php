@@ -7,6 +7,7 @@ namespace Blockstudio\PHPStan\Tests\Rules;
 use Blockstudio\PHPStan\Reflection\FieldTypeRegistry;
 use Blockstudio\PHPStan\Rules\BlockTagRule;
 use Blockstudio\PHPStan\Schema\BlockJsonReader;
+use Blockstudio\PHPStan\Schema\CustomFieldResolver;
 use Blockstudio\PHPStan\Schema\ProjectScanner;
 use PHPStan\Rules\Rule;
 use PHPStan\Testing\RuleTestCase;
@@ -34,9 +35,14 @@ final class BlockTagRuleTest extends RuleTestCase
 
     protected function getRule(): Rule
     {
+        $scanner = new ProjectScanner($this->fixtureDir, $this->additionalScanRoots);
+
         return new BlockTagRule(
-            new ProjectScanner($this->fixtureDir, $this->additionalScanRoots),
-            new BlockJsonReader(new FieldTypeRegistry())
+            $scanner,
+            new BlockJsonReader(
+                new FieldTypeRegistry(),
+                new CustomFieldResolver($scanner)
+            )
         );
     }
 

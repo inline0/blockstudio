@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Blockstudio\PHPStan\Rules;
 
+use Blockstudio\PHPStan\Schema\CustomFieldResolver;
 use Blockstudio\PHPStan\Schema\ProjectScanner;
 use PhpParser\Node;
 use PHPStan\Analyser\Scope;
@@ -32,7 +33,8 @@ final class FieldJsonShapeRule implements Rule
     private static array $validatedPaths = [];
 
     public function __construct(
-        private readonly ProjectScanner $scanner
+        private readonly ProjectScanner $scanner,
+        private readonly CustomFieldResolver $customFields
     ) {}
 
     public function getNodeType(): string
@@ -44,7 +46,7 @@ final class FieldJsonShapeRule implements Rule
     {
         $errors = [];
 
-        foreach ($this->findFieldJsonFiles() as $path) {
+        foreach ($this->scanner->getFieldJsonPaths() as $path) {
             if (isset(self::$validatedPaths[$path])) {
                 continue;
             }
@@ -53,32 +55,6 @@ final class FieldJsonShapeRule implements Rule
         }
 
         return $errors;
-    }
-
-    /**
-     * @return list<string>
-     */
-    private function findFieldJsonFiles(): array
-    {
-        $files = [];
-        foreach ($this->scanner->getBlockJsonPaths() as $blockJsonPath) {
-            $projectRoot = dirname($blockJsonPath, 2);
-            $fieldsDir = $projectRoot . '/fields';
-            if (!is_dir($fieldsDir)) {
-                $fieldsDir = dirname($blockJsonPath, 3) . '/fields';
-            }
-            if (is_dir($fieldsDir)) {
-                $iterator = new \RecursiveIteratorIterator(
-                    new \RecursiveDirectoryIterator($fieldsDir, \FilesystemIterator::SKIP_DOTS)
-                );
-                foreach ($iterator as $file) {
-                    if ($file instanceof \SplFileInfo && $file->getFilename() === 'field.json') {
-                        $files[$file->getPathname()] = $file->getPathname();
-                    }
-                }
-            }
-        }
-        return array_values($files);
     }
 
     /**
@@ -114,16 +90,23 @@ final class FieldJsonShapeRule implements Rule
         }
 
         $attributes = $data['attributes'] ?? null;
-        if ($attributes !== null && !is_array($attributes)) {
+        if (!is_array($attributes) || $attributes === []) {
             $errors[] = RuleErrorBuilder::message(sprintf(
-                'field.json "attributes" must be an array: %s',
+                'field.json "attributes" must be a non-empty array: %s',
                 $path
             ))
                 ->identifier('blockstudio.fieldJson.attributes')
                 ->file($path)
                 ->build();
-        } elseif (is_array($attributes)) {
+        } else {
             $errors = array_merge($errors, $this->validateAttributes($attributes, $path));
+            $errors = array_merge(
+                $errors,
+                $this->buildCustomFieldErrors(
+                    $this->customFields->resolveDefinition($path)['issues'],
+                    $path
+                )
+            );
         }
 
         return $errors;
@@ -139,6 +122,14 @@ final class FieldJsonShapeRule implements Rule
 
         foreach ($attributes as $i => $field) {
             if (!is_array($field)) {
+                $errors[] = RuleErrorBuilder::message(sprintf(
+                    'field.json attributes[%d] must be an object: %s',
+                    $i,
+                    $path
+                ))
+                    ->identifier('blockstudio.fieldJson.attributes')
+                    ->file($path)
+                    ->build();
                 continue;
             }
 
@@ -202,6 +193,30 @@ final class FieldJsonShapeRule implements Rule
         return $type !== 'group'
             && $type !== 'tabs'
             && !str_starts_with($type, 'custom/');
+    }
+
+    /**
+     * @param list<array{
+     *     type: 'missing'|'ambiguous'|'cycle'|'invalid',
+     *     name: string,
+     *     paths: list<string>
+     * }> $issues
+     * @return list<\PHPStan\Rules\IdentifierRuleError>
+     */
+    private function buildCustomFieldErrors(array $issues, string $path): array
+    {
+        $errors = [];
+
+        foreach ($issues as $issue) {
+            $errors[] = RuleErrorBuilder::message(
+                CustomFieldResolver::describeIssue($issue, 'field.json')
+            )
+                ->identifier('blockstudio.customField.' . $issue['type'])
+                ->file($path)
+                ->build();
+        }
+
+        return $errors;
     }
 
     /**

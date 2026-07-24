@@ -1,7 +1,7 @@
 ---
 title: Blockstudio 7.2
 description: An admin overview, a registry CLI for distributing blocks, a PHPStan extension for type-safe templates, and SCSS preludes.
-date: 2026-04-10
+date: "2026-04-10"
 author: Dennis
 path: "blockstudio-7-2"
 order: 4
@@ -24,7 +24,11 @@ brings TypeScript-style type safety to templates, block tags, `db.php`,
 Both directions are about the same thing: making larger Blockstudio projects
 easier to reason about, build on, and share.
 
-## Admin overview
+## Admin experience
+
+Two additions make a larger project easier to navigate inside wp-admin.
+
+### Admin overview
 
 Blockstudio now ships with an admin screen under **Tools > Blockstudio**. It
 gives you a single place to inspect what the system has registered from the
@@ -86,7 +90,7 @@ If you don't want it at all, disable it entirely:
 add_filter('blockstudio/admin/enabled', '__return_false');
 ```
 
-## Admin registry browser
+### Admin registry browser
 
 Sitting next to the overview is a second tab: **Registry**. It's a browser for
 remote block registries configured in your theme's `blocks.json`, and it lets
@@ -240,7 +244,11 @@ The extension also ships stubs for the entire Blockstudio public API: `Db`,
 and type checking for all Blockstudio APIs without needing the plugin source on
 your dev machine.
 
-## Global SCSS preludes
+## Authoring conveniences
+
+Two smaller authoring conveniences round out the release.
+
+### Global SCSS preludes
 
 Blockstudio already supported SCSS compilation, but there was one annoying
 friction point: shared Sass setup.
@@ -277,7 +285,7 @@ No repeated imports in every block asset. It's not "Bootstrap support" as a
 special mode. It's a generic hook for shared Sass across a project, whether
 that comes from Bootstrap or your own internal toolkit.
 
-## PHP-native block API definitions
+### PHP-native block API definitions
 
 7.2 also adds an optional PHP-native syntax for the full-stack block APIs.
 Arrays remain the default and fully supported. Nothing was replaced. But if you

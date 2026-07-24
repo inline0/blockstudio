@@ -42,6 +42,17 @@ Field keys follow Blockstudio's runtime flattening rules. `tabs` and anonymous
 Named groups prefix child keys, so a `text` field inside a `cta` group is
 available as `$a['cta_text']`.
 
+File-backed reusable fields are expanded too. A
+`{"type":"custom/mytheme/hero","idStructure":"hero_{id}"}` reference contributes
+the same transformed keys as it does at runtime, including nested custom
+references inside groups, tabs, and repeaters. Per-instance `overrides` are
+applied before PHP, Twig, Blade, block-tag, and inferred-shape checks.
+
+Missing, ambiguous, invalid, and cyclic definitions report focused
+`blockstudio.customField.*` errors without producing secondary unknown-key
+noise. Definitions registered only through the runtime `blockstudio/fields`
+filter cannot be inferred; use `field.json` for statically checked fields.
+
 Twig and Blade templates are checked too:
 
 ```twig
@@ -186,13 +197,14 @@ The extension requires no manual configuration. It auto-discovers
 `block.json`, `db.php`, `rpc.php`, `cron.php`, `page.json`, `field.json`, and
 `blockstudio.json` files in your project.
 
-If a project references blocks from a library outside the project root, add the
-library directory to `blockstudioScanRoots`:
+If a project references blocks or reusable fields from a library outside the
+project root, add the library directory to `blockstudioScanRoots`. Both
+`block.json` and `field.json` files are indexed:
 
 ```yaml
 parameters:
   blockstudioScanRoots:
-    - vendor/acme/block-library/blocks
+    - vendor/acme/block-library/blockstudio
 ```
 
 If you need to exclude specific paths, use PHPStan's standard `excludePaths`:

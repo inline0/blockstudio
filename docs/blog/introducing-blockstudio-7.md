@@ -1,7 +1,7 @@
 ---
 title: Introducing Blockstudio 7
 description: A complete rewrite of the WordPress block framework. Now free and open source, with file-based pages, an HTML-to-block parser, and an architecture built for AI coding agents.
-date: 2026-02-07
+date: "2026-02-07"
 author: Dennis
 path: "introducing-blockstudio-7"
 order: 6

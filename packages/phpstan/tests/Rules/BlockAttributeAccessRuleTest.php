@@ -8,6 +8,7 @@ use Blockstudio\PHPStan\Reflection\BlockTemplateDetector;
 use Blockstudio\PHPStan\Reflection\FieldTypeRegistry;
 use Blockstudio\PHPStan\Rules\BlockAttributeAccessRule;
 use Blockstudio\PHPStan\Schema\BlockJsonReader;
+use Blockstudio\PHPStan\Schema\CustomFieldResolver;
 use Blockstudio\PHPStan\Schema\ProjectScanner;
 use PHPStan\Rules\Rule;
 use PHPStan\Testing\RuleTestCase;
@@ -21,7 +22,10 @@ final class BlockAttributeAccessRuleTest extends RuleTestCase
     {
         $scanner = new ProjectScanner(__DIR__ . '/data/blocks');
         $detector = new BlockTemplateDetector($scanner);
-        $reader = new BlockJsonReader(new FieldTypeRegistry());
+        $reader = new BlockJsonReader(
+            new FieldTypeRegistry(),
+            new CustomFieldResolver($scanner)
+        );
 
         return new BlockAttributeAccessRule($detector, $reader);
     }
@@ -75,6 +79,14 @@ final class BlockAttributeAccessRuleTest extends RuleTestCase
     {
         $this->analyse(
             [__DIR__ . '/data/blocks/anonymous-group/index.php'],
+            []
+        );
+    }
+
+    public function test_custom_fields_are_expanded_in_php_templates(): void
+    {
+        $this->analyse(
+            [__DIR__ . '/data/blocks/custom-field/index.php'],
             []
         );
     }

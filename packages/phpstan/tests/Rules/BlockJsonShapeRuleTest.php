@@ -7,6 +7,7 @@ namespace Blockstudio\PHPStan\Tests\Rules;
 use Blockstudio\PHPStan\Reflection\FieldTypeRegistry;
 use Blockstudio\PHPStan\Rules\BlockJsonShapeRule;
 use Blockstudio\PHPStan\Schema\BlockJsonReader;
+use Blockstudio\PHPStan\Schema\CustomFieldResolver;
 use Blockstudio\PHPStan\Schema\ProjectScanner;
 use PHPStan\Rules\Rule;
 use PHPStan\Testing\RuleTestCase;
@@ -30,7 +31,10 @@ final class BlockJsonShapeRuleTest extends RuleTestCase
     protected function getRule(): Rule
     {
         $scanner = new ProjectScanner($this->fixtureDir);
-        $reader = new BlockJsonReader(new FieldTypeRegistry());
+        $reader = new BlockJsonReader(
+            new FieldTypeRegistry(),
+            new CustomFieldResolver($scanner)
+        );
         return new BlockJsonShapeRule($scanner, $reader);
     }
 
@@ -92,6 +96,32 @@ final class BlockJsonShapeRuleTest extends RuleTestCase
             [$this->fixtureDir . '/blockstudio/good/index.php'],
             []
         );
+    }
+
+    public function test_missing_custom_field_definition_is_reported(): void
+    {
+        $this->fixtureDir = __DIR__ . '/data/shape/missing-custom-field';
+        $errors = $this->gatherErrors(
+            [$this->fixtureDir . '/blockstudio/bad/index.php']
+        );
+        $this->assertContainsErrorMessage(
+            'Custom field "test/not-found"',
+            $errors
+        );
+        $this->assertContainsErrorMessage('no discoverable field.json', $errors);
+    }
+
+    public function test_ambiguous_custom_field_definition_is_reported(): void
+    {
+        $this->fixtureDir = __DIR__ . '/data/shape/ambiguous-custom-field';
+        $errors = $this->gatherErrors(
+            [$this->fixtureDir . '/blockstudio/bad/index.php']
+        );
+        $this->assertContainsErrorMessage(
+            'Custom field "test/shared"',
+            $errors
+        );
+        $this->assertContainsErrorMessage('is ambiguous', $errors);
     }
 
     public function test_plugin_dependencies_must_use_slug_keys_and_object_values(): void

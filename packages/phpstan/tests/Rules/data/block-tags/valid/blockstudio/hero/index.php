@@ -2,5 +2,5 @@
 <div class="hero">
   <h1><?php echo $a['title']; ?></h1>
   <block name="core/separator" />
-  <bs:mytheme-card title="Featured" />
+  <bs:mytheme-card title="Featured" card_badge="New" />
 </div>

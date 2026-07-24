@@ -1,0 +1,16 @@
+{
+  "name": "test/custom-field",
+  "blockstudio": {
+    "attributes": [
+      {
+        "type": "custom/test/composite",
+        "idStructure": "hero_{id}",
+        "overrides": {
+          "title": {
+            "id": "headline"
+          }
+        }
+      }
+    ]
+  }
+}

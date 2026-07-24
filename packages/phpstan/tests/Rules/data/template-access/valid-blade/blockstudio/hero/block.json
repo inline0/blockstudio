@@ -12,7 +12,11 @@
                 "type": "group",
                 "attributes": [
                   { "id": "title", "type": "text" },
-                  { "id": "subtitle", "type": "text" }
+                  { "id": "subtitle", "type": "text" },
+                  {
+                    "type": "custom/mytheme/meta",
+                    "idStructure": "hero_{id}"
+                  }
                 ]
               }
             ]
