@@ -1,0 +1,65 @@
+includes:
+  - theme.neon
+
+parameters:
+  level: max
+  checkBenevolentUnionTypes: true
+  checkExplicitMixed: true
+  checkFunctionNameCase: true
+  checkInternalClassCaseSensitivity: true
+  checkMissingCallableSignature: true
+  checkMissingOverrideMethodAttribute: true
+  checkTooWideReturnTypesInProtectedAndPublicMethods: true
+  reportMaybesInMethodSignatures: true
+  reportMaybesInPropertyPhpDocTypes: true
+  reportStaticMethodSignatures: true
+  blockstudioExtremeJavaScript: true
+  blockstudioExtremeTailwind: true
+
+parametersSchema:
+  blockstudioExtremeJavaScript: bool()
+  blockstudioExtremeTailwind: bool()
+
+services:
+  blockstudio.phpstan.javaScriptAnalyzer:
+    class: Blockstudio\PHPStan\Theme\JavaScriptAnalyzer
+
+  blockstudio.phpstan.tailwindAnalyzer:
+    class: Blockstudio\PHPStan\Theme\TailwindAnalyzer
+
+  blockstudio.phpstan.extremeThemeAnalyzer:
+    class: Blockstudio\PHPStan\Theme\ExtremeAnalyzer
+    arguments:
+      scanner: @blockstudio.phpstan.themeProjectScanner
+      javaScriptAnalyzer: @blockstudio.phpstan.javaScriptAnalyzer
+      tailwindAnalyzer: @blockstudio.phpstan.tailwindAnalyzer
+      checkJavaScript: %blockstudioExtremeJavaScript%
+      checkTailwind: %blockstudioExtremeTailwind%
+
+  blockstudio.phpstan.extremeThemeRule:
+    class: Blockstudio\PHPStan\Rules\ExtremeThemeRule
+    arguments:
+      analyzer: @blockstudio.phpstan.extremeThemeAnalyzer
+    tags:
+      - phpstan.rules.rule
+
+  blockstudio.phpstan.forbiddenFunctionRule:
+    class: Blockstudio\PHPStan\Rules\ExtremeForbiddenFunctionRule
+    arguments:
+      scanner: @blockstudio.phpstan.themeProjectScanner
+    tags:
+      - phpstan.rules.rule
+
+  blockstudio.phpstan.rawDatabaseWriteRule:
+    class: Blockstudio\PHPStan\Rules\ExtremeRawDatabaseWriteRule
+    arguments:
+      scanner: @blockstudio.phpstan.themeProjectScanner
+    tags:
+      - phpstan.rules.rule
+
+  blockstudio.phpstan.outputEscapingRule:
+    class: Blockstudio\PHPStan\Rules\ExtremeOutputEscapingRule
+    arguments:
+      scanner: @blockstudio.phpstan.themeProjectScanner
+    tags:
+      - phpstan.rules.rule

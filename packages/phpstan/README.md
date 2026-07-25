@@ -215,11 +215,162 @@ parameters:
     - some/path/to/exclude
 ```
 
+## Opt-in analysis presets
+
+The auto-discovered `extension.neon` remains the compatibility-safe base
+extension. Version 7.6 adds separate presets; installing the package does not
+enable them automatically.
+
+| Preset | Includes |
+| --- | --- |
+| `base.neon` | The unchanged auto-discovered schema, template, hook, and API checks. |
+| `theme.neon` | Base plus WordPress theme structure, Blockstudio asset references, scoped block styles, field defaults, and repeater bounds. |
+| `extreme-theme.neon` | Theme plus PHPStan `max`, unsafe PHP checks, output escaping, Tailwind validation, JavaScript syntax and browser hygiene, and Interactivity API contracts. |
+| `wordpress-render.neon` | Extreme theme plus an explicit live WordPress render probe. It never starts WordPress by itself. |
+
+Include a preset directly when an existing PHPStan command owns the rest of
+the configuration:
+
+```yaml
+includes:
+  - vendor/blockstudio/phpstan/extreme-theme.neon
+
+parameters:
+  blockstudioThemeRoots:
+    - .
+  blockstudioThemeExcludePaths:
+    - fixtures/**
+  blockstudioThemeMaxFiles: 10000
+  blockstudioExtremeJavaScript: true
+  blockstudioExtremeTailwind: true
+```
+
+`blockstudioThemeExcludePaths` limits the project scanner. PHPStan's own
+`excludePaths` still controls which PHP files PHPStan analyzes.
+
+## Canonical command
+
+The package installs `vendor/bin/blockstudio-phpstan`. It defaults to the
+extreme-theme preset:
+
+```bash
+vendor/bin/blockstudio-phpstan --root . -- --no-progress
+```
+
+Use another preset, compose a project configuration, or emit PHPStan's JSON
+format:
+
+```bash
+vendor/bin/blockstudio-phpstan \
+  --preset theme \
+  --configuration phpstan.neon \
+  --root . \
+  --exclude 'fixtures/**' \
+  --error-format json \
+  -- --no-progress
+```
+
+The command writes its composed NEON file only to the system temporary
+directory and removes it on exit. It does not create a project cache,
+configuration, baseline, or hook. PHPStan's normal cache policy still applies
+when a caller explicitly configures one.
+
+Exit codes are stable:
+
+- `0`: analysis passed
+- `1`: PHPStan reported diagnostics
+- `2`: invalid usage, configuration, or process execution
+
+## Optional live WordPress render
+
+Live rendering is a separate, explicit preset because it is slower and needs a
+caller-owned WordPress environment:
+
+```bash
+vendor/bin/blockstudio-phpstan \
+  --preset wordpress-render \
+  --render-command='["wp","eval-file","tools/render-probe.php"]' \
+  --render-working-directory=. \
+  --render-timeout=60 \
+  --root .
+```
+
+The command is an argv JSON array and is executed without a shell. The probe
+must print exactly one JSON object:
+
+```json
+{"ok":true}
+```
+
+To report a failure:
+
+```json
+{
+  "ok": false,
+  "message": "Rendered block failed.",
+  "file": "/absolute/path/to/block.json",
+  "line": 12
+}
+```
+
+Non-zero exits, timeouts, malformed JSON, and an `ok: false` response use the
+`blockstudio.wordpress.render` diagnostic.
+
+## Preset diagnostics
+
+Every new diagnostic has a stable `blockstudio.*` identifier:
+
+- Theme roots and structure:
+  `blockstudio.theme.root.missing`, `blockstudio.theme.style.missing`,
+  `blockstudio.theme.style.header`, and `blockstudio.theme.scanLimit`
+- Block and field contracts:
+  `blockstudio.theme.asset.manualEnqueue`,
+  `blockstudio.theme.asset.selectorScope`,
+  `blockstudio.theme.asset.missing`, `blockstudio.field.default`, and
+  `blockstudio.field.repeaterBounds`
+- PHP:
+  `blockstudio.php.forbiddenFunction`,
+  `blockstudio.wordpress.rawDatabaseWrite`, and
+  `blockstudio.output.unescaped`
+- Tailwind:
+  `blockstudio.tailwind.compilerMissing`,
+  `blockstudio.tailwind.compile`, `blockstudio.tailwind.unknownUtility`, and
+  `blockstudio.tailwind.semanticToken`
+- JavaScript:
+  `blockstudio.javascript.syntax`, `blockstudio.javascript.debugOutput`,
+  `blockstudio.javascript.bannedApi`, `blockstudio.javascript.leakedGlobal`,
+  `blockstudio.javascript.importSpecifier`,
+  `blockstudio.javascript.rootGuard`, `blockstudio.javascript.initShape`,
+  `blockstudio.javascript.domContract`,
+  `blockstudio.javascript.listenerCleanup`, and
+  `blockstudio.javascript.reducedMotion`
+- Interactivity API:
+  `blockstudio.interactivity.import`,
+  `blockstudio.interactivity.moduleImport`,
+  `blockstudio.interactivity.namespace`,
+  `blockstudio.interactivity.scopedDom`,
+  `blockstudio.interactivity.derivedState`,
+  `blockstudio.interactivity.handler`, `blockstudio.interactivity.binding`,
+  `blockstudio.interactivity.context`, and
+  `blockstudio.interactivity.orphan`
+
+## Performance
+
+The theme scanner uses ordinary materialized filesystem roots, deduplicates
+them, skips dependency/build/cache trees by default, reads each file once, and
+sorts diagnostics deterministically. Use narrow
+`blockstudioThemeRoots`/`--root` values, exclusions, and
+`blockstudioThemeMaxFiles`/`--max-files` for large repositories. JavaScript and
+Tailwind checks can be disabled independently. The live-render layer runs only
+when explicitly selected.
+
 ## Requirements
 
 - PHP 8.2+
 - PHPStan 2.0+
 - [phpstan/phpstan-wordpress](https://github.com/szepeviktor/phpstan-wordpress)
+- [Phasis](https://github.com/phasis/phasis) for JavaScript parsing
+- [TailwindPHP](https://github.com/tailwindphp/tailwindphp) for Tailwind analysis
 
 ## License
 

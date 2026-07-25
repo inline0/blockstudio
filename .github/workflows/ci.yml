@@ -130,6 +130,9 @@ jobs:
 
       - run: composer install --no-interaction --working-dir=packages/phpstan
       - run: packages/phpstan/vendor/bin/phpunit --configuration packages/phpstan/phpunit.xml.dist
+      - name: Analyze PHPStan package
+        working-directory: packages/phpstan
+        run: vendor/bin/phpstan analyse --configuration phpstan.neon.dist --no-progress --memory-limit=512M
 
   e2e:
     name: E2E Tests (Shard ${{ matrix.shard }}/${{ matrix.total_shards }})

@@ -121,7 +121,7 @@ final class DbSchemaReader
         $schemas = [];
 
         foreach ($expr->items as $item) {
-            if ($item === null || $item->key === null) {
+            if ($item->key === null) {
                 continue;
             }
 
@@ -212,10 +212,6 @@ final class DbSchemaReader
         $result = [];
 
         foreach ($node->items as $item) {
-            if ($item === null) {
-                continue;
-            }
-
             $value = $this->nodeToValue($item->value);
             if ($item->key === null) {
                 $result[] = $value;

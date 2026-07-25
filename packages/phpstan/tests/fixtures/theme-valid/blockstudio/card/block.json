@@ -1,0 +1,30 @@
+{
+  "apiVersion": 3,
+  "name": "example/card",
+  "title": "Card",
+  "blockstudio": {
+    "attributes": [
+      {
+        "id": "title",
+        "type": "text",
+        "default": ""
+      },
+      {
+        "id": "items",
+        "type": "repeater",
+        "min": 0,
+        "max": 3,
+        "default": [],
+        "attributes": [
+          {
+            "id": "label",
+            "type": "text",
+            "default": ""
+          }
+        ]
+      }
+    ]
+  },
+  "style": "file:./style.css",
+  "viewScriptModule": "file:./view.js"
+}

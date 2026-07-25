@@ -35,3 +35,12 @@ Use normal Composer/Packagist tags in the split repo:
 - `v1.0.0`
 
 The monorepo does not need matching root tags for the package.
+
+## Release gate
+
+Before splitting a release, the exact source commit must pass the Blockstudio
+full `[all]` workflow. The `PHPStan Package Tests` job installs the standalone
+package dependencies, runs its complete PHPUnit suite (including preset, CLI,
+Tailwind, JavaScript, PHP rule, and live-render contracts), and analyzes the
+package itself with PHPStan. Verify the split contains the four NEON presets
+and the executable `bin/blockstudio-phpstan`.

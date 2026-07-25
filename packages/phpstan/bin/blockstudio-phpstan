@@ -1,0 +1,530 @@
+#!/usr/bin/env php
+<?php
+
+declare(strict_types=1);
+
+/**
+ * Canonical Blockstudio PHPStan entry point.
+ *
+ * It selects an opt-in preset, writes the composed configuration to the system
+ * temporary directory, and delegates analysis to the consumer's PHPStan
+ * binary. It never writes generated state into the analysed project.
+ */
+final class BlockstudioPhpstanCli
+{
+    /**
+     * @param list<string> $arguments
+     */
+    public function run(array $arguments): int
+    {
+        try {
+            $options = $this->parse($arguments);
+        } catch (\InvalidArgumentException $exception) {
+            fwrite(STDERR, 'Error: ' . $exception->getMessage() . "\n\n");
+            $this->help(STDERR);
+            return 2;
+        }
+
+        if ($options['help']) {
+            $this->help(STDOUT);
+            return 0;
+        }
+
+        $phpstan = $this->findPhpstan();
+        if ($phpstan === null) {
+            fwrite(
+                STDERR,
+                "Error: PHPStan was not found. Install dependencies before running analysis.\n"
+            );
+            return 2;
+        }
+
+        try {
+            $configuration = $this->configuration($options);
+        } catch (\InvalidArgumentException $exception) {
+            fwrite(STDERR, 'Error: ' . $exception->getMessage() . "\n");
+            return 2;
+        }
+
+        $temporary = tempnam(sys_get_temp_dir(), 'blockstudio-phpstan-');
+        if ($temporary === false) {
+            fwrite(STDERR, "Error: Unable to create a temporary configuration.\n");
+            return 2;
+        }
+
+        $configurationPath = $temporary . '.neon';
+        @unlink($temporary);
+
+        if (file_put_contents($configurationPath, $configuration) === false) {
+            fwrite(STDERR, "Error: Unable to write the temporary configuration.\n");
+            return 2;
+        }
+
+        $command = [
+            PHP_BINARY,
+            $phpstan,
+            'analyse',
+            '--configuration=' . $configurationPath,
+            '--error-format=' . $options['errorFormat'],
+        ];
+
+        foreach ($options['passthrough'] as $argument) {
+            $command[] = $argument;
+        }
+        foreach ($options['roots'] as $root) {
+            $command[] = $root;
+        }
+
+        try {
+            $process = proc_open(
+                $command,
+                [
+                    0 => STDIN,
+                    1 => STDOUT,
+                    2 => STDERR,
+                ],
+                $pipes,
+                is_dir($options['roots'][0])
+                    ? $options['roots'][0]
+                    : (getcwd() ?: null),
+                null,
+                ['bypass_shell' => true]
+            );
+
+            if (!is_resource($process)) {
+                fwrite(STDERR, "Error: Unable to start PHPStan.\n");
+                return 2;
+            }
+
+            $exitCode = proc_close($process);
+            return $exitCode >= 0 ? $exitCode : 2;
+        } finally {
+            @unlink($configurationPath);
+        }
+    }
+
+    /**
+     * @param list<string> $arguments
+     * @return array{
+     *   help: bool,
+     *   preset: string,
+     *   roots: list<string>,
+     *   excludes: list<string>,
+     *   maxFiles: int,
+     *   projectConfiguration: ?string,
+     *   errorFormat: string,
+     *   renderCommand: list<string>,
+     *   renderWorkingDirectory: string,
+     *   renderTimeout: int,
+     *   passthrough: list<string>
+     * }
+     */
+    private function parse(array $arguments): array
+    {
+        array_shift($arguments);
+
+        $options = [
+            'help' => false,
+            'preset' => 'extreme-theme',
+            'roots' => [],
+            'excludes' => [],
+            'maxFiles' => 10000,
+            'projectConfiguration' => null,
+            'errorFormat' => 'table',
+            'renderCommand' => [],
+            'renderWorkingDirectory' => getcwd() ?: '.',
+            'renderTimeout' => 60,
+            'passthrough' => [],
+        ];
+
+        $count = count($arguments);
+        for ($index = 0; $index < $count; $index++) {
+            $argument = $arguments[$index];
+
+            if ($argument === '--') {
+                $options['passthrough'] = array_merge(
+                    $options['passthrough'],
+                    array_slice($arguments, $index + 1)
+                );
+                break;
+            }
+
+            if ($argument === '-h' || $argument === '--help') {
+                $options['help'] = true;
+                continue;
+            }
+
+            $matched = $this->optionValue(
+                $argument,
+                $arguments,
+                $index,
+                ['--preset']
+            );
+            if ($matched !== null) {
+                $options['preset'] = $matched;
+                continue;
+            }
+
+            $matched = $this->optionValue(
+                $argument,
+                $arguments,
+                $index,
+                ['--root']
+            );
+            if ($matched !== null) {
+                $options['roots'][] = $this->absolutePath($matched);
+                continue;
+            }
+
+            $matched = $this->optionValue(
+                $argument,
+                $arguments,
+                $index,
+                ['--exclude']
+            );
+            if ($matched !== null) {
+                $options['excludes'][] = $matched;
+                continue;
+            }
+
+            $matched = $this->optionValue(
+                $argument,
+                $arguments,
+                $index,
+                ['--max-files']
+            );
+            if ($matched !== null) {
+                $options['maxFiles'] = $this->positiveInteger(
+                    $matched,
+                    '--max-files'
+                );
+                continue;
+            }
+
+            $matched = $this->optionValue(
+                $argument,
+                $arguments,
+                $index,
+                ['-c', '--configuration']
+            );
+            if ($matched !== null) {
+                $options['projectConfiguration'] = $this->absolutePath($matched);
+                continue;
+            }
+
+            $matched = $this->optionValue(
+                $argument,
+                $arguments,
+                $index,
+                ['--error-format']
+            );
+            if ($matched !== null) {
+                $options['errorFormat'] = $matched;
+                continue;
+            }
+
+            $matched = $this->optionValue(
+                $argument,
+                $arguments,
+                $index,
+                ['--render-command']
+            );
+            if ($matched !== null) {
+                $options['renderCommand'] = $this->command($matched);
+                continue;
+            }
+
+            $matched = $this->optionValue(
+                $argument,
+                $arguments,
+                $index,
+                ['--render-working-directory']
+            );
+            if ($matched !== null) {
+                $options['renderWorkingDirectory'] = $this->absolutePath($matched);
+                continue;
+            }
+
+            $matched = $this->optionValue(
+                $argument,
+                $arguments,
+                $index,
+                ['--render-timeout']
+            );
+            if ($matched !== null) {
+                $options['renderTimeout'] = $this->positiveInteger(
+                    $matched,
+                    '--render-timeout'
+                );
+                continue;
+            }
+
+            if (str_starts_with($argument, '-')) {
+                $options['passthrough'][] = $argument;
+                continue;
+            }
+
+            $options['roots'][] = $this->absolutePath($argument);
+        }
+
+        if ($options['roots'] === []) {
+            $options['roots'][] = $this->absolutePath('.');
+        }
+
+        $options['roots'] = array_values(array_unique($options['roots']));
+        $options['excludes'] = array_values(array_unique($options['excludes']));
+
+        return $options;
+    }
+
+    /**
+     * @param list<string> $arguments
+     * @param list<string> $names
+     */
+    private function optionValue(
+        string $argument,
+        array $arguments,
+        int &$index,
+        array $names
+    ): ?string {
+        foreach ($names as $name) {
+            if ($argument === $name) {
+                $index++;
+                if (!isset($arguments[$index]) || $arguments[$index] === '') {
+                    throw new \InvalidArgumentException(
+                        sprintf('%s requires a value.', $name)
+                    );
+                }
+                return $arguments[$index];
+            }
+
+            if (str_starts_with($argument, $name . '=')) {
+                $value = substr($argument, strlen($name) + 1);
+                if ($value === '') {
+                    throw new \InvalidArgumentException(
+                        sprintf('%s requires a value.', $name)
+                    );
+                }
+                return $value;
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * @param array{
+     *   preset: string,
+     *   roots: list<string>,
+     *   excludes: list<string>,
+     *   maxFiles: int,
+     *   projectConfiguration: ?string,
+     *   renderCommand: list<string>,
+     *   renderWorkingDirectory: string,
+     *   renderTimeout: int
+     * } $options
+     */
+    private function configuration(array $options): string
+    {
+        $presets = [
+            'base' => dirname(__DIR__) . '/base.neon',
+            'theme' => dirname(__DIR__) . '/theme.neon',
+            'extreme-theme' => dirname(__DIR__) . '/extreme-theme.neon',
+            'wordpress-render' => dirname(__DIR__) . '/wordpress-render.neon',
+        ];
+
+        if (!isset($presets[$options['preset']])) {
+            throw new \InvalidArgumentException(
+                sprintf(
+                    'Unknown preset "%s". Choose base, theme, extreme-theme, or wordpress-render.',
+                    $options['preset']
+                )
+            );
+        }
+
+        if (
+            $options['preset'] === 'wordpress-render'
+            && $options['renderCommand'] === []
+        ) {
+            throw new \InvalidArgumentException(
+                'The wordpress-render preset requires --render-command with a JSON argv array.'
+            );
+        }
+
+        if (
+            $options['projectConfiguration'] !== null
+            && !is_file($options['projectConfiguration'])
+        ) {
+            throw new \InvalidArgumentException(
+                'Project configuration does not exist: '
+                . $options['projectConfiguration']
+            );
+        }
+
+        $lines = [
+            'includes:',
+            '  - ' . $this->neonString($presets[$options['preset']]),
+        ];
+
+        if ($options['projectConfiguration'] !== null) {
+            $lines[] = '  - ' . $this->neonString(
+                $options['projectConfiguration']
+            );
+        }
+
+        $lines[] = '';
+        $lines[] = 'parameters:';
+        $lines[] = '  blockstudioScanRoots:';
+        foreach ($options['roots'] as $root) {
+            $lines[] = '    - ' . $this->neonString($root);
+        }
+
+        if (
+            in_array($options['preset'], ['base', 'theme'], true)
+            && $options['projectConfiguration'] === null
+        ) {
+            $lines[] = '  level: max';
+        }
+
+        if ($options['preset'] !== 'base') {
+            $lines[] = '  blockstudioThemeRoots:';
+            foreach ($options['roots'] as $root) {
+                $lines[] = '    - ' . $this->neonString($root);
+            }
+            $lines[] = '  blockstudioThemeExcludePaths:';
+            foreach ($options['excludes'] as $exclude) {
+                $lines[] = '    - ' . $this->neonString($exclude);
+            }
+            $lines[] = '  blockstudioThemeMaxFiles: ' . $options['maxFiles'];
+        }
+
+        if ($options['preset'] === 'wordpress-render') {
+            $lines[] = '  blockstudioWordPressRenderCommand:';
+            foreach ($options['renderCommand'] as $argument) {
+                $lines[] = '    - ' . $this->neonString($argument);
+            }
+            $lines[] = '  blockstudioWordPressRenderWorkingDirectory: '
+                . $this->neonString($options['renderWorkingDirectory']);
+            $lines[] = '  blockstudioWordPressRenderTimeout: '
+                . $options['renderTimeout'];
+        }
+
+        return implode("\n", $lines) . "\n";
+    }
+
+    /**
+     * @return list<string>
+     */
+    private function command(string $json): array
+    {
+        $command = json_decode($json, true);
+        if (
+            !is_array($command)
+            || $command === []
+            || !array_is_list($command)
+        ) {
+            throw new \InvalidArgumentException(
+                '--render-command must be a non-empty JSON argv array.'
+            );
+        }
+
+        foreach ($command as $argument) {
+            if (!is_string($argument) || $argument === '') {
+                throw new \InvalidArgumentException(
+                    '--render-command entries must be non-empty strings.'
+                );
+            }
+        }
+
+        return $command;
+    }
+
+    private function positiveInteger(string $value, string $name): int
+    {
+        if (!ctype_digit($value) || (int) $value < 1) {
+            throw new \InvalidArgumentException(
+                sprintf('%s must be a positive integer.', $name)
+            );
+        }
+
+        return (int) $value;
+    }
+
+    private function absolutePath(string $path): string
+    {
+        if (
+            str_starts_with($path, '/')
+            || preg_match('/^[A-Za-z]:[\\\\\/]/', $path) === 1
+        ) {
+            return str_replace('\\', '/', $path);
+        }
+
+        return str_replace(
+            '\\',
+            '/',
+            rtrim(getcwd() ?: '.', '/\\') . '/' . $path
+        );
+    }
+
+    private function neonString(string $value): string
+    {
+        return json_encode(
+            str_replace('\\', '/', $value),
+            JSON_THROW_ON_ERROR | JSON_UNESCAPED_SLASHES
+        );
+    }
+
+    private function findPhpstan(): ?string
+    {
+        $candidates = [
+            dirname(__DIR__) . '/vendor/bin/phpstan',
+            dirname(__DIR__, 3) . '/bin/phpstan',
+            rtrim(getcwd() ?: '.', '/\\') . '/vendor/bin/phpstan',
+        ];
+
+        foreach ($candidates as $candidate) {
+            if (is_file($candidate)) {
+                return $candidate;
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * @param resource $stream
+     */
+    private function help($stream): void
+    {
+        fwrite(
+            $stream,
+            <<<'HELP'
+Blockstudio PHPStan
+
+Usage:
+  blockstudio-phpstan [options] [root ...] [-- phpstan-options]
+
+Options:
+  --preset <name>                    base, theme, extreme-theme (default),
+                                     or wordpress-render
+  --root <path>                      Add an analysed theme root (repeatable)
+  --exclude <glob>                   Add a scan exclusion (repeatable)
+  --max-files <number>               Maximum files scanned per run
+  -c, --configuration <path>         Include a project PHPStan configuration
+  --error-format <format>            PHPStan output format (default: table)
+  --render-command <json-array>      Live-render command argv
+  --render-working-directory <path>  Working directory for the render command
+  --render-timeout <seconds>         Live-render timeout (default: 60)
+  -h, --help                         Show this help
+
+Exit codes:
+  0  Analysis passed
+  1  Analysis reported diagnostics
+  2  Usage, configuration, or execution error
+
+HELP
+        );
+    }
+}
+
+exit((new BlockstudioPhpstanCli())->run($argv));

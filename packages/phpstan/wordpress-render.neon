@@ -1,0 +1,26 @@
+includes:
+  - extreme-theme.neon
+
+parameters:
+  blockstudioWordPressRenderCommand: []
+  blockstudioWordPressRenderWorkingDirectory: %currentWorkingDirectory%
+  blockstudioWordPressRenderTimeout: 60
+
+parametersSchema:
+  blockstudioWordPressRenderCommand: listOf(string())
+  blockstudioWordPressRenderWorkingDirectory: string()
+  blockstudioWordPressRenderTimeout: int()
+
+services:
+  blockstudio.phpstan.commandRunner:
+    class: Blockstudio\PHPStan\Theme\CommandRunner
+
+  blockstudio.phpstan.wordPressRenderRule:
+    class: Blockstudio\PHPStan\Rules\WordPressRenderRule
+    arguments:
+      command: %blockstudioWordPressRenderCommand%
+      workingDirectory: %blockstudioWordPressRenderWorkingDirectory%
+      timeoutSeconds: %blockstudioWordPressRenderTimeout%
+      runner: @blockstudio.phpstan.commandRunner
+    tags:
+      - phpstan.rules.rule
