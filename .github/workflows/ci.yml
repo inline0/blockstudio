@@ -36,11 +36,50 @@ jobs:
       - run: npm ci
       - run: composer install --no-interaction
 
-      - name: TypeScript check
-        run: npx tsc --noEmit
+      - name: JavaScript, docs, schema, and product-neutrality checks
+        run: npm run check
 
       - name: PHPCS
         run: composer cs
+
+  loading-modes:
+    name: Loading Mode (${{ matrix.mode }})
+    if: contains(github.event.head_commit.message, '[all]')
+    runs-on: [self-hosted, Linux, X64, inline0-blockstudio]
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        mode: [plugin, mu-plugin, composer-theme, composer-plugin]
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 20
+          cache: npm
+
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: "8.4"
+
+      - name: Configure npm registries
+        run: |
+          echo "@fortawesome:registry=https://npm.fontawesome.com/" >> .npmrc
+          echo "//npm.fontawesome.com/:_authToken=${{ secrets.FONTAWESOME_TOKEN }}" >> .npmrc
+
+      - run: npm ci
+      - run: composer install --no-interaction
+
+      - name: Start ${{ matrix.mode }} implementation
+        run: npm run wp-env:implementations:${{ matrix.mode }}:start
+
+      - name: Verify ${{ matrix.mode }} implementation
+        run: npm run wp-env:implementations:${{ matrix.mode }}:verify
+
+      - name: Stop ${{ matrix.mode }} implementation
+        if: always()
+        run: npm run wp-env:implementations:${{ matrix.mode }}:stop
 
   unit:
     name: Unit Tests
@@ -112,7 +151,7 @@ jobs:
 
       - uses: shivammathur/setup-php@v2
         with:
-          php-version: "8.4"
+          php-version: '8.4'
 
       - name: Configure npm registries
         run: |

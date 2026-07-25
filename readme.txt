@@ -68,7 +68,7 @@ Download the latest release zip from [GitHub Releases](https://github.com/inline
 * New: `bs.db` schemas can use `storage: "storh"` for indexed file-per-record storage in uploads, with integer IDs preserved and a JSONC-to-Storh migration command
 * Enhancement: mapped richtext paragraph blocks now receive simple `<p>` inner text through their `content` attribute without a custom parser builder
 * Enhancement: `InnerBlocks` allowed-block lists now support `namespace/*`, `category:<slug>`, and `@theme` tokens in editor templates
-* Enhancement: block prefix tags can compose (a brand prefix resolving through a namespace prefix, e.g. `<dv-ui-input />` to `bsui/input`), and registered prefix and alias tags now render in block-template output alongside `<bs:>` and `<block>` tags
+* Enhancement: block prefix tags can compose (a project prefix resolving through a namespace prefix, e.g. `<theme-ui-input />` to `bsui/input`), and registered prefix and alias tags now render in block-template output alongside `<bs:>` and `<block>` tags
 * Enhancement: nested `bs_render_block()` and `bs_block()` calls now output frontend-resolved markup inside editor previews
 * Enhancement: bundled `bsui/*` inline styles now emit in the `bsui` cascade layer so theme CSS can override them without `!important`
 * Enhancement: `bsui/button` now supports icon and icon position attributes, plus a variant CSS extension hook

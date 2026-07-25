@@ -38,7 +38,7 @@ This is a Blockstudio-owned feature. It sits natively next to `Page_Sync`,
 `Storage_Sync`, and `Database`, and reuses their proven internals via a shared
 core extracted *after* the first slice proves the boundary (see "Architecture").
 Downstream products (for example a git-workspace product that wants content
-variants per worktree) consume the same commands and files; none of that coupling
+alternate source variants) consume the same commands and files; none of that coupling
 lives here.
 
 ## V1 Scope (the conservative slice)
@@ -687,7 +687,7 @@ and menus, taxonomy definition capture, a REST and admin UI surface.
   The plan converges it onto the shared core as a consumer (Phase 5), so record
   sync gains the same identity, fingerprint, diff-minimal writes, and dry-run.
 - **Downstream products** (for example a git-workspace product that wants content
-  variants compared across worktrees) consume `wp bs content` and the files. That
+  alternate source variants) consume `wp bs content` and the files. That
   integration does not live in Blockstudio and is out of scope here.
 
 ## Open Questions

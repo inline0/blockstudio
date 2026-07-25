@@ -264,26 +264,26 @@ This filter lets you map prefix shorthands to one or more block namespaces. Each
 
 ```php title="functions.php"
 add_filter('blockstudio/block_tags/prefixes', function($prefixes) {
-  $prefixes['dv'] = ['divine-homepage', 'bsui'];
+  $prefixes['theme'] = ['theme-components', 'bsui'];
 
   return $prefixes;
 });
 ```
 
 ```html title="pages/home/index.php"
-<dv-card title="Homepage" />
-<dv-button label="Get started" />
-<dv-onumia-feature-matrix />
+<theme-card title="Homepage" />
+<theme-button label="Get started" />
+<theme-ui-feature-matrix />
 ```
 
-`<dv-card>` resolves to `divine-homepage/card`. `<dv-button>` tries
-`divine-homepage/button` first, then falls back to `bsui/button`. Explicit
+`<theme-card>` resolves to `theme-components/card`. `<theme-button>` tries
+`theme-components/button` first, then falls back to `bsui/button`. Explicit
 `blockstudio/block_tags/tag_aliases` entries take precedence for the same tag,
 and unresolved prefixed tags are left unchanged.
 
 Prefixes compose: if a prefixed tag does not resolve directly and its slug is
-itself a registered prefix tag, resolution recurses. With `dv => ['divine-homepage']`
-and `ui => ['bsui']`, `<dv-ui-input>` falls through to the `ui` prefix and
+itself a registered prefix tag, resolution recurses. With `theme => ['theme-components']`
+and `ui => ['bsui']`, `<theme-ui-input>` falls through to the `ui` prefix and
 resolves `bsui/input`. Registered prefix and alias tags also render in
 block-template output, not only in page content.
 
@@ -827,7 +827,7 @@ This filter allows you to register prefix to namespace shorthands for block tags
 ```php title="functions.php"
 add_filter('blockstudio/settings/block_tags/prefixes', function() {
   return [
-    'dv' => ['divine-homepage', 'bsui']
+    'theme' => ['theme-components', 'bsui']
   ];
 });
 ```

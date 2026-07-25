@@ -708,19 +708,15 @@ opt-in caching.
 - The island runtime is printed only when the rendered response contains an
   island marker, so pages without islands ship no extra JavaScript.
 
-## Relationship to Divine
+## Downstream Static Delivery
 
-The island mechanism is a Blockstudio feature and is fully described by this PRD.
-It works on any WordPress site, including sites that use Blockstudio without any
-external runtime.
+The island mechanism is a self-contained Blockstudio feature. It works on any
+WordPress site without requiring an external runtime.
 
-Divine's static prerender benefits from islands automatically: because island
-pages produce a cache-safe initial response, Divine's full-page cache can store
-and serve them without per-user invalidation, and background prerender warming
-keeps them fresh. Divine's optional side of this, such as signaling a
-placeholder render context during prerender warming or adding a fragment cache
-policy in exported themes, is tracked separately in the Divine repo and is out of
-scope here. This PRD does not depend on Divine.
+Static delivery integrations can benefit from the cache-safe initial response
+and refresh fragments independently. Any integration-specific prerender signal,
+full-page cache, or fragment-cache policy remains outside Blockstudio and is not
+required by this PRD.
 
 ## Implementation Plan
 

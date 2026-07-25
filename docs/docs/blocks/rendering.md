@@ -166,7 +166,7 @@ HTML embedded directly into the block's template output:
   <block name="core/separator" />
   <bs:core-paragraph>Rendered by WordPress</bs:core-paragraph>
   <block name="core/heading" level="2">Also WordPress</block>
-  <dv-card title="Prefix shorthand" />
+  <theme-card title="Prefix shorthand" />
 </div>
 ```
 
@@ -227,19 +227,19 @@ first registered block in that namespace order:
 
 ```php title="functions.php"
 add_filter('blockstudio/block_tags/prefixes', function($prefixes) {
-  $prefixes['dv'] = ['divine-homepage', 'bsui'];
+  $prefixes['theme'] = ['theme-components', 'bsui'];
 
   return $prefixes;
 });
 ```
 
 ```html
-<dv-card title="Homepage" />
-<dv-button label="Get started" />
-<dv-onumia-feature-matrix />
+<theme-card title="Homepage" />
+<theme-button label="Get started" />
+<theme-ui-feature-matrix />
 ```
 
-With the example above, `<dv-card>` resolves to `divine-homepage/card`, `<dv-button>` falls back to `bsui/button` when `divine-homepage/button` is not registered, and `<dv-onumia-feature-matrix>` resolves to `divine-homepage/onumia-feature-matrix`.
+With the example above, `<theme-card>` resolves to `theme-components/card`, `<theme-button>` falls back to `bsui/button` when `theme-components/button` is not registered, and `<theme-ui-feature-matrix>` resolves to `theme-components/ui-feature-matrix`.
 
 Prefixes can also compose. When a prefixed tag does not resolve directly and the
 remaining slug is itself a registered prefix tag, resolution recurses, so a
@@ -247,7 +247,7 @@ brand prefix can sit on top of a namespace prefix:
 
 ```php title="functions.php"
 add_filter('blockstudio/block_tags/prefixes', function($prefixes) {
-  $prefixes['dv'] = ['divine-homepage'];
+  $prefixes['theme'] = ['theme-components'];
   $prefixes['ui'] = ['bsui'];
 
   return $prefixes;
@@ -255,10 +255,10 @@ add_filter('blockstudio/block_tags/prefixes', function($prefixes) {
 ```
 
 ```html
-<dv-ui-input />
+<theme-ui-input />
 ```
 
-`<dv-ui-input>` has no `divine-homepage/ui-input` block, so it falls through to
+`<theme-ui-input>` has no `theme-components/ui-input` block, so it falls through to
 the `ui` prefix and resolves `bsui/input`. Direct matches always win over nested
 resolution, and allow/deny rules apply to the final resolved block.
 
@@ -268,7 +268,7 @@ You can also configure prefixes in `blockstudio.json`:
 {
   "blockTags": {
     "prefixes": {
-      "dv": ["divine-homepage", "bsui"]
+      "theme": ["theme-components", "bsui"]
     }
   }
 }

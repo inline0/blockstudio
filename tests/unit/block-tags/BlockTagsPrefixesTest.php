@@ -49,64 +49,64 @@ class BlockTagsPrefixesTest extends TestCase {
 	}
 
 	public function test_single_namespace_prefix_resolves_block(): void {
-		$this->set_prefixes( array( 'dv' => 'divine-homepage' ) );
+		$this->set_prefixes( array( 'theme' => 'theme-components' ) );
 
-		$result = Block_Tags::render( '<dv-card title="Homepage" />' );
+		$result = Block_Tags::render( '<theme-card title="Homepage" />' );
 
-		$this->assertStringContainsString( 'class="dv-card"', $result );
+		$this->assertStringContainsString( 'class="theme-card"', $result );
 		$this->assertStringContainsString( 'Homepage', $result );
 	}
 
 	public function test_ordered_fallback_namespace_resolves_block(): void {
-		$this->set_prefixes( array( 'dv' => array( 'divine-homepage', 'bsui' ) ) );
+		$this->set_prefixes( array( 'theme' => array( 'theme-components', 'bsui' ) ) );
 
-		$result = Block_Tags::render( '<dv-button label="Fallback" />' );
+		$result = Block_Tags::render( '<theme-button label="Fallback" />' );
 
-		$this->assertStringContainsString( 'class="dv-button"', $result );
+		$this->assertStringContainsString( 'class="bsui-button"', $result );
 		$this->assertStringContainsString( 'Fallback', $result );
 	}
 
 	public function test_multi_hyphen_slug_maps_directly(): void {
-		$this->set_prefixes( array( 'dv' => array( 'divine-homepage', 'bsui' ) ) );
+		$this->set_prefixes( array( 'theme' => array( 'theme-components', 'bsui' ) ) );
 
-		$result = Block_Tags::render( '<dv-onumia-feature-matrix title="Matrix" />' );
+		$result = Block_Tags::render( '<theme-ui-feature-matrix title="Matrix" />' );
 
-		$this->assertStringContainsString( 'class="dv-feature-matrix"', $result );
+		$this->assertStringContainsString( 'class="theme-feature-matrix"', $result );
 		$this->assertStringContainsString( 'Matrix', $result );
 	}
 
 	public function test_alias_overrides_prefix_resolution_for_same_tag(): void {
-		$this->set_prefixes( array( 'dv' => array( 'divine-homepage', 'bsui' ) ) );
-		$this->set_aliases( array( 'dv-button' => 'divine-homepage/card' ) );
+		$this->set_prefixes( array( 'theme' => array( 'theme-components', 'bsui' ) ) );
+		$this->set_aliases( array( 'theme-button' => 'theme-components/card' ) );
 
-		$result = Block_Tags::render( '<dv-button label="Ignored" />' );
+		$result = Block_Tags::render( '<theme-button label="Ignored" />' );
 
-		$this->assertStringContainsString( 'class="dv-card"', $result );
-		$this->assertStringNotContainsString( 'dv-button', $result );
+		$this->assertStringContainsString( 'class="theme-card"', $result );
+		$this->assertStringNotContainsString( 'bsui-button', $result );
 	}
 
 	public function test_unknown_prefixed_tag_is_left_untouched(): void {
-		$this->set_prefixes( array( 'dv' => array( 'divine-homepage', 'bsui' ) ) );
+		$this->set_prefixes( array( 'theme' => array( 'theme-components', 'bsui' ) ) );
 
-		$input = '<dv-nope title="Nope" />';
+		$input = '<theme-nope title="Nope" />';
 
 		$this->assertSame( $input, Block_Tags::render( $input ) );
 	}
 
 	public function test_paired_prefix_tag_preserves_attributes_and_inner_content(): void {
-		$this->set_prefixes( array( 'dv' => 'divine-homepage' ) );
+		$this->set_prefixes( array( 'theme' => 'theme-components' ) );
 
-		$result = Block_Tags::render( '<dv-card title="Paired"><span>Inner</span></dv-card>' );
+		$result = Block_Tags::render( '<theme-card title="Paired"><span>Inner</span></theme-card>' );
 
 		$this->assertStringContainsString( 'Paired', $result );
 		$this->assertStringContainsString( '<span>Inner</span>', $result );
 	}
 
 	public function test_allow_deny_applies_to_prefix_resolved_blocks(): void {
-		$this->set_prefixes( array( 'dv' => array( 'divine-homepage', 'bsui' ) ) );
+		$this->set_prefixes( array( 'theme' => array( 'theme-components', 'bsui' ) ) );
 		$this->set_deny( array( 'bsui/*' ) );
 
-		$input = '<dv-button label="Denied" />';
+		$input = '<theme-button label="Denied" />';
 
 		$this->assertSame( $input, Block_Tags::render( $input ) );
 	}
@@ -114,36 +114,36 @@ class BlockTagsPrefixesTest extends TestCase {
 	public function test_invalid_prefix_registrations_are_ignored(): void {
 		$this->set_prefixes(
 			array(
-				'dv-bad' => 'divine-homepage',
-				'1dv'   => 'divine-homepage',
-				'ok'    => 'divine-homepage',
+				'theme-bad' => 'theme-components',
+				'1theme'    => 'theme-components',
+				'ok'        => 'theme-components',
 			)
 		);
 
-		$this->assertSame( '<dv-bad-card />', Block_Tags::render( '<dv-bad-card />' ) );
-		$this->assertSame( '<1dv-card />', Block_Tags::render( '<1dv-card />' ) );
-		$this->assertStringContainsString( 'dv-card', Block_Tags::render( '<ok-card />' ) );
+		$this->assertSame( '<theme-bad-card />', Block_Tags::render( '<theme-bad-card />' ) );
+		$this->assertSame( '<1theme-card />', Block_Tags::render( '<1theme-card />' ) );
+		$this->assertStringContainsString( 'theme-card', Block_Tags::render( '<ok-card />' ) );
 	}
 
 	public function test_prefix_tags_parse_into_block_arrays(): void {
-		$this->set_prefixes( array( 'dv' => array( 'divine-homepage', 'bsui' ) ) );
+		$this->set_prefixes( array( 'theme' => array( 'theme-components', 'bsui' ) ) );
 
-		$blocks = Block_Tags::parse_inner_blocks( '<dv-card title="Parsed"><dv-button label="Child" /></dv-card>' );
+		$blocks = Block_Tags::parse_inner_blocks( '<theme-card title="Parsed"><theme-button label="Child" /></theme-card>' );
 
 		$this->assertCount( 1, $blocks );
-		$this->assertSame( 'divine-homepage/card', $blocks[0]['blockName'] );
+		$this->assertSame( 'theme-components/card', $blocks[0]['blockName'] );
 		$this->assertSame( 'Parsed', $this->get_blockstudio_attributes( $blocks[0] )['title'] ?? null );
 		$this->assertCount( 1, $blocks[0]['innerBlocks'] );
 		$this->assertSame( 'bsui/button', $blocks[0]['innerBlocks'][0]['blockName'] );
 	}
 
 	public function test_prefix_tags_parse_before_html_fallback(): void {
-		$this->set_prefixes( array( 'dv' => 'divine-homepage' ) );
+		$this->set_prefixes( array( 'theme' => 'theme-components' ) );
 
-		$blocks = Block_Tags::parse_all_elements( '<dv-card title="Parsed"><p>Body</p></dv-card>' );
+		$blocks = Block_Tags::parse_all_elements( '<theme-card title="Parsed"><p>Body</p></theme-card>' );
 
 		$this->assertCount( 1, $blocks );
-		$this->assertSame( 'divine-homepage/card', $blocks[0]['blockName'] );
+		$this->assertSame( 'theme-components/card', $blocks[0]['blockName'] );
 		$this->assertSame( 'Parsed', $this->get_blockstudio_attributes( $blocks[0] )['title'] ?? null );
 		$this->assertCount( 1, $blocks[0]['innerBlocks'] );
 		$this->assertSame( 'core/paragraph', $blocks[0]['innerBlocks'][0]['blockName'] );
@@ -154,14 +154,14 @@ class BlockTagsPrefixesTest extends TestCase {
 	public function test_nested_prefix_resolves_through_inner_prefix(): void {
 		$this->set_prefixes(
 			array(
-				'dv' => array( 'divine-homepage' ),
-				'ui' => array( 'bsui' ),
+				'theme' => array( 'theme-components' ),
+				'ui'    => array( 'bsui' ),
 			)
 		);
 
-		// divine-homepage/ui-button is not registered, so dv-ui-button falls
+		// theme-components/ui-button is not registered, so theme-ui-button falls
 		// through to the ui prefix and resolves bsui/button.
-		$blocks = Block_Tags::parse_inner_blocks( '<dv-ui-button label="Nested" />' );
+		$blocks = Block_Tags::parse_inner_blocks( '<theme-ui-button label="Nested" />' );
 
 		$this->assertCount( 1, $blocks );
 		$this->assertSame( 'bsui/button', $blocks[0]['blockName'] );
@@ -169,33 +169,33 @@ class BlockTagsPrefixesTest extends TestCase {
 	}
 
 	public function test_direct_resolution_takes_precedence_over_nested(): void {
-		// onumia is a registered prefix, but the direct divine-homepage match
-		// must win: dv-onumia-feature-matrix stays divine-homepage/onumia-feature-matrix
-		// and never recurses into the onumia prefix.
+		// ui is a registered prefix, but the direct theme-components match
+		// must win: theme-ui-feature-matrix stays
+		// theme-components/ui-feature-matrix and never recurses into ui.
 		$this->set_prefixes(
 			array(
-				'dv'     => array( 'divine-homepage' ),
-				'onumia' => array( 'bsui' ),
+				'theme' => array( 'theme-components' ),
+				'ui'    => array( 'bsui' ),
 			)
 		);
 
-		$blocks = Block_Tags::parse_inner_blocks( '<dv-onumia-feature-matrix title="Direct" />' );
+		$blocks = Block_Tags::parse_inner_blocks( '<theme-ui-feature-matrix title="Direct" />' );
 
 		$this->assertCount( 1, $blocks );
-		$this->assertSame( 'divine-homepage/onumia-feature-matrix', $blocks[0]['blockName'] );
+		$this->assertSame( 'theme-components/ui-feature-matrix', $blocks[0]['blockName'] );
 	}
 
 	public function test_deep_nested_prefix_chain_resolves(): void {
 		$this->set_prefixes(
 			array(
-				'xy' => array( 'divine-homepage' ),
-				'dv' => array( 'divine-homepage' ),
-				'ui' => array( 'bsui' ),
+				'brand' => array( 'theme-components' ),
+				'theme' => array( 'theme-components' ),
+				'ui'    => array( 'bsui' ),
 			)
 		);
 
-		// xy-dv-ui-button peels one registered prefix per level until bsui/button.
-		$blocks = Block_Tags::parse_inner_blocks( '<xy-dv-ui-button label="Deep" />' );
+		// brand-theme-ui-button peels one registered prefix per level until bsui/button.
+		$blocks = Block_Tags::parse_inner_blocks( '<brand-theme-ui-button label="Deep" />' );
 
 		$this->assertCount( 1, $blocks );
 		$this->assertSame( 'bsui/button', $blocks[0]['blockName'] );
@@ -204,32 +204,32 @@ class BlockTagsPrefixesTest extends TestCase {
 	public function test_nested_unknown_inner_slug_left_untouched(): void {
 		$this->set_prefixes(
 			array(
-				'dv' => array( 'divine-homepage' ),
-				'ui' => array( 'bsui' ),
+				'theme' => array( 'theme-components' ),
+				'ui'    => array( 'bsui' ),
 			)
 		);
 
 		// ui is a registered prefix but bsui/nope does not exist, so nothing resolves.
-		$input = '<dv-ui-nope title="Nope" />';
+		$input = '<theme-ui-nope title="Nope" />';
 
 		$this->assertSame( $input, Block_Tags::render( $input ) );
 	}
 
 	public function test_nested_requires_registered_inner_prefix(): void {
 		// ui is not a registered prefix, so the nested branch is never taken.
-		$this->set_prefixes( array( 'dv' => array( 'divine-homepage' ) ) );
+		$this->set_prefixes( array( 'theme' => array( 'theme-components' ) ) );
 
-		$input = '<dv-ui-button label="No inner prefix" />';
+		$input = '<theme-ui-button label="No inner prefix" />';
 
 		$this->assertSame( $input, Block_Tags::render( $input ) );
 	}
 
 	public function test_repeated_prefix_does_not_recurse(): void {
-		// dv-dv-button: the inner segment repeats the outer prefix, so the guard
+		// theme-theme-button repeats the outer prefix, so the guard
 		// blocks recursion and the tag is left untouched.
-		$this->set_prefixes( array( 'dv' => array( 'divine-homepage' ) ) );
+		$this->set_prefixes( array( 'theme' => array( 'theme-components' ) ) );
 
-		$input = '<dv-dv-button label="Loop" />';
+		$input = '<theme-theme-button label="Loop" />';
 
 		$this->assertSame( $input, Block_Tags::render( $input ) );
 	}
@@ -239,12 +239,12 @@ class BlockTagsPrefixesTest extends TestCase {
 		// leave the tag untouched (guards against runaway recursion).
 		$this->set_prefixes(
 			array(
-				'dv' => array( 'divine-homepage' ),
-				'ui' => array( 'bsui' ),
+				'theme' => array( 'theme-components' ),
+				'ui'    => array( 'bsui' ),
 			)
 		);
 
-		$input = '<dv-ui-dv-ui-dv-ui-nope title="Deep miss" />';
+		$input = '<theme-ui-theme-ui-theme-ui-nope title="Deep miss" />';
 
 		$this->assertSame( $input, Block_Tags::render( $input ) );
 	}

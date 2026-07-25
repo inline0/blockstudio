@@ -37,7 +37,7 @@ add_filter(
         return [
             new Inventory_Discovery_Source(
                 'preview:feature-card',
-                '/workspace/feature-card/blockstudio',
+                '/runtime-preview/feature-card/blockstudio',
                 [
                     'card/block.json' => [
                         'path' => '/theme/blockstudio/card/block.json',
@@ -47,14 +47,14 @@ add_filter(
                         ],
                     ],
                     'card/index.php' => [
-                        'path' => '/workspace/feature-card/blockstudio/card/index.php',
+                        'path' => '/runtime-preview/feature-card/blockstudio/card/index.php',
                         'provenance' => [
                             'layer' => 'preview',
                         ],
                     ],
                 ],
                 'parent-and-preview-fingerprint',
-                ['/theme/blockstudio', '/workspace/feature-card/blockstudio']
+                ['/theme/blockstudio', '/runtime-preview/feature-card/blockstudio']
             ),
         ];
     },
@@ -157,3 +157,26 @@ add_filter(
 
 Use the URL filter when selected files live outside `wp-content` or are served
 through a runtime endpoint.
+
+## Runtime extension-point audit
+
+Blockstudio's existing contracts are the public integration boundary. A
+consumer supplies a final-visible source selection; Blockstudio continues to
+own discovery, rendering, caching, assets, and generated output. No separate
+host-adapter or bootstrap layer is required.
+
+| Requirement | Reused public contract | Verified behavior | 7.6 gap |
+| --- | --- | --- | --- |
+| Plugin, must-use plugin, Composer-theme, and Composer-plugin loading | Package bootstrap and the Composer autoloader | One Blockstudio instance initializes in every supported loading mode | None |
+| Blocks and sibling templates/assets | `Discovery_Source`, `Inventory_Discovery_Source`, and `Block_Discovery` | Logical siblings may resolve across roots while preserving manifest provenance | None |
+| Pages and inherited loaders/layouts | `Discovery_Source` and `Page_Discovery` | Selected page content can inherit collection metadata and layout files | None |
+| Patterns, fields, templates, and template parts | The corresponding discovery classes over `Discovery_Source` | Every discovery system consumes the same final-visible inventory model | None |
+| Shadowing and deletion | Consumer-composed inventory | A selected entry shadows an earlier one; an omitted entry remains invisible | None |
+| Deterministic invalidation | Source IDs, fingerprints, watch paths, and `Runtime_Context` | Cache identity changes with the runtime selection and visible content | None |
+| Read-only source output | Entry provenance and `blockstudio/generated_output/path` | Generated files are redirected away from inherited/read-only sources | None |
+| Alternate public file routing | `blockstudio/files/url` and `blockstudio/url` | Physical files can map to consumer-provided public URLs | None |
+| Empty final-visible tree | `Discovery_Sources::for_path()` | An explicitly empty source does not fall back to physical discovery | None |
+
+The 7.6 audit therefore adds no consumer-specific runtime concept. Generic
+filesystem inventory tests remain the owning coverage, while consumers test
+their own source-composition policy in their own repositories.

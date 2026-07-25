@@ -49,8 +49,8 @@ class BlockTagsHtmlParsingTest extends TestCase {
 	public function test_alias_tags_parse_before_html_fallback(): void {
 		$filter = static function (): array {
 			return array(
-				'dv-card'      => 'theme/card',
-				'dv-paragraph' => 'core/paragraph',
+				'alias-card'      => 'theme/card',
+				'alias-paragraph' => 'core/paragraph',
 			);
 		};
 
@@ -58,7 +58,7 @@ class BlockTagsHtmlParsingTest extends TestCase {
 
 		try {
 			$blocks = Block_Tags::parse_all_elements(
-				'<dv-card title="Feature"><dv-paragraph>Alias child</dv-paragraph></dv-card>'
+				'<alias-card title="Feature"><alias-paragraph>Alias child</alias-paragraph></alias-card>'
 			);
 		} finally {
 			remove_filter( 'blockstudio/block_tags/tag_aliases', $filter );
@@ -73,7 +73,7 @@ class BlockTagsHtmlParsingTest extends TestCase {
 	}
 
 	public function test_unknown_custom_element_keeps_existing_text_fallback(): void {
-		$blocks = Block_Tags::parse_all_elements( '<dv-unknown>Raw</dv-unknown>' );
+		$blocks = Block_Tags::parse_all_elements( '<alias-unknown>Raw</alias-unknown>' );
 
 		$this->assertCount( 1, $blocks );
 		$this->assertSame( 'core/paragraph', $blocks[0]['blockName'] );

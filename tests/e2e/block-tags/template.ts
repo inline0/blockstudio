@@ -45,11 +45,11 @@ test.describe('Block Tags in Templates', () => {
   });
 
   test('prefix tags render in templates', async () => {
-    const card = page.locator('.btt-prefix-card .dv-card');
+    const card = page.locator('.btt-prefix-card .theme-card');
     await expect(card).toBeVisible();
-    await expect(card.locator('.dv-title')).toHaveText('Template Prefix Card');
+    await expect(card.locator('.theme-title')).toHaveText('Template Prefix Card');
 
-    const button = page.locator('.btt-prefix-button .dv-button');
+    const button = page.locator('.btt-prefix-button .bsui-button');
     await expect(button).toBeVisible();
     await expect(button).toHaveText('Template Prefix Button');
   });

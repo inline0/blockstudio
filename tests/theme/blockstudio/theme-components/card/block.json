@@ -1,9 +1,9 @@
 {
   "$schema": "https://blockstudio.dev/schema/block",
-  "name": "divine-homepage/onumia-feature-matrix",
-  "title": "Divine Feature Matrix",
+  "name": "theme-components/card",
+  "title": "Theme Card",
   "category": "blockstudio-test-native",
-  "icon": "grid-view",
+  "icon": "index-card",
   "blockstudio": {
     "attributes": [
       {

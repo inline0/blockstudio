@@ -1,9 +1,9 @@
 {
   "$schema": "https://blockstudio.dev/schema/block",
-  "name": "divine-homepage/card",
-  "title": "Divine Homepage Card",
+  "name": "theme-components/ui-feature-matrix",
+  "title": "UI Feature Matrix",
   "category": "blockstudio-test-native",
-  "icon": "index-card",
+  "icon": "grid-view",
   "blockstudio": {
     "attributes": [
       {

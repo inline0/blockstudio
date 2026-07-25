@@ -53,7 +53,7 @@ The short version:
   `bs_render_block()` output matches frontend rendering in editor previews,
   and `bsui/button` gains icons plus easier styling hooks.
 - **Composable block tags**: prefix tags can resolve through another prefix
-  (`<dv-ui-input>` to `bsui/input`), and prefix and alias tags render in
+  (`<theme-ui-input>` to `bsui/input`), and prefix and alias tags render in
   block-template output, not only in page content.
 - **Host-safe build caches**: runtime and editor caches now default outside
   uploads, support configurable locations, and prune stale entries so
@@ -95,14 +95,14 @@ add_filter(
         return [
             new Inventory_Discovery_Source(
                 'preview:feature-card',
-                '/workspace/feature-card/blockstudio',
+                '/runtime-preview/feature-card/blockstudio',
                 [
                     'card/block.json' => [
                         'path' => '/theme/blockstudio/card/block.json',
                         'provenance' => ['layer' => 'parent'],
                     ],
                     'card/index.php' => [
-                        'path' => '/workspace/feature-card/blockstudio/card/index.php',
+                        'path' => '/runtime-preview/feature-card/blockstudio/card/index.php',
                         'provenance' => ['layer' => 'preview'],
                     ],
                 ],
@@ -342,7 +342,7 @@ cascade layer, and button variants can be extended with
 `blockstudio/blocks/attributes` filter.
 
 Block tags compose further, too. A prefix can resolve through another prefix, so
-`<dv-ui-input />` with a `dv` brand prefix over a `ui` namespace prefix resolves
+`<theme-ui-input />` with a `theme` project prefix over a `ui` namespace prefix resolves
 `bsui/input`. Registered prefix and alias tags now also render in block-template
 output, not just page content, so a template can emit them directly instead of
 calling `bs_render_block()`.

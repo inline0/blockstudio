@@ -128,6 +128,22 @@ require_once __DIR__ . '/vendor/autoload.php';
 
 Asset URLs resolve to the correct plugin vendor directory.
 
+## Supported loading-mode checks
+
+Blockstudio continuously verifies the same package in four supported runtime
+positions:
+
+| Mode | Bootstrap |
+| --- | --- |
+| WordPress plugin | WordPress activates `blockstudio.php` |
+| Must-use plugin | A root loader requires the package entry point |
+| Composer dependency in a theme | The theme requires Composer's autoloader |
+| Composer dependency in a plugin | The host plugin requires Composer's autoloader |
+
+The full CI matrix boots WordPress independently in every mode and asserts
+that `BLOCKSTUDIO_VERSION` is defined. This guards the one-instance bootstrap
+without introducing a second host abstraction.
+
 ## Custom Package URL
 
 Normal plugin, must-use plugin, bundled plugin, active theme, parent theme, and
