@@ -41,6 +41,34 @@ add_filter('blockstudio/settings/ui/enabled', '__return_true');
 
 When enabled, Blockstudio registers the bundled component library from `includes/ui/blocks` and the bundled demo apps from `includes/ui/apps`.
 
+## Public Inventory and Examples
+
+The bundled implementation blocks remain normal `bsui/*` registrations, but
+consumers should use the public family inventory when building a component
+gallery:
+
+```php
+use Blockstudio\Ui;
+
+$families = Ui::inventory();
+$examples = Ui::examples();
+```
+
+`Ui::inventory()` groups every compound component under its public root and
+lists the implementation registrations required by that family.
+`Ui::examples()` adds a deterministic normalized declaration with default and
+illustrative data. It preserves required root/child relationships, so the
+result can be passed directly to `Blockstudio\Render::document()`.
+
+The public Canvas inventory exposes these examples under its `ui` type and
+omits bundled implementation registrations from the normal `blocks` type. This
+produces one complete example per public component family instead of a gallery
+of internal root, trigger, popup, and layer fragments.
+
+When assembling an already-rendered document, `Ui::global_assets($block_names,
+$html)` returns the exact bundled global style and script only when selected
+output actually uses a UI component.
+
 ## Rendering
 
 Use the normal block tag syntax:

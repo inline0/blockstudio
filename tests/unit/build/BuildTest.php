@@ -624,6 +624,81 @@ class BuildTest extends TestCase {
 		);
 	}
 
+	public function test_refresh_block_paths_registers_only_changed_topology(): void {
+		$tmp_dir        = sys_get_temp_dir() . '/bs-changed-topology-' . uniqid();
+		$existing_dir   = $tmp_dir . '/existing';
+		$changed_dir    = $tmp_dir . '/changed';
+		$unrelated_dir  = $tmp_dir . '/unrelated';
+		$existing_name  = 'blockstudio-test/topology-existing';
+		$changed_name   = 'blockstudio-test/topology-changed';
+		$unrelated_name = 'blockstudio-test/topology-unrelated';
+		$observed        = null;
+		$observer        = static function ( array $names, array $paths ) use ( &$observed ): void {
+			$observed = compact( 'names', 'paths' );
+		};
+
+		$write_block = static function ( string $directory, string $name ): void {
+			wp_mkdir_p( $directory );
+			file_put_contents(
+				$directory . '/block.json',
+				wp_json_encode(
+					array(
+						'name'        => $name,
+						'title'       => $name,
+						'blockstudio' => array(),
+					)
+				)
+			);
+			file_put_contents( $directory . '/index.php', '<?php // render' );
+		};
+
+		$write_block( $existing_dir, $existing_name );
+		Build::init(
+			array(
+				'dir' => $tmp_dir,
+			)
+		);
+
+		$write_block( $changed_dir, $changed_name );
+		$write_block( $unrelated_dir, $unrelated_name );
+		$changed_paths = array(
+			wp_normalize_path( $changed_dir . '/block.json' ),
+			wp_normalize_path( $changed_dir . '/index.php' ),
+		);
+
+		add_action( 'blockstudio/blocks/topology_refreshed', $observer, 10, 2 );
+
+		try {
+			$this->assertSame(
+				array( $changed_name ),
+				Build::refresh_block_paths( $changed_paths )
+			);
+			$this->assertArrayHasKey( $changed_name, Build::blocks() );
+			$this->assertArrayNotHasKey( $unrelated_name, Build::blocks() );
+			$this->assertSame(
+				array(
+					'names' => array( $changed_name ),
+					'paths' => $changed_paths,
+				),
+				$observed
+			);
+		} finally {
+			remove_action( 'blockstudio/blocks/topology_refreshed', $observer, 10 );
+
+			if ( is_dir( $tmp_dir ) ) {
+				Files::delete_all_files( $tmp_dir );
+			}
+
+			Build::refresh_blocks();
+
+			foreach ( array( $existing_name, $changed_name, $unrelated_name ) as $name ) {
+				if ( WP_Block_Type_Registry::get_instance()->is_registered( $name ) ) {
+					WP_Block_Type_Registry::get_instance()->unregister( $name );
+				}
+			}
+		}
+	}
+
 	// Block type properties
 
 	public function test_block_type_has_render_callback(): void {

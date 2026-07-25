@@ -24,6 +24,76 @@ island rendered with `bs_render_block()`, `bs_block()`, or a block tag returns
 the same placeholder marker as a block rendered from post content, and the
 frontend runtime is injected when that marker is present in the response.
 
+## Structured Compositions and Complete Documents
+
+For long-lived tools, previews, exports, and component galleries, use the
+versioned `Blockstudio\Render` API. It accepts one declaration or an ordered
+list and renders without echoing:
+
+```php
+use Blockstudio\Render;
+
+$composition = [
+  'root' => 'theme/card',
+  'example' => [
+    'data' => [
+      'heading' => 'Example card',
+    ],
+    'layers' => [
+      [
+        'name' => 'theme/button',
+        'data' => [
+          'label' => 'Continue',
+        ],
+      ],
+    ],
+  ],
+];
+
+$normalized = Render::normalize($composition);
+$html = Render::composition($composition);
+$document = Render::document($composition, [
+  'title' => 'Component preview',
+]);
+```
+
+The canonical normalized declaration has four keys:
+
+```php
+[
+  'name' => 'theme/card',
+  'attributes' => [],
+  'content' => '',
+  'children' => [],
+]
+```
+
+`data`, `inner`, `innerBlocks`, `root`, `layers`, and `example` are input
+conveniences and are normalized away. Nested declarations render recursively
+through the same Blockstudio pipeline.
+
+`Render::document()` returns `schemaVersion`, `html`, `body`, `blocks`,
+`assets`, `warnings`, and `errors`. The `assets` value separates `head`,
+`footer`, `styles`, `scripts`, `modules`, `interactivity`, `ui`, and `tailwind`.
+The block list and assets include dependencies referenced by selected templates,
+but exclude unrelated and editor-only assets.
+
+To assemble a document around HTML that is already rendered, provide its known
+root block names:
+
+```php
+$document = Render::document_from_html(
+  $rendered_html,
+  ['theme/hero', 'theme/button'],
+  ['title' => 'Homepage preview']
+);
+```
+
+Use `Render::content()` for serialized WordPress block content. Consumers that
+render several independent documents in one request should call
+`Blockstudio\Batch_Render::reset()` between them; `Canvas::documents()` does
+this automatically.
+
 ## PHP Functions
 
 ### Without Data

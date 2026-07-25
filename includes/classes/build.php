@@ -1432,11 +1432,12 @@ class Build {
 	 *
 	 * @since 7.0.0
 	 *
-	 * @param bool $allow_cached Whether a valid runtime cache may skip discovery.
+	 * @param bool          $allow_cached Whether a valid runtime cache may skip discovery.
+	 * @param array<string> $only_blocks Explicit existing block names to rediscover.
 	 *
 	 * @return void
 	 */
-	public static function refresh_blocks( bool $allow_cached = false ): void {
+	public static function refresh_blocks( bool $allow_cached = false, array $only_blocks = array() ): void {
 		$registry = Block_Registry::instance();
 
 		// If the default build dir was created after init (e.g. during a live
@@ -1461,6 +1462,23 @@ class Build {
 			return;
 		}
 
+		$only_blocks = array_values(
+			array_unique(
+				array_filter(
+					array_map(
+						static fn( mixed $name ): string => is_string( $name ) ? strtolower( trim( $name ) ) : '',
+						$only_blocks
+					),
+					static fn( string $name ): bool => (bool) preg_match( '#^[a-z0-9-]+/[a-z0-9-]+$#', $name )
+				)
+			)
+		);
+
+		if ( array() !== $only_blocks ) {
+			self::refresh_selected_blocks( $registry, $only_blocks );
+			return;
+		}
+
 		$existing_block_names = array_keys( $registry->get_blocks() );
 		$discovered_names     = array();
 
@@ -1473,68 +1491,17 @@ class Build {
 				continue;
 			}
 
-			$discovery = new Block_Discovery();
-			$results   = $discovery->discover( $source, $instance, false );
-
-			self::filter_missing_plugin_dependencies(
-				$results['store'],
-				$results['registerable'],
-				$results['overrides'],
-				$results['block_json_data'] ?? array()
-			);
-
-			$refresh_lookup = array();
-			foreach ( $results['registerable'] as $reg_name => $reg_item ) {
-				$refresh_lookup[ $reg_name ] = $reg_item['block_json'];
-			}
-
-			foreach ( $results['registerable'] as $name => $item ) {
-				$discovered_names[] = $name;
-
-				if ( in_array( $name, $existing_block_names, true ) ) {
-					continue;
-				}
-
-				if ( $item['classification']['is_native'] ?? false ) {
-					$native_dir = dirname( $item['data']['path'] );
-					if ( ! \WP_Block_Type_Registry::get_instance()->is_registered( $name ) ) {
-						\register_block_type( $native_dir );
-					}
-					continue;
-				}
-
-				if ( Settings::get( 'assets/enqueue' ) ) {
-					self::process_block_assets(
-						$item['data'],
-						$name,
-						$instance,
-						false,
-						$registry
-					);
-				}
-
-				self::register_block_type(
-					$item['data'],
-					$item['block_json'],
-					$item['classification'],
-					$item['contents'],
-					$name,
+			$discovery        = new Block_Discovery();
+			$results          = $discovery->discover( $source, $instance, false );
+			$discovered_names = array_merge(
+				$discovered_names,
+				self::register_new_discovery_results(
 					$registry,
-					$refresh_lookup
-				);
-
-				$block = $registry->get_block( $name );
-				if ( $block && empty( $block->blockstudio['component'] ) ) {
-					\register_block_type(
-						apply_filters( 'blockstudio/blocks/meta', $block )
-					);
-				}
-			}
-
-			$new_store = array_diff_key( $results['store'], array_flip( $existing_block_names ) );
-			if ( ! empty( $new_store ) ) {
-				$registry->merge_data( $new_store );
-			}
+					$results,
+					$instance,
+					$existing_block_names
+				)
+			);
 		}
 
 		foreach ( $existing_block_names as $name ) {
@@ -1544,6 +1511,334 @@ class Build {
 				if ( \WP_Block_Type_Registry::get_instance()->is_registered( $name ) ) {
 					\WP_Block_Type_Registry::get_instance()->unregister( $name );
 				}
+			}
+		}
+	}
+
+	/**
+	 * Discover and register brand-new blocks only around changed source files.
+	 *
+	 * Existing blocks use refresh_blocks() with canonical names. This method is
+	 * the topology counterpart for live consumers: it scopes Block_Discovery to
+	 * the exact changed directories and never scans unrelated block directories.
+	 *
+	 * @since 7.6.0
+	 *
+	 * @param array<string> $paths Changed physical source files.
+	 *
+	 * @return array<int, string> Newly registered canonical block names.
+	 */
+	public static function refresh_block_paths( array $paths ): array {
+		$paths = array_values(
+			array_unique(
+				array_filter(
+					array_map(
+						static fn( mixed $path ): string => is_string( $path )
+							? wp_normalize_path( $path )
+							: '',
+						$paths
+					),
+					static fn( string $path ): bool => '' !== $path && is_file( $path )
+				)
+			)
+		);
+
+		if ( array() === $paths ) {
+			return array();
+		}
+
+		$registry = Block_Registry::instance();
+		$before   = array_fill_keys( array_keys( $registry->get_blocks() ), true );
+		$found    = array();
+
+		foreach ( $registry->get_instances() as $instance_data ) {
+			$instance_path = is_string( $instance_data['path'] ?? null )
+				? wp_normalize_path( $instance_data['path'] )
+				: '';
+
+			if ( '' === $instance_path ) {
+				continue;
+			}
+
+			$source      = Discovery_Sources::for_path( 'blocks', $instance_path );
+			$directories = array();
+			$all_entries = $source->entries();
+
+			foreach ( $all_entries as $entry ) {
+				if ( ! in_array( wp_normalize_path( $entry->physical_path() ), $paths, true ) ) {
+					continue;
+				}
+
+				$directory                 = dirname( Discovery_Sources::normalize_logical_path( $entry->logical_path() ) );
+				$directories[ $directory ] = true;
+			}
+
+			if ( array() === $directories ) {
+				continue;
+			}
+
+			$entries = array();
+
+			foreach ( $all_entries as $entry ) {
+				$logical = Discovery_Sources::normalize_logical_path( $entry->logical_path() );
+
+				foreach ( array_keys( $directories ) as $directory ) {
+					if ( '.' === $directory
+						|| $logical === $directory
+						|| str_starts_with( $logical, $directory . '/' )
+					) {
+						$entries[ $logical ] = $entry;
+						break;
+					}
+				}
+			}
+
+			$selected_source = new Inventory_Discovery_Source(
+				$source->id() . '#changed-topology:' . hash( 'sha256', implode( "\n", array_keys( $entries ) ) ),
+				$source->root(),
+				$entries,
+				null,
+				$paths
+			);
+			$instance        = self::get_instance_name( $instance_path );
+			$discovery       = new Block_Discovery();
+			$results         = $discovery->discover( $selected_source, $instance, false );
+
+			$found = array_merge(
+				$found,
+				self::register_new_discovery_results(
+					$registry,
+					$results,
+					$instance,
+					array_keys( $registry->get_blocks() )
+				)
+			);
+		}
+
+		$names = array_values(
+			array_unique(
+				array_filter(
+					$found,
+					static fn( string $name ): bool => ! isset( $before[ $name ] )
+						&& \WP_Block_Type_Registry::get_instance()->is_registered( $name )
+				)
+			)
+		);
+
+		/**
+		 * Fires after scoped changed-path topology discovery.
+		 *
+		 * @since 7.6.0
+		 *
+		 * @param array<int, string> $names Newly registered block names.
+		 * @param array<int, string> $paths Changed physical paths.
+		 */
+		do_action( 'blockstudio/blocks/topology_refreshed', $names, $paths );
+
+		return $names;
+	}
+
+	/**
+	 * Register only new block results from one already-scoped discovery pass.
+	 *
+	 * @param Block_Registry $registry             Block registry.
+	 * @param array          $results              Block_Discovery result.
+	 * @param string         $instance             Instance name.
+	 * @param array<string>  $existing_block_names Names that predate the pass.
+	 *
+	 * @return array<int, string> Discoverable names in this source.
+	 */
+	private static function register_new_discovery_results(
+		Block_Registry $registry,
+		array $results,
+		string $instance,
+		array $existing_block_names
+	): array {
+		self::filter_missing_plugin_dependencies(
+			$results['store'],
+			$results['registerable'],
+			$results['overrides'],
+			$results['block_json_data'] ?? array()
+		);
+
+		$refresh_lookup = array();
+
+		foreach ( $results['registerable'] as $name => $item ) {
+			$refresh_lookup[ $name ] = $item['block_json'];
+		}
+
+		foreach ( $results['registerable'] as $name => $item ) {
+			if ( in_array( $name, $existing_block_names, true ) ) {
+				continue;
+			}
+
+			if ( $item['classification']['is_native'] ?? false ) {
+				$native_dir = dirname( $item['data']['path'] );
+
+				if ( ! \WP_Block_Type_Registry::get_instance()->is_registered( $name ) ) {
+					\register_block_type( $native_dir );
+				}
+				continue;
+			}
+
+			if ( Settings::get( 'assets/enqueue' ) ) {
+				self::process_block_assets(
+					$item['data'],
+					$name,
+					$instance,
+					false,
+					$registry
+				);
+			}
+
+			self::register_block_type(
+				$item['data'],
+				$item['block_json'],
+				$item['classification'],
+				$item['contents'],
+				$name,
+				$registry,
+				$refresh_lookup
+			);
+
+			$block = $registry->get_block( $name );
+			if ( $block && empty( $block->blockstudio['component'] ) ) {
+				\register_block_type(
+					apply_filters( 'blockstudio/blocks/meta', $block )
+				);
+			}
+		}
+
+		$new_store = array_diff_key( $results['store'], array_flip( $existing_block_names ) );
+		if ( ! empty( $new_store ) ) {
+			$registry->merge_data( $new_store );
+		}
+
+		return array_keys( $results['registerable'] );
+	}
+
+	/**
+	 * Re-discover exact existing blocks without scanning unrelated directories.
+	 *
+	 * Unknown names intentionally remain untouched: locating a newly added
+	 * block requires a topology refresh, while a changed-only request must not
+	 * inspect unrelated source directories.
+	 *
+	 * @param Block_Registry $registry     Block registry.
+	 * @param array<string>  $only_blocks Existing canonical names.
+	 *
+	 * @return void
+	 */
+	private static function refresh_selected_blocks( Block_Registry $registry, array $only_blocks ): void {
+		$existing_data = $registry->get_data();
+
+		foreach ( $only_blocks as $requested_name ) {
+			$current = $existing_data[ $requested_name ] ?? null;
+
+			if ( ! is_array( $current ) ) {
+				continue;
+			}
+
+			$instance_path = isset( $current['instancePath'] ) && is_string( $current['instancePath'] )
+				? wp_normalize_path( $current['instancePath'] )
+				: '';
+			$logical_path  = isset( $current['logicalPath'] ) && is_string( $current['logicalPath'] )
+				? Discovery_Sources::normalize_logical_path( $current['logicalPath'] )
+				: '';
+
+			if ( '' === $instance_path || '' === $logical_path ) {
+				continue;
+			}
+
+			$logical_directory = dirname( $logical_path );
+			$logical_directory = '.' === $logical_directory ? '' : $logical_directory;
+			$source            = Discovery_Sources::for_path( 'blocks', $instance_path );
+			$entries           = array();
+
+			foreach ( $source->entries( $logical_directory, true ) as $entry ) {
+				$entry_path = Discovery_Sources::normalize_logical_path( $entry->logical_path() );
+
+				if ( '' === $logical_directory
+					|| $entry_path === $logical_directory
+					|| str_starts_with( $entry_path, $logical_directory . '/' )
+				) {
+					$entries[ $entry_path ] = $entry;
+				}
+			}
+
+			$selected_source = new Inventory_Discovery_Source(
+				$source->id() . '#block:' . $requested_name,
+				$source->root(),
+				$entries,
+				null,
+				$source->watch_paths()
+			);
+			$instance        = self::get_instance_name( $instance_path );
+			$discovery       = new Block_Discovery();
+			$results         = $discovery->discover( $selected_source, $instance, false );
+
+			$results['store']        = array_intersect_key( $results['store'], array( $requested_name => true ) );
+			$results['registerable'] = array_intersect_key( $results['registerable'], array( $requested_name => true ) );
+			$results['overrides']    = array_intersect_key( $results['overrides'], array( $requested_name => true ) );
+
+			self::filter_missing_plugin_dependencies(
+				$results['store'],
+				$results['registerable'],
+				$results['overrides'],
+				$results['block_json_data'] ?? array()
+			);
+
+			$registry->remove_block( $requested_name );
+
+			if ( \WP_Block_Type_Registry::get_instance()->is_registered( $requested_name ) ) {
+				\WP_Block_Type_Registry::get_instance()->unregister( $requested_name );
+			}
+
+			$item = $results['registerable'][ $requested_name ] ?? null;
+
+			if ( ! is_array( $item ) ) {
+				continue;
+			}
+
+			if ( $item['classification']['is_native'] ?? false ) {
+				$native_dir = dirname( $item['data']['path'] );
+				\register_block_type( $native_dir );
+				continue;
+			}
+
+			if ( Settings::get( 'assets/enqueue' ) ) {
+				self::process_block_assets(
+					$item['data'],
+					$requested_name,
+					$instance,
+					false,
+					$registry
+				);
+			}
+
+			$refresh_lookup = array(
+				$requested_name => $item['block_json'],
+			);
+
+			self::register_block_type(
+				$item['data'],
+				$item['block_json'],
+				$item['classification'],
+				$item['contents'],
+				$requested_name,
+				$registry,
+				$refresh_lookup
+			);
+
+			$block = $registry->get_block( $requested_name );
+			if ( $block && empty( $block->blockstudio['component'] ) ) {
+				\register_block_type(
+					apply_filters( 'blockstudio/blocks/meta', $block )
+				);
+			}
+
+			if ( isset( $results['store'][ $requested_name ] ) ) {
+				$registry->set_block_data( $requested_name, $results['store'][ $requested_name ] );
 			}
 		}
 	}

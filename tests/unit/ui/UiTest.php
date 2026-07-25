@@ -39,4 +39,36 @@ class UiTest extends TestCase {
 		$this->assertContains( BLOCKSTUDIO_DIR . '/includes/ui/blocks', $directories );
 		$this->assertContains( BLOCKSTUDIO_DIR . '/includes/ui/apps', $directories );
 	}
+
+	public function test_bundled_path_detection_is_consumer_neutral(): void {
+		$this->assertTrue(
+			Ui::is_bundled_block(
+				array(
+					'path' => BLOCKSTUDIO_DIR . '/includes/ui/blocks/button/root/index.php',
+				)
+			)
+		);
+		$this->assertFalse(
+			Ui::is_bundled_block(
+				array(
+					'path' => get_template_directory() . '/blockstudio/card/index.php',
+				)
+			)
+		);
+	}
+
+	public function test_global_assets_are_emitted_only_for_ui_output(): void {
+		$this->assertSame(
+			array(
+				'style'  => '',
+				'script' => '',
+			),
+			Ui::global_assets( array(), '<div>Theme block</div>' )
+		);
+
+		$assets = Ui::global_assets( array(), '<button data-bsui-button>Button</button>' );
+
+		$this->assertStringContainsString( '<style id="blockstudio-ui-global">', $assets['style'] );
+		$this->assertStringContainsString( '<script id="blockstudio-ui-global-script">', $assets['script'] );
+	}
 }

@@ -463,7 +463,7 @@ test.describe('Canvas', () => {
       expect(firstPage).toHaveProperty('content');
     });
 
-    test('targeted refresh with empty blocks skips block data entirely', async () => {
+    test('targeted refresh with empty blocks skips all omitted content types', async () => {
       const result = await page.evaluate(async () => {
         const apiFetch = (window as any).wp.apiFetch;
         return apiFetch({ path: '/blockstudio/v1/canvas/refresh?blocks=' });
@@ -472,7 +472,7 @@ test.describe('Canvas', () => {
       expect(result).toHaveProperty('pages');
       expect(result).toHaveProperty('blockstudioBlocks');
       expect(result.blockstudioBlocks).toEqual([]);
-      expect(result.pages.length).toBeGreaterThanOrEqual(4);
+      expect(result.pages).toEqual([]);
       expect(result.blocks).toEqual([]);
     });
 
@@ -487,6 +487,7 @@ test.describe('Canvas', () => {
         expect(entry.blockName).toBe('blockstudio/init');
       }
       expect(result.changedBlocks).toEqual(['blockstudio/init']);
+      expect(result.pages).toEqual([]);
 
       expect(result.blocks.length).toBe(1);
       expect(result.blocks[0].name).toBe('blockstudio/init');

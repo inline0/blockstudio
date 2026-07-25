@@ -1740,6 +1740,71 @@ class Pages {
 	}
 
 	/**
+	 * Render a page layout around arbitrary content.
+	 *
+	 * This is the programmatic counterpart to the frontend `the_content`
+	 * integration. It exposes the same `page_content()` and `current_page()`
+	 * context to `layout.php` without requiring a singular WordPress request.
+	 *
+	 * @since 7.6.0
+	 *
+	 * @param string $content     Rendered page content.
+	 * @param array  $page        Canonical page data.
+	 * @param string $layout_path Optional explicit layout path.
+	 *
+	 * @return string Rendered layout, or the original content when unavailable.
+	 */
+	public static function render_layout( string $content, array $page, string $layout_path = '' ): string {
+		if ( '' === $layout_path ) {
+			$layout_path = is_string( $page['layout_path'] ?? null )
+				? $page['layout_path']
+				: '';
+		}
+
+		if ( '' === $layout_path || ! is_file( $layout_path ) ) {
+			return $content;
+		}
+
+		$previous_rendering_layout = self::$rendering_layout;
+		$previous_current_page     = self::$current_page;
+		$previous_page_content     = self::$current_page_content;
+		$initial_buffer_level      = ob_get_level();
+
+		try {
+			self::$rendering_layout     = true;
+			self::$current_page         = $page;
+			self::$current_page_content = $content;
+
+			ob_start();
+			include $layout_path;
+			$rendered = ob_get_clean();
+
+			return false === $rendered ? $content : $rendered;
+		} catch ( \Throwable $throwable ) {
+			while ( ob_get_level() > $initial_buffer_level ) {
+				ob_end_clean();
+			}
+
+			/**
+			 * Fires when a programmatic page layout cannot be rendered.
+			 *
+			 * @since 7.6.0
+			 *
+			 * @param \Throwable $throwable  Rendering failure.
+			 * @param string     $layout_path Layout file.
+			 * @param array      $page         Canonical page data.
+			 */
+			do_action( 'blockstudio/pages/layout_error', $throwable, $layout_path, $page );
+
+			return $content;
+		} finally {
+			self::$rendering_layout     = $previous_rendering_layout;
+			self::$current_page         = $previous_current_page;
+			self::$current_page_content = $previous_page_content;
+		}
+	}
+
+	/**
 	 * Render collection layout.php around frontend page content.
 	 *
 	 * @param string $content Original post content.
@@ -1765,19 +1830,7 @@ class Pages {
 
 		$page = self::page_for_post_id( $post_id );
 
-		self::$rendering_layout     = true;
-		self::$current_page         = $page;
-		self::$current_page_content = $content;
-
-		ob_start();
-		include $layout_path;
-		$layout_content = ob_get_clean();
-
-		self::$current_page         = null;
-		self::$current_page_content = '';
-		self::$rendering_layout     = false;
-
-		return false === $layout_content ? $content : $layout_content;
+		return self::render_layout( $content, is_array( $page ) ? $page : array(), $layout_path );
 	}
 
 	/**
@@ -1895,6 +1948,17 @@ class Pages {
 		$page = Page_Registry::instance()->get_page( $name );
 
 		return $page['post_id'] ?? null;
+	}
+
+	/**
+	 * Get page discovery and sync errors.
+	 *
+	 * @since 7.6.0
+	 *
+	 * @return array<int, array> Errors.
+	 */
+	public static function errors(): array {
+		return Page_Registry::instance()->get_errors();
 	}
 
 	/**

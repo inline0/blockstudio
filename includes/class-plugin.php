@@ -129,6 +129,7 @@ class Plugin {
 		require_once $classes_dir . 'block-editor-policy.php';
 		require_once $classes_dir . 'block.php';
 		require_once $classes_dir . 'islands.php';
+		require_once $classes_dir . 'render-document.php';
 		require_once $classes_dir . 'render.php';
 		require_once $classes_dir . 'build.php';
 		require_once $classes_dir . 'populate.php';
@@ -143,6 +144,7 @@ class Plugin {
 		require_once $classes_dir . 'template-compiler.php';
 		require_once $classes_dir . 'admin.php';
 		require_once $classes_dir . 'devtools.php';
+		require_once $classes_dir . 'canvas-data.php';
 		require_once $classes_dir . 'canvas.php';
 		require_once $classes_dir . 'ui.php';
 		require_once $classes_dir . 'blocks.php';

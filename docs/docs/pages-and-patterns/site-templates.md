@@ -213,6 +213,26 @@ $header = Blockstudio\Site_Templates::get_part('header');
 $paths = Blockstudio\Site_Templates::get_paths();
 ```
 
+Pass an explicit list to read and compile only exact slugs, paths, or source
+paths:
+
+```php
+$templates = Blockstudio\Site_Templates::templates([
+    'front-page',
+]);
+
+$parts = Blockstudio\Site_Templates::parts([
+    'header',
+]);
+
+$errors = Blockstudio\Site_Templates::selection_errors('templates');
+```
+
+Omitting the argument preserves complete registry behavior. Passing an empty
+list returns no items. Conventional slug and path requests narrow discovery to
+their matching directories; custom manifest slugs may require a metadata scan,
+but unrelated sources are still not compiled or returned.
+
 Template helper functions are also available:
 
 ```php
@@ -237,6 +257,7 @@ The full Site Template extension surface is:
 | `blockstudio/site_templates/template_content` | Filter | Adjust compiled full-template source before parsing. |
 | `blockstudio/site_templates/part_content` | Filter | Adjust compiled template-part source before parsing. |
 | `blockstudio/site_templates/parser` | Filter | Replace the `Html_Parser` instance for one item. |
+| `blockstudio/site_templates/source_compiled` | Action | Runs immediately before one selected source is compiled. |
 | `blockstudio/site_templates/discovered` | Action | Runs after a cold discovery and compilation pass. |
 | `blockstudio/site_templates/registered` | Action | Runs after that rebuilt registry has been persisted. |
 

@@ -4,7 +4,7 @@ description: Page collections, Markdown page sources, Content Sync, block tag pr
 date: "2026-06-21"
 author: Dennis
 path: "blockstudio-7-4"
-order: 2
+order: 3
 section: "Blog"
 meta_title: "Blockstudio 7.4"
 meta_description: "Page collections, Markdown page sources, Content Sync, block tag prefixes, and runtime and editor fixes."

@@ -4,7 +4,7 @@ description: Bundled UI components, expanded editing, plugin dependencies, edito
 date: "2026-05-19"
 author: Dennis
 path: "blockstudio-7-3"
-order: 3
+order: 4
 section: "Blog"
 meta_title: "Blockstudio 7.3"
 meta_description: "Bundled UI components, expanded editing, plugin dependencies, editor policies, and a more reliable parsing pipeline."

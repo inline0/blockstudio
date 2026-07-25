@@ -4,7 +4,7 @@ description: RPC, database, cron, components, and more new features turning bloc
 date: "2026-03-14"
 author: Dennis
 path: "blockstudio-7-1"
-order: 5
+order: 6
 section: "Blog"
 meta_title: "Blockstudio 7.1"
 meta_description: "RPC, database, cron, components, and more new features turning blocks into full-stack applications."

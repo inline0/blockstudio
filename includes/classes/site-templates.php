@@ -50,6 +50,16 @@ final class Site_Templates {
 	private static int $discovery_runs = 0;
 
 	/**
+	 * Errors from the most recent exact selection, keyed by item family.
+	 *
+	 * @var array{templates: array<int, array>, parts: array<int, array>}
+	 */
+	private static array $selection_errors = array(
+		'templates' => array(),
+		'parts'     => array(),
+	);
+
+	/**
 	 * Initialize the Site Editor template provider.
 	 *
 	 * @return void
@@ -197,9 +207,27 @@ final class Site_Templates {
 	/**
 	 * Get file-backed templates.
 	 *
+	 * Passing an explicit selection keeps discovery and compilation scoped to
+	 * those identifiers. `null` preserves the complete registry behavior.
+	 *
+	 * @param array<int, string>|null $only Exact slugs, paths, or source paths.
+	 *
 	 * @return array<string, array> Templates.
 	 */
-	public static function templates(): array {
+	public static function templates( ?array $only = null ): array {
+		if ( null !== $only ) {
+			$templates = self::selected_items( false, $only );
+
+			/**
+			 * Filter selected Site Editor templates.
+			 *
+			 * @param array $templates Templates indexed by slug.
+			 */
+			$templates = apply_filters( 'blockstudio/site_templates/templates', $templates );
+
+			return self::filter_selected_items( is_array( $templates ) ? $templates : array(), $only );
+		}
+
 		self::ensure_loaded();
 
 		$templates = Site_Template_Registry::instance()->get_templates();
@@ -215,9 +243,27 @@ final class Site_Templates {
 	/**
 	 * Get file-backed template parts.
 	 *
+	 * Passing an explicit selection keeps discovery and compilation scoped to
+	 * those identifiers. `null` preserves the complete registry behavior.
+	 *
+	 * @param array<int, string>|null $only Exact slugs, paths, or source paths.
+	 *
 	 * @return array<string, array> Template parts.
 	 */
-	public static function parts(): array {
+	public static function parts( ?array $only = null ): array {
+		if ( null !== $only ) {
+			$parts = self::selected_items( true, $only );
+
+			/**
+			 * Filter selected Site Editor template parts.
+			 *
+			 * @param array $parts Template parts indexed by slug.
+			 */
+			$parts = apply_filters( 'blockstudio/site_templates/parts', $parts );
+
+			return self::filter_selected_items( is_array( $parts ) ? $parts : array(), $only );
+		}
+
 		self::ensure_loaded();
 
 		$parts = Site_Template_Registry::instance()->get_parts();
@@ -321,6 +367,24 @@ final class Site_Templates {
 	}
 
 	/**
+	 * Get errors from the most recent exact selection without loading all items.
+	 *
+	 * @param string|null $type Optional `templates` or `parts` family.
+	 *
+	 * @return array<int, array> Errors.
+	 */
+	public static function selection_errors( ?string $type = null ): array {
+		if ( in_array( $type, array( 'templates', 'parts' ), true ) ) {
+			return self::$selection_errors[ $type ];
+		}
+
+		return array_merge(
+			self::$selection_errors['templates'],
+			self::$selection_errors['parts']
+		);
+	}
+
+	/**
 	 * Get the number of discovery scans run this request.
 	 *
 	 * @return int Discovery run count.
@@ -336,8 +400,255 @@ final class Site_Templates {
 	 */
 	public static function reset(): void {
 		Site_Template_Registry::reset();
-		self::$loaded         = false;
-		self::$discovery_runs = 0;
+		self::$loaded           = false;
+		self::$discovery_runs   = 0;
+		self::$selection_errors = array(
+			'templates' => array(),
+			'parts'     => array(),
+		);
+	}
+
+	/**
+	 * Discover and compile only explicitly requested templates or parts.
+	 *
+	 * Exact conventional slugs and physical paths first narrow each discovery
+	 * source to the matching directories. A custom manifest slug falls back to
+	 * metadata discovery, but compilation and returned records remain exact.
+	 *
+	 * @param bool               $parts Whether to select template parts.
+	 * @param array<int, string> $only  Exact identifiers.
+	 *
+	 * @return array<string, array> Selected items.
+	 */
+	private static function selected_items( bool $parts, array $only ): array {
+		$type = $parts ? 'parts' : 'templates';
+		$only = self::normalize_identifiers( $only );
+
+		self::$selection_errors[ $type ] = array();
+
+		if ( array() === $only ) {
+			return array();
+		}
+
+		$registry = Site_Template_Registry::instance();
+
+		if ( self::$loaded ) {
+			$items = $parts ? $registry->get_parts() : $registry->get_templates();
+			return self::filter_selected_items( $items, $only );
+		}
+
+		$paths   = self::get_paths();
+		$key     = $parts ? 'parts' : 'templates';
+		$context = $parts ? 'site-template-parts' : 'site-templates';
+		$sources = Discovery_Sources::for_paths( $context, $paths[ $key ] );
+		$sources = self::scope_sources( $sources, $only );
+
+		++self::$discovery_runs;
+
+		$discovery = new Site_Template_Discovery();
+		$found     = $discovery->discover(
+			$parts ? array() : $sources,
+			$parts ? $sources : array()
+		);
+		$items     = $parts ? $found['parts'] : $found['templates'];
+		$items     = self::filter_selected_items( $items, $only );
+
+		self::$selection_errors[ $type ] = self::filter_selection_errors(
+			$discovery->get_errors(),
+			$only
+		);
+
+		return self::compile_items( $items );
+	}
+
+	/**
+	 * Normalize exact selection identifiers.
+	 *
+	 * @param array $identifiers Identifiers.
+	 *
+	 * @return array<int, string> Identifiers.
+	 */
+	private static function normalize_identifiers( array $identifiers ): array {
+		return array_values(
+			array_unique(
+				array_filter(
+					array_map(
+						static fn( mixed $identifier ): string => is_scalar( $identifier )
+							? trim( wp_normalize_path( (string) $identifier ) )
+							: '',
+						$identifiers
+					)
+				)
+			)
+		);
+	}
+
+	/**
+	 * Keep only records matching exact public identifiers.
+	 *
+	 * @param array              $items       Items indexed by slug.
+	 * @param array<int, string> $identifiers Identifiers.
+	 *
+	 * @return array<string, array> Selected items.
+	 */
+	private static function filter_selected_items( array $items, array $identifiers ): array {
+		$identifiers = self::normalize_identifiers( $identifiers );
+		$selected    = array();
+
+		foreach ( $items as $key => $item ) {
+			if ( ! is_array( $item ) ) {
+				continue;
+			}
+
+			$candidates = array( is_scalar( $key ) ? (string) $key : '' );
+
+			foreach ( array( 'slug', 'name', 'source_path', 'manifest_path', 'logical_path', 'directory' ) as $field ) {
+				if ( is_scalar( $item[ $field ] ?? null ) ) {
+					$candidates[] = (string) $item[ $field ];
+				}
+			}
+
+			if ( self::identifiers_match( $identifiers, $candidates ) ) {
+				$selected[ (string) $key ] = $item;
+			}
+		}
+
+		return $selected;
+	}
+
+	/**
+	 * Narrow conventional slug/path selections before manifest discovery.
+	 *
+	 * If any identifier cannot be mapped safely, the original sources are
+	 * returned so custom manifest slugs remain supported. Record filtering
+	 * still happens before source compilation.
+	 *
+	 * @param array<int, Discovery_Source> $sources     Discovery sources.
+	 * @param array<int, string>           $identifiers Identifiers.
+	 *
+	 * @return array<int, Discovery_Source> Sources.
+	 */
+	private static function scope_sources( array $sources, array $identifiers ): array {
+		$matched = array_fill_keys( $identifiers, false );
+		$scoped  = array();
+
+		foreach ( $sources as $source ) {
+			$directories = array();
+			$entries     = $source->entries();
+
+			foreach ( $entries as $entry ) {
+				$logical    = Discovery_Sources::normalize_logical_path( $entry->logical_path() );
+				$directory  = dirname( $logical );
+				$directory  = '.' === $directory ? '' : $directory;
+				$physical   = wp_normalize_path( $entry->physical_path() );
+				$candidates = array(
+					$logical,
+					$physical,
+					$directory,
+					wp_normalize_path( dirname( $physical ) ),
+					basename( $directory ),
+				);
+
+				foreach ( $identifiers as $identifier ) {
+					if ( self::identifiers_match( array( $identifier ), $candidates ) ) {
+						$matched[ $identifier ]    = true;
+						$directories[ $directory ] = true;
+					}
+				}
+			}
+
+			if ( array() === $directories ) {
+				continue;
+			}
+
+			$selected_entries = array();
+
+			foreach ( $entries as $entry ) {
+				$logical = Discovery_Sources::normalize_logical_path( $entry->logical_path() );
+
+				foreach ( array_keys( $directories ) as $directory ) {
+					if ( '' === $directory
+						|| $logical === $directory
+						|| str_starts_with( $logical, $directory . '/' )
+					) {
+						$selected_entries[ $logical ] = $entry;
+						break;
+					}
+				}
+			}
+
+			$scoped[] = new Inventory_Discovery_Source(
+				$source->id() . '#selection:' . hash( 'sha256', implode( "\n", array_keys( $selected_entries ) ) ),
+				$source->root(),
+				$selected_entries,
+				null,
+				$source->watch_paths(),
+				array_keys( $directories )
+			);
+		}
+
+		return in_array( false, $matched, true ) ? $sources : $scoped;
+	}
+
+	/**
+	 * Check exact paths and normalized slugs for a selection match.
+	 *
+	 * @param array<int, string> $identifiers Identifiers.
+	 * @param array<int, string> $candidates  Candidate values.
+	 *
+	 * @return bool Whether any value matches.
+	 */
+	private static function identifiers_match( array $identifiers, array $candidates ): bool {
+		foreach ( $identifiers as $identifier ) {
+			$identifier = trim( wp_normalize_path( $identifier ) );
+			$slug       = Site_Template_Discovery::normalize_slug( $identifier );
+
+			foreach ( $candidates as $candidate ) {
+				$candidate = trim( wp_normalize_path( $candidate ) );
+
+				if ( '' !== $candidate && $identifier === $candidate ) {
+					return true;
+				}
+
+				if ( null !== $slug && Site_Template_Discovery::normalize_slug( $candidate ) === $slug ) {
+					return true;
+				}
+			}
+		}
+
+		return false;
+	}
+
+	/**
+	 * Keep discovery errors that belong to selected paths or slugs.
+	 *
+	 * @param array              $errors      Discovery errors.
+	 * @param array<int, string> $identifiers Identifiers.
+	 *
+	 * @return array<int, array> Errors.
+	 */
+	private static function filter_selection_errors( array $errors, array $identifiers ): array {
+		return array_values(
+			array_filter(
+				$errors,
+				static function ( mixed $error ) use ( $identifiers ): bool {
+					if ( ! is_array( $error ) ) {
+						return false;
+					}
+
+					$context    = is_array( $error['context'] ?? null ) ? $error['context'] : array();
+					$candidates = array();
+
+					foreach ( array( 'slug', 'path', 'source_path', 'manifest_path' ) as $field ) {
+						if ( is_scalar( $context[ $field ] ?? null ) ) {
+							$candidates[] = (string) $context[ $field ];
+						}
+					}
+
+					return self::identifiers_match( $identifiers, $candidates );
+				}
+			)
+		);
 	}
 
 	/**
@@ -426,6 +737,16 @@ final class Site_Templates {
 		if ( ! is_string( $source_path ) || ! is_file( $source_path ) ) {
 			return '';
 		}
+
+		/**
+		 * Fires immediately before one selected Site Editor source is compiled.
+		 *
+		 * @since 7.6.0
+		 *
+		 * @param string $source_path Physical source path.
+		 * @param array  $item        Template or part record.
+		 */
+		do_action( 'blockstudio/site_templates/source_compiled', $source_path, $item );
 
 		$content = Template_Compiler::compile(
 			$source_path,
