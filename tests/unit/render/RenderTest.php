@@ -118,6 +118,38 @@ class RenderTest extends TestCase {
 		$this->assertSame( array(), $document['errors'] );
 	}
 
+	public function test_document_can_wrap_content_in_a_semantic_element(): void {
+		$document = Render::document_from_html(
+			'<p>Preview content</p>',
+			array(),
+			array(
+				'contentElement'    => 'main',
+				'contentClasses'    => array( 'canvas-preview', 'canvas-preview' ),
+				'contentAttributes' => array(
+					'data-preview' => 'true',
+					'hidden'       => false,
+				),
+			)
+		);
+
+		$this->assertSame( '<p>Preview content</p>', $document['body'] );
+		$this->assertStringContainsString(
+			'<main data-preview="true" class="canvas-preview"><p>Preview content</p></main>',
+			$document['html']
+		);
+	}
+
+	public function test_document_ignores_an_unsafe_content_element(): void {
+		$document = Render::document_from_html(
+			'<p>Preview content</p>',
+			array(),
+			array( 'contentElement' => 'script' )
+		);
+
+		$this->assertStringNotContainsString( '<script><p>Preview content</p></script>', $document['html'] );
+		$this->assertStringContainsString( '<body><p>Preview content</p></body>', $document['html'] );
+	}
+
 	public function test_document_closes_nested_template_dependencies(): void {
 		$name       = 'blockstudio/type-block-tags-kitchen-sink';
 		$dependency = 'blockstudio/type-block-tags-default';

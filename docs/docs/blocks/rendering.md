@@ -54,6 +54,8 @@ $normalized = Render::normalize($composition);
 $html = Render::composition($composition);
 $document = Render::document($composition, [
   'title' => 'Component preview',
+  'contentElement' => 'main',
+  'contentClasses' => ['component-preview'],
 ]);
 ```
 
@@ -77,6 +79,11 @@ through the same Blockstudio pipeline.
 `footer`, `styles`, `scripts`, `modules`, `interactivity`, `ui`, and `tailwind`.
 The block list and assets include dependencies referenced by selected templates,
 but exclude unrelated and editor-only assets.
+
+Complete documents may set `bodyClasses`/`bodyAttributes` and optionally wrap
+the rendered body with `contentElement`, `contentClasses`, and
+`contentAttributes`. The wrapper is restricted to a safe element name; the
+returned `body` remains the unwrapped rendered content.
 
 To assemble a document around HTML that is already rendered, provide its known
 root block names:

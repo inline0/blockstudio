@@ -598,8 +598,9 @@ final class Canvas_Data {
 		$content = Render::content( self::record_string( $item, 'content' ) );
 
 		if ( 'pages' === $type ) {
-			$page    = is_array( $item['page'] ?? null ) ? $item['page'] : array();
-			$content = Pages::render_layout(
+			$document_options['contentElement'] = $document_options['contentElement'] ?? 'main';
+			$page                               = is_array( $item['page'] ?? null ) ? $item['page'] : array();
+			$content                            = Pages::render_layout(
 				$content,
 				$page,
 				self::record_string( $item, 'layoutPath' )

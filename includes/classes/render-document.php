@@ -66,6 +66,7 @@ final class Render_Document {
 		$lang       = self::option_string( $options, 'lang', function_exists( 'get_bloginfo' ) ? (string) get_bloginfo( 'language' ) : 'en' );
 		$head_extra = self::option_string( $options, 'head', '' );
 		$body_attrs = self::body_attributes( $options );
+		$content    = self::content_markup( $body, $options );
 
 		$document = '<!doctype html><html lang="' . esc_attr( $lang ) . '"><head>'
 			. '<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">'
@@ -73,7 +74,7 @@ final class Render_Document {
 			. $head_extra
 			. $head
 			. '</head><body' . $body_attrs . '>'
-			. $body
+			. $content
 			. $footer
 			. '</body></html>';
 
@@ -562,8 +563,49 @@ final class Render_Document {
 	 * @return string Attribute string including leading space.
 	 */
 	private static function body_attributes( array $options ): string {
-		$attributes = $options['bodyAttributes'] ?? array();
-		$classes    = $options['bodyClasses'] ?? array();
+		return self::element_attributes(
+			$options['bodyAttributes'] ?? array(),
+			$options['bodyClasses'] ?? array()
+		);
+	}
+
+	/**
+	 * Wrap rendered content in an optional semantic document element.
+	 *
+	 * @param string $body    Rendered body.
+	 * @param array  $options Options.
+	 *
+	 * @return string Content markup.
+	 */
+	private static function content_markup( string $body, array $options ): string {
+		$element = strtolower( trim( self::option_string( $options, 'contentElement', '' ) ) );
+
+		if ( '' === $element ) {
+			return $body;
+		}
+
+		$blocked = array( 'html', 'head', 'body', 'base', 'link', 'meta', 'script', 'style', 'title' );
+		if ( ! preg_match( '/^[a-z][a-z0-9-]*$/', $element ) || in_array( $element, $blocked, true ) ) {
+			return $body;
+		}
+
+		$attributes = self::element_attributes(
+			$options['contentAttributes'] ?? array(),
+			$options['contentClasses'] ?? array()
+		);
+
+		return '<' . $element . $attributes . '>' . $body . '</' . $element . '>';
+	}
+
+	/**
+	 * Serialize safe element attributes and classes.
+	 *
+	 * @param mixed $attributes Attributes.
+	 * @param mixed $classes    Classes.
+	 *
+	 * @return string Attribute string including leading space.
+	 */
+	private static function element_attributes( mixed $attributes, mixed $classes = array() ): string {
 
 		if ( is_string( $classes ) ) {
 			$classes = preg_split( '/\s+/', trim( $classes ) );

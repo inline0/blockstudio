@@ -354,6 +354,23 @@ class CanvasTest extends TestCase {
 		$this->assertSame( array(), $result['documents']['pages'] );
 	}
 
+	public function test_targeted_page_document_uses_a_semantic_main_element(): void {
+		$page = $this->first_page_id();
+
+		if ( null === $page ) {
+			$this->markTestSkipped( 'A page fixture is required.' );
+		}
+
+		$this->add_filter_callback( 'blockstudio/settings/tailwind/enabled', '__return_false' );
+
+		$result   = Canvas::documents( array( 'pages' => array( $page ) ) );
+		$document = $result['documents']['pages'][0]['document'] ?? array();
+
+		$this->assertSame( $page, $result['documents']['pages'][0]['id'] ?? null );
+		$this->assertStringContainsString( '<main>', $document['html'] ?? '' );
+		$this->assertStringContainsString( '</main>', $document['html'] ?? '' );
+	}
+
 	public function test_targeted_pattern_compiles_only_the_selected_source(): void {
 		$registry        = Pattern_Registry::instance();
 		$original        = $registry->get_patterns();

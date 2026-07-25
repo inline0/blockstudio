@@ -92,7 +92,8 @@ contain:
 `Canvas::documents()` adds one complete render document per selected record.
 Each document contains its body, assembled HTML, dependency-closed block names,
 and exact CSS, JavaScript, modules, interactivity bootstrap, bundled UI globals,
-and Tailwind output.
+and Tailwind output. Page documents use a semantic `<main>` content wrapper;
+callers can override or disable it through the shared Render document options.
 
 ### Exact selection semantics
 
