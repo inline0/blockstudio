@@ -133,6 +133,14 @@ class Plugin {
 		require_once $classes_dir . 'link-preload.php';
 		require_once $classes_dir . 'performance-measurement.php';
 		require_once $classes_dir . 'wordpress-optimizations.php';
+		require_once $classes_dir . 'runtime-cache.php';
+		require_once $classes_dir . 'static-prerender-content-hasher.php';
+		require_once $classes_dir . 'static-prerender-identity.php';
+		require_once $classes_dir . 'static-prerender-miss-lock.php';
+		require_once $classes_dir . 'static-prerender-warm-queue.php';
+		require_once $classes_dir . 'static-prerender-batch-renderer.php';
+		require_once $classes_dir . 'static-prerender-early-serve.php';
+		require_once $classes_dir . 'static-prerender-runtime.php';
 		require_once $classes_dir . 'runtime.php';
 		require_once $classes_dir . 'build-cache.php';
 		require_once $classes_dir . 'block-editor-policy.php';

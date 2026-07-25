@@ -1037,7 +1037,14 @@ JS;
 					'name'       => $name,
 					'attributes' => self::sort_recursive( $attributes ),
 					'scope'      => $scope,
-					'version'    => BLOCKSTUDIO_VERSION,
+					'runtime'    => Runtime_Context::hash(
+						'island-fragment',
+						array( 'blocks' ),
+						array(
+							'block' => $name,
+							'cache' => $cache,
+						)
+					),
 				)
 			)
 		);

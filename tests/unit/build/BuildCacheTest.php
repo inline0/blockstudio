@@ -139,10 +139,13 @@ class BuildCacheTest extends TestCase {
 		add_filter( 'blockstudio/settings/cache/path', $filter );
 
 		try {
-			$this->assertSame(
-				wp_normalize_path( WP_CONTENT_DIR . '/custom-cache/blockstudio/runtime' ),
-				Build_Cache::get_cache_dir( 'runtime' )
+			$directory = Build_Cache::get_cache_dir( 'runtime' );
+
+			$this->assertStringStartsWith(
+				wp_normalize_path( WP_CONTENT_DIR . '/custom-cache/blockstudio/sites/network-' ),
+				$directory
 			);
+			$this->assertStringEndsWith( '/runtime', $directory );
 		} finally {
 			remove_filter( 'blockstudio/settings/cache/path', $filter );
 		}
@@ -169,10 +172,10 @@ class BuildCacheTest extends TestCase {
 		add_filter( 'blockstudio/cache/dir', $dir_filter );
 
 		try {
-			$this->assertSame(
-				$filter_path . '/editor-assets',
-				Build_Cache::get_cache_dir( 'editor-assets' )
-			);
+			$directory = Build_Cache::get_cache_dir( 'editor-assets' );
+
+			$this->assertStringStartsWith( $filter_path . '/sites/network-', $directory );
+			$this->assertStringEndsWith( '/editor-assets', $directory );
 		} finally {
 			remove_filter( 'blockstudio/settings/cache/path', $setting_path );
 			remove_filter( 'blockstudio/cache/dir', $dir_filter );
@@ -196,12 +199,13 @@ class BuildCacheTest extends TestCase {
 	public function test_failed_atomic_rename_returns_false_without_warning(): void {
 		$directory  = $this->create_temporary_directory();
 		$dir_filter = static fn (): string => $directory;
-		$target     = $directory . '/runtime/rename-collision.php';
 
-		wp_mkdir_p( $target );
 		add_filter( 'blockstudio/cache/dir', $dir_filter );
 
 		try {
+			$target = Build_Cache::get_cache_dir( 'runtime' ) . '/rename-collision.php';
+			wp_mkdir_p( $target );
+
 			$this->assertFalse(
 				Build_Cache::write(
 					'runtime',

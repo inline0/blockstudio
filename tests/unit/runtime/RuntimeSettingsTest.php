@@ -122,9 +122,11 @@ class RuntimeSettingsTest extends TestCase {
 	 * @param array<string, mixed> $settings Settings payload.
 	 */
 	private function write( array $settings ): void {
+		$payload = array() === $settings ? (object) array() : $settings;
+
 		file_put_contents(
 			$this->path,
-			wp_json_encode( $settings, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES ) . "\n"
+			wp_json_encode( $payload, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES ) . "\n"
 		);
 		Settings::reload();
 		Runtime_Settings::reset();

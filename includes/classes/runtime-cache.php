@@ -1,0 +1,611 @@
+<?php
+/**
+ * Runtime cache class.
+ *
+ * @package Blockstudio
+ */
+
+namespace Blockstudio;
+
+/**
+ * Shared filesystem boundary for Blockstudio runtime caches and generated state.
+ *
+ * Every persistent runtime scope resolves beneath one configured writable root
+ * and a site/context namespace. The class provides the common atomic-write,
+ * single-flight, stale-last-good, pruning, and diagnostic behavior used by
+ * build, Tailwind, render, fragment, and static-prerender caches.
+ *
+ * @since 7.6.0
+ */
+final class Runtime_Cache {
+
+	/**
+	 * Default maximum number of objects retained per scope.
+	 *
+	 * @var int
+	 */
+	private const DEFAULT_MAX_OBJECTS = 1000;
+
+	/**
+	 * Wait budget for a concurrent builder.
+	 *
+	 * @var int
+	 */
+	private const WAIT_BUDGET_MS = 4000;
+
+	/**
+	 * Request-local diagnostics.
+	 *
+	 * @var array<string, array<string, int>>
+	 */
+	private static array $diagnostics = array();
+
+	/**
+	 * Resolve the configured writable cache root.
+	 *
+	 * Relative paths are contained within WP_CONTENT_DIR. Absolute paths are
+	 * supported for hosts with a dedicated cache volume.
+	 *
+	 * @return string Normalized cache root.
+	 */
+	public static function root(): string {
+		$default = wp_normalize_path( WP_CONTENT_DIR . '/blockstudio/cache' );
+		$base    = self::resolve_root( Settings::get( 'cache/path', 'blockstudio/cache' ), $default );
+
+		/**
+		 * Filter the shared Blockstudio runtime cache root.
+		 *
+		 * @since 7.6.0
+		 *
+		 * @param string $base Resolved cache root.
+		 */
+		$filtered = apply_filters( 'blockstudio/cache/dir', $base );
+
+		return self::resolve_root( $filtered, $base );
+	}
+
+	/**
+	 * Resolve one cache scope beneath the current site/context namespace.
+	 *
+	 * @param string $scope Cache scope.
+	 *
+	 * @return string Scope directory.
+	 */
+	public static function directory( string $scope ): string {
+		$scope = sanitize_key( $scope );
+
+		if ( '' === $scope ) {
+			return self::root();
+		}
+
+		return self::root()
+			. '/sites/'
+			. self::site_key()
+			. '/'
+			. Runtime_Context::namespace( $scope )
+			. '/'
+			. $scope;
+	}
+
+	/**
+	 * Resolve a safe object path in one scope.
+	 *
+	 * @param string $scope     Cache scope.
+	 * @param string $key       Cache key.
+	 * @param string $extension File extension.
+	 *
+	 * @return string Object path.
+	 */
+	public static function path( string $scope, string $key, string $extension = 'cache' ): string {
+		$key       = sanitize_file_name( $key );
+		$extension = sanitize_key( $extension );
+
+		if ( '' === $key ) {
+			$key = hash( 'sha256', $scope );
+		}
+		if ( '' === $extension ) {
+			$extension = 'cache';
+		}
+
+		return self::directory( $scope ) . '/' . $key . '.' . $extension;
+	}
+
+	/**
+	 * Build a deterministic object key under the shared runtime identity.
+	 *
+	 * @param string              $scope        Cache scope.
+	 * @param array<string,mixed> $inputs       Object-specific identity.
+	 * @param string[]            $discovery    Discovery context names.
+	 * @param array<string,mixed> $dependencies Optional dependency identities.
+	 *
+	 * @return string SHA-256 key.
+	 */
+	public static function key( string $scope, array $inputs, array $discovery = array(), array $dependencies = array() ): string {
+		$identity = array(
+			'runtime' => Runtime_Context::identity( $scope, $discovery, $dependencies ),
+			'inputs'  => self::normalize_identity( $inputs ),
+		);
+		$encoded  = wp_json_encode( $identity, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE );
+
+		return hash( 'sha256', is_string( $encoded ) ? $encoded : '' );
+	}
+
+	/**
+	 * Atomically publish one cache object.
+	 *
+	 * @param string $scope     Cache scope.
+	 * @param string $key       Cache key.
+	 * @param string $contents  Object contents.
+	 * @param string $extension File extension.
+	 *
+	 * @return bool Whether the object was published.
+	 */
+	public static function write( string $scope, string $key, string $contents, string $extension = 'cache' ): bool {
+		$path = self::path( $scope, $key, $extension );
+
+		if ( ! Single_Flight::publish( $path, $contents ) ) {
+			self::record( $scope, 'write-failure' );
+
+			return false;
+		}
+
+		self::record( $scope, 'write' );
+		self::prune( $scope, $path );
+
+		return true;
+	}
+
+	/**
+	 * Read one cache object.
+	 *
+	 * @param string $scope     Cache scope.
+	 * @param string $key       Cache key.
+	 * @param int    $ttl       Maximum age in seconds. Zero disables expiry.
+	 * @param string $extension File extension.
+	 *
+	 * @return string|null Object contents or null on miss/expiry/read failure.
+	 */
+	public static function read( string $scope, string $key, int $ttl = 0, string $extension = 'cache' ): ?string {
+		$path = self::path( $scope, $key, $extension );
+
+		if ( ! is_file( $path ) ) {
+			self::record( $scope, 'miss-absent' );
+
+			return null;
+		}
+
+		if ( $ttl > 0 && (int) filemtime( $path ) < time() - $ttl ) {
+			self::record( $scope, 'miss-stale' );
+
+			return null;
+		}
+
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Reading a local runtime cache object.
+		$contents = file_get_contents( $path );
+
+		if ( false === $contents || '' === $contents ) {
+			self::record( $scope, 'miss-unreadable' );
+
+			return null;
+		}
+
+		self::record( $scope, 'hit' );
+
+		return $contents;
+	}
+
+	/**
+	 * Read or build one deterministic object with stale-last-good recovery.
+	 *
+	 * The first request to a cold or expired key becomes the builder. Concurrent
+	 * requests wait for its atomic publish. If the builder fails, expired content
+	 * remains available for this request as last-good output.
+	 *
+	 * @param string        $scope     Cache scope.
+	 * @param string        $key       Cache key.
+	 * @param callable      $builder   Returns object contents or null/empty on failure.
+	 * @param int           $ttl       Maximum age in seconds. Zero disables expiry.
+	 * @param string        $extension File extension.
+	 * @param callable|null $validate  Optional content validator.
+	 *
+	 * @return array{value:string|null,state:string,reason:string}
+	 */
+	public static function remember(
+		string $scope,
+		string $key,
+		callable $builder,
+		int $ttl = 0,
+		string $extension = 'cache',
+		?callable $validate = null
+	): array {
+		$path     = self::path( $scope, $key, $extension );
+		$current  = self::read_file( $path );
+		$is_stale = null !== $current && $ttl > 0 && (int) filemtime( $path ) < time() - $ttl;
+
+		if ( null !== $current && ! $is_stale && self::valid( $current, $validate ) ) {
+			self::record( $scope, 'hit' );
+
+			return array(
+				'value'  => $current,
+				'state'  => 'hit',
+				'reason' => 'fresh',
+			);
+		}
+
+		self::record( $scope, $is_stale ? 'miss-stale' : 'miss-absent' );
+		$lock = Single_Flight::acquire( $path . '.lock' );
+
+		if ( false === $lock ) {
+			$published = Single_Flight::wait(
+				static function () use ( $path, $ttl, $validate ): ?string {
+					$value = self::read_file( $path );
+
+					if ( null === $value ) {
+						return null;
+					}
+					if ( $ttl > 0 && (int) filemtime( $path ) < time() - $ttl ) {
+						return null;
+					}
+
+					return self::valid( $value, $validate ) ? $value : null;
+				},
+				self::WAIT_BUDGET_MS
+			);
+
+			if ( is_string( $published ) ) {
+				self::record( $scope, 'hit-peer' );
+
+				return array(
+					'value'  => $published,
+					'state'  => 'hit',
+					'reason' => 'peer-publish',
+				);
+			}
+
+			if ( null !== $current && self::valid( $current, $validate ) ) {
+				self::record( $scope, 'stale-last-good' );
+
+				return array(
+					'value'  => $current,
+					'state'  => 'stale',
+					'reason' => 'builder-timeout',
+				);
+			}
+
+			self::record( $scope, 'build-timeout' );
+
+			return array(
+				'value'  => null,
+				'state'  => 'miss',
+				'reason' => 'builder-timeout',
+			);
+		}
+
+		try {
+			$peer = self::read_file( $path );
+			if (
+				null !== $peer &&
+				( 0 === $ttl || (int) filemtime( $path ) >= time() - $ttl ) &&
+				self::valid( $peer, $validate )
+			) {
+				self::record( $scope, 'hit-peer' );
+
+				return array(
+					'value'  => $peer,
+					'state'  => 'hit',
+					'reason' => 'peer-publish',
+				);
+			}
+
+			try {
+				$built = $builder();
+			} catch ( \Throwable ) {
+				$built = null;
+			}
+
+			if ( is_string( $built ) && '' !== $built && self::valid( $built, $validate ) ) {
+				if ( Single_Flight::publish( $path, $built ) ) {
+					self::record( $scope, 'build' );
+					self::prune( $scope, $path );
+
+					return array(
+						'value'  => $built,
+						'state'  => 'miss',
+						'reason' => 'built',
+					);
+				}
+
+				self::record( $scope, 'write-failure' );
+			} else {
+				self::record( $scope, 'build-failure' );
+			}
+
+			if ( null !== $current && self::valid( $current, $validate ) ) {
+				self::record( $scope, 'stale-last-good' );
+
+				return array(
+					'value'  => $current,
+					'state'  => 'stale',
+					'reason' => 'build-failure',
+				);
+			}
+
+			return array(
+				'value'  => null,
+				'state'  => 'miss',
+				'reason' => 'build-failure',
+			);
+		} finally {
+			if ( is_resource( $lock ) ) {
+				Single_Flight::release( $lock );
+			}
+		}
+	}
+
+	/**
+	 * Delete one scope or the entire current site namespace.
+	 *
+	 * @param string|null $scope Optional scope.
+	 *
+	 * @return int Number of files removed.
+	 */
+	public static function purge( ?string $scope = null ): int {
+		$directory = null === $scope
+			? self::root() . '/sites/' . self::site_key()
+			: self::directory( $scope );
+		$removed   = self::delete_tree( $directory );
+
+		self::record( null === $scope ? 'all' : $scope, 'purge' );
+
+		return $removed;
+	}
+
+	/**
+	 * Return request-local cache outcomes.
+	 *
+	 * @return array<string, array<string, int>> Diagnostics by scope and reason.
+	 */
+	public static function diagnostics(): array {
+		return self::$diagnostics;
+	}
+
+	/**
+	 * Reset request-local cache outcomes.
+	 *
+	 * @return void
+	 */
+	public static function reset_diagnostics(): void {
+		self::$diagnostics = array();
+	}
+
+	/**
+	 * Prune old objects and abandoned temporary files in one scope.
+	 *
+	 * @param string $scope     Cache scope.
+	 * @param string $keep_path Object that must remain.
+	 *
+	 * @return void
+	 */
+	public static function prune( string $scope, string $keep_path = '' ): void {
+		$directory = self::directory( $scope );
+
+		if ( ! is_dir( $directory ) ) {
+			return;
+		}
+
+		$now             = time();
+		$temporary_files = glob( $directory . '/*.tmp-*' );
+		foreach ( is_array( $temporary_files ) ? $temporary_files : array() as $temporary ) {
+			$mtime = is_file( $temporary ) ? (int) filemtime( $temporary ) : 0;
+			if ( $mtime > 0 && $mtime < $now - HOUR_IN_SECONDS ) {
+				wp_delete_file( $temporary );
+			}
+		}
+
+		$scope_files = glob( $directory . '/*' );
+		$objects     = array_values(
+			array_filter(
+				is_array( $scope_files ) ? $scope_files : array(),
+				static fn( string $path ): bool => is_file( $path )
+					&& ! str_ends_with( $path, '.lock' )
+					&& ! str_contains( basename( $path ), '.tmp-' )
+					&& $path !== $keep_path
+			)
+		);
+		usort(
+			$objects,
+			static fn( string $left, string $right ): int => (int) filemtime( $right ) <=> (int) filemtime( $left )
+		);
+
+		$maximum = max(
+			1,
+			(int) apply_filters(
+				'blockstudio/cache/max_files_per_scope',
+				self::DEFAULT_MAX_OBJECTS,
+				$scope
+			)
+		);
+
+		foreach ( array_slice( $objects, max( 0, $maximum - ( '' === $keep_path ? 0 : 1 ) ) ) as $object ) {
+			wp_delete_file( $object );
+		}
+	}
+
+	/**
+	 * Resolve a configured cache root.
+	 *
+	 * @param mixed  $path     Configured root.
+	 * @param string $fallback Fallback root.
+	 *
+	 * @return string Normalized root.
+	 */
+	private static function resolve_root( mixed $path, string $fallback ): string {
+		if ( ! is_string( $path ) || '' === trim( $path ) || str_contains( $path, "\0" ) ) {
+			return rtrim( wp_normalize_path( $fallback ), '/' );
+		}
+
+		$path        = wp_normalize_path( trim( $path ) );
+		$is_absolute = str_starts_with( $path, '/' )
+			|| (bool) preg_match( '/^[A-Za-z]:\//', $path )
+			|| str_starts_with( $path, '//' );
+
+		if ( ! $is_absolute ) {
+			if ( in_array( '..', explode( '/', $path ), true ) ) {
+				return rtrim( wp_normalize_path( $fallback ), '/' );
+			}
+
+			$path = WP_CONTENT_DIR . '/' . ltrim( $path, '/' );
+		}
+
+		$normalized = rtrim( wp_normalize_path( $path ), '/' );
+		if ( '' === $normalized || (bool) preg_match( '/^[A-Za-z]:$/', $normalized ) ) {
+			return rtrim( wp_normalize_path( $fallback ), '/' );
+		}
+
+		return $normalized;
+	}
+
+	/**
+	 * Build a filesystem-safe multisite key.
+	 *
+	 * @return string Site key.
+	 */
+	private static function site_key(): string {
+		$network = function_exists( 'get_current_network_id' ) ? (int) get_current_network_id() : 0;
+		$blog    = function_exists( 'get_current_blog_id' ) ? (int) get_current_blog_id() : 0;
+		$key     = sprintf( 'network-%d-blog-%d', $network, $blog );
+
+		/**
+		 * Filter the filesystem-safe cache site identity.
+		 *
+		 * This supports hosts with a custom tenant boundary and isolated tests.
+		 * The value is sanitized before it becomes part of a path.
+		 *
+		 * @since 7.6.0
+		 *
+		 * @param string $key     Default network/blog identity.
+		 * @param int    $network Current network ID.
+		 * @param int    $blog    Current blog ID.
+		 */
+		$filtered = apply_filters( 'blockstudio/cache/site_key', $key, $network, $blog );
+		$filtered = is_string( $filtered ) ? sanitize_file_name( $filtered ) : '';
+
+		return '' === $filtered ? $key : $filtered;
+	}
+
+	/**
+	 * Read a non-empty local file.
+	 *
+	 * @param string $path File path.
+	 *
+	 * @return string|null File contents.
+	 */
+	private static function read_file( string $path ): ?string {
+		if ( ! is_file( $path ) || ! is_readable( $path ) ) {
+			return null;
+		}
+
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Reading a local runtime cache object.
+		$contents = file_get_contents( $path );
+
+		return false === $contents || '' === $contents ? null : $contents;
+	}
+
+	/**
+	 * Validate cached or generated contents.
+	 *
+	 * @param string        $contents Contents.
+	 * @param callable|null $validate Optional validator.
+	 *
+	 * @return bool Whether contents are valid.
+	 */
+	private static function valid( string $contents, ?callable $validate ): bool {
+		if ( null === $validate ) {
+			return true;
+		}
+
+		try {
+			return true === $validate( $contents );
+		} catch ( \Throwable ) {
+			return false;
+		}
+	}
+
+	/**
+	 * Recursively delete a cache tree.
+	 *
+	 * @param string $directory Directory.
+	 *
+	 * @return int Number of files removed.
+	 */
+	private static function delete_tree( string $directory ): int {
+		if ( ! is_dir( $directory ) ) {
+			return 0;
+		}
+
+		$removed  = 0;
+		$iterator = new \RecursiveIteratorIterator(
+			new \RecursiveDirectoryIterator( $directory, \FilesystemIterator::SKIP_DOTS ),
+			\RecursiveIteratorIterator::CHILD_FIRST
+		);
+
+		foreach ( $iterator as $item ) {
+			$path = $item->getPathname();
+			if ( $item->isDir() ) {
+				@rmdir( $path ); // phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged, WordPress.WP.AlternativeFunctions.file_system_operations_rmdir
+			} elseif ( @unlink( $path ) ) { // phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged, WordPress.WP.AlternativeFunctions.unlink_unlink
+				++$removed;
+			}
+		}
+
+		@rmdir( $directory ); // phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged, WordPress.WP.AlternativeFunctions.file_system_operations_rmdir
+
+		return $removed;
+	}
+
+	/**
+	 * Normalize nested identity input before hashing.
+	 *
+	 * @param mixed $value Identity value.
+	 *
+	 * @return mixed Normalized identity.
+	 */
+	private static function normalize_identity( mixed $value ): mixed {
+		if ( ! is_array( $value ) ) {
+			return $value;
+		}
+
+		foreach ( $value as $key => $item ) {
+			$value[ $key ] = self::normalize_identity( $item );
+		}
+
+		if ( ! array_is_list( $value ) ) {
+			ksort( $value );
+		}
+
+		return $value;
+	}
+
+	/**
+	 * Record one request-local cache outcome.
+	 *
+	 * @param string $scope  Cache scope.
+	 * @param string $reason Outcome reason.
+	 *
+	 * @return void
+	 */
+	private static function record( string $scope, string $reason ): void {
+		self::$diagnostics[ $scope ]          ??= array();
+		self::$diagnostics[ $scope ][ $reason ] = ( self::$diagnostics[ $scope ][ $reason ] ?? 0 ) + 1;
+
+		/**
+		 * Fires after a Blockstudio runtime cache outcome.
+		 *
+		 * @since 7.6.0
+		 *
+		 * @param string $scope  Cache scope.
+		 * @param string $reason Outcome reason.
+		 */
+		do_action( 'blockstudio/cache/outcome', $scope, $reason );
+	}
+}

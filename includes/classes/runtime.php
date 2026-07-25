@@ -38,6 +38,7 @@ final class Runtime {
 		Link_Preload::register();
 		Performance_Measurement::register();
 		WordPress_Optimizations::register();
+		Static_Prerender_Runtime::register();
 
 		do_action( 'blockstudio/runtime/initialized', Runtime_Settings::current() );
 	}

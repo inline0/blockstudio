@@ -44,6 +44,10 @@ The short version:
   runtime settings, theme defaults, media metadata and rendering, Tailwind
   composition helpers, intent preloading, opt-in measurements, and generic
   WordPress optimizations.
+- **One cache and prerender boundary**: build, Tailwind, render, fragment,
+  static HTML, graph, queue, and diagnostic state share one multisite-safe
+  runtime identity with atomic writes, single-flight recovery, bounded pruning,
+  incremental dependency graphs, and anonymous-safe early serving.
 
 ## Canvas inventory and exact selection
 
@@ -127,3 +131,29 @@ The existing `Blockstudio\Pages` and `Blockstudio\Patterns` APIs remain the
 canonical file-backed content surfaces. Theme defaults can opt into
 development page reconciliation without adding another page or pattern
 abstraction.
+
+## Unified caching and static prerendering
+
+All persistent runtime output now lives below `cache.path`, isolated by
+network, site, runtime identity, and scope. The identity covers Blockstudio,
+settings, WordPress, PHP, theme, active plugins, logical discovery, host
+context, and explicit source dependencies. Tailwind no longer writes a
+separate cache beneath uploads.
+
+Cold objects use one builder and atomic publication. Concurrent requests wait
+for that result, a failed refresh can serve stale last-good output, bounded
+pruning removes old objects, and cache outcomes are available to diagnostics.
+
+The opt-in static prerender runtime supports ordinary signature-mode fills and
+explicit incremental dependency graphs. A graph build recalculates only pages
+whose shared or page-specific dependencies changed, retains unrelated pages,
+tracks skipped dynamic results, garbage-collects deleted routes, and can
+rewrite output to a deployment host/home without changing source URLs.
+
+Optional early serving uses an owned per-site map and `advanced-cache.php`
+drop-in to serve eligible anonymous HTML before WordPress boots. It excludes
+control headers, query strings, admin/REST/Ajax/cron, feeds, search, previews,
+non-GET requests, dynamic path boundaries, and personalized cookies. Complete
+graphs are validated before atomic cutover; foreign cache artifacts are never
+overwritten; multisite entries are removed independently on disable or
+deactivation.

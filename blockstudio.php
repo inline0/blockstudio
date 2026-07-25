@@ -200,6 +200,7 @@ function blockstudio(): \Blockstudio\Plugin {
 blockstudio();
 
 register_deactivation_hook( __FILE__, array( 'Blockstudio\Cron', 'unschedule_all' ) );
+register_deactivation_hook( __FILE__, array( 'Blockstudio\Static_Prerender_Runtime', 'deactivate' ) );
 
 add_filter(
 	'block_categories_all',

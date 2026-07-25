@@ -130,8 +130,10 @@ cannot receive another preview's fallback CSS.
 
 Mark inherited or read-only entries with `inherited: true`, `readOnly: true`,
 or `writable: false` in provenance or metadata. Blockstudio then writes
-compiled assets to a context-specific directory under uploads instead of next
-to the parent source.
+compiled assets to a context-specific `generated` scope below the configured
+Blockstudio cache root instead of next to the parent source. Generated assets,
+Tailwind output, render documents, and static prerenders therefore share the
+same writable host boundary.
 
 Two filters cover custom runtime routing:
 

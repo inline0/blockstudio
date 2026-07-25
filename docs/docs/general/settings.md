@@ -233,10 +233,13 @@ the uploads directory. A relative `path` is resolved from `WP_CONTENT_DIR`; an
 absolute path is used directly. This supports hosts that provide a dedicated
 writable cache volume.
 
-When enabled, Blockstudio caches runtime build payloads, prebuilt block
-registration data, and resolved editor assets. Runtime cache entries are
-invalidated when watched block files, field files, asset files, settings, active
-plugins, WordPress, PHP, or Blockstudio versions change.
+When enabled, Blockstudio uses this one root for build payloads, prebuilt block
+registration data, resolved editor assets, Tailwind CSS, render documents,
+island fragments, static prerenders, graph indexes, queues, and diagnostics.
+Each object is isolated by network, site, complete runtime identity, and scope.
+Runtime identities cover Blockstudio, settings, WordPress, PHP, the active
+theme, active plugins, logical discovery sources, host context, and explicit
+dependency hashes supplied by the owning operation.
 
 The `blockstudio/settings/cache/path` setting filter changes the configured
 value. For deployment-specific path resolution, `blockstudio/cache/dir` filters
@@ -247,6 +250,11 @@ add_filter('blockstudio/cache/dir', function (string $directory): string {
     return WP_CONTENT_DIR . '/cache/blockstudio';
 });
 ```
+
+Hosts with a tenant identity that differs from WordPress network/blog IDs can
+filter `blockstudio/cache/site_key`. The result is sanitized and used only as a
+directory segment. `blockstudio/cache/context` remains the correct place for a
+serializable runtime variant that must alter object identities.
 
 ### themeDefaults
 
@@ -287,10 +295,23 @@ override its profile value.
 | `measurement.queryMonitor` | boolean | `false`        | `false`              | Include queries taking at least 50ms             |
 | `measurement.headers`      | boolean | `false`        | `false`              | Send profile and config hash headers             |
 | `measurement.timings`      | boolean | `false`        | `false`              | Send the elapsed runtime header                  |
+| `staticPrerender.enabled`  | boolean | `false`        | `false`              | Enable anonymous-safe HTML caching               |
+| `staticPrerender.ttl`      | integer | `86400`        | `86400`              | Maximum cached document age in seconds           |
+| `staticPrerender.invalidate` | string | `"signature"` | `"signature"`        | Use `signature` or incremental `graph` identity  |
+| `staticPrerender.earlyServe` | boolean | `false`      | `false`              | Serve safe hits before WordPress boots           |
+| `staticPrerender.serveLoggedIn` | boolean | `false`   | `false`              | Permit users to consume, never author, cache hits |
+| `staticPrerender.dynamicPaths` | array | `[]`         | `[]`                 | Path prefixes that must remain dynamic           |
+| `staticPrerender.warm.enabled` | boolean | `false`    | `false`              | Enable the durable scheduled warm queue          |
+| `staticPrerender.warm.interval` | integer | `3600`    | `3600`               | Warm interval in seconds                         |
+| `staticPrerender.warm.concurrency` | integer | `2`   | `2`                  | Maximum jobs processed by one warm pass          |
+| `staticPrerender.warm.transport` | string | `"http"` | `"http"`             | Use `http` or a host-provided `internal` renderer |
 
-Static prerender settings are schema-stable under
-`performance.staticPrerender`, including `ttl`, invalidation, early serving,
-dynamic paths, and warming. They remain disabled unless explicitly enabled.
+Static prerendering remains disabled unless explicitly enabled. Signature mode
+uses a cheap activated identity on ordinary requests. Graph mode is intended
+for explicit builds: it records per-page source dependencies so changing one
+page does not invalidate unrelated documents. See the [performance
+guide](/docs/dev/perf#static-prerendering) for warming, deployment, early
+serving, and safety details.
 
 Measurements are available programmatically:
 

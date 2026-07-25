@@ -254,10 +254,12 @@ source selection into another.
 Cache files are stored in:
 
 ```
-wp-content/uploads/blockstudio/tailwind/cache/
+wp-content/blockstudio/cache/sites/{network-blog}/{runtime-identity}/tailwind/
 ```
 
-Each file is named with an MD5 hash: `{hash}.css`.
+The configured `cache.path`, current multisite identity, and complete runtime
+identity determine the exact prefix. Each file is named with an MD5 hash:
+`{hash}.css`.
 
 ### Clearing the Cache
 
@@ -265,14 +267,13 @@ Delete the contents of the cache directory to force recompilation:
 
 ```php
 // Clear all cached Tailwind CSS
-$cache_dir = wp_upload_dir()['basedir'] . '/blockstudio/tailwind/cache';
-array_map('unlink', glob("$cache_dir/*.css"));
+Blockstudio\Runtime_Cache::purge('tailwind');
 ```
 
 Or via WP-CLI:
 
 ```bash
-wp eval "array_map('unlink', glob(wp_upload_dir()['basedir'] . '/blockstudio/tailwind/cache/*.css'));"
+wp eval "Blockstudio\\Runtime_Cache::purge('tailwind');"
 ```
 
 The next frontend request will recompile and cache the CSS automatically.
@@ -334,7 +335,7 @@ Frontend Request
   │   ├─ Cache key = md5(sorted candidates + css input)
   │   │
   │   ├─ Cache hit?
-  │   │   ├─ Yes → Read CSS from uploads/blockstudio/tailwind/cache/{hash}.css
+  │   │   ├─ Yes → Read CSS from the shared runtime `tailwind/{hash}.css` scope
   │   │   └─ No  → TailwindPHP::generate() → Write to cache file
   │   │
   │   └─ Inject <style id="blockstudio-tailwind"> before </head>

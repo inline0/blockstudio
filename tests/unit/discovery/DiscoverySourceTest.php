@@ -14,6 +14,7 @@ use Blockstudio\Files;
 use Blockstudio\Inventory_Discovery_Source;
 use Blockstudio\Page_Discovery;
 use Blockstudio\Pattern_Discovery;
+use Blockstudio\Runtime_Cache;
 use Blockstudio\Site_Template_Discovery;
 use Blockstudio\Tailwind;
 use PHPUnit\Framework\TestCase;
@@ -329,7 +330,7 @@ class DiscoverySourceTest extends TestCase {
 
 		$output = Assets::get_dist_folder( $root . '/style.css' );
 
-		$this->assertStringStartsWith( wp_normalize_path( wp_upload_dir()['basedir'] ) . '/blockstudio/generated/', $output );
+		$this->assertStringStartsWith( Runtime_Cache::directory( 'generated' ) . '/', $output );
 		$this->assertNotSame( $root . '/_dist', $output );
 	}
 

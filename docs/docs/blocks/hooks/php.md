@@ -920,6 +920,40 @@ add_filter('blockstudio/cache/context', function($context, string $scope) {
 }, 10, 2);
 ```
 
+### blockstudio/cache/site_key
+
+This filter changes the network/blog directory identity for hosts with their
+own tenant boundary. The returned value is sanitized before use.
+
+```php title="functions.php"
+add_filter(
+  'blockstudio/cache/site_key',
+  function(string $key, int $networkId, int $blogId) {
+    return sprintf('tenant-%d-%d', $networkId, $blogId);
+  },
+  10,
+  3
+);
+```
+
+### blockstudio/runtime/identity
+
+This filter adds host facts that affect every object in a runtime scope.
+Item-specific source fingerprints should be passed as explicit dependencies by
+the owning API instead.
+
+```php title="functions.php"
+add_filter(
+  'blockstudio/runtime/identity',
+  function(array $identity, string $scope) {
+    $identity['deployment'] = getenv('RELEASE_SHA') ?: 'local';
+    return $identity;
+  },
+  10,
+  2
+);
+```
+
 ### blockstudio/cache/watch_debounce
 
 Filters the number of seconds a validated file-watch snapshot can be reused
@@ -940,6 +974,84 @@ Filters how many published payloads each runtime cache scope retains.
 add_filter('blockstudio/cache/max_files_per_scope', function($maximum, $scope) {
   return $scope === 'runtime' ? 50 : $maximum;
 }, 10, 2);
+```
+
+### blockstudio/cache/outcome
+
+This action reports a shared cache scope and outcome such as `hit`, `build`,
+`miss-stale`, `stale-last-good`, or `write-failure`.
+
+```php title="functions.php"
+add_action('blockstudio/cache/outcome', function(string $scope, string $reason) {
+  my_metrics()->increment("blockstudio.cache.{$scope}.{$reason}");
+}, 10, 2);
+```
+
+### blockstudio/static_prerender/request_bypass
+
+This filter receives the final anonymous-safety decision plus server and cookie
+inputs. Returning `true` always bypasses static serving and generation.
+
+```php title="functions.php"
+add_filter(
+  'blockstudio/static_prerender/request_bypass',
+  function(bool $bypass, array $server, array $cookies) {
+    return $bypass || isset($cookies['commerce_session']);
+  },
+  10,
+  3
+);
+```
+
+### blockstudio/static_prerender/public_urls
+
+This filter supplies or adjusts the complete public URL inventory used by the
+scheduled warmer and explicit graph tooling.
+
+```php title="functions.php"
+add_filter('blockstudio/static_prerender/public_urls', function(array $urls) {
+  $urls[] = home_url('/custom-route/');
+  return array_values(array_unique($urls));
+});
+```
+
+### blockstudio/static_prerender/render_internal
+
+This filter implements the optional in-process batch transport. Return a
+normalized result array or leave the value unchanged to let the renderer use
+its configured HTTP fallback.
+
+```php title="functions.php"
+add_filter(
+  'blockstudio/static_prerender/render_internal',
+  function($result, string $url, array $options) {
+    return my_static_renderer()->render($url, $options);
+  },
+  10,
+  3
+);
+```
+
+### blockstudio/static_prerender/cacheable_html
+
+This filter makes the final decision after Blockstudio verifies that output is
+a complete HTML document without the no-cache marker.
+
+```php title="functions.php"
+add_filter('blockstudio/static_prerender/cacheable_html', function(bool $cacheable, string $html) {
+  return $cacheable && !str_contains($html, 'data-personalized');
+}, 10, 2);
+```
+
+### blockstudio/static_prerender/outcome
+
+This action reports static-prerender outcomes including hits, misses, writes,
+graph writes, stale entries, and failures.
+
+```php title="functions.php"
+add_action('blockstudio/static_prerender/outcome', function(string $reason) {
+  my_metrics()->increment("blockstudio.prerender.{$reason}");
+});
 ```
 
 ### blockstudio/tailwind/cache_max_files

@@ -2,6 +2,7 @@
 
 use Blockstudio\Tailwind;
 use Blockstudio\Page_Registry;
+use Blockstudio\Runtime_Cache;
 use Blockstudio\Settings;
 use PHPUnit\Framework\TestCase;
 
@@ -17,14 +18,14 @@ class TailwindTest extends TestCase {
 	public function test_get_cache_dir_contains_blockstudio_path(): void {
 		$result = Tailwind::get_cache_dir();
 
-		$this->assertStringContainsString( 'blockstudio/tailwind/cache', $result );
+		$this->assertStringContainsString( 'blockstudio/cache/sites/network-', $result );
+		$this->assertStringEndsWith( '/tailwind', $result );
 	}
 
-	public function test_get_cache_dir_is_inside_uploads(): void {
-		$uploads = wp_upload_dir();
-		$result  = Tailwind::get_cache_dir();
+	public function test_get_cache_dir_is_inside_shared_runtime_root(): void {
+		$result = Tailwind::get_cache_dir();
 
-		$this->assertStringStartsWith( $uploads['basedir'], $result );
+		$this->assertStringStartsWith( Runtime_Cache::root() . '/sites/', $result );
 	}
 
 	public function test_prune_cache_keeps_new_file_and_removes_stale_files(): void {
