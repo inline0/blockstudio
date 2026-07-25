@@ -148,6 +148,7 @@ class Plugin {
 		require_once $classes_dir . 'islands.php';
 		require_once $classes_dir . 'render-document.php';
 		require_once $classes_dir . 'render.php';
+		require_once $classes_dir . 'batch-render.php';
 		require_once $classes_dir . 'build.php';
 		require_once $classes_dir . 'populate.php';
 		require_once $classes_dir . 'field.php';
