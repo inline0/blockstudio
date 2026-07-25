@@ -5,7 +5,7 @@
   "gutenberg_schema_url": "https://raw.githubusercontent.com/WordPress/gutenberg/trunk/schemas/json/block.json",
   "files": {
     "block.json": "e1626c2e397c3030f7a70850065e20cea1368fb898d33e6dc0f5958a848ad8b9",
-    "blockstudio.json": "c2b691fb0ec1f8e7fd937548f1290e739dfed2ab78ef2736c572d04a3fb48f73",
+    "blockstudio.json": "4fd4764b87b9cfdaf0a81580bd7d9ea6abfd7f37fff2cd12d5d1b27c66abbda6",
     "extend.json": "6a32bc7a5a540b92af0856a03f42c15f5838b7a0dad99507767e92444b0b9b26",
     "field.json": "e92dfbd4f8232d363f97d91b0276fe6006c37df5056a22195ccfcb028883ef1e",
     "page.json": "28cb571295d978b0a0369a9ce8f8561b1af602748c623047e115d2262996450b"

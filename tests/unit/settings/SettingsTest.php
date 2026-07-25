@@ -76,6 +76,10 @@ class SettingsTest extends TestCase {
 		$this->assertFalse( Settings::get( 'ui/enabled' ) );
 	}
 
+	public function test_githooks_commit_keeps_default(): void {
+		$this->assertFalse( Settings::get( 'githooks/commit' ) );
+	}
+
 	public function test_assets_enqueue_from_json(): void {
 		$this->assertTrue( Settings::get( 'assets/enqueue' ) );
 	}

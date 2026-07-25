@@ -142,6 +142,20 @@
       },
       "additionalProperties": true
     },
+    "githooks": {
+      "type": "object",
+      "description": "Settings for repository hooks generated and owned by Blockstudio development tooling.",
+      "properties": {
+        "commit": {
+          "type": "boolean",
+          "default": false,
+          "description": "Generate an analysis-only pre-commit hook when blockstudio-githooks sync runs.",
+          "descriptionFilter": "This filter exposes whether the Blockstudio-owned PHPStan commit hook is enabled.",
+          "example": true
+        }
+      },
+      "additionalProperties": false
+    },
     "content": {
       "type": "object",
       "description": "Settings for Content Sync, the WP-CLI driven projection of allowlisted WordPress content to portable files.",

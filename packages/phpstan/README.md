@@ -281,6 +281,47 @@ Exit codes are stable:
 - `1`: PHPStan reported diagnostics
 - `2`: invalid usage, configuration, or process execution
 
+## Managed commit hook
+
+Blockstudio can own an analysis-only pre-commit hook. Enable it in the project
+`blockstudio.json`:
+
+```json
+{
+  "$schema": "https://blockstudio.dev/schema/blockstudio",
+  "githooks": {
+    "commit": true
+  }
+}
+```
+
+Then synchronize the repository:
+
+```bash
+vendor/bin/blockstudio-githooks sync
+```
+
+The command installs a generated hook inside Git's common directory and points
+`core.hooksPath` at its managed directory. It records the prior hooks path and
+chains an existing pre-commit hook before running
+`vendor/bin/blockstudio-phpstan`. Re-running the command refreshes an owned
+hook, including after package upgrades.
+
+Set `commit` to `false`, remove the setting, or remove `blockstudio.json`, then
+run `sync` again to remove only Blockstudio-owned files and restore the recorded
+hooks path. `vendor/bin/blockstudio-githooks remove` performs the same safe
+cleanup explicitly.
+
+Blockstudio refuses to overwrite or remove files without its generated marker.
+If `core.hooksPath` is changed after installation, removal leaves that newer
+user setting intact. Linked Git checkouts share the managed directory, while
+the generated hook resolves the active checkout and project root at commit
+time. Paths containing spaces are supported.
+
+The hook performs PHPStan analysis only. It never formats or rewrites project
+files. A missing Composer installation or failed analysis blocks the commit
+with a direct error; bypass behavior remains Git's standard `--no-verify`.
+
 ## Optional live WordPress render
 
 Live rendering is a separate, explicit preset because it is slower and needs a

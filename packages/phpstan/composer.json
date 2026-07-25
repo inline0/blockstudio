@@ -38,7 +38,8 @@
     }
   },
   "bin": [
-    "bin/blockstudio-phpstan"
+    "bin/blockstudio-phpstan",
+    "bin/blockstudio-githooks"
   ],
   "extra": {
     "phpstan": {

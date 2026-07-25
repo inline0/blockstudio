@@ -28,6 +28,7 @@ namespace Blockstudio;
  * - editor/formatOnSave: Auto-format code in editor
  * - tailwind/enabled: Enable Tailwind CSS integration
  * - ui/enabled: Enable bundled UI components
+ * - githooks/commit: Enable the Blockstudio-owned PHPStan commit hook
  * - blockEditor/enhance: Add Blockstudio editor hover and selection affordances
  * - blockEditor/blocks: Configure global block inserter policy
  * - blockEditor/patterns: Configure global pattern inserter policy
@@ -95,6 +96,9 @@ class Settings {
 		'cache'       => array(
 			'enabled' => true,
 			'path'    => 'blockstudio/cache',
+		),
+		'githooks'    => array(
+			'commit' => false,
 		),
 		'content'     => array(
 			'enabled'                => false,

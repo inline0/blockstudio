@@ -57,6 +57,10 @@ The original auto-discovered extension is the stable base contract. Version
 - `bin/blockstudio-phpstan` is the canonical executable. It composes NEON in
   the system temporary directory, preserves stable exit codes, and leaves the
   analyzed project untouched.
+- `bin/blockstudio-githooks` synchronizes an opt-in, analysis-only pre-commit
+  hook from `blockstudio.json`. Its generated files and ownership state live in
+  Git's common directory, safely chain an existing hook, and are removed
+  without touching user-owned files when the setting is disabled.
 
 All new diagnostics use product-owned `blockstudio.*` identifiers. The
 extension has no knowledge of an orchestration product, caller repository
@@ -73,6 +77,7 @@ phpstan/
 ├── extreme-theme.neon          # Opt-in strict PHP/JS/Tailwind layer
 ├── wordpress-render.neon       # Explicit live-render command layer
 ├── bin/blockstudio-phpstan     # Canonical executable
+├── bin/blockstudio-githooks    # Managed commit-hook synchronizer
 ├── README.md
 ├── PRD.md                      # This file
 ├── phpstan.neon.dist           # Self-test config

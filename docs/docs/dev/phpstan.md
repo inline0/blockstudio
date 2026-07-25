@@ -325,6 +325,48 @@ The exit contract is:
 - `1` when PHPStan reports diagnostics
 - `2` for invalid usage, configuration, or process execution
 
+### Managed commit hook
+
+To make the extreme-theme analysis a repository commit gate, enable the
+Blockstudio-owned hook in `blockstudio.json`:
+
+```json title="blockstudio.json"
+{
+  "$schema": "https://blockstudio.dev/schema/blockstudio",
+  "githooks": {
+    "commit": true
+  }
+}
+```
+
+Synchronize it after installing dependencies or changing the setting:
+
+```bash
+vendor/bin/blockstudio-githooks sync
+```
+
+The command writes its generated pre-commit hook and ownership record inside
+Git's common directory, sets `core.hooksPath` to the managed hook directory,
+and safely chains the previously configured pre-commit hook. Repeated syncs
+refresh only the generated file, so package upgrades are idempotent.
+
+Set `commit` to `false`, remove it, or remove `blockstudio.json`, then run
+`sync` to restore the recorded hook path and delete only Blockstudio-owned
+files. You can also run:
+
+```bash
+vendor/bin/blockstudio-githooks remove
+```
+
+User-owned files are never overwritten or deleted. If someone changes
+`core.hooksPath` after Blockstudio was enabled, removal preserves that newer
+setting. The generated hook supports linked Git checkouts and paths containing
+spaces by resolving the active repository and project root at commit time.
+
+The hook runs `vendor/bin/blockstudio-phpstan` only. Blockstudio does not run a
+formatter, and the hook never rewrites project files. Missing dependencies and
+analysis failures block the commit with an actionable error.
+
 ### Live WordPress rendering
 
 The live layer is deliberately explicit. The caller owns the WordPress
