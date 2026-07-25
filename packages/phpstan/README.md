@@ -257,6 +257,27 @@ extreme-theme preset:
 vendor/bin/blockstudio-phpstan --root . -- --no-progress
 ```
 
+Projects can keep the canonical command's defaults in `blockstudio.json`:
+
+```json
+{
+  "$schema": "https://blockstudio.dev/schema/blockstudio",
+  "phpstan": {
+    "preset": "extreme-theme",
+    "roots": ["."],
+    "excludePaths": ["fixtures/**"],
+    "maxFiles": 10000
+  }
+}
+```
+
+Relative roots resolve from the configuration file. Explicit command-line
+values replace their corresponding JSON value, so automation can make a
+one-off selection without rewriting project configuration. Use
+`--blockstudio-json <path>` when a project supplies the settings from an
+alternate source. Invalid JSON, unknown `phpstan` keys, invalid types, and a
+missing explicit source fail with exit code `2`.
+
 Use another preset, compose a project configuration, or emit PHPStan's JSON
 format:
 
@@ -289,6 +310,12 @@ Blockstudio can own an analysis-only pre-commit hook. Enable it in the project
 ```json
 {
   "$schema": "https://blockstudio.dev/schema/blockstudio",
+  "phpstan": {
+    "preset": "extreme-theme",
+    "roots": ["."],
+    "excludePaths": [],
+    "maxFiles": 10000
+  },
   "githooks": {
     "commit": true
   }
@@ -304,8 +331,10 @@ vendor/bin/blockstudio-githooks sync
 The command installs a generated hook inside Git's common directory and points
 `core.hooksPath` at its managed directory. It records the prior hooks path and
 chains an existing pre-commit hook before running
-`vendor/bin/blockstudio-phpstan`. Re-running the command refreshes an owned
-hook, including after package upgrades.
+`vendor/bin/blockstudio-phpstan` from the configured project root. The
+canonical command reads the same `phpstan` object, so the generated hook needs
+no duplicated arguments. Re-running the command refreshes an owned hook,
+including after package upgrades.
 
 Set `commit` to `false`, remove the setting, or remove `blockstudio.json`, then
 run `sync` again to remove only Blockstudio-owned files and restore the recorded

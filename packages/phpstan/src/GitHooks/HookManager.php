@@ -467,7 +467,7 @@ cd "$project_root" || {
   exit 2
 }
 
-"$analysis" --root "$project_root" -- --no-progress
+"$analysis" -- --no-progress
 status=$?
 
 if [ "$status" -ne 0 ]; then

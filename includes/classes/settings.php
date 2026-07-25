@@ -29,6 +29,7 @@ namespace Blockstudio;
  * - tailwind/enabled: Enable Tailwind CSS integration
  * - ui/enabled: Enable bundled UI components
  * - githooks/commit: Enable the Blockstudio-owned PHPStan commit hook
+ * - phpstan/*: Configure the canonical Blockstudio PHPStan command
  * - themeDefaults/*: Configure generic theme setup and development page sync
  * - performance/*: Configure generic runtime profiles, media, and measurements
  * - blockEditor/enhance: Add Blockstudio editor hover and selection affordances
@@ -101,6 +102,12 @@ class Settings {
 		),
 		'githooks'      => array(
 			'commit' => false,
+		),
+		'phpstan'       => array(
+			'preset'       => 'extreme-theme',
+			'roots'        => array( '.' ),
+			'excludePaths' => array(),
+			'maxFiles'     => 10000,
 		),
 		'themeDefaults' => array(
 			'titleTag'                 => true,

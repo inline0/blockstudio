@@ -300,6 +300,26 @@ The package installs a single executable that defaults to extreme-theme:
 vendor/bin/blockstudio-phpstan --root . -- --no-progress
 ```
 
+Keep project-wide command defaults in `blockstudio.json`:
+
+```json title="blockstudio.json"
+{
+  "$schema": "https://blockstudio.dev/schema/blockstudio",
+  "phpstan": {
+    "preset": "extreme-theme",
+    "roots": ["."],
+    "excludePaths": ["fixtures/**"],
+    "maxFiles": 10000
+  }
+}
+```
+
+Relative roots resolve from the file that declares them. Explicit CLI values
+replace the corresponding JSON values. Pass
+`--blockstudio-json path/to/project.json` for an alternate configuration
+source. Malformed JSON, unsupported `phpstan` keys, invalid values, and a
+missing explicit source fail deterministically with exit code `2`.
+
 Select another preset, include a project configuration, add repeatable roots
 and exclusions, or ask PHPStan for JSON:
 
@@ -333,6 +353,12 @@ Blockstudio-owned hook in `blockstudio.json`:
 ```json title="blockstudio.json"
 {
   "$schema": "https://blockstudio.dev/schema/blockstudio",
+  "phpstan": {
+    "preset": "extreme-theme",
+    "roots": ["."],
+    "excludePaths": [],
+    "maxFiles": 10000
+  },
   "githooks": {
     "commit": true
   }
@@ -361,7 +387,9 @@ vendor/bin/blockstudio-githooks remove
 User-owned files are never overwritten or deleted. If someone changes
 `core.hooksPath` after Blockstudio was enabled, removal preserves that newer
 setting. The generated hook supports linked Git checkouts and paths containing
-spaces by resolving the active repository and project root at commit time.
+spaces by resolving the active repository and project root at commit time. It
+runs the canonical command from that root, so the same `phpstan` object controls
+interactive runs and commits without duplicated generated arguments.
 
 The hook runs `vendor/bin/blockstudio-phpstan` only. Blockstudio does not run a
 formatter, and the hook never rewrites project files. Missing dependencies and

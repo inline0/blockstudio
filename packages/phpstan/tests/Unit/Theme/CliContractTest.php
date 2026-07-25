@@ -9,6 +9,17 @@ use PHPUnit\Framework\TestCase;
 
 final class CliContractTest extends TestCase
 {
+    /** @var list<string> */
+    private array $temporaryDirectories = [];
+
+    protected function tearDown(): void
+    {
+        foreach (array_reverse($this->temporaryDirectories) as $directory) {
+            $this->removeDirectory($directory);
+        }
+        $this->temporaryDirectories = [];
+    }
+
     public function test_help_and_usage_exit_codes_are_stable(): void
     {
         $package = dirname(__DIR__, 3);
@@ -181,5 +192,177 @@ final class CliContractTest extends TestCase
         );
         $this->assertGreaterThan(0, $payload['totals']['file_errors'] ?? 0);
         $this->assertArrayHasKey('files', $payload);
+    }
+
+    public function test_blockstudio_json_supplies_defaults_and_cli_options_override_them(): void
+    {
+        $package = dirname(__DIR__, 3);
+        $theme = dirname(__DIR__, 2) . '/fixtures/theme-minimal';
+        $project = $this->temporaryDirectory('configured project');
+        $runner = new CommandRunner();
+        file_put_contents(
+            $project . '/blockstudio.json',
+            json_encode(
+                [
+                    'phpstan' => [
+                        'preset' => 'base',
+                        'roots' => [$theme],
+                        'excludePaths' => ['fixtures/**'],
+                        'maxFiles' => 250,
+                    ],
+                ],
+                JSON_PRETTY_PRINT | JSON_THROW_ON_ERROR
+            )
+        );
+
+        $configured = $runner->run(
+            [
+                PHP_BINARY,
+                $package . '/bin/blockstudio-phpstan',
+                '--',
+                '--no-progress',
+            ],
+            $project,
+            30
+        );
+        $this->assertSame(
+            0,
+            $configured->exitCode,
+            $configured->stdout . $configured->stderr
+        );
+
+        file_put_contents(
+            $project . '/blockstudio.json',
+            json_encode(
+                [
+                    'phpstan' => [
+                        'preset' => 'wordpress-render',
+                        'roots' => [$project . '/missing'],
+                    ],
+                ],
+                JSON_PRETTY_PRINT | JSON_THROW_ON_ERROR
+            )
+        );
+        $overridden = $runner->run(
+            [
+                PHP_BINARY,
+                $package . '/bin/blockstudio-phpstan',
+                '--preset',
+                'base',
+                '--root',
+                $theme,
+                '--',
+                '--no-progress',
+            ],
+            $project,
+            30
+        );
+        $this->assertSame(
+            0,
+            $overridden->exitCode,
+            $overridden->stdout . $overridden->stderr
+        );
+    }
+
+    public function test_alternate_and_malformed_blockstudio_sources_have_stable_contracts(): void
+    {
+        $package = dirname(__DIR__, 3);
+        $theme = dirname(__DIR__, 2) . '/fixtures/theme-minimal';
+        $project = $this->temporaryDirectory('alternate project');
+        $configuration = $project . '/config/project.json';
+        mkdir(dirname($configuration), 0777, true);
+        file_put_contents(
+            $configuration,
+            json_encode(
+                [
+                    'phpstan' => [
+                        'preset' => 'base',
+                        'roots' => [$theme],
+                    ],
+                ],
+                JSON_PRETTY_PRINT | JSON_THROW_ON_ERROR
+            )
+        );
+        $runner = new CommandRunner();
+
+        $alternate = $runner->run(
+            [
+                PHP_BINARY,
+                $package . '/bin/blockstudio-phpstan',
+                '--blockstudio-json',
+                $configuration,
+                '--',
+                '--no-progress',
+            ],
+            $project,
+            30
+        );
+        $this->assertSame(
+            0,
+            $alternate->exitCode,
+            $alternate->stdout . $alternate->stderr
+        );
+
+        file_put_contents($project . '/blockstudio.json', '{broken');
+        $invalid = $runner->run(
+            [PHP_BINARY, $package . '/bin/blockstudio-phpstan'],
+            $project,
+            10
+        );
+        $this->assertSame(2, $invalid->exitCode);
+        $this->assertStringContainsString(
+            'Invalid JSON in ' . $project . '/blockstudio.json',
+            $invalid->stderr
+        );
+
+        $help = $runner->run(
+            [
+                PHP_BINARY,
+                $package . '/bin/blockstudio-phpstan',
+                '--help',
+            ],
+            $project,
+            10
+        );
+        $this->assertSame(0, $help->exitCode);
+        $this->assertStringContainsString(
+            '--blockstudio-json <path>',
+            $help->stdout
+        );
+    }
+
+    private function temporaryDirectory(string $name): string
+    {
+        $directory = sys_get_temp_dir()
+            . '/blockstudio-cli-'
+            . preg_replace('/[^a-z]+/i', '-', $name)
+            . '-'
+            . bin2hex(random_bytes(5));
+        mkdir($directory, 0777, true);
+        $directory = realpath($directory) ?: $directory;
+        $this->temporaryDirectories[] = $directory;
+
+        return $directory;
+    }
+
+    private function removeDirectory(string $directory): void
+    {
+        if (!is_dir($directory)) {
+            return;
+        }
+
+        foreach (scandir($directory) ?: [] as $entry) {
+            if ($entry === '.' || $entry === '..') {
+                continue;
+            }
+            $path = $directory . '/' . $entry;
+            if (is_dir($path) && !is_link($path)) {
+                $this->removeDirectory($path);
+            } else {
+                @unlink($path);
+            }
+        }
+
+        @rmdir($directory);
     }
 }

@@ -37,9 +37,9 @@ The short version:
 - **Stricter PHPStan projects**: opt-in theme and extreme-theme layers extend
   the existing Blockstudio PHPStan package for projects that want a stronger
   default.
-- **Managed commit checks**: projects can let `blockstudio.json` install a
-  Blockstudio-owned PHPStan pre-commit hook without hand-maintaining generated
-  hook files.
+- **Managed project analysis**: `blockstudio.json` owns the canonical PHPStan
+  preset, roots, exclusions, scan limit, and opt-in generated pre-commit hook
+  without hand-maintaining command or hook files.
 - **Generic theme runtime**: `blockstudio.json` now owns typed, invalidating
   runtime settings, theme defaults, media metadata and rendering, Tailwind
   composition helpers, intent preloading, opt-in measurements, and generic

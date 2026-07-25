@@ -149,6 +149,48 @@
       },
       "additionalProperties": false
     },
+    "phpstan": {
+      "type": "object",
+      "description": "Settings consumed by the canonical blockstudio-phpstan command and Blockstudio-owned analysis hook.",
+      "properties": {
+        "preset": {
+          "type": "string",
+          "enum": ["base", "theme", "extreme-theme", "wordpress-render"],
+          "default": "extreme-theme",
+          "description": "Analysis preset used when the command line does not select one explicitly.",
+          "example": "extreme-theme"
+        },
+        "roots": {
+          "type": "array",
+          "minItems": 1,
+          "default": ["."],
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "description": "Theme roots analyzed by the canonical command. Relative paths resolve from this configuration file.",
+          "example": [".", "../shared-theme"]
+        },
+        "excludePaths": {
+          "type": "array",
+          "default": [],
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "description": "Additional scanner exclusions relative to each configured root.",
+          "example": ["fixtures/**"]
+        },
+        "maxFiles": {
+          "type": "integer",
+          "minimum": 1,
+          "default": 10000,
+          "description": "Maximum number of files inspected by the theme scanner.",
+          "example": 10000
+        }
+      },
+      "additionalProperties": false
+    },
     "themeDefaults": {
       "type": "object",
       "description": "Generic defaults for themes that load Blockstudio.",

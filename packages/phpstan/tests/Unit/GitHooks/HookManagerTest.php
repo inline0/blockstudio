@@ -240,9 +240,13 @@ final class HookManagerTest extends TestCase
         );
 
         self::assertSame(0, $passed->exitCode, $passed->stderr);
-        self::assertStringContainsString(
-            '--root ' . realpath($repository),
-            (string) file_get_contents($repository . '/.analysis-arguments')
+        self::assertSame(
+            "-- --no-progress\n",
+            file_get_contents($repository . '/.analysis-arguments')
+        );
+        self::assertSame(
+            realpath($repository) . "\n",
+            file_get_contents($repository . '/.analysis-working-directory')
         );
     }
 
@@ -392,10 +396,14 @@ final class HookManagerTest extends TestCase
         );
 
         self::assertSame(0, $commit->exitCode, $commit->stderr);
-        self::assertStringContainsString(
-            '--root ' . realpath($linkedProject),
-            (string) file_get_contents(
-                $linkedProject . '/.analysis-arguments'
+        self::assertSame(
+            "-- --no-progress\n",
+            file_get_contents($linkedProject . '/.analysis-arguments')
+        );
+        self::assertSame(
+            realpath($linkedProject) . "\n",
+            file_get_contents(
+                $linkedProject . '/.analysis-working-directory'
             )
         );
         self::assertSame(
@@ -481,6 +489,7 @@ final class HookManagerTest extends TestCase
             <<<'SH'
 #!/bin/sh
 printf '%s\n' "$*" > .analysis-arguments
+pwd > .analysis-working-directory
 if [ -f .analysis-fail ]; then
   echo "Fixture analysis failed." >&2
   exit 1

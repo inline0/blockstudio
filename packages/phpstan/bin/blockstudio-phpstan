@@ -3,6 +3,8 @@
 
 declare(strict_types=1);
 
+require_once dirname(__DIR__) . '/src/Theme/AnalysisConfiguration.php';
+
 /**
  * Canonical Blockstudio PHPStan entry point.
  *
@@ -28,6 +30,13 @@ final class BlockstudioPhpstanCli
         if ($options['help']) {
             $this->help(STDOUT);
             return 0;
+        }
+
+        try {
+            $options = $this->applyBlockstudioConfiguration($options);
+        } catch (\InvalidArgumentException $exception) {
+            fwrite(STDERR, 'Error: ' . $exception->getMessage() . "\n");
+            return 2;
         }
 
         $phpstan = $this->findPhpstan();
@@ -111,12 +120,17 @@ final class BlockstudioPhpstanCli
      *   roots: list<string>,
      *   excludes: list<string>,
      *   maxFiles: int,
+     *   blockstudioConfiguration: ?string,
      *   projectConfiguration: ?string,
      *   errorFormat: string,
      *   renderCommand: list<string>,
      *   renderWorkingDirectory: string,
      *   renderTimeout: int,
-     *   passthrough: list<string>
+     *   passthrough: list<string>,
+     *   explicitPreset: bool,
+     *   explicitRoots: bool,
+     *   explicitExcludes: bool,
+     *   explicitMaxFiles: bool
      * }
      */
     private function parse(array $arguments): array
@@ -129,12 +143,17 @@ final class BlockstudioPhpstanCli
             'roots' => [],
             'excludes' => [],
             'maxFiles' => 10000,
+            'blockstudioConfiguration' => null,
             'projectConfiguration' => null,
             'errorFormat' => 'table',
             'renderCommand' => [],
             'renderWorkingDirectory' => getcwd() ?: '.',
             'renderTimeout' => 60,
             'passthrough' => [],
+            'explicitPreset' => false,
+            'explicitRoots' => false,
+            'explicitExcludes' => false,
+            'explicitMaxFiles' => false,
         ];
 
         $count = count($arguments);
@@ -162,6 +181,7 @@ final class BlockstudioPhpstanCli
             );
             if ($matched !== null) {
                 $options['preset'] = $matched;
+                $options['explicitPreset'] = true;
                 continue;
             }
 
@@ -173,6 +193,7 @@ final class BlockstudioPhpstanCli
             );
             if ($matched !== null) {
                 $options['roots'][] = $this->absolutePath($matched);
+                $options['explicitRoots'] = true;
                 continue;
             }
 
@@ -184,6 +205,7 @@ final class BlockstudioPhpstanCli
             );
             if ($matched !== null) {
                 $options['excludes'][] = $matched;
+                $options['explicitExcludes'] = true;
                 continue;
             }
 
@@ -197,6 +219,20 @@ final class BlockstudioPhpstanCli
                 $options['maxFiles'] = $this->positiveInteger(
                     $matched,
                     '--max-files'
+                );
+                $options['explicitMaxFiles'] = true;
+                continue;
+            }
+
+            $matched = $this->optionValue(
+                $argument,
+                $arguments,
+                $index,
+                ['--blockstudio-json']
+            );
+            if ($matched !== null) {
+                $options['blockstudioConfiguration'] = $this->absolutePath(
+                    $matched
                 );
                 continue;
             }
@@ -265,6 +301,80 @@ final class BlockstudioPhpstanCli
             }
 
             $options['roots'][] = $this->absolutePath($argument);
+            $options['explicitRoots'] = true;
+        }
+
+        $options['roots'] = array_values(array_unique($options['roots']));
+        $options['excludes'] = array_values(array_unique($options['excludes']));
+
+        return $options;
+    }
+
+    /**
+     * @param array{
+     *   help: bool,
+     *   preset: string,
+     *   roots: list<string>,
+     *   excludes: list<string>,
+     *   maxFiles: int,
+     *   blockstudioConfiguration: ?string,
+     *   projectConfiguration: ?string,
+     *   errorFormat: string,
+     *   renderCommand: list<string>,
+     *   renderWorkingDirectory: string,
+     *   renderTimeout: int,
+     *   passthrough: list<string>,
+     *   explicitPreset: bool,
+     *   explicitRoots: bool,
+     *   explicitExcludes: bool,
+     *   explicitMaxFiles: bool
+     * } $options
+     * @return array{
+     *   help: bool,
+     *   preset: string,
+     *   roots: non-empty-list<string>,
+     *   excludes: list<string>,
+     *   maxFiles: int,
+     *   blockstudioConfiguration: ?string,
+     *   projectConfiguration: ?string,
+     *   errorFormat: string,
+     *   renderCommand: list<string>,
+     *   renderWorkingDirectory: string,
+     *   renderTimeout: int,
+     *   passthrough: list<string>,
+     *   explicitPreset: bool,
+     *   explicitRoots: bool,
+     *   explicitExcludes: bool,
+     *   explicitMaxFiles: bool
+     * }
+     */
+    private function applyBlockstudioConfiguration(array $options): array
+    {
+        $workingDirectory = getcwd() ?: '.';
+        $configuration = (
+            new \Blockstudio\PHPStan\Theme\AnalysisConfiguration()
+        )->read(
+            $workingDirectory,
+            $options['blockstudioConfiguration']
+        );
+
+        if (!$options['explicitPreset'] && $configuration['preset'] !== null) {
+            $options['preset'] = $configuration['preset'];
+        }
+        if (!$options['explicitRoots'] && $configuration['roots'] !== null) {
+            $options['roots'] = $configuration['roots'];
+        }
+        if (
+            !$options['explicitExcludes']
+            && $configuration['excludes'] !== null
+        ) {
+            $options['excludes'] = $configuration['excludes'];
+        }
+        if (
+            !$options['explicitMaxFiles']
+            && $configuration['maxFiles'] !== null
+        ) {
+            $options['maxFiles'] = $configuration['maxFiles'];
         }
 
         if ($options['roots'] === []) {
@@ -272,7 +382,9 @@ final class BlockstudioPhpstanCli
         }
 
         $options['roots'] = array_values(array_unique($options['roots']));
-        $options['excludes'] = array_values(array_unique($options['excludes']));
+        $options['excludes'] = array_values(
+            array_unique($options['excludes'])
+        );
 
         return $options;
     }
@@ -510,6 +622,8 @@ Options:
   --root <path>                      Add an analysed theme root (repeatable)
   --exclude <glob>                   Add a scan exclusion (repeatable)
   --max-files <number>               Maximum files scanned per run
+  --blockstudio-json <path>          Read PHPStan settings from this
+                                     blockstudio.json source
   -c, --configuration <path>         Include a project PHPStan configuration
   --error-format <format>            PHPStan output format (default: table)
   --render-command <json-array>      Live-render command argv
