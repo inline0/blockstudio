@@ -84,7 +84,9 @@ contain:
 - `inventory`: normalized `pages`, `blocks`, `patterns`, `templates`, `parts`,
   and public `ui` family examples
 - `order`: the stable cross-type display order
-- `sources`: exact selected source paths with provenance on each record
+- `sources`: exact selected source paths with provenance on each record; a page
+  record's `source` is its stable source identity while `path` is the physical
+  render template path
 - `warnings` and `errors`: structured issues instead of emitted output
 - `deleted`: requested identifiers that no longer exist
 - `selection`: the normalized selection and whether it was targeted

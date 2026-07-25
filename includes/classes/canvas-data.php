@@ -377,7 +377,11 @@ final class Canvas_Data {
 				'title'       => self::record_string( $page, 'title', self::humanize( $id ) ),
 				'slug'        => self::record_string( $page, 'slug' ),
 				'source'      => $source,
-				'path'        => self::record_string( $page, 'path', $source ),
+				'path'        => self::record_string(
+					$page,
+					'template_path',
+					self::record_string( $page, 'path', $source )
+				),
 				'provenance'  => self::record_string( $page, 'collection', 'blockstudio-page' ),
 				'contentType' => self::record_string( $page, 'contentType', 'blocks' ),
 				'content'     => '',
