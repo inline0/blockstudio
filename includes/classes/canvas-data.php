@@ -628,44 +628,46 @@ final class Canvas_Data {
 			$preferred = Settings::get( 'dev/canvas/order' );
 		}
 
-		$preferred = is_array( $preferred )
+		$preferred   = is_array( $preferred )
 			? array_values(
 				array_filter(
 					array_map(
-						static fn( mixed $value ): string => is_scalar( $value ) ? trim( (string) $value ) : '',
+						static fn( mixed $value ): string => is_scalar( $value )
+							? self::normalize_order_identifier( (string) $value )
+							: '',
 						$preferred
 					)
 				)
 			)
 			: array();
-		$positions = array_flip( $preferred );
-		$rows      = array();
-		$sequence  = 0;
+		$positions   = array_flip( $preferred );
+		$rows        = array();
+		$path_titles = array();
+		$sequence    = 0;
 
 		foreach ( self::TYPES as $type ) {
 			foreach ( $inventory[ $type ] ?? array() as $item ) {
-				$candidates = self::record_candidates( $item );
-				$position   = PHP_INT_MAX;
+				$page_path = 'pages' === $type ? self::page_order_path( $item ) : '';
+				$title     = strtolower( self::record_string( $item, 'title', (string) $item['id'] ) );
 
-				foreach ( $candidates as $candidate ) {
-					if ( isset( $positions[ $candidate ] ) ) {
-						$position = min( $position, (int) $positions[ $candidate ] );
-					}
+				if ( '' !== $page_path ) {
+					$path_titles[ $page_path ] = $title;
 				}
 
 				$rows[] = array(
 					'type'      => $type,
 					'id'        => (string) $item['id'],
-					'position'  => $position,
+					'position'  => self::order_position( $item, $page_path, $positions ),
+					'pagePath'  => $page_path,
 					'sequence'  => $sequence++,
-					'titleSort' => strtolower( self::record_string( $item, 'title', (string) $item['id'] ) ),
+					'titleSort' => $title,
 				);
 			}
 		}
 
 		usort(
 			$rows,
-			static function ( array $left, array $right ): int {
+			static function ( array $left, array $right ) use ( $path_titles ): int {
 				if ( $left['position'] !== $right['position'] ) {
 					if ( PHP_INT_MAX === $left['position'] ) {
 						return 1;
@@ -676,6 +678,18 @@ final class Canvas_Data {
 					}
 
 					return $left['position'] <=> $right['position'];
+				}
+
+				if ( 'pages' === $left['type'] && 'pages' === $right['type'] ) {
+					$page_order = self::compare_page_order_paths(
+						(string) $left['pagePath'],
+						(string) $right['pagePath'],
+						$path_titles
+					);
+
+					if ( 0 !== $page_order ) {
+						return $page_order;
+					}
 				}
 
 				if ( PHP_INT_MAX !== $left['position'] ) {
@@ -759,6 +773,145 @@ final class Canvas_Data {
 		}
 
 		return array_values( array_unique( $candidates ) );
+	}
+
+	/**
+	 * Resolve an explicit or inherited display-order position.
+	 *
+	 * @param array              $record    Record.
+	 * @param string             $page_path Normalized page hierarchy path.
+	 * @param array<string, int> $positions Configured positions.
+	 *
+	 * @return int Position.
+	 */
+	private static function order_position( array $record, string $page_path, array $positions ): int {
+		$position = PHP_INT_MAX;
+
+		foreach ( self::record_candidates( $record ) as $candidate ) {
+			$candidate = self::normalize_order_identifier( $candidate );
+			if ( isset( $positions[ $candidate ] ) ) {
+				$position = min( $position, (int) $positions[ $candidate ] );
+			}
+		}
+
+		if ( PHP_INT_MAX !== $position || '' === $page_path ) {
+			return $position;
+		}
+
+		$candidate = $page_path;
+		while ( '' !== $candidate ) {
+			if ( isset( $positions[ $candidate ] ) ) {
+				return (int) $positions[ $candidate ];
+			}
+
+			$separator = strrpos( $candidate, '/' );
+			$candidate = false === $separator ? '' : substr( $candidate, 0, $separator );
+		}
+
+		return PHP_INT_MAX;
+	}
+
+	/**
+	 * Resolve a normalized hierarchy path for a page record.
+	 *
+	 * @param array $record Page record.
+	 *
+	 * @return string Path.
+	 */
+	private static function page_order_path( array $record ): string {
+		$page = is_array( $record['page'] ?? null ) ? $record['page'] : array();
+
+		foreach ( array( 'logical_path', 'source_path' ) as $key ) {
+			$path = self::normalize_page_order_path( self::record_string( $page, $key ) );
+			if ( '' !== $path ) {
+				return $path;
+			}
+		}
+
+		foreach ( array( 'source', 'path' ) as $key ) {
+			$path = self::normalize_page_order_path( self::record_string( $record, $key ) );
+			if ( '' !== $path ) {
+				return $path;
+			}
+		}
+
+		return '';
+	}
+
+	/**
+	 * Normalize a page source into a hierarchy path.
+	 *
+	 * @param string $path Source path.
+	 *
+	 * @return string Path.
+	 */
+	private static function normalize_page_order_path( string $path ): string {
+		$path = self::normalize_order_identifier( $path );
+		if ( str_starts_with( $path, 'pages/' ) ) {
+			$path = substr( $path, strlen( 'pages/' ) );
+		}
+
+		$path = (string) preg_replace(
+			'#/(?:index|page)(?:\.(?:blade\.php|php|twig|md|html|json))?$#',
+			'',
+			'/' . $path
+		);
+		$path = ltrim( $path, '/' );
+		$path = (string) preg_replace( '/\.(?:blade\.php|php|twig|md|html|json)$/', '', $path );
+
+		return self::normalize_order_identifier( $path );
+	}
+
+	/**
+	 * Compare two page paths as a title-aware hierarchy.
+	 *
+	 * @param string                $left_path  Left path.
+	 * @param string                $right_path Right path.
+	 * @param array<string, string> $titles     Titles keyed by complete path.
+	 *
+	 * @return int Order.
+	 */
+	private static function compare_page_order_paths( string $left_path, string $right_path, array $titles ): int {
+		if ( $left_path === $right_path ) {
+			return 0;
+		}
+
+		$left_segments  = '' === $left_path ? array() : explode( '/', $left_path );
+		$right_segments = '' === $right_path ? array() : explode( '/', $right_path );
+		$shared         = min( count( $left_segments ), count( $right_segments ) );
+
+		for ( $index = 0; $index < $shared; ++$index ) {
+			if ( $left_segments[ $index ] === $right_segments[ $index ] ) {
+				continue;
+			}
+
+			$left_prefix  = implode( '/', array_slice( $left_segments, 0, $index + 1 ) );
+			$right_prefix = implode( '/', array_slice( $right_segments, 0, $index + 1 ) );
+			$title_order  = strcasecmp(
+				$titles[ $left_prefix ] ?? $left_segments[ $index ],
+				$titles[ $right_prefix ] ?? $right_segments[ $index ]
+			);
+
+			return 0 !== $title_order
+				? $title_order
+				: strcasecmp( $left_prefix, $right_prefix );
+		}
+
+		return count( $left_segments ) <=> count( $right_segments );
+	}
+
+	/**
+	 * Normalize one display-order identifier.
+	 *
+	 * @param string $identifier Identifier.
+	 *
+	 * @return string Identifier.
+	 */
+	private static function normalize_order_identifier( string $identifier ): string {
+		$identifier = strtolower( trim( str_replace( '\\', '/', $identifier ) ) );
+		$identifier = (string) preg_replace( '#/+#', '/', $identifier );
+
+		return trim( $identifier, '/' );
 	}
 
 	/**

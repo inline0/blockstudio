@@ -7,6 +7,7 @@
 
 use Blockstudio\Canvas;
 use Blockstudio\Build;
+use Blockstudio\Page_Registry;
 use Blockstudio\Pattern_Registry;
 use Blockstudio\Pages;
 use Blockstudio\Site_Templates;
@@ -181,6 +182,50 @@ class CanvasTest extends TestCase {
 		$this->assertFileExists( $source['template_path'] );
 		$this->assertSame( $source['template_path'], $record['path'] );
 		$this->assertSame( 0, $reconciled );
+	}
+
+	public function test_explicit_order_groups_page_hierarchies_by_their_root(): void {
+		$registry = Page_Registry::instance();
+		Pages::reset();
+		$registry->add_path( '/virtual/pages' );
+
+		$pages = array(
+			'account'       => array( 'title' => 'Account', 'logical_path' => 'account/page.json', 'source_path' => 'account' ),
+			'docs-install'  => array( 'title' => 'Install', 'logical_path' => 'docs/install.md', 'source_path' => 'docs/install.md' ),
+			'security'      => array( 'title' => 'Security', 'logical_path' => 'account/security/page.json', 'source_path' => 'account/security' ),
+			'docs-usage'    => array( 'title' => 'Configure', 'logical_path' => 'docs/usage.md', 'source_path' => 'docs/usage.md' ),
+			'docs-home'     => array( 'title' => 'Guides', 'logical_path' => 'docs/index.md', 'source_path' => 'docs/index.md' ),
+		);
+
+		try {
+			foreach ( $pages as $name => $page ) {
+				$registry->register(
+					$name,
+					array_merge(
+						$page,
+						array(
+							'name'        => $name,
+							'key'         => $name,
+							'slug'        => $name,
+							'path'        => $page['source_path'],
+							'contentType' => 'html',
+						)
+					)
+				);
+			}
+
+			$result = Canvas::inventory(
+				array( 'pages' => true ),
+				array( 'order' => array( 'docs', 'account' ) )
+			);
+
+			$this->assertSame(
+				array( 'docs-home', 'docs-usage', 'docs-install', 'account', 'security' ),
+				array_column( $result['order'], 'id' )
+			);
+		} finally {
+			Pages::reset();
+		}
 	}
 
 	public function test_blocks_only_refresh_does_not_discover_pages(): void {
