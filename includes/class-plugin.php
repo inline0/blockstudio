@@ -125,6 +125,15 @@ class Plugin {
 		require_once $classes_dir . 'files.php';
 		require_once $classes_dir . 'single-flight.php';
 		require_once $classes_dir . 'settings.php';
+		require_once $classes_dir . 'runtime-settings.php';
+		require_once $classes_dir . 'media-metadata.php';
+		require_once $classes_dir . 'media-metadata-builder.php';
+		require_once $classes_dir . 'media.php';
+		require_once $classes_dir . 'theme-defaults.php';
+		require_once $classes_dir . 'link-preload.php';
+		require_once $classes_dir . 'performance-measurement.php';
+		require_once $classes_dir . 'wordpress-optimizations.php';
+		require_once $classes_dir . 'runtime.php';
 		require_once $classes_dir . 'build-cache.php';
 		require_once $classes_dir . 'block-editor-policy.php';
 		require_once $classes_dir . 'block.php';
@@ -218,6 +227,10 @@ class Plugin {
 	 */
 	private function init(): void {
 		$this->init_storage_system();
+
+		if ( class_exists( 'Blockstudio\Runtime' ) ) {
+			Runtime::init();
+		}
 
 		if ( class_exists( 'Blockstudio\Ui' ) ) {
 			Ui::init();

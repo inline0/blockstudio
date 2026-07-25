@@ -1,0 +1,20 @@
+{
+  "$schema": "https://blockstudio.dev/schema/blockstudio",
+  "themeDefaults": {
+    "titleTag": true,
+    "suppressDirectoryUpdates": true,
+    "syncPagesInDevelopment": false
+  },
+  "performance": {
+    "profile": "speed",
+    "wordpress": {
+      "frontendAssets": false
+    },
+    "measurement": {
+      "enabled": true,
+      "queryMonitor": true,
+      "headers": false,
+      "timings": false
+    }
+  }
+}

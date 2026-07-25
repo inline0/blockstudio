@@ -12,6 +12,7 @@ use Blockstudio\Pages;
 use Blockstudio\Site_Templates;
 use Blockstudio\Field_Type_Registry;
 use Blockstudio\Utils;
+use Blockstudio\Media;
 
 /**
  * Render a Blockstudio block as frontend-resolved HTML.
@@ -466,4 +467,74 @@ function blockstudio_site_template( string $slug ): ?array {
  */
 function blockstudio_site_template_part( string $slug ): ?array {
 	return Site_Templates::get_part( $slug );
+}
+
+/**
+ * Merge Tailwind class values with Blockstudio's bundled TailwindPHP runtime.
+ *
+ * @since 7.6.0
+ *
+ * @param mixed ...$classes Class strings, arrays, and conditional values.
+ *
+ * @return string Merged class string.
+ *
+ * @phpcs:disable WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedFunctionFound -- Public API function.
+ */
+function bs_tw_merge( mixed ...$classes ): string {
+	// phpcs:enable WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedFunctionFound
+	blockstudio_load_tailwindphp();
+
+	return \BlockstudioVendor\TailwindPHP\merge( ...$classes );
+}
+
+/**
+ * Create a CVA-style Tailwind variant composer.
+ *
+ * @since 7.6.0
+ *
+ * @param array<string, mixed> $config Variant configuration.
+ *
+ * @return callable Variant composer.
+ *
+ * @phpcs:disable WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedFunctionFound -- Public API function.
+ */
+function bs_tw_variants( array $config ): callable {
+	// phpcs:enable WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedFunctionFound
+	blockstudio_load_tailwindphp();
+
+	return \BlockstudioVendor\TailwindPHP\variants( $config );
+}
+
+/**
+ * Load the bundled TailwindPHP function API once.
+ *
+ * @since 7.6.0
+ *
+ * @return void
+ */
+function blockstudio_load_tailwindphp(): void {
+	static $loaded = false;
+
+	if ( $loaded ) {
+		return;
+	}
+
+	$loaded = true;
+	require_once BLOCKSTUDIO_DIR . '/lib/tailwindphp-autoload.php';
+}
+
+/**
+ * Render a stable Blockstudio image.
+ *
+ * @since 7.6.0
+ *
+ * @param array<string, mixed> $args Image arguments.
+ *
+ * @return string Image markup.
+ *
+ * @phpcs:disable WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedFunctionFound -- Public API function.
+ */
+function bs_media_image( array $args ): string {
+	// phpcs:enable WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedFunctionFound
+	return Media::image( $args );
 }

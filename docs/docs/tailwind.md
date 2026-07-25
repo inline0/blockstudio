@@ -1,11 +1,11 @@
 ---
 title: Tailwind CSS
 description: Server-side Tailwind CSS compilation with automatic caching.
-path: "tailwind"
+path: 'tailwind'
 order: 57
-section: "Platform"
-meta_title: "Tailwind CSS"
-meta_description: "Server-side Tailwind CSS compilation with automatic caching."
+section: 'Platform'
+meta_title: 'Tailwind CSS'
+meta_description: 'Server-side Tailwind CSS compilation with automatic caching.'
 ---
 
 # Tailwind CSS
@@ -33,7 +33,9 @@ The compilation flow:
 The compiled CSS is injected as:
 
 ```html
-<style id="blockstudio-tailwind">/* compiled CSS */</style>
+<style id="blockstudio-tailwind">
+  /* compiled CSS */
+</style>
 ```
 
 This includes Tailwind's preflight (CSS reset) and all matched utility classes.
@@ -64,6 +66,35 @@ add_filter('blockstudio/settings/tailwind/enabled', '__return_true');
 ```
 
 When `enabled` is `true`, every frontend page will have Tailwind CSS compiled and injected automatically. You can use Tailwind utility classes anywhere: in block templates, theme templates, `the_content` filters, or any HTML that appears in the page output.
+
+## Template composition helpers
+
+Blockstudio exposes the same bundled TailwindPHP engine to PHP templates. No
+theme-side copy or fallback implementation is required:
+
+```php title="functions.php"
+$classes = bs_tw_merge('px-2 text-sm', 'px-4');
+// text-sm px-4
+
+$button = bs_tw_variants([
+    'base' => 'inline-flex items-center',
+    'variants' => [
+        'size' => [
+            'sm' => 'h-8 px-3',
+            'lg' => 'h-12 px-6',
+        ],
+    ],
+    'defaultVariants' => [
+        'size' => 'sm',
+    ],
+]);
+
+echo $button(['size' => 'lg', 'class' => 'rounded']);
+```
+
+`bs_tw_merge()` accepts nested class values and resolves conflicting Tailwind
+utilities. `bs_tw_variants()` returns a CVA-style callable supporting base,
+variants, default variants, compound variants, `class`, and `className`.
 
 ## Configuration
 
@@ -173,10 +204,10 @@ Use the classes value in your template:
 
 ## Settings Reference
 
-| Option | Type | Default | Description |
-|--------|------|---------|-------------|
+| Option    | Type    | Default | Description                                     |
+| --------- | ------- | ------- | ----------------------------------------------- |
 | `enabled` | boolean | `false` | Enable Tailwind CSS compilation on the frontend |
-| `config` | string | `""` | Tailwind v4 CSS-first configuration string |
+| `config`  | string  | `""`    | Tailwind v4 CSS-first configuration string      |
 
 ### Setting via JSON
 
@@ -265,10 +296,12 @@ The full CSS input that gets compiled looks like this:
 
 ```css
 /* Base import */
-@import "tailwindcss";
+@import 'tailwindcss';
 
 /* Config from settings (if set) */
-@theme { --color-brand: pink; }
+@theme {
+  --color-brand: pink;
+}
 
 /* Anything added via the blockstudio/tailwind/css filter */
 ```
@@ -381,7 +414,6 @@ A complete working setup with custom theme colors and a block that uses them:
 ```
 
 This renders on the frontend with all Tailwind utilities and custom theme colors compiled into a single inline `<style>` tag.
-
 
 > **[Building a Block Library](/guides/block-library)**
 >

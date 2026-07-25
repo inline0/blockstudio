@@ -28,32 +28,7 @@ class SettingsTest extends TestCase {
 	}
 
 	private function reset_singleton(): void {
-		$ref = new ReflectionClass( Settings::class );
-
-		$instance = $ref->getProperty( 'instance' );
-		$instance->setAccessible( true );
-		$instance->setValue( null, null );
-
-		$settings = $ref->getProperty( 'settings' );
-		$settings->setAccessible( true );
-		$settings->setValue( null, array() );
-
-		$options = $ref->getProperty( 'settings_options' );
-		$options->setAccessible( true );
-		$options->setValue( null, array() );
-
-		$json = $ref->getProperty( 'settings_json' );
-		$json->setAccessible( true );
-		$json->setValue( null, null );
-
-		$filters = $ref->getProperty( 'settings_filters' );
-		$filters->setAccessible( true );
-		$filters->setValue( null, array() );
-
-		$filters_values = $ref->getProperty( 'settings_filters_values' );
-		$filters_values->setAccessible( true );
-		$filters_values->setValue( null, array() );
-
+		Settings::reset();
 		Settings::get_instance();
 	}
 
@@ -574,5 +549,39 @@ class SettingsTest extends TestCase {
 		$this->reset_singleton();
 
 		$this->assertFalse( Settings::get( 'assets/enqueue' ) );
+	}
+
+	public function test_typed_accessors_use_strict_types_and_fallbacks(): void {
+		$this->assertTrue( Settings::get_bool( 'tailwind/enabled' ) );
+		$this->assertSame( '@fallback', Settings::get_string( 'tailwind/enabled', '@fallback' ) );
+		$this->assertSame( 12, Settings::get_int( 'tailwind/enabled', 12 ) );
+		$this->assertSame( array( 1 ), Settings::get_array( 'users/ids' ) );
+		$this->assertSame( array( 'fallback' ), Settings::get_array( 'tailwind/enabled', array( 'fallback' ) ) );
+	}
+
+	public function test_raw_settings_expose_only_the_active_source_payload(): void {
+		$raw = Settings::get_raw();
+
+		$this->assertTrue( $raw['tailwind']['enabled'] );
+		$this->assertArrayNotHasKey( 'performance', $raw );
+	}
+
+	public function test_invalid_json_reports_an_error_and_file_changes_reload_automatically(): void {
+		$path = wp_tempnam( 'blockstudio-settings-reload' );
+		$this->assertIsString( $path );
+		$this->add_filter(
+			'blockstudio/settings/path',
+			static fn(): string => $path
+		);
+
+		file_put_contents( $path, "[]\n" );
+		Settings::reload();
+		$this->assertNotEmpty( Settings::errors() );
+
+		file_put_contents( $path, "{\"ui\":{\"enabled\":true}}\n" );
+		$this->assertTrue( Settings::get_bool( 'ui/enabled' ) );
+		$this->assertSame( array(), Settings::errors() );
+
+		unlink( $path );
 	}
 }

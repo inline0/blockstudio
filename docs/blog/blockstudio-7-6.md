@@ -1,13 +1,13 @@
 ---
 title: Blockstudio 7.6
-description: Public canvas and rendering contracts, exact changed-content selection, stricter PHPStan layers, and managed project hooks.
-date: "2026-07-25"
+description: Public canvas and rendering contracts, generic theme runtime ownership, stricter PHPStan layers, and managed project hooks.
+date: '2026-07-25'
 author: Dennis
-path: "blockstudio-7-6"
+path: 'blockstudio-7-6'
 order: 1
-section: "Blog"
-meta_title: "Blockstudio 7.6"
-meta_description: "Public canvas and rendering contracts, exact changed-content selection, stricter PHPStan layers, and managed project hooks."
+section: 'Blog'
+meta_title: 'Blockstudio 7.6'
+meta_description: 'Public canvas and rendering contracts, generic theme runtime ownership, stricter PHPStan layers, and managed project hooks.'
 ---
 
 Blockstudio 7.6 makes its existing runtime capabilities available through
@@ -40,6 +40,10 @@ The short version:
 - **Managed commit checks**: projects can let `blockstudio.json` install a
   Blockstudio-owned PHPStan pre-commit hook without hand-maintaining generated
   hook files.
+- **Generic theme runtime**: `blockstudio.json` now owns typed, invalidating
+  runtime settings, theme defaults, media metadata and rendering, Tailwind
+  composition helpers, intent preloading, opt-in measurements, and generic
+  WordPress optimizations.
 
 ## Canvas inventory and exact selection
 
@@ -98,3 +102,28 @@ unrelated and editor-only assets are not.
 
 These APIs are designed for preview tools, component galleries, exporters, and
 other integrations without knowledge of any particular host product.
+
+## Generic runtime ownership
+
+Themes can select `compat`, `speed`, or `strict` under
+`performance.profile`. Compat preserves WordPress defaults. The opt-in profiles
+enable independent WordPress cleanup, same-origin intent preloading, stable
+lazy images, and media metadata while allowing every child value to be
+overridden.
+
+`Blockstudio\Settings` now exposes strict boolean, integer, string, and array
+accessors; raw-source values; parse errors; deterministic fingerprints; and
+automatic source invalidation. `Blockstudio\Runtime_Settings` resolves the
+effective profile and provides a stable configuration hash.
+
+Theme images can be inventoried with
+`Blockstudio\Media_Metadata_Builder`, read through
+`Blockstudio\Media_Metadata`, and rendered with `bs_media_image()`. Tailwind
+class composition is available directly through `bs_tw_merge()` and
+`bs_tw_variants()`. The browser assets and public hooks use only Blockstudio
+names.
+
+The existing `Blockstudio\Pages` and `Blockstudio\Patterns` APIs remain the
+canonical file-backed content surfaces. Theme defaults can opt into
+development page reconciliation without adding another page or pattern
+abstraction.
