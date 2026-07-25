@@ -147,7 +147,7 @@ final class Static_Prerender_Runtime {
 		$server  = is_array( $_SERVER ) ? $_SERVER : array();
 		$cookies = is_array( $_COOKIE ) ? $_COOKIE : array();
 
-		if ( self::should_bypass_request( $server, $cookies ) ) {
+		if ( self::should_bypass_request( $server, $cookies, true ) ) {
 			return;
 		}
 
@@ -189,12 +189,17 @@ final class Static_Prerender_Runtime {
 	/**
 	 * Determine whether a request is unsafe for static caching.
 	 *
-	 * @param array<string,mixed> $server  Server values.
-	 * @param array<string,mixed> $cookies Cookie values.
+	 * @param array<string,mixed> $server              Server values.
+	 * @param array<string,mixed> $cookies             Cookie values.
+	 * @param bool                $use_wordpress_state Include live WordPress request flags.
 	 *
 	 * @return bool Whether to bypass.
 	 */
-	public static function should_bypass_request( array $server, array $cookies ): bool {
+	public static function should_bypass_request(
+		array $server,
+		array $cookies,
+		bool $use_wordpress_state = false
+	): bool {
 		$method = strtoupper( (string) ( $server['REQUEST_METHOD'] ?? 'GET' ) );
 		$bypass = 'GET' !== $method;
 
@@ -207,19 +212,19 @@ final class Static_Prerender_Runtime {
 			}
 		}
 
-		if ( ! $bypass && function_exists( 'is_admin' ) && is_admin() ) {
+		if ( ! $bypass && $use_wordpress_state && function_exists( 'is_admin' ) && is_admin() ) {
 			$bypass = true;
 		}
-		if ( ! $bypass && defined( 'REST_REQUEST' ) && REST_REQUEST ) {
+		if ( ! $bypass && $use_wordpress_state && defined( 'REST_REQUEST' ) && REST_REQUEST ) {
 			$bypass = true;
 		}
-		if ( ! $bypass && function_exists( 'wp_doing_ajax' ) && wp_doing_ajax() ) {
+		if ( ! $bypass && $use_wordpress_state && function_exists( 'wp_doing_ajax' ) && wp_doing_ajax() ) {
 			$bypass = true;
 		}
-		if ( ! $bypass && function_exists( 'wp_doing_cron' ) && wp_doing_cron() ) {
+		if ( ! $bypass && $use_wordpress_state && function_exists( 'wp_doing_cron' ) && wp_doing_cron() ) {
 			$bypass = true;
 		}
-		if ( ! $bypass && defined( 'DONOTCACHEPAGE' ) && DONOTCACHEPAGE ) {
+		if ( ! $bypass && $use_wordpress_state && defined( 'DONOTCACHEPAGE' ) && DONOTCACHEPAGE ) {
 			$bypass = true;
 		}
 

@@ -349,6 +349,21 @@ contain dashes. Explicit aliases from
 `blockstudio/block_tags/tag_aliases` take precedence over prefix resolution.
 Unknown prefixed tags are left untouched.
 
+Prefix and alias tags remain supported authoring conveniences. The canonical,
+portable spelling is always `<bs:namespace-slug>`, because it records the real
+block name without depending on project filters:
+
+```html
+<bs:theme-components-card />
+<bs:bsui-input />
+```
+
+Blockstudio examples, generated diagnostics, and programmatic output use this
+canonical spelling. Projects that want to remove an older shorthand surface
+can use the standalone, dry-run-first
+[canonical tag migration](/docs/dev/migration/v7#canonical-block-tags) without
+booting WordPress.
+
 ### Core blocks
 
 Any block with a registered [renderer](/docs/pages-and-patterns) can be used:

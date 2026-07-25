@@ -157,3 +157,13 @@ non-GET requests, dynamic path boundaries, and personalized cookies. Complete
 graphs are validated before atomic cutover; foreign cache artifacts are never
 overwritten; multisite entries are removed independently on disable or
 deactivation.
+
+## Canonical block-tag migrations
+
+Project prefixes and aliases still work, but Blockstudio now consistently emits
+the portable `<bs:namespace-slug>` spelling. A standalone migration utility can
+translate a caller-supplied legacy prefix and alias map without booting
+WordPress. Dry-run is the default; the JSON report records exact mappings,
+source hashes, unknown and ambiguous cases, dynamic tags, and documentation
+examples that require review. Paired, nested, self-closing, and PHP-string tags
+are covered, while unrelated custom elements remain untouched.
