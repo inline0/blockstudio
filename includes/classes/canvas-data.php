@@ -362,7 +362,7 @@ final class Canvas_Data {
 	private static function page_records( ?array $requested ): array {
 		$records = array();
 
-		foreach ( Pages::pages() as $key => $page ) {
+		foreach ( Pages::discover() as $key => $page ) {
 			if ( ! is_array( $page ) ) {
 				continue;
 			}
@@ -906,6 +906,46 @@ final class Canvas_Data {
 	 * @return string Content.
 	 */
 	private static function page_content( array $page ): string {
+		$content_path   = self::record_string(
+			$page,
+			'content_path',
+			self::record_string( $page, 'template_path' )
+		);
+		$inline_content = is_string( $page['inline_content'] ?? null )
+			? $page['inline_content']
+			: '';
+		$has_source     = '' !== $inline_content || ( '' !== $content_path && is_file( $content_path ) );
+
+		if ( $has_source ) {
+			if ( ! empty( $page['is_markdown'] ) || 'markdown' === ( $page['contentType'] ?? null ) ) {
+				$content = $inline_content;
+				if ( '' === $content && '' !== $content_path ) {
+					// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Reading the selected local page source.
+					$loaded  = file_get_contents( $content_path );
+					$content = is_string( $loaded ) ? $loaded : '';
+				}
+
+				$parts = Page_Markdown::split_frontmatter( $content );
+				$body  = is_string( $parts['body'] ?? null ) ? $parts['body'] : $content;
+				$html  = Page_Markdown::to_html( $body );
+
+				if ( ! empty( $page['sanitize_content'] ) ) {
+					$html = Page_Markdown::sanitize_docs_html( $html );
+				}
+
+				return is_string( $html ) ? $html : $content;
+			}
+
+			if ( '' !== $inline_content ) {
+				return $inline_content;
+			}
+
+			$content = self::compiled_template_content( $page );
+			if ( '' !== $content ) {
+				return $content;
+			}
+		}
+
 		$post_id = isset( $page['post_id'] ) && is_numeric( $page['post_id'] )
 			? (int) $page['post_id']
 			: 0;

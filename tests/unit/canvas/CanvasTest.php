@@ -156,6 +156,33 @@ class CanvasTest extends TestCase {
 		$this->assertSame( array(), $result['inventory']['templates'] );
 	}
 
+	public function test_page_inventory_restores_source_metadata_without_synchronizing_posts(): void {
+		$page = $this->first_page_id();
+
+		if ( null === $page ) {
+			$this->markTestSkipped( 'A page fixture is required.' );
+		}
+
+		$reconciled = 0;
+		$this->add_action_callback(
+			'blockstudio/pages/reconciled',
+			static function () use ( &$reconciled ): void {
+				++$reconciled;
+			}
+		);
+
+		Pages::reset();
+		$result = Canvas::inventory( array( 'pages' => array( $page ) ) );
+		$record = $result['inventory']['pages'][0] ?? array();
+		$source = is_array( $record['page'] ?? null ) ? $record['page'] : array();
+
+		$this->assertCount( 1, $result['inventory']['pages'] );
+		$this->assertArrayHasKey( 'template_path', $source );
+		$this->assertFileExists( $source['template_path'] );
+		$this->assertSame( $source['template_path'], $record['path'] );
+		$this->assertSame( 0, $reconciled );
+	}
+
 	public function test_blocks_only_refresh_does_not_discover_pages(): void {
 		$name = $this->first_theme_block_name();
 

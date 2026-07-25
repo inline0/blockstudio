@@ -1882,6 +1882,45 @@ class Pages {
 	}
 
 	/**
+	 * Discover the current page sources without synchronizing WordPress posts.
+	 *
+	 * Canvas and other read-only consumers need the source-backed registry even
+	 * when the ordinary frontend registry was hydrated from persisted posts.
+	 * Existing post IDs and permalinks are merged back into matching discovered
+	 * records without writing content or advancing reconciliation state.
+	 *
+	 * @since 7.6.0
+	 *
+	 * @return array<string, array> Source-backed pages.
+	 */
+	public static function discover(): array {
+		$registry = Page_Registry::instance();
+
+		if ( array() !== $registry->get_paths() ) {
+			return $registry->get_registered_pages();
+		}
+
+		$persisted = $registry->get_pages();
+		$registry  = self::discover_registry();
+
+		foreach ( $registry->get_registered_pages() as $name => $page_data ) {
+			$key      = is_string( $page_data['key'] ?? null ) ? $page_data['key'] : (string) $name;
+			$existing = is_array( $persisted[ $key ] ?? null )
+				? $persisted[ $key ]
+				: ( is_array( $persisted[ $name ] ?? null ) ? $persisted[ $name ] : array() );
+			$post_id  = isset( $existing['post_id'] ) && is_numeric( $existing['post_id'] )
+				? (int) $existing['post_id']
+				: 0;
+
+			if ( $post_id > 0 ) {
+				self::hydrate_registry_page( $registry, (string) $name, $page_data, $post_id );
+			}
+		}
+
+		return $registry->get_registered_pages();
+	}
+
+	/**
 	 * Get pages in a collection.
 	 *
 	 * @param string $collection Collection slug.
