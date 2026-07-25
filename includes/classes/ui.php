@@ -516,7 +516,7 @@ class Ui {
 			return (string) $definition['placeholder'];
 		}
 
-		if ( str_contains( strtolower( $id ), 'href' ) || str_contains( strtolower( $id ), 'url' ) ) {
+		if ( 'src' === strtolower( $id ) || str_contains( strtolower( $id ), 'href' ) || str_contains( strtolower( $id ), 'url' ) ) {
 			return '#';
 		}
 
