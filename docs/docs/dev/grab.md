@@ -4,6 +4,7 @@ description: A built-in element inspector for identifying block template files o
 path: "dev/grab"
 order: 61
 section: "Dev"
+subsection: "Inspection Tools"
 meta_title: "Element Grabber"
 meta_description: "A built-in element inspector for identifying block template files on the frontend."
 ---

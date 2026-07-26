@@ -2,7 +2,7 @@
 title: PHP Hooks
 description: PHP filters and actions available in Blockstudio.
 path: "blocks/hooks/php"
-order: 49
+order: 48
 section: "Blocks"
 subsection: "Hooks"
 meta_title: "PHP Hooks"

@@ -2,9 +2,9 @@
 title: Populating Options
 description: Dynamically populate field options from queries, functions, or external sources.
 path: "blocks/attributes/populating-options"
-order: 17
+order: 24
 section: "Blocks"
-subsection: "Attributes"
+subsection: "Field Editing"
 meta_title: "Populating Options"
 meta_description: "Dynamically populate field options from queries, functions, or external sources."
 ---

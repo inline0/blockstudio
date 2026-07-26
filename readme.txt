@@ -57,6 +57,8 @@ Download the latest release zip from [GitHub Releases](https://github.com/inline
 * New: Canvas inventory and document APIs answer what a project contains and render any part of it on demand
 * New: `blockstudio.json` owns production behaviour, including performance profiles, static prerendering with early serving, and unified runtime caches
 * New: Opt-in theme PHPStan layers, a canonical analysis command, a managed commit hook, and `phpstan.configuration` for a project's own configuration
+* New: `blockstudio-agents` generates a project's `AGENTS.md` from its own configuration, structure, and selected preset, and never replaces a file it did not write
+* New: The context file for coding assistants is an index of every document, its purpose, and the identifiers it owns, with the full text published alongside it
 * New: Canonical block tag migration command
 * New: Block template variables are typed from each block's own `block.json` during analysis
 * Fix: Static prerendering writes no files and installs no drop-in while it is disabled

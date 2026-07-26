@@ -43,5 +43,5 @@ full `[all]` workflow. The `PHPStan Package Tests` job installs the standalone
 package dependencies, runs its complete PHPUnit suite (including preset, CLI,
 Tailwind, JavaScript, PHP rule, live-render, and managed-hook contracts), and
 analyzes the package itself with PHPStan. Verify the split contains the four
-NEON presets and both executables: `bin/blockstudio-phpstan` and
-`bin/blockstudio-githooks`.
+NEON presets and all three executables: `bin/blockstudio-phpstan`,
+`bin/blockstudio-githooks`, and `bin/blockstudio-agents`.

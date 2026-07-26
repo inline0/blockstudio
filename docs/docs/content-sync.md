@@ -2,8 +2,9 @@
 title: Content Sync
 description: Add database content to Blockstudio's file-first workflow by projecting allowlisted WordPress records to portable files.
 path: "content-sync"
-order: 56
+order: 58
 section: "Platform"
+subsection: "Project Files"
 meta_title: "Content Sync"
 meta_description: "Add database content to Blockstudio's file-first workflow by projecting allowlisted WordPress records to portable files."
 ---

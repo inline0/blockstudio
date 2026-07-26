@@ -2,8 +2,9 @@
 title: Logical Discovery Sources
 description: Supply composed file inventories to Blockstudio discovery and runtime caches.
 path: "dev/discovery-sources"
-order: 63
+order: 67
 section: "Dev"
+subsection: "Integrations"
 meta_title: "Logical Discovery Sources"
 meta_description: "Supply composed file inventories to Blockstudio discovery and runtime caches."
 ---

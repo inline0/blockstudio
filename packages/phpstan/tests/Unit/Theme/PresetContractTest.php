@@ -33,7 +33,11 @@ final class PresetContractTest extends TestCase
         );
 
         $this->assertSame(
-            ['bin/blockstudio-phpstan', 'bin/blockstudio-githooks'],
+            [
+                'bin/blockstudio-phpstan',
+                'bin/blockstudio-githooks',
+                'bin/blockstudio-agents',
+            ],
             $composer['bin'] ?? null
         );
         $this->assertSame('0.4.1', $composer['require']['phasis/phasis'] ?? null);

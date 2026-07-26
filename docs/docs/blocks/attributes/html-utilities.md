@@ -2,9 +2,9 @@
 title: HTML Utilities
 description: Render attribute values as data attributes or CSS variables.
 path: "blocks/attributes/html-utilities"
-order: 23
+order: 20
 section: "Blocks"
-subsection: "Attributes"
+subsection: "Attribute Values"
 meta_title: "HTML Utilities"
 meta_description: "Render attribute values as data attributes or CSS variables."
 ---

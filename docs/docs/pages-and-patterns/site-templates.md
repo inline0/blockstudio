@@ -2,8 +2,9 @@
 title: Site Templates
 description: Create WordPress Site Editor templates and template parts from Blockstudio files.
 path: "pages-and-patterns/site-templates"
-order: 54
+order: 53
 section: "Pages & Patterns"
+subsection: "File Templates"
 meta_title: "Site Templates"
 meta_description: "Create WordPress Site Editor templates and template parts from Blockstudio files."
 ---

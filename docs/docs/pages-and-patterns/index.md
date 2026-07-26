@@ -2,8 +2,9 @@
 title: General
 description: Create WordPress pages and block patterns from file templates with automatic block parsing.
 path: "pages-and-patterns"
-order: 51
+order: 50
 section: "Pages & Patterns"
+subsection: "File Templates"
 meta_title: "General"
 meta_description: "Create WordPress pages and block patterns from file templates with automatic block parsing."
 ---

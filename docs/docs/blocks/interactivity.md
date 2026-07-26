@@ -2,8 +2,9 @@
 title: Interactivity
 description: Use the WordPress Interactivity API in your blocks for reactive, client-side behavior.
 path: "blocks/interactivity"
-order: 42
+order: 43
 section: "Blocks"
+subsection: "Client Behavior"
 meta_title: "Interactivity"
 meta_description: "Use the WordPress Interactivity API in your blocks for reactive, client-side behavior."
 ---

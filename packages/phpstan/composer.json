@@ -1,6 +1,6 @@
 {
   "name": "blockstudio/phpstan",
-  "description": "PHPStan extension for Blockstudio with template typing, schema validation, block tag checks, and public API stubs.",
+  "description": "PHPStan extension for Blockstudio with template typing, schema validation, block tag checks, public API stubs, and a generated project contract.",
   "type": "phpstan-extension",
   "license": "MIT",
   "keywords": [
@@ -40,7 +40,8 @@
   },
   "bin": [
     "bin/blockstudio-phpstan",
-    "bin/blockstudio-githooks"
+    "bin/blockstudio-githooks",
+    "bin/blockstudio-agents"
   ],
   "extra": {
     "phpstan": {

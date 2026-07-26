@@ -2,7 +2,7 @@
 title: Block Field
 description: Reference another block as a field, expanding its attributes inline.
 path: "blocks/attributes/block-field"
-order: 22
+order: 16
 section: "Blocks"
 subsection: "Attributes"
 meta_title: "Block Field"

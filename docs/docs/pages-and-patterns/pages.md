@@ -2,8 +2,9 @@
 title: Pages
 description: Create WordPress pages from file templates with automatic syncing.
 path: "pages-and-patterns/pages"
-order: 52
+order: 51
 section: "Pages & Patterns"
+subsection: "File Templates"
 meta_title: "Pages"
 meta_description: "Create WordPress pages from file templates with automatic syncing."
 ---

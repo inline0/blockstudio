@@ -2,8 +2,9 @@
 title: Transforms
 description: Define ways to transform blocks into other blocks.
 path: "blocks/transforms"
-order: 25
+order: 32
 section: "Blocks"
+subsection: "Editor Behavior"
 meta_title: "Transforms"
 meta_description: "Define ways to transform blocks into other blocks."
 ---

@@ -61,6 +61,10 @@ The original auto-discovered extension is the stable base contract. Version
   hook from `blockstudio.json`. Its generated files and ownership state live in
   Git's common directory, safely chain an existing hook, and are removed
   without touching user-owned files when the setting is disabled.
+- `bin/blockstudio-agents` writes a project contract for coding agents. Every
+  line is derived from the project's own files, its `blockstudio.json`, and the
+  rules the selected preset registers. It follows the same ownership rule as the
+  commit hook and preserves an author-owned notes region across regeneration.
 
 All new diagnostics use product-owned `blockstudio.*` identifiers. The
 extension has no knowledge of an orchestration product, caller repository
@@ -78,6 +82,7 @@ phpstan/
 ├── wordpress-render.neon       # Explicit live-render command layer
 ├── bin/blockstudio-phpstan     # Canonical executable
 ├── bin/blockstudio-githooks    # Managed commit-hook synchronizer
+├── bin/blockstudio-agents      # Generated project contract for coding agents
 ├── README.md
 ├── PRD.md                      # This file
 ├── phpstan.neon.dist           # Self-test config
@@ -110,6 +115,7 @@ phpstan/
 │   │   ├── FieldTypeAccessRule.php          # Catches wrong field shape access
 │   │   └── DeprecatedApiRule.php
 │   ├── Theme/                  # Ordinary-root scanner and non-PHP analyzers
+│   ├── Agents/                 # Project profile, preset contract, and generated document
 │   └── Reflection/             # Helpers for inspecting Blockstudio code in user projects
 │       ├── BlockTemplateDetector.php        # Determines if a file is a Blockstudio template
 │       └── FieldTypeRegistry.php            # Maps field type names to data shapes

@@ -2,8 +2,9 @@
 title: Variations
 description: Create block variations with different default attribute values.
 path: "blocks/variations"
-order: 24
+order: 31
 section: "Blocks"
+subsection: "Editor Behavior"
 meta_title: "Variations"
 meta_description: "Create block variations with different default attribute values."
 ---

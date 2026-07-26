@@ -4,6 +4,7 @@ description: Configure Blockstudio with blockstudio.json or filters.
 path: 'general/settings'
 order: 2
 section: 'General'
+subsection: 'Setup'
 meta_title: 'Settings'
 meta_description: 'Configure Blockstudio with blockstudio.json or filters.'
 ---

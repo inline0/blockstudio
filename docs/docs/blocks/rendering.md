@@ -2,8 +2,9 @@
 title: Programmatic Rendering
 description: Render Blockstudio blocks programmatically via PHP functions or HTML tags.
 path: "blocks/rendering"
-order: 40
+order: 39
 section: "Blocks"
+subsection: "Rendering"
 meta_title: "Programmatic Rendering"
 meta_description: "Render Blockstudio blocks programmatically via PHP functions or HTML tags."
 ---

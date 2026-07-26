@@ -376,6 +376,38 @@ The hook performs PHPStan analysis only. It never formats or rewrites project
 files. A missing Composer installation or failed analysis blocks the commit
 with a direct error; bypass behavior remains Git's standard `--no-verify`.
 
+## Project contract
+
+`vendor/bin/blockstudio-agents` writes an `AGENTS.md` describing the project it
+runs in, for the coding agents that read one before touching a codebase:
+
+```bash
+vendor/bin/blockstudio-agents
+```
+
+The document is generated, never templated. The project's own files decide
+whether it describes a theme that authors blocks and pages or a plugin that
+consumes Blockstudio, and they supply the counts, directories, namespaces, and
+template languages. `blockstudio.json` decides which features are described and
+with which values. The selected preset decides the correctness section, which is
+read from the preset files themselves, so a layer that gains a rule changes the
+generated document with it. The commands section lists only the commands that
+apply to that project.
+
+```
+--root <path>    Project root (default: current directory)
+--config <path>  blockstudio.json path (default: <root>/blockstudio.json)
+--output <path>  Contract path (default: <root>/AGENTS.md)
+--stdout         Print the contract instead of writing it
+--check          Fail when the contract on disk is not current
+--force          Replace a file Blockstudio does not own
+```
+
+Ownership follows the commit hook: the generated file carries a marker, and a
+file without it is never replaced. `--check` exits `1` on an outdated contract
+so CI can gate it. The notes region at the end of the document is author owned,
+and its bytes survive every regeneration.
+
 ## Optional live WordPress render
 
 Live rendering is a separate, explicit preset because it is slower and needs a

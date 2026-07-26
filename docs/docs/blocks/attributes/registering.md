@@ -2,7 +2,7 @@
 title: Registering Attributes
 description: Learn how to register custom attributes for your blocks.
 path: "blocks/attributes/registering"
-order: 11
+order: 12
 section: "Blocks"
 subsection: "Attributes"
 meta_title: "Registering Attributes"

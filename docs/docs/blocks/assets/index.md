@@ -2,7 +2,7 @@
 title: General
 description: Automatically enqueue and process CSS, SCSS, and JavaScript files for your blocks.
 path: "blocks/assets"
-order: 7
+order: 8
 section: "Blocks"
 subsection: "Assets"
 meta_title: "General"

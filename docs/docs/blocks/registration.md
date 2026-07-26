@@ -4,6 +4,7 @@ description: Learn how to register custom blocks with Blockstudio.
 path: "blocks/registration"
 order: 3
 section: "Blocks"
+subsection: "Block Definition"
 meta_title: "Registration"
 meta_description: "Learn how to register custom blocks with Blockstudio."
 ---

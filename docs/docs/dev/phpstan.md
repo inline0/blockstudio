@@ -2,8 +2,9 @@
 title: PHPStan
 description: Static analysis for Blockstudio projects with type-safe templates, schema validation, and hook checking.
 path: "dev/phpstan"
-order: 66
+order: 65
 section: "Dev"
+subsection: "Integrations"
 meta_title: "PHPStan"
 meta_description: "Static analysis for Blockstudio projects with type-safe templates, schema validation, and hook checking."
 ---
@@ -305,9 +306,10 @@ the single-directory form is what keeps compiled output out of analysis.
 
 ### Canonical command
 
-The package installs a single executable. It runs the `base` preset unless a
-project selects another one, so installing the package never enables the
-theme or extreme-theme layers on its own:
+The package installs `vendor/bin/blockstudio-phpstan` as its analysis
+executable. It runs the `base` preset unless a project selects another one, so
+installing the package never enables the theme or extreme-theme layers on its
+own:
 
 ```bash
 vendor/bin/blockstudio-phpstan --root . -- --no-progress
@@ -520,6 +522,86 @@ diagnostics deterministically. Keep roots narrow, exclude fixture/generated
 trees, and set a file limit for large repositories. JavaScript and Tailwind can
 be disabled independently. Live rendering never runs unless its preset is
 selected.
+
+## Project contract for coding agents
+
+The package installs a third executable, `vendor/bin/blockstudio-agents`. It
+writes an `AGENTS.md` describing the project it runs in, which is what a coding
+agent needs before it touches anything: what the project authors, which
+Blockstudio features are enabled, what analysis will reject, and the commands
+that apply.
+
+```bash
+vendor/bin/blockstudio-agents
+```
+
+```text
+Blockstudio contract created: /path/to/project/AGENTS.md
+```
+
+Nothing in the output is a fixed template. Every line is derived from one of
+three sources:
+
+- **The project's own files.** A theme with a `style.css` header, blocks, and
+  file-backed pages produces a different document than a plugin that registers
+  blocks and nothing else. Counts, directories, block namespaces, and template
+  languages are what the scanner actually found, using the same roots and
+  exclusions as analysis.
+- **`blockstudio.json`.** Only enabled features are described, with their
+  configured values: block tag prefixes and the namespaces they resolve
+  through, Tailwind, the bundled UI, the editor asset reset, the cache path,
+  the performance profile, static prerendering and its dynamic paths, theme
+  defaults, Content Sync, and the commit hook.
+- **The selected `phpstan.preset`.** The correctness section is read from the
+  preset files themselves, layer by layer, so it lists exactly the rules that
+  preset registers. At `base` it describes the schema, template, hook, and
+  settings rules. At `extreme-theme` it also describes the theme structure
+  rules, the strict PHPStan flags, unsafe PHP, output escaping, Tailwind, and
+  JavaScript. A preset that gains a rule changes the generated document with
+  it.
+
+The commands section follows the same principle. `wp bs prerender status`
+appears when static prerendering is enabled, `vendor/bin/blockstudio-githooks
+sync` when `githooks.commit` is set, and `wp bs db schemas` when the project
+actually has a `db.php`.
+
+| Option | Behavior |
+| --- | --- |
+| `--root <path>` | Project root (default: current directory) |
+| `--config <path>` | `blockstudio.json` path (default: `<root>/blockstudio.json`) |
+| `--output <path>` | Contract path (default: `<root>/AGENTS.md`) |
+| `--stdout` | Print the contract instead of writing it |
+| `--check` | Exit `1` when the contract on disk is not current |
+| `--force` | Replace a file Blockstudio does not own |
+
+`--check` makes the contract a CI gate, the same way the commit hook makes
+analysis one:
+
+```bash
+vendor/bin/blockstudio-agents --check
+```
+
+### Ownership
+
+The generated file carries the same kind of marker as the managed commit hook,
+and the same rule applies: Blockstudio never replaces a file it did not write.
+An `AGENTS.md` that predates the command, or one an author wrote by hand, is
+refused with exit code `2` and left untouched until `--force` is passed.
+
+Regenerating is safe. The file ends with a notes region, and the bytes between
+its markers are preserved across every regeneration:
+
+```markdown
+## Project notes
+
+<!-- blockstudio:notes:start -->
+Deploys run from the release branch only.
+<!-- blockstudio:notes:end -->
+```
+
+Exit codes are `0` when the contract is written, current, or printed, `1` when
+`--check` finds an outdated contract, and `2` for usage, configuration, or
+filesystem errors.
 
 ## Field type shapes
 

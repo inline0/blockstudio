@@ -2,8 +2,9 @@
 title: Composer
 description: Install Blockstudio using Composer.
 path: "dev/composer"
-order: 65
+order: 64
 section: "Dev"
+subsection: "Integrations"
 meta_title: "Composer"
 meta_description: "Install Blockstudio using Composer."
 ---

@@ -4,6 +4,7 @@ description: Built-in profiler for tracking block render times, template phases,
 path: "dev/perf"
 order: 62
 section: "Dev"
+subsection: "Inspection Tools"
 meta_title: "Performance Profiler"
 meta_description: "Built-in profiler for tracking block render times, template phases, and asset processing."
 ---

@@ -72,6 +72,7 @@ if (mdx.length) problems.push(`${mdx.length} .mdx files remain`);
 
 const published = markdown.filter((file) => !draftCollections.has(collectionOf(file)));
 const routeKeys = new Set();
+const metaByFile = new Map();
 for (const file of markdown) {
   const source = readFileSync(file, 'utf8');
   const meta = frontmatter(source);
@@ -79,6 +80,7 @@ for (const file of markdown) {
     problems.push(`${relative(contentRoot, file)} has no frontmatter`);
     continue;
   }
+  metaByFile.set(file, meta);
   checkPortableMarkdown(file, source);
   const collection = collectionOf(file);
   if (draftCollections.has(collection)) {
@@ -130,6 +132,92 @@ for (const file of metaFiles) {
   }
 }
 
+const indexedCollections = new Set(['docs', 'guides', 'registry']);
+const artifacts = {
+  index: resolve(repositoryRoot, 'includes/llm/blockstudio-llm.txt'),
+  full: resolve(repositoryRoot, 'includes/llm/blockstudio-llm-full.txt'),
+};
+let indexedFiles = new Set();
+
+function slugToTitle(slug) {
+  return slug
+    .split('-')
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+    .join(' ');
+}
+
+function groupFor(file, meta) {
+  const parts = [slugToTitle(collectionOf(file)), meta.section ?? '', meta.subsection ?? ''];
+  return parts.filter((part, position) => part !== '' && part !== parts[position - 1]).join(' / ');
+}
+
+function routeFor(file, meta) {
+  const collection = collectionOf(file);
+  return meta.path === '.' ? `/${collection}` : `/${collection}/${meta.path}`;
+}
+
+function readIndexEntries(source) {
+  const entries = [];
+  let group = '';
+  let entry = null;
+  for (const line of source.split(/\r?\n/)) {
+    const heading = line.match(/^## (.+)$/);
+    if (heading) {
+      group = heading[1];
+      continue;
+    }
+    if (line.startsWith('### ')) {
+      entry = { group, title: line.slice(4), route: '', file: '' };
+      entries.push(entry);
+      continue;
+    }
+    if (!entry) continue;
+    if (line.startsWith('route: ')) entry.route = line.slice(7);
+    if (line.startsWith('file: ')) entry.file = line.slice(6);
+  }
+  return entries;
+}
+
+for (const [name, path] of Object.entries(artifacts)) {
+  if (!existsSync(path)) {
+    problems.push(`the ${name} LLM artifact is missing; run npm run build:llm`);
+  }
+}
+
+if (existsSync(artifacts.index)) {
+  const entries = readIndexEntries(readFileSync(artifacts.index, 'utf8'));
+  indexedFiles = new Set(entries.map((entry) => entry.file));
+  const documents = new Map(
+    published.map((file) => [relative(repositoryRoot, file).replaceAll('\\', '/'), file]),
+  );
+
+  for (const entry of entries) {
+    if (!existsSync(resolve(repositoryRoot, entry.file))) {
+      problems.push(`the documentation index references missing ${entry.file}`);
+      continue;
+    }
+    const file = documents.get(entry.file);
+    if (!file) continue;
+    const meta = metaByFile.get(file);
+    if (!meta) continue;
+    const group = groupFor(file, meta);
+    const route = routeFor(file, meta);
+    if (entry.group !== group) {
+      problems.push(`the documentation index files ${entry.file} under "${entry.group}"; expected "${group}"`);
+    }
+    if (entry.route !== route) {
+      problems.push(`the documentation index routes ${entry.file} to ${entry.route}; expected ${route}`);
+    }
+  }
+
+  for (const file of published) {
+    const path = relative(repositoryRoot, file).replaceAll('\\', '/');
+    if (indexedCollections.has(collectionOf(file)) && !indexedFiles.has(path)) {
+      problems.push(`${path} is missing from the documentation index; run npm run build:llm`);
+    }
+  }
+}
+
 const expectedTotal = Object.values(expectedDocuments).reduce((total, count) => total + count, 0);
 if (published.length !== expectedTotal) problems.push(`${published.length} published Markdown documents found; expected ${expectedTotal}`);
 if (routeKeys.size !== expectedTotal) problems.push(`${routeKeys.size} unique collection paths found; expected ${expectedTotal}`);
@@ -140,5 +228,5 @@ if (problems.length) {
 }
 
 console.log(
-  `Markdown content valid: ${published.length} published documents, ${routeKeys.size} unique collection paths, ${markdown.length - published.length} unpublished drafts, no MDX runtime syntax.`,
+  `Markdown content valid: ${published.length} published documents, ${routeKeys.size} unique collection paths, ${markdown.length - published.length} unpublished drafts, ${indexedFiles.size} files in the LLM index, no MDX runtime syntax.`,
 );

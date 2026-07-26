@@ -2,8 +2,9 @@
 title: SEO
 description: How Blockstudio integrates with SEO plugins for real-time content analysis.
 path: "blocks/seo"
-order: 43
+order: 35
 section: "Blocks"
+subsection: "Editor Behavior"
 meta_title: "SEO"
 meta_description: "How Blockstudio integrates with SEO plugins for real-time content analysis."
 ---
