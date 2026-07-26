@@ -34,10 +34,12 @@ final class ProjectScanner
 
     /**
      * @param list<string> $additionalScanRoots
+     * @param list<string> $configuredExcludePaths
      */
     public function __construct(
         private readonly string $currentWorkingDirectory,
-        private readonly array $additionalScanRoots = []
+        private readonly array $additionalScanRoots = [],
+        private readonly array $configuredExcludePaths = []
     ) {}
 
     public function relativePath(string $path): string
@@ -252,14 +254,76 @@ final class ProjectScanner
     private function shouldSkipDirectory(string $path): bool
     {
         $base = basename($path);
-        return in_array($base, [
+        if (in_array($base, [
             'node_modules',
             'vendor',
             '.git',
             '_dist',
             '_references',
             'tmp',
-        ], true);
+        ], true)) {
+            return true;
+        }
+
+        return $this->isConfiguredExcluded($path);
+    }
+
+    private function isConfiguredExcluded(string $path): bool
+    {
+        if ($this->configuredExcludePaths === []) {
+            return false;
+        }
+
+        $candidate = $this->relativePath($path);
+
+        foreach ($this->configuredExcludePaths as $pattern) {
+            $pattern = ltrim(str_replace('\\', '/', trim($pattern)), '/');
+            if ($pattern === '') {
+                continue;
+            }
+
+            $base = rtrim($pattern, '/*');
+
+            if (
+                fnmatch($pattern, $candidate, FNM_PATHNAME)
+                || $candidate === $base
+                || str_starts_with($candidate, $base . '/')
+                || self::pathIsUnder($candidate, $base)
+            ) {
+                return true;
+            }
+
+            if (
+                !str_contains($base, '/')
+                && !str_contains($base, '*')
+                && $base !== ''
+                && str_contains($candidate, '/' . $base . '/')
+            ) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private static function pathIsUnder(string $candidate, string $base): bool
+    {
+        if ($base === '') {
+            return false;
+        }
+
+        $segments = explode('/', $candidate);
+        $prefix = '';
+
+        foreach ($segments as $segment) {
+            $prefix = $prefix === '' ? $segment : $prefix . '/' . $segment;
+
+            if (fnmatch($base, $prefix, FNM_PATHNAME)) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     private function isFieldDefinitionPath(string $path): bool

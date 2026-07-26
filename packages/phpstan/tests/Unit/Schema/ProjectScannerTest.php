@@ -95,6 +95,56 @@ final class ProjectScannerTest extends TestCase
         $this->assertContains($this->tempDir . '/blockstudio/card/block.json', $paths);
     }
 
+    public function test_configured_exclusions_keep_out_documents_that_only_share_a_reserved_name(): void
+    {
+        mkdir($this->tempDir . '/assets/sites/example/schemas', 0777, true);
+        file_put_contents(
+            $this->tempDir . '/assets/sites/example/schemas/block.json',
+            json_encode(['$schema' => 'https://json-schema.org/draft-07/schema#'])
+        );
+
+        $unfiltered = new ProjectScanner($this->tempDir);
+        $this->assertContains(
+            $this->tempDir . '/assets/sites/example/schemas/block.json',
+            $unfiltered->getBlockJsonPaths()
+        );
+
+        $scanner = new ProjectScanner(
+            $this->tempDir,
+            [],
+            ['assets/sites/*/schemas/**']
+        );
+
+        $this->assertNotContains(
+            $this->tempDir . '/assets/sites/example/schemas/block.json',
+            $scanner->getBlockJsonPaths()
+        );
+        $this->assertContains(
+            $this->tempDir . '/blockstudio/hero/block.json',
+            $scanner->getBlockJsonPaths()
+        );
+    }
+
+    public function test_a_configured_exclusion_applies_at_any_depth(): void
+    {
+        mkdir($this->tempDir . '/blockstudio/vendored/schemas/deep', 0777, true);
+        file_put_contents(
+            $this->tempDir . '/blockstudio/vendored/schemas/deep/block.json',
+            json_encode(['$schema' => 'https://json-schema.org/draft-07/schema#'])
+        );
+
+        $scanner = new ProjectScanner($this->tempDir, [], ['schemas/**']);
+
+        $this->assertNotContains(
+            $this->tempDir . '/blockstudio/vendored/schemas/deep/block.json',
+            $scanner->getBlockJsonPaths()
+        );
+        $this->assertContains(
+            $this->tempDir . '/blockstudio/card/block.json',
+            $scanner->getBlockJsonPaths()
+        );
+    }
+
     public function test_skips_node_modules(): void
     {
         $scanner = new ProjectScanner($this->tempDir);

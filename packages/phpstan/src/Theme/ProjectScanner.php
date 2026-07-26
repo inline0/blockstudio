@@ -249,6 +249,7 @@ final class ProjectScanner
                 fnmatch($normalizedPattern, $candidate, FNM_PATHNAME)
                 || $candidate === $base
                 || str_starts_with($candidate, $base . '/')
+                || self::pathIsUnder($candidate, $base)
             ) {
                 return true;
             }
@@ -259,6 +260,26 @@ final class ProjectScanner
                 && $base !== ''
                 && str_contains($candidate, '/' . $base . '/')
             ) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private static function pathIsUnder(string $candidate, string $base): bool
+    {
+        if ($base === '') {
+            return false;
+        }
+
+        $segments = explode('/', $candidate);
+        $prefix = '';
+
+        foreach ($segments as $segment) {
+            $prefix = $prefix === '' ? $segment : $prefix . '/' . $segment;
+
+            if (fnmatch($base, $prefix, FNM_PATHNAME)) {
                 return true;
             }
         }

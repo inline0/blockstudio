@@ -501,6 +501,10 @@ final class BlockstudioPhpstanCli
         foreach ($options['roots'] as $root) {
             $lines[] = '    - ' . $this->neonString($root);
         }
+        $lines[] = '  blockstudioExcludePaths:';
+        foreach ($options['excludes'] as $exclude) {
+            $lines[] = '    - ' . $this->neonString($exclude);
+        }
 
         if (
             in_array($options['preset'], ['base', 'theme'], true)
