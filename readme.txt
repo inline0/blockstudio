@@ -3,7 +3,7 @@ Contributors: dnnsjsk
 Requires at least: 6.7
 Tested up to: 7.0.0
 Requires PHP: 8.2
-Stable tag: 7.5.2
+Stable tag: 7.6.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -52,6 +52,20 @@ Download the latest release zip from [GitHub Releases](https://github.com/inline
 * [Getting Started](https://blockstudio.dev/docs/getting-started)
 
 == Changelog ==
+
+= 7.6.0 =
+* New: Canvas inventory and document APIs answer what a project contains and render any part of it on demand
+* New: `blockstudio.json` owns production behaviour, including performance profiles, static prerendering with early serving, and unified runtime caches
+* New: Opt-in theme PHPStan layers, a canonical analysis command, a managed commit hook, and `phpstan.configuration` for a project's own configuration
+* New: `blockstudio-agents` generates a project's `AGENTS.md` from its own configuration, structure, and selected preset, and never replaces a file it did not write
+* New: The context file for coding assistants is an index of every document, its purpose, and the identifiers it owns, with the full text published alongside it
+* New: Canonical block tag migration command
+* New: Block template variables are typed from each block's own `block.json` during analysis
+* Fix: Static prerendering writes no files and installs no drop-in while it is disabled
+* Fix: Error responses are never cached or replayed as a success
+* Fix: Signature-mode early serving computes the same key in the drop-in and in PHP
+* Fix: One invalid configuration key no longer discards an entire settings group, and configuration errors reach an admin notice
+* Fix: Analysis honours a project's exclusions and keeps machine paths out of its messages
 
 = 7.5.2 =
 * Fix: `blockstudio/phpstan` expands file-backed custom field references across PHP, Twig, Blade, block tags, and inferred attribute shapes, including nested fields, ID transformations, and cycle-safe diagnostics
