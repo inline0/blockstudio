@@ -11,9 +11,14 @@ const expectedDocuments = {
   docs: 69,
   guides: 9,
   registry: 14,
-  blog: 8,
+  blog: 7,
 };
+const draftCollections = new Set(['drafts']);
 const expectedMetaFiles = 18;
+
+function collectionOf(path) {
+  return relative(contentRoot, path).split(/[\\/]/)[0];
+}
 
 function filesUnder(root) {
   const files = [];
@@ -65,6 +70,7 @@ const markdown = files.filter((file) => extname(file) === '.md');
 const mdx = files.filter((file) => extname(file) === '.mdx');
 if (mdx.length) problems.push(`${mdx.length} .mdx files remain`);
 
+const published = markdown.filter((file) => !draftCollections.has(collectionOf(file)));
 const routeKeys = new Set();
 for (const file of markdown) {
   const source = readFileSync(file, 'utf8');
@@ -73,21 +79,31 @@ for (const file of markdown) {
     problems.push(`${relative(contentRoot, file)} has no frontmatter`);
     continue;
   }
+  checkPortableMarkdown(file, source);
+  const collection = collectionOf(file);
+  if (draftCollections.has(collection)) {
+    if (meta.date !== undefined) problems.push(`${relative(contentRoot, file)} is a draft but declares a release date`);
+    if (meta.order !== undefined) problems.push(`${relative(contentRoot, file)} is a draft but declares a published order`);
+    continue;
+  }
   for (const field of ['title', 'path', 'order', 'section', 'meta_title']) {
     if (!(field in meta) || meta[field] === '') problems.push(`${relative(contentRoot, file)} is missing ${field}`);
   }
-  const collection = relative(contentRoot, file).split(/[\\/]/)[0];
   const key = `${collection}:${meta.path}`;
   if (routeKeys.has(key)) problems.push(`${relative(contentRoot, file)} duplicates ${key}`);
   routeKeys.add(key);
-  checkPortableMarkdown(file, source);
 }
 
 for (const [collection, expected] of Object.entries(expectedDocuments)) {
-  const actual = markdown.filter(
-    (file) => relative(contentRoot, file).split(/[\\/]/)[0] === collection,
-  ).length;
+  const actual = published.filter((file) => collectionOf(file) === collection).length;
   if (actual !== expected) problems.push(`${collection} has ${actual} Markdown documents; expected ${expected}`);
+}
+
+for (const file of markdown) {
+  const collection = collectionOf(file);
+  if (!draftCollections.has(collection) && !(collection in expectedDocuments)) {
+    problems.push(`${relative(contentRoot, file)} is outside every known collection`);
+  }
 }
 
 const metaFiles = files.filter((path) => path.endsWith('meta.json'));
@@ -115,7 +131,7 @@ for (const file of metaFiles) {
 }
 
 const expectedTotal = Object.values(expectedDocuments).reduce((total, count) => total + count, 0);
-if (markdown.length !== expectedTotal) problems.push(`${markdown.length} Markdown documents found; expected ${expectedTotal}`);
+if (published.length !== expectedTotal) problems.push(`${published.length} published Markdown documents found; expected ${expectedTotal}`);
 if (routeKeys.size !== expectedTotal) problems.push(`${routeKeys.size} unique collection paths found; expected ${expectedTotal}`);
 
 if (problems.length) {
@@ -123,4 +139,6 @@ if (problems.length) {
   process.exit(1);
 }
 
-console.log(`Markdown content valid: ${markdown.length} documents, ${routeKeys.size} unique collection paths, no MDX runtime syntax.`);
+console.log(
+  `Markdown content valid: ${published.length} published documents, ${routeKeys.size} unique collection paths, ${markdown.length - published.length} unpublished drafts, no MDX runtime syntax.`,
+);
