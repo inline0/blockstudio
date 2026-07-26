@@ -372,7 +372,7 @@ class CanvasTest extends TestCase {
 	}
 
 	public function test_page_documents_use_and_restore_each_selected_frontend_context(): void {
-		$registry     = Page_Registry::instance();
+		$registry    = Page_Registry::instance();
 		$account_id  = wp_insert_post(
 			array(
 				'post_type'   => 'page',
@@ -396,6 +396,13 @@ class CanvasTest extends TestCase {
 
 		$this->assertIsInt( $account_id );
 		$this->assertIsInt( $about_id );
+
+		update_post_meta( $account_id, '_blockstudio_page_key', 'account' );
+		update_post_meta( $account_id, '_blockstudio_page_name', 'account' );
+		update_post_meta( $account_id, '_blockstudio_page_source', '/virtual/pages/account/index.php' );
+		update_post_meta( $about_id, '_blockstudio_page_key', 'about' );
+		update_post_meta( $about_id, '_blockstudio_page_name', 'about' );
+		update_post_meta( $about_id, '_blockstudio_page_source', '/virtual/pages/about/index.php' );
 
 		foreach ( $global_keys as $key ) {
 			$globals[ $key ] = array(
@@ -463,8 +470,6 @@ class CanvasTest extends TestCase {
 					'template_path'  => '/virtual/pages/account/index.php',
 					'contentType'    => 'html',
 					'inline_content' => '<section data-page="account">Account</section>',
-					'post_id'        => $account_id,
-					'permalink'      => home_url( '/account/' ),
 				)
 			);
 			$registry->register(
@@ -479,8 +484,6 @@ class CanvasTest extends TestCase {
 					'template_path'  => '/virtual/pages/about/index.php',
 					'contentType'    => 'html',
 					'inline_content' => '<section data-page="about">About</section>',
-					'post_id'        => $about_id,
-					'permalink'      => home_url( '/about/' ),
 				)
 			);
 
@@ -493,9 +496,14 @@ class CanvasTest extends TestCase {
 				)
 			);
 			$documents = array_column( $result['documents']['pages'], 'document', 'id' );
+			$pages     = array_column( $result['inventory']['pages'], 'page', 'id' );
 			$account   = $documents['account']['html'] ?? '';
 			$about     = $documents['about']['html'] ?? '';
 
+			$this->assertSame( $account_id, $pages['account']['post_id'] ?? null );
+			$this->assertSame( $about_id, $pages['about']['post_id'] ?? null );
+			$this->assertSame( home_url( '/account/' ), $pages['account']['permalink'] ?? null );
+			$this->assertSame( home_url( '/about/' ), $pages['about']['permalink'] ?? null );
 			$this->assertStringContainsString( 'consumer-preview', $account );
 			$this->assertStringContainsString( 'theme-account-page', $account );
 			$this->assertStringContainsString( 'theme-account.css', $account );

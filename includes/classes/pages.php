@@ -1897,6 +1897,8 @@ class Pages {
 		$registry = Page_Registry::instance();
 
 		if ( array() !== $registry->get_paths() ) {
+			self::hydrate_source_registry_pages( $registry );
+
 			return $registry->get_registered_pages();
 		}
 
@@ -1918,6 +1920,62 @@ class Pages {
 		}
 
 		return $registry->get_registered_pages();
+	}
+
+	/**
+	 * Merge managed post identity into an already source-backed registry.
+	 *
+	 * Logical discovery sources can populate the registry before Canvas asks for
+	 * pages. The registry then deliberately skips lazy database hydration because
+	 * its source records are already present, so resolve their stable keys or
+	 * source identities against the existing managed post inventory without
+	 * synchronizing content.
+	 *
+	 * @param Page_Registry $registry Source-backed registry.
+	 *
+	 * @return void
+	 */
+	private static function hydrate_source_registry_pages( Page_Registry $registry ): void {
+		$pages = $registry->get_registered_pages();
+
+		if ( array() === $pages ) {
+			return;
+		}
+
+		$unresolved = array_filter(
+			$pages,
+			static fn ( array $page ): bool => ! isset( $page['post_id'] )
+				|| ! is_numeric( $page['post_id'] )
+				|| (int) $page['post_id'] <= 0
+		);
+
+		if ( array() === $unresolved ) {
+			return;
+		}
+
+		$indexes = self::managed_post_indexes( ( new Page_Sync() )->managed_posts() );
+
+		foreach ( $unresolved as $name => $page_data ) {
+			$key        = is_scalar( $page_data['key'] ?? null )
+				? (string) $page_data['key']
+				: (string) $name;
+			$source     = is_scalar( $page_data['source_path'] ?? null )
+				? (string) $page_data['source_path']
+				: '';
+			$candidates = array_merge(
+				$indexes['key'][ $key ] ?? array(),
+				'' !== $source ? ( $indexes['source'][ $source ] ?? array() ) : array()
+			);
+
+			foreach ( $candidates as $post ) {
+				if ( ! $post instanceof \WP_Post ) {
+					continue;
+				}
+
+				self::hydrate_registry_page( $registry, (string) $name, $page_data, $post->ID );
+				break;
+			}
+		}
 	}
 
 	/**

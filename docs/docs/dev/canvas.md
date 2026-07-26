@@ -118,9 +118,11 @@ This makes changed-only requests safe for large projects. Existing blocks and
 pages resolve through their canonical registries. When a frontend request has
 only the persisted page projection loaded, Canvas performs a read-only source
 discovery and merges matching post IDs and permalinks without synchronizing
-content. New live-session topology is discovered only around the changed
-directory, while selected pattern and Site Editor template sources compile only
-after selection.
+content. The same identity merge applies when a logical discovery source
+populates the source-backed registry first, so contextual page rendering still
+uses the matching managed WordPress post. New live-session topology is
+discovered only around the changed directory, while selected pattern and Site
+Editor template sources compile only after selection.
 
 The REST refresh endpoint follows the same rule for its existing `blocks` and
 `pages` query parameters. For example,
