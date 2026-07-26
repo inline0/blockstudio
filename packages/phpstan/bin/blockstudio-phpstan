@@ -144,7 +144,7 @@ final class BlockstudioPhpstanCli
 
         $options = [
             'help' => false,
-            'preset' => 'extreme-theme',
+            'preset' => 'base',
             'roots' => [],
             'excludes' => [],
             'maxFiles' => 10000,
@@ -686,7 +686,7 @@ Usage:
   blockstudio-phpstan [options] [root ...] [-- phpstan-options]
 
 Options:
-  --preset <name>                    base, theme, extreme-theme (default),
+  --preset <name>                    base (default), theme, extreme-theme,
                                      or wordpress-render
   --root <path>                      Add an analysed theme root (repeatable)
   --exclude <glob>                   Add a scan exclusion (repeatable)

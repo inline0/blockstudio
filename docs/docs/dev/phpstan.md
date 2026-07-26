@@ -299,7 +299,9 @@ analysis as well as Blockstudio's project scan.
 
 ### Canonical command
 
-The package installs a single executable that defaults to extreme-theme:
+The package installs a single executable. It runs the `base` preset unless a
+project selects another one, so installing the package never enables the
+theme or extreme-theme layers on its own:
 
 ```bash
 vendor/bin/blockstudio-phpstan --root . -- --no-progress

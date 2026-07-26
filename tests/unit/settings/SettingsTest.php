@@ -56,7 +56,7 @@ class SettingsTest extends TestCase {
 	}
 
 	public function test_phpstan_configuration_keeps_tooling_defaults(): void {
-		$this->assertSame( 'extreme-theme', Settings::get( 'phpstan/preset' ) );
+		$this->assertSame( 'base', Settings::get( 'phpstan/preset' ) );
 		$this->assertSame( array( '.' ), Settings::get( 'phpstan/roots' ) );
 		$this->assertSame( array(), Settings::get( 'phpstan/excludePaths' ) );
 		$this->assertSame( 10000, Settings::get( 'phpstan/maxFiles' ) );

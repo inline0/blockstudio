@@ -156,8 +156,8 @@
         "preset": {
           "type": "string",
           "enum": ["base", "theme", "extreme-theme", "wordpress-render"],
-          "default": "extreme-theme",
-          "description": "Analysis preset used when the command line does not select one explicitly.",
+          "default": "base",
+          "description": "Analysis preset used when the command line does not select one explicitly. The theme and extreme-theme layers are opt-in and must be selected here or on the command line.",
           "example": "extreme-theme"
         },
         "roots": {

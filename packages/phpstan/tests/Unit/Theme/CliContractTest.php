@@ -51,6 +51,25 @@ final class CliContractTest extends TestCase
         $this->assertStringContainsString('Unknown preset', $invalid->stderr);
     }
 
+    public function test_default_preset_is_base_so_stricter_layers_stay_opt_in(): void
+    {
+        $package = dirname(__DIR__, 3);
+        $runner = new CommandRunner();
+
+        $help = $runner->run(
+            [PHP_BINARY, $package . '/bin/blockstudio-phpstan', '--help'],
+            $package,
+            10
+        );
+
+        $this->assertSame(0, $help->exitCode);
+        $this->assertStringContainsString('base (default)', $help->stdout);
+        $this->assertStringNotContainsString(
+            'extreme-theme (default)',
+            $help->stdout
+        );
+    }
+
     public function test_base_theme_and_extreme_presets_run_without_project_artifacts(): void
     {
         $package = dirname(__DIR__, 3);

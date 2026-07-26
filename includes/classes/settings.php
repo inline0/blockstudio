@@ -104,7 +104,7 @@ class Settings {
 			'commit' => false,
 		),
 		'phpstan'       => array(
-			'preset'       => 'extreme-theme',
+			'preset'       => 'base',
 			'roots'        => array( '.' ),
 			'excludePaths' => array(),
 			'maxFiles'     => 10000,
