@@ -55,8 +55,13 @@ final class Render_Document {
 		$ui_assets     = self::ui_assets( $names, $body, $warnings );
 		$interactivity = self::interactivity_assets( $body, $warnings );
 
-		$head   = $asset_markup['head'] . $ui_assets['style'] . $interactivity;
-		$footer = $asset_markup['footer'] . $ui_assets['script'];
+		$head   = self::option_string( $options, 'head', '' )
+			. $asset_markup['head']
+			. $ui_assets['style']
+			. $interactivity;
+		$footer = $asset_markup['footer']
+			. $ui_assets['script']
+			. self::option_string( $options, 'footer', '' );
 
 		$native_blocks = self::native_blocks( $names );
 		$head          = self::filter_markup( 'blockstudio/render/head', $head, $native_blocks, $warnings );
@@ -64,14 +69,12 @@ final class Render_Document {
 
 		$title      = self::option_string( $options, 'title', '' );
 		$lang       = self::option_string( $options, 'lang', function_exists( 'get_bloginfo' ) ? (string) get_bloginfo( 'language' ) : 'en' );
-		$head_extra = self::option_string( $options, 'head', '' );
 		$body_attrs = self::body_attributes( $options );
 		$content    = self::content_markup( $body, $options );
 
 		$document = '<!doctype html><html lang="' . esc_attr( $lang ) . '"><head>'
 			. '<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">'
 			. ( '' === $title ? '' : '<title>' . esc_html( $title ) . '</title>' )
-			. $head_extra
 			. $head
 			. '</head><body' . $body_attrs . '>'
 			. $content

@@ -29,7 +29,8 @@ The short version:
   deterministic example data through the normal Blockstudio pipeline.
 - **Complete frontend documents**: selected output includes dependency-closed
   CSS, JavaScript, modules, interactivity bootstrap, bundled UI globals, and
-  Tailwind output while excluding editor and unrelated assets.
+  Tailwind output while excluding editor and unrelated assets. Page documents
+  also run in an isolated, restored frontend query and enqueue context.
 - **Public UI families**: the bundled `bsui/*` registrations remain the
   implementation, while `Blockstudio\Ui::inventory()` and
   `Blockstudio\Ui::examples()` expose complete component families instead of
@@ -72,6 +73,9 @@ under `deleted`.
 record. Pattern and Site Editor template sources compile only after selection;
 known block and page edits use their canonical registrations, and genuinely
 new live-session topology gets a directory-scoped discovery pass.
+Each page observes its own queried object, route, contextual body classes,
+redirect protection, and `wp_enqueue_scripts` lifecycle without leaking those
+globals or dependency queues into the next selected document.
 
 ## Structured rendering and asset closure
 

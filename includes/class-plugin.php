@@ -162,6 +162,7 @@ class Plugin {
 		require_once $classes_dir . 'template-compiler.php';
 		require_once $classes_dir . 'admin.php';
 		require_once $classes_dir . 'devtools.php';
+		require_once $classes_dir . 'canvas-page-document.php';
 		require_once $classes_dir . 'canvas-data.php';
 		require_once $classes_dir . 'canvas.php';
 		require_once $classes_dir . 'ui.php';

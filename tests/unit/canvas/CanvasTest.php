@@ -371,6 +371,174 @@ class CanvasTest extends TestCase {
 		$this->assertStringContainsString( '</main>', $document['html'] ?? '' );
 	}
 
+	public function test_page_documents_use_and_restore_each_selected_frontend_context(): void {
+		$registry     = Page_Registry::instance();
+		$account_id  = wp_insert_post(
+			array(
+				'post_type'   => 'page',
+				'post_status' => 'publish',
+				'post_name'   => 'account',
+				'post_title'  => 'Account',
+			)
+		);
+		$about_id    = wp_insert_post(
+			array(
+				'post_type'   => 'page',
+				'post_status' => 'publish',
+				'post_name'   => 'about',
+				'post_title'  => 'About',
+			)
+		);
+		$global_keys = array( 'post', 'wp_query', 'wp_the_query', 'wp_styles', 'wp_scripts' );
+		$globals     = array();
+		$server      = array();
+		$requests    = array();
+
+		$this->assertIsInt( $account_id );
+		$this->assertIsInt( $about_id );
+
+		foreach ( $global_keys as $key ) {
+			$globals[ $key ] = array(
+				'exists' => array_key_exists( $key, $GLOBALS ),
+				'value'  => $GLOBALS[ $key ] ?? null,
+			);
+		}
+
+		foreach ( array( 'REQUEST_METHOD', 'REQUEST_URI', 'QUERY_STRING' ) as $key ) {
+			$server[ $key ] = array(
+				'exists' => array_key_exists( $key, $_SERVER ),
+				'value'  => $_SERVER[ $key ] ?? null,
+			);
+		}
+
+		$this->add_filter_callback(
+			'body_class',
+			static function ( array $classes ): array {
+				if ( is_page( 'account' ) ) {
+					$classes[] = 'theme-account-page';
+				}
+
+				return $classes;
+			}
+		);
+		$this->add_action_callback(
+			'wp_enqueue_scripts',
+			static function () use ( &$requests ): void {
+				$requests[ get_queried_object_id() ] = $_SERVER['REQUEST_URI'] ?? ''; // phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized,WordPress.Security.ValidatedSanitizedInput.MissingUnslash -- Test records the exact temporary request URI.
+
+				if ( ! is_page( 'account' ) ) {
+					return;
+				}
+
+				wp_enqueue_style(
+					'theme-account',
+					'https://example.test/theme-account.css',
+					array(),
+					'1.0.0'
+				);
+				wp_enqueue_script(
+					'theme-account',
+					'https://example.test/theme-account.js',
+					array(),
+					'1.0.0',
+					true
+				);
+				wp_redirect( 'https://example.test/sign-in/', 307 );
+			}
+		);
+		$this->add_filter_callback( 'blockstudio/settings/tailwind/enabled', '__return_false' );
+
+		try {
+			Pages::reset();
+			$registry->add_path( '/virtual/pages' );
+			$registry->register(
+				'account',
+				array(
+					'name'           => 'account',
+					'key'            => 'account',
+					'title'          => 'Account',
+					'slug'           => 'account',
+					'path'           => 'account',
+					'source_path'    => '/virtual/pages/account/index.php',
+					'template_path'  => '/virtual/pages/account/index.php',
+					'contentType'    => 'html',
+					'inline_content' => '<section data-page="account">Account</section>',
+					'post_id'        => $account_id,
+					'permalink'      => home_url( '/account/' ),
+				)
+			);
+			$registry->register(
+				'about',
+				array(
+					'name'           => 'about',
+					'key'            => 'about',
+					'title'          => 'About',
+					'slug'           => 'about',
+					'path'           => 'about',
+					'source_path'    => '/virtual/pages/about/index.php',
+					'template_path'  => '/virtual/pages/about/index.php',
+					'contentType'    => 'html',
+					'inline_content' => '<section data-page="about">About</section>',
+					'post_id'        => $about_id,
+					'permalink'      => home_url( '/about/' ),
+				)
+			);
+
+			$result    = Canvas::documents(
+				array( 'pages' => array( 'account', 'about' ) ),
+				array(
+					'document' => array(
+						'bodyClasses' => array( 'consumer-preview' ),
+					),
+				)
+			);
+			$documents = array_column( $result['documents']['pages'], 'document', 'id' );
+			$account   = $documents['account']['html'] ?? '';
+			$about     = $documents['about']['html'] ?? '';
+
+			$this->assertStringContainsString( 'consumer-preview', $account );
+			$this->assertStringContainsString( 'theme-account-page', $account );
+			$this->assertStringContainsString( 'theme-account.css', $account );
+			$this->assertStringContainsString( 'theme-account.js', $account );
+			$this->assertStringContainsString( 'data-page="account"', $account );
+			$this->assertStringContainsString( 'consumer-preview', $about );
+			$this->assertStringNotContainsString( 'theme-account-page', $about );
+			$this->assertStringNotContainsString( 'theme-account.css', $about );
+			$this->assertStringNotContainsString( 'theme-account.js', $about );
+			$this->assertStringContainsString( 'data-page="about"', $about );
+			$this->assertSame( '/account/', $requests[ $account_id ] ?? null );
+			$this->assertSame( '/about/', $requests[ $about_id ] ?? null );
+			$this->assertSame(
+				'page_redirect_suppressed',
+				$documents['account']['warnings'][0]['code'] ?? null
+			);
+			$this->assertStringContainsString(
+				'307 redirect to "https://example.test/sign-in/"',
+				$documents['account']['warnings'][0]['message'] ?? ''
+			);
+
+			foreach ( $globals as $key => $state ) {
+				$this->assertSame( $state['exists'], array_key_exists( $key, $GLOBALS ) );
+
+				if ( $state['exists'] ) {
+					$this->assertSame( $state['value'], $GLOBALS[ $key ] );
+				}
+			}
+
+			foreach ( $server as $key => $state ) {
+				$this->assertSame( $state['exists'], array_key_exists( $key, $_SERVER ) );
+
+				if ( $state['exists'] ) {
+					$this->assertSame( $state['value'], $_SERVER[ $key ] );
+				}
+			}
+		} finally {
+			Pages::reset();
+			wp_delete_post( $account_id, true );
+			wp_delete_post( $about_id, true );
+		}
+	}
+
 	public function test_targeted_pattern_compiles_only_the_selected_source(): void {
 		$registry        = Pattern_Registry::instance();
 		$original        = $registry->get_patterns();

@@ -168,6 +168,26 @@ class RenderTest extends TestCase {
 		);
 	}
 
+	public function test_document_includes_explicit_head_and_footer_markup_in_its_asset_closure(): void {
+		$document = Render::document_from_html(
+			'<p>Preview content</p>',
+			array(),
+			array(
+				'head'   => '<link rel="stylesheet" href="https://example.test/context.css">',
+				'footer' => '<script src="https://example.test/context.js"></script>',
+			)
+		);
+
+		$this->assertStringContainsString( 'context.css', $document['assets']['head'] );
+		$this->assertStringContainsString( 'context.css', $document['assets']['styles'] );
+		$this->assertStringContainsString( 'context.js', $document['assets']['footer'] );
+		$this->assertStringContainsString( 'context.js', $document['assets']['scripts'] );
+		$this->assertStringContainsString(
+			'<p>Preview content</p><script src="https://example.test/context.js"></script>',
+			$document['html']
+		);
+	}
+
 	public function test_document_ignores_an_unsafe_content_element(): void {
 		$document = Render::document_from_html(
 			'<p>Preview content</p>',

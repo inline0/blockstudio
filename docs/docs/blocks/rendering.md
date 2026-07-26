@@ -84,6 +84,8 @@ Complete documents may set `bodyClasses`/`bodyAttributes` and optionally wrap
 the rendered body with `contentElement`, `contentClasses`, and
 `contentAttributes`. The wrapper is restricted to a safe element name; the
 returned `body` remains the unwrapped rendered content.
+The `head` and `footer` options append trusted document markup at their
+respective positions and are included in the returned asset closure.
 
 To assemble a document around HTML that is already rendered, provide its known
 root block names:

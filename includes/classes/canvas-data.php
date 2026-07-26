@@ -599,20 +599,16 @@ final class Canvas_Data {
 			return Render::document( $item['declaration'], $document_options );
 		}
 
-		$content = Render::content( self::record_string( $item, 'content' ) );
-
 		if ( 'pages' === $type ) {
-			$document_options['contentElement'] = $document_options['contentElement'] ?? 'main';
-			$page                               = is_array( $item['page'] ?? null ) ? $item['page'] : array();
-			$content                            = Pages::render_layout(
-				$content,
-				$page,
-				self::record_string( $item, 'layoutPath' )
+			return Canvas_Page_Document::render(
+				$item,
+				$document_options,
+				self::block_names_from_content( self::record_string( $item, 'content' ) )
 			);
 		}
 
 		return Render::document_from_html(
-			$content,
+			Render::content( self::record_string( $item, 'content' ) ),
 			self::block_names_from_content( self::record_string( $item, 'content' ) ),
 			$document_options
 		);

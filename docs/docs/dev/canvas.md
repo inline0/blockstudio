@@ -96,6 +96,12 @@ Each document contains its body, assembled HTML, dependency-closed block names,
 and exact CSS, JavaScript, modules, interactivity bootstrap, bundled UI globals,
 and Tailwind output. Page documents use a semantic `<main>` content wrapper;
 callers can override or disable it through the shared Render document options.
+Every selected page renders in its own restored frontend WordPress context, so
+query conditionals, body-class filters, shortcodes, layouts, redirects, and
+`wp_enqueue_scripts` callbacks observe that page rather than the admin or REST
+request that requested the Canvas result. Caller-provided body classes are
+merged with the page's contextual classes, and frontend enqueue registries are
+isolated between documents.
 
 ### Exact selection semantics
 
