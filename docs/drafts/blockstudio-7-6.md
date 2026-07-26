@@ -1,15 +1,22 @@
 ---
 title: Blockstudio 7.6
 description: Ask a project what it contains, render any part of it on demand, and move production behaviour into blockstudio.json.
+status: 'unpublished-prerelease-draft'
+draft: true
 version: '7.6.0'
+developmentLine: '7.6.0.x-dev'
 author: Dennis
 path: 'blockstudio-7-6'
-date: "2026-07-27"
-order: 1
-section: 'Blog'
-meta_title: 'Blockstudio 7.6'
-meta_description: 'Ask a project what it contains, render any part of it on demand, and move production behaviour into blockstudio.json.'
+section: 'Drafts'
+meta_title: 'Blockstudio 7.6 (unpublished prerelease draft)'
+meta_description: 'Unpublished draft notes for the Blockstudio 7.6.0.x-dev development line. Not a release announcement.'
 ---
+
+> **Unpublished draft.** These notes describe the `7.6.0.x-dev` development
+> line. Nothing here is tagged or released, the plugin headers in this
+> repository still read `7.5.2`, and this file sits outside the published blog
+> collection on purpose, so it has no release date and no published ordering.
+> Treat every command below as development software.
 
 Blockstudio 7.6 makes a project readable and renderable from PHP, and moves
 production frontend defaults into `blockstudio.json`: an inventory API,
