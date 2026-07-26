@@ -41,6 +41,9 @@ The short version:
 - **Managed project analysis**: `blockstudio.json` owns the canonical PHPStan
   preset, roots, exclusions, scan limit, and opt-in generated pre-commit hook
   without hand-maintaining command or hook files.
+- **Portable analysis installs**: the PHPStan package includes a BC Math
+  compatibility provider, so fresh theme installs do not depend on a
+  host-provided `ext-bcmath` extension.
 - **Generic theme runtime**: `blockstudio.json` now owns typed, invalidating
   runtime settings, theme defaults, media metadata and rendering, Tailwind
   composition helpers, intent preloading, opt-in measurements, and generic

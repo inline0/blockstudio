@@ -524,3 +524,7 @@ plugin source on your machine.
 - PHP 8.2+
 - PHPStan 2.0+
 - `phpstan/extension-installer` (recommended, for auto-discovery)
+
+The package installs its BC Math compatibility provider automatically. Native
+`ext-bcmath` is therefore optional, including for fresh generated themes that
+enable the JavaScript checks through the theme or extreme preset.

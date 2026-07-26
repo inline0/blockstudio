@@ -38,6 +38,10 @@ final class PresetContractTest extends TestCase
         );
         $this->assertSame('0.4.1', $composer['require']['phasis/phasis'] ?? null);
         $this->assertSame(
+            '^2.0.3',
+            $composer['require']['phpseclib/bcmath_compat'] ?? null
+        );
+        $this->assertSame(
             '^1.5',
             $composer['require']['tailwindphp/tailwindphp'] ?? null
         );

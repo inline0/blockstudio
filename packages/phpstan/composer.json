@@ -19,6 +19,7 @@
   "require": {
     "php": "^8.2",
     "phasis/phasis": "0.4.1",
+    "phpseclib/bcmath_compat": "^2.0.3",
     "phpstan/phpstan": "^2.0",
     "szepeviktor/phpstan-wordpress": "^2.0",
     "nikic/php-parser": "^5.0",

@@ -451,6 +451,8 @@ when explicitly selected.
 - PHPStan 2.0+
 - [phpstan/phpstan-wordpress](https://github.com/szepeviktor/phpstan-wordpress)
 - [Phasis](https://github.com/phasis/phasis) for JavaScript parsing
+- [BCMath compatibility](https://github.com/phpseclib/bcmath_compat) for hosts
+  without the native `ext-bcmath` extension
 - [TailwindPHP](https://github.com/tailwindphp/tailwindphp) for Tailwind analysis
 
 ## License
