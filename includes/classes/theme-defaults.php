@@ -37,7 +37,7 @@ final class Theme_Defaults {
 		}
 
 		self::$registered = true;
-		if ( Settings::get_bool( 'themeDefaults/titleTag', true ) ) {
+		if ( Settings::get_bool( 'themeDefaults/titleTag', false ) ) {
 			add_action( 'after_setup_theme', array( self::class, 'enable_title_tag' ) );
 		}
 		if ( Settings::get_bool( 'themeDefaults/suppressDirectoryUpdates', false ) ) {

@@ -111,7 +111,7 @@ class Settings {
 			'maxFiles'      => 10000,
 		),
 		'themeDefaults' => array(
-			'titleTag'                 => true,
+			'titleTag'                 => false,
 			'suppressDirectoryUpdates' => false,
 			'syncPagesInDevelopment'   => false,
 		),

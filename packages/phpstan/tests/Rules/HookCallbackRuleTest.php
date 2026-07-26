@@ -60,6 +60,30 @@ final class HookCallbackRuleTest extends RuleTestCase
         );
     }
 
+    public function test_runtime_hook_families_pass(): void
+    {
+        $this->analyse(
+            [__DIR__ . '/data/hook-callback-runtime-families.php'],
+            []
+        );
+    }
+
+    public function test_dynamic_performance_and_ui_hooks_pass(): void
+    {
+        $this->analyse(
+            [__DIR__ . '/data/hook-callback-dynamic.php'],
+            []
+        );
+    }
+
+    public function test_hook_resembling_no_known_name_is_not_reported(): void
+    {
+        $this->analyse(
+            [__DIR__ . '/data/hook-callback-unfamiliar.php'],
+            []
+        );
+    }
+
     public function test_non_blockstudio_hooks_pass(): void
     {
         $this->analyse(

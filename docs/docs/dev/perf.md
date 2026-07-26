@@ -312,6 +312,11 @@ Blockstudio\Static_Prerender_Early_Serve::install_artifact_entry(
 );
 ```
 
+Configuration stays authoritative. `install_artifact_entry()` returns `false`
+unless both `enabled` and `earlyServe` are true, so a deploy can never install a
+map, drop-in, and `WP_CACHE` declaration that the next admin request would
+remove again.
+
 ### Warming, maintenance, and observability
 
 The warm queue is durable, URL-coalescing, single-flight, and recovers timed-out

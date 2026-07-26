@@ -39,7 +39,32 @@ final class Runtime {
 		Performance_Measurement::register();
 		WordPress_Optimizations::register();
 		Static_Prerender_Runtime::register();
+		add_action( 'admin_notices', array( self::class, 'render_configuration_notice' ) );
 
 		do_action( 'blockstudio/runtime/initialized', Runtime_Settings::current() );
+	}
+
+	/**
+	 * Report resolved configuration errors to administrators.
+	 *
+	 * @return void
+	 */
+	public static function render_configuration_notice(): void {
+		if ( ! current_user_can( 'manage_options' ) ) {
+			return;
+		}
+
+		$errors = Runtime_Settings::current()->errors();
+		if ( array() === $errors ) {
+			return;
+		}
+
+		echo '<div class="notice notice-error"><p>'
+			. esc_html__( 'Blockstudio ignored invalid configuration values:', 'blockstudio' )
+			. '</p><ul>';
+		foreach ( $errors as $error ) {
+			echo '<li><code>' . esc_html( $error ) . '</code></li>';
+		}
+		echo '</ul></div>';
 	}
 }

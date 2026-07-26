@@ -63,6 +63,9 @@ final class Static_Prerender_Early_Serve {
 	/**
 	 * Synchronize the current site's map entry and shared drop-in.
 	 *
+	 * While the feature is disabled the lock is taken only when this class owns
+	 * installed state, so a disabled site creates and reads no files at all.
+	 *
 	 * @return void
 	 */
 	public static function maybe_sync(): void {
@@ -71,18 +74,32 @@ final class Static_Prerender_Early_Serve {
 			return;
 		}
 
-		self::with_exclusive_lock(
-			self::map_path() . '.lock',
-			static function (): bool {
-				if (
-					! Runtime_Settings::current()->enabled( 'staticPrerender/enabled' ) ||
-					! Runtime_Settings::current()->enabled( 'staticPrerender/earlyServe' )
-				) {
+		if (
+			! Runtime_Settings::current()->enabled( 'staticPrerender/enabled' ) ||
+			! Runtime_Settings::current()->enabled( 'staticPrerender/earlyServe' )
+		) {
+			if (
+				! self::file_contains_marker( self::map_path(), self::MAP_MARKER ) &&
+				! self::file_contains_marker( self::dropin_path(), self::DROPIN_MARKER )
+			) {
+				return;
+			}
+
+			self::with_exclusive_lock(
+				self::map_path() . '.lock',
+				static function (): bool {
 					self::remove_current_site_locked();
 
 					return true;
 				}
+			);
 
+			return;
+		}
+
+		self::with_exclusive_lock(
+			self::map_path() . '.lock',
+			static function (): bool {
 				$entry = self::current_entry();
 				if ( null !== $entry && self::sync_map( $entry ) ) {
 					self::ensure_dropin();
@@ -139,7 +156,9 @@ final class Static_Prerender_Early_Serve {
 	 * Activate a complete dependency-graph artifact atomically.
 	 *
 	 * Every route is validated before the map rename makes it visible. Existing
-	 * HTML is retained until after the new graph becomes active.
+	 * HTML is retained until after the new graph becomes active. Configuration
+	 * stays authoritative: an artifact is never installed unless both
+	 * `staticPrerender/enabled` and `staticPrerender/earlyServe` are true.
 	 *
 	 * @param array<string,mixed> $entry     Artifact entry.
 	 * @param string              $cache_dir Directory containing route HTML.
@@ -147,6 +166,13 @@ final class Static_Prerender_Early_Serve {
 	 * @return bool Whether the artifact was installed.
 	 */
 	public static function install_artifact_entry( array $entry, string $cache_dir ): bool {
+		if (
+			! Runtime_Settings::current()->enabled( 'staticPrerender/enabled' ) ||
+			! Runtime_Settings::current()->enabled( 'staticPrerender/earlyServe' )
+		) {
+			return false;
+		}
+
 		$cache_dir = rtrim( wp_normalize_path( $cache_dir ), '/' );
 
 		if ( '' === $cache_dir || ! is_dir( $cache_dir ) ) {
@@ -310,6 +336,7 @@ function blockstudio_early_serve_static_prerender(): void {
 	}
 
 	\$route_path = strtolower( '/' . ltrim( (string) ( parse_url( \$uri, PHP_URL_PATH ) ?: '/' ), '/' ) );
+	\$route_path = (string) ( preg_replace( '#/+#', '/', \$route_path ) ?: '/' );
 	if ( 'graph' === ( \$entry['mode'] ?? null ) ) {
 		\$routes = is_array( \$entry['routes'] ?? null ) ? \$entry['routes'] : array();
 		\$key = isset( \$routes[ \$route_path ] ) && is_string( \$routes[ \$route_path ] ) ? \$routes[ \$route_path ] : '';
@@ -470,6 +497,8 @@ PHP;
 			}
 
 			$path = strtolower( '/' . ltrim( self::url_path( $path ), '/' ) );
+			$path = preg_replace( '#/+#', '/', $path );
+			$path = is_string( $path ) && '' !== $path ? $path : '/';
 			if ( ! str_starts_with( $path . '/', $home_path ) ) {
 				return false;
 			}
@@ -526,8 +555,8 @@ PHP;
 		$entries[ $host . '|' . $home_path ] = $normalized;
 		if (
 			! self::ensure_dropin() ||
-			! Static_Prerender_Identity::activate( $build_id ) ||
-			! self::write_map( $entries )
+			! self::write_map( $entries ) ||
+			! Static_Prerender_Identity::activate( $build_id )
 		) {
 			return false;
 		}
@@ -575,11 +604,17 @@ PHP;
 	/**
 	 * Remove the current site without disturbing other multisite entries.
 	 *
+	 * A foreign map owner is never cleaned up, because its entries cannot be
+	 * attributed to this installation.
+	 *
 	 * @return void
 	 */
 	private static function remove_current_site_locked(): void {
 		$entries = self::owned_map_entries();
-		if ( null === $entries || array() === $entries ) {
+		if ( null === $entries ) {
+			return;
+		}
+		if ( array() === $entries ) {
 			self::remove_owned_map();
 			self::remove_shared_artifacts();
 

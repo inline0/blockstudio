@@ -9,6 +9,8 @@ use Blockstudio\Runtime_Cache;
 use Blockstudio\Runtime_Settings;
 use Blockstudio\Settings;
 use Blockstudio\Static_Prerender_Content_Hasher;
+use Blockstudio\Static_Prerender_Early_Serve;
+use Blockstudio\Static_Prerender_Identity;
 use Blockstudio\Static_Prerender_Runtime;
 use PHPUnit\Framework\TestCase;
 
@@ -154,6 +156,103 @@ class StaticPrerenderRuntimeTest extends TestCase {
 		);
 	}
 
+	public function test_signature_keys_fold_case_and_duplicate_slashes_like_the_dropin(): void {
+		$expected = hash(
+			'sha256',
+			'example.test|/products/card/|' . Static_Prerender_Identity::current()
+		);
+
+		$this->assertSame(
+			$expected,
+			Static_Prerender_Runtime::cache_key_for_request(
+				array(
+					'HTTP_HOST'   => 'Example.test',
+					'REQUEST_URI' => '/Products/Card/',
+				)
+			)
+		);
+		$this->assertSame(
+			$expected,
+			Static_Prerender_Runtime::cache_key_for_request(
+				array(
+					'HTTP_HOST'   => 'example.test',
+					'REQUEST_URI' => '/products//card/',
+				)
+			)
+		);
+		$this->assertSame(
+			$expected,
+			Static_Prerender_Runtime::cache_key_for_url( 'http://example.test/Products//Card/' )
+		);
+
+		$source = Static_Prerender_Early_Serve::dropin_source();
+		$this->assertStringContainsString( "preg_replace( '#/+#', '/', \$route_path )", $source );
+	}
+
+	public function test_error_status_responses_are_never_cacheable(): void {
+		$document = '<!doctype html><html><body>Not found</body></html>';
+
+		$this->assertTrue( Static_Prerender_Runtime::cacheable_html( $document ) );
+		$this->assertTrue( Static_Prerender_Runtime::cacheable_html( $document, 200 ) );
+		$this->assertFalse( Static_Prerender_Runtime::cacheable_html( $document, 404 ) );
+		$this->assertFalse( Static_Prerender_Runtime::cacheable_html( $document, 410 ) );
+		$this->assertFalse( Static_Prerender_Runtime::cacheable_html( $document, 500 ) );
+		$this->assertFalse( Static_Prerender_Runtime::cacheable_html( $document, 503 ) );
+	}
+
+	public function test_a_captured_error_document_is_never_persisted_as_a_success(): void {
+		$document = '<!doctype html><html><body>Themed error</body></html>';
+
+		$this->assertSame( $document, $this->capture_response( $document, 404 ) );
+		$this->assertSame( array(), $this->cached_files() );
+
+		$this->assertSame( $document, $this->capture_response( $document, null ) );
+		$this->assertCount( 1, $this->cached_files() );
+	}
+
+	public function test_disabled_static_prerender_registers_no_hooks_and_creates_no_state(): void {
+		$content = $this->root . '/content';
+		wp_mkdir_p( $content );
+		file_put_contents( $content . '/wp-config.php', "<?php\n" );
+		Static_Prerender_Early_Serve::override_content_dir_for_testing( $content );
+		Static_Prerender_Early_Serve::override_config_path_for_testing( $content . '/wp-config.php' );
+
+		try {
+			Static_Prerender_Runtime::deactivate();
+			$before = $this->files();
+
+			Static_Prerender_Runtime::register();
+
+			$this->assertFalse(
+				has_action( 'template_redirect', array( Static_Prerender_Runtime::class, 'maybe_serve_or_buffer' ) )
+			);
+			$this->assertFalse(
+				has_action( 'save_post', array( Static_Prerender_Runtime::class, 'handle_content_changed' ) )
+			);
+			$this->assertFalse(
+				has_action( 'deleted_post', array( Static_Prerender_Runtime::class, 'handle_content_changed' ) )
+			);
+			$this->assertFalse(
+				has_action( 'switch_theme', array( Static_Prerender_Runtime::class, 'handle_site_changed' ) )
+			);
+			$this->assertFalse(
+				has_filter( 'cron_schedules', array( Static_Prerender_Runtime::class, 'filter_cron_schedules' ) )
+			);
+			$this->assertFalse(
+				has_filter( 'status_header', array( Static_Prerender_Runtime::class, 'record_status_header' ) )
+			);
+			$this->assertFalse( wp_next_scheduled( 'blockstudio_static_prerender_warm' ) );
+			$this->assertNotFalse(
+				has_action( 'admin_init', array( Static_Prerender_Early_Serve::class, 'maybe_sync' ) )
+			);
+			$this->assertSame( $before, $this->files() );
+			$this->assertSame( "<?php\n", file_get_contents( $content . '/wp-config.php' ) );
+		} finally {
+			Static_Prerender_Early_Serve::override_content_dir_for_testing( null );
+			Static_Prerender_Early_Serve::override_config_path_for_testing( null );
+		}
+	}
+
 	public function test_cacheability_requires_a_complete_opted_in_html_document(): void {
 		$this->assertTrue(
 			Static_Prerender_Runtime::cacheable_html(
@@ -237,6 +336,76 @@ class StaticPrerenderRuntimeTest extends TestCase {
 		$this->assertSame( Static_Prerender_Runtime::cache_root_path(), $status['cacheRoot'] );
 		$this->assertArrayHasKey( 'queue', $status );
 		$this->assertSame( 1, $status['diagnostics']['diagnostic']['write'] ?? 0 );
+	}
+
+	private function capture_response( string $document, ?int $status ): string {
+		$user   = get_current_user_id();
+		$server = $_SERVER;
+		$screen = $GLOBALS['current_screen'] ?? null;
+		$level  = ob_get_level();
+		wp_set_current_user( 0 );
+		unset( $GLOBALS['current_screen'] );
+		$_SERVER = array(
+			'REQUEST_METHOD' => 'GET',
+			'REQUEST_URI'    => '/status-capture/',
+			'HTTP_HOST'      => 'localhost:8888',
+		);
+		Static_Prerender_Runtime::reset_request_cache();
+
+		ob_start();
+		try {
+			Static_Prerender_Runtime::maybe_serve_or_buffer();
+			$this->assertSame( $level + 2, ob_get_level(), 'Static prerender did not buffer the response.' );
+
+			if ( null !== $status ) {
+				Static_Prerender_Runtime::record_status_header(
+					'HTTP/1.1 ' . $status . ' Error',
+					$status
+				);
+			}
+
+			echo $document;
+			ob_end_flush();
+
+			return (string) ob_get_clean();
+		} finally {
+			while ( ob_get_level() > $level ) {
+				ob_end_clean();
+			}
+			$_SERVER = $server;
+			wp_set_current_user( $user );
+			if ( null !== $screen ) {
+				$GLOBALS['current_screen'] = $screen;
+			}
+		}
+	}
+
+	/**
+	 * @return string[] Cached HTML paths.
+	 */
+	private function cached_files(): array {
+		$files = glob( Static_Prerender_Runtime::cache_root_path() . '/*.html' );
+
+		return is_array( $files ) ? $files : array();
+	}
+
+	/**
+	 * @return string[] Relative test-root file paths.
+	 */
+	private function files(): array {
+		$files = array();
+		$items = new RecursiveIteratorIterator(
+			new RecursiveDirectoryIterator( $this->root, FilesystemIterator::SKIP_DOTS )
+		);
+
+		foreach ( $items as $item ) {
+			if ( $item->isFile() ) {
+				$files[] = substr( $item->getPathname(), strlen( $this->root ) + 1 );
+			}
+		}
+		sort( $files );
+
+		return $files;
 	}
 
 	private function remove_directory( string $directory ): void {

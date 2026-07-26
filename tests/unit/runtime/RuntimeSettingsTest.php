@@ -1,5 +1,6 @@
 <?php
 
+use Blockstudio\Runtime;
 use Blockstudio\Runtime_Settings;
 use Blockstudio\Settings;
 use PHPUnit\Framework\TestCase;
@@ -88,6 +89,103 @@ class RuntimeSettingsTest extends TestCase {
 		$this->assertStringContainsString( 'not supported', $errors );
 		$this->assertStringContainsString( 'performance.wordpress.xmlrpc must be true or false', $errors );
 		$this->assertStringContainsString( 'performance.preload must be an object', $errors );
+	}
+
+	public function test_one_invalid_key_never_discards_the_other_explicit_values(): void {
+		$this->write(
+			array(
+				'performance' => array(
+					'staticPrerender' => array(
+						'enabled'    => true,
+						'earlyServe' => true,
+						'earlyserve' => true,
+						'ttl'        => '1h',
+					),
+					'media'           => array(
+						'lazy'       => true,
+						'rootMargin' => '450',
+					),
+				),
+			)
+		);
+
+		$config = Runtime_Settings::current();
+
+		$this->assertTrue( $config->enabled( 'staticPrerender/enabled' ) );
+		$this->assertTrue( $config->enabled( 'staticPrerender/earlyServe' ) );
+		$this->assertSame( 86400, $config->value( 'staticPrerender/ttl' ) );
+		$this->assertTrue( $config->enabled( 'media/lazy' ) );
+		$this->assertSame( '300px', $config->value( 'media/rootMargin' ) );
+
+		$errors = implode( "\n", $config->errors() );
+		$this->assertStringContainsString( 'performance.staticPrerender.earlyserve is not supported', $errors );
+		$this->assertStringContainsString( 'performance.staticPrerender.ttl must be a positive integer', $errors );
+		$this->assertStringContainsString( 'performance.media.rootMargin must be a pixel or percentage length', $errors );
+	}
+
+	public function test_an_invalid_filter_value_falls_back_to_the_validated_file_configuration(): void {
+		$invalid = static fn(): string => '450';
+		$this->write(
+			array(
+				'performance' => array(
+					'media' => array(
+						'lazy'       => true,
+						'rootMargin' => '600px',
+					),
+				),
+			)
+		);
+		add_filter( 'blockstudio/performance/media/rootMargin', $invalid );
+		Runtime_Settings::reset();
+
+		try {
+			$config = Runtime_Settings::current();
+
+			$this->assertSame( '600px', $config->value( 'media/rootMargin' ) );
+			$this->assertTrue( $config->enabled( 'media/lazy' ) );
+			$this->assertNotEmpty( $config->errors() );
+		} finally {
+			remove_filter( 'blockstudio/performance/media/rootMargin', $invalid );
+			Runtime_Settings::reset();
+		}
+	}
+
+	public function test_configuration_errors_are_reported_to_administrators(): void {
+		$user = get_current_user_id();
+		wp_set_current_user( 1 );
+
+		try {
+			ob_start();
+			Runtime::render_configuration_notice();
+			$this->assertSame( '', (string) ob_get_clean() );
+
+			$this->write(
+				array(
+					'performance' => array(
+						'staticPrerender' => array(
+							'earlyserve' => true,
+						),
+					),
+				)
+			);
+
+			ob_start();
+			Runtime::render_configuration_notice();
+			$notice = (string) ob_get_clean();
+
+			$this->assertStringContainsString( 'notice notice-error', $notice );
+			$this->assertStringContainsString(
+				'performance.staticPrerender.earlyserve is not supported',
+				$notice
+			);
+
+			wp_set_current_user( 0 );
+			ob_start();
+			Runtime::render_configuration_notice();
+			$this->assertSame( '', (string) ob_get_clean() );
+		} finally {
+			wp_set_current_user( $user );
+		}
 	}
 
 	public function test_runtime_value_filters_are_applied_before_validation(): void {

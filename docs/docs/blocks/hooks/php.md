@@ -1034,13 +1034,15 @@ add_filter(
 
 ### blockstudio/static_prerender/cacheable_html
 
-This filter makes the final decision after Blockstudio verifies that output is
-a complete HTML document without the no-cache marker.
+This filter makes the final decision after Blockstudio verifies that output is a
+complete HTML document without the no-cache marker, and that the observed
+response status is a success. The third argument is the observed status, or
+`null` when no status was declared.
 
 ```php title="functions.php"
-add_filter('blockstudio/static_prerender/cacheable_html', function(bool $cacheable, string $html) {
+add_filter('blockstudio/static_prerender/cacheable_html', function(bool $cacheable, string $html, ?int $status) {
   return $cacheable && !str_contains($html, 'data-personalized');
-}, 10, 2);
+}, 10, 3);
 ```
 
 ### blockstudio/static_prerender/outcome

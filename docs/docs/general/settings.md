@@ -44,7 +44,7 @@ The following properties are available:
     "path": "blockstudio/cache"
   },
   "themeDefaults": {
-    "titleTag": true,
+    "titleTag": false,
     "suppressDirectoryUpdates": false,
     "syncPagesInDevelopment": false
   },
@@ -260,7 +260,7 @@ serializable runtime variant that must alter object identities.
 
 | Option                     | Type    | Default | Description                                                                      |
 | -------------------------- | ------- | ------- | -------------------------------------------------------------------------------- |
-| `titleTag`                 | boolean | `true`  | Enable WordPress title-tag theme support                                         |
+| `titleTag`                 | boolean | `false` | Enable WordPress title-tag theme support                                         |
 | `suppressDirectoryUpdates` | boolean | `false` | Remove active child and parent themes from directory update results              |
 | `syncPagesInDevelopment`   | boolean | `false` | Reconcile the existing `Blockstudio\Pages` source when page files change locally |
 

@@ -1,5 +1,6 @@
 <?php
 
+use Blockstudio\Block_Tags;
 use Blockstudio\Settings;
 use PHPUnit\Framework\TestCase;
 
@@ -146,6 +147,37 @@ class SettingsTest extends TestCase {
 
 	public function test_block_tags_enabled_from_json(): void {
 		$this->assertTrue( Settings::get( 'blockTags/enabled' ) );
+	}
+
+	public function test_block_tags_page_rendering_registers_nothing_by_default(): void {
+		$path = trailingslashit( get_temp_dir() ) . 'blockstudio-block-tags-' . wp_generate_uuid4() . '.json';
+		file_put_contents( $path, "{}\n" );
+		$settings_path = static fn(): string => $path;
+
+		remove_filter( 'the_content', array( Block_Tags::class, 'render' ), 5 );
+		remove_filter( 'widget_text', array( Block_Tags::class, 'render' ), 5 );
+		remove_filter( 'blockstudio/block_tags/render', array( Block_Tags::class, 'render' ) );
+		$this->add_filter( 'blockstudio/settings/path', $settings_path );
+		Settings::reset();
+
+		try {
+			$this->assertFalse( Settings::get( 'blockTags/enabled' ) );
+
+			Block_Tags::init();
+
+			$this->assertFalse( has_filter( 'the_content', array( Block_Tags::class, 'render' ) ) );
+			$this->assertFalse( has_filter( 'widget_text', array( Block_Tags::class, 'render' ) ) );
+			$this->assertFalse(
+				has_filter( 'blockstudio/block_tags/render', array( Block_Tags::class, 'render' ) )
+			);
+		} finally {
+			remove_filter( 'blockstudio/settings/path', $settings_path );
+			unlink( $path );
+			Settings::reset();
+			Block_Tags::init();
+		}
+
+		$this->assertNotFalse( has_filter( 'the_content', array( Block_Tags::class, 'render' ) ) );
 	}
 
 	public function test_block_tags_allow_keeps_default(): void {

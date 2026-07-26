@@ -71,6 +71,13 @@ final class Static_Prerender_Runtime {
 	private static ?string $buffer_url = null;
 
 	/**
+	 * Last HTTP status WordPress sent for this response.
+	 *
+	 * @var int|null
+	 */
+	private static ?int $response_status = null;
+
+	/**
 	 * Request-local warm queue.
 	 *
 	 * @var Static_Prerender_Warm_Queue|null
@@ -105,6 +112,7 @@ final class Static_Prerender_Runtime {
 		}
 
 		add_filter( 'cron_schedules', array( self::class, 'filter_cron_schedules' ) ); // phpcs:ignore WordPress.WP.CronInterval.ChangeDetected -- Interval is validated runtime configuration.
+		add_filter( 'status_header', array( self::class, 'record_status_header' ), 10, 2 );
 		add_action( 'template_redirect', array( self::class, 'maybe_serve_or_buffer' ), 0 );
 		add_action( 'save_post', array( self::class, 'handle_content_changed' ), 10, 3 );
 		add_action( 'deleted_post', array( self::class, 'handle_content_changed' ), 10, 2 );
@@ -372,14 +380,18 @@ final class Static_Prerender_Runtime {
 	 * @return string Original buffer.
 	 */
 	public static function capture_response( string $buffer ): string {
-		$key = self::$buffer_key;
-		$url = self::$buffer_url;
+		$key    = self::$buffer_key;
+		$url    = self::$buffer_url;
+		$status = self::$response_status ?? http_response_code();
 
 		self::$buffer_key = null;
 		self::$buffer_url = null;
 
 		try {
-			if ( null === $key || ! self::cacheable_html( $buffer ) ) {
+			if (
+				null === $key ||
+				! self::cacheable_html( $buffer, is_int( $status ) && $status > 0 ? $status : null )
+			) {
 				return $buffer;
 			}
 
@@ -506,6 +518,20 @@ final class Static_Prerender_Runtime {
 		);
 
 		return $schedules;
+	}
+
+	/**
+	 * Record the status WordPress declared for the current response.
+	 *
+	 * @param string $header Status header.
+	 * @param int    $code   Status code.
+	 *
+	 * @return string Status header.
+	 */
+	public static function record_status_header( string $header, int $code ): string {
+		self::$response_status = $code;
+
+		return $header;
 	}
 
 	/**
@@ -1206,13 +1232,19 @@ final class Static_Prerender_Runtime {
 	/**
 	 * Determine whether a response is a complete cacheable HTML document.
 	 *
-	 * @param string $html Response.
+	 * Only a successful response may be persisted. An observed status other
+	 * than 200 is never cacheable, so a themed error document cannot be
+	 * replayed as a success by either serve path.
+	 *
+	 * @param string   $html   Response.
+	 * @param int|null $status Observed HTTP status, or null when unknown.
 	 *
 	 * @return bool Whether cacheable.
 	 */
-	public static function cacheable_html( string $html ): bool {
+	public static function cacheable_html( string $html, ?int $status = null ): bool {
 		$trimmed   = ltrim( $html );
-		$cacheable = '' !== $trimmed
+		$cacheable = ( null === $status || 200 === $status )
+			&& '' !== $trimmed
 			&& (
 				str_starts_with( strtolower( $trimmed ), '<!doctype html' ) ||
 				str_starts_with( strtolower( $trimmed ), '<html' )
@@ -1224,10 +1256,11 @@ final class Static_Prerender_Runtime {
 		 *
 		 * @since 7.6.0
 		 *
-		 * @param bool   $cacheable Current decision.
-		 * @param string $html      Response HTML.
+		 * @param bool     $cacheable Current decision.
+		 * @param string   $html      Response HTML.
+		 * @param int|null $status    Observed HTTP status.
 		 */
-		return (bool) apply_filters( 'blockstudio/static_prerender/cacheable_html', $cacheable, $html );
+		return (bool) apply_filters( 'blockstudio/static_prerender/cacheable_html', $cacheable, $html, $status );
 	}
 
 	/**
@@ -1317,6 +1350,7 @@ final class Static_Prerender_Runtime {
 	public static function reset_request_cache(): void {
 		self::$buffer_key         = null;
 		self::$buffer_url         = null;
+		self::$response_status    = null;
 		self::$warm_queue         = null;
 		self::$index_record_cache = array();
 		Static_Prerender_Identity::reset();
@@ -1560,6 +1594,9 @@ final class Static_Prerender_Runtime {
 	/**
 	 * Build an identity-mode key from host and path.
 	 *
+	 * Host and path are folded exactly like the generated early-serve drop-in,
+	 * so both engines resolve one request to one key.
+	 *
 	 * @param string $host Host.
 	 * @param string $path Path.
 	 *
@@ -1567,7 +1604,9 @@ final class Static_Prerender_Runtime {
 	 */
 	private static function cache_key_for_host_path( string $host, string $path ): string {
 		$host = strtolower( trim( $host ) );
-		$path = '/' . ltrim( self::url_path( $path ), '/' );
+		$path = strtolower( '/' . ltrim( self::url_path( $path ), '/' ) );
+		$path = preg_replace( '#/+#', '/', $path );
+		$path = is_string( $path ) && '' !== $path ? $path : '/';
 
 		return hash( 'sha256', $host . '|' . $path . '|' . Static_Prerender_Identity::current() );
 	}

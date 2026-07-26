@@ -701,22 +701,20 @@ loading all stay exactly as WordPress and your theme left them until you select
 `performance.staticPrerender.warm.enabled`,
 `performance.measurement.enabled`, `performance.media.lazy`,
 `performance.media.skeleton`, `performance.media.metadata`,
-`themeDefaults.suppressDirectoryUpdates`,
+`themeDefaults.titleTag`, `themeDefaults.suppressDirectoryUpdates`,
 `themeDefaults.syncPagesInDevelopment`, `githooks.commit`,
 `dev.canvas.enabled`, `ui.enabled`, `tailwind.enabled`, and
 `blockTags.enabled`. Static prerendering in particular writes no files and
 installs no drop-in while it is disabled.
 
-**One default is on: `themeDefaults.titleTag`.** Blockstudio calls
-`add_theme_support('title-tag')` unless you set it to `false`. Almost every
-modern theme already does this, and the call is harmless when repeated. But if
-your theme prints its own `<title>` in a template instead of letting `wp_head`
-render it, you will get two title elements. Set it to `false` in that case:
+**Nothing changes your document head either.** `themeDefaults.titleTag` is off,
+so the frontend keeps whatever `<title>` your theme renders today. Turn it on
+when you want Blockstudio to call `add_theme_support('title-tag')` for you:
 
 ```json title="blockstudio.json"
 {
   "themeDefaults": {
-    "titleTag": false
+    "titleTag": true
   }
 }
 ```

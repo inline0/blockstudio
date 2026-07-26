@@ -5,14 +5,19 @@
  * @package Blockstudio
  */
 
+use Blockstudio\Runtime_Settings;
+use Blockstudio\Settings;
 use Blockstudio\Static_Prerender_Early_Serve;
 use Blockstudio\Static_Prerender_Identity;
+use Blockstudio\Static_Prerender_Runtime;
 use PHPUnit\Framework\TestCase;
 
 /**
  * Tests safe map/drop-in ownership and atomic graph activation.
  */
 class StaticPrerenderEarlyServeTest extends TestCase {
+
+	private const CONFIG_SOURCE = "<?php\n// Test configuration.\n";
 
 	private string $root;
 
@@ -25,10 +30,11 @@ class StaticPrerenderEarlyServeTest extends TestCase {
 		$this->cache  = $this->root . '/cache';
 		$this->config = $this->root . '/wp-config.php';
 		wp_mkdir_p( $this->cache );
-		file_put_contents( $this->config, "<?php\n// Test configuration.\n" );
+		file_put_contents( $this->config, self::CONFIG_SOURCE );
 
 		add_filter( 'blockstudio/cache/dir', array( $this, 'filter_cache_root' ) );
 		add_filter( 'blockstudio/cache/site_key', array( $this, 'filter_site_key' ) );
+		$this->enable_early_serve();
 		Static_Prerender_Identity::reset();
 		Static_Prerender_Early_Serve::override_content_dir_for_testing( $this->root );
 		Static_Prerender_Early_Serve::override_config_path_for_testing( $this->config );
@@ -37,6 +43,7 @@ class StaticPrerenderEarlyServeTest extends TestCase {
 	protected function tearDown(): void {
 		remove_filter( 'blockstudio/cache/dir', array( $this, 'filter_cache_root' ) );
 		remove_filter( 'blockstudio/cache/site_key', array( $this, 'filter_site_key' ) );
+		$this->disable_early_serve();
 		Static_Prerender_Identity::reset();
 		Static_Prerender_Early_Serve::override_content_dir_for_testing( null );
 		Static_Prerender_Early_Serve::override_config_path_for_testing( null );
@@ -173,6 +180,148 @@ class StaticPrerenderEarlyServeTest extends TestCase {
 		$this->assertSame( $foreign_dropin, file_get_contents( Static_Prerender_Early_Serve::dropin_path() ) );
 	}
 
+	public function test_disabled_early_serve_creates_no_files_and_reads_no_configuration(): void {
+		$this->disable_early_serve();
+		$before = $this->files();
+
+		Static_Prerender_Early_Serve::maybe_sync();
+
+		$this->assertSame( $before, $this->files() );
+		$this->assertFileDoesNotExist( Static_Prerender_Early_Serve::map_path() . '.lock' );
+		$this->assertSame( self::CONFIG_SOURCE, file_get_contents( $this->config ) );
+	}
+
+	public function test_enabled_early_serve_installs_the_map_dropin_and_wp_cache_declaration(): void {
+		Static_Prerender_Early_Serve::maybe_sync();
+
+		$site    = Static_Prerender_Early_Serve::current_site_identity();
+		$entries = Static_Prerender_Early_Serve::installed_map_entries();
+
+		$this->assertFileExists( Static_Prerender_Early_Serve::map_path() );
+		$this->assertFileExists( Static_Prerender_Early_Serve::dropin_path() );
+		$this->assertSame( 'signature', $entries[ $site['key'] ]['mode'] );
+		$this->assertSame( Static_Prerender_Identity::current(), $entries[ $site['key'] ]['signature'] );
+		$this->assertStringContainsString(
+			"define( 'WP_CACHE', true ); // Blockstudio static prerender early serve.",
+			(string) file_get_contents( $this->config )
+		);
+	}
+
+	public function test_disabling_early_serve_removes_owned_state_and_the_owned_declaration(): void {
+		Static_Prerender_Early_Serve::maybe_sync();
+		$this->assertFileExists( Static_Prerender_Early_Serve::dropin_path() );
+
+		$this->disable_early_serve();
+		Static_Prerender_Early_Serve::maybe_sync();
+
+		$this->assertFileDoesNotExist( Static_Prerender_Early_Serve::map_path() );
+		$this->assertFileDoesNotExist( Static_Prerender_Early_Serve::dropin_path() );
+		$this->assertSame( self::CONFIG_SOURCE, file_get_contents( $this->config ) );
+	}
+
+	public function test_a_foreign_wp_cache_declaration_is_never_added_to_or_removed_from(): void {
+		$foreign = "<?php\ndefine( 'WP_CACHE', true ); // Other cache plugin.\n";
+		file_put_contents( $this->config, $foreign );
+
+		Static_Prerender_Early_Serve::maybe_sync();
+		$this->assertFileExists( Static_Prerender_Early_Serve::dropin_path() );
+		$this->assertSame( $foreign, file_get_contents( $this->config ) );
+
+		$this->disable_early_serve();
+		Static_Prerender_Early_Serve::maybe_sync();
+
+		$this->assertFileDoesNotExist( Static_Prerender_Early_Serve::dropin_path() );
+		$this->assertSame( $foreign, file_get_contents( $this->config ) );
+	}
+
+	public function test_a_foreign_map_owner_is_never_cleaned_up(): void {
+		Static_Prerender_Early_Serve::maybe_sync();
+		$this->assertFileExists( Static_Prerender_Early_Serve::dropin_path() );
+
+		$foreign = "<?php\nreturn array( 'entries' => array() );\n";
+		file_put_contents( Static_Prerender_Early_Serve::map_path(), $foreign );
+
+		Static_Prerender_Early_Serve::remove_current_site();
+
+		$this->assertSame( $foreign, file_get_contents( Static_Prerender_Early_Serve::map_path() ) );
+		$this->assertFileExists( Static_Prerender_Early_Serve::dropin_path() );
+		$this->assertStringContainsString(
+			"define( 'WP_CACHE', true ); // Blockstudio static prerender early serve.",
+			(string) file_get_contents( $this->config )
+		);
+	}
+
+	public function test_artifact_install_requires_early_serve_to_be_enabled(): void {
+		$key = str_repeat( 'd', 64 );
+		file_put_contents( $this->cache . '/' . $key . '.html', '<html>Ready</html>' );
+		$site  = Static_Prerender_Early_Serve::current_site_identity();
+		$entry = array(
+			'host'      => $site['host'],
+			'home_path' => $site['home_path'],
+			'build_id'  => str_repeat( 'e', 32 ),
+			'routes'    => array( $site['home_path'] => $key ),
+		);
+
+		$this->disable_early_serve();
+
+		$this->assertFalse( Static_Prerender_Early_Serve::install_artifact_entry( $entry, $this->cache ) );
+		$this->assertFileDoesNotExist( Static_Prerender_Early_Serve::map_path() );
+		$this->assertFileDoesNotExist( Static_Prerender_Early_Serve::dropin_path() );
+
+		$this->enable_early_serve();
+
+		$this->assertTrue( Static_Prerender_Early_Serve::install_artifact_entry( $entry, $this->cache ) );
+	}
+
+	public function test_a_failed_map_publish_leaves_the_active_identity_unchanged(): void {
+		$key = str_repeat( 'a', 64 );
+		file_put_contents( $this->cache . '/' . $key . '.html', '<html>Ready</html>' );
+		$site     = Static_Prerender_Early_Serve::current_site_identity();
+		$build_id = str_repeat( 'b', 32 );
+		$identity = Static_Prerender_Identity::current();
+		wp_mkdir_p( Static_Prerender_Early_Serve::map_path() );
+
+		set_error_handler( function () { return true; } );
+		try {
+			$installed = Static_Prerender_Early_Serve::install_artifact_entry(
+				array(
+					'host'      => $site['host'],
+					'home_path' => $site['home_path'],
+					'build_id'  => $build_id,
+					'routes'    => array( $site['home_path'] => $key ),
+				),
+				$this->cache
+			);
+		} finally {
+			restore_error_handler();
+		}
+
+		Static_Prerender_Identity::reset();
+
+		$this->assertFalse( $installed );
+		$this->assertNotSame( $build_id, Static_Prerender_Identity::current() );
+		$this->assertSame( $identity, Static_Prerender_Identity::current() );
+	}
+
+	public function test_generated_dropin_resolves_the_same_signature_key_as_the_runtime(): void {
+		$html = '<!doctype html><html><body>Early</body></html>';
+		Static_Prerender_Early_Serve::maybe_sync();
+
+		$key = Static_Prerender_Runtime::cache_key_for_request(
+			array(
+				'HTTP_HOST'   => 'localhost:8888',
+				'REQUEST_URI' => '/Products/Card/',
+			)
+		);
+		$this->assertIsString( $key );
+		wp_mkdir_p( Static_Prerender_Runtime::cache_root_path() );
+		file_put_contents( Static_Prerender_Runtime::cache_root_path() . '/' . $key . '.html', $html );
+
+		$this->assertSame( $html, $this->serve_through_dropin( '/Products/Card/' ) );
+		$this->assertSame( $html, $this->serve_through_dropin( '/products//card/' ) );
+		$this->assertSame( '', $this->serve_through_dropin( '/products/other/' ) );
+	}
+
 	public function test_generated_dropin_contains_the_same_anonymous_safety_boundaries(): void {
 		$source = Static_Prerender_Early_Serve::dropin_source();
 
@@ -184,6 +333,53 @@ class StaticPrerenderEarlyServeTest extends TestCase {
 		$this->assertStringContainsString( 'comment_author_email_', $source );
 		$this->assertStringContainsString( 'str_contains( $uri, \'?\' )', $source );
 		$this->assertStringContainsString( 'str_starts_with( $path . \'/\', $prefix . \'/\' )', $source );
+	}
+
+	private function serve_through_dropin( string $request_uri ): string {
+		$code = sprintf(
+			'$_SERVER["REQUEST_METHOD"] = "GET"; $_SERVER["HTTP_HOST"] = "localhost:8888";'
+				. ' $_SERVER["REQUEST_URI"] = %s; require %s;'
+				. ' blockstudio_early_serve_static_prerender();',
+			var_export( $request_uri, true ),
+			var_export( Static_Prerender_Early_Serve::dropin_path(), true )
+		);
+
+		return (string) shell_exec(
+			escapeshellarg( PHP_BINARY ) . ' -r ' . escapeshellarg( $code ) . ' 2>&1'
+		);
+	}
+
+	private function enable_early_serve(): void {
+		add_filter( 'blockstudio/performance/staticPrerender/enabled', '__return_true' );
+		add_filter( 'blockstudio/performance/staticPrerender/earlyServe', '__return_true' );
+		Settings::reset();
+		Runtime_Settings::reset();
+	}
+
+	private function disable_early_serve(): void {
+		remove_filter( 'blockstudio/performance/staticPrerender/enabled', '__return_true' );
+		remove_filter( 'blockstudio/performance/staticPrerender/earlyServe', '__return_true' );
+		Settings::reset();
+		Runtime_Settings::reset();
+	}
+
+	/**
+	 * @return string[] Relative content-directory file paths.
+	 */
+	private function files(): array {
+		$files = array();
+		$items = new RecursiveIteratorIterator(
+			new RecursiveDirectoryIterator( $this->root, FilesystemIterator::SKIP_DOTS )
+		);
+
+		foreach ( $items as $item ) {
+			if ( $item->isFile() ) {
+				$files[] = substr( $item->getPathname(), strlen( $this->root ) + 1 );
+			}
+		}
+		sort( $files );
+
+		return $files;
 	}
 
 	private function remove_directory( string $directory ): void {

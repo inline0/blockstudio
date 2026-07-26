@@ -183,26 +183,26 @@ final class Runtime_Settings {
 		$raw_errors = self::validate( $raw, false );
 		if ( array() !== $raw_errors ) {
 			$errors = array_merge( $errors, $raw_errors );
-			$raw    = array();
+			$raw    = self::valid_values( $raw );
 		}
 
-		$profile = is_string( $raw['profile'] ?? null )
+		$profile  = is_string( $raw['profile'] ?? null )
 			? strtolower( trim( $raw['profile'] ) )
 			: (string) ( $defaults['profile'] ?? 'compat' );
-		$config  = self::merge( $defaults, self::profile( $profile ) );
-		$config  = self::merge( $config, $raw );
-		$config  = self::filter_values( $config );
-		$config  = apply_filters( 'blockstudio/performance/config', $config );
+		$resolved = self::merge( $defaults, self::profile( $profile ) );
+		$resolved = self::merge( $resolved, $raw );
+		$config   = self::filter_values( $resolved );
+		$config   = apply_filters( 'blockstudio/performance/config', $config );
 
 		if ( ! is_array( $config ) ) {
 			$errors[] = 'blockstudio/performance/config must return an array.';
-			$config   = $defaults;
+			$config   = $resolved;
 		}
 
 		$effective_errors = self::validate( $config );
 		if ( array() !== $effective_errors ) {
 			$errors = array_merge( $errors, $effective_errors );
-			$config = $defaults;
+			$config = $resolved;
 		}
 
 		return new self( $config, array_values( array_unique( $errors ) ) );
@@ -319,6 +319,47 @@ final class Runtime_Settings {
 		}
 
 		return $value;
+	}
+
+	/**
+	 * Keep only the explicit values that validate on their own.
+	 *
+	 * A rejected key falls back to its default or profile value instead of
+	 * discarding every other explicit value in the same object.
+	 *
+	 * @param array<string, mixed> $config  Explicit configuration.
+	 * @param string[]             $context Parent keys.
+	 *
+	 * @return array<string, mixed> Valid configuration.
+	 */
+	private static function valid_values( array $config, array $context = array() ): array {
+		$valid = array();
+
+		foreach ( $config as $key => $value ) {
+			if ( ! is_string( $key ) ) {
+				continue;
+			}
+
+			$candidate = array( $key => $value );
+			foreach ( array_reverse( $context ) as $parent ) {
+				$candidate = array( $parent => $candidate );
+			}
+
+			if ( array() === self::validate( $candidate, false ) ) {
+				$valid[ $key ] = $value;
+				continue;
+			}
+			if ( ! is_array( $value ) ) {
+				continue;
+			}
+
+			$child = self::valid_values( $value, array_merge( $context, array( $key ) ) );
+			if ( array() !== $child ) {
+				$valid[ $key ] = $child;
+			}
+		}
+
+		return $valid;
 	}
 
 	/**

@@ -5,6 +5,8 @@ use Blockstudio\Media_Metadata;
 use Blockstudio\Media_Metadata_Builder;
 use Blockstudio\Performance_Measurement;
 use Blockstudio\Runtime_Settings;
+use Blockstudio\Settings;
+use Blockstudio\Theme_Defaults;
 use Blockstudio\WordPress_Optimizations;
 use PHPUnit\Framework\TestCase;
 
@@ -77,6 +79,24 @@ class RuntimeSurfaceTest extends TestCase {
 		);
 
 		$this->assertSame( 99, Media_Metadata::theme_asset( $this->theme_root, 'assets/icons/card.svg' )['width'] );
+	}
+
+	public function test_theme_title_tag_support_stays_off_unless_it_is_configured(): void {
+		$enabled = '__return_true';
+
+		$this->assertFalse( Settings::get_bool( 'themeDefaults/titleTag', false ) );
+		$this->assertFalse(
+			has_action( 'after_setup_theme', array( Theme_Defaults::class, 'enable_title_tag' ) )
+		);
+		$this->assertFalse( current_theme_supports( 'title-tag' ) );
+
+		add_filter( 'blockstudio/settings/themeDefaults/titleTag', $enabled );
+
+		try {
+			$this->assertTrue( Settings::get_bool( 'themeDefaults/titleTag', false ) );
+		} finally {
+			remove_filter( 'blockstudio/settings/themeDefaults/titleTag', $enabled );
+		}
 	}
 
 	public function test_media_renderer_preserves_dimensions_without_lazy_runtime(): void {
