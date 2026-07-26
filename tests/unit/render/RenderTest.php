@@ -93,6 +93,35 @@ class RenderTest extends TestCase {
 		$this->assertStringNotContainsString( '<RichText', $html );
 	}
 
+	public function test_composition_renders_nested_declarations_inside_inner_blocks(): void {
+		if (
+			! isset( Build::data()['blockstudio/component-innerblocks-default'] )
+			|| ! isset( Build::data()['blockstudio/component-richtext-default'] )
+		) {
+			$this->markTestSkipped( 'Nested declaration fixtures are not registered.' );
+		}
+
+		$html = Render::composition(
+			array(
+				'name'     => 'blockstudio/component-innerblocks-default',
+				'children' => array(
+					array(
+						'name'       => 'blockstudio/component-richtext-default',
+						'attributes' => array(
+							'richtext'  => 'Nested declaration content',
+							'richtext2' => 'Nested declaration second',
+							'richtext3' => 'Nested declaration third',
+						),
+					),
+				),
+			)
+		);
+
+		$this->assertStringContainsString( '<section', $html );
+		$this->assertStringContainsString( 'Nested declaration content', $html );
+		$this->assertStringNotContainsString( '<InnerBlocks', $html );
+	}
+
 	public function test_document_returns_versioned_body_and_asset_contract(): void {
 		if ( ! isset( Build::data()['blockstudio/function-nested-render'] ) ) {
 			$this->markTestSkipped( 'Nested render fixture is not registered.' );

@@ -438,7 +438,7 @@ class Render {
 						'attributes' => $declaration['attributes'],
 					),
 				),
-				'',
+				$inner,
 				'',
 				$inner
 			);
