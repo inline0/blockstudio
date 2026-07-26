@@ -54,7 +54,7 @@ final class Runtime {
 			return;
 		}
 
-		$errors = Runtime_Settings::current()->errors();
+		$errors = array_merge( Settings::errors(), Runtime_Settings::current()->errors() );
 		if ( array() === $errors ) {
 			return;
 		}

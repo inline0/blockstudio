@@ -478,9 +478,91 @@ class Settings {
 			return;
 		}
 
+		$this->report_unknown_keys( $json_settings, static::$defaults, '', $path );
+
 		static::$settings_raw  = $json_settings;
 		static::$settings      = $this->array_deep_merge( static::$settings, $json_settings );
 		static::$settings_json = $this->array_deep_merge( static::$settings_json, $json_settings );
+	}
+
+	/**
+	 * Report configuration keys the defaults tree does not declare.
+	 *
+	 * A deep merge accepts anything, so a misspelled group used to validate in
+	 * an editor and then be silently ignored at runtime. Only the performance
+	 * group was ever checked. The defaults tree is the authoritative shape, so
+	 * it is what every group is compared against.
+	 *
+	 * Free-form maps are skipped: their keys are user data, not setting names.
+	 *
+	 * @param array<string, mixed> $value    Configuration subtree.
+	 * @param array<string, mixed> $known    Matching defaults subtree.
+	 * @param string               $path     Slash-delimited path so far.
+	 * @param string               $filename Configuration file, for the message.
+	 *
+	 * @return void
+	 */
+	private function report_unknown_keys( array $value, array $known, string $path, string $filename ): void {
+		$freeform = array(
+			'blockTags/prefixes',
+			'blockEditor/blocks/categories/rename',
+			'blockEditor/patterns/categories/rename',
+			'editor/assets',
+		);
+
+		foreach ( $value as $key => $child ) {
+			if ( ! is_string( $key ) ) {
+				continue;
+			}
+
+			$current = '' === $path ? $key : $path . '/' . $key;
+
+			if ( '$schema' === $key && '' === $path ) {
+				continue;
+			}
+
+			if ( ! array_key_exists( $key, $known ) ) {
+				$suggestion = self::closest_key( $key, array_keys( $known ) );
+
+				static::$errors[] = null === $suggestion
+					? sprintf( '%s: unknown setting "%s"', $filename, $current )
+					: sprintf( '%s: unknown setting "%s", did you mean "%s"?', $filename, $current, $suggestion );
+
+				continue;
+			}
+
+			if ( in_array( $current, $freeform, true ) ) {
+				continue;
+			}
+
+			if ( is_array( $child ) && is_array( $known[ $key ] ) && array() !== $known[ $key ] ) {
+				$this->report_unknown_keys( $child, $known[ $key ], $current, $filename );
+			}
+		}
+	}
+
+	/**
+	 * Closest known key to a misspelling, or null when nothing is close.
+	 *
+	 * @param string        $key   Unknown key.
+	 * @param array<string> $known Known sibling keys.
+	 *
+	 * @return string|null Suggestion.
+	 */
+	private static function closest_key( string $key, array $known ): ?string {
+		$best     = null;
+		$distance = PHP_INT_MAX;
+
+		foreach ( $known as $candidate ) {
+			$current = levenshtein( strtolower( $key ), strtolower( (string) $candidate ) );
+
+			if ( $current < $distance ) {
+				$distance = $current;
+				$best     = (string) $candidate;
+			}
+		}
+
+		return $distance <= 3 ? $best : null;
 	}
 
 	/**
