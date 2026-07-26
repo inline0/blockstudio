@@ -247,6 +247,8 @@ final class ProjectScanner
 
             if (
                 fnmatch($normalizedPattern, $candidate, FNM_PATHNAME)
+                || fnmatch($base, $candidate, FNM_PATHNAME)
+                || fnmatch($base . '/*', $candidate, FNM_PATHNAME)
                 || $candidate === $base
                 || str_starts_with($candidate, $base . '/')
                 || self::pathIsUnder($candidate, $base)

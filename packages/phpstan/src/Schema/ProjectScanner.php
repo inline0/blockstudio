@@ -48,7 +48,14 @@ final class ProjectScanner
         $root = rtrim(str_replace('\\', '/', $this->currentWorkingDirectory), '/');
 
         if ($root !== '' && str_starts_with($normalized, $root . '/')) {
-            return substr($normalized, strlen($root) + 1);
+            $normalized = substr($normalized, strlen($root) + 1);
+        }
+
+        // A scan root of "." arrives as "<root>/." and yields "./path" entries.
+        // Left in place the prefix defeats every exclude pattern and leaks into
+        // error messages.
+        while (str_starts_with($normalized, './')) {
+            $normalized = substr($normalized, 2);
         }
 
         return $normalized;
@@ -286,6 +293,8 @@ final class ProjectScanner
 
             if (
                 fnmatch($pattern, $candidate, FNM_PATHNAME)
+                || fnmatch($base, $candidate, FNM_PATHNAME)
+                || fnmatch($base . '/*', $candidate, FNM_PATHNAME)
                 || $candidate === $base
                 || str_starts_with($candidate, $base . '/')
                 || self::pathIsUnder($candidate, $base)
