@@ -292,6 +292,11 @@ parameters:
 `blockstudioThemeExcludePaths` controls the theme scanner.
 PHPStan's standard `excludePaths` independently controls PHP analysis.
 
+The canonical command's `phpstan.excludePaths` setting in `blockstudio.json`
+(and its `--exclude` option) configures both layers. Relative patterns resolve
+against every configured root, so entries such as `vendor/**` bound PHPStan
+analysis as well as Blockstudio's project scan.
+
 ### Canonical command
 
 The package installs a single executable that defaults to extreme-theme:
@@ -299,6 +304,11 @@ The package installs a single executable that defaults to extreme-theme:
 ```bash
 vendor/bin/blockstudio-phpstan --root . -- --no-progress
 ```
+
+The command defaults PHPStan to a `1G` memory limit so Composer-managed
+WordPress projects do not inherit a typical `128M` CLI ceiling. Pass an
+explicit PHPStan option after `--` to override it, such as
+`-- --memory-limit=512M --no-progress`.
 
 Keep project-wide command defaults in `blockstudio.json`:
 

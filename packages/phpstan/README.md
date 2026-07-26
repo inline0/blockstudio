@@ -248,6 +248,12 @@ parameters:
 `blockstudioThemeExcludePaths` limits the project scanner. PHPStan's own
 `excludePaths` still controls which PHP files PHPStan analyzes.
 
+When the canonical command reads `phpstan.excludePaths` from
+`blockstudio.json` (or receives `--exclude`), it applies each exclusion to both
+the Blockstudio project scanner and PHPStan analysis. Relative patterns resolve
+against every configured root even though the generated NEON file lives in the
+system temporary directory.
+
 ## Canonical command
 
 The package installs `vendor/bin/blockstudio-phpstan`. It defaults to the
@@ -256,6 +262,11 @@ extreme-theme preset:
 ```bash
 vendor/bin/blockstudio-phpstan --root . -- --no-progress
 ```
+
+The canonical command gives PHPStan a `1G` memory limit by default so a normal
+PHP CLI `128M` limit does not fail on Composer-managed WordPress projects.
+Override it for a specific run after `--`, for example
+`-- --memory-limit=512M --no-progress`.
 
 Projects can keep the canonical command's defaults in `blockstudio.json`:
 

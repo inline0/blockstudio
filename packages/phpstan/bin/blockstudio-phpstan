@@ -14,6 +14,8 @@ require_once dirname(__DIR__) . '/src/Theme/AnalysisConfiguration.php';
  */
 final class BlockstudioPhpstanCli
 {
+    private const DEFAULT_MEMORY_LIMIT = '1G';
+
     /**
      * @param list<string> $arguments
      */
@@ -77,6 +79,9 @@ final class BlockstudioPhpstanCli
             '--error-format=' . $options['errorFormat'],
         ];
 
+        if (!$this->hasMemoryLimitOption($options['passthrough'])) {
+            $command[] = '--memory-limit=' . self::DEFAULT_MEMORY_LIMIT;
+        }
         foreach ($options['passthrough'] as $argument) {
             $command[] = $argument;
         }
@@ -510,6 +515,18 @@ final class BlockstudioPhpstanCli
             $lines[] = '  blockstudioThemeMaxFiles: ' . $options['maxFiles'];
         }
 
+        $analysisExcludePaths = $this->analysisExcludePaths(
+            $options['roots'],
+            $options['excludes']
+        );
+        if ($analysisExcludePaths !== []) {
+            $lines[] = '  excludePaths:';
+            $lines[] = '    analyse:';
+            foreach ($analysisExcludePaths as $excludePath) {
+                $lines[] = '      - ' . $this->neonString($excludePath);
+            }
+        }
+
         if ($options['preset'] === 'wordpress-render') {
             $lines[] = '  blockstudioWordPressRenderCommand:';
             foreach ($options['renderCommand'] as $argument) {
@@ -522,6 +539,58 @@ final class BlockstudioPhpstanCli
         }
 
         return implode("\n", $lines) . "\n";
+    }
+
+    /**
+     * Resolve canonical-command exclusions against every configured analysis
+     * root because the generated NEON file lives in the system temporary
+     * directory rather than in the consumer project.
+     *
+     * @param list<string> $roots
+     * @param list<string> $excludes
+     * @return list<string>
+     */
+    private function analysisExcludePaths(
+        array $roots,
+        array $excludes
+    ): array {
+        $paths = [];
+
+        foreach ($excludes as $exclude) {
+            $exclude = str_replace('\\', '/', $exclude);
+            if (
+                str_starts_with($exclude, '/')
+                || preg_match('/^[A-Za-z]:[\\\\\/]/', $exclude) === 1
+            ) {
+                $paths[] = $exclude;
+                continue;
+            }
+
+            foreach ($roots as $root) {
+                $paths[] = rtrim(str_replace('\\', '/', $root), '/')
+                    . '/'
+                    . ltrim($exclude, '/');
+            }
+        }
+
+        return array_values(array_unique($paths));
+    }
+
+    /**
+     * @param list<string> $arguments
+     */
+    private function hasMemoryLimitOption(array $arguments): bool
+    {
+        foreach ($arguments as $argument) {
+            if (
+                $argument === '--memory-limit'
+                || str_starts_with($argument, '--memory-limit=')
+            ) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     /**
@@ -630,6 +699,9 @@ Options:
   --render-working-directory <path>  Working directory for the render command
   --render-timeout <seconds>         Live-render timeout (default: 60)
   -h, --help                         Show this help
+
+PHPStan defaults to --memory-limit=1G. Pass another --memory-limit after --
+to override it for a specific run.
 
 Exit codes:
   0  Analysis passed

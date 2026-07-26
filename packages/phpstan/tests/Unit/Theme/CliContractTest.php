@@ -32,6 +32,10 @@ final class CliContractTest extends TestCase
         );
         $this->assertSame(0, $help->exitCode);
         $this->assertStringContainsString('Exit codes:', $help->stdout);
+        $this->assertStringContainsString(
+            'defaults to --memory-limit=1G',
+            $help->stdout
+        );
 
         $invalid = $runner->run(
             [
@@ -261,6 +265,97 @@ final class CliContractTest extends TestCase
             0,
             $overridden->exitCode,
             $overridden->stdout . $overridden->stderr
+        );
+    }
+
+    public function test_canonical_exclusions_bound_phpstan_analysis_as_well_as_the_theme_scanner(): void
+    {
+        $package = dirname(__DIR__, 3);
+        $project = $this->temporaryDirectory('analysis exclusions');
+        $runner = new CommandRunner();
+        mkdir($project . '/vendor', 0777, true);
+        file_put_contents(
+            $project . '/index.php',
+            "<?php\n\ndeclare(strict_types=1);\n\nfunction included_value(): int\n{\n    return 1;\n}\n"
+        );
+        file_put_contents(
+            $project . '/vendor/invalid.php',
+            "<?php\n\ndeclare(strict_types=1);\n\nfunction excluded_value(): int\n{\n    return 'invalid';\n}\n"
+        );
+        file_put_contents(
+            $project . '/blockstudio.json',
+            json_encode(
+                [
+                    'phpstan' => [
+                        'preset' => 'base',
+                        'roots' => ['.'],
+                        'excludePaths' => ['vendor/**'],
+                    ],
+                ],
+                JSON_PRETTY_PRINT | JSON_THROW_ON_ERROR
+            )
+        );
+
+        $excluded = $runner->run(
+            [
+                PHP_BINARY,
+                $package . '/bin/blockstudio-phpstan',
+                '--',
+                '--no-progress',
+            ],
+            $project,
+            30
+        );
+        $this->assertSame(
+            0,
+            $excluded->exitCode,
+            $excluded->stdout . $excluded->stderr
+        );
+
+        $overriddenMemory = $runner->run(
+            [
+                PHP_BINARY,
+                $package . '/bin/blockstudio-phpstan',
+                '--',
+                '--memory-limit=256M',
+                '--no-progress',
+            ],
+            $project,
+            30
+        );
+        $this->assertSame(
+            0,
+            $overriddenMemory->exitCode,
+            $overriddenMemory->stdout . $overriddenMemory->stderr
+        );
+
+        file_put_contents(
+            $project . '/blockstudio.json',
+            json_encode(
+                [
+                    'phpstan' => [
+                        'preset' => 'base',
+                        'roots' => ['.'],
+                        'excludePaths' => [],
+                    ],
+                ],
+                JSON_PRETTY_PRINT | JSON_THROW_ON_ERROR
+            )
+        );
+        $included = $runner->run(
+            [
+                PHP_BINARY,
+                $package . '/bin/blockstudio-phpstan',
+                '--',
+                '--no-progress',
+            ],
+            $project,
+            30
+        );
+        $this->assertSame(1, $included->exitCode);
+        $this->assertStringContainsString(
+            'invalid.php',
+            $included->stdout . $included->stderr
         );
     }
 
