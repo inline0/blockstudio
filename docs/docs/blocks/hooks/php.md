@@ -874,6 +874,88 @@ add_filter('blockstudio/settings/dev/canvas/admin_bar', function() {
 
 <!-- GENERATED_SETTINGS_END -->
 
+## Canvas
+
+### blockstudio/canvas/inventory
+
+This filter adjusts the inventory Canvas reports for a selection. The callback
+receives the inventory DTO, the original selection, and the options it was
+called with.
+
+```php title="functions.php"
+add_filter('blockstudio/canvas/inventory', function(array $result, array $selection, array $options) {
+  return $result;
+}, 10, 3);
+```
+
+### blockstudio/canvas/documents
+
+This filter adjusts the rendered documents Canvas returns, with the same three
+arguments as the inventory filter.
+
+### blockstudio/canvas/item_loaded
+
+This action fires once per inventory record as it is loaded, receiving the
+inventory type, the canonical record ID, and the normalized record.
+
+### blockstudio/canvas/source_compiled
+
+This action fires after a source file is compiled for Canvas, receiving the
+selected source path and the canonical source record.
+
+## Bundled UI
+
+### blockstudio/ui/directories
+
+This filter adjusts the directories scanned for bundled UI components.
+
+### blockstudio/ui/inventory
+
+This filter adjusts the public UI family inventory.
+
+### blockstudio/ui/examples
+
+This filter adjusts the UI example records, receiving the examples and the
+public UI inventory they were derived from.
+
+## Topology
+
+### blockstudio/blocks/topology_refreshed
+
+This action fires after the block topology is rebuilt.
+
+### blockstudio/pages/topology_refreshed
+
+This action fires after the page topology is rebuilt.
+
+### blockstudio/pages/layout_error
+
+This action fires when a page layout fails to render, rather than failing
+silently.
+
+## Runtime
+
+### blockstudio/runtime/initialized
+
+This action fires once the runtime has resolved its configuration.
+
+### blockstudio/runtime/changed
+
+This action fires when the resolved runtime identity changes, which is what
+moves cache namespaces and static prerender state.
+
+### blockstudio/performance/default_config
+
+This filter adjusts the performance defaults before a project's own
+`blockstudio.json` values are layered on top.
+
+## Content
+
+### blockstudio/content/orphan_action
+
+This filter decides what content sync does with a record that no longer has a
+source.
+
 ## Bootstrap
 
 ### blockstudio/url
@@ -1014,6 +1096,14 @@ add_filter('blockstudio/static_prerender/public_urls', function(array $urls) {
   return array_values(array_unique($urls));
 });
 ```
+
+What the filter returns is not the final inventory. The result is passed through
+a cacheability pass that drops anything matching a configured dynamic path, and
+anything bypassed by default: `/wp-admin`, `/wp-json`, `/wp-login.php`,
+`/xmlrpc.php`, and any path containing `/feed/`, `/search/` or `/preview/`. A URL
+you add can therefore be discarded without a warning. If a route you expect is
+missing from the built inventory, check it against those rules before assuming
+the filter did not run.
 
 ### blockstudio/static_prerender/render_internal
 
