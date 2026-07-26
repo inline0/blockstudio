@@ -42,17 +42,15 @@ interface RenderState {
   hasBlockProps: boolean | null;
 }
 
-const getDocumentFrameElement = (): HTMLElement | null => {
+const getDocumentFrameElement = (): Element | null => {
   try {
-    return window.frameElement instanceof HTMLElement
-      ? window.frameElement
-      : null;
+    return window.frameElement;
   } catch {
     return null;
   }
 };
 
-const isPreviewFrameElement = (frameElement: HTMLElement | null): boolean =>
+const isPreviewFrameElement = (frameElement: Element | null): boolean =>
   !!frameElement &&
   (
     frameElement.classList.contains('block-editor-block-preview__content-iframe') ||
