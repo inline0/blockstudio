@@ -297,6 +297,12 @@ The canonical command's `phpstan.excludePaths` setting in `blockstudio.json`
 against every configured root, so entries such as `vendor/**` bound PHPStan
 analysis as well as Blockstudio's project scan.
 
+A pattern naming a single directory, such as `_dist/**` or `node_modules/**`,
+excludes that directory wherever it appears, not only beside the theme root. A
+pattern containing a slash, such as `assets/*/docs/**`, stays anchored to the
+root. Generated block assets live in a `_dist` directory inside each block, so
+the single-directory form is what keeps compiled output out of analysis.
+
 ### Canonical command
 
 The package installs a single executable. It runs the `base` preset unless a

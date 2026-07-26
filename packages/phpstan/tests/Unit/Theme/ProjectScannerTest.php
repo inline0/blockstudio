@@ -56,6 +56,72 @@ final class ProjectScannerTest extends TestCase
         );
     }
 
+    public function test_generated_output_is_excluded_at_any_depth(): void
+    {
+        mkdir($this->root . '/blocks/card/_dist/modules/vendored', 0777, true);
+        mkdir($this->root . '/blocks/card/dist', 0777, true);
+        mkdir($this->root . '/blocks/card/distinct', 0777, true);
+        file_put_contents($this->root . '/blocks/card/_dist/bundle.js', '');
+        file_put_contents($this->root . '/blocks/card/_dist/modules/vendored/lib.js', '');
+        file_put_contents($this->root . '/blocks/card/dist/bundle.js', '');
+        file_put_contents($this->root . '/blocks/card/distinct/keep.php', '<?php');
+
+        $scanner = new ProjectScanner($this->root, [$this->root]);
+
+        $this->assertSame(
+            [
+                $this->root . '/blocks/card/block.json',
+                $this->root . '/blocks/card/distinct/keep.php',
+                $this->root . '/blocks/card/index.php',
+                $this->root . '/ignored/index.php',
+                $this->root . '/style.css',
+            ],
+            $scanner->files()
+        );
+    }
+
+    public function test_a_multi_segment_pattern_stays_anchored(): void
+    {
+        mkdir($this->root . '/assets/sites/divine/docs', 0777, true);
+        mkdir($this->root . '/blocks/card/assets/sites/divine/docs', 0777, true);
+        file_put_contents($this->root . '/assets/sites/divine/docs/dropped.md', '');
+        file_put_contents($this->root . '/blocks/card/assets/sites/divine/docs/keep.md', '');
+
+        $scanner = new ProjectScanner(
+            $this->root,
+            [$this->root],
+            ['assets/sites/*/docs/**']
+        );
+
+        $this->assertSame(
+            [
+                $this->root . '/blocks/card/assets/sites/divine/docs/keep.md',
+                $this->root . '/blocks/card/block.json',
+                $this->root . '/blocks/card/index.php',
+                $this->root . '/ignored/index.php',
+                $this->root . '/style.css',
+            ],
+            $scanner->files()
+        );
+    }
+
+    public function test_a_single_segment_pattern_excludes_at_any_depth(): void
+    {
+        mkdir($this->root . '/blocks/card/ignored', 0777, true);
+        file_put_contents($this->root . '/blocks/card/ignored/dropped.php', '<?php');
+
+        $scanner = new ProjectScanner($this->root, [$this->root], ['ignored/**']);
+
+        $this->assertSame(
+            [
+                $this->root . '/blocks/card/block.json',
+                $this->root . '/blocks/card/index.php',
+                $this->root . '/style.css',
+            ],
+            $scanner->files()
+        );
+    }
+
     public function test_reports_a_bounded_scan_without_writing_state(): void
     {
         $scanner = new ProjectScanner($this->root, [], [], 2);

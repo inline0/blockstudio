@@ -243,10 +243,21 @@ final class ProjectScanner
                 ? $this->absolutePath($pattern)
                 : ltrim($pattern, '/');
 
+            $base = rtrim($normalizedPattern, '/*');
+
             if (
                 fnmatch($normalizedPattern, $candidate, FNM_PATHNAME)
-                || $candidate === rtrim($normalizedPattern, '/*')
-                || str_starts_with($candidate, rtrim($normalizedPattern, '/*') . '/')
+                || $candidate === $base
+                || str_starts_with($candidate, $base . '/')
+            ) {
+                return true;
+            }
+
+            if (
+                !str_contains($base, '/')
+                && !str_contains($base, '*')
+                && $base !== ''
+                && str_contains($candidate, '/' . $base . '/')
             ) {
                 return true;
             }
