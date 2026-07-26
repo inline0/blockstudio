@@ -82,10 +82,10 @@ final class ProjectScannerTest extends TestCase
 
     public function test_a_multi_segment_pattern_stays_anchored(): void
     {
-        mkdir($this->root . '/assets/sites/divine/docs', 0777, true);
-        mkdir($this->root . '/blocks/card/assets/sites/divine/docs', 0777, true);
-        file_put_contents($this->root . '/assets/sites/divine/docs/dropped.md', '');
-        file_put_contents($this->root . '/blocks/card/assets/sites/divine/docs/keep.md', '');
+        mkdir($this->root . '/assets/sites/example/docs', 0777, true);
+        mkdir($this->root . '/blocks/card/assets/sites/example/docs', 0777, true);
+        file_put_contents($this->root . '/assets/sites/example/docs/dropped.md', '');
+        file_put_contents($this->root . '/blocks/card/assets/sites/example/docs/keep.md', '');
 
         $scanner = new ProjectScanner(
             $this->root,
@@ -95,7 +95,7 @@ final class ProjectScannerTest extends TestCase
 
         $this->assertSame(
             [
-                $this->root . '/blocks/card/assets/sites/divine/docs/keep.md',
+                $this->root . '/blocks/card/assets/sites/example/docs/keep.md',
                 $this->root . '/blocks/card/block.json',
                 $this->root . '/blocks/card/index.php',
                 $this->root . '/ignored/index.php',
