@@ -371,8 +371,7 @@ final class Render_Document {
 
 				try {
 					if ( 'inline' === ( $asset['type'] ?? '' ) ) {
-						$render_id = str_replace( array( '.inline', '-inline' ), '', $asset_id );
-						$markup    = Assets::render_inline( $render_id, $asset, $block, true );
+						$markup = Assets::render_inline( $asset_id, $asset, $block, true );
 					} else {
 						$markup = Assets::render_tag( $asset_id, $asset, $block );
 					}

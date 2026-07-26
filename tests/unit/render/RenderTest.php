@@ -219,6 +219,7 @@ class RenderTest extends TestCase {
 
 		$this->assertStringContainsString( 'test-scoped-css', $document['assets']['styles'] );
 		$this->assertStringContainsString( 'test-view-js', $document['assets']['modules'] );
+		$this->assertStringContainsString( 'blockstudio-blockstudio-assets-test-inline-js', $document['assets']['modules'] );
 		$this->assertStringNotContainsString( 'test-editor', $document['assets']['head'] );
 		$this->assertStringNotContainsString( 'test2-editor', $document['assets']['footer'] );
 		$this->assertSame( '', $document['assets']['scripts'] );
