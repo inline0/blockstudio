@@ -74,7 +74,6 @@ class Plugin {
 		require_once $classes_dir . 'runtime-context.php';
 
 		// Core configuration classes.
-		require_once $classes_dir . 'constants.php';
 		require_once $classes_dir . 'field-type-config.php';
 		require_once $classes_dir . 'field-type-registry.php';
 		require_once $classes_dir . 'block-registry.php';
@@ -111,7 +110,6 @@ class Plugin {
 		// Block discovery and registration (Phase 5).
 		require_once $classes_dir . 'file-classifier.php';
 		require_once $classes_dir . 'block-discovery.php';
-		require_once $classes_dir . 'block-registrar.php';
 
 		// Settings loaders (Phase 6).
 
@@ -169,7 +167,6 @@ class Plugin {
 		require_once $classes_dir . 'blocks.php';
 		require_once $classes_dir . 'rest.php';
 		require_once $classes_dir . 'extensions.php';
-		require_once $classes_dir . 'examples.php';
 		require_once $classes_dir . 'register.php';
 		require_once $classes_dir . 'block-tags.php';
 		require_once $classes_dir . 'csrf.php';

@@ -1440,6 +1440,8 @@ class Assets {
 		try {
 			return $compiler->compileString( $scss )->getCss();
 		} catch ( SassException $e ) {
+			Error_Handler::handle_exception( $e, 'scss' );
+
 			return '';
 		}
 	}
