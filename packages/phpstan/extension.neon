@@ -35,6 +35,11 @@ services:
     class: Blockstudio\PHPStan\Reflection\BlockTemplateDetector
 
   -
+    class: Blockstudio\PHPStan\Type\BlockTemplateVariableType
+    tags:
+      - phpstan.broker.expressionTypeResolverExtension
+
+  -
     class: Blockstudio\PHPStan\Type\DbGetReturnType
     tags:
       - phpstan.broker.dynamicStaticMethodReturnTypeExtension

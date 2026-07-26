@@ -30,7 +30,6 @@ When a PHP file lives next to a `block.json`, the extension validates every
 ```php
 // blockstudio/hero/index.php
 <?php
-/** @var array<string, mixed> $a */
 
 echo $a['title'];     // OK
 echo $a['subtitle'];  // OK
@@ -179,17 +178,32 @@ The package ships stubs for the Blockstudio public API, including:
 Legacy compatibility aliases are stubbed too, so older codebases still analyze
 cleanly while migrating.
 
-## Convention: typing `$a` in PHP templates
+## Injected template variables
 
-Add a `@var` annotation at the top of each PHP block template so PHPStan knows
-`$a` exists:
+Blockstudio includes PHP block templates from its own render function, so
+PHPStan cannot see where their variables come from. The extension types them
+directly, with no annotation required:
+
+| Variable | Type |
+| --- | --- |
+| `$attributes`, `$a` | array shape built from `block.json`, or `array<string, mixed>` when the block declares no attributes |
+| `$block`, `$b` | `array<string, mixed>` |
+| `$context`, `$c` | `array<string, mixed>` |
+| `$content`, `$inner_blocks` | `string` |
+| `$islandPhase` | `string` |
+| `$isEditor`, `$isPreview`, `$isIsland`, `$isIslandPlaceholder`, `$isIslandFragment` | `bool` |
 
 ```php
+// blockstudio/hero/index.php
 <?php
-/** @var array<string, mixed> $a */
+
+echo $a['title'];        // string
+echo $a['cta']['href'];  // string
 ```
 
-Twig and Blade templates do not need this annotation.
+A `@var array<string, mixed> $a` annotation overrides the inferred shape, so
+remove any that were added before this typing existed. Assignments made by the
+template always keep their own inferred type.
 
 ## Configuration
 

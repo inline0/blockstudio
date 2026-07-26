@@ -1,0 +1,10 @@
+{
+  "$schema": "https://blockstudio.dev/schema/block",
+  "apiVersion": 3,
+  "name": "test/template-variables-typo",
+  "title": "Typo",
+  "category": "layout",
+  "blockstudio": {
+    "attributes": [{ "id": "title", "type": "text" }]
+  }
+}
