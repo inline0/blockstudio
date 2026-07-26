@@ -280,7 +280,12 @@ final class DbSchemaReader
 
         $className = $this->shortName($node->class);
         $methodName = $node->name->toString();
-        $args = $this->argsToMap($node->args);
+        // First-class callable syntax, Schema::make(...), puts a
+        // VariadicPlaceholder in args where an Arg is expected.
+        $args = $this->argsToMap(array_values(array_filter(
+            $node->args,
+            static fn($arg): bool => $arg instanceof Arg
+        )));
 
         if (in_array($className, ['Schema', 'Db_Schema'], true) && $methodName === 'make') {
             return $this->parseSchemaBuilderCall($args);

@@ -1,11 +1,26 @@
 includes:
   - vendor/szepeviktor/phpstan-wordpress/extension.neon
+  # Dogfood the rules this package ships to consumers.
+  - extension.neon
 
 parameters:
-  level: 6
+  # The rules use their own scanner, so PHPStan's excludePaths does not reach
+  # them. Without this they walk the fixture projects the rules are tested
+  # against and report their deliberate defects as findings.
+  blockstudioExcludePaths:
+    - tests/**
+    - vendor/**
+  level: 8
   paths:
     - src
+  # tests/ is not analysed yet: 212 findings at this level, almost all in test
+  # scaffolding rather than the rules themselves. That is the next ratchet.
+
   excludePaths:
     - src/Stubs/*
+    # Fixture projects: deliberately malformed input the rules are tested against.
+    - tests/data/*
+    - tests/Rules/data/*
+    - tests/Unit/data/*
   bootstrapFiles:
     - src/Stubs/loader.php

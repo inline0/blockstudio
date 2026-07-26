@@ -118,10 +118,12 @@ final class TailwindAnalyzer
                 continue;
             }
 
-            if (
-                !$designSystem->hasInvalidCandidate($candidate)
-                && $compiler->properties($candidate) !== []
-            ) {
+            // getDesignSystem() is typed object by the compiler package, so the
+            // method is checked rather than assumed.
+            $known = !method_exists($designSystem, 'hasInvalidCandidate')
+                || !$designSystem->hasInvalidCandidate($candidate);
+
+            if ($known && $compiler->properties($candidate) !== []) {
                 continue;
             }
 

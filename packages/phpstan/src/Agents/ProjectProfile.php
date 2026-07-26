@@ -188,7 +188,9 @@ final class ProjectProfile
             $namespaces[strstr($name, '/', true)] = true;
         }
 
-        $namespaces = array_keys($namespaces);
+        // Array keys normalise a numeric namespace such as "0" to an int, so
+        // the keys are cast back before they leave as a list<string>.
+        $namespaces = array_map(static fn($namespace): string => (string) $namespace, array_keys($namespaces));
         sort($namespaces);
 
         return $namespaces;
