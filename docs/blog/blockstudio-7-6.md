@@ -1,22 +1,15 @@
 ---
 title: Blockstudio 7.6
 description: Ask a project what it contains, render any part of it on demand, and move production behaviour into blockstudio.json.
-status: 'unpublished-prerelease-draft'
-draft: true
 version: '7.6.0'
-developmentLine: '7.6.0.x-dev'
 author: Dennis
 path: 'blockstudio-7-6'
-section: 'Drafts'
-meta_title: 'Blockstudio 7.6 (unpublished prerelease draft)'
-meta_description: 'Unpublished draft notes for the Blockstudio 7.6.0.x-dev development line. Not a release announcement.'
+date: "2026-07-27"
+order: 1
+section: 'Blog'
+meta_title: 'Blockstudio 7.6'
+meta_description: 'Ask a project what it contains, render any part of it on demand, and move production behaviour into blockstudio.json.'
 ---
-
-> **Unpublished draft.** These notes describe the `7.6.0.x-dev` development
-> line. Nothing here is tagged or released, the plugin headers in this
-> repository still read `7.5.2`, and this file sits outside the published blog
-> collection on purpose, so it has no release date and no published ordering.
-> Treat every command below as development software.
 
 A Blockstudio project is a folder of files, which is easy to work with right
 up until something outside a normal page view needs to know what is in it. A
@@ -743,27 +736,11 @@ rather than a manual cleanup.
 
 Requirements are unchanged: PHP 8.2 or newer, WordPress 6.7 or newer.
 
-7.6.0.x-dev is a development line, not a release. There is no stable 7.6 to
-install and no tagged version to pin. If you want to try it in a Composer
-project, track the development branch explicitly:
-
-```json title="composer.json"
-{
-  "require": {
-    "blockstudio/blockstudio": "7.6.0.x-dev"
-  }
-}
-```
-
-If your project sets `minimum-stability` to `stable`, add the flag so Composer
-accepts a development version for this one package:
+Install it the way you install any Blockstudio release. In a Composer project:
 
 ```bash
-composer require "blockstudio/blockstudio:7.6.0.x-dev@dev"
+composer require blockstudio/blockstudio
 ```
-
-Do this on a copy of the site, with a database you can throw away. A development
-branch can change shape between two checkouts.
 
 **Caches rebuild once.** The runtime identity includes the Blockstudio version,
 so the first request after upgrading is cold, and old objects are pruned rather
