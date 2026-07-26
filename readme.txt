@@ -61,6 +61,10 @@ Download the latest release zip from [GitHub Releases](https://github.com/inline
 * New: The context file for coding assistants is an index of every document, its purpose, and the identifiers it owns, with the full text published alongside it
 * New: Canonical block tag migration command
 * New: Block template variables are typed from each block's own `block.json` during analysis
+* New: `themeDefaults.titleTag` hands the document title to Blockstudio. It is off by default, so a theme keeps its own `add_theme_support( 'title-tag' )` unless it opts in
+* New: `wp bs teardown` removes the cron events and static prerender state an installation owns, for setups without a plugin deactivation hook
+* Fix: Unused runtime cache namespaces are collected instead of accumulating on every plugin activation and PHP or WordPress update
+* Fix: Settings reads no longer hash the configuration file on every access
 * Fix: Static prerendering writes no files and installs no drop-in while it is disabled
 * Fix: Error responses are never cached or replayed as a success
 * Fix: Signature-mode early serving computes the same key in the drop-in and in PHP

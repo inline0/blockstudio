@@ -27,6 +27,16 @@ final class Runtime_Cache {
 	private const DEFAULT_MAX_OBJECTS = 1000;
 
 	/**
+	 * Grace period before an unused namespace directory is collected.
+	 *
+	 * The namespace folds in the active plugin list and the WordPress and PHP
+	 * versions, so activating a plugin or taking a point release moves every
+	 * path at once. The previous tree is dead from that moment, but a request
+	 * already in flight may still be reading it, so it is kept for a day.
+	 */
+	private const NAMESPACE_GRACE = DAY_IN_SECONDS;
+
+	/**
 	 * Wait budget for a concurrent builder.
 	 *
 	 * @var int
@@ -379,6 +389,84 @@ final class Runtime_Cache {
 	}
 
 	/**
+	 * Remove namespace directories this installation no longer resolves to.
+	 *
+	 * Nothing else collects them: prune() bounds object count inside a single
+	 * scope, and delete_tree() is only reachable from an explicit purge. Left
+	 * alone, every plugin activation and every WordPress or PHP point release
+	 * orphans a whole tree that is never read again.
+	 *
+	 * @param string $scope_directory Current scope directory.
+	 *
+	 * @return void
+	 */
+	private static function collect_stale_namespaces( string $scope_directory ): void {
+		$current_namespace = dirname( $scope_directory );
+		$site_directory    = dirname( $current_namespace );
+
+		if ( ! is_dir( $site_directory ) || $site_directory === $current_namespace ) {
+			return;
+		}
+
+		$siblings = glob( $site_directory . '/*', GLOB_ONLYDIR );
+
+		if ( ! is_array( $siblings ) ) {
+			return;
+		}
+
+		$threshold = time() - self::NAMESPACE_GRACE;
+
+		foreach ( $siblings as $sibling ) {
+			if ( $sibling === $current_namespace ) {
+				continue;
+			}
+
+			$mtime = self::newest_mtime( $sibling );
+
+			if ( 0 === $mtime || $mtime >= $threshold ) {
+				continue;
+			}
+
+			self::delete_tree( $sibling );
+		}
+	}
+
+	/**
+	 * Newest modification time anywhere beneath a directory.
+	 *
+	 * @param string $directory Directory to scan.
+	 *
+	 * @return int Newest mtime, or 0 when the directory cannot be read.
+	 */
+	private static function newest_mtime( string $directory ): int {
+		if ( ! is_dir( $directory ) ) {
+			return 0;
+		}
+
+		$newest = (int) filemtime( $directory );
+
+		try {
+			$iterator = new \RecursiveIteratorIterator(
+				new \RecursiveDirectoryIterator( $directory, \FilesystemIterator::SKIP_DOTS )
+			);
+
+			foreach ( $iterator as $entry ) {
+				$mtime = (int) $entry->getMTime();
+
+				if ( $mtime > $newest ) {
+					$newest = $mtime;
+				}
+			}
+		} catch ( \Throwable $error ) {
+			unset( $error );
+
+			return 0;
+		}
+
+		return $newest;
+	}
+
+	/**
 	 * Prune old objects and abandoned temporary files in one scope.
 	 *
 	 * @param string $scope     Cache scope.
@@ -388,6 +476,8 @@ final class Runtime_Cache {
 	 */
 	public static function prune( string $scope, string $keep_path = '' ): void {
 		$directory = self::directory( $scope );
+
+		self::collect_stale_namespaces( $directory );
 
 		if ( ! is_dir( $directory ) ) {
 			return;
