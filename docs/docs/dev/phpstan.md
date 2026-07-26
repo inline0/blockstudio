@@ -312,6 +312,34 @@ WordPress projects do not inherit a typical `128M` CLI ceiling. Pass an
 explicit PHPStan option after `--` to override it, such as
 `-- --memory-limit=512M --no-progress`.
 
+### Adopting analysis on an existing project
+
+A project that has never been analysed will usually report findings on its first
+run. Rather than lowering the preset, generate a PHPStan baseline and point
+`phpstan.configuration` at a project configuration that includes it. New code is
+then held to the full preset while the recorded findings stay out of the way:
+
+```bash
+vendor/bin/blockstudio-phpstan -- --no-progress --generate-baseline=phpstan-baseline.neon
+```
+
+```neon title="phpstan.neon"
+includes:
+    - phpstan-baseline.neon
+```
+
+```json title="blockstudio.json"
+{
+  "phpstan": {
+    "configuration": "phpstan.neon"
+  }
+}
+```
+
+Relative paths resolve from `blockstudio.json`. The canonical command and the
+managed commit hook both pick the file up, so the hook gates new findings without
+requiring the backlog to be cleared first.
+
 Keep project-wide command defaults in `blockstudio.json`:
 
 ```json title="blockstudio.json"

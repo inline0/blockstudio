@@ -104,10 +104,11 @@ class Settings {
 			'commit' => false,
 		),
 		'phpstan'       => array(
-			'preset'       => 'base',
-			'roots'        => array( '.' ),
-			'excludePaths' => array(),
-			'maxFiles'     => 10000,
+			'preset'        => 'base',
+			'configuration' => '',
+			'roots'         => array( '.' ),
+			'excludePaths'  => array(),
+			'maxFiles'      => 10000,
 		),
 		'themeDefaults' => array(
 			'titleTag'                 => true,

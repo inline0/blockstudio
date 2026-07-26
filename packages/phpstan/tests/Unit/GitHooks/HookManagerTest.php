@@ -253,7 +253,7 @@ final class HookManagerTest extends TestCase
     public function testManagedHookRunsRealExtremeAnalysis(): void
     {
         $repository = $this->repository('real analysis repository');
-        $this->configuration($repository, true);
+        $this->configuration($repository, true, 'extreme-theme');
         $directory = $repository . '/vendor/bin';
         mkdir($directory, 0775, true);
         $canonical = dirname(__DIR__, 3) . '/bin/blockstudio-phpstan';
@@ -465,12 +465,20 @@ final class HookManagerTest extends TestCase
         $this->git($repository, ['git', 'config', 'commit.gpgsign', 'false']);
     }
 
-    private function configuration(string $project, bool $enabled): void
-    {
+    private function configuration(
+        string $project,
+        bool $enabled,
+        ?string $preset = null
+    ): void {
+        $configuration = ['githooks' => ['commit' => $enabled]];
+        if ($preset !== null) {
+            $configuration['phpstan'] = ['preset' => $preset];
+        }
+
         file_put_contents(
             $project . '/blockstudio.json',
             json_encode(
-                ['githooks' => ['commit' => $enabled]],
+                $configuration,
                 JSON_PRETTY_PRINT | JSON_THROW_ON_ERROR
             ) . "\n"
         );

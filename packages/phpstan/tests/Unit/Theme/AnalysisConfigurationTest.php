@@ -31,11 +31,46 @@ final class AnalysisConfigurationTest extends TestCase
 
         $this->assertSame([
             'path' => null,
+            'configuration' => null,
             'preset' => null,
             'roots' => null,
             'excludes' => null,
             'maxFiles' => null,
         ], $configuration);
+    }
+
+    public function test_project_configuration_resolves_from_the_config_directory(): void
+    {
+        mkdir($this->root . '/config');
+        $path = $this->root . '/config/project.json';
+        file_put_contents($path, json_encode([
+            'phpstan' => [
+                'configuration' => 'phpstan.neon',
+            ],
+        ], JSON_THROW_ON_ERROR));
+
+        $configuration = (new AnalysisConfiguration())->read(
+            $this->root,
+            'config/project.json'
+        );
+
+        $this->assertSame(
+            $this->root . '/config/phpstan.neon',
+            $configuration['configuration']
+        );
+    }
+
+    public function test_project_configuration_rejects_an_empty_value(): void
+    {
+        $path = $this->root . '/blockstudio.json';
+        file_put_contents($path, json_encode([
+            'phpstan' => ['configuration' => '   '],
+        ], JSON_THROW_ON_ERROR));
+
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessage('phpstan.configuration must be a non-empty string');
+
+        (new AnalysisConfiguration())->read($this->root);
     }
 
     public function test_reads_typed_values_and_resolves_roots_from_source(): void

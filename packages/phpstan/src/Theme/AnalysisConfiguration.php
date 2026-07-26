@@ -17,6 +17,7 @@ final class AnalysisConfiguration
     ];
 
     private const KEYS = [
+        'configuration',
         'preset',
         'roots',
         'excludePaths',
@@ -119,6 +120,10 @@ final class AnalysisConfiguration
         );
         $maxFiles = $this->optionalPositiveInteger($phpstan, 'maxFiles');
         $directory = dirname($path);
+        $configuration = $this->optionalString($phpstan, 'configuration');
+        if ($configuration !== null) {
+            $configuration = $this->absolutePath($configuration, $directory);
+        }
 
         if ($roots !== null) {
             $roots = array_map(
@@ -133,6 +138,7 @@ final class AnalysisConfiguration
 
         return [
             'path' => $path,
+            'configuration' => $configuration,
             'preset' => $preset,
             'roots' => $roots,
             'excludes' => $excludes,
@@ -143,6 +149,7 @@ final class AnalysisConfiguration
     /**
      * @return array{
      *   path: null,
+     *   configuration: null,
      *   preset: null,
      *   roots: null,
      *   excludes: null,
@@ -153,11 +160,36 @@ final class AnalysisConfiguration
     {
         return [
             'path' => null,
+            'configuration' => null,
             'preset' => null,
             'roots' => null,
             'excludes' => null,
             'maxFiles' => null,
         ];
+    }
+
+    /**
+     * @param array<string, mixed> $configuration
+     */
+    private function optionalString(
+        array $configuration,
+        string $key
+    ): ?string {
+        if (!array_key_exists($key, $configuration)) {
+            return null;
+        }
+
+        $value = $configuration[$key];
+        if (!is_string($value) || trim($value) === '') {
+            throw new \InvalidArgumentException(
+                sprintf(
+                    'blockstudio.json phpstan.%s must be a non-empty string.',
+                    $key
+                )
+            );
+        }
+
+        return $value;
     }
 
     /**

@@ -17,7 +17,9 @@
           "description": "List of user IDs with access to the settings and editor.",
           "descriptionFilter": "This filter allows you to enable the editor for specific user IDs.",
           "help": "Comma separated list of user IDs. Example: 1,2,3",
-          "example": [1]
+          "example": [
+            1
+          ]
         },
         "roles": {
           "id": "userRoles",
@@ -29,7 +31,10 @@
           "description": "List of user roles with access to the settings and editor.",
           "descriptionFilter": "This filter allows you to enable the editor for specific user roles.",
           "help": "Comma separated list of user roles. Example: administrator,editor",
-          "example": ["administrator", "editor"]
+          "example": [
+            "administrator",
+            "editor"
+          ]
         }
       }
     },
@@ -67,7 +72,9 @@
               },
               "description": "Post types where the editor uses full-width layout by removing classic editor constraints.",
               "descriptionFilter": "This filter allows you to control which post types use full-width editing.",
-              "example": ["page"]
+              "example": [
+                "page"
+              ]
             }
           }
         },
@@ -155,21 +162,37 @@
       "properties": {
         "preset": {
           "type": "string",
-          "enum": ["base", "theme", "extreme-theme", "wordpress-render"],
+          "enum": [
+            "base",
+            "theme",
+            "extreme-theme",
+            "wordpress-render"
+          ],
           "default": "base",
           "description": "Analysis preset used when the command line does not select one explicitly. The theme and extreme-theme layers are opt-in and must be selected here or on the command line.",
           "example": "extreme-theme"
         },
+        "configuration": {
+          "type": "string",
+          "default": "",
+          "description": "Project PHPStan configuration file to include alongside the preset. Relative paths resolve from blockstudio.json. Use it to adopt analysis on an existing project through a baseline.",
+          "example": "phpstan.neon"
+        },
         "roots": {
           "type": "array",
           "minItems": 1,
-          "default": ["."],
+          "default": [
+            "."
+          ],
           "items": {
             "type": "string",
             "minLength": 1
           },
           "description": "Theme roots analyzed by the canonical command. Relative paths resolve from this configuration file.",
-          "example": [".", "../shared-theme"]
+          "example": [
+            ".",
+            "../shared-theme"
+          ]
         },
         "excludePaths": {
           "type": "array",
@@ -179,7 +202,9 @@
             "minLength": 1
           },
           "description": "Additional scanner exclusions relative to each configured root.",
-          "example": ["fixtures/**"]
+          "example": [
+            "fixtures/**"
+          ]
         },
         "maxFiles": {
           "type": "integer",
@@ -222,7 +247,11 @@
       "properties": {
         "profile": {
           "type": "string",
-          "enum": ["compat", "speed", "strict"],
+          "enum": [
+            "compat",
+            "speed",
+            "strict"
+          ],
           "default": "compat",
           "description": "Base runtime profile. Explicit child values override the selected profile.",
           "example": "speed"
@@ -282,7 +311,10 @@
           "properties": {
             "links": {
               "type": "string",
-              "enum": ["off", "intent"],
+              "enum": [
+                "off",
+                "intent"
+              ],
               "default": "off",
               "description": "Prefetch same-origin documents after hover, focus, or touch intent.",
               "example": "intent"
@@ -372,7 +404,10 @@
             },
             "invalidate": {
               "type": "string",
-              "enum": ["signature", "graph"],
+              "enum": [
+                "signature",
+                "graph"
+              ],
               "default": "signature",
               "description": "Prerender invalidation strategy.",
               "example": "graph"
@@ -397,7 +432,9 @@
                 "minLength": 1
               },
               "description": "Path prefixes that must always remain dynamic.",
-              "example": ["/account"]
+              "example": [
+                "/account"
+              ]
             },
             "warm": {
               "type": "object",
@@ -425,7 +462,10 @@
                 },
                 "transport": {
                   "type": "string",
-                  "enum": ["http", "internal"],
+                  "enum": [
+                    "http",
+                    "internal"
+                  ],
                   "default": "http",
                   "description": "Warm request transport.",
                   "example": "http"
@@ -473,7 +513,10 @@
         },
         "authors": {
           "type": "string",
-          "enum": ["ignore", "login"],
+          "enum": [
+            "ignore",
+            "login"
+          ],
           "default": "ignore",
           "description": "Author portability mode. Use ignore to omit authors or login to store author logins and resolve existing users on push.",
           "descriptionFilter": "This filter allows you to configure Content Sync author handling.",
@@ -487,7 +530,9 @@
           },
           "description": "Allowlisted post types to sync. Empty means no post types are synced.",
           "descriptionFilter": "This filter allows you to configure Content Sync post type allowlists.",
-          "example": ["team_member"]
+          "example": [
+            "team_member"
+          ]
         },
         "meta": {
           "type": "object",
@@ -500,16 +545,26 @@
                 "type": "string"
               },
               "description": "Glob patterns for meta keys that may be projected to files.",
-              "example": ["_my_*"]
+              "example": [
+                "_my_*"
+              ]
             },
             "exclude": {
               "type": "array",
-              "default": ["_edit_lock", "_edit_last", "_wp_old_slug"],
+              "default": [
+                "_edit_lock",
+                "_edit_last",
+                "_wp_old_slug"
+              ],
               "items": {
                 "type": "string"
               },
               "description": "Glob patterns for meta keys that must never be projected, even if included.",
-              "example": ["_edit_lock", "_edit_last", "_wp_old_slug"]
+              "example": [
+                "_edit_lock",
+                "_edit_last",
+                "_wp_old_slug"
+              ]
             },
             "references": {
               "type": "object",
@@ -520,7 +575,11 @@
                 "properties": {
                   "kind": {
                     "type": "string",
-                    "enum": ["post", "attachment", "term"],
+                    "enum": [
+                      "post",
+                      "attachment",
+                      "term"
+                    ],
                     "description": "Referenced entity type.",
                     "example": "attachment"
                   },
@@ -530,7 +589,9 @@
                     "example": "image.id"
                   }
                 },
-                "required": ["kind"]
+                "required": [
+                  "kind"
+                ]
               },
               "example": {
                 "_thumbnail_id": {
@@ -557,11 +618,17 @@
           },
           "description": "Allowlisted registered taxonomies whose terms and post relationships are synced. Taxonomy definitions are not captured.",
           "descriptionFilter": "This filter allows you to configure Content Sync taxonomy allowlists.",
-          "example": ["category", "post_tag"]
+          "example": [
+            "category",
+            "post_tag"
+          ]
         },
         "media": {
           "type": "string",
-          "enum": ["manifest", "none"],
+          "enum": [
+            "manifest",
+            "none"
+          ],
           "default": "manifest",
           "description": "Attachment reference behavior. manifest records referenced attachments and validates them on push; none drops attachment references.",
           "descriptionFilter": "This filter allows you to configure Content Sync media handling.",
@@ -623,10 +690,16 @@
           "default": [],
           "description": "Additional asset IDs to be enqueued.",
           "descriptionFilter": "This filter allows you to enqueue additional assets in the editor.",
-          "example": ["my-stylesheet", "another-stylesheet"]
+          "example": [
+            "my-stylesheet",
+            "another-stylesheet"
+          ]
         },
         "markup": {
-          "type": ["string", "boolean"],
+          "type": [
+            "string",
+            "boolean"
+          ],
           "element": "textarea",
           "default": "",
           "description": "Additional markup to be added to the end of the editor.",
@@ -660,7 +733,10 @@
           "default": [],
           "description": "Stylesheets whose CSS classes should be available for choice in the class field.",
           "descriptionFilter": "This filter allows you to add stylesheets whose classes should be available for choice in the class field.",
-          "example": ["my-stylesheet", "another-stylesheet"]
+          "example": [
+            "my-stylesheet",
+            "another-stylesheet"
+          ]
         },
         "cssVariables": {
           "id": "blockEditorCssVariables",
@@ -668,7 +744,10 @@
           "default": [],
           "description": "Stylesheets whose CSS variables should be available for autocompletion in the code field.",
           "descriptionFilter": "This filter allows you to add stylesheets whose CSS variables should be available for autocompletion in the code field.",
-          "example": ["my-stylesheet", "another-stylesheet"]
+          "example": [
+            "my-stylesheet",
+            "another-stylesheet"
+          ]
         },
         "blocks": {
           "type": "object",
@@ -682,7 +761,11 @@
               },
               "description": "Block names that are allowed in the inserter. Supports wildcards such as core/*.",
               "descriptionFilter": "This filter allows you to control the block names that are allowed in the inserter.",
-              "example": ["core/*", "acf/*", "my-theme/*"]
+              "example": [
+                "core/*",
+                "acf/*",
+                "my-theme/*"
+              ]
             },
             "deny": {
               "type": "array",
@@ -692,7 +775,10 @@
               },
               "description": "Block names that are removed from the inserter. Supports wildcards such as core/embed.",
               "descriptionFilter": "This filter allows you to remove block names from the inserter.",
-              "example": ["core/embed", "core/freeform"]
+              "example": [
+                "core/embed",
+                "core/freeform"
+              ]
             },
             "directory": {
               "type": "boolean",
@@ -713,7 +799,11 @@
                   },
                   "description": "Block category slugs that should remain available. Empty means all categories are allowed.",
                   "descriptionFilter": "This filter allows you to control which block category slugs remain available.",
-                  "example": ["text", "media", "design"]
+                  "example": [
+                    "text",
+                    "media",
+                    "design"
+                  ]
                 },
                 "deny": {
                   "type": "array",
@@ -723,7 +813,9 @@
                   },
                   "description": "Block category slugs that should be removed from the inserter.",
                   "descriptionFilter": "This filter allows you to remove block category slugs from the inserter.",
-                  "example": ["embed"]
+                  "example": [
+                    "embed"
+                  ]
                 },
                 "rename": {
                   "type": "object",
@@ -746,7 +838,11 @@
                   },
                   "description": "Block category slugs that should be moved to the beginning of the inserter in the provided order.",
                   "descriptionFilter": "This filter allows you to order block category slugs in the inserter.",
-                  "example": ["my-theme", "text", "media"]
+                  "example": [
+                    "my-theme",
+                    "text",
+                    "media"
+                  ]
                 }
               },
               "additionalProperties": true
@@ -767,8 +863,12 @@
                     }
                   },
                   "example": {
-                    "my-theme/card": ["outline"],
-                    "my-theme/media": ["framed"]
+                    "my-theme/card": [
+                      "outline"
+                    ],
+                    "my-theme/media": [
+                      "framed"
+                    ]
                   }
                 }
               },
@@ -786,7 +886,10 @@
                   },
                   "description": "Legacy widget IDs that should be hidden from the legacy widget block.",
                   "descriptionFilter": "This filter allows you to hide additional legacy widgets from the legacy widget block.",
-                  "example": ["archives", "calendar"]
+                  "example": [
+                    "archives",
+                    "calendar"
+                  ]
                 }
               },
               "additionalProperties": true
@@ -838,7 +941,11 @@
                   },
                   "description": "Pattern category slugs that should remain available. Empty means all categories are allowed.",
                   "descriptionFilter": "This filter allows you to control which pattern category slugs remain available.",
-                  "example": ["featured", "buttons", "columns"]
+                  "example": [
+                    "featured",
+                    "buttons",
+                    "columns"
+                  ]
                 },
                 "deny": {
                   "type": "array",
@@ -848,7 +955,9 @@
                   },
                   "description": "Pattern category slugs that should be removed from the pattern inserter.",
                   "descriptionFilter": "This filter allows you to remove pattern category slugs from the pattern inserter.",
-                  "example": ["gallery"]
+                  "example": [
+                    "gallery"
+                  ]
                 },
                 "rename": {
                   "type": "object",
@@ -870,7 +979,10 @@
                   },
                   "description": "Pattern category slugs that should be moved to the beginning of the inserter in the provided order.",
                   "descriptionFilter": "This filter allows you to order pattern category slugs in the inserter.",
-                  "example": ["featured", "buttons"]
+                  "example": [
+                    "featured",
+                    "buttons"
+                  ]
                 }
               },
               "additionalProperties": true
@@ -901,7 +1013,10 @@
                   },
                   "description": "Image size names that should remain available. Empty means all image sizes are allowed.",
                   "descriptionFilter": "This filter allows you to control which image size names remain available in editor media controls.",
-                  "example": ["thumbnail", "large"]
+                  "example": [
+                    "thumbnail",
+                    "large"
+                  ]
                 },
                 "deny": {
                   "type": "array",
@@ -911,7 +1026,9 @@
                   },
                   "description": "Image size names that should be removed from editor media controls.",
                   "descriptionFilter": "This filter allows you to remove image size names from editor media controls.",
-                  "example": ["medium_large"]
+                  "example": [
+                    "medium_large"
+                  ]
                 }
               },
               "additionalProperties": true
@@ -955,7 +1072,10 @@
           },
           "default": [],
           "description": "Allowlist of block name patterns. Supports wildcards via fnmatch(). When set, only matching blocks render via tags.",
-          "example": ["mytheme/*", "bsui/*"]
+          "example": [
+            "mytheme/*",
+            "bsui/*"
+          ]
         },
         "deny": {
           "type": "array",
@@ -964,7 +1084,9 @@
           },
           "default": [],
           "description": "Denylist of block name patterns. Supports wildcards via fnmatch(). Matching blocks are excluded from tag rendering. Takes precedence over allow.",
-          "example": ["mytheme/internal-*"]
+          "example": [
+            "mytheme/internal-*"
+          ]
         },
         "prefixes": {
           "type": "object",
@@ -972,7 +1094,10 @@
           "description": "Prefix to namespace shorthands for block tags. Each key is a lowercase prefix without dashes, and each value is a namespace string or ordered namespace array.",
           "descriptionFilter": "This filter allows you to register prefix to namespace shorthands for block tags.",
           "example": {
-            "theme": ["theme-components", "bsui"]
+            "theme": [
+              "theme-components",
+              "bsui"
+            ]
           }
         }
       },

@@ -363,6 +363,12 @@ final class BlockstudioPhpstanCli
             $options['blockstudioConfiguration']
         );
 
+        if (
+            $options['projectConfiguration'] === null
+            && $configuration['configuration'] !== null
+        ) {
+            $options['projectConfiguration'] = $configuration['configuration'];
+        }
         if (!$options['explicitPreset'] && $configuration['preset'] !== null) {
             $options['preset'] = $configuration['preset'];
         }
