@@ -99,7 +99,6 @@ The following properties are available:
   "ui": {
     "enabled": false
   },
-  "library": false,
   "blockEditor": {
     "disableLoading": false,
     "enhance": false,
@@ -390,12 +389,6 @@ format.
 | `formatOnSave` | boolean | `false` | Format block.json on save           |
 | `assets`       | array   | `[]`    | Additional assets to load in editor |
 | `markup`       | boolean | `false` | Enable markup editing               |
-
-### library
-
-| Type    | Default | Description              |
-| ------- | ------- | ------------------------ |
-| boolean | `false` | Enable the block library |
 
 ### tailwind
 

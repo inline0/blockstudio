@@ -52,6 +52,7 @@ php: Blockstudio\Build, Build::init()
 route: /docs/blocks/schema
 file: docs/docs/blocks/schema.md
 purpose: JSON Schema support for Blockstudio blocks.
+settings: $schema
 
 ### Overrides
 route: /docs/blocks/overrides
@@ -620,7 +621,7 @@ cli: npx blockstudio remove
 route: /registry/configuration/blocks-json
 file: docs/registry/configuration/blocks-json.md
 purpose: The project config file that tells the CLI where to install blocks and which registries to use.
-settings: ui
+settings: $schema, ui
 hooks: blockstudio/hero/
 cli: npx blockstudio add, npx blockstudio init
 
@@ -654,11 +655,13 @@ purpose: Serve a block registry from your own infrastructure.
 route: /registry/reference/blocks-json-schema
 file: docs/registry/reference/blocks-json-schema.md
 purpose: Complete field reference for the blocks.json project config file.
+settings: $schema
 
 ### registry.json Schema
 route: /registry/reference/registry-json-schema
 file: docs/registry/reference/registry-json-schema.md
 purpose: Complete field reference for the registry.json manifest file.
+settings: $schema
 
 ## Schemas
 

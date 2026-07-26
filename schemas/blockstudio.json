@@ -119,7 +119,7 @@
           }
         }
       },
-      "additionalProperties": true
+      "additionalProperties": false
     },
     "cache": {
       "type": "object",
@@ -140,7 +140,7 @@
           "example": "cache/blockstudio"
         }
       },
-      "additionalProperties": true
+      "additionalProperties": false
     },
     "githooks": {
       "type": "object",
@@ -608,7 +608,7 @@
               }
             }
           },
-          "additionalProperties": true
+          "additionalProperties": false
         },
         "taxonomies": {
           "type": "array",
@@ -635,7 +635,7 @@
           "example": "manifest"
         }
       },
-      "additionalProperties": true
+      "additionalProperties": false
     },
     "tailwind": {
       "type": "object",
@@ -657,7 +657,7 @@
           "example": "@theme { --color-primary: pink; }"
         }
       },
-      "additionalProperties": true
+      "additionalProperties": false
     },
     "ui": {
       "type": "object",
@@ -671,7 +671,7 @@
           "example": true
         }
       },
-      "additionalProperties": true
+      "additionalProperties": false
     },
     "editor": {
       "type": "object",
@@ -707,7 +707,7 @@
           "example": "<style>body { background: black; }</style>"
         }
       },
-      "additionalProperties": true
+      "additionalProperties": false
     },
     "blockEditor": {
       "type": "object",
@@ -845,7 +845,7 @@
                   ]
                 }
               },
-              "additionalProperties": true
+              "additionalProperties": false
             },
             "styles": {
               "type": "object",
@@ -872,7 +872,7 @@
                   }
                 }
               },
-              "additionalProperties": true
+              "additionalProperties": false
             },
             "legacyWidgets": {
               "type": "object",
@@ -892,10 +892,10 @@
                   ]
                 }
               },
-              "additionalProperties": true
+              "additionalProperties": false
             }
           },
-          "additionalProperties": true
+          "additionalProperties": false
         },
         "patterns": {
           "type": "object",
@@ -985,10 +985,10 @@
                   ]
                 }
               },
-              "additionalProperties": true
+              "additionalProperties": false
             }
           },
-          "additionalProperties": true
+          "additionalProperties": false
         },
         "media": {
           "type": "object",
@@ -1031,13 +1031,13 @@
                   ]
                 }
               },
-              "additionalProperties": true
+              "additionalProperties": false
             }
           },
-          "additionalProperties": true
+          "additionalProperties": false
         }
       },
-      "additionalProperties": true
+      "additionalProperties": false
     },
     "ai": {
       "id": "aiLlmMd",
@@ -1052,7 +1052,7 @@
           "example": true
         }
       },
-      "additionalProperties": true
+      "additionalProperties": false
     },
     "blockTags": {
       "type": "object",
@@ -1101,7 +1101,7 @@
           }
         }
       },
-      "additionalProperties": true
+      "additionalProperties": false
     },
     "dev": {
       "type": "object",
@@ -1148,8 +1148,12 @@
           }
         }
       },
-      "additionalProperties": true
+      "additionalProperties": false
+    },
+    "$schema": {
+      "type": "string",
+      "description": "JSON Schema reference for editor completion."
     }
   },
-  "additionalProperties": true
+  "additionalProperties": false
 }
