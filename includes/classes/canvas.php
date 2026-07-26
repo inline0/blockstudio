@@ -1225,41 +1225,6 @@ class Canvas {
 			$mtimes[ $pathname ] = is_file( $pathname ) ? filemtime( $pathname ) : false;
 		}
 	}
-
-	/**
-	 * Recursively collect file modification times from a directory.
-	 *
-	 * @param string                   $directory The directory to scan.
-	 * @param array<string, int|false> $mtimes    Reference to the mtimes array.
-	 * @return void
-	 */
-	private function collect_file_mtimes( string $directory, array &$mtimes ): void {
-		if ( ! is_dir( $directory ) ) {
-			return;
-		}
-
-		$iterator = new RecursiveIteratorIterator(
-			new RecursiveDirectoryIterator( $directory, RecursiveDirectoryIterator::SKIP_DOTS )
-		);
-
-		foreach ( $iterator as $file ) {
-			if ( ! $file->isFile() ) {
-				continue;
-			}
-
-			$pathname = $file->getPathname();
-
-			if ( str_contains( $pathname, '/_dist/' ) || str_contains( $pathname, '/node_modules/' ) ) {
-				continue;
-			}
-
-			if ( ! in_array( $file->getExtension(), self::WATCHED_EXTENSIONS, true ) ) {
-				continue;
-			}
-
-			$mtimes[ $pathname ] = $file->getMTime();
-		}
-	}
 }
 
 new Canvas();

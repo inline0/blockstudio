@@ -814,9 +814,10 @@ class Build {
 						}
 					}
 				}
+
+				unset( $data );
 			}
 		);
-		unset( $data ); // Break reference.
 
 		// Phase 2.5: Discover custom fields.
 		$local_fields = self::discover_local_custom_fields( $path, $source );
@@ -2106,8 +2107,9 @@ class Build {
 				continue;
 			}
 
-			$is_custom = str_starts_with( $type, 'custom/' );
-			$is_block  = 'block' === $type && isset( $attr['block'] );
+			$is_custom  = str_starts_with( $type, 'custom/' );
+			$is_block   = 'block' === $type && isset( $attr['block'] );
+			$block_name = '';
 
 			if ( ! $is_custom && ! $is_block ) {
 				$expanded[] = $attr;

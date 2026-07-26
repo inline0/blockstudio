@@ -257,15 +257,15 @@ class Assets {
 	/**
 	 * Maybe buffer output.
 	 *
-	 * @return bool|void
+	 * @return void
 	 */
-	public function maybe_buffer_output() {
+	public function maybe_buffer_output(): void {
 		if ( function_exists( 'is_customize_preview' ) && is_customize_preview() ) {
-			return false;
+			return;
 		}
 
 		if ( is_admin() ) {
-			return false;
+			return;
 		}
 
 		ob_start( array( $this, 'return_buffer' ) );
@@ -1895,6 +1895,8 @@ class Assets {
 
 		// phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Asset output.
 		echo $string;
+
+		return null;
 	}
 
 	/**

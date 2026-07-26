@@ -444,7 +444,7 @@ class Block {
 							"</$element_tag>"
 						: '',
 					$content
-				);
+				) ?? $content;
 			} else {
 				$inner_blocks_content = apply_filters(
 					'blockstudio/blocks/components/inner_blocks/render',
@@ -476,7 +476,7 @@ class Block {
 							"</$element_tag>"
 						: $inner_blocks_content,
 					$content
-				);
+				) ?? $content;
 			}
 		}
 	}
@@ -493,7 +493,7 @@ class Block {
 	 */
 	public static function remove_custom_tag( &$content, $component ) {
 		$regex   = '/<' . preg_quote( $component, '/' ) . '\s*(.*?)\s*\/?>/s';
-		$content = preg_replace( $regex, '', $content );
+		$content = preg_replace( $regex, '', $content ) ?? $content;
 	}
 
 	/**
@@ -1521,7 +1521,7 @@ class Block {
 			}
 		}
 		$attributes = array_merge(
-			$attr ?? array(),
+			$attr,
 			$attributes['blockstudio']['attributes'] ?? array()
 		);
 
@@ -1915,7 +1915,7 @@ class Block {
 			}
 
 			$rendered_block =
-				( '' !== trim( $render ?? '' ) ? $blockstudio_id : '' ) .
+				( '' !== trim( $render ) ? $blockstudio_id : '' ) .
 				( $is_preview ? Assets::get_preview_assets( $block_data ) : '' ) .
 				$render .
 				( $is_preview ? Assets::get_preview_assets( $block_data, false ) : '' );

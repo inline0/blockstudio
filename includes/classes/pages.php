@@ -148,6 +148,7 @@ class Pages {
 		 * Fires after pages have been synced.
 		 *
 		 * @param Page_Registry $registry The page registry instance.
+		 * @param array         $report   Reconciliation report and source identity.
 		 */
 		do_action( 'blockstudio/pages/synced', $registry, $report );
 	}
@@ -2061,7 +2062,7 @@ class Pages {
 	/**
 	 * Force sync all pages.
 	 *
-	 * @return array<string, int|WP_Error> Results indexed by page name.
+	 * @return array<string, int|\WP_Error> Results indexed by page name.
 	 */
 	public static function force_sync_all(): array {
 		$results  = array();
@@ -2080,7 +2081,7 @@ class Pages {
 	 *
 	 * @param string $name The page name.
 	 *
-	 * @return int|WP_Error|null The post ID, WP_Error, or null if page not found.
+	 * @return int|\WP_Error|null The post ID, WP_Error, or null if page not found.
 	 */
 	public static function force_sync( string $name ): int|\WP_Error|null {
 		$page = Page_Registry::instance()->get_page( $name );

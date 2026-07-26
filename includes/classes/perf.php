@@ -93,10 +93,10 @@ class Perf {
 	 *
 	 * @template T
 	 *
-	 * @param string   $group    The group label.
-	 * @param callable $callback Callback to measure.
+	 * @param string        $group    The group label.
+	 * @param callable(): T $callback Callback to measure.
 	 *
-	 * @return mixed Callback return value.
+	 * @return T Callback return value.
 	 */
 	public static function measure( string $group, callable $callback ): mixed {
 		if ( ! self::$active ) {

@@ -309,6 +309,25 @@ class Settings {
 	private static string $loaded_source_fingerprint = '';
 
 	/**
+	 * Stat signature the cached JSON fingerprint was computed from.
+	 *
+	 * Settings::get() resolves the singleton on every read, so hashing the
+	 * settings file each time costs more than the lookup it guards. Gating the
+	 * hash behind path, mtime, size and inode keeps the file a live source
+	 * without paying for it on every access.
+	 *
+	 * @var string|null
+	 */
+	private static ?string $json_stat_signature = null;
+
+	/**
+	 * Fingerprint cached against the current stat signature.
+	 *
+	 * @var string|null
+	 */
+	private static ?string $json_fingerprint = null;
+
+	/**
 	 * Get singleton instance.
 	 *
 	 * @return Settings|null The singleton instance.
@@ -534,10 +553,10 @@ class Settings {
 	public static function get( string $key, $default = null ) {
 		self::get_instance();
 
-		$value = static::fetch_value_from_key( $key, static::$settings );
+		$value = self::fetch_value_from_key( $key, static::$settings );
 
 		if ( null === $value ) {
-			$value = static::fetch_value_from_key( $key, static::$defaults );
+			$value = self::fetch_value_from_key( $key, static::$defaults );
 		}
 
 		if ( null === $value ) {
@@ -760,6 +779,8 @@ class Settings {
 		self::$settings_raw              = array();
 		self::$errors                    = array();
 		self::$loaded_source_fingerprint = '';
+		self::$json_stat_signature       = null;
+		self::$json_fingerprint          = null;
 	}
 
 	/**
@@ -781,12 +802,27 @@ class Settings {
 	private static function source_fingerprint(): string {
 		$path = self::json_path();
 		clearstatcache( true, $path );
+		$stat = @stat( $path ); // phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged -- A missing file is the options branch, not an error.
 
-		if ( is_file( $path ) && is_readable( $path ) ) {
-			$hash = hash_file( 'sha256', $path );
+		if ( false !== $stat ) {
+			$signature = $path . ':' . $stat['mtime'] . ':' . $stat['size'] . ':' . $stat['ino'];
 
-			return 'json:' . $path . ':' . ( is_string( $hash ) ? $hash : 'unreadable' );
+			if ( $signature === self::$json_stat_signature && null !== self::$json_fingerprint ) {
+				return self::$json_fingerprint;
+			}
+
+			if ( is_file( $path ) && is_readable( $path ) ) {
+				$hash = hash_file( 'sha256', $path );
+
+				self::$json_stat_signature = $signature;
+				self::$json_fingerprint    = 'json:' . $path . ':' . ( is_string( $hash ) ? $hash : 'unreadable' );
+
+				return self::$json_fingerprint;
+			}
 		}
+
+		self::$json_stat_signature = null;
+		self::$json_fingerprint    = null;
 
 		$options = function_exists( 'get_option' )
 			? get_option( 'blockstudio_settings', array() )

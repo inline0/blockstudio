@@ -52,7 +52,8 @@ final class Field_Type_Config {
 	 *
 	 * Maps field types to their attribute type and default value.
 	 *
-	 * @var array<string, array{attribute: string|array, default: mixed}>
+	 * The exact shape is inferred from the literal; a looser @var would be a
+	 * widening, not a contract.
 	 */
 	public const TYPES = array(
 		// String types.

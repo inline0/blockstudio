@@ -104,7 +104,7 @@ class Block_Tags {
 	 */
 	public static function render( $content ): string {
 		if ( ! is_string( $content ) || '' === $content ) {
-			return $content ?? '';
+			return $content;
 		}
 
 		$aliases    = self::get_tag_aliases();
@@ -1834,7 +1834,7 @@ class Block_Tags {
 	 * @param int    $pos     Position of the opening <.
 	 * @param bool   $is_bs   Whether this is a <bs:> tag.
 	 *
-	 * @return array{block: array, offset: int}|null Parsed block and new offset, or null.
+	 * @return array{block: array, inner: string, offset: int}|null Parsed block, inner content, and new offset, or null.
 	 */
 	private static function parse_single_block_tag( string $content, int $pos, bool $is_bs ): ?array {
 		$len      = strlen( $content );

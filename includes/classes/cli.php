@@ -32,6 +32,28 @@ class Cli {
 		\WP_CLI::add_command( 'bs scss', array( __CLASS__, 'scss' ) );
 		\WP_CLI::add_command( 'bs fields', array( __CLASS__, 'fields' ) );
 		\WP_CLI::add_command( 'bs assets', array( __CLASS__, 'assets' ) );
+		\WP_CLI::add_command( 'bs teardown', array( __CLASS__, 'teardown' ) );
+	}
+
+	/**
+	 * Remove everything this installation owns outside its own cache.
+	 *
+	 * Blockstudio can be loaded as a plugin, an mu-plugin, or a Composer
+	 * dependency of a theme or plugin. Only the plugin case has a deactivation
+	 * hook, so a Composer consumer has no lifecycle event that could unschedule
+	 * cron jobs or remove the early-serve drop-in, the prerender map, and the
+	 * WP_CACHE declaration. This is the entry point for those cases; run it
+	 * before removing the dependency.
+	 *
+	 * Owned state only: a foreign drop-in, map, or WP_CACHE line is left alone.
+	 *
+	 * @return void
+	 */
+	public static function teardown(): void {
+		Cron::unschedule_all();
+		Static_Prerender_Runtime::deactivate();
+
+		\WP_CLI::success( 'Removed Blockstudio cron events and static prerender state owned by this installation.' );
 	}
 
 	// Blocks.

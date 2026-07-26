@@ -125,7 +125,11 @@ final class Media_Metadata_Builder {
 	/**
 	 * Build WordPress attachment metadata.
 	 *
-	 * @return array<string, array<string, mixed>> Attachment metadata.
+	 * Keys are attachment IDs. PHP normalises numeric string keys back to int,
+	 * so the cast at the assignment documents intent rather than changing the
+	 * key type.
+	 *
+	 * @return array<int|string, array<string, mixed>> Attachment metadata.
 	 */
 	private function attachments(): array {
 		if ( ! function_exists( 'get_posts' ) || ! function_exists( 'wp_get_attachment_metadata' ) || ! function_exists( 'wp_get_attachment_url' ) ) {

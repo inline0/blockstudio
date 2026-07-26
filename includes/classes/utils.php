@@ -97,7 +97,7 @@ class Utils {
 	/**
 	 * Render data attributes from an array.
 	 *
-	 * @param array $data_attributes Array of attribute data.
+	 * @param array|null $data_attributes Array of attribute data, or null.
 	 *
 	 * @return string
 	 */

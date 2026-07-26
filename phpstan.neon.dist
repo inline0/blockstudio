@@ -1,0 +1,36 @@
+includes:
+  - vendor/szepeviktor/phpstan-wordpress/extension.neon
+
+parameters:
+  level: 3
+  bootstrapFiles:
+    - vendor/php-stubs/wp-cli-stubs/wp-cli-stubs.php
+    - phpstan-stubs.php
+  paths:
+    - blockstudio.php
+    - includes
+  excludePaths:
+    analyseAndScan:
+      - includes/classes/lib/*
+      - includes/lib/*
+      # Block templates receive $a, $attributes and $block from the render
+      # context. They are analysed by the Blockstudio PHPStan extension, which
+      # types them from block.json; a generic run only sees undefined variables.
+      - includes/ui/blocks/*
+  ignoreErrors:
+    # Optional third-party integrations, guarded at runtime by class_exists().
+    - identifier: class.notFound
+      path: includes/classes/block.php
+    - identifier: class.notFound
+      path: includes/classes/admin.php
+    # WP_CONTENT_URL is correct here: the path is resolved before WordPress
+    # can answer content_url() for a Composer-loaded runtime.
+    - identifier: phpstanWP.wpConstant.fetch
+      path: includes/classes/files.php
+    # Blockstudio attaches its own data to WP_Block_Type, which WordPress
+    # supports but does not declare.
+    - identifier: property.notFound
+      message: '#Access to an undefined property WP_Block_Type::#'
+    # Provided by the update checker's concrete Vcs API subclasses.
+    - identifier: method.notFound
+      path: includes/classes/github-updater.php
