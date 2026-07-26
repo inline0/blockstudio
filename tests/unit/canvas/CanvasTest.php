@@ -454,6 +454,10 @@ class CanvasTest extends TestCase {
 			}
 		);
 		$this->add_filter_callback( 'blockstudio/settings/tailwind/enabled', '__return_false' );
+		add_shortcode(
+			'blockstudio_canvas_account',
+			static fn(): string => '<section data-canvas-shortcode data-page="account">Account</section>'
+		);
 
 		try {
 			Pages::reset();
@@ -469,7 +473,7 @@ class CanvasTest extends TestCase {
 					'source_path'    => '/virtual/pages/account/index.php',
 					'template_path'  => '/virtual/pages/account/index.php',
 					'contentType'    => 'html',
-					'inline_content' => '<section data-page="account">Account</section>',
+					'inline_content' => '[blockstudio_canvas_account]',
 				)
 			);
 			$registry->register(
@@ -508,7 +512,9 @@ class CanvasTest extends TestCase {
 			$this->assertStringContainsString( 'theme-account-page', $account );
 			$this->assertStringContainsString( 'theme-account.css', $account );
 			$this->assertStringContainsString( 'theme-account.js', $account );
+			$this->assertStringContainsString( 'data-canvas-shortcode', $account );
 			$this->assertStringContainsString( 'data-page="account"', $account );
+			$this->assertStringNotContainsString( '[blockstudio_canvas_account]', $account );
 			$this->assertStringContainsString( 'consumer-preview', $about );
 			$this->assertStringNotContainsString( 'theme-account-page', $about );
 			$this->assertStringNotContainsString( 'theme-account.css', $about );
@@ -541,6 +547,7 @@ class CanvasTest extends TestCase {
 				}
 			}
 		} finally {
+			remove_shortcode( 'blockstudio_canvas_account' );
 			Pages::reset();
 			wp_delete_post( $account_id, true );
 			wp_delete_post( $about_id, true );

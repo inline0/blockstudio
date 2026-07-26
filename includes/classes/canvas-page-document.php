@@ -41,7 +41,7 @@ final class Canvas_Page_Document {
 			static function () use ( $item, $page, $document_options, $block_names ): array {
 				$captured = self::capture_frontend_assets(
 					static function () use ( $item, $page, $document_options ): array {
-						$content = Render::content( self::record_string( $item, 'content' ) );
+						$content = self::render_content( self::record_string( $item, 'content' ) );
 						$content = Pages::render_layout(
 							$content,
 							$page,
@@ -268,6 +268,28 @@ final class Canvas_Page_Document {
 		$output = ob_get_clean();
 
 		return false === $output ? '' : $output;
+	}
+
+	/**
+	 * Run page content through the normal frontend content pipeline.
+	 *
+	 * Canvas establishes a singular query without entering the main loop, so
+	 * the regular Blockstudio layout filter remains inactive here. The layout
+	 * is applied exactly once by the caller after blocks, shortcodes, and other
+	 * public content filters have rendered.
+	 *
+	 * @param string $content Source page content.
+	 *
+	 * @return string Rendered page content.
+	 */
+	private static function render_content( string $content ): string {
+		if ( ! self::has_host_function( 'apply_filters' ) ) {
+			return Render::content( $content );
+		}
+
+		$rendered = apply_filters( 'the_content', $content ); // phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedHooknameFound -- Core WordPress frontend content pipeline.
+
+		return is_string( $rendered ) ? $rendered : Render::content( $content );
 	}
 
 	/**
