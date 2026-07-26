@@ -23,7 +23,6 @@
     "islands",
     "interactivity",
     "block-api",
-    "hooks",
-    "cli"
+    "hooks"
   ]
 }

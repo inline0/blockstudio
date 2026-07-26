@@ -1,4 +1,15 @@
 {
   "title": "Dev",
-  "pages": ["admin", "canvas", "grab", "perf", "composer", "phpstan", "ai", "discovery-sources", "migration"]
+  "pages": [
+    "admin",
+    "canvas",
+    "grab",
+    "perf",
+    "cli",
+    "composer",
+    "phpstan",
+    "ai",
+    "discovery-sources",
+    "migration"
+  ]
 }
