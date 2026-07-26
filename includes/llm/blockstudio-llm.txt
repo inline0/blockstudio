@@ -368,7 +368,7 @@ file: docs/docs/pages-and-patterns/pages.md
 purpose: Create WordPress pages from file templates with automatic syncing.
 settings: content
 hooks: blockstudio/pages/allow_external_loader_path, blockstudio/pages/collection_post_type_args, blockstudio/pages/create_post_data, blockstudio/pages/docs_allowed_html, blockstudio/pages/manifest_scan_interval, blockstudio/pages/orphan_action, blockstudio/pages/paths, blockstudio/pages/post_created, blockstudio/pages/post_updated, blockstudio/pages/reconciled, blockstudio/pages/serve_markdown, blockstudio/pages/sync_engine_inputs, blockstudio/pages/synced, blockstudio/pages/template_candidates, blockstudio/pages/update_post_data
-php: Blockstudio\Pages, Pages::children(), Pages::collection(), Pages::force_sync(), Pages::force_sync_all(), Pages::get_page(), Pages::get_post_id(), Pages::lock(), Pages::pages(), Pages::permalink(), Pages::reconcile(), Pages::store_successful_source_identity(), Pages::tree(), Pages::unlock()
+php: Blockstudio\Media_Metadata, Blockstudio\Media_Metadata_Builder, Blockstudio\Pages, Blockstudio\Static_Prerender_Batch_Renderer, Media_Metadata::reset(), Media_Metadata_Builder::build(), Pages::children(), Pages::collection(), Pages::force_sync(), Pages::force_sync_all(), Pages::get_page(), Pages::get_post_id(), Pages::in_collection(), Pages::lock(), Pages::pages(), Pages::permalink(), Pages::reconcile(), Pages::store_successful_source_identity(), Pages::tree(), Pages::unlock(), Static_Prerender_Batch_Renderer::is_rendering(), Static_Prerender_Batch_Renderer::parse_shard()
 
 ### Patterns
 route: /docs/pages-and-patterns/patterns

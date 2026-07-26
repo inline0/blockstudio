@@ -6,26 +6,73 @@
     "name"
   ],
   "properties": {
+    "blockEditingMode": {
+      "type": "string",
+      "enum": [
+        "default",
+        "contentOnly",
+        "disabled"
+      ],
+      "description": "Controls how blocks can be edited. 'default' allows full editing, 'contentOnly' only allows text editing, 'disabled' prevents all editing.",
+      "example": "disabled"
+    },
+    "collection": {
+      "type": "string",
+      "description": "Collection this page belongs to, set by the pages.json manifest that discovered it."
+    },
+    "content": {
+      "type": "string",
+      "description": "Inline page content, used instead of a template file."
+    },
+    "contentSource": {
+      "type": "string",
+      "description": "Where the content came from, recorded during discovery."
+    },
+    "contentType": {
+      "type": "string",
+      "description": "Content format, such as html or markdown."
+    },
+    "defaults": {
+      "type": "object",
+      "description": "Default values applied to every page in a collection."
+    },
+    "file": {
+      "type": "string",
+      "description": "Template file backing this page."
+    },
+    "generated": {
+      "type": "boolean",
+      "description": "Whether the definition was generated rather than authored."
+    },
+    "html": {
+      "type": "string",
+      "description": "Pre-rendered HTML for the page."
+    },
+    "markdown": {
+      "type": "string",
+      "description": "Markdown source for the page."
+    },
+    "meta": {
+      "type": "object",
+      "description": "Post meta written on sync."
+    },
     "name": {
       "type": "string",
       "description": "Unique identifier for the page. Used internally to track and reference the page definition.",
       "example": "about"
     },
-    "title": {
-      "type": "string",
-      "description": "The title of the WordPress page/post. Defaults to a human-readable version of the name if not specified.",
-      "example": "About Us"
+    "order": {
+      "type": "integer",
+      "description": "Menu order within the collection."
     },
-    "slug": {
+    "path": {
       "type": "string",
-      "description": "The URL slug for the page. Defaults to the name if not specified.",
-      "example": "about-us"
+      "description": "Logical route for the page inside its collection. Use \".\" for a collection index."
     },
-    "postType": {
-      "type": "string",
-      "default": "page",
-      "description": "The WordPress post type to create. Can be any registered post type.",
-      "example": "page"
+    "postId": {
+      "type": "integer",
+      "description": "Pin the page to a specific WordPress post ID. Uses import_id during creation to request this ID. If the ID is already taken by an unrelated post, WordPress silently auto-assigns a new ID.",
+      "example": 42
     },
     "postStatus": {
       "type": "string",
@@ -39,20 +86,47 @@
       ],
       "example": "publish"
     },
-    "postId": {
-      "type": "integer",
-      "description": "Pin the page to a specific WordPress post ID. Uses import_id during creation to request this ID. If the ID is already taken by an unrelated post, WordPress silently auto-assigns a new ID.",
-      "example": 42
-    },
-    "blockEditingMode": {
+    "postType": {
       "type": "string",
-      "enum": [
-        "default",
-        "contentOnly",
-        "disabled"
+      "default": "page",
+      "description": "The WordPress post type to create. Can be any registered post type.",
+      "example": "page"
+    },
+    "postTypeArgs": {
+      "type": "object",
+      "description": "Arguments used when the collection registers its own post type."
+    },
+    "slug": {
+      "type": "string",
+      "description": "The URL slug for the page. Defaults to the name if not specified.",
+      "example": "about-us"
+    },
+    "source": {
+      "type": "string",
+      "description": "Absolute source path recorded during discovery."
+    },
+    "source_fingerprint": {
+      "type": "string",
+      "description": "Content fingerprint used to detect changes between syncs."
+    },
+    "sync": {
+      "type": "boolean",
+      "default": true,
+      "description": "Whether to automatically sync the page content when the template file changes. Set to false to create the page once and prevent future automatic updates.",
+      "example": true
+    },
+    "template": {
+      "type": "string",
+      "description": "Template assigned to the created post."
+    },
+    "templateFor": {
+      "type": [
+        "string",
+        "null"
       ],
-      "description": "Controls how blocks can be edited. 'default' allows full editing, 'contentOnly' only allows text editing, 'disabled' prevents all editing.",
-      "example": "disabled"
+      "default": null,
+      "description": "When specified, this page's block structure becomes the default template for the specified post type. Any new posts of that type will start with this template.",
+      "example": "product"
     },
     "templateLock": {
       "type": [
@@ -69,20 +143,14 @@
       ],
       "example": "all"
     },
-    "templateFor": {
-      "type": [
-        "string",
-        "null"
-      ],
-      "default": null,
-      "description": "When specified, this page's block structure becomes the default template for the specified post type. Any new posts of that type will start with this template.",
-      "example": "product"
+    "title": {
+      "type": "string",
+      "description": "The title of the WordPress page/post. Defaults to a human-readable version of the name if not specified.",
+      "example": "About Us"
     },
-    "sync": {
+    "trusted": {
       "type": "boolean",
-      "default": true,
-      "description": "Whether to automatically sync the page content when the template file changes. Set to false to create the page once and prevent future automatic updates.",
-      "example": true
+      "description": "Whether the source is trusted to emit unfiltered markup."
     }
   },
   "additionalProperties": true
