@@ -78,7 +78,9 @@ known block and page edits use their canonical registrations, and genuinely
 new live-session topology gets a directory-scoped discovery pass.
 Each page observes its own queried object, route, contextual body classes,
 redirect protection, and `wp_enqueue_scripts` lifecycle without leaking those
-globals or dependency queues into the next selected document. Source-backed
+globals or dependency queues into the next selected document, including when
+Blockstudio is Composer-loaded under a relocated application namespace.
+Source-backed
 registries also resolve matching managed post identity by stable page key or
 source path before rendering, including when a logical discovery source loaded
 the page inventory first.

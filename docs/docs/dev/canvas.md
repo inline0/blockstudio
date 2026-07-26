@@ -101,7 +101,9 @@ query conditionals, body-class filters, shortcodes, layouts, redirects, and
 `wp_enqueue_scripts` callbacks observe that page rather than the admin or REST
 request that requested the Canvas result. Caller-provided body classes are
 merged with the page's contextual classes, and frontend enqueue registries are
-isolated between documents.
+isolated between documents. Canvas resolves those lifecycle callbacks by their
+public WordPress function names, so the same context is preserved when
+Blockstudio is loaded through Composer or a relocated application namespace.
 
 ### Exact selection semantics
 

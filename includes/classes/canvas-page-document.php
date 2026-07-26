@@ -123,9 +123,9 @@ final class Canvas_Page_Document {
 		};
 		$filter_page_uri = null !== $post
 			&& '' !== $route_path
-			&& function_exists( 'add_filter' )
-			&& function_exists( 'remove_filter' );
-		$filter_redirect = function_exists( 'add_filter' ) && function_exists( 'remove_filter' );
+			&& is_callable( 'add_filter' )
+			&& is_callable( 'remove_filter' );
+		$filter_redirect = is_callable( 'add_filter' ) && is_callable( 'remove_filter' );
 
 		try {
 			unset( $_GET['blockstudioMode'] ); // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Temporary static page context only.
@@ -181,7 +181,7 @@ final class Canvas_Page_Document {
 	 * @return array{result:T,head:string,footer:string}
 	 */
 	private static function capture_frontend_assets( callable $callback ): array {
-		if ( ! function_exists( 'do_action' ) ) {
+		if ( ! is_callable( 'do_action' ) ) {
 			return array(
 				'result' => $callback(),
 				'head'   => '',
@@ -200,18 +200,18 @@ final class Canvas_Page_Document {
 			$result = $callback();
 			$head   = self::capture_output(
 				static function (): void {
-					if ( function_exists( 'wp_print_styles' ) ) {
+					if ( is_callable( 'wp_print_styles' ) ) {
 						wp_print_styles();
 					}
 
-					if ( function_exists( 'wp_print_head_scripts' ) ) {
+					if ( is_callable( 'wp_print_head_scripts' ) ) {
 						wp_print_head_scripts();
 					}
 				}
 			);
 			$footer = self::capture_output(
 				static function (): void {
-					if ( function_exists( 'wp_print_footer_scripts' ) ) {
+					if ( is_callable( 'wp_print_footer_scripts' ) ) {
 						wp_print_footer_scripts();
 					}
 				}
@@ -283,7 +283,7 @@ final class Canvas_Page_Document {
 
 		$result = is_array( $classes ) ? $classes : array();
 
-		if ( function_exists( 'get_body_class' ) ) {
+		if ( is_callable( 'get_body_class' ) ) {
 			$body_classes = get_body_class();
 
 			if ( is_array( $body_classes ) ) {
@@ -322,7 +322,7 @@ final class Canvas_Page_Document {
 			}
 		}
 
-		if ( $post_id <= 0 || ! function_exists( 'get_post' ) ) {
+		if ( $post_id <= 0 || ! is_callable( 'get_post' ) ) {
 			return null;
 		}
 
@@ -376,7 +376,7 @@ final class Canvas_Page_Document {
 			return $permalink;
 		}
 
-		return function_exists( 'home_url' )
+		return is_callable( 'home_url' )
 			? (string) home_url( '/' . trim( $route_path, '/' ) . '/' )
 			: '/' . trim( $route_path, '/' ) . '/';
 	}
