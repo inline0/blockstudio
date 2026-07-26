@@ -72,7 +72,7 @@ final class BlockJsonShapeRule implements Rule
             return [
                 RuleErrorBuilder::message(sprintf(
                     'Invalid block.json: %s could not be parsed as JSON.',
-                    $path
+                    $this->scanner->relativePath($path)
                 ))
                     ->identifier('blockstudio.blockJson')
                     ->file($path)
@@ -85,7 +85,7 @@ final class BlockJsonShapeRule implements Rule
         if (!isset($data['name']) || !is_string($data['name']) || $data['name'] === '') {
             $errors[] = RuleErrorBuilder::message(sprintf(
                 'block.json missing required "name" field: %s',
-                $path
+                $this->scanner->relativePath($path)
             ))
                 ->identifier('blockstudio.blockJson.name')
                 ->file($path)
@@ -96,7 +96,7 @@ final class BlockJsonShapeRule implements Rule
         if ($bs !== null && !is_array($bs)) {
             $errors[] = RuleErrorBuilder::message(sprintf(
                 'block.json "blockstudio" must be an object: %s',
-                $path
+                $this->scanner->relativePath($path)
             ))
                 ->identifier('blockstudio.blockJson.blockstudio')
                 ->file($path)
@@ -112,7 +112,7 @@ final class BlockJsonShapeRule implements Rule
         if ($attributes !== null && !is_array($attributes)) {
             $errors[] = RuleErrorBuilder::message(sprintf(
                 'block.json "blockstudio.attributes" must be an array: %s',
-                $path
+                $this->scanner->relativePath($path)
             ))
                 ->identifier('blockstudio.blockJson.attributes')
                 ->file($path)
@@ -147,7 +147,7 @@ final class BlockJsonShapeRule implements Rule
             return [
                 RuleErrorBuilder::message(sprintf(
                     'block.json "blockstudio.pluginDependencies" must be an array or object: %s',
-                    $path
+                    $this->scanner->relativePath($path)
                 ))
                     ->identifier('blockstudio.blockJson.pluginDependencies')
                     ->file($path)
@@ -163,7 +163,7 @@ final class BlockJsonShapeRule implements Rule
                     $errors[] = RuleErrorBuilder::message(sprintf(
                         'block.json "blockstudio.pluginDependencies[%s]" must be a plugin slug string: %s',
                         (string) $i,
-                        $path
+                        $this->scanner->relativePath($path)
                     ))
                         ->identifier('blockstudio.blockJson.pluginDependencies')
                         ->file($path)
@@ -175,7 +175,7 @@ final class BlockJsonShapeRule implements Rule
                     $errors[] = RuleErrorBuilder::message(sprintf(
                         'block.json "blockstudio.pluginDependencies[%s]" must be a WordPress plugin slug: %s',
                         (string) $i,
-                        $path
+                        $this->scanner->relativePath($path)
                     ))
                         ->identifier('blockstudio.blockJson.pluginDependencies')
                         ->file($path)
@@ -190,7 +190,7 @@ final class BlockJsonShapeRule implements Rule
             if (!is_string($slug) || !$this->isPluginDependencySlug($slug)) {
                 $errors[] = RuleErrorBuilder::message(sprintf(
                     'block.json "blockstudio.pluginDependencies" keys must be WordPress plugin slugs: %s',
-                    $path
+                    $this->scanner->relativePath($path)
                 ))
                     ->identifier('blockstudio.blockJson.pluginDependencies')
                     ->file($path)
@@ -202,7 +202,7 @@ final class BlockJsonShapeRule implements Rule
                 $errors[] = RuleErrorBuilder::message(sprintf(
                     'block.json "blockstudio.pluginDependencies.%s" must be an object: %s',
                     $slug,
-                    $path
+                    $this->scanner->relativePath($path)
                 ))
                     ->identifier('blockstudio.blockJson.pluginDependencies')
                     ->file($path)
@@ -216,7 +216,7 @@ final class BlockJsonShapeRule implements Rule
                         'block.json "blockstudio.pluginDependencies.%s.%s" is not supported: %s',
                         $slug,
                         (string) $key,
-                        $path
+                        $this->scanner->relativePath($path)
                     ))
                         ->identifier('blockstudio.blockJson.pluginDependencies')
                         ->file($path)
@@ -228,7 +228,7 @@ final class BlockJsonShapeRule implements Rule
                 $errors[] = RuleErrorBuilder::message(sprintf(
                     'block.json "blockstudio.pluginDependencies.%s.version" must be a string: %s',
                     $slug,
-                    $path
+                    $this->scanner->relativePath($path)
                 ))
                     ->identifier('blockstudio.blockJson.pluginDependencies')
                     ->file($path)
@@ -258,7 +258,7 @@ final class BlockJsonShapeRule implements Rule
                 $errors[] = RuleErrorBuilder::message(sprintf(
                     'block.json attributes[%d] must be an object: %s',
                     $i,
-                    $path
+                    $this->scanner->relativePath($path)
                 ))
                     ->identifier('blockstudio.blockJson.attributes')
                     ->file($path)
@@ -273,7 +273,7 @@ final class BlockJsonShapeRule implements Rule
                 $errors[] = RuleErrorBuilder::message(sprintf(
                     'block.json field "%s" missing "type": %s',
                     $this->getFieldLabel($field, $i),
-                    $path
+                    $this->scanner->relativePath($path)
                 ))
                     ->identifier('blockstudio.blockJson.type')
                     ->file($path)
@@ -286,7 +286,7 @@ final class BlockJsonShapeRule implements Rule
                     'block.json field "%s" has unknown type "%s" in %s',
                     $this->getFieldLabel($field, $i),
                     $type,
-                    $path
+                    $this->scanner->relativePath($path)
                 ))
                     ->identifier('blockstudio.blockJson.type')
                     ->file($path)
@@ -298,7 +298,7 @@ final class BlockJsonShapeRule implements Rule
                 $errors[] = RuleErrorBuilder::message(sprintf(
                     'block.json attributes[%d] missing "id": %s',
                     $i,
-                    $path
+                    $this->scanner->relativePath($path)
                 ))
                     ->identifier('blockstudio.blockJson.attributes')
                     ->file($path)
@@ -311,7 +311,7 @@ final class BlockJsonShapeRule implements Rule
                     $errors[] = RuleErrorBuilder::message(sprintf(
                         'block.json duplicate field id "%s" in %s',
                         $id,
-                        $path
+                        $this->scanner->relativePath($path)
                     ))
                         ->identifier('blockstudio.blockJson.duplicate')
                         ->file($path)
@@ -326,7 +326,7 @@ final class BlockJsonShapeRule implements Rule
                         'block.json field "%s" of type "%s" must have "options" or "populate" in %s',
                         $id,
                         $type,
-                        $path
+                        $this->scanner->relativePath($path)
                     ))
                         ->identifier('blockstudio.blockJson.options')
                         ->file($path)

@@ -40,6 +40,18 @@ final class ProjectScanner
         private readonly array $additionalScanRoots = []
     ) {}
 
+    public function relativePath(string $path): string
+    {
+        $normalized = str_replace('\\', '/', $path);
+        $root = rtrim(str_replace('\\', '/', $this->currentWorkingDirectory), '/');
+
+        if ($root !== '' && str_starts_with($normalized, $root . '/')) {
+            return substr($normalized, strlen($root) + 1);
+        }
+
+        return $normalized;
+    }
+
     /**
      * @return list<string>
      */
