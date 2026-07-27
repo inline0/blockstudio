@@ -1,6 +1,6 @@
 import { store, getContext, getElement } from '@wordpress/interactivity';
 
-const openParts = new WeakMap();
+let openEntry = null;
 
 function portalToBody( el ) {
 	if ( ! el || el.parentNode === document.body ) return null;
@@ -35,14 +35,12 @@ store( 'bsui/alert-dialog', {
 			if ( backdrop ) backdrop.removeAttribute( 'hidden' );
 			if ( popup ) popup.removeAttribute( 'hidden' );
 
-			if ( root ) {
-				openParts.set( root, {
-					popup,
-					backdrop,
-					backdropPlaceholder: portalToBody( backdrop ),
-					popupPlaceholder: portalToBody( popup ),
-				} );
-			}
+			openEntry = {
+				popup,
+				backdrop,
+				backdropPlaceholder: portalToBody( backdrop ),
+				popupPlaceholder: portalToBody( popup ),
+			};
 
 			requestAnimationFrame( () => {
 				if ( popup ) {
@@ -57,8 +55,10 @@ store( 'bsui/alert-dialog', {
 			ctx.open = false;
 			window.__bsui.unlockScroll();
 
+			// The close button sits inside the popup, which is portalled to the
+			// body while open, so the root is no longer an ancestor of it.
 			const root = ref.closest( '[data-bsui-alert-dialog-root]' );
-			const parts = root ? openParts.get( root ) : null;
+			const parts = openEntry;
 			const popup = parts?.popup || root?.querySelector( '[role="alertdialog"]' );
 			const backdrop = parts?.backdrop || root?.querySelector( '[aria-hidden]' );
 
@@ -68,7 +68,7 @@ store( 'bsui/alert-dialog', {
 			if ( parts ) {
 				unportal( popup, parts.popupPlaceholder );
 				unportal( backdrop, parts.backdropPlaceholder );
-				openParts.delete( root );
+				openEntry = null;
 			}
 
 			requestAnimationFrame( () => {

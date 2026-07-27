@@ -1,6 +1,6 @@
 import { store, getContext, getElement } from '@wordpress/interactivity';
 
-const openParts = new WeakMap();
+let openEntry = null;
 
 function portalToBody( el ) {
 	if ( ! el || el.parentNode === document.body ) return null;
@@ -18,8 +18,10 @@ function unportal( el, placeholder ) {
 
 function closeDrawer( ctx, ref ) {
 	if ( ! ctx.open ) return;
+	// Close controls sit inside the popup, which is portalled to the body
+	// while open, so the root is no longer an ancestor of them.
 	const root = ref?.closest( '[data-bsui-drawer-root]' );
-	const parts = root ? openParts.get( root ) : null;
+	const parts = openEntry;
 	const popup = parts?.popup || root?.querySelector( '[role="dialog"]' );
 	const backdrop = parts?.backdrop || root?.querySelector( '[aria-hidden]' );
 
@@ -37,7 +39,7 @@ function closeDrawer( ctx, ref ) {
 		if ( parts ) {
 			unportal( popup, parts.popupPlaceholder );
 			unportal( backdrop, parts.backdropPlaceholder );
-			openParts.delete( root );
+			openEntry = null;
 		}
 
 		const trigger = root?.querySelector( '[data-bsui-drawer-trigger]' );
@@ -60,14 +62,12 @@ store( 'bsui/drawer', {
 			if ( backdrop ) backdrop.removeAttribute( 'hidden' );
 			if ( popup ) popup.removeAttribute( 'hidden' );
 
-			if ( root ) {
-				openParts.set( root, {
-					popup,
-					backdrop,
-					backdropPlaceholder: portalToBody( backdrop ),
-					popupPlaceholder: portalToBody( popup ),
-				} );
-			}
+			openEntry = {
+				popup,
+				backdrop,
+				backdropPlaceholder: portalToBody( backdrop ),
+				popupPlaceholder: portalToBody( popup ),
+			};
 			if ( popup ) popup.classList.add( 'bs-ui-entering' );
 			if ( backdrop ) backdrop.classList.add( 'bs-ui-entering' );
 
