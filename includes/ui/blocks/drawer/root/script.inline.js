@@ -18,12 +18,10 @@ function unportal( el, placeholder ) {
 
 function closeDrawer( ctx, ref ) {
 	if ( ! ctx.open ) return;
-	// Close controls sit inside the popup, which is portalled to the body
-	// while open, so the root is no longer an ancestor of them.
 	const root = ref?.closest( '[data-bsui-drawer-root]' );
 	const parts = openEntry;
 	const popup = parts?.popup || root?.querySelector( '[role="dialog"]' );
-	const backdrop = parts?.backdrop || root?.querySelector( '[aria-hidden]' );
+	const backdrop = parts?.backdrop || root?.querySelector( '[data-bsui-drawer-backdrop]' );
 
 	if ( popup ) popup.classList.add( 'bs-ui-entering' );
 	if ( backdrop ) backdrop.classList.add( 'bs-ui-entering' );
@@ -57,10 +55,13 @@ store( 'bsui/drawer', {
 			const { ref } = getElement();
 			const root = ref.closest( '[data-bsui-drawer-root]' );
 			const popup = root?.querySelector( '[role="dialog"]' );
-			const backdrop = root?.querySelector( '[aria-hidden]' );
+			const backdrop = root?.querySelector( '[data-bsui-drawer-backdrop]' );
 
 			if ( backdrop ) backdrop.removeAttribute( 'hidden' );
-			if ( popup ) popup.removeAttribute( 'hidden' );
+			if ( popup ) {
+				popup.removeAttribute( 'hidden' );
+				popup.dataset.position = root?.dataset.position || 'left';
+			}
 
 			openEntry = {
 				popup,

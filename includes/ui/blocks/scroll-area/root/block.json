@@ -1,22 +1,38 @@
 {
-	"$schema": "https://blockstudio.dev/schema/block",
-	"name": "bsui/scroll-area",
-	"title": "Scroll Area",
-	"category": "design",
-	"icon": "arrow-down-alt2",
-	"blockstudio": {
-		"attributes": [
-			{
-				"id": "orientation",
-				"type": "select",
-				"label": "Orientation",
-				"options": [
-					{ "label": "Vertical", "value": "vertical" },
-					{ "label": "Horizontal", "value": "horizontal" },
-					{ "label": "Both", "value": "both" }
-				],
-				"default": "vertical"
-			}
-		]
-	}
+  "$schema": "https://blockstudio.dev/schema/block",
+  "name": "bsui/scroll-area",
+  "title": "Scroll Area",
+  "category": "design",
+  "icon": "arrow-down-alt2",
+  "blockstudio": {
+    "attributes": [
+      {
+        "id": "orientation",
+        "type": "select",
+        "label": "Orientation",
+        "options": [
+          {
+            "label": "Vertical",
+            "value": "vertical"
+          },
+          {
+            "label": "Horizontal",
+            "value": "horizontal"
+          },
+          {
+            "label": "Both",
+            "value": "both"
+          }
+        ],
+        "default": "vertical"
+      },
+      {
+        "id": "maxHeight",
+        "type": "text",
+        "label": "Max height",
+        "help": "A CSS length such as 15rem. Ignored for horizontal scrolling.",
+        "default": "15rem"
+      }
+    ]
+  }
 }

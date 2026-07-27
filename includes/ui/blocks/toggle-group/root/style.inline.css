@@ -43,7 +43,8 @@
 }
 
 [data-bsui-toggle-group-item][aria-pressed="true"] {
-	background: var(--bs-ui-muted);
+	background: var(--bs-ui-background);
+	box-shadow: var(--bs-ui-shadow-sm);
 	color: var(--bs-ui-foreground);
 }
 

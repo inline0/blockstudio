@@ -8,6 +8,10 @@
 	border-bottom: 1px solid var(--bs-ui-border);
 }
 
+[data-bsui-accordion-root] > div > div:last-child {
+	border-bottom: 0;
+}
+
 [data-bsui-accordion-trigger] {
 	all: unset;
 

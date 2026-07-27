@@ -183,9 +183,7 @@
 }
 
 body > [data-bsui-dialog-backdrop],
-[data-bsui-alert-dialog-root] [aria-hidden="true"],
 [data-bsui-alert-dialog-backdrop],
-[data-bsui-drawer-root] [aria-hidden="true"],
 [data-bsui-drawer-backdrop] {
 	position: fixed;
 	inset: 0;
@@ -197,9 +195,26 @@ body > [data-bsui-dialog-backdrop],
 }
 
 body > [data-bsui-dialog-backdrop].bs-ui-entering,
-[data-bsui-drawer-root] [aria-hidden="true"].bs-ui-entering,
 [data-bsui-drawer-backdrop].bs-ui-entering {
 	opacity: 0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+	[data-bsui-focus],
+	[class*="bs-ui-"],
+	[data-bsui-drawer-popup],
+	[data-bsui-dialog-popup],
+	[data-bsui-alert-dialog-popup],
+	[data-bsui-drawer-backdrop],
+	[data-bsui-dialog-backdrop],
+	[data-bsui-alert-dialog-backdrop],
+	[role="menu"],
+	[role="listbox"],
+	[role="tooltip"] {
+		animation-duration: 1ms !important;
+		transition-duration: 1ms !important;
+		scroll-behavior: auto !important;
+	}
 }
 
 [data-bsui-overlay-x] {

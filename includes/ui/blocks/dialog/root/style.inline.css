@@ -1,7 +1,4 @@
-[data-bsui-dialog-root] [role="dialog"],
-body > [role="dialog"],
-[data-bsui-alert-dialog-root] [role="alertdialog"],
-[data-bsui-alert-dialog-popup] {
+[data-bsui-dialog-popup] {
 	position: fixed;
 	z-index: 51;
 	top: calc(50% + 1.25rem * var(--bs-ui-nested-dialogs, 0));
@@ -22,39 +19,19 @@ body > [role="dialog"],
 	transition: opacity 150ms cubic-bezier(0.45, 1.005, 0, 1.005), transform 150ms cubic-bezier(0.45, 1.005, 0, 1.005);
 }
 
-[data-bsui-alert-dialog-root] [role="alertdialog"]:not([hidden]),
-[data-bsui-alert-dialog-popup]:not([hidden]) {
-	animation: bs-ui-dialog-in 150ms cubic-bezier(0.45, 1.005, 0, 1.005);
-}
-
 [data-nested-dialog-open]::after {
 	content: "";
 	position: absolute;
 	inset: 0;
 	border-radius: inherit;
-	background: oklch(0 0 0 / 0.05);
+	background: color-mix(in oklab, var(--bs-ui-foreground) 8%, transparent);
 	pointer-events: none;
 	z-index: 1;
 }
 
-body > [role="dialog"].bs-ui-entering {
+[data-bsui-dialog-popup].bs-ui-entering {
 	opacity: 0;
 	transform: translate(-50%, -50%) scale(0.9);
-}
-
-@keyframes bs-ui-dialog-in {
-	from { opacity: 0; transform: translate(-50%, -50%) scale(0.9); }
-	to { opacity: 1; transform: translate(-50%, -50%) scale(1); }
-}
-
-[data-bsui-alert-dialog-root] [aria-hidden="true"]:not([hidden]),
-[data-bsui-alert-dialog-backdrop]:not([hidden]) {
-	animation: bs-ui-fade-in 150ms cubic-bezier(0.45, 1.005, 0, 1.005);
-}
-
-@keyframes bs-ui-fade-in {
-	from { opacity: 0; }
-	to { opacity: 1; }
 }
 
 [data-bsui-dialog-header] > div {
@@ -76,8 +53,10 @@ body > [role="dialog"].bs-ui-entering {
 	margin: 0;
 }
 
-[data-bsui-dialog-content] > div {
-	padding-top: 1rem;
+[data-bsui-dialog-popup] > div {
+	display: flex;
+	flex-direction: column;
+	gap: 1rem;
 }
 
 [data-bsui-dialog-footer] > div {

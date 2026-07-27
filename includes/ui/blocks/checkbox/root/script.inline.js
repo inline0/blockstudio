@@ -10,7 +10,7 @@ store( 'bsui/checkbox', {
 		get formValue() {
 			const ctx = getContext();
 			if ( ctx.indeterminate ) return '';
-			return ctx.checked ? 'on' : '';
+			return ctx.checked ? ( ctx.value || 'on' ) : '';
 		},
 	},
 	actions: {

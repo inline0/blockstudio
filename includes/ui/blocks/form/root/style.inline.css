@@ -26,7 +26,7 @@ form[data-bsui-form-root] > div:not([hidden]) > div {
 
 .bs-ui-form-success {
 	font-size: var(--bs-ui-font-size);
-	color: var(--bs-ui-success, var(--bs-ui-foreground));
+	color: var(--bs-ui-success-foreground);
 }
 
 form.bs-ui-submitting [data-bsui-button][type="submit"],

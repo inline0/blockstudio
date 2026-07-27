@@ -30,8 +30,8 @@ store( 'bsui/alert-dialog', {
 			window.__bsui.lockScroll();
 
 			const root = ref.closest( '[data-bsui-alert-dialog-root]' );
-			const popup = root?.querySelector( '[role="alertdialog"]' );
-			const backdrop = root?.querySelector( '[aria-hidden]' );
+			const popup = root?.querySelector( '[data-bsui-alert-dialog-popup]' );
+			const backdrop = root?.querySelector( '[data-bsui-alert-dialog-backdrop]' );
 			if ( backdrop ) backdrop.removeAttribute( 'hidden' );
 			if ( popup ) popup.removeAttribute( 'hidden' );
 
@@ -42,7 +42,13 @@ store( 'bsui/alert-dialog', {
 				popupPlaceholder: portalToBody( popup ),
 			};
 
+			if ( popup ) popup.classList.add( 'bs-ui-entering' );
+			if ( backdrop ) backdrop.classList.add( 'bs-ui-entering' );
+			if ( popup ) void popup.offsetHeight;
+
 			requestAnimationFrame( () => {
+				if ( popup ) popup.classList.remove( 'bs-ui-entering' );
+				if ( backdrop ) backdrop.classList.remove( 'bs-ui-entering' );
 				if ( popup ) {
 					const focusable = popup.querySelector( window.__bsui.FOCUSABLE );
 					( focusable || popup ).focus();
@@ -52,29 +58,37 @@ store( 'bsui/alert-dialog', {
 		close() {
 			const ctx = getContext();
 			const { ref } = getElement();
+			if ( ! ctx.open ) return;
 			ctx.open = false;
-			window.__bsui.unlockScroll();
 
-			// The close button sits inside the popup, which is portalled to the
-			// body while open, so the root is no longer an ancestor of it.
 			const root = ref.closest( '[data-bsui-alert-dialog-root]' );
 			const parts = openEntry;
-			const popup = parts?.popup || root?.querySelector( '[role="alertdialog"]' );
-			const backdrop = parts?.backdrop || root?.querySelector( '[aria-hidden]' );
+			const popup = parts?.popup || root?.querySelector( '[data-bsui-alert-dialog-popup]' );
+			const backdrop = parts?.backdrop || root?.querySelector( '[data-bsui-alert-dialog-backdrop]' );
 
-			if ( popup ) popup.setAttribute( 'hidden', '' );
-			if ( backdrop ) backdrop.setAttribute( 'hidden', '' );
+			if ( popup ) popup.classList.add( 'bs-ui-entering' );
+			if ( backdrop ) backdrop.classList.add( 'bs-ui-entering' );
 
-			if ( parts ) {
-				unportal( popup, parts.popupPlaceholder );
-				unportal( backdrop, parts.backdropPlaceholder );
-				openEntry = null;
-			}
+			setTimeout( () => {
+				window.__bsui.unlockScroll();
+				if ( popup ) {
+					popup.setAttribute( 'hidden', '' );
+					popup.classList.remove( 'bs-ui-entering' );
+				}
+				if ( backdrop ) {
+					backdrop.setAttribute( 'hidden', '' );
+					backdrop.classList.remove( 'bs-ui-entering' );
+				}
 
-			requestAnimationFrame( () => {
+				if ( parts ) {
+					unportal( popup, parts.popupPlaceholder );
+					unportal( backdrop, parts.backdropPlaceholder );
+					openEntry = null;
+				}
+
 				const trigger = root?.querySelector( '[data-bsui-alert-dialog-trigger]' );
-				window.__bsui.getAnchor( trigger )?.focus();
-			} );
+				requestAnimationFrame( () => window.__bsui.getAnchor( trigger )?.focus() );
+			}, 150 );
 		},
 		handleFocusTrap( event ) {
 			if ( event.key !== 'Tab' ) return;

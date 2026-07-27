@@ -12,6 +12,12 @@
 	flex-direction: column;
 }
 
+[data-bsui-card-header] > div {
+	display: flex;
+	flex-direction: column;
+	gap: 0.375rem;
+}
+
 [data-bsui-card-header] {
 	display: flex;
 	flex-direction: column;

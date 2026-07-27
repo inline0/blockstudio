@@ -1,6 +1,6 @@
 <?php
 $value         = $a['value'] ?? '';
-$default_value = $context['bsui/tabs']['defaultValue'] ?? '';
+$default_value = $context['bsui/tabs']['activeValue'] ?? '';
 $is_active     = $value !== '' && $value === $default_value;
 $tab_id        = 'ui-tab-' . sanitize_title( $value );
 $panel_id      = 'ui-tabpanel-' . sanitize_title( $value );

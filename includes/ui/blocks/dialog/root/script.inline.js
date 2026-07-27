@@ -106,11 +106,11 @@ function openDialog( root, ctx ) {
 	const popupPlaceholder = portalToBody( popup );
 	popup.removeAttribute( 'hidden' );
 
-	// Trigger entry animation via class
 	popup.classList.add( 'bs-ui-entering' );
 	if ( backdrop && ! isNested ) {
 		backdrop.classList.add( 'bs-ui-entering' );
 	}
+	void popup.offsetHeight;
 	requestAnimationFrame( () => {
 		popup.classList.remove( 'bs-ui-entering' );
 		if ( backdrop && ! isNested ) {
