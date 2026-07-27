@@ -1,4 +1,5 @@
 <div
+	data-bsui-alert-dialog-popup
 	data-bsui-focus
 	data-wp-interactive="bsui/alert-dialog"
 	data-wp-on--keydown="actions.handleFocusTrap"

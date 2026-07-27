@@ -184,7 +184,9 @@
 
 body > [data-bsui-dialog-backdrop],
 [data-bsui-alert-dialog-root] [aria-hidden="true"],
-[data-bsui-drawer-root] [aria-hidden="true"] {
+[data-bsui-alert-dialog-backdrop],
+[data-bsui-drawer-root] [aria-hidden="true"],
+[data-bsui-drawer-backdrop] {
 	position: fixed;
 	inset: 0;
 	z-index: 50;
@@ -195,7 +197,8 @@ body > [data-bsui-dialog-backdrop],
 }
 
 body > [data-bsui-dialog-backdrop].bs-ui-entering,
-[data-bsui-drawer-root] [aria-hidden="true"].bs-ui-entering {
+[data-bsui-drawer-root] [aria-hidden="true"].bs-ui-entering,
+[data-bsui-drawer-backdrop].bs-ui-entering {
 	opacity: 0;
 }
 

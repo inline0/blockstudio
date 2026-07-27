@@ -1,4 +1,5 @@
-[data-bsui-drawer-root] [role="dialog"] {
+[data-bsui-drawer-root] [role="dialog"],
+[data-bsui-drawer-popup] {
 	position: fixed;
 	z-index: 51;
 	background: var(--bs-ui-background);
@@ -70,10 +71,12 @@
 	transform: translateY(100%);
 }
 
-[data-bsui-drawer-root] [role="dialog"][data-flush] {
+[data-bsui-drawer-root] [role="dialog"][data-flush],
+[data-bsui-drawer-popup][data-flush] {
 	padding: 0;
 }
 
-[data-bsui-drawer-root] [role="dialog"][data-flush] > div {
+[data-bsui-drawer-root] [role="dialog"][data-flush],
+[data-bsui-drawer-popup][data-flush] > div {
 	height: 100%;
 }
