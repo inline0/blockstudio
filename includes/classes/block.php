@@ -1195,6 +1195,210 @@ class Block {
 	}
 
 	/**
+	 * Put back the identity comment and assets a render filter dropped.
+	 *
+	 * A filter that replaces the output wholesale loses both, and without the
+	 * identity comment the block stops being addressable downstream.
+	 *
+	 * @param string $result         The filtered output.
+	 * @param string $blockstudio_id The block identity comment.
+	 * @param mixed  $assets         The rendered asset markup.
+	 * @param string $island_phase   The island render phase.
+	 *
+	 * @return string The output with both restored.
+	 */
+	private static function restore_block_markers(
+		string $result,
+		string $blockstudio_id,
+		$assets,
+		string $island_phase
+	): string {
+		if ( ! str_contains( $result, $blockstudio_id ) ) {
+			$result = $blockstudio_id . $result;
+		}
+
+		if (
+			'fragment' !== $island_phase &&
+			is_string( $assets ) &&
+			'' !== $assets &&
+			! str_contains( $result, $assets )
+		) {
+			$result .= $assets;
+		}
+
+		return $result;
+	}
+
+	/**
+	 * Collect the field attributes every extension adds to a block.
+	 *
+	 * @param string $name       The block name.
+	 * @param array  $extensions All registered extensions.
+	 *
+	 * @return array The attributes keyed by name.
+	 */
+	private static function extension_attributes( string $name, array $extensions ): array {
+		$extension_attributes = array();
+
+		foreach ( Extensions::get_matches( $name, $extensions ) as $match ) {
+			foreach ( $match->attributes as $key => $value ) {
+				if ( $value['field'] ?? false ) {
+					$extension_attributes[ $key ] = $value;
+				}
+			}
+		}
+
+		return $extension_attributes;
+	}
+
+	/**
+	 * Resolve every source file a block render reads.
+	 *
+	 * @param string $path       The resolved template path.
+	 * @param array  $block_data The block registry entry.
+	 *
+	 * @return array<int, string> The unique dependency paths.
+	 */
+	private static function render_dependencies( string $path, array $block_data ): array {
+		$dependencies = array( $path );
+
+		foreach ( $block_data['filesPaths'] ?? array() as $dependency_path ) {
+			if ( is_string( $dependency_path ) && '' !== $dependency_path ) {
+				$dependencies[] = $dependency_path;
+			}
+		}
+
+		foreach ( $block_data['assets'] ?? array() as $asset ) {
+			$dependency_path = is_array( $asset ) ? $asset['path'] ?? '' : '';
+
+			if ( is_string( $dependency_path ) && '' !== $dependency_path ) {
+				$dependencies[] = $dependency_path;
+			}
+		}
+
+		return array_values( array_unique( $dependencies ) );
+	}
+
+	/**
+	 * Compile the attributes of every block this one takes context from.
+	 *
+	 * A provider reached through `_BLOCKSTUDIO_CONTEXT` is compiled directly.
+	 * Anything else is only reachable through the render call stack, which is
+	 * why the fallback walks a backtrace looking for the provider's own block
+	 * instance.
+	 *
+	 * @param object $data       The block type.
+	 * @param array  $block      The block data (passed by reference).
+	 * @param array  $blocks     All registered blocks.
+	 * @param mixed  $editor     The editor template, or false.
+	 * @param bool   $is_preview Whether this is a preview render.
+	 *
+	 * @return array The compiled context, keyed by provider name.
+	 */
+	private static function compile_uses_context(
+		$data,
+		array &$block,
+		array $blocks,
+		$editor,
+		bool $is_preview
+	): array {
+		$compiled_context = array();
+
+		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- WordPress block API property.
+		foreach ( $data->usesContext ?? array() as $context_provider ) {
+			if ( ! isset( $blocks[ $context_provider ] ) ) {
+				continue;
+			}
+
+			if ( $block['_BLOCKSTUDIO_CONTEXT'][ $context_provider ] ?? false ) {
+				$trace_attributes = array(
+					'blockstudio' => array(
+						'attributes' =>
+							$block['_BLOCKSTUDIO_CONTEXT'][ $context_provider ]['attributes'],
+					),
+				);
+
+				self::transform(
+					$trace_attributes,
+					$block,
+					$context_provider,
+					$editor,
+					$is_preview,
+					$blocks[ $context_provider ]->attributes
+				);
+
+				$compiled_context[ $context_provider ] = $trace_attributes;
+
+				continue;
+			}
+
+			$stack_trace = debug_backtrace(); // phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_debug_backtrace
+
+			foreach ( $stack_trace as $trace ) {
+				$trace_name = $trace['object']->block_type->name ?? '';
+
+				if ( $trace_name !== $context_provider ) {
+					continue;
+				}
+
+				$trace_attributes = $trace['object']->attributes;
+
+				self::transform(
+					$trace_attributes,
+					$block,
+					$context_provider,
+					$editor,
+					$is_preview,
+					$blocks[ $context_provider ]->attributes
+				);
+
+				$compiled_context[ $context_provider ] = $trace_attributes;
+			}
+		}
+
+		return $compiled_context;
+	}
+
+	/**
+	 * Make an interactive block usable inside the editor canvas.
+	 *
+	 * The editor hydrates from markup alone, so server state has to travel
+	 * with it. Only array and object values are embedded: scalars are usually
+	 * computed by JS getters and injecting them would overwrite those.
+	 *
+	 * @param string $rendered_block The rendered block markup.
+	 * @param array  $block_data     The block registry entry.
+	 *
+	 * @return string The markup with server state and inline scripts attached.
+	 */
+	private static function prepare_editor_interactivity(
+		string $rendered_block,
+		array $block_data
+	): string {
+		$rendered_block = wp_interactivity_process_directives( $rendered_block );
+
+		if ( preg_match( '/data-wp-interactive="([^"]+)"/', $rendered_block, $m ) ) {
+			$ns    = $m[1];
+			$state = array_filter(
+				wp_interactivity_state( $ns ),
+				fn( $v ) => is_array( $v )
+			);
+
+			if ( ! empty( $state ) ) {
+				$encoded        = esc_attr( wp_json_encode( $state ) );
+				$rendered_block = preg_replace(
+					'/data-wp-interactive="' . preg_quote( $ns, '/' ) . '"/',
+					'data-wp-interactive="' . $ns . '" data-wp-server-state="' . $encoded . '"',
+					$rendered_block,
+					1
+				);
+			}
+		}
+
+		return $rendered_block . Assets::get_preview_assets( $block_data, false );
+	}
+
+	/**
 	 * Resolve a code value and collect the assets it contributes.
 	 *
 	 * `%selector%` resolves to the block's own attribute selector, so a code
@@ -1750,17 +1954,7 @@ class Block {
 		$overrides            = Build::overrides();
 		$blade                = Build::blade();
 		$extensions           = Build::extensions();
-		$extension_attributes = array();
-		$matches              = Extensions::get_matches( $name, $extensions );
-		if ( count( $matches ) >= 1 ) {
-			foreach ( $matches as $match ) {
-				foreach ( $match->attributes as $key => $value ) {
-					if ( $value['field'] ?? false ) {
-						$extension_attributes[ $key ] = $value;
-					}
-				}
-			}
-		}
+		$extension_attributes = self::extension_attributes( $name, $extensions );
 
 		$blockstudio_id    = self::comment( $name );
 		$block_data        = $block_data_map[ $name ];
@@ -1787,19 +1981,7 @@ class Block {
 			}
 		}
 
-		$dependencies = array( $path );
-		foreach ( $block_data['filesPaths'] ?? array() as $dependency_path ) {
-			if ( is_string( $dependency_path ) && '' !== $dependency_path ) {
-				$dependencies[] = $dependency_path;
-			}
-		}
-		foreach ( $block_data['assets'] ?? array() as $asset ) {
-			$dependency_path = is_array( $asset ) ? $asset['path'] ?? '' : '';
-			if ( is_string( $dependency_path ) && '' !== $dependency_path ) {
-				$dependencies[] = $dependency_path;
-			}
-		}
-		$dependencies = array_values( array_unique( $dependencies ) );
+		$dependencies = self::render_dependencies( $path, $block_data );
 
 		/**
 		 * Filters the resolved dependencies for a rendered block.
@@ -1831,49 +2013,13 @@ class Block {
 		$block['isIslandPlaceholder'] = 'placeholder' === $island_phase;
 		$block['isIslandFragment']    = 'fragment' === $island_phase;
 
-		$compiled_context = array();
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- WordPress block API property.
-		foreach ( $data->usesContext ?? array() as $context_provider ) {
-			if ( ! isset( $blocks[ $context_provider ] ) ) {
-				continue;
-			}
-
-			if ( $block['_BLOCKSTUDIO_CONTEXT'][ $context_provider ] ?? false ) {
-				$trace_attributes                      = array(
-					'blockstudio' => array(
-						'attributes' =>
-							$block['_BLOCKSTUDIO_CONTEXT'][ $context_provider ]['attributes'],
-					),
-				);
-				$attribute_data                        = self::transform(
-					$trace_attributes,
-					$block,
-					$context_provider,
-					$editor,
-					$is_preview,
-					$blocks[ $context_provider ]->attributes
-				);
-				$compiled_context[ $context_provider ] = $trace_attributes;
-			} else {
-				$stack_trace = debug_backtrace(); // phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_debug_backtrace
-
-				foreach ( $stack_trace as $trace ) {
-					$trace_name = $trace['object']->block_type->name ?? '';
-					if ( $trace_name === $context_provider ) {
-						$trace_attributes                      = $trace['object']->attributes;
-						$attribute_data                        = self::transform(
-							$trace_attributes,
-							$block,
-							$context_provider,
-							$editor,
-							$is_preview,
-							$blocks[ $context_provider ]->attributes
-						);
-						$compiled_context[ $context_provider ] = $trace_attributes;
-					}
-				}
-			}
-		}
+		$compiled_context = self::compile_uses_context(
+			$data,
+			$block,
+			$blocks,
+			$editor,
+			$is_preview
+		);
 
 		$block['context'] =
 			$block['_BLOCKSTUDIO_CONTEXT'] ?? ( $wp_block->context ?? array() );
@@ -2077,36 +2223,7 @@ class Block {
 		}
 
 		if ( $is_editor && str_contains( $rendered_block, 'data-wp-interactive' ) ) {
-			$rendered_block = wp_interactivity_process_directives( $rendered_block );
-
-			// Embed server state as a data attribute so the editor
-			// MutationObserver can inject it into the store before hydrating.
-			if ( preg_match( '/data-wp-interactive="([^"]+)"/', $rendered_block, $m ) ) {
-				$ns    = $m[1];
-				$state = wp_interactivity_state( $ns );
-				// Only include array/object values. Scalar values (strings,
-				// booleans) are likely computed by JS getters and would
-				// overwrite them if injected via store().
-				$state = array_filter(
-					$state,
-					function ( $v ) {
-						return is_array( $v );
-					}
-				);
-				if ( ! empty( $state ) ) {
-					$encoded        = esc_attr( wp_json_encode( $state ) );
-					$rendered_block = preg_replace(
-						'/data-wp-interactive="' . preg_quote( $ns, '/' ) . '"/',
-						'data-wp-interactive="' . $ns . '" data-wp-server-state="' . $encoded . '"',
-						$rendered_block,
-						1
-					);
-				}
-			}
-
-			// Append block inline scripts (store actions) so interactive
-			// blocks are fully functional in the editor.
-			$rendered_block .= Assets::get_preview_assets( $block_data, false );
+			$rendered_block = self::prepare_editor_interactivity( $rendered_block, $block_data );
 		}
 
 		if ( $perf_start ) {
@@ -2148,18 +2265,12 @@ class Block {
 			$result !== $rendered_block &&
 			'' !== trim( $result )
 		) {
-			if ( ! str_contains( $result, $blockstudio_id ) ) {
-				$result = $blockstudio_id . $result;
-			}
-
-			if (
-				'fragment' !== $island_phase &&
-				is_string( $assets ) &&
-				'' !== $assets &&
-				! str_contains( $result, $assets )
-			) {
-				$result .= $assets;
-			}
+			$result = self::restore_block_markers(
+				$result,
+				$blockstudio_id,
+				$assets,
+				$island_phase
+			);
 		}
 
 		if (
