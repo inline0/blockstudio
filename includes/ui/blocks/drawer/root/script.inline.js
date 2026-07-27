@@ -1,10 +1,27 @@
 import { store, getContext, getElement } from '@wordpress/interactivity';
 
+const openParts = new WeakMap();
+
+function portalToBody( el ) {
+	if ( ! el || el.parentNode === document.body ) return null;
+	const placeholder = document.createComment( 'bs-ui-drawer' );
+	el.parentNode.insertBefore( placeholder, el );
+	document.body.appendChild( el );
+	return placeholder;
+}
+
+function unportal( el, placeholder ) {
+	if ( ! el || ! placeholder?.parentNode ) return;
+	placeholder.parentNode.insertBefore( el, placeholder );
+	placeholder.remove();
+}
+
 function closeDrawer( ctx, ref ) {
 	if ( ! ctx.open ) return;
 	const root = ref?.closest( '[data-bsui-drawer-root]' );
-	const popup = root?.querySelector( '[role="dialog"]' );
-	const backdrop = root?.querySelector( '[aria-hidden]' );
+	const parts = root ? openParts.get( root ) : null;
+	const popup = parts?.popup || root?.querySelector( '[role="dialog"]' );
+	const backdrop = parts?.backdrop || root?.querySelector( '[aria-hidden]' );
 
 	if ( popup ) popup.classList.add( 'bs-ui-entering' );
 	if ( backdrop ) backdrop.classList.add( 'bs-ui-entering' );
@@ -16,6 +33,13 @@ function closeDrawer( ctx, ref ) {
 		if ( backdrop ) backdrop.classList.remove( 'bs-ui-entering' );
 		if ( popup ) popup.setAttribute( 'hidden', '' );
 		if ( backdrop ) backdrop.setAttribute( 'hidden', '' );
+
+		if ( parts ) {
+			unportal( popup, parts.popupPlaceholder );
+			unportal( backdrop, parts.backdropPlaceholder );
+			openParts.delete( root );
+		}
+
 		const trigger = root?.querySelector( '[data-bsui-drawer-trigger]' );
 		requestAnimationFrame( () => window.__bsui.getAnchor( trigger )?.focus() );
 	}, 450 );
@@ -33,8 +57,17 @@ store( 'bsui/drawer', {
 			const popup = root?.querySelector( '[role="dialog"]' );
 			const backdrop = root?.querySelector( '[aria-hidden]' );
 
-			if ( popup ) popup.removeAttribute( 'hidden' );
 			if ( backdrop ) backdrop.removeAttribute( 'hidden' );
+			if ( popup ) popup.removeAttribute( 'hidden' );
+
+			if ( root ) {
+				openParts.set( root, {
+					popup,
+					backdrop,
+					backdropPlaceholder: portalToBody( backdrop ),
+					popupPlaceholder: portalToBody( popup ),
+				} );
+			}
 			if ( popup ) popup.classList.add( 'bs-ui-entering' );
 			if ( backdrop ) backdrop.classList.add( 'bs-ui-entering' );
 

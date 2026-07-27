@@ -1,5 +1,21 @@
 import { store, getContext, getElement } from '@wordpress/interactivity';
 
+const openParts = new WeakMap();
+
+function portalToBody( el ) {
+	if ( ! el || el.parentNode === document.body ) return null;
+	const placeholder = document.createComment( 'bs-ui-alert-dialog' );
+	el.parentNode.insertBefore( placeholder, el );
+	document.body.appendChild( el );
+	return placeholder;
+}
+
+function unportal( el, placeholder ) {
+	if ( ! el || ! placeholder?.parentNode ) return;
+	placeholder.parentNode.insertBefore( el, placeholder );
+	placeholder.remove();
+}
+
 store( 'bsui/alert-dialog', {
 	state: {
 		get ariaExpanded() {
@@ -16,8 +32,17 @@ store( 'bsui/alert-dialog', {
 			const root = ref.closest( '[data-bsui-alert-dialog-root]' );
 			const popup = root?.querySelector( '[role="alertdialog"]' );
 			const backdrop = root?.querySelector( '[aria-hidden]' );
-			if ( popup ) popup.removeAttribute( 'hidden' );
 			if ( backdrop ) backdrop.removeAttribute( 'hidden' );
+			if ( popup ) popup.removeAttribute( 'hidden' );
+
+			if ( root ) {
+				openParts.set( root, {
+					popup,
+					backdrop,
+					backdropPlaceholder: portalToBody( backdrop ),
+					popupPlaceholder: portalToBody( popup ),
+				} );
+			}
 
 			requestAnimationFrame( () => {
 				if ( popup ) {
@@ -33,10 +58,18 @@ store( 'bsui/alert-dialog', {
 			window.__bsui.unlockScroll();
 
 			const root = ref.closest( '[data-bsui-alert-dialog-root]' );
-			const popup = root?.querySelector( '[role="alertdialog"]' );
-			const backdrop = root?.querySelector( '[aria-hidden]' );
+			const parts = root ? openParts.get( root ) : null;
+			const popup = parts?.popup || root?.querySelector( '[role="alertdialog"]' );
+			const backdrop = parts?.backdrop || root?.querySelector( '[aria-hidden]' );
+
 			if ( popup ) popup.setAttribute( 'hidden', '' );
 			if ( backdrop ) backdrop.setAttribute( 'hidden', '' );
+
+			if ( parts ) {
+				unportal( popup, parts.popupPlaceholder );
+				unportal( backdrop, parts.backdropPlaceholder );
+				openParts.delete( root );
+			}
 
 			requestAnimationFrame( () => {
 				const trigger = root?.querySelector( '[data-bsui-alert-dialog-trigger]' );
