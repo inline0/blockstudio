@@ -371,6 +371,45 @@ final class Runtime_Cache {
 	}
 
 	/**
+	 * Delete one scope in every namespace this site has ever written.
+	 *
+	 * purge() only reaches the namespace the current request resolves to, so a
+	 * namespace that stopped being current keeps whatever it holds. That matters
+	 * for anything served before WordPress loads: the identity rolls the moment
+	 * a stylesheet changes, and collect_stale_namespaces() will not touch the
+	 * abandoned tree until it is a day old, so an explicit purge appears to
+	 * succeed while the previous build carries on being served.
+	 *
+	 * @param string $scope Cache scope.
+	 *
+	 * @return int Number of files removed.
+	 */
+	public static function purge_every_namespace( string $scope ): int {
+		$scope = sanitize_key( $scope );
+
+		if ( '' === $scope ) {
+			return 0;
+		}
+
+		$site_directory = self::root() . '/sites/' . self::site_key();
+		$namespaces     = glob( $site_directory . '/*', GLOB_ONLYDIR );
+		$removed        = 0;
+
+		foreach ( is_array( $namespaces ) ? $namespaces : array() as $namespace ) {
+			$removed += self::delete_tree( $namespace . '/' . $scope );
+
+			$remaining = glob( $namespace . '/*' );
+			if ( is_array( $remaining ) && array() === $remaining ) {
+				self::delete_tree( $namespace );
+			}
+		}
+
+		self::record( $scope, 'purge' );
+
+		return $removed;
+	}
+
+	/**
 	 * Return request-local cache outcomes.
 	 *
 	 * @return array<string, array<string, int>> Diagnostics by scope and reason.

@@ -495,9 +495,9 @@ final class Static_Prerender_Runtime {
 	 * @return int Number of files removed.
 	 */
 	public static function purge(): int {
-		$removed  = Runtime_Cache::purge( 'static-prerender' );
-		$removed += Runtime_Cache::purge( 'static-prerender-state' );
-		$removed += Runtime_Cache::purge( 'static-prerender-queue' );
+		$removed  = Runtime_Cache::purge_every_namespace( 'static-prerender' );
+		$removed += Runtime_Cache::purge_every_namespace( 'static-prerender-state' );
+		$removed += Runtime_Cache::purge_every_namespace( 'static-prerender-queue' );
 
 		self::reset_request_cache();
 
