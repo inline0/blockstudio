@@ -314,6 +314,14 @@ Tailwind compilation hooks into Blockstudio's output buffer system. The buffer c
 
 The compilation filter runs at priority `999999` on the `blockstudio/buffer/output` hook, ensuring it processes the final HTML after all other modifications. The buffer is started on the `template_redirect` action, which means it only runs on frontend requests, not in the admin, REST API, or AJAX contexts.
 
+Buffering the whole document is what makes this possible, so it is on by default. A site that uses neither Tailwind nor block assets can turn it off:
+
+```php
+add_filter( 'blockstudio/buffer/enabled', '__return_false' );
+```
+
+Returning `false` skips the buffer entirely, which also disables Tailwind compilation and the hoisting of block styles and scripts into the head and footer.
+
 ## Architecture
 
 ```

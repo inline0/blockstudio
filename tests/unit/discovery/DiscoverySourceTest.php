@@ -335,6 +335,40 @@ class DiscoverySourceTest extends TestCase {
 	}
 
 	/**
+	 * A writable source keeps generating beside the block by default.
+	 *
+	 * @return void
+	 */
+	public function test_writable_source_generates_beside_the_block_by_default(): void {
+		$root = $this->temporary_directory( 'output-default' );
+		$this->write( $root . '/style.css', '.test {}' );
+
+		$this->assertSame( $root . '/_dist', Assets::get_dist_folder( $root . '/style.css' ) );
+	}
+
+	/**
+	 * The assets/output setting moves generated output out of the source tree.
+	 *
+	 * @return void
+	 */
+	public function test_cache_output_setting_keeps_the_source_tree_clean(): void {
+		$root = $this->temporary_directory( 'output-cache' );
+		$this->write( $root . '/style.css', '.test {}' );
+
+		$filter = static fn(): string => 'cache';
+		add_filter( 'blockstudio/settings/assets/output', $filter );
+
+		try {
+			$output = Assets::get_dist_folder( $root . '/style.css' );
+
+			$this->assertStringStartsWith( Runtime_Cache::directory( 'generated' ) . '/', $output );
+			$this->assertNotSame( $root . '/_dist', $output );
+		} finally {
+			remove_filter( 'blockstudio/settings/assets/output', $filter );
+		}
+	}
+
+	/**
 	 * Create a temporary directory.
 	 *
 	 * @param string $name Directory suffix.

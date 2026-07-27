@@ -157,7 +157,9 @@ final class Runtime_Context {
 		$entry     = Discovery_Sources::entry_for_physical_path( $source_path );
 		$read_only = $entry && Discovery_Sources::entry_is_read_only( $entry );
 
-		if ( $read_only ) {
+		$to_cache = $read_only || 'cache' === Settings::get( 'assets/output' );
+
+		if ( $to_cache ) {
 			$source_dir     = is_dir( $source_path ) ? $source_path : dirname( $source_path );
 			$suggested_path = Runtime_Cache::directory( 'generated' )
 				. '/'

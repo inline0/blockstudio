@@ -25,6 +25,7 @@ namespace Blockstudio;
  * - assets/minify/js: Enable JavaScript minification
  * - assets/process/scss: Enable inline SCSS compilation
  * - assets/process/scssFiles: Enable .scss file compilation
+ * - assets/output: Where compiled _dist output is written (source|cache)
  * - editor/formatOnSave: Auto-format code in editor
  * - tailwind/enabled: Enable Tailwind CSS integration
  * - ui/enabled: Enable bundled UI components
@@ -95,6 +96,7 @@ class Settings {
 				'scss'      => false,
 				'scssFiles' => true,
 			),
+			'output'  => 'source',
 		),
 		'cache'         => array(
 			'enabled' => true,

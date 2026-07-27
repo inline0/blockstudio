@@ -1481,4 +1481,17 @@ class PagesTest extends TestCase {
 
 		rmdir( $dir );
 	}
+
+	public function test_markdown_404_is_scoped_to_page_collections(): void {
+		$method = new ReflectionMethod( Pages::class, 'path_is_in_collection' );
+
+		$this->assertTrue( $method->invoke( null, 'docs' ) );
+		$this->assertTrue( $method->invoke( null, 'docs/getting-started' ) );
+		$this->assertTrue( $method->invoke( null, '/docs/getting-started/' ) );
+
+		$this->assertFalse( $method->invoke( null, '' ) );
+		$this->assertFalse( $method->invoke( null, 'readme' ) );
+		$this->assertFalse( $method->invoke( null, 'vendor/package/readme' ) );
+		$this->assertFalse( $method->invoke( null, 'docsy/other' ) );
+	}
 }

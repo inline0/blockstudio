@@ -177,6 +177,8 @@ Disable raw Markdown responses with the `blockstudio/pages/serve_markdown` filte
 add_filter( 'blockstudio/pages/serve_markdown', '__return_false' );
 ```
 
+A `.md` URL that does not resolve to a Markdown-backed page returns a 404 only when the path falls inside a page collection. Outside every collection, Blockstudio leaves the request alone for WordPress and other plugins to handle.
+
 ## Page Collections
 
 A collection is a folder with a `pages.json` manifest. It groups many page sources under one collection slug, applies defaults, supports nested paths, and can register a dedicated post type automatically.

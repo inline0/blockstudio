@@ -216,6 +216,13 @@ if ($runtime->enabled('measurement/queryMonitor')) {
 | `minify.css`      | boolean | `false` | Minify CSS output                                           |
 | `minify.js`       | boolean | `false` | Minify JS output                                            |
 | `process.scss`    | boolean | `false` | Process SCSS files                                          |
+| `output`          | string  | `source` | Where compiled assets are written: `source` or `cache`     |
+
+`output` defaults to `source`, which writes a `_dist` directory beside each
+block. Set it to `cache` to write compiled assets under the Blockstudio cache
+directory instead, so the block source tree stays clean and deployable from an
+immutable checkout. Sources Blockstudio cannot write to already redirect to the
+cache regardless of this setting.
 
 With `reset.enabled` active, Blockstudio also copies sanitized frontend
 `body_class` values into the editor canvas. Use

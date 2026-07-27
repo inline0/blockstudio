@@ -1626,29 +1626,32 @@ class Pages {
 			return;
 		}
 
-		$post = null;
+		$post     = null;
+		$relative = '';
 		if ( $is_md_ext ) {
-			$relative = preg_replace( '/\.md$/', '', self::current_request_relative_path() );
-			$post     = self::find_collection_post_by_relative_path( (string) $relative, true );
+			$relative = (string) preg_replace( '/\.md$/', '', self::current_request_relative_path() );
+			$post     = self::find_collection_post_by_relative_path( $relative, true );
 
 			if ( ! $post ) {
-				$post = get_page_by_path( (string) $relative, OBJECT, get_post_types() );
+				$post = get_page_by_path( $relative, OBJECT, get_post_types() );
 			}
 		} else {
 			$queried = (int) get_queried_object_id();
 			$post    = $queried > 0 ? get_post( $queried ) : null;
 		}
 
+		$claims_404 = $is_md_ext && self::path_is_in_collection( $relative );
+
 		$file = $post ? (string) get_post_meta( $post->ID, '_blockstudio_page_content_path', true ) : '';
 		if ( ! $post || ! self::can_serve_markdown_post( $post ) ) {
-			if ( $is_md_ext ) {
+			if ( $claims_404 ) {
 				self::serve_markdown_not_found();
 			}
 			return;
 		}
 
 		if ( '' === $file || ! is_file( $file ) ) {
-			if ( $is_md_ext ) {
+			if ( $claims_404 ) {
 				self::serve_markdown_not_found();
 			}
 			return;
@@ -1690,6 +1693,40 @@ class Pages {
 		}
 
 		return is_post_publicly_viewable( $post ) || current_user_can( 'read_post', $post->ID );
+	}
+
+	/**
+	 * Whether a relative request path falls inside a known page collection.
+	 *
+	 * Without this the unresolved-markdown 404 below claimed every `.md` URL
+	 * on the site, including on installs with no markdown pages at all, and
+	 * exited before anything else could respond. A `.md` path outside every
+	 * collection belongs to the rest of the site.
+	 *
+	 * @param string $relative_path Relative request path with the extension removed.
+	 *
+	 * @return bool Whether a collection owns the path.
+	 */
+	private static function path_is_in_collection( string $relative_path ): bool {
+		$relative_path = trim( $relative_path, '/' );
+
+		if ( '' === $relative_path ) {
+			return false;
+		}
+
+		foreach ( self::get_collection_manifests() as $collection ) {
+			$slug = trim( (string) ( $collection['slug'] ?? '' ), '/' );
+
+			if ( '' === $slug ) {
+				continue;
+			}
+
+			if ( $relative_path === $slug || str_starts_with( $relative_path, $slug . '/' ) ) {
+				return true;
+			}
+		}
+
+		return false;
 	}
 
 	/**

@@ -268,6 +268,23 @@ class Assets {
 			return;
 		}
 
+		/**
+		 * Filters whether Blockstudio buffers the frontend response.
+		 *
+		 * Buffering exists so block style and script tags rendered inside the
+		 * body can be hoisted into the head and footer, which means holding
+		 * and scanning the whole document on every frontend request. A site
+		 * that renders no Blockstudio block assets can return false and skip
+		 * both.
+		 *
+		 * @since 7.6.0
+		 *
+		 * @param bool $enabled Whether to buffer the response.
+		 */
+		if ( ! apply_filters( 'blockstudio/buffer/enabled', true ) ) {
+			return;
+		}
+
 		ob_start( array( $this, 'return_buffer' ) );
 	}
 

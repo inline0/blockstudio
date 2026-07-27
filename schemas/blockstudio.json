@@ -117,6 +117,17 @@
               "example": true
             }
           }
+        },
+        "output": {
+          "type": "string",
+          "default": "source",
+          "enum": [
+            "source",
+            "cache"
+          ],
+          "description": "Where compiled block assets are written. \"source\" writes a _dist directory beside the block, \"cache\" writes them under the Blockstudio cache directory so the source tree stays clean.",
+          "descriptionFilter": "This filter allows you to control where compiled block assets are written.",
+          "example": "cache"
         }
       },
       "additionalProperties": false

@@ -880,4 +880,36 @@ class AssetsTest extends TestCase {
 
 		$this->assertNotSame( $before, $after );
 	}
+
+	public function test_buffering_is_on_by_default_on_the_frontend(): void {
+		$assets = new Assets();
+		$depth  = ob_get_level();
+
+		$assets->maybe_buffer_output();
+
+		$started = ob_get_level() > $depth;
+
+		if ( $started ) {
+			ob_end_clean();
+		}
+
+		$this->assertTrue( $started );
+	}
+
+	public function test_buffer_enabled_filter_skips_whole_document_buffering(): void {
+		$this->add_filter( 'blockstudio/buffer/enabled', static fn(): bool => false );
+
+		$assets = new Assets();
+		$depth  = ob_get_level();
+
+		$assets->maybe_buffer_output();
+
+		$started = ob_get_level() > $depth;
+
+		if ( $started ) {
+			ob_end_clean();
+		}
+
+		$this->assertFalse( $started );
+	}
 }
