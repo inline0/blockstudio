@@ -19,6 +19,11 @@ namespace Blockstudio;
  * 3. $settings_json - Values from theme's blockstudio.json file
  * 4. $settings_filters - Values from WordPress filters (blockstudio/settings/*)
  *
+ * Every layer is loaded and merged. blockstudio.json used to replace the
+ * options table rather than sit on top of it, so an unrelated saved setting
+ * stopped applying the moment the file appeared. It now overrides only the
+ * keys it declares.
+ *
  * Settings Structure:
  * - assets/enqueue: Enable/disable asset loading on frontend
  * - assets/minify/css: Enable CSS minification
@@ -363,10 +368,8 @@ class Settings {
 		static::$settings_filters['assets']['enqueue']              = false;
 		static::$settings_filters['assets']['process']['scssFiles'] = false;
 
-		if ( ! self::json() ) {
-			static::$settings_options = static::$defaults;
-			$this->load_settings_from_options();
-		}
+		static::$settings_options = static::$defaults;
+		$this->load_settings_from_options();
 
 		$this->migrate_settings_from_old_version( static::$settings );
 		$this->migrate_settings_from_old_version( static::$settings_filters );
@@ -482,7 +485,7 @@ class Settings {
 
 		$this->report_unknown_keys( $json_settings, static::$defaults, '', $path );
 
-		static::$settings_raw  = $json_settings;
+		static::$settings_raw  = $this->array_deep_merge( static::$settings_raw, $json_settings );
 		static::$settings      = $this->array_deep_merge( static::$settings, $json_settings );
 		static::$settings_json = $this->array_deep_merge( static::$settings_json, $json_settings );
 	}

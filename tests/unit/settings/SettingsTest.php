@@ -598,11 +598,55 @@ class SettingsTest extends TestCase {
 		$this->assertSame( array( 'fallback' ), Settings::get_array( 'tailwind/enabled', array( 'fallback' ) ) );
 	}
 
-	public function test_raw_settings_expose_only_the_active_source_payload(): void {
+	public function test_raw_settings_expose_the_active_source_payload(): void {
 		$raw = Settings::get_raw();
 
 		$this->assertTrue( $raw['tailwind']['enabled'] );
 		$this->assertArrayNotHasKey( 'performance', $raw );
+	}
+
+	public function test_json_layers_over_saved_options_instead_of_replacing_them(): void {
+		$path = wp_tempnam( 'blockstudio-settings-layer' );
+		$this->assertIsString( $path );
+
+		$previous = get_option( 'blockstudio_settings', null );
+
+		update_option(
+			'blockstudio_settings',
+			array(
+				'ui'       => array( 'enabled' => true ),
+				'tailwind' => array( 'config' => '@from-options' ),
+			),
+			false
+		);
+
+		$this->add_filter( 'blockstudio/settings/path', static fn(): string => $path );
+
+		try {
+			file_put_contents( $path, '{"tailwind":{"config":"@from-json"}}' . "\n" );
+			Settings::reload();
+
+			$this->assertSame( array(), Settings::errors() );
+			$this->assertSame( '@from-json', Settings::get_string( 'tailwind/config' ) );
+			$this->assertTrue(
+				Settings::get_bool( 'ui/enabled' ),
+				'A saved setting the JSON file does not mention must keep applying.'
+			);
+
+			$raw = Settings::get_raw();
+			$this->assertSame( '@from-json', $raw['tailwind']['config'] );
+			$this->assertTrue( $raw['ui']['enabled'] );
+		} finally {
+			unlink( $path );
+
+			if ( null === $previous ) {
+				delete_option( 'blockstudio_settings' );
+			} else {
+				update_option( 'blockstudio_settings', $previous, false );
+			}
+
+			Settings::reload();
+		}
 	}
 
 	public function test_invalid_json_reports_an_error_and_file_changes_reload_automatically(): void {

@@ -70,6 +70,11 @@ Download the latest release zip from [GitHub Releases](https://github.com/inline
 * Fix: Signature-mode early serving computes the same key in the drop-in and in PHP
 * Fix: One invalid configuration key no longer discards an entire settings group, and configuration errors reach an admin notice
 * Fix: Analysis honours a project's exclusions and keeps machine paths out of its messages
+* Fix: `blockstudio.json` layers over saved settings instead of replacing them, so a setting the file does not mention keeps applying. Delete any saved setting you intended a `blockstudio.json` to override
+* Fix: `assets.output` chooses where compiled block assets are written. It defaults to `source`, the existing `_dist` directory beside each block; set it to `cache` to keep the block source tree clean
+* Fix: `blockstudio/buffer/enabled` turns off full-page output buffering for sites that use neither Tailwind nor block assets
+* Fix: An unresolved `.md` URL only returns a Blockstudio 404 inside a page collection, instead of claiming every `.md` URL on the site
+* Fix: The populate cache version is only written when the build cache is enabled and a block declares a populate field, instead of on every post, term, user, and meta write
 
 = 7.5.2 =
 * Fix: `blockstudio/phpstan` expands file-backed custom field references across PHP, Twig, Blade, block tags, and inferred attribute shapes, including nested fields, ID transformations, and cycle-safe diagnostics
