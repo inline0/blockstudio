@@ -1,14 +1,6 @@
 [data-bsui-drawer-root] [role="dialog"],
 [data-bsui-drawer-popup] {
-	position: fixed;
-	z-index: 51;
-	background: var(--bs-ui-background);
-	color: var(--bs-ui-foreground);
-	font-family: var(--bs-ui-font-sans);
-	padding: 1.5rem;
 	border: none;
-	box-shadow: var(--bs-ui-shadow-lg);
-	overflow-y: auto;
 	border-radius: 0;
 	max-height: none;
 	will-change: transform;

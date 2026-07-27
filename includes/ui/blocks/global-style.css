@@ -51,6 +51,11 @@
 	--bs-ui-switch-height: 1.25rem;
 	--bs-ui-switch-thumb: 1rem;
 
+	--bs-ui-modal-padding: 1.5rem;
+	--bs-ui-modal-gap: 1.5rem;
+	--bs-ui-modal-header-gap: 0.5rem;
+	--bs-ui-modal-footer-gap: 0.5rem;
+
 	--bs-ui-transition: 150ms cubic-bezier(0.4, 0, 0.2, 1);
 	--bs-ui-transition-slow: 200ms cubic-bezier(0.4, 0, 0.2, 1);
 }
@@ -222,4 +227,35 @@ body > [data-bsui-dialog-backdrop].bs-ui-entering,
 	top: 1rem;
 	right: 1rem;
 	z-index: 1;
+}
+
+/* Every modal layer is the same surface underneath. Only its geometry, which
+   is what actually distinguishes a dialog from a sheet, lives per component. */
+[data-bsui-dialog-popup],
+[data-bsui-alert-dialog-popup],
+[data-bsui-drawer-popup] {
+	position: fixed;
+	z-index: 51;
+	overflow-y: auto;
+	background: var(--bs-ui-popover);
+	color: var(--bs-ui-popover-foreground);
+	box-shadow: var(--bs-ui-shadow-lg);
+	font-family: var(--bs-ui-font-sans);
+	font-size: var(--bs-ui-font-size);
+	padding: var(--bs-ui-modal-padding);
+}
+
+/* InnerBlocks wraps the authored children, so the rhythm lives on the wrapper
+   rather than on the popup itself. */
+[data-bsui-dialog-popup] > div,
+[data-bsui-alert-dialog-popup] > div,
+[data-bsui-drawer-popup] > div {
+	display: flex;
+	flex-direction: column;
+	gap: var(--bs-ui-modal-gap);
+}
+
+[data-bsui-drawer-popup][data-flush],
+[data-bsui-dialog-popup][data-flush] {
+	padding: 0;
 }
