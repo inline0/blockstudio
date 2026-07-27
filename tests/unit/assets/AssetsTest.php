@@ -33,7 +33,9 @@ class AssetsTest extends TestCase {
 	}
 
 	private function create_temporary_asset( string $filename, string $content ): string {
-		$directory = sys_get_temp_dir() . '/blockstudio-assets-' . uniqid( '', true );
+		// Under wp-content so the asset resolves to a real URL; a path outside it
+		// has none, and an asset without a URL no longer renders a tag.
+		$directory = WP_CONTENT_DIR . '/blockstudio-assets-' . uniqid( '', true );
 		wp_mkdir_p( $directory );
 		$this->temporary_directories[] = $directory;
 
@@ -846,7 +848,9 @@ class AssetsTest extends TestCase {
 	}
 
 	public function test_get_imported_modification_times_changes_when_prelude_dependency_changes(): void {
-		$directory = sys_get_temp_dir() . '/blockstudio-assets-' . uniqid( '', true );
+		// Under wp-content so the asset resolves to a real URL; a path outside it
+		// has none, and an asset without a URL no longer renders a tag.
+		$directory = WP_CONTENT_DIR . '/blockstudio-assets-' . uniqid( '', true );
 		wp_mkdir_p( $directory );
 
 		$path = $directory . '/style.scss';

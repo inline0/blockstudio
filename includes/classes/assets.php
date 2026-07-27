@@ -1987,7 +1987,17 @@ class Assets {
 			return null;
 		}
 
-		$src       = Files::get_relative_url( $maybe_compiled_path );
+		$src = Files::get_relative_url( $maybe_compiled_path );
+
+		/*
+		 * An unresolvable URL used to still emit a tag, so the browser requested
+		 * the current document as a stylesheet or module. Every page carrying
+		 * such an asset logged a MIME type error.
+		 */
+		if ( '' === $src ) {
+			return null;
+		}
+
 		$key       = filemtime( $path );
 		$processed = 1 === count( self::get_matches( $path ) ) ? 'data-processed' : '';
 
