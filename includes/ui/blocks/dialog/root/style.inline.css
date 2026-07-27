@@ -38,7 +38,7 @@ body > [data-bsui-dialog-backdrop],
 	transition: opacity 150ms cubic-bezier(0.45, 1.005, 0, 1.005);
 }
 
-body > [data-bsui-dialog-backdrop],
+body > [data-bsui-dialog-backdrop].bs-ui-entering,
 [data-bsui-dialog-backdrop].bs-ui-entering {
 	opacity: 0;
 }

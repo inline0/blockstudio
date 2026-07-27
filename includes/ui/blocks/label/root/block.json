@@ -6,8 +6,22 @@
   "icon": "tag",
   "blockstudio": {
     "attributes": [
-      { "id": "text", "type": "richtext" },
-      { "id": "for", "type": "text", "label": "For", "default": "" }
+      {
+        "id": "text",
+        "type": "richtext"
+      },
+      {
+        "id": "for",
+        "type": "text",
+        "label": "For",
+        "default": ""
+      },
+      {
+        "id": "bindText",
+        "type": "text",
+        "label": "Bind text",
+        "default": ""
+      }
     ]
   }
 }

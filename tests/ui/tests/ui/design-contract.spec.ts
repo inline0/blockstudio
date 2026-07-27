@@ -72,6 +72,29 @@ test.describe( 'design contract', () => {
 		expect( parseFloat( surfaces[ 1 ].gap ) ).toBeLessThan( parseFloat( surfaces[ 0 ].gap ) );
 	} );
 
+	test( 'a modal dims the page behind it', async ( { page } ) => {
+		for ( const modal of MODALS ) {
+			await openModal( page, modal );
+			const backdrop = await page.evaluate( ( selector ) => {
+				const attr = selector.replace( '-popup', '-backdrop' );
+				const node = [ ...document.querySelectorAll( attr ) ].find(
+					( candidate ) => ! candidate.hasAttribute( 'hidden' )
+				);
+				if ( ! node ) return null;
+				const style = getComputedStyle( node );
+				return {
+					opacity: Number.parseFloat( style.opacity ),
+					height: Math.round( node.getBoundingClientRect().height ),
+				};
+			}, modal.popup );
+
+			expect( backdrop, `${ modal.page } must show a backdrop` ).not.toBeNull();
+			const { opacity, height } = backdrop as { opacity: number; height: number };
+			expect( opacity, `${ modal.page } backdrop sits at ${ opacity }` ).toBeGreaterThan( 0.9 );
+			expect( height, `${ modal.page } backdrop covers ${ height }px` ).toBeGreaterThan( 400 );
+		}
+	} );
+
 	test( 'a modal separates its children', async ( { page } ) => {
 		for ( const modal of MODALS ) {
 			await openModal( page, modal );

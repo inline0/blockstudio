@@ -33,7 +33,7 @@ $initial   = ! empty( $a['defaultChecked'] ) ? 'true' : 'false';
 	<input type="hidden" name="<?php echo esc_attr( $checkbox_name ); ?>" data-wp-bind--value="state.formValue" />
 	<?php endif; ?>
 	<?php if ( $bind_text ) : ?>
-	<span data-wp-text="<?php echo esc_attr( $bind_text ); ?>"><?php echo esc_html( $a['label'] ?? '' ); ?></span>
+	<?php echo bs_block( array( 'name' => 'bsui/label', 'data' => array( 'text' => (string) ( $a['label'] ?? '' ), 'bindText' => $bind_text ) ) ); ?>
 	<?php else : ?>
 	<?php echo bs_block( array( 'name' => 'bsui/label', 'data' => array( 'text' => (string) ( $a['label'] ?? '' ) ) ) ); ?>
 	<?php endif; ?>
