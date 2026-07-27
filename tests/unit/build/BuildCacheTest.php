@@ -521,6 +521,113 @@ class BuildCacheTest extends TestCase {
 	}
 
 	/**
+	 * Build a registry from one block and return the populate option value.
+	 *
+	 * @param string $attributes Serialized blockstudio attributes.
+	 *
+	 * @return array{before: string, after: string} Option value around a post write.
+	 */
+	private function populate_version_around_post_write( string $attributes ): array {
+		Build_Cache::init();
+
+		$directory       = $this->create_temporary_directory();
+		$path            = wp_normalize_path( $directory );
+		$block_directory = $path . '/populate-gate';
+		wp_mkdir_p( $block_directory );
+
+		$this->write_file(
+			$block_directory . '/block.json',
+			'{"name":"blockstudio-test/populate-gate","title":"Populate Gate","blockstudio":{"attributes":' . $attributes . '}}'
+		);
+		$this->write_file( $block_directory . '/index.php', '<div></div>' );
+
+		$registry = Block_Registry::instance();
+		$post_id  = 0;
+
+		try {
+			$registry->reset();
+			Build::init( array( 'dir' => $path ) );
+
+			$this->assertNotEmpty(
+				Build::blocks(),
+				'The fixture block must register, or the gate falls back to invalidating.'
+			);
+
+			$before = Build_Cache::get_populate_cache_version();
+
+			$post_id = wp_insert_post(
+				array(
+					'post_title'  => 'Populate gate',
+					'post_status' => 'publish',
+					'post_type'   => 'post',
+				)
+			);
+			$this->assertGreaterThan( 0, $post_id );
+
+			return array(
+				'before' => $before,
+				'after'  => Build_Cache::get_populate_cache_version(),
+			);
+		} finally {
+			if ( is_int( $post_id ) && $post_id > 0 ) {
+				wp_delete_post( $post_id, true );
+			}
+
+			$registry->reset();
+
+			$default_build_dir = Build::get_build_dir();
+
+			if ( is_dir( $default_build_dir ) ) {
+				Build::init( $default_build_dir );
+			}
+		}
+	}
+
+	/**
+	 * Content writes do not touch the populate option when no block populates.
+	 *
+	 * @return void
+	 */
+	public function test_populate_cache_version_is_untouched_when_no_block_populates(): void {
+		$version = $this->populate_version_around_post_write(
+			'[{"id":"plain","type":"text","label":"Plain","default":""}]'
+		);
+
+		$this->assertSame( $version['before'], $version['after'] );
+	}
+
+	/**
+	 * Content writes still bump the populate option when a block populates.
+	 *
+	 * @return void
+	 */
+	public function test_populate_cache_version_changes_when_a_block_populates(): void {
+		$version = $this->populate_version_around_post_write(
+			'[{"id":"posts","type":"select","label":"Posts","default":"",' .
+			'"populate":{"type":"query","query":"posts",' .
+			'"returnFormat":{"value":"ID","label":"post_title"}}}]'
+		);
+
+		$this->assertNotSame( $version['before'], $version['after'] );
+	}
+
+	/**
+	 * A populate field nested in a repeater row still counts as in use.
+	 *
+	 * @return void
+	 */
+	public function test_populate_cache_version_changes_for_a_nested_populate_field(): void {
+		$version = $this->populate_version_around_post_write(
+			'[{"id":"rows","type":"repeater","label":"Rows","default":[],"min":0,"max":10,' .
+			'"attributes":[{"id":"posts","type":"select","label":"Posts","default":"",' .
+			'"populate":{"type":"query","query":"posts",' .
+			'"returnFormat":{"value":"ID","label":"post_title"}}}]}]'
+		);
+
+		$this->assertNotSame( $version['before'], $version['after'] );
+	}
+
+	/**
 	 * Runtime cache hydration matches a cold runtime build.
 	 *
 	 * @return void

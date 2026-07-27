@@ -221,11 +221,84 @@ final class Build_Cache {
 	 * @return void
 	 */
 	public static function invalidate_populate_cache(): void {
+		if ( ! self::is_enabled() || ! self::any_block_populates() ) {
+			return;
+		}
+
 		$version = function_exists( 'wp_generate_uuid4' )
 			? wp_generate_uuid4()
 			: uniqid( '', true );
 
 		update_option( self::POPULATE_CACHE_VERSION_OPTION, $version, false );
+	}
+
+	/**
+	 * Whether any registered block declares a query-populated field.
+	 *
+	 * The invalidation above is attached to twenty-three core content, term,
+	 * user and meta hooks, so without this check every post, term, user and
+	 * meta write anywhere on the site wrote an option row whose only reader is
+	 * the build-cache key. Where no block declares populate, nothing read it.
+	 *
+	 * Populate survives into the registered attribute config, including inside
+	 * repeater rows, so the registry is the source of truth. An empty registry
+	 * means discovery has not run yet rather than that no block populates, so
+	 * that case invalidates rather than guessing.
+	 *
+	 * Deliberately not memoised. The walk is over an in-memory registry and
+	 * runs only on content writes, while the registry itself grows as further
+	 * Build::init instances register, so a cached answer risks being stale in
+	 * exactly the case that matters.
+	 *
+	 * @return bool Whether the option can affect anything.
+	 */
+	private static function any_block_populates(): bool {
+		if ( ! class_exists( 'Blockstudio\Build' ) ) {
+			return true;
+		}
+
+		$blocks = Build::blocks();
+
+		if ( empty( $blocks ) ) {
+			return true;
+		}
+
+		foreach ( $blocks as $block ) {
+			if ( self::attributes_populate( (array) ( $block->attributes ?? array() ) ) ) {
+				return true;
+			}
+		}
+
+		return false;
+	}
+
+	/**
+	 * Whether an attribute config declares populate at any depth.
+	 *
+	 * @param array<string, mixed> $attributes Attribute config.
+	 *
+	 * @return bool Whether populate is declared.
+	 */
+	private static function attributes_populate( array $attributes ): bool {
+		foreach ( $attributes as $attribute ) {
+			if ( ! is_array( $attribute ) ) {
+				continue;
+			}
+
+			if ( ! empty( $attribute['populate'] ) ) {
+				return true;
+			}
+
+			if (
+				! empty( $attribute['attributes'] ) &&
+				is_array( $attribute['attributes'] ) &&
+				self::attributes_populate( $attribute['attributes'] )
+			) {
+				return true;
+			}
+		}
+
+		return false;
 	}
 
 	/**
