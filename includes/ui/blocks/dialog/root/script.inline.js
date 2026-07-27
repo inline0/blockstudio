@@ -83,7 +83,7 @@ function closeTopDialog() {
 
 		window.__bsui.unlockScroll();
 
-		window.__bsui.getAnchor( trigger )?.focus();
+		window.__bsui.getAnchor( trigger )?.focus( { preventScroll: true } );
 	}, 150 );
 }
 
@@ -169,10 +169,10 @@ function openDialog( root, ctx ) {
 			const last = focusable[ focusable.length - 1 ];
 			if ( e.shiftKey && document.activeElement === first ) {
 				e.preventDefault();
-				last.focus();
+				last.focus( { preventScroll: true } );
 			} else if ( ! e.shiftKey && document.activeElement === last ) {
 				e.preventDefault();
-				first.focus();
+				first.focus( { preventScroll: true } );
 			}
 		}
 	};
@@ -183,7 +183,7 @@ function openDialog( root, ctx ) {
 
 	requestAnimationFrame( () => {
 		const focusable = popup.querySelector( window.__bsui.FOCUSABLE );
-		( focusable || popup ).focus();
+		( focusable || popup ).focus( { preventScroll: true } );
 	} );
 }
 

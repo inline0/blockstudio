@@ -1,0 +1,11 @@
+{
+	"$schema": "https://blockstudio.dev/schema/block",
+	"name": "bsui/drawer-footer",
+	"title": "Drawer Footer",
+	"category": "design",
+	"icon": "text",
+	"parent": [
+		"bsui/drawer-popup"
+	],
+	"blockstudio": true
+}

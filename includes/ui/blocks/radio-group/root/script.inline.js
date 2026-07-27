@@ -68,7 +68,7 @@ store( 'bsui/radio-group', {
 			}
 
 			if ( next >= 0 ) {
-				radios[ next ].focus();
+				radios[ next ].focus( { preventScroll: true } );
 				const nextValue =
 					radios[ next ].getAttribute( 'data-value' );
 				if ( nextValue !== null ) {

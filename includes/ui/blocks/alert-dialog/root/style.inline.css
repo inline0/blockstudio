@@ -20,6 +20,16 @@
 	display: contents;
 }
 
+[data-bsui-alert-dialog-footer] {
+	margin-top: calc(var(--bs-ui-modal-gap) - var(--bs-ui-modal-header-gap));
+}
+
+[data-bsui-alert-dialog-footer] > div {
+	display: flex;
+	justify-content: flex-end;
+	gap: var(--bs-ui-modal-footer-gap);
+}
+
 [data-bsui-alert-dialog-popup] [data-bsui-overlay-x] {
 	position: absolute;
 	top: var(--bs-ui-space-4);

@@ -10,14 +10,14 @@ function animatePanel( panel, open ) {
 
 	if ( open ) {
 		panel.style.setProperty( '--bs-ui-panel-height', '0px' );
-		panel.classList.add( 'bs-ui-open' );
+		panel.setAttribute( 'data-bsui-accordion-open', '' );
 		requestAnimationFrame( () => {
 			panel.style.setProperty( '--bs-ui-panel-height', panel.scrollHeight + 'px' );
 		} );
 	} else {
 		panel.style.setProperty( '--bs-ui-panel-height', panel.scrollHeight + 'px' );
 		panel._onTransitionEnd = () => {
-			panel.classList.remove( 'bs-ui-open' );
+			panel.removeAttribute( 'data-bsui-accordion-open' );
 			panel._onTransitionEnd = null;
 		};
 		panel.addEventListener( 'transitionend', panel._onTransitionEnd, { once: true } );
@@ -54,7 +54,7 @@ store( 'bsui/accordion', {
 			if ( ! multiple ) {
 				const root = ref.closest( '[data-bsui-accordion-root]' );
 				if ( root ) {
-					root.querySelectorAll( '[role="region"].bs-ui-open' ).forEach( ( p ) => {
+					root.querySelectorAll( '[role="region"][data-bsui-accordion-open]' ).forEach( ( p ) => {
 						if ( p !== item?.querySelector( '[role="region"]' ) ) {
 							animatePanel( p, false );
 						}
@@ -120,16 +120,27 @@ store( 'bsui/accordion', {
 			}
 
 			if ( next >= 0 ) {
-				triggers[ next ].focus();
+				triggers[ next ].focus( { preventScroll: true } );
 			}
 		},
 	},
 	callbacks: {
 		initPanel() {
+			const ctx = getContext();
 			const { ref } = getElement();
-			if ( ref.classList.contains( 'bs-ui-open' ) ) {
-				ref.style.setProperty( '--bs-ui-panel-height', ref.scrollHeight + 'px' );
+			const open =
+				Array.isArray( ctx.value ) &&
+				ctx.itemValue !== undefined &&
+				ctx.value.includes( ctx.itemValue );
+			if ( ! open ) {
+				return;
 			}
+			ref.setAttribute( 'data-bsui-accordion-open', '' );
+			requestAnimationFrame( () => {
+				if ( ref.scrollHeight > 0 ) {
+					ref.style.setProperty( '--bs-ui-panel-height', ref.scrollHeight + 'px' );
+				}
+			} );
 		},
 	},
 } );

@@ -139,6 +139,12 @@
 				"type": "toggle",
 				"label": "Wrap",
 				"default": false
+			},
+			{
+				"id": "grow",
+				"type": "toggle",
+				"label": "Grow",
+				"default": false
 			}
 		]
 	}

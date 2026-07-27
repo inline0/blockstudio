@@ -28,7 +28,7 @@ store( 'bsui/popover', {
 							Object.assign( popup.style, { left: x + 'px', top: y + 'px' } );
 						} );
 						const focusable = popup.querySelector( window.__bsui.FOCUSABLE );
-						( focusable || popup ).focus();
+						( focusable || popup ).focus( { preventScroll: true } );
 					}
 				} );
 			} else {
@@ -44,7 +44,7 @@ store( 'bsui/popover', {
 			const popup = root?.querySelector( '[role="dialog"]' );
 			if ( popup ) popup.setAttribute( 'hidden', '' );
 			const trigger = root?.querySelector( '[aria-haspopup="dialog"]' );
-			window.__bsui.getAnchor( trigger )?.focus();
+			window.__bsui.getAnchor( trigger )?.focus( { preventScroll: true } );
 		},
 		handleOutsideClick( event ) {
 			const ctx = getContext();
@@ -66,7 +66,7 @@ store( 'bsui/popover', {
 			const popup = ref.querySelector( '[role="dialog"]' );
 			if ( popup ) popup.setAttribute( 'hidden', '' );
 			const trigger = ref.querySelector( '[aria-haspopup="dialog"]' );
-			window.__bsui.getAnchor( trigger )?.focus();
+			window.__bsui.getAnchor( trigger )?.focus( { preventScroll: true } );
 		},
 		handleFocusTrap( event ) {
 			if ( event.key !== 'Tab' ) return;
@@ -77,10 +77,10 @@ store( 'bsui/popover', {
 			const last = focusable[ focusable.length - 1 ];
 			if ( event.shiftKey && document.activeElement === first ) {
 				event.preventDefault();
-				last.focus();
+				last.focus( { preventScroll: true } );
 			} else if ( ! event.shiftKey && document.activeElement === last ) {
 				event.preventDefault();
-				first.focus();
+				first.focus( { preventScroll: true } );
 			}
 		},
 	},

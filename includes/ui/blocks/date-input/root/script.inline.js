@@ -1,4 +1,35 @@
 import { store, getContext, getElement } from '@wordpress/interactivity';
+import { computePosition, flip, shift, offset } from 'https://esm.sh/@floating-ui/dom@1.7.4';
+
+function positionPopup( anchor, popup ) {
+	popup.style.position = 'fixed';
+	computePosition( anchor, popup, {
+		placement: 'bottom-start',
+		strategy: 'fixed',
+		middleware: [ offset( 4 ), flip(), shift( { padding: 8 } ) ],
+	} ).then( ( { x, y } ) => {
+		Object.assign( popup.style, { left: x + 'px', top: y + 'px', position: 'fixed' } );
+	} );
+
+	if ( ! popup.__bsuiScrollTracked ) {
+		popup.__bsuiScrollTracked = true;
+		let frame = 0;
+		const track = () => {
+			if ( popup.hasAttribute( 'hidden' ) ) {
+				popup.__bsuiScrollTracked = false;
+				window.removeEventListener( 'scroll', onScroll, true );
+				return;
+			}
+			positionPopup( anchor, popup );
+		};
+		const onScroll = ( event ) => {
+			if ( popup.contains( event.target ) ) return;
+			cancelAnimationFrame( frame );
+			frame = requestAnimationFrame( track );
+		};
+		window.addEventListener( 'scroll', onScroll, true );
+	}
+}
 
 store( 'bsui/date-input', {
 	state: {
@@ -24,7 +55,11 @@ store( 'bsui/date-input', {
 			const root = ref.closest( '[data-bsui-date-input]' );
 			const popup = root?.querySelector( '[data-bsui-date-input-popup]' );
 			if ( ctx.open ) {
-				if ( popup ) popup.removeAttribute( 'hidden' );
+				if ( popup ) {
+					popup.removeAttribute( 'hidden' );
+					const anchor = root?.querySelector( 'input' ) ?? ref;
+					requestAnimationFrame( () => positionPopup( anchor, popup ) );
+				}
 			} else {
 				if ( popup ) popup.setAttribute( 'hidden', '' );
 			}

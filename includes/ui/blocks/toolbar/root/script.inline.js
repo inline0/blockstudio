@@ -32,7 +32,7 @@ store( 'bsui/toolbar', {
 					next = items.length - 1;
 					break;
 			}
-			if ( next >= 0 ) items[ next ].focus();
+			if ( next >= 0 ) items[ next ].focus( { preventScroll: true } );
 		},
 	},
 } );

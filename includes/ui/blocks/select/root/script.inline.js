@@ -31,19 +31,23 @@ function positionPopup( trigger, popup, isMulti ) {
 		const optionRect = selectedOption.getBoundingClientRect();
 		const popupRect = popup.getBoundingClientRect();
 
-		const x = triggerRect.left + 1 - popupBorder - popupPadding;
+		popup.style.animation = 'none';
+		popup.style.minWidth = ( triggerRect.width + popupPadding * 2 + popupBorder * 2 + checkmarkSpace ) + 'px';
+		const sizedRect = popup.getBoundingClientRect();
+
+		let x = triggerRect.left + 1 - popupBorder - popupPadding;
 		const optionOffsetY = optionRect.top - popupRect.top;
 		let y = triggerRect.top - optionOffsetY;
 
-		const maxY = window.innerHeight - popupRect.height - 8;
+		const maxX = window.innerWidth - sizedRect.width - 8;
+		x = Math.max( 8, Math.min( x, maxX ) );
+		const maxY = window.innerHeight - sizedRect.height - 8;
 		y = Math.max( 8, Math.min( y, maxY ) );
 
-		popup.style.animation = 'none';
 		Object.assign( popup.style, {
 			left: x + 'px',
 			top: y + 'px',
 			position: 'fixed',
-			minWidth: ( triggerRect.width + popupPadding * 2 + popupBorder * 2 + checkmarkSpace ) + 'px',
 		} );
 	} else {
 		const triggerRect = trigger.getBoundingClientRect();
@@ -60,6 +64,25 @@ function positionPopup( trigger, popup, isMulti ) {
 			Object.assign( popup.style, { left: x + 'px', top: y + 'px', position: 'fixed' } );
 		} );
 	}
+	if ( ! popup.__bsuiScrollTracked ) {
+		popup.__bsuiScrollTracked = true;
+		let frame = 0;
+		const track = () => {
+			if ( popup.hasAttribute( 'hidden' ) ) {
+				popup.__bsuiScrollTracked = false;
+				window.removeEventListener( 'scroll', onScroll, true );
+				return;
+			}
+			positionPopup( trigger, popup, isMulti );
+		};
+		const onScroll = ( event ) => {
+			if ( popup.contains( event.target ) ) return;
+			cancelAnimationFrame( frame );
+			frame = requestAnimationFrame( track );
+		};
+		window.addEventListener( 'scroll', onScroll, true );
+	}
+
 }
 
 function isSelected( ctx, optionValue ) {
@@ -118,7 +141,7 @@ store( 'bsui/select', {
 					if ( ! listbox ) return;
 
 					if ( trigger ) positionPopup( trigger, listbox, ctx.multiple );
-					listbox.focus();
+					listbox.focus( { preventScroll: true } );
 					const options = getOptions( root );
 					const currentValue = ctx.multiple
 						? ( ctx.value[ 0 ] || '' )
@@ -183,7 +206,7 @@ store( 'bsui/select', {
 			const trigger = root?.querySelector(
 				'[data-bsui-select-trigger]'
 			);
-			requestAnimationFrame( () => window.__bsui.getAnchor( trigger )?.focus() );
+			requestAnimationFrame( () => window.__bsui.getAnchor( trigger )?.focus( { preventScroll: true } ) );
 			root?.dispatchEvent( new CustomEvent( 'change', { bubbles: true, detail: { value: ctx.value } } ) );
 		},
 		handleListboxKeyDown( event ) {
@@ -255,7 +278,7 @@ store( 'bsui/select', {
 							'[data-bsui-select-trigger]'
 						);
 						requestAnimationFrame( () =>
-							window.__bsui.getAnchor( trigger )?.focus()
+							window.__bsui.getAnchor( trigger )?.focus( { preventScroll: true } )
 						);
 					}
 					event.stopPropagation();

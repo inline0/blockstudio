@@ -75,7 +75,7 @@ store( 'bsui/tabs', {
 			}
 
 			if ( next >= 0 ) {
-				tabs[ next ].focus();
+				tabs[ next ].focus( { preventScroll: true } );
 				// activateOnFocus: activate tab when focused via keyboard (default true, matching WAI-ARIA recommendation)
 				if ( ctx.activateOnFocus !== false ) {
 					const nextValue = tabs[ next ].getAttribute(

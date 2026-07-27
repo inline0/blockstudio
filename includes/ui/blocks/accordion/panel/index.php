@@ -11,7 +11,7 @@ $panel_id      = 'ui-accordion-panel-' . sanitize_title( $item_value );
 	id="<?php echo esc_attr( $panel_id ); ?>"
 	aria-labelledby="<?php echo esc_attr( $trigger_id ); ?>"
 	role="region"
-	class="<?php echo $is_open ? 'bs-ui-open' : ''; ?>"
+	<?php if ( $is_open ) echo 'data-bsui-accordion-open '; ?>
 >
 	<InnerBlocks />
 </div>

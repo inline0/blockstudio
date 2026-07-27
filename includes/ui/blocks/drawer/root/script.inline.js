@@ -41,7 +41,7 @@ function closeDrawer( ctx, ref ) {
 		}
 
 		const trigger = root?.querySelector( '[data-bsui-drawer-trigger]' );
-		requestAnimationFrame( () => window.__bsui.getAnchor( trigger )?.focus() );
+		requestAnimationFrame( () => window.__bsui.getAnchor( trigger )?.focus( { preventScroll: true } ) );
 	}, 450 );
 }
 
@@ -79,7 +79,7 @@ store( 'bsui/drawer', {
 				if ( popup ) {
 					popup.classList.remove( 'bs-ui-entering' );
 					const focusable = popup.querySelector( window.__bsui.FOCUSABLE );
-					( focusable || popup ).focus();
+					( focusable || popup ).focus( { preventScroll: true } );
 				}
 				if ( backdrop ) backdrop.classList.remove( 'bs-ui-entering' );
 			} );
@@ -114,10 +114,10 @@ store( 'bsui/drawer', {
 			const last = focusable[ focusable.length - 1 ];
 			if ( event.shiftKey && document.activeElement === first ) {
 				event.preventDefault();
-				last.focus();
+				last.focus( { preventScroll: true } );
 			} else if ( ! event.shiftKey && document.activeElement === last ) {
 				event.preventDefault();
-				first.focus();
+				first.focus( { preventScroll: true } );
 			}
 		},
 	},

@@ -15,5 +15,5 @@ $listbox_id = $context['bsui/select']['listboxId'] ?? '';
 	aria-expanded="false"
 	aria-controls="<?php echo esc_attr( $listbox_id ); ?>"
 >
-	<?php echo esc_html( $context['bsui/select']['placeholder'] ?? 'Select...' ); ?>
+	<?php echo esc_html( '' !== (string) ( $context['bsui/select']['label'] ?? '' ) ? (string) $context['bsui/select']['label'] : ( $context['bsui/select']['placeholder'] ?? 'Select...' ) ); ?>
 </button>

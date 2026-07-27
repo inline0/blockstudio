@@ -1,3 +1,7 @@
+[data-bsui-tooltip-trigger] {
+	display: inline-flex;
+}
+
 [role="tooltip"] {
 	background: var(--bs-ui-primary);
 	color: var(--bs-ui-primary-foreground);

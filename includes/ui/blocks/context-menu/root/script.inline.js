@@ -38,6 +38,7 @@ store( 'bsui/context-menu', {
 				if ( popup ) {
 					computePosition( virtualEl, popup, {
 						placement: 'bottom-start',
+						strategy: 'fixed',
 						middleware: [ flip(), shift( { padding: 8 } ) ],
 					} ).then( ( { x, y } ) => {
 						Object.assign( popup.style, { left: x + 'px', top: y + 'px' } );
@@ -45,10 +46,10 @@ store( 'bsui/context-menu', {
 				}
 				const items = root ? [ ...root.querySelectorAll( ITEM_SELECTOR ) ] : [];
 				if ( items.length > 0 ) {
-					items[ 0 ].focus();
+					items[ 0 ].focus( { preventScroll: true } );
 					ctx.activeIndex = 0;
 				} else if ( popup ) {
-					popup.focus();
+					popup.focus( { preventScroll: true } );
 				}
 			} );
 		},
@@ -73,22 +74,22 @@ store( 'bsui/context-menu', {
 				case 'ArrowDown':
 					event.preventDefault();
 					ctx.activeIndex = ( ctx.activeIndex + 1 ) % items.length;
-					items[ ctx.activeIndex ].focus();
+					items[ ctx.activeIndex ].focus( { preventScroll: true } );
 					break;
 				case 'ArrowUp':
 					event.preventDefault();
 					ctx.activeIndex = ( ctx.activeIndex - 1 + items.length ) % items.length;
-					items[ ctx.activeIndex ].focus();
+					items[ ctx.activeIndex ].focus( { preventScroll: true } );
 					break;
 				case 'Home':
 					event.preventDefault();
 					ctx.activeIndex = 0;
-					items[ 0 ].focus();
+					items[ 0 ].focus( { preventScroll: true } );
 					break;
 				case 'End':
 					event.preventDefault();
 					ctx.activeIndex = items.length - 1;
-					items[ ctx.activeIndex ].focus();
+					items[ ctx.activeIndex ].focus( { preventScroll: true } );
 					break;
 				case 'Enter':
 				case ' ':

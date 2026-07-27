@@ -45,7 +45,7 @@ function closeAlertDialog( ctx, root ) {
 		}
 
 		const trigger = root?.querySelector( '[data-bsui-alert-dialog-trigger]' );
-		requestAnimationFrame( () => window.__bsui.getAnchor( trigger )?.focus() );
+		requestAnimationFrame( () => window.__bsui.getAnchor( trigger )?.focus( { preventScroll: true } ) );
 	}, 150 );
 }
 
@@ -97,7 +97,7 @@ store( 'bsui/alert-dialog', {
 				if ( backdrop ) backdrop.classList.remove( 'bs-ui-entering' );
 				if ( popup ) {
 					const focusable = popup.querySelector( window.__bsui.FOCUSABLE );
-					( focusable || popup ).focus();
+					( focusable || popup ).focus( { preventScroll: true } );
 				}
 			} );
 		},
@@ -114,10 +114,10 @@ store( 'bsui/alert-dialog', {
 			const last = focusable[ focusable.length - 1 ];
 			if ( event.shiftKey && document.activeElement === first ) {
 				event.preventDefault();
-				last.focus();
+				last.focus( { preventScroll: true } );
 			} else if ( ! event.shiftKey && document.activeElement === last ) {
 				event.preventDefault();
-				first.focus();
+				first.focus( { preventScroll: true } );
 			}
 		},
 	},

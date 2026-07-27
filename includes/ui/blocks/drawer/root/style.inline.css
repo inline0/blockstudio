@@ -20,6 +20,17 @@
 	display: contents;
 }
 
+[data-bsui-drawer-footer] {
+	margin-top: auto;
+}
+
+[data-bsui-drawer-footer] > div {
+	display: flex;
+	flex-direction: column;
+	align-items: stretch;
+	gap: var(--bs-ui-modal-footer-gap);
+}
+
 [data-bsui-drawer-popup] [data-bsui-overlay-x] {
 	position: absolute;
 	top: var(--bs-ui-space-4);

@@ -20,6 +20,25 @@ function positionPopup( trigger, popup ) {
 			top: y + 'px',
 		} );
 	} );
+	if ( ! popup.__bsuiScrollTracked ) {
+		popup.__bsuiScrollTracked = true;
+		let frame = 0;
+		const track = () => {
+			if ( popup.hasAttribute( 'hidden' ) ) {
+				popup.__bsuiScrollTracked = false;
+				window.removeEventListener( 'scroll', onScroll, true );
+				return;
+			}
+			positionPopup( trigger, popup );
+		};
+		const onScroll = ( event ) => {
+			if ( popup.contains( event.target ) ) return;
+			cancelAnimationFrame( frame );
+			frame = requestAnimationFrame( track );
+		};
+		window.addEventListener( 'scroll', onScroll, true );
+	}
+
 }
 
 store( 'bsui/menu', {
@@ -44,7 +63,7 @@ store( 'bsui/menu', {
 				requestAnimationFrame( () => {
 					if ( popup && trigger ) {
 						positionPopup( trigger, popup );
-						popup.focus();
+						popup.focus( { preventScroll: true } );
 					}
 				} );
 			} else {
@@ -73,7 +92,7 @@ store( 'bsui/menu', {
 								const startIndex = event.key === 'ArrowUp' ? items.length - 1 : 0;
 								ctx.activeIndex = window.__bsui.focusItem( items, startIndex );
 							} else {
-								popup.focus();
+								popup.focus( { preventScroll: true } );
 							}
 						}
 					} );
@@ -93,7 +112,7 @@ store( 'bsui/menu', {
 			const popup = root?.querySelector( '[role="menu"]' );
 			if ( popup ) popup.setAttribute( 'hidden', '' );
 			const trigger = root?.querySelector( '[data-bsui-menu-trigger]' );
-			requestAnimationFrame( () => window.__bsui.getAnchor( trigger )?.focus() );
+			requestAnimationFrame( () => window.__bsui.getAnchor( trigger )?.focus( { preventScroll: true } ) );
 		},
 		handlePopupKeyDown( event ) {
 			const ctx = getContext();
@@ -145,7 +164,7 @@ store( 'bsui/menu', {
 						const menuPopup = root.querySelector( '[role="menu"]' );
 						if ( menuPopup ) menuPopup.setAttribute( 'hidden', '' );
 						const trigger = root.querySelector( '[data-bsui-menu-trigger]' );
-						requestAnimationFrame( () => window.__bsui.getAnchor( trigger )?.focus() );
+						requestAnimationFrame( () => window.__bsui.getAnchor( trigger )?.focus( { preventScroll: true } ) );
 					}
 					event.stopPropagation();
 					break;
@@ -188,7 +207,7 @@ store( 'bsui/menu', {
 			const popup = ref.querySelector( '[role="menu"]' );
 			if ( popup ) popup.setAttribute( 'hidden', '' );
 			const trigger = ref.querySelector( '[data-bsui-menu-trigger]' );
-			requestAnimationFrame( () => window.__bsui.getAnchor( trigger )?.focus() );
+			requestAnimationFrame( () => window.__bsui.getAnchor( trigger )?.focus( { preventScroll: true } ) );
 		},
 	},
 } );

@@ -12,7 +12,9 @@
 
 [role="separator"][aria-orientation="vertical"] {
 	width: 1px;
-	height: 100%;
+	height: auto;
+	min-height: 1rem;
+	align-self: stretch;
 	margin: 0 0.5rem;
 	display: inline-block;
 }

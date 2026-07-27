@@ -2,7 +2,7 @@
 	display: flex;
 	max-width: 100%;
 	min-width: 0;
-	flex: 1 1 auto;
+	flex: var(--bsui-stack-grow, 0) 1 auto;
 	flex-direction: var(--bsui-stack-direction, row);
 	gap: var(--bsui-stack-gap, 0.5rem);
 	align-items: var(--bsui-stack-align);

@@ -53,9 +53,9 @@
 }
 
 [data-bsui-date-input-popup] {
-	position: absolute;
+	position: fixed;
 	z-index: 50;
-	top: calc(100% + 4px);
+	top: 0;
 	left: 0;
 	background: var(--bs-ui-popover);
 	border: 1px solid var(--bs-ui-border);

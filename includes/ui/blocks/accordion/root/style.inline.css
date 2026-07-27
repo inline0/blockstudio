@@ -54,8 +54,8 @@
 	color: var(--bs-ui-muted-foreground);
 }
 
-[data-bsui-accordion-root] [role="region"].bs-ui-open {
-	height: var(--bs-ui-panel-height);
+[data-bsui-accordion-root] [role="region"][data-bsui-accordion-open] {
+	height: var(--bs-ui-panel-height, auto);
 }
 
 [data-bsui-accordion-root] [role="region"] > div {

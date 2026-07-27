@@ -1,3 +1,7 @@
+[data-bsui-context-menu-root] {
+	width: 100%;
+}
+
 [data-bsui-context-menu-root] [role="menu"] {
 	position: fixed;
 	z-index: 50;
