@@ -1082,14 +1082,7 @@ class Block {
 		$selector_attribute = "data-assets='$selector_attribute_id'";
 
 		foreach ( $attributes as $k => $v ) {
-			$att = $repeater
-				? array_values(
-					array_filter(
-						$repeater,
-						fn( $item ) => ( $item['id'] ?? false ) === $k
-					)
-				)[0] ?? false
-				: $block_attributes[ $k ] ?? false;
+			$att = self::attribute_definition( (string) $k, $repeater, $block_attributes );
 
 			if ( isset( $att['blockstudio'] ) && ! $repeater ) {
 				$attribute_names[] = $k;
@@ -1105,222 +1098,31 @@ class Block {
 				}
 
 				if (
-						'select' === $type ||
-						'radio' === $type ||
-						'checkbox' === $type ||
-						'token' === $type
-					) {
-					$is_multiple_option =
-						'checkbox' === $type ||
-						( 'select' === $type && ( $att['multiple'] ?? false ) );
-
-					if (
-						'select' === $type &&
-						isset( $populate['type'] ) &&
-						'fetch' === $populate['type']
-					) {
-						$attributes[ $k ] = $v;
-					} else {
-						if (
-							( 'select' === $type || 'radio' === $type ) &&
-							! $is_multiple_option
-						) {
-							$attributes[ $k ] = self::get_option_value(
-								$att,
-								$return_format,
-								$v,
-								$populate
-							);
-						}
-						if ( $is_multiple_option ) {
-							$new_values = array();
-							foreach ( $v as $l ) {
-								$val = self::get_option_value(
-									$att,
-									$return_format,
-									$l,
-									$populate
-								);
-
-								if ( $val ) {
-									$new_values[] = $val;
-								}
-							}
-
-							if ( 'checkbox' === $type ) {
-								if (
-									isset( $new_values[0]->ID ) ||
-									isset( $new_values[0]->term_id )
-								) {
-									$is_id   = isset( $new_values[0]->ID );
-									$is_term = isset( $new_values[0]->term_id );
-									$key     = $is_id ? 'ID' : 'term_id';
-
-									$sorting_arr = array_column(
-										$att['options'],
-										'value'
-									);
-
-									if ( $is_id || $is_term ) {
-										uasort(
-											$new_values,
-											function (
-												$a,
-												$b
-											) use (
-												$key,
-												$sorting_arr
-											) {
-												return array_search(
-													$a->{$key} ??
-														( $a['value'] ?? $a ),
-													$sorting_arr,
-													true
-												) <=>
-													array_search(
-														$b->{$key} ??
-															( $b['value'] ?? $b ),
-														$sorting_arr,
-														true
-													);
-											}
-										);
-									}
-								} else {
-									if (
-										isset( $att['options'][0]['label'] ) &&
-										'label' === $return_format
-									) {
-										$sorting_arr = array_column(
-											$att['options'],
-											'label'
-										);
-									} elseif (
-										isset( $att['options'][0]['value'] )
-									) {
-										$sorting_arr = array_column(
-											$att['options'],
-											'value'
-										);
-									} else {
-										$sorting_arr = $att['options'];
-									}
-
-									uasort(
-										$new_values,
-										function (
-											$a,
-											$b
-										) use (
-											$sorting_arr
-										) {
-											return array_search(
-												$a['value'] ?? $a,
-												$sorting_arr,
-												true
-											) <=>
-												array_search(
-													$b['value'] ?? $b,
-													$sorting_arr,
-													true
-												);
-										}
-									);
-								}
-							}
-							$attributes[ $k ] = array_values( $new_values );
-						}
-						if ( 'token' === $type && 'both' !== $return_format ) {
-							$new_values = array();
-							foreach ( $v as $l ) {
-								$new_values[] = $l[ $return_format ] ?? $l;
-							}
-							$attributes[ $k ] = $new_values;
-						}
-					}
+					'select' === $type ||
+					'radio' === $type ||
+					'checkbox' === $type ||
+					'token' === $type
+				) {
+					self::transform_option_attribute(
+						$attributes,
+						(string) $k,
+						$v,
+						$att,
+						$type,
+						$return_format,
+						$populate
+					);
 				}
 
 				if ( 'files' === $type ) {
-					if ( is_array( $v ) ) {
-						foreach ( $v as $file_id ) {
-							if ( in_array( $k . '_' . $file_id, $disabled, true ) ) {
-								$attributes[ $k ] = array_filter(
-									$attributes[ $k ],
-									fn( $val ) => $val !== $file_id
-								);
-							}
-						}
-						$attributes[ $k ] = array_values( $attributes[ $k ] );
-					} elseif ( in_array( $k . '_' . $v, $disabled, true ) ) {
-						$attributes[ $k ] = false;
-					}
-
-					$size = 'full';
-
-					if ( isset( $attributes[ $k . '__size' ] ) ) {
-						$size = $attributes[ $k . '__size' ] ?? 'full';
-					}
-
-					if ( 'id' !== $return_format && 'url' !== $return_format ) {
-						if ( is_array( $attributes[ $k ] ) ) {
-							$object_array = array();
-							foreach ( $attributes[ $k ] as $o ) {
-								$object_array[] = self::get_attachment_data(
-									$o,
-									false,
-									0,
-									$size
-								);
-							}
-							$attributes[ $k ] = $object_array;
-						} elseif ( $attributes[ $k ] ) {
-							$attributes[ $k ] = self::get_attachment_data(
-								$attributes[ $k ],
-								false,
-								0,
-								$size
-							);
-						}
-					}
-
-					if ( 'url' === $return_format ) {
-						$media = fn( $id, $size ) => wp_attachment_is(
-							'image',
-							$id
-						)
-							? wp_get_attachment_image_src( $id, $size )[0] ??
-								false
-							: wp_get_attachment_url( $id ) ?? false;
-
-						if ( is_array( $attributes[ $k ] ) ) {
-							$url_array = array();
-							foreach ( $attributes[ $k ] as $o ) {
-								$url_array[] = $media( $o, $att['returnSize'] );
-							}
-							$attributes[ $k ] = $url_array;
-						} elseif ( $attributes[ $k ] ) {
-							$attributes[ $k ] = $media(
-								$attributes[ $k ],
-								$att['returnSize']
-							);
-						}
-
-						if (
-							( $att['multiple'] ?? false ) &&
-							! is_array( $attributes[ $k ] )
-						) {
-							$attributes[ $k ] = array( $attributes[ $k ] );
-						}
-					}
-
-					if (
-						$attributes[ $k ] &&
-						( $att['multiple'] ?? false ) &&
-						( $attributes[ $k ]['ID'] ??
-							( is_numeric( $attributes[ $k ] ) ?? false ) )
-					) {
-						$attributes[ $k ] = array( $attributes[ $k ] );
-					}
+					self::transform_files_attribute(
+						$attributes,
+						(string) $k,
+						$v,
+						$att,
+						$return_format,
+						$disabled
+					);
 				}
 
 				if ( 'number' === $type || 'range' === $type ) {
@@ -1351,29 +1153,14 @@ class Block {
 				}
 
 				if ( 'code' === $type ) {
-					$lang           = $att['language'];
-					$replaced_value = str_replace(
-						'%selector%',
-						"[$selector_attribute]",
-						$v
+					self::transform_code_attribute(
+						$attributes,
+						(string) $k,
+						$v,
+						$att,
+						$selector_attribute,
+						$attribute_data
 					);
-
-					if ( str_contains( $v, '%selector%' ) ) {
-						$attribute_data['hasCodeSelector'] = true;
-					}
-
-					if ( 'css' === $lang || 'scss' === $lang || 'javascript' === $lang ) {
-						$asset_data                 = array(
-							'language' => $lang,
-							'value'    => $replaced_value,
-						);
-						$attribute_data['assets'][] = $asset_data;
-						if ( $att['asset'] ?? false ) {
-							$attribute_data['assetsAsset'][] = $asset_data;
-						}
-					}
-
-					$attributes[ $k ] = $replaced_value;
 				}
 			}
 
@@ -1396,16 +1183,329 @@ class Block {
 			);
 		}
 
-		// Resolve block field references after all attributes are transformed.
+		self::resolve_block_field_references( $attributes, $repeater, $block_attributes );
+
+		return array(
+			'assets'              => $attribute_data['assets'] ?? array(),
+			'assetsAsset'         => $attribute_data['assetsAsset'] ?? array(),
+			'selectorAttribute'   => $selector_attribute,
+			'selectorAttributeId' => $selector_attribute_id,
+			'hasCodeSelector'     => $attribute_data['hasCodeSelector'] ?? false,
+		);
+	}
+
+	/**
+	 * Resolve a code value and collect the assets it contributes.
+	 *
+	 * `%selector%` resolves to the block's own attribute selector, so a code
+	 * field can scope its own CSS without knowing the instance ID.
+	 *
+	 * @param array  $attributes         The attributes (passed by reference).
+	 * @param string $key                The attribute key.
+	 * @param mixed  $value              The stored value.
+	 * @param array  $att                The attribute definition.
+	 * @param string $selector_attribute The block's selector attribute.
+	 * @param array  $attribute_data     The attribute data (passed by reference).
+	 *
+	 * @return void
+	 */
+	private static function transform_code_attribute(
+		array &$attributes,
+		string $key,
+		$value,
+		array $att,
+		string $selector_attribute,
+		array &$attribute_data
+	): void {
+		$lang           = $att['language'];
+		$replaced_value = str_replace( '%selector%', "[$selector_attribute]", $value );
+
+		if ( str_contains( $value, '%selector%' ) ) {
+			$attribute_data['hasCodeSelector'] = true;
+		}
+
+		if ( 'css' === $lang || 'scss' === $lang || 'javascript' === $lang ) {
+			$asset_data = array(
+				'language' => $lang,
+				'value'    => $replaced_value,
+			);
+
+			$attribute_data['assets'][] = $asset_data;
+
+			if ( $att['asset'] ?? false ) {
+				$attribute_data['assetsAsset'][] = $asset_data;
+			}
+		}
+
+		$attributes[ $key ] = $replaced_value;
+	}
+
+	/**
+	 * Transform a select, radio, checkbox, or token value.
+	 *
+	 * @param array  $attributes    The attributes (passed by reference).
+	 * @param string $key           The attribute key.
+	 * @param mixed  $value         The stored value.
+	 * @param array  $att           The attribute definition.
+	 * @param string $type          The field type.
+	 * @param string $return_format The return format.
+	 * @param array  $populate      The populate configuration.
+	 *
+	 * @return void
+	 */
+	private static function transform_option_attribute(
+		array &$attributes,
+		string $key,
+		$value,
+		array $att,
+		string $type,
+		string $return_format,
+		array $populate
+	): void {
+		if (
+			'select' === $type &&
+			isset( $populate['type'] ) &&
+			'fetch' === $populate['type']
+		) {
+			$attributes[ $key ] = $value;
+
+			return;
+		}
+
+		$is_multiple_option =
+			'checkbox' === $type ||
+			( 'select' === $type && ( $att['multiple'] ?? false ) );
+
+		if ( ( 'select' === $type || 'radio' === $type ) && ! $is_multiple_option ) {
+			$attributes[ $key ] = self::get_option_value(
+				$att,
+				$return_format,
+				$value,
+				$populate
+			);
+		}
+
+		if ( $is_multiple_option ) {
+			$new_values = array();
+
+			foreach ( $value as $l ) {
+				$val = self::get_option_value( $att, $return_format, $l, $populate );
+
+				if ( $val ) {
+					$new_values[] = $val;
+				}
+			}
+
+			if ( 'checkbox' === $type ) {
+				self::sort_option_values( $new_values, $att, $return_format );
+			}
+
+			$attributes[ $key ] = array_values( $new_values );
+		}
+
+		if ( 'token' === $type && 'both' !== $return_format ) {
+			$new_values = array();
+
+			foreach ( $value as $l ) {
+				$new_values[] = $l[ $return_format ] ?? $l;
+			}
+
+			$attributes[ $key ] = $new_values;
+		}
+	}
+
+	/**
+	 * Restore a checkbox selection to the order its options declare.
+	 *
+	 * Selections arrive in the order the editor stored them. Post and term
+	 * objects sort by their identifier, everything else by the option value or
+	 * label the field declares.
+	 *
+	 * @param array  $values        The resolved option values (passed by reference).
+	 * @param array  $att           The attribute definition.
+	 * @param string $return_format The return format.
+	 *
+	 * @return void
+	 */
+	private static function sort_option_values(
+		array &$values,
+		array $att,
+		string $return_format
+	): void {
+		$is_id   = isset( $values[0]->ID );
+		$is_term = isset( $values[0]->term_id );
+
+		if ( $is_id || $is_term ) {
+			$key         = $is_id ? 'ID' : 'term_id';
+			$sorting_arr = array_column( $att['options'], 'value' );
+
+			uasort(
+				$values,
+				function ( $a, $b ) use ( $key, $sorting_arr ) {
+					return array_search(
+						$a->{$key} ?? ( $a['value'] ?? $a ),
+						$sorting_arr,
+						true
+					) <=> array_search(
+						$b->{$key} ?? ( $b['value'] ?? $b ),
+						$sorting_arr,
+						true
+					);
+				}
+			);
+
+			return;
+		}
+
+		if ( isset( $att['options'][0]['label'] ) && 'label' === $return_format ) {
+			$sorting_arr = array_column( $att['options'], 'label' );
+		} elseif ( isset( $att['options'][0]['value'] ) ) {
+			$sorting_arr = array_column( $att['options'], 'value' );
+		} else {
+			$sorting_arr = $att['options'];
+		}
+
+		uasort(
+			$values,
+			function ( $a, $b ) use ( $sorting_arr ) {
+				return array_search( $a['value'] ?? $a, $sorting_arr, true )
+					<=> array_search( $b['value'] ?? $b, $sorting_arr, true );
+			}
+		);
+	}
+
+	/**
+	 * Transform a files value into the shape its return format asks for.
+	 *
+	 * @param array  $attributes    The attributes (passed by reference).
+	 * @param string $key           The attribute key.
+	 * @param mixed  $value         The stored value.
+	 * @param array  $att           The attribute definition.
+	 * @param string $return_format The return format.
+	 * @param array  $disabled      The disabled attribute keys.
+	 *
+	 * @return void
+	 */
+	private static function transform_files_attribute(
+		array &$attributes,
+		string $key,
+		$value,
+		array $att,
+		string $return_format,
+		array $disabled
+	): void {
+		if ( is_array( $value ) ) {
+			foreach ( $value as $file_id ) {
+				if ( in_array( $key . '_' . $file_id, $disabled, true ) ) {
+					$attributes[ $key ] = array_filter(
+						$attributes[ $key ],
+						fn( $val ) => $val !== $file_id
+					);
+				}
+			}
+
+			$attributes[ $key ] = array_values( $attributes[ $key ] );
+		} elseif ( in_array( $key . '_' . $value, $disabled, true ) ) {
+			$attributes[ $key ] = false;
+		}
+
+		$size = $attributes[ $key . '__size' ] ?? 'full';
+
+		if ( 'id' !== $return_format && 'url' !== $return_format ) {
+			if ( is_array( $attributes[ $key ] ) ) {
+				$object_array = array();
+
+				foreach ( $attributes[ $key ] as $o ) {
+					$object_array[] = self::get_attachment_data( $o, false, 0, $size );
+				}
+
+				$attributes[ $key ] = $object_array;
+			} elseif ( $attributes[ $key ] ) {
+				$attributes[ $key ] = self::get_attachment_data(
+					$attributes[ $key ],
+					false,
+					0,
+					$size
+				);
+			}
+		}
+
+		if ( 'url' === $return_format ) {
+			$media = fn( $id, $media_size ) => wp_attachment_is( 'image', $id )
+				? wp_get_attachment_image_src( $id, $media_size )[0] ?? false
+				: wp_get_attachment_url( $id ) ?? false;
+
+			if ( is_array( $attributes[ $key ] ) ) {
+				$url_array = array();
+
+				foreach ( $attributes[ $key ] as $o ) {
+					$url_array[] = $media( $o, $att['returnSize'] );
+				}
+
+				$attributes[ $key ] = $url_array;
+			} elseif ( $attributes[ $key ] ) {
+				$attributes[ $key ] = $media( $attributes[ $key ], $att['returnSize'] );
+			}
+
+			if ( ( $att['multiple'] ?? false ) && ! is_array( $attributes[ $key ] ) ) {
+				$attributes[ $key ] = array( $attributes[ $key ] );
+			}
+		}
+
+		if (
+			$attributes[ $key ] &&
+			( $att['multiple'] ?? false ) &&
+			( $attributes[ $key ]['ID'] ?? ( is_numeric( $attributes[ $key ] ) ?? false ) )
+		) {
+			$attributes[ $key ] = array( $attributes[ $key ] );
+		}
+	}
+
+	/**
+	 * Find the definition for one attribute key.
+	 *
+	 * Repeater rows carry their definitions as a list keyed by an `id`
+	 * property, everything else is keyed by name.
+	 *
+	 * @param string     $key              The attribute key.
+	 * @param array|bool $repeater         The repeater attributes, or false.
+	 * @param array      $block_attributes The block attributes.
+	 *
+	 * @return array|false The attribute definition.
+	 */
+	private static function attribute_definition( string $key, $repeater, array $block_attributes ) {
+		if ( ! $repeater ) {
+			return $block_attributes[ $key ] ?? false;
+		}
+
+		return array_values(
+			array_filter(
+				$repeater,
+				fn( $item ) => ( $item['id'] ?? false ) === $key
+			)
+		)[0] ?? false;
+	}
+
+	/**
+	 * Resolve block field references once every attribute is transformed.
+	 *
+	 * A block field renders another block with the sibling attributes that
+	 * share its ID structure, so it can only run after those siblings hold
+	 * their final values.
+	 *
+	 * @param array      $attributes       The attributes (passed by reference).
+	 * @param array|bool $repeater         The repeater attributes, or false.
+	 * @param array      $block_attributes The block attributes.
+	 *
+	 * @return void
+	 */
+	private static function resolve_block_field_references(
+		array &$attributes,
+		$repeater,
+		array $block_attributes
+	): void {
 		foreach ( $attributes as $k => $v ) {
-			$att = $repeater
-				? array_values(
-					array_filter(
-						$repeater,
-						fn( $item ) => ( $item['id'] ?? false ) === $k
-					)
-				)[0] ?? false
-				: $block_attributes[ $k ] ?? false;
+			$att = self::attribute_definition( (string) $k, $repeater, $block_attributes );
 
 			if ( ! $att || empty( $att['_blockField'] ) ) {
 				continue;
@@ -1470,14 +1570,6 @@ class Block {
 				$attributes[ $k ] = $rendered;
 			}
 		}
-
-		return array(
-			'assets'              => $attribute_data['assets'] ?? array(),
-			'assetsAsset'         => $attribute_data['assetsAsset'] ?? array(),
-			'selectorAttribute'   => $selector_attribute,
-			'selectorAttributeId' => $selector_attribute_id,
-			'hasCodeSelector'     => $attribute_data['hasCodeSelector'] ?? false,
-		);
 	}
 
 	/**
