@@ -258,6 +258,7 @@ store( 'bsui/select', {
 							window.__bsui.getAnchor( trigger )?.focus()
 						);
 					}
+					event.stopPropagation();
 					break;
 				case 'Tab':
 					ctx.open = false;

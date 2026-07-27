@@ -9,7 +9,9 @@ function getItems( root ) {
 }
 
 function positionPopup( trigger, popup ) {
+	popup.style.position = 'fixed';
 	computePosition( window.__bsui.getAnchor( trigger ), popup, {
+		strategy: 'fixed',
 		placement: 'bottom-start',
 		middleware: [ offset( 4 ), flip(), shift( { padding: 8 } ) ],
 	} ).then( ( { x, y } ) => {
@@ -145,6 +147,7 @@ store( 'bsui/menu', {
 						const trigger = root.querySelector( '[data-bsui-menu-trigger]' );
 						requestAnimationFrame( () => window.__bsui.getAnchor( trigger )?.focus() );
 					}
+					event.stopPropagation();
 					break;
 				case 'Tab':
 					ctx.open = false;

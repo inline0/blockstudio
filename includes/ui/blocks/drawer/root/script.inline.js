@@ -99,6 +99,8 @@ store( 'bsui/drawer', {
 			if ( event.key !== 'Escape' ) return;
 			const ctx = getContext();
 			if ( ! ctx.open || ! ctx.dismissable ) return;
+	if ( document.querySelector( '[role="listbox"]:not([hidden]), [role="menu"]:not([hidden]), [data-bsui-popover-root] [role="dialog"]:not([hidden]), [data-bsui-date-input-popup]:not([hidden]), [data-bsui-phone-popup]:not([hidden])' ) ) return;
+
 			event.preventDefault();
 			const { ref } = getElement();
 			closeDrawer( ctx, ref );

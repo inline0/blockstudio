@@ -46,7 +46,6 @@
 	border: none;
 	border-radius: 0;
 	max-height: none;
-	will-change: transform;
 	transition: transform 450ms cubic-bezier(0.32, 0.72, 0, 1);
 }
 

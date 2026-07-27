@@ -104,6 +104,7 @@ store( 'bsui/context-menu', {
 						const menuPopup = root?.querySelector( '[role="menu"]' );
 						if ( menuPopup ) menuPopup.setAttribute( 'hidden', '' );
 					}
+					event.stopPropagation();
 					break;
 			}
 		},

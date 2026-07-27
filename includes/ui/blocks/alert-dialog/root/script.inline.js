@@ -54,6 +54,8 @@ function closeAlertDialog( ctx, root ) {
 // has to be made rather than dismissed by accident.
 document.addEventListener( 'keydown', ( event ) => {
 	if ( 'Escape' !== event.key || ! openEntry ) return;
+	if ( document.querySelector( '[role="listbox"]:not([hidden]), [role="menu"]:not([hidden]), [data-bsui-popover-root] [role="dialog"]:not([hidden]), [data-bsui-date-input-popup]:not([hidden]), [data-bsui-phone-popup]:not([hidden])' ) ) return;
+
 	event.preventDefault();
 	closeAlertDialog( openEntry.ctx, openEntry.root );
 } );

@@ -58,6 +58,7 @@ store( 'bsui/popover', {
 		},
 		handleEscape( event ) {
 			if ( event.key !== 'Escape' ) return;
+			event.stopPropagation();
 			const ctx = getContext();
 			if ( ! ctx.open ) return;
 			ctx.open = false;

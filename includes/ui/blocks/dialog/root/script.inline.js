@@ -189,6 +189,9 @@ function openDialog( root, ctx ) {
 
 document.addEventListener( 'keydown', ( e ) => {
 	if ( e.key !== 'Escape' || openDialogStack.length === 0 ) return;
+	// A floating layer above the dialog owns this Escape.
+	if ( document.querySelector( '[role="listbox"]:not([hidden]), [role="menu"]:not([hidden]), [data-bsui-popover-root] [role="dialog"]:not([hidden]), [data-bsui-date-input-popup]:not([hidden]), [data-bsui-phone-popup]:not([hidden])' ) ) return;
+
 	const top = openDialogStack[ openDialogStack.length - 1 ];
 	if ( top.ctx && top.ctx.dismissable === false ) return;
 	e.preventDefault();

@@ -8,7 +8,9 @@ function getVisibleOptions( root ) {
 }
 
 function positionPopup( input, popup ) {
+	popup.style.position = 'fixed';
 	computePosition( input, popup, {
+		strategy: 'fixed',
 		placement: 'bottom-start',
 		middleware: [ offset( 4 ), flip(), shift( { padding: 8 } ) ],
 	} ).then( ( { x, y } ) => {
@@ -112,6 +114,7 @@ store( 'bsui/combobox', {
 					ctx.activeIndex = -1;
 					if ( popup ) popup.setAttribute( 'hidden', '' );
 					root.querySelector( '[data-bsui-combobox-input]' )?.focus();
+					event.stopPropagation();
 					break;
 			}
 		},

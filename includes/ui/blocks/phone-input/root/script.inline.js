@@ -141,6 +141,7 @@ store( 'bsui/phone-input', {
 					if ( telInput ) telInput.focus();
 				}
 			} else if ( event.key === 'Escape' ) {
+			event.stopPropagation();
 				event.preventDefault();
 				ctx.open = false;
 				hidePopup( root );
