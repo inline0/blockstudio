@@ -40,7 +40,7 @@ Or enable them with a filter:
 add_filter('blockstudio/settings/ui/enabled', '__return_true');
 ```
 
-When enabled, Blockstudio registers the bundled component library from `includes/ui/blocks` and the bundled demo apps from `includes/ui/apps`.
+When enabled, Blockstudio registers the bundled component library from `includes/ui/blocks`.
 
 ## Public Inventory and Examples
 
@@ -210,23 +210,6 @@ The bundled UI library includes:
 | Forms      | `bsui/field`, `bsui/field-group`, `bsui/form`                                                                                                                                                                                                                                                    |
 
 Compound components also expose child blocks such as `bsui/dialog-trigger`, `bsui/dialog-popup`, `bsui/tabs-list`, `bsui/tabs-trigger`, `bsui/tabs-panel`, `bsui/select-trigger`, `bsui/select-popup`, and `bsui/select-option`.
-
-## Apps
-
-The `app/*` namespace contains bundled app examples built from the same UI components:
-
-```html
-<block name="app/kitchen-sink"></block>
-
-<block name="app/chat">
-  <block name="app/chat-sidebar"></block>
-  <block name="app/chat-header"></block>
-  <block name="app/chat-messages"></block>
-  <block name="app/chat-input"></block>
-</block>
-```
-
-These are useful as reference implementations for more complex Interactivity API flows, RPC, database-backed UI, and compound block composition.
 
 ## Styling
 

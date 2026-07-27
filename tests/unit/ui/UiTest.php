@@ -33,11 +33,11 @@ class UiTest extends TestCase {
 		$this->assertTrue( Ui::enabled() );
 	}
 
-	public function test_directories_include_bundled_blocks_and_apps(): void {
+	public function test_directories_include_bundled_blocks(): void {
 		$directories = Ui::directories();
 
 		$this->assertContains( BLOCKSTUDIO_DIR . '/includes/ui/blocks', $directories );
-		$this->assertContains( BLOCKSTUDIO_DIR . '/includes/ui/apps', $directories );
+		$this->assertNotContains( BLOCKSTUDIO_DIR . '/includes/ui/apps', $directories );
 	}
 
 	public function test_bundled_path_detection_is_consumer_neutral(): void {

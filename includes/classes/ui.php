@@ -19,10 +19,6 @@ class Ui {
 	 */
 	private const BLOCKS_PATH_MARKER = '/includes/ui/blocks/';
 
-	/**
-	 * Bundled UI app source marker.
-	 */
-	private const APPS_PATH_MARKER = '/includes/ui/apps/';
 
 	/**
 	 * Whether the hooks have already been registered.
@@ -93,7 +89,6 @@ class Ui {
 			'blockstudio/ui/directories',
 			array(
 				BLOCKSTUDIO_DIR . '/includes/ui/blocks',
-				BLOCKSTUDIO_DIR . '/includes/ui/apps',
 			)
 		);
 
@@ -359,20 +354,15 @@ class Ui {
 			}
 
 			$relative = '';
+			$position = strpos( $path, self::BLOCKS_PATH_MARKER );
 
-			foreach ( array( self::BLOCKS_PATH_MARKER, self::APPS_PATH_MARKER ) as $marker ) {
-				$position = strpos( $path, $marker );
-
-				if ( false !== $position ) {
-					$relative = substr( $path, $position + strlen( $marker ) );
-					break;
-				}
+			if ( false !== $position ) {
+				$relative = substr( $path, $position + strlen( self::BLOCKS_PATH_MARKER ) );
 			}
 
 			$segments = array_values( array_filter( explode( '/', trim( $relative, '/' ) ) ) );
-			$is_app   = str_contains( $path, self::APPS_PATH_MARKER );
-			$family   = $is_app ? '' : ( $segments[0] ?? '' );
-			$role     = $is_app ? 'app' : ( $segments[1] ?? '' );
+			$family   = $segments[0] ?? '';
+			$role     = $segments[1] ?? '';
 			$title    = self::record_string( $block, 'title' );
 			$parent   = self::record_value( $block, 'parent' );
 
@@ -618,8 +608,7 @@ class Ui {
 	 * @return bool Whether bundled.
 	 */
 	private static function is_bundled_path( string $path ): bool {
-		return str_contains( $path, self::BLOCKS_PATH_MARKER )
-			|| str_contains( $path, self::APPS_PATH_MARKER );
+		return str_contains( $path, self::BLOCKS_PATH_MARKER );
 	}
 
 	/**
