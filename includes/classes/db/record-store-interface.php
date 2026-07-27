@@ -78,4 +78,18 @@ interface Record_Store_Interface {
 	 * @return int
 	 */
 	public function count( array $filters = array() ): int;
+
+	/**
+	 * Query records and report the total matching them.
+	 *
+	 * Backends that can answer both in one pass override the default, which
+	 * runs a query and a count.
+	 *
+	 * @param array<string, mixed> $filters Equality filters.
+	 * @param int                  $limit   Maximum rows.
+	 * @param int                  $offset  Row offset.
+	 *
+	 * @return array{items: array<int, array<string, mixed>>, total: int}
+	 */
+	public function paginate( array $filters = array(), int $limit = 50, int $offset = 0 ): array;
 }
