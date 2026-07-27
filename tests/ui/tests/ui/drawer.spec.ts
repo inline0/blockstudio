@@ -15,23 +15,26 @@ test.describe( 'bsui/drawer', () => {
 	test( 'click trigger opens', async ( { page } ) => {
 		const root = page.locator( '[data-bsui-drawer-root]' );
 		await root.locator( '[data-bsui-drawer-trigger] button' ).click();
-		await expect( root.locator( '[role="dialog"]' ) ).toBeVisible();
+		// The popup portals to the body while open, so it escapes stacking
+		// contexts and is no longer a descendant of the root.
+		await expect( page.locator( '[data-bsui-drawer-popup]' ) ).toBeVisible();
 	} );
 
 	test( 'Escape closes', async ( { page } ) => {
 		const root = page.locator( '[data-bsui-drawer-root]' );
 		await root.locator( '[data-bsui-drawer-trigger] button' ).click();
-		await expect( root.locator( '[role="dialog"]' ) ).toBeVisible();
+		const popup = page.locator( '[data-bsui-drawer-popup]' );
+		await expect( popup ).toBeVisible();
 		await page.keyboard.press( 'Escape' );
-		await expect( root.locator( '[role="dialog"]' ) ).toBeHidden();
+		await expect( popup ).toBeHidden();
 	} );
 
 	test( 'close button closes', async ( { page } ) => {
 		const root = page.locator( '[data-bsui-drawer-root]' );
 		await root.locator( '[data-bsui-drawer-trigger] button' ).click();
-		const popup = root.locator( '[role="dialog"]' );
+		const popup = page.locator( '[data-bsui-drawer-popup]' );
 		await expect( popup ).toBeVisible();
-		await popup.locator( 'button' ).click();
+		await popup.locator( '[data-bsui-drawer-close] button' ).click();
 		await expect( popup ).toBeHidden();
 	} );
 

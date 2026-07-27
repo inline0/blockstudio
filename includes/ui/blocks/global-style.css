@@ -56,6 +56,15 @@
 	--bs-ui-modal-header-gap: 0.5rem;
 	--bs-ui-modal-footer-gap: 0.5rem;
 
+	--bs-ui-space-1: 0.25rem;
+	--bs-ui-space-2: 0.5rem;
+	--bs-ui-space-3: 0.75rem;
+	--bs-ui-space-4: 1rem;
+	--bs-ui-space-6: 1.5rem;
+	--bs-ui-space-8: 2rem;
+	--bs-ui-rhythm: var(--bs-ui-space-4);
+	--bs-ui-field-gap: 0.375rem;
+
 	--bs-ui-transition: 150ms cubic-bezier(0.4, 0, 0.2, 1);
 	--bs-ui-transition-slow: 200ms cubic-bezier(0.4, 0, 0.2, 1);
 }
@@ -97,111 +106,9 @@
 	transition: outline-offset 50ms ease-in !important;
 }
 
-[data-bsui-popover-root] [role="dialog"],
-[data-bsui-context-menu-root] [role="menu"],
-[data-bsui-menu-root] [role="menu"],
-[data-bsui-select-root] [role="listbox"],
-[data-bsui-preview-card-root] [data-bsui-preview-card-popup] {
-	position: absolute;
-	z-index: 50;
-	top: 0;
-	left: 0;
-	min-width: 12rem;
-	background: var(--bs-ui-popover);
-	color: var(--bs-ui-popover-foreground);
-	border: 1px solid var(--bs-ui-border);
-	border-radius: var(--bs-ui-radius);
-	padding: var(--bs-ui-popup-padding);
-	box-shadow: var(--bs-ui-shadow-md);
-	font-family: var(--bs-ui-font-sans);
-	font-size: var(--bs-ui-font-size);
-}
-
-[data-bsui-popover-root] [role="dialog"]:not([hidden]),
-[data-bsui-context-menu-root] [role="menu"]:not([hidden]),
-[data-bsui-menu-root] [role="menu"]:not([hidden]),
-[data-bsui-select-root] [role="listbox"]:not([hidden]),
-[data-bsui-preview-card-root] [data-bsui-preview-card-popup]:not([hidden]) {
-	animation: bs-ui-popup-in var(--bs-ui-transition);
-}
-
 @keyframes bs-ui-popup-in {
 	from { opacity: 0; transform: translateY(-4px); }
 	to { opacity: 1; transform: translateY(0); }
-}
-
-[data-bsui-popover-root] [role="dialog"] {
-	padding: 1rem;
-}
-
-[role="menuitem"],
-[role="option"] {
-	all: unset;
-
-	box-sizing: border-box;
-	display: flex;
-	align-items: center;
-	gap: 0.5rem;
-	min-height: var(--bs-ui-control-height);
-	padding: 0 var(--bs-ui-control-padding);
-	border-radius: var(--bs-ui-radius-sm);
-	cursor: pointer;
-	font-size: var(--bs-ui-font-size);
-	transition: background var(--bs-ui-transition), color var(--bs-ui-transition);
-	color: var(--bs-ui-popover-foreground);
-	position: relative;
-}
-
-[role="option"][hidden] {
-	display: none;
-}
-
-[role="menuitem"]:hover,
-[role="menuitem"]:focus,
-[role="option"]:hover,
-[role="option"]:focus {
-	background: var(--bs-ui-accent);
-	color: var(--bs-ui-accent-foreground);
-	outline: none;
-}
-
-[role="menuitem"][aria-disabled="true"],
-[role="option"][aria-disabled="true"] {
-	opacity: 0.5;
-	pointer-events: none;
-}
-
-[role="option"][aria-selected="true"] {
-	font-weight: inherit;
-}
-
-[role="option"][aria-selected="true"]::before {
-	content: "";
-	position: absolute;
-	left: var(--bs-ui-control-padding);
-	top: 50%;
-	transform: translateY(-50%);
-	width: 0.625rem;
-	height: 0.625rem;
-	background: currentColor;
-	mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M20 6 9 17l-5-5'/%3E%3C/svg%3E") center / contain no-repeat;
-}
-
-body > [data-bsui-dialog-backdrop],
-[data-bsui-alert-dialog-backdrop],
-[data-bsui-drawer-backdrop] {
-	position: fixed;
-	inset: 0;
-	z-index: 50;
-	background: oklch(0 0 0 / 0.5);
-	backdrop-filter: blur(4px);
-	opacity: 1;
-	transition: opacity 150ms cubic-bezier(0.45, 1.005, 0, 1.005);
-}
-
-body > [data-bsui-dialog-backdrop].bs-ui-entering,
-[data-bsui-drawer-backdrop].bs-ui-entering {
-	opacity: 0;
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -220,42 +127,4 @@ body > [data-bsui-dialog-backdrop].bs-ui-entering,
 		transition-duration: 1ms !important;
 		scroll-behavior: auto !important;
 	}
-}
-
-[data-bsui-overlay-x] {
-	position: absolute;
-	top: 1rem;
-	right: 1rem;
-	z-index: 1;
-}
-
-/* Every modal layer is the same surface underneath. Only its geometry, which
-   is what actually distinguishes a dialog from a sheet, lives per component. */
-[data-bsui-dialog-popup],
-[data-bsui-alert-dialog-popup],
-[data-bsui-drawer-popup] {
-	position: fixed;
-	z-index: 51;
-	overflow-y: auto;
-	background: var(--bs-ui-popover);
-	color: var(--bs-ui-popover-foreground);
-	box-shadow: var(--bs-ui-shadow-lg);
-	font-family: var(--bs-ui-font-sans);
-	font-size: var(--bs-ui-font-size);
-	padding: var(--bs-ui-modal-padding);
-}
-
-/* InnerBlocks wraps the authored children, so the rhythm lives on the wrapper
-   rather than on the popup itself. */
-[data-bsui-dialog-popup] > div,
-[data-bsui-alert-dialog-popup] > div,
-[data-bsui-drawer-popup] > div {
-	display: flex;
-	flex-direction: column;
-	gap: var(--bs-ui-modal-gap);
-}
-
-[data-bsui-drawer-popup][data-flush],
-[data-bsui-dialog-popup][data-flush] {
-	padding: 0;
 }

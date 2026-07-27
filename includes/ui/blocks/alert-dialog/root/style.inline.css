@@ -1,3 +1,46 @@
+[data-bsui-alert-dialog-popup] {
+	position: fixed;
+	z-index: 51;
+}
+
+[data-bsui-alert-dialog-popup]:not([hidden]) {
+	display: flex;
+	flex-direction: column;
+	gap: var(--bs-ui-modal-gap);
+	overflow-y: auto;
+	background: var(--bs-ui-popover);
+	color: var(--bs-ui-popover-foreground);
+	box-shadow: var(--bs-ui-shadow-lg);
+	font-family: var(--bs-ui-font-sans);
+	font-size: var(--bs-ui-font-size);
+	padding: var(--bs-ui-modal-padding);
+}
+
+[data-bsui-alert-dialog-popup] > div {
+	display: contents;
+}
+
+[data-bsui-alert-dialog-popup] [data-bsui-overlay-x] {
+	position: absolute;
+	top: var(--bs-ui-space-4);
+	right: var(--bs-ui-space-4);
+	z-index: 1;
+}
+
+[data-bsui-alert-dialog-backdrop] {
+	position: fixed;
+	inset: 0;
+	z-index: 50;
+	background: oklch(0 0 0 / 0.5);
+	backdrop-filter: blur(4px);
+	opacity: 1;
+	transition: opacity 150ms cubic-bezier(0.45, 1.005, 0, 1.005);
+}
+
+[data-bsui-alert-dialog-backdrop].bs-ui-entering {
+	opacity: 0;
+}
+
 [data-bsui-alert-dialog-root] [role="alertdialog"],
 [data-bsui-alert-dialog-popup] {
 	top: 50%;
@@ -17,7 +60,7 @@
 	transform: translate(-50%, -50%) scale(0.9);
 }
 
-[data-bsui-alert-dialog-popup][role="alertdialog"] > div {
+[data-bsui-alert-dialog-popup][role="alertdialog"] {
 	gap: var(--bs-ui-modal-header-gap);
 }
 

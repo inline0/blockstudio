@@ -1,0 +1,43 @@
+{
+  "$schema": "https://blockstudio.dev/schema/block",
+  "name": "bsui/space",
+  "title": "Space",
+  "category": "design",
+  "icon": "image-flip-vertical",
+  "blockstudio": {
+    "attributes": [
+      {
+        "id": "size",
+        "type": "select",
+        "label": "Size",
+        "options": [
+          {
+            "label": "1 (0.25rem)",
+            "value": "1"
+          },
+          {
+            "label": "2 (0.5rem)",
+            "value": "2"
+          },
+          {
+            "label": "3 (0.75rem)",
+            "value": "3"
+          },
+          {
+            "label": "4 (1rem)",
+            "value": "4"
+          },
+          {
+            "label": "6 (1.5rem)",
+            "value": "6"
+          },
+          {
+            "label": "8 (2rem)",
+            "value": "8"
+          }
+        ],
+        "default": "4"
+      }
+    ]
+  }
+}

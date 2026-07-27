@@ -18,7 +18,7 @@
 	flex-shrink: 0;
 	width: var(--bs-ui-indicator-size);
 	height: var(--bs-ui-indicator-size);
-	border-radius: var(--bs-ui-radius-sm);
+	border-radius: 0.25rem;
 	border: 1px solid var(--bs-ui-primary);
 	transition: background var(--bs-ui-transition), border-color var(--bs-ui-transition);
 	cursor: pointer;

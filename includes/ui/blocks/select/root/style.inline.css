@@ -30,3 +30,72 @@
 	mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E") center / contain no-repeat;
 	flex-shrink: 0;
 }
+
+[data-bsui-select-root] [role="listbox"] {
+	position: absolute;
+	z-index: 50;
+	top: 0;
+	left: 0;
+	min-width: 12rem;
+	background: var(--bs-ui-popover);
+	color: var(--bs-ui-popover-foreground);
+	border: 1px solid var(--bs-ui-border);
+	border-radius: var(--bs-ui-radius);
+	padding: var(--bs-ui-popup-padding);
+	box-shadow: var(--bs-ui-shadow-md);
+	font-family: var(--bs-ui-font-sans);
+	font-size: var(--bs-ui-font-size);
+}
+
+[data-bsui-select-root] [role="listbox"]:not([hidden]) {
+	animation: bs-ui-popup-in var(--bs-ui-transition);
+}
+
+[data-bsui-select-root] [role="menuitem"],
+[data-bsui-select-root] [role="option"] {
+	all: unset;
+	box-sizing: border-box;
+	display: flex;
+	align-items: center;
+	gap: var(--bs-ui-space-2);
+	min-height: var(--bs-ui-control-height);
+	padding: 0 var(--bs-ui-control-padding);
+	border-radius: var(--bs-ui-radius-sm);
+	cursor: pointer;
+	font-family: var(--bs-ui-font-sans);
+	font-size: var(--bs-ui-font-size);
+	transition: background var(--bs-ui-transition), color var(--bs-ui-transition);
+	color: var(--bs-ui-popover-foreground);
+	position: relative;
+}
+
+[data-bsui-select-root] [role="menuitem"]:hover,
+[data-bsui-select-root] [role="menuitem"]:focus,
+[data-bsui-select-root] [role="option"]:hover,
+[data-bsui-select-root] [role="option"]:focus {
+	background: var(--bs-ui-accent);
+	color: var(--bs-ui-accent-foreground);
+	outline: none;
+}
+
+[data-bsui-select-root] [role="menuitem"][aria-disabled="true"],
+[data-bsui-select-root] [role="option"][aria-disabled="true"] {
+	opacity: 0.5;
+	pointer-events: none;
+}
+
+[data-bsui-select-root] [role="option"][aria-selected="true"]::before {
+	content: "";
+	position: absolute;
+	left: var(--bs-ui-control-padding);
+	top: 50%;
+	transform: translateY(-50%);
+	width: 0.625rem;
+	height: 0.625rem;
+	background: currentColor;
+	mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M20 6 9 17l-5-5'/%3E%3C/svg%3E") center / contain no-repeat;
+}
+
+[data-bsui-field-root] [data-bsui-select-trigger] {
+	width: 100%;
+}

@@ -29,8 +29,7 @@ form[data-bsui-form-root] > div:not([hidden]) > div {
 	color: var(--bs-ui-success-foreground);
 }
 
-form.bs-ui-submitting [data-bsui-button][type="submit"],
-form.bs-ui-submitting [data-bsui-button][data-bsui-form-submit] {
+form.bs-ui-submitting [data-bsui-button][type="submit"] {
 	opacity: 0.5;
 	pointer-events: none;
 }

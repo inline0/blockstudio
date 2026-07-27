@@ -26,16 +26,16 @@
 	display: inline-flex;
 	align-items: center;
 	justify-content: center;
-	width: 1em;
-	height: 1em;
+	width: 1rem;
+	height: 1rem;
 	flex-shrink: 0;
 	pointer-events: none;
 }
 
 [data-bsui-button-icon] svg {
 	display: block;
-	width: 1em;
-	height: 1em;
+	width: 1rem;
+	height: 1rem;
 }
 
 [data-bsui-button][data-size="default"] {

@@ -1,0 +1,32 @@
+[data-bsui-popover-root] [role="dialog"] {
+	position: absolute;
+	z-index: 50;
+	top: 0;
+	left: 0;
+	min-width: 12rem;
+	background: var(--bs-ui-popover);
+	color: var(--bs-ui-popover-foreground);
+	border: 1px solid var(--bs-ui-border);
+	border-radius: var(--bs-ui-radius);
+	padding: var(--bs-ui-space-4);
+	box-shadow: var(--bs-ui-shadow-md);
+	font-family: var(--bs-ui-font-sans);
+	font-size: var(--bs-ui-font-size);
+}
+
+[data-bsui-popover-root] [role="dialog"]:not([hidden]) {
+	animation: bs-ui-popup-in var(--bs-ui-transition);
+}
+
+[data-bsui-popover-root] [role="dialog"] > div {
+	display: flex;
+	flex-direction: column;
+	gap: var(--bs-ui-space-3);
+}
+
+[data-bsui-popover-root] [data-bsui-overlay-x] {
+	position: absolute;
+	top: var(--bs-ui-space-3);
+	right: var(--bs-ui-space-3);
+	z-index: 1;
+}

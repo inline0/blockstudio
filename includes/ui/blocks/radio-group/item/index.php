@@ -7,7 +7,7 @@ $is_checked     = $value !== '' && $value === $default_value;
 $is_disabled    = $disabled || $root_disabled;
 $bind_text      = ! empty( $a['bindText'] ) ? $a['bindText'] : '';
 ?>
-<label data-bsui-radio>
+<span data-bsui-radio>
 	<div
 		data-wp-interactive="bsui/radio-group"
 		data-wp-context='<?php echo esc_attr( wp_json_encode( array( 'radioValue' => $value ) ) ); ?>'
@@ -28,6 +28,6 @@ $bind_text      = ! empty( $a['bindText'] ) ? $a['bindText'] : '';
 	<?php if ( $bind_text ) : ?>
 	<span data-wp-text="<?php echo esc_attr( $bind_text ); ?>"><?php echo esc_html( $a['label'] ?? '' ); ?></span>
 	<?php else : ?>
-	<RichText attribute="label" tag="span" placeholder="Option" />
+	<?php echo bs_block( array( 'name' => 'bsui/label', 'data' => array( 'text' => (string) ( $a['label'] ?? '' ) ) ) ); ?>
 	<?php endif; ?>
-</label>
+</span>

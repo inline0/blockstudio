@@ -5,6 +5,7 @@ $fallback = ! empty( $a['fallback'] ) ? $a['fallback'] : '';
 $has_src  = '' !== $src;
 ?>
 <span
+	data-bsui-avatar
 	data-wp-interactive="bsui/avatar"
 	data-wp-context='<?php echo esc_attr( wp_json_encode( array(
 		'loaded' => $has_src,
