@@ -526,6 +526,25 @@ class Assets {
 			$head = $interactivity_importmap . $head;
 		}
 
+		/*
+		 * Bundled UI blocks read shared helpers from window.__bsui, and their
+		 * own inline scripts assume it exists. Only the canvas document
+		 * renderer emitted those globals, so a bundled component rendered on
+		 * an ordinary page threw on the first interaction: a dialog could not
+		 * lock scroll, so it never opened.
+		 */
+		if ( method_exists( Ui::class, 'global_assets' ) ) {
+			$ui_globals = Ui::global_assets( array_keys( $blocks_on_page ), $html );
+
+			if ( is_string( $ui_globals['style'] ?? null ) && '' !== $ui_globals['style'] ) {
+				$head .= $ui_globals['style'];
+			}
+
+			if ( is_string( $ui_globals['script'] ?? null ) && '' !== $ui_globals['script'] ) {
+				$footer = $ui_globals['script'] . $footer;
+			}
+		}
+
 		$head   = apply_filters( 'blockstudio/render/head', $head, $blocks_on_page );
 		$footer = apply_filters( 'blockstudio/render/footer', $footer, $blocks_on_page );
 
