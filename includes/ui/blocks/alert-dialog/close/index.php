@@ -7,7 +7,7 @@ $is_x = ! empty( $a['x'] );
 		'name' => 'bsui/button',
 		'data' => $is_x
 			? array( 'variant' => 'ghost', 'size' => 'icon', 'label' => '✕' )
-			: array( 'variant' => 'outline', 'label' => $a['label'] ?? 'Close' ),
+			: array( 'variant' => $a['variant'] ?? 'outline', 'label' => $a['label'] ?? 'Close' ),
 	) );
 	?>
 </div>

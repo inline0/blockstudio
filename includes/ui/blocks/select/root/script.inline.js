@@ -25,13 +25,13 @@ function positionPopup( trigger, popup, isMulti ) {
 		const styles = getComputedStyle( document.documentElement );
 		const popupPadding = parseFloat( styles.getPropertyValue( '--bs-ui-popup-padding' ) ) * rem;
 		const popupBorder = 1;
-		const checkmarkSpace = rem;
+		const checkmarkSpace = 1.25 * rem;
 
 		const triggerRect = trigger.getBoundingClientRect();
 		const optionRect = selectedOption.getBoundingClientRect();
 		const popupRect = popup.getBoundingClientRect();
 
-		const x = triggerRect.left - popupPadding - popupBorder - checkmarkSpace + 1;
+		const x = triggerRect.left + 1 - popupBorder - popupPadding;
 		const optionOffsetY = optionRect.top - popupRect.top;
 		let y = triggerRect.top - optionOffsetY;
 

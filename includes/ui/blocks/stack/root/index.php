@@ -29,7 +29,7 @@ $gap       = isset( $scale[ $gap_raw ] ) ? $scale[ $gap_raw ] : $gap_raw;
 $default   = 'column' === $direction ? 'flex-start' : 'center';
 $align     = ! empty( $a['align'] ) ? $a['align'] : $default;
 $justify   = ! empty( $a['justify'] ) ? $a['justify'] : '';
-$wrap      = filter_var( $a['wrap'] ?? true, FILTER_VALIDATE_BOOLEAN );
+$wrap      = filter_var( $a['wrap'] ?? false, FILTER_VALIDATE_BOOLEAN );
 
 $style = '--bsui-stack-gap:' . esc_attr( $gap ) . ';'
 	. ' --bsui-stack-direction:' . esc_attr( $direction ) . ';'

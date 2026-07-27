@@ -18,10 +18,6 @@
 	color: var(--bs-ui-foreground);
 }
 
-[data-bsui-select-root] [role="option"] {
-	padding-left: calc(var(--bs-ui-control-padding) + 1rem);
-}
-
 [data-bsui-select-trigger]::after {
 	content: "";
 	width: 0.75rem;
@@ -32,7 +28,7 @@
 }
 
 [data-bsui-select-root] [role="listbox"] {
-	position: absolute;
+	position: fixed;
 	z-index: 50;
 	top: 0;
 	left: 0;
@@ -84,10 +80,14 @@
 	pointer-events: none;
 }
 
+[data-bsui-select-root] [role="option"] {
+	padding-right: calc(var(--bs-ui-control-padding) + 1.25rem);
+}
+
 [data-bsui-select-root] [role="option"][aria-selected="true"]::before {
 	content: "";
 	position: absolute;
-	left: var(--bs-ui-control-padding);
+	right: var(--bs-ui-control-padding);
 	top: 50%;
 	transform: translateY(-50%);
 	width: 0.625rem;

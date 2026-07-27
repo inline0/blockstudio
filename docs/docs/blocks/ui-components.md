@@ -241,11 +241,11 @@ echo bs_block( array(
 	'name' => 'bsui/button',
 	'data' => $is_x
 		? array( 'variant' => 'ghost', 'size' => 'icon', 'label' => '✕' )
-		: array( 'variant' => 'outline', 'label' => $a['label'] ?? 'Close' ),
+		: array( 'variant' => $a['variant'] ?? 'outline', 'label' => $a['label'] ?? 'Close' ),
 ) );
 ```
 
-Your blocks should do the same. When a project block needs a button that looks like the system button, it renders `bsui/button` with `bs_block()` or a nested tag, and it gets every future refinement of the button for free.
+The forwarded `variant` is how a footer builds its Cancel and Save pair from two close tags: the dismissing close stays `outline`, the affirmative one passes `variant="default"`. Your blocks should do the same. When a project block needs a button that looks like the system button, it renders `bsui/button` with `bs_block()` or a nested tag, and it gets every future refinement of the button for free.
 
 ## Accessibility
 

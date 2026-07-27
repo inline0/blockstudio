@@ -1,13 +1,19 @@
 [data-bsui-stack] {
-	max-width: 100%;
-	width: 100%;
-}
-
-[data-bsui-stack] > div {
 	display: flex;
+	max-width: 100%;
+	min-width: 0;
+	flex: 1 1 auto;
 	flex-direction: var(--bsui-stack-direction, row);
 	gap: var(--bsui-stack-gap, 0.5rem);
 	align-items: var(--bsui-stack-align);
 	justify-content: var(--bsui-stack-justify, normal);
 	flex-wrap: var(--bsui-stack-wrap, nowrap);
+}
+
+[data-bsui-stack] > div {
+	display: contents;
+}
+
+[data-bsui-stack] [data-bsui-stack] {
+	align-self: stretch;
 }

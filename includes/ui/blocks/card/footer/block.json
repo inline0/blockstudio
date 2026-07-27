@@ -2,6 +2,35 @@
 	"$schema": "https://blockstudio.dev/schema/block",
 	"name": "bsui/card-footer",
 	"title": "Card Footer",
-	"parent": ["bsui/card"],
-	"blockstudio": true
+	"parent": [
+		"bsui/card"
+	],
+	"blockstudio": {
+		"attributes": [
+			{
+				"id": "justify",
+				"type": "select",
+				"label": "Justify",
+				"default": "start",
+				"options": [
+					{
+						"value": "start",
+						"label": "Start"
+					},
+					{
+						"value": "center",
+						"label": "Center"
+					},
+					{
+						"value": "end",
+						"label": "End"
+					},
+					{
+						"value": "between",
+						"label": "Between"
+					}
+				]
+			}
+		]
+	}
 }

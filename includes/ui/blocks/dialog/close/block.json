@@ -4,13 +4,45 @@
 	"title": "Dialog Close",
 	"category": "design",
 	"icon": "no",
-	"parent": ["bsui/dialog-popup"],
-	"usesContext": ["bsui/dialog"],
+	"parent": [
+		"bsui/dialog-popup"
+	],
+	"usesContext": [
+		"bsui/dialog"
+	],
 	"blockstudio": {
 		"attributes": [
 			{
 				"id": "label",
 				"type": "richtext"
+			},
+			{
+				"id": "variant",
+				"type": "select",
+				"label": "Variant",
+				"default": "outline",
+				"options": [
+					{
+						"value": "default",
+						"label": "Default"
+					},
+					{
+						"value": "secondary",
+						"label": "Secondary"
+					},
+					{
+						"value": "outline",
+						"label": "Outline"
+					},
+					{
+						"value": "ghost",
+						"label": "Ghost"
+					},
+					{
+						"value": "destructive",
+						"label": "Destructive"
+					}
+				]
 			},
 			{
 				"id": "x",

@@ -10,23 +10,79 @@ function bodyOverflow( page: Page ) {
 	return page.evaluate( () => document.body.style.overflow );
 }
 
+type TextMetrics = {
+	left: number;
+	top: number;
+	fontSize: string;
+};
+
+async function textRect( locator: Locator ): Promise< TextMetrics | null > {
+	return locator.evaluate( ( el ) => {
+		const walker = document.createTreeWalker( el, NodeFilter.SHOW_TEXT, {
+			acceptNode: ( node ) =>
+				( node.textContent || '' ).trim().length > 0
+					? NodeFilter.FILTER_ACCEPT
+					: NodeFilter.FILTER_REJECT,
+		} );
+		const node = walker.nextNode();
+		if ( ! node ) return null;
+		const range = document.createRange();
+		range.selectNodeContents( node );
+		const rect = range.getBoundingClientRect();
+		return {
+			left: rect.left,
+			top: rect.top,
+			fontSize: getComputedStyle( el ).fontSize,
+		};
+	} );
+}
+
 async function expectAnchored( trigger: Locator, popup: Locator ) {
+	await expect( popup ).toHaveCSS( 'position', 'fixed' );
+
+	const selected = popup.locator( '[role="option"][aria-selected="true"]' );
+
+	if ( ( await selected.count() ) === 1 ) {
+		const triggerText = await textRect( trigger );
+		const optionText = await textRect( selected );
+		expect( triggerText, 'trigger must render label text' ).not.toBeNull();
+		expect(
+			optionText,
+			'selected option must render label text'
+		).not.toBeNull();
+
+		const a = triggerText as TextMetrics;
+		const b = optionText as TextMetrics;
+		expect(
+			Math.abs( b.left - a.left ),
+			`option text left ${ b.left } drifts from trigger text left ${ a.left }`
+		).toBeLessThanOrEqual( 1 );
+		expect(
+			Math.abs( b.top - a.top ),
+			`option text top ${ b.top } drifts from trigger text top ${ a.top }`
+		).toBeLessThanOrEqual( 1 );
+		expect( b.fontSize, 'popup text must match trigger font size' ).toBe(
+			a.fontSize
+		);
+		return;
+	}
+
 	const triggerBox = await box( trigger );
 	const popupBox = await box( popup );
-	const triggerCentre = triggerBox.x + triggerBox.width / 2;
+	const triggerBottom = triggerBox.y + triggerBox.height;
 
 	expect(
-		triggerCentre,
-		`trigger centre ${ triggerCentre } sits left of popup ${ popupBox.x }`
-	).toBeGreaterThanOrEqual( popupBox.x - 8 );
+		popupBox.y,
+		`popup top ${ popupBox.y } must sit below trigger bottom ${ triggerBottom }`
+	).toBeGreaterThanOrEqual( triggerBottom );
 	expect(
-		triggerCentre,
-		`trigger centre ${ triggerCentre } sits right of popup ${ popupBox.x + popupBox.width }`
-	).toBeLessThanOrEqual( popupBox.x + popupBox.width + 8 );
+		popupBox.y - triggerBottom,
+		`popup top ${ popupBox.y } sits far below trigger bottom ${ triggerBottom }`
+	).toBeLessThanOrEqual( 24 );
 	expect(
-		Math.abs( popupBox.y - triggerBox.y ),
-		`popup top ${ popupBox.y } sits far from trigger top ${ triggerBox.y }`
-	).toBeLessThan( 200 );
+		Math.abs( popupBox.x - triggerBox.x ),
+		`popup left ${ popupBox.x } drifts from trigger left ${ triggerBox.x }`
+	).toBeLessThanOrEqual( 8 );
 }
 
 async function expectWithinViewport( page: Page, locator: Locator ) {
@@ -251,6 +307,153 @@ test.describe( 'composition: dialog-combobox', () => {
 		await expect( input ).toHaveValue( 'Remix' );
 		await expect( popup ).toBeHidden();
 		await expect( page.locator( '[data-bsui-dialog-popup]' ) ).toBeVisible();
+	} );
+
+	test( 'option list anchors under the input, clear of the dialog header', async ( {
+		page,
+	} ) => {
+		await openDialog( page );
+
+		const heading = page.locator( '[data-bsui-dialog-popup] h3' );
+		const input = page.locator( '[data-bsui-combobox-input]' );
+		const popup = page.locator( '[data-bsui-combobox-popup]' );
+
+		await input.click();
+		await expect( popup ).toBeVisible();
+		await input.fill( 'n' );
+		await expect(
+			page
+				.locator(
+					'[data-bsui-combobox-root] [role="option"]:not([hidden])'
+				)
+				.first()
+		).toBeVisible();
+		await page.waitForTimeout( 300 );
+
+		await expect( popup ).toHaveCSS( 'position', 'fixed' );
+
+		const headingBox = await box( heading );
+		const inputBox = await box( input );
+		const popupBox = await box( popup );
+		const inputBottom = inputBox.y + inputBox.height;
+
+		expect(
+			Math.abs( popupBox.x - inputBox.x ),
+			`popup left ${ popupBox.x } drifts from input left ${ inputBox.x }`
+		).toBeLessThanOrEqual( 8 );
+		expect(
+			popupBox.y - inputBottom,
+			`popup top ${ popupBox.y } sits above input bottom ${ inputBottom }`
+		).toBeGreaterThanOrEqual( 0 );
+		expect(
+			popupBox.y - inputBottom,
+			`popup top ${ popupBox.y } sits far below input bottom ${ inputBottom }`
+		).toBeLessThanOrEqual( 24 );
+		expect(
+			popupBox.y,
+			`popup top ${ popupBox.y } overlaps the header ending at ${ headingBox.y + headingBox.height }`
+		).toBeGreaterThanOrEqual( headingBox.y + headingBox.height );
+	} );
+} );
+
+test.describe( 'composition: dialog-close-variants', () => {
+	test.beforeEach( async ( { page } ) => {
+		await page.goto( '/dialog-close-variants-test/' );
+		await page.waitForSelector( '[data-bsui-dialog-root]' );
+	} );
+
+	test( 'close buttons carry their declared variants', async ( { page } ) => {
+		await openDialog( page );
+
+		const closeButtons = page.locator( '[data-bsui-dialog-close] button' );
+		await expect( closeButtons ).toHaveCount( 2 );
+		await expect( closeButtons.nth( 0 ) ).toHaveAttribute(
+			'data-variant',
+			'outline'
+		);
+		await expect( closeButtons.nth( 0 ) ).toContainText( 'Cancel' );
+		await expect( closeButtons.nth( 1 ) ).toHaveAttribute(
+			'data-variant',
+			'default'
+		);
+		await expect( closeButtons.nth( 1 ) ).toContainText( 'Save' );
+	} );
+
+	test( 'the default variant close still closes the dialog', async ( {
+		page,
+	} ) => {
+		await openDialog( page );
+
+		const popup = page.locator( '[data-bsui-dialog-popup]' );
+		await popup
+			.locator( '[data-bsui-dialog-close] button' )
+			.filter( { hasText: 'Save' } )
+			.click();
+		await expect( popup ).toBeHidden();
+	} );
+
+	test( 'an icon-sm button renders as a 2rem square', async ( { page } ) => {
+		const button = page.locator( '[data-bsui-button][data-size="icon-sm"]' );
+		await expect( button ).toBeVisible();
+
+		const rect = await box( button );
+		expect( rect.width, `icon-sm width ${ rect.width }` ).toBeCloseTo(
+			32,
+			0
+		);
+		expect( rect.height, `icon-sm height ${ rect.height }` ).toBeCloseTo(
+			32,
+			0
+		);
+	} );
+} );
+
+test.describe( 'composition: toolbar spacing', () => {
+	test.beforeEach( async ( { page } ) => {
+		await page.goto( '/toolbar-test/' );
+		await page.waitForSelector( '[role="toolbar"]' );
+	} );
+
+	test( 'consecutive toolbar children sit at one even gap', async ( {
+		page,
+	} ) => {
+		const gaps = await page.evaluate( () => {
+			const toolbar = document.querySelector( '[role="toolbar"]' );
+			if ( ! toolbar ) return null;
+
+			const items: Element[] = [];
+			const collect = ( el: Element ) => {
+				for ( const child of el.children ) {
+					if ( getComputedStyle( child ).display === 'contents' ) {
+						collect( child );
+						continue;
+					}
+					if ( child.getBoundingClientRect().width > 0 ) {
+						items.push( child );
+					}
+				}
+			};
+			collect( toolbar );
+
+			const rects = items
+				.map( ( item ) => item.getBoundingClientRect() )
+				.sort( ( a, b ) => a.left - b.left );
+			const result: number[] = [];
+			for ( let i = 1; i < rects.length; i += 1 ) {
+				result.push( rects[ i ].left - rects[ i - 1 ].right );
+			}
+			return result;
+		} );
+
+		expect( gaps, 'toolbar must render flex items' ).not.toBeNull();
+		const values = gaps as number[];
+		expect( values.length ).toBeGreaterThanOrEqual( 4 );
+
+		const spread = Math.max( ...values ) - Math.min( ...values );
+		expect(
+			spread,
+			`gaps ${ values.map( ( gap ) => gap.toFixed( 2 ) ).join( ', ' ) } must be even`
+		).toBeLessThanOrEqual( 1 );
 	} );
 } );
 

@@ -4,11 +4,49 @@
 	"title": "Alert Dialog Close",
 	"category": "design",
 	"icon": "no",
-	"parent": ["bsui/alert-dialog-popup"],
+	"parent": [
+		"bsui/alert-dialog-popup"
+	],
 	"blockstudio": {
 		"attributes": [
-			{ "id": "label", "type": "richtext" },
-			{ "id": "x", "type": "toggle", "label": "X Icon", "default": false }
+			{
+				"id": "label",
+				"type": "richtext"
+			},
+			{
+				"id": "variant",
+				"type": "select",
+				"label": "Variant",
+				"default": "outline",
+				"options": [
+					{
+						"value": "default",
+						"label": "Default"
+					},
+					{
+						"value": "secondary",
+						"label": "Secondary"
+					},
+					{
+						"value": "outline",
+						"label": "Outline"
+					},
+					{
+						"value": "ghost",
+						"label": "Ghost"
+					},
+					{
+						"value": "destructive",
+						"label": "Destructive"
+					}
+				]
+			},
+			{
+				"id": "x",
+				"type": "toggle",
+				"label": "X Icon",
+				"default": false
+			}
 		]
 	}
 }

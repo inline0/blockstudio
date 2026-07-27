@@ -21,7 +21,7 @@
 }
 
 [data-bsui-combobox-popup] {
-	position: absolute;
+	position: fixed;
 	z-index: 50;
 	min-width: 12rem;
 	background: var(--bs-ui-popover);
@@ -77,10 +77,14 @@
 	pointer-events: none;
 }
 
+[data-bsui-combobox-popup] [role="option"] {
+	padding-right: calc(var(--bs-ui-control-padding) + 1.25rem);
+}
+
 [data-bsui-combobox-popup] [role="option"][aria-selected="true"]::before {
 	content: "";
 	position: absolute;
-	left: var(--bs-ui-control-padding);
+	right: var(--bs-ui-control-padding);
 	top: 50%;
 	transform: translateY(-50%);
 	width: 0.625rem;
