@@ -1,10 +1,8 @@
 ---
 title: UI Components
 description: Enable and render the bundled Blockstudio UI components.
-path: "blocks/ui-components"
+path: "."
 order: 41
-section: "Blocks"
-subsection: "Rendering"
 meta_title: "UI Components"
 meta_description: "Enable and render the bundled Blockstudio UI components."
 ---
