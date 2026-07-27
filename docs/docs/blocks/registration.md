@@ -45,7 +45,7 @@ is used.
 Blocks can be registered conditionally using the `conditions` key. It supports
 all the global variables which are also available for attributes.
 
-[See all conditions](/docs/blocks/attributes/conditional-logic#global)
+[See all conditions](/docs/blocks/attributes/conditional-logic#global-conditions)
 
 The following example will only register the block if the current post type is a
 page:
