@@ -144,6 +144,15 @@ blockstudio/
 Build your block with `npx wp-scripts build`, then drop the output folder into
 your Blockstudio directory. It will be registered automatically.
 
+The same applies to WordPress 7.0's [PHP-only
+blocks](https://make.wordpress.org/core/2026/03/03/php-only-block-registration/):
+a `block.json` with the `autoRegister` support and a `render.php` needs no
+script and no build, and registers here like any other standard block. Core
+scopes that path to simple blocks with string, integer, boolean, and enum
+attributes; the moment one needs inner blocks, rich text, media, or custom
+controls, either scaffold a client-side block or give it a `blockstudio` key
+and stay in PHP.
+
 ### HTML
 
 Blockstudio is using a React element parser to render the icon element, so it is

@@ -27,17 +27,21 @@ that helps you get started with custom blocks quickly.
 
 ### Server side first
 
-When creating dynamic blocks using nothing but WordPress, there is duplication
-of logic between PHP and JS code. [There are
-discussions](https://github.com/WordPress/gutenberg/discussions/38224) about
-solving this issue, including hydrating blocks on the client side (not good for
-SEO) or introducing a JSX parser for PHP (complex).
+WordPress can register simple blocks from PHP alone: since WordPress 7.0,
+[`register_block_type()` with the `autoRegister`
+support](https://make.wordpress.org/core/2026/03/03/php-only-block-registration/)
+renders a block through its `render_callback` and generates basic inspector
+controls for string, integer, boolean, and enum attributes. That covers exactly
+that, and core is explicit that it is not meant to replace the client-side
+paradigm: there are no inner blocks, no rich text, no media fields, and no
+interactivity, so anything beyond a handful of primitive controls still means
+writing JavaScript, running a build, and duplicating logic between PHP and JS.
 
-Blockstudio takes a different approach. You use PHP to write your block
-templates and sprinkle in interactivity like `<RichText />` or `<InnerBlocks />`
-using JSX-like tags. Inside the editor, those tags will be replaced with their
-React counterparts. On the frontend, the tags will be replaced with HTML
-content.
+Blockstudio starts from the same idea and carries it the whole way. You use PHP
+to write your block templates and sprinkle in interactivity like `<RichText />`
+or `<InnerBlocks />` using JSX-like tags. Inside the editor, those tags will be
+replaced with their React counterparts. On the frontend, the tags will be
+replaced with HTML content.
 
 This way, you get the best of both worlds: a server-side rendered block with
 great interactivity in the editor.
