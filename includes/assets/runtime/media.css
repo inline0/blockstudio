@@ -1,0 +1,28 @@
+.blockstudio-media {
+  display: block;
+  margin: 0;
+  overflow: hidden;
+}
+
+.blockstudio-media__image {
+  display: block;
+  height: auto;
+  width: 100%;
+}
+
+.blockstudio-media--skeleton[data-state='loading'] {
+  animation: blockstudio-media-pulse 1.4s ease-in-out infinite;
+  background: currentColor;
+  opacity: 0.12;
+}
+
+.blockstudio-media[data-state='loaded'] {
+  animation: none;
+  opacity: 1;
+}
+
+@keyframes blockstudio-media-pulse {
+  50% {
+    opacity: 0.22;
+  }
+}

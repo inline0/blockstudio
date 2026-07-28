@@ -1,6 +1,6 @@
 # Blockstudio UI
 
-Headless UI component library for WordPress, built entirely on the Interactivity API. 60 components ported from [Base UI](https://base-ui.com), plus demo apps that showcase them. Component source lives in `includes/ui`; this test harness enables the bundled UI feature from the theme's `blockstudio.json`.
+Headless UI component library for WordPress, built entirely on the Interactivity API. 60 components ported from [Base UI](https://base-ui.com). Component source lives in `includes/ui`; this test harness enables the bundled UI feature from the theme's `blockstudio.json`.
 
 ## Quick Reference
 
@@ -17,7 +17,6 @@ node screenshots.mjs                        # Capture component screenshots
 ```
 includes/ui/
   blocks/                # UI components (bsui/* namespace, 60 components)
-  apps/                  # Full applications built with the components
 
 tests/ui/
   theme/
@@ -25,7 +24,6 @@ tests/ui/
     pages/               # Test pages (one per component/app/interaction)
   tests/
     ui/                  # Component tests (34 files)
-    apps/                # App tests (kitchen-sink)
     interactions/        # Interaction tests (8 files)
     helpers/
       dual-context.ts    # Runs tests in both frontend and editor contexts
@@ -48,7 +46,6 @@ When enabled, `Blockstudio\Ui` registers the bundled component directories:
 
 ```php
 Blockstudio\Build::init( array( 'dir' => BLOCKSTUDIO_DIR . '/includes/ui/blocks' ) );
-Blockstudio\Build::init( array( 'dir' => BLOCKSTUDIO_DIR . '/includes/ui/apps' ) );
 ```
 
 The theme harness registers only the test fixtures from `tests/ui/theme/interactions`.
@@ -64,7 +61,6 @@ The theme harness registers only the test fixtures from `tests/ui/theme/interact
 ### Namespaces
 
 - `bsui/*` for UI components: `bsui/tabs`, `bsui/button`, `bsui/drawer`
-- `app/*` for apps: `app/chat`, `app/chat-sidebar`
 - `interaction/*` for interactions: `interaction/checkbox-counter-sync`
 
 ## Building SSR-first Interactivity API Apps
@@ -264,8 +260,6 @@ return array(
 The helper at `tests/helpers/dual-context.ts` runs every test in both frontend and editor contexts:
 
 ```ts
-const contexts = createContexts( 'kitchen-sink', '[data-app-kitchen-sink]' );
-
 for ( const { name, setup } of contexts ) {
     test.describe( `app/kitchen-sink (${ name })`, () => {
         let ctx: TestContext;
@@ -282,7 +276,6 @@ Frontend tests hit the page URL directly. Editor tests log into wp-admin, open t
 | Directory | What it tests |
 |-----------|--------------|
 | `tests/ui/` | Individual components (tabs, dialog, select, etc.) |
-| `tests/apps/` | Full applications (kitchen-sink) |
 | `tests/interactions/` | Multi-component scenarios |
 
 ### Running tests

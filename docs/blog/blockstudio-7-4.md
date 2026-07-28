@@ -4,7 +4,7 @@ description: Page collections, Markdown page sources, Content Sync, block tag pr
 date: "2026-06-21"
 author: Dennis
 path: "blockstudio-7-4"
-order: 2
+order: 3
 section: "Blog"
 meta_title: "Blockstudio 7.4"
 meta_description: "Page collections, Markdown page sources, Content Sync, block tag prefixes, and runtime and editor fixes."
@@ -38,7 +38,7 @@ The short version:
 - **Content Sync**: `wp bs content pull`, `wp bs content push`, and
   `wp bs content status` project allowlisted posts, terms, relationships, and
   declared meta references to portable files.
-- **Block tag prefixes**: project prefixes such as `<dv-card>` can resolve
+- **Block tag prefixes**: project prefixes such as `<theme-card>` can resolve
   across ordered namespaces without per-block aliases.
 - **More reliable syncing**: page changes are detected across manifests,
   loaders, layouts, metadata, and source files.
@@ -279,16 +279,16 @@ namespaces:
 
 ```php
 add_filter('blockstudio/block_tags/prefixes', function ($prefixes) {
-  $prefixes['dv'] = ['divine-homepage', 'bsui'];
+  $prefixes['theme'] = ['theme-components', 'bsui'];
 
   return $prefixes;
 });
 ```
 
-With that in place, `<dv-card>` can resolve to `divine-homepage/card`,
-`<dv-button>` can fall back to `bsui/button`, and
-`<dv-onumia-feature-matrix>` can resolve to
-`divine-homepage/onumia-feature-matrix`.
+With that in place, `<theme-card>` can resolve to `theme-components/card`,
+`<theme-button>` can fall back to `bsui/button`, and
+`<theme-ui-feature-matrix>` can resolve to
+`theme-components/ui-feature-matrix`.
 
 Explicit `tag_aliases` still win when a project needs a one-off override.
 Unknown prefix tags are left untouched, and the existing block tag allow/deny

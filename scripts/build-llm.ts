@@ -1,12 +1,28 @@
-import { readFileSync, writeFileSync, existsSync } from 'fs';
-import { dirname, resolve, join } from 'path';
+import { readFileSync, writeFileSync, existsSync, readdirSync, statSync } from 'fs';
+import { dirname, relative, resolve, join } from 'path';
 import { fileURLToPath } from 'url';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const root = resolve(__dirname, '..');
+const contentDir = resolve(root, 'docs');
 const docsDir = resolve(root, 'docs/docs');
 const schemasDir = resolve(root, 'schemas');
-const outputPath = resolve(root, 'includes/llm/blockstudio-llm.txt');
+const indexPath = resolve(root, 'includes/llm/blockstudio-llm.txt');
+const fullPath = resolve(root, 'includes/llm/blockstudio-llm-full.txt');
+
+const indexedCollections = ['docs', 'guides', 'registry'];
+const publicSchemas = [
+  { name: 'block', purpose: 'Block definitions, including every field type.' },
+  { name: 'blockstudio', purpose: 'Settings in blockstudio.json.' },
+  { name: 'extend', purpose: 'Extensions that add fields to existing blocks.' },
+  { name: 'field', purpose: 'Reusable custom field definitions.' },
+  { name: 'page', purpose: 'File-based page definitions.' },
+];
+const packageNames = new Set([
+  'blockstudio/blockstudio',
+  'blockstudio/phpstan',
+  'blockstudio/registry',
+]);
 
 interface MetaJson {
   title: string;
@@ -17,6 +33,21 @@ interface DocEntry {
   title: string;
   content: string;
   depth: number;
+}
+
+interface IndexEntry {
+  collection: string;
+  section: string;
+  subsection: string;
+  title: string;
+  route: string;
+  file: string;
+  purpose: string;
+  order: number;
+  settings: string[];
+  hooks: string[];
+  php: string[];
+  cli: string[];
 }
 
 function readJson(path: string): unknown {
@@ -123,6 +154,246 @@ function collectDocs(dir: string, meta: MetaJson, depth: number): DocEntry[] {
 function buildHeading(title: string, depth: number): string {
   const level = Math.min(depth + 2, 6);
   return '#'.repeat(level) + ' ' + title;
+}
+
+function markdownFiles(dir: string): string[] {
+  const files: string[] = [];
+  for (const name of readdirSync(dir).sort()) {
+    const path = resolve(dir, name);
+    if (statSync(path).isDirectory()) files.push(...markdownFiles(path));
+    else if (name.endsWith('.md')) files.push(path);
+  }
+  return files;
+}
+
+function frontmatter(source: string): Record<string, string> {
+  const match = source.match(/^---\r?\n([\s\S]*?)\r?\n---/);
+  if (!match) return {};
+
+  const values: Record<string, string> = {};
+  for (const line of match[1].split(/\r?\n/)) {
+    const field = line.match(/^([A-Za-z0-9_-]+):\s*(.*)$/);
+    if (field) {
+      values[field[1]] = field[2].trim().replace(/^(["'])([\s\S]*)\1$/, '$2');
+    }
+  }
+  return values;
+}
+
+function schemaPaths(schema: Record<string, any>, prefix = ''): string[] {
+  const paths: string[] = [];
+  const properties = schema.properties as Record<string, any> | undefined;
+  if (!properties) return paths;
+
+  for (const [key, value] of Object.entries(properties)) {
+    const path = prefix ? `${prefix}/${key}` : key;
+    paths.push(path);
+    paths.push(...schemaPaths(value, path));
+  }
+  return paths;
+}
+
+function stripLiteralBlocks(body: string): string {
+  return body.replace(/^```(?:text|txt)\r?\n[\s\S]*?^```/gm, '');
+}
+
+function inlineCodeSpans(body: string): string[] {
+  return [...body.matchAll(/`([^`\n]+)`/g)].map((match) => match[1]);
+}
+
+function collectHooks(body: string, spans: string[]): string[] {
+  const found = new Set<string>();
+
+  for (const match of body.matchAll(
+    /(?:add_filter|add_action|apply_filters|do_action|addFilter|addAction|applyFilters|doAction)\(\s*['"]([^'"]+)['"]/g,
+  )) {
+    if (match[1].startsWith('blockstudio/')) found.add(match[1]);
+  }
+  for (const span of spans) {
+    if (/^blockstudio\/[a-z0-9_/{}-]+$/.test(span) && !packageNames.has(span)) {
+      found.add(span);
+    }
+  }
+
+  return [...found].sort();
+}
+
+function collectPhp(body: string, spans: string[]): string[] {
+  const found = new Set<string>();
+
+  for (const match of body.matchAll(/\bbs_[a-z0-9_]+(?=\()/g)) {
+    found.add(`${match[0]}()`);
+  }
+  for (const match of body.matchAll(
+    /\b([A-Z][A-Za-z0-9_]*)::([a-z_][A-Za-z0-9_]*)(?=\()/g,
+  )) {
+    found.add(`${match[1]}::${match[2]}()`);
+  }
+  for (const match of body.matchAll(
+    /\bBlockstudio\\{1,2}([A-Z][A-Za-z0-9_]*)/g,
+  )) {
+    found.add(`Blockstudio\\${match[1]}`);
+  }
+  for (const span of spans) {
+    if (/^\$[a-z]$/.test(span)) found.add(span);
+  }
+
+  return [...found].sort();
+}
+
+function collectCli(body: string): string[] {
+  const found = new Set<string>();
+
+  for (const match of body.matchAll(/\bwp bs [a-z-]+(?: [a-z-]+)?/g)) {
+    found.add(match[0]);
+  }
+  for (const match of body.matchAll(/\bvendor\/bin\/blockstudio-[a-z-]+/g)) {
+    found.add(match[0]);
+  }
+  for (const match of body.matchAll(/\bnpx blockstudio [a-z-]+/g)) {
+    found.add(match[0]);
+  }
+
+  return [...found].sort();
+}
+
+function collectSettings(body: string, spans: string[], paths: string[]): string[] {
+  const found = new Set<string>();
+  const prose = body
+    .replace(/\]\([^)]*\)/g, ' ')
+    .replace(/https?:\/\/\S+/g, ' ');
+
+  for (const path of paths) {
+    const dotted = path.replace(/\//g, '.');
+    if (spans.includes(path) || spans.includes(dotted)) {
+      found.add(path);
+      continue;
+    }
+    if (path.includes('/') && (prose.includes(path) || prose.includes(dotted))) {
+      found.add(path);
+      continue;
+    }
+    if (
+      !path.includes('/') &&
+      new RegExp(`"${path}"\\s*:`).test(body)
+    ) {
+      found.add(path);
+    }
+  }
+
+  const owned = [...found];
+  return owned
+    .filter((path) => !owned.some((other) => other.startsWith(`${path}/`)))
+    .sort();
+}
+
+function collectIndex(paths: string[]): IndexEntry[] {
+  const entries: IndexEntry[] = [];
+
+  for (const collection of indexedCollections) {
+    for (const path of markdownFiles(resolve(contentDir, collection))) {
+      const source = readFileSync(path, 'utf-8');
+      const meta = frontmatter(source);
+      const body = stripLiteralBlocks(
+        stripGeneratedBlocks(stripFrontmatter(source)),
+      );
+      const spans = inlineCodeSpans(body);
+      const route = meta.path === '.' ? collection : `${collection}/${meta.path}`;
+
+      entries.push({
+        collection,
+        section: meta.section || '',
+        subsection: meta.subsection || '',
+        title: meta.title || slugToTitle(path),
+        route: `/${route}`,
+        file: relative(root, path).replaceAll('\\', '/'),
+        purpose: meta.description || meta.meta_description || '',
+        order: Number(meta.order ?? 0),
+        settings: collectSettings(body, spans, paths),
+        hooks: collectHooks(body, spans),
+        php: collectPhp(body, spans),
+        cli: collectCli(body),
+      });
+    }
+  }
+
+  return entries.sort((a, b) => {
+    if (a.collection !== b.collection) {
+      return (
+        indexedCollections.indexOf(a.collection) -
+        indexedCollections.indexOf(b.collection)
+      );
+    }
+    if (a.order !== b.order) return a.order - b.order;
+    return a.route.localeCompare(b.route);
+  });
+}
+
+function renderIdentifiers(label: string, values: string[]): string[] {
+  if (!values.length) return [];
+  return [`${label}: ${values.join(', ')}`];
+}
+
+function groupOf(entry: IndexEntry): string {
+  const parts = [slugToTitle(entry.collection), entry.section, entry.subsection];
+  return parts
+    .filter((part, position) => part !== '' && part !== parts[position - 1])
+    .join(' / ');
+}
+
+function buildIndex(entries: IndexEntry[]): string {
+  const parts: string[] = [
+    '# Blockstudio documentation index',
+    '',
+    'This is the primary context file for coding assistants. It is an index, not',
+    'the documentation itself. Each entry names one document, what it is for, and',
+    'the identifiers that document owns. Read this index, then open only the',
+    'document you need.',
+    '',
+    'Every document is addressable two ways: as a URL on https://blockstudio.dev,',
+    'and as a Markdown file in the Blockstudio repository. The full text of every',
+    'document and schema is also available in one file at /blockstudio-llm-full.txt',
+    'for tools that want everything at once.',
+    '',
+    'Entries are grouped by the section and subsection they belong to, in',
+    'navigation order. Each entry has a route, a source file, a one-line purpose,',
+    'and any of these identifier lines: settings (blockstudio.json paths), hooks',
+    '(PHP and JavaScript filter and action names), php (functions, classes, and',
+    'methods), and cli (commands).',
+    '',
+  ];
+
+  let group = '';
+  for (const entry of entries) {
+    const current = groupOf(entry);
+    if (current !== group) {
+      group = current;
+      parts.push(`## ${group}`);
+      parts.push('');
+    }
+
+    parts.push(`### ${entry.title}`);
+    parts.push(`route: ${entry.route}`);
+    parts.push(`file: ${entry.file}`);
+    if (entry.purpose) parts.push(`purpose: ${entry.purpose}`);
+    parts.push(...renderIdentifiers('settings', entry.settings));
+    parts.push(...renderIdentifiers('hooks', entry.hooks));
+    parts.push(...renderIdentifiers('php', entry.php));
+    parts.push(...renderIdentifiers('cli', entry.cli));
+    parts.push('');
+  }
+
+  parts.push('## Schemas');
+  parts.push('');
+  for (const schema of publicSchemas) {
+    parts.push(`### ${schema.name}.json`);
+    parts.push(`route: /schema/${schema.name}`);
+    parts.push(`file: schemas/${schema.name}.json`);
+    parts.push(`purpose: ${schema.purpose}`);
+    parts.push('');
+  }
+
+  return parts.join('\n').replace(/\n{3,}/g, '\n\n').trimEnd() + '\n';
 }
 
 const pageSchema = {
@@ -328,6 +599,10 @@ const docs = collectDocs(docsDir, rootMeta, 0);
     any
   >;
 
+  const index = collectIndex(schemaPaths(blockstudioSchema));
+  const indexOutput = buildIndex(index);
+  writeFileSync(indexPath, indexOutput, 'utf-8');
+
   const schemas: { name: string; filename: string; content: string }[] = [];
   const bs = full.properties.blockstudio;
 
@@ -400,9 +675,12 @@ const docs = collectDocs(docsDir, rootMeta, 0);
   });
   const parts: string[] = [];
 
-  parts.push('# Blockstudio');
+  parts.push('# Blockstudio, full text');
   parts.push(
-    'Context about the Blockstudio WordPress block framework for LLM coding assistants.',
+    'Every documentation page and schema in one file, for tools that want the complete corpus.',
+  );
+  parts.push(
+    'The primary context file is the index at /blockstudio-llm.txt: it lists each document with its route, purpose, and the identifiers it owns. Start there and open only what you need.',
   );
   parts.push('');
   parts.push('## Documentation');
@@ -431,12 +709,14 @@ const docs = collectDocs(docsDir, rootMeta, 0);
   output = output.replace(/\n{3,}/g, '\n\n');
   output = output.trimEnd() + '\n';
 
-  writeFileSync(outputPath, output, 'utf-8');
+  writeFileSync(fullPath, output, 'utf-8');
 
-  const docCount = docs.length;
-  const schemaCount = schemas.length;
-  const sizeKb = Math.round(Buffer.byteLength(output, 'utf-8') / 1024);
+  const size = (value: string) =>
+    Math.round(Buffer.byteLength(value, 'utf-8') / 1024);
   console.log(
-    `Built ${outputPath}\n  ${docCount} docs, ${schemaCount} schemas, ${sizeKb}KB`,
+    `Built ${indexPath}\n  ${index.length} documents, ${publicSchemas.length} schemas, ${size(indexOutput)}KB`,
+  );
+  console.log(
+    `Built ${fullPath}\n  ${docs.length} docs, ${schemas.length} schemas, ${size(output)}KB`,
   );
 })();

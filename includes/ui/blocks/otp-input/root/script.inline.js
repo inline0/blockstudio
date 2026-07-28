@@ -8,7 +8,7 @@ document.addEventListener( 'input', ( e ) => {
 	input.value = input.value.replace( /[^0-9]/g, '' ).slice( 0, 1 );
 
 	if ( input.value && idx < inputs.length - 1 ) {
-		inputs[ idx + 1 ].focus();
+		inputs[ idx + 1 ].focus( { preventScroll: true } );
 		inputs[ idx + 1 ].select();
 	}
 
@@ -23,16 +23,16 @@ document.addEventListener( 'keydown', ( e ) => {
 	const idx = inputs.indexOf( input );
 
 	if ( e.key === 'Backspace' && ! input.value && idx > 0 ) {
-		inputs[ idx - 1 ].focus();
+		inputs[ idx - 1 ].focus( { preventScroll: true } );
 		inputs[ idx - 1 ].select();
 	}
 	if ( e.key === 'ArrowLeft' && idx > 0 ) {
 		e.preventDefault();
-		inputs[ idx - 1 ].focus();
+		inputs[ idx - 1 ].focus( { preventScroll: true } );
 	}
 	if ( e.key === 'ArrowRight' && idx < inputs.length - 1 ) {
 		e.preventDefault();
-		inputs[ idx + 1 ].focus();
+		inputs[ idx + 1 ].focus( { preventScroll: true } );
 	}
 } );
 
@@ -49,7 +49,7 @@ document.addEventListener( 'paste', ( e ) => {
 		inputs[ idx + i ].value = text[ i ];
 	}
 	const nextIdx = Math.min( idx + text.length, inputs.length - 1 );
-	inputs[ nextIdx ].focus();
+	inputs[ nextIdx ].focus( { preventScroll: true } );
 	updateHidden( root, inputs );
 } );
 

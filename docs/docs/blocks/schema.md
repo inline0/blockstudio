@@ -2,8 +2,9 @@
 title: Schema
 description: JSON Schema support for Blockstudio blocks.
 path: "blocks/schema"
-order: 6
+order: 4
 section: "Blocks"
+subsection: "Block Definition"
 meta_title: "Schema"
 meta_description: "JSON Schema support for Blockstudio blocks."
 ---

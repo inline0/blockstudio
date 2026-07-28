@@ -5,9 +5,10 @@
     "general",
     "blocks",
     "pages-and-patterns",
-    "content-sync",
     "tailwind",
     "extensions",
+    "content-sync",
+    "production",
     "code-snippets",
     "dev"
   ]

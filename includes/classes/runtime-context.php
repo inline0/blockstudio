@@ -37,33 +37,95 @@ final class Runtime_Context {
 	}
 
 	/**
+	 * Get the complete generic runtime identity for one cache scope.
+	 *
+	 * The identity covers platform, site, theme, settings, named discovery
+	 * contexts, explicit dependency fingerprints, and the consumer-provided
+	 * Runtime_Context value. Expensive source traversal is never implicit:
+	 * callers that already own a discovery snapshot pass it in $dependencies.
+	 * This keeps cold-cache lookup cheap and makes changed-only callers isolate
+	 * only the sources they selected.
+	 *
+	 * @param string              $scope              Runtime scope.
+	 * @param string[]            $discovery_contexts Named discovery contexts.
+	 * @param array<string,mixed> $dependencies       Explicit dependency identity.
+	 *
+	 * @return array<string,mixed> Stable runtime identity.
+	 */
+	public static function identity( string $scope, array $discovery_contexts = array(), array $dependencies = array() ): array {
+		$active_plugins = function_exists( 'get_option' )
+			? array_values( array_filter( (array) get_option( 'active_plugins', array() ), 'is_string' ) )
+			: array();
+
+		if ( function_exists( 'is_multisite' ) && is_multisite() && function_exists( 'get_site_option' ) ) {
+			$active_plugins = array_merge(
+				$active_plugins,
+				array_keys( (array) get_site_option( 'active_sitewide_plugins', array() ) )
+			);
+		}
+		$active_plugins = array_values( array_unique( $active_plugins ) );
+		sort( $active_plugins, SORT_STRING );
+
+		$discovery_contexts = array_values(
+			array_unique(
+				array_filter(
+					$discovery_contexts,
+					static fn( $context ): bool => is_string( $context ) && '' !== trim( $context )
+				)
+			)
+		);
+		sort( $discovery_contexts, SORT_STRING );
+
+		$identity = array(
+			'format'       => 1,
+			'scope'        => $scope,
+			'blockstudio'  => defined( 'BLOCKSTUDIO_VERSION' ) ? (string) BLOCKSTUDIO_VERSION : '',
+			'settings'     => class_exists( Settings::class ) ? Settings::fingerprint() : '',
+			'runtime'      => class_exists( Runtime_Settings::class ) ? Runtime_Settings::current()->hash() : '',
+			'wordpress'    => function_exists( 'get_bloginfo' ) ? (string) get_bloginfo( 'version' ) : '',
+			'php'          => PHP_VERSION,
+			'network'      => function_exists( 'get_current_network_id' ) ? (int) get_current_network_id() : 0,
+			'blog'         => function_exists( 'get_current_blog_id' ) ? (int) get_current_blog_id() : 0,
+			'home'         => function_exists( 'home_url' ) ? (string) home_url( '/' ) : '',
+			'site'         => function_exists( 'site_url' ) ? (string) site_url( '/' ) : '',
+			'stylesheet'   => function_exists( 'get_stylesheet' ) ? (string) get_stylesheet() : '',
+			'template'     => function_exists( 'get_template' ) ? (string) get_template() : '',
+			'plugins'      => $active_plugins,
+			'context'      => self::cache( $scope ),
+			'discovery'    => $discovery_contexts,
+			'dependencies' => self::normalize_identity( $dependencies ),
+		);
+
+		/**
+		 * Filter the complete generic runtime identity.
+		 *
+		 * Use this only for host facts that affect every object in the scope.
+		 * Item-specific source fingerprints belong in the dependency argument.
+		 *
+		 * @since 7.6.0
+		 *
+		 * @param array<string,mixed> $identity Runtime identity.
+		 * @param string              $scope    Runtime scope.
+		 */
+		$filtered = apply_filters( 'blockstudio/runtime/identity', $identity, $scope );
+
+		return is_array( $filtered ) ? self::normalize_identity( $filtered ) : self::normalize_identity( $identity );
+	}
+
+	/**
 	 * Get a stable context hash.
 	 *
-	 * The hash covers only the consumer-provided cache context. Per the
-	 * blockstudio/cache/context contract, that value must change whenever the
-	 * logical inventory or runtime selection changes, so traversing discovery
-	 * sources here would duplicate the consumer's identity at the cost of a
-	 * full tree walk on every cache-key computation. Content freshness is
-	 * validated separately by each cache's watch snapshot or input hash, and
-	 * keys must not depend on whether sources happen to be constructed yet.
-	 *
-	 * @param string $scope Cache scope.
-	 * @param array  $discovery_contexts Discovery contexts named for key hygiene.
+	 * @param string              $scope              Cache scope.
+	 * @param string[]            $discovery_contexts Discovery contexts named for key hygiene.
+	 * @param array<string,mixed> $dependencies       Explicit dependency identity.
 	 *
 	 * @return string Context hash.
 	 */
-	public static function hash( string $scope, array $discovery_contexts = array() ): string {
-		$identity = array(
-			'context'   => self::cache( $scope ),
-			'discovery' => array_values(
-				array_filter(
-					$discovery_contexts,
-					static fn( $discovery_context ): bool => is_string( $discovery_context ) && '' !== $discovery_context
-				)
-			),
+	public static function hash( string $scope, array $discovery_contexts = array(), array $dependencies = array() ): string {
+		$encoded = wp_json_encode(
+			self::identity( $scope, $discovery_contexts, $dependencies ),
+			JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE
 		);
-
-		$encoded = wp_json_encode( $identity );
 
 		return hash( 'sha256', false === $encoded ? '' : $encoded );
 	}
@@ -71,35 +133,14 @@ final class Runtime_Context {
 	/**
 	 * Get a filesystem-safe namespace for the consumer runtime selection.
 	 *
-	 * Namespaces derive from the consumer cache context alone so a request that
-	 * hydrates from cache (no sources constructed) and a request that rebuilds
-	 * (sources active) resolve the same generated-output locations.
-	 *
-	 * @param string $scope Runtime scope.
-	 * @param array  $discovery_contexts Discovery contexts named for key hygiene.
+	 * @param string              $scope              Runtime scope.
+	 * @param string[]            $discovery_contexts Discovery contexts named for key hygiene.
+	 * @param array<string,mixed> $dependencies       Explicit dependency identity.
 	 *
 	 * @return string Context namespace.
 	 */
-	public static function namespace( string $scope, array $discovery_contexts = array() ): string {
-		$context = self::cache( $scope );
-
-		if ( '' === $context || null === $context || array() === $context ) {
-			return 'default';
-		}
-
-		$identity = array(
-			'context'   => $context,
-			'discovery' => array_values(
-				array_filter(
-					$discovery_contexts,
-					static fn( $discovery_context ): bool => is_string( $discovery_context ) && '' !== $discovery_context
-				)
-			),
-		);
-
-		$encoded = wp_json_encode( $identity );
-
-		return substr( hash( 'sha256', false === $encoded ? '' : $encoded ), 0, 20 );
+	public static function namespace( string $scope, array $discovery_contexts = array(), array $dependencies = array() ): string {
+		return substr( self::hash( $scope, $discovery_contexts, $dependencies ), 0, 20 );
 	}
 
 	/**
@@ -116,11 +157,12 @@ final class Runtime_Context {
 		$entry     = Discovery_Sources::entry_for_physical_path( $source_path );
 		$read_only = $entry && Discovery_Sources::entry_is_read_only( $entry );
 
-		if ( $read_only ) {
-			$uploads        = wp_upload_dir();
+		$to_cache = $read_only || 'cache' === Settings::get( 'assets/output' );
+
+		if ( $to_cache ) {
 			$source_dir     = is_dir( $source_path ) ? $source_path : dirname( $source_path );
-			$suggested_path = rtrim( wp_normalize_path( $uploads['basedir'] ), '/' )
-				. '/blockstudio/generated/'
+			$suggested_path = Runtime_Cache::directory( 'generated' )
+				. '/'
 				. self::namespace( 'generated', array( 'blocks' ) )
 				. '/'
 				. substr( hash( 'sha256', wp_normalize_path( $source_dir ) ), 0, 20 );
@@ -166,5 +208,28 @@ final class Runtime_Context {
 		$filtered = apply_filters( 'blockstudio/files/url', $url, $path, $scope );
 
 		return is_string( $filtered ) ? $filtered : $url;
+	}
+
+	/**
+	 * Normalize nested identity input.
+	 *
+	 * @param mixed $value Identity value.
+	 *
+	 * @return mixed Normalized value.
+	 */
+	private static function normalize_identity( mixed $value ): mixed {
+		if ( ! is_array( $value ) ) {
+			return $value;
+		}
+
+		foreach ( $value as $key => $item ) {
+			$value[ $key ] = self::normalize_identity( $item );
+		}
+
+		if ( ! array_is_list( $value ) ) {
+			ksort( $value );
+		}
+
+		return $value;
 	}
 }

@@ -84,6 +84,7 @@ store( 'bsui/tooltip', {
 		},
 		handleKeyDown( event ) {
 			if ( event.key === 'Escape' ) {
+			event.stopPropagation();
 				const ctx = getContext();
 				const { ref } = getElement();
 				const root = ref.closest( '[data-bsui-tooltip-root]' );

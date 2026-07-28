@@ -1,1 +1,7 @@
-<label data-bsui-text data-variant="label"><RichText attribute="text" tag="span" placeholder="Label" /></label>
+<?php
+echo bs_block(
+	array(
+		'name' => 'bsui/label',
+		'data' => array( 'text' => (string) ( $a['text'] ?? '' ) ),
+	)
+);

@@ -154,10 +154,10 @@ class BlockTagsAllowDenyTest extends TestCase {
 	}
 
 	public function test_deny_works_with_alias_syntax(): void {
-		$this->set_aliases( array( 'dv-separator' => 'core/separator' ) );
+		$this->set_aliases( array( 'alias-separator' => 'core/separator' ) );
 		$this->set_deny( array( 'core/separator' ) );
 
-		$input  = '<dv-separator />';
+		$input  = '<alias-separator />';
 		$result = Block_Tags::render( $input );
 
 		$this->assertSame( $input, $result );
@@ -168,14 +168,14 @@ class BlockTagsAllowDenyTest extends TestCase {
 	public function test_deny_applies_to_nested_prefix_resolution(): void {
 		$this->set_prefixes(
 			array(
-				'dv' => array( 'divine-homepage' ),
-				'ui' => array( 'bsui' ),
+				'theme' => array( 'theme-components' ),
+				'ui'    => array( 'bsui' ),
 			)
 		);
 		$this->set_deny( array( 'bsui/*' ) );
 
-		// dv-ui-button resolves bsui/button via the nested path, which is denied.
-		$input = '<dv-ui-button label="Denied" />';
+		// theme-ui-button resolves bsui/button via the nested path, which is denied.
+		$input = '<theme-ui-button label="Denied" />';
 
 		$this->assertSame( $input, Block_Tags::render( $input ) );
 	}
@@ -183,14 +183,14 @@ class BlockTagsAllowDenyTest extends TestCase {
 	public function test_allow_applies_to_nested_prefix_resolution(): void {
 		$this->set_prefixes(
 			array(
-				'dv' => array( 'divine-homepage' ),
-				'ui' => array( 'bsui' ),
+				'theme' => array( 'theme-components' ),
+				'ui'    => array( 'bsui' ),
 			)
 		);
 		$this->set_allow( array( 'core/*' ) );
 
 		// bsui/button is outside the allow list, so the nested match is dropped.
-		$input = '<dv-ui-button label="Not allowed" />';
+		$input = '<theme-ui-button label="Not allowed" />';
 
 		$this->assertSame( $input, Block_Tags::render( $input ) );
 	}
@@ -208,16 +208,16 @@ class BlockTagsAllowDenyTest extends TestCase {
 	public function test_allow_works_with_alias_syntax(): void {
 		$this->set_aliases(
 			array(
-				'dv-paragraph' => 'core/paragraph',
-				'dv-separator' => 'core/separator',
+				'alias-paragraph' => 'core/paragraph',
+				'alias-separator' => 'core/separator',
 			)
 		);
 		$this->set_allow( array( 'core/paragraph' ) );
 
-		$p = Block_Tags::render( '<dv-paragraph>Text</dv-paragraph>' );
+		$p = Block_Tags::render( '<alias-paragraph>Text</alias-paragraph>' );
 		$this->assert_contains_paragraph( $p, 'Text' );
 
-		$sep_input = '<dv-separator />';
+		$sep_input = '<alias-separator />';
 		$this->assertSame( $sep_input, Block_Tags::render( $sep_input ) );
 	}
 

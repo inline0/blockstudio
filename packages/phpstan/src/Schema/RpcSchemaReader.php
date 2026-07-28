@@ -111,7 +111,7 @@ final class RpcSchemaReader
         $functions = [];
 
         foreach ($array->items as $item) {
-            if ($item === null || !$item->key instanceof String_) {
+            if (!$item->key instanceof String_) {
                 continue;
             }
 
@@ -129,7 +129,7 @@ final class RpcSchemaReader
 
             $config = [];
             foreach ($value->items as $configItem) {
-                if ($configItem === null || !$configItem->key instanceof String_) {
+                if (!$configItem->key instanceof String_) {
                     continue;
                 }
 
@@ -175,6 +175,9 @@ final class RpcSchemaReader
         return $functions;
     }
 
+    /**
+     * @param list<string> $names
+     */
     private function findAttribute(ClassMethod $method, array $names): ?Attribute
     {
         foreach ($method->attrGroups as $group) {
@@ -278,10 +281,6 @@ final class RpcSchemaReader
             $result = [];
 
             foreach ($node->items as $item) {
-                if ($item === null) {
-                    continue;
-                }
-
                 $val = $this->nodeToValue($item->value);
 
                 if ($item->key === null) {

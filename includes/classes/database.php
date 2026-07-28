@@ -10,8 +10,14 @@
 
 namespace Blockstudio;
 
+use Blockstudio\Db\Jsonc_Record_Store;
+use Blockstudio\Db\Meta_Record_Store;
+use Blockstudio\Db\Post_Type_Record_Store;
+use Blockstudio\Db\Record_Store_Interface;
+use Blockstudio\Db\Sqlite_Record_Store;
 use Blockstudio\Db\Storage;
 use Blockstudio\Db\Storh_Record_Store;
+use Blockstudio\Db\Table_Record_Store;
 use Blockstudio\Definition;
 
 /**
@@ -606,7 +612,12 @@ class Database {
 		}
 
 		if ( 'sqlite' === $storage ) {
-			self::sqlite_ensure( $key, $schema );
+			$sqlite = self::store( $key, 'sqlite', $schema );
+
+			if ( $sqlite instanceof Sqlite_Record_Store ) {
+				$sqlite->ensure();
+			}
+
 			$ensured[ $signature ] = true;
 			return;
 		}
@@ -624,7 +635,7 @@ class Database {
 
 		global $wpdb;
 
-		$table   = self::table_name( $key );
+		$table   = Table_Record_Store::table_for_key( $key );
 		$fields  = $schema['fields'] ?? array();
 		$columns = array();
 
@@ -676,44 +687,6 @@ class Database {
 	}
 
 	/**
-	 * Get the table name for a schema key.
-	 *
-	 * @param string $key The schema key.
-	 *
-	 * @return string The full table name with prefix.
-	 */
-	private static function table_name( string $key ): string {
-		global $wpdb;
-		$safe = str_replace( array( '/', '-', ':' ), '_', $key );
-		return $wpdb->prefix . 'bs_' . $safe;
-	}
-
-	/**
-	 * Get the meta key for a schema key.
-	 *
-	 * @param string $key The schema key.
-	 *
-	 * @return string The meta key.
-	 */
-	private static function meta_key( string $key ): string {
-		return '_bs_db_' . str_replace( array( '/', '-', ':' ), '_', $key );
-	}
-
-	/**
-	 * Get the JSONC file path for a schema key.
-	 *
-	 * @param string $key The schema key.
-	 *
-	 * @return string The file path.
-	 */
-	private static function jsonc_path( string $key ): string {
-		list( $block_name, $schema_name ) = self::parse_key( $key );
-		$block_path                       = self::$block_paths[ $block_name ] ?? '';
-
-		return dirname( $block_path ) . '/db/' . $schema_name . '.jsonc';
-	}
-
-	/**
 	 * Get a Storh store for a schema key.
 	 *
 	 * @param string                    $key    The schema key.
@@ -722,16 +695,62 @@ class Database {
 	 * @return Storh_Record_Store
 	 */
 	private static function storh_store( string $key, ?array $schema = null ): Storh_Record_Store {
+		$store = self::store( $key, 'storh', $schema );
+
+		return $store instanceof Storh_Record_Store
+			? $store
+			: new Storh_Record_Store( $key, $schema ?? array() );
+	}
+
+	/**
+	 * Get the record store backing a schema.
+	 *
+	 * Every backend answers the same interface, so the CRUD paths below do not
+	 * branch on storage type.
+	 *
+	 * @param string                    $key     The schema key.
+	 * @param string|null               $storage The storage type, or null to read it from the schema.
+	 * @param array<string, mixed>|null $schema  Optional schema override.
+	 *
+	 * @return Record_Store_Interface
+	 */
+	private static function store( string $key, ?string $storage = null, ?array $schema = null ): Record_Store_Interface {
 		static $stores = array();
 
 		$schema    = $schema ?? ( self::$schemas[ $key ] ?? array() );
-		$signature = $key . ':' . md5( wp_json_encode( $schema ) );
+		$storage   = $storage ?? ( $schema['storage'] ?? 'table' );
+		$signature = $key . '|' . $storage . '|' . md5( (string) wp_json_encode( $schema ) );
 
-		if ( ! isset( $stores[ $signature ] ) ) {
-			$stores[ $signature ] = new Storh_Record_Store( $key, $schema );
+		if ( isset( $stores[ $signature ] ) ) {
+			return $stores[ $signature ];
 		}
 
-		return $stores[ $signature ];
+		list( $block_name ) = self::parse_key( $key );
+		$block_path         = self::$block_paths[ $block_name ] ?? '';
+
+		switch ( $storage ) {
+			case 'meta':
+				$store = new Meta_Record_Store( $key, $schema, $block_path );
+				break;
+			case 'jsonc':
+				$store = new Jsonc_Record_Store( $key, $schema, $block_path );
+				break;
+			case 'sqlite':
+				$store = new Sqlite_Record_Store( $key, $schema, $block_path );
+				break;
+			case 'storh':
+				$store = new Storh_Record_Store( $key, $schema );
+				break;
+			case 'post_type':
+				$store = new Post_Type_Record_Store( $key, $schema, $block_path );
+				break;
+			default:
+				$store = new Table_Record_Store( $key, $schema, $block_path );
+		}
+
+		$stores[ $signature ] = $store;
+
+		return $store;
 	}
 
 	/**
@@ -763,8 +782,9 @@ class Database {
 			return new \WP_Error( 'blockstudio_db_schema_not_found', sprintf( 'Schema not found: %s', $key ) );
 		}
 
-		$source_path = self::jsonc_path( $key );
-		$records     = self::jsonc_read( $key );
+		$jsonc       = new Jsonc_Record_Store( $key, self::$schemas[ $key ], self::$block_paths[ $block_name ] ?? '' );
+		$source_path = $jsonc->path();
+		$records     = $jsonc->read();
 
 		if ( ! is_file( $source_path ) ) {
 			return new \WP_Error( 'blockstudio_db_jsonc_not_found', sprintf( 'JSONC source file not found: %s', $source_path ) );
@@ -985,20 +1005,7 @@ class Database {
 			$filters['user_id'] = (string) get_current_user_id();
 		}
 
-		switch ( $storage ) {
-			case 'meta':
-				return self::meta_list( $key, $schema, $filters, $limit, $offset );
-			case 'jsonc':
-				return self::jsonc_list( $key, $filters, $limit, $offset );
-			case 'sqlite':
-				return self::sqlite_list( $key, $schema, $filters, $limit, $offset );
-			case 'storh':
-				return self::storh_store( $key, $schema )->query( $filters, $limit, $offset );
-			case 'post_type':
-				return self::cpt_list( $key, $schema, $filters, $limit, $offset );
-			default:
-				return self::table_list( $key, $schema, $filters, $limit, $offset );
-		}
+		return self::store( $key, $storage, $schema )->query( $filters, $limit, $offset );
 	}
 
 	/**
@@ -1022,19 +1029,7 @@ class Database {
 			$filters['user_id'] = (string) get_current_user_id();
 		}
 
-		switch ( $storage ) {
-			case 'meta':
-				return self::meta_paginate( $key, $schema, $filters, $limit, $offset );
-			case 'jsonc':
-				return self::jsonc_paginate( $key, $filters, $limit, $offset );
-			case 'storh':
-				return self::storh_store( $key, $schema )->paginate( $filters, $limit, $offset );
-			default:
-				return array(
-					'items' => self::storage_list( $key, $storage, $schema, $filters, $limit, $offset ),
-					'total' => self::storage_count( $key, $storage, $schema, $filters ),
-				);
-		}
+		return self::store( $key, $storage, $schema )->paginate( $filters, $limit, $offset );
 	}
 
 	/**
@@ -1054,20 +1049,7 @@ class Database {
 			$filters['user_id'] = (string) get_current_user_id();
 		}
 
-		switch ( $storage ) {
-			case 'meta':
-				return self::meta_count( $key, $schema, $filters );
-			case 'jsonc':
-				return self::jsonc_count( $key, $filters );
-			case 'sqlite':
-				return self::sqlite_count( $key, $schema, $filters );
-			case 'storh':
-				return self::storh_store( $key, $schema )->count( $filters );
-			case 'post_type':
-				return self::cpt_count( $key, $schema, $filters );
-			default:
-				return self::table_count( $key, $schema, $filters );
-		}
+		return self::store( $key, $storage, $schema )->count( $filters );
 	}
 
 	/**
@@ -1112,25 +1094,7 @@ class Database {
 	 * @return array|null The record or null.
 	 */
 	private static function storage_get( string $key, string $storage, int $id ) {
-		switch ( $storage ) {
-			case 'meta':
-				$record = self::meta_get( $key, $id );
-				break;
-			case 'jsonc':
-				$record = self::jsonc_get( $key, $id );
-				break;
-			case 'sqlite':
-				$record = self::sqlite_get( $key, $id );
-				break;
-			case 'storh':
-				$record = self::storh_store( $key )->get( $id );
-				break;
-			case 'post_type':
-				$record = self::cpt_get( $key, $id );
-				break;
-			default:
-				$record = self::table_get( $key, $id );
-		}
+		$record = self::store( $key, $storage )->get( $id );
 
 		if ( ! self::user_owns_record( $key, $record ) ) {
 			return null;
@@ -1165,25 +1129,7 @@ class Database {
 			)
 		);
 
-		switch ( $storage ) {
-			case 'meta':
-				$record = self::meta_create( $key, $data );
-				break;
-			case 'jsonc':
-				$record = self::jsonc_create( $key, $data );
-				break;
-			case 'sqlite':
-				$record = self::sqlite_create( $key, $data );
-				break;
-			case 'storh':
-				$record = self::storh_store( $key )->create( $data );
-				break;
-			case 'post_type':
-				$record = self::cpt_create( $key, $data );
-				break;
-			default:
-				$record = self::table_create( $key, $data );
-		}
+		$record = self::store( $key, $storage )->create( $data );
 
 		do_action(
 			'blockstudio/db/after_create',
@@ -1230,25 +1176,7 @@ class Database {
 			)
 		);
 
-		switch ( $storage ) {
-			case 'meta':
-				$record = self::meta_update( $key, $id, $data );
-				break;
-			case 'jsonc':
-				$record = self::jsonc_update( $key, $id, $data );
-				break;
-			case 'sqlite':
-				$record = self::sqlite_update( $key, $id, $data );
-				break;
-			case 'storh':
-				$record = self::storh_store( $key )->update( $id, $data );
-				break;
-			case 'post_type':
-				$record = self::cpt_update( $key, $id, $data );
-				break;
-			default:
-				$record = self::table_update( $key, $id, $data );
-		}
+		$record = self::store( $key, $storage )->update( $id, $data );
 
 		if ( $record ) {
 			do_action(
@@ -1295,25 +1223,7 @@ class Database {
 			)
 		);
 
-		switch ( $storage ) {
-			case 'meta':
-				$deleted = self::meta_delete( $key, $id );
-				break;
-			case 'jsonc':
-				$deleted = self::jsonc_delete( $key, $id );
-				break;
-			case 'sqlite':
-				$deleted = self::sqlite_delete( $key, $id );
-				break;
-			case 'storh':
-				$deleted = self::storh_store( $key )->delete( $id );
-				break;
-			case 'post_type':
-				$deleted = self::cpt_delete( $key, $id );
-				break;
-			default:
-				$deleted = self::table_delete( $key, $id );
-		}
+		$deleted = self::store( $key, $storage )->delete( $id );
 
 		if ( $deleted ) {
 			do_action(
@@ -1330,955 +1240,6 @@ class Database {
 		return $deleted;
 	}
 
-	// Table storage.
-
-	/**
-	 * List rows from a custom table.
-	 *
-	 * @param string $key     The schema key.
-	 * @param array  $schema  The schema.
-	 * @param array  $filters Field equality filters.
-	 * @param int    $limit   Maximum rows.
-	 * @param int    $offset  Row offset.
-	 *
-	 * @return array The rows.
-	 */
-	private static function table_list( string $key, array $schema, array $filters, int $limit, int $offset ): array {
-		global $wpdb;
-
-		$table  = self::table_name( $key );
-		$fields = array_keys( $schema['fields'] ?? array() );
-		$where  = array();
-		$values = array();
-
-		foreach ( $filters as $k => $val ) {
-			if ( 'user_id' === $k || in_array( $k, $fields, true ) ) {
-				$where[]  = sanitize_key( $k ) . ' = %s';
-				$values[] = $val;
-			}
-		}
-
-		$sql = "SELECT * FROM $table"; // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
-
-		if ( ! empty( $where ) ) {
-			$sql .= ' WHERE ' . implode( ' AND ', $where );
-		}
-
-		$sql     .= ' ORDER BY id DESC LIMIT %d OFFSET %d';
-		$values[] = $limit;
-		$values[] = $offset;
-
-		return $wpdb->get_results( $wpdb->prepare( $sql, $values ), ARRAY_A ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching,WordPress.DB.PreparedSQL.NotPrepared
-	}
-
-	/**
-	 * Count rows in a custom table.
-	 *
-	 * @param string $key     The schema key.
-	 * @param array  $schema  The schema.
-	 * @param array  $filters Field equality filters.
-	 *
-	 * @return int The total matching rows.
-	 */
-	private static function table_count( string $key, array $schema, array $filters ): int {
-		global $wpdb;
-
-		$table  = self::table_name( $key );
-		$fields = array_keys( $schema['fields'] ?? array() );
-		$where  = array();
-		$values = array();
-
-		foreach ( $filters as $k => $val ) {
-			if ( 'user_id' === $k || in_array( $k, $fields, true ) ) {
-				$where[]  = sanitize_key( $k ) . ' = %s';
-				$values[] = $val;
-			}
-		}
-
-		$sql = "SELECT COUNT(*) FROM $table"; // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
-
-		if ( ! empty( $where ) ) {
-			$sql .= ' WHERE ' . implode( ' AND ', $where );
-		}
-
-		if ( ! empty( $values ) ) {
-			return (int) $wpdb->get_var( $wpdb->prepare( $sql, $values ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching,WordPress.DB.PreparedSQL.NotPrepared
-		}
-
-		return (int) $wpdb->get_var( $sql ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching,WordPress.DB.PreparedSQL.NotPrepared
-	}
-
-	/**
-	 * Get a single row from a custom table.
-	 *
-	 * @param string $key The schema key.
-	 * @param int    $id  The row ID.
-	 *
-	 * @return array|null The row or null.
-	 */
-	private static function table_get( string $key, int $id ) {
-		global $wpdb;
-		$table = self::table_name( $key );
-
-		return $wpdb->get_row( $wpdb->prepare( "SELECT * FROM $table WHERE id = %d", $id ), ARRAY_A ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching,WordPress.DB.PreparedSQL.InterpolatedNotPrepared
-	}
-
-	/**
-	 * Insert a row into a custom table.
-	 *
-	 * @param string $key  The schema key.
-	 * @param array  $data The sanitized data.
-	 *
-	 * @return array The created row.
-	 */
-	private static function table_create( string $key, array $data ): array {
-		global $wpdb;
-		$table              = self::table_name( $key );
-		$now                = current_time( 'mysql', true );
-		$data['created_at'] = $now;
-		$data['updated_at'] = $now;
-
-		$wpdb->insert( $table, $data ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery
-
-		return self::table_get( $key, (int) $wpdb->insert_id );
-	}
-
-	/**
-	 * Update a row in a custom table.
-	 *
-	 * @param string $key  The schema key.
-	 * @param int    $id   The row ID.
-	 * @param array  $data The sanitized data.
-	 *
-	 * @return array|null The updated row or null.
-	 */
-	private static function table_update( string $key, int $id, array $data ) {
-		global $wpdb;
-		$table              = self::table_name( $key );
-		$data['updated_at'] = current_time( 'mysql', true );
-
-		$wpdb->update( $table, $data, array( 'id' => $id ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching
-
-		return self::table_get( $key, $id );
-	}
-
-	/**
-	 * Delete a row from a custom table.
-	 *
-	 * @param string $key The schema key.
-	 * @param int    $id  The row ID.
-	 *
-	 * @return bool Whether the row was deleted.
-	 */
-	private static function table_delete( string $key, int $id ): bool {
-		global $wpdb;
-		$table = self::table_name( $key );
-
-		return (bool) $wpdb->delete( $table, array( 'id' => $id ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching
-	}
-
-	// Meta storage.
-
-	/**
-	 * List entries from post meta.
-	 *
-	 * @param string $key     The schema key.
-	 * @param array  $schema  The schema.
-	 * @param array  $filters Field equality filters.
-	 * @param int    $limit   Maximum entries.
-	 * @param int    $offset  Entry offset.
-	 *
-	 * @return array The entries.
-	 */
-	private static function meta_list( string $key, array $schema, array $filters, int $limit, int $offset ): array {
-		$entries = self::meta_all( $key );
-
-		if ( ! empty( $filters ) ) {
-			$entries = array_filter(
-				$entries,
-				function ( $entry ) use ( $filters ) {
-					foreach ( $filters as $k => $val ) {
-						if ( ( $entry[ $k ] ?? null ) != $val ) { // phpcs:ignore Universal.Operators.StrictComparisons.LooseNotEqual -- Intentional loose comparison for query param strings.
-							return false;
-						}
-					}
-					return true;
-				}
-			);
-		}
-
-		return array_values( array_slice( $entries, $offset, $limit ) );
-	}
-
-	/**
-	 * Paginate entries from post meta.
-	 *
-	 * @param string $key     The schema key.
-	 * @param array  $schema  The schema.
-	 * @param array  $filters Field equality filters.
-	 * @param int    $limit   Maximum entries.
-	 * @param int    $offset  Entry offset.
-	 *
-	 * @return array{items: array<int, array<string, mixed>>, total: int}
-	 */
-	private static function meta_paginate( string $key, array $schema, array $filters, int $limit, int $offset ): array {
-		unset( $schema );
-
-		$entries = self::meta_all( $key );
-
-		if ( ! empty( $filters ) ) {
-			$entries = array_filter(
-				$entries,
-				function ( $entry ) use ( $filters ) {
-					foreach ( $filters as $k => $val ) {
-						if ( ( $entry[ $k ] ?? null ) != $val ) { // phpcs:ignore Universal.Operators.StrictComparisons.LooseNotEqual -- Intentional loose comparison for query param strings.
-							return false;
-						}
-					}
-					return true;
-				}
-			);
-		}
-
-		$entries = array_values( $entries );
-
-		return array(
-			'items' => array_values( array_slice( $entries, $offset, $limit ) ),
-			'total' => count( $entries ),
-		);
-	}
-
-	/**
-	 * Count entries from post meta.
-	 *
-	 * @param string $key     The schema key.
-	 * @param array  $schema  The schema.
-	 * @param array  $filters Field equality filters.
-	 *
-	 * @return int The total matching entries.
-	 */
-	private static function meta_count( string $key, array $schema, array $filters ): int {
-		unset( $schema );
-
-		$entries = self::meta_all( $key );
-
-		if ( empty( $filters ) ) {
-			return count( $entries );
-		}
-
-		return count(
-			array_filter(
-				$entries,
-				function ( $entry ) use ( $filters ) {
-					foreach ( $filters as $k => $val ) {
-						if ( ( $entry[ $k ] ?? null ) != $val ) { // phpcs:ignore Universal.Operators.StrictComparisons.LooseNotEqual -- Intentional loose comparison for query param strings.
-							return false;
-						}
-					}
-					return true;
-				}
-			)
-		);
-	}
-
-	/**
-	 * Get a single entry from post meta.
-	 *
-	 * @param string $key The schema key.
-	 * @param int    $id  The entry ID.
-	 *
-	 * @return array|null The entry or null.
-	 */
-	private static function meta_get( string $key, int $id ) {
-		foreach ( self::meta_all( $key ) as $entry ) {
-			if ( ( $entry['id'] ?? 0 ) === $id ) {
-				return $entry;
-			}
-		}
-		return null;
-	}
-
-	/**
-	 * Create an entry in post meta.
-	 *
-	 * @param string $key  The schema key.
-	 * @param array  $data The sanitized data.
-	 *
-	 * @return array The created entry.
-	 */
-	private static function meta_create( string $key, array $data ): array {
-		$schema   = self::$schemas[ $key ];
-		$meta_key = self::meta_key( $key );
-		$post_id  = $schema['postId'] ?? 0;
-		$entries  = self::meta_all( $key );
-
-		$max_id = 0;
-		foreach ( $entries as $entry ) {
-			$max_id = max( $max_id, $entry['id'] ?? 0 );
-		}
-
-		$data['id']         = $max_id + 1;
-		$data['created_at'] = current_time( 'mysql', true );
-		$data['updated_at'] = current_time( 'mysql', true );
-		$entries[]          = $data;
-
-		update_post_meta( $post_id, $meta_key, $entries );
-
-		return $data;
-	}
-
-	/**
-	 * Update an entry in post meta.
-	 *
-	 * @param string $key  The schema key.
-	 * @param int    $id   The entry ID.
-	 * @param array  $data The sanitized data.
-	 *
-	 * @return array|null The updated entry or null.
-	 */
-	private static function meta_update( string $key, int $id, array $data ) {
-		$schema   = self::$schemas[ $key ];
-		$meta_key = self::meta_key( $key );
-		$post_id  = $schema['postId'] ?? 0;
-		$entries  = self::meta_all( $key );
-		$found    = false;
-
-		foreach ( $entries as &$entry ) {
-			if ( ( $entry['id'] ?? 0 ) === $id ) {
-				$entry               = array_merge( $entry, $data );
-				$entry['updated_at'] = current_time( 'mysql', true );
-				$found               = $entry;
-				break;
-			}
-		}
-		unset( $entry );
-
-		if ( ! $found ) {
-			return null;
-		}
-
-		update_post_meta( $post_id, $meta_key, $entries );
-
-		return $found;
-	}
-
-	/**
-	 * Delete an entry from post meta.
-	 *
-	 * @param string $key The schema key.
-	 * @param int    $id  The entry ID.
-	 *
-	 * @return bool Whether the entry was deleted.
-	 */
-	private static function meta_delete( string $key, int $id ): bool {
-		$schema   = self::$schemas[ $key ];
-		$meta_key = self::meta_key( $key );
-		$post_id  = $schema['postId'] ?? 0;
-		$entries  = self::meta_all( $key );
-		$count    = count( $entries );
-
-		$entries = array_values(
-			array_filter(
-				$entries,
-				fn( $entry ) => ( $entry['id'] ?? 0 ) !== $id
-			)
-		);
-
-		if ( count( $entries ) === $count ) {
-			return false;
-		}
-
-		update_post_meta( $post_id, $meta_key, $entries );
-
-		return true;
-	}
-
-	/**
-	 * Get all meta entries for a schema.
-	 *
-	 * @param string $key The schema key.
-	 *
-	 * @return array All entries.
-	 */
-	private static function meta_all( string $key ): array {
-		$schema   = self::$schemas[ $key ];
-		$meta_key = self::meta_key( $key );
-		$post_id  = $schema['postId'] ?? 0;
-		$entries  = get_post_meta( $post_id, $meta_key, true );
-
-		return is_array( $entries ) ? $entries : array();
-	}
-
-	// JSONC file storage.
-
-	/**
-	 * Read all records from a JSONC file.
-	 *
-	 * @param string $key The schema key.
-	 *
-	 * @return array All records with IDs.
-	 */
-	private static function jsonc_read( string $key ): array {
-		$path = self::jsonc_path( $key );
-
-		if ( ! file_exists( $path ) ) {
-			return array();
-		}
-
-		$content = file_get_contents( $path ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents
-		$lines   = explode( "\n", $content );
-		$records = array();
-		$id      = 0;
-
-		foreach ( $lines as $line ) {
-			$line = trim( $line );
-
-			if ( '' === $line || str_starts_with( $line, '//' ) ) {
-				continue;
-			}
-
-			$record = json_decode( $line, true );
-
-			if ( is_array( $record ) ) {
-				++$id;
-				$record['id'] = $record['id'] ?? $id;
-				$id           = max( $id, $record['id'] );
-				$records[]    = $record;
-			}
-		}
-
-		return $records;
-	}
-
-	/**
-	 * Write all records to a JSONC file.
-	 *
-	 * @param string $key     The schema key.
-	 * @param array  $records The records to write.
-	 *
-	 * @return void
-	 */
-	private static function jsonc_write( string $key, array $records ): void {
-		$path = self::jsonc_path( $key );
-		$dir  = dirname( $path );
-
-		if ( ! is_dir( $dir ) ) {
-			wp_mkdir_p( $dir );
-		}
-
-		$lines = array();
-
-		foreach ( $records as $record ) {
-			$lines[] = wp_json_encode( $record, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE );
-		}
-
-		file_put_contents( $path, implode( "\n", $lines ) . "\n", LOCK_EX ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents
-	}
-
-	/**
-	 * List records from JSONC file.
-	 *
-	 * @param string $key     The schema key.
-	 * @param array  $filters Field equality filters.
-	 * @param int    $limit   Maximum records.
-	 * @param int    $offset  Record offset.
-	 *
-	 * @return array The records.
-	 */
-	private static function jsonc_list( string $key, array $filters, int $limit, int $offset ): array {
-		$records = self::jsonc_read( $key );
-
-		if ( ! empty( $filters ) ) {
-			$records = array_filter(
-				$records,
-				function ( $record ) use ( $filters ) {
-					foreach ( $filters as $k => $val ) {
-						if ( ( $record[ $k ] ?? null ) != $val ) { // phpcs:ignore Universal.Operators.StrictComparisons.LooseNotEqual -- Intentional loose comparison for query param strings.
-							return false;
-						}
-					}
-					return true;
-				}
-			);
-		}
-
-		return array_values( array_slice( $records, $offset, $limit ) );
-	}
-
-	/**
-	 * Paginate records from JSONC file.
-	 *
-	 * @param string $key     The schema key.
-	 * @param array  $filters Field equality filters.
-	 * @param int    $limit   Maximum records.
-	 * @param int    $offset  Record offset.
-	 *
-	 * @return array{items: array<int, array<string, mixed>>, total: int}
-	 */
-	private static function jsonc_paginate( string $key, array $filters, int $limit, int $offset ): array {
-		$records = self::jsonc_read( $key );
-
-		if ( ! empty( $filters ) ) {
-			$records = array_filter(
-				$records,
-				function ( $record ) use ( $filters ) {
-					foreach ( $filters as $k => $val ) {
-						if ( ( $record[ $k ] ?? null ) != $val ) { // phpcs:ignore Universal.Operators.StrictComparisons.LooseNotEqual -- Intentional loose comparison for query param strings.
-							return false;
-						}
-					}
-					return true;
-				}
-			);
-		}
-
-		$records = array_values( $records );
-
-		return array(
-			'items' => array_values( array_slice( $records, $offset, $limit ) ),
-			'total' => count( $records ),
-		);
-	}
-
-	/**
-	 * Count records from JSONC file.
-	 *
-	 * @param string $key     The schema key.
-	 * @param array  $filters Field equality filters.
-	 *
-	 * @return int The total matching records.
-	 */
-	private static function jsonc_count( string $key, array $filters ): int {
-		$records = self::jsonc_read( $key );
-
-		if ( empty( $filters ) ) {
-			return count( $records );
-		}
-
-		return count(
-			array_filter(
-				$records,
-				function ( $record ) use ( $filters ) {
-					foreach ( $filters as $k => $val ) {
-						if ( ( $record[ $k ] ?? null ) != $val ) { // phpcs:ignore Universal.Operators.StrictComparisons.LooseNotEqual -- Intentional loose comparison for query param strings.
-							return false;
-						}
-					}
-					return true;
-				}
-			)
-		);
-	}
-
-	/**
-	 * Get a single record from JSONC file.
-	 *
-	 * @param string $key The schema key.
-	 * @param int    $id  The record ID.
-	 *
-	 * @return array|null The record or null.
-	 */
-	private static function jsonc_get( string $key, int $id ) {
-		foreach ( self::jsonc_read( $key ) as $record ) {
-			if ( ( $record['id'] ?? 0 ) === $id ) {
-				return $record;
-			}
-		}
-		return null;
-	}
-
-	/**
-	 * Create a record in JSONC file.
-	 *
-	 * @param string $key  The schema key.
-	 * @param array  $data The sanitized data.
-	 *
-	 * @return array The created record.
-	 */
-	private static function jsonc_create( string $key, array $data ): array {
-		$records = self::jsonc_read( $key );
-
-		$max_id = 0;
-		foreach ( $records as $record ) {
-			$max_id = max( $max_id, $record['id'] ?? 0 );
-		}
-
-		$data['id']         = $max_id + 1;
-		$data['created_at'] = current_time( 'mysql', true );
-		$data['updated_at'] = current_time( 'mysql', true );
-		$records[]          = $data;
-
-		self::jsonc_write( $key, $records );
-
-		return $data;
-	}
-
-	/**
-	 * Update a record in JSONC file.
-	 *
-	 * @param string $key  The schema key.
-	 * @param int    $id   The record ID.
-	 * @param array  $data The sanitized data.
-	 *
-	 * @return array|null The updated record or null.
-	 */
-	private static function jsonc_update( string $key, int $id, array $data ) {
-		$records = self::jsonc_read( $key );
-		$found   = false;
-
-		foreach ( $records as &$record ) {
-			if ( ( $record['id'] ?? 0 ) === $id ) {
-				$record               = array_merge( $record, $data );
-				$record['updated_at'] = current_time( 'mysql', true );
-				$found                = $record;
-				break;
-			}
-		}
-		unset( $record );
-
-		if ( ! $found ) {
-			return null;
-		}
-
-		self::jsonc_write( $key, $records );
-
-		return $found;
-	}
-
-	/**
-	 * Delete a record from JSONC file.
-	 *
-	 * @param string $key The schema key.
-	 * @param int    $id  The record ID.
-	 *
-	 * @return bool Whether the record was deleted.
-	 */
-	private static function jsonc_delete( string $key, int $id ): bool {
-		$records = self::jsonc_read( $key );
-		$count   = count( $records );
-
-		$records = array_values(
-			array_filter(
-				$records,
-				fn( $record ) => ( $record['id'] ?? 0 ) !== $id
-			)
-		);
-
-		if ( count( $records ) === $count ) {
-			return false;
-		}
-
-		self::jsonc_write( $key, $records );
-
-		return true;
-	}
-
-	// SQLite storage.
-
-	/**
-	 * SQLite PDO connections keyed by file path.
-	 *
-	 * @var array<string, \PDO>
-	 */
-	private static array $sqlite_connections = array();
-
-	/**
-	 * Get the SQLite database file path for a schema key.
-	 *
-	 * @param string $key The schema key.
-	 *
-	 * @return string The file path.
-	 */
-	private static function sqlite_path( string $key ): string {
-		list( $block_name, $schema_name ) = self::parse_key( $key );
-		$block_path                       = self::$block_paths[ $block_name ] ?? '';
-
-		return dirname( $block_path ) . '/db/' . $schema_name . '.sqlite';
-	}
-
-	/**
-	 * Get or create a SQLite PDO connection.
-	 *
-	 * @param string $key The schema key.
-	 *
-	 * @return \PDO The PDO instance.
-	 */
-	private static function sqlite_pdo( string $key ): \PDO {
-		$path = self::sqlite_path( $key );
-
-		if ( isset( self::$sqlite_connections[ $path ] ) ) {
-			return self::$sqlite_connections[ $path ];
-		}
-
-		$dir = dirname( $path );
-		if ( ! is_dir( $dir ) ) {
-			wp_mkdir_p( $dir );
-		}
-
-		// phpcs:disable WordPress.DB.RestrictedClasses.mysql__PDO -- SQLite via PDO, not MySQL.
-		$pdo = new \PDO( 'sqlite:' . $path );
-		$pdo->setAttribute( \PDO::ATTR_ERRMODE, \PDO::ERRMODE_EXCEPTION );
-		$pdo->setAttribute( \PDO::ATTR_DEFAULT_FETCH_MODE, \PDO::FETCH_ASSOC );
-		$pdo->exec( 'PRAGMA journal_mode=WAL' );
-		// phpcs:enable WordPress.DB.RestrictedClasses.mysql__PDO
-
-		self::$sqlite_connections[ $path ] = $pdo;
-
-		return $pdo;
-	}
-
-	/**
-	 * Map a field type to a SQLite column type.
-	 *
-	 * @param array $def The field definition.
-	 *
-	 * @return string The SQLite column type.
-	 */
-	private static function sqlite_column_type( array $def ): string {
-		$type = $def['type'] ?? 'string';
-
-		switch ( $type ) {
-			case 'integer':
-				return 'INTEGER DEFAULT 0';
-			case 'number':
-				return 'REAL DEFAULT 0';
-			case 'boolean':
-				return 'INTEGER DEFAULT 0';
-			default:
-				return "TEXT DEFAULT ''";
-		}
-	}
-
-	/**
-	 * Ensure the SQLite table exists for a schema.
-	 *
-	 * @param string $key    The schema key.
-	 * @param array  $schema The schema definition.
-	 *
-	 * @return void
-	 */
-	private static function sqlite_ensure( string $key, array $schema ): void {
-		$pdo     = self::sqlite_pdo( $key );
-		$fields  = $schema['fields'] ?? array();
-		$columns = array();
-
-		foreach ( $fields as $name => $def ) {
-			$col_type  = self::sqlite_column_type( $def );
-			$col_name  = preg_replace( '/[^a-z0-9_]/', '', $name );
-			$columns[] = "$col_name $col_type";
-		}
-
-		$columns_sql = implode( ', ', $columns );
-
-		$pdo->exec(
-			"CREATE TABLE IF NOT EXISTS data (
-				id INTEGER PRIMARY KEY AUTOINCREMENT,
-				$columns_sql,
-				created_at TEXT DEFAULT (datetime('now')),
-				updated_at TEXT DEFAULT (datetime('now'))
-			)"
-		);
-
-		// Add missing columns (like dbDelta for SQLite).
-		$existing = array();
-		$info     = $pdo->query( 'PRAGMA table_info(data)' );
-
-		foreach ( $info as $col ) {
-			$existing[] = $col['name'];
-		}
-
-		foreach ( $fields as $name => $def ) {
-			$col_name = preg_replace( '/[^a-z0-9_]/', '', $name );
-
-			if ( ! in_array( $col_name, $existing, true ) ) {
-				$col_type = self::sqlite_column_type( $def );
-				$pdo->exec( "ALTER TABLE data ADD COLUMN $col_name $col_type" );
-			}
-		}
-	}
-
-	/**
-	 * List rows from SQLite.
-	 *
-	 * @param string $key     The schema key.
-	 * @param array  $schema  The schema.
-	 * @param array  $filters Field equality filters.
-	 * @param int    $limit   Maximum rows.
-	 * @param int    $offset  Row offset.
-	 *
-	 * @return array The rows.
-	 */
-	private static function sqlite_list( string $key, array $schema, array $filters, int $limit, int $offset ): array {
-		$pdo    = self::sqlite_pdo( $key );
-		$fields = array_keys( $schema['fields'] ?? array() );
-		$where  = array();
-		$values = array();
-
-		foreach ( $filters as $k => $val ) {
-			if ( 'user_id' === $k || in_array( $k, $fields, true ) ) {
-				$where[]  = "$k = ?";
-				$values[] = $val;
-			}
-		}
-
-		$sql = 'SELECT * FROM data';
-
-		if ( ! empty( $where ) ) {
-			$sql .= ' WHERE ' . implode( ' AND ', $where );
-		}
-
-		$sql     .= ' ORDER BY id DESC LIMIT ? OFFSET ?';
-		$values[] = $limit;
-		$values[] = $offset;
-
-		$stmt = $pdo->prepare( $sql );
-		$stmt->execute( $values );
-
-		return $stmt->fetchAll();
-	}
-
-	/**
-	 * Count rows from SQLite.
-	 *
-	 * @param string $key     The schema key.
-	 * @param array  $schema  The schema.
-	 * @param array  $filters Field equality filters.
-	 *
-	 * @return int The total matching rows.
-	 */
-	private static function sqlite_count( string $key, array $schema, array $filters ): int {
-		$pdo    = self::sqlite_pdo( $key );
-		$fields = array_keys( $schema['fields'] ?? array() );
-		$where  = array();
-		$values = array();
-
-		foreach ( $filters as $k => $val ) {
-			if ( 'user_id' === $k || in_array( $k, $fields, true ) ) {
-				$where[]  = "$k = ?";
-				$values[] = $val;
-			}
-		}
-
-		$sql = 'SELECT COUNT(*) FROM data';
-
-		if ( ! empty( $where ) ) {
-			$sql .= ' WHERE ' . implode( ' AND ', $where );
-		}
-
-		$stmt = $pdo->prepare( $sql );
-		$stmt->execute( $values );
-
-		return (int) $stmt->fetchColumn();
-	}
-
-	/**
-	 * Get a single row from SQLite.
-	 *
-	 * @param string $key The schema key.
-	 * @param int    $id  The row ID.
-	 *
-	 * @return array|null The row or null.
-	 */
-	private static function sqlite_get( string $key, int $id ) {
-		$pdo  = self::sqlite_pdo( $key );
-		$stmt = $pdo->prepare( 'SELECT * FROM data WHERE id = ?' );
-		$stmt->execute( array( $id ) );
-		$row = $stmt->fetch();
-
-		return false !== $row ? $row : null;
-	}
-
-	/**
-	 * Insert a row into SQLite.
-	 *
-	 * @param string $key  The schema key.
-	 * @param array  $data The sanitized data.
-	 *
-	 * @return array The created row.
-	 */
-	private static function sqlite_create( string $key, array $data ): array {
-		$pdo = self::sqlite_pdo( $key );
-		$now = gmdate( 'Y-m-d H:i:s' );
-
-		$data['created_at'] = $now;
-		$data['updated_at'] = $now;
-
-		$columns      = implode( ', ', array_keys( $data ) );
-		$placeholders = implode( ', ', array_fill( 0, count( $data ), '?' ) );
-
-		$stmt = $pdo->prepare( "INSERT INTO data ($columns) VALUES ($placeholders)" );
-		$stmt->execute( array_values( $data ) );
-
-		return self::sqlite_get( $key, (int) $pdo->lastInsertId() );
-	}
-
-	/**
-	 * Update a row in SQLite.
-	 *
-	 * @param string $key  The schema key.
-	 * @param int    $id   The row ID.
-	 * @param array  $data The sanitized data.
-	 *
-	 * @return array|null The updated row or null.
-	 */
-	private static function sqlite_update( string $key, int $id, array $data ) {
-		$pdo                = self::sqlite_pdo( $key );
-		$data['updated_at'] = gmdate( 'Y-m-d H:i:s' );
-
-		$sets   = array();
-		$values = array();
-
-		foreach ( $data as $col => $val ) {
-			$sets[]   = "$col = ?";
-			$values[] = $val;
-		}
-
-		$values[] = $id;
-		$sql      = 'UPDATE data SET ' . implode( ', ', $sets ) . ' WHERE id = ?';
-		$stmt     = $pdo->prepare( $sql );
-		$stmt->execute( $values );
-
-		return self::sqlite_get( $key, $id );
-	}
-
-	/**
-	 * Delete a row from SQLite.
-	 *
-	 * @param string $key The schema key.
-	 * @param int    $id  The row ID.
-	 *
-	 * @return bool Whether the row was deleted.
-	 */
-	private static function sqlite_delete( string $key, int $id ): bool {
-		$pdo  = self::sqlite_pdo( $key );
-		$stmt = $pdo->prepare( 'DELETE FROM data WHERE id = ?' );
-		$stmt->execute( array( $id ) );
-
-		return $stmt->rowCount() > 0;
-	}
-
-	// Post type (CPT) storage.
-
-	/**
-	 * Get the custom post type name for a schema key.
-	 *
-	 * WordPress limits post type names to 20 characters.
-	 *
-	 * @param string $key The schema key.
-	 *
-	 * @return string The post type name.
-	 */
-	private static function cpt_name( string $key ): string {
-		$safe = str_replace( array( '/', '-', ':' ), '_', $key );
-		$name = 'bs_' . $safe;
-
-		if ( strlen( $name ) > 20 ) {
-			$name = 'bs_' . substr( md5( $key ), 0, 17 );
-		}
-
-		return $name;
-	}
-
 	/**
 	 * Register custom post types for all post_type storage schemas.
 	 *
@@ -2292,7 +1253,7 @@ class Database {
 				continue;
 			}
 
-			$cpt = self::cpt_name( $key );
+			$cpt = Post_Type_Record_Store::post_type_for_key( $key );
 
 			if ( post_type_exists( $cpt ) ) {
 				continue;
@@ -2309,244 +1270,6 @@ class Database {
 				)
 			);
 		}
-	}
-
-	/**
-	 * Convert a CPT post to a record array.
-	 *
-	 * @param \WP_Post $post   The post object.
-	 * @param array    $schema The schema definition.
-	 *
-	 * @return array The record.
-	 */
-	private static function cpt_to_record( \WP_Post $post, array $schema ): array {
-		$record = array(
-			'id'         => $post->ID,
-			'created_at' => $post->post_date_gmt,
-			'updated_at' => $post->post_modified_gmt,
-		);
-
-		foreach ( array_keys( $schema['fields'] ?? array() ) as $field ) {
-			$value = get_post_meta( $post->ID, $field, true );
-
-			$type = $schema['fields'][ $field ]['type'] ?? 'string';
-			if ( 'boolean' === $type ) {
-				$value = filter_var( $value, FILTER_VALIDATE_BOOLEAN );
-			} elseif ( 'integer' === $type ) {
-				$value = (int) $value;
-			} elseif ( 'number' === $type ) {
-				$value = (float) $value;
-			} elseif ( '' === $value && isset( $schema['fields'][ $field ]['default'] ) ) {
-				$value = $schema['fields'][ $field ]['default'];
-			}
-
-			$record[ $field ] = $value;
-		}
-
-		if ( isset( $schema['userScoped'] ) && $schema['userScoped'] ) {
-			$record['user_id'] = (int) $post->post_author;
-		}
-
-		return $record;
-	}
-
-	/**
-	 * List records from CPT storage.
-	 *
-	 * @param string $key     The schema key.
-	 * @param array  $schema  The schema.
-	 * @param array  $filters Field equality filters.
-	 * @param int    $limit   Maximum rows.
-	 * @param int    $offset  Row offset.
-	 *
-	 * @return array The records.
-	 */
-	private static function cpt_list( string $key, array $schema, array $filters, int $limit, int $offset ): array {
-		$cpt  = self::cpt_name( $key );
-		$args = array(
-			'post_type'      => $cpt,
-			'post_status'    => 'publish',
-			'posts_per_page' => $limit,
-			'offset'         => $offset,
-			'orderby'        => 'ID',
-			'order'          => 'DESC',
-		);
-
-		$user_id = $filters['user_id'] ?? null;
-		unset( $filters['user_id'] );
-
-		if ( $user_id ) {
-			$args['author'] = (int) $user_id;
-		}
-
-		if ( ! empty( $filters ) ) {
-			$meta_query = array();
-			foreach ( $filters as $field => $value ) {
-				$meta_query[] = array(
-					'key'   => $field,
-					'value' => $value,
-				);
-			}
-			$args['meta_query'] = $meta_query; // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query
-		}
-
-		$posts   = get_posts( $args );
-		$records = array();
-
-		foreach ( $posts as $post ) {
-			$records[] = self::cpt_to_record( $post, $schema );
-		}
-
-		return $records;
-	}
-
-	/**
-	 * Count records from CPT storage.
-	 *
-	 * @param string $key     The schema key.
-	 * @param array  $schema  The schema.
-	 * @param array  $filters Field equality filters.
-	 *
-	 * @return int The total matching records.
-	 */
-	private static function cpt_count( string $key, array $schema, array $filters ): int {
-		unset( $schema );
-
-		$cpt  = self::cpt_name( $key );
-		$args = array(
-			'post_type'              => $cpt,
-			'post_status'            => 'publish',
-			'posts_per_page'         => 1,
-			'fields'                 => 'ids',
-			'no_found_rows'          => false,
-			'update_post_meta_cache' => false,
-			'update_post_term_cache' => false,
-		);
-
-		$user_id = $filters['user_id'] ?? null;
-		unset( $filters['user_id'] );
-
-		if ( $user_id ) {
-			$args['author'] = (int) $user_id;
-		}
-
-		if ( ! empty( $filters ) ) {
-			$meta_query = array();
-			foreach ( $filters as $field => $value ) {
-				$meta_query[] = array(
-					'key'   => $field,
-					'value' => $value,
-				);
-			}
-			$args['meta_query'] = $meta_query; // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query
-		}
-
-		$query = new \WP_Query( $args );
-
-		return (int) $query->found_posts;
-	}
-
-	/**
-	 * Get a single record from CPT storage.
-	 *
-	 * @param string $key The schema key.
-	 * @param int    $id  The record (post) ID.
-	 *
-	 * @return array|null The record or null.
-	 */
-	private static function cpt_get( string $key, int $id ) {
-		$cpt  = self::cpt_name( $key );
-		$post = get_post( $id );
-
-		if ( ! $post || $cpt !== $post->post_type || 'publish' !== $post->post_status ) {
-			return null;
-		}
-
-		return self::cpt_to_record( $post, self::$schemas[ $key ] );
-	}
-
-	/**
-	 * Create a record in CPT storage.
-	 *
-	 * @param string $key  The schema key.
-	 * @param array  $data The sanitized data.
-	 *
-	 * @return array The created record.
-	 */
-	private static function cpt_create( string $key, array $data ): array {
-		$cpt    = self::cpt_name( $key );
-		$schema = self::$schemas[ $key ];
-
-		$post_data = array(
-			'post_type'   => $cpt,
-			'post_status' => 'publish',
-			'post_title'  => $cpt . '_entry',
-		);
-
-		if ( isset( $data['user_id'] ) ) {
-			$post_data['post_author'] = (int) $data['user_id'];
-			unset( $data['user_id'] );
-		}
-
-		$post_id = wp_insert_post( $post_data );
-
-		foreach ( $data as $field => $value ) {
-			update_post_meta( $post_id, $field, $value );
-		}
-
-		return self::cpt_to_record( get_post( $post_id ), $schema );
-	}
-
-	/**
-	 * Update a record in CPT storage.
-	 *
-	 * @param string $key  The schema key.
-	 * @param int    $id   The record (post) ID.
-	 * @param array  $data The sanitized data.
-	 *
-	 * @return array|null The updated record or null.
-	 */
-	private static function cpt_update( string $key, int $id, array $data ) {
-		$cpt  = self::cpt_name( $key );
-		$post = get_post( $id );
-
-		if ( ! $post || $cpt !== $post->post_type ) {
-			return null;
-		}
-
-		wp_update_post(
-			array(
-				'ID'            => $id,
-				'post_modified' => current_time( 'mysql' ),
-			)
-		);
-
-		foreach ( $data as $field => $value ) {
-			update_post_meta( $id, $field, $value );
-		}
-
-		clean_post_cache( $id );
-
-		return self::cpt_to_record( get_post( $id ), self::$schemas[ $key ] );
-	}
-
-	/**
-	 * Delete a record from CPT storage.
-	 *
-	 * @param string $key The schema key.
-	 * @param int    $id  The record (post) ID.
-	 *
-	 * @return bool Whether the record was deleted.
-	 */
-	private static function cpt_delete( string $key, int $id ): bool {
-		$cpt  = self::cpt_name( $key );
-		$post = get_post( $id );
-
-		if ( ! $post || $cpt !== $post->post_type ) {
-			return false;
-		}
-
-		return (bool) wp_delete_post( $id, true );
 	}
 
 	// Discovery.

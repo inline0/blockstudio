@@ -18,7 +18,7 @@ This PRD adds a first-class custom field type system for Blockstudio 7.5.0:
   repeaters, custom fields, and extensions
 
 The user-facing result: a consumer can register one field type such as
-`divine/dimensions`, use it in `block.json`, and receive a stable object value
+`acme/dimensions`, use it in `block.json`, and receive a stable object value
 like `{ "top": "sm", "right": "md", "bottom": "sm", "left": "md" }` without
 patching Blockstudio core or maintaining per-project forks.
 
@@ -156,8 +156,8 @@ namespace/type-name
 
 Examples:
 
-- `divine/dimensions`
-- `divine/text-options`
+- `acme/dimensions`
+- `acme/text-options`
 - `acme/spacing-token`
 
 Rules:
@@ -169,19 +169,19 @@ Rules:
 - invalid registrations are ignored by filters and rejected by helper functions
 
 The editor must never use the raw type name directly as a CSS class suffix.
-Add a sanitizing helper so `divine/dimensions` becomes a safe class/data suffix
-such as `divine-dimensions`.
+Add a sanitizing helper so `acme/dimensions` becomes a safe class/data suffix
+such as `acme-dimensions`.
 
 ### PHP helper
 
 Add public functions:
 
 ```php
-bs_register_field_type( 'divine/dimensions', array(
+bs_register_field_type( 'acme/dimensions', array(
 	'attribute'     => 'object',
 	'default'       => array(),
-	'editor_script' => 'divine-field-dimensions',
-	'editor_style'  => 'divine-field-dimensions',
+	'editor_script' => 'acme-field-dimensions',
+	'editor_style'  => 'acme-field-dimensions',
 	'storage'       => array(
 		'type'        => 'object',
 		'rest_schema' => array(
@@ -191,7 +191,7 @@ bs_register_field_type( 'divine/dimensions', array(
 	),
 ) );
 
-bs_unregister_field_type( 'divine/dimensions' );
+bs_unregister_field_type( 'acme/dimensions' );
 ```
 
 Return value:
@@ -205,10 +205,10 @@ Add a filter:
 
 ```php
 add_filter( 'blockstudio/field_types', function ( array $types ): array {
-	$types['divine/dimensions'] = array(
+	$types['acme/dimensions'] = array(
 		'attribute'     => 'object',
 		'default'       => array(),
-		'editor_script' => 'divine-field-dimensions',
+		'editor_script' => 'acme-field-dimensions',
 	);
 
 	return $types;
@@ -263,11 +263,11 @@ Rules:
 Expose an editor global:
 
 ```js
-window.blockstudio.registerFieldType('divine/dimensions', {
+window.blockstudio.registerFieldType('acme/dimensions', {
 	component: DimensionsField,
 });
 
-window.blockstudio.unregisterFieldType('divine/dimensions');
+window.blockstudio.unregisterFieldType('acme/dimensions');
 ```
 
 The component receives a stable props object:
@@ -294,7 +294,7 @@ Also pass field definition properties through so controls can read custom keys:
 ```json
 {
   "id": "margin",
-  "type": "divine/dimensions",
+  "type": "acme/dimensions",
   "label": "Margin",
   "sides": ["top", "right", "bottom", "left"]
 }
@@ -465,7 +465,7 @@ A minimal consumer plugin should look like this:
 ```php
 add_action( 'init', function () {
 	wp_register_script(
-		'divine-field-dimensions',
+		'acme-field-dimensions',
 		plugins_url( 'dimensions.js', __FILE__ ),
 		array( 'blockstudio-blocks', 'wp-element', 'wp-components' ),
 		'1.0.0',
@@ -473,11 +473,11 @@ add_action( 'init', function () {
 	);
 
 	bs_register_field_type(
-		'divine/dimensions',
+		'acme/dimensions',
 		array(
 			'attribute'     => 'object',
 			'default'       => array(),
-			'editor_script' => 'divine-field-dimensions',
+			'editor_script' => 'acme-field-dimensions',
 			'storage'       => array(
 				'type'        => 'object',
 				'rest_schema' => array(
@@ -491,7 +491,7 @@ add_action( 'init', function () {
 ```
 
 ```js
-window.blockstudio.registerFieldType('divine/dimensions', {
+window.blockstudio.registerFieldType('acme/dimensions', {
 	component({ value, onChange, sides = ['top', 'right', 'bottom', 'left'] }) {
 		const next = value && typeof value === 'object' ? value : {};
 
@@ -523,7 +523,7 @@ Usage:
     "attributes": [
       {
         "id": "margin",
-        "type": "divine/dimensions",
+        "type": "acme/dimensions",
         "label": "Margin",
         "sides": ["top", "bottom"],
         "default": {
@@ -668,9 +668,9 @@ Docs must include:
 
 A consumer can:
 
-1. register `divine/dimensions` in PHP
+1. register `acme/dimensions` in PHP
 2. register the matching editor component in JavaScript
-3. use `"type": "divine/dimensions"` in `block.json`
+3. use `"type": "acme/dimensions"` in `block.json`
 4. edit an object value in the block editor
 5. save and reload without losing data
 6. render the value in PHP, Twig, and Blade templates

@@ -104,57 +104,7 @@ final class Build_Cache {
 	 * @return string Cache directory.
 	 */
 	public static function get_cache_dir( string $scope = '' ): string {
-		$default = wp_normalize_path( WP_CONTENT_DIR . '/blockstudio/cache' );
-		$base    = self::resolve_cache_base( Settings::get( 'cache/path', 'blockstudio/cache' ), $default );
-
-		/**
-		 * Filter the base directory used for file-backed caches.
-		 *
-		 * Relative paths resolve from WP_CONTENT_DIR. The scope is appended
-		 * after this filter runs.
-		 *
-		 * @param string $base Base cache directory.
-		 */
-		$filtered = apply_filters( 'blockstudio/cache/dir', $base );
-		$base     = self::resolve_cache_base( $filtered, $base );
-
-		if ( '' === $scope ) {
-			return $base;
-		}
-
-		return $base . '/' . sanitize_key( $scope );
-	}
-
-	/**
-	 * Resolve a configured cache path.
-	 *
-	 * Relative paths are contained within WP_CONTENT_DIR. Absolute paths are
-	 * accepted for hosts that expose a dedicated writable cache volume.
-	 *
-	 * @param mixed  $path     Configured path.
-	 * @param string $fallback Fallback path.
-	 *
-	 * @return string Resolved normalized path.
-	 */
-	private static function resolve_cache_base( mixed $path, string $fallback ): string {
-		if ( ! is_string( $path ) || '' === trim( $path ) || str_contains( $path, "\0" ) ) {
-			return rtrim( wp_normalize_path( $fallback ), '/' );
-		}
-
-		$path        = wp_normalize_path( trim( $path ) );
-		$is_absolute = str_starts_with( $path, '/' )
-			|| (bool) preg_match( '/^[A-Za-z]:\//', $path )
-			|| str_starts_with( $path, '//' );
-
-		if ( ! $is_absolute ) {
-			if ( in_array( '..', explode( '/', $path ), true ) ) {
-				return rtrim( wp_normalize_path( $fallback ), '/' );
-			}
-
-			$path = WP_CONTENT_DIR . '/' . ltrim( $path, '/' );
-		}
-
-		return rtrim( wp_normalize_path( $path ), '/' );
+		return '' === $scope ? Runtime_Cache::root() : Runtime_Cache::directory( $scope );
 	}
 
 	/**
@@ -271,11 +221,84 @@ final class Build_Cache {
 	 * @return void
 	 */
 	public static function invalidate_populate_cache(): void {
+		if ( ! self::is_enabled() || ! self::any_block_populates() ) {
+			return;
+		}
+
 		$version = function_exists( 'wp_generate_uuid4' )
 			? wp_generate_uuid4()
 			: uniqid( '', true );
 
 		update_option( self::POPULATE_CACHE_VERSION_OPTION, $version, false );
+	}
+
+	/**
+	 * Whether any registered block declares a query-populated field.
+	 *
+	 * The invalidation above is attached to twenty-three core content, term,
+	 * user and meta hooks, so without this check every post, term, user and
+	 * meta write anywhere on the site wrote an option row whose only reader is
+	 * the build-cache key. Where no block declares populate, nothing read it.
+	 *
+	 * Populate survives into the registered attribute config, including inside
+	 * repeater rows, so the registry is the source of truth. An empty registry
+	 * means discovery has not run yet rather than that no block populates, so
+	 * that case invalidates rather than guessing.
+	 *
+	 * Deliberately not memoised. The walk is over an in-memory registry and
+	 * runs only on content writes, while the registry itself grows as further
+	 * Build::init instances register, so a cached answer risks being stale in
+	 * exactly the case that matters.
+	 *
+	 * @return bool Whether the option can affect anything.
+	 */
+	private static function any_block_populates(): bool {
+		if ( ! class_exists( 'Blockstudio\Build' ) ) {
+			return true;
+		}
+
+		$blocks = Build::blocks();
+
+		if ( empty( $blocks ) ) {
+			return true;
+		}
+
+		foreach ( $blocks as $block ) {
+			if ( self::attributes_populate( (array) ( $block->attributes ?? array() ) ) ) {
+				return true;
+			}
+		}
+
+		return false;
+	}
+
+	/**
+	 * Whether an attribute config declares populate at any depth.
+	 *
+	 * @param array<string, mixed> $attributes Attribute config.
+	 *
+	 * @return bool Whether populate is declared.
+	 */
+	private static function attributes_populate( array $attributes ): bool {
+		foreach ( $attributes as $attribute ) {
+			if ( ! is_array( $attribute ) ) {
+				continue;
+			}
+
+			if ( ! empty( $attribute['populate'] ) ) {
+				return true;
+			}
+
+			if (
+				! empty( $attribute['attributes'] ) &&
+				is_array( $attribute['attributes'] ) &&
+				self::attributes_populate( $attribute['attributes'] )
+			) {
+				return true;
+			}
+		}
+
+		return false;
 	}
 
 	/**

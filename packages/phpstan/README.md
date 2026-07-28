@@ -30,7 +30,6 @@ When a PHP file lives next to a `block.json`, the extension validates every
 ```php
 // blockstudio/hero/index.php
 <?php
-/** @var array<string, mixed> $a */
 
 echo $a['title'];     // OK
 echo $a['subtitle'];  // OK
@@ -179,17 +178,32 @@ The package ships stubs for the Blockstudio public API, including:
 Legacy compatibility aliases are stubbed too, so older codebases still analyze
 cleanly while migrating.
 
-## Convention: typing `$a` in PHP templates
+## Injected template variables
 
-Add a `@var` annotation at the top of each PHP block template so PHPStan knows
-`$a` exists:
+Blockstudio includes PHP block templates from its own render function, so
+PHPStan cannot see where their variables come from. The extension types them
+directly, with no annotation required:
+
+| Variable | Type |
+| --- | --- |
+| `$attributes`, `$a` | array shape built from `block.json`, or `array<string, mixed>` when the block declares no attributes |
+| `$block`, `$b` | `array<string, mixed>` |
+| `$context`, `$c` | `array<string, mixed>` |
+| `$content`, `$inner_blocks` | `string` |
+| `$islandPhase` | `string` |
+| `$isEditor`, `$isPreview`, `$isIsland`, `$isIslandPlaceholder`, `$isIslandFragment` | `bool` |
 
 ```php
+// blockstudio/hero/index.php
 <?php
-/** @var array<string, mixed> $a */
+
+echo $a['title'];        // string
+echo $a['cta']['href'];  // string
 ```
 
-Twig and Blade templates do not need this annotation.
+A `@var array<string, mixed> $a` annotation overrides the inferred shape, so
+remove any that were added before this typing existed. Assignments made by the
+template always keep their own inferred type.
 
 ## Configuration
 
@@ -215,11 +229,277 @@ parameters:
     - some/path/to/exclude
 ```
 
+## Opt-in analysis presets
+
+The auto-discovered `extension.neon` remains the compatibility-safe base
+extension. Version 7.6 adds separate presets; installing the package does not
+enable them automatically.
+
+| Preset | Includes |
+| --- | --- |
+| `base.neon` | The unchanged auto-discovered schema, template, hook, and API checks. |
+| `theme.neon` | Base plus WordPress theme structure, Blockstudio asset references, scoped block styles, field defaults, and repeater bounds. |
+| `extreme-theme.neon` | Theme plus PHPStan `max`, unsafe PHP checks, output escaping, Tailwind validation, JavaScript syntax and browser hygiene, and Interactivity API contracts. |
+| `wordpress-render.neon` | Extreme theme plus an explicit live WordPress render probe. It never starts WordPress by itself. |
+
+Include a preset directly when an existing PHPStan command owns the rest of
+the configuration:
+
+```yaml
+includes:
+  - vendor/blockstudio/phpstan/extreme-theme.neon
+
+parameters:
+  blockstudioThemeRoots:
+    - .
+  blockstudioThemeExcludePaths:
+    - fixtures/**
+  blockstudioThemeMaxFiles: 10000
+  blockstudioExtremeJavaScript: true
+  blockstudioExtremeTailwind: true
+```
+
+`blockstudioThemeExcludePaths` limits the project scanner. PHPStan's own
+`excludePaths` still controls which PHP files PHPStan analyzes.
+
+When the canonical command reads `phpstan.excludePaths` from
+`blockstudio.json` (or receives `--exclude`), it applies each exclusion to both
+the Blockstudio project scanner and PHPStan analysis. Relative patterns resolve
+against every configured root even though the generated NEON file lives in the
+system temporary directory.
+
+## Canonical command
+
+The package installs `vendor/bin/blockstudio-phpstan`. It defaults to the
+extreme-theme preset:
+
+```bash
+vendor/bin/blockstudio-phpstan --root . -- --no-progress
+```
+
+The canonical command gives PHPStan a `1G` memory limit by default so a normal
+PHP CLI `128M` limit does not fail on Composer-managed WordPress projects.
+Override it for a specific run after `--`, for example
+`-- --memory-limit=512M --no-progress`.
+
+Projects can keep the canonical command's defaults in `blockstudio.json`:
+
+```json
+{
+  "$schema": "https://blockstudio.dev/schema/blockstudio",
+  "phpstan": {
+    "preset": "extreme-theme",
+    "roots": ["."],
+    "excludePaths": ["fixtures/**"],
+    "maxFiles": 10000
+  }
+}
+```
+
+Relative roots resolve from the configuration file. Explicit command-line
+values replace their corresponding JSON value, so automation can make a
+one-off selection without rewriting project configuration. Use
+`--blockstudio-json <path>` when a project supplies the settings from an
+alternate source. Invalid JSON, unknown `phpstan` keys, invalid types, and a
+missing explicit source fail with exit code `2`.
+
+Use another preset, compose a project configuration, or emit PHPStan's JSON
+format:
+
+```bash
+vendor/bin/blockstudio-phpstan \
+  --preset theme \
+  --configuration phpstan.neon \
+  --root . \
+  --exclude 'fixtures/**' \
+  --error-format json \
+  -- --no-progress
+```
+
+The command writes its composed NEON file only to the system temporary
+directory and removes it on exit. It does not create a project cache,
+configuration, baseline, or hook. PHPStan's normal cache policy still applies
+when a caller explicitly configures one.
+
+Exit codes are stable:
+
+- `0`: analysis passed
+- `1`: PHPStan reported diagnostics
+- `2`: invalid usage, configuration, or process execution
+
+## Managed commit hook
+
+Blockstudio can own an analysis-only pre-commit hook. Enable it in the project
+`blockstudio.json`:
+
+```json
+{
+  "$schema": "https://blockstudio.dev/schema/blockstudio",
+  "phpstan": {
+    "preset": "extreme-theme",
+    "roots": ["."],
+    "excludePaths": [],
+    "maxFiles": 10000
+  },
+  "githooks": {
+    "commit": true
+  }
+}
+```
+
+Then synchronize the repository:
+
+```bash
+vendor/bin/blockstudio-githooks sync
+```
+
+The command installs a generated hook inside Git's common directory and points
+`core.hooksPath` at its managed directory. It records the prior hooks path and
+chains an existing pre-commit hook before running
+`vendor/bin/blockstudio-phpstan` from the configured project root. The
+canonical command reads the same `phpstan` object, so the generated hook needs
+no duplicated arguments. Re-running the command refreshes an owned hook,
+including after package upgrades.
+
+Set `commit` to `false`, remove the setting, or remove `blockstudio.json`, then
+run `sync` again to remove only Blockstudio-owned files and restore the recorded
+hooks path. `vendor/bin/blockstudio-githooks remove` performs the same safe
+cleanup explicitly.
+
+Blockstudio refuses to overwrite or remove files without its generated marker.
+If `core.hooksPath` is changed after installation, removal leaves that newer
+user setting intact. Linked Git checkouts share the managed directory, while
+the generated hook resolves the active checkout and project root at commit
+time. Paths containing spaces are supported.
+
+The hook performs PHPStan analysis only. It never formats or rewrites project
+files. A missing Composer installation or failed analysis blocks the commit
+with a direct error; bypass behavior remains Git's standard `--no-verify`.
+
+## Project contract
+
+`vendor/bin/blockstudio-agents` writes an `AGENTS.md` describing the project it
+runs in, for the coding agents that read one before touching a codebase:
+
+```bash
+vendor/bin/blockstudio-agents
+```
+
+The document is generated, never templated. The project's own files decide
+whether it describes a theme that authors blocks and pages or a plugin that
+consumes Blockstudio, and they supply the counts, directories, namespaces, and
+template languages. `blockstudio.json` decides which features are described and
+with which values. The selected preset decides the correctness section, which is
+read from the preset files themselves, so a layer that gains a rule changes the
+generated document with it. The commands section lists only the commands that
+apply to that project.
+
+```
+--root <path>    Project root (default: current directory)
+--config <path>  blockstudio.json path (default: <root>/blockstudio.json)
+--output <path>  Contract path (default: <root>/AGENTS.md)
+--stdout         Print the contract instead of writing it
+--check          Fail when the contract on disk is not current
+--force          Replace a file Blockstudio does not own
+```
+
+Ownership follows the commit hook: the generated file carries a marker, and a
+file without it is never replaced. `--check` exits `1` on an outdated contract
+so CI can gate it. The notes region at the end of the document is author owned,
+and its bytes survive every regeneration.
+
+## Optional live WordPress render
+
+Live rendering is a separate, explicit preset because it is slower and needs a
+caller-owned WordPress environment:
+
+```bash
+vendor/bin/blockstudio-phpstan \
+  --preset wordpress-render \
+  --render-command='["wp","eval-file","tools/render-probe.php"]' \
+  --render-working-directory=. \
+  --render-timeout=60 \
+  --root .
+```
+
+The command is an argv JSON array and is executed without a shell. The probe
+must print exactly one JSON object:
+
+```json
+{"ok":true}
+```
+
+To report a failure:
+
+```json
+{
+  "ok": false,
+  "message": "Rendered block failed.",
+  "file": "/absolute/path/to/block.json",
+  "line": 12
+}
+```
+
+Non-zero exits, timeouts, malformed JSON, and an `ok: false` response use the
+`blockstudio.wordpress.render` diagnostic.
+
+## Preset diagnostics
+
+Every new diagnostic has a stable `blockstudio.*` identifier:
+
+- Theme roots and structure:
+  `blockstudio.theme.root.missing`, `blockstudio.theme.style.missing`,
+  `blockstudio.theme.style.header`, and `blockstudio.theme.scanLimit`
+- Block and field contracts:
+  `blockstudio.theme.asset.manualEnqueue`,
+  `blockstudio.theme.asset.selectorScope`,
+  `blockstudio.theme.asset.missing`, `blockstudio.field.default`, and
+  `blockstudio.field.repeaterBounds`
+- PHP:
+  `blockstudio.php.forbiddenFunction`,
+  `blockstudio.wordpress.rawDatabaseWrite`, and
+  `blockstudio.output.unescaped`
+- Tailwind:
+  `blockstudio.tailwind.compilerMissing`,
+  `blockstudio.tailwind.compile`, `blockstudio.tailwind.unknownUtility`, and
+  `blockstudio.tailwind.semanticToken`
+- JavaScript:
+  `blockstudio.javascript.syntax`, `blockstudio.javascript.debugOutput`,
+  `blockstudio.javascript.bannedApi`, `blockstudio.javascript.leakedGlobal`,
+  `blockstudio.javascript.importSpecifier`,
+  `blockstudio.javascript.rootGuard`, `blockstudio.javascript.initShape`,
+  `blockstudio.javascript.domContract`,
+  `blockstudio.javascript.listenerCleanup`, and
+  `blockstudio.javascript.reducedMotion`
+- Interactivity API:
+  `blockstudio.interactivity.import`,
+  `blockstudio.interactivity.moduleImport`,
+  `blockstudio.interactivity.namespace`,
+  `blockstudio.interactivity.scopedDom`,
+  `blockstudio.interactivity.derivedState`,
+  `blockstudio.interactivity.handler`, `blockstudio.interactivity.binding`,
+  `blockstudio.interactivity.context`, and
+  `blockstudio.interactivity.orphan`
+
+## Performance
+
+The theme scanner uses ordinary materialized filesystem roots, deduplicates
+them, skips dependency/build/cache trees by default, reads each file once, and
+sorts diagnostics deterministically. Use narrow
+`blockstudioThemeRoots`/`--root` values, exclusions, and
+`blockstudioThemeMaxFiles`/`--max-files` for large repositories. JavaScript and
+Tailwind checks can be disabled independently. The live-render layer runs only
+when explicitly selected.
+
 ## Requirements
 
 - PHP 8.2+
 - PHPStan 2.0+
 - [phpstan/phpstan-wordpress](https://github.com/szepeviktor/phpstan-wordpress)
+- [Phasis](https://github.com/phasis/phasis) for JavaScript parsing
+- [BCMath compatibility](https://github.com/phpseclib/bcmath_compat) for hosts
+  without the native `ext-bcmath` extension
+- [TailwindPHP](https://github.com/tailwindphp/tailwindphp) for Tailwind analysis
 
 ## License
 

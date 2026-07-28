@@ -26,16 +26,16 @@
 	display: inline-flex;
 	align-items: center;
 	justify-content: center;
-	width: 1em;
-	height: 1em;
+	width: 1rem;
+	height: 1rem;
 	flex-shrink: 0;
 	pointer-events: none;
 }
 
 [data-bsui-button-icon] svg {
 	display: block;
-	width: 1em;
-	height: 1em;
+	width: 1rem;
+	height: 1rem;
 }
 
 [data-bsui-button][data-size="default"] {
@@ -59,6 +59,13 @@
 	height: var(--bs-ui-control-height);
 	width: var(--bs-ui-control-height);
 	padding: 0;
+}
+
+[data-bsui-button][data-size="icon-sm"] {
+	height: 2rem;
+	width: 2rem;
+	padding: 0;
+	font-size: 0.8125rem;
 }
 
 [data-bsui-button][data-variant="default"] {

@@ -2,8 +2,9 @@
 title: Components
 description: Non-editor blocks for programmatic rendering.
 path: "blocks/components"
-order: 31
+order: 40
 section: "Blocks"
+subsection: "Rendering"
 meta_title: "Components"
 meta_description: "Non-editor blocks for programmatic rendering."
 ---

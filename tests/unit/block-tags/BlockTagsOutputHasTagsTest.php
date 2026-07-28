@@ -11,7 +11,7 @@ use PHPUnit\Framework\TestCase;
  * whenever render() would transform the string and be driven by live filter
  * state (a prefix/alias registered after a first probe must be seen).
  *
- * The test theme registers "dv" as a prefix globally (test-helper.php), so
+ * The test theme registers "theme" as a prefix globally (test-helper.php), so
  * "zz" is used wherever a guaranteed-unregistered prefix is needed.
  */
 class BlockTagsOutputHasTagsTest extends TestCase {

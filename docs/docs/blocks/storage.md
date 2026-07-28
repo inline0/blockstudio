@@ -2,8 +2,9 @@
 title: Storage
 description: Store field values in different locations like post meta or options.
 path: "blocks/storage"
-order: 37
+order: 21
 section: "Blocks"
+subsection: "Attribute Values"
 meta_title: "Storage"
 meta_description: "Store field values in different locations like post meta or options."
 ---

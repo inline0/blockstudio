@@ -2,8 +2,9 @@
 title: Programmatic Rendering
 description: Render Blockstudio blocks programmatically via PHP functions or HTML tags.
 path: "blocks/rendering"
-order: 40
+order: 39
 section: "Blocks"
+subsection: "Rendering"
 meta_title: "Programmatic Rendering"
 meta_description: "Render Blockstudio blocks programmatically via PHP functions or HTML tags."
 ---
@@ -23,6 +24,85 @@ All Blockstudio specific features like inline styles, scripts, and scoped styles
 island rendered with `bs_render_block()`, `bs_block()`, or a block tag returns
 the same placeholder marker as a block rendered from post content, and the
 frontend runtime is injected when that marker is present in the response.
+
+## Structured Compositions and Complete Documents
+
+For long-lived tools, previews, exports, and component galleries, use the
+versioned `Blockstudio\Render` API. It accepts one declaration or an ordered
+list and renders without echoing:
+
+```php
+use Blockstudio\Render;
+
+$composition = [
+  'root' => 'theme/card',
+  'example' => [
+    'data' => [
+      'heading' => 'Example card',
+    ],
+    'layers' => [
+      [
+        'name' => 'theme/button',
+        'data' => [
+          'label' => 'Continue',
+        ],
+      ],
+    ],
+  ],
+];
+
+$normalized = Render::normalize($composition);
+$html = Render::composition($composition);
+$document = Render::document($composition, [
+  'title' => 'Component preview',
+  'contentElement' => 'main',
+  'contentClasses' => ['component-preview'],
+]);
+```
+
+The canonical normalized declaration has four keys:
+
+```php
+[
+  'name' => 'theme/card',
+  'attributes' => [],
+  'content' => '',
+  'children' => [],
+]
+```
+
+`data`, `inner`, `innerBlocks`, `root`, `layers`, and `example` are input
+conveniences and are normalized away. Nested declarations render recursively
+through the same Blockstudio pipeline.
+
+`Render::document()` returns `schemaVersion`, `html`, `body`, `blocks`,
+`assets`, `warnings`, and `errors`. The `assets` value separates `head`,
+`footer`, `styles`, `scripts`, `modules`, `interactivity`, `ui`, and `tailwind`.
+The block list and assets include dependencies referenced by selected templates,
+but exclude unrelated and editor-only assets.
+
+Complete documents may set `bodyClasses`/`bodyAttributes` and optionally wrap
+the rendered body with `contentElement`, `contentClasses`, and
+`contentAttributes`. The wrapper is restricted to a safe element name; the
+returned `body` remains the unwrapped rendered content.
+The `head` and `footer` options append trusted document markup at their
+respective positions and are included in the returned asset closure.
+
+To assemble a document around HTML that is already rendered, provide its known
+root block names:
+
+```php
+$document = Render::document_from_html(
+  $rendered_html,
+  ['theme/hero', 'theme/button'],
+  ['title' => 'Homepage preview']
+);
+```
+
+Use `Render::content()` for serialized WordPress block content. Consumers that
+render several independent documents in one request should call
+`Blockstudio\Batch_Render::reset()` between them; `Canvas::documents()` does
+this automatically.
 
 ## PHP Functions
 
@@ -166,7 +246,7 @@ HTML embedded directly into the block's template output:
   <block name="core/separator" />
   <bs:core-paragraph>Rendered by WordPress</bs:core-paragraph>
   <block name="core/heading" level="2">Also WordPress</block>
-  <dv-card title="Prefix shorthand" />
+  <theme-card title="Prefix shorthand" />
 </div>
 ```
 
@@ -227,19 +307,19 @@ first registered block in that namespace order:
 
 ```php title="functions.php"
 add_filter('blockstudio/block_tags/prefixes', function($prefixes) {
-  $prefixes['dv'] = ['divine-homepage', 'bsui'];
+  $prefixes['theme'] = ['theme-components', 'bsui'];
 
   return $prefixes;
 });
 ```
 
 ```html
-<dv-card title="Homepage" />
-<dv-button label="Get started" />
-<dv-onumia-feature-matrix />
+<theme-card title="Homepage" />
+<theme-button label="Get started" />
+<theme-ui-feature-matrix />
 ```
 
-With the example above, `<dv-card>` resolves to `divine-homepage/card`, `<dv-button>` falls back to `bsui/button` when `divine-homepage/button` is not registered, and `<dv-onumia-feature-matrix>` resolves to `divine-homepage/onumia-feature-matrix`.
+With the example above, `<theme-card>` resolves to `theme-components/card`, `<theme-button>` falls back to `bsui/button` when `theme-components/button` is not registered, and `<theme-ui-feature-matrix>` resolves to `theme-components/ui-feature-matrix`.
 
 Prefixes can also compose. When a prefixed tag does not resolve directly and the
 remaining slug is itself a registered prefix tag, resolution recurses, so a
@@ -247,7 +327,7 @@ brand prefix can sit on top of a namespace prefix:
 
 ```php title="functions.php"
 add_filter('blockstudio/block_tags/prefixes', function($prefixes) {
-  $prefixes['dv'] = ['divine-homepage'];
+  $prefixes['theme'] = ['theme-components'];
   $prefixes['ui'] = ['bsui'];
 
   return $prefixes;
@@ -255,10 +335,10 @@ add_filter('blockstudio/block_tags/prefixes', function($prefixes) {
 ```
 
 ```html
-<dv-ui-input />
+<theme-ui-input />
 ```
 
-`<dv-ui-input>` has no `divine-homepage/ui-input` block, so it falls through to
+`<theme-ui-input>` has no `theme-components/ui-input` block, so it falls through to
 the `ui` prefix and resolves `bsui/input`. Direct matches always win over nested
 resolution, and allow/deny rules apply to the final resolved block.
 
@@ -268,7 +348,7 @@ You can also configure prefixes in `blockstudio.json`:
 {
   "blockTags": {
     "prefixes": {
-      "dv": ["divine-homepage", "bsui"]
+      "theme": ["theme-components", "bsui"]
     }
   }
 }
@@ -278,6 +358,21 @@ Prefixes must be lowercase letters or numbers, start with a letter, and cannot
 contain dashes. Explicit aliases from
 `blockstudio/block_tags/tag_aliases` take precedence over prefix resolution.
 Unknown prefixed tags are left untouched.
+
+Prefix and alias tags remain supported authoring conveniences. The canonical,
+portable spelling is always `<bs:namespace-slug>`, because it records the real
+block name without depending on project filters:
+
+```html
+<bs:theme-components-card />
+<bs:bsui-input />
+```
+
+Blockstudio examples, generated diagnostics, and programmatic output use this
+canonical spelling. Projects that want to remove an older shorthand surface
+can use the standalone, dry-run-first
+[canonical tag migration](/docs/dev/migration/v7#canonical-block-tags) without
+booting WordPress.
 
 ### Core blocks
 

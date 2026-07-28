@@ -117,9 +117,20 @@
               "example": true
             }
           }
+        },
+        "output": {
+          "type": "string",
+          "default": "source",
+          "enum": [
+            "source",
+            "cache"
+          ],
+          "description": "Where compiled block assets are written. \"source\" writes a _dist directory beside the block, \"cache\" writes them under the Blockstudio cache directory so the source tree stays clean.",
+          "descriptionFilter": "This filter allows you to control where compiled block assets are written.",
+          "example": "cache"
         }
       },
-      "additionalProperties": true
+      "additionalProperties": false
     },
     "cache": {
       "type": "object",
@@ -140,7 +151,344 @@
           "example": "cache/blockstudio"
         }
       },
-      "additionalProperties": true
+      "additionalProperties": false
+    },
+    "githooks": {
+      "type": "object",
+      "description": "Settings for repository hooks generated and owned by Blockstudio development tooling.",
+      "properties": {
+        "commit": {
+          "type": "boolean",
+          "default": false,
+          "description": "Generate an analysis-only pre-commit hook when blockstudio-githooks sync runs.",
+          "descriptionFilter": "This filter exposes whether the Blockstudio-owned PHPStan commit hook is enabled.",
+          "example": true
+        }
+      },
+      "additionalProperties": false
+    },
+    "phpstan": {
+      "type": "object",
+      "description": "Settings consumed by the canonical blockstudio-phpstan command and Blockstudio-owned analysis hook.",
+      "properties": {
+        "preset": {
+          "type": "string",
+          "enum": [
+            "base",
+            "theme",
+            "extreme-theme",
+            "wordpress-render"
+          ],
+          "default": "base",
+          "description": "Analysis preset used when the command line does not select one explicitly. The theme and extreme-theme layers are opt-in and must be selected here or on the command line.",
+          "example": "extreme-theme"
+        },
+        "configuration": {
+          "type": "string",
+          "default": "",
+          "description": "Project PHPStan configuration file to include alongside the preset. Relative paths resolve from blockstudio.json. Use it to adopt analysis on an existing project through a baseline.",
+          "example": "phpstan.neon"
+        },
+        "roots": {
+          "type": "array",
+          "minItems": 1,
+          "default": [
+            "."
+          ],
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "description": "Theme roots analyzed by the canonical command. Relative paths resolve from this configuration file.",
+          "example": [
+            ".",
+            "../shared-theme"
+          ]
+        },
+        "excludePaths": {
+          "type": "array",
+          "default": [],
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "description": "Additional scanner exclusions relative to each configured root.",
+          "example": [
+            "fixtures/**"
+          ]
+        },
+        "maxFiles": {
+          "type": "integer",
+          "minimum": 1,
+          "default": 10000,
+          "description": "Maximum number of files inspected by the theme scanner.",
+          "example": 10000
+        }
+      },
+      "additionalProperties": false
+    },
+    "themeDefaults": {
+      "type": "object",
+      "description": "Generic defaults for themes that load Blockstudio.",
+      "properties": {
+        "titleTag": {
+          "type": "boolean",
+          "default": false,
+          "description": "Enable WordPress title-tag theme support.",
+          "example": true
+        },
+        "suppressDirectoryUpdates": {
+          "type": "boolean",
+          "default": false,
+          "description": "Remove the active child and parent theme from WordPress.org directory update results.",
+          "example": true
+        },
+        "syncPagesInDevelopment": {
+          "type": "boolean",
+          "default": false,
+          "description": "Reconcile file-backed pages when their source signature changes in local or WP_DEBUG environments.",
+          "example": true
+        }
+      },
+      "additionalProperties": false
+    },
+    "performance": {
+      "type": "object",
+      "description": "Opt-in generic frontend runtime behavior. Compat preserves WordPress defaults; speed and strict enable the documented optimization profile.",
+      "properties": {
+        "profile": {
+          "type": "string",
+          "enum": [
+            "compat",
+            "speed",
+            "strict"
+          ],
+          "default": "compat",
+          "description": "Base runtime profile. Explicit child values override the selected profile.",
+          "example": "speed"
+        },
+        "wordpress": {
+          "type": "object",
+          "description": "Independent WordPress optimization switches.",
+          "properties": {
+            "headNoise": {
+              "type": "boolean",
+              "default": false,
+              "description": "Remove generator, emoji, feed, discovery, and adjacent-post head output.",
+              "example": true
+            },
+            "embeds": {
+              "type": "boolean",
+              "default": false,
+              "description": "Remove oEmbed discovery and host scripts.",
+              "example": true
+            },
+            "xmlrpc": {
+              "type": "boolean",
+              "default": false,
+              "description": "Disable XML-RPC and pingbacks.",
+              "example": true
+            },
+            "editor": {
+              "type": "boolean",
+              "default": false,
+              "description": "Disable remote patterns, Openverse, application passwords, and the block directory.",
+              "example": true
+            },
+            "frontendAssets": {
+              "type": "boolean",
+              "default": false,
+              "description": "Remove generic core frontend styles and scripts when the theme owns its asset output.",
+              "example": true
+            },
+            "media": {
+              "type": "boolean",
+              "default": false,
+              "description": "Apply image quality, generated-size, and async decoding defaults.",
+              "example": true
+            },
+            "heartbeat": {
+              "type": "boolean",
+              "default": false,
+              "description": "Throttle Heartbeat to at least 60 seconds outside editor screens.",
+              "example": true
+            }
+          },
+          "additionalProperties": false
+        },
+        "preload": {
+          "type": "object",
+          "description": "Document preload behavior.",
+          "properties": {
+            "links": {
+              "type": "string",
+              "enum": [
+                "off",
+                "intent"
+              ],
+              "default": "off",
+              "description": "Prefetch same-origin documents after hover, focus, or touch intent.",
+              "example": "intent"
+            }
+          },
+          "additionalProperties": false
+        },
+        "media": {
+          "type": "object",
+          "description": "Stable image rendering and lazy-loading behavior.",
+          "properties": {
+            "lazy": {
+              "type": "boolean",
+              "default": false,
+              "description": "Use the Blockstudio intersection-observer image loader.",
+              "example": true
+            },
+            "skeleton": {
+              "type": "boolean",
+              "default": false,
+              "description": "Show the built-in media skeleton while lazy images load.",
+              "example": true
+            },
+            "metadata": {
+              "type": "boolean",
+              "default": false,
+              "description": "Declare that assets/media.json is generated and maintained for stable dimensions.",
+              "example": true
+            },
+            "rootMargin": {
+              "type": "string",
+              "pattern": "^-?[0-9]+(?:px|%)$",
+              "default": "300px",
+              "description": "Intersection observer root margin for lazy images.",
+              "example": "400px"
+            }
+          },
+          "additionalProperties": false
+        },
+        "measurement": {
+          "type": "object",
+          "description": "Opt-in diagnostics for development and measurement environments.",
+          "properties": {
+            "enabled": {
+              "type": "boolean",
+              "default": false,
+              "description": "Enable runtime measurement snapshots and hooks.",
+              "example": true
+            },
+            "queryMonitor": {
+              "type": "boolean",
+              "default": false,
+              "description": "Include queries taking at least 50ms in snapshots when SAVEQUERIES data is available.",
+              "example": true
+            },
+            "headers": {
+              "type": "boolean",
+              "default": false,
+              "description": "Send Blockstudio performance profile and configuration headers.",
+              "example": true
+            },
+            "timings": {
+              "type": "boolean",
+              "default": false,
+              "description": "Include elapsed request time in the opt-in response headers.",
+              "example": true
+            }
+          },
+          "additionalProperties": false
+        },
+        "staticPrerender": {
+          "type": "object",
+          "description": "Configuration reserved for Blockstudio's file-backed prerender runtime.",
+          "properties": {
+            "enabled": {
+              "type": "boolean",
+              "default": false,
+              "description": "Enable static prerender generation and serving.",
+              "example": true
+            },
+            "ttl": {
+              "type": "integer",
+              "minimum": 1,
+              "default": 86400,
+              "description": "Maximum prerender age in seconds.",
+              "example": 3600
+            },
+            "invalidate": {
+              "type": "string",
+              "enum": [
+                "signature",
+                "graph"
+              ],
+              "default": "signature",
+              "description": "Prerender invalidation strategy.",
+              "example": "graph"
+            },
+            "earlyServe": {
+              "type": "boolean",
+              "default": false,
+              "description": "Serve eligible prerenders before the full WordPress template lifecycle.",
+              "example": true
+            },
+            "serveLoggedIn": {
+              "type": "boolean",
+              "default": false,
+              "description": "Allow logged-in requests to receive prerendered documents.",
+              "example": false
+            },
+            "dynamicPaths": {
+              "type": "array",
+              "default": [],
+              "items": {
+                "type": "string",
+                "minLength": 1
+              },
+              "description": "Path prefixes that must always remain dynamic.",
+              "example": [
+                "/account"
+              ]
+            },
+            "warm": {
+              "type": "object",
+              "description": "Background prerender warming.",
+              "properties": {
+                "enabled": {
+                  "type": "boolean",
+                  "default": false,
+                  "description": "Enable scheduled warming.",
+                  "example": true
+                },
+                "interval": {
+                  "type": "integer",
+                  "minimum": 60,
+                  "default": 3600,
+                  "description": "Warm interval in seconds.",
+                  "example": 900
+                },
+                "concurrency": {
+                  "type": "integer",
+                  "minimum": 1,
+                  "default": 2,
+                  "description": "Maximum concurrent warm requests.",
+                  "example": 4
+                },
+                "transport": {
+                  "type": "string",
+                  "enum": [
+                    "http",
+                    "internal"
+                  ],
+                  "default": "http",
+                  "description": "Warm request transport.",
+                  "example": "http"
+                }
+              },
+              "additionalProperties": false
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
     },
     "content": {
       "type": "object",
@@ -271,7 +619,7 @@
               }
             }
           },
-          "additionalProperties": true
+          "additionalProperties": false
         },
         "taxonomies": {
           "type": "array",
@@ -298,7 +646,7 @@
           "example": "manifest"
         }
       },
-      "additionalProperties": true
+      "additionalProperties": false
     },
     "tailwind": {
       "type": "object",
@@ -320,7 +668,7 @@
           "example": "@theme { --color-primary: pink; }"
         }
       },
-      "additionalProperties": true
+      "additionalProperties": false
     },
     "ui": {
       "type": "object",
@@ -334,7 +682,7 @@
           "example": true
         }
       },
-      "additionalProperties": true
+      "additionalProperties": false
     },
     "editor": {
       "type": "object",
@@ -370,7 +718,7 @@
           "example": "<style>body { background: black; }</style>"
         }
       },
-      "additionalProperties": true
+      "additionalProperties": false
     },
     "blockEditor": {
       "type": "object",
@@ -508,7 +856,7 @@
                   ]
                 }
               },
-              "additionalProperties": true
+              "additionalProperties": false
             },
             "styles": {
               "type": "object",
@@ -535,7 +883,7 @@
                   }
                 }
               },
-              "additionalProperties": true
+              "additionalProperties": false
             },
             "legacyWidgets": {
               "type": "object",
@@ -555,10 +903,10 @@
                   ]
                 }
               },
-              "additionalProperties": true
+              "additionalProperties": false
             }
           },
-          "additionalProperties": true
+          "additionalProperties": false
         },
         "patterns": {
           "type": "object",
@@ -648,10 +996,10 @@
                   ]
                 }
               },
-              "additionalProperties": true
+              "additionalProperties": false
             }
           },
-          "additionalProperties": true
+          "additionalProperties": false
         },
         "media": {
           "type": "object",
@@ -694,13 +1042,13 @@
                   ]
                 }
               },
-              "additionalProperties": true
+              "additionalProperties": false
             }
           },
-          "additionalProperties": true
+          "additionalProperties": false
         }
       },
-      "additionalProperties": true
+      "additionalProperties": false
     },
     "ai": {
       "id": "aiLlmMd",
@@ -715,7 +1063,7 @@
           "example": true
         }
       },
-      "additionalProperties": true
+      "additionalProperties": false
     },
     "blockTags": {
       "type": "object",
@@ -757,14 +1105,14 @@
           "description": "Prefix to namespace shorthands for block tags. Each key is a lowercase prefix without dashes, and each value is a namespace string or ordered namespace array.",
           "descriptionFilter": "This filter allows you to register prefix to namespace shorthands for block tags.",
           "example": {
-            "dv": [
-              "divine-homepage",
+            "theme": [
+              "theme-components",
               "bsui"
             ]
           }
         }
       },
-      "additionalProperties": true
+      "additionalProperties": false
     },
     "dev": {
       "type": "object",
@@ -811,8 +1159,12 @@
           }
         }
       },
-      "additionalProperties": true
+      "additionalProperties": false
+    },
+    "$schema": {
+      "type": "string",
+      "description": "JSON Schema reference for editor completion."
     }
   },
-  "additionalProperties": true
+  "additionalProperties": false
 }

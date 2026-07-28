@@ -2,8 +2,9 @@
 title: Environment
 description: Conditionally render content based on the rendering context.
 path: "blocks/environment"
-order: 33
+order: 36
 section: "Blocks"
+subsection: "Template Context"
 meta_title: "Environment"
 meta_description: "Conditionally render content based on the rendering context."
 ---

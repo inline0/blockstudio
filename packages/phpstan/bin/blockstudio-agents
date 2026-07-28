@@ -1,0 +1,272 @@
+#!/usr/bin/env php
+<?php
+
+declare(strict_types=1);
+
+use Blockstudio\PHPStan\Agents\DocumentManager;
+use Blockstudio\PHPStan\Agents\PresetContract;
+use Blockstudio\PHPStan\Agents\ProjectProfile;
+
+$autoload = $GLOBALS['_composer_autoload_path']
+    ?? dirname(__DIR__) . '/vendor/autoload.php';
+
+if (!is_file($autoload)) {
+    fwrite(
+        STDERR,
+        "Blockstudio: Composer autoloading is unavailable. Run Composer install first.\n"
+    );
+    exit(2);
+}
+
+require_once $autoload;
+
+/**
+ * Writes the project contract a coding agent reads before touching the project.
+ */
+final class BlockstudioAgentsCli
+{
+    /**
+     * @param list<string> $arguments
+     */
+    public function run(array $arguments): int
+    {
+        try {
+            $options = $this->parse($arguments);
+        } catch (\InvalidArgumentException $exception) {
+            fwrite(STDERR, 'Error: ' . $exception->getMessage() . "\n\n");
+            $this->help(STDERR);
+            return 2;
+        }
+
+        if ($options['help']) {
+            $this->help(STDOUT);
+            return 0;
+        }
+
+        try {
+            $profile = ProjectProfile::discover(
+                $options['root'],
+                $options['configuration']
+            );
+            $contract = PresetContract::forPreset($profile->preset());
+            $manager = new DocumentManager();
+
+            if ($options['stdout']) {
+                fwrite(
+                    STDOUT,
+                    $manager->render($options['output'], $profile, $contract)
+                );
+                return 0;
+            }
+
+            if ($options['check']) {
+                return $this->check($manager, $options['output'], $profile, $contract);
+            }
+
+            $result = $manager->write(
+                $options['output'],
+                $profile,
+                $contract,
+                $options['force']
+            );
+        } catch (\Throwable $throwable) {
+            fwrite(STDERR, 'Blockstudio: ' . $throwable->getMessage() . "\n");
+            return 2;
+        }
+
+        fwrite(
+            STDOUT,
+            sprintf(
+                "Blockstudio contract %s: %s\n",
+                $result->status,
+                $result->path
+            )
+        );
+
+        return 0;
+    }
+
+    private function check(
+        DocumentManager $manager,
+        string $output,
+        ProjectProfile $profile,
+        PresetContract $contract
+    ): int {
+        $expected = $manager->render($output, $profile, $contract);
+        $current = is_file($output) ? file_get_contents($output) : null;
+
+        if ($current === $expected) {
+            fwrite(STDOUT, sprintf("Blockstudio contract current: %s\n", $output));
+            return 0;
+        }
+
+        fwrite(
+            STDERR,
+            sprintf(
+                "Blockstudio contract is out of date: %s\nRun blockstudio-agents to regenerate it.\n",
+                $output
+            )
+        );
+
+        return 1;
+    }
+
+    /**
+     * @param list<string> $arguments
+     * @return array{
+     *   root: string,
+     *   configuration: ?string,
+     *   output: string,
+     *   stdout: bool,
+     *   check: bool,
+     *   force: bool,
+     *   help: bool
+     * }
+     */
+    private function parse(array $arguments): array
+    {
+        array_shift($arguments);
+        $root = getcwd() ?: '.';
+        $configuration = null;
+        $output = null;
+        $stdout = false;
+        $check = false;
+        $force = false;
+        $help = false;
+
+        while ($arguments !== []) {
+            $argument = array_shift($arguments);
+
+            if ($argument === '-h' || $argument === '--help') {
+                $help = true;
+                continue;
+            }
+            if ($argument === '--stdout') {
+                $stdout = true;
+                continue;
+            }
+            if ($argument === '--check') {
+                $check = true;
+                continue;
+            }
+            if ($argument === '--force') {
+                $force = true;
+                continue;
+            }
+
+            $value = null;
+            foreach (['--root', '--config', '--output'] as $name) {
+                if ($argument === $name) {
+                    if ($arguments === []) {
+                        throw new \InvalidArgumentException(
+                            sprintf('%s requires a value.', $name)
+                        );
+                    }
+                    $value = [$name, array_shift($arguments)];
+                    break;
+                }
+                if (str_starts_with($argument, $name . '=')) {
+                    $value = [$name, substr($argument, strlen($name) + 1)];
+                    break;
+                }
+            }
+
+            if ($value === null) {
+                throw new \InvalidArgumentException(
+                    sprintf('Unknown option: %s.', $argument)
+                );
+            }
+            if ($value[1] === '') {
+                throw new \InvalidArgumentException(
+                    sprintf('%s requires a value.', $value[0])
+                );
+            }
+
+            if ($value[0] === '--root') {
+                $root = $value[1];
+            } elseif ($value[0] === '--config') {
+                $configuration = $value[1];
+            } else {
+                $output = $value[1];
+            }
+        }
+
+        if ($stdout && $check) {
+            throw new \InvalidArgumentException(
+                'Use either --stdout or --check, not both.'
+            );
+        }
+
+        $root = $this->absolutePath($root);
+
+        return [
+            'root' => $root,
+            'configuration' => $configuration === null
+                ? null
+                : $this->absolutePath($configuration),
+            'output' => $output === null
+                ? $root . '/AGENTS.md'
+                : $this->absolutePath($output),
+            'stdout' => $stdout,
+            'check' => $check,
+            'force' => $force,
+            'help' => $help,
+        ];
+    }
+
+    private function absolutePath(string $path): string
+    {
+        if (
+            str_starts_with($path, '/')
+            || preg_match('/^[A-Za-z]:[\\\\\/]/', $path) === 1
+        ) {
+            return str_replace('\\', '/', $path);
+        }
+
+        return str_replace(
+            '\\',
+            '/',
+            rtrim(getcwd() ?: '.', '/\\') . '/' . $path
+        );
+    }
+
+    /**
+     * @param resource $stream
+     */
+    private function help($stream): void
+    {
+        fwrite(
+            $stream,
+            <<<'HELP'
+Blockstudio project contract
+
+Usage:
+  blockstudio-agents [--root <path>] [--config <path>] [--output <path>]
+                     [--stdout] [--check] [--force]
+
+Reads blockstudio.json and the project's own files, then writes an AGENTS.md
+describing that project: what it authors, which features are enabled, what the
+selected PHPStan preset enforces, and the commands that apply. A file without
+the generated marker belongs to the author and is never replaced without
+--force. Text between the notes markers is preserved.
+
+Options:
+  --root <path>    Project root (default: current directory)
+  --config <path>  blockstudio.json path (default: <root>/blockstudio.json)
+  --output <path>  Contract path (default: <root>/AGENTS.md)
+  --stdout         Print the contract instead of writing it
+  --check          Fail when the contract on disk is not current
+  --force          Replace a file Blockstudio does not own
+  -h, --help       Show this help
+
+Exit codes:
+  0  Contract written, current, or printed
+  1  --check found an outdated contract
+  2  Usage, configuration, or filesystem error
+
+HELP
+        );
+    }
+}
+
+exit((new BlockstudioAgentsCli())->run($argv));

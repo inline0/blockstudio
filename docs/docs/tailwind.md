@@ -1,11 +1,12 @@
 ---
 title: Tailwind CSS
 description: Server-side Tailwind CSS compilation with automatic caching.
-path: "tailwind"
-order: 57
-section: "Platform"
-meta_title: "Tailwind CSS"
-meta_description: "Server-side Tailwind CSS compilation with automatic caching."
+path: 'tailwind'
+order: 55
+section: "Blocks"
+subsection: 'Styling'
+meta_title: 'Tailwind CSS'
+meta_description: 'Server-side Tailwind CSS compilation with automatic caching.'
 ---
 
 # Tailwind CSS
@@ -33,7 +34,9 @@ The compilation flow:
 The compiled CSS is injected as:
 
 ```html
-<style id="blockstudio-tailwind">/* compiled CSS */</style>
+<style id="blockstudio-tailwind">
+  /* compiled CSS */
+</style>
 ```
 
 This includes Tailwind's preflight (CSS reset) and all matched utility classes.
@@ -64,6 +67,35 @@ add_filter('blockstudio/settings/tailwind/enabled', '__return_true');
 ```
 
 When `enabled` is `true`, every frontend page will have Tailwind CSS compiled and injected automatically. You can use Tailwind utility classes anywhere: in block templates, theme templates, `the_content` filters, or any HTML that appears in the page output.
+
+## Template composition helpers
+
+Blockstudio exposes the same bundled TailwindPHP engine to PHP templates. No
+theme-side copy or fallback implementation is required:
+
+```php title="functions.php"
+$classes = bs_tw_merge('px-2 text-sm', 'px-4');
+// text-sm px-4
+
+$button = bs_tw_variants([
+    'base' => 'inline-flex items-center',
+    'variants' => [
+        'size' => [
+            'sm' => 'h-8 px-3',
+            'lg' => 'h-12 px-6',
+        ],
+    ],
+    'defaultVariants' => [
+        'size' => 'sm',
+    ],
+]);
+
+echo $button(['size' => 'lg', 'class' => 'rounded']);
+```
+
+`bs_tw_merge()` accepts nested class values and resolves conflicting Tailwind
+utilities. `bs_tw_variants()` returns a CVA-style callable supporting base,
+variants, default variants, compound variants, `class`, and `className`.
 
 ## Configuration
 
@@ -173,10 +205,10 @@ Use the classes value in your template:
 
 ## Settings Reference
 
-| Option | Type | Default | Description |
-|--------|------|---------|-------------|
+| Option    | Type    | Default | Description                                     |
+| --------- | ------- | ------- | ----------------------------------------------- |
 | `enabled` | boolean | `false` | Enable Tailwind CSS compilation on the frontend |
-| `config` | string | `""` | Tailwind v4 CSS-first configuration string |
+| `config`  | string  | `""`    | Tailwind v4 CSS-first configuration string      |
 
 ### Setting via JSON
 
@@ -223,10 +255,12 @@ source selection into another.
 Cache files are stored in:
 
 ```
-wp-content/uploads/blockstudio/tailwind/cache/
+wp-content/blockstudio/cache/sites/{network-blog}/{runtime-identity}/tailwind/
 ```
 
-Each file is named with an MD5 hash: `{hash}.css`.
+The configured `cache.path`, current multisite identity, and complete runtime
+identity determine the exact prefix. Each file is named with an MD5 hash:
+`{hash}.css`.
 
 ### Clearing the Cache
 
@@ -234,14 +268,13 @@ Delete the contents of the cache directory to force recompilation:
 
 ```php
 // Clear all cached Tailwind CSS
-$cache_dir = wp_upload_dir()['basedir'] . '/blockstudio/tailwind/cache';
-array_map('unlink', glob("$cache_dir/*.css"));
+Blockstudio\Runtime_Cache::purge('tailwind');
 ```
 
 Or via WP-CLI:
 
 ```bash
-wp eval "array_map('unlink', glob(wp_upload_dir()['basedir'] . '/blockstudio/tailwind/cache/*.css'));"
+wp eval "Blockstudio\\Runtime_Cache::purge('tailwind');"
 ```
 
 The next frontend request will recompile and cache the CSS automatically.
@@ -265,10 +298,12 @@ The full CSS input that gets compiled looks like this:
 
 ```css
 /* Base import */
-@import "tailwindcss";
+@import 'tailwindcss';
 
 /* Config from settings (if set) */
-@theme { --color-brand: pink; }
+@theme {
+  --color-brand: pink;
+}
 
 /* Anything added via the blockstudio/tailwind/css filter */
 ```
@@ -278,6 +313,14 @@ The full CSS input that gets compiled looks like this:
 Tailwind compilation hooks into Blockstudio's output buffer system. The buffer captures the complete page HTML after WordPress has finished rendering, allowing Tailwind to scan all classes from every source: block templates, theme templates, plugin output, `the_content` filters, and widget areas.
 
 The compilation filter runs at priority `999999` on the `blockstudio/buffer/output` hook, ensuring it processes the final HTML after all other modifications. The buffer is started on the `template_redirect` action, which means it only runs on frontend requests, not in the admin, REST API, or AJAX contexts.
+
+Buffering the whole document is what makes this possible, so it is on by default. A site that uses neither Tailwind nor block assets can turn it off:
+
+```php
+add_filter( 'blockstudio/buffer/enabled', '__return_false' );
+```
+
+Returning `false` skips the buffer entirely, which also disables Tailwind compilation and the hoisting of block styles and scripts into the head and footer.
 
 ## Architecture
 
@@ -301,7 +344,7 @@ Frontend Request
   │   ├─ Cache key = md5(sorted candidates + css input)
   │   │
   │   ├─ Cache hit?
-  │   │   ├─ Yes → Read CSS from uploads/blockstudio/tailwind/cache/{hash}.css
+  │   │   ├─ Yes → Read CSS from the shared runtime `tailwind/{hash}.css` scope
   │   │   └─ No  → TailwindPHP::generate() → Write to cache file
   │   │
   │   └─ Inject <style id="blockstudio-tailwind"> before </head>
@@ -381,7 +424,6 @@ A complete working setup with custom theme colors and a block that uses them:
 ```
 
 This renders on the frontend with all Tailwind utilities and custom theme colors compiled into a single inline `<style>` tag.
-
 
 > **[Building a Block Library](/guides/block-library)**
 >

@@ -1,0 +1,19 @@
+{
+  "$schema": "https://blockstudio.dev/schema/block",
+  "apiVersion": 3,
+  "name": "test/template-variables-button",
+  "title": "Button",
+  "category": "layout",
+  "blockstudio": {
+    "attributes": [
+      { "id": "label", "type": "text" },
+      { "id": "featured", "type": "toggle" },
+      { "id": "cta", "type": "link" },
+      {
+        "id": "items",
+        "type": "repeater",
+        "attributes": [{ "id": "label", "type": "text" }]
+      }
+    ]
+  }
+}

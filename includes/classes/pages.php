@@ -148,6 +148,7 @@ class Pages {
 		 * Fires after pages have been synced.
 		 *
 		 * @param Page_Registry $registry The page registry instance.
+		 * @param array         $report   Reconciliation report and source identity.
 		 */
 		do_action( 'blockstudio/pages/synced', $registry, $report );
 	}
@@ -1625,29 +1626,32 @@ class Pages {
 			return;
 		}
 
-		$post = null;
+		$post     = null;
+		$relative = '';
 		if ( $is_md_ext ) {
-			$relative = preg_replace( '/\.md$/', '', self::current_request_relative_path() );
-			$post     = self::find_collection_post_by_relative_path( (string) $relative, true );
+			$relative = (string) preg_replace( '/\.md$/', '', self::current_request_relative_path() );
+			$post     = self::find_collection_post_by_relative_path( $relative, true );
 
 			if ( ! $post ) {
-				$post = get_page_by_path( (string) $relative, OBJECT, get_post_types() );
+				$post = get_page_by_path( $relative, OBJECT, get_post_types() );
 			}
 		} else {
 			$queried = (int) get_queried_object_id();
 			$post    = $queried > 0 ? get_post( $queried ) : null;
 		}
 
+		$claims_404 = $is_md_ext && self::path_is_in_collection( $relative );
+
 		$file = $post ? (string) get_post_meta( $post->ID, '_blockstudio_page_content_path', true ) : '';
 		if ( ! $post || ! self::can_serve_markdown_post( $post ) ) {
-			if ( $is_md_ext ) {
+			if ( $claims_404 ) {
 				self::serve_markdown_not_found();
 			}
 			return;
 		}
 
 		if ( '' === $file || ! is_file( $file ) ) {
-			if ( $is_md_ext ) {
+			if ( $claims_404 ) {
 				self::serve_markdown_not_found();
 			}
 			return;
@@ -1689,6 +1693,40 @@ class Pages {
 		}
 
 		return is_post_publicly_viewable( $post ) || current_user_can( 'read_post', $post->ID );
+	}
+
+	/**
+	 * Whether a relative request path falls inside a known page collection.
+	 *
+	 * Without this the unresolved-markdown 404 below claimed every `.md` URL
+	 * on the site, including on installs with no markdown pages at all, and
+	 * exited before anything else could respond. A `.md` path outside every
+	 * collection belongs to the rest of the site.
+	 *
+	 * @param string $relative_path Relative request path with the extension removed.
+	 *
+	 * @return bool Whether a collection owns the path.
+	 */
+	private static function path_is_in_collection( string $relative_path ): bool {
+		$relative_path = trim( $relative_path, '/' );
+
+		if ( '' === $relative_path ) {
+			return false;
+		}
+
+		foreach ( self::get_collection_manifests() as $collection ) {
+			$slug = trim( (string) ( $collection['slug'] ?? '' ), '/' );
+
+			if ( '' === $slug ) {
+				continue;
+			}
+
+			if ( $relative_path === $slug || str_starts_with( $relative_path, $slug . '/' ) ) {
+				return true;
+			}
+		}
+
+		return false;
 	}
 
 	/**
@@ -1740,6 +1778,71 @@ class Pages {
 	}
 
 	/**
+	 * Render a page layout around arbitrary content.
+	 *
+	 * This is the programmatic counterpart to the frontend `the_content`
+	 * integration. It exposes the same `page_content()` and `current_page()`
+	 * context to `layout.php` without requiring a singular WordPress request.
+	 *
+	 * @since 7.6.0
+	 *
+	 * @param string $content     Rendered page content.
+	 * @param array  $page        Canonical page data.
+	 * @param string $layout_path Optional explicit layout path.
+	 *
+	 * @return string Rendered layout, or the original content when unavailable.
+	 */
+	public static function render_layout( string $content, array $page, string $layout_path = '' ): string {
+		if ( '' === $layout_path ) {
+			$layout_path = is_string( $page['layout_path'] ?? null )
+				? $page['layout_path']
+				: '';
+		}
+
+		if ( '' === $layout_path || ! is_file( $layout_path ) ) {
+			return $content;
+		}
+
+		$previous_rendering_layout = self::$rendering_layout;
+		$previous_current_page     = self::$current_page;
+		$previous_page_content     = self::$current_page_content;
+		$initial_buffer_level      = ob_get_level();
+
+		try {
+			self::$rendering_layout     = true;
+			self::$current_page         = $page;
+			self::$current_page_content = $content;
+
+			ob_start();
+			include $layout_path;
+			$rendered = ob_get_clean();
+
+			return false === $rendered ? $content : $rendered;
+		} catch ( \Throwable $throwable ) {
+			while ( ob_get_level() > $initial_buffer_level ) {
+				ob_end_clean();
+			}
+
+			/**
+			 * Fires when a programmatic page layout cannot be rendered.
+			 *
+			 * @since 7.6.0
+			 *
+			 * @param \Throwable $throwable  Rendering failure.
+			 * @param string     $layout_path Layout file.
+			 * @param array      $page         Canonical page data.
+			 */
+			do_action( 'blockstudio/pages/layout_error', $throwable, $layout_path, $page );
+
+			return $content;
+		} finally {
+			self::$rendering_layout     = $previous_rendering_layout;
+			self::$current_page         = $previous_current_page;
+			self::$current_page_content = $previous_page_content;
+		}
+	}
+
+	/**
 	 * Render collection layout.php around frontend page content.
 	 *
 	 * @param string $content Original post content.
@@ -1765,19 +1868,7 @@ class Pages {
 
 		$page = self::page_for_post_id( $post_id );
 
-		self::$rendering_layout     = true;
-		self::$current_page         = $page;
-		self::$current_page_content = $content;
-
-		ob_start();
-		include $layout_path;
-		$layout_content = ob_get_clean();
-
-		self::$current_page         = null;
-		self::$current_page_content = '';
-		self::$rendering_layout     = false;
-
-		return false === $layout_content ? $content : $layout_content;
+		return self::render_layout( $content, is_array( $page ) ? $page : array(), $layout_path );
 	}
 
 	/**
@@ -1826,6 +1917,103 @@ class Pages {
 		$registry = Page_Registry::instance();
 
 		return null === $collection ? $registry->get_pages() : $registry->in_collection( $collection );
+	}
+
+	/**
+	 * Discover the current page sources without synchronizing WordPress posts.
+	 *
+	 * Canvas and other read-only consumers need the source-backed registry even
+	 * when the ordinary frontend registry was hydrated from persisted posts.
+	 * Existing post IDs and permalinks are merged back into matching discovered
+	 * records without writing content or advancing reconciliation state.
+	 *
+	 * @since 7.6.0
+	 *
+	 * @return array<string, array> Source-backed pages.
+	 */
+	public static function discover(): array {
+		$registry = Page_Registry::instance();
+
+		if ( array() !== $registry->get_paths() ) {
+			self::hydrate_source_registry_pages( $registry );
+
+			return $registry->get_registered_pages();
+		}
+
+		$persisted = $registry->get_pages();
+		$registry  = self::discover_registry();
+
+		foreach ( $registry->get_registered_pages() as $name => $page_data ) {
+			$key      = is_string( $page_data['key'] ?? null ) ? $page_data['key'] : (string) $name;
+			$existing = is_array( $persisted[ $key ] ?? null )
+				? $persisted[ $key ]
+				: ( is_array( $persisted[ $name ] ?? null ) ? $persisted[ $name ] : array() );
+			$post_id  = isset( $existing['post_id'] ) && is_numeric( $existing['post_id'] )
+				? (int) $existing['post_id']
+				: 0;
+
+			if ( $post_id > 0 ) {
+				self::hydrate_registry_page( $registry, (string) $name, $page_data, $post_id );
+			}
+		}
+
+		return $registry->get_registered_pages();
+	}
+
+	/**
+	 * Merge managed post identity into an already source-backed registry.
+	 *
+	 * Logical discovery sources can populate the registry before Canvas asks for
+	 * pages. The registry then deliberately skips lazy database hydration because
+	 * its source records are already present, so resolve their stable keys or
+	 * source identities against the existing managed post inventory without
+	 * synchronizing content.
+	 *
+	 * @param Page_Registry $registry Source-backed registry.
+	 *
+	 * @return void
+	 */
+	private static function hydrate_source_registry_pages( Page_Registry $registry ): void {
+		$pages = $registry->get_registered_pages();
+
+		if ( array() === $pages ) {
+			return;
+		}
+
+		$unresolved = array_filter(
+			$pages,
+			static fn ( array $page ): bool => ! isset( $page['post_id'] )
+				|| ! is_numeric( $page['post_id'] )
+				|| (int) $page['post_id'] <= 0
+		);
+
+		if ( array() === $unresolved ) {
+			return;
+		}
+
+		$indexes = self::managed_post_indexes( ( new Page_Sync() )->managed_posts() );
+
+		foreach ( $unresolved as $name => $page_data ) {
+			$key        = is_scalar( $page_data['key'] ?? null )
+				? (string) $page_data['key']
+				: (string) $name;
+			$source     = is_scalar( $page_data['source_path'] ?? null )
+				? (string) $page_data['source_path']
+				: '';
+			$candidates = array_merge(
+				$indexes['key'][ $key ] ?? array(),
+				'' !== $source ? ( $indexes['source'][ $source ] ?? array() ) : array()
+			);
+
+			foreach ( $candidates as $post ) {
+				if ( ! $post instanceof \WP_Post ) {
+					continue;
+				}
+
+				self::hydrate_registry_page( $registry, (string) $name, $page_data, $post->ID );
+				break;
+			}
+		}
 	}
 
 	/**
@@ -1898,9 +2086,20 @@ class Pages {
 	}
 
 	/**
+	 * Get page discovery and sync errors.
+	 *
+	 * @since 7.6.0
+	 *
+	 * @return array<int, array> Errors.
+	 */
+	public static function errors(): array {
+		return Page_Registry::instance()->get_errors();
+	}
+
+	/**
 	 * Force sync all pages.
 	 *
-	 * @return array<string, int|WP_Error> Results indexed by page name.
+	 * @return array<string, int|\WP_Error> Results indexed by page name.
 	 */
 	public static function force_sync_all(): array {
 		$results  = array();
@@ -1919,7 +2118,7 @@ class Pages {
 	 *
 	 * @param string $name The page name.
 	 *
-	 * @return int|WP_Error|null The post ID, WP_Error, or null if page not found.
+	 * @return int|\WP_Error|null The post ID, WP_Error, or null if page not found.
 	 */
 	public static function force_sync( string $name ): int|\WP_Error|null {
 		$page = Page_Registry::instance()->get_page( $name );

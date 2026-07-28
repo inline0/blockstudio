@@ -54,7 +54,7 @@ store( 'bsui/phone-input', {
 				showPopup( root );
 				requestAnimationFrame( () => {
 					const input = root.querySelector( '[data-bsui-phone-search-input]' );
-					if ( input ) input.focus();
+					if ( input ) input.focus( { preventScroll: true } );
 				} );
 			} else {
 				hidePopup( root );
@@ -76,7 +76,7 @@ store( 'bsui/phone-input', {
 					showPopup( root );
 					requestAnimationFrame( () => {
 						const input = root.querySelector( '[data-bsui-phone-search-input]' );
-						if ( input ) input.focus();
+						if ( input ) input.focus( { preventScroll: true } );
 					} );
 				}
 			}
@@ -138,14 +138,15 @@ store( 'bsui/phone-input', {
 					const value = ctx.number ? ctx.code + ctx.number : '';
 					root.dispatchEvent( new CustomEvent( 'change', { bubbles: true, detail: { value: value } } ) );
 					const telInput = root.querySelector( 'input[type="tel"]' );
-					if ( telInput ) telInput.focus();
+					if ( telInput ) telInput.focus( { preventScroll: true } );
 				}
 			} else if ( event.key === 'Escape' ) {
+			event.stopPropagation();
 				event.preventDefault();
 				ctx.open = false;
 				hidePopup( root );
 				const trigger = root.querySelector( '[data-bsui-phone-trigger]' );
-				if ( trigger ) trigger.focus();
+				if ( trigger ) trigger.focus( { preventScroll: true } );
 			}
 		},
 		selectCountry() {
@@ -159,7 +160,7 @@ store( 'bsui/phone-input', {
 			const value = ctx.number ? ctx.code + ctx.number : '';
 			root.dispatchEvent( new CustomEvent( 'change', { bubbles: true, detail: { value: value } } ) );
 			const telInput = root.querySelector( 'input[type="tel"]' );
-			if ( telInput ) telInput.focus();
+			if ( telInput ) telInput.focus( { preventScroll: true } );
 		},
 		setNumber( event ) {
 			const ctx = getContext();

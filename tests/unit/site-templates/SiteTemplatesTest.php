@@ -60,6 +60,27 @@ class SiteTemplatesTest extends TestCase {
 		$this->assertStringContainsString( 'BLOCKSTUDIO TWIG TEMPLATE', $templates['blockstudio-single']['content'] );
 	}
 
+	public function test_exact_selection_discovers_and_compiles_only_the_requested_template(): void {
+		$compiled = array();
+		$observer = static function ( string $source_path ) use ( &$compiled ): void {
+			$compiled[] = wp_normalize_path( $source_path );
+		};
+
+		add_action( 'blockstudio/site_templates/source_compiled', $observer, 10, 1 );
+
+		try {
+			$templates = Site_Templates::templates( array( 'blockstudio-custom' ) );
+		} finally {
+			remove_action( 'blockstudio/site_templates/source_compiled', $observer, 10 );
+		}
+
+		$this->assertSame( array( 'blockstudio-custom' ), array_keys( $templates ) );
+		$this->assertCount( 1, $compiled );
+		$this->assertStringContainsString( '/templates/blockstudio-custom/index.php', $compiled[0] );
+		$this->assertStringContainsString( 'Blockstudio Site Template', $templates['blockstudio-custom']['content'] );
+		$this->assertSame( 1, Site_Templates::discovery_runs() );
+	}
+
 	public function test_get_block_template_returns_file_backed_template_object(): void {
 		$template = get_block_template( get_stylesheet() . '//blockstudio-custom', 'wp_template' );
 

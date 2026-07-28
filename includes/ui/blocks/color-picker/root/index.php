@@ -26,7 +26,7 @@ $on_change = ! empty( $a['onChange'] ) ? $a['onChange'] : '';
 		value="<?php echo esc_attr( $default ); ?>"
 		maxlength="7"
 		spellcheck="false"
-		<?php if ( '' !== $name ) ?>name="<?php echo esc_attr( $name ); ?>"<?php ; ?>
+		<?php if ( '' !== $name ) : ?>name="<?php echo esc_attr( $name ); ?>"<?php endif; ?>
 		<?php if ( $disabled ) echo 'disabled'; ?>
 	/>
 </div>

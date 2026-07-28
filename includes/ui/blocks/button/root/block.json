@@ -19,8 +19,14 @@
 				"type": "select",
 				"label": "Icon Position",
 				"options": [
-					{ "label": "Left", "value": "left" },
-					{ "label": "Right", "value": "right" }
+					{
+						"label": "Left",
+						"value": "left"
+					},
+					{
+						"label": "Right",
+						"value": "right"
+					}
 				],
 				"default": "left"
 			},
@@ -34,12 +40,30 @@
 				"type": "select",
 				"label": "Variant",
 				"options": [
-					{ "label": "Default", "value": "default" },
-					{ "label": "Secondary", "value": "secondary" },
-					{ "label": "Outline", "value": "outline" },
-					{ "label": "Ghost", "value": "ghost" },
-					{ "label": "Link", "value": "link" },
-					{ "label": "Destructive", "value": "destructive" }
+					{
+						"label": "Default",
+						"value": "default"
+					},
+					{
+						"label": "Secondary",
+						"value": "secondary"
+					},
+					{
+						"label": "Outline",
+						"value": "outline"
+					},
+					{
+						"label": "Ghost",
+						"value": "ghost"
+					},
+					{
+						"label": "Link",
+						"value": "link"
+					},
+					{
+						"label": "Destructive",
+						"value": "destructive"
+					}
 				],
 				"default": "default"
 			},
@@ -48,10 +72,26 @@
 				"type": "select",
 				"label": "Size",
 				"options": [
-					{ "label": "Default", "value": "default" },
-					{ "label": "Small", "value": "sm" },
-					{ "label": "Large", "value": "lg" },
-					{ "label": "Icon", "value": "icon" }
+					{
+						"label": "Default",
+						"value": "default"
+					},
+					{
+						"label": "Small",
+						"value": "sm"
+					},
+					{
+						"label": "Large",
+						"value": "lg"
+					},
+					{
+						"label": "Icon",
+						"value": "icon"
+					},
+					{
+						"value": "icon-sm",
+						"label": "Icon small"
+					}
 				],
 				"default": "default"
 			},

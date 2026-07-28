@@ -1,0 +1,33 @@
+includes:
+  - base.neon
+
+parameters:
+  blockstudioThemeRoots: []
+  blockstudioThemeExcludePaths: []
+  blockstudioThemeMaxFiles: 10000
+
+parametersSchema:
+  blockstudioThemeRoots: listOf(string())
+  blockstudioThemeExcludePaths: listOf(string())
+  blockstudioThemeMaxFiles: int()
+
+services:
+  blockstudio.phpstan.themeProjectScanner:
+    class: Blockstudio\PHPStan\Theme\ProjectScanner
+    arguments:
+      currentWorkingDirectory: %currentWorkingDirectory%
+      configuredRoots: %blockstudioThemeRoots%
+      configuredExcludePaths: %blockstudioThemeExcludePaths%
+      maxFiles: %blockstudioThemeMaxFiles%
+
+  blockstudio.phpstan.themeStructureAnalyzer:
+    class: Blockstudio\PHPStan\Theme\StructureAnalyzer
+    arguments:
+      scanner: @blockstudio.phpstan.themeProjectScanner
+
+  blockstudio.phpstan.themeProjectRule:
+    class: Blockstudio\PHPStan\Rules\ThemeProjectRule
+    arguments:
+      analyzer: @blockstudio.phpstan.themeStructureAnalyzer
+    tags:
+      - phpstan.rules.rule

@@ -36,6 +36,26 @@ function bs_db_form(array $args): string {}
 function bs_db_table(array $args): string {}
 
 /**
+ * Merge Tailwind class values with the bundled engine.
+ */
+function bs_tw_merge(mixed ...$classes): string {}
+
+/**
+ * Create a CVA-style Tailwind variant composer.
+ *
+ * @param array<string, mixed> $config
+ * @return callable(?array<string, mixed>): string
+ */
+function bs_tw_variants(array $config): callable {}
+
+/**
+ * Render an image through the Blockstudio media runtime.
+ *
+ * @param array<string, mixed> $args
+ */
+function bs_media_image(array $args): string {}
+
+/**
  * Inline placeholder SVG helpers.
  */
 function blockstudio_placeholder(string $variant = 'default'): string {}

@@ -5,7 +5,10 @@ import { fileURLToPath } from "url";
 import type { EvalSuite, CaseResult, ScoreResult } from "./types.ts";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
-const CONTEXT_PATH = resolve(__dirname, "../includes/llm/blockstudio-llm.txt");
+const CONTEXT_PATH = resolve(
+  __dirname,
+  "../includes/llm/blockstudio-llm-full.txt",
+);
 
 const DEFAULT_MODEL = "sonnet";
 

@@ -8,6 +8,6 @@ $disabled = ! empty( $a['disabled'] );
 	<?php if ( $disabled ) echo 'disabled'; ?>
 >
 	<InnerBlocks
-		allowedBlocks='<?php echo esc_attr( wp_json_encode( array( 'bsui/field-group-title', 'bsui/field-group-description', 'bsui/field', 'bsui/input', 'bsui/textarea', 'bsui/number-field', 'bsui/select', 'bsui/checkbox', 'bsui/switch', 'bsui/radio-group', 'bsui/stack', 'bsui/text', 'bsui/separator' ) ) ); ?>'
+		allowedBlocks='<?php echo esc_attr( wp_json_encode( array( 'bsui/field-group-title', 'bsui/field-group-description', 'bsui/field-group-content', 'bsui/field', 'bsui/input', 'bsui/textarea', 'bsui/number-field', 'bsui/select', 'bsui/checkbox', 'bsui/switch', 'bsui/radio-group', 'bsui/stack', 'bsui/text', 'bsui/separator' ) ) ); ?>'
 	/>
 </fieldset>

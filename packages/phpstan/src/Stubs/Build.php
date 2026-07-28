@@ -22,4 +22,11 @@ class Build
      * Get the Blockstudio build directory.
      */
     public static function get_build_dir(string $path = '/blockstudio', string $filter = 'path'): string {}
+
+    /**
+     * Register blocks from a directory.
+     *
+     * @param bool|string|array<string, mixed> $args
+     */
+    public static function init(bool|string|array $args = false): void {}
 }

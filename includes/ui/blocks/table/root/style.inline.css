@@ -52,7 +52,7 @@
 }
 
 [data-bsui-table-root] tbody tr:hover {
-	background: var(--bs-ui-muted);
+	background: var(--bs-ui-accent);
 }
 
 [data-bsui-table-root][data-striped] tbody tr:nth-child(even) {

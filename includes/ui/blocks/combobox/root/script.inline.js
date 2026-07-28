@@ -8,12 +8,33 @@ function getVisibleOptions( root ) {
 }
 
 function positionPopup( input, popup ) {
+	popup.style.position = 'fixed';
 	computePosition( input, popup, {
+		strategy: 'fixed',
 		placement: 'bottom-start',
 		middleware: [ offset( 4 ), flip(), shift( { padding: 8 } ) ],
 	} ).then( ( { x, y } ) => {
 		Object.assign( popup.style, { left: x + 'px', top: y + 'px' } );
 	} );
+	if ( ! popup.__bsuiScrollTracked ) {
+		popup.__bsuiScrollTracked = true;
+		let frame = 0;
+		const track = () => {
+			if ( popup.hasAttribute( 'hidden' ) ) {
+				popup.__bsuiScrollTracked = false;
+				window.removeEventListener( 'scroll', onScroll, true );
+				return;
+			}
+			positionPopup( input, popup );
+		};
+		const onScroll = ( event ) => {
+			if ( popup.contains( event.target ) ) return;
+			cancelAnimationFrame( frame );
+			frame = requestAnimationFrame( track );
+		};
+		window.addEventListener( 'scroll', onScroll, true );
+	}
+
 }
 
 store( 'bsui/combobox', {
@@ -45,7 +66,7 @@ store( 'bsui/combobox', {
 				requestAnimationFrame( () => positionPopup( input, popup ) );
 			}
 		},
-		handleFocus() {
+		handleClick() {
 			const ctx = getContext();
 			ctx.open = true;
 			const { ref } = getElement();
@@ -91,14 +112,20 @@ store( 'bsui/combobox', {
 				case 'ArrowDown':
 					event.preventDefault();
 					ctx.open = true;
-					if ( popup ) popup.removeAttribute( 'hidden' );
+					if ( popup && popup.hasAttribute( 'hidden' ) ) {
+						popup.removeAttribute( 'hidden' );
+						const input = root.querySelector( '[data-bsui-combobox-input]' );
+						if ( input ) {
+							requestAnimationFrame( () => positionPopup( input, popup ) );
+						}
+					}
 					ctx.activeIndex = ctx.activeIndex < options.length - 1 ? ctx.activeIndex + 1 : 0;
-					options[ ctx.activeIndex ]?.focus();
+					options[ ctx.activeIndex ]?.focus( { preventScroll: true } );
 					break;
 				case 'ArrowUp':
 					event.preventDefault();
 					ctx.activeIndex = ctx.activeIndex > 0 ? ctx.activeIndex - 1 : options.length - 1;
-					options[ ctx.activeIndex ]?.focus();
+					options[ ctx.activeIndex ]?.focus( { preventScroll: true } );
 					break;
 				case 'Enter':
 					event.preventDefault();
@@ -111,7 +138,8 @@ store( 'bsui/combobox', {
 					ctx.open = false;
 					ctx.activeIndex = -1;
 					if ( popup ) popup.setAttribute( 'hidden', '' );
-					root.querySelector( '[data-bsui-combobox-input]' )?.focus();
+					root.querySelector( '[data-bsui-combobox-input]' )?.focus( { preventScroll: true } );
+					event.stopPropagation();
 					break;
 			}
 		},

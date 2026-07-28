@@ -257,15 +257,32 @@ class Assets {
 	/**
 	 * Maybe buffer output.
 	 *
-	 * @return bool|void
+	 * @return void
 	 */
-	public function maybe_buffer_output() {
+	public function maybe_buffer_output(): void {
 		if ( function_exists( 'is_customize_preview' ) && is_customize_preview() ) {
-			return false;
+			return;
 		}
 
 		if ( is_admin() ) {
-			return false;
+			return;
+		}
+
+		/**
+		 * Filters whether Blockstudio buffers the frontend response.
+		 *
+		 * Buffering exists so block style and script tags rendered inside the
+		 * body can be hoisted into the head and footer, which means holding
+		 * and scanning the whole document on every frontend request. A site
+		 * that renders no Blockstudio block assets can return false and skip
+		 * both.
+		 *
+		 * @since 7.6.0
+		 *
+		 * @param bool $enabled Whether to buffer the response.
+		 */
+		if ( ! apply_filters( 'blockstudio/buffer/enabled', true ) ) {
+			return;
 		}
 
 		ob_start( array( $this, 'return_buffer' ) );
@@ -509,6 +526,25 @@ class Assets {
 			$head = $interactivity_importmap . $head;
 		}
 
+		/*
+		 * Bundled UI blocks read shared helpers from window.__bsui, and their
+		 * own inline scripts assume it exists. Only the canvas document
+		 * renderer emitted those globals, so a bundled component rendered on
+		 * an ordinary page threw on the first interaction: a dialog could not
+		 * lock scroll, so it never opened.
+		 */
+		if ( method_exists( Ui::class, 'global_assets' ) ) {
+			$ui_globals = Ui::global_assets( array_keys( $blocks_on_page ), $html );
+
+			if ( is_string( $ui_globals['style'] ?? null ) && '' !== $ui_globals['style'] ) {
+				$head .= $ui_globals['style'];
+			}
+
+			if ( is_string( $ui_globals['script'] ?? null ) && '' !== $ui_globals['script'] ) {
+				$footer = $ui_globals['script'] . $footer;
+			}
+		}
+
 		$head   = apply_filters( 'blockstudio/render/head', $head, $blocks_on_page );
 		$footer = apply_filters( 'blockstudio/render/footer', $footer, $blocks_on_page );
 
@@ -600,18 +636,15 @@ class Assets {
 		wp_script_modules()->print_enqueued_script_modules();
 		$module_output = ob_get_clean();
 
-		// Build an importmap from the rendered module src URL.
-		$importmap                    = '';
-		$interactivity_module_pattern = '/<script\b'
-			. '(?=[^>]*id=["\']@wordpress\/interactivity[^"\']*["\'])'
-			. '(?=[^>]*src=["\']([^"\']+)["\'])'
-			. '[^>]*>/i';
+		// Build an importmap even if WordPress printed the module earlier.
+		$importmap = '';
+		$src       = self::get_script_module_src( '@wordpress/interactivity', $module_output );
 
-		if ( preg_match( $interactivity_module_pattern, $module_output, $matches ) ) {
+		if ( '' !== $src ) {
 			$importmap = '<script type="importmap">' . wp_json_encode(
 				array(
 					'imports' => array(
-						'@wordpress/interactivity' => $matches[1],
+						'@wordpress/interactivity' => $src,
 					),
 				)
 			) . '</script>';
@@ -653,6 +686,92 @@ class Assets {
 		}
 
 		return $importmap . $module_output . $data_clients . $reinit;
+	}
+
+	/**
+	 * Resolve a registered script module URL.
+	 *
+	 * WordPress does not print modules that another asset collection already
+	 * marked as done. Resolve the registered source in that case so isolated
+	 * render documents remain dependency-closed.
+	 *
+	 * @param string $id            Script module identifier.
+	 * @param string $module_output Rendered script module markup.
+	 *
+	 * @return string Versioned and filtered module URL, or an empty string.
+	 */
+	private static function get_script_module_src( string $id, string $module_output ): string {
+		$module_pattern = '/<script\b'
+			. '(?=[^>]*id=["\']' . preg_quote( $id, '/' ) . '[^"\']*["\'])'
+			. '(?=[^>]*src=["\']([^"\']+)["\'])'
+			. '[^>]*>/i';
+
+		if ( preg_match( $module_pattern, $module_output, $matches ) ) {
+			return html_entity_decode( $matches[1], ENT_QUOTES | ENT_HTML5, 'UTF-8' );
+		}
+
+		$script_modules = wp_script_modules();
+
+		if ( method_exists( $script_modules, 'get_registered' ) ) {
+			$registered = $script_modules->get_registered( $id );
+
+			if ( is_array( $registered ) && isset( $registered['src'] ) && is_string( $registered['src'] ) ) {
+				return self::version_script_module_src(
+					$id,
+					$registered['src'],
+					$registered['version'] ?? false
+				);
+			}
+		}
+
+		if ( '@wordpress/interactivity' !== $id ) {
+			return '';
+		}
+
+		$assets_file = ABSPATH . WPINC . '/assets/script-modules-packages.php';
+		if ( ! is_file( $assets_file ) ) {
+			return '';
+		}
+
+		$assets = include $assets_file;
+		$file   = 'interactivity/index.js';
+		if ( ! is_array( $assets ) || ! isset( $assets[ $file ] ) || ! is_array( $assets[ $file ] ) ) {
+			return '';
+		}
+
+		$suffix = defined( 'WP_RUN_CORE_TESTS' ) ? '.min' : wp_scripts_get_suffix();
+		if ( '' !== $suffix ) {
+			$file = str_replace( '.js', $suffix . '.js', $file );
+		}
+
+		return self::version_script_module_src(
+			$id,
+			includes_url( 'js/dist/script-modules/' . $file ),
+			$assets['interactivity/index.js']['version'] ?? false
+		);
+	}
+
+	/**
+	 * Apply WordPress script-module versioning and source filtering.
+	 *
+	 * @param string            $id      Script module identifier.
+	 * @param string            $src     Unversioned module URL.
+	 * @param string|false|null $version Registered version, false for WordPress version.
+	 *
+	 * @return string Versioned and filtered module URL.
+	 */
+	private static function version_script_module_src( string $id, string $src, $version ): string {
+		if ( '' !== $src ) {
+			if ( false === $version ) {
+				$src = add_query_arg( 'ver', get_bloginfo( 'version' ), $src );
+			} elseif ( null !== $version ) {
+				$src = add_query_arg( 'ver', $version, $src );
+			}
+		}
+
+		$src = apply_filters( 'script_module_loader_src', $src, $id ); // phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedHooknameFound -- Core WordPress hook.
+
+		return is_string( $src ) ? $src : '';
 	}
 
 	/**
@@ -1357,6 +1476,8 @@ class Assets {
 		try {
 			return $compiler->compileString( $scss )->getCss();
 		} catch ( SassException $e ) {
+			Error_Handler::handle_exception( $e, 'scss' );
+
 			return '';
 		}
 	}
@@ -1812,6 +1933,8 @@ class Assets {
 
 		// phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Asset output.
 		echo $string;
+
+		return null;
 	}
 
 	/**
@@ -1864,7 +1987,17 @@ class Assets {
 			return null;
 		}
 
-		$src       = Files::get_relative_url( $maybe_compiled_path );
+		$src = Files::get_relative_url( $maybe_compiled_path );
+
+		/*
+		 * An unresolvable URL used to still emit a tag, so the browser requested
+		 * the current document as a stylesheet or module. Every page carrying
+		 * such an asset logged a MIME type error.
+		 */
+		if ( '' === $src ) {
+			return null;
+		}
+
 		$key       = filemtime( $path );
 		$processed = 1 === count( self::get_matches( $path ) ) ? 'data-processed' : '';
 

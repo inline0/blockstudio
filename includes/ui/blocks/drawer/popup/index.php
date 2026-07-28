@@ -1,5 +1,6 @@
 <?php $flush = ! empty( $a['flush'] ); ?>
 <div
+	data-bsui-drawer-popup
 	data-bsui-focus
 	data-wp-interactive="bsui/drawer"
 	data-wp-on--keydown="actions.handleFocusTrap"

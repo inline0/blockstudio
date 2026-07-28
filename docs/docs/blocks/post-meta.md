@@ -2,8 +2,9 @@
 title: Post Meta
 description: Access post meta data in your block templates.
 path: "blocks/post-meta"
-order: 36
+order: 38
 section: "Blocks"
+subsection: "Template Context"
 meta_title: "Post Meta"
 meta_description: "Access post meta data in your block templates."
 ---

@@ -25,6 +25,39 @@ use WP_REST_Response;
 class Canvas {
 
 	/**
+	 * Public inventory and document schema version.
+	 */
+	public const SCHEMA_VERSION = Canvas_Data::SCHEMA_VERSION;
+
+	/**
+	 * Return the public canvas inventory for all or selected content.
+	 *
+	 * @since 7.6.0
+	 *
+	 * @param array $selection Type-keyed IDs, names, paths, or source paths.
+	 * @param array $options   Optional ordering and consumer metadata.
+	 *
+	 * @return array Canvas inventory DTO.
+	 */
+	public static function inventory( array $selection = array(), array $options = array() ): array {
+		return Canvas_Data::inventory( $selection, $options );
+	}
+
+	/**
+	 * Render public canvas documents for all or selected content.
+	 *
+	 * @since 7.6.0
+	 *
+	 * @param array $selection Type-keyed IDs, names, paths, or source paths.
+	 * @param array $options   Inventory and document options.
+	 *
+	 * @return array Canvas document DTO.
+	 */
+	public static function documents( array $selection = array(), array $options = array() ): array {
+		return Canvas_Data::documents( $selection, $options );
+	}
+
+	/**
 	 * File extensions to monitor for changes.
 	 *
 	 * @var array<string>
@@ -218,13 +251,23 @@ class Canvas {
 	/**
 	 * Get all registered Blockstudio blocks with default attribute content.
 	 *
+	 * @param array<string>|null $only_blocks Optional canonical block names, null for all.
+	 *
 	 * @return array<int, array{title: string, name: string, content: string}>
 	 */
-	private function get_blocks_with_content(): array {
+	private function get_blocks_with_content( ?array $only_blocks = null ): array {
 		$blocks = Build::blocks();
 		$items  = array();
 
 		foreach ( $blocks as $name => $block ) {
+			if ( null !== $only_blocks && ! in_array( $name, $only_blocks, true ) ) {
+				continue;
+			}
+
+			if ( Ui::is_bundled_block( $block ) ) {
+				continue;
+			}
+
 			$attributes = $block->blockstudio['attributes'] ?? array();
 			$defaults   = array();
 
@@ -288,14 +331,7 @@ class Canvas {
 					continue;
 				}
 
-				// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Setting mode for rendering.
-				$_GET['blockstudioMode'] = 'editor';
-
-				try {
-					$rendered = render_block( $block );
-				} catch ( \Throwable $e ) {
-					$rendered = '';
-				}
+				$rendered = $this->render_editor_block( $block );
 
 				$blockstudio_blocks[] = array(
 					'rendered'   => $rendered,
@@ -330,11 +366,8 @@ class Canvas {
 		) {
 			if ( in_array( $block['blockName'], $block_names, true ) ) {
 				if ( empty( $only_blocks ) || in_array( $block['blockName'], $only_blocks, true ) ) {
-					// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Setting mode for rendering.
-					$_GET['blockstudioMode'] = 'editor';
-
 					$blockstudio_blocks[] = array(
-						'rendered'   => render_block( $block ),
+						'rendered'   => $this->render_editor_block( $block ),
 						'blockName'  => $block['blockName'],
 						'attributes' => $block['attrs'],
 						'mode'       => 'editor',
@@ -358,6 +391,35 @@ class Canvas {
 		}
 
 		return $blockstudio_blocks;
+	}
+
+	/**
+	 * Render one editor-mode block without leaking request state.
+	 *
+	 * @param array $block Parsed block.
+	 *
+	 * @return string Rendered HTML or an empty string on failure.
+	 */
+	private function render_editor_block( array $block ): string {
+		$had_mode = array_key_exists( 'blockstudioMode', $_GET ); // phpcs:ignore WordPress.Security.NonceVerification.Recommended
+		// phpcs:ignore WordPress.Security.NonceVerification.Recommended, WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- Opaque snapshot is restored, never interpreted.
+		$mode = $had_mode ? wp_unslash( $_GET['blockstudioMode'] ) : null;
+
+		$_GET['blockstudioMode'] = 'editor'; // phpcs:ignore WordPress.Security.NonceVerification.Recommended
+
+		try {
+			$rendered = render_block( $block );
+
+			return is_string( $rendered ) ? $rendered : '';
+		} catch ( \Throwable ) {
+			return '';
+		} finally {
+			if ( $had_mode ) {
+				$_GET['blockstudioMode'] = $mode; // phpcs:ignore WordPress.Security.NonceVerification.Recommended
+			} else {
+				unset( $_GET['blockstudioMode'] );
+			}
+		}
 	}
 
 	/**
@@ -426,17 +488,24 @@ class Canvas {
 			);
 		}
 
-		$query_params    = $request->get_query_params();
-		$blocks_targeted = array_key_exists( 'blocks', $query_params );
-		$blocks_param    = $blocks_targeted ? $request->get_param( 'blocks' ) : '';
-		$only_blocks     = ! empty( $blocks_param ) ? explode( ',', $blocks_param ) : array();
-		$pages_targeted  = array_key_exists( 'pages', $query_params );
-		$pages_param     = $pages_targeted ? $request->get_param( 'pages' ) : '';
-		$only_pages      = ! empty( $pages_param ) ? explode( ',', $pages_param ) : array();
+		$query_params     = $request->get_query_params();
+		$has_blocks_param = array_key_exists( 'blocks', $query_params );
+		$has_pages_param  = array_key_exists( 'pages', $query_params );
+		$targeted         = $has_blocks_param || $has_pages_param;
+		$blocks_targeted  = $targeted;
+		$blocks_param     = $has_blocks_param ? $request->get_param( 'blocks' ) : '';
+		$only_blocks      = ! empty( $blocks_param ) ? explode( ',', $blocks_param ) : array();
+		$pages_targeted   = $targeted;
+		$pages_param      = $has_pages_param ? $request->get_param( 'pages' ) : '';
+		$only_pages       = ! empty( $pages_param ) ? explode( ',', $pages_param ) : array();
 
-		Build::refresh_blocks();
+		if ( ! $blocks_targeted ) {
+			Build::refresh_blocks();
+		} elseif ( ! empty( $only_blocks ) ) {
+			Build::refresh_blocks( false, $only_blocks );
+		}
 
-		if ( ! $pages_targeted || ! empty( $only_pages ) ) {
+		if ( ! $pages_targeted ) {
 			$page_paths = Pages::get_paths();
 			$discovery  = new Page_Discovery();
 			$sync       = new Page_Sync();
@@ -445,11 +514,11 @@ class Canvas {
 				$discovered = $discovery->discover( $source );
 
 				foreach ( $discovered as $page_data ) {
-					if ( empty( $only_pages ) || in_array( $page_data['source_path'], $only_pages, true ) ) {
-						$sync->sync( $page_data );
-					}
+					$sync->sync( $page_data );
 				}
 			}
+		} elseif ( ! empty( $only_pages ) ) {
+			$this->sync_selected_pages( $only_pages );
 		}
 
 		if ( $pages_targeted && empty( $only_pages ) ) {
@@ -460,37 +529,12 @@ class Canvas {
 			$response_pages = $this->get_pages_with_content();
 		}
 
-		if ( $blocks_targeted && empty( $only_blocks ) ) {
-			return new WP_REST_Response(
-				array(
-					'pages'             => $response_pages,
-					'blocks'            => array(),
-					'blockstudioBlocks' => array(),
-					'changedBlocks'     => array(),
-				)
-			);
-		}
-
-		$all_blocks = $this->get_blocks_with_content();
-
-		if ( $blocks_targeted ) {
-			$blocks = array_values(
-				array_filter(
-					$all_blocks,
-					function ( $block ) use ( $only_blocks ) {
-						return in_array( $block['name'], $only_blocks, true );
-					}
-				)
-			);
-		} else {
-			$blocks = $all_blocks;
-		}
-
-		// Preloading needs all pages to find block usage across all content.
-		$preload_pages      = $pages_targeted ? $this->get_pages_with_content() : $response_pages;
+		$blocks             = $this->get_blocks_with_content( $blocks_targeted ? $only_blocks : null );
+		$preload_pages      = $response_pages;
 		$blockstudio_blocks = $this->preload_all_blocks( $preload_pages, $only_blocks );
-		$block_preloads     = $this->preload_block_items( $all_blocks, $only_blocks );
+		$block_preloads     = $this->preload_block_items( $blocks, $only_blocks );
 		$blockstudio_blocks = array_merge( $blockstudio_blocks, $block_preloads );
+		$blocks_native      = $this->native_blocks_for_selection( $blocks_targeted ? $only_blocks : null );
 
 		return new WP_REST_Response(
 			array(
@@ -498,7 +542,12 @@ class Canvas {
 				'blocks'            => $blocks,
 				'blockstudioBlocks' => $blockstudio_blocks,
 				'changedBlocks'     => $only_blocks,
-				'blocksNative'      => Build::prepare_blocks_for_client( Build::blocks() ),
+				'blocksNative'      => $blocks_native,
+				'tailwindCss'       => $this->selected_tailwind_css(
+					$blockstudio_blocks,
+					$response_pages,
+					$only_blocks
+				),
 			)
 		);
 	}
@@ -555,9 +604,40 @@ class Canvas {
 			$new_mtimes          = array();
 			$new_fingerprint     = $this->compute_fingerprint_with_mtimes( $new_mtimes );
 			$fingerprint_changed = $new_fingerprint !== $fingerprint;
-			Build::refresh_blocks( ! $fingerprint_changed );
-			$new_dir_to_blocks  = $this->build_dir_to_blocks_map();
-			$new_dir_to_pages   = $this->build_dir_to_pages_map();
+			if ( ! $fingerprint_changed ) {
+				Build::refresh_blocks( true );
+			}
+			$new_blocks        = array();
+			$new_pages         = array();
+			$new_dir_to_blocks = $this->build_dir_to_blocks_map();
+			$new_dir_to_pages  = $this->build_dir_to_pages_map();
+
+			if ( $fingerprint_changed ) {
+				$changed_files  = $this->diff_mtimes( $prev_mtimes, $new_mtimes );
+				$unmapped_files = $this->unmapped_changed_files(
+					$changed_files,
+					array_merge( array_keys( $dir_to_blocks ), array_keys( $dir_to_pages ) )
+				);
+				$unmapped_files = array_values(
+					array_unique(
+						array_merge(
+							$unmapped_files,
+							array_keys( array_diff_key( $new_mtimes, $prev_mtimes ) )
+						)
+					)
+				);
+				$new_blocks     = Build::refresh_block_paths( $unmapped_files );
+				$new_pages      = $this->refresh_page_topology( $unmapped_files );
+
+				if ( array() !== $new_blocks ) {
+					$new_dir_to_blocks = $this->build_dir_to_blocks_map();
+				}
+
+				if ( array() !== $new_pages ) {
+					$new_dir_to_pages = $this->build_dir_to_pages_map();
+				}
+			}
+
 			$blocks_map_changed = ! empty( array_diff_assoc( $new_dir_to_blocks, $dir_to_blocks ) )
 				|| ! empty( array_diff_assoc( $dir_to_blocks, $new_dir_to_blocks ) );
 			$pages_map_changed  = ! empty( array_diff_assoc( $new_dir_to_pages, $dir_to_pages ) )
@@ -570,6 +650,8 @@ class Canvas {
 
 				$changed_blocks = array_values( array_unique( $this->detect_changed_blocks( $prev_mtimes, $new_mtimes, $dir_to_blocks ) ) );
 				$changed_pages  = $this->detect_changed_pages( $prev_mtimes, $new_mtimes, $dir_to_pages );
+				$changed_blocks = array_merge( $changed_blocks, $new_blocks );
+				$changed_pages  = array_merge( $changed_pages, $new_pages );
 
 				foreach ( $new_dir_to_blocks as $dir => $name ) {
 					if ( ! isset( $dir_to_blocks[ $dir ] ) ) {
@@ -643,35 +725,35 @@ class Canvas {
 	 * @return array<string, array<int, string>> Directory path => page source paths.
 	 */
 	private function build_dir_to_pages_map(): array {
-		$map       = array();
-		$discovery = new Page_Discovery();
+		$map = array();
 
-		foreach ( Discovery_Sources::for_paths( 'pages', Pages::get_paths() ) as $source ) {
-			$discovered = $discovery->discover( $source );
+		foreach ( Pages::pages() as $page_data ) {
+			if ( ! is_array( $page_data )
+				|| ! is_string( $page_data['source_path'] ?? null )
+				|| '' === $page_data['source_path']
+			) {
+				continue;
+			}
 
-			foreach ( $discovered as $page_data ) {
-				if ( ! isset( $page_data['source_path'] ) ) {
-					continue;
-				}
+			$paths = array_merge(
+				array(
+					$page_data['directory'] ?? null,
+					$page_data['json_path'] ?? null,
+					$page_data['template_path'] ?? null,
+					$page_data['layout_path'] ?? null,
+				),
+				is_array( $page_data['source_mtime_paths'] ?? null )
+					? $page_data['source_mtime_paths']
+					: array()
+			);
 
-				$paths = array_merge(
-					array(
-						$page_data['directory'] ?? null,
-						$page_data['json_path'] ?? null,
-						$page_data['template_path'] ?? null,
-						$page_data['layout_path'] ?? null,
-					),
-					$page_data['source_mtime_paths'] ?? array()
+			foreach ( array_filter( $paths, static fn( mixed $path ): bool => is_string( $path ) && '' !== $path ) as $path ) {
+				$directory         = is_dir( $path ) ? $path : dirname( $path );
+				$map[ $directory ] = array_values(
+					array_unique(
+						array_merge( $map[ $directory ] ?? array(), array( $page_data['source_path'] ) )
+					)
 				);
-
-				foreach ( array_filter( $paths, static fn( mixed $path ): bool => is_string( $path ) && '' !== $path ) as $path ) {
-					$directory         = is_dir( $path ) ? $path : dirname( $path );
-					$map[ $directory ] = array_values(
-						array_unique(
-							array_merge( $map[ $directory ] ?? array(), array( $page_data['source_path'] ) )
-						)
-					);
-				}
 			}
 		}
 
@@ -727,6 +809,159 @@ class Canvas {
 	}
 
 	/**
+	 * Return changed files that are outside every known item directory.
+	 *
+	 * These paths may represent brand-new topology. Existing item edits remain
+	 * on the cheaper canonical-name/source-path refresh path.
+	 *
+	 * @param array<string> $changed_files Changed physical files.
+	 * @param array<string> $directories   Known block and page directories.
+	 *
+	 * @return array<int, string> Unmapped changed files.
+	 */
+	private function unmapped_changed_files( array $changed_files, array $directories ): array {
+		$unmapped = array();
+
+		foreach ( $changed_files as $file ) {
+			$file    = wp_normalize_path( $file );
+			$matched = false;
+
+			foreach ( $directories as $directory ) {
+				$directory = untrailingslashit( wp_normalize_path( $directory ) );
+
+				if ( '' !== $directory && ( $file === $directory || str_starts_with( $file, $directory . '/' ) ) ) {
+					$matched = true;
+					break;
+				}
+			}
+
+			if ( ! $matched ) {
+				$unmapped[] = $file;
+			}
+		}
+
+		return array_values( array_unique( $unmapped ) );
+	}
+
+	/**
+	 * Discover new pages only inside changed, previously unmapped directories.
+	 *
+	 * Parent collection manifests/layouts are included as dependency closure,
+	 * while sibling page directories remain outside the scoped source.
+	 *
+	 * @param array<string> $paths Changed physical source files.
+	 *
+	 * @return array<int, string> Newly discovered page source paths.
+	 */
+	private function refresh_page_topology( array $paths ): array {
+		$paths = array_values(
+			array_unique(
+				array_filter(
+					array_map(
+						static fn( mixed $path ): string => is_string( $path )
+							? wp_normalize_path( $path )
+							: '',
+						$paths
+					),
+					static fn( string $path ): bool => '' !== $path && is_file( $path )
+				)
+			)
+		);
+
+		if ( array() === $paths ) {
+			return array();
+		}
+
+		$registry = Page_Registry::instance();
+		$before   = array_fill_keys( array_keys( $registry->get_pages() ), true );
+		$sources  = array();
+
+		foreach ( Discovery_Sources::for_paths( 'pages', Pages::get_paths() ) as $source ) {
+			$all_entries = $source->entries();
+			$directories = array();
+
+			foreach ( $all_entries as $entry ) {
+				if ( ! in_array( wp_normalize_path( $entry->physical_path() ), $paths, true ) ) {
+					continue;
+				}
+
+				$logical_directory = dirname( Discovery_Sources::normalize_logical_path( $entry->logical_path() ) );
+				$directories[ '.' === $logical_directory ? '' : $logical_directory ] = true;
+			}
+
+			if ( array() === $directories ) {
+				continue;
+			}
+
+			$entries = array();
+
+			foreach ( $all_entries as $entry ) {
+				$logical       = Discovery_Sources::normalize_logical_path( $entry->logical_path() );
+				$entry_dir     = dirname( $logical );
+				$entry_dir     = '.' === $entry_dir ? '' : $entry_dir;
+				$basename      = basename( $logical );
+				$is_dependency = in_array( $basename, array( 'pages.json', 'loader.php', 'layout.php' ), true );
+
+				foreach ( array_keys( $directories ) as $directory ) {
+					$inside_directory    = '' === $directory
+						|| $logical === $directory
+						|| str_starts_with( $logical, $directory . '/' );
+					$ancestor_dependency = $is_dependency
+						&& ( '' === $entry_dir
+							|| $entry_dir === $directory
+							|| str_starts_with( $directory, $entry_dir . '/' )
+						);
+
+					if ( $inside_directory || $ancestor_dependency ) {
+						$entries[ $logical ] = $entry;
+						break;
+					}
+				}
+			}
+
+			$selected_source = new Inventory_Discovery_Source(
+				$source->id() . '#changed-topology:' . hash( 'sha256', implode( "\n", array_keys( $entries ) ) ),
+				$source->root(),
+				$entries,
+				null,
+				$paths
+			);
+			$discovery       = new Page_Discovery();
+			$discovered      = $discovery->discover( $selected_source );
+
+			foreach ( $discovery->get_collections() as $collection => $collection_data ) {
+				$registry->register_collection( $collection, $collection_data );
+			}
+
+			$registry->add_errors( $discovery->get_errors() );
+
+			foreach ( $discovered as $name => $page_data ) {
+				$registry->register( $name, $page_data );
+
+				if ( is_string( $page_data['source_path'] ?? null ) && '' !== $page_data['source_path'] ) {
+					$sources[] = $page_data['source_path'];
+				}
+			}
+		}
+
+		$after = array_fill_keys( array_keys( $registry->get_pages() ), true );
+		$added = array_keys( array_diff_key( $after, $before ) );
+
+		/**
+		 * Fires after scoped changed-path page topology discovery.
+		 *
+		 * @since 7.6.0
+		 *
+		 * @param array<int, string> $added   Newly registered page keys.
+		 * @param array<int, string> $sources Newly discovered page sources.
+		 * @param array<int, string> $paths   Changed physical paths.
+		 */
+		do_action( 'blockstudio/pages/topology_refreshed', $added, $sources, $paths );
+
+		return array_values( array_unique( $sources ) );
+	}
+
+	/**
 	 * Compute refresh data for changed blocks and pages.
 	 *
 	 * Used by the SSE stream to include refresh data inline,
@@ -737,36 +972,19 @@ class Canvas {
 	 * @return array{pages: array, blocks: array, blockstudioBlocks: array, changedBlocks: array<string>, tailwindCss: string}
 	 */
 	private function compute_refresh_data( array $changed_blocks, array $changed_pages ): array {
-		Build::refresh_blocks();
-
-		// When new blocks appear, page templates may also have been updated in
-		// the same write batch. Re-sync ALL pages so the database content is
-		// fresh, and include every page in the response. This avoids a race
-		// where detect_changed_pages() misses a page whose mtime was already
-		// captured in prev_mtimes by the time the SSE polled.
-		$sync_all_pages = ! empty( $changed_blocks ) && empty( $changed_pages );
-
-		$page_paths = Pages::get_paths();
-		$discovery  = new Page_Discovery();
-		$sync       = new Page_Sync();
-
-		if ( $sync_all_pages || ! empty( $changed_pages ) ) {
-			foreach ( Discovery_Sources::for_paths( 'pages', $page_paths ) as $source ) {
-				$discovered = $discovery->discover( $source );
-
-				foreach ( $discovered as $page_data ) {
-					if ( $sync_all_pages || in_array( $page_data['source_path'], $changed_pages, true ) ) {
-						$sync->sync( $page_data );
-					}
-				}
-			}
+		if ( ! empty( $changed_blocks ) ) {
+			Build::refresh_blocks( false, $changed_blocks );
 		}
 
-		$response_pages = ( ! empty( $changed_pages ) || $sync_all_pages )
-			? $this->get_pages_with_content( $sync_all_pages ? array() : $changed_pages )
+		if ( ! empty( $changed_pages ) ) {
+			$this->sync_selected_pages( $changed_pages );
+		}
+
+		$response_pages = ! empty( $changed_pages )
+			? $this->get_pages_with_content( $changed_pages )
 			: array();
 
-		$blocks_native = Build::prepare_blocks_for_client( Build::blocks() );
+		$blocks_native = $this->native_blocks_for_selection( $changed_blocks );
 
 		if ( empty( $changed_blocks ) ) {
 			$blockstudio_blocks = ! empty( $response_pages )
@@ -779,23 +997,17 @@ class Canvas {
 				'blockstudioBlocks' => $blockstudio_blocks,
 				'changedBlocks'     => array(),
 				'blocksNative'      => $blocks_native,
-				'tailwindCss'       => '',
+				'tailwindCss'       => $this->selected_tailwind_css(
+					$blockstudio_blocks,
+					$response_pages,
+					array()
+				),
 			);
 		}
 
-		$all_blocks = $this->get_blocks_with_content();
-		$blocks     = array_values(
-			array_filter(
-				$all_blocks,
-				function ( $block ) use ( $changed_blocks ) {
-					return in_array( $block['name'], $changed_blocks, true );
-				}
-			)
-		);
-
-		$preload_pages      = $this->get_pages_with_content();
-		$blockstudio_blocks = $this->preload_all_blocks( $preload_pages, $changed_blocks );
-		$block_preloads     = $this->preload_block_items( $all_blocks, $changed_blocks );
+		$blocks             = $this->get_blocks_with_content( $changed_blocks );
+		$blockstudio_blocks = $this->preload_all_blocks( $response_pages, $changed_blocks );
+		$block_preloads     = $this->preload_block_items( $blocks, $changed_blocks );
 		$blockstudio_blocks = array_merge( $blockstudio_blocks, $block_preloads );
 
 		return array(
@@ -804,8 +1016,128 @@ class Canvas {
 			'blockstudioBlocks' => $blockstudio_blocks,
 			'changedBlocks'     => $changed_blocks,
 			'blocksNative'      => $blocks_native,
-			'tailwindCss'       => Settings::get( 'tailwind/enabled' ) ? Tailwind::compile_editor_css() : '',
+			'tailwindCss'       => $this->selected_tailwind_css(
+				$blockstudio_blocks,
+				$response_pages,
+				$changed_blocks
+			),
 		);
+	}
+
+	/**
+	 * Sync exact registered pages without rediscovering unrelated sources.
+	 *
+	 * @param array<string> $identifiers Page keys, names, or source paths.
+	 *
+	 * @return void
+	 */
+	private function sync_selected_pages( array $identifiers ): void {
+		$identifiers = array_values(
+			array_unique(
+				array_filter(
+					array_map(
+						static fn( mixed $value ): string => is_scalar( $value ) ? trim( (string) $value ) : '',
+						$identifiers
+					)
+				)
+			)
+		);
+
+		if ( array() === $identifiers ) {
+			return;
+		}
+
+		$sync = new Page_Sync();
+
+		foreach ( Pages::pages() as $key => $page_data ) {
+			if ( ! is_array( $page_data ) ) {
+				continue;
+			}
+
+			$candidates = array_filter(
+				array(
+					is_scalar( $key ) ? (string) $key : '',
+					is_scalar( $page_data['key'] ?? null ) ? (string) $page_data['key'] : '',
+					is_scalar( $page_data['name'] ?? null ) ? (string) $page_data['name'] : '',
+					is_scalar( $page_data['source_path'] ?? null ) ? (string) $page_data['source_path'] : '',
+				)
+			);
+
+			if ( array_intersect( $identifiers, $candidates ) ) {
+				$sync->sync( $page_data );
+			}
+		}
+	}
+
+	/**
+	 * Prepare only selected native block metadata for the client.
+	 *
+	 * @param array<string>|null $only_blocks Names, or null for all.
+	 *
+	 * @return array Client-safe blocks.
+	 */
+	private function native_blocks_for_selection( ?array $only_blocks ): array {
+		$blocks = Build::blocks();
+
+		if ( null !== $only_blocks ) {
+			$blocks = array_intersect_key( $blocks, array_fill_keys( $only_blocks, true ) );
+		}
+
+		return Build::prepare_blocks_for_client( $blocks );
+	}
+
+	/**
+	 * Compile Tailwind for the selected rendered payload only.
+	 *
+	 * @param array         $preloads    Rendered block preloads.
+	 * @param array         $pages       Selected pages.
+	 * @param array<string> $block_names Selected block names.
+	 *
+	 * @return string Raw Tailwind CSS.
+	 */
+	private function selected_tailwind_css( array $preloads, array $pages, array $block_names ): string {
+		if ( ! Settings::get( 'tailwind/enabled' ) ) {
+			return '';
+		}
+
+		$body = '';
+
+		foreach ( $preloads as $preload ) {
+			if ( is_string( $preload['rendered'] ?? null ) ) {
+				$body .= $preload['rendered'];
+			}
+
+			if ( is_string( $preload['blockName'] ?? null )
+				&& ! in_array( $preload['blockName'], $block_names, true )
+			) {
+				$block_names[] = $preload['blockName'];
+			}
+		}
+
+		foreach ( $pages as $page ) {
+			if ( is_string( $page['content'] ?? null ) ) {
+				$body .= Render::content( $page['content'] );
+			}
+		}
+
+		if ( '' === $body ) {
+			return '';
+		}
+
+		try {
+			$document = Render::document_from_html( $body, $block_names );
+			$markup   = is_string( $document['assets']['tailwind'] ?? null )
+				? $document['assets']['tailwind']
+				: '';
+
+			if ( preg_match( '#<style\b[^>]*>(.*?)</style>#is', $markup, $match ) ) {
+				return $match[1];
+			}
+		} catch ( \Throwable ) {
+			return '';
+		}
+
+		return '';
 	}
 
 	/**
@@ -891,41 +1223,6 @@ class Canvas {
 			}
 
 			$mtimes[ $pathname ] = is_file( $pathname ) ? filemtime( $pathname ) : false;
-		}
-	}
-
-	/**
-	 * Recursively collect file modification times from a directory.
-	 *
-	 * @param string                   $directory The directory to scan.
-	 * @param array<string, int|false> $mtimes    Reference to the mtimes array.
-	 * @return void
-	 */
-	private function collect_file_mtimes( string $directory, array &$mtimes ): void {
-		if ( ! is_dir( $directory ) ) {
-			return;
-		}
-
-		$iterator = new RecursiveIteratorIterator(
-			new RecursiveDirectoryIterator( $directory, RecursiveDirectoryIterator::SKIP_DOTS )
-		);
-
-		foreach ( $iterator as $file ) {
-			if ( ! $file->isFile() ) {
-				continue;
-			}
-
-			$pathname = $file->getPathname();
-
-			if ( str_contains( $pathname, '/_dist/' ) || str_contains( $pathname, '/node_modules/' ) ) {
-				continue;
-			}
-
-			if ( ! in_array( $file->getExtension(), self::WATCHED_EXTENSIONS, true ) ) {
-				continue;
-			}
-
-			$mtimes[ $pathname ] = $file->getMTime();
 		}
 	}
 }

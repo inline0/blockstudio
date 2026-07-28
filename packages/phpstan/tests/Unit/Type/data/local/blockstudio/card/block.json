@@ -1,0 +1,13 @@
+{
+  "$schema": "https://blockstudio.dev/schema/block",
+  "apiVersion": 3,
+  "name": "test/template-variables-card",
+  "title": "Card",
+  "category": "layout",
+  "blockstudio": {
+    "attributes": [
+      { "id": "description", "type": "text" },
+      { "id": "badges", "type": "text" }
+    ]
+  }
+}

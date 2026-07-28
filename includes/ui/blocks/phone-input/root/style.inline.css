@@ -54,7 +54,7 @@
 	border-radius: var(--bs-ui-radius);
 	box-shadow: var(--bs-ui-shadow-md);
 	overflow: hidden;
-	animation: bs-ui-popup-in var(--bs-ui-transition) ease;
+	animation: bs-ui-popup-in var(--bs-ui-transition);
 }
 
 [data-bsui-phone-search] {

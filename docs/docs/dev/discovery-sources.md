@@ -2,8 +2,9 @@
 title: Logical Discovery Sources
 description: Supply composed file inventories to Blockstudio discovery and runtime caches.
 path: "dev/discovery-sources"
-order: 63
+order: 67
 section: "Dev"
+subsection: "Integrations"
 meta_title: "Logical Discovery Sources"
 meta_description: "Supply composed file inventories to Blockstudio discovery and runtime caches."
 ---
@@ -37,7 +38,7 @@ add_filter(
         return [
             new Inventory_Discovery_Source(
                 'preview:feature-card',
-                '/workspace/feature-card/blockstudio',
+                '/runtime-preview/feature-card/blockstudio',
                 [
                     'card/block.json' => [
                         'path' => '/theme/blockstudio/card/block.json',
@@ -47,14 +48,14 @@ add_filter(
                         ],
                     ],
                     'card/index.php' => [
-                        'path' => '/workspace/feature-card/blockstudio/card/index.php',
+                        'path' => '/runtime-preview/feature-card/blockstudio/card/index.php',
                         'provenance' => [
                             'layer' => 'preview',
                         ],
                     ],
                 ],
                 'parent-and-preview-fingerprint',
-                ['/theme/blockstudio', '/workspace/feature-card/blockstudio']
+                ['/theme/blockstudio', '/runtime-preview/feature-card/blockstudio']
             ),
         ];
     },
@@ -130,8 +131,10 @@ cannot receive another preview's fallback CSS.
 
 Mark inherited or read-only entries with `inherited: true`, `readOnly: true`,
 or `writable: false` in provenance or metadata. Blockstudio then writes
-compiled assets to a context-specific directory under uploads instead of next
-to the parent source.
+compiled assets to a context-specific `generated` scope below the configured
+Blockstudio cache root instead of next to the parent source. Generated assets,
+Tailwind output, render documents, and static prerenders therefore share the
+same writable host boundary.
 
 Two filters cover custom runtime routing:
 

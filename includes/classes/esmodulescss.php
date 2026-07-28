@@ -189,8 +189,7 @@ class ESModulesCSS {
 				$filenames[] = self::fetch_module_and_write_to_file( $module, $folder );
 			}
 		} catch ( Exception $error ) {
-			// Silently fail on module fetch errors.
-			unset( $error );
+			Error_Handler::handle_exception( $error, 'esmodulecss' );
 		}
 
 		return array(

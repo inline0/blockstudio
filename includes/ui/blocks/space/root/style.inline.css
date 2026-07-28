@@ -1,0 +1,12 @@
+[data-bsui-space] {
+	display: block;
+	width: 100%;
+	flex-shrink: 0;
+}
+
+[data-bsui-space][data-size="1"] { height: var(--bs-ui-space-1); }
+[data-bsui-space][data-size="2"] { height: var(--bs-ui-space-2); }
+[data-bsui-space][data-size="3"] { height: var(--bs-ui-space-3); }
+[data-bsui-space][data-size="4"] { height: var(--bs-ui-space-4); }
+[data-bsui-space][data-size="6"] { height: var(--bs-ui-space-6); }
+[data-bsui-space][data-size="8"] { height: var(--bs-ui-space-8); }

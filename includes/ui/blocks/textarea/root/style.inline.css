@@ -1,5 +1,7 @@
 [data-bsui-textarea] {
 	all: unset;
+	white-space: pre-wrap;
+	overflow-wrap: break-word;
 
 	box-sizing: border-box;
 	display: block;

@@ -770,9 +770,9 @@ JS;
 	/**
 	 * Render island endpoint.
 	 *
-	 * @param WP_REST_Request $request Request.
+	 * @param \WP_REST_Request $request Request.
 	 *
-	 * @return WP_REST_Response|WP_Error Response.
+	 * @return \WP_REST_Response|\WP_Error Response.
 	 */
 	public static function render_endpoint( WP_REST_Request $request ) {
 		self::maybe_restore_cookie_user();
@@ -1037,7 +1037,14 @@ JS;
 					'name'       => $name,
 					'attributes' => self::sort_recursive( $attributes ),
 					'scope'      => $scope,
-					'version'    => BLOCKSTUDIO_VERSION,
+					'runtime'    => Runtime_Context::hash(
+						'island-fragment',
+						array( 'blocks' ),
+						array(
+							'block' => $name,
+							'cache' => $cache,
+						)
+					),
 				)
 			)
 		);

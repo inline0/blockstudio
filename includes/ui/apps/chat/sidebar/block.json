@@ -1,8 +1,0 @@
-{
-	"$schema": "https://blockstudio.dev/schema/block",
-	"name": "app/chat-sidebar",
-	"title": "Chat Sidebar",
-	"parent": ["app/chat"],
-	"usesContext": ["app/chat"],
-	"blockstudio": true
-}

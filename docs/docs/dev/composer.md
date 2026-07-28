@@ -2,8 +2,9 @@
 title: Composer
 description: Install Blockstudio using Composer.
 path: "dev/composer"
-order: 65
-section: "Dev"
+order: 3
+section: "Start"
+subsection: "Integrations"
 meta_title: "Composer"
 meta_description: "Install Blockstudio using Composer."
 ---
@@ -127,6 +128,21 @@ require_once __DIR__ . '/vendor/autoload.php';
 ```
 
 Asset URLs resolve to the correct plugin vendor directory.
+
+## Supported loading-mode checks
+
+Blockstudio continuously verifies the same package in four supported runtime
+positions:
+
+| Mode | Bootstrap |
+| --- | --- |
+| WordPress plugin | WordPress activates `blockstudio.php` |
+| Must-use plugin | A root loader requires the package entry point |
+| Composer dependency in a theme | The theme requires Composer's autoloader |
+| Composer dependency in a plugin | The host plugin requires Composer's autoloader |
+
+Every mode boots WordPress to the same outcome: one Blockstudio instance with
+`BLOCKSTUDIO_VERSION` defined, and no second host abstraction underneath.
 
 ## Custom Package URL
 

@@ -3,7 +3,7 @@ Contributors: dnnsjsk
 Requires at least: 6.7
 Tested up to: 7.0.0
 Requires PHP: 8.2
-Stable tag: 7.5.2
+Stable tag: 7.6.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -15,7 +15,7 @@ Create custom WordPress blocks by dropping a `block.json` and a PHP template int
 
 = Features =
 
-* **28 field types** including text, repeater, tabs, classes, color, files, and more
+* **26 field types** including text, repeater, tabs, classes, color, files, and more
 * **PHP, Twig, and Blade templates** with the same `$a` variable across all languages
 * **File-based pages** that parse HTML templates into native block content with automatic syncing
 * **File-based patterns** registered from template files without any PHP registration code
@@ -26,6 +26,7 @@ Create custom WordPress blocks by dropping a `block.json` and a PHP template int
 * **Scoped styles** that only load when a block is on the page
 * **HTML-to-block parser** with custom element mapping
 * **SEO integration** with Yoast SEO and Rank Math content analysis
+* **Bundled UI library** with 59 headless components under the `bsui` namespace, powered by the Interactivity API
 * **50+ PHP and JS hooks** for customizing every aspect of the framework
 
 = Installation =
@@ -53,6 +54,37 @@ Download the latest release zip from [GitHub Releases](https://github.com/inline
 
 == Changelog ==
 
+= 7.6.0 =
+* New: Bundled UI composition: footer parts for the dialog, alert dialog, and drawer, a variant on every close control, an icon-sm button size, a grow attribute on stacks, and a public trigger seam on the context menu
+* New: The composition chapter documents how the UI families assemble, in the ui docs collection beside the components guide
+* Fix: Selects and comboboxes mark the chosen option on the reading edge, and a select's open listbox overlays its trigger to the pixel, clamped to the viewport
+* Fix: Floating popups compute fixed strategy coordinates, track the scroll underneath them, and anchor correctly inside modals; overlay focus never scrolls the page
+* Fix: The combobox opens on click, typing, and arrow keys instead of bare focus, and its keyboard opened list is positioned
+* Fix: Accordions render their default open panel by carrying open state on a data attribute the tag pipeline preserves
+* Fix: Stacks size to content instead of wrapping and growing by default, vertical separators stretch to their row, toggles hold their label inside the pressed surface, and tooltip triggers hug their button
+* Fix: blockstudio/phpstan schema discovery honours the analysed paths and excludePaths instead of scanning the working directory unconditionally
+* New: Canvas inventory and document APIs answer what a project contains and render any part of it on demand
+* New: `blockstudio.json` owns production behaviour, including performance profiles, static prerendering with early serving, and unified runtime caches
+* New: Opt-in theme PHPStan layers, a canonical analysis command, a managed commit hook, and `phpstan.configuration` for a project's own configuration
+* New: `blockstudio-agents` generates a project's `AGENTS.md` from its own configuration, structure, and selected preset, and never replaces a file it did not write
+* New: The context file for coding assistants is an index of every document, its purpose, and the identifiers it owns, with the full text published alongside it
+* New: Canonical block tag migration command
+* New: Block template variables are typed from each block's own `block.json` during analysis
+* New: `themeDefaults.titleTag` hands the document title to Blockstudio. It is off by default, so a theme keeps its own `add_theme_support( 'title-tag' )` unless it opts in
+* New: `wp bs teardown` removes the cron events and static prerender state an installation owns, for setups without a plugin deactivation hook
+* Fix: Unused runtime cache namespaces are collected instead of accumulating on every plugin activation and PHP or WordPress update
+* Fix: Settings reads no longer hash the configuration file on every access
+* Fix: Static prerendering writes no files and installs no drop-in while it is disabled
+* Fix: Error responses are never cached or replayed as a success
+* Fix: Signature-mode early serving computes the same key in the drop-in and in PHP
+* Fix: One invalid configuration key no longer discards an entire settings group, and configuration errors reach an admin notice
+* Fix: Analysis honours a project's exclusions and keeps machine paths out of its messages
+* Fix: `blockstudio.json` layers over saved settings instead of replacing them, so a setting the file does not mention keeps applying. Delete any saved setting you intended a `blockstudio.json` to override
+* Fix: `assets.output` chooses where compiled block assets are written. It defaults to `source`, the existing `_dist` directory beside each block; set it to `cache` to keep the block source tree clean
+* Fix: `blockstudio/buffer/enabled` turns off full-page output buffering for sites that use neither Tailwind nor block assets
+* Fix: An unresolved `.md` URL only returns a Blockstudio 404 inside a page collection, instead of claiming every `.md` URL on the site
+* Fix: The populate cache version is only written when the build cache is enabled and a block declares a populate field, instead of on every post, term, user, and meta write
+
 = 7.5.2 =
 * Fix: `blockstudio/phpstan` expands file-backed custom field references across PHP, Twig, Blade, block tags, and inferred attribute shapes, including nested fields, ID transformations, and cycle-safe diagnostics
 
@@ -68,7 +100,7 @@ Download the latest release zip from [GitHub Releases](https://github.com/inline
 * New: `bs.db` schemas can use `storage: "storh"` for indexed file-per-record storage in uploads, with integer IDs preserved and a JSONC-to-Storh migration command
 * Enhancement: mapped richtext paragraph blocks now receive simple `<p>` inner text through their `content` attribute without a custom parser builder
 * Enhancement: `InnerBlocks` allowed-block lists now support `namespace/*`, `category:<slug>`, and `@theme` tokens in editor templates
-* Enhancement: block prefix tags can compose (a brand prefix resolving through a namespace prefix, e.g. `<dv-ui-input />` to `bsui/input`), and registered prefix and alias tags now render in block-template output alongside `<bs:>` and `<block>` tags
+* Enhancement: block prefix tags can compose (a project prefix resolving through a namespace prefix, e.g. `<theme-ui-input />` to `bsui/input`), and registered prefix and alias tags now render in block-template output alongside `<bs:>` and `<block>` tags
 * Enhancement: nested `bs_render_block()` and `bs_block()` calls now output frontend-resolved markup inside editor previews
 * Enhancement: bundled `bsui/*` inline styles now emit in the `bsui` cascade layer so theme CSS can override them without `!important`
 * Enhancement: `bsui/button` now supports icon and icon position attributes, plus a variant CSS extension hook

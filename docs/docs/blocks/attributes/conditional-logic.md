@@ -2,9 +2,9 @@
 title: Conditional Logic
 description: Show or hide fields based on conditions.
 path: "blocks/attributes/conditional-logic"
-order: 16
+order: 23
 section: "Blocks"
-subsection: "Attributes"
+subsection: "Field Editing"
 meta_title: "Conditional Logic"
 meta_description: "Show or hide fields based on conditions."
 ---

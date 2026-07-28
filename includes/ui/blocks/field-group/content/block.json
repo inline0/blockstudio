@@ -1,0 +1,11 @@
+{
+  "$schema": "https://blockstudio.dev/schema/block",
+  "name": "bsui/field-group-content",
+  "title": "Field Group Content",
+  "category": "design",
+  "icon": "align-center",
+  "parent": ["bsui/field-group"],
+  "blockstudio": {
+    "attributes": []
+  }
+}

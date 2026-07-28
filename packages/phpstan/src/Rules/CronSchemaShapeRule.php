@@ -114,7 +114,7 @@ final class CronSchemaShapeRule implements Rule
         $errors = [];
 
         foreach ($array->items as $item) {
-            if ($item === null || !$item->key instanceof String_) {
+            if (!$item->key instanceof String_) {
                 continue;
             }
 
@@ -132,7 +132,7 @@ final class CronSchemaShapeRule implements Rule
             $hasCallback = false;
 
             foreach ($item->value->items as $configItem) {
-                if ($configItem === null || !$configItem->key instanceof String_) {
+                if (!$configItem->key instanceof String_) {
                     continue;
                 }
 
@@ -206,6 +206,9 @@ final class CronSchemaShapeRule implements Rule
         return $errors;
     }
 
+    /**
+     * @param list<string> $names
+     */
     private function findAttribute(ClassMethod $method, array $names): ?Attribute
     {
         foreach ($method->attrGroups as $group) {

@@ -104,7 +104,7 @@ class Block_Tags {
 	 */
 	public static function render( $content ): string {
 		if ( ! is_string( $content ) || '' === $content ) {
-			return $content ?? '';
+			return $content;
 		}
 
 		$aliases    = self::get_tag_aliases();
@@ -551,7 +551,7 @@ class Block_Tags {
 	/**
 	 * Return custom tag aliases for block tag parsing.
 	 *
-	 * Alias keys are lowercase custom-element names such as "dv-button".
+	 * Alias keys are lowercase custom-element names such as "theme-button".
 	 * Alias values are canonical block names such as "bsui/button".
 	 *
 	 * @return array<string,string>
@@ -667,8 +667,8 @@ class Block_Tags {
 	/**
 	 * Return prefix namespace shorthands for block tag parsing.
 	 *
-	 * Prefix keys are lowercase names such as "dv". Values are one or more
-	 * block namespaces that are tried in order for tags like <dv-card />.
+	 * Prefix keys are lowercase names such as "theme". Values are one or more
+	 * block namespaces that are tried in order for tags like <theme-card />.
 	 *
 	 * @return array<string,array<string>>
 	 */
@@ -888,7 +888,7 @@ class Block_Tags {
 		}
 
 		// Nested prefixes: a brand prefix can compose over a namespace prefix,
-		// so <dv-ui-input> falls through to <ui-input> and resolves bsui/input.
+		// so <theme-ui-input> falls through to <ui-input> and resolves bsui/input.
 		// Recursion is on the strictly shorter slug, so it always terminates.
 		$nested_hyphen = strpos( $slug, '-' );
 		if ( false !== $nested_hyphen ) {
@@ -906,7 +906,7 @@ class Block_Tags {
 	 *
 	 * Mirrors render()'s own short-circuit guard: covers the built-in
 	 * <bs:...> / <block ...> syntaxes plus every registered prefix
-	 * (<dv-..., <ui-...) and alias tag, so block templates can emit those
+	 * (<theme-..., <ui-...) and alias tag, so block templates can emit those
 	 * tags instead of calling render helpers directly. Prefixes and aliases
 	 * are resolved fresh so a filter registered after the first probe is
 	 * always seen.
@@ -1834,7 +1834,7 @@ class Block_Tags {
 	 * @param int    $pos     Position of the opening <.
 	 * @param bool   $is_bs   Whether this is a <bs:> tag.
 	 *
-	 * @return array{block: array, offset: int}|null Parsed block and new offset, or null.
+	 * @return array{block: array, inner: string, offset: int}|null Parsed block, inner content, and new offset, or null.
 	 */
 	private static function parse_single_block_tag( string $content, int $pos, bool $is_bs ): ?array {
 		$len      = strlen( $content );

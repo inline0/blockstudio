@@ -2,7 +2,7 @@
 title: JavaScript Hooks
 description: JavaScript filters and actions available in Blockstudio.
 path: "blocks/hooks/javascript"
-order: 50
+order: 49
 section: "Blocks"
 subsection: "Hooks"
 meta_title: "JavaScript Hooks"

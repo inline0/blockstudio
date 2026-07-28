@@ -84,7 +84,7 @@ final class ExtensionJsonShapeRule implements Rule
         $data = json_decode($content, true);
         if (!is_array($data)) {
             return [
-                RuleErrorBuilder::message(sprintf('Invalid extension JSON: %s', $path))
+                RuleErrorBuilder::message(sprintf('Invalid extension JSON: %s', $this->scanner->relativePath($path)))
                     ->identifier('blockstudio.extensionJson')
                     ->file($path)
                     ->build(),
@@ -96,7 +96,7 @@ final class ExtensionJsonShapeRule implements Rule
         if (!isset($data['name']) || !is_string($data['name']) || $data['name'] === '') {
             $errors[] = RuleErrorBuilder::message(sprintf(
                 'Extension JSON missing required "name" (target block): %s',
-                $path
+                $this->scanner->relativePath($path)
             ))
                 ->identifier('blockstudio.extensionJson.name')
                 ->file($path)
@@ -107,7 +107,7 @@ final class ExtensionJsonShapeRule implements Rule
         if ($bs === null) {
             $errors[] = RuleErrorBuilder::message(sprintf(
                 'Extension JSON missing "blockstudio" key: %s',
-                $path
+                $this->scanner->relativePath($path)
             ))
                 ->identifier('blockstudio.extensionJson.blockstudio')
                 ->file($path)
@@ -118,7 +118,7 @@ final class ExtensionJsonShapeRule implements Rule
         if (!is_array($bs)) {
             $errors[] = RuleErrorBuilder::message(sprintf(
                 'Extension JSON "blockstudio" must be an object: %s',
-                $path
+                $this->scanner->relativePath($path)
             ))
                 ->identifier('blockstudio.extensionJson.blockstudio')
                 ->file($path)
@@ -129,7 +129,7 @@ final class ExtensionJsonShapeRule implements Rule
         if (!isset($bs['extend'])) {
             $errors[] = RuleErrorBuilder::message(sprintf(
                 'Extension JSON missing "blockstudio.extend" key: %s',
-                $path
+                $this->scanner->relativePath($path)
             ))
                 ->identifier('blockstudio.extensionJson.extend')
                 ->file($path)

@@ -2,17 +2,17 @@
   "title": "Attributes",
   "pages": [
     "registering",
-    "expanded-editor",
-    "rendering",
-    "filtering",
-    "disabling",
-    "conditional-logic",
-    "populating-options",
-    "block-attributes",
     "field-types",
     "custom-field-types",
     "custom-fields",
     "block-field",
-    "html-utilities"
+    "filtering",
+    "rendering",
+    "block-attributes",
+    "html-utilities",
+    "expanded-editor",
+    "conditional-logic",
+    "populating-options",
+    "disabling"
   ]
 }

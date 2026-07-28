@@ -107,13 +107,13 @@ test.describe('Block Tags', () => {
   });
 
   test('prefix tags render Blockstudio blocks from ordered namespaces', async () => {
-    const card = page.locator('.dv-card', { hasText: 'Prefix Card' });
+    const card = page.locator('.theme-card', { hasText: 'Prefix Card' });
     await expect(card).toBeVisible();
-    await expect(card.locator('.dv-button')).toHaveText('Prefix Button');
+    await expect(card.locator('.bsui-button')).toHaveText('Prefix Button');
 
-    const matrix = page.locator('.dv-feature-matrix');
+    const matrix = page.locator('.theme-feature-matrix');
     await expect(matrix).toBeVisible();
-    await expect(matrix.locator('.dv-title')).toHaveText('Prefix Matrix');
+    await expect(matrix.locator('.theme-title')).toHaveText('Prefix Matrix');
   });
 
   test('unknown prefix tags are left untouched', async () => {

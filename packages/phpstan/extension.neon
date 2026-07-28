@@ -1,10 +1,12 @@
 parameters:
   blockstudioScanRoots: []
+  blockstudioExcludePaths: []
   bootstrapFiles:
     - src/Stubs/loader.php
 
 parametersSchema:
   blockstudioScanRoots: listOf(string())
+  blockstudioExcludePaths: listOf(string())
 
 services:
   -
@@ -12,6 +14,9 @@ services:
     arguments:
       currentWorkingDirectory: %currentWorkingDirectory%
       additionalScanRoots: %blockstudioScanRoots%
+      configuredExcludePaths: %blockstudioExcludePaths%
+      analysedPaths: %paths%
+      phpstanExcludePaths: %excludePaths%
 
   -
     class: Blockstudio\PHPStan\Schema\CustomFieldResolver
@@ -33,6 +38,11 @@ services:
 
   -
     class: Blockstudio\PHPStan\Reflection\BlockTemplateDetector
+
+  -
+    class: Blockstudio\PHPStan\Type\BlockTemplateVariableType
+    tags:
+      - phpstan.broker.expressionTypeResolverExtension
 
   -
     class: Blockstudio\PHPStan\Type\DbGetReturnType

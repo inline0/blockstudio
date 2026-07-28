@@ -2,8 +2,9 @@
 title: Patterns
 description: Create WordPress block patterns from file templates.
 path: "pages-and-patterns/patterns"
-order: 53
+order: 52
 section: "Pages & Patterns"
+subsection: "File Templates"
 meta_title: "Patterns"
 meta_description: "Create WordPress block patterns from file templates."
 ---

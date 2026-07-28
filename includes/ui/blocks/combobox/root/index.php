@@ -15,7 +15,7 @@ $name        = ! empty( $a['name'] ) ? $a['name'] : '';
 	) ) ); ?>'
 	data-bsui-combobox-root
 	data-wp-on-document--click="actions.handleOutsideClick"
-	style="display: inline-block; position: relative;"
+	style="display: block; position: relative; width: 100%;"
 >
 	<InnerBlocks allowedBlocks='<?php echo esc_attr( wp_json_encode( array(
 		'bsui/combobox-input',

@@ -32,13 +32,79 @@ final class ProjectScanner
 
     private bool $scanned = false;
 
+    /** @var list<string> */
+    private array $resolvedExcludePaths;
+
     /**
      * @param list<string> $additionalScanRoots
+     * @param list<string> $configuredExcludePaths
+     * @param list<string> $analysedPaths PHPStan's own configured paths.
+     * @param mixed $phpstanExcludePaths PHPStan's own excludePaths structure.
      */
     public function __construct(
         private readonly string $currentWorkingDirectory,
-        private readonly array $additionalScanRoots = []
-    ) {}
+        private readonly array $additionalScanRoots = [],
+        private readonly array $configuredExcludePaths = [],
+        private readonly array $analysedPaths = [],
+        mixed $phpstanExcludePaths = null
+    ) {
+        $this->resolvedExcludePaths = array_merge(
+            $this->configuredExcludePaths,
+            self::flattenPhpstanExcludePaths($phpstanExcludePaths)
+        );
+    }
+
+    /**
+     * PHPStan stores excludePaths either as a plain list or keyed by
+     * analyse / analyseAndScan. Schema discovery honours every entry, since a
+     * path the user excluded from analysis should not fail the run through a
+     * side door.
+     *
+     * @return list<string>
+     */
+    private static function flattenPhpstanExcludePaths(mixed $excludePaths): array
+    {
+        if (!is_array($excludePaths)) {
+            return [];
+        }
+
+        $flat = [];
+        foreach ($excludePaths as $key => $value) {
+            if (is_string($value)) {
+                $flat[] = $value;
+                continue;
+            }
+            if (!is_array($value) || !in_array($key, ['analyse', 'analyseAndScan'], true)) {
+                continue;
+            }
+            foreach ($value as $entry) {
+                if (is_string($entry)) {
+                    $flat[] = $entry;
+                }
+            }
+        }
+
+        return $flat;
+    }
+
+    public function relativePath(string $path): string
+    {
+        $normalized = str_replace('\\', '/', $path);
+        $root = rtrim(str_replace('\\', '/', $this->currentWorkingDirectory), '/');
+
+        if ($root !== '' && str_starts_with($normalized, $root . '/')) {
+            $normalized = substr($normalized, strlen($root) + 1);
+        }
+
+        // A scan root of "." arrives as "<root>/." and yields "./path" entries.
+        // Left in place the prefix defeats every exclude pattern and leaks into
+        // error messages.
+        while (str_starts_with($normalized, './')) {
+            $normalized = substr($normalized, 2);
+        }
+
+        return $normalized;
+    }
 
     /**
      * @return list<string>
@@ -136,10 +202,27 @@ final class ProjectScanner
     }
 
     /**
+     * The analysed paths PHPStan was configured with bound discovery when they
+     * exist; a project that analyses only its theme directory should not have
+     * schemas validated from anywhere else. Without configured paths the
+     * scanner keeps its working directory heuristics.
+     *
      * @return list<string>
      */
     private function getProjectScanRoots(): array
     {
+        $configured = [];
+        foreach ($this->analysedPaths as $path) {
+            $absolute = $this->absolutePath($path);
+            if ($absolute !== '' && is_dir($absolute)) {
+                $configured[] = $absolute;
+            }
+        }
+
+        if ($configured !== []) {
+            return array_values(array_unique($configured));
+        }
+
         $candidates = [
             $this->currentWorkingDirectory . '/blockstudio',
             $this->currentWorkingDirectory . '/src/blockstudio',
@@ -151,6 +234,24 @@ final class ProjectScanner
             $candidates,
             static fn(string $path): bool => $path !== ''
         )));
+    }
+
+    private function absolutePath(string $path): string
+    {
+        $normalized = str_replace('\\', '/', trim($path));
+        if ($normalized === '') {
+            return '';
+        }
+
+        if (
+            str_starts_with($normalized, '/')
+            || preg_match('~^[A-Za-z]:/~', $normalized) === 1
+        ) {
+            return rtrim($normalized, '/');
+        }
+
+        $root = rtrim(str_replace('\\', '/', $this->currentWorkingDirectory), '/');
+        return rtrim($root . '/' . ltrim($normalized, './'), '/');
     }
 
     private function walkDirectory(
@@ -240,14 +341,82 @@ final class ProjectScanner
     private function shouldSkipDirectory(string $path): bool
     {
         $base = basename($path);
-        return in_array($base, [
+        if (in_array($base, [
             'node_modules',
             'vendor',
             '.git',
             '_dist',
             '_references',
             'tmp',
-        ], true);
+        ], true)) {
+            return true;
+        }
+
+        return $this->isConfiguredExcluded($path);
+    }
+
+    private function isConfiguredExcluded(string $path): bool
+    {
+        if ($this->resolvedExcludePaths === []) {
+            return false;
+        }
+
+        $candidate = $this->relativePath($path);
+
+        foreach ($this->resolvedExcludePaths as $pattern) {
+            $pattern = str_replace('\\', '/', trim($pattern));
+            if (str_starts_with($pattern, '/') || preg_match('~^[A-Za-z]:/~', $pattern) === 1) {
+                $pattern = $this->relativePath($pattern);
+            }
+            $pattern = ltrim($pattern, '/');
+            if ($pattern === '') {
+                continue;
+            }
+
+            $base = rtrim($pattern, '/*');
+
+            if (
+                fnmatch($pattern, $candidate, FNM_PATHNAME)
+                || fnmatch($base, $candidate, FNM_PATHNAME)
+                || fnmatch($base . '/*', $candidate, FNM_PATHNAME)
+                || $candidate === $base
+                || str_starts_with($candidate, $base . '/')
+                || self::pathIsUnder($candidate, $base)
+            ) {
+                return true;
+            }
+
+            if (
+                !str_contains($base, '/')
+                && !str_contains($base, '*')
+                && $base !== ''
+                && str_contains($candidate, '/' . $base . '/')
+            ) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private static function pathIsUnder(string $candidate, string $base): bool
+    {
+        if ($base === '') {
+            return false;
+        }
+
+        $segments = explode('/', $candidate);
+        $prefix = '';
+
+        foreach ($segments as $segment) {
+            $prefix = $prefix === '' ? $segment : $prefix . '/' . $segment;
+
+            if (fnmatch($base, $prefix, FNM_PATHNAME)) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     private function isFieldDefinitionPath(string $path): bool

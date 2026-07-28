@@ -2,8 +2,9 @@
 title: Context
 description: Access loop and post context data in your block templates.
 path: "blocks/context"
-order: 34
+order: 37
 section: "Blocks"
+subsection: "Template Context"
 meta_title: "Context"
 meta_description: "Access loop and post context data in your block templates."
 ---

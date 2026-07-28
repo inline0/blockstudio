@@ -32,13 +32,13 @@ class BlockTagsParserTest extends TestCase {
 
 	public function test_self_closing_alias_tag(): void {
 		$filter = static function (): array {
-			return array( 'dv-separator' => 'core/separator' );
+			return array( 'alias-separator' => 'core/separator' );
 		};
 
 		add_filter( 'blockstudio/block_tags/tag_aliases', $filter );
 
 		try {
-			$blocks = Block_Tags::parse_inner_blocks( '<dv-separator />' );
+			$blocks = Block_Tags::parse_inner_blocks( '<alias-separator />' );
 		} finally {
 			remove_filter( 'blockstudio/block_tags/tag_aliases', $filter );
 		}
@@ -64,15 +64,15 @@ class BlockTagsParserTest extends TestCase {
 	public function test_paired_alias_tag_with_nested_alias_tag(): void {
 		$filter = static function (): array {
 			return array(
-				'dv-group'     => 'core/group',
-				'dv-paragraph' => 'core/paragraph',
+				'alias-group'     => 'core/group',
+				'alias-paragraph' => 'core/paragraph',
 			);
 		};
 
 		add_filter( 'blockstudio/block_tags/tag_aliases', $filter );
 
 		try {
-			$blocks = Block_Tags::parse_inner_blocks( '<dv-group><dv-paragraph>Inside</dv-paragraph></dv-group>' );
+			$blocks = Block_Tags::parse_inner_blocks( '<alias-group><alias-paragraph>Inside</alias-paragraph></alias-group>' );
 		} finally {
 			remove_filter( 'blockstudio/block_tags/tag_aliases', $filter );
 		}

@@ -638,6 +638,56 @@ class PagesTest extends TestCase {
 		$this->assertSame( $expected, wp_normalize_path( (string) $pages['account-purchases']['layout_path'] ) );
 	}
 
+	public function test_programmatic_layout_exposes_page_context_and_restores_it(): void {
+		$temp_dir = sys_get_temp_dir() . '/blockstudio-programmatic-layout-' . uniqid();
+		$layout   = $temp_dir . '/layout.php';
+		mkdir( $temp_dir, 0755, true );
+		file_put_contents(
+			$layout,
+			'<main data-page="<?php echo esc_attr( Blockstudio\\Pages::current_page()["name"] ); ?>"><?php echo Blockstudio\\Pages::page_content(); ?></main>'
+		);
+
+		try {
+			$rendered = Pages::render_layout(
+				'<p>Selected content</p>',
+				array(
+					'name'        => 'selected-page',
+					'layout_path' => $layout,
+				)
+			);
+		} finally {
+			$this->remove_dir( $temp_dir );
+		}
+
+		$this->assertSame(
+			'<main data-page="selected-page"><p>Selected content</p></main>',
+			$rendered
+		);
+		$this->assertSame( '', Pages::page_content() );
+	}
+
+	public function test_programmatic_layout_failure_returns_original_content_and_cleans_buffers(): void {
+		$temp_dir = sys_get_temp_dir() . '/blockstudio-programmatic-layout-error-' . uniqid();
+		$layout   = $temp_dir . '/layout.php';
+		mkdir( $temp_dir, 0755, true );
+		file_put_contents( $layout, '<?php echo "partial"; throw new RuntimeException( "Layout failed" );' );
+		$level = ob_get_level();
+
+		try {
+			$rendered = Pages::render_layout(
+				'<p>Fallback</p>',
+				array( 'name' => 'failing-page' ),
+				$layout
+			);
+		} finally {
+			$this->remove_dir( $temp_dir );
+		}
+
+		$this->assertSame( '<p>Fallback</p>', $rendered );
+		$this->assertSame( $level, ob_get_level() );
+		$this->assertSame( '', Pages::page_content() );
+	}
+
 	public function test_synced_collection_pages_store_identity_meta(): void {
 		$post_id = Pages::get_post_id( 'docs-install' );
 
@@ -1430,5 +1480,18 @@ class PagesTest extends TestCase {
 		}
 
 		rmdir( $dir );
+	}
+
+	public function test_markdown_404_is_scoped_to_page_collections(): void {
+		$method = new ReflectionMethod( Pages::class, 'path_is_in_collection' );
+
+		$this->assertTrue( $method->invoke( null, 'docs' ) );
+		$this->assertTrue( $method->invoke( null, 'docs/getting-started' ) );
+		$this->assertTrue( $method->invoke( null, '/docs/getting-started/' ) );
+
+		$this->assertFalse( $method->invoke( null, '' ) );
+		$this->assertFalse( $method->invoke( null, 'readme' ) );
+		$this->assertFalse( $method->invoke( null, 'vendor/package/readme' ) );
+		$this->assertFalse( $method->invoke( null, 'docsy/other' ) );
 	}
 }

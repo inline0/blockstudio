@@ -228,8 +228,8 @@ write-back state separate.
 
 ### Redirectable write event
 
-Expose a stable interception point before the file write so downstream products
-can redirect the target to a worktree or review branch.
+Expose a stable interception point before the file write so downstream
+integrations can redirect the target to an alternate source destination.
 
 Recommended shape:
 
@@ -254,8 +254,8 @@ Also fire an action after success/failure with the result object:
 - `blockstudio/pages/write_back_succeeded`
 - `blockstudio/pages/write_back_failed`
 
-The downstream worktree or branch policy is out of scope for Blockstudio.
-Blockstudio only provides the redirectable write payload and result hooks.
+Downstream destination policy is out of scope for Blockstudio. Blockstudio only
+provides the redirectable write payload and result hooks.
 
 ## Non Goals
 
@@ -265,7 +265,7 @@ Blockstudio only provides the redirectable write payload and result hooks.
 - Not reverse-engineering PHP, Twig, Blade, helper calls, includes, or dynamic
   rendered output.
 - Not writing unkeyed arbitrary editor changes back to source files.
-- Not implementing downstream worktree or branch routing.
+- Not implementing downstream destination routing.
 - Not importing or syncing media files.
 
 ## Security and Safety
@@ -350,9 +350,8 @@ keep CI green.
   Sync-managed posts by default.
 - `Block_Merger` remains useful for file -> database preservation, but write-back
   requires a new source-aware mapper/writer.
-- Downstream products such as Divine can consume the redirectable payload to
-  route writes into a worktree or review flow. That policy does not live in
-  Blockstudio.
+- Downstream integrations can consume the redirectable payload to route writes
+  to an alternate source destination. That policy does not live in Blockstudio.
 
 ## Open Questions
 

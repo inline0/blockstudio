@@ -2,7 +2,7 @@
 title: PHP Hooks
 description: PHP filters and actions available in Blockstudio.
 path: "blocks/hooks/php"
-order: 49
+order: 48
 section: "Blocks"
 subsection: "Hooks"
 meta_title: "PHP Hooks"
@@ -264,26 +264,26 @@ This filter lets you map prefix shorthands to one or more block namespaces. Each
 
 ```php title="functions.php"
 add_filter('blockstudio/block_tags/prefixes', function($prefixes) {
-  $prefixes['dv'] = ['divine-homepage', 'bsui'];
+  $prefixes['theme'] = ['theme-components', 'bsui'];
 
   return $prefixes;
 });
 ```
 
 ```html title="pages/home/index.php"
-<dv-card title="Homepage" />
-<dv-button label="Get started" />
-<dv-onumia-feature-matrix />
+<theme-card title="Homepage" />
+<theme-button label="Get started" />
+<theme-ui-feature-matrix />
 ```
 
-`<dv-card>` resolves to `divine-homepage/card`. `<dv-button>` tries
-`divine-homepage/button` first, then falls back to `bsui/button`. Explicit
+`<theme-card>` resolves to `theme-components/card`. `<theme-button>` tries
+`theme-components/button` first, then falls back to `bsui/button`. Explicit
 `blockstudio/block_tags/tag_aliases` entries take precedence for the same tag,
 and unresolved prefixed tags are left unchanged.
 
 Prefixes compose: if a prefixed tag does not resolve directly and its slug is
-itself a registered prefix tag, resolution recurses. With `dv => ['divine-homepage']`
-and `ui => ['bsui']`, `<dv-ui-input>` falls through to the `ui` prefix and
+itself a registered prefix tag, resolution recurses. With `theme => ['theme-components']`
+and `ui => ['bsui']`, `<theme-ui-input>` falls through to the `ui` prefix and
 resolves `bsui/input`. Registered prefix and alias tags also render in
 block-template output, not only in page content.
 
@@ -827,7 +827,7 @@ This filter allows you to register prefix to namespace shorthands for block tags
 ```php title="functions.php"
 add_filter('blockstudio/settings/block_tags/prefixes', function() {
   return [
-    'dv' => ['divine-homepage', 'bsui']
+    'theme' => ['theme-components', 'bsui']
   ];
 });
 ```
@@ -873,6 +873,88 @@ add_filter('blockstudio/settings/dev/canvas/admin_bar', function() {
 ```
 
 <!-- GENERATED_SETTINGS_END -->
+
+## Canvas
+
+### blockstudio/canvas/inventory
+
+This filter adjusts the inventory Canvas reports for a selection. The callback
+receives the inventory DTO, the original selection, and the options it was
+called with.
+
+```php title="functions.php"
+add_filter('blockstudio/canvas/inventory', function(array $result, array $selection, array $options) {
+  return $result;
+}, 10, 3);
+```
+
+### blockstudio/canvas/documents
+
+This filter adjusts the rendered documents Canvas returns, with the same three
+arguments as the inventory filter.
+
+### blockstudio/canvas/item_loaded
+
+This action fires once per inventory record as it is loaded, receiving the
+inventory type, the canonical record ID, and the normalized record.
+
+### blockstudio/canvas/source_compiled
+
+This action fires after a source file is compiled for Canvas, receiving the
+selected source path and the canonical source record.
+
+## Bundled UI
+
+### blockstudio/ui/directories
+
+This filter adjusts the directories scanned for bundled UI components.
+
+### blockstudio/ui/inventory
+
+This filter adjusts the public UI family inventory.
+
+### blockstudio/ui/examples
+
+This filter adjusts the UI example records, receiving the examples and the
+public UI inventory they were derived from.
+
+## Topology
+
+### blockstudio/blocks/topology_refreshed
+
+This action fires after the block topology is rebuilt.
+
+### blockstudio/pages/topology_refreshed
+
+This action fires after the page topology is rebuilt.
+
+### blockstudio/pages/layout_error
+
+This action fires when a page layout fails to render, rather than failing
+silently.
+
+## Runtime
+
+### blockstudio/runtime/initialized
+
+This action fires once the runtime has resolved its configuration.
+
+### blockstudio/runtime/changed
+
+This action fires when the resolved runtime identity changes, which is what
+moves cache namespaces and static prerender state.
+
+### blockstudio/performance/default_config
+
+This filter adjusts the performance defaults before a project's own
+`blockstudio.json` values are layered on top.
+
+## Content
+
+### blockstudio/content/orphan_action
+
+This filter decides what content sync does with a record that no longer has a
+source.
 
 ## Bootstrap
 
@@ -920,6 +1002,40 @@ add_filter('blockstudio/cache/context', function($context, string $scope) {
 }, 10, 2);
 ```
 
+### blockstudio/cache/site_key
+
+This filter changes the network/blog directory identity for hosts with their
+own tenant boundary. The returned value is sanitized before use.
+
+```php title="functions.php"
+add_filter(
+  'blockstudio/cache/site_key',
+  function(string $key, int $networkId, int $blogId) {
+    return sprintf('tenant-%d-%d', $networkId, $blogId);
+  },
+  10,
+  3
+);
+```
+
+### blockstudio/runtime/identity
+
+This filter adds host facts that affect every object in a runtime scope.
+Item-specific source fingerprints should be passed as explicit dependencies by
+the owning API instead.
+
+```php title="functions.php"
+add_filter(
+  'blockstudio/runtime/identity',
+  function(array $identity, string $scope) {
+    $identity['deployment'] = getenv('RELEASE_SHA') ?: 'local';
+    return $identity;
+  },
+  10,
+  2
+);
+```
+
 ### blockstudio/cache/watch_debounce
 
 Filters the number of seconds a validated file-watch snapshot can be reused
@@ -940,6 +1056,94 @@ Filters how many published payloads each runtime cache scope retains.
 add_filter('blockstudio/cache/max_files_per_scope', function($maximum, $scope) {
   return $scope === 'runtime' ? 50 : $maximum;
 }, 10, 2);
+```
+
+### blockstudio/cache/outcome
+
+This action reports a shared cache scope and outcome such as `hit`, `build`,
+`miss-stale`, `stale-last-good`, or `write-failure`.
+
+```php title="functions.php"
+add_action('blockstudio/cache/outcome', function(string $scope, string $reason) {
+  my_metrics()->increment("blockstudio.cache.{$scope}.{$reason}");
+}, 10, 2);
+```
+
+### blockstudio/static_prerender/request_bypass
+
+This filter receives the final anonymous-safety decision plus server and cookie
+inputs. Returning `true` always bypasses static serving and generation.
+
+```php title="functions.php"
+add_filter(
+  'blockstudio/static_prerender/request_bypass',
+  function(bool $bypass, array $server, array $cookies) {
+    return $bypass || isset($cookies['commerce_session']);
+  },
+  10,
+  3
+);
+```
+
+### blockstudio/static_prerender/public_urls
+
+This filter supplies or adjusts the complete public URL inventory used by the
+scheduled warmer and explicit graph tooling.
+
+```php title="functions.php"
+add_filter('blockstudio/static_prerender/public_urls', function(array $urls) {
+  $urls[] = home_url('/custom-route/');
+  return array_values(array_unique($urls));
+});
+```
+
+What the filter returns is not the final inventory. The result is passed through
+a cacheability pass that drops anything matching a configured dynamic path, and
+anything bypassed by default: `/wp-admin`, `/wp-json`, `/wp-login.php`,
+`/xmlrpc.php`, and any path containing `/feed/`, `/search/` or `/preview/`. A URL
+you add can therefore be discarded without a warning. If a route you expect is
+missing from the built inventory, check it against those rules before assuming
+the filter did not run.
+
+### blockstudio/static_prerender/render_internal
+
+This filter implements the optional in-process batch transport. Return a
+normalized result array or leave the value unchanged to let the renderer use
+its configured HTTP fallback.
+
+```php title="functions.php"
+add_filter(
+  'blockstudio/static_prerender/render_internal',
+  function($result, string $url, array $options) {
+    return my_static_renderer()->render($url, $options);
+  },
+  10,
+  3
+);
+```
+
+### blockstudio/static_prerender/cacheable_html
+
+This filter makes the final decision after Blockstudio verifies that output is a
+complete HTML document without the no-cache marker, and that the observed
+response status is a success. The third argument is the observed status, or
+`null` when no status was declared.
+
+```php title="functions.php"
+add_filter('blockstudio/static_prerender/cacheable_html', function(bool $cacheable, string $html, ?int $status) {
+  return $cacheable && !str_contains($html, 'data-personalized');
+}, 10, 3);
+```
+
+### blockstudio/static_prerender/outcome
+
+This action reports static-prerender outcomes including hits, misses, writes,
+graph writes, stale entries, and failures.
+
+```php title="functions.php"
+add_action('blockstudio/static_prerender/outcome', function(string $reason) {
+  my_metrics()->increment("blockstudio.prerender.{$reason}");
+});
 ```
 
 ### blockstudio/tailwind/cache_max_files
@@ -1061,6 +1265,34 @@ compiled.
 add_filter('blockstudio/assets/process/js/content', function($content, $block) {
   return $content;
 }, 10, 2);
+```
+
+## Buffer
+
+### enabled
+
+Blockstudio buffers the frontend response so block style and script tags
+rendered inside the body can be hoisted into the head and footer, and so
+Tailwind can scan the complete document. Buffering means holding and scanning
+the whole document on every frontend request; a site that renders no
+Blockstudio block assets and does not use Tailwind can return `false` to skip
+both.
+
+```php title="functions.php"
+add_filter('blockstudio/buffer/enabled', '__return_false');
+```
+
+### output
+
+This filter receives the complete buffered HTML document before it is sent.
+Blockstudio's own asset hoisting runs at priority `1000000` and Tailwind
+compilation at `999999`, so run earlier to see the document before them or
+later to see the final output.
+
+```php title="functions.php"
+add_filter('blockstudio/buffer/output', function(string $html) {
+  return $html;
+}, 2000000);
 ```
 
 ## Render

@@ -154,7 +154,7 @@ identically in the editor and on the frontend.
 
 ## Boundaries and Relationships
 
-- The inline0/Divine marketing theme currently carries this fix locally in its
+- A downstream marketing theme currently carries this fix locally in its
   `style.css` (`.editor-styles-wrapper .flex { display: flex }` and the rest).
   Once this ships, that theme-local block can be removed.
 - Relates to the existing `assets.reset` editor parity work

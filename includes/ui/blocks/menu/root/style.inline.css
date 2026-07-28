@@ -1,0 +1,52 @@
+[data-bsui-menu-root] [role="menu"] {
+	position: fixed;
+	z-index: 50;
+	top: 0;
+	left: 0;
+	min-width: 12rem;
+	background: var(--bs-ui-popover);
+	color: var(--bs-ui-popover-foreground);
+	border: 1px solid var(--bs-ui-border);
+	border-radius: var(--bs-ui-radius);
+	padding: var(--bs-ui-popup-padding);
+	box-shadow: var(--bs-ui-shadow-md);
+	font-family: var(--bs-ui-font-sans);
+	font-size: var(--bs-ui-font-size);
+}
+
+[data-bsui-menu-root] [role="menu"]:not([hidden]) {
+	animation: bs-ui-popup-in var(--bs-ui-transition);
+}
+
+[data-bsui-menu-root] [role="menuitem"],
+[data-bsui-menu-root] [role="option"] {
+	all: unset;
+	box-sizing: border-box;
+	display: flex;
+	align-items: center;
+	gap: var(--bs-ui-space-2);
+	min-height: var(--bs-ui-control-height);
+	padding: 0 var(--bs-ui-control-padding);
+	border-radius: var(--bs-ui-radius-sm);
+	cursor: pointer;
+	font-family: var(--bs-ui-font-sans);
+	font-size: var(--bs-ui-font-size);
+	transition: background var(--bs-ui-transition), color var(--bs-ui-transition);
+	color: var(--bs-ui-popover-foreground);
+	position: relative;
+}
+
+[data-bsui-menu-root] [role="menuitem"]:hover,
+[data-bsui-menu-root] [role="menuitem"]:focus,
+[data-bsui-menu-root] [role="option"]:hover,
+[data-bsui-menu-root] [role="option"]:focus {
+	background: var(--bs-ui-accent);
+	color: var(--bs-ui-accent-foreground);
+	outline: none;
+}
+
+[data-bsui-menu-root] [role="menuitem"][aria-disabled="true"],
+[data-bsui-menu-root] [role="option"][aria-disabled="true"] {
+	opacity: 0.5;
+	pointer-events: none;
+}

@@ -2,9 +2,9 @@
 title: Disabling Attributes
 description: Temporarily disable attributes while preserving their values.
 path: "blocks/attributes/disabling"
-order: 15
+order: 25
 section: "Blocks"
-subsection: "Attributes"
+subsection: "Field Editing"
 meta_title: "Disabling Attributes"
 meta_description: "Temporarily disable attributes while preserving their values."
 ---

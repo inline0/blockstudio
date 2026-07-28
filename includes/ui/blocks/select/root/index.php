@@ -8,11 +8,22 @@ $listbox_id    = wp_unique_id( 'select-listbox-' );
 
 $value = $multiple ? array() : $default_value;
 
+$default_label = '';
+
 $options = array();
 if ( ! empty( $a['options'] ) ) {
 	$decoded = is_array( $a['options'] ) ? $a['options'] : json_decode( (string) $a['options'], true );
 	if ( is_array( $decoded ) ) {
 		$options = $decoded;
+	}
+}
+
+if ( ! $multiple && '' !== $default_value ) {
+	foreach ( $options as $option ) {
+		if ( (string) ( $option['value'] ?? '' ) === (string) $default_value ) {
+			$default_label = (string) ( $option['label'] ?? $default_value );
+			break;
+		}
 	}
 }
 ?>
@@ -21,7 +32,7 @@ if ( ! empty( $a['options'] ) ) {
 	data-wp-context='<?php echo esc_attr( wp_json_encode( array(
 		'open'             => false,
 		'value'            => $value,
-		'label'            => '',
+		'label'            => $default_label,
 		'labels'           => array(),
 		'multiple'         => $multiple,
 		'activeIndex'      => -1,

@@ -1,5 +1,6 @@
 <?php
 
+use Blockstudio\Block_Tags;
 use Blockstudio\Settings;
 use PHPUnit\Framework\TestCase;
 
@@ -28,32 +29,7 @@ class SettingsTest extends TestCase {
 	}
 
 	private function reset_singleton(): void {
-		$ref = new ReflectionClass( Settings::class );
-
-		$instance = $ref->getProperty( 'instance' );
-		$instance->setAccessible( true );
-		$instance->setValue( null, null );
-
-		$settings = $ref->getProperty( 'settings' );
-		$settings->setAccessible( true );
-		$settings->setValue( null, array() );
-
-		$options = $ref->getProperty( 'settings_options' );
-		$options->setAccessible( true );
-		$options->setValue( null, array() );
-
-		$json = $ref->getProperty( 'settings_json' );
-		$json->setAccessible( true );
-		$json->setValue( null, null );
-
-		$filters = $ref->getProperty( 'settings_filters' );
-		$filters->setAccessible( true );
-		$filters->setValue( null, array() );
-
-		$filters_values = $ref->getProperty( 'settings_filters_values' );
-		$filters_values->setAccessible( true );
-		$filters_values->setValue( null, array() );
-
+		Settings::reset();
 		Settings::get_instance();
 	}
 
@@ -74,6 +50,17 @@ class SettingsTest extends TestCase {
 
 	public function test_ui_enabled_keeps_default(): void {
 		$this->assertFalse( Settings::get( 'ui/enabled' ) );
+	}
+
+	public function test_githooks_commit_keeps_default(): void {
+		$this->assertFalse( Settings::get( 'githooks/commit' ) );
+	}
+
+	public function test_phpstan_configuration_keeps_tooling_defaults(): void {
+		$this->assertSame( 'base', Settings::get( 'phpstan/preset' ) );
+		$this->assertSame( array( '.' ), Settings::get( 'phpstan/roots' ) );
+		$this->assertSame( array(), Settings::get( 'phpstan/excludePaths' ) );
+		$this->assertSame( 10000, Settings::get( 'phpstan/maxFiles' ) );
 	}
 
 	public function test_assets_enqueue_from_json(): void {
@@ -160,6 +147,37 @@ class SettingsTest extends TestCase {
 
 	public function test_block_tags_enabled_from_json(): void {
 		$this->assertTrue( Settings::get( 'blockTags/enabled' ) );
+	}
+
+	public function test_block_tags_page_rendering_registers_nothing_by_default(): void {
+		$path = trailingslashit( get_temp_dir() ) . 'blockstudio-block-tags-' . wp_generate_uuid4() . '.json';
+		file_put_contents( $path, "{}\n" );
+		$settings_path = static fn(): string => $path;
+
+		remove_filter( 'the_content', array( Block_Tags::class, 'render' ), 5 );
+		remove_filter( 'widget_text', array( Block_Tags::class, 'render' ), 5 );
+		remove_filter( 'blockstudio/block_tags/render', array( Block_Tags::class, 'render' ) );
+		$this->add_filter( 'blockstudio/settings/path', $settings_path );
+		Settings::reset();
+
+		try {
+			$this->assertFalse( Settings::get( 'blockTags/enabled' ) );
+
+			Block_Tags::init();
+
+			$this->assertFalse( has_filter( 'the_content', array( Block_Tags::class, 'render' ) ) );
+			$this->assertFalse( has_filter( 'widget_text', array( Block_Tags::class, 'render' ) ) );
+			$this->assertFalse(
+				has_filter( 'blockstudio/block_tags/render', array( Block_Tags::class, 'render' ) )
+			);
+		} finally {
+			remove_filter( 'blockstudio/settings/path', $settings_path );
+			unlink( $path );
+			Settings::reset();
+			Block_Tags::init();
+		}
+
+		$this->assertNotFalse( has_filter( 'the_content', array( Block_Tags::class, 'render' ) ) );
 	}
 
 	public function test_block_tags_allow_keeps_default(): void {
@@ -570,5 +588,83 @@ class SettingsTest extends TestCase {
 		$this->reset_singleton();
 
 		$this->assertFalse( Settings::get( 'assets/enqueue' ) );
+	}
+
+	public function test_typed_accessors_use_strict_types_and_fallbacks(): void {
+		$this->assertTrue( Settings::get_bool( 'tailwind/enabled' ) );
+		$this->assertSame( '@fallback', Settings::get_string( 'tailwind/enabled', '@fallback' ) );
+		$this->assertSame( 12, Settings::get_int( 'tailwind/enabled', 12 ) );
+		$this->assertSame( array( 1 ), Settings::get_array( 'users/ids' ) );
+		$this->assertSame( array( 'fallback' ), Settings::get_array( 'tailwind/enabled', array( 'fallback' ) ) );
+	}
+
+	public function test_raw_settings_expose_the_active_source_payload(): void {
+		$raw = Settings::get_raw();
+
+		$this->assertTrue( $raw['tailwind']['enabled'] );
+		$this->assertArrayNotHasKey( 'performance', $raw );
+	}
+
+	public function test_json_layers_over_saved_options_instead_of_replacing_them(): void {
+		$path = wp_tempnam( 'blockstudio-settings-layer' );
+		$this->assertIsString( $path );
+
+		$previous = get_option( 'blockstudio_settings', null );
+
+		update_option(
+			'blockstudio_settings',
+			array(
+				'ui'       => array( 'enabled' => true ),
+				'tailwind' => array( 'config' => '@from-options' ),
+			),
+			false
+		);
+
+		$this->add_filter( 'blockstudio/settings/path', static fn(): string => $path );
+
+		try {
+			file_put_contents( $path, '{"tailwind":{"config":"@from-json"}}' . "\n" );
+			Settings::reload();
+
+			$this->assertSame( array(), Settings::errors() );
+			$this->assertSame( '@from-json', Settings::get_string( 'tailwind/config' ) );
+			$this->assertTrue(
+				Settings::get_bool( 'ui/enabled' ),
+				'A saved setting the JSON file does not mention must keep applying.'
+			);
+
+			$raw = Settings::get_raw();
+			$this->assertSame( '@from-json', $raw['tailwind']['config'] );
+			$this->assertTrue( $raw['ui']['enabled'] );
+		} finally {
+			unlink( $path );
+
+			if ( null === $previous ) {
+				delete_option( 'blockstudio_settings' );
+			} else {
+				update_option( 'blockstudio_settings', $previous, false );
+			}
+
+			Settings::reload();
+		}
+	}
+
+	public function test_invalid_json_reports_an_error_and_file_changes_reload_automatically(): void {
+		$path = wp_tempnam( 'blockstudio-settings-reload' );
+		$this->assertIsString( $path );
+		$this->add_filter(
+			'blockstudio/settings/path',
+			static fn(): string => $path
+		);
+
+		file_put_contents( $path, "[]\n" );
+		Settings::reload();
+		$this->assertNotEmpty( Settings::errors() );
+
+		file_put_contents( $path, "{\"ui\":{\"enabled\":true}}\n" );
+		$this->assertTrue( Settings::get_bool( 'ui/enabled' ) );
+		$this->assertSame( array(), Settings::errors() );
+
+		unlink( $path );
 	}
 }

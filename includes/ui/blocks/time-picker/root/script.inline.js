@@ -56,7 +56,7 @@ store( 'bsui/time-picker', {
 				const root = ref.closest( '[data-bsui-time-picker]' );
 				const minuteInput = root.querySelector( '[data-bsui-time-minute]' );
 				if ( minuteInput ) {
-					minuteInput.focus();
+					minuteInput.focus( { preventScroll: true } );
 					minuteInput.select();
 				}
 			}
@@ -119,7 +119,7 @@ store( 'bsui/time-picker', {
 				const root = ref.closest( '[data-bsui-time-picker]' );
 				const hourInput = root.querySelector( '[data-bsui-time-hour]' );
 				if ( hourInput ) {
-					hourInput.focus();
+					hourInput.focus( { preventScroll: true } );
 					hourInput.select();
 				}
 			}

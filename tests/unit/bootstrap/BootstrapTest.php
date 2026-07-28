@@ -4,6 +4,10 @@ use PHPUnit\Framework\TestCase;
 
 class BootstrapTest extends TestCase {
 
+	public function test_canvas_batch_renderer_is_loaded_by_plugin_bootstrap(): void {
+		$this->assertTrue( class_exists( 'Blockstudio\\Batch_Render', false ) );
+	}
+
 	public function test_composer_bootstrap_defers_before_wordpress_plugin_loading(): void {
 		$bootstrap = dirname( __DIR__, 3 ) . '/bootstrap.php';
 		$script    = tempnam( sys_get_temp_dir(), 'blockstudio-bootstrap-' );

@@ -15,6 +15,11 @@ add_action(
 					'dir' => __DIR__ . '/interactions',
 				)
 			);
+			Blockstudio\Build::init(
+				array(
+					'dir' => __DIR__ . '/blocks',
+				)
+			);
 		}
 	},
 	PHP_INT_MAX - 2

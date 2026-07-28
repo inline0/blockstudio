@@ -4,7 +4,7 @@ description: An admin overview, a registry CLI for distributing blocks, a PHPSta
 date: "2026-04-10"
 author: Dennis
 path: "blockstudio-7-2"
-order: 4
+order: 5
 section: "Blog"
 meta_title: "Blockstudio 7.2"
 meta_description: "An admin overview, a registry CLI for distributing blocks, a PHPStan extension for type-safe templates, and SCSS preludes."

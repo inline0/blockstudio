@@ -119,8 +119,8 @@ add_shortcode(
 add_filter(
 	'blockstudio/block_tags/prefixes',
 	function ( $prefixes ) {
-		$prefixes       = is_array( $prefixes ) ? $prefixes : array();
-		$prefixes['dv'] = array( 'divine-homepage', 'bsui' );
+		$prefixes          = is_array( $prefixes ) ? $prefixes : array();
+		$prefixes['theme'] = array( 'theme-components', 'bsui' );
 
 		return $prefixes;
 	}
@@ -1069,9 +1069,9 @@ add_action(
 						. '<block name="core/separator" />'
 						. '<block name="core/group"><block name="core/paragraph">Inside group</block></block>'
 						. '<bs:core-paragraph html-class="page-passthrough" data-testid="page-pt">Passthrough test</bs:core-paragraph>'
-						. '<dv-card title="Prefix Card"><dv-button label="Prefix Button" /></dv-card>'
-						. '<dv-onumia-feature-matrix title="Prefix Matrix" />'
-						. '<p>Unknown prefix tag: <dv-nope title="Nope" /></p>';
+						. '<theme-card title="Prefix Card"><theme-button label="Prefix Button" /></theme-card>'
+						. '<theme-ui-feature-matrix title="Prefix Matrix" />'
+						. '<p>Unknown prefix tag: <theme-nope title="Nope" /></p>';
 					if ( ! get_post( 3100 ) ) {
 						$wpdb->insert( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery
 							$wpdb->posts,

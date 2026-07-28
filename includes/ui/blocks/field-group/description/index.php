@@ -1,1 +1,1 @@
-<span data-bsui-text data-variant="muted"><RichText attribute="text" tag="span" placeholder="Group description" /></span>
+<span data-bsui-field-group-description><RichText attribute="text" tag="span" placeholder="Group description" /></span>

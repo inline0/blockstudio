@@ -2,8 +2,9 @@
 title: Loading
 description: Control how blocks are loaded in the editor.
 path: "blocks/loading"
-order: 39
+order: 34
 section: "Blocks"
+subsection: "Editor Behavior"
 meta_title: "Loading"
 meta_description: "Control how blocks are loaded in the editor."
 ---

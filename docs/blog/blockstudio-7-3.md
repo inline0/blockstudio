@@ -4,7 +4,7 @@ description: Bundled UI components, expanded editing, plugin dependencies, edito
 date: "2026-05-19"
 author: Dennis
 path: "blockstudio-7-3"
-order: 3
+order: 4
 section: "Blog"
 meta_title: "Blockstudio 7.3"
 meta_description: "Bundled UI components, expanded editing, plugin dependencies, editor policies, and a more reliable parsing pipeline."
@@ -147,9 +147,9 @@ state, and places where UI components meet RPC or database-backed features.
 </block>
 ```
 
-The UI library also has its own documentation, visual coverage, and interaction
-test harness. Component behavior is not just a collection of templates. It is
-something the framework can keep verifying as it grows.
+The UI library also ships its own documentation and a live component reference.
+Component behavior is not just a collection of templates. It is part of the
+framework's contract, and it stays coherent as the library grows.
 
 ## Authoring and editing
 

@@ -37,7 +37,10 @@ final class SettingsPathRule implements Rule
             return [];
         }
 
-        if (!$node->name instanceof Identifier || $node->name->name !== 'get') {
+        if (
+            !$node->name instanceof Identifier ||
+            !in_array($node->name->name, ['get', 'get_bool', 'get_int', 'get_string', 'get_array'], true)
+        ) {
             return [];
         }
 

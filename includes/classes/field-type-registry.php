@@ -638,10 +638,14 @@ final class Field_Type_Registry {
 				continue;
 			}
 
-			if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
-				// phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log -- Development warning for missing consumer asset handle.
-				error_log( sprintf( 'Blockstudio custom field type "%s" references missing editor %s handle "%s".', $field_type, $asset_type, $handle ) );
-			}
+			Error_Handler::warning(
+				sprintf( 'Custom field type "%s" references missing editor %s handle "%s".', $field_type, $asset_type, $handle ),
+				array(
+					'field_type' => $field_type,
+					'asset_type' => $asset_type,
+					'handle'     => $handle,
+				)
+			);
 		}
 	}
 }

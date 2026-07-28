@@ -2,8 +2,9 @@
 title: Overrides
 description: Override blocks on a granular level.
 path: "blocks/overrides"
-order: 38
+order: 5
 section: "Blocks"
+subsection: "Block Definition"
 meta_title: "Overrides"
 meta_description: "Override blocks on a granular level."
 ---

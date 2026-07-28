@@ -1,4 +1,4 @@
-[data-wp-interactive="bsui/avatar"] {
+[data-bsui-avatar] {
 	display: inline-flex;
 	align-items: center;
 	justify-content: center;
@@ -17,14 +17,14 @@
 	user-select: none;
 	position: relative;
 }
-[data-wp-interactive="bsui/avatar"] img {
+[data-bsui-avatar] img {
 	width: 100%;
 	height: 100%;
 	object-fit: cover;
 	position: absolute;
 	inset: 0;
 }
-[data-wp-interactive="bsui/avatar"] > span {
+[data-bsui-avatar] > span {
 	display: flex;
 	align-items: center;
 	justify-content: center;

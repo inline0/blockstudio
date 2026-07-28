@@ -4,7 +4,7 @@ description: A complete rewrite of the WordPress block framework. Now free and o
 date: "2026-02-07"
 author: Dennis
 path: "introducing-blockstudio-7"
-order: 6
+order: 7
 section: "Blog"
 meta_title: "Introducing Blockstudio 7"
 meta_description: "A complete rewrite of the WordPress block framework. Now free and open source, with file-based pages, an HTML-to-block parser, and an architecture built for AI coding agents."

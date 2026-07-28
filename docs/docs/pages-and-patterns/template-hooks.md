@@ -2,8 +2,9 @@
 title: Hooks
 description: PHP filters and actions for pages, patterns, Site Templates, and the HTML parser.
 path: "pages-and-patterns/template-hooks"
-order: 55
+order: 54
 section: "Pages & Patterns"
+subsection: "File Templates"
 meta_title: "Hooks"
 meta_description: "PHP filters and actions for pages, patterns, Site Templates, and the HTML parser."
 ---

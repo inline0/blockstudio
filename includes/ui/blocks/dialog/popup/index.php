@@ -1,4 +1,5 @@
 <div
+	data-bsui-dialog-popup
 	data-bsui-focus
 	data-wp-interactive="bsui/dialog"
 	role="dialog"

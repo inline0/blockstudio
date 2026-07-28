@@ -1,0 +1,8 @@
+{
+  "$schema": "https://blockstudio.dev/schema/block",
+  "apiVersion": 3,
+  "name": "test/template-variables-plain",
+  "title": "Plain",
+  "category": "layout",
+  "blockstudio": true
+}

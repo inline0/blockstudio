@@ -1,3 +1,7 @@
+[data-bsui-tooltip-trigger] {
+	display: inline-flex;
+}
+
 [role="tooltip"] {
 	background: var(--bs-ui-primary);
 	color: var(--bs-ui-primary-foreground);
@@ -11,7 +15,7 @@
 	top: 0;
 	left: 0;
 	white-space: nowrap;
-	animation: bs-ui-fade-in var(--bs-ui-transition) ease;
+	animation: bs-ui-fade-in var(--bs-ui-transition);
 }
 
 @keyframes bs-ui-fade-in {

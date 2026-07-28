@@ -83,7 +83,7 @@ function closeTopDialog() {
 
 		window.__bsui.unlockScroll();
 
-		window.__bsui.getAnchor( trigger )?.focus();
+		window.__bsui.getAnchor( trigger )?.focus( { preventScroll: true } );
 	}, 150 );
 }
 
@@ -106,11 +106,11 @@ function openDialog( root, ctx ) {
 	const popupPlaceholder = portalToBody( popup );
 	popup.removeAttribute( 'hidden' );
 
-	// Trigger entry animation via class
 	popup.classList.add( 'bs-ui-entering' );
 	if ( backdrop && ! isNested ) {
 		backdrop.classList.add( 'bs-ui-entering' );
 	}
+	void popup.offsetHeight;
 	requestAnimationFrame( () => {
 		popup.classList.remove( 'bs-ui-entering' );
 		if ( backdrop && ! isNested ) {
@@ -169,10 +169,10 @@ function openDialog( root, ctx ) {
 			const last = focusable[ focusable.length - 1 ];
 			if ( e.shiftKey && document.activeElement === first ) {
 				e.preventDefault();
-				last.focus();
+				last.focus( { preventScroll: true } );
 			} else if ( ! e.shiftKey && document.activeElement === last ) {
 				e.preventDefault();
-				first.focus();
+				first.focus( { preventScroll: true } );
 			}
 		}
 	};
@@ -183,12 +183,15 @@ function openDialog( root, ctx ) {
 
 	requestAnimationFrame( () => {
 		const focusable = popup.querySelector( window.__bsui.FOCUSABLE );
-		( focusable || popup ).focus();
+		( focusable || popup ).focus( { preventScroll: true } );
 	} );
 }
 
 document.addEventListener( 'keydown', ( e ) => {
 	if ( e.key !== 'Escape' || openDialogStack.length === 0 ) return;
+	// A floating layer above the dialog owns this Escape.
+	if ( document.querySelector( '[role="listbox"]:not([hidden]), [role="menu"]:not([hidden]), [data-bsui-popover-root] [role="dialog"]:not([hidden]), [data-bsui-date-input-popup]:not([hidden]), [data-bsui-phone-popup]:not([hidden])' ) ) return;
+
 	const top = openDialogStack[ openDialogStack.length - 1 ];
 	if ( top.ctx && top.ctx.dismissable === false ) return;
 	e.preventDefault();

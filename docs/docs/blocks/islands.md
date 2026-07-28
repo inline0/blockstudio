@@ -2,8 +2,9 @@
 title: Islands
 description: Split blocks into cache-safe placeholders and client-rendered fragments.
 path: "blocks/islands"
-order: 41
+order: 42
 section: "Blocks"
+subsection: "Client Behavior"
 meta_title: "Islands"
 meta_description: "Split blocks into cache-safe placeholders and client-rendered fragments."
 ---

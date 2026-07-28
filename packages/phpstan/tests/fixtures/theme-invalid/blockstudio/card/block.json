@@ -1,0 +1,24 @@
+{
+  "apiVersion": 3,
+  "name": "example/card",
+  "title": "Card",
+  "blockstudio": {
+    "attributes": [
+      {
+        "id": "title",
+        "type": "text"
+      },
+      {
+        "id": "items",
+        "type": "repeater",
+        "attributes": [
+          {
+            "id": "label",
+            "type": "text"
+          }
+        ]
+      }
+    ]
+  },
+  "viewScriptModule": "file:./missing.js"
+}

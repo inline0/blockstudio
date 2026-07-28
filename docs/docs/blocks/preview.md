@@ -2,8 +2,9 @@
 title: Preview
 description: Enable block previews in the block inserter.
 path: "blocks/preview"
-order: 35
+order: 33
 section: "Blocks"
+subsection: "Editor Behavior"
 meta_title: "Preview"
 meta_description: "Enable block previews in the block inserter."
 ---

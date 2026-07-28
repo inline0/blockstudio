@@ -36,15 +36,68 @@ jobs:
       - run: npm ci
       - run: composer install --no-interaction
 
-      - name: TypeScript check
-        run: npx tsc --noEmit
+      - name: JavaScript, docs, schema, and product-neutrality checks
+        run: npm run check
 
       - name: PHPCS
         run: composer cs
 
+  phpstan:
+    name: PHPStan (Runtime)
+    runs-on: [self-hosted, Linux, X64, inline0-blockstudio]
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: "8.4"
+
+      - run: composer install --no-interaction
+
+      - name: Analyse the runtime
+        run: vendor/bin/phpstan analyse --no-progress --memory-limit=2G
+
+  loading-modes:
+    name: Loading Mode (${{ matrix.mode }})
+    runs-on: [self-hosted, Linux, X64, inline0-blockstudio]
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        mode: [plugin, mu-plugin, composer-theme, composer-plugin]
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 20
+          cache: npm
+
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: "8.4"
+
+      - name: Configure npm registries
+        run: |
+          echo "@fortawesome:registry=https://npm.fontawesome.com/" >> .npmrc
+          echo "//npm.fontawesome.com/:_authToken=${{ secrets.FONTAWESOME_TOKEN }}" >> .npmrc
+
+      - run: npm ci
+      - run: composer install --no-interaction
+
+      - name: Start ${{ matrix.mode }} implementation
+        run: npm run wp-env:implementations:${{ matrix.mode }}:start
+
+      - name: Verify ${{ matrix.mode }} implementation
+        run: npm run wp-env:implementations:${{ matrix.mode }}:verify
+
+      - name: Stop ${{ matrix.mode }} implementation
+        if: always()
+        run: npm run wp-env:implementations:${{ matrix.mode }}:stop
+
   unit:
     name: Unit Tests
-    if: contains(github.event.head_commit.message, '[unit]') || contains(github.event.head_commit.message, '[all]')
     runs-on: [self-hosted, Linux, X64, inline0-blockstudio]
     timeout-minutes: 15
     steps:
@@ -79,7 +132,6 @@ jobs:
 
   phpstan-package:
     name: PHPStan Package Tests
-    if: contains(github.event.head_commit.message, '[unit]') || contains(github.event.head_commit.message, '[all]')
     runs-on: [self-hosted, Linux, X64, inline0-blockstudio]
     timeout-minutes: 10
     steps:
@@ -91,10 +143,12 @@ jobs:
 
       - run: composer install --no-interaction --working-dir=packages/phpstan
       - run: packages/phpstan/vendor/bin/phpunit --configuration packages/phpstan/phpunit.xml.dist
+      - name: Analyze PHPStan package
+        working-directory: packages/phpstan
+        run: vendor/bin/phpstan analyse --configuration phpstan.neon.dist --no-progress --memory-limit=512M
 
   e2e:
     name: E2E Tests (Shard ${{ matrix.shard }}/${{ matrix.total_shards }})
-    if: contains(github.event.head_commit.message, '[e2e]') || contains(github.event.head_commit.message, '[all]')
     runs-on: [self-hosted, Linux, X64, inline0-blockstudio]
     timeout-minutes: 120
     strategy:
@@ -112,7 +166,7 @@ jobs:
 
       - uses: shivammathur/setup-php@v2
         with:
-          php-version: "8.4"
+          php-version: '8.4'
 
       - name: Configure npm registries
         run: |

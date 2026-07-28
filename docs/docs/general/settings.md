@@ -1,11 +1,12 @@
 ---
 title: Settings
 description: Configure Blockstudio with blockstudio.json or filters.
-path: "general/settings"
+path: 'general/settings'
 order: 2
-section: "General"
-meta_title: "Settings"
-meta_description: "Configure Blockstudio with blockstudio.json or filters."
+section: "Start"
+subsection: 'Setup'
+meta_title: 'Settings'
+meta_description: 'Configure Blockstudio with blockstudio.json or filters.'
 ---
 
 # Settings
@@ -43,6 +44,38 @@ The following properties are available:
     "enabled": true,
     "path": "blockstudio/cache"
   },
+  "themeDefaults": {
+    "titleTag": false,
+    "suppressDirectoryUpdates": false,
+    "syncPagesInDevelopment": false
+  },
+  "performance": {
+    "profile": "compat",
+    "wordpress": {
+      "headNoise": false,
+      "embeds": false,
+      "xmlrpc": false,
+      "editor": false,
+      "frontendAssets": false,
+      "media": false,
+      "heartbeat": false
+    },
+    "preload": {
+      "links": "off"
+    },
+    "media": {
+      "lazy": false,
+      "skeleton": false,
+      "metadata": false,
+      "rootMargin": "300px"
+    },
+    "measurement": {
+      "enabled": false,
+      "queryMonitor": false,
+      "headers": false,
+      "timings": false
+    }
+  },
   "content": {
     "enabled": false,
     "id": "default",
@@ -63,10 +96,19 @@ The following properties are available:
     "assets": [],
     "markup": false
   },
+  "tailwind": {
+    "enabled": false,
+    "config": ""
+  },
+  "blockTags": {
+    "enabled": false,
+    "allow": [],
+    "deny": [],
+    "prefixes": {}
+  },
   "ui": {
     "enabled": false
   },
-  "library": false,
   "blockEditor": {
     "disableLoading": false,
     "enhance": false,
@@ -108,6 +150,29 @@ The following properties are available:
         "deny": []
       }
     }
+  },
+  "dev": {
+    "grab": {
+      "enabled": false
+    },
+    "perf": false,
+    "canvas": {
+      "enabled": false,
+      "adminBar": true
+    }
+  },
+  "githooks": {
+    "commit": false
+  },
+  "phpstan": {
+    "preset": "base",
+    "configuration": "",
+    "roots": ["."],
+    "excludePaths": [],
+    "maxFiles": 10000
+  },
+  "ai": {
+    "enableContextGeneration": false
   }
 }
 ```
@@ -125,6 +190,64 @@ add_filter('blockstudio/settings/block_editor/patterns/remote', '__return_false'
 
 Options set via the `blockstudio/settings/${setting}` filter will override the ones set via the `blockstudio.json` file. Both methods can be used together.
 
+Runtime values also expose `blockstudio/performance/${setting}` filters and one
+final `blockstudio/performance/config` filter. The latter must return a valid
+configuration object.
+
+## How the sources layer
+
+Every source is loaded and merged, lowest priority first:
+
+1. Built-in defaults
+2. Settings saved through the admin UI (the `blockstudio_settings` option)
+3. `blockstudio.json` in the theme
+4. `blockstudio/settings/*` filters
+
+`blockstudio.json` overrides only the keys it declares. It used to replace the
+saved settings entirely, so an unrelated admin-saved value stopped applying the
+moment the file appeared; it now sits on top of them. The flip side: a stale
+value saved through the admin UI keeps applying until the file declares that
+key or the saved value is removed. When a setting behaves differently from what
+the file says, check the saved layer with `wp bs settings` or
+`Settings::get_raw()`, which returns only what the active JSON or options
+source explicitly declared.
+
+## Reading settings from PHP
+
+`Blockstudio\Settings` loads the active source, reports malformed JSON, and
+automatically reloads when `blockstudio.json` changes:
+
+```php title="functions.php"
+use Blockstudio\Settings;
+
+$enabled = Settings::get_bool('performance/media/lazy');
+$margin = Settings::get_string('performance/media/rootMargin', '300px');
+$roles = Settings::get_array('users/roles');
+$ttl = Settings::get_int('performance/staticPrerender/ttl', 86400);
+
+foreach (Settings::errors() as $error) {
+    error_log($error);
+}
+```
+
+Use `Settings::get_raw()` when an integration needs only values explicitly
+declared by the active JSON or options source. `Settings::fingerprint()` returns
+a deterministic effective-settings identity. Long-running processes can call
+`Settings::reload()` explicitly; normal access invalidates automatically.
+
+The resolved performance profile is available through
+`Blockstudio\Runtime_Settings::current()`. It supports slash or dot paths:
+
+```php title="functions.php"
+use Blockstudio\Runtime_Settings;
+
+$runtime = Runtime_Settings::current();
+
+if ($runtime->enabled('measurement/queryMonitor')) {
+    $hash = $runtime->hash();
+}
+```
+
 ## Available Settings
 
 ### users
@@ -136,14 +259,21 @@ Options set via the `blockstudio/settings/${setting}` filter will override the o
 
 ### assets
 
-| Option          | Type    | Default | Description |
-| --------------- | ------- | ------- | ----------- |
-| `enqueue`       | boolean | `true`  | Auto-enqueue block assets |
-| `reset.enabled` | boolean | `false` | Remove core block styles and apply the editor utility reset |
-| `reset.fullWidth` | array | `[]` | Post types that use the full-width editor layout |
-| `minify.css`    | boolean | `false` | Minify CSS output |
-| `minify.js`     | boolean | `false` | Minify JS output |
-| `process.scss`  | boolean | `false` | Process SCSS files |
+| Option            | Type    | Default | Description                                                 |
+| ----------------- | ------- | ------- | ----------------------------------------------------------- |
+| `enqueue`         | boolean | `true`  | Auto-enqueue block assets                                   |
+| `reset.enabled`   | boolean | `false` | Remove core block styles and apply the editor utility reset |
+| `reset.fullWidth` | array   | `[]`    | Post types that use the full-width editor layout            |
+| `minify.css`      | boolean | `false` | Minify CSS output                                           |
+| `minify.js`       | boolean | `false` | Minify JS output                                            |
+| `process.scss`    | boolean | `false` | Process SCSS files                                          |
+| `output`          | string  | `source` | Where compiled assets are written: `source` or `cache`     |
+
+`output` defaults to `source`, which writes a `_dist` directory beside each
+block. Set it to `cache` to write compiled assets under the Blockstudio cache
+directory instead, so the block source tree stays clean and deployable from an
+immutable checkout. Sources Blockstudio cannot write to already redirect to the
+cache regardless of this setting.
 
 With `reset.enabled` active, Blockstudio also copies sanitized frontend
 `body_class` values into the editor canvas. Use
@@ -151,9 +281,9 @@ With `reset.enabled` active, Blockstudio also copies sanitized frontend
 
 ### cache
 
-| Option    | Type    | Default               | Description                                      |
-| --------- | ------- | --------------------- | ------------------------------------------------ |
-| `enabled` | boolean | `true`                | Enable Blockstudio file-backed caches            |
+| Option    | Type    | Default               | Description                                          |
+| --------- | ------- | --------------------- | ---------------------------------------------------- |
+| `enabled` | boolean | `true`                | Enable Blockstudio file-backed caches                |
 | `path`    | string  | `"blockstudio/cache"` | Cache path, relative to `WP_CONTENT_DIR` or absolute |
 
 By default cache files are written to `wp-content/blockstudio/cache`, outside
@@ -161,10 +291,13 @@ the uploads directory. A relative `path` is resolved from `WP_CONTENT_DIR`; an
 absolute path is used directly. This supports hosts that provide a dedicated
 writable cache volume.
 
-When enabled, Blockstudio caches runtime build payloads, prebuilt block
-registration data, and resolved editor assets. Runtime cache entries are
-invalidated when watched block files, field files, asset files, settings, active
-plugins, WordPress, PHP, or Blockstudio versions change.
+When enabled, Blockstudio uses this one root for build payloads, prebuilt block
+registration data, resolved editor assets, Tailwind CSS, render documents,
+island fragments, static prerenders, graph indexes, queues, and diagnostics.
+Each object is isolated by network, site, complete runtime identity, and scope.
+Runtime identities cover Blockstudio, settings, WordPress, PHP, the active
+theme, active plugins, logical discovery sources, host context, and explicit
+dependency hashes supplied by the owning operation.
 
 The `blockstudio/settings/cache/path` setting filter changes the configured
 value. For deployment-specific path resolution, `blockstudio/cache/dir` filters
@@ -176,21 +309,102 @@ add_filter('blockstudio/cache/dir', function (string $directory): string {
 });
 ```
 
+Hosts with a tenant identity that differs from WordPress network/blog IDs can
+filter `blockstudio/cache/site_key`. The result is sanitized and used only as a
+directory segment. `blockstudio/cache/context` remains the correct place for a
+serializable runtime variant that must alter object identities.
+
+### themeDefaults
+
+| Option                     | Type    | Default | Description                                                                      |
+| -------------------------- | ------- | ------- | -------------------------------------------------------------------------------- |
+| `titleTag`                 | boolean | `false` | Enable WordPress title-tag theme support                                         |
+| `suppressDirectoryUpdates` | boolean | `false` | Remove active child and parent themes from directory update results              |
+| `syncPagesInDevelopment`   | boolean | `false` | Reconcile the existing `Blockstudio\Pages` source when page files change locally |
+
+Page synchronization is limited to the `local` environment or `WP_DEBUG`.
+`blockstudio/theme_defaults/sync_pages_in_development` can apply an additional
+environment gate. Patterns continue to use the existing
+`Blockstudio\Patterns` API; these defaults do not introduce alternate page or
+pattern facades.
+
+### performance
+
+The `compat` profile leaves generic WordPress behavior unchanged. `speed` and
+`strict` enable the same opt-in frontend defaults; every child setting can
+override its profile value.
+
+| Option                     | Type    | Compat default | Speed/strict default | Description                                      |
+| -------------------------- | ------- | -------------- | -------------------- | ------------------------------------------------ |
+| `profile`                  | string  | `"compat"`     | —                    | `compat`, `speed`, or `strict`                   |
+| `wordpress.headNoise`      | boolean | `false`        | `true`               | Remove generic head discovery and emoji output   |
+| `wordpress.embeds`         | boolean | `false`        | `true`               | Remove oEmbed discovery and host scripts         |
+| `wordpress.xmlrpc`         | boolean | `false`        | `true`               | Disable XML-RPC and pingbacks                    |
+| `wordpress.editor`         | boolean | `false`        | `true`               | Disable remote editor discovery surfaces         |
+| `wordpress.frontendAssets` | boolean | `false`        | `true`               | Remove generic core frontend assets              |
+| `wordpress.media`          | boolean | `false`        | `true`               | Apply image output defaults                      |
+| `wordpress.heartbeat`      | boolean | `false`        | `true`               | Throttle Heartbeat outside editors               |
+| `preload.links`            | string  | `"off"`        | `"intent"`           | Prefetch same-origin documents after user intent |
+| `media.lazy`               | boolean | `false`        | `true`               | Use Blockstudio's image loader                   |
+| `media.skeleton`           | boolean | `false`        | `true`               | Show the built-in loading skeleton               |
+| `media.metadata`           | boolean | `false`        | `true`               | Declare use of `assets/media.json`               |
+| `media.rootMargin`         | string  | `"300px"`      | `"300px"`            | Lazy-loader intersection margin                  |
+| `measurement.enabled`      | boolean | `false`        | `false`              | Enable runtime measurement APIs                  |
+| `measurement.queryMonitor` | boolean | `false`        | `false`              | Include queries taking at least 50ms             |
+| `measurement.headers`      | boolean | `false`        | `false`              | Send profile and config hash headers             |
+| `measurement.timings`      | boolean | `false`        | `false`              | Send the elapsed runtime header                  |
+| `staticPrerender.enabled`  | boolean | `false`        | `false`              | Enable anonymous-safe HTML caching               |
+| `staticPrerender.ttl`      | integer | `86400`        | `86400`              | Maximum cached document age in seconds           |
+| `staticPrerender.invalidate` | string | `"signature"` | `"signature"`        | Use `signature` or incremental `graph` identity  |
+| `staticPrerender.earlyServe` | boolean | `false`      | `false`              | Serve safe hits before WordPress boots           |
+| `staticPrerender.serveLoggedIn` | boolean | `false`   | `false`              | Permit users to consume, never author, cache hits |
+| `staticPrerender.dynamicPaths` | array | `[]`         | `[]`                 | Path prefixes that must remain dynamic           |
+| `staticPrerender.warm.enabled` | boolean | `false`    | `false`              | Enable the durable scheduled warm queue          |
+| `staticPrerender.warm.interval` | integer | `3600`    | `3600`               | Warm interval in seconds                         |
+| `staticPrerender.warm.concurrency` | integer | `2`   | `2`                  | Maximum jobs processed by one warm pass          |
+| `staticPrerender.warm.transport` | string | `"http"` | `"http"`             | Use `http` or a host-provided `internal` renderer |
+
+Static prerendering remains disabled unless explicitly enabled. Signature mode
+uses a cheap activated identity on ordinary requests. Graph mode is intended
+for explicit builds: it records per-page source dependencies so changing one
+page does not invalidate unrelated documents. See
+[Static Prerendering](/docs/production/static-prerendering) for warming,
+deployment, early serving, and safety details.
+
+Measurements are available programmatically:
+
+```php title="functions.php"
+use Blockstudio\Performance_Measurement;
+
+$snapshot = Performance_Measurement::snapshot();
+```
+
+When headers are enabled, Blockstudio sends
+`X-Blockstudio-Performance-Profile`,
+`X-Blockstudio-Performance-Config`, and optionally
+`X-Blockstudio-Performance-Time`. The
+`blockstudio/performance/measurement_enabled` action receives the resolved
+runtime settings.
+
+The `media` options drive `bs_media_image()`, the `assets/media.json`
+manifest, and the frontend lazy loader. See [Media](/docs/production/media)
+for the helper, the manifest builder, and the loader behaviour.
+
 ### content
 
-| Option                   | Type    | Default                                  | Description                                               |
-| ------------------------ | ------- | ---------------------------------------- | --------------------------------------------------------- |
-| `enabled`                | boolean | `false`                                  | Enable Content Sync configuration                         |
-| `id`                     | string  | `"default"`                              | Content-set namespace stored on synced entities           |
-| `path`                   | string  | `"content"`                              | Theme-relative content file directory                     |
-| `includePageSyncManaged` | boolean | `false`                                  | Include Page Sync managed posts without owning their body |
-| `authors`                | string  | `"ignore"`                               | Author handling (`ignore` or existing-user `login`)       |
-| `postTypes`              | array   | `[]`                                     | Allowlisted post types                                    |
-| `meta.include`           | array   | `[]`                                     | Glob patterns for meta keys to sync                       |
-| `meta.exclude`           | array   | `["_edit_lock", "_edit_last", "_wp_old_slug"]` | Glob patterns for meta keys to exclude                    |
-| `meta.references`        | object  | `{}`                                     | Declared meta references rewritten between IDs and UIDs   |
-| `taxonomies`             | array   | `[]`                                     | Allowlisted registered taxonomies for terms and relationships |
-| `media`                  | string  | `"manifest"`                             | Attachment reference behavior (`manifest` or `none`)      |
+| Option                   | Type    | Default                                        | Description                                                   |
+| ------------------------ | ------- | ---------------------------------------------- | ------------------------------------------------------------- |
+| `enabled`                | boolean | `false`                                        | Enable Content Sync configuration                             |
+| `id`                     | string  | `"default"`                                    | Content-set namespace stored on synced entities               |
+| `path`                   | string  | `"content"`                                    | Theme-relative content file directory                         |
+| `includePageSyncManaged` | boolean | `false`                                        | Include Page Sync managed posts without owning their body     |
+| `authors`                | string  | `"ignore"`                                     | Author handling (`ignore` or existing-user `login`)           |
+| `postTypes`              | array   | `[]`                                           | Allowlisted post types                                        |
+| `meta.include`           | array   | `[]`                                           | Glob patterns for meta keys to sync                           |
+| `meta.exclude`           | array   | `["_edit_lock", "_edit_last", "_wp_old_slug"]` | Glob patterns for meta keys to exclude                        |
+| `meta.references`        | object  | `{}`                                           | Declared meta references rewritten between IDs and UIDs       |
+| `taxonomies`             | array   | `[]`                                           | Allowlisted registered taxonomies for terms and relationships |
+| `media`                  | string  | `"manifest"`                                   | Attachment reference behavior (`manifest` or `none`)          |
 
 Content Sync is managed through `wp bs content` and projects allowlisted posts,
 postmeta, and declared references to portable files. See
@@ -205,18 +419,28 @@ format.
 | `assets`       | array   | `[]`    | Additional assets to load in editor |
 | `markup`       | boolean | `false` | Enable markup editing               |
 
-### library
-
-| Type    | Default | Description              |
-| ------- | ------- | ------------------------ |
-| boolean | `false` | Enable the block library |
-
 ### tailwind
 
 | Option    | Type    | Default | Description                         |
 | --------- | ------- | ------- | ----------------------------------- |
 | `enabled` | boolean | `false` | Enable Tailwind CSS compilation     |
 | `config`  | string  | `""`    | Tailwind v4 CSS-first configuration |
+
+See [Tailwind CSS](/docs/tailwind) for compilation behaviour and the CSS-first
+configuration format.
+
+### blockTags
+
+| Option     | Type    | Default | Description                                                          |
+| ---------- | ------- | ------- | -------------------------------------------------------------------- |
+| `enabled`  | boolean | `false` | Enable page-level `bs:` tag rendering in post content and widget areas |
+| `allow`    | array   | `[]`    | Allowlist of block name patterns; supports `fnmatch()` wildcards     |
+| `deny`     | array   | `[]`    | Denylist of block name patterns; takes precedence over `allow`       |
+| `prefixes` | object  | `{}`    | Prefix to namespace shorthands, each value a namespace or ordered array |
+
+Template-level tag rendering is always active; these options control page-level
+replacement. See [Rendering](/docs/blocks/rendering) for the tag syntax and
+resolution rules.
 
 ### ui
 
@@ -320,6 +544,45 @@ Use `blockEditor.media` for global media inserter policy.
 }
 ```
 
+### dev
+
+| Option           | Type    | Default | Description                                                     |
+| ---------------- | ------- | ------- | --------------------------------------------------------------- |
+| `grab.enabled`   | boolean | `false` | Enable the frontend element grabber                             |
+| `perf`           | boolean | `false` | Enable the [performance profiler](/docs/production/performance) on every page load |
+| `canvas.enabled` | boolean | `false` | Enable the [canvas](/docs/dev/canvas)                           |
+| `canvas.adminBar` | boolean | `true` | Show the WordPress admin bar when viewing the canvas            |
+
+### githooks
+
+| Option   | Type    | Default | Description                                                            |
+| -------- | ------- | ------- | ---------------------------------------------------------------------- |
+| `commit` | boolean | `false` | Generate an analysis-only pre-commit hook when `blockstudio-githooks sync` runs |
+
+See the [managed commit hook](/docs/dev/phpstan#managed-commit-hook) for what
+the generated hook runs and how it stays in sync.
+
+### phpstan
+
+| Option          | Type    | Default   | Description                                                            |
+| --------------- | ------- | --------- | ---------------------------------------------------------------------- |
+| `preset`        | string  | `"base"`  | Analysis preset when the command line does not select one: `base`, `theme`, `extreme-theme`, or `wordpress-render` |
+| `configuration` | string  | `""`      | Project PHPStan configuration included alongside the preset, resolved from `blockstudio.json` |
+| `roots`         | array   | `["."]`   | Theme roots analyzed by the canonical command                          |
+| `excludePaths`  | array   | `[]`      | Additional scanner exclusions relative to each configured root         |
+| `maxFiles`      | integer | `10000`   | Maximum number of files inspected by the theme scanner                 |
+
+These settings drive the canonical `blockstudio-phpstan` command. See
+[PHPStan](/docs/dev/phpstan) for presets, layers, and adoption.
+
+### ai
+
+| Option                    | Type    | Default | Description                                                    |
+| ------------------------- | ------- | ------- | -------------------------------------------------------------- |
+| `enableContextGeneration` | boolean | `false` | Generate a combined context file of blocks, settings, schemas, and documentation for LLM tools |
+
+See [AI Integration](/docs/dev/ai) for the documentation index and the full
+generated text.
 
 > **[UI Components](/docs/blocks/ui-components)**
 >

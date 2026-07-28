@@ -1,0 +1,192 @@
+#!/usr/bin/env php
+<?php
+
+declare(strict_types=1);
+
+use Blockstudio\PHPStan\GitHooks\HookManager;
+
+$autoload = $GLOBALS['_composer_autoload_path']
+    ?? dirname(__DIR__) . '/vendor/autoload.php';
+
+if (!is_file($autoload)) {
+    fwrite(
+        STDERR,
+        "Blockstudio: Composer autoloading is unavailable. Run Composer install first.\n"
+    );
+    exit(2);
+}
+
+require_once $autoload;
+
+/**
+ * Synchronizes the repository hook with blockstudio.json.
+ */
+final class BlockstudioGitHooksCli
+{
+    /**
+     * @param list<string> $arguments
+     */
+    public function run(array $arguments): int
+    {
+        try {
+            $options = $this->parse($arguments);
+        } catch (\InvalidArgumentException $exception) {
+            fwrite(STDERR, 'Error: ' . $exception->getMessage() . "\n\n");
+            $this->help(STDERR);
+            return 2;
+        }
+
+        if ($options['help']) {
+            $this->help(STDOUT);
+            return 0;
+        }
+
+        try {
+            $manager = new HookManager();
+            $result = $options['command'] === 'remove'
+                ? $manager->remove($options['root'])
+                : $manager->sync($options['root'], $options['configuration']);
+        } catch (\Throwable $throwable) {
+            fwrite(STDERR, 'Blockstudio: ' . $throwable->getMessage() . "\n");
+            return 2;
+        }
+
+        fwrite(
+            STDOUT,
+            sprintf(
+                "Blockstudio commit hook %s: %s\n",
+                $result->status,
+                $result->hookPath
+            )
+        );
+
+        return 0;
+    }
+
+    /**
+     * @param list<string> $arguments
+     * @return array{
+     *   command: string,
+     *   root: string,
+     *   configuration: string,
+     *   help: bool
+     * }
+     */
+    private function parse(array $arguments): array
+    {
+        array_shift($arguments);
+        $command = 'sync';
+        $root = getcwd() ?: '.';
+        $configuration = null;
+        $help = false;
+
+        if (
+            isset($arguments[0])
+            && !str_starts_with($arguments[0], '-')
+        ) {
+            $command = array_shift($arguments);
+        }
+        if (!in_array($command, ['sync', 'remove'], true)) {
+            throw new \InvalidArgumentException(
+                sprintf('Unknown command: %s.', $command)
+            );
+        }
+
+        while ($arguments !== []) {
+            $argument = array_shift($arguments);
+
+            if ($argument === '-h' || $argument === '--help') {
+                $help = true;
+                continue;
+            }
+            if ($argument === '--root' || $argument === '--config') {
+                if ($arguments === []) {
+                    throw new \InvalidArgumentException(
+                        sprintf('%s requires a value.', $argument)
+                    );
+                }
+                $value = array_shift($arguments);
+                if ($argument === '--root') {
+                    $root = $value;
+                } else {
+                    $configuration = $value;
+                }
+                continue;
+            }
+            if (str_starts_with($argument, '--root=')) {
+                $root = substr($argument, strlen('--root='));
+                continue;
+            }
+            if (str_starts_with($argument, '--config=')) {
+                $configuration = substr($argument, strlen('--config='));
+                continue;
+            }
+
+            throw new \InvalidArgumentException(
+                sprintf('Unknown option: %s.', $argument)
+            );
+        }
+
+        $root = $this->absolutePath($root);
+        $configuration = $configuration === null
+            ? $root . '/blockstudio.json'
+            : $this->absolutePath($configuration);
+
+        return [
+            'command' => $command,
+            'root' => $root,
+            'configuration' => $configuration,
+            'help' => $help,
+        ];
+    }
+
+    private function absolutePath(string $path): string
+    {
+        if (
+            str_starts_with($path, '/')
+            || preg_match('/^[A-Za-z]:[\\\\\/]/', $path) === 1
+        ) {
+            return str_replace('\\', '/', $path);
+        }
+
+        return str_replace(
+            '\\',
+            '/',
+            rtrim(getcwd() ?: '.', '/\\') . '/' . $path
+        );
+    }
+
+    /**
+     * @param resource $stream
+     */
+    private function help($stream): void
+    {
+        fwrite(
+            $stream,
+            <<<'HELP'
+Blockstudio Git hooks
+
+Usage:
+  blockstudio-githooks sync [--root <path>] [--config <path>]
+  blockstudio-githooks remove [--root <path>]
+
+The sync command reads blockstudio.json. A strict
+"githooks": { "commit": true } setting installs or refreshes the
+Blockstudio-owned, analysis-only pre-commit hook. False, a missing setting, or
+a missing configuration removes only Blockstudio-owned state.
+
+Options:
+  --root <path>    Theme/project root (default: current directory)
+  --config <path>  blockstudio.json path (default: <root>/blockstudio.json)
+  -h, --help       Show this help
+
+Exit codes:
+  0  Hook state synchronized
+  2  Usage, configuration, Git, or filesystem error
+
+HELP
+        );
+    }
+}
+
+exit((new BlockstudioGitHooksCli())->run($argv));

@@ -140,7 +140,7 @@ All of these tools can create and edit files in a Blockstudio project directory.
 
 ### The LLM context file
 
-Blockstudio ships a pre-built context file that contains the complete framework documentation and all JSON schemas in a single file (~48k tokens). This is not a summary or a cheat sheet. It is the full reference: every field type, every template variable, every hook, every configuration option, plus the block.json, page.json, settings, and extension schemas.
+Blockstudio ships a pre-built context file that indexes the complete framework documentation. It is not a summary or a cheat sheet: every document is listed once with its route, its purpose, and the identifiers it owns, so an agent can find the one page that answers a question and open only that. The full text of every document and schema stays available in a second file for tools that want the whole corpus at once.
 
 Enable it in your `blockstudio.json`:
 
@@ -152,9 +152,9 @@ Enable it in your `blockstudio.json`:
 }
 ```
 
-The file is now available at `your-site.com/blockstudio-llm.txt`. Point your AI tool to this URL and it will understand the entire Blockstudio API without any additional instruction. See the [AI integration docs](/docs/dev/ai) for tool-specific setup.
+The index is now available at `your-site.com/blockstudio-llm.txt`, and the full text at `your-site.com/blockstudio-llm-full.txt`. Point your AI tool to the index and it can reach the entire Blockstudio API without any additional instruction. See the [AI integration docs](/docs/dev/ai) for tool-specific setup.
 
-This single file replaces the need to write framework-specific instructions yourself. An agent with access to `blockstudio-llm.txt` knows how to create blocks, define fields, write templates, configure Tailwind, set up pages, and use every hook Blockstudio provides.
+This replaces the need to write framework-specific instructions yourself. An agent with access to `blockstudio-llm.txt` can find how to create blocks, define fields, write templates, configure Tailwind, set up pages, and use every hook Blockstudio provides.
 
 ### Project-specific context files
 
@@ -168,6 +168,8 @@ Most AI coding agents also read a project-level context file for instructions sp
 | `.github/copilot-instructions.md` | GitHub Copilot |
 
 Since `blockstudio-llm.txt` already covers the framework, your project context file only needs to describe what is unique to your project: directory layout, naming conventions, commands, and boundaries.
+
+If you install [`blockstudio/phpstan`](/docs/dev/phpstan), you do not have to write that description by hand. `vendor/bin/blockstudio-agents` generates an `AGENTS.md` from your `blockstudio.json` and your own files, listing what the project authors, which features are enabled, what analysis will reject, and the commands that apply. It refuses to overwrite a file it did not write, and it preserves your own notes when you regenerate it.
 
 ```markdown title="CLAUDE.md"
 # My WordPress Site
@@ -315,7 +317,7 @@ Because each block is its own directory and Tailwind styles are co-located in te
 
 ## Tips for better results
 
-1. **Reference the LLM context file.** Agents produce significantly better Blockstudio code when they have the full framework documentation. Always point them to `blockstudio-llm.txt`.
+1. **Reference the LLM context file.** Agents produce significantly better Blockstudio code when they can reach the framework documentation. Always point them to `blockstudio-llm.txt`, and give them a generated `AGENTS.md` for the project itself.
 
 2. **Be specific about field types.** Instead of "add an image field," say "add a files field with `allowedTypes: ['image']` and `returnFormat: 'object'`." The more precise your field definitions, the fewer iterations needed.
 

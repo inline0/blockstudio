@@ -1,4 +1,24 @@
+[data-bsui-preview-card-root] [data-bsui-preview-card-popup] {
+	position: absolute;
+	z-index: 50;
+	top: 0;
+	left: 0;
+	min-width: 12rem;
+	background: var(--bs-ui-popover);
+	color: var(--bs-ui-popover-foreground);
+	border: 1px solid var(--bs-ui-border);
+	border-radius: var(--bs-ui-radius);
+	padding: var(--bs-ui-space-4);
+	box-shadow: var(--bs-ui-shadow-md);
+	font-family: var(--bs-ui-font-sans);
+	font-size: var(--bs-ui-font-size);
+}
+
 [data-bsui-preview-card-root] [data-bsui-preview-card-popup]:not([hidden]) {
+	animation: bs-ui-popup-in var(--bs-ui-transition);
+}
+
+[data-bsui-preview-card-root] [data-bsui-preview-card-popup] {
 	max-width: 20rem;
 }
 

@@ -36,9 +36,39 @@ In `phpstan/` subdirectory of the main repo, similar to how `registry/` is struc
 ## Stack
 
 - **Language**: PHP 8.2+ (matches Blockstudio minimum)
-- **PHPStan**: 1.11+ (uses stable extension API)
+- **PHPStan**: 2.0+ (uses stable extension API)
 - **Test framework**: PHPUnit (PHPStan ships test helpers)
 - **Schema parsing**: PHP native (json_decode for `block.json`, PHP token parser for `db.php`/`rpc.php` array returns)
+
+## Blockstudio 7.6 analysis layers
+
+The original auto-discovered extension is the stable base contract. Version
+7.6 keeps that entry point unchanged and adds explicit `base`, `theme`,
+`extreme-theme`, and `wordpress-render` presets.
+
+- `theme` scans ordinary filesystem roots for WordPress theme structure,
+  Blockstudio asset references, selector scope, field defaults, and repeater
+  bounds.
+- `extreme-theme` adds PHPStan max-level defaults, generic unsafe-PHP and
+  output checks, Tailwind compilation, JavaScript parsing, browser hygiene,
+  and WordPress Interactivity API contracts.
+- `wordpress-render` runs only a caller-supplied, bounded command and consumes
+  a small JSON result contract. The package does not provision WordPress.
+- `bin/blockstudio-phpstan` is the canonical executable. It composes NEON in
+  the system temporary directory, preserves stable exit codes, and leaves the
+  analyzed project untouched.
+- `bin/blockstudio-githooks` synchronizes an opt-in, analysis-only pre-commit
+  hook from `blockstudio.json`. Its generated files and ownership state live in
+  Git's common directory, safely chain an existing hook, and are removed
+  without touching user-owned files when the setting is disabled.
+- `bin/blockstudio-agents` writes a project contract for coding agents. Every
+  line is derived from the project's own files, its `blockstudio.json`, and the
+  rules the selected preset registers. It follows the same ownership rule as the
+  commit hook and preserves an author-owned notes region across regeneration.
+
+All new diagnostics use product-owned `blockstudio.*` identifiers. The
+extension has no knowledge of an orchestration product, caller repository
+topology, alternate filesystem adapters, or a particular consumer theme.
 
 ## Architecture
 
@@ -46,6 +76,13 @@ In `phpstan/` subdirectory of the main repo, similar to how `registry/` is struc
 phpstan/
 ├── composer.json
 ├── extension.neon              # PHPStan auto-discovery entry point
+├── base.neon                   # Explicit alias for the stable base
+├── theme.neon                  # Opt-in theme structure layer
+├── extreme-theme.neon          # Opt-in strict PHP/JS/Tailwind layer
+├── wordpress-render.neon       # Explicit live-render command layer
+├── bin/blockstudio-phpstan     # Canonical executable
+├── bin/blockstudio-githooks    # Managed commit-hook synchronizer
+├── bin/blockstudio-agents      # Generated project contract for coding agents
 ├── README.md
 ├── PRD.md                      # This file
 ├── phpstan.neon.dist           # Self-test config
@@ -77,6 +114,8 @@ phpstan/
 │   │   ├── SettingsPathRule.php             # Validates Settings::get() paths
 │   │   ├── FieldTypeAccessRule.php          # Catches wrong field shape access
 │   │   └── DeprecatedApiRule.php
+│   ├── Theme/                  # Ordinary-root scanner and non-PHP analyzers
+│   ├── Agents/                 # Project profile, preset contract, and generated document
 │   └── Reflection/             # Helpers for inspecting Blockstudio code in user projects
 │       ├── BlockTemplateDetector.php        # Determines if a file is a Blockstudio template
 │       └── FieldTypeRegistry.php            # Maps field type names to data shapes
@@ -339,13 +378,14 @@ Goal: catch wrong usage of valid schemas.
 - [ ] Publish to Packagist
 - [ ] Blog post announcing the extension
 
-## Out of scope (for v1)
+## Out of scope
 
-- Twig template analysis (templates use `{{ a.field }}` syntax, would need a separate parser)
-- Blade template analysis (similar concern)
 - IDE integration beyond what PHPStan natively provides
 - Auto-fix for schema errors
 - Generation of TypeScript types from PHP Blockstudio code
+- Provisioning or booting a live WordPress environment
+- Consumer-specific manifests, naming conventions, repository topology, or
+  alternate filesystem adapters
 
 These can be added later as separate features once the core PHP analysis is solid.
 

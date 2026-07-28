@@ -1,0 +1,17 @@
+{
+  "$schema": "https://blockstudio.dev/schema/block",
+  "name": "theme-components/ui-feature-matrix",
+  "title": "UI Feature Matrix",
+  "category": "blockstudio-test-native",
+  "icon": "grid-view",
+  "blockstudio": {
+    "attributes": [
+      {
+        "id": "title",
+        "type": "text",
+        "label": "Title",
+        "default": ""
+      }
+    ]
+  }
+}

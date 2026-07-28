@@ -194,28 +194,28 @@ test.describe( 'bsui/accordion', () => {
 
 	// Animation
 
-	test( 'initially open panel has bs-ui-open class and height variable', async ( { page } ) => {
+	test( 'initially open panel carries the open attribute and height variable', async ( { page } ) => {
 		const panel1 = page.locator( '#ui-accordion-panel-item1' );
-		await expect( panel1 ).toHaveClass( /bs-ui-open/ );
+		await expect( panel1 ).toHaveAttribute( 'data-bsui-accordion-open', '' );
 		const height = await panel1.evaluate(
 			( el ) => getComputedStyle( el ).getPropertyValue( '--bs-ui-panel-height' )
 		);
 		expect( height ).toMatch( /^\d+px$/ );
 	} );
 
-	test( 'closed panels do not have bs-ui-open class', async ( { page } ) => {
+	test( 'closed panels do not carry the open attribute', async ( { page } ) => {
 		const panel2 = page.locator( '#ui-accordion-panel-item2' );
 		const panel3 = page.locator( '#ui-accordion-panel-item3' );
-		await expect( panel2 ).not.toHaveClass( /bs-ui-open/ );
-		await expect( panel3 ).not.toHaveClass( /bs-ui-open/ );
+		await expect( panel2 ).not.toHaveAttribute( 'data-bsui-accordion-open', '' );
+		await expect( panel3 ).not.toHaveAttribute( 'data-bsui-accordion-open', '' );
 	} );
 
-	test( 'opening a never-opened panel adds bs-ui-open and height', async ( { page } ) => {
+	test( 'opening a never-opened panel adds the open attribute and height', async ( { page } ) => {
 		const trigger2 = page.locator( '#ui-accordion-trigger-item2' );
 		const panel2 = page.locator( '#ui-accordion-panel-item2' );
 
 		await trigger2.click();
-		await expect( panel2 ).toHaveClass( /bs-ui-open/ );
+		await expect( panel2 ).toHaveAttribute( 'data-bsui-accordion-open', '' );
 		await expect( panel2 ).toBeVisible();
 		const height = await panel2.evaluate(
 			( el ) => getComputedStyle( el ).getPropertyValue( '--bs-ui-panel-height' )
@@ -232,7 +232,7 @@ test.describe( 'bsui/accordion', () => {
 		await trigger2.click();
 		await expect( page.locator( '#ui-accordion-panel-item2' ) ).toBeVisible();
 		await trigger3.click();
-		await expect( panel3 ).toHaveClass( /bs-ui-open/ );
+		await expect( panel3 ).toHaveAttribute( 'data-bsui-accordion-open', '' );
 		await expect( panel3 ).toBeVisible();
 		const height = await panel3.evaluate(
 			( el ) => getComputedStyle( el ).getPropertyValue( '--bs-ui-panel-height' )
@@ -240,12 +240,12 @@ test.describe( 'bsui/accordion', () => {
 		expect( parseInt( height ) ).toBeGreaterThan( 0 );
 	} );
 
-	test( 'closing removes bs-ui-open class after transition', async ( { page } ) => {
+	test( 'closing removes the open attribute after transition', async ( { page } ) => {
 		const trigger1 = page.locator( '#ui-accordion-trigger-item1' );
 		const panel1 = page.locator( '#ui-accordion-panel-item1' );
 
 		await trigger1.click();
-		await expect( panel1 ).not.toHaveClass( /bs-ui-open/ );
+		await expect( panel1 ).not.toHaveAttribute( 'data-bsui-accordion-open', '' );
 		await expect( panel1 ).toBeHidden();
 	} );
 
@@ -256,7 +256,7 @@ test.describe( 'bsui/accordion', () => {
 		await trigger1.click();
 		await expect( panel1 ).toBeHidden();
 		await trigger1.click();
-		await expect( panel1 ).toHaveClass( /bs-ui-open/ );
+		await expect( panel1 ).toHaveAttribute( 'data-bsui-accordion-open', '' );
 		await expect( panel1 ).toBeVisible();
 	} );
 
@@ -276,7 +276,7 @@ test.describe( 'bsui/accordion', () => {
 		const panel1 = page.locator( '#ui-accordion-panel-item1' );
 		await expect( panel1 ).toBeVisible();
 		const visiblePanels = page.locator(
-			'[role="region"].bs-ui-open'
+			'[role="region"][data-bsui-accordion-open]'
 		);
 		await expect( visiblePanels ).toHaveCount( 1 );
 	} );

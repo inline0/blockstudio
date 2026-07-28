@@ -1,0 +1,17 @@
+[data-bsui-label] {
+	display: flex;
+	align-items: center;
+	gap: 0.5rem;
+	width: fit-content;
+	font-family: var(--bs-ui-font-sans);
+	font-size: var(--bs-ui-font-size);
+	font-weight: 500;
+	line-height: 1;
+	color: var(--bs-ui-foreground);
+	user-select: none;
+}
+
+[data-bsui-label][data-disabled] {
+	opacity: 0.5;
+	pointer-events: none;
+}

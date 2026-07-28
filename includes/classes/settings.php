@@ -19,15 +19,25 @@ namespace Blockstudio;
  * 3. $settings_json - Values from theme's blockstudio.json file
  * 4. $settings_filters - Values from WordPress filters (blockstudio/settings/*)
  *
+ * Every layer is loaded and merged. blockstudio.json used to replace the
+ * options table rather than sit on top of it, so an unrelated saved setting
+ * stopped applying the moment the file appeared. It now overrides only the
+ * keys it declares.
+ *
  * Settings Structure:
  * - assets/enqueue: Enable/disable asset loading on frontend
  * - assets/minify/css: Enable CSS minification
  * - assets/minify/js: Enable JavaScript minification
  * - assets/process/scss: Enable inline SCSS compilation
  * - assets/process/scssFiles: Enable .scss file compilation
+ * - assets/output: Where compiled _dist output is written (source|cache)
  * - editor/formatOnSave: Auto-format code in editor
  * - tailwind/enabled: Enable Tailwind CSS integration
  * - ui/enabled: Enable bundled UI components
+ * - githooks/commit: Enable the Blockstudio-owned PHPStan commit hook
+ * - phpstan/*: Configure the canonical Blockstudio PHPStan command
+ * - themeDefaults/*: Configure generic theme setup and development page sync
+ * - performance/*: Configure generic runtime profiles, media, and measurements
  * - blockEditor/enhance: Add Blockstudio editor hover and selection affordances
  * - blockEditor/blocks: Configure global block inserter policy
  * - blockEditor/patterns: Configure global pattern inserter policy
@@ -73,11 +83,11 @@ class Settings {
 	 * @var array
 	 */
 	protected static array $defaults = array(
-		'users'       => array(
+		'users'         => array(
 			'ids'   => array(),
 			'roles' => array(),
 		),
-		'assets'      => array(
+		'assets'        => array(
 			'enqueue' => true,
 			'reset'   => array(
 				'enabled'   => false,
@@ -91,12 +101,69 @@ class Settings {
 				'scss'      => false,
 				'scssFiles' => true,
 			),
+			'output'  => 'source',
 		),
-		'cache'       => array(
+		'cache'         => array(
 			'enabled' => true,
 			'path'    => 'blockstudio/cache',
 		),
-		'content'     => array(
+		'githooks'      => array(
+			'commit' => false,
+		),
+		'phpstan'       => array(
+			'preset'        => 'base',
+			'configuration' => '',
+			'roots'         => array( '.' ),
+			'excludePaths'  => array(),
+			'maxFiles'      => 10000,
+		),
+		'themeDefaults' => array(
+			'titleTag'                 => false,
+			'suppressDirectoryUpdates' => false,
+			'syncPagesInDevelopment'   => false,
+		),
+		'performance'   => array(
+			'profile'         => 'compat',
+			'wordpress'       => array(
+				'headNoise'      => false,
+				'embeds'         => false,
+				'xmlrpc'         => false,
+				'editor'         => false,
+				'frontendAssets' => false,
+				'media'          => false,
+				'heartbeat'      => false,
+			),
+			'preload'         => array(
+				'links' => 'off',
+			),
+			'media'           => array(
+				'lazy'       => false,
+				'skeleton'   => false,
+				'metadata'   => false,
+				'rootMargin' => '300px',
+			),
+			'measurement'     => array(
+				'enabled'      => false,
+				'queryMonitor' => false,
+				'headers'      => false,
+				'timings'      => false,
+			),
+			'staticPrerender' => array(
+				'enabled'       => false,
+				'ttl'           => 86400,
+				'invalidate'    => 'signature',
+				'earlyServe'    => false,
+				'serveLoggedIn' => false,
+				'dynamicPaths'  => array(),
+				'warm'          => array(
+					'enabled'     => false,
+					'interval'    => 3600,
+					'concurrency' => 2,
+					'transport'   => 'http',
+				),
+			),
+		),
+		'content'       => array(
 			'enabled'                => false,
 			'id'                     => 'default',
 			'path'                   => 'content',
@@ -111,19 +178,19 @@ class Settings {
 			'taxonomies'             => array(),
 			'media'                  => 'manifest',
 		),
-		'editor'      => array(
+		'editor'        => array(
 			'formatOnSave' => false,
 			'assets'       => array(),
 			'markup'       => false,
 		),
-		'tailwind'    => array(
+		'tailwind'      => array(
 			'enabled' => false,
 			'config'  => '',
 		),
-		'ui'          => array(
+		'ui'            => array(
 			'enabled' => false,
 		),
-		'blockEditor' => array(
+		'blockEditor'   => array(
 			'disableLoading' => false,
 			'enhance'        => false,
 			'cssClasses'     => array(),
@@ -165,16 +232,16 @@ class Settings {
 				),
 			),
 		),
-		'ai'          => array(
+		'ai'            => array(
 			'enableContextGeneration' => false,
 		),
-		'blockTags'   => array(
+		'blockTags'     => array(
 			'enabled'  => false,
 			'allow'    => array(),
 			'deny'     => array(),
 			'prefixes' => array(),
 		),
-		'dev'         => array(
+		'dev'           => array(
 			'grab'   => array(
 				'enabled' => false,
 			),
@@ -228,12 +295,58 @@ class Settings {
 	protected static array $settings_filters_values = array();
 
 	/**
+	 * Unmerged settings from the active source.
+	 *
+	 * @var array
+	 */
+	protected static array $settings_raw = array();
+
+	/**
+	 * Configuration errors from the active source.
+	 *
+	 * @var string[]
+	 */
+	protected static array $errors = array();
+
+	/**
+	 * Fingerprint of the source loaded by the singleton.
+	 *
+	 * @var string
+	 */
+	private static string $loaded_source_fingerprint = '';
+
+	/**
+	 * Stat signature the cached JSON fingerprint was computed from.
+	 *
+	 * Settings::get() resolves the singleton on every read, so hashing the
+	 * settings file each time costs more than the lookup it guards. Gating the
+	 * hash behind path, mtime, size and inode keeps the file a live source
+	 * without paying for it on every access.
+	 *
+	 * @var string|null
+	 */
+	private static ?string $json_stat_signature = null;
+
+	/**
+	 * Fingerprint cached against the current stat signature.
+	 *
+	 * @var string|null
+	 */
+	private static ?string $json_fingerprint = null;
+
+	/**
 	 * Get singleton instance.
 	 *
 	 * @return Settings|null The singleton instance.
 	 */
 	public static function get_instance(): ?Settings {
-		if ( null === self::$instance ) {
+		$source_fingerprint = self::source_fingerprint();
+
+		if (
+			null === self::$instance ||
+			self::$loaded_source_fingerprint !== $source_fingerprint
+		) {
+			self::$instance = null;
 			self::$instance = new self();
 		}
 
@@ -244,16 +357,19 @@ class Settings {
 	 * Constructor.
 	 */
 	public function __construct() {
-		static::$settings         = static::$defaults;
-		static::$settings_filters = static::$defaults;
+		static::$settings                = static::$defaults;
+		static::$settings_filters        = static::$defaults;
+		static::$settings_options        = array();
+		static::$settings_json           = null;
+		static::$settings_filters_values = array();
+		static::$settings_raw            = array();
+		static::$errors                  = array();
 
 		static::$settings_filters['assets']['enqueue']              = false;
 		static::$settings_filters['assets']['process']['scssFiles'] = false;
 
-		if ( ! self::json() ) {
-			static::$settings_options = static::$defaults;
-			$this->load_settings_from_options();
-		}
+		static::$settings_options = static::$defaults;
+		$this->load_settings_from_options();
 
 		$this->migrate_settings_from_old_version( static::$settings );
 		$this->migrate_settings_from_old_version( static::$settings_filters );
@@ -264,6 +380,7 @@ class Settings {
 		}
 
 		$this->load_settings_from_filters();
+		self::$loaded_source_fingerprint = self::source_fingerprint();
 	}
 
 	/**
@@ -310,6 +427,7 @@ class Settings {
 			$options = array();
 		}
 
+		static::$settings_raw     = $options;
 		static::$settings         = $this->array_deep_merge( static::$settings, $options );
 		static::$settings_options = $this->array_deep_merge( static::$settings, $options );
 	}
@@ -345,25 +463,111 @@ class Settings {
 	 * @return void
 	 */
 	protected function load_settings_from_json(): void {
-		$this->merge_json_settings_from_path( self::$settings );
-		$this->merge_json_settings_from_path( self::$settings_json );
+		$path = self::json();
+		if ( ! is_string( $path ) ) {
+			return;
+		}
+
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Reading local JSON file.
+		$json_data     = file_get_contents( $path );
+		$json_root     = json_decode( (string) $json_data );
+		$json_settings = json_decode( $json_data, true );
+
+		if ( ! is_object( $json_root ) || ! is_array( $json_settings ) ) {
+			static::$errors[] = sprintf(
+				'%s must contain a valid JSON object: %s',
+				$path,
+				json_last_error_msg()
+			);
+
+			return;
+		}
+
+		$this->report_unknown_keys( $json_settings, static::$defaults, '', $path );
+
+		static::$settings_raw  = $this->array_deep_merge( static::$settings_raw, $json_settings );
+		static::$settings      = $this->array_deep_merge( static::$settings, $json_settings );
+		static::$settings_json = $this->array_deep_merge( static::$settings_json, $json_settings );
 	}
 
 	/**
-	 * Merge JSON settings from path.
+	 * Report configuration keys the defaults tree does not declare.
 	 *
-	 * @param array $settings The settings array to merge into.
+	 * A deep merge accepts anything, so a misspelled group used to validate in
+	 * an editor and then be silently ignored at runtime. Only the performance
+	 * group was ever checked. The defaults tree is the authoritative shape, so
+	 * it is what every group is compared against.
+	 *
+	 * Free-form maps are skipped: their keys are user data, not setting names.
+	 *
+	 * @param array<string, mixed> $value    Configuration subtree.
+	 * @param array<string, mixed> $known    Matching defaults subtree.
+	 * @param string               $path     Slash-delimited path so far.
+	 * @param string               $filename Configuration file, for the message.
 	 *
 	 * @return void
 	 */
-	private function merge_json_settings_from_path( &$settings ): void {
-		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Reading local JSON file.
-		$json_data     = file_get_contents( self::json() );
-		$json_settings = json_decode( $json_data, true );
+	private function report_unknown_keys( array $value, array $known, string $path, string $filename ): void {
+		$freeform = array(
+			'blockTags/prefixes',
+			'blockEditor/blocks/categories/rename',
+			'blockEditor/patterns/categories/rename',
+			'editor/assets',
+		);
 
-		if ( $json_settings && is_array( $json_settings ) ) {
-			$settings = $this->array_deep_merge( $settings, $json_settings );
+		foreach ( $value as $key => $child ) {
+			if ( ! is_string( $key ) ) {
+				continue;
+			}
+
+			$current = '' === $path ? $key : $path . '/' . $key;
+
+			if ( '$schema' === $key && '' === $path ) {
+				continue;
+			}
+
+			if ( ! array_key_exists( $key, $known ) ) {
+				$suggestion = self::closest_key( $key, array_keys( $known ) );
+
+				static::$errors[] = null === $suggestion
+					? sprintf( '%s: unknown setting "%s"', $filename, $current )
+					: sprintf( '%s: unknown setting "%s", did you mean "%s"?', $filename, $current, $suggestion );
+
+				continue;
+			}
+
+			if ( in_array( $current, $freeform, true ) ) {
+				continue;
+			}
+
+			if ( is_array( $child ) && is_array( $known[ $key ] ) && array() !== $known[ $key ] ) {
+				$this->report_unknown_keys( $child, $known[ $key ], $current, $filename );
+			}
 		}
+	}
+
+	/**
+	 * Closest known key to a misspelling, or null when nothing is close.
+	 *
+	 * @param string        $key   Unknown key.
+	 * @param array<string> $known Known sibling keys.
+	 *
+	 * @return string|null Suggestion.
+	 */
+	private static function closest_key( string $key, array $known ): ?string {
+		$best     = null;
+		$distance = PHP_INT_MAX;
+
+		foreach ( $known as $candidate ) {
+			$current = levenshtein( strtolower( $key ), strtolower( (string) $candidate ) );
+
+			if ( $current < $distance ) {
+				$distance = $current;
+				$best     = (string) $candidate;
+			}
+		}
+
+		return $distance <= 3 ? $best : null;
 	}
 
 	/**
@@ -434,10 +638,12 @@ class Settings {
 	 * @return mixed The setting value.
 	 */
 	public static function get( string $key, $default = null ) {
-		$value = static::fetch_value_from_key( $key, static::$settings );
+		self::get_instance();
+
+		$value = self::fetch_value_from_key( $key, static::$settings );
 
 		if ( null === $value ) {
-			$value = static::fetch_value_from_key( $key, static::$defaults );
+			$value = self::fetch_value_from_key( $key, static::$defaults );
 		}
 
 		if ( null === $value ) {
@@ -454,6 +660,62 @@ class Settings {
 		}
 
 		return $value;
+	}
+
+	/**
+	 * Get a boolean setting with a strict fallback.
+	 *
+	 * @param string $key     The setting key.
+	 * @param bool   $default The fallback value.
+	 *
+	 * @return bool The resolved boolean value.
+	 */
+	public static function get_bool( string $key, bool $default = false ): bool {
+		$value = self::get( $key, $default );
+
+		return is_bool( $value ) ? $value : $default;
+	}
+
+	/**
+	 * Get an integer setting with a strict fallback.
+	 *
+	 * @param string $key     The setting key.
+	 * @param int    $default The fallback value.
+	 *
+	 * @return int The resolved integer value.
+	 */
+	public static function get_int( string $key, int $default = 0 ): int {
+		$value = self::get( $key, $default );
+
+		return is_int( $value ) ? $value : $default;
+	}
+
+	/**
+	 * Get a string setting with a strict fallback.
+	 *
+	 * @param string $key     The setting key.
+	 * @param string $default The fallback value.
+	 *
+	 * @return string The resolved string value.
+	 */
+	public static function get_string( string $key, string $default = '' ): string {
+		$value = self::get( $key, $default );
+
+		return is_string( $value ) ? $value : $default;
+	}
+
+	/**
+	 * Get an array setting with a strict fallback.
+	 *
+	 * @param string $key     The setting key.
+	 * @param array  $default The fallback value.
+	 *
+	 * @return array The resolved array value.
+	 */
+	public static function get_array( string $key, array $default = array() ): array {
+		$value = self::get( $key, $default );
+
+		return is_array( $value ) ? $value : $default;
 	}
 
 	/**
@@ -506,6 +768,8 @@ class Settings {
 	 * @return array All settings.
 	 */
 	public static function get_all(): array {
+		self::get_instance();
+
 		return static::$settings;
 	}
 
@@ -515,6 +779,8 @@ class Settings {
 	 * @return array Options settings.
 	 */
 	public static function get_options(): array {
+		self::get_instance();
+
 		return static::$settings_options;
 	}
 
@@ -524,7 +790,20 @@ class Settings {
 	 * @return array|null JSON settings.
 	 */
 	public static function get_json(): ?array {
+		self::get_instance();
+
 		return static::$settings_json;
+	}
+
+	/**
+	 * Get the unmerged active source settings.
+	 *
+	 * @return array The raw blockstudio.json or options payload.
+	 */
+	public static function get_raw(): array {
+		self::get_instance();
+
+		return static::$settings_raw;
 	}
 
 	/**
@@ -533,6 +812,8 @@ class Settings {
 	 * @return array Filters settings.
 	 */
 	public static function get_filters(): array {
+		self::get_instance();
+
 		return static::$settings_filters;
 	}
 
@@ -542,7 +823,100 @@ class Settings {
 	 * @return array Filter values.
 	 */
 	public static function get_filters_values(): array {
+		self::get_instance();
+
 		return static::$settings_filters_values;
+	}
+
+	/**
+	 * Get configuration errors from the active source.
+	 *
+	 * @return string[] Configuration errors.
+	 */
+	public static function errors(): array {
+		self::get_instance();
+
+		return static::$errors;
+	}
+
+	/**
+	 * Get a deterministic fingerprint of resolved settings.
+	 *
+	 * @return string Settings fingerprint.
+	 */
+	public static function fingerprint(): string {
+		self::get_instance();
+		$encoded = wp_json_encode( static::$settings, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE );
+
+		return hash( 'sha256', is_string( $encoded ) ? $encoded : '' );
+	}
+
+	/**
+	 * Clear all cached settings so the next access reloads the active source.
+	 *
+	 * @return void
+	 */
+	public static function reset(): void {
+		self::$instance                  = null;
+		self::$settings                  = array();
+		self::$settings_options          = array();
+		self::$settings_json             = null;
+		self::$settings_filters          = array();
+		self::$settings_filters_values   = array();
+		self::$settings_raw              = array();
+		self::$errors                    = array();
+		self::$loaded_source_fingerprint = '';
+		self::$json_stat_signature       = null;
+		self::$json_fingerprint          = null;
+	}
+
+	/**
+	 * Reload settings immediately.
+	 *
+	 * @return Settings|null The reloaded singleton.
+	 */
+	public static function reload(): ?Settings {
+		self::reset();
+
+		return self::get_instance();
+	}
+
+	/**
+	 * Fingerprint the active JSON file or options payload.
+	 *
+	 * @return string Source fingerprint.
+	 */
+	private static function source_fingerprint(): string {
+		$path = self::json_path();
+		clearstatcache( true, $path );
+		$stat = @stat( $path ); // phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged -- A missing file is the options branch, not an error.
+
+		if ( false !== $stat ) {
+			$signature = $path . ':' . $stat['mtime'] . ':' . $stat['size'] . ':' . $stat['ino'];
+
+			if ( $signature === self::$json_stat_signature && null !== self::$json_fingerprint ) {
+				return self::$json_fingerprint;
+			}
+
+			if ( is_file( $path ) && is_readable( $path ) ) {
+				$hash = hash_file( 'sha256', $path );
+
+				self::$json_stat_signature = $signature;
+				self::$json_fingerprint    = 'json:' . $path . ':' . ( is_string( $hash ) ? $hash : 'unreadable' );
+
+				return self::$json_fingerprint;
+			}
+		}
+
+		self::$json_stat_signature = null;
+		self::$json_fingerprint    = null;
+
+		$options = function_exists( 'get_option' )
+			? get_option( 'blockstudio_settings', array() )
+			: array();
+		$encoded = wp_json_encode( $options, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE );
+
+		return 'options:' . hash( 'sha256', is_string( $encoded ) ? $encoded : '' );
 	}
 }
 

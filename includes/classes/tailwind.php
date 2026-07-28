@@ -23,7 +23,7 @@ use BlockstudioVendor\TailwindPHP\TailwindCompiler;
  * Cache Strategy:
  * - Extract CSS class candidates from HTML via TailwindPHP::extractCandidates()
  * - Sort candidates and hash with CSS config and plugin version to create cache key
- * - Cache files stored in uploads/blockstudio/tailwind/cache/
+ * - Cache files stored beneath the shared Blockstudio runtime cache root
  * - Dynamic HTML (nonces, timestamps) does NOT bust the cache
  * - Cold keys compile once across processes via Single_Flight: one request is
  *   elected builder and publishes atomically, concurrent requests wait briefly
@@ -523,10 +523,7 @@ class Tailwind {
 	 * @return string The cache directory path.
 	 */
 	public static function get_cache_dir(): string {
-		$directory = wp_upload_dir()['basedir'] . '/blockstudio/tailwind/cache';
-		$namespace = Runtime_Context::namespace( 'tailwind', array( 'blocks', 'pages' ) );
-
-		return 'default' === $namespace ? $directory : $directory . '/' . $namespace;
+		return Runtime_Cache::directory( 'tailwind' );
 	}
 
 	/**

@@ -70,7 +70,7 @@ final class FieldJsonShapeRule implements Rule
         $data = json_decode($content, true);
         if (!is_array($data)) {
             return [
-                RuleErrorBuilder::message(sprintf('Invalid field.json: %s', $path))
+                RuleErrorBuilder::message(sprintf('Invalid field.json: %s', $this->scanner->relativePath($path)))
                     ->identifier('blockstudio.fieldJson')
                     ->file($path)
                     ->build(),
@@ -82,7 +82,7 @@ final class FieldJsonShapeRule implements Rule
         if (!isset($data['name']) || !is_string($data['name']) || $data['name'] === '') {
             $errors[] = RuleErrorBuilder::message(sprintf(
                 'field.json missing required "name": %s',
-                $path
+                $this->scanner->relativePath($path)
             ))
                 ->identifier('blockstudio.fieldJson.name')
                 ->file($path)
@@ -93,7 +93,7 @@ final class FieldJsonShapeRule implements Rule
         if (!is_array($attributes) || $attributes === []) {
             $errors[] = RuleErrorBuilder::message(sprintf(
                 'field.json "attributes" must be a non-empty array: %s',
-                $path
+                $this->scanner->relativePath($path)
             ))
                 ->identifier('blockstudio.fieldJson.attributes')
                 ->file($path)
@@ -125,7 +125,7 @@ final class FieldJsonShapeRule implements Rule
                 $errors[] = RuleErrorBuilder::message(sprintf(
                     'field.json attributes[%d] must be an object: %s',
                     $i,
-                    $path
+                    $this->scanner->relativePath($path)
                 ))
                     ->identifier('blockstudio.fieldJson.attributes')
                     ->file($path)
@@ -140,7 +140,7 @@ final class FieldJsonShapeRule implements Rule
                 $errors[] = RuleErrorBuilder::message(sprintf(
                     'field.json field "%s" missing "type": %s',
                     $this->getFieldLabel($field, $i),
-                    $path
+                    $this->scanner->relativePath($path)
                 ))
                     ->identifier('blockstudio.fieldJson.type')
                     ->file($path)
@@ -153,7 +153,7 @@ final class FieldJsonShapeRule implements Rule
                     'field.json field "%s" has unknown type "%s": %s',
                     $this->getFieldLabel($field, $i),
                     $type,
-                    $path
+                    $this->scanner->relativePath($path)
                 ))
                     ->identifier('blockstudio.fieldJson.type')
                     ->file($path)
@@ -165,7 +165,7 @@ final class FieldJsonShapeRule implements Rule
                 $errors[] = RuleErrorBuilder::message(sprintf(
                     'field.json attributes[%d] missing "id": %s',
                     $i,
-                    $path
+                    $this->scanner->relativePath($path)
                 ))
                     ->identifier('blockstudio.fieldJson.attributes')
                     ->file($path)

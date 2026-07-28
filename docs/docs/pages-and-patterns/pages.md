@@ -2,8 +2,9 @@
 title: Pages
 description: Create WordPress pages from file templates with automatic syncing.
 path: "pages-and-patterns/pages"
-order: 52
+order: 51
 section: "Pages & Patterns"
+subsection: "File Templates"
 meta_title: "Pages"
 meta_description: "Create WordPress pages from file templates with automatic syncing."
 ---
@@ -175,6 +176,8 @@ Disable raw Markdown responses with the `blockstudio/pages/serve_markdown` filte
 ```php title="functions.php"
 add_filter( 'blockstudio/pages/serve_markdown', '__return_false' );
 ```
+
+A `.md` URL that does not resolve to a Markdown-backed page returns a 404 only when the path falls inside a page collection. Outside every collection, Blockstudio leaves the request alone for WordPress and other plugins to handle.
 
 ## Page Collections
 
@@ -797,6 +800,10 @@ $pages = Blockstudio\Pages::pages();
 
 // Get pages from one collection.
 $docs = Blockstudio\Pages::pages('docs');
+
+// Answer whether the current request resolves inside a collection.
+// Layout files use it to branch between an archive and a single view.
+$inDocs = Blockstudio\Pages::in_collection('docs');
 
 // Get a nested page tree.
 $tree = Blockstudio\Pages::tree('docs');
