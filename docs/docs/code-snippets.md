@@ -2,7 +2,7 @@
 title: Code Snippets
 description: Use Blockstudio's file-first approach for code snippets.
 path: "code-snippets"
-order: 57
+order: 60
 section: "Dev"
 subsection: "Project Files"
 meta_title: "Code Snippets"

@@ -2,7 +2,7 @@
 title: Media
 description: Stable image dimensions, lazy loading, and the media metadata manifest.
 path: "production/media"
-order: 73
+order: 59
 section: "Production"
 meta_title: "Media"
 meta_description: "Stable image dimensions, lazy loading, and the media metadata manifest."

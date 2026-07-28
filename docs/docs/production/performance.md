@@ -2,7 +2,7 @@
 title: Performance
 description: Production frontend defaults, the built-in profiler, and the render techniques underneath.
 path: "production/performance"
-order: 70
+order: 56
 section: "Production"
 meta_title: "Performance"
 meta_description: "Production frontend defaults, the built-in profiler, and the render techniques underneath."

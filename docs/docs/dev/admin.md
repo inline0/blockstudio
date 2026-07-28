@@ -2,7 +2,7 @@
 title: Admin
 description: Inspect registered Blockstudio blocks, browse registries, and view database records from wp-admin.
 path: "dev/admin"
-order: 59
+order: 61
 section: "Dev"
 subsection: "Inspection Tools"
 meta_title: "Admin"

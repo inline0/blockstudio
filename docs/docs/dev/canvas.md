@@ -2,7 +2,7 @@
 title: Canvas
 description: A visual workspace and public inventory API for Blockstudio content.
 path: "dev/canvas"
-order: 60
+order: 62
 section: "Dev"
 subsection: "Inspection Tools"
 meta_title: "Canvas"

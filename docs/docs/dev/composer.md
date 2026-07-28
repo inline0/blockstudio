@@ -2,7 +2,7 @@
 title: Composer
 description: Install Blockstudio using Composer.
 path: "dev/composer"
-order: 64
+order: 3
 section: "Start"
 subsection: "Integrations"
 meta_title: "Composer"

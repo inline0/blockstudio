@@ -2,7 +2,7 @@
 title: Static Prerendering
 description: Serve anonymous pages as static HTML, optionally before WordPress boots.
 path: "production/static-prerendering"
-order: 71
+order: 57
 section: "Production"
 meta_title: "Static Prerendering"
 meta_description: "Serve anonymous pages as static HTML, optionally before WordPress boots."

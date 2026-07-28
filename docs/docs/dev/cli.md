@@ -2,7 +2,7 @@
 title: CLI
 description: Manage Blockstudio blocks, database, RPC, and cron from the command line via WP-CLI.
 path: "dev/cli"
-order: 63
+order: 64
 section: "Dev"
 subsection: "Command Line"
 meta_title: "CLI"

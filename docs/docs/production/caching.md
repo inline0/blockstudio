@@ -2,7 +2,7 @@
 title: Caching
 description: The one file-backed cache directory that owns every generated runtime artifact.
 path: "production/caching"
-order: 72
+order: 58
 section: "Production"
 meta_title: "Caching"
 meta_description: "The one file-backed cache directory that owns every generated runtime artifact."
