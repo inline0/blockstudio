@@ -173,6 +173,14 @@ declaration is canonical, so it goes straight into `Render::document()`.
 Canvas groups the same way. Bundled UI appears under the `ui` type as one
 example per family, and implementation registrations stay out of `blocks`.
 
+The families are built to be assembled: a select opens inside a dialog with its
+listbox overlaying the trigger, menus and comboboxes anchor with fixed viewport
+coordinates that survive scrolling, modals stack and unwind one Escape at a
+time, and every footer composes the same close control with a variant. How
+those seams work, and the invariants that keep them working, is the
+[composition chapter](/ui/composition); [/ui/examples](/ui/examples) shows the
+compositions live.
+
 ## Template helpers
 
 ### Stable image dimensions
@@ -624,8 +632,9 @@ A reasonable adoption order:
 
 - [Canvas](/docs/dev/canvas) and its
   [inventory and document API](/docs/dev/canvas#public-inventory-and-document-api)
-- [Rendering](/docs/blocks/rendering#structured-compositions-and-complete-documents)
-  and [UI Components](/ui#public-inventory-and-examples)
+- [Rendering](/docs/blocks/rendering#structured-compositions-and-complete-documents),
+  [UI Components](/ui#public-inventory-and-examples), and
+  [UI Composition](/ui/composition)
 - [Settings](/docs/general/settings) and
   [performance](/docs/general/settings#performance)
 - [Performance Profiler](/docs/dev/perf): the

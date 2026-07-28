@@ -47,6 +47,7 @@ Blockstudio removes all of that. You write a JSON config and a PHP template. The
 - **Extensions** - add custom fields to any core or third-party block via a JSON file
 - **Asset pipeline** - SCSS compilation, ES module imports from npm, automatic minification, and scoped loading by naming convention
 - **Tailwind CSS v4** - server-side compilation via TailwindPHP with candidate-based caching, no Node.js or CLI needed
+- **Bundled UI library** - 59 headless `bsui/*` components on the Interactivity API, from buttons and selects to dialogs, menus, and forms, composable in any template
 - **Database layer** - use REST and PHP/JS clients across MySQL, SQLite, JSONC, post meta, custom post types, or Storh
 - **Storage** - persist field values in post meta or site options, queryable via `WP_Query` and the REST API
 - **Custom fields** - reusable field definitions shared across multiple blocks via filesystem or PHP filter

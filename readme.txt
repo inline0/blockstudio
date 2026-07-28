@@ -15,7 +15,7 @@ Create custom WordPress blocks by dropping a `block.json` and a PHP template int
 
 = Features =
 
-* **28 field types** including text, repeater, tabs, classes, color, files, and more
+* **26 field types** including text, repeater, tabs, classes, color, files, and more
 * **PHP, Twig, and Blade templates** with the same `$a` variable across all languages
 * **File-based pages** that parse HTML templates into native block content with automatic syncing
 * **File-based patterns** registered from template files without any PHP registration code
@@ -26,6 +26,7 @@ Create custom WordPress blocks by dropping a `block.json` and a PHP template int
 * **Scoped styles** that only load when a block is on the page
 * **HTML-to-block parser** with custom element mapping
 * **SEO integration** with Yoast SEO and Rank Math content analysis
+* **Bundled UI library** with 59 headless components under the `bsui` namespace, powered by the Interactivity API
 * **50+ PHP and JS hooks** for customizing every aspect of the framework
 
 = Installation =
@@ -54,6 +55,14 @@ Download the latest release zip from [GitHub Releases](https://github.com/inline
 == Changelog ==
 
 = 7.6.0 =
+* New: Bundled UI composition: footer parts for the dialog, alert dialog, and drawer, a variant on every close control, an icon-sm button size, a grow attribute on stacks, and a public trigger seam on the context menu
+* New: The composition chapter documents how the UI families assemble, in the ui docs collection beside the components guide
+* Fix: Selects and comboboxes mark the chosen option on the reading edge, and a select's open listbox overlays its trigger to the pixel, clamped to the viewport
+* Fix: Floating popups compute fixed strategy coordinates, track the scroll underneath them, and anchor correctly inside modals; overlay focus never scrolls the page
+* Fix: The combobox opens on click, typing, and arrow keys instead of bare focus, and its keyboard opened list is positioned
+* Fix: Accordions render their default open panel by carrying open state on a data attribute the tag pipeline preserves
+* Fix: Stacks size to content instead of wrapping and growing by default, vertical separators stretch to their row, toggles hold their label inside the pressed surface, and tooltip triggers hug their button
+* Fix: blockstudio/phpstan schema discovery honours the analysed paths and excludePaths instead of scanning the working directory unconditionally
 * New: Canvas inventory and document APIs answer what a project contains and render any part of it on demand
 * New: `blockstudio.json` owns production behaviour, including performance profiles, static prerendering with early serving, and unified runtime caches
 * New: Opt-in theme PHPStan layers, a canonical analysis command, a managed commit hook, and `phpstan.configuration` for a project's own configuration
