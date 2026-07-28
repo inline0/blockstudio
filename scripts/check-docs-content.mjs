@@ -8,14 +8,14 @@ const repositoryRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const contentRoot = resolve(repositoryRoot, 'docs');
 const problems = [];
 const expectedDocuments = {
-  docs: 69,
+  docs: 72,
   guides: 9,
   registry: 14,
   blog: 8,
   ui: 2,
 };
 const draftCollections = new Set(['drafts']);
-const expectedMetaFiles = 18;
+const expectedMetaFiles = 19;
 
 function collectionOf(path) {
   return relative(contentRoot, path).split(/[\\/]/)[0];

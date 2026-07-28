@@ -3,7 +3,7 @@ title: Settings
 description: Configure Blockstudio with blockstudio.json or filters.
 path: 'general/settings'
 order: 2
-section: 'General'
+section: "Start"
 subsection: 'Setup'
 meta_title: 'Settings'
 meta_description: 'Configure Blockstudio with blockstudio.json or filters.'
@@ -96,6 +96,16 @@ The following properties are available:
     "assets": [],
     "markup": false
   },
+  "tailwind": {
+    "enabled": false,
+    "config": ""
+  },
+  "blockTags": {
+    "enabled": false,
+    "allow": [],
+    "deny": [],
+    "prefixes": {}
+  },
   "ui": {
     "enabled": false
   },
@@ -140,6 +150,29 @@ The following properties are available:
         "deny": []
       }
     }
+  },
+  "dev": {
+    "grab": {
+      "enabled": false
+    },
+    "perf": false,
+    "canvas": {
+      "enabled": false,
+      "adminBar": true
+    }
+  },
+  "githooks": {
+    "commit": false
+  },
+  "phpstan": {
+    "preset": "base",
+    "configuration": "",
+    "roots": ["."],
+    "excludePaths": [],
+    "maxFiles": 10000
+  },
+  "ai": {
+    "enableContextGeneration": false
   }
 }
 ```
@@ -160,6 +193,24 @@ Options set via the `blockstudio/settings/${setting}` filter will override the o
 Runtime values also expose `blockstudio/performance/${setting}` filters and one
 final `blockstudio/performance/config` filter. The latter must return a valid
 configuration object.
+
+## How the sources layer
+
+Every source is loaded and merged, lowest priority first:
+
+1. Built-in defaults
+2. Settings saved through the admin UI (the `blockstudio_settings` option)
+3. `blockstudio.json` in the theme
+4. `blockstudio/settings/*` filters
+
+`blockstudio.json` overrides only the keys it declares. It used to replace the
+saved settings entirely, so an unrelated admin-saved value stopped applying the
+moment the file appeared; it now sits on top of them. The flip side: a stale
+value saved through the admin UI keeps applying until the file declares that
+key or the saved value is removed. When a setting behaves differently from what
+the file says, check the saved layer with `wp bs settings` or
+`Settings::get_raw()`, which returns only what the active JSON or options
+source explicitly declared.
 
 ## Reading settings from PHP
 
@@ -316,9 +367,9 @@ override its profile value.
 Static prerendering remains disabled unless explicitly enabled. Signature mode
 uses a cheap activated identity on ordinary requests. Graph mode is intended
 for explicit builds: it records per-page source dependencies so changing one
-page does not invalidate unrelated documents. See the [performance
-guide](/docs/dev/perf#static-prerendering) for warming, deployment, early
-serving, and safety details.
+page does not invalidate unrelated documents. See
+[Static Prerendering](/docs/production/static-prerendering) for warming,
+deployment, early serving, and safety details.
 
 Measurements are available programmatically:
 
@@ -335,38 +386,9 @@ When headers are enabled, Blockstudio sends
 `blockstudio/performance/measurement_enabled` action receives the resolved
 runtime settings.
 
-#### Media metadata and images
-
-Generate stable dimensions for theme assets and optional WordPress attachments:
-
-```php title="functions.php"
-use Blockstudio\Media_Metadata_Builder;
-
-(new Media_Metadata_Builder())->write(
-    get_stylesheet_directory(),
-    true
-);
-```
-
-This writes deterministic metadata to `assets/media.json`. Templates can then
-render local or attachment images through the public helper:
-
-```php title="index.php"
-<?php
-echo bs_media_image([
-    'src' => 'assets/images/hero.webp',
-    'alt' => 'Hero',
-    'class' => 'hero-media',
-    'sources' => [
-        ['srcset' => '/hero-small.webp', 'media' => '(max-width: 640px)'],
-    ],
-]);
-?>
-```
-
-The helper always emits known width, height, and aspect ratio values when
-metadata exists. Lazy mode uses only `blockstudio-*` classes, attributes,
-handles, and globals.
+The `media` options drive `bs_media_image()`, the `assets/media.json`
+manifest, and the frontend lazy loader. See [Media](/docs/production/media)
+for the helper, the manifest builder, and the loader behaviour.
 
 ### content
 
@@ -403,6 +425,22 @@ format.
 | --------- | ------- | ------- | ----------------------------------- |
 | `enabled` | boolean | `false` | Enable Tailwind CSS compilation     |
 | `config`  | string  | `""`    | Tailwind v4 CSS-first configuration |
+
+See [Tailwind CSS](/docs/tailwind) for compilation behaviour and the CSS-first
+configuration format.
+
+### blockTags
+
+| Option     | Type    | Default | Description                                                          |
+| ---------- | ------- | ------- | -------------------------------------------------------------------- |
+| `enabled`  | boolean | `false` | Enable page-level `bs:` tag rendering in post content and widget areas |
+| `allow`    | array   | `[]`    | Allowlist of block name patterns; supports `fnmatch()` wildcards     |
+| `deny`     | array   | `[]`    | Denylist of block name patterns; takes precedence over `allow`       |
+| `prefixes` | object  | `{}`    | Prefix to namespace shorthands, each value a namespace or ordered array |
+
+Template-level tag rendering is always active; these options control page-level
+replacement. See [Rendering](/docs/blocks/rendering) for the tag syntax and
+resolution rules.
 
 ### ui
 
@@ -505,6 +543,46 @@ Use `blockEditor.media` for global media inserter policy.
   }
 }
 ```
+
+### dev
+
+| Option           | Type    | Default | Description                                                     |
+| ---------------- | ------- | ------- | --------------------------------------------------------------- |
+| `grab.enabled`   | boolean | `false` | Enable the frontend element grabber                             |
+| `perf`           | boolean | `false` | Enable the [performance profiler](/docs/production/performance) on every page load |
+| `canvas.enabled` | boolean | `false` | Enable the [canvas](/docs/dev/canvas)                           |
+| `canvas.adminBar` | boolean | `true` | Show the WordPress admin bar when viewing the canvas            |
+
+### githooks
+
+| Option   | Type    | Default | Description                                                            |
+| -------- | ------- | ------- | ---------------------------------------------------------------------- |
+| `commit` | boolean | `false` | Generate an analysis-only pre-commit hook when `blockstudio-githooks sync` runs |
+
+See the [managed commit hook](/docs/dev/phpstan#managed-commit-hook) for what
+the generated hook runs and how it stays in sync.
+
+### phpstan
+
+| Option          | Type    | Default   | Description                                                            |
+| --------------- | ------- | --------- | ---------------------------------------------------------------------- |
+| `preset`        | string  | `"base"`  | Analysis preset when the command line does not select one: `base`, `theme`, `extreme-theme`, or `wordpress-render` |
+| `configuration` | string  | `""`      | Project PHPStan configuration included alongside the preset, resolved from `blockstudio.json` |
+| `roots`         | array   | `["."]`   | Theme roots analyzed by the canonical command                          |
+| `excludePaths`  | array   | `[]`      | Additional scanner exclusions relative to each configured root         |
+| `maxFiles`      | integer | `10000`   | Maximum number of files inspected by the theme scanner                 |
+
+These settings drive the canonical `blockstudio-phpstan` command. See
+[PHPStan](/docs/dev/phpstan) for presets, layers, and adoption.
+
+### ai
+
+| Option                    | Type    | Default | Description                                                    |
+| ------------------------- | ------- | ------- | -------------------------------------------------------------- |
+| `enableContextGeneration` | boolean | `false` | Generate a combined context file of blocks, settings, schemas, and documentation for LLM tools |
+
+See [AI Integration](/docs/dev/ai) for the documentation index and the full
+generated text.
 
 > **[UI Components](/docs/blocks/ui-components)**
 >

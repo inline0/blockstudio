@@ -1267,6 +1267,34 @@ add_filter('blockstudio/assets/process/js/content', function($content, $block) {
 }, 10, 2);
 ```
 
+## Buffer
+
+### enabled
+
+Blockstudio buffers the frontend response so block style and script tags
+rendered inside the body can be hoisted into the head and footer, and so
+Tailwind can scan the complete document. Buffering means holding and scanning
+the whole document on every frontend request; a site that renders no
+Blockstudio block assets and does not use Tailwind can return `false` to skip
+both.
+
+```php title="functions.php"
+add_filter('blockstudio/buffer/enabled', '__return_false');
+```
+
+### output
+
+This filter receives the complete buffered HTML document before it is sent.
+Blockstudio's own asset hoisting runs at priority `1000000` and Tailwind
+compilation at `999999`, so run earlier to see the document before them or
+later to see the final output.
+
+```php title="functions.php"
+add_filter('blockstudio/buffer/output', function(string $html) {
+  return $html;
+}, 2000000);
+```
+
 ## Render
 
 ### dependencies

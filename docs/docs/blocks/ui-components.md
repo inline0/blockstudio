@@ -247,6 +247,8 @@ echo bs_block( array(
 
 The forwarded `variant` is how a footer builds its Cancel and Save pair from two close tags: the dismissing close stays `outline`, the affirmative one passes `variant="default"`. Your blocks should do the same. When a project block needs a button that looks like the system button, it renders `bsui/button` with `bs_block()` or a nested tag, and it gets every future refinement of the button for free.
 
+The button's `size` attribute takes `default`, `sm`, `lg`, `icon`, or `icon-sm`. The two icon sizes render a square button sized for a lone glyph; `icon-sm` is the dense variant for toolbars, table rows, and other places a full-height control would not fit.
+
 ## Accessibility
 
 The components carry their accessibility with them, so a composed page starts from correct semantics rather than retrofitting them:

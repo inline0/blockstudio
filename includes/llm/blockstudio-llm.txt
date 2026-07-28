@@ -16,14 +16,14 @@ and any of these identifier lines: settings (blockstudio.json paths), hooks
 (PHP and JavaScript filter and action names), php (functions, classes, and
 methods), and cli (commands).
 
-## Docs / General / Overview
+## Docs / Start / Overview
 
 ### Introduction
 route: /docs
 file: docs/docs/index.md
 purpose: Welcome to the Blockstudio documentation.
 
-## Docs / General / Setup
+## Docs / Start / Setup
 
 ### Getting Started
 route: /docs/general/getting-started
@@ -34,10 +34,10 @@ purpose: Set up your first Blockstudio project.
 route: /docs/general/settings
 file: docs/docs/general/settings.md
 purpose: Configure Blockstudio with blockstudio.json or filters.
-settings: assets/enqueue, blockEditor/blocks, blockEditor/media, blockEditor/patterns, cache/path, content, editor/formatOnSave, performance/measurement, performance/media/lazy, performance/media/rootMargin, performance/staticPrerender/ttl, themeDefaults, ui/enabled, users/roles
+settings: ai, assets/enqueue, blockEditor/blocks, blockEditor/media, blockEditor/patterns, blockTags, cache/path, content, dev, editor/formatOnSave, githooks, performance/measurement, performance/media/lazy, performance/media/rootMargin, performance/staticPrerender/ttl, phpstan, tailwind, themeDefaults, ui/enabled, users/roles
 hooks: blockstudio/cache/context, blockstudio/cache/dir, blockstudio/cache/site_key, blockstudio/editor/canvas/body_class, blockstudio/performance/config, blockstudio/performance/measurement_enabled, blockstudio/settings/assets/enqueue, blockstudio/settings/block_editor/patterns/remote, blockstudio/settings/cache/path, blockstudio/settings/editor/formatOnSave, blockstudio/settings/ui/enabled, blockstudio/theme_defaults/sync_pages_in_development
-php: Blockstudio\Media_Metadata_Builder, Blockstudio\Pages, Blockstudio\Patterns, Blockstudio\Performance_Measurement, Blockstudio\Runtime_Settings, Blockstudio\Settings, Performance_Measurement::snapshot(), Runtime_Settings::current(), Settings::errors(), Settings::fingerprint(), Settings::get_array(), Settings::get_bool(), Settings::get_int(), Settings::get_raw(), Settings::get_string(), Settings::reload(), bs_media_image()
-cli: wp bs content
+php: Blockstudio\Pages, Blockstudio\Patterns, Blockstudio\Performance_Measurement, Blockstudio\Runtime_Settings, Blockstudio\Settings, Performance_Measurement::snapshot(), Runtime_Settings::current(), Settings::errors(), Settings::fingerprint(), Settings::get_array(), Settings::get_bool(), Settings::get_int(), Settings::get_raw(), Settings::get_string(), Settings::reload(), bs_media_image()
+cli: wp bs content, wp bs settings
 
 ## Docs / Blocks / Block Definition
 
@@ -345,7 +345,7 @@ route: /docs/blocks/hooks/php
 file: docs/docs/blocks/hooks/php.md
 purpose: PHP filters and actions available in Blockstudio.
 settings: assets/process/scss, ui
-hooks: blockstudio/admin/enabled, blockstudio/assets/disable, blockstudio/assets/enable, blockstudio/assets/process/css/content, blockstudio/assets/process/js/content, blockstudio/assets/process/scss/import_paths, blockstudio/assets/process/scss/prelude, blockstudio/block_tags/builders, blockstudio/block_tags/prefixes, blockstudio/block_tags/renderers, blockstudio/block_tags/tag_aliases, blockstudio/blocks/attributes, blockstudio/blocks/attributes/populate, blockstudio/blocks/attributes/render, blockstudio/blocks/components/inner_blocks/frontend/wrap, blockstudio/blocks/components/inner_blocks/render, blockstudio/blocks/components/rich_text/render, blockstudio/blocks/components/use_block_props/render, blockstudio/blocks/conditions, blockstudio/blocks/meta, blockstudio/blocks/render, blockstudio/cache/context, blockstudio/cache/dir, blockstudio/cache/max_files_per_scope, blockstudio/cache/outcome, blockstudio/cache/site_key, blockstudio/cache/watch_debounce, blockstudio/canvas/inventory, blockstudio/db/after_create, blockstudio/db/after_delete, blockstudio/db/after_update, blockstudio/db/before_create, blockstudio/db/before_delete, blockstudio/db/before_update, blockstudio/editor/canvas/body_class, blockstudio/error/exception, blockstudio/error/logged, blockstudio/init, blockstudio/init/$instance, blockstudio/init/before, blockstudio/init/before/$instance, blockstudio/parser/element_mapping, blockstudio/parser/renderers, blockstudio/path, blockstudio/render, blockstudio/render/dependencies, blockstudio/render/footer, blockstudio/render/head, blockstudio/rpc/after_call, blockstudio/rpc/before_call, blockstudio/runtime/identity, blockstudio/settings/path, blockstudio/static_prerender/cacheable_html, blockstudio/static_prerender/outcome, blockstudio/static_prerender/public_urls, blockstudio/static_prerender/render_internal, blockstudio/static_prerender/request_bypass, blockstudio/tailwind/cache_max_age, blockstudio/tailwind/cache_max_files, blockstudio/url
+hooks: blockstudio/admin/enabled, blockstudio/assets/disable, blockstudio/assets/enable, blockstudio/assets/process/css/content, blockstudio/assets/process/js/content, blockstudio/assets/process/scss/import_paths, blockstudio/assets/process/scss/prelude, blockstudio/block_tags/builders, blockstudio/block_tags/prefixes, blockstudio/block_tags/renderers, blockstudio/block_tags/tag_aliases, blockstudio/blocks/attributes, blockstudio/blocks/attributes/populate, blockstudio/blocks/attributes/render, blockstudio/blocks/components/inner_blocks/frontend/wrap, blockstudio/blocks/components/inner_blocks/render, blockstudio/blocks/components/rich_text/render, blockstudio/blocks/components/use_block_props/render, blockstudio/blocks/conditions, blockstudio/blocks/meta, blockstudio/blocks/render, blockstudio/buffer/enabled, blockstudio/buffer/output, blockstudio/cache/context, blockstudio/cache/dir, blockstudio/cache/max_files_per_scope, blockstudio/cache/outcome, blockstudio/cache/site_key, blockstudio/cache/watch_debounce, blockstudio/canvas/inventory, blockstudio/db/after_create, blockstudio/db/after_delete, blockstudio/db/after_update, blockstudio/db/before_create, blockstudio/db/before_delete, blockstudio/db/before_update, blockstudio/editor/canvas/body_class, blockstudio/error/exception, blockstudio/error/logged, blockstudio/init, blockstudio/init/$instance, blockstudio/init/before, blockstudio/init/before/$instance, blockstudio/parser/element_mapping, blockstudio/parser/renderers, blockstudio/path, blockstudio/render, blockstudio/render/dependencies, blockstudio/render/footer, blockstudio/render/head, blockstudio/rpc/after_call, blockstudio/rpc/before_call, blockstudio/runtime/identity, blockstudio/settings/path, blockstudio/static_prerender/cacheable_html, blockstudio/static_prerender/outcome, blockstudio/static_prerender/public_urls, blockstudio/static_prerender/render_internal, blockstudio/static_prerender/request_bypass, blockstudio/tailwind/cache_max_age, blockstudio/tailwind/cache_max_files, blockstudio/url
 
 ### JavaScript Hooks
 route: /docs/blocks/hooks/javascript
@@ -368,7 +368,7 @@ file: docs/docs/pages-and-patterns/pages.md
 purpose: Create WordPress pages from file templates with automatic syncing.
 settings: content
 hooks: blockstudio/pages/allow_external_loader_path, blockstudio/pages/collection_post_type_args, blockstudio/pages/create_post_data, blockstudio/pages/docs_allowed_html, blockstudio/pages/manifest_scan_interval, blockstudio/pages/orphan_action, blockstudio/pages/paths, blockstudio/pages/post_created, blockstudio/pages/post_updated, blockstudio/pages/reconciled, blockstudio/pages/serve_markdown, blockstudio/pages/sync_engine_inputs, blockstudio/pages/synced, blockstudio/pages/template_candidates, blockstudio/pages/update_post_data
-php: Blockstudio\Media_Metadata, Blockstudio\Media_Metadata_Builder, Blockstudio\Pages, Blockstudio\Static_Prerender_Batch_Renderer, Media_Metadata::reset(), Media_Metadata_Builder::build(), Pages::children(), Pages::collection(), Pages::force_sync(), Pages::force_sync_all(), Pages::get_page(), Pages::get_post_id(), Pages::in_collection(), Pages::lock(), Pages::pages(), Pages::permalink(), Pages::reconcile(), Pages::store_successful_source_identity(), Pages::tree(), Pages::unlock(), Static_Prerender_Batch_Renderer::is_rendering(), Static_Prerender_Batch_Renderer::parse_shard()
+php: Blockstudio\Pages, Pages::children(), Pages::collection(), Pages::force_sync(), Pages::force_sync_all(), Pages::get_page(), Pages::get_post_id(), Pages::in_collection(), Pages::lock(), Pages::pages(), Pages::permalink(), Pages::reconcile(), Pages::store_successful_source_identity(), Pages::tree(), Pages::unlock()
 
 ### Patterns
 route: /docs/pages-and-patterns/patterns
@@ -392,7 +392,7 @@ settings: content
 hooks: blockstudio/block_tags/builders, blockstudio/block_tags/renderers, blockstudio/pages/create_post_data, blockstudio/pages/manifest_scan_interval, blockstudio/pages/paths, blockstudio/pages/post_created, blockstudio/pages/post_updated, blockstudio/pages/synced, blockstudio/pages/update_post_data, blockstudio/parser/element_mapping, blockstudio/parser/renderers, blockstudio/patterns/paths, blockstudio/patterns/registered, blockstudio/site_templates/discovered, blockstudio/site_templates/parser, blockstudio/site_templates/part_content, blockstudio/site_templates/part_paths, blockstudio/site_templates/parts, blockstudio/site_templates/paths, blockstudio/site_templates/registered, blockstudio/site_templates/template_candidates, blockstudio/site_templates/template_content, blockstudio/site_templates/template_paths, blockstudio/site_templates/templates
 php: Block_Tags::parse_inner_blocks(), Blockstudio\Block_Tags, Blockstudio\Html_Parser
 
-## Docs / Platform / Styling
+## Docs / Blocks / Styling
 
 ### Tailwind CSS
 route: /docs/tailwind
@@ -402,12 +402,14 @@ settings: assets/reset/enabled, cache/path, tailwind/config, tailwind/enabled
 hooks: blockstudio/buffer/enabled, blockstudio/buffer/output, blockstudio/settings/tailwind/config, blockstudio/settings/tailwind/enabled, blockstudio/tailwind/css
 php: Block_Registry::set_tailwind_active(), Blockstudio\Runtime_Cache, Runtime_Cache::purge(), Settings::get(), TailwindPHP::extractCandidates(), TailwindPHP::generate(), bs_tw_merge(), bs_tw_variants()
 
-## Docs / Platform / Project Files
+## Docs / Blocks / Project Files
 
 ### Extensions
 route: /docs/extensions
 file: docs/docs/extensions.md
 purpose: Extend any registered block with custom attributes.
+
+## Docs / Dev / Project Files
 
 ### Code Snippets
 route: /docs/code-snippets
@@ -415,6 +417,8 @@ file: docs/docs/code-snippets.md
 purpose: Use Blockstudio's file-first approach for code snippets.
 settings: assets
 php: Blockstudio\Build, Build::init()
+
+## Docs / Pages & Patterns / Project Files
 
 ### Content Sync
 route: /docs/content-sync
@@ -447,15 +451,6 @@ purpose: A built-in element inspector for identifying block template files on th
 settings: dev/grab/enabled
 hooks: blockstudio/settings/dev/grab/enabled
 
-### Performance Profiler
-route: /docs/dev/perf
-file: docs/docs/dev/perf.md
-purpose: Built-in profiler for tracking block render times, template phases, and asset processing.
-settings: assets, cache/enabled, cache/path, dev/perf, performance, tailwind
-hooks: blockstudio/cache/context, blockstudio/cache/dir, blockstudio/cache/max_files_per_scope, blockstudio/cache/outcome, blockstudio/cache/site_key, blockstudio/cache/watch_debounce, blockstudio/render/dependencies, blockstudio/settings/cache/enabled, blockstudio/settings/cache/path, blockstudio/settings/dev/perf, blockstudio/static_prerender/outcome, blockstudio/static_prerender/render_internal, blockstudio/tailwind/cache_max_age, blockstudio/tailwind/cache_max_files
-php: Batch_Render::reset(), Blockstudio\Batch_Render, Blockstudio\Static_Prerender_Early_Serve, Blockstudio\Static_Prerender_Runtime, Static_Prerender_Batch_Renderer::render(), Static_Prerender_Early_Serve::install_artifact_entry(), Static_Prerender_Runtime::artifact_entry(), Static_Prerender_Runtime::build_plan(), Static_Prerender_Runtime::cache_root_path(), Static_Prerender_Runtime::garbage_collect(), Static_Prerender_Runtime::persist_built_response()
-cli: wp bs prerender purge, wp bs prerender status, wp bs prerender warm
-
 ## Docs / Dev / Command Line
 
 ### CLI
@@ -463,15 +458,17 @@ route: /docs/dev/cli
 file: docs/docs/dev/cli.md
 purpose: Manage Blockstudio blocks, database, RPC, and cron from the command line via WP-CLI.
 settings: assets/enqueue, tailwind/enabled
-cli: wp bs assets list, wp bs blocks list, wp bs content pull, wp bs content push, wp bs content status, wp bs cron list, wp bs cron run, wp bs db create, wp bs db delete, wp bs db get, wp bs db list, wp bs db migrate, wp bs db schemas, wp bs db update, wp bs fields list, wp bs rpc call, wp bs rpc list, wp bs scss compile, wp bs settings get, wp bs settings list, wp bs tailwind cache, wp bs tailwind compile
+cli: wp bs assets list, wp bs blocks list, wp bs content pull, wp bs content push, wp bs content status, wp bs cron list, wp bs cron run, wp bs db create, wp bs db delete, wp bs db get, wp bs db list, wp bs db migrate, wp bs db schemas, wp bs db update, wp bs fields list, wp bs prerender purge, wp bs prerender status, wp bs prerender warm, wp bs rpc call, wp bs rpc list, wp bs scss compile, wp bs settings get, wp bs settings list, wp bs tailwind cache, wp bs tailwind compile, wp bs teardown
 
-## Docs / Dev / Integrations
+## Docs / Start / Integrations
 
 ### Composer
 route: /docs/dev/composer
 file: docs/docs/dev/composer.md
 purpose: Install Blockstudio using Composer.
 hooks: blockstudio/url
+
+## Docs / Dev / Integrations
 
 ### PHPStan
 route: /docs/dev/phpstan
@@ -487,7 +484,6 @@ route: /docs/dev/ai
 file: docs/docs/dev/ai.md
 purpose: An addressable documentation index for coding agents, plus a generated contract for your own project.
 settings: ai/enableContextGeneration
-php: $a, $b, $c
 cli: vendor/bin/blockstudio-agents
 
 ### Logical Discovery Sources
@@ -506,6 +502,40 @@ purpose: Breaking changes and migration steps for Blockstudio 7.
 settings: ai/enableContextGeneration, assets/process/scss, assets/process/scssFiles, blockEditor/cssClasses, blockEditor/cssVariables, blockEditor/disableLoading, editor/formatOnSave, tailwind/config, tailwind/enabled
 hooks: blockstudio/assets/process/scss/import_paths, blockstudio/blocks/components/inner_blocks/frontend/wrap, blockstudio/blocks/components/inner_blocks/render, blockstudio/blocks/components/innerblocks/frontend/wrap, blockstudio/blocks/components/innerblocks/render, blockstudio/blocks/components/rich_text/render, blockstudio/blocks/components/richtext/render, blockstudio/blocks/components/use_block_props/render, blockstudio/blocks/components/useblockprops/render, blockstudio/settings/ai/enable_context_generation, blockstudio/settings/assets/process/scss_files, blockstudio/settings/blockEditor/cssClasses, blockstudio/settings/block_editor/css_classes, blockstudio/settings/block_editor/css_variables, blockstudio/settings/block_editor/disable_loading, blockstudio/settings/editor/format_on_save, blockstudio/settings/library, blockstudio/settings/tailwind/config, blockstudio/settings/tailwind/custom_classes, blockstudio/tailwind/assets/dir, blockstudio/tailwind/css, blockstudio/tailwind/on_demand/css
 php: Blockstudio\Runtime_Cache, Runtime_Cache::purge()
+
+## Docs / Production
+
+### Performance
+route: /docs/production/performance
+file: docs/docs/production/performance.md
+purpose: Production frontend defaults, the built-in profiler, and the render techniques underneath.
+settings: assets, dev/perf, performance/measurement, performance/profile, tailwind
+hooks: blockstudio/performance/measurement_enabled, blockstudio/render/dependencies, blockstudio/settings/dev/perf
+php: Batch_Render::reset(), Blockstudio\Batch_Render, Blockstudio\Performance_Measurement, Performance_Measurement::snapshot(), Runtime_Settings::current()
+
+### Static Prerendering
+route: /docs/production/static-prerendering
+file: docs/docs/production/static-prerendering.md
+purpose: Serve anonymous pages as static HTML, optionally before WordPress boots.
+settings: performance/media/lazy, performance/profile, performance/staticPrerender
+hooks: blockstudio/cache/outcome, blockstudio/static_prerender/outcome, blockstudio/static_prerender/render_internal
+php: Blockstudio\Static_Prerender_Early_Serve, Blockstudio\Static_Prerender_Runtime, Static_Prerender_Batch_Renderer::is_rendering(), Static_Prerender_Batch_Renderer::parse_shard(), Static_Prerender_Batch_Renderer::render(), Static_Prerender_Early_Serve::install_artifact_entry(), Static_Prerender_Runtime::artifact_entry(), Static_Prerender_Runtime::build_plan(), Static_Prerender_Runtime::cache_root_path(), Static_Prerender_Runtime::garbage_collect(), Static_Prerender_Runtime::persist_built_response(), bs_media_image()
+cli: wp bs prerender purge, wp bs prerender status, wp bs prerender warm, wp bs teardown
+
+### Caching
+route: /docs/production/caching
+file: docs/docs/production/caching.md
+purpose: The one file-backed cache directory that owns every generated runtime artifact.
+settings: cache/enabled, cache/path, tailwind
+hooks: blockstudio/cache/context, blockstudio/cache/dir, blockstudio/cache/max_files_per_scope, blockstudio/cache/site_key, blockstudio/cache/watch_debounce, blockstudio/settings/cache/enabled, blockstudio/settings/cache/path, blockstudio/tailwind/cache_max_age, blockstudio/tailwind/cache_max_files
+php: Blockstudio\Runtime_Cache, Runtime_Cache::purge()
+
+### Media
+route: /docs/production/media
+file: docs/docs/production/media.md
+purpose: Stable image dimensions, lazy loading, and the media metadata manifest.
+settings: performance/media
+php: Blockstudio\Media_Metadata, Blockstudio\Media_Metadata_Builder, Media_Metadata::reset(), Media_Metadata_Builder::build(), bs_media_image()
 
 ## Guides
 

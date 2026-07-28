@@ -3,7 +3,7 @@ title: Extensions
 description: Extend any registered block with custom attributes.
 path: "extensions"
 order: 56
-section: "Platform"
+section: "Blocks"
 subsection: "Project Files"
 meta_title: "Extensions"
 meta_description: "Extend any registered block with custom attributes."

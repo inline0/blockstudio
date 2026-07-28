@@ -3,7 +3,7 @@ title: Getting Started
 description: Set up your first Blockstudio project.
 path: "general/getting-started"
 order: 1
-section: "General"
+section: "Start"
 subsection: "Setup"
 meta_title: "Getting Started"
 meta_description: "Set up your first Blockstudio project."

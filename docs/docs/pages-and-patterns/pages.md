@@ -792,28 +792,6 @@ Page discovery, sync, and collection routing expose these extension points:
 | `blockstudio/pages/synced` | Action | Runs after the page registry has finished syncing. |
 | `blockstudio/pages/reconciled` | Action | Runs after an explicit reconciliation with its machine-readable report. |
 
-## Undocumented until now
-
-These are public and consumed by real projects, and were previously missing
-from this page.
-
-`Blockstudio\Pages::in_collection( string $collection )` answers whether the
-current request resolves inside a page collection. Layout files use it to
-branch between an archive and a single view.
-
-`Blockstudio\Static_Prerender_Batch_Renderer::is_rendering()` answers whether
-the current request is a batch render rather than a visitor. Use it to skip
-work that should not run during a build.
-
-`Blockstudio\Media_Metadata_Builder::build( string $root )` returns the media
-manifest without writing it; `write()` is the variant that persists.
-`Blockstudio\Media_Metadata::reset()` clears the in-process cache after a
-rebuild.
-
-`Static_Prerender_Batch_Renderer::parse_shard()` and `select_shard()` back the
-`N/TOTAL` shard option, so a caller can compute the same partition the renderer
-would.
-
 ## PHP API
 
 ```php
@@ -822,6 +800,10 @@ $pages = Blockstudio\Pages::pages();
 
 // Get pages from one collection.
 $docs = Blockstudio\Pages::pages('docs');
+
+// Answer whether the current request resolves inside a collection.
+// Layout files use it to branch between an archive and a single view.
+$inDocs = Blockstudio\Pages::in_collection('docs');
 
 // Get a nested page tree.
 $tree = Blockstudio\Pages::tree('docs');

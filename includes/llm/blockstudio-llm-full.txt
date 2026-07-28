@@ -260,6 +260,16 @@ The following properties are available:
     "assets": [],
     "markup": false
   },
+  "tailwind": {
+    "enabled": false,
+    "config": ""
+  },
+  "blockTags": {
+    "enabled": false,
+    "allow": [],
+    "deny": [],
+    "prefixes": {}
+  },
   "ui": {
     "enabled": false
   },
@@ -304,6 +314,29 @@ The following properties are available:
         "deny": []
       }
     }
+  },
+  "dev": {
+    "grab": {
+      "enabled": false
+    },
+    "perf": false,
+    "canvas": {
+      "enabled": false,
+      "adminBar": true
+    }
+  },
+  "githooks": {
+    "commit": false
+  },
+  "phpstan": {
+    "preset": "base",
+    "configuration": "",
+    "roots": ["."],
+    "excludePaths": [],
+    "maxFiles": 10000
+  },
+  "ai": {
+    "enableContextGeneration": false
   }
 }
 ```
@@ -324,6 +357,24 @@ Options set via the `blockstudio/settings/${setting}` filter will override the o
 Runtime values also expose `blockstudio/performance/${setting}` filters and one
 final `blockstudio/performance/config` filter. The latter must return a valid
 configuration object.
+
+## How the sources layer
+
+Every source is loaded and merged, lowest priority first:
+
+1. Built-in defaults
+2. Settings saved through the admin UI (the `blockstudio_settings` option)
+3. `blockstudio.json` in the theme
+4. `blockstudio/settings/` filters
+
+`blockstudio.json` overrides only the keys it declares. It used to replace the
+saved settings entirely, so an unrelated admin-saved value stopped applying the
+moment the file appeared; it now sits on top of them. The flip side: a stale
+value saved through the admin UI keeps applying until the file declares that
+key or the saved value is removed. When a setting behaves differently from what
+the file says, check the saved layer with `wp bs settings` or
+`Settings::get_raw()`, which returns only what the active JSON or options
+source explicitly declared.
 
 ## Reading settings from PHP
 
@@ -480,9 +531,9 @@ override its profile value.
 Static prerendering remains disabled unless explicitly enabled. Signature mode
 uses a cheap activated identity on ordinary requests. Graph mode is intended
 for explicit builds: it records per-page source dependencies so changing one
-page does not invalidate unrelated documents. See the performance
-guide for warming, deployment, early
-serving, and safety details.
+page does not invalidate unrelated documents. See
+Static Prerendering for warming,
+deployment, early serving, and safety details.
 
 Measurements are available programmatically:
 
@@ -499,38 +550,9 @@ When headers are enabled, Blockstudio sends
 `blockstudio/performance/measurement_enabled` action receives the resolved
 runtime settings.
 
-#### Media metadata and images
-
-Generate stable dimensions for theme assets and optional WordPress attachments:
-
-```php
-use Blockstudio\Media_Metadata_Builder;
-
-(new Media_Metadata_Builder())->write(
-    get_stylesheet_directory(),
-    true
-);
-```
-
-This writes deterministic metadata to `assets/media.json`. Templates can then
-render local or attachment images through the public helper:
-
-```php
-<?php
-echo bs_media_image([
-    'src' => 'assets/images/hero.webp',
-    'alt' => 'Hero',
-    'class' => 'hero-media',
-    'sources' => [
-        ['srcset' => '/hero-small.webp', 'media' => '(max-width: 640px)'],
-    ],
-]);
-?>
-```
-
-The helper always emits known width, height, and aspect ratio values when
-metadata exists. Lazy mode uses only `blockstudio-` classes, attributes,
-handles, and globals.
+The `media` options drive `bs_media_image()`, the `assets/media.json`
+manifest, and the frontend lazy loader. See Media
+for the helper, the manifest builder, and the loader behaviour.
 
 ### content
 
@@ -567,6 +589,22 @@ format.
 | --------- | ------- | ------- | ----------------------------------- |
 | `enabled` | boolean | `false` | Enable Tailwind CSS compilation     |
 | `config`  | string  | `""`    | Tailwind v4 CSS-first configuration |
+
+See Tailwind CSS for compilation behaviour and the CSS-first
+configuration format.
+
+### blockTags
+
+| Option     | Type    | Default | Description                                                          |
+| ---------- | ------- | ------- | -------------------------------------------------------------------- |
+| `enabled`  | boolean | `false` | Enable page-level `bs:` tag rendering in post content and widget areas |
+| `allow`    | array   | `[]`    | Allowlist of block name patterns; supports `fnmatch()` wildcards     |
+| `deny`     | array   | `[]`    | Denylist of block name patterns; takes precedence over `allow`       |
+| `prefixes` | object  | `{}`    | Prefix to namespace shorthands, each value a namespace or ordered array |
+
+Template-level tag rendering is always active; these options control page-level
+replacement. See Rendering for the tag syntax and
+resolution rules.
 
 ### ui
 
@@ -669,6 +707,46 @@ Use `blockEditor.media` for global media inserter policy.
   }
 }
 ```
+
+### dev
+
+| Option           | Type    | Default | Description                                                     |
+| ---------------- | ------- | ------- | --------------------------------------------------------------- |
+| `grab.enabled`   | boolean | `false` | Enable the frontend element grabber                             |
+| `perf`           | boolean | `false` | Enable the performance profiler on every page load |
+| `canvas.enabled` | boolean | `false` | Enable the canvas                           |
+| `canvas.adminBar` | boolean | `true` | Show the WordPress admin bar when viewing the canvas            |
+
+### githooks
+
+| Option   | Type    | Default | Description                                                            |
+| -------- | ------- | ------- | ---------------------------------------------------------------------- |
+| `commit` | boolean | `false` | Generate an analysis-only pre-commit hook when `blockstudio-githooks sync` runs |
+
+See the managed commit hook for what
+the generated hook runs and how it stays in sync.
+
+### phpstan
+
+| Option          | Type    | Default   | Description                                                            |
+| --------------- | ------- | --------- | ---------------------------------------------------------------------- |
+| `preset`        | string  | `"base"`  | Analysis preset when the command line does not select one: `base`, `theme`, `extreme-theme`, or `wordpress-render` |
+| `configuration` | string  | `""`      | Project PHPStan configuration included alongside the preset, resolved from `blockstudio.json` |
+| `roots`         | array   | `["."]`   | Theme roots analyzed by the canonical command                          |
+| `excludePaths`  | array   | `[]`      | Additional scanner exclusions relative to each configured root         |
+| `maxFiles`      | integer | `10000`   | Maximum number of files inspected by the theme scanner                 |
+
+These settings drive the canonical `blockstudio-phpstan` command. See
+PHPStan for presets, layers, and adoption.
+
+### ai
+
+| Option                    | Type    | Default | Description                                                    |
+| ------------------------- | ------- | ------- | -------------------------------------------------------------- |
+| `enableContextGeneration` | boolean | `false` | Generate a combined context file of blocks, settings, schemas, and documentation for LLM tools |
+
+See AI Integration for the documentation index and the full
+generated text.
 
 > UI Components
 >
@@ -6077,6 +6155,8 @@ echo bs_block( array(
 
 The forwarded `variant` is how a footer builds its Cancel and Save pair from two close tags: the dismissing close stays `outline`, the affirmative one passes `variant="default"`. Your blocks should do the same. When a project block needs a button that looks like the system button, it renders `bsui/button` with `bs_block()` or a nested tag, and it gets every future refinement of the button for free.
 
+The button's `size` attribute takes `default`, `sm`, `lg`, `icon`, or `icon-sm`. The two icon sizes render a square button sized for a lone glyph; `icon-sm` is the dense variant for toolbars, table rows, and other places a full-height control would not fit.
+
 ## Accessibility
 
 The components carry their accessibility with them, so a composed page starts from correct semantics rather than retrofitting them:
@@ -8776,6 +8856,34 @@ add_filter('blockstudio/assets/process/js/content', function($content, $block) {
 }, 10, 2);
 ```
 
+## Buffer
+
+### enabled
+
+Blockstudio buffers the frontend response so block style and script tags
+rendered inside the body can be hoisted into the head and footer, and so
+Tailwind can scan the complete document. Buffering means holding and scanning
+the whole document on every frontend request; a site that renders no
+Blockstudio block assets and does not use Tailwind can return `false` to skip
+both.
+
+```php
+add_filter('blockstudio/buffer/enabled', '__return_false');
+```
+
+### output
+
+This filter receives the complete buffered HTML document before it is sent.
+Blockstudio's own asset hoisting runs at priority `1000000` and Tailwind
+compilation at `999999`, so run earlier to see the document before them or
+later to see the final output.
+
+```php
+add_filter('blockstudio/buffer/output', function(string $html) {
+  return $html;
+}, 2000000);
+```
+
 ## Render
 
 ### dependencies
@@ -10500,28 +10608,6 @@ Page discovery, sync, and collection routing expose these extension points:
 | `blockstudio/pages/synced` | Action | Runs after the page registry has finished syncing. |
 | `blockstudio/pages/reconciled` | Action | Runs after an explicit reconciliation with its machine-readable report. |
 
-## Undocumented until now
-
-These are public and consumed by real projects, and were previously missing
-from this page.
-
-`Blockstudio\Pages::in_collection( string $collection )` answers whether the
-current request resolves inside a page collection. Layout files use it to
-branch between an archive and a single view.
-
-`Blockstudio\Static_Prerender_Batch_Renderer::is_rendering()` answers whether
-the current request is a batch render rather than a visitor. Use it to skip
-work that should not run during a build.
-
-`Blockstudio\Media_Metadata_Builder::build( string $root )` returns the media
-manifest without writing it; `write()` is the variant that persists.
-`Blockstudio\Media_Metadata::reset()` clears the in-process cache after a
-rebuild.
-
-`Static_Prerender_Batch_Renderer::parse_shard()` and `select_shard()` back the
-`N/TOTAL` shard option, so a caller can compute the same partition the renderer
-would.
-
 ## PHP API
 
 ```php
@@ -10530,6 +10616,10 @@ $pages = Blockstudio\Pages::pages();
 
 // Get pages from one collection.
 $docs = Blockstudio\Pages::pages('docs');
+
+// Answer whether the current request resolves inside a collection.
+// Layout files use it to branch between an archive and a single view.
+$inDocs = Blockstudio\Pages::in_collection('docs');
 
 // Get a nested page tree.
 $tree = Blockstudio\Pages::tree('docs');
@@ -11911,43 +12001,6 @@ When using arrays, the `set` property will be applied to every item in the array
 
 When using the `attributes` field, there is no `set` property needed, as the field automatically maps the values to the attribute name and value.
 
-## Code Snippets
-
-Although Blockstudio's main focus is on custom blocks, its file-first approach is also suitable for code snippets.
-
-## Setup
-
-To create a new code snippet, simply create a new folder and place an `init.php` file in it. Blockstudio will always execute that file. For more information on the init file, check the Initialization page.
-
-## Styles and Scripts
-
-Folders marked as code snippets will also process and enqueue styles and scripts. To enqueue global styles and scripts, use the `global` prefix for the asset name.
-
-Example folder structure:
-
-```
-assets/
-├── init.php
-├── global-styles.css
-└── global-scripts.js
-```
-
-Assets inside code snippet folders also support all processing.
-
-## Custom Directories
-
-The above technique can also be used on directories outside of the folder where all blocks are stored. For example, let's say you want to store global assets like styles and scripts inside your theme. Simply create a new Blockstudio instance using the `init` method.
-
-```php
-add_action('init', function () {
-  Blockstudio\Build::init([
-    'dir' => get_template_directory() . '/assets'
-  ]);
-});
-```
-
-Now, simply follow the setup instructions to register a code snippet inside the `assets` folder.
-
 ## Content Sync
 
 Blockstudio is built around a file-first workflow: blocks, fields, templates, assets, patterns, and file-based pages can all live in your project. Content Sync extends that model to selected WordPress database content for teams that also want curated posts, terms, relationships, and declared metadata in git.
@@ -12147,6 +12200,641 @@ Content Sync supports:
 - `pull`, `push`, `status`, `--dry-run`, `--prune`, and locked-entity handling
 
 Taxonomy definition capture, media binary copying, and block-markup ID rewriting are not supported.
+
+### Performance
+
+Production performance in Blockstudio is one profile switch, a set of
+measurement tools to verify what it does, and two render techniques that keep
+repeated work out of the page.
+
+## Performance profiles
+
+`performance.profile` turns production frontend defaults on in one place:
+
+```json
+{
+  "performance": {
+    "profile": "speed",
+    "preload": {
+      "links": "off"
+    }
+  }
+}
+```
+
+`compat` is the default and changes nothing. `speed` and `strict` enable the
+same set: generator, emoji, feed, discovery, and adjacent-post output removed
+from the head; oEmbed discovery and host scripts dropped; XML-RPC, pingbacks,
+and remote editor discovery disabled; generic core frontend assets removed;
+image output defaults applied; Heartbeat throttled outside editors; same-origin
+documents prefetched on hover or focus intent; and Blockstudio's image loader in
+use.
+
+Every child value overrides the profile, as `preload.links` does above.
+Removing core frontend assets is the one to test first, because a page that
+depends on them breaks visibly. `Runtime_Settings::current()` exposes the
+resolved profile, and the full option table lives in the
+settings reference.
+
+Measurements are available programmatically:
+
+```php
+use Blockstudio\Performance_Measurement;
+
+$snapshot = Performance_Measurement::snapshot();
+```
+
+When `measurement.headers` is enabled, Blockstudio sends
+`X-Blockstudio-Performance-Profile`,
+`X-Blockstudio-Performance-Config`, and optionally
+`X-Blockstudio-Performance-Time`. The
+`blockstudio/performance/measurement_enabled` action receives the resolved
+runtime settings.
+
+## Profiler
+
+Blockstudio includes a lightweight profiler that tracks render performance
+across the entire pipeline. It shows per-block timings, phase breakdowns,
+and cache hit rates.
+
+### Activation
+
+Add `?blockstudio-perf` to any frontend URL:
+
+```
+https://example.com/my-page/?blockstudio-perf
+```
+
+Or enable it permanently in `blockstudio.json`:
+
+```json
+{
+  "dev": {
+    "perf": true
+  }
+}
+```
+
+Or via filter:
+
+```php
+add_filter('blockstudio/settings/dev/perf', '__return_true');
+```
+
+The profiler only outputs data for logged-in users with `edit_posts`
+capability.
+
+### Output
+
+#### Debug panel
+
+A fixed panel appears at the bottom of the page with a table showing every
+tracked metric, its duration, and call count.
+
+#### Server-Timing headers
+
+Timing data is also sent as `Server-Timing` HTTP headers, visible in the
+browser DevTools Network tab under the "Timing" section. This works even
+if the page HTML is cached by a CDN.
+
+### Tracked metrics
+
+| Metric | Description |
+|--------|-------------|
+| `total` | Total Blockstudio processing time |
+| `block-tags` | Block tag parser (`<bs:>` and `<block>` replacement) |
+| `assets` | Asset discovery and injection |
+| `tailwind` | Tailwind CSS compilation |
+| `phase:transform` | Attribute transformation (per block render) |
+| `phase:template` | PHP/Twig template compilation (per block render) |
+| `phase:twig` | Twig-specific compilation (per block render) |
+| `phase:components` | Component replacement: InnerBlocks, RichText, useBlockProps (per block render) |
+| `block:{name}` | Individual block type render time with call count |
+
+## In-Process Batch Rendering
+
+Long-lived exporters and static-site builders can render several WordPress
+documents in one PHP process without rebuilding Blockstudio registrations.
+Reset request-scoped counters, assets, island state, page layout state, and
+Tailwind's per-document generation between documents:
+
+```php
+foreach ($routes as $route) {
+    Blockstudio\Batch_Render::reset();
+    $html = render_route($route);
+
+    write_static_page($route, $html);
+}
+```
+
+`Batch_Render::reset()` keeps discovery and registered block data warm. It is
+not a cache clear.
+
+To collect source dependencies for each rendered block, observe
+`blockstudio/render/dependencies`:
+
+```php
+$dependencies = [];
+
+add_filter(
+    'blockstudio/render/dependencies',
+    function (
+        array $paths,
+        string $name,
+        array $block,
+        bool $is_editor,
+        bool $is_preview
+    ) use (&$dependencies): array {
+        $dependencies[$name] = array_values(array_unique([
+            ...($dependencies[$name] ?? []),
+            ...$paths,
+        ]));
+
+        return $paths;
+    },
+    10,
+    5
+);
+```
+
+The reported paths include the selected render template, discovered template
+files, and registered block asset files. A collector can add separately loaded
+files to its own dependency graph.
+
+## Render cache
+
+Self-closing block tags (no inner content) are cached in memory during
+page rendering. When the same block with identical attributes appears
+multiple times, subsequent renders are served from cache. The cache is
+per-request and cleared after the page finishes rendering.
+
+The profiler shows reduced render call counts when the cache is active,
+making it easy to verify caching is working.
+
+> Static Prerendering
+>
+> Serve anonymous pages as static HTML, optionally before WordPress boots.
+
+> Caching
+>
+> The persistent file-backed caches behind every request.
+
+### Static Prerendering
+
+Static prerendering is an opt-in anonymous HTML cache. A cacheable response must
+be a complete HTML document and may opt out with
+`<!-- blockstudio:no-cache -->`. Blockstudio bypasses non-GET requests, query
+strings, WordPress admin, REST, Ajax, cron, feeds, search, preview and canvas
+headers, nonce-bearing requests, declared dynamic paths, password/comment
+cookies, and logged-in requests by default.
+
+```json
+{
+  "performance": {
+    "staticPrerender": {
+      "enabled": true,
+      "ttl": 3600,
+      "invalidate": "graph",
+      "earlyServe": true,
+      "serveLoggedIn": false,
+      "dynamicPaths": ["/account", "/checkout"],
+      "warm": {
+        "enabled": true,
+        "interval": 900,
+        "concurrency": 4,
+        "transport": "http"
+      }
+    }
+  }
+}
+```
+
+Logged-in users can consume an existing hit only when `serveLoggedIn` is true;
+personalized responses never create cache entries. Dynamic paths use path
+boundaries, so `/account` matches `/account/orders` but not `/accounting`.
+
+While the feature is disabled it writes no files and installs no drop-in.
+
+## Signature and graph modes
+
+`signature` mode fills an identity-keyed response on a normal anonymous miss.
+It is convenient for ordinary WordPress sites and rotates after site-level
+changes.
+
+`graph` mode is for deterministic build/deploy integrations. Call
+`Static_Prerender_Runtime::build_plan()` with the live source URLs, render only
+`affectedUrls`, then record each result with
+`persist_built_response()` or `persist_skipped_response()`. The plan compares
+shared files and each page's exact dependency hashes. Deleted URLs and
+unreferenced HTML are removed by `garbage_collect()`.
+
+```php
+use Blockstudio\Static_Prerender_Runtime;
+
+$plan = Static_Prerender_Runtime::build_plan($sourceUrls);
+
+foreach ($plan['affectedUrls'] as $url) {
+    $result = render_with_dependencies($url);
+
+    Static_Prerender_Runtime::persist_built_response(
+        $url,
+        $result['html'],
+        $result['files'],
+        $result['virtualHashes']
+    );
+}
+
+$targets = array_keys($plan['live']);
+Static_Prerender_Runtime::garbage_collect($targets);
+```
+
+Optional target host/home arguments rewrite routes for a deployment without
+using the first page path as the site root. Batch tools can use
+`Static_Prerender_Batch_Renderer::render()` and stable `N/TOTAL` shards;
+`Static_Prerender_Batch_Renderer::parse_shard()` and `select_shard()` back the
+shard option, so a caller can compute the same partition the renderer would.
+Inside a build, `Static_Prerender_Batch_Renderer::is_rendering()` answers
+whether the current request is a batch render rather than a visitor, so a
+template can skip work that should not run during a build. An `internal`
+transport is supplied by the generic
+`blockstudio/static_prerender/render_internal` filter; optional HTTP fallback
+uses the normal warm header.
+
+## Early serving and atomic deployment
+
+With `earlyServe` enabled, Blockstudio owns a small
+`wp-content/blockstudio-static-prerender-map.php`, an
+`advanced-cache.php` drop-in, and one exact `WP_CACHE` declaration. The drop-in
+reads a per-site route map and streams an eligible hit before WordPress,
+plugins, or the theme boot.
+
+Blockstudio never overwrites a foreign map, drop-in, or `WP_CACHE` declaration.
+Graph artifacts validate every referenced HTML file before the map is swapped;
+the previous graph remains active if validation fails. Multisite entries share
+the map but are isolated by host, home path, and site ID. Disabling the feature
+or deactivating Blockstudio removes only the current site's entry and removes
+shared artifacts only after the final owned entry is gone.
+
+Deployment tools can activate a fully rendered graph atomically:
+
+```php
+$entry = Static_Prerender_Runtime::artifact_entry($targetUrls);
+
+Blockstudio\Static_Prerender_Early_Serve::install_artifact_entry(
+    $entry,
+    Static_Prerender_Runtime::cache_root_path()
+);
+```
+
+Configuration stays authoritative. `install_artifact_entry()` returns `false`
+unless both `enabled` and `earlyServe` are true, so a deploy can never install a
+map, drop-in, and `WP_CACHE` declaration that the next admin request would
+remove again.
+
+## Warming, maintenance, and observability
+
+The warm queue is durable, URL-coalescing, single-flight, and recovers timed-out
+claims. Content and site changes force a replacement job even when the current
+signature is unchanged; interval passes enqueue only stale work.
+
+```bash
+wp bs prerender warm
+wp bs prerender status
+wp bs prerender purge
+```
+
+`status` reports the active identity, files, bytes, graph records, queue state,
+and per-scope hit/miss/build/failure counters. Observe individual response
+outcomes with `blockstudio/static_prerender/outcome` and all shared cache
+outcomes with `blockstudio/cache/outcome`.
+
+## Teardown
+
+Installations without a plugin deactivation hook, such as Composer-bundled
+setups, can remove everything the feature owns in one command:
+
+```bash
+wp bs teardown
+```
+
+It removes the cron events and the static prerender state an installation
+owns: the current site's map entry, and the shared drop-in and `WP_CACHE`
+declaration once the final owned entry is gone. Configuration files are left
+untouched, so re-enabling the feature starts cleanly.
+
+## Adopting it in production
+
+A reasonable adoption order:
+
+1. Set `performance.profile` to `speed`, then check head output, feeds, and any
+   plugin relying on oEmbed or XML-RPC.
+2. Generate `assets/media.json`, move templates to `bs_media_image()`, then turn
+   on `performance.media.lazy`.
+3. Enable `performance.staticPrerender` with `earlyServe` off, verify hits with
+   `wp bs prerender status`, then turn `earlyServe` on.
+
+Rolling back is per feature: `staticPrerender.enabled` to `false` undoes this
+layer, `performance.profile` back to `compat` undoes the profile, and each
+leaves the others in place.
+
+> Performance
+>
+> The profiles, the profiler, and the render techniques underneath.
+
+> Caching
+>
+> The one cache directory every generated artifact lives under.
+
+### Caching
+
+Blockstudio includes persistent file-backed caches. They are enabled by
+default through the `cache.enabled` setting and are written to:
+
+```
+wp-content/blockstudio/cache/
+```
+
+This one configured root owns runtime build payloads, prebuilt block
+registration data, editor assets, Tailwind CSS, rendered documents, island
+fragments, static HTML, graph indexes, warm queues, and cache diagnostics. This
+avoids repeating discovery, parsing, compilation, and rendering work while
+keeping all generated runtime state under one host-manageable boundary.
+
+The default deliberately sits outside `uploads`, where hardened hosts may
+block PHP cache payloads. Change the location with `cache.path`; relative paths
+resolve from `WP_CONTENT_DIR`, while absolute paths support dedicated writable
+cache volumes:
+
+```json
+{
+  "cache": {
+    "enabled": true,
+    "path": "cache/blockstudio"
+  }
+}
+```
+
+For environment-specific configuration, use either the setting filter or the
+resolved-directory filter:
+
+```php
+add_filter('blockstudio/settings/cache/path', function () {
+    return '/srv/wordpress-cache/blockstudio';
+});
+
+add_filter('blockstudio/cache/dir', function (string $directory): string {
+    return WP_CONTENT_DIR . '/cache/blockstudio';
+});
+```
+
+Changing the path starts with a cold cache. Old files under
+`wp-content/uploads/blockstudio/cache` are no longer read and can be removed.
+
+## Identity and invalidation
+
+Every scope is nested under a network/blog identity and a complete runtime
+identity. Cache entries change when their inputs change, including watched
+block files, field files, asset dependencies, settings, the active theme,
+active plugins, logical discovery inventories, WordPress, PHP, and Blockstudio
+versions. Item-specific dependency hashes isolate changed-only builds from
+unrelated objects.
+
+Logical discovery sources also contribute their
+source ID, content fingerprint, and watch inputs. Alternate runtime selections
+can add a `blockstudio/cache/context` value to isolate all cache scopes.
+Hosts whose tenant boundary differs from WordPress network/blog IDs can filter
+`blockstudio/cache/site_key`; the result is sanitized before it becomes a path
+segment.
+
+On a warm frontend request, Blockstudio hydrates the runtime registry before it
+constructs discovery sources. A valid cache hit therefore skips recursive
+source discovery, block construction, field parsing, and repeated cache-key
+tree walks.
+
+In `production` and `staging`, a validated watch snapshot is trusted for 20
+seconds before Blockstudio stats its files and directories again. `local` and
+`development` environments default to zero so source edits are visible
+immediately. Change that interval with:
+
+```php
+add_filter('blockstudio/cache/watch_debounce', function () {
+    return 30;
+});
+```
+
+The debounce can delay automatic source-change detection by at most the
+configured number of seconds. Set it to `0` when a production-like environment
+is also used for active file authoring.
+
+## Concurrency and retention
+
+Cold cache keys use a single-flight lock. One request builds the payload while
+concurrent requests wait for the atomically published result instead of
+repeating the same discovery or compilation work. Atomic publication prevents
+partial objects. When a refresh fails, a valid stale last-good object remains
+available, the failure is observable, and the next request can recover.
+
+Runtime scopes retain 20 published payloads by default. Adjust the cap per
+scope when an integration intentionally creates more cache contexts:
+
+```php
+add_filter(
+    'blockstudio/cache/max_files_per_scope',
+    function (int $maximum, string $scope): int {
+        return 'runtime' === $scope ? 50 : $maximum;
+    },
+    10,
+    2
+);
+```
+
+Unused namespaces are collected automatically instead of accumulating on every
+plugin activation and PHP or WordPress update. A deployment snippet that used
+to glob the old Tailwind cache directory should call
+`Blockstudio\Runtime_Cache::purge('tailwind')` instead.
+
+Disable the persistent caches in `blockstudio.json`:
+
+```json
+{
+  "cache": {
+    "enabled": false
+  }
+}
+```
+
+Or via filter:
+
+```php
+add_filter('blockstudio/settings/cache/enabled', '__return_false');
+```
+
+The in-memory per-request render cache described under
+Performance is intentionally
+separate, but its persistent artifacts use this same filesystem boundary.
+
+## Tailwind cache
+
+Tailwind's compiled CSS cache uses the shared runtime root under its
+network/site/runtime namespace and `tailwind` scope. It stores up to 1,000
+entries for 30 days by default, enough to retain page-level keys for a complete
+site instead of evicting them after a small number of routes.
+
+Tailwind also reuses a warm compiler for the same CSS input inside long-lived
+processes and persists compiler construction state between processes. Cold
+page candidate sets still compile independently, but they do not need to
+rebuild the framework parser each time.
+
+Use these filters to change retention:
+
+```php
+add_filter('blockstudio/tailwind/cache_max_files', function () {
+    return 1500;
+});
+
+add_filter('blockstudio/tailwind/cache_max_age', function () {
+    return 14 * DAY_IN_SECONDS;
+});
+```
+
+The minimum age is one hour.
+
+> Static Prerendering
+>
+> The anonymous HTML cache that lives under this same root.
+
+### Media
+
+Theme images live outside the media library, so WordPress knows nothing about
+their dimensions and every unstyled image shifts layout while it loads.
+Blockstudio closes that gap with a generated metadata manifest, a template
+helper that always emits real dimensions, and an optional lazy loader.
+
+## Rendering images
+
+`bs_media_image()` renders theme assets with real width, height, and a reserved
+aspect ratio:
+
+```php
+<?php
+echo bs_media_image([
+    'src' => 'assets/images/hero.webp',
+    'alt' => 'Hero',
+    'class' => 'hero-media',
+    'sources' => [
+        ['srcset' => '/hero-small.webp', 'media' => '(max-width: 640px)'],
+    ],
+]);
+?>
+```
+
+The output is a `figure.blockstudio-media` with an inline `aspect-ratio` around
+an `img` carrying real `width`, `height`, `loading`, and `decoding` values.
+
+`src` takes a theme-relative path, an absolute path, or a full URL, and
+`attachmentId` covers media library images. `eager` opts out of lazy loading
+above the fold, and `sources` emits a `<picture>` element with the given
+alternates.
+
+The helper always emits known width, height, and aspect ratio values when
+metadata exists. Lazy mode uses only `blockstudio-*` classes, attributes,
+handles, and globals.
+
+## The metadata manifest
+
+Dimensions come from `assets/media.json`, written by
+`Blockstudio\Media_Metadata_Builder` in a build step or by hand:
+
+```php
+use Blockstudio\Media_Metadata_Builder;
+
+(new Media_Metadata_Builder())->write(
+    get_stylesheet_directory(),
+    true
+);
+```
+
+This writes deterministic metadata for the theme's assets and, with the second
+argument, optional WordPress attachments. Regenerate it whenever files under
+`assets/` change.
+
+`Media_Metadata_Builder::build( string $root )` returns the manifest without
+writing it; `write()` is the variant that persists.
+`Blockstudio\Media_Metadata::reset()` clears the in-process cache after a
+rebuild, which long-lived build processes need before rendering against fresh
+metadata.
+
+## Lazy loading
+
+The `performance.media` settings drive the frontend loader:
+
+```json
+{
+  "performance": {
+    "media": {
+      "lazy": true,
+      "skeleton": true,
+      "metadata": true,
+      "rootMargin": "300px"
+    }
+  }
+}
+```
+
+With `lazy` on, the real URL moves to `data-src` behind a correctly sized
+placeholder and Blockstudio's intersection-based loader swaps it in as the
+image approaches the viewport, `rootMargin` ahead of time. `skeleton` shows the
+built-in loading placeholder, and `metadata` declares that `assets/media.json`
+is in use.
+
+The `speed` and `strict` performance profiles
+enable the loader by default; `compat` leaves it off. Every child value can
+override its profile default.
+
+> Settings
+>
+> The full `performance.media` option table.
+
+> Static Prerendering
+>
+> Media metadata is step two of the production adoption order.
+
+## Code Snippets
+
+Although Blockstudio's main focus is on custom blocks, its file-first approach is also suitable for code snippets.
+
+## Setup
+
+To create a new code snippet, simply create a new folder and place an `init.php` file in it. Blockstudio will always execute that file. For more information on the init file, check the Initialization page.
+
+## Styles and Scripts
+
+Folders marked as code snippets will also process and enqueue styles and scripts. To enqueue global styles and scripts, use the `global` prefix for the asset name.
+
+Example folder structure:
+
+```
+assets/
+├── init.php
+├── global-styles.css
+└── global-scripts.js
+```
+
+Assets inside code snippet folders also support all processing.
+
+## Custom Directories
+
+The above technique can also be used on directories outside of the folder where all blocks are stored. For example, let's say you want to store global assets like styles and scripts inside your theme. Simply create a new Blockstudio instance using the `init` method.
+
+```php
+add_action('init', function () {
+  Blockstudio\Build::init([
+    'dir' => get_template_directory() . '/assets'
+  ]);
+});
+```
+
+Now, simply follow the setup instructions to register a code snippet inside the `assets` folder.
 
 ### Admin
 
@@ -12472,392 +13160,6 @@ The `data-blockstudio-path` attribute and grabber script are only rendered when 
 - The current user has the `edit_posts` capability.
 
 Public visitors never see file paths or the grabber script.
-
-### Performance Profiler
-
-Blockstudio includes a lightweight profiler that tracks render performance
-across the entire pipeline. It shows per-block timings, phase breakdowns,
-and cache hit rates.
-
-## Activation
-
-Add `?blockstudio-perf` to any frontend URL:
-
-```
-https://example.com/my-page/?blockstudio-perf
-```
-
-Or enable it permanently in `blockstudio.json`:
-
-```json
-{
-  "dev": {
-    "perf": true
-  }
-}
-```
-
-Or via filter:
-
-```php
-add_filter('blockstudio/settings/dev/perf', '__return_true');
-```
-
-The profiler only outputs data for logged-in users with `edit_posts`
-capability.
-
-## Output
-
-### Debug panel
-
-A fixed panel appears at the bottom of the page with a table showing every
-tracked metric, its duration, and call count.
-
-### Server-Timing headers
-
-Timing data is also sent as `Server-Timing` HTTP headers, visible in the
-browser DevTools Network tab under the "Timing" section. This works even
-if the page HTML is cached by a CDN.
-
-## Tracked metrics
-
-| Metric | Description |
-|--------|-------------|
-| `total` | Total Blockstudio processing time |
-| `block-tags` | Block tag parser (`<bs:>` and `<block>` replacement) |
-| `assets` | Asset discovery and injection |
-| `tailwind` | Tailwind CSS compilation |
-| `phase:transform` | Attribute transformation (per block render) |
-| `phase:template` | PHP/Twig template compilation (per block render) |
-| `phase:twig` | Twig-specific compilation (per block render) |
-| `phase:components` | Component replacement: InnerBlocks, RichText, useBlockProps (per block render) |
-| `block:{name}` | Individual block type render time with call count |
-
-## File-backed caches
-
-Blockstudio also includes persistent file-backed caches. They are enabled by
-default through the `cache.enabled` setting and are written to:
-
-```
-wp-content/blockstudio/cache/
-```
-
-This one configured root owns runtime build payloads, prebuilt block
-registration data, editor assets, Tailwind CSS, rendered documents, island
-fragments, static HTML, graph indexes, warm queues, and cache diagnostics. This
-avoids repeating discovery, parsing, compilation, and rendering work while
-keeping all generated runtime state under one host-manageable boundary.
-
-The default deliberately sits outside `uploads`, where hardened hosts may
-block PHP cache payloads. Change the location with `cache.path`; relative paths
-resolve from `WP_CONTENT_DIR`, while absolute paths support dedicated writable
-cache volumes:
-
-```json
-{
-  "cache": {
-    "enabled": true,
-    "path": "cache/blockstudio"
-  }
-}
-```
-
-For environment-specific configuration, use either the setting filter or the
-resolved-directory filter:
-
-```php
-add_filter('blockstudio/settings/cache/path', function () {
-    return '/srv/wordpress-cache/blockstudio';
-});
-
-add_filter('blockstudio/cache/dir', function (string $directory): string {
-    return WP_CONTENT_DIR . '/cache/blockstudio';
-});
-```
-
-Changing the path starts with a cold cache. Old files under
-`wp-content/uploads/blockstudio/cache` are no longer read and can be removed.
-
-Every scope is nested under a network/blog identity and a complete runtime
-identity. Cache entries change when their inputs change, including watched
-block files, field files, asset dependencies, settings, the active theme,
-active plugins, logical discovery inventories, WordPress, PHP, and Blockstudio
-versions. Item-specific dependency hashes isolate changed-only builds from
-unrelated objects.
-
-Logical discovery sources also contribute their
-source ID, content fingerprint, and watch inputs. Alternate runtime selections
-can add a `blockstudio/cache/context` value to isolate all cache scopes.
-Hosts whose tenant boundary differs from WordPress network/blog IDs can filter
-`blockstudio/cache/site_key`; the result is sanitized before it becomes a path
-segment.
-
-On a warm frontend request, Blockstudio hydrates the runtime registry before it
-constructs discovery sources. A valid cache hit therefore skips recursive
-source discovery, block construction, field parsing, and repeated cache-key
-tree walks.
-
-In `production` and `staging`, a validated watch snapshot is trusted for 20
-seconds before Blockstudio stats its files and directories again. `local` and
-`development` environments default to zero so source edits are visible
-immediately. Change that interval with:
-
-```php
-add_filter('blockstudio/cache/watch_debounce', function () {
-    return 30;
-});
-```
-
-The debounce can delay automatic source-change detection by at most the
-configured number of seconds. Set it to `0` when a production-like environment
-is also used for active file authoring.
-
-Cold cache keys use a single-flight lock. One request builds the payload while
-concurrent requests wait for the atomically published result instead of
-repeating the same discovery or compilation work. Atomic publication prevents
-partial objects. When a refresh fails, a valid stale last-good object remains
-available, the failure is observable, and the next request can recover.
-
-Runtime scopes retain 20 published payloads by default. Adjust the cap per
-scope when an integration intentionally creates more cache contexts:
-
-```php
-add_filter(
-    'blockstudio/cache/max_files_per_scope',
-    function (int $maximum, string $scope): int {
-        return 'runtime' === $scope ? 50 : $maximum;
-    },
-    10,
-    2
-);
-```
-
-Disable the persistent caches in `blockstudio.json`:
-
-```json
-{
-  "cache": {
-    "enabled": false
-  }
-}
-```
-
-Or via filter:
-
-```php
-add_filter('blockstudio/settings/cache/enabled', '__return_false');
-```
-
-The in-memory per-request render cache below is intentionally separate, but its
-persistent artifacts use this same filesystem boundary.
-
-### Tailwind Cache
-
-Tailwind's compiled CSS cache now uses the shared runtime root under its
-network/site/runtime namespace and `tailwind` scope. It stores up to 1,000
-entries for 30 days by default, enough to retain page-level keys for a complete
-site instead of evicting them after a small number of routes.
-
-Tailwind also reuses a warm compiler for the same CSS input inside long-lived
-processes and persists compiler construction state between processes. Cold
-page candidate sets still compile independently, but they do not need to
-rebuild the framework parser each time.
-
-Use these filters to change retention:
-
-```php
-add_filter('blockstudio/tailwind/cache_max_files', function () {
-    return 1500;
-});
-
-add_filter('blockstudio/tailwind/cache_max_age', function () {
-    return 14 * DAY_IN_SECONDS;
-});
-```
-
-The minimum age is one hour.
-
-## Static prerendering
-
-Static prerendering is an opt-in anonymous HTML cache. A cacheable response must
-be a complete HTML document and may opt out with
-`<!-- blockstudio:no-cache -->`. Blockstudio bypasses non-GET requests, query
-strings, WordPress admin, REST, Ajax, cron, feeds, search, preview and canvas
-headers, nonce-bearing requests, declared dynamic paths, password/comment
-cookies, and logged-in requests by default.
-
-```json
-{
-  "performance": {
-    "staticPrerender": {
-      "enabled": true,
-      "ttl": 3600,
-      "invalidate": "graph",
-      "earlyServe": true,
-      "serveLoggedIn": false,
-      "dynamicPaths": ["/account", "/checkout"],
-      "warm": {
-        "enabled": true,
-        "interval": 900,
-        "concurrency": 4,
-        "transport": "http"
-      }
-    }
-  }
-}
-```
-
-Logged-in users can consume an existing hit only when `serveLoggedIn` is true;
-personalized responses never create cache entries. Dynamic paths use path
-boundaries, so `/account` matches `/account/orders` but not `/accounting`.
-
-### Signature and graph modes
-
-`signature` mode fills an identity-keyed response on a normal anonymous miss.
-It is convenient for ordinary WordPress sites and rotates after site-level
-changes.
-
-`graph` mode is for deterministic build/deploy integrations. Call
-`Static_Prerender_Runtime::build_plan()` with the live source URLs, render only
-`affectedUrls`, then record each result with
-`persist_built_response()` or `persist_skipped_response()`. The plan compares
-shared files and each page's exact dependency hashes. Deleted URLs and
-unreferenced HTML are removed by `garbage_collect()`.
-
-```php
-use Blockstudio\Static_Prerender_Runtime;
-
-$plan = Static_Prerender_Runtime::build_plan($sourceUrls);
-
-foreach ($plan['affectedUrls'] as $url) {
-    $result = render_with_dependencies($url);
-
-    Static_Prerender_Runtime::persist_built_response(
-        $url,
-        $result['html'],
-        $result['files'],
-        $result['virtualHashes']
-    );
-}
-
-$targets = array_keys($plan['live']);
-Static_Prerender_Runtime::garbage_collect($targets);
-```
-
-Optional target host/home arguments rewrite routes for a deployment without
-using the first page path as the site root. Batch tools can use
-`Static_Prerender_Batch_Renderer::render()` and stable `N/TOTAL` shards. An
-`internal` transport is supplied by the generic
-`blockstudio/static_prerender/render_internal` filter; optional HTTP fallback
-uses the normal warm header.
-
-### Early serving and atomic deployment
-
-With `earlyServe` enabled, Blockstudio owns a small
-`wp-content/blockstudio-static-prerender-map.php`, an
-`advanced-cache.php` drop-in, and one exact `WP_CACHE` declaration. The drop-in
-reads a per-site route map and streams an eligible hit before WordPress,
-plugins, or the theme boot.
-
-Blockstudio never overwrites a foreign map, drop-in, or `WP_CACHE` declaration.
-Graph artifacts validate every referenced HTML file before the map is swapped;
-the previous graph remains active if validation fails. Multisite entries share
-the map but are isolated by host, home path, and site ID. Disabling the feature
-or deactivating Blockstudio removes only the current site's entry and removes
-shared artifacts only after the final owned entry is gone.
-
-Deployment tools can activate a fully rendered graph atomically:
-
-```php
-$entry = Static_Prerender_Runtime::artifact_entry($targetUrls);
-
-Blockstudio\Static_Prerender_Early_Serve::install_artifact_entry(
-    $entry,
-    Static_Prerender_Runtime::cache_root_path()
-);
-```
-
-Configuration stays authoritative. `install_artifact_entry()` returns `false`
-unless both `enabled` and `earlyServe` are true, so a deploy can never install a
-map, drop-in, and `WP_CACHE` declaration that the next admin request would
-remove again.
-
-### Warming, maintenance, and observability
-
-The warm queue is durable, URL-coalescing, single-flight, and recovers timed-out
-claims. Content and site changes force a replacement job even when the current
-signature is unchanged; interval passes enqueue only stale work.
-
-```bash
-wp bs prerender warm
-wp bs prerender status
-wp bs prerender purge
-```
-
-`status` reports the active identity, files, bytes, graph records, queue state,
-and per-scope hit/miss/build/failure counters. Observe individual response
-outcomes with `blockstudio/static_prerender/outcome` and all shared cache
-outcomes with `blockstudio/cache/outcome`.
-
-## In-Process Batch Rendering
-
-Long-lived exporters and static-site builders can render several WordPress
-documents in one PHP process without rebuilding Blockstudio registrations.
-Reset request-scoped counters, assets, island state, page layout state, and
-Tailwind's per-document generation between documents:
-
-```php
-foreach ($routes as $route) {
-    Blockstudio\Batch_Render::reset();
-    $html = render_route($route);
-
-    write_static_page($route, $html);
-}
-```
-
-`Batch_Render::reset()` keeps discovery and registered block data warm. It is
-not a cache clear.
-
-To collect source dependencies for each rendered block, observe
-`blockstudio/render/dependencies`:
-
-```php
-$dependencies = [];
-
-add_filter(
-    'blockstudio/render/dependencies',
-    function (
-        array $paths,
-        string $name,
-        array $block,
-        bool $is_editor,
-        bool $is_preview
-    ) use (&$dependencies): array {
-        $dependencies[$name] = array_values(array_unique([
-            ...($dependencies[$name] ?? []),
-            ...$paths,
-        ]));
-
-        return $paths;
-    },
-    10,
-    5
-);
-```
-
-The reported paths include the selected render template, discovered template
-files, and registered block asset files. A collector can add separately loaded
-files to its own dependency graph.
-
-## Render cache
-
-Self-closing block tags (no inner content) are cached in memory during
-page rendering. When the same block with identical attributes appears
-multiple times, subsequent renders are served from cache. The cache is
-per-request and cleared after the page finishes rendering.
-
-The profiler shows reduced render call counts when the cache is active,
-making it easy to verify caching is working.
 
 ### CLI
 
@@ -13189,6 +13491,83 @@ wp bs content status
 ```
 
 The table reports each file-backed entity as `unchanged`, `would-update`, `missing-db`, `conflict`, `locked`, or `orphaned`.
+
+## Static Prerendering
+
+See Static Prerendering for the cache
+itself; these commands drive it.
+
+### Warm stale entries
+
+```bash
+wp bs prerender warm
+```
+
+Processes the durable warm queue: stale or invalidated URLs are re-rendered and
+republished. Content and site changes enqueue replacement jobs automatically;
+this command works the queue down.
+
+### Report cache state
+
+```bash
+wp bs prerender status
+```
+
+Reports the active identity, files, bytes, graph records, queue state, and
+per-scope hit/miss/build/failure counters.
+
+### Purge the cache
+
+```bash
+wp bs prerender purge
+```
+
+Removes the current site's prerendered documents. The next anonymous request or
+warm pass rebuilds them.
+
+## Block Tag Migration
+
+A standalone script rewrites prefix and alias shorthands to the canonical
+`<bs:namespace-slug>` spelling. It does not load WordPress and does not write
+unless `--apply` is explicitly supplied:
+
+```bash
+php vendor/blockstudio/blockstudio/bin/migrate-block-tags.php \
+  --root="$PWD" \
+  --prefix-map=/tmp/project-prefixes.json \
+  --known-blocks=/tmp/project-blocks.json \
+  --aliases=/tmp/project-aliases.json \
+  --report=/tmp/blockstudio-tag-migration.json \
+  --dry-run
+```
+
+The prefix file maps caller-owned prefixes to ordered namespaces. The known
+block file is a JSON list of registered block names. Exact aliases are
+optional. The report includes deterministic mappings, before/after hashes,
+unknown tags, ambiguous aliases, dynamic tags, and examples found in comments,
+code fences, `<pre>`, or `<code>` ranges.
+
+The scanner handles paired, nested, and self-closing markup, including literal
+tags in PHP strings. It preserves attributes and changes only tag names.
+Comments and code samples are report-only. Unrelated custom elements are
+ignored. Applying a migration is blocked while unknown, ambiguous, or dynamic
+cases remain unless the caller deliberately passes `--allow-unresolved`.
+Running the command again over canonical output produces no changes.
+
+See Migration for why the
+canonical spelling exists and what it resolves.
+
+## Teardown
+
+```bash
+wp bs teardown
+```
+
+Removes the cron events and static prerender state an installation owns: the
+current site's early-serve map entry, and the shared `advanced-cache.php`
+drop-in and `WP_CACHE` declaration once the final owned entry is gone.
+Installations without a plugin deactivation hook, such as Composer-bundled
+setups, use this for a clean removal. Configuration files are left untouched.
 
 ### Composer
 

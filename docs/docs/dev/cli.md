@@ -339,3 +339,80 @@ wp bs content status
 ```
 
 The table reports each file-backed entity as `unchanged`, `would-update`, `missing-db`, `conflict`, `locked`, or `orphaned`.
+
+## Static Prerendering
+
+See [Static Prerendering](/docs/production/static-prerendering) for the cache
+itself; these commands drive it.
+
+### Warm stale entries
+
+```bash
+wp bs prerender warm
+```
+
+Processes the durable warm queue: stale or invalidated URLs are re-rendered and
+republished. Content and site changes enqueue replacement jobs automatically;
+this command works the queue down.
+
+### Report cache state
+
+```bash
+wp bs prerender status
+```
+
+Reports the active identity, files, bytes, graph records, queue state, and
+per-scope hit/miss/build/failure counters.
+
+### Purge the cache
+
+```bash
+wp bs prerender purge
+```
+
+Removes the current site's prerendered documents. The next anonymous request or
+warm pass rebuilds them.
+
+## Block Tag Migration
+
+A standalone script rewrites prefix and alias shorthands to the canonical
+`<bs:namespace-slug>` spelling. It does not load WordPress and does not write
+unless `--apply` is explicitly supplied:
+
+```bash
+php vendor/blockstudio/blockstudio/bin/migrate-block-tags.php \
+  --root="$PWD" \
+  --prefix-map=/tmp/project-prefixes.json \
+  --known-blocks=/tmp/project-blocks.json \
+  --aliases=/tmp/project-aliases.json \
+  --report=/tmp/blockstudio-tag-migration.json \
+  --dry-run
+```
+
+The prefix file maps caller-owned prefixes to ordered namespaces. The known
+block file is a JSON list of registered block names. Exact aliases are
+optional. The report includes deterministic mappings, before/after hashes,
+unknown tags, ambiguous aliases, dynamic tags, and examples found in comments,
+code fences, `<pre>`, or `<code>` ranges.
+
+The scanner handles paired, nested, and self-closing markup, including literal
+tags in PHP strings. It preserves attributes and changes only tag names.
+Comments and code samples are report-only. Unrelated custom elements are
+ignored. Applying a migration is blocked while unknown, ambiguous, or dynamic
+cases remain unless the caller deliberately passes `--allow-unresolved`.
+Running the command again over canonical output produces no changes.
+
+See [Migration](/docs/dev/migration/v7#canonical-block-tags) for why the
+canonical spelling exists and what it resolves.
+
+## Teardown
+
+```bash
+wp bs teardown
+```
+
+Removes the cron events and static prerender state an installation owns: the
+current site's early-serve map entry, and the shared `advanced-cache.php`
+drop-in and `WP_CACHE` declaration once the final owned entry is gone.
+Installations without a plugin deactivation hook, such as Composer-bundled
+setups, use this for a clean removal. Configuration files are left untouched.

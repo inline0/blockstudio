@@ -3,7 +3,7 @@ title: Introduction
 description: Welcome to the Blockstudio documentation.
 path: "."
 order: 0
-section: "General"
+section: "Start"
 subsection: "Overview"
 meta_title: "Introduction"
 meta_description: "Welcome to the Blockstudio documentation."

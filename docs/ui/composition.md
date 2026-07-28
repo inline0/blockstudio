@@ -140,6 +140,8 @@ Composition is not limited to pages. Block tags render automatically inside bloc
 
 The same works from PHP with `bs_block()`, including nesting through the `content` key, as described under [programmatic rendering](/docs/blocks/rendering). Either way the component's stylesheet and store load with it, and your block stays a thin layer of arrangement over system parts.
 
+For arranging components side by side, `bsui/stack` is the generic flex row or column: `direction`, `gap` on the spacing scale, `align`, `justify`, and a `wrap` toggle. Children keep their natural size by default; the `grow` toggle stretches them to share the stack's length equally, which is how a footer makes two buttons split its width instead of huddling at one end.
+
 ## The layering model
 
 Stacked surfaces are where component libraries usually fall apart. The bundled components follow a small set of rules, written for people building real UIs.

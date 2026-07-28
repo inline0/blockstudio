@@ -1,0 +1,9 @@
+{
+  "title": "Production",
+  "pages": [
+    "performance",
+    "static-prerendering",
+    "caching",
+    "media"
+  ]
+}

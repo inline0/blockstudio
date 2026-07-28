@@ -3,7 +3,7 @@ title: Tailwind CSS
 description: Server-side Tailwind CSS compilation with automatic caching.
 path: 'tailwind'
 order: 55
-section: 'Platform'
+section: "Blocks"
 subsection: 'Styling'
 meta_title: 'Tailwind CSS'
 meta_description: 'Server-side Tailwind CSS compilation with automatic caching.'

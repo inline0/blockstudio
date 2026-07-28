@@ -7,8 +7,9 @@
     "pages-and-patterns",
     "tailwind",
     "extensions",
-    "code-snippets",
     "content-sync",
+    "production",
+    "code-snippets",
     "dev"
   ]
 }

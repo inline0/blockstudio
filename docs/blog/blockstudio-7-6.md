@@ -637,9 +637,9 @@ A reasonable adoption order:
   [UI Composition](/ui/composition)
 - [Settings](/docs/general/settings) and
   [performance](/docs/general/settings#performance)
-- [Performance Profiler](/docs/dev/perf): the
-  [cache root](/docs/dev/perf#file-backed-caches) and
-  [static prerendering](/docs/dev/perf#static-prerendering)
+- [Performance](/docs/production/performance),
+  [Caching](/docs/production/caching), and
+  [Static Prerendering](/docs/production/static-prerendering)
 - [Tailwind CSS](/docs/tailwind#template-composition-helpers)
 - [PHPStan](/docs/dev/phpstan): [presets](/docs/dev/phpstan#analysis-presets),
   [canonical command](/docs/dev/phpstan#canonical-command),
