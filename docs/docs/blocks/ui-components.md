@@ -19,7 +19,7 @@ Every component is an ordinary Blockstudio block. Each one is a directory with a
 <bs:bsui-button label="Save changes" variant="default" />
 ```
 
-The full component reference with rendered previews lives at [/ui](/ui), and [/ui/examples](/ui/examples) collects live multi-component compositions. For how the components fit together into working interfaces, see [UI Composition](/ui/examples).
+The full component reference with rendered previews lives at [/ui](/ui), and [/ui/examples](/ui/examples) collects live multi-component compositions. For how the components fit together into working interfaces, see [UI Composition](/ui/composition).
 
 The library's contract, in one paragraph: one token layer under the `--bs-ui-` prefix, one spacing scale that containers apply through `gap`, one label primitive, one modal surface, per-component stylesheets that load with the block, all component CSS in a cascade layer your theme outranks by default, visibility through the `hidden` attribute, and reduced motion respected globally. The rest of this page unpacks each of those choices.
 
@@ -116,7 +116,7 @@ Simple components are a single block. Compound components are a family: a root b
 </bs:bsui-dialog>
 ```
 
-Parent and child relationships, trigger attributes like `trigger_label`, and the runtime stores behind them are covered in depth on the [UI Composition](/ui/examples) page.
+Parent and child relationships, trigger attributes like `trigger_label`, and the runtime stores behind them are covered in depth on the [UI Composition](/ui/composition) page.
 
 ### In the editor
 
@@ -332,7 +332,7 @@ $examples = Ui::examples();
 Compound families also register their child blocks, such as `bsui/dialog-trigger`, `bsui/dialog-popup`, `bsui/select-trigger`, `bsui/select-popup`, `bsui/select-option`, `bsui/tabs-list`, `bsui/tabs-trigger`, and `bsui/tabs-panel`. Every part, with its attributes and defaults, is documented at [/ui](/ui).
 
 
-> **[UI Composition](/ui/examples)**
+> **[UI Composition](/ui/composition)**
 >
 > Parent and child relationships, trigger forwarding, the stores underneath, and the layering model that makes selects work inside dialogs.
 

@@ -1,7 +1,7 @@
 ---
 title: UI Composition
 description: How the bundled UI components compose into working interfaces, and the runtime model underneath.
-path: "examples"
+path: "composition"
 order: 42
 section: "UI"
 meta_title: "UI Composition"
