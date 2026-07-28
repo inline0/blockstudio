@@ -216,7 +216,7 @@ The pattern that exercises every rule above at once: a trigger opens a modal, th
 </bs:bsui-dialog>
 ```
 
-Every tag and attribute above is load-bearing: the trigger forwards to the system button, the title and description take `content`, the fields carry the names the form serializes, and `required="true"` coerces to a real boolean in the tag parser. This is also the composition the library's harness pins with a dedicated interaction suite.
+Every tag and attribute above is load-bearing: the trigger forwards to the system button, the title and description take `content`, the fields carry the names the form serializes, and `required="true"` coerces to a real boolean in the tag parser.
 
 ### What each store does at runtime
 
@@ -232,13 +232,7 @@ The same markup pasted into a file-based page syncs as native blocks, and the sa
 
 ## What keeps these seams working
 
-Composition is only trustworthy if the seams are tested, so the library treats them as first-class test subjects.
-
-The library's Playwright harness exercises the same path you use. Its fixture theme enables the library through `ui.enabled` in `blockstudio.json` and composes test pages from tags, so registration, discovery, and asset loading are covered by the act of running the suite, not mocked around.
-
-It runs component suites and dedicated interaction suites against real pages, in both frontend and editor contexts. The interaction fixtures are standalone blocks composing multiple `bsui` families, and the specs are exactly the compositions above: a dialog containing a form containing a select, a form submission lifecycle with server-side validation errors, multi-step workflows, state syncing between checkboxes and counters. They assert the seams, not the parts: that the select's popup is visible inside the open dialog, that selecting updates the trigger text, that submitting closes the dialog and the new row appears in the list.
-
-On top of that sits a measured design contract. A dedicated spec reads computed styles from the rendered pages and asserts the system's invariants: every label in the library resolves to one identical set of computed typography, every modal popup shares one surface (same padding, background, and z-index across dialog, alert dialog, and drawer), and every modal dims the page behind it. The reference site behind [/ui](/ui) runs the same assertions against its own tokens, so a drift is caught wherever it starts: a component stylesheet, the shared tokens, or a theme override.
+The seams above are not conventions, they are invariants the library holds wherever it renders: every label resolves to one identical typography, every modal popup shares one surface and dims the page behind it, floating popups keep their anchor to the trigger while the page scrolls, and Escape closes exactly one layer at a time, from the inside out. The guarantees hold in the frontend and in the editor canvas, under the default tokens or your theme's, so a composition that behaves in one context behaves the same in the others.
 
 ## Live examples
 

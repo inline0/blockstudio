@@ -486,8 +486,8 @@ longer listed as runtime dependencies. Only `php >= 8.2` and
 `plugin-update-checker` remain.
 
 All three install methods (plugin zip, plugin via Composer, theme-bundled via
-Composer) are tested in CI with full WordPress activation, block registration,
-and frontend rendering verification.
+Composer) boot to the same result: full WordPress activation, block
+registration, and frontend rendering.
 
 See the [Composer documentation](/docs/dev/composer) for setup instructions.
 

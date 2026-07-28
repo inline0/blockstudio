@@ -13322,9 +13322,8 @@ positions:
 | Composer dependency in a theme | The theme requires Composer's autoloader |
 | Composer dependency in a plugin | The host plugin requires Composer's autoloader |
 
-The full CI matrix boots WordPress independently in every mode and asserts
-that `BLOCKSTUDIO_VERSION` is defined. This guards the one-instance bootstrap
-without introducing a second host abstraction.
+Every mode boots WordPress to the same outcome: one Blockstudio instance with
+`BLOCKSTUDIO_VERSION` defined, and no second host abstraction underneath.
 
 ## Custom Package URL
 
