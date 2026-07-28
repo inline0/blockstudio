@@ -294,13 +294,6 @@ settings: blockTags, ui/enabled
 hooks: blockstudio/blocks/attributes, blockstudio/settings/ui/enabled, blockstudio/ui/button/variants-style, blockstudio/ui/examples, blockstudio/ui/inventory, blockstudio/ui/{component}/variants-style
 php: Blockstudio\Render, Blockstudio\Ui, Render::document(), Ui::examples(), Ui::global_assets(), Ui::inventory(), bs_block(), bs_render_block()
 
-### UI Composition
-route: /docs/blocks/ui-composition
-file: docs/docs/blocks/ui-composition.md
-purpose: How the bundled UI components compose into working interfaces, and the runtime model underneath.
-settings: content, ui/enabled
-php: bs_block(), bs_render_block()
-
 ## Docs / Blocks / Client Behavior
 
 ### Islands

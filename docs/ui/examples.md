@@ -1,10 +1,9 @@
 ---
 title: UI Composition
 description: How the bundled UI components compose into working interfaces, and the runtime model underneath.
-path: "blocks/ui-composition"
-order: 41
-section: "Blocks"
-subsection: "Rendering"
+path: "examples"
+order: 42
+section: "UI"
 meta_title: "UI Composition"
 meta_description: "How the bundled UI components compose into working interfaces, and the runtime model underneath."
 ---

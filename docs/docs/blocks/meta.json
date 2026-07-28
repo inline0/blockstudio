@@ -20,7 +20,6 @@
     "rendering",
     "components",
     "ui-components",
-    "ui-composition",
     "islands",
     "interactivity",
     "block-api",

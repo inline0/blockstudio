@@ -8,11 +8,11 @@ const repositoryRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const contentRoot = resolve(repositoryRoot, 'docs');
 const problems = [];
 const expectedDocuments = {
-  docs: 70,
+  docs: 69,
   guides: 9,
   registry: 14,
   blog: 8,
-  ui: 1,
+  ui: 2,
 };
 const draftCollections = new Set(['drafts']);
 const expectedMetaFiles = 18;
