@@ -62,6 +62,22 @@ final class ProjectScannerTest extends TestCase
         $this->removeDir($this->tempDir);
     }
 
+    private function writeBlockJson(string $relativePath, string $blockName): void
+    {
+        $path = $this->tempDir . '/' . $relativePath;
+        mkdir(dirname($path), 0777, true);
+        file_put_contents($path, json_encode(['name' => $blockName]));
+    }
+
+    private function relative(string $path): string
+    {
+        $root = str_replace('\\', '/', $this->tempDir) . '/';
+        $normalized = str_replace('\\', '/', $path);
+        return str_starts_with($normalized, $root)
+            ? substr($normalized, strlen($root))
+            : $normalized;
+    }
+
     private function removeDir(string $path): void
     {
         if (!is_dir($path)) {
@@ -83,6 +99,80 @@ final class ProjectScannerTest extends TestCase
             }
         }
         rmdir($path);
+    }
+
+    public function test_analysed_paths_bound_discovery(): void
+    {
+        $this->writeBlockJson('theme/blocks/hero/block.json', 'demo/hero');
+        $this->writeBlockJson('excluded/blockstudio/example/block.json', 'demo/excluded');
+
+        $scanner = new ProjectScanner(
+            $this->tempDir,
+            [],
+            [],
+            [$this->tempDir . '/theme']
+        );
+
+        $names = array_map(
+            fn(string $path): string => $this->relative($path),
+            $scanner->getBlockJsonPaths()
+        );
+
+        $this->assertSame(['theme/blocks/hero/block.json'], $names);
+        $this->assertNull($scanner->findBlockJsonByName('demo/excluded'));
+    }
+
+    public function test_relative_analysed_paths_resolve_against_the_working_directory(): void
+    {
+        $this->writeBlockJson('theme/blocks/hero/block.json', 'demo/hero');
+        $this->writeBlockJson('other/block.json', 'demo/other');
+
+        $scanner = new ProjectScanner($this->tempDir, [], [], ['theme']);
+
+        $names = array_map(
+            fn(string $path): string => $this->relative($path),
+            $scanner->getBlockJsonPaths()
+        );
+
+        $this->assertSame(['theme/blocks/hero/block.json'], $names);
+    }
+
+    public function test_phpstan_exclude_paths_keep_schemas_out_of_discovery(): void
+    {
+        $this->writeBlockJson('theme/blocks/hero/block.json', 'demo/hero');
+        $this->writeBlockJson('theme/fixtures/broken/block.json', 'demo/broken');
+
+        $scanner = new ProjectScanner(
+            $this->tempDir,
+            [],
+            [],
+            [],
+            ['analyse' => [$this->tempDir . '/theme/fixtures'], 'analyseAndScan' => []]
+        );
+
+        $names = array_map(
+            fn(string $path): string => $this->relative($path),
+            $scanner->getBlockJsonPaths()
+        );
+
+        $this->assertContains('theme/blocks/hero/block.json', $names);
+        $this->assertNotContains('theme/fixtures/broken/block.json', $names);
+    }
+
+    public function test_plain_list_exclude_paths_are_honoured(): void
+    {
+        $this->writeBlockJson('theme/blocks/hero/block.json', 'demo/hero');
+        $this->writeBlockJson('generated/block.json', 'demo/generated');
+
+        $scanner = new ProjectScanner($this->tempDir, [], [], [], ['generated']);
+
+        $names = array_map(
+            fn(string $path): string => $this->relative($path),
+            $scanner->getBlockJsonPaths()
+        );
+
+        $this->assertContains('theme/blocks/hero/block.json', $names);
+        $this->assertNotContains('generated/block.json', $names);
     }
 
     public function test_finds_all_block_json_files(): void
