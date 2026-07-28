@@ -289,10 +289,17 @@ php: bs_block(), bs_render_block()
 ### UI Components
 route: /docs/blocks/ui-components
 file: docs/docs/blocks/ui-components.md
-purpose: Enable and render the bundled Blockstudio UI components.
+purpose: The bundled bsui component library, the design system behind it, and how to theme it.
 settings: blockTags, ui/enabled
-hooks: blockstudio/blocks/attributes, blockstudio/settings/ui/enabled, blockstudio/ui/button/variants-style
-php: Blockstudio\Render, Blockstudio\Ui, Render::document(), Ui::examples(), Ui::global_assets(), Ui::inventory(), bs_render_block()
+hooks: blockstudio/blocks/attributes, blockstudio/settings/ui/enabled, blockstudio/ui/button/variants-style, blockstudio/ui/examples, blockstudio/ui/inventory, blockstudio/ui/{component}/variants-style
+php: Blockstudio\Render, Blockstudio\Ui, Render::document(), Ui::examples(), Ui::global_assets(), Ui::inventory(), bs_block(), bs_render_block()
+
+### UI Composition
+route: /docs/blocks/ui-composition
+file: docs/docs/blocks/ui-composition.md
+purpose: How the bundled UI components compose into working interfaces, and the runtime model underneath.
+settings: content, ui/enabled
+php: bs_block(), bs_render_block()
 
 ## Docs / Blocks / Client Behavior
 
@@ -399,7 +406,7 @@ route: /docs/tailwind
 file: docs/docs/tailwind.md
 purpose: Server-side Tailwind CSS compilation with automatic caching.
 settings: assets/reset/enabled, cache/path, tailwind/config, tailwind/enabled
-hooks: blockstudio/buffer/output, blockstudio/settings/tailwind/config, blockstudio/settings/tailwind/enabled, blockstudio/tailwind/css
+hooks: blockstudio/buffer/enabled, blockstudio/buffer/output, blockstudio/settings/tailwind/config, blockstudio/settings/tailwind/enabled, blockstudio/tailwind/css
 php: Block_Registry::set_tailwind_active(), Blockstudio\Runtime_Cache, Runtime_Cache::purge(), Settings::get(), TailwindPHP::extractCandidates(), TailwindPHP::generate(), bs_tw_merge(), bs_tw_variants()
 
 ## Docs / Platform / Project Files

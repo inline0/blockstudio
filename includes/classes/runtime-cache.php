@@ -373,7 +373,8 @@ final class Runtime_Cache {
 	/**
 	 * Delete one scope in every namespace this site has ever written.
 	 *
-	 * purge() only reaches the namespace the current request resolves to, so a
+	 * A plain purge() only reaches the namespace the current request resolves
+	 * to, so a
 	 * namespace that stopped being current keeps whatever it holds. That matters
 	 * for anything served before WordPress loads: the identity rolls the moment
 	 * a stylesheet changes, and collect_stale_namespaces() will not touch the

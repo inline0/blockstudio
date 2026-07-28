@@ -380,6 +380,13 @@ if ($runtime->enabled('measurement/queryMonitor')) {
 | `minify.css`      | boolean | `false` | Minify CSS output                                           |
 | `minify.js`       | boolean | `false` | Minify JS output                                            |
 | `process.scss`    | boolean | `false` | Process SCSS files                                          |
+| `output`          | string  | `source` | Where compiled assets are written: `source` or `cache`     |
+
+`output` defaults to `source`, which writes a `_dist` directory beside each
+block. Set it to `cache` to write compiled assets under the Blockstudio cache
+directory instead, so the block source tree stays clean and deployable from an
+immutable checkout. Sources Blockstudio cannot write to already redirect to the
+cache regardless of this setting.
 
 With `reset.enabled` active, Blockstudio also copies sanitized frontend
 `body_class` values into the editor canvas. Use
@@ -5834,17 +5841,21 @@ Since components never appear in the editor:
 
 ### UI Components
 
-Blockstudio 7.3 includes a bundled set of headless UI blocks powered by the WordPress Interactivity API. They are registered under the `bsui/` namespace and can be composed in templates, file-based pages, patterns, and post content.
+Blockstudio ships a bundled library of 59 headless-styled UI components under the `bsui` namespace, powered by the WordPress Interactivity API. Buttons, inputs, selects, dialogs, menus, tabs, forms: the working vocabulary of an application interface, available in templates, file-based pages, patterns, and post content.
 
-> Note
->
-> UI components are in beta while we gather feedback on the component set,
-> naming, behavior, and project usage patterns. They are ready to try in 7.3,
-> but the API surface may still be refined before it is marked stable.
+Every component is an ordinary Blockstudio block. Each one is a directory with a `block.json` and a PHP template, registered through the same filesystem discovery as your project blocks and rendered with the same block and tag syntax. There is no separate runtime, no build step, and no JavaScript framework: behavior is Interactivity API stores, styling is plain CSS custom properties.
 
-## Enable UI Components
+```html
+<bs:bsui-button label="Save changes" variant="default" />
+```
 
-Bundled UI components are opt-in. Enable them in your theme's `blockstudio.json`:
+The full component reference with rendered previews lives at /ui, and /ui/examples collects live multi-component compositions. For how the components fit together into working interfaces, see UI Composition.
+
+The library's contract, in one paragraph: one token layer under the `--bs-ui-` prefix, one spacing scale that containers apply through `gap`, one label primitive, one modal surface, per-component stylesheets that load with the block, all component CSS in a cascade layer your theme outranks by default, visibility through the `hidden` attribute, and reduced motion respected globally. The rest of this page unpacks each of those choices.
+
+## Enabling the library
+
+The bundled components are opt-in. Enable them once in `blockstudio.json`:
 
 ```json
 {
@@ -5855,88 +5866,41 @@ Bundled UI components are opt-in. Enable them in your theme's `blockstudio.json`
 }
 ```
 
-Or enable them with a filter:
+Or with a filter:
 
 ```php
 add_filter('blockstudio/settings/ui/enabled', '__return_true');
 ```
 
-When enabled, Blockstudio registers the bundled component library from `includes/ui/blocks` and the bundled demo apps from `includes/ui/apps`.
-
-## Public Inventory and Examples
-
-The bundled implementation blocks remain normal `bsui/` registrations, but
-consumers should use the public family inventory when building a component
-gallery:
-
-```php
-use Blockstudio\Ui;
-
-$families = Ui::inventory();
-$examples = Ui::examples();
-```
-
-`Ui::inventory()` groups every compound component under its public root and
-lists the implementation registrations required by that family.
-`Ui::examples()` adds a deterministic normalized declaration with default and
-illustrative data. It preserves required root/child relationships, so the
-result can be passed directly to `Blockstudio\Render::document()`.
-
-The public Canvas inventory exposes these examples under its `ui` type and
-omits bundled implementation registrations from the normal `blocks` type. This
-produces one complete example per public component family instead of a gallery
-of internal root, trigger, popup, and layer fragments.
-
-When assembling an already-rendered document, `Ui::global_assets($block_names,
-$html)` returns the exact bundled global style and script only when selected
-output actually uses a UI component.
+With the setting on, all 59 components register automatically from the plugin's `includes/ui/blocks` directory. There is nothing to enqueue and nothing to import; a component's assets load when the component renders.
 
 ## Rendering
 
-Use the normal block tag syntax:
+Components render like any other block. The canonical tag spelling is `<bs:bsui-slug>`:
 
 ```html
-<block name="bsui/button" label="Save" variant="default"></block>
+<bs:bsui-badge label="Beta" />
+<bs:bsui-input name="email" type="email" placeholder="Email" />
+<bs:bsui-spinner />
 ```
 
-The shorter `<bs:>` syntax works too:
+The `<block>` syntax and PHP rendering work too:
 
 ```html
-<bs:bsui-button label="Save" variant="default" />
+<block name="bsui/button" label="Continue" variant="outline"></block>
 ```
 
-In Blockstudio templates, block tags render automatically. In file-based pages and patterns, they are synced as native WordPress blocks. If you want to render UI components directly from post content or widget areas, enable page-level block tags:
-
-```json
-{
-  "ui": {
-    "enabled": true
-  },
-  "blockTags": {
-    "enabled": true,
-    "allow": ["bsui/", "app/"]
-  }
-}
+```php
+bs_render_block([
+  'name' => 'bsui/button',
+  'data' => [
+    'label' => 'Continue',
+    'variant' => 'outline',
+  ],
+]);
 ```
 
-## Basic Components
-
-Simple components render as a single block:
-
-```html
-<block name="bsui/button" label="Continue" variant="default"></block>
-<block name="bsui/badge" label="Beta"></block>
-<block
-  name="bsui/input"
-  nameAlt="email"
-  type="email"
-  placeholder="Email"
-></block>
-<block name="bsui/textarea" name="message" placeholder="Message"></block>
-<block name="bsui/spinner"></block>
-```
-
-Attributes map directly to each component's `block.json` attributes. For example, `bsui/button` supports `label`, `icon`, `iconPosition`, `href`, `variant`, `size`, and `disabled`.
+Structured fields work the same way from PHP. The button's `icon` attribute is a Blockstudio icon field, so it takes the field's array shape:
 
 ```php
 bs_render_block([
@@ -5953,128 +5917,200 @@ bs_render_block([
 ]);
 ```
 
-## Compound Components
+Attributes map directly to each component's `block.json` fields; the reference at /ui lists every attribute with its type, options, and default. In Blockstudio templates, tags render automatically. In file-based pages and patterns they sync as native WordPress blocks. To render components from post content or widget areas, enable page-level block tags:
 
-Many UI components are compound blocks. The root block owns the state, and child blocks declare their parent.
-
-### Tabs
-
-```html
-<block name="bsui/tabs" defaultValue="tab1">
-  <block name="bsui/tabs-list">
-    <block name="bsui/tabs-trigger" value="tab1" title="Features"></block>
-    <block name="bsui/tabs-trigger" value="tab2" title="Pricing"></block>
-    <block name="bsui/tabs-trigger" value="tab3" title="FAQ"></block>
-  </block>
-  <block name="bsui/tabs-panel" value="tab1">
-    <p>Features content.</p>
-  </block>
-  <block name="bsui/tabs-panel" value="tab2">
-    <p>Pricing content.</p>
-  </block>
-  <block name="bsui/tabs-panel" value="tab3">
-    <p>FAQ content.</p>
-  </block>
-</block>
+```json
+{
+  "ui": {
+    "enabled": true
+  },
+  "blockTags": {
+    "enabled": true,
+    "allow": ["bsui/"]
+  }
+}
 ```
 
-### Dialog
+### Simple and compound components
+
+Simple components are a single block. Compound components are a family: a root block that owns the state and child blocks that declare their `parent` in `block.json`. The root exposes an `InnerBlocks` area, so the same structure works in the editor and in tags:
 
 ```html
-<block name="bsui/dialog">
-  <block name="bsui/dialog-trigger" label="Open Dialog"></block>
-  <block name="bsui/dialog-backdrop"></block>
-  <block name="bsui/dialog-popup">
+<bs:bsui-dialog>
+  <bs:bsui-dialog-trigger trigger_label="Open dialog" />
+  <bs:bsui-dialog-backdrop />
+  <bs:bsui-dialog-popup>
     <p>Dialog content.</p>
-    <block name="bsui/dialog-close" label="Close"></block>
-  </block>
-</block>
+    <bs:bsui-dialog-close label="Close" />
+  </bs:bsui-dialog-popup>
+</bs:bsui-dialog>
 ```
 
-### Select
+Parent and child relationships, trigger attributes like `trigger_label`, and the runtime stores behind them are covered in depth on the UI Composition page.
 
-```html
-<block name="bsui/select" placeholder="Choose a fruit" nameAlt="fruit">
-  <block name="bsui/select-trigger"></block>
-  <block name="bsui/select-popup">
-    <block name="bsui/select-option" value="apple" label="Apple"></block>
-    <block name="bsui/select-option" value="banana" label="Banana"></block>
-    <block name="bsui/select-option" value="cherry" label="Cherry"></block>
-  </block>
-</block>
-```
+### In the editor
 
-### Form Fields
+The components are first-class editor citizens. They register in the inserter's Design category, while child blocks that declare a `parent` appear only inside their family. Inline styles and scripts enqueue in the editor as well as on the frontend, and the Interactivity API is loaded inside the editor iframe, so a dialog opens and a select drops down in the canvas, not just on the published page. Compound roots declare `allowedBlocks` on their `InnerBlocks` areas, so the inserter offers exactly the children that belong inside a dialog popup or a select popup. State that the components seed through `data-wp-context` behaves identically in both places, because context, unlike server-side Interactivity state, is carried in the markup itself.
 
-```html
-<block name="bsui/form" block="contact/form" successMessage="Thank you!">
-  <block name="bsui/field">
-    <block name="bsui/field-label" text="Email"></block>
-    <block name="bsui/input" nameAlt="email" type="email"></block>
-    <block name="bsui/field-error"></block>
-  </block>
-</block>
-```
+## The design system
 
-## Available Blocks
+The components look finished out of the box, but every visual decision routes through one small system. Understanding it is the difference between fighting the library and steering it.
 
-The bundled UI library includes:
+### One token layer
 
-| Area       | Blocks                                                                                                                                                                                                                                                                                           |
-| ---------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| Layout     | `bsui/aspect-ratio`, `bsui/card`, `bsui/separator`, `bsui/stack`, `bsui/table`                                                                                                                                                                                                                   |
-| Actions    | `bsui/button`, `bsui/button-group`, `bsui/toggle`, `bsui/toggle-group`, `bsui/toolbar`                                                                                                                                                                                                           |
-| Inputs     | `bsui/checkbox`, `bsui/color-picker`, `bsui/date-input`, `bsui/file-upload`, `bsui/input`, `bsui/number-field`, `bsui/otp-input`, `bsui/password-input`, `bsui/phone-input`, `bsui/radio-group`, `bsui/rating`, `bsui/select`, `bsui/slider`, `bsui/switch`, `bsui/textarea`, `bsui/time-picker` |
-| Overlays   | `bsui/alert-dialog`, `bsui/dialog`, `bsui/drawer`, `bsui/menu`, `bsui/menubar`, `bsui/popover`, `bsui/preview-card`, `bsui/tooltip`                                                                                                                                                              |
-| Navigation | `bsui/accordion`, `bsui/breadcrumb`, `bsui/carousel`, `bsui/collapsible`, `bsui/context-menu`, `bsui/navigation-menu`, `bsui/pagination`, `bsui/tabs`                                                                                                                                            |
-| Feedback   | `bsui/badge`, `bsui/kbd`, `bsui/meter`, `bsui/progress`, `bsui/skeleton`, `bsui/spinner`, `bsui/text`, `bsui/toast`                                                                                                                                                                              |
-| Forms      | `bsui/field`, `bsui/field-group`, `bsui/form`                                                                                                                                                                                                                                                    |
+All shared values are CSS custom properties with the `--bs-ui-` prefix, defined on `:root` in a single global stylesheet. The palette is oklch, with a complete dark scheme activated by a `.dark` class on any ancestor.
 
-Compound components also expose child blocks such as `bsui/dialog-trigger`, `bsui/dialog-popup`, `bsui/tabs-list`, `bsui/tabs-trigger`, `bsui/tabs-panel`, `bsui/select-trigger`, `bsui/select-popup`, and `bsui/select-option`.
+| Group | Tokens | Defaults worth knowing |
+| --- | --- | --- |
+| Color | The base pair `--bs-ui-background` and `--bs-ui-foreground`; the surfaces and roles `--bs-ui-card`, `--bs-ui-popover`, `--bs-ui-primary`, `--bs-ui-secondary`, `--bs-ui-muted`, `--bs-ui-accent`, `--bs-ui-destructive`, `--bs-ui-success`, `--bs-ui-warning`, and `--bs-ui-info`, each with a `-foreground` pair; the lines `--bs-ui-border`, `--bs-ui-input`, `--bs-ui-ring` | Light neutral scale, near-black primary |
+| Radius | `--bs-ui-radius`, `-sm`, `-lg`, `-full` | `0.5rem`; `-sm` and `-lg` derive from it by 2px |
+| Typography | `--bs-ui-font-sans`, `--bs-ui-font-mono`, `--bs-ui-font-size` | System font stacks, `0.875rem` |
+| Controls | `--bs-ui-control-height`, `--bs-ui-control-padding`, `--bs-ui-popup-padding` | `2.25rem`, `0.75rem`, `0.25rem` |
+| Shadows | `--bs-ui-shadow-sm`, `--bs-ui-shadow`, `--bs-ui-shadow-md`, `--bs-ui-shadow-lg` | Layered oklch shadows |
+| Modal surface | `--bs-ui-modal-padding`, `--bs-ui-modal-gap`, `--bs-ui-modal-header-gap`, `--bs-ui-modal-footer-gap` | `1.5rem`, `1.5rem`, `0.5rem`, `0.5rem` |
+| Spacing | `--bs-ui-space-1` through `--bs-ui-space-8`, `--bs-ui-rhythm`, `--bs-ui-field-gap` | See below |
+| Motion | `--bs-ui-transition`, `--bs-ui-transition-slow` | `150ms` and `200ms` eased |
 
-## Apps
+Change a token and every component that reads it follows. Because derived tokens are `calc()` chains, overriding `--bs-ui-radius` alone re-tunes the small and large radii with it.
 
-The `app/` namespace contains bundled app examples built from the same UI components:
+### The spacing scale and rhythm
 
-```html
-<block name="app/kitchen-sink"></block>
-
-<block name="app/chat">
-  <block name="app/chat-sidebar"></block>
-  <block name="app/chat-header"></block>
-  <block name="app/chat-messages"></block>
-  <block name="app/chat-input"></block>
-</block>
-```
-
-These are useful as reference implementations for more complex Interactivity API flows, RPC, database-backed UI, and compound block composition.
-
-## Styling
-
-UI components ship with their own CSS custom properties using the `--bs-ui-` prefix. You can override them from your theme CSS:
+Vertical rhythm is not something you add with margins. It comes from a fixed scale:
 
 ```css
-:root {
-  --bs-ui-radius: 0.5rem;
+--bs-ui-space-1: 0.25rem;
+--bs-ui-space-2: 0.5rem;
+--bs-ui-space-3: 0.75rem;
+--bs-ui-space-4: 1rem;
+--bs-ui-space-6: 1.5rem;
+--bs-ui-space-8: 2rem;
+--bs-ui-rhythm: var(--bs-ui-space-4);
+--bs-ui-field-gap: 0.375rem;
+```
+
+Containers own the rhythm by spacing their children with `gap` on that scale. A `bsui/field` separates its label, control, description, and error with `--bs-ui-field-gap`. A `bsui/field-group` stacks fields on `--bs-ui-rhythm`. A modal popup spaces its header, content, and footer regions with `--bs-ui-modal-gap`. Components do not space themselves with outer margins; the container they sit in owns the distance, so compositions do not fight collapsing margins.
+
+When no container owns the distance you need, insert an explicit step with `bsui/space`. It renders an `aria-hidden` div whose height is one value from the scale, sizes `1`, `2`, `3`, `4`, `6`, and `8`, default `4`:
+
+```html
+<bs:bsui-space size="6" />
+```
+
+Because both the containers and `bsui/space` read the same tokens, retuning `--bs-ui-space-4` retunes the default rhythm of the whole library at once.
+
+### One label primitive
+
+There is exactly one definition of what a form label looks like: `bsui/label`. The `bsui/field-label` template, the checkbox, the switch, and each `bsui/radio-group` item do not restyle a label; they render that block:
+
+```php
+echo bs_block(
+	array(
+		'name' => 'bsui/label',
+		'data' => array( 'text' => (string) ( $a['text'] ?? '' ) ),
+	)
+);
+```
+
+A change to the label primitive's stylesheet changes every label in the library, and nothing else can drift, because nothing else defines label typography.
+
+### Native form participation
+
+The custom controls are real form fields. Give a component a `name` and it renders a hidden input bound to its state, so a surrounding form posts plain values with no JavaScript on your side. The select's hidden input tracks `state.selectedValue`, the checkbox posts its `value` (default `on`) while checked, and the date input posts an ISO date alongside the formatted display value. Checkbox, radio group, select, slider, switch, rating, and the specialized inputs all follow this pattern.
+
+One naming detail: the `<block>` syntax already uses `name` for the block's own name, so form components also accept `nameAlt` as an equivalent spelling. With `<bs:>` tags, plain `name` works:
+
+```html
+<bs:bsui-select name="country" placeholder="Country" />
+<block name="bsui/select" nameAlt="country" placeholder="Country"></block>
+```
+
+### One modal surface
+
+Dialog, alert dialog, and drawer are one surface wearing three shapes. All three popups read the `--bs-ui-modal-` tokens for their padding and internal gaps, sit on the same popover background and border tokens, and use the same backdrop: fixed, full-viewport, half-black with a 4px backdrop blur, at `z-index: 50` under a popup at `z-index: 51`. Overriding `--bs-ui-modal-padding` restyles every modal layer in the project consistently.
+
+### The page is the bundle
+
+Each component directory carries its own `style.inline.css` and, where it needs behavior, a `script.inline.js`. Blockstudio inlines a block's styles into the head and its scripts before the closing body tag, once per block, on exactly the pages where the block renders. There is no library-wide stylesheet of 59 components' rules and no bundle to split: a page that renders a button and a select ships the CSS and JS for a button and a select.
+
+Two small global assets exist, the token sheet and a shared helper script, and even those are injected only when the response actually contains a bundled component.
+
+### The bsui cascade layer
+
+Component CSS is emitted inside the named `bsui` cascade layer. The global sheet declares the layer up front, and every per-component stylesheet is wrapped in `@layer bsui { }` at output time. Unlayered CSS always beats layered CSS in the cascade, so any plain rule in your theme overrides component styling without `!important` and without specificity games:
+
+```css
+[data-bsui-button][data-variant="default"] {
+  border-radius: 0;
+}
+```
+
+### Hidden, focus, and motion
+
+Three conventions run through every component:
+
+- Visibility is the `hidden` attribute. Stylesheets style the open state through `:not([hidden])`, so setting `hidden` always wins and nothing needs a display override to close.
+- Focus is one ring. Focusable parts carry `data-bsui-focus`, and a single global rule draws a 2px `:focus-visible` outline in `--bs-ui-focus-ring`, falling back to `--bs-ui-ring`. Components repoint the ring instead of redrawing it; an invalid field, for example, sets `--bs-ui-focus-ring` to the destructive color.
+- Motion respects the user. A global `prefers-reduced-motion` rule collapses component animations and transitions to 1ms.
+
+## Composition first
+
+The library has one rule for sharing a look: render the block. The data attributes in the components' markup, `data-bsui-button`, `data-bsui-label`, and the rest, are a private contract between each component's template and its own stylesheet. Copying one onto your own element borrows today's CSS and none of tomorrow's, and it silently breaks when the component's markup evolves.
+
+Rendering the block instead means the stylesheet and behavior travel with it. The library holds itself to this rule internally. The date input does not reimplement a month grid; its popup renders the calendar component:
+
+```php
+<div data-bsui-date-input-popup hidden>
+	<?php echo bs_block( array( 'name' => 'bsui/calendar', 'data' => array() ) ); ?>
+</div>
+```
+
+The field label renders the label primitive, as shown above. The dialog's close control does not style its own button; it renders the system one:
+
+```php
+echo bs_block( array(
+	'name' => 'bsui/button',
+	'data' => $is_x
+		? array( 'variant' => 'ghost', 'size' => 'icon', 'label' => '✕' )
+		: array( 'variant' => $a['variant'] ?? 'outline', 'label' => $a['label'] ?? 'Close' ),
+) );
+```
+
+The forwarded `variant` is how a footer builds its Cancel and Save pair from two close tags: the dismissing close stays `outline`, the affirmative one passes `variant="default"`. Your blocks should do the same. When a project block needs a button that looks like the system button, it renders `bsui/button` with `bs_block()` or a nested tag, and it gets every future refinement of the button for free.
+
+## Accessibility
+
+The components carry their accessibility with them, so a composed page starts from correct semantics rather than retrofitting them:
+
+- Overlays are announced. Dialog popups render `role="dialog"` with `aria-modal="true"`, triggers carry `aria-haspopup`, and disclosure patterns bind `aria-expanded` to their open state.
+- Selection widgets use the real patterns. The select renders a `role="listbox"` with `role="option"` children, tracks the active option through `aria-activedescendant`, and reflects choices through `aria-selected`. The checkbox is a `role="checkbox"` button whose `aria-checked` supports `mixed` for the indeterminate state.
+- Keyboards work everywhere. Listboxes and menus support arrow keys, Home, End, Enter, Space, and type-ahead matching; modals trap Tab inside themselves and return focus to their trigger on close.
+- Labels are real labels. The label primitive renders a `label` element and accepts a `for` attribute, and the decorative `bsui/space` block is `aria-hidden`.
+
+None of this requires configuration; it is how the templates are written.
+
+## Theming
+
+Tokens inherit, so the highest-leverage override is a handful of custom properties on `body`. That wins over the `:root` defaults for everything on the page, regardless of stylesheet order:
+
+```css
+body {
   --bs-ui-primary: oklch(0.45 0.18 260);
-  --bs-ui-primary-foreground: white;
+  --bs-ui-primary-foreground: oklch(0.985 0 0);
+  --bs-ui-ring: oklch(0.45 0.18 260);
+  --bs-ui-radius: 0.75rem;
+  --bs-ui-font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
 }
 ```
 
-The components are headless in behavior, but opinionated enough to be usable out of the box. Override tokens first, then add component-specific CSS where needed.
+Scope the same overrides to a section wrapper to retheme one area. The dark scheme needs no CSS at all; add the class to any ancestor and every token underneath it flips:
 
-Bundled component CSS is emitted in the named `bsui` cascade layer. Unlayered
-theme CSS can override component rules without `!important`:
-
-```css
-.button-brand {
-  background: var(--brand-primary);
-}
+```html
+<body class="dark">
 ```
 
-To add a custom `bsui/button` variant, append the select option with the
-existing attributes filter and provide the variant CSS with
-`blockstudio/ui/button/variants-style`:
+To adjust the dark palette rather than adopt it wholesale, override tokens inside your own `.dark` rule; it participates in the cascade like any other unlayered CSS.
+
+For structural changes beyond tokens, write plain CSS against the component's attributes; the cascade layer guarantees your unlayered rules win. To extend a component's public API, add to its fields and provide the CSS through the per-component style filter. Adding a brand variant to the button:
 
 ```php
 add_filter('blockstudio/blocks/attributes', function($attribute, $block) {
@@ -6097,11 +6133,289 @@ add_filter('blockstudio/ui/button/variants-style', function($css) {
 });
 ```
 
-## Related
+The `blockstudio/ui/{component}/variants-style` CSS is appended inside the component's own stylesheet, inside the `bsui` layer, so it loads exactly when the component does.
 
-- Programmatic Rendering
-- Components
-- Interactivity API
+## The programmatic inventory
+
+For galleries, previews, and tooling, the `Blockstudio\Ui` class exposes the library as data:
+
+```php
+use Blockstudio\Ui;
+
+$families = Ui::inventory();
+$examples = Ui::examples();
+```
+
+`Ui::inventory()` groups every compound component under its public root and lists the implementation registrations that family needs. `Ui::examples()` derives one deterministic, renderable declaration per family, preserving required root and child relationships, ready to pass to `Blockstudio\Render::document()`. When assembling an already-rendered document, `Ui::global_assets($block_names, $html)` returns the global token sheet and helper script only when the selected output actually uses a bundled component. The `blockstudio/ui/inventory` and `blockstudio/ui/examples` filters let you reshape both.
+
+## The component set
+
+| Area | Components |
+| --- | --- |
+| Layout and structure | `bsui/aspect-ratio`, `bsui/card`, `bsui/scroll-area`, `bsui/separator`, `bsui/space`, `bsui/stack`, `bsui/table` |
+| Actions | `bsui/button`, `bsui/button-group`, `bsui/toggle`, `bsui/toggle-group`, `bsui/toolbar` |
+| Inputs and forms | `bsui/calendar`, `bsui/checkbox`, `bsui/color-picker`, `bsui/combobox`, `bsui/date-input`, `bsui/field`, `bsui/field-group`, `bsui/file-upload`, `bsui/form`, `bsui/input`, `bsui/label`, `bsui/number-field`, `bsui/otp-input`, `bsui/password-input`, `bsui/phone-input`, `bsui/radio-group`, `bsui/rating`, `bsui/select`, `bsui/slider`, `bsui/switch`, `bsui/textarea`, `bsui/time-picker` |
+| Overlays | `bsui/alert-dialog`, `bsui/context-menu`, `bsui/dialog`, `bsui/drawer`, `bsui/menu`, `bsui/menubar`, `bsui/popover`, `bsui/preview-card`, `bsui/tooltip` |
+| Navigation | `bsui/accordion`, `bsui/breadcrumb`, `bsui/carousel`, `bsui/collapsible`, `bsui/navigation-menu`, `bsui/pagination`, `bsui/tabs` |
+| Feedback and display | `bsui/avatar`, `bsui/badge`, `bsui/kbd`, `bsui/meter`, `bsui/progress`, `bsui/skeleton`, `bsui/spinner`, `bsui/text`, `bsui/toast` |
+
+Compound families also register their child blocks, such as `bsui/dialog-trigger`, `bsui/dialog-popup`, `bsui/select-trigger`, `bsui/select-popup`, `bsui/select-option`, `bsui/tabs-list`, `bsui/tabs-trigger`, and `bsui/tabs-panel`. Every part, with its attributes and defaults, is documented at /ui.
+
+> UI Composition
+>
+> Parent and child relationships, trigger forwarding, the stores underneath, and the layering model that makes selects work inside dialogs.
+
+> Component reference
+>
+> All 59 components with rendered previews, attributes, and worked examples, plus live compositions at /ui/examples.
+
+> Programmatic Rendering
+>
+> Block tags, prefixes, and the PHP rendering functions the examples on this page use.
+
+> Interactivity
+>
+> The directive and store model the UI components are built on.
+
+### UI Composition
+
+The bundled UI components are designed to be assembled, not used one at a time. A select opens inside a dialog, a form validates inside a drawer, a menu sits in a table row. This page explains the machinery that makes those seams work: how compound families are structured, how triggers forward button props, what the Interactivity API does underneath, and the layering model that keeps stacked surfaces coherent.
+
+## Compound families
+
+A compound component is a root block plus child blocks. The root owns the state; each child declares its place in the family through `parent` and `usesContext` in its `block.json`:
+
+```json
+{
+  "name": "bsui/select-option",
+  "parent": ["bsui/select-popup"],
+  "usesContext": ["bsui/select"]
+}
+```
+
+Roots expose an `InnerBlocks` area with an `allowedBlocks` list and a starting `template`, so inserting a dialog in the editor scaffolds its trigger, backdrop, and popup, and a family behaves identically whether it is composed in the editor, in a file-based page, or in tags:
+
+```html
+<bs:bsui-select name="role" placeholder="Pick a role">
+  <bs:bsui-select-trigger />
+  <bs:bsui-select-popup>
+    <bs:bsui-select-option value="viewer" label="Viewer" />
+    <bs:bsui-select-option value="editor" label="Editor" />
+  </bs:bsui-select-popup>
+</bs:bsui-select>
+```
+
+Popups and panels are real `InnerBlocks` areas, not slots with special syntax. A `bsui/dialog-popup` accepts nested blocks the same way a group block does, which is what makes putting a form, a select, or another dialog inside one an ordinary act of composition.
+
+### Flat data or composed children
+
+Some families accept their content as data instead of children. The select renders its own trigger and listbox when you hand it an `options` JSON array, which suits options that come from PHP:
+
+```php
+bs_render_block([
+  'name' => 'bsui/select',
+  'data' => [
+    'name' => 'role',
+    'placeholder' => 'Pick a role',
+    'options' => wp_json_encode([
+      ['value' => 'viewer', 'label' => 'Viewer'],
+      ['value' => 'editor', 'label' => 'Editor'],
+    ]),
+  ],
+]);
+```
+
+Both forms produce the same markup contract and the same runtime behavior. Use children when the structure is authored, `options` when it is computed.
+
+## Trigger forwarding
+
+Overlay components open from a button, and that button should be the system button. Rather than each trigger reimplementing one, the trigger blocks of `bsui/dialog`, `bsui/alert-dialog`, `bsui/drawer`, `bsui/menu`, `bsui/popover`, `bsui/collapsible`, and `bsui/tooltip` embed `bsui/button` through a block field:
+
+```json
+{
+  "blockstudio": {
+    "attributes": [
+      {
+        "id": "trigger",
+        "type": "block",
+        "block": "bsui/button",
+        "idStructure": "trigger_{id}"
+      }
+    ]
+  }
+}
+```
+
+The `idStructure` expands the button's fields onto the trigger with a `trigger_` prefix. Every button prop is available: `trigger_label`, `trigger_variant`, `trigger_size`, `trigger_icon`, `trigger_iconPosition`, `trigger_href`, `trigger_disabled`.
+
+```html
+<bs:bsui-dialog-trigger trigger_label="Invite teammate" trigger_variant="outline" />
+```
+
+In the trigger's template, `$a['trigger']` is the fully rendered button, so the button's stylesheet and future refinements travel with it. At runtime, a shared helper forwards the wrapper's ARIA wiring (`aria-haspopup`, `aria-expanded`, `aria-controls`, `aria-describedby`, `aria-labelledby`, `id`) onto the inner button and keeps it in sync through a `MutationObserver`, so assistive technology sees one coherent control.
+
+## The Interactivity API underneath
+
+Every interactive family is a WordPress Interactivity API store named after its root block: `bsui/dialog`, `bsui/select`, `bsui/form`, `bsui/tabs`, and so on. Three consequences follow.
+
+State is seeded server-side. The root template prints its initial state as `data-wp-context`, straight from the block's attributes:
+
+```html
+<div
+  data-wp-interactive="bsui/select"
+  data-wp-context='{"open":false,"value":"","placeholder":"Pick a role", ...}'
+  data-bsui-select-root
+>
+```
+
+The first paint is correct HTML with no client-side hydration flash, popups start `hidden`, and the same markup works in the editor canvas because context does not depend on a frontend-only state pass.
+
+Behavior is wired with directives, not with your JavaScript. The templates connect markup to stores declaratively. The select's trigger, stripped of its PHP, is nothing but directives:
+
+```html
+<button
+  data-wp-interactive="bsui/select"
+  data-wp-on--click="actions.toggle"
+  data-wp-on--keydown="actions.handleTriggerKeyDown"
+  data-wp-bind--aria-expanded="state.ariaExpanded"
+  data-wp-text="state.displayValue"
+  data-bsui-select-trigger
+  aria-haspopup="listbox"
+>
+```
+
+`data-wp-on` routes events to actions, `data-wp-bind` keeps attributes in sync with derived state, `data-wp-text` renders state as text, and `data-wp-on-document--click` gives roots their outside-click dismissal. Composing components never requires writing an event handler; the store ships with the block as an inline module.
+
+Your stores can plug into the seams. Form controls accept directive expressions as attributes, and the Interactivity API's namespaced syntax points them at any store. `onChange` routes change handling to one of your actions, `checked` binds the control's state to your state, and `bindText` renders a label as a `data-wp-text` span bound to any state path:
+
+```html
+<bs:bsui-switch label="Notifications" checked="myPlugin::state.notifications" onChange="myPlugin::actions.toggleNotifications" />
+<bs:bsui-checkbox label="0 selected" bindText="myPlugin::state.selectionSummary" />
+```
+
+`bindText` is available on `bsui/label`, `bsui/checkbox`, `bsui/switch`, `bsui/toggle`, and `bsui/radio-group` items. On the checkbox, switch, and radio items it flows into the shared label primitive, so state-driven text keeps the exact system label typography. Selects and other inputs additionally dispatch a bubbling `change` event from their root, carrying the new value in `detail`, for coarser integrations.
+
+## Composing from your own blocks
+
+Composition is not limited to pages. Block tags render automatically inside block templates, so a project block can emit `bsui` components directly and wrap them in its own structure:
+
+```php
+<div useBlockProps class="settings-panel">
+  <bs:bsui-switch label="Public profile" name="public" />
+  <bs:bsui-space size="4" />
+  <bs:bsui-button label="Save" variant="default" />
+</div>
+```
+
+The same works from PHP with `bs_block()`, including nesting through the `content` key, as described under programmatic rendering. Either way the component's stylesheet and store load with it, and your block stays a thin layer of arrangement over system parts.
+
+## The layering model
+
+Stacked surfaces are where component libraries usually fall apart. The bundled components follow a small set of rules, written for people building real UIs.
+
+### Modals portal to the body
+
+When a dialog, alert dialog, or drawer opens, its popup and backdrop are moved to `document.body`, with a placeholder comment marking the way home for when it closes. Portaling frees the modal from any ancestor's `overflow`, transform, or stacking context. Opening also locks page scroll: the lock is reference-counted across all overlay components, and it compensates for the scrollbar width so the page does not shift. The backdrop sits at `z-index: 50`, the popup at `51`, focus moves into the popup, Tab is trapped inside it, and closing returns focus to the trigger.
+
+Modals stack. Opening a dialog from inside a dialog pushes onto one shared stack: only the outermost dialog shows its backdrop, and the dialogs behind the top one scale down and peek from behind it. The stack drives a `--bs-ui-nested-dialogs` custom property on each background popup, so the peeking offset and scale deepen with every level, and the parent matches its height to the child so the layers peek evenly. Closing restores everything in reverse, one layer per close.
+
+When a modal closes, focus returns to its trigger, and it returns to the right element. A shared `getAnchor` helper resolves a trigger wrapper to the system button inside it, so the visible control regains focus rather than an invisible wrapper.
+
+### The top modal is never transformed
+
+That peeking effect transforms only the background dialogs. The top modal deliberately stays untransformed, because a transformed element becomes the containing block for `position: fixed` descendants, which would break every floating popup opened inside it.
+
+This is the rule that makes the whole layering model compose. The floating layers all position themselves with fixed coordinates, which only mean the viewport as long as no transformed ancestor intervenes:
+
+- The menu and the combobox compute their position against the trigger with Floating UI's `fixed` strategy, dropping below it and flipping or shifting when the viewport runs out.
+- The select does the same when nothing is selected. When it already has a selection, it instead aligns its popup so the selected option sits directly over the trigger, clamped to the viewport, the way native selects behave on macOS.
+- The context menu opens at the pointer's `clientX`/`clientY`.
+
+Because the top modal is untransformed, all of these anchor correctly to their triggers inside a dialog, an alert dialog, or a drawer, at any nesting depth. Nothing about the popups knows they are inside a modal, and nothing needs to.
+
+### Escape closes the innermost layer first
+
+One Escape press closes exactly one layer, from the inside out:
+
+1. An open floating layer (a select listbox, a menu, a popover, a date or phone popup) closes first and returns focus to its trigger. The select stops the event's propagation, and the modal handlers additionally stand down whenever any floating layer is open, so the dialog underneath never sees that press.
+2. The top modal closes next.
+3. With stacked modals, each further Escape pops one more from the stack.
+
+Dismissal is a policy, not an accident. A dialog rendered with `dismissable="false"` ignores both Escape and backdrop clicks. And `bsui/alert-dialog` answers Escape like any modal but deliberately ignores backdrop clicks: the point of the pattern is that the choice has to be made rather than dismissed by accident. Backdrop clicks on a regular dialog close it, since `dismissable` defaults to true.
+
+## A form in a dialog
+
+The pattern that exercises every rule above at once: a trigger opens a modal, the modal contains a validating form, and the form contains a floating select.
+
+```html
+<bs:bsui-dialog>
+  <bs:bsui-dialog-trigger trigger_label="Invite teammate" trigger_variant="outline" />
+  <bs:bsui-dialog-backdrop />
+  <bs:bsui-dialog-popup>
+    <bs:bsui-dialog-header>
+      <bs:bsui-dialog-title content="Invite a teammate" />
+      <bs:bsui-dialog-description content="They receive an email with a join link." />
+    </bs:bsui-dialog-header>
+    <bs:bsui-dialog-content>
+      <bs:bsui-form block="team/invite" successMessage="Invitation sent.">
+        <bs:bsui-field name="email">
+          <bs:bsui-field-label text="Email" />
+          <bs:bsui-input name="email" type="email" placeholder="colleague@example.com" required="true" />
+          <bs:bsui-field-error />
+        </bs:bsui-field>
+        <bs:bsui-field name="role">
+          <bs:bsui-field-label text="Role" />
+          <bs:bsui-select name="role" defaultValue="editor" placeholder="Pick a role">
+            <bs:bsui-select-trigger />
+            <bs:bsui-select-popup>
+              <bs:bsui-select-option value="viewer" label="Viewer" />
+              <bs:bsui-select-option value="editor" label="Editor" />
+              <bs:bsui-select-option value="admin" label="Admin" />
+            </bs:bsui-select-popup>
+          </bs:bsui-select>
+        </bs:bsui-field>
+        <bs:bsui-space size="2" />
+        <bs:bsui-button label="Send invite" />
+      </bs:bsui-form>
+    </bs:bsui-dialog-content>
+    <bs:bsui-dialog-footer>
+      <bs:bsui-dialog-close label="Cancel" />
+    </bs:bsui-dialog-footer>
+  </bs:bsui-dialog-popup>
+</bs:bsui-dialog>
+```
+
+Every tag and attribute above is load-bearing: the trigger forwards to the system button, the title and description take `content`, the fields carry the names the form serializes, and `required="true"` coerces to a real boolean in the tag parser. This is also the composition the library's harness pins with a dedicated interaction suite.
+
+### What each store does at runtime
+
+`bsui/dialog` seeds `{"open":false,"dismissable":true}` into context on the server. The trigger's click runs `actions.open`: the popup and backdrop portal to the body, scroll locks with scrollbar compensation, the popup animates in over 150ms, focus moves to its first focusable element, and Tab cycles inside it. The header, content, and footer regions space themselves on the modal gap tokens.
+
+`bsui/select` waits inside the form with its listbox `hidden`. Clicking the trigger flips `context.open`, positions the listbox with fixed viewport coordinates, and because `defaultValue="editor"` is already selected, aligns the popup so Editor sits directly over the trigger. Arrow keys, Home, End, and type-ahead move the active option; Enter or a click selects; Tab and outside clicks dismiss without selecting. The trigger's visible text updates through `data-wp-text="state.displayValue"`, and the hidden `<input name="role">` tracks the value through `data-wp-bind--value="state.selectedValue"`, which is what the form later serializes. All of this anchors correctly inside the dialog because the top modal is untransformed.
+
+`bsui/form` intercepts the submit. The `bsui/button` at the end of the form renders a plain `button` element with no `type` attribute, so it is the form's submit control by HTML default; the Cancel button lives in the footer outside the `form` element and cannot submit anything. On submit, the store serializes the form's `FormData` and sends it through the data API of the block named in `block`, here creating a row against the `team/invite` block's database schema. Validation errors come back per field: each `bsui/field` carries its `name`, gets flagged invalid, repoints the focus ring to the destructive color, and shows the message in its `bsui/field-error` alert. On success, the form body hides and the `successMessage` shows, both through `data-wp-bind--hidden`.
+
+The layers unwind in order. With the listbox open, Escape closes the listbox and refocuses the select trigger; the next Escape closes the dialog and refocuses Invite teammate. A backdrop click closes the dialog because `dismissable` was left at its default. Closing unlocks scroll and unportals the popup back to its place in the document.
+
+The same markup pasted into a file-based page syncs as native blocks, and the same composition assembled in the editor previews interactively in the canvas, because every behavior above lives in directives and stores that load in both contexts.
+
+## What keeps these seams working
+
+Composition is only trustworthy if the seams are tested, so the library treats them as first-class test subjects.
+
+The library's Playwright harness exercises the same path you use. Its fixture theme enables the library through `ui.enabled` in `blockstudio.json` and composes test pages from tags, so registration, discovery, and asset loading are covered by the act of running the suite, not mocked around.
+
+It runs component suites and dedicated interaction suites against real pages, in both frontend and editor contexts. The interaction fixtures are standalone blocks composing multiple `bsui` families, and the specs are exactly the compositions above: a dialog containing a form containing a select, a form submission lifecycle with server-side validation errors, multi-step workflows, state syncing between checkboxes and counters. They assert the seams, not the parts: that the select's popup is visible inside the open dialog, that selecting updates the trigger text, that submitting closes the dialog and the new row appears in the list.
+
+On top of that sits a measured design contract. A dedicated spec reads computed styles from the rendered pages and asserts the system's invariants: every label in the library resolves to one identical set of computed typography, every modal popup shares one surface (same padding, background, and z-index across dialog, alert dialog, and drawer), and every modal dims the page behind it. The reference site behind /ui runs the same assertions against its own tokens, so a drift is caught wherever it starts: a component stylesheet, the shared tokens, or a theme override.
+
+## Live examples
+
+The compositions on this page are the grammar; /ui/examples is the phrasebook. It collects live, rendered compositions in three tiers: pairs that prove one seam between two or three components, recognizable product patterns built from a handful of them, and complete mini apps assembled the way the components ship inside real products. Each component page at /ui adds its own worked examples, from a labeled field to a calendar behind a popover.
+
+> Interactivity
+>
+> The directive and store model the UI components are built on, and how to use it in your own blocks.
 
 ### Islands
 
@@ -9811,6 +10125,8 @@ Disable raw Markdown responses with the `blockstudio/pages/serve_markdown` filte
 add_filter( 'blockstudio/pages/serve_markdown', '__return_false' );
 ```
 
+A `.md` URL that does not resolve to a Markdown-backed page returns a 404 only when the path falls inside a page collection. Outside every collection, Blockstudio leaves the request alone for WordPress and other plugins to handle.
+
 ## Page Collections
 
 A collection is a folder with a `pages.json` manifest. It groups many page sources under one collection slug, applies defaults, supports nested paths, and can register a dedicated post type automatically.
@@ -11529,6 +11845,14 @@ The full CSS input that gets compiled looks like this:
 Tailwind compilation hooks into Blockstudio's output buffer system. The buffer captures the complete page HTML after WordPress has finished rendering, allowing Tailwind to scan all classes from every source: block templates, theme templates, plugin output, `the_content` filters, and widget areas.
 
 The compilation filter runs at priority `999999` on the `blockstudio/buffer/output` hook, ensuring it processes the final HTML after all other modifications. The buffer is started on the `template_redirect` action, which means it only runs on frontend requests, not in the admin, REST API, or AJAX contexts.
+
+Buffering the whole document is what makes this possible, so it is on by default. A site that uses neither Tailwind nor block assets can turn it off:
+
+```php
+add_filter( 'blockstudio/buffer/enabled', '__return_false' );
+```
+
+Returning `false` skips the buffer entirely, which also disables Tailwind compilation and the hoisting of block styles and scripts into the head and footer.
 
 ## Architecture
 
@@ -14093,7 +14417,7 @@ through a runtime endpoint.
 ### Settings Schema (blockstudio.json)
 
 ```json
-{"title":"JSON schema for Blockstudio settings","$schema":"http://json-schema.org/draft-04/schema#","type":"object","properties":{"users":{"type":"object","description":"Settings related to allowed users with access to the settings and editor.","properties":{"ids":{"id":"userIds","type":"array","default":[],"items":{"type":"integer"},"description":"List of user IDs with access to the settings and editor.","descriptionFilter":"This filter allows you to enable the editor for specific user IDs.","help":"Comma separated list of user IDs. Example: 1,2,3","example":[1]},"roles":{"id":"userRoles","type":"array","default":[],"items":{"type":"string"},"description":"List of user roles with access to the settings and editor.","descriptionFilter":"This filter allows you to enable the editor for specific user roles.","help":"Comma separated list of user roles. Example: administrator,editor","example":["administrator","editor"]}}},"assets":{"type":"object","description":"Settings related to asset management.","properties":{"enqueue":{"type":"boolean","default":true,"description":"Enqueue assets in frontend and editor.","descriptionFilter":"This filter allows you to enable/disable the enqueueing of assets in frontend and editor.","example":false},"reset":{"type":"object","default":{"enabled":false,"fullWidth":[]},"description":"Control removal of WordPress core block styles and editor reset parity.","properties":{"enabled":{"type":"boolean","default":false,"description":"Remove WordPress core block styles on the frontend and in the editor, and restore common utility-class display and position values in the editor canvas.","descriptionFilter":"This filter allows you to enable/disable the removal of WordPress core block styles and the editor utility layout reset.","example":true},"fullWidth":{"type":"array","default":[],"items":{"type":"string"},"description":"Post types where the editor uses full-width layout by removing classic editor constraints.","descriptionFilter":"This filter allows you to control which post types use full-width editing.","example":["page"]}}},"minify":{"type":"object","description":"Settings related to asset minification.","properties":{"css":{"type":"boolean","default":false,"description":"Minify CSS.","descriptionFilter":"This filter allows you to enable/disable the minification of CSS.","example":true},"js":{"type":"boolean","default":false,"description":"Minify JS.","descriptionFilter":"This filter allows you to enable/disable the minification of JS.","example":true}}},"process":{"type":"object","description":"Settings related to asset processing.","properties":{"scss":{"type":"boolean","default":false,"description":"Process SCSS in .css files.","descriptionFilter":"This filter allows you to enable/disable the processing of SCSS in .css files.","example":true},"scssFiles":{"type":"boolean","default":true,"description":"Process .scss files to CSS.","descriptionFilter":"This filter allows you to enable/disable the processing of .scss files to CSS.","example":true}}}},"additionalProperties":false},"cache":{"type":"object","description":"Settings related to Blockstudio runtime caching.","properties":{"enabled":{"type":"boolean","default":true,"description":"Enable Blockstudio file-backed runtime, block registration, and editor asset caches.","descriptionFilter":"This filter allows you to enable/disable all Blockstudio file-backed runtime and editor asset caches.","example":false},"path":{"type":"string","default":"blockstudio/cache","description":"Cache directory. Relative paths resolve from WP_CONTENT_DIR; absolute paths are used as provided.","descriptionFilter":"This filter allows you to change the Blockstudio file-backed cache directory.","example":"cache/blockstudio"}},"additionalProperties":false},"githooks":{"type":"object","description":"Settings for repository hooks generated and owned by Blockstudio development tooling.","properties":{"commit":{"type":"boolean","default":false,"description":"Generate an analysis-only pre-commit hook when blockstudio-githooks sync runs.","descriptionFilter":"This filter exposes whether the Blockstudio-owned PHPStan commit hook is enabled.","example":true}},"additionalProperties":false},"phpstan":{"type":"object","description":"Settings consumed by the canonical blockstudio-phpstan command and Blockstudio-owned analysis hook.","properties":{"preset":{"type":"string","enum":["base","theme","extreme-theme","wordpress-render"],"default":"base","description":"Analysis preset used when the command line does not select one explicitly. The theme and extreme-theme layers are opt-in and must be selected here or on the command line.","example":"extreme-theme"},"configuration":{"type":"string","default":"","description":"Project PHPStan configuration file to include alongside the preset. Relative paths resolve from blockstudio.json. Use it to adopt analysis on an existing project through a baseline.","example":"phpstan.neon"},"roots":{"type":"array","minItems":1,"default":["."],"items":{"type":"string","minLength":1},"description":"Theme roots analyzed by the canonical command. Relative paths resolve from this configuration file.","example":[".","../shared-theme"]},"excludePaths":{"type":"array","default":[],"items":{"type":"string","minLength":1},"description":"Additional scanner exclusions relative to each configured root.","example":["fixtures/**"]},"maxFiles":{"type":"integer","minimum":1,"default":10000,"description":"Maximum number of files inspected by the theme scanner.","example":10000}},"additionalProperties":false},"themeDefaults":{"type":"object","description":"Generic defaults for themes that load Blockstudio.","properties":{"titleTag":{"type":"boolean","default":false,"description":"Enable WordPress title-tag theme support.","example":true},"suppressDirectoryUpdates":{"type":"boolean","default":false,"description":"Remove the active child and parent theme from WordPress.org directory update results.","example":true},"syncPagesInDevelopment":{"type":"boolean","default":false,"description":"Reconcile file-backed pages when their source signature changes in local or WP_DEBUG environments.","example":true}},"additionalProperties":false},"performance":{"type":"object","description":"Opt-in generic frontend runtime behavior. Compat preserves WordPress defaults; speed and strict enable the documented optimization profile.","properties":{"profile":{"type":"string","enum":["compat","speed","strict"],"default":"compat","description":"Base runtime profile. Explicit child values override the selected profile.","example":"speed"},"wordpress":{"type":"object","description":"Independent WordPress optimization switches.","properties":{"headNoise":{"type":"boolean","default":false,"description":"Remove generator, emoji, feed, discovery, and adjacent-post head output.","example":true},"embeds":{"type":"boolean","default":false,"description":"Remove oEmbed discovery and host scripts.","example":true},"xmlrpc":{"type":"boolean","default":false,"description":"Disable XML-RPC and pingbacks.","example":true},"editor":{"type":"boolean","default":false,"description":"Disable remote patterns, Openverse, application passwords, and the block directory.","example":true},"frontendAssets":{"type":"boolean","default":false,"description":"Remove generic core frontend styles and scripts when the theme owns its asset output.","example":true},"media":{"type":"boolean","default":false,"description":"Apply image quality, generated-size, and async decoding defaults.","example":true},"heartbeat":{"type":"boolean","default":false,"description":"Throttle Heartbeat to at least 60 seconds outside editor screens.","example":true}},"additionalProperties":false},"preload":{"type":"object","description":"Document preload behavior.","properties":{"links":{"type":"string","enum":["off","intent"],"default":"off","description":"Prefetch same-origin documents after hover, focus, or touch intent.","example":"intent"}},"additionalProperties":false},"media":{"type":"object","description":"Stable image rendering and lazy-loading behavior.","properties":{"lazy":{"type":"boolean","default":false,"description":"Use the Blockstudio intersection-observer image loader.","example":true},"skeleton":{"type":"boolean","default":false,"description":"Show the built-in media skeleton while lazy images load.","example":true},"metadata":{"type":"boolean","default":false,"description":"Declare that assets/media.json is generated and maintained for stable dimensions.","example":true},"rootMargin":{"type":"string","pattern":"^-?[0-9]+(?:px|%)$","default":"300px","description":"Intersection observer root margin for lazy images.","example":"400px"}},"additionalProperties":false},"measurement":{"type":"object","description":"Opt-in diagnostics for development and measurement environments.","properties":{"enabled":{"type":"boolean","default":false,"description":"Enable runtime measurement snapshots and hooks.","example":true},"queryMonitor":{"type":"boolean","default":false,"description":"Include queries taking at least 50ms in snapshots when SAVEQUERIES data is available.","example":true},"headers":{"type":"boolean","default":false,"description":"Send Blockstudio performance profile and configuration headers.","example":true},"timings":{"type":"boolean","default":false,"description":"Include elapsed request time in the opt-in response headers.","example":true}},"additionalProperties":false},"staticPrerender":{"type":"object","description":"Configuration reserved for Blockstudio's file-backed prerender runtime.","properties":{"enabled":{"type":"boolean","default":false,"description":"Enable static prerender generation and serving.","example":true},"ttl":{"type":"integer","minimum":1,"default":86400,"description":"Maximum prerender age in seconds.","example":3600},"invalidate":{"type":"string","enum":["signature","graph"],"default":"signature","description":"Prerender invalidation strategy.","example":"graph"},"earlyServe":{"type":"boolean","default":false,"description":"Serve eligible prerenders before the full WordPress template lifecycle.","example":true},"serveLoggedIn":{"type":"boolean","default":false,"description":"Allow logged-in requests to receive prerendered documents.","example":false},"dynamicPaths":{"type":"array","default":[],"items":{"type":"string","minLength":1},"description":"Path prefixes that must always remain dynamic.","example":["/account"]},"warm":{"type":"object","description":"Background prerender warming.","properties":{"enabled":{"type":"boolean","default":false,"description":"Enable scheduled warming.","example":true},"interval":{"type":"integer","minimum":60,"default":3600,"description":"Warm interval in seconds.","example":900},"concurrency":{"type":"integer","minimum":1,"default":2,"description":"Maximum concurrent warm requests.","example":4},"transport":{"type":"string","enum":["http","internal"],"default":"http","description":"Warm request transport.","example":"http"}},"additionalProperties":false}},"additionalProperties":false}},"additionalProperties":false},"content":{"type":"object","description":"Settings for Content Sync, the WP-CLI driven projection of allowlisted WordPress content to portable files.","properties":{"enabled":{"type":"boolean","default":false,"description":"Enable Content Sync configuration for this theme.","descriptionFilter":"This filter allows you to enable/disable Content Sync.","example":true},"id":{"type":"string","default":"default","description":"Content-set identity stored on synced entities. Prune and ownership checks are scoped to this value.","descriptionFilter":"This filter allows you to set the Content Sync ownership namespace.","example":"docs"},"path":{"type":"string","default":"content","description":"Theme-relative directory where Content Sync reads and writes files.","descriptionFilter":"This filter allows you to set the Content Sync file directory.","example":"content"},"includePageSyncManaged":{"type":"boolean","default":false,"description":"Include Page Sync managed posts. Their post_content remains owned by Page Sync.","descriptionFilter":"This filter allows you to include or exclude Page Sync managed posts.","example":false},"authors":{"type":"string","enum":["ignore","login"],"default":"ignore","description":"Author portability mode. Use ignore to omit authors or login to store author logins and resolve existing users on push.","descriptionFilter":"This filter allows you to configure Content Sync author handling.","example":"ignore"},"postTypes":{"type":"array","default":[],"items":{"type":"string"},"description":"Allowlisted post types to sync. Empty means no post types are synced.","descriptionFilter":"This filter allows you to configure Content Sync post type allowlists.","example":["team_member"]},"meta":{"type":"object","description":"Postmeta allowlist, exclude list, and declared reference rewriting rules.","properties":{"include":{"type":"array","default":[],"items":{"type":"string"},"description":"Glob patterns for meta keys that may be projected to files.","example":["_my_*"]},"exclude":{"type":"array","default":["_edit_lock","_edit_last","_wp_old_slug"],"items":{"type":"string"},"description":"Glob patterns for meta keys that must never be projected, even if included.","example":["_edit_lock","_edit_last","_wp_old_slug"]},"references":{"type":"object","default":{},"description":"Declared meta references. Only these keys and paths are rewritten between local IDs and portable UIDs.","additionalProperties":{"type":"object","properties":{"kind":{"type":"string","enum":["post","attachment","term"],"description":"Referenced entity type.","example":"attachment"},"path":{"type":"string","description":"Optional dot path inside structured meta. Use * to map every array item.","example":"image.id"}},"required":["kind"]},"example":{"_thumbnail_id":{"kind":"attachment"},"_related_posts":{"kind":"post","path":"*"},"_hero":{"kind":"attachment","path":"image.id"}}}},"additionalProperties":false},"taxonomies":{"type":"array","default":[],"items":{"type":"string"},"description":"Allowlisted registered taxonomies whose terms and post relationships are synced. Taxonomy definitions are not captured.","descriptionFilter":"This filter allows you to configure Content Sync taxonomy allowlists.","example":["category","post_tag"]},"media":{"type":"string","enum":["manifest","none"],"default":"manifest","description":"Attachment reference behavior. manifest records referenced attachments and validates them on push; none drops attachment references.","descriptionFilter":"This filter allows you to configure Content Sync media handling.","example":"manifest"}},"additionalProperties":false},"tailwind":{"type":"object","description":"Settings related to Tailwind.","properties":{"enabled":{"type":"boolean","default":false,"description":"Enable Tailwind.","descriptionFilter":"This filter allows you to enable/disable Tailwind.","example":true},"config":{"type":"string","default":"","description":"Tailwind CSS configuration using v4 CSS-first syntax.","descriptionFilter":"This filter allows you to add a custom Tailwind CSS configuration.","element":"textarea","example":"@theme { --color-primary: pink; }"}},"additionalProperties":false},"ui":{"type":"object","description":"Settings related to bundled UI components.","properties":{"enabled":{"type":"boolean","default":false,"description":"Enable bundled UI components.","descriptionFilter":"This filter allows you to enable/disable bundled UI components.","example":true}},"additionalProperties":false},"editor":{"type":"object","description":"Settings related to the editor.","properties":{"formatOnSave":{"type":"boolean","default":false,"description":"Format code upon saving.","descriptionFilter":"This filter allows you to enable/disable the formatting of code upon saving.","example":true},"assets":{"id":"editorAssets","type":"array","default":[],"description":"Additional asset IDs to be enqueued.","descriptionFilter":"This filter allows you to enqueue additional assets in the editor.","example":["my-stylesheet","another-stylesheet"]},"markup":{"type":["string","boolean"],"element":"textarea","default":"","description":"Additional markup to be added to the end of the editor.","descriptionFilter":"This filter allows you to add additional markup to the end of the editor.","example":"<style>body { background: black; }</style>"}},"additionalProperties":false},"blockEditor":{"type":"object","description":"Settings related to Gutenberg.","properties":{"disableLoading":{"type":"boolean","default":false,"description":"Disable loading of blocks inside the Block Editor.","descriptionFilter":"This filter allows you to disable the loading of blocks inside the Block Editor.","example":true},"enhance":{"type":"boolean","default":false,"description":"Enable Blockstudio editor affordances such as cleaner focus styles and hover/selection outlines.","descriptionFilter":"This filter allows you to enable Blockstudio editor affordances such as cleaner focus styles and hover/selection outlines.","example":true},"cssClasses":{"id":"blockEditorCssClasses","type":"array","default":[],"description":"Stylesheets whose CSS classes should be available for choice in the class field.","descriptionFilter":"This filter allows you to add stylesheets whose classes should be available for choice in the class field.","example":["my-stylesheet","another-stylesheet"]},"cssVariables":{"id":"blockEditorCssVariables","type":"array","default":[],"description":"Stylesheets whose CSS variables should be available for autocompletion in the code field.","descriptionFilter":"This filter allows you to add stylesheets whose CSS variables should be available for autocompletion in the code field.","example":["my-stylesheet","another-stylesheet"]},"blocks":{"type":"object","description":"Global block editor policies that map to WordPress PHP block editor hooks.","properties":{"allow":{"type":"array","default":[],"items":{"type":"string"},"description":"Block names that are allowed in the inserter. Supports wildcards such as core/*.","descriptionFilter":"This filter allows you to control the block names that are allowed in the inserter.","example":["core/*","acf/*","my-theme/*"]},"deny":{"type":"array","default":[],"items":{"type":"string"},"description":"Block names that are removed from the inserter. Supports wildcards such as core/embed.","descriptionFilter":"This filter allows you to remove block names from the inserter.","example":["core/embed","core/freeform"]},"directory":{"type":"boolean","default":true,"description":"Enable the WordPress block directory assets in the editor.","descriptionFilter":"This filter allows you to enable or disable the WordPress block directory assets in the editor.","example":false},"categories":{"type":"object","description":"Filter, rename, and order block inserter categories by slug.","properties":{"allow":{"type":"array","default":[],"items":{"type":"string"},"description":"Block category slugs that should remain available. Empty means all categories are allowed.","descriptionFilter":"This filter allows you to control which block category slugs remain available.","example":["text","media","design"]},"deny":{"type":"array","default":[],"items":{"type":"string"},"description":"Block category slugs that should be removed from the inserter.","descriptionFilter":"This filter allows you to remove block category slugs from the inserter.","example":["embed"]},"rename":{"type":"object","default":{},"description":"Map block category slugs to replacement labels.","descriptionFilter":"This filter allows you to rename block category labels by slug.","additionalProperties":{"type":"string"},"example":{"text":"Writing","design":"Layout"}},"order":{"type":"array","default":[],"items":{"type":"string"},"description":"Block category slugs that should be moved to the beginning of the inserter in the provided order.","descriptionFilter":"This filter allows you to order block category slugs in the inserter.","example":["my-theme","text","media"]}},"additionalProperties":false},"styles":{"type":"object","description":"Policies for PHP-registered block styles.","properties":{"deny":{"type":"object","default":{},"description":"Map block names to PHP-registered block style names that should be unregistered. Use * as a style name to remove all registered styles for a block.","descriptionFilter":"This filter allows you to unregister PHP-registered block styles by block name.","additionalProperties":{"type":"array","items":{"type":"string"}},"example":{"my-theme/card":["outline"],"my-theme/media":["framed"]}}},"additionalProperties":false},"legacyWidgets":{"type":"object","description":"Policies for the legacy widget block.","properties":{"hide":{"type":"array","default":[],"items":{"type":"string"},"description":"Legacy widget IDs that should be hidden from the legacy widget block.","descriptionFilter":"This filter allows you to hide additional legacy widgets from the legacy widget block.","example":["archives","calendar"]}},"additionalProperties":false}},"additionalProperties":false},"patterns":{"type":"object","description":"Global pattern inserter policies that map to WordPress PHP pattern hooks.","properties":{"core":{"type":"boolean","default":true,"description":"Enable WordPress core block patterns.","descriptionFilter":"This filter allows you to enable or disable WordPress core block patterns.","example":false},"remote":{"type":"boolean","default":true,"description":"Enable remote patterns from the WordPress pattern directory.","descriptionFilter":"This filter allows you to enable or disable remote patterns from the WordPress pattern directory.","example":false},"theme":{"type":"boolean","default":true,"description":"Enable theme-provided block patterns.","descriptionFilter":"This filter allows you to enable or disable theme-provided block patterns.","example":false},"blockstudio":{"type":"boolean","default":true,"description":"Enable Blockstudio file-based patterns.","descriptionFilter":"This filter allows you to enable or disable Blockstudio file-based patterns.","example":false},"categories":{"type":"object","description":"Filter, rename, and order block pattern categories by slug.","properties":{"allow":{"type":"array","default":[],"items":{"type":"string"},"description":"Pattern category slugs that should remain available. Empty means all categories are allowed.","descriptionFilter":"This filter allows you to control which pattern category slugs remain available.","example":["featured","buttons","columns"]},"deny":{"type":"array","default":[],"items":{"type":"string"},"description":"Pattern category slugs that should be removed from the pattern inserter.","descriptionFilter":"This filter allows you to remove pattern category slugs from the pattern inserter.","example":["gallery"]},"rename":{"type":"object","default":{},"description":"Map pattern category slugs to replacement labels.","descriptionFilter":"This filter allows you to rename pattern category labels by slug.","additionalProperties":{"type":"string"},"example":{"featured":"Featured Layouts"}},"order":{"type":"array","default":[],"items":{"type":"string"},"description":"Pattern category slugs that should be moved to the beginning of the inserter in the provided order.","descriptionFilter":"This filter allows you to order pattern category slugs in the inserter.","example":["featured","buttons"]}},"additionalProperties":false}},"additionalProperties":false},"media":{"type":"object","description":"Global media policies for the block editor.","properties":{"openverse":{"type":"boolean","default":true,"description":"Enable the Openverse media category in the block editor media inserter.","descriptionFilter":"This filter allows you to enable or disable the Openverse media category in the block editor media inserter.","example":false},"imageSizes":{"type":"object","description":"Filter image size choices shown in editor media controls.","properties":{"allow":{"type":"array","default":[],"items":{"type":"string"},"description":"Image size names that should remain available. Empty means all image sizes are allowed.","descriptionFilter":"This filter allows you to control which image size names remain available in editor media controls.","example":["thumbnail","large"]},"deny":{"type":"array","default":[],"items":{"type":"string"},"description":"Image size names that should be removed from editor media controls.","descriptionFilter":"This filter allows you to remove image size names from editor media controls.","example":["medium_large"]}},"additionalProperties":false}},"additionalProperties":false}},"additionalProperties":false},"ai":{"id":"aiLlmMd","type":"object","description":"Settings related to AI-powered context generation.","properties":{"enableContextGeneration":{"type":"boolean","default":false,"description":"Enables the automatic creation of a comprehensive context file for use with large language model (LLM) tools (e.g., Cursor). This file compiles current installation data: all available block definitions and paths, Blockstudio-specific settings, relevant block schemas, and combined Blockstudio documentation, providing a ready-to-use resource for prompt engineering and AI code development.","descriptionFilter":"This filter allows you to enable or disable context file generation for LLM tool integration. When enabled, the context file assembles up-to-date block data, Blockstudio settings of the current install, all relevant schemas, and Blockstudio documentation into a single source for use with AI development tools.","example":true}},"additionalProperties":false},"blockTags":{"type":"object","description":"Settings for bs: tag rendering. Controls page-level replacement of <bs:block-name> tags with rendered block output. Template-level rendering is always active.","properties":{"enabled":{"type":"boolean","default":false,"description":"Enable page-level bs: tag rendering in post content and widget areas.","descriptionFilter":"This filter allows you to enable/disable page-level block tag rendering.","example":true},"allow":{"type":"array","items":{"type":"string"},"default":[],"description":"Allowlist of block name patterns. Supports wildcards via fnmatch(). When set, only matching blocks render via tags.","example":["mytheme/*","bsui/*"]},"deny":{"type":"array","items":{"type":"string"},"default":[],"description":"Denylist of block name patterns. Supports wildcards via fnmatch(). Matching blocks are excluded from tag rendering. Takes precedence over allow.","example":["mytheme/internal-*"]},"prefixes":{"type":"object","default":{},"description":"Prefix to namespace shorthands for block tags. Each key is a lowercase prefix without dashes, and each value is a namespace string or ordered namespace array.","descriptionFilter":"This filter allows you to register prefix to namespace shorthands for block tags.","example":{"theme":["theme-components","bsui"]}}},"additionalProperties":false},"dev":{"type":"object","description":"Settings related to developer tools.","properties":{"grab":{"type":"object","description":"Settings related to the element grabber.","properties":{"enabled":{"type":"boolean","default":false,"description":"Enable the element grabber.","descriptionFilter":"This filter allows you to enable/disable the element grabber.","example":false}}},"perf":{"type":"boolean","default":false,"description":"Enable the performance profiler. Shows Server-Timing headers and a debug panel on every page load.","descriptionFilter":"This filter allows you to enable/disable the performance profiler.","example":false},"canvas":{"type":"object","description":"Settings related to the canvas.","properties":{"enabled":{"type":"boolean","default":false,"description":"Enable the canvas.","descriptionFilter":"This filter allows you to enable/disable the canvas.","example":false},"adminBar":{"type":"boolean","default":true,"description":"Show the WordPress admin bar when viewing the canvas.","descriptionFilter":"This filter allows you to show/hide the WordPress admin bar on the canvas.","example":true}}}},"additionalProperties":false},"$schema":{"type":"string","description":"JSON Schema reference for editor completion."}},"additionalProperties":false}
+{"title":"JSON schema for Blockstudio settings","$schema":"http://json-schema.org/draft-04/schema#","type":"object","properties":{"users":{"type":"object","description":"Settings related to allowed users with access to the settings and editor.","properties":{"ids":{"id":"userIds","type":"array","default":[],"items":{"type":"integer"},"description":"List of user IDs with access to the settings and editor.","descriptionFilter":"This filter allows you to enable the editor for specific user IDs.","help":"Comma separated list of user IDs. Example: 1,2,3","example":[1]},"roles":{"id":"userRoles","type":"array","default":[],"items":{"type":"string"},"description":"List of user roles with access to the settings and editor.","descriptionFilter":"This filter allows you to enable the editor for specific user roles.","help":"Comma separated list of user roles. Example: administrator,editor","example":["administrator","editor"]}}},"assets":{"type":"object","description":"Settings related to asset management.","properties":{"enqueue":{"type":"boolean","default":true,"description":"Enqueue assets in frontend and editor.","descriptionFilter":"This filter allows you to enable/disable the enqueueing of assets in frontend and editor.","example":false},"reset":{"type":"object","default":{"enabled":false,"fullWidth":[]},"description":"Control removal of WordPress core block styles and editor reset parity.","properties":{"enabled":{"type":"boolean","default":false,"description":"Remove WordPress core block styles on the frontend and in the editor, and restore common utility-class display and position values in the editor canvas.","descriptionFilter":"This filter allows you to enable/disable the removal of WordPress core block styles and the editor utility layout reset.","example":true},"fullWidth":{"type":"array","default":[],"items":{"type":"string"},"description":"Post types where the editor uses full-width layout by removing classic editor constraints.","descriptionFilter":"This filter allows you to control which post types use full-width editing.","example":["page"]}}},"minify":{"type":"object","description":"Settings related to asset minification.","properties":{"css":{"type":"boolean","default":false,"description":"Minify CSS.","descriptionFilter":"This filter allows you to enable/disable the minification of CSS.","example":true},"js":{"type":"boolean","default":false,"description":"Minify JS.","descriptionFilter":"This filter allows you to enable/disable the minification of JS.","example":true}}},"process":{"type":"object","description":"Settings related to asset processing.","properties":{"scss":{"type":"boolean","default":false,"description":"Process SCSS in .css files.","descriptionFilter":"This filter allows you to enable/disable the processing of SCSS in .css files.","example":true},"scssFiles":{"type":"boolean","default":true,"description":"Process .scss files to CSS.","descriptionFilter":"This filter allows you to enable/disable the processing of .scss files to CSS.","example":true}}},"output":{"type":"string","default":"source","enum":["source","cache"],"description":"Where compiled block assets are written. \"source\" writes a _dist directory beside the block, \"cache\" writes them under the Blockstudio cache directory so the source tree stays clean.","descriptionFilter":"This filter allows you to control where compiled block assets are written.","example":"cache"}},"additionalProperties":false},"cache":{"type":"object","description":"Settings related to Blockstudio runtime caching.","properties":{"enabled":{"type":"boolean","default":true,"description":"Enable Blockstudio file-backed runtime, block registration, and editor asset caches.","descriptionFilter":"This filter allows you to enable/disable all Blockstudio file-backed runtime and editor asset caches.","example":false},"path":{"type":"string","default":"blockstudio/cache","description":"Cache directory. Relative paths resolve from WP_CONTENT_DIR; absolute paths are used as provided.","descriptionFilter":"This filter allows you to change the Blockstudio file-backed cache directory.","example":"cache/blockstudio"}},"additionalProperties":false},"githooks":{"type":"object","description":"Settings for repository hooks generated and owned by Blockstudio development tooling.","properties":{"commit":{"type":"boolean","default":false,"description":"Generate an analysis-only pre-commit hook when blockstudio-githooks sync runs.","descriptionFilter":"This filter exposes whether the Blockstudio-owned PHPStan commit hook is enabled.","example":true}},"additionalProperties":false},"phpstan":{"type":"object","description":"Settings consumed by the canonical blockstudio-phpstan command and Blockstudio-owned analysis hook.","properties":{"preset":{"type":"string","enum":["base","theme","extreme-theme","wordpress-render"],"default":"base","description":"Analysis preset used when the command line does not select one explicitly. The theme and extreme-theme layers are opt-in and must be selected here or on the command line.","example":"extreme-theme"},"configuration":{"type":"string","default":"","description":"Project PHPStan configuration file to include alongside the preset. Relative paths resolve from blockstudio.json. Use it to adopt analysis on an existing project through a baseline.","example":"phpstan.neon"},"roots":{"type":"array","minItems":1,"default":["."],"items":{"type":"string","minLength":1},"description":"Theme roots analyzed by the canonical command. Relative paths resolve from this configuration file.","example":[".","../shared-theme"]},"excludePaths":{"type":"array","default":[],"items":{"type":"string","minLength":1},"description":"Additional scanner exclusions relative to each configured root.","example":["fixtures/**"]},"maxFiles":{"type":"integer","minimum":1,"default":10000,"description":"Maximum number of files inspected by the theme scanner.","example":10000}},"additionalProperties":false},"themeDefaults":{"type":"object","description":"Generic defaults for themes that load Blockstudio.","properties":{"titleTag":{"type":"boolean","default":false,"description":"Enable WordPress title-tag theme support.","example":true},"suppressDirectoryUpdates":{"type":"boolean","default":false,"description":"Remove the active child and parent theme from WordPress.org directory update results.","example":true},"syncPagesInDevelopment":{"type":"boolean","default":false,"description":"Reconcile file-backed pages when their source signature changes in local or WP_DEBUG environments.","example":true}},"additionalProperties":false},"performance":{"type":"object","description":"Opt-in generic frontend runtime behavior. Compat preserves WordPress defaults; speed and strict enable the documented optimization profile.","properties":{"profile":{"type":"string","enum":["compat","speed","strict"],"default":"compat","description":"Base runtime profile. Explicit child values override the selected profile.","example":"speed"},"wordpress":{"type":"object","description":"Independent WordPress optimization switches.","properties":{"headNoise":{"type":"boolean","default":false,"description":"Remove generator, emoji, feed, discovery, and adjacent-post head output.","example":true},"embeds":{"type":"boolean","default":false,"description":"Remove oEmbed discovery and host scripts.","example":true},"xmlrpc":{"type":"boolean","default":false,"description":"Disable XML-RPC and pingbacks.","example":true},"editor":{"type":"boolean","default":false,"description":"Disable remote patterns, Openverse, application passwords, and the block directory.","example":true},"frontendAssets":{"type":"boolean","default":false,"description":"Remove generic core frontend styles and scripts when the theme owns its asset output.","example":true},"media":{"type":"boolean","default":false,"description":"Apply image quality, generated-size, and async decoding defaults.","example":true},"heartbeat":{"type":"boolean","default":false,"description":"Throttle Heartbeat to at least 60 seconds outside editor screens.","example":true}},"additionalProperties":false},"preload":{"type":"object","description":"Document preload behavior.","properties":{"links":{"type":"string","enum":["off","intent"],"default":"off","description":"Prefetch same-origin documents after hover, focus, or touch intent.","example":"intent"}},"additionalProperties":false},"media":{"type":"object","description":"Stable image rendering and lazy-loading behavior.","properties":{"lazy":{"type":"boolean","default":false,"description":"Use the Blockstudio intersection-observer image loader.","example":true},"skeleton":{"type":"boolean","default":false,"description":"Show the built-in media skeleton while lazy images load.","example":true},"metadata":{"type":"boolean","default":false,"description":"Declare that assets/media.json is generated and maintained for stable dimensions.","example":true},"rootMargin":{"type":"string","pattern":"^-?[0-9]+(?:px|%)$","default":"300px","description":"Intersection observer root margin for lazy images.","example":"400px"}},"additionalProperties":false},"measurement":{"type":"object","description":"Opt-in diagnostics for development and measurement environments.","properties":{"enabled":{"type":"boolean","default":false,"description":"Enable runtime measurement snapshots and hooks.","example":true},"queryMonitor":{"type":"boolean","default":false,"description":"Include queries taking at least 50ms in snapshots when SAVEQUERIES data is available.","example":true},"headers":{"type":"boolean","default":false,"description":"Send Blockstudio performance profile and configuration headers.","example":true},"timings":{"type":"boolean","default":false,"description":"Include elapsed request time in the opt-in response headers.","example":true}},"additionalProperties":false},"staticPrerender":{"type":"object","description":"Configuration reserved for Blockstudio's file-backed prerender runtime.","properties":{"enabled":{"type":"boolean","default":false,"description":"Enable static prerender generation and serving.","example":true},"ttl":{"type":"integer","minimum":1,"default":86400,"description":"Maximum prerender age in seconds.","example":3600},"invalidate":{"type":"string","enum":["signature","graph"],"default":"signature","description":"Prerender invalidation strategy.","example":"graph"},"earlyServe":{"type":"boolean","default":false,"description":"Serve eligible prerenders before the full WordPress template lifecycle.","example":true},"serveLoggedIn":{"type":"boolean","default":false,"description":"Allow logged-in requests to receive prerendered documents.","example":false},"dynamicPaths":{"type":"array","default":[],"items":{"type":"string","minLength":1},"description":"Path prefixes that must always remain dynamic.","example":["/account"]},"warm":{"type":"object","description":"Background prerender warming.","properties":{"enabled":{"type":"boolean","default":false,"description":"Enable scheduled warming.","example":true},"interval":{"type":"integer","minimum":60,"default":3600,"description":"Warm interval in seconds.","example":900},"concurrency":{"type":"integer","minimum":1,"default":2,"description":"Maximum concurrent warm requests.","example":4},"transport":{"type":"string","enum":["http","internal"],"default":"http","description":"Warm request transport.","example":"http"}},"additionalProperties":false}},"additionalProperties":false}},"additionalProperties":false},"content":{"type":"object","description":"Settings for Content Sync, the WP-CLI driven projection of allowlisted WordPress content to portable files.","properties":{"enabled":{"type":"boolean","default":false,"description":"Enable Content Sync configuration for this theme.","descriptionFilter":"This filter allows you to enable/disable Content Sync.","example":true},"id":{"type":"string","default":"default","description":"Content-set identity stored on synced entities. Prune and ownership checks are scoped to this value.","descriptionFilter":"This filter allows you to set the Content Sync ownership namespace.","example":"docs"},"path":{"type":"string","default":"content","description":"Theme-relative directory where Content Sync reads and writes files.","descriptionFilter":"This filter allows you to set the Content Sync file directory.","example":"content"},"includePageSyncManaged":{"type":"boolean","default":false,"description":"Include Page Sync managed posts. Their post_content remains owned by Page Sync.","descriptionFilter":"This filter allows you to include or exclude Page Sync managed posts.","example":false},"authors":{"type":"string","enum":["ignore","login"],"default":"ignore","description":"Author portability mode. Use ignore to omit authors or login to store author logins and resolve existing users on push.","descriptionFilter":"This filter allows you to configure Content Sync author handling.","example":"ignore"},"postTypes":{"type":"array","default":[],"items":{"type":"string"},"description":"Allowlisted post types to sync. Empty means no post types are synced.","descriptionFilter":"This filter allows you to configure Content Sync post type allowlists.","example":["team_member"]},"meta":{"type":"object","description":"Postmeta allowlist, exclude list, and declared reference rewriting rules.","properties":{"include":{"type":"array","default":[],"items":{"type":"string"},"description":"Glob patterns for meta keys that may be projected to files.","example":["_my_*"]},"exclude":{"type":"array","default":["_edit_lock","_edit_last","_wp_old_slug"],"items":{"type":"string"},"description":"Glob patterns for meta keys that must never be projected, even if included.","example":["_edit_lock","_edit_last","_wp_old_slug"]},"references":{"type":"object","default":{},"description":"Declared meta references. Only these keys and paths are rewritten between local IDs and portable UIDs.","additionalProperties":{"type":"object","properties":{"kind":{"type":"string","enum":["post","attachment","term"],"description":"Referenced entity type.","example":"attachment"},"path":{"type":"string","description":"Optional dot path inside structured meta. Use * to map every array item.","example":"image.id"}},"required":["kind"]},"example":{"_thumbnail_id":{"kind":"attachment"},"_related_posts":{"kind":"post","path":"*"},"_hero":{"kind":"attachment","path":"image.id"}}}},"additionalProperties":false},"taxonomies":{"type":"array","default":[],"items":{"type":"string"},"description":"Allowlisted registered taxonomies whose terms and post relationships are synced. Taxonomy definitions are not captured.","descriptionFilter":"This filter allows you to configure Content Sync taxonomy allowlists.","example":["category","post_tag"]},"media":{"type":"string","enum":["manifest","none"],"default":"manifest","description":"Attachment reference behavior. manifest records referenced attachments and validates them on push; none drops attachment references.","descriptionFilter":"This filter allows you to configure Content Sync media handling.","example":"manifest"}},"additionalProperties":false},"tailwind":{"type":"object","description":"Settings related to Tailwind.","properties":{"enabled":{"type":"boolean","default":false,"description":"Enable Tailwind.","descriptionFilter":"This filter allows you to enable/disable Tailwind.","example":true},"config":{"type":"string","default":"","description":"Tailwind CSS configuration using v4 CSS-first syntax.","descriptionFilter":"This filter allows you to add a custom Tailwind CSS configuration.","element":"textarea","example":"@theme { --color-primary: pink; }"}},"additionalProperties":false},"ui":{"type":"object","description":"Settings related to bundled UI components.","properties":{"enabled":{"type":"boolean","default":false,"description":"Enable bundled UI components.","descriptionFilter":"This filter allows you to enable/disable bundled UI components.","example":true}},"additionalProperties":false},"editor":{"type":"object","description":"Settings related to the editor.","properties":{"formatOnSave":{"type":"boolean","default":false,"description":"Format code upon saving.","descriptionFilter":"This filter allows you to enable/disable the formatting of code upon saving.","example":true},"assets":{"id":"editorAssets","type":"array","default":[],"description":"Additional asset IDs to be enqueued.","descriptionFilter":"This filter allows you to enqueue additional assets in the editor.","example":["my-stylesheet","another-stylesheet"]},"markup":{"type":["string","boolean"],"element":"textarea","default":"","description":"Additional markup to be added to the end of the editor.","descriptionFilter":"This filter allows you to add additional markup to the end of the editor.","example":"<style>body { background: black; }</style>"}},"additionalProperties":false},"blockEditor":{"type":"object","description":"Settings related to Gutenberg.","properties":{"disableLoading":{"type":"boolean","default":false,"description":"Disable loading of blocks inside the Block Editor.","descriptionFilter":"This filter allows you to disable the loading of blocks inside the Block Editor.","example":true},"enhance":{"type":"boolean","default":false,"description":"Enable Blockstudio editor affordances such as cleaner focus styles and hover/selection outlines.","descriptionFilter":"This filter allows you to enable Blockstudio editor affordances such as cleaner focus styles and hover/selection outlines.","example":true},"cssClasses":{"id":"blockEditorCssClasses","type":"array","default":[],"description":"Stylesheets whose CSS classes should be available for choice in the class field.","descriptionFilter":"This filter allows you to add stylesheets whose classes should be available for choice in the class field.","example":["my-stylesheet","another-stylesheet"]},"cssVariables":{"id":"blockEditorCssVariables","type":"array","default":[],"description":"Stylesheets whose CSS variables should be available for autocompletion in the code field.","descriptionFilter":"This filter allows you to add stylesheets whose CSS variables should be available for autocompletion in the code field.","example":["my-stylesheet","another-stylesheet"]},"blocks":{"type":"object","description":"Global block editor policies that map to WordPress PHP block editor hooks.","properties":{"allow":{"type":"array","default":[],"items":{"type":"string"},"description":"Block names that are allowed in the inserter. Supports wildcards such as core/*.","descriptionFilter":"This filter allows you to control the block names that are allowed in the inserter.","example":["core/*","acf/*","my-theme/*"]},"deny":{"type":"array","default":[],"items":{"type":"string"},"description":"Block names that are removed from the inserter. Supports wildcards such as core/embed.","descriptionFilter":"This filter allows you to remove block names from the inserter.","example":["core/embed","core/freeform"]},"directory":{"type":"boolean","default":true,"description":"Enable the WordPress block directory assets in the editor.","descriptionFilter":"This filter allows you to enable or disable the WordPress block directory assets in the editor.","example":false},"categories":{"type":"object","description":"Filter, rename, and order block inserter categories by slug.","properties":{"allow":{"type":"array","default":[],"items":{"type":"string"},"description":"Block category slugs that should remain available. Empty means all categories are allowed.","descriptionFilter":"This filter allows you to control which block category slugs remain available.","example":["text","media","design"]},"deny":{"type":"array","default":[],"items":{"type":"string"},"description":"Block category slugs that should be removed from the inserter.","descriptionFilter":"This filter allows you to remove block category slugs from the inserter.","example":["embed"]},"rename":{"type":"object","default":{},"description":"Map block category slugs to replacement labels.","descriptionFilter":"This filter allows you to rename block category labels by slug.","additionalProperties":{"type":"string"},"example":{"text":"Writing","design":"Layout"}},"order":{"type":"array","default":[],"items":{"type":"string"},"description":"Block category slugs that should be moved to the beginning of the inserter in the provided order.","descriptionFilter":"This filter allows you to order block category slugs in the inserter.","example":["my-theme","text","media"]}},"additionalProperties":false},"styles":{"type":"object","description":"Policies for PHP-registered block styles.","properties":{"deny":{"type":"object","default":{},"description":"Map block names to PHP-registered block style names that should be unregistered. Use * as a style name to remove all registered styles for a block.","descriptionFilter":"This filter allows you to unregister PHP-registered block styles by block name.","additionalProperties":{"type":"array","items":{"type":"string"}},"example":{"my-theme/card":["outline"],"my-theme/media":["framed"]}}},"additionalProperties":false},"legacyWidgets":{"type":"object","description":"Policies for the legacy widget block.","properties":{"hide":{"type":"array","default":[],"items":{"type":"string"},"description":"Legacy widget IDs that should be hidden from the legacy widget block.","descriptionFilter":"This filter allows you to hide additional legacy widgets from the legacy widget block.","example":["archives","calendar"]}},"additionalProperties":false}},"additionalProperties":false},"patterns":{"type":"object","description":"Global pattern inserter policies that map to WordPress PHP pattern hooks.","properties":{"core":{"type":"boolean","default":true,"description":"Enable WordPress core block patterns.","descriptionFilter":"This filter allows you to enable or disable WordPress core block patterns.","example":false},"remote":{"type":"boolean","default":true,"description":"Enable remote patterns from the WordPress pattern directory.","descriptionFilter":"This filter allows you to enable or disable remote patterns from the WordPress pattern directory.","example":false},"theme":{"type":"boolean","default":true,"description":"Enable theme-provided block patterns.","descriptionFilter":"This filter allows you to enable or disable theme-provided block patterns.","example":false},"blockstudio":{"type":"boolean","default":true,"description":"Enable Blockstudio file-based patterns.","descriptionFilter":"This filter allows you to enable or disable Blockstudio file-based patterns.","example":false},"categories":{"type":"object","description":"Filter, rename, and order block pattern categories by slug.","properties":{"allow":{"type":"array","default":[],"items":{"type":"string"},"description":"Pattern category slugs that should remain available. Empty means all categories are allowed.","descriptionFilter":"This filter allows you to control which pattern category slugs remain available.","example":["featured","buttons","columns"]},"deny":{"type":"array","default":[],"items":{"type":"string"},"description":"Pattern category slugs that should be removed from the pattern inserter.","descriptionFilter":"This filter allows you to remove pattern category slugs from the pattern inserter.","example":["gallery"]},"rename":{"type":"object","default":{},"description":"Map pattern category slugs to replacement labels.","descriptionFilter":"This filter allows you to rename pattern category labels by slug.","additionalProperties":{"type":"string"},"example":{"featured":"Featured Layouts"}},"order":{"type":"array","default":[],"items":{"type":"string"},"description":"Pattern category slugs that should be moved to the beginning of the inserter in the provided order.","descriptionFilter":"This filter allows you to order pattern category slugs in the inserter.","example":["featured","buttons"]}},"additionalProperties":false}},"additionalProperties":false},"media":{"type":"object","description":"Global media policies for the block editor.","properties":{"openverse":{"type":"boolean","default":true,"description":"Enable the Openverse media category in the block editor media inserter.","descriptionFilter":"This filter allows you to enable or disable the Openverse media category in the block editor media inserter.","example":false},"imageSizes":{"type":"object","description":"Filter image size choices shown in editor media controls.","properties":{"allow":{"type":"array","default":[],"items":{"type":"string"},"description":"Image size names that should remain available. Empty means all image sizes are allowed.","descriptionFilter":"This filter allows you to control which image size names remain available in editor media controls.","example":["thumbnail","large"]},"deny":{"type":"array","default":[],"items":{"type":"string"},"description":"Image size names that should be removed from editor media controls.","descriptionFilter":"This filter allows you to remove image size names from editor media controls.","example":["medium_large"]}},"additionalProperties":false}},"additionalProperties":false}},"additionalProperties":false},"ai":{"id":"aiLlmMd","type":"object","description":"Settings related to AI-powered context generation.","properties":{"enableContextGeneration":{"type":"boolean","default":false,"description":"Enables the automatic creation of a comprehensive context file for use with large language model (LLM) tools (e.g., Cursor). This file compiles current installation data: all available block definitions and paths, Blockstudio-specific settings, relevant block schemas, and combined Blockstudio documentation, providing a ready-to-use resource for prompt engineering and AI code development.","descriptionFilter":"This filter allows you to enable or disable context file generation for LLM tool integration. When enabled, the context file assembles up-to-date block data, Blockstudio settings of the current install, all relevant schemas, and Blockstudio documentation into a single source for use with AI development tools.","example":true}},"additionalProperties":false},"blockTags":{"type":"object","description":"Settings for bs: tag rendering. Controls page-level replacement of <bs:block-name> tags with rendered block output. Template-level rendering is always active.","properties":{"enabled":{"type":"boolean","default":false,"description":"Enable page-level bs: tag rendering in post content and widget areas.","descriptionFilter":"This filter allows you to enable/disable page-level block tag rendering.","example":true},"allow":{"type":"array","items":{"type":"string"},"default":[],"description":"Allowlist of block name patterns. Supports wildcards via fnmatch(). When set, only matching blocks render via tags.","example":["mytheme/*","bsui/*"]},"deny":{"type":"array","items":{"type":"string"},"default":[],"description":"Denylist of block name patterns. Supports wildcards via fnmatch(). Matching blocks are excluded from tag rendering. Takes precedence over allow.","example":["mytheme/internal-*"]},"prefixes":{"type":"object","default":{},"description":"Prefix to namespace shorthands for block tags. Each key is a lowercase prefix without dashes, and each value is a namespace string or ordered namespace array.","descriptionFilter":"This filter allows you to register prefix to namespace shorthands for block tags.","example":{"theme":["theme-components","bsui"]}}},"additionalProperties":false},"dev":{"type":"object","description":"Settings related to developer tools.","properties":{"grab":{"type":"object","description":"Settings related to the element grabber.","properties":{"enabled":{"type":"boolean","default":false,"description":"Enable the element grabber.","descriptionFilter":"This filter allows you to enable/disable the element grabber.","example":false}}},"perf":{"type":"boolean","default":false,"description":"Enable the performance profiler. Shows Server-Timing headers and a debug panel on every page load.","descriptionFilter":"This filter allows you to enable/disable the performance profiler.","example":false},"canvas":{"type":"object","description":"Settings related to the canvas.","properties":{"enabled":{"type":"boolean","default":false,"description":"Enable the canvas.","descriptionFilter":"This filter allows you to enable/disable the canvas.","example":false},"adminBar":{"type":"boolean","default":true,"description":"Show the WordPress admin bar when viewing the canvas.","descriptionFilter":"This filter allows you to show/hide the WordPress admin bar on the canvas.","example":true}}}},"additionalProperties":false},"$schema":{"type":"string","description":"JSON Schema reference for editor completion."}},"additionalProperties":false}
 ```
 
 ### Page Schema (page.json)
