@@ -48,10 +48,10 @@ final class ProjectScanner
         private readonly array $analysedPaths = [],
         mixed $phpstanExcludePaths = null
     ) {
-        $this->resolvedExcludePaths = array_values(array_merge(
+        $this->resolvedExcludePaths = array_merge(
             $this->configuredExcludePaths,
             self::flattenPhpstanExcludePaths($phpstanExcludePaths)
-        ));
+        );
     }
 
     /**
