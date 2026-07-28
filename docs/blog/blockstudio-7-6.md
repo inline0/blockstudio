@@ -625,7 +625,7 @@ A reasonable adoption order:
 - [Canvas](/docs/dev/canvas) and its
   [inventory and document API](/docs/dev/canvas#public-inventory-and-document-api)
 - [Rendering](/docs/blocks/rendering#structured-compositions-and-complete-documents)
-  and [UI Components](/docs/blocks/ui-components#public-inventory-and-examples)
+  and [UI Components](/ui#public-inventory-and-examples)
 - [Settings](/docs/general/settings) and
   [performance](/docs/general/settings#performance)
 - [Performance Profiler](/docs/dev/perf): the
