@@ -1058,6 +1058,20 @@ add_filter('blockstudio/cache/max_files_per_scope', function($maximum, $scope) {
 }, 10, 2);
 ```
 
+### blockstudio/cache/protected_paths
+
+Cache paths retention pruning must never evict. Blockstudio seeds it with
+every file the installed early-serve map references.
+
+```php title="functions.php"
+add_filter('blockstudio/cache/protected_paths', function(array $paths, string $scope, string $directory) {
+  if ('static-prerender' === $scope) {
+    $paths[] = $directory . '/pinned.html';
+  }
+  return $paths;
+}, 10, 3);
+```
+
 ### blockstudio/cache/outcome
 
 This action reports a shared cache scope and outcome such as `hit`, `build`,
