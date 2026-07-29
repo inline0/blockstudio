@@ -15,7 +15,7 @@ env:
 jobs:
   lint:
     name: Lint
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, Linux, X64, inline0-blockstudio]
     steps:
       - uses: actions/checkout@v5
 
@@ -36,7 +36,7 @@ jobs:
 
   phpcs:
     name: PHPCS
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, Linux, X64, inline0-blockstudio]
     steps:
       - uses: actions/checkout@v5
 
@@ -51,7 +51,7 @@ jobs:
 
   phpstan:
     name: PHPStan (Runtime)
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, Linux, X64, inline0-blockstudio]
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@v5
@@ -67,7 +67,7 @@ jobs:
 
   loading-modes:
     name: Loading Mode (${{ matrix.mode }})
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, Linux, X64, inline0-blockstudio]
     timeout-minutes: 20
     strategy:
       fail-fast: false
@@ -105,7 +105,7 @@ jobs:
 
   unit:
     name: Unit Tests
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, Linux, X64, inline0-blockstudio]
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@v5
@@ -139,7 +139,7 @@ jobs:
 
   phpstan-package:
     name: PHPStan Package Tests
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, Linux, X64, inline0-blockstudio]
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@v5
@@ -156,13 +156,13 @@ jobs:
 
   e2e:
     name: E2E Tests (Shard ${{ matrix.shard }}/${{ matrix.total_shards }})
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, Linux, X64, inline0-blockstudio]
     timeout-minutes: 45
     strategy:
       fail-fast: false
       matrix:
-        shard: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16]
-        total_shards: [16]
+        shard: [1, 2, 3, 4]
+        total_shards: [4]
     steps:
       - uses: actions/checkout@v5
 
@@ -213,7 +213,7 @@ jobs:
 
   e2e-empty:
     name: E2E Tests (Empty Theme)
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, Linux, X64, inline0-blockstudio]
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@v5
