@@ -22,6 +22,17 @@ block, pattern, Site Editor template, template part, and bundled UI example a
 project registers. `Render::document()` returns finished HTML for any of them,
 with exactly the assets that render used.
 
+> **7.6.2 update:** File-backed pages no longer reconcile during ordinary
+> WordPress requests. Run `wp bs pages sync` or call
+> `Blockstudio\Pages::reconcile()` when applying source changes. Collection
+> routing and `templateFor` defaults use persisted runtime configuration, and
+> explicit reconciliation avoids the previous large multilingual OR-meta
+> query. The short-lived `themeDefaults.syncPagesInDevelopment` option has been
+> removed because page synchronization no longer runs from request hooks.
+> `Pages::init()` is now bootstrap-only; integrations that passed `force` must
+> use `Pages::reconcile()` or the CLI. Opening Canvas still performs one
+> authenticated, explicit reconciliation for its authoring inventory.
+
 The short version:
 
 - **Project inventory**: `Canvas::inventory()` returns every registered record
@@ -264,9 +275,9 @@ Every child value overrides the profile, as `preload.links` does above. Removing
 core frontend assets is the one to test first, because a page that depends on
 them breaks visibly. `Runtime_Settings::current()` exposes the resolved profile.
 
-`themeDefaults` covers three things themes otherwise hand-roll: `titleTag`,
+`themeDefaults` covers two things themes otherwise hand-roll: `titleTag` and
 `suppressDirectoryUpdates` to hide the active child and parent theme from update
-results, and `syncPagesInDevelopment` to reconcile file-backed pages locally.
+results.
 
 ### Typed settings access
 

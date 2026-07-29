@@ -753,6 +753,97 @@ export const Canvas = ({
     [],
   );
 
+  const applyInitialSnapshot = useCallback(
+    (data: Partial<SSEChangedData>): void => {
+      const pages = Array.isArray(data.pages) ? data.pages : [];
+      const blocks = Array.isArray(data.blocks) ? data.blocks : [];
+      const preloads = Array.isArray(data.blockstudioBlocks)
+        ? data.blockstudioBlocks
+        : [];
+
+      const registerBlock = window.blockstudio?.registerBlock;
+      if (registerBlock && data.blocksNative) {
+        Object.values(data.blocksNative).forEach((blockData: any) => {
+          if (blockData?.name && !getBlockType(blockData.name)) {
+            try {
+              registerBlock(blockData);
+            } catch (err) {
+              console.error(
+                '[canvas:initial] registerBlock FAILED:',
+                blockData.name,
+                err,
+              );
+            }
+          }
+        });
+      }
+
+      if ((window as any).blockstudio) {
+        (window as any).blockstudio.blockstudioBlocks = preloads;
+      }
+      window.blockstudio?.replacePreloads?.(preloads);
+
+      fittedRef.current = false;
+      setReady(false);
+      setMountedCount(
+        Math.min(BATCH_SIZE, Math.max(pages.length, blocks.length)),
+      );
+      setCurrentPages(pages);
+      setCurrentBlocks(blocks);
+      setRevisions((previous) =>
+        Object.fromEntries(
+          pages.map((page) => [page.slug, (previous[page.slug] || 0) + 1]),
+        ),
+      );
+      setBlockRevisions((previous) =>
+        Object.fromEntries(
+          blocks.map((block) => [
+            block.name,
+            (previous[block.name] || 0) + 1,
+          ]),
+        ),
+      );
+
+      if (typeof data.tailwindCss === 'string') {
+        applyTailwindCss(data.tailwindCss);
+      }
+    },
+    [applyTailwindCss],
+  );
+
+  useEffect(() => {
+    const canvasData = (window as any).blockstudioCanvas as
+      | { restRoot?: string; restNonce?: string }
+      | undefined;
+    const restRoot = canvasData?.restRoot;
+    const restNonce = canvasData?.restNonce;
+
+    if (!restRoot || !restNonce) return;
+
+    const controller = new AbortController();
+    const refreshUrl =
+      restRoot +
+      'blockstudio/v1/canvas/refresh?_wpnonce=' +
+      encodeURIComponent(restNonce);
+
+    void window
+      .fetch(refreshUrl, {
+        credentials: 'same-origin',
+        signal: controller.signal,
+      })
+      .then((response) => (response.ok ? response.json() : null))
+      .then((data: Partial<SSEChangedData> | null) => {
+        if (data && !controller.signal.aborted) {
+          applyInitialSnapshot(data);
+        }
+      })
+      .catch(() => {
+        // Preserve the server-rendered snapshot when the explicit refresh fails.
+      });
+
+    return () => controller.abort();
+  }, [applyInitialSnapshot]);
+
   const queueRef = useRef<ReturnType<typeof createUpdateQueue> | null>(null);
   if (!queueRef.current) {
     queueRef.current = createUpdateQueue({

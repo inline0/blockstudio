@@ -731,6 +731,53 @@ class PagesTest extends TestCase {
 		$this->assertNotSame( $signature, $signature_method->invoke( null, $rewrite_changed ) );
 	}
 
+	public function test_collection_child_endpoint_rules_precede_the_page_catch_all(): void {
+		global $wp_rewrite;
+
+		$extra_rules_top = $wp_rewrite->extra_rules_top;
+		$method          = new ReflectionMethod( Pages::class, 'add_collection_rewrite_rules' );
+		$first_match     = static function ( string $path, array $rules ): ?string {
+			foreach ( $rules as $regex => $query ) {
+				if ( 1 === preg_match( '#' . $regex . '#', $path ) ) {
+					return $query;
+				}
+			}
+
+			return null;
+		};
+
+		try {
+			$wp_rewrite->extra_rules_top = array();
+			$method->invoke(
+				null,
+				array(
+					'slug'     => 'docs',
+					'postType' => 'bs_docs',
+				)
+			);
+
+			$rules = $wp_rewrite->extra_rules_top;
+			$this->assertSame(
+				'index.php?blockstudio_collection=docs&blockstudio_collection_path=$matches[1]&embed=true',
+				$first_match( 'docs/guide/install/embed/', $rules )
+			);
+			$this->assertSame(
+				'index.php?blockstudio_collection=docs&blockstudio_collection_path=$matches[1]&paged=$matches[2]',
+				$first_match( 'docs/guide/install/page/2/', $rules )
+			);
+			$this->assertSame(
+				'index.php?blockstudio_collection=docs&blockstudio_collection_path=$matches[1]&feed=$matches[2]',
+				$first_match( 'docs/guide/install/feed/rss2/', $rules )
+			);
+			$this->assertSame(
+				'index.php?blockstudio_collection=docs&blockstudio_collection_path=$matches[1]',
+				$first_match( 'docs/guide/install/', $rules )
+			);
+		} finally {
+			$wp_rewrite->extra_rules_top = $extra_rules_top;
+		}
+	}
+
 	#[RunInSeparateProcess]
 	#[PreserveGlobalState(false)]
 	public function test_cli_rewrite_generation_preserves_collection_routes(): void {
@@ -1117,27 +1164,6 @@ class PagesTest extends TestCase {
 		$this->assertNotEmpty( Pages::pages() );
 	}
 
-	public function test_init_context_blocks_frontend_without_force(): void {
-		$method = new ReflectionMethod( Pages::class, 'can_init_in_current_context' );
-		$method->setAccessible( true );
-
-		$this->assertFalse( $method->invoke( null, array(), false, false ) );
-	}
-
-	public function test_init_context_allows_frontend_with_force(): void {
-		$method = new ReflectionMethod( Pages::class, 'can_init_in_current_context' );
-		$method->setAccessible( true );
-
-		$this->assertTrue( $method->invoke( null, array( 'force' => true ), false, false ) );
-	}
-
-	public function test_init_context_allows_admin_but_blocks_cli_without_force(): void {
-		$method = new ReflectionMethod( Pages::class, 'can_init_in_current_context' );
-
-		$this->assertTrue( $method->invoke( null, array(), true, false ) );
-		$this->assertFalse( $method->invoke( null, array(), false, true ) );
-	}
-
 	/**
 	 * Request-safe editor hooks remain available when discovery is gated.
 	 */
@@ -1451,6 +1477,7 @@ class PagesTest extends TestCase {
 		global $wpdb;
 
 		delete_option( 'blockstudio_collection_post_types_signature' );
+		delete_option( 'blockstudio_pages_collection_manifests' );
 		$wpdb->query( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery
 			$wpdb->prepare(
 				"DELETE FROM {$wpdb->options} WHERE option_name LIKE %s OR option_name LIKE %s",

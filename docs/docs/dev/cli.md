@@ -1,19 +1,18 @@
 ---
 title: CLI
-description: Manage Blockstudio blocks, database, RPC, and cron from the command line via WP-CLI.
+description: Manage Blockstudio blocks, pages, database, RPC, and cron from the command line via WP-CLI.
 path: "dev/cli"
 order: 64
 section: "Dev"
 subsection: "Command Line"
 meta_title: "CLI"
-meta_description: "Manage Blockstudio blocks, database, RPC, and cron from the command line via WP-CLI."
+meta_description: "Manage Blockstudio blocks, pages, database, RPC, and cron from the command line via WP-CLI."
 ---
 
 # CLI
 
-Blockstudio registers WP-CLI commands for managing blocks, database records,
-RPC functions, cron jobs, and settings from the terminal. Everything you can
-do through the REST API or PHP, you can do from the command line.
+Blockstudio registers WP-CLI commands for managing blocks, file-backed pages,
+database records, RPC functions, cron jobs, and settings from the terminal.
 
 ## Blocks
 
@@ -44,6 +43,37 @@ wp bs blocks list --components
 ```bash
 wp bs blocks list --format=json
 ```
+
+## Pages
+
+File-backed page synchronization is explicit. Ordinary WordPress requests
+never perform complete page discovery or write page posts. A cold runtime may
+read collection manifests once to restore routes, without synchronizing content.
+
+```bash
+wp bs pages sync
+```
+
+The command reconciles the complete desired inventory and reports discovered,
+created, updated, unchanged, removed, and failed pages. Equal fingerprints
+produce no post or post-meta writes.
+
+Use `--authoritative` to replace managed content instead of preserving keyed
+editor content, and `--full` to force a full comparison:
+
+```bash
+wp bs pages sync --authoritative --full
+```
+
+For deployment scripts that need the complete report:
+
+```bash
+wp bs pages sync --format=json
+```
+
+The command exits unsuccessfully when discovery or reconciliation reports an
+error. See [Pages](/docs/pages-and-patterns/pages#sync-behavior) for the PHP API
+and deployment identity contract.
 
 ## Database
 

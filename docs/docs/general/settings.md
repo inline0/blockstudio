@@ -46,8 +46,7 @@ The following properties are available:
   },
   "themeDefaults": {
     "titleTag": false,
-    "suppressDirectoryUpdates": false,
-    "syncPagesInDevelopment": false
+    "suppressDirectoryUpdates": false
   },
   "performance": {
     "profile": "compat",
@@ -316,17 +315,13 @@ serializable runtime variant that must alter object identities.
 
 ### themeDefaults
 
-| Option                     | Type    | Default | Description                                                                      |
-| -------------------------- | ------- | ------- | -------------------------------------------------------------------------------- |
-| `titleTag`                 | boolean | `false` | Enable WordPress title-tag theme support                                         |
-| `suppressDirectoryUpdates` | boolean | `false` | Remove active child and parent themes from directory update results              |
-| `syncPagesInDevelopment`   | boolean | `false` | Reconcile the existing `Blockstudio\Pages` source when page files change locally |
+| Option                     | Type    | Default | Description                                                         |
+| -------------------------- | ------- | ------- | ------------------------------------------------------------------- |
+| `titleTag`                 | boolean | `false` | Enable WordPress title-tag theme support                            |
+| `suppressDirectoryUpdates` | boolean | `false` | Remove active child and parent themes from directory update results |
 
-Page synchronization is limited to the `local` environment or `WP_DEBUG`.
-`blockstudio/theme_defaults/sync_pages_in_development` can apply an additional
-environment gate. Patterns continue to use the existing
-`Blockstudio\Patterns` API; these defaults do not introduce alternate page or
-pattern facades.
+Patterns continue to use the existing `Blockstudio\Patterns` API; these
+defaults do not introduce alternate page or pattern facades.
 
 ### performance
 

@@ -505,20 +505,13 @@ class Canvas {
 			Build::refresh_blocks( false, $only_blocks );
 		}
 
-		if ( ! $pages_targeted ) {
-			$page_paths = Pages::get_paths();
-			$discovery  = new Page_Discovery();
-			$sync       = new Page_Sync();
-
-			foreach ( Discovery_Sources::for_paths( 'pages', $page_paths ) as $source ) {
-				$discovered = $discovery->discover( $source );
-
-				foreach ( $discovered as $page_data ) {
-					$sync->sync( $page_data );
-				}
-			}
-		} elseif ( ! empty( $only_pages ) ) {
-			$this->sync_selected_pages( $only_pages );
+		if ( ! $pages_targeted || ! empty( $only_pages ) ) {
+			Pages::reconcile(
+				array(
+					'authoritative' => false,
+					'plan_valid'    => false,
+				)
+			);
 		}
 
 		if ( $pages_targeted && empty( $only_pages ) ) {
@@ -584,6 +577,7 @@ class Canvas {
 		}
 
 		$prev_mtimes = array();
+		Pages::discover();
 		$fingerprint = $this->compute_fingerprint_with_mtimes( $prev_mtimes );
 
 		$dir_to_blocks = $this->build_dir_to_blocks_map();
@@ -977,7 +971,12 @@ class Canvas {
 		}
 
 		if ( ! empty( $changed_pages ) ) {
-			$this->sync_selected_pages( $changed_pages );
+			Pages::reconcile(
+				array(
+					'authoritative' => false,
+					'plan_valid'    => false,
+				)
+			);
 		}
 
 		$response_pages = ! empty( $changed_pages )
@@ -1022,51 +1021,6 @@ class Canvas {
 				$changed_blocks
 			),
 		);
-	}
-
-	/**
-	 * Sync exact registered pages without rediscovering unrelated sources.
-	 *
-	 * @param array<string> $identifiers Page keys, names, or source paths.
-	 *
-	 * @return void
-	 */
-	private function sync_selected_pages( array $identifiers ): void {
-		$identifiers = array_values(
-			array_unique(
-				array_filter(
-					array_map(
-						static fn( mixed $value ): string => is_scalar( $value ) ? trim( (string) $value ) : '',
-						$identifiers
-					)
-				)
-			)
-		);
-
-		if ( array() === $identifiers ) {
-			return;
-		}
-
-		$sync = new Page_Sync();
-
-		foreach ( Pages::pages() as $key => $page_data ) {
-			if ( ! is_array( $page_data ) ) {
-				continue;
-			}
-
-			$candidates = array_filter(
-				array(
-					is_scalar( $key ) ? (string) $key : '',
-					is_scalar( $page_data['key'] ?? null ) ? (string) $page_data['key'] : '',
-					is_scalar( $page_data['name'] ?? null ) ? (string) $page_data['name'] : '',
-					is_scalar( $page_data['source_path'] ?? null ) ? (string) $page_data['source_path'] : '',
-				)
-			);
-
-			if ( array_intersect( $identifiers, $candidates ) ) {
-				$sync->sync( $page_data );
-			}
-		}
 	}
 
 	/**

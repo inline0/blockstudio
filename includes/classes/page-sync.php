@@ -212,28 +212,33 @@ class Page_Sync {
 	 * @return array<int, WP_Post> Managed posts.
 	 */
 	public function managed_posts(): array {
-		$posts = get_posts(
-			array(
-				'meta_query'        => array( // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query
-					'relation' => 'OR',
-					array(
-						'key'     => '_blockstudio_page_key',
-						'compare' => 'EXISTS',
-					),
-					array(
-						'key'     => '_blockstudio_page_source',
-						'compare' => 'EXISTS',
-					),
-				),
-				'post_type'         => 'any',
-				'posts_per_page'    => -1,
-				'post_status'       => $this->synced_post_statuses(),
-				'orderby'           => 'ID',
-				'order'             => 'ASC',
-				'suppress_filters'  => false,
-				'update_meta_cache' => true,
+		global $wpdb;
+
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching -- Explicit reconciliation requires a complete cross-post-type inventory and must bypass multilingual query filters.
+		$post_ids = $wpdb->get_col(
+			$wpdb->prepare(
+				"SELECT DISTINCT post_id
+				FROM {$wpdb->postmeta}
+				WHERE meta_key IN ( %s, %s )
+				ORDER BY post_id ASC",
+				'_blockstudio_page_key',
+				'_blockstudio_page_source'
 			)
 		);
+
+		$post_ids = array_values(
+			array_unique(
+				array_filter(
+					array_map( 'absint', $post_ids )
+				)
+			)
+		);
+
+		foreach ( array_chunk( $post_ids, 500 ) as $chunk ) {
+			_prime_post_caches( $chunk, false, true );
+		}
+
+		$posts = array_map( 'get_post', $post_ids );
 
 		return array_values(
 			array_filter(

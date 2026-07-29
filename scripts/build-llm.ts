@@ -486,7 +486,7 @@ const pageSchema = {
       type: 'boolean',
       default: true,
       description:
-        'Whether to automatically sync the page content when the template file changes. Set to false to create the page once and prevent future automatic updates.',
+        'Whether explicit API or CLI reconciliation may update the page from its source. Set to false to ignore the page during normal reconciliation; use force_sync() when intentionally creating or replacing it.',
       example: true,
     },
     contentType: {

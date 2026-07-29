@@ -12,7 +12,10 @@ meta_description: "Create WordPress pages from code. A practical guide to templa
 
 Traditional WordPress page building happens in the block editor: dragging blocks, configuring settings, clicking save. This works for clients building their own pages, but for developers building structured, version-controlled pages, it creates problems. The page layout lives in the database, not in code. You cannot review it in a pull request, roll it back with git, or reproduce it on a fresh install.
 
-Blockstudio's file-based pages solve this. You define pages as files in your theme, write HTML templates that convert to WordPress blocks, and control exactly what clients can and cannot edit. The pages sync to the database automatically, and your templates remain the source of truth.
+Blockstudio's file-based pages solve this. You define pages as files in your
+theme, write HTML templates that convert to WordPress blocks, and control
+exactly what clients can and cannot edit. An explicit command syncs those files
+to normal WordPress posts, and your templates remain the source of truth.
 
 This guide walks through building pages from scratch, with a deep focus on the locking and editing controls that make file-based pages practical for client projects.
 
@@ -41,9 +44,19 @@ theme/
 <p>We build things for the web.</p>
 ```
 
-Visit the WordPress admin. Blockstudio detects the new files, parses the HTML into WordPress blocks, and creates a page called "About Us" with the slug `about`. Open it in the editor and you will see a heading and a paragraph, exactly as if you had added them manually.
+Run the page synchronization command:
 
-Edit `index.php`, change the text, and reload the editor. The page updates. This is the core loop: write HTML, get blocks.
+```bash
+wp bs pages sync
+```
+
+Blockstudio parses the HTML into WordPress blocks and creates a page called
+"About Us" with the slug `about`. Open it in the editor and you will see a
+heading and a paragraph, exactly as if you had added them manually.
+
+Edit `index.php`, change the text, and run the command again. Reload the editor
+to see the update. This is the core loop: write HTML, sync intentionally, get
+blocks.
 
 ## The Template Language
 
@@ -577,15 +590,20 @@ Every new "product" post starts with this structure. The `templateLock: "insert"
 
 ## Tips
 
-**Sync only runs in admin.** Pages sync when you (or the client) visit the WordPress admin dashboard. If you deploy a template change but nobody logs in, the page does not update until the next admin visit. For automated deployments, call `Blockstudio\Pages::force_sync_all()` from a WP-CLI command or a deploy hook.
+**Sync at an intentional deployment boundary.** Run `wp bs pages sync` after
+changing or deploying page sources. Frontend and admin visits never synchronize
+pages. PHP deployment tooling can call `Blockstudio\Pages::reconcile()` and
+inspect its machine-readable report.
 
 **Pin important post IDs.** Use `postId` in `page.json` for pages referenced by menus, hardcoded links, or external systems. Without pinning, a deleted-and-recreated page gets a new ID, breaking those references.
 
-**Use `sync: false` for scaffolds.** If you want to create a page once and then hand it off entirely to the client, set `"sync": false`. The template creates the initial structure, and after that, template changes are ignored.
+**Use `sync: false` for scaffolds.** If you want to create a page once and then
+hand it off entirely to the client, set `"sync": false` and create it with
+`Blockstudio\Pages::force_sync()`. Normal reconciliation then ignores it.
 
 **Lock and unlock via PHP.** Call `Blockstudio\Pages::lock('about')` to prevent a specific page from syncing (useful during client editing sprints). Call `Blockstudio\Pages::unlock('about')` to re-enable syncing.
 
-**Template engines.** Besides PHP, templates can be written in Twig (requires [Timber](https://timber.github.io/docs/)) or Blade (requires [jenssegers/blade](https://github.com/jenssegers/blade)). This is useful for loops and filters, but since templates are compiled at initialization time, there is no request context available. Stick with PHP if you need dynamic data.
+**Template engines.** Besides PHP, templates can be written in Twig (requires [Timber](https://timber.github.io/docs/)) or Blade (requires [jenssegers/blade](https://github.com/jenssegers/blade)). This is useful for loops and filters, but page templates are compiled during explicit synchronization, not during the frontend request. Stick with PHP if the source compilation itself needs PHP-only helpers.
 
 **Force sync ignores keys.** Calling `Pages::force_sync('about')` replaces the entire page content, ignoring keys and modification time checks. Use it when you intentionally want to reset a page to the template state.
 

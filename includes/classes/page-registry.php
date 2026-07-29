@@ -112,10 +112,10 @@ final class Page_Registry {
 	/**
 	 * Hydrate the registry from synced posts when it has not been populated by discovery.
 	 *
-	 * Discovery and sync run only in admin and WP-CLI. On the frontend the registry is
-	 * otherwise empty, so read APIs hydrate lazily from the posts that sync already wrote,
+	 * Full discovery and synchronization run only through explicit API or CLI calls.
+	 * Ordinary requests hydrate read APIs lazily from posts that an earlier sync wrote,
 	 * using their stored Blockstudio page meta. This keeps Pages::tree(), in_collection(),
-	 * current_page(), and layout rendering working on the frontend without a filesystem sync.
+	 * current_page(), and layout rendering working without implicit synchronization.
 	 *
 	 * @return void
 	 */

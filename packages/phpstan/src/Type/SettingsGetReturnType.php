@@ -45,7 +45,6 @@ final class SettingsGetReturnType implements DynamicStaticMethodReturnTypeExtens
             'phpstan/maxFiles' => new IntegerType(),
             'themeDefaults/titleTag' => new BooleanType(),
             'themeDefaults/suppressDirectoryUpdates' => new BooleanType(),
-            'themeDefaults/syncPagesInDevelopment' => new BooleanType(),
             'performance/profile' => new StringType(),
             'performance/wordpress/headNoise' => new BooleanType(),
             'performance/wordpress/embeds' => new BooleanType(),

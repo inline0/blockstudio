@@ -260,6 +260,43 @@ class CanvasTest extends TestCase {
 		$this->assertSame( array( $name ), array_values( array_unique( wp_list_pluck( $data['blocks'], 'name' ) ) ) );
 	}
 
+	public function test_page_refresh_is_an_explicit_reconciliation_boundary(): void {
+		$source = null;
+
+		foreach ( Pages::discover() as $page ) {
+			if (
+				'publish' === ( $page['postStatus'] ?? null )
+				&& is_string( $page['source_path'] ?? null )
+				&& '' !== $page['source_path']
+			) {
+				$source = $page['source_path'];
+				break;
+			}
+		}
+
+		if ( null === $source ) {
+			$this->markTestSkipped( 'A source-backed page fixture is required.' );
+		}
+
+		$reconciled = 0;
+		$this->add_action_callback(
+			'blockstudio/pages/reconciled',
+			static function () use ( &$reconciled ): void {
+				++$reconciled;
+			}
+		);
+		$this->add_filter_callback( 'blockstudio/settings/tailwind/enabled', '__return_false' );
+
+		$request = new WP_REST_Request( 'GET', '/blockstudio/v1/canvas/refresh' );
+		$request->set_query_params( array( 'pages' => $source ) );
+
+		$data = ( new Canvas() )->refresh( $request )->get_data();
+
+		$this->assertSame( 1, $reconciled );
+		$this->assertNotEmpty( $data['pages'] );
+		$this->assertSame( array(), $data['blocks'] );
+	}
+
 	public function test_empty_targeted_refresh_does_not_discover_or_render_content(): void {
 		$contexts = array();
 		$this->add_filter_callback(

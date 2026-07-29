@@ -62,7 +62,7 @@ pages/about/
 </div>
 ```
 
-An agent can scaffold an entire WordPress page, complete with core blocks, custom blocks, template locking, and editing controls, all by writing two files. The page syncs to the database automatically when you visit the admin.
+An agent can scaffold an entire WordPress page, complete with core blocks, custom blocks, template locking, and editing controls, all by writing two files. Run `wp bs pages sync` to apply the source to WordPress; opening the admin never performs that synchronization implicitly.
 
 This is one of the most powerful features for AI-assisted development. Instead of describing a page layout and manually assembling it in the editor, you describe it to an agent and it writes the template. The result is version-controlled, reproducible, and can be iterated on in seconds.
 
@@ -290,7 +290,9 @@ pages/about/
 └── index.php     # Full block structure with core + custom blocks
 ```
 
-Plus any custom blocks it references (e.g., `blockstudio/team-member/`). The page syncs to WordPress automatically, complete with template locking and editing controls. The entire page is version-controlled and reproducible.
+Plus any custom blocks it references (e.g., `blockstudio/team-member/`). Run
+`wp bs pages sync` to create the WordPress post with its template locking and
+editing controls. The entire page is version-controlled and reproducible.
 
 ### Building a full site
 
