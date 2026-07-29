@@ -120,6 +120,11 @@ unless both `enabled` and `earlyServe` are true, so a deploy can never install a
 map, drop-in, and `WP_CACHE` declaration that the next admin request would
 remove again.
 
+Installing an artifact promotes its documents into a dedicated artifact scope
+that retention pruning never touches, and files the map references are immune
+to eviction wherever they live, so live render traffic cannot age mapped
+routes out of early serving.
+
 ## Warming, maintenance, and observability
 
 The warm queue is durable, URL-coalescing, single-flight, and recovers timed-out
