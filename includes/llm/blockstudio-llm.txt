@@ -452,7 +452,7 @@ route: /docs/production/caching
 file: docs/docs/production/caching.md
 purpose: The one file-backed cache directory that owns every generated runtime artifact.
 settings: cache/enabled, cache/path, tailwind
-hooks: blockstudio/cache/context, blockstudio/cache/dir, blockstudio/cache/max_files_per_scope, blockstudio/cache/site_key, blockstudio/cache/watch_debounce, blockstudio/settings/cache/enabled, blockstudio/settings/cache/path, blockstudio/tailwind/cache_max_age, blockstudio/tailwind/cache_max_files
+hooks: blockstudio/cache/context, blockstudio/cache/dir, blockstudio/cache/max_files_per_scope, blockstudio/cache/protected_paths, blockstudio/cache/site_key, blockstudio/cache/watch_debounce, blockstudio/settings/cache/enabled, blockstudio/settings/cache/path, blockstudio/tailwind/cache_max_age, blockstudio/tailwind/cache_max_files
 php: Blockstudio\Runtime_Cache, Runtime_Cache::purge()
 
 ### Media

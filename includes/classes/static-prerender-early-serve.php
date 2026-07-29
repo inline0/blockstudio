@@ -129,6 +129,47 @@ final class Static_Prerender_Early_Serve {
 	}
 
 	/**
+	 * Cache file paths in one directory that the installed map references.
+	 *
+	 * Retention pruning must never evict a file an early-serve entry points
+	 * at, or the drop-in misses route by route while the map stays valid.
+	 *
+	 * @param string $directory Scope directory.
+	 *
+	 * @return string[] Absolute protected paths.
+	 */
+	public static function protected_cache_paths( string $directory ): array {
+		static $cache = array();
+
+		$directory = rtrim( wp_normalize_path( $directory ), '/' );
+		if ( isset( $cache[ $directory ] ) ) {
+			return $cache[ $directory ];
+		}
+
+		$paths = array();
+		foreach ( self::installed_map_entries() as $entry ) {
+			if ( ! is_array( $entry ) ) {
+				continue;
+			}
+			$entry_dir = is_scalar( $entry['dir'] ?? null )
+				? rtrim( wp_normalize_path( (string) $entry['dir'] ), '/' )
+				: '';
+			if ( $entry_dir !== $directory ) {
+				continue;
+			}
+			foreach ( is_array( $entry['routes'] ?? null ) ? $entry['routes'] : array() as $key ) {
+				if ( is_string( $key ) ) {
+					$paths[ $directory . '/' . $key . '.html' ] = true;
+				}
+			}
+		}
+
+		$cache[ $directory ] = array_keys( $paths );
+
+		return $cache[ $directory ];
+	}
+
+	/**
 	 * Remove the current site's owned entry and shared artifacts when unused.
 	 *
 	 * Other multisite entries and every foreign map, drop-in, or WP_CACHE
@@ -514,6 +555,23 @@ PHP;
 			return false;
 		}
 
+		$artifact_dir = rtrim( wp_normalize_path( Runtime_Cache::directory( 'static-prerender-artifact' ) ), '/' );
+		if ( ! is_dir( $artifact_dir ) && ! wp_mkdir_p( $artifact_dir ) ) {
+			return false;
+		}
+		if ( rtrim( wp_normalize_path( $cache_dir ), '/' ) !== $artifact_dir ) {
+			foreach ( $routes as $key ) {
+				$destination = $artifact_dir . '/' . $key . '.html';
+				if ( is_file( $destination ) ) {
+					continue;
+				}
+				// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_copy -- Content-addressed artifact promotion into the uncapped scope.
+				if ( ! copy( $cache_dir . '/' . $key . '.html', $destination ) ) {
+					return false;
+				}
+			}
+		}
+
 		$build_id = isset( $entry['build_id'] ) && is_string( $entry['build_id'] )
 			? strtolower( trim( $entry['build_id'] ) )
 			: '';
@@ -530,7 +588,7 @@ PHP;
 			'site_id'         => isset( $entry['site_id'] ) && is_numeric( $entry['site_id'] )
 				? (int) $entry['site_id']
 				: 0,
-			'dir'             => $cache_dir,
+			'dir'             => $artifact_dir,
 			'mode'            => 'graph',
 			'build_id'        => $build_id,
 			'signature'       => isset( $entry['signature'] ) && is_scalar( $entry['signature'] )
@@ -561,7 +619,7 @@ PHP;
 			return false;
 		}
 
-		self::garbage_collect_after_swap( $entries, $cache_dir );
+		self::garbage_collect_after_swap( $entries, $artifact_dir );
 
 		return true;
 	}

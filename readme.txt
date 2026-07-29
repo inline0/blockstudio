@@ -54,6 +54,10 @@ Download the latest release zip from [GitHub Releases](https://github.com/inline
 
 == Changelog ==
 
+= 7.6.1 =
+* Fix: Retention pruning never evicts cache files the installed early-serve map references, and a `blockstudio/cache/protected_paths` filter extends that protection
+* Fix: Installing an early-serve artifact promotes its documents into a dedicated artifact scope with no retention cap, so live render traffic can no longer age mapped routes out of early serving
+
 = 7.6.0 =
 * New: Bundled UI composition: footer parts for the dialog, alert dialog, and drawer, a variant on every close control, an icon-sm button size, a grow attribute on stacks, and a public trigger seam on the context menu
 * New: The composition chapter documents how the UI families assemble, in the ui docs collection beside the components guide

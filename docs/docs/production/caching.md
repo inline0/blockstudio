@@ -111,6 +111,10 @@ add_filter(
 );
 ```
 
+Retention never evicts a file the installed early-serve map references, and
+the `blockstudio/cache/protected_paths` filter marks additional paths that
+pruning must leave alone.
+
 Unused namespaces are collected automatically instead of accumulating on every
 plugin activation and PHP or WordPress update. A deployment snippet that used
 to glob the old Tailwind cache directory should call

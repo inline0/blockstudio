@@ -532,6 +532,27 @@ final class Runtime_Cache {
 			}
 		}
 
+		$protected = class_exists( '\Blockstudio\Static_Prerender_Early_Serve' )
+			? Static_Prerender_Early_Serve::protected_cache_paths( $directory )
+			: array();
+
+		/**
+		 * Filters cache paths retention pruning must never evict.
+		 *
+		 * @since 7.6.1
+		 *
+		 * @param string[] $protected Absolute protected paths.
+		 * @param string   $scope     Cache scope.
+		 * @param string   $directory Scope directory.
+		 */
+		$protected     = apply_filters( 'blockstudio/cache/protected_paths', $protected, $scope, $directory );
+		$protected_map = array();
+		foreach ( is_array( $protected ) ? $protected : array() as $protected_path ) {
+			if ( is_string( $protected_path ) ) {
+				$protected_map[ wp_normalize_path( $protected_path ) ] = true;
+			}
+		}
+
 		$scope_files = glob( $directory . '/*' );
 		$objects     = array_values(
 			array_filter(
@@ -540,6 +561,7 @@ final class Runtime_Cache {
 					&& ! str_ends_with( $path, '.lock' )
 					&& ! str_contains( basename( $path ), '.tmp-' )
 					&& $path !== $keep_path
+					&& ! isset( $protected_map[ wp_normalize_path( $path ) ] )
 			)
 		);
 		usort(

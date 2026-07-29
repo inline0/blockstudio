@@ -81,18 +81,62 @@ class StaticPrerenderEarlyServeTest extends TestCase {
 			'routes'          => array( $route => $live_key ),
 		);
 
+		$artifact_dir = \Blockstudio\Runtime_Cache::directory( 'static-prerender-artifact' );
+		wp_mkdir_p( $artifact_dir );
+		file_put_contents( $artifact_dir . '/' . $stale_key . '.html', '<html>Stale artifact</html>' );
+
 		$this->assertTrue( Static_Prerender_Early_Serve::install_artifact_entry( $entry, $this->cache ) );
 		$this->assertFileExists( Static_Prerender_Early_Serve::map_path() );
 		$this->assertFileExists( Static_Prerender_Early_Serve::dropin_path() );
 		$this->assertFileExists( $this->cache . '/' . $live_key . '.html' );
-		$this->assertFileDoesNotExist( $this->cache . '/' . $stale_key . '.html' );
+		$this->assertFileExists( $artifact_dir . '/' . $live_key . '.html' );
+		$this->assertFileDoesNotExist( $artifact_dir . '/' . $stale_key . '.html' );
 
 		$entries = Static_Prerender_Early_Serve::installed_map_entries();
 		$this->assertSame( $live_key, $entries[ $site['key'] ]['routes'][ $route ] );
+		$this->assertSame( rtrim( wp_normalize_path( $artifact_dir ), '/' ), $entries[ $site['key'] ]['dir'] );
 		$this->assertStringContainsString(
 			'Blockstudio static prerender early serve',
 			(string) file_get_contents( Static_Prerender_Early_Serve::dropin_path() )
 		);
+	}
+
+	public function test_prune_never_evicts_files_the_installed_map_references(): void {
+		$site     = Static_Prerender_Early_Serve::current_site_identity();
+		$live_key = str_repeat( '1', 64 );
+		file_put_contents( $this->cache . '/' . $live_key . '.html', '<html>Mapped</html>' );
+
+		$this->assertTrue(
+			Static_Prerender_Early_Serve::install_artifact_entry(
+				array(
+					'host'      => $site['host'],
+					'home_path' => $site['home_path'],
+					'build_id'  => str_repeat( '2', 32 ),
+					'routes'    => array( $site['home_path'] => $live_key ),
+				),
+				$this->cache
+			)
+		);
+
+		$artifact_dir = \Blockstudio\Runtime_Cache::directory( 'static-prerender-artifact' );
+		$protected    = Static_Prerender_Early_Serve::protected_cache_paths( $artifact_dir );
+		$this->assertContains(
+			rtrim( wp_normalize_path( $artifact_dir ), '/' ) . '/' . $live_key . '.html',
+			$protected
+		);
+
+		$mapped = $artifact_dir . '/' . $live_key . '.html';
+		touch( $mapped, time() - WEEK_IN_SECONDS );
+		for ( $i = 0; $i < 5; $i++ ) {
+			file_put_contents( $artifact_dir . '/' . hash( 'sha256', 'filler-' . $i ) . '.html', '<html>Filler</html>' );
+		}
+
+		$cap = static fn (): int => 2;
+		add_filter( 'blockstudio/cache/max_files_per_scope', $cap );
+		\Blockstudio\Runtime_Cache::prune( 'static-prerender-artifact' );
+		remove_filter( 'blockstudio/cache/max_files_per_scope', $cap );
+
+		$this->assertFileExists( $mapped );
 	}
 
 	public function test_incomplete_graph_never_replaces_the_active_map(): void {
