@@ -78,10 +78,11 @@ add_filter( 'blockstudio/pages/paths', function( $paths ) {
 
 ### blockstudio/pages/manifest_scan_interval
 
-Filter how often frontend requests rescan page roots for a newly added
-collection manifest. Existing manifest changes are also guarded by file-watch
-metadata. The default is five seconds in local and development environments
-and 20 seconds elsewhere.
+Filter the maximum age of a legacy pre-7.6.2 manifest cache that can seed the
+persisted collection runtime during an upgrade. Normal requests use the
+persisted collection configuration and do not periodically rescan page roots.
+Run `wp bs pages sync` or call `Blockstudio\Pages::reconcile()` after changing a
+collection manifest.
 
 ```php
 add_filter( 'blockstudio/pages/manifest_scan_interval', function() {

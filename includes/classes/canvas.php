@@ -401,7 +401,8 @@ class Canvas {
 	 * @return string Rendered HTML or an empty string on failure.
 	 */
 	private function render_editor_block( array $block ): string {
-		$had_mode = array_key_exists( 'blockstudioMode', $_GET ); // phpcs:ignore WordPress.Security.NonceVerification.Recommended
+		$buffer_level = ob_get_level();
+		$had_mode     = array_key_exists( 'blockstudioMode', $_GET ); // phpcs:ignore WordPress.Security.NonceVerification.Recommended
 		// phpcs:ignore WordPress.Security.NonceVerification.Recommended, WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- Opaque snapshot is restored, never interpreted.
 		$mode = $had_mode ? wp_unslash( $_GET['blockstudioMode'] ) : null;
 
@@ -418,6 +419,10 @@ class Canvas {
 				$_GET['blockstudioMode'] = $mode; // phpcs:ignore WordPress.Security.NonceVerification.Recommended
 			} else {
 				unset( $_GET['blockstudioMode'] );
+			}
+
+			while ( ob_get_level() > $buffer_level ) {
+				ob_end_clean();
 			}
 		}
 	}

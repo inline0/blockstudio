@@ -1238,6 +1238,52 @@ class PagesTest extends TestCase {
 		$this->assertSame( $expected_post_id, $hydrated['post_id'] );
 		$this->assertSame( 'docs', $hydrated['collection'] );
 		$this->assertSame( 'guide/install', $hydrated['path'] );
+		$this->assertSame( 'docs/guide/install/index.md', $hydrated['source_path'] );
+		$this->assertStringEndsWith( '/pages/docs/guide/install/index.md', $hydrated['template_path'] );
+		$this->assertStringEndsWith( '/pages/docs/guide/install', $hydrated['directory'] );
+		$this->assertSame( 'markdown', $hydrated['contentType'] );
+		$this->assertTrue( $hydrated['is_markdown'] );
+		$this->assertSame( 'bs_docs', $hydrated['postType'] );
+		$this->assertSame( 'publish', $hydrated['postStatus'] );
+		$this->assertSame( 'contentOnly', $hydrated['templateLock'] );
+		$this->assertTrue( $hydrated['sync'] );
+		$this->assertSame(
+			$expected_post_id,
+			$registry->get_synced_post( 'docs/guide/install/index.md' )
+		);
+	}
+
+	public function test_registry_hydrates_template_for_mapping(): void {
+		$post_id = Pages::get_post_id( 'blockstudio-template-for-test' );
+		$this->assertGreaterThan( 0, $post_id );
+
+		try {
+			$this->assertSame(
+				$post_id,
+				wp_update_post(
+					array(
+						'ID'          => $post_id,
+						'post_status' => 'publish',
+					)
+				)
+			);
+
+			$registry = Page_Registry::instance();
+			$registry->reset();
+			$registry->hydrate_from_posts();
+
+			$template = $registry->get_template_for( 'blockstudio_test_cpt' );
+			$this->assertIsArray( $template );
+			$this->assertSame( 'blockstudio-template-for-test', $template['name'] );
+			$this->assertStringEndsWith( '/pages/test-template-for/index.php', $template['template_path'] );
+		} finally {
+			wp_update_post(
+				array(
+					'ID'          => $post_id,
+					'post_status' => 'draft',
+				)
+			);
+		}
 	}
 
 	public function test_registry_hydration_carries_persisted_order(): void {

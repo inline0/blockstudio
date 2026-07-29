@@ -59,6 +59,8 @@ Download the latest release zip from [GitHub Releases](https://github.com/inline
 * Fix: ordinary frontend, admin, AJAX, REST, cron, and WP-CLI bootstrap requests never run full page discovery or reconciliation and never write managed page posts
 * Fix: explicit page reconciliation inventories managed posts with one indexed meta-key lookup that bypasses multilingual `WP_Query` filters and the previous large OR-meta query
 * Fix: collection post types, rewrites, and `templateFor` defaults load from compact persisted configuration instead of rescanning page source trees on ordinary requests
+* Fix: page and collection helper APIs retain synced runtime metadata across requests without rediscovering source files
+* Fix: unchanged explicit page reconciliation refreshes release-local runtime paths without updating managed post content
 * Fix: collection child feeds, pagination, and embeds resolve before the generic child-page route
 * Fix: failed page reconciliation preserves the last verified collection routes and `templateFor` defaults
 * Fix: Canvas explicitly reconciles once when opened so newly added page sources appear without restoring implicit admin-request synchronization

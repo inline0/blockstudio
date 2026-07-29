@@ -603,8 +603,14 @@ class Pages {
 		self::register_collection_url_hooks();
 
 		$collections ??= self::get_collection_manifests( self::should_refresh_collection_manifest_cache() );
+		$registry      = Page_Registry::instance();
 
 		foreach ( $collections as $collection ) {
+			$slug = is_scalar( $collection['slug'] ?? null ) ? (string) $collection['slug'] : '';
+			if ( '' !== $slug ) {
+				$registry->register_collection( $slug, $collection );
+			}
+
 			self::register_collection_post_type( $collection );
 			self::add_collection_rewrite_rules( $collection );
 		}

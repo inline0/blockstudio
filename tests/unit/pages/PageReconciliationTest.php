@@ -137,6 +137,56 @@ class PageReconciliationTest extends TestCase {
 	}
 
 	/**
+	 * An unchanged source refreshes release-local runtime paths without updating the post.
+	 *
+	 * @return void
+	 */
+	public function test_no_change_reconciliation_refreshes_relocated_runtime_paths(): void {
+		$this->write_page( 'alpha', 'Alpha' );
+		$first     = $this->reconcile( true );
+		$post_id   = $first['pages']['alpha']['postId'];
+		$page_data = Pages::get_page( 'alpha' );
+		$before    = get_post( $post_id );
+
+		$this->assertIsArray( $page_data );
+		$this->assertInstanceOf( WP_Post::class, $before );
+
+		$release_directory = $this->pages_path . '/release-two/alpha';
+		wp_mkdir_p( $release_directory );
+		copy( $page_data['json_path'], $release_directory . '/page.json' );
+		copy( $page_data['template_path'], $release_directory . '/index.php' );
+
+		$page_data['json_path']          = $release_directory . '/page.json';
+		$page_data['template_path']      = $release_directory . '/index.php';
+		$page_data['content_path']       = $release_directory . '/index.php';
+		$page_data['directory']          = $release_directory;
+		$page_data['source_mtime_paths'] = array(
+			$page_data['json_path'],
+			$page_data['content_path'],
+		);
+
+		$post_writes = 0;
+		$save_post   = static function ( int $saved_post_id ) use ( &$post_writes, $post_id ): void {
+			if ( $post_id === $saved_post_id ) {
+				++$post_writes;
+			}
+		};
+
+		add_action( 'save_post', $save_post );
+		$result = ( new Page_Sync() )->reconcile( $page_data );
+		remove_action( 'save_post', $save_post );
+
+		$after = get_post( $post_id );
+		$this->assertInstanceOf( WP_Post::class, $after );
+		$this->assertSame( 'unchanged', $result['status'] );
+		$this->assertSame( 0, $post_writes );
+		$this->assertSame( $before->post_content, $after->post_content );
+		$this->assertSame( $before->post_modified_gmt, $after->post_modified_gmt );
+		$this->assertSame( $page_data['template_path'], get_post_meta( $post_id, '_blockstudio_page_template_path', true ) );
+		$this->assertSame( $page_data['directory'], get_post_meta( $post_id, '_blockstudio_page_directory', true ) );
+	}
+
+	/**
 	 * A matching source fingerprint must not hide database-row drift.
 	 *
 	 * @return void
@@ -429,6 +479,7 @@ class PageReconciliationTest extends TestCase {
 		add_action( 'blockstudio/pages/reconciled', $capture );
 		add_filter( 'blockstudio/settings/dev/canvas/enabled', '__return_true' );
 		add_filter( 'blockstudio/settings/tailwind/enabled', '__return_false' );
+		$buffer_level = ob_get_level();
 
 		try {
 			$response = ( new Canvas() )->refresh(
@@ -439,6 +490,8 @@ class PageReconciliationTest extends TestCase {
 			remove_filter( 'blockstudio/settings/dev/canvas/enabled', '__return_true' );
 			remove_filter( 'blockstudio/settings/tailwind/enabled', '__return_false' );
 		}
+
+		$this->assertSame( $buffer_level, ob_get_level() );
 
 		$data  = $response->get_data();
 		$pages = is_array( $data['pages'] ?? null ) ? $data['pages'] : array();
@@ -597,6 +650,8 @@ class PageReconciliationTest extends TestCase {
 
 			$this->assertTrue( post_type_exists( 'bs_runtime_old' ) );
 			$this->assertFalse( post_type_exists( 'bs_runtime_new' ) );
+			$this->assertSame( array(), Pages::get_registered_paths() );
+			$this->assertSame( 'bs_runtime_old', Pages::collection( 'docs' )['postType'] ?? null );
 
 			unregister_post_type( 'bs_runtime_old' );
 			$updated = $this->reconcile( true );

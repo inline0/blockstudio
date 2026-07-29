@@ -10347,9 +10347,12 @@ for a normal explicit synchronization. `plan_valid: false`, `full: true`,
 fingerprint broadens the pass. Git rename records are identity hints only. They
 never replace complete inventory comparison.
 
-Equal fingerprints perform no post or postmeta writes and do not fire update
-hooks. Missing managed pages are pruned only after the complete reconciliation
-pass finishes without discovery or page-write errors.
+Equal fingerprints with unchanged runtime paths perform no post or postmeta
+writes and do not fire update hooks. When an unchanged source moves into a new
+release directory, reconciliation refreshes only its persisted template,
+content, layout, and directory paths; it does not update `post_content` or the
+post-modified timestamp. Missing managed pages are pruned only after the
+complete reconciliation pass finishes without discovery or page-write errors.
 
 Direct API reconciliation does not mark a deployment successful. After
 activating and verifying the matching static artifact and routes, persist the
@@ -10657,7 +10660,7 @@ Page discovery, sync, and collection routing expose these extension points:
 | `blockstudio/pages/orphan_action` | Filter | Return `trash`, `delete`, or `keep` for orphan cleanup. |
 | `blockstudio/pages/docs_allowed_html` | Filter | Adjust allowed HTML for generated Markdown docs content. |
 | `blockstudio/pages/allow_external_loader_path` | Filter | Allow loader `paths` outside the collection root. |
-| `blockstudio/pages/manifest_scan_interval` | Filter | Change how often frontend requests rescan for brand-new collection manifests. Defaults to 5 seconds locally and 20 seconds elsewhere. |
+| `blockstudio/pages/manifest_scan_interval` | Filter | Set the maximum age of a legacy pre-7.6.2 manifest cache that may seed persisted runtime configuration during an upgrade. |
 | `blockstudio/pages/create_post_data` | Filter | Modify post data before a synced page is created. |
 | `blockstudio/pages/update_post_data` | Filter | Modify post data before a synced page is updated. |
 | `blockstudio/pages/sync_engine_inputs` | Filter | Add a parser, mapping, or migration version that should deliberately broaden reconciliation once. |
@@ -10734,7 +10737,7 @@ blockstudio_page_content();
 blockstudio_current_page();
 ```
 
-Page arrays returned by `Blockstudio\Pages::pages()`, `Blockstudio\Pages::tree()`, `Blockstudio\Pages::children()`, and the global helpers include a `permalink` key after sync. The Pages class does not expose a separate permalink method.
+Page arrays returned by `Blockstudio\Pages::pages()`, `Blockstudio\Pages::tree()`, `Blockstudio\Pages::children()`, and the global helpers include the synced post identity, source and template paths, collection/path metadata, content type, sync policy, post type/status, editing policy, custom metadata, and a `permalink` key. Collection metadata is loaded from the last successful explicit reconciliation. Normal requests reconstruct this runtime data from persisted configuration and synced post meta without reading page source trees. The Pages class does not expose a separate permalink method.
 
 > Building File-Based Pages
 >
@@ -11230,10 +11233,11 @@ add_filter( 'blockstudio/pages/paths', function( $paths ) {
 
 ### blockstudio/pages/manifest_scan_interval
 
-Filter how often frontend requests rescan page roots for a newly added
-collection manifest. Existing manifest changes are also guarded by file-watch
-metadata. The default is five seconds in local and development environments
-and 20 seconds elsewhere.
+Filter the maximum age of a legacy pre-7.6.2 manifest cache that can seed the
+persisted collection runtime during an upgrade. Normal requests use the
+persisted collection configuration and do not periodically rescan page roots.
+Run `wp bs pages sync` or call `Blockstudio\Pages::reconcile()` after changing a
+collection manifest.
 
 ```php
 add_filter( 'blockstudio/pages/manifest_scan_interval', function() {
