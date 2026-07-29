@@ -29,7 +29,7 @@ jobs:
           echo "@fortawesome:registry=https://npm.fontawesome.com/" >> .npmrc
           echo "//npm.fontawesome.com/:_authToken=${{ secrets.FONTAWESOME_TOKEN }}" >> .npmrc
 
-      - run: npm ci
+      - run: scripts/ci/npm-ci.sh
 
       - name: JavaScript, docs, schema, and product-neutrality checks
         run: npm run check
@@ -90,7 +90,7 @@ jobs:
           echo "@fortawesome:registry=https://npm.fontawesome.com/" >> .npmrc
           echo "//npm.fontawesome.com/:_authToken=${{ secrets.FONTAWESOME_TOKEN }}" >> .npmrc
 
-      - run: npm ci
+      - run: scripts/ci/npm-ci.sh
       - run: composer install --no-interaction
 
       - name: Start ${{ matrix.mode }} implementation
@@ -124,7 +124,7 @@ jobs:
           echo "@fortawesome:registry=https://npm.fontawesome.com/" >> .npmrc
           echo "//npm.fontawesome.com/:_authToken=${{ secrets.FONTAWESOME_TOKEN }}" >> .npmrc
 
-      - run: npm ci
+      - run: scripts/ci/npm-ci.sh
       - run: composer install --no-interaction
       - run: composer install --no-interaction --working-dir=tests/theme
 
@@ -180,7 +180,7 @@ jobs:
           echo "@fortawesome:registry=https://npm.fontawesome.com/" >> .npmrc
           echo "//npm.fontawesome.com/:_authToken=${{ secrets.FONTAWESOME_TOKEN }}" >> .npmrc
 
-      - run: npm ci
+      - run: scripts/ci/npm-ci.sh
       - run: composer install --no-interaction
       - run: composer install --no-interaction --working-dir=tests/theme
 
@@ -232,7 +232,7 @@ jobs:
           echo "@fortawesome:registry=https://npm.fontawesome.com/" >> .npmrc
           echo "//npm.fontawesome.com/:_authToken=${{ secrets.FONTAWESOME_TOKEN }}" >> .npmrc
 
-      - run: npm ci
+      - run: scripts/ci/npm-ci.sh
       - run: composer install --no-interaction
 
       - name: Install Playwright browsers
