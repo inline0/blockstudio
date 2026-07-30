@@ -23,6 +23,16 @@ class Pages {
 	private const SOURCE_IDENTITY_OPTION = 'blockstudio_pages_successful_source_identity';
 
 	/**
+	 * Per-site collection manifests used for request-time CPT registration.
+	 */
+	private const COLLECTION_MANIFESTS_OPTION = 'blockstudio_pages_collection_manifests';
+
+	/**
+	 * Per-site compiled templates used for request-time post type defaults.
+	 */
+	private const TEMPLATE_FOR_OPTION = 'blockstudio_pages_template_for';
+
+	/**
 	 * Whether pages have been initialized.
 	 *
 	 * @var bool
@@ -113,44 +123,21 @@ class Pages {
 	/**
 	 * Initialize the pages system.
 	 *
-	 * @param array $args Optional arguments.
+	 * @param array $args Deprecated initialization arguments. They no longer trigger synchronization.
 	 *
 	 * @return void
 	 */
 	public static function init( array $args = array() ): void {
+		unset( $args );
 		self::register_runtime_hooks();
-		if ( ! self::can_init_in_current_context( $args ) ) {
+
+		if ( self::$initialized ) {
 			return;
 		}
 
-		if ( self::$initialized && empty( $args['force'] ) ) {
-			return;
-		}
-
-		$report   = self::reconcile(
-			array(
-				'authoritative' => false,
-				'full'          => ! empty( $args['force'] ),
-				'plan_valid'    => false,
-			)
-		);
-		$registry = Page_Registry::instance();
-
-		if ( ! self::$hooks_registered ) {
-			self::register_template_for_hooks();
-
-			self::$hooks_registered = true;
-		}
-
+		self::register_template_for_hooks();
+		self::apply_template_for_to_registered_post_types();
 		self::$initialized = true;
-
-		/**
-		 * Fires after pages have been synced.
-		 *
-		 * @param Page_Registry $registry The page registry instance.
-		 * @param array         $report   Reconciliation report and source identity.
-		 */
-		do_action( 'blockstudio/pages/synced', $registry, $report );
 	}
 
 	/**
@@ -165,19 +152,20 @@ class Pages {
 	 * @return array Reconciliation report and source identity.
 	 */
 	public static function reconcile( array $args = array() ): array {
+		self::register_runtime_hooks();
 		$was_reconciling   = self::$reconciling;
 		self::$reconciling = true;
 
 		try {
-			self::register_collection_post_types();
-
 			$registry = self::discover_registry();
-			$sync     = new Page_Sync();
-			$pages    = $registry->get_registered_pages();
-			$managed  = $sync->managed_posts();
-			$indexes  = self::managed_post_indexes( $managed );
-			$engine   = Page_Sync::engine_fingerprint();
-			$desired  = array();
+			self::prepare_runtime_configuration( $registry );
+
+			$sync    = new Page_Sync();
+			$pages   = $registry->get_registered_pages();
+			$managed = $sync->managed_posts();
+			$indexes = self::managed_post_indexes( $managed );
+			$engine  = Page_Sync::engine_fingerprint();
+			$desired = array();
 
 			foreach ( $pages as $name => $page_data ) {
 				$desired[ $name ] = array(
@@ -265,12 +253,16 @@ class Pages {
 				}
 			}
 
-			if ( 0 === count( $registry->get_errors() ) ) {
+			if ( 0 === $report['failed'] && array() === $report['errors'] ) {
 				$report['removed'] = $sync->prune_missing(
 					array_column( $desired, 'key' ),
 					array_column( $desired, 'source' ),
 					$managed
 				);
+			}
+
+			if ( 0 === $report['failed'] && array() === $report['errors'] ) {
+				self::persist_runtime_configuration( $registry );
 			}
 
 			/**
@@ -280,6 +272,14 @@ class Pages {
 			 * @param Page_Registry $registry Discovered registry.
 			 */
 			do_action( 'blockstudio/pages/reconciled', $report, $registry );
+
+			/**
+			 * Fires after pages have been synced.
+			 *
+			 * @param Page_Registry $registry The page registry instance.
+			 * @param array         $report   Reconciliation report and source identity.
+			 */
+			do_action( 'blockstudio/pages/synced', $registry, $report );
 
 			return $report;
 		} finally {
@@ -594,19 +594,30 @@ class Pages {
 	/**
 	 * Register custom post types declared by page collection manifests.
 	 *
+	 * @param array<int, array>|null $collections      Explicitly discovered collections.
+	 * @param bool                   $activate_rewrites Whether to persist a changed rewrite signature.
+	 *
 	 * @return void
 	 */
-	public static function register_collection_post_types(): void {
+	public static function register_collection_post_types( ?array $collections = null, bool $activate_rewrites = true ): void {
 		self::register_collection_url_hooks();
 
-		$collections = self::get_collection_manifests( self::should_refresh_collection_manifest_cache() );
+		$collections ??= self::get_collection_manifests( self::should_refresh_collection_manifest_cache() );
+		$registry      = Page_Registry::instance();
 
 		foreach ( $collections as $collection ) {
+			$slug = is_scalar( $collection['slug'] ?? null ) ? (string) $collection['slug'] : '';
+			if ( '' !== $slug ) {
+				$registry->register_collection( $slug, $collection );
+			}
+
 			self::register_collection_post_type( $collection );
 			self::add_collection_rewrite_rules( $collection );
 		}
 
-		self::maybe_flush_collection_rewrite_rules( $collections );
+		if ( $activate_rewrites ) {
+			self::maybe_flush_collection_rewrite_rules( $collections );
+		}
 		self::set_collection_manifests_cache( $collections, false );
 	}
 
@@ -702,12 +713,6 @@ class Pages {
 		$base = preg_quote( trim( $slug, '/' ), '#' );
 
 		add_rewrite_rule(
-			'^' . $base . '/(?!(?:feed|rdf|rss|rss2|atom|page|embed)(?:/|$))(.+?)/?$',
-			'index.php?blockstudio_collection=' . $slug . '&blockstudio_collection_path=$matches[1]',
-			'top'
-		);
-
-		add_rewrite_rule(
 			'^' . $base . '/(.+?)/embed/?$',
 			'index.php?blockstudio_collection=' . $slug . '&blockstudio_collection_path=$matches[1]&embed=true',
 			'top'
@@ -728,6 +733,12 @@ class Pages {
 		add_rewrite_rule(
 			'^' . $base . '/(.+?)/(feed|rdf|rss|rss2|atom)/?$',
 			'index.php?blockstudio_collection=' . $slug . '&blockstudio_collection_path=$matches[1]&feed=$matches[2]',
+			'top'
+		);
+
+		add_rewrite_rule(
+			'^' . $base . '/(?!(?:feed|rdf|rss|rss2|atom|page|embed)(?:/|$))(.+?)/?$',
+			'index.php?blockstudio_collection=' . $slug . '&blockstudio_collection_path=$matches[1]',
 			'top'
 		);
 
@@ -994,20 +1005,29 @@ class Pages {
 		/** This filter is documented in init(). */
 		$paths = apply_filters( 'blockstudio/pages/paths', $paths );
 
+		if ( ! $refresh ) {
+			$persisted = self::persisted_collection_manifests( $paths );
+
+			if ( null !== $persisted ) {
+				self::set_collection_manifests_cache( $persisted, false );
+				return self::$collection_manifests_cache ?? array();
+			}
+		}
+
 		$cache_key = self::collection_manifests_cache_key( $paths );
 
 		if ( ! $refresh ) {
 			$cached = wp_cache_get( $cache_key, 'blockstudio' );
 
 			if ( self::collection_manifests_payload_fresh( $cached ) ) {
-				self::set_collection_manifests_cache( $cached['collections'], false );
+				self::set_collection_manifests_cache( $cached['collections'] );
 				return self::$collection_manifests_cache ?? array();
 			}
 
 			$transient = get_transient( $cache_key );
 
 			if ( self::collection_manifests_payload_fresh( $transient ) ) {
-				self::set_collection_manifests_cache( $transient['collections'], false );
+				self::set_collection_manifests_cache( $transient['collections'] );
 				wp_cache_set( $cache_key, $transient, 'blockstudio', HOUR_IN_SECONDS );
 				return self::$collection_manifests_cache ?? array();
 			}
@@ -1030,11 +1050,9 @@ class Pages {
 	/**
 	 * Check whether a persistent manifest payload is still trustworthy.
 	 *
-	 * Manifest edits and removals are caught by the payload watch snapshot,
-	 * which stats only the known manifest files and source roots. Brand-new
-	 * collections in previously manifest-free trees are only visible to a
-	 * scan, so payloads older than the scan interval rebuild. Admin and
-	 * reconcile requests bypass this cache entirely.
+	 * This validates legacy object-cache and transient payloads used to seed
+	 * durable runtime configuration during an upgrade. Once persisted, normal
+	 * requests use that configuration until explicit reconciliation replaces it.
 	 *
 	 * @param mixed $payload Cached payload.
 	 *
@@ -1059,6 +1077,9 @@ class Pages {
 	/**
 	 * Get the collection manifest scan interval in seconds.
 	 *
+	 * The interval only bounds legacy cache payloads considered during a cold
+	 * runtime bootstrap. It does not schedule recurring page-tree discovery.
+	 *
 	 * @return int Scan interval.
 	 */
 	private static function collection_manifest_scan_interval(): int {
@@ -1066,7 +1087,7 @@ class Pages {
 		$default     = in_array( $environment, array( 'local', 'development' ), true ) ? 5 : 20;
 
 		/**
-		 * Filter how often frontend requests rescan page trees for new collection manifests.
+		 * Filter the maximum age of a legacy manifest payload used at cold bootstrap.
 		 *
 		 * @since 7.5.0
 		 *
@@ -1081,7 +1102,7 @@ class Pages {
 	 * @return bool Whether to bypass persistent manifest caches.
 	 */
 	private static function should_refresh_collection_manifest_cache(): bool {
-		return is_admin() || self::$reconciling;
+		return self::$reconciling;
 	}
 
 	/**
@@ -1142,6 +1163,8 @@ class Pages {
 
 		$payload = array(
 			'collections' => self::$collection_manifests_cache,
+			'context'     => Runtime_Context::hash( 'page-manifests', array( 'pages' ) ),
+			'paths'       => self::normalize_collection_manifest_paths( $paths ),
 			'watch'       => Build_Cache::create_watch_snapshot( $watch_files, $watch_dirs ),
 			'scannedAt'   => time(),
 		);
@@ -1149,6 +1172,54 @@ class Pages {
 		$cache_key = self::collection_manifests_cache_key( $paths );
 		wp_cache_set( $cache_key, $payload, 'blockstudio', HOUR_IN_SECONDS );
 		set_transient( $cache_key, $payload, HOUR_IN_SECONDS );
+		update_option( self::COLLECTION_MANIFESTS_OPTION, $payload, false );
+	}
+
+	/**
+	 * Read request-time collection manifests persisted by explicit discovery.
+	 *
+	 * @param array $paths Configured page paths.
+	 *
+	 * @return array<int, array>|null Persisted manifests, or null when stale.
+	 */
+	private static function persisted_collection_manifests( array $paths ): ?array {
+		$payload = get_option( self::COLLECTION_MANIFESTS_OPTION );
+
+		if ( ! is_array( $payload ) || ! is_array( $payload['collections'] ?? null ) ) {
+			return null;
+		}
+
+		if (
+			( $payload['context'] ?? null ) !== Runtime_Context::hash( 'page-manifests', array( 'pages' ) )
+			|| ( $payload['paths'] ?? null ) !== self::normalize_collection_manifest_paths( $paths )
+		) {
+			return null;
+		}
+
+		return array_values(
+			array_filter(
+				$payload['collections'],
+				'is_array'
+			)
+		);
+	}
+
+	/**
+	 * Normalize page paths for persisted collection configuration.
+	 *
+	 * @param array $paths Configured page paths.
+	 *
+	 * @return array<int, string> Normalized paths.
+	 */
+	private static function normalize_collection_manifest_paths( array $paths ): array {
+		return array_values(
+			array_filter(
+				array_map(
+					static fn ( mixed $path ): string => is_scalar( $path ) ? wp_normalize_path( (string) $path ) : '',
+					$paths
+				)
+			)
+		);
 	}
 
 	/**
@@ -1329,30 +1400,6 @@ class Pages {
 	}
 
 	/**
-	 * Determine whether pages should initialize in the current request.
-	 *
-	 * Normal automatic initialization stays limited to admin requests.
-	 * Explicit force initialization is allowed for trusted callers that need to
-	 * sync pages from controlled frontend contexts, such as local dev tooling.
-	 *
-	 * @param array     $args Optional arguments.
-	 * @param bool|null $is_admin_request Optional admin context override for tests.
-	 * @param bool|null $is_cli_request Optional WP-CLI context override for tests.
-	 *
-	 * @return bool Whether initialization is allowed.
-	 */
-	private static function can_init_in_current_context( array $args = array(), ?bool $is_admin_request = null, ?bool $is_cli_request = null ): bool {
-		if ( ! empty( $args['force'] ) ) {
-			return true;
-		}
-
-		$is_admin_request ??= is_admin();
-		$is_cli_request   ??= defined( 'WP_CLI' ) && WP_CLI;
-
-		return $is_admin_request && ! $is_cli_request;
-	}
-
-	/**
 	 * Get default pages paths.
 	 *
 	 * @return array<string> Array of directory paths.
@@ -1367,58 +1414,131 @@ class Pages {
 	 * @return void
 	 */
 	private static function register_template_for_hooks(): void {
-		$registry = Page_Registry::instance();
-
-		$all_template_for = $registry->get_all_template_for();
-
-		if ( empty( $all_template_for ) ) {
+		if ( self::$hooks_registered ) {
 			return;
 		}
 
-		$parser = Html_Parser::from_settings();
+		self::$hooks_registered = true;
 
-		// Apply to already-registered post types (since Pages::init runs late).
-		foreach ( $all_template_for as $post_type => $template_page ) {
-			$post_type_object = get_post_type_object( $post_type );
-
-			if ( ! $post_type_object ) {
-				continue;
-			}
-
-			$template = self::build_post_type_template( $parser, $template_page );
-
-			if ( ! $template ) {
-				continue;
-			}
-
-			$post_type_object->template      = $template;
-			$post_type_object->template_lock = $template_page['templateLock'];
-		}
-
-		// Also hook for any post types registered after this point.
 		add_filter(
 			'register_post_type_args',
-			function ( array $args, string $post_type ) use ( $registry, $parser ): array {
-				$template_page = $registry->get_template_for( $post_type );
-
-				if ( ! $template_page ) {
-					return $args;
-				}
-
-				$template = self::build_post_type_template( $parser, $template_page );
-
-				if ( ! $template ) {
-					return $args;
-				}
-
-				$args['template']      = $template;
-				$args['template_lock'] = $template_page['templateLock'];
-
-				return $args;
-			},
+			array( __CLASS__, 'filter_template_for_post_type_args' ),
 			10,
 			2
 		);
+	}
+
+	/**
+	 * Apply persisted file-backed templates while a post type is registered.
+	 *
+	 * @param array  $args      Post type registration arguments.
+	 * @param string $post_type Post type name.
+	 *
+	 * @return array Filtered registration arguments.
+	 */
+	public static function filter_template_for_post_type_args( array $args, string $post_type ): array {
+		$configuration = self::template_for_configuration();
+		$template      = $configuration[ $post_type ] ?? null;
+
+		if ( ! is_array( $template ) || ! is_array( $template['template'] ?? null ) ) {
+			return $args;
+		}
+
+		$args['template']      = $template['template'];
+		$args['template_lock'] = $template['templateLock'] ?? false;
+
+		return $args;
+	}
+
+	/**
+	 * Apply persisted templates to post types registered before Pages::init().
+	 *
+	 * @return void
+	 */
+	private static function apply_template_for_to_registered_post_types(): void {
+		foreach ( self::template_for_configuration() as $post_type => $template ) {
+			$post_type_object = get_post_type_object( (string) $post_type );
+
+			if ( ! $post_type_object || ! is_array( $template['template'] ?? null ) ) {
+				continue;
+			}
+
+			$post_type_object->template      = $template['template'];
+			$post_type_object->template_lock = $template['templateLock'] ?? false;
+		}
+	}
+
+	/**
+	 * Compile and persist post type templates during explicit reconciliation.
+	 *
+	 * @param Page_Registry $registry Discovered page registry.
+	 *
+	 * @return void
+	 */
+	private static function store_template_for_configuration( Page_Registry $registry ): void {
+		$parser        = Html_Parser::from_settings();
+		$configuration = array();
+
+		foreach ( $registry->get_all_template_for() as $post_type => $template_page ) {
+			$template = self::build_post_type_template( $parser, $template_page );
+
+			if ( null === $template ) {
+				continue;
+			}
+
+			$configuration[ (string) $post_type ] = array(
+				'template'     => $template,
+				'templateLock' => $template_page['templateLock'] ?? false,
+			);
+		}
+
+		update_option( self::TEMPLATE_FOR_OPTION, $configuration, false );
+	}
+
+	/**
+	 * Prepare request-time post types for an explicit synchronization.
+	 *
+	 * This deliberately does not persist configuration or advance the rewrite
+	 * signature. A failed synchronization must not activate a partial runtime
+	 * configuration for later requests.
+	 *
+	 * @param Page_Registry $registry Discovered page registry.
+	 *
+	 * @return void
+	 */
+	private static function prepare_runtime_configuration( Page_Registry $registry ): void {
+		$collections = array_values( $registry->get_collections() );
+
+		self::set_collection_manifests_cache( $collections, false );
+		self::register_collection_post_types( $collections, false );
+	}
+
+	/**
+	 * Persist and activate configuration after a successful explicit synchronization.
+	 *
+	 * @param Page_Registry $registry Discovered page registry.
+	 *
+	 * @return void
+	 */
+	private static function persist_runtime_configuration( Page_Registry $registry ): void {
+		$collections = array_values( $registry->get_collections() );
+
+		self::set_collection_manifests_cache( $collections );
+		self::register_collection_post_types( $collections );
+		self::store_template_for_configuration( $registry );
+		self::register_template_for_hooks();
+		self::apply_template_for_to_registered_post_types();
+	}
+
+	/**
+	 * Read compiled post type templates without discovering page sources.
+	 *
+	 * @return array<string, array> Templates indexed by post type.
+	 */
+	private static function template_for_configuration(): array {
+		$configuration = get_option( self::TEMPLATE_FOR_OPTION, array() );
+
+		return is_array( $configuration ) ? $configuration : array();
 	}
 
 	/**
@@ -2103,11 +2223,28 @@ class Pages {
 	 */
 	public static function force_sync_all(): array {
 		$results  = array();
-		$registry = Page_Registry::instance();
+		$registry = self::discover_registry();
 		$sync     = new Page_Sync();
+		$pages    = $registry->get_registered_pages();
 
-		foreach ( $registry->get_pages() as $name => $page_data ) {
-			$results[ $name ] = $sync->force_sync( $page_data );
+		if ( array() === $pages ) {
+			return $results;
+		}
+
+		self::prepare_runtime_configuration( $registry );
+
+		foreach ( $pages as $name => $page_data ) {
+			$result           = $sync->force_sync( $page_data );
+			$results[ $name ] = $result;
+
+			if ( is_int( $result ) && $result > 0 ) {
+				self::hydrate_registry_page( $registry, (string) $name, $page_data, $result );
+			}
+		}
+
+		$failed = array_filter( $results, 'is_wp_error' );
+		if ( array() === $registry->get_errors() && array() === $failed ) {
+			self::persist_runtime_configuration( $registry );
 		}
 
 		return $results;
@@ -2121,19 +2258,38 @@ class Pages {
 	 * @return int|\WP_Error|null The post ID, WP_Error, or null if page not found.
 	 */
 	public static function force_sync( string $name ): int|\WP_Error|null {
-		$page = Page_Registry::instance()->get_page( $name );
+		$registry = self::discover_registry();
+		$pages    = $registry->get_registered_pages();
+		$page     = $pages[ $name ] ?? null;
+		if ( ! is_array( $page ) ) {
+			$matches = array_filter(
+				$pages,
+				static fn ( array $candidate ): bool => ( $candidate['name'] ?? null ) === $name
+			);
+			$page    = 1 === count( $matches ) ? reset( $matches ) : null;
+		}
 
-		if ( ! $page ) {
+		if ( ! is_array( $page ) ) {
 			return null;
 		}
 
-		$sync = new Page_Sync();
+		self::prepare_runtime_configuration( $registry );
 
-		return $sync->force_sync( $page );
+		$sync   = new Page_Sync();
+		$result = $sync->force_sync( $page );
+
+		if ( is_int( $result ) && $result > 0 ) {
+			self::hydrate_registry_page( $registry, (string) ( $page['key'] ?? $name ), $page, $result );
+			if ( array() === $registry->get_errors() ) {
+				self::persist_runtime_configuration( $registry );
+			}
+		}
+
+		return $result;
 	}
 
 	/**
-	 * Lock a page to prevent automatic updates.
+	 * Lock a page to prevent updates during normal explicit reconciliation.
 	 *
 	 * @param string $name The page name.
 	 *
@@ -2153,7 +2309,7 @@ class Pages {
 	}
 
 	/**
-	 * Unlock a page to allow automatic updates.
+	 * Unlock a page to allow updates during normal explicit reconciliation.
 	 *
 	 * @param string $name The page name.
 	 *

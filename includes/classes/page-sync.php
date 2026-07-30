@@ -23,7 +23,7 @@ class Page_Sync {
 	/**
 	 * Version of the page serialization and managed-meta contract.
 	 */
-	public const SYNC_ENGINE_VERSION = '3';
+	public const SYNC_ENGINE_VERSION = '4';
 
 	/**
 	 * The HTML parser instance.
@@ -70,6 +70,9 @@ class Page_Sync {
 			: $this->find_existing_post( $page_data );
 
 		if ( ! $sync_enabled && empty( $args['always_update'] ) ) {
+			if ( $existing ) {
+				$this->update_runtime_post_meta( $existing->ID, $page_data );
+			}
 			return $this->reconcile_result( 'unchanged', $existing ? $existing->ID : 0 );
 		}
 
@@ -91,12 +94,14 @@ class Page_Sync {
 				if ( ! empty( $args['prune_duplicates'] ) ) {
 					$post_id = $this->prune_duplicate_posts( $page_data, $post_id, $fingerprint, $engine_fingerprint );
 				}
+				$this->update_runtime_post_meta( $post_id, $page_data );
 
 				return $this->reconcile_result( 'unchanged', $post_id );
 			}
 
 			$is_locked = (bool) get_post_meta( $existing->ID, '_blockstudio_page_locked', true );
 			if ( $is_locked && empty( $args['authoritative'] ) ) {
+				$this->update_runtime_post_meta( $existing->ID, $page_data );
 				return $this->reconcile_result( 'unchanged', $existing->ID, null, true );
 			}
 			if ( $is_locked ) {
@@ -212,28 +217,33 @@ class Page_Sync {
 	 * @return array<int, WP_Post> Managed posts.
 	 */
 	public function managed_posts(): array {
-		$posts = get_posts(
-			array(
-				'meta_query'        => array( // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query
-					'relation' => 'OR',
-					array(
-						'key'     => '_blockstudio_page_key',
-						'compare' => 'EXISTS',
-					),
-					array(
-						'key'     => '_blockstudio_page_source',
-						'compare' => 'EXISTS',
-					),
-				),
-				'post_type'         => 'any',
-				'posts_per_page'    => -1,
-				'post_status'       => $this->synced_post_statuses(),
-				'orderby'           => 'ID',
-				'order'             => 'ASC',
-				'suppress_filters'  => false,
-				'update_meta_cache' => true,
+		global $wpdb;
+
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching -- Explicit reconciliation requires a complete cross-post-type inventory and must bypass multilingual query filters.
+		$post_ids = $wpdb->get_col(
+			$wpdb->prepare(
+				"SELECT DISTINCT post_id
+				FROM {$wpdb->postmeta}
+				WHERE meta_key IN ( %s, %s )
+				ORDER BY post_id ASC",
+				'_blockstudio_page_key',
+				'_blockstudio_page_source'
 			)
 		);
+
+		$post_ids = array_values(
+			array_unique(
+				array_filter(
+					array_map( 'absint', $post_ids )
+				)
+			)
+		);
+
+		foreach ( array_chunk( $post_ids, 500 ) as $chunk ) {
+			_prime_post_caches( $chunk, false, true );
+		}
+
+		$posts = array_map( 'get_post', $post_ids );
 
 		return array_values(
 			array_filter(
@@ -845,7 +855,6 @@ class Page_Sync {
 		update_post_meta( $post_id, '_blockstudio_page_path', $page_data['path'] ?? '' );
 		update_post_meta( $post_id, '_blockstudio_page_route', ( $page_data['collection'] ?? '' ) . ':' . ( $page_data['path'] ?? '' ) );
 		update_post_meta( $post_id, '_blockstudio_page_generated', ! empty( $page_data['generated'] ) );
-		update_post_meta( $post_id, '_blockstudio_page_content_type', $page_data['contentType'] ?? 'php' );
 		update_post_meta( $post_id, '_blockstudio_page_stale', false );
 		$dependencies = $this->dependency_ids( $page_data );
 		if ( ! empty( $dependencies ) ) {
@@ -853,24 +862,12 @@ class Page_Sync {
 		} else {
 			delete_post_meta( $post_id, '_blockstudio_page_dependencies' );
 		}
-
-		$content_path = $page_data['content_path'] ?? $page_data['template_path'] ?? '';
-		if ( 'markdown' === ( $page_data['contentType'] ?? '' ) && is_string( $content_path ) && '' !== $content_path ) {
-			update_post_meta( $post_id, '_blockstudio_page_content_path', $content_path );
-		} else {
-			delete_post_meta( $post_id, '_blockstudio_page_content_path' );
-		}
+		$this->update_runtime_post_meta( $post_id, $page_data );
 
 		if ( ! empty( $page_data['parent_key'] ) ) {
 			update_post_meta( $post_id, '_blockstudio_page_parent_key', $page_data['parent_key'] );
 		} else {
 			delete_post_meta( $post_id, '_blockstudio_page_parent_key' );
-		}
-
-		if ( ! empty( $page_data['layout_path'] ) ) {
-			update_post_meta( $post_id, '_blockstudio_page_layout', $page_data['layout_path'] );
-		} else {
-			delete_post_meta( $post_id, '_blockstudio_page_layout' );
 		}
 
 		if ( ! empty( $page_data['meta'] ) ) {
@@ -889,6 +886,60 @@ class Page_Sync {
 			update_post_meta( $post_id, '_blockstudio_block_editing_mode', $page_data['blockEditingMode'] );
 		} else {
 			delete_post_meta( $post_id, '_blockstudio_block_editing_mode' );
+		}
+	}
+
+	/**
+	 * Persist request-time page metadata without changing the managed post row.
+	 *
+	 * Explicit deployments may move an unchanged source into a new release
+	 * directory. Refreshing these paths keeps runtime helpers on the active
+	 * release while preserving the literal zero-write path when values match.
+	 *
+	 * @param int   $post_id   Synced post ID.
+	 * @param array $page_data Desired page data.
+	 *
+	 * @return void
+	 */
+	private function update_runtime_post_meta( int $post_id, array $page_data ): void {
+		$content_type  = is_scalar( $page_data['contentType'] ?? null ) ? (string) $page_data['contentType'] : 'php';
+		$content_path  = $page_data['content_path'] ?? $page_data['template_path'] ?? '';
+		$template_path = $page_data['template_path'] ?? '';
+		$directory     = $page_data['directory'] ?? '';
+		$layout_path   = $page_data['layout_path'] ?? '';
+		$template_for  = $page_data['templateFor'] ?? '';
+
+		update_post_meta( $post_id, '_blockstudio_page_content_type', $content_type );
+		update_post_meta( $post_id, '_blockstudio_page_sync', (bool) ( $page_data['sync'] ?? true ) );
+
+		if ( is_string( $template_path ) && '' !== $template_path ) {
+			update_post_meta( $post_id, '_blockstudio_page_template_path', $template_path );
+		} else {
+			delete_post_meta( $post_id, '_blockstudio_page_template_path' );
+		}
+
+		if ( is_string( $directory ) && '' !== $directory ) {
+			update_post_meta( $post_id, '_blockstudio_page_directory', $directory );
+		} else {
+			delete_post_meta( $post_id, '_blockstudio_page_directory' );
+		}
+
+		if ( 'markdown' === $content_type && is_string( $content_path ) && '' !== $content_path ) {
+			update_post_meta( $post_id, '_blockstudio_page_content_path', $content_path );
+		} else {
+			delete_post_meta( $post_id, '_blockstudio_page_content_path' );
+		}
+
+		if ( is_scalar( $template_for ) && '' !== (string) $template_for ) {
+			update_post_meta( $post_id, '_blockstudio_page_template_for', (string) $template_for );
+		} else {
+			delete_post_meta( $post_id, '_blockstudio_page_template_for' );
+		}
+
+		if ( is_string( $layout_path ) && '' !== $layout_path ) {
+			update_post_meta( $post_id, '_blockstudio_page_layout', $layout_path );
+		} else {
+			delete_post_meta( $post_id, '_blockstudio_page_layout' );
 		}
 	}
 

@@ -242,12 +242,6 @@
           "default": false,
           "description": "Remove the active child and parent theme from WordPress.org directory update results.",
           "example": true
-        },
-        "syncPagesInDevelopment": {
-          "type": "boolean",
-          "default": false,
-          "description": "Reconcile file-backed pages when their source signature changes in local or WP_DEBUG environments.",
-          "example": true
         }
       },
       "additionalProperties": false

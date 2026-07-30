@@ -664,7 +664,8 @@ Pages compose blocks into full layouts using the `<block>` syntax. Create a home
 <block name="my-theme/features"></block>
 ```
 
-That's it. Each `<block>` element inserts the block with its default attribute values. The page syncs to WordPress automatically.
+That's it. Each `<block>` element inserts the block with its default attribute
+values. Run `wp bs pages sync` to apply the page source to WordPress.
 
 To override defaults for a specific page, pass attributes directly:
 

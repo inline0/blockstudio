@@ -119,8 +119,9 @@ section markers in Markdown files.
 
 ## CI
 
-- Lint (TSC + PHPCS) runs on every push to `main`.
-- E2E tests only run when the commit message contains `[e2e]`. Include `[e2e]` in the commit message when changes affect plugin functionality (PHP, TypeScript, tests). Skip it for docs-only, UI copy, or config changes.
+- The complete CI suite runs on every push to `main` and `7.*` branches.
+- Browser coverage runs in isolated GitHub-hosted WordPress environments: 16 main-suite shards plus one empty-theme job.
+- Commit-message tags such as `[all]`, `[e2e]`, and `[unit]` do not gate jobs. `[all]` remains a release-validation convention only.
 
 ## Key Rules for Claude
 
@@ -131,7 +132,7 @@ section markers in Markdown files.
 5. **100% WordPress Coding Standards** - no exceptions
 6. **One class at a time** - migrate and test incrementally
 7. **Avoid direct `npx` for routine flows** - prefer `npm run` scripts from package.json
-8. **E2E CI gate** - Add `[e2e]` to commit messages when changes affect plugin functionality. Omit for docs/UI-only changes.
+8. **E2E CI gate** - Every push to `main` and `7.*` runs the complete E2E matrix; do not add commit-message conditions that bypass behavioral coverage.
 9. **Durable guidance only** - Add instructions here only when they are general, valid, and repeatedly useful for the repo. Do not add one-off preferences, temporary decisions, or task-specific snippets.
 
 ## Commands

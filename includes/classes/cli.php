@@ -23,6 +23,7 @@ class Cli {
 	 */
 	public static function register(): void {
 		\WP_CLI::add_command( 'bs blocks', array( __CLASS__, 'blocks' ) );
+		\WP_CLI::add_command( 'bs pages', array( __CLASS__, 'pages' ) );
 		\WP_CLI::add_command( 'bs db', array( __CLASS__, 'db' ) );
 		\WP_CLI::add_command( 'bs rpc', array( __CLASS__, 'rpc' ) );
 		\WP_CLI::add_command( 'bs cron', array( __CLASS__, 'cron' ) );
@@ -54,6 +55,88 @@ class Cli {
 		Static_Prerender_Runtime::deactivate();
 
 		\WP_CLI::success( 'Removed Blockstudio cron events and static prerender state owned by this installation.' );
+	}
+
+	// Pages.
+
+	/**
+	 * Synchronize file-backed pages explicitly.
+	 *
+	 * ## OPTIONS
+	 *
+	 * <sync>
+	 * : Synchronize the complete discovered page inventory.
+	 *
+	 * [--authoritative]
+	 * : Replace managed content instead of preserving keyed editor content.
+	 *
+	 * [--full]
+	 * : Force a full reconciliation regardless of the stored source identity.
+	 *
+	 * [--format=<format>]
+	 * : Output format. Accepts table or json.
+	 *
+	 * ## EXAMPLES
+	 *
+	 *     wp bs pages sync
+	 *     wp bs pages sync --authoritative --full --format=json
+	 *
+	 * @param array $args       Positional arguments.
+	 * @param array $assoc_args Associative arguments.
+	 *
+	 * @return void
+	 */
+	public static function pages( $args, $assoc_args ): void {
+		$subcommand = $args[0] ?? '';
+
+		if ( 'sync' !== $subcommand ) {
+			\WP_CLI::error( "Unknown subcommand: $subcommand. Use: sync" );
+			return;
+		}
+
+		$format = isset( $assoc_args['format'] ) ? (string) $assoc_args['format'] : 'table';
+
+		if ( ! in_array( $format, array( 'table', 'json' ), true ) ) {
+			\WP_CLI::error( 'Invalid format. Use: table or json' );
+			return;
+		}
+
+		$report = Pages::reconcile(
+			array(
+				'authoritative' => isset( $assoc_args['authoritative'] ),
+				'full'          => isset( $assoc_args['full'] ),
+				'plan_valid'    => true,
+			)
+		);
+		$row    = array(
+			'discovered' => (int) $report['discovered'],
+			'created'    => (int) $report['created'],
+			'updated'    => (int) $report['updated'],
+			'unchanged'  => (int) $report['unchanged'],
+			'removed'    => (int) $report['removed'],
+			'failed'     => (int) $report['failed'],
+			'source_id'  => (string) $report['sourceId'],
+		);
+
+		if ( 'json' === $format ) {
+			\WP_CLI::line( (string) wp_json_encode( $report, JSON_PRETTY_PRINT ) );
+		} else {
+			\WP_CLI\Utils\format_items( 'table', array( $row ), array_keys( $row ) );
+		}
+
+		if ( (int) $report['failed'] > 0 || ! empty( $report['errors'] ) ) {
+			\WP_CLI::error( 'Page synchronization failed. Review the reported discovery and reconciliation errors.' );
+			return;
+		}
+
+		if ( ! Pages::store_successful_source_identity( $report['sourceIdentity'] ) ) {
+			\WP_CLI::error( 'Pages synchronized, but the successful source identity could not be stored.' );
+			return;
+		}
+
+		if ( 'json' !== $format ) {
+			\WP_CLI::success( 'File-backed pages synchronized.' );
+		}
 	}
 
 	// Blocks.

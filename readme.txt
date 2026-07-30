@@ -3,7 +3,7 @@ Contributors: dnnsjsk
 Requires at least: 6.7
 Tested up to: 7.0.0
 Requires PHP: 8.2
-Stable tag: 7.6.1
+Stable tag: 7.6.2
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -17,7 +17,7 @@ Create custom WordPress blocks by dropping a `block.json` and a PHP template int
 
 * **26 field types** including text, repeater, tabs, classes, color, files, and more
 * **PHP, Twig, and Blade templates** with the same `$a` variable across all languages
-* **File-based pages** that parse HTML templates into native block content with automatic syncing
+* **File-based pages** that explicitly sync file templates into native WordPress block content
 * **File-based patterns** registered from template files without any PHP registration code
 * **Extensions** to add custom fields to any core or third-party block via JSON
 * **Tailwind CSS v4** compiled server-side via TailwindPHP with automatic caching
@@ -53,6 +53,19 @@ Download the latest release zip from [GitHub Releases](https://github.com/inline
 * [Getting Started](https://blockstudio.dev/docs/getting-started)
 
 == Changelog ==
+
+= 7.6.2 =
+* New: `wp bs pages sync` is the explicit deployment command for file-backed page reconciliation, with authoritative, full, and JSON output options
+* Fix: ordinary frontend, admin, AJAX, REST, cron, and WP-CLI bootstrap requests never run full page discovery or reconciliation and never write managed page posts
+* Fix: explicit page reconciliation inventories managed posts with one indexed meta-key lookup that bypasses multilingual `WP_Query` filters and the previous large OR-meta query
+* Fix: collection post types, rewrites, and `templateFor` defaults load from compact persisted configuration instead of rescanning page source trees on ordinary requests
+* Fix: page and collection helper APIs retain synced runtime metadata across requests without rediscovering source files
+* Fix: unchanged explicit page reconciliation refreshes release-local runtime paths without updating managed post content
+* Fix: collection child feeds, pagination, and embeds resolve before the generic child-page route
+* Fix: failed page reconciliation preserves the last verified collection routes and `templateFor` defaults
+* Fix: Canvas explicitly reconciles once when opened so newly added page sources appear without restoring implicit admin-request synchronization
+* Change: removed `themeDefaults.syncPagesInDevelopment`; use the explicit page CLI or PHP API instead
+* Change: `Pages::init()` is bootstrap-only and ignores its legacy `force` argument; use `Pages::reconcile()` or `wp bs pages sync`
 
 = 7.6.1 =
 * Fix: Retention pruning never evicts cache files the installed early-serve map references, and a `blockstudio/cache/protected_paths` filter extends that protection

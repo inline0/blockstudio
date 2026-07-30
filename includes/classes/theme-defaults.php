@@ -15,11 +15,6 @@ namespace Blockstudio;
 final class Theme_Defaults {
 
 	/**
-	 * Page source signature option.
-	 */
-	private const PAGES_SIGNATURE_OPTION = 'blockstudio_theme_defaults_pages_signature';
-
-	/**
 	 * Whether hooks have been registered.
 	 *
 	 * @var bool
@@ -42,9 +37,6 @@ final class Theme_Defaults {
 		}
 		if ( Settings::get_bool( 'themeDefaults/suppressDirectoryUpdates', false ) ) {
 			add_filter( 'site_transient_update_themes', array( self::class, 'suppress_directory_updates' ) );
-		}
-		if ( Settings::get_bool( 'themeDefaults/syncPagesInDevelopment', false ) ) {
-			add_action( 'wp_loaded', array( self::class, 'sync_pages_in_development' ), 100 );
 		}
 	}
 
@@ -82,66 +74,6 @@ final class Theme_Defaults {
 	}
 
 	/**
-	 * Force file-backed page reconciliation when sources change locally.
-	 *
-	 * @return void
-	 */
-	public static function sync_pages_in_development(): void {
-		$enabled = self::is_development_environment();
-		$enabled = (bool) apply_filters( 'blockstudio/theme_defaults/sync_pages_in_development', $enabled );
-		if ( ! $enabled ) {
-			return;
-		}
-
-		$signature = self::pages_signature();
-		if ( '' !== $signature && get_option( self::PAGES_SIGNATURE_OPTION ) === $signature ) {
-			return;
-		}
-
-		Pages::init( array( 'force' => true ) );
-		Pages::force_sync_all();
-
-		if ( '' !== $signature ) {
-			update_option( self::PAGES_SIGNATURE_OPTION, $signature, false );
-		}
-	}
-
-	/**
-	 * Build a cheap signature over configured page paths.
-	 *
-	 * @return string Source signature.
-	 */
-	private static function pages_signature(): string {
-		$paths = apply_filters(
-			'blockstudio/pages/paths',
-			array( rtrim( (string) get_stylesheet_directory(), '/' ) . '/pages' )
-		);
-		$parts = array();
-
-		foreach ( (array) $paths as $path ) {
-			if ( ! is_string( $path ) || '' === $path || ! is_dir( $path ) ) {
-				continue;
-			}
-			$files = new \RecursiveIteratorIterator(
-				new \RecursiveDirectoryIterator( $path, \FilesystemIterator::SKIP_DOTS )
-			);
-			foreach ( $files as $file ) {
-				if ( $file instanceof \SplFileInfo && $file->isFile() ) {
-					$parts[] = $file->getPathname() . ':' . $file->getMTime() . ':' . $file->getSize();
-				}
-			}
-		}
-
-		if ( array() === $parts ) {
-			return '';
-		}
-
-		sort( $parts, SORT_STRING );
-
-		return hash( 'sha256', implode( '|', $parts ) );
-	}
-
-	/**
 	 * Get active child and parent theme slugs.
 	 *
 	 * @return string[] Theme slugs.
@@ -157,18 +89,5 @@ final class Theme_Defaults {
 				)
 			)
 		);
-	}
-
-	/**
-	 * Determine whether WordPress is running in a development environment.
-	 *
-	 * @return bool Whether development behavior is allowed.
-	 */
-	private static function is_development_environment(): bool {
-		if ( function_exists( 'wp_get_environment_type' ) && 'local' === wp_get_environment_type() ) {
-			return true;
-		}
-
-		return defined( 'WP_DEBUG' ) && true === WP_DEBUG;
 	}
 }

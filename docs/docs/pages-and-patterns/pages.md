@@ -1,17 +1,20 @@
 ---
 title: Pages
-description: Create WordPress pages from file templates with automatic syncing.
+description: Create WordPress pages from file templates with explicit, deployment-safe syncing.
 path: "pages-and-patterns/pages"
 order: 51
 section: "Pages & Patterns"
 subsection: "File Templates"
 meta_title: "Pages"
-meta_description: "Create WordPress pages from file templates with automatic syncing."
+meta_description: "Create WordPress pages from file templates with explicit, deployment-safe syncing."
 ---
 
 # Pages
 
-Pages are file-based templates that sync to the WordPress database as posts. When you update a template file, Blockstudio detects the change and updates the corresponding page.
+Pages are file-based templates that sync to the WordPress database as posts.
+Synchronization is explicit: run `wp bs pages sync` or call the Pages API when
+you intend to apply source changes. Loading the frontend or WordPress admin
+never performs complete page discovery or mutates page posts.
 
 Pages can be defined as a single `page.json` folder, as standalone Markdown, or as a collection with a `pages.json` manifest. Collections are useful for documentation, knowledge bases, landing page libraries, or any set of nested pages that should be generated from files.
 
@@ -45,7 +48,7 @@ For a JSON-defined page, add a `page.json` configuration file:
 | `blockEditingMode` | `string` | - | Block editing mode: `"default"`, `"contentOnly"`, or `"disabled"` |
 | `templateLock` | `string\|false` | `"all"` | Lock mode: `"all"`, `"insert"`, `"contentOnly"`, or `false` |
 | `templateFor` | `string\|null` | `null` | Set as default template for a post type |
-| `sync` | `boolean` | `true` | Whether to sync content when template changes |
+| `sync` | `boolean` | `true` | Whether normal explicit reconciliation may create or update the post |
 
 Across `page.json`, frontmatter, and loader entries, recognized keys include `blockEditingMode`, `collection`, `content`, `contentType`, `defaults`, `file`, `html`, `markdown`, `meta`, `name`, `order`, `path`, `postId`, `postStatus`, `postType`, `postTypeArgs`, `slug`, `template`, `templateFor`, `templateLock`, and `title`. Any key not listed above is stored under the page's `meta` array.
 
@@ -254,7 +257,9 @@ If you change a collection from `postType: "page"` to a custom post type, Blocks
 
 Collections can include a trusted local `loader.php`. Use it when collection pages come from another local source, such as an external docs folder, a package, or a generated manifest.
 
-The loader runs during page discovery and sync. It should be deterministic and local. Avoid fetching remote content from `loader.php`, because admin requests can trigger page sync.
+The loader runs during explicit page discovery and synchronization. It should
+be deterministic and local. Avoid fetching remote content from `loader.php`,
+because it would make deployment synchronization depend on that service.
 
 ```php title="pages/docs/loader.php"
 <?php
@@ -429,11 +434,42 @@ When a `templateLock` is set, Blockstudio disables the ability to unlock blocks 
 
 ## Sync Behavior
 
-Pages are synced when you visit the WordPress admin. Blockstudio only updates WordPress when the relevant page source files or settings change.
+Page posts change only through an explicit synchronization operation:
+
+```bash
+wp bs pages sync
+```
+
+The command discovers the complete source inventory, creates or updates changed
+posts, prunes confirmed orphans, refreshes collection routing and compiled
+`templateFor` configuration, and reports what changed. Add `--authoritative` to
+replace managed content instead of preserving keyed editor content, and
+`--full` to force a full comparison:
+
+```bash
+wp bs pages sync --authoritative --full
+```
+
+Normal frontend, admin, AJAX, REST, cron, and generic WP-CLI bootstrap requests
+do not run complete page discovery, query the managed reconciliation inventory,
+or write page posts. They use already-synced WordPress posts plus compact
+collection and post-type-template configuration persisted by the last explicit
+operation. A cold installation or upgrade may scan collection manifests once to
+restore routing metadata; that read-only bootstrap never synchronizes content.
+The authenticated, opt-in Canvas refresh endpoint is an explicit authoring API:
+Canvas calls it once when the workspace opens so newly added or changed sources
+appear in the initial inventory. Live mode calls the same boundary when it
+observes a page-source change.
+
+`Blockstudio\Pages::init()` now registers request-time hooks only. Integrations
+that previously passed a `force` argument to that method must call
+`Blockstudio\Pages::reconcile()` or run `wp bs pages sync` instead.
 
 To prevent a page from being overwritten after manual edits, set `"sync": false` in `page.json`.
 
-For collection pages, Blockstudio watches the manifest, loader, page source, layout file, metadata, and related source paths. When any of those inputs change, the generated WordPress pages are synced again.
+For collection pages, fingerprints cover the manifest, loader, page source,
+layout file, metadata, and related source paths. The next explicit
+synchronization applies changes to those inputs.
 
 When a collection source is removed, Blockstudio removes the generated page so old collection pages do not linger after the source file is gone. By default, orphaned collection pages are moved to trash. Use `blockstudio/pages/orphan_action` to return `trash`, `delete`, or `keep`.
 
@@ -441,9 +477,9 @@ On frontend requests, Blockstudio hydrates the page registry from already synced
 
 ### Deployment Reconciliation
 
-`Blockstudio\Pages::reconcile()` is the explicit deployment and WP-CLI entry
-point. It discovers the complete desired inventory, compares source and
-sync-engine fingerprints, and returns a machine-readable report:
+`Blockstudio\Pages::reconcile()` is the PHP deployment entry point. It discovers
+the complete desired inventory, compares source and sync-engine fingerprints,
+and returns a machine-readable report:
 
 ```php
 $report = Blockstudio\Pages::reconcile([
@@ -468,18 +504,21 @@ deterministic `sourceIdentity`.
 
 `authoritative: true` may clear a Page Sync lock and replaces content from the
 file definition instead of preserving keyed editor content. Leave it `false`
-for normal admin sync behavior. `plan_valid: false`, `full: true`, `broad:
-true`, a missing previous source identity, or a changed sync-engine fingerprint
-broadens the pass. Git rename records are identity hints only. They never
-replace complete inventory comparison.
+for a normal explicit synchronization. `plan_valid: false`, `full: true`,
+`broad: true`, a missing previous source identity, or a changed sync-engine
+fingerprint broadens the pass. Git rename records are identity hints only. They
+never replace complete inventory comparison.
 
-Equal fingerprints perform no post or postmeta writes and do not fire update
-hooks. Missing managed pages are pruned only after discovery completes without
-errors.
+Equal fingerprints with unchanged runtime paths perform no post or postmeta
+writes and do not fire update hooks. When an unchanged source moves into a new
+release directory, reconciliation refreshes only its persisted template,
+content, layout, and directory paths; it does not update `post_content` or the
+post-modified timestamp. Missing managed pages are pruned only after the
+complete reconciliation pass finishes without discovery or page-write errors.
 
-Reconciliation does not mark a deployment successful. After activating and
-verifying the matching static artifact and routes, persist the returned
-identity explicitly:
+Direct API reconciliation does not mark a deployment successful. After
+activating and verifying the matching static artifact and routes, persist the
+returned identity explicitly:
 
 ```php
 Blockstudio\Pages::store_successful_source_identity(
@@ -487,9 +526,9 @@ Blockstudio\Pages::store_successful_source_identity(
 );
 ```
 
-Ordinary WP-CLI bootstrap registers cached collection post types and rewrites
-but does not discover or sync every page. Deployment and authoring commands
-must call `reconcile()` when they need a sync.
+`wp bs pages sync` stores the returned identity after a successful pass.
+Ordinary WP-CLI bootstrap only registers persisted collection post types and
+rewrites. It does not discover or synchronize pages.
 
 ## Post ID Pinning
 
@@ -783,7 +822,7 @@ Page discovery, sync, and collection routing expose these extension points:
 | `blockstudio/pages/orphan_action` | Filter | Return `trash`, `delete`, or `keep` for orphan cleanup. |
 | `blockstudio/pages/docs_allowed_html` | Filter | Adjust allowed HTML for generated Markdown docs content. |
 | `blockstudio/pages/allow_external_loader_path` | Filter | Allow loader `paths` outside the collection root. |
-| `blockstudio/pages/manifest_scan_interval` | Filter | Change how often frontend requests rescan for brand-new collection manifests. Defaults to 5 seconds locally and 20 seconds elsewhere. |
+| `blockstudio/pages/manifest_scan_interval` | Filter | Set the maximum age of a legacy pre-7.6.2 manifest cache that may seed persisted runtime configuration during an upgrade. |
 | `blockstudio/pages/create_post_data` | Filter | Modify post data before a synced page is created. |
 | `blockstudio/pages/update_post_data` | Filter | Modify post data before a synced page is updated. |
 | `blockstudio/pages/sync_engine_inputs` | Filter | Add a parser, mapping, or migration version that should deliberately broaden reconciliation once. |
@@ -820,10 +859,10 @@ $page = Blockstudio\Pages::get_page('about');
 // Get the WordPress post ID for a page.
 $postId = Blockstudio\Pages::get_post_id('about');
 
-// Force sync a page (ignores modification time).
+// Force sync a page explicitly (ignores fingerprints, locks, and sync: false).
 Blockstudio\Pages::force_sync('about');
 
-// Force sync all pages.
+// Force sync all discovered pages explicitly.
 Blockstudio\Pages::force_sync_all();
 
 // Reconcile a complete deployment inventory without rewriting equal pages.
@@ -839,7 +878,7 @@ $report = Blockstudio\Pages::reconcile([
 // Store this only after the matching static artifact and routes verify.
 Blockstudio\Pages::store_successful_source_identity($report['sourceIdentity']);
 
-// Lock a page to prevent automatic updates.
+// Lock a page against non-authoritative reconciliation.
 Blockstudio\Pages::lock('about');
 
 // Unlock a page.
@@ -860,7 +899,7 @@ blockstudio_page_content();
 blockstudio_current_page();
 ```
 
-Page arrays returned by `Blockstudio\Pages::pages()`, `Blockstudio\Pages::tree()`, `Blockstudio\Pages::children()`, and the global helpers include a `permalink` key after sync. There is no separate `Pages::permalink()` method.
+Page arrays returned by `Blockstudio\Pages::pages()`, `Blockstudio\Pages::tree()`, `Blockstudio\Pages::children()`, and the global helpers include the synced post identity, source and template paths, collection/path metadata, content type, sync policy, post type/status, editing policy, custom metadata, and a `permalink` key. Collection metadata is loaded from the last successful explicit reconciliation. Normal requests reconstruct this runtime data from persisted configuration and synced post meta without reading page source trees. The Pages class does not expose a separate permalink method.
 
 
 > **[Building File-Based Pages](/guides/file-based-pages)**

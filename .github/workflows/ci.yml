@@ -24,20 +24,27 @@ jobs:
           node-version: 20
           cache: npm
 
-      - uses: shivammathur/setup-php@v2
-        with:
-          php-version: "8.4"
-
       - name: Configure npm registries
         run: |
           echo "@fortawesome:registry=https://npm.fontawesome.com/" >> .npmrc
           echo "//npm.fontawesome.com/:_authToken=${{ secrets.FONTAWESOME_TOKEN }}" >> .npmrc
 
-      - run: npm ci
-      - run: composer install --no-interaction
+      - run: scripts/ci/npm-ci.sh
 
       - name: JavaScript, docs, schema, and product-neutrality checks
         run: npm run check
+
+  phpcs:
+    name: PHPCS
+    runs-on: [self-hosted, Linux, X64, inline0-blockstudio]
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+
+      - run: composer install --no-interaction
 
       - name: PHPCS
         run: composer cs
@@ -51,7 +58,7 @@ jobs:
 
       - uses: shivammathur/setup-php@v2
         with:
-          php-version: "8.4"
+          php-version: '8.4'
 
       - run: composer install --no-interaction
 
@@ -76,14 +83,14 @@ jobs:
 
       - uses: shivammathur/setup-php@v2
         with:
-          php-version: "8.4"
+          php-version: '8.4'
 
       - name: Configure npm registries
         run: |
           echo "@fortawesome:registry=https://npm.fontawesome.com/" >> .npmrc
           echo "//npm.fontawesome.com/:_authToken=${{ secrets.FONTAWESOME_TOKEN }}" >> .npmrc
 
-      - run: npm ci
+      - run: scripts/ci/npm-ci.sh
       - run: composer install --no-interaction
 
       - name: Start ${{ matrix.mode }} implementation
@@ -110,14 +117,14 @@ jobs:
 
       - uses: shivammathur/setup-php@v2
         with:
-          php-version: "8.4"
+          php-version: '8.4'
 
       - name: Configure npm registries
         run: |
           echo "@fortawesome:registry=https://npm.fontawesome.com/" >> .npmrc
           echo "//npm.fontawesome.com/:_authToken=${{ secrets.FONTAWESOME_TOKEN }}" >> .npmrc
 
-      - run: npm ci
+      - run: scripts/ci/npm-ci.sh
       - run: composer install --no-interaction
       - run: composer install --no-interaction --working-dir=tests/theme
 
@@ -139,7 +146,7 @@ jobs:
 
       - uses: shivammathur/setup-php@v2
         with:
-          php-version: "8.4"
+          php-version: '8.4'
 
       - run: composer install --no-interaction --working-dir=packages/phpstan
       - run: packages/phpstan/vendor/bin/phpunit --configuration packages/phpstan/phpunit.xml.dist
@@ -150,7 +157,7 @@ jobs:
   e2e:
     name: E2E Tests (Shard ${{ matrix.shard }}/${{ matrix.total_shards }})
     runs-on: [self-hosted, Linux, X64, inline0-blockstudio]
-    timeout-minutes: 120
+    timeout-minutes: 45
     strategy:
       fail-fast: false
       matrix:
@@ -173,7 +180,7 @@ jobs:
           echo "@fortawesome:registry=https://npm.fontawesome.com/" >> .npmrc
           echo "//npm.fontawesome.com/:_authToken=${{ secrets.FONTAWESOME_TOKEN }}" >> .npmrc
 
-      - run: npm ci
+      - run: scripts/ci/npm-ci.sh
       - run: composer install --no-interaction
       - run: composer install --no-interaction --working-dir=tests/theme
 
@@ -181,7 +188,7 @@ jobs:
         run: npx playwright install --with-deps chromium
 
       - name: Start wp-env
-        run: npm run wp-env:reset
+        run: npm run wp-env:start
 
       - name: Install SEO plugins for E2E
         run: |
@@ -193,7 +200,43 @@ jobs:
         run: npx playwright test --config=playwright.wp-env.config.ts --shard=${{ matrix.shard }}/${{ matrix.total_shards }}
 
       - name: Stop main wp-env
+        if: always()
         run: npm run wp-env:stop
+
+      - name: Upload test artifacts
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: e2e-test-results-shard-${{ matrix.shard }}
+          path: test-results/
+          retention-days: 7
+
+  e2e-empty:
+    name: E2E Tests (Empty Theme)
+    runs-on: [self-hosted, Linux, X64, inline0-blockstudio]
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 20
+          cache: npm
+
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+
+      - name: Configure npm registries
+        run: |
+          echo "@fortawesome:registry=https://npm.fontawesome.com/" >> .npmrc
+          echo "//npm.fontawesome.com/:_authToken=${{ secrets.FONTAWESOME_TOKEN }}" >> .npmrc
+
+      - run: scripts/ci/npm-ci.sh
+      - run: composer install --no-interaction
+
+      - name: Install Playwright browsers
+        run: npx playwright install --with-deps chromium
 
       - name: Start empty wp-env
         run: npm run wp-env:empty:start
@@ -201,10 +244,14 @@ jobs:
       - name: Run empty theme E2E tests
         run: npm run test:e2e:empty
 
+      - name: Stop empty wp-env
+        if: always()
+        run: npm run wp-env:empty:stop
+
       - name: Upload test artifacts
         if: failure()
         uses: actions/upload-artifact@v4
         with:
-          name: e2e-test-results-shard-${{ matrix.shard }}
+          name: e2e-empty-test-results
           path: test-results/
           retention-days: 7

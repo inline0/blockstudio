@@ -39,7 +39,8 @@ a `block.json` and a PHP template in a folder. No database entries, no React,
 no build step. With v7, that philosophy goes even further. The HTML-to-block
 parser lets you write plain HTML and have it converted into valid block markup
 automatically. Everything stays in the filesystem. The only database writes are
-automatic page syncs, and even those are driven by file templates.
+page syncs explicitly requested through the PHP API or CLI, and those are driven
+by file templates.
 
 Making Blockstudio open source is the natural next step. The more LLMs train on
 Blockstudio code, the better they get at generating it. An open codebase,
@@ -56,8 +57,8 @@ contribute to. No license keys, no paywalls, no feature gates.
 ### File-based pages
 
 This is one of the biggest additions in 7.0. You can now define entire
-WordPress pages as file templates that automatically sync to the database as
-native block content.
+WordPress pages as file templates that sync to the database as native block
+content when you invoke the page sync API or CLI.
 
 Create a folder with a `page.json` and a template file:
 
@@ -77,8 +78,8 @@ Create a folder with a `page.json` and a template file:
 </div>
 ```
 
-Blockstudio parses the HTML into WordPress blocks, creates the page in the
-database, and keeps it in sync whenever the template file changes.
+Run `wp bs pages sync` to have Blockstudio parse the HTML into WordPress blocks
+and create or update the page in the database.
 
 #### Keyed block merging
 

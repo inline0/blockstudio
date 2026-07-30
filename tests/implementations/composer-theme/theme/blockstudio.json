@@ -2,8 +2,7 @@
   "$schema": "https://blockstudio.dev/schema/blockstudio",
   "themeDefaults": {
     "titleTag": true,
-    "suppressDirectoryUpdates": true,
-    "syncPagesInDevelopment": false
+    "suppressDirectoryUpdates": true
   },
   "performance": {
     "profile": "speed",

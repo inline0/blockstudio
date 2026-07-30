@@ -392,6 +392,16 @@ add_filter('blockstudio/settings/assets/process/scss_files', function() {
 });
 ```
 
+### assets/output
+
+This filter allows you to control where compiled block assets are written.
+
+```php title="functions.php"
+add_filter('blockstudio/settings/assets/output', function() {
+  return 'cache';
+});
+```
+
 ### cache/enabled
 
 This filter allows you to enable/disable all Blockstudio file-backed runtime and editor asset caches.
@@ -409,6 +419,16 @@ This filter allows you to change the Blockstudio file-backed cache directory.
 ```php title="functions.php"
 add_filter('blockstudio/settings/cache/path', function() {
   return 'cache/blockstudio';
+});
+```
+
+### githooks/commit
+
+This filter exposes whether the Blockstudio-owned PHPStan commit hook is enabled.
+
+```php title="functions.php"
+add_filter('blockstudio/settings/githooks/commit', function() {
+  return true;
 });
 ```
 

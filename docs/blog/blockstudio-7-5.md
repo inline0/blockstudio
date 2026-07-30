@@ -168,8 +168,9 @@ wins. Reset the customization, and the latest file source is visible again.
 
 ### Incremental page deployment
 
-File-backed pages still sync automatically in normal authoring workflows. 7.5
-also gives deployment tooling an explicit reconciliation API:
+File-backed pages gained a deployment reconciliation API in 7.5. As of 7.6.2,
+that explicit API and `wp bs pages sync` are the only synchronization entry
+points; ordinary requests never apply source changes:
 
 ```php
 $report = Blockstudio\Pages::reconcile([

@@ -101,6 +101,24 @@ test.describe('CLI - blocks', () => {
   });
 });
 
+test.describe('CLI - pages', () => {
+  test('synchronizes the complete page inventory and stores its identity', () => {
+    const report = JSON.parse(wp('bs pages sync --format=json'));
+
+    expect(report.discovered).toBeGreaterThan(0);
+    expect(report.failed).toBe(0);
+    expect(report.errors).toEqual([]);
+    expect(report.sourceIdentity.hash).toBe(report.sourceId);
+
+    const stored = JSON.parse(
+      wp(
+        'option get blockstudio_pages_successful_source_identity --format=json'
+      )
+    );
+    expect(stored.hash).toBe(report.sourceIdentity.hash);
+  });
+});
+
 test.describe('CLI - db', () => {
   test('lists schemas', () => {
     const out = wp('bs db schemas --format=json');

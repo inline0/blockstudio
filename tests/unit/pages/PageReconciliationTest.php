@@ -7,8 +7,10 @@
 
 // phpcs:disable WordPress.WP.AlternativeFunctions,WordPress.DB.SlowDBQuery
 
+use Blockstudio\Canvas;
 use Blockstudio\Page_Sync;
 use Blockstudio\Pages;
+use Blockstudio\Utils;
 use PHPUnit\Framework\TestCase;
 
 /**
@@ -40,6 +42,9 @@ class PageReconciliationTest extends TestCase {
 		wp_mkdir_p( $this->pages_path );
 		$this->delete_managed_posts();
 		delete_option( 'blockstudio_pages_successful_source_identity' );
+		delete_option( 'blockstudio_pages_collection_manifests' );
+		delete_option( 'blockstudio_pages_template_for' );
+		delete_option( 'blockstudio_collection_post_types_signature' );
 		Pages::reset();
 		add_filter( 'blockstudio/pages/paths', array( $this, 'filter_paths' ), PHP_INT_MAX );
 	}
@@ -54,6 +59,10 @@ class PageReconciliationTest extends TestCase {
 		remove_filter( 'blockstudio/pages/sync_engine_inputs', array( $this, 'filter_engine' ) );
 		$this->delete_managed_posts();
 		$this->remove_directory( $this->pages_path );
+		delete_option( 'blockstudio_pages_successful_source_identity' );
+		delete_option( 'blockstudio_pages_collection_manifests' );
+		delete_option( 'blockstudio_pages_template_for' );
+		delete_option( 'blockstudio_collection_post_types_signature' );
 		Pages::reset();
 	}
 
@@ -125,6 +134,56 @@ class PageReconciliationTest extends TestCase {
 		$this->assertSame( 0, $second['failed'] );
 		$this->assertFalse( $second['fullReconciliation'] );
 		$this->assertSame( 0, $writes );
+	}
+
+	/**
+	 * An unchanged source refreshes release-local runtime paths without updating the post.
+	 *
+	 * @return void
+	 */
+	public function test_no_change_reconciliation_refreshes_relocated_runtime_paths(): void {
+		$this->write_page( 'alpha', 'Alpha' );
+		$first     = $this->reconcile( true );
+		$post_id   = $first['pages']['alpha']['postId'];
+		$page_data = Pages::get_page( 'alpha' );
+		$before    = get_post( $post_id );
+
+		$this->assertIsArray( $page_data );
+		$this->assertInstanceOf( WP_Post::class, $before );
+
+		$release_directory = $this->pages_path . '/release-two/alpha';
+		wp_mkdir_p( $release_directory );
+		copy( $page_data['json_path'], $release_directory . '/page.json' );
+		copy( $page_data['template_path'], $release_directory . '/index.php' );
+
+		$page_data['json_path']          = $release_directory . '/page.json';
+		$page_data['template_path']      = $release_directory . '/index.php';
+		$page_data['content_path']       = $release_directory . '/index.php';
+		$page_data['directory']          = $release_directory;
+		$page_data['source_mtime_paths'] = array(
+			$page_data['json_path'],
+			$page_data['content_path'],
+		);
+
+		$post_writes = 0;
+		$save_post   = static function ( int $saved_post_id ) use ( &$post_writes, $post_id ): void {
+			if ( $post_id === $saved_post_id ) {
+				++$post_writes;
+			}
+		};
+
+		add_action( 'save_post', $save_post );
+		$result = ( new Page_Sync() )->reconcile( $page_data );
+		remove_action( 'save_post', $save_post );
+
+		$after = get_post( $post_id );
+		$this->assertInstanceOf( WP_Post::class, $after );
+		$this->assertSame( 'unchanged', $result['status'] );
+		$this->assertSame( 0, $post_writes );
+		$this->assertSame( $before->post_content, $after->post_content );
+		$this->assertSame( $before->post_modified_gmt, $after->post_modified_gmt );
+		$this->assertSame( $page_data['template_path'], get_post_meta( $post_id, '_blockstudio_page_template_path', true ) );
+		$this->assertSame( $page_data['directory'], get_post_meta( $post_id, '_blockstudio_page_directory', true ) );
 	}
 
 	/**
@@ -356,17 +415,349 @@ class PageReconciliationTest extends TestCase {
 	}
 
 	/**
-	 * Generic WP-CLI bootstrap is not an implicit filesystem sync context.
+	 * Pages initialization never reconciles sources or loads managed inventory.
 	 *
 	 * @return void
 	 */
-	public function test_arbitrary_cli_bootstrap_is_not_an_implicit_sync_context(): void {
-		$method = new ReflectionMethod( Pages::class, 'can_init_in_current_context' );
+	public function test_init_never_reconciles_or_inventories_page_sources(): void {
+		$this->write_page( 'implicit-sync-probe', 'Implicit Sync Probe' );
 
-		$this->assertTrue( $method->invoke( null, array(), true, false ) );
-		$this->assertFalse( $method->invoke( null, array(), false, true ) );
-		$this->assertFalse( $method->invoke( null, array(), true, true ) );
-		$this->assertTrue( $method->invoke( null, array( 'force' => true ), false, true ) );
+		$reconciliations = 0;
+		$post_writes     = 0;
+		$inventory_sql   = 0;
+		$reconciled      = static function () use ( &$reconciliations ): void {
+			++$reconciliations;
+		};
+		$saved           = static function () use ( &$post_writes ): void {
+			++$post_writes;
+		};
+		$query           = static function ( string $sql ) use ( &$inventory_sql ): string {
+			if ( str_contains( $sql, '_blockstudio_page_key' ) && str_contains( $sql, '_blockstudio_page_source' ) ) {
+				++$inventory_sql;
+			}
+
+			return $sql;
+		};
+
+		add_action( 'blockstudio/pages/reconciled', $reconciled );
+		add_action( 'save_post', $saved );
+		add_filter( 'query', $query );
+
+		Pages::maybe_register_collection_post_types();
+		Pages::init( array( 'force' => true ) );
+
+		remove_action( 'blockstudio/pages/reconciled', $reconciled );
+		remove_action( 'save_post', $saved );
+		remove_filter( 'query', $query );
+
+		$this->assertSame( 0, $reconciliations );
+		$this->assertSame( 0, $post_writes );
+		$this->assertSame( 0, $inventory_sql );
+		$this->assertNull( get_page_by_path( 'implicit-sync-probe' ) );
+	}
+
+	/**
+	 * Canvas refresh is an explicit authoring boundary for newly added pages.
+	 *
+	 * @return void
+	 */
+	public function test_canvas_refresh_reconciles_new_page_sources_explicitly(): void {
+		$this->write_page( 'existing', 'Existing' );
+		$initial = $this->reconcile( true );
+		$this->assertSame( 1, $initial['created'] );
+
+		$this->write_page( 'added', 'Added' );
+		Pages::reset();
+		Pages::init();
+		$this->assertNull( Pages::get_page( 'added' ) );
+
+		$report  = null;
+		$capture = static function ( array $value ) use ( &$report ): void {
+			$report = $value;
+		};
+
+		add_action( 'blockstudio/pages/reconciled', $capture );
+		add_filter( 'blockstudio/settings/dev/canvas/enabled', '__return_true' );
+		add_filter( 'blockstudio/settings/tailwind/enabled', '__return_false' );
+		$buffer_level = ob_get_level();
+
+		try {
+			$response = ( new Canvas() )->refresh(
+				new WP_REST_Request( 'GET', '/blockstudio/v1/canvas/refresh' )
+			);
+		} finally {
+			remove_action( 'blockstudio/pages/reconciled', $capture );
+			remove_filter( 'blockstudio/settings/dev/canvas/enabled', '__return_true' );
+			remove_filter( 'blockstudio/settings/tailwind/enabled', '__return_false' );
+		}
+
+		$this->assertSame( $buffer_level, ob_get_level() );
+
+		$data  = $response->get_data();
+		$pages = is_array( $data['pages'] ?? null ) ? $data['pages'] : array();
+		$added = array_values(
+			array_filter(
+				$pages,
+				static fn ( array $page ): bool => 'added' === ( $page['name'] ?? '' )
+			)
+		);
+
+		$this->assertIsArray( $report );
+		$this->assertSame( 2, $report['discovered'], wp_json_encode( $report ) );
+		$this->assertSame( 1, $report['created'], wp_json_encode( $report ) );
+		$this->assertCount( 1, $added );
+		$this->assertStringContainsString( 'Added', $added[0]['content'] );
+		$this->assertSame( 'page', get_post_type( Pages::get_post_id( 'added' ) ) );
+	}
+
+	/**
+	 * Explicit reconciliation persists templateFor without runtime discovery.
+	 *
+	 * @return void
+	 */
+	public function test_reconciliation_persists_template_for_runtime_bootstrap(): void {
+		$this->write_page( 'template-probe', 'Template Probe' );
+		$definition_path = $this->pages_path . '/template-probe/page.json';
+		$definition      = Utils::read_json_file( $definition_path );
+		$this->assertIsArray( $definition );
+		$definition['templateFor']  = 'bs_runtime_template';
+		$definition['templateLock'] = 'insert';
+		file_put_contents( $definition_path, wp_json_encode( $definition, JSON_PRETTY_PRINT ) );
+
+		register_post_type(
+			'bs_runtime_template',
+			array(
+				'public'       => true,
+				'show_in_rest' => true,
+			)
+		);
+
+		$report = $this->reconcile( true );
+		$this->assertSame( 0, $report['failed'] );
+
+		$configuration = get_option( 'blockstudio_pages_template_for' );
+		$this->assertIsArray( $configuration );
+		$this->assertArrayHasKey( 'bs_runtime_template', $configuration );
+
+		$post_type = get_post_type_object( 'bs_runtime_template' );
+		$this->assertNotNull( $post_type );
+		$this->assertSame( 'insert', $post_type->template_lock );
+		$this->assertSame( 'core/heading', $post_type->template[0][0] );
+
+		$post_type->template      = array();
+		$post_type->template_lock = false;
+		Pages::reset();
+		Pages::init();
+
+		$this->assertSame( 'insert', $post_type->template_lock );
+		$this->assertSame( 'core/heading', $post_type->template[0][0] );
+	}
+
+	/**
+	 * A failed explicit sync cannot activate partially discovered runtime state.
+	 *
+	 * @return void
+	 */
+	public function test_failed_reconciliation_preserves_runtime_configuration(): void {
+		$this->write_collection_page( '.', 'docs-home', 'Docs' );
+		$manifest_path = $this->pages_path . '/docs/pages.json';
+		$manifest      = Utils::read_json_file( $manifest_path );
+		$this->assertIsArray( $manifest );
+		$manifest['postType'] = 'bs_failed_docs';
+		file_put_contents( $manifest_path, wp_json_encode( $manifest, JSON_PRETTY_PRINT ) );
+
+		$previous_manifests = array( 'sentinel' => 'manifests' );
+		$previous_templates = array( 'sentinel' => 'templates' );
+		$previous_signature = 'existing-rewrite-signature';
+		update_option( 'blockstudio_pages_collection_manifests', $previous_manifests, false );
+		update_option( 'blockstudio_pages_template_for', $previous_templates, false );
+		update_option( 'blockstudio_collection_post_types_signature', $previous_signature, false );
+
+		$fail_create = static function ( bool $is_empty, array $post_data ): bool {
+			return 'bs_failed_docs' === ( $post_data['post_type'] ?? '' ) ? true : $is_empty;
+		};
+		add_filter( 'wp_insert_post_empty_content', $fail_create, 10, 2 );
+
+		try {
+			$report = $this->reconcile( true );
+		} finally {
+			remove_filter( 'wp_insert_post_empty_content', $fail_create, 10 );
+			unregister_post_type( 'bs_failed_docs' );
+		}
+
+		$this->assertSame( 1, $report['failed'] );
+		$this->assertNotEmpty( $report['errors'] );
+		$this->assertSame( $previous_manifests, get_option( 'blockstudio_pages_collection_manifests' ) );
+		$this->assertSame( $previous_templates, get_option( 'blockstudio_pages_template_for' ) );
+		$this->assertSame( $previous_signature, get_option( 'blockstudio_collection_post_types_signature' ) );
+	}
+
+	/**
+	 * A failed page write cannot prune another managed post.
+	 *
+	 * @return void
+	 */
+	public function test_failed_reconciliation_preserves_missing_managed_posts(): void {
+		$this->write_page( 'keep', 'Keep' );
+		$this->write_page( 'orphan', 'Orphan' );
+		$initial   = $this->reconcile( true );
+		$orphan_id = $initial['pages']['orphan']['postId'];
+
+		$this->remove_directory( $this->pages_path . '/orphan' );
+		$this->write_page( 'failure', 'Failure' );
+
+		$fail_create = static function ( bool $is_empty, array $post_data ): bool {
+			return 'Failure' === ( $post_data['post_title'] ?? '' ) ? true : $is_empty;
+		};
+		add_filter( 'wp_insert_post_empty_content', $fail_create, 10, 2 );
+
+		try {
+			$report = $this->reconcile();
+		} finally {
+			remove_filter( 'wp_insert_post_empty_content', $fail_create, 10 );
+		}
+
+		$this->assertSame( 1, $report['failed'] );
+		$this->assertSame( 0, $report['removed'] );
+		$this->assertSame( 'publish', get_post_status( $orphan_id ) );
+		$this->assertSame( '', get_post_meta( $orphan_id, '_blockstudio_page_stale', true ) );
+	}
+
+	/**
+	 * Normal bootstrap keeps last-good routes until explicit reconciliation.
+	 *
+	 * @return void
+	 */
+	public function test_runtime_bootstrap_does_not_rediscover_changed_collection_manifests(): void {
+		$this->write_collection_page( '.', 'docs-home', 'Docs' );
+		$manifest_path = $this->pages_path . '/docs/pages.json';
+		$manifest      = Utils::read_json_file( $manifest_path );
+		$this->assertIsArray( $manifest );
+		$manifest['postType'] = 'bs_runtime_old';
+		file_put_contents( $manifest_path, wp_json_encode( $manifest, JSON_PRETTY_PRINT ) );
+
+		try {
+			$initial = $this->reconcile( true );
+			$this->assertSame( 0, $initial['failed'] );
+			$this->assertTrue( post_type_exists( 'bs_runtime_old' ) );
+
+			$manifest['postType'] = 'bs_runtime_new';
+			file_put_contents( $manifest_path, wp_json_encode( $manifest, JSON_PRETTY_PRINT ) );
+			unregister_post_type( 'bs_runtime_old' );
+			Pages::reset();
+
+			Pages::register_collection_post_types();
+
+			$this->assertTrue( post_type_exists( 'bs_runtime_old' ) );
+			$this->assertFalse( post_type_exists( 'bs_runtime_new' ) );
+			$this->assertSame( array(), Pages::get_registered_paths() );
+			$this->assertSame( 'bs_runtime_old', Pages::collection( 'docs' )['postType'] ?? null );
+
+			unregister_post_type( 'bs_runtime_old' );
+			$updated = $this->reconcile( true );
+
+			$this->assertSame( 0, $updated['failed'] );
+			$this->assertTrue( post_type_exists( 'bs_runtime_new' ) );
+		} finally {
+			if ( post_type_exists( 'bs_runtime_old' ) ) {
+				unregister_post_type( 'bs_runtime_old' );
+			}
+			if ( post_type_exists( 'bs_runtime_new' ) ) {
+				unregister_post_type( 'bs_runtime_new' );
+			}
+		}
+	}
+
+	/**
+	 * Force sync never falls back to source-less records hydrated from the database.
+	 *
+	 * @return void
+	 */
+	public function test_force_sync_all_ignores_database_records_without_discovered_sources(): void {
+		$post_id = wp_insert_post(
+			array(
+				'post_title'   => 'Database-only page',
+				'post_content' => '<!-- wp:paragraph --><p>Keep me</p><!-- /wp:paragraph -->',
+				'post_status'  => 'publish',
+				'post_type'    => 'page',
+			)
+		);
+		$this->assertIsInt( $post_id );
+		update_post_meta( $post_id, '_blockstudio_page_key', 'database-only' );
+		update_post_meta( $post_id, '_blockstudio_page_name', 'database-only' );
+		update_post_meta( $post_id, '_blockstudio_page_source', '/missing/database-only/index.php' );
+
+		$before  = get_post( $post_id );
+		$results = Pages::force_sync_all();
+		$after   = get_post( $post_id );
+
+		$this->assertSame( array(), $results );
+		$this->assertInstanceOf( WP_Post::class, $before );
+		$this->assertInstanceOf( WP_Post::class, $after );
+		$this->assertSame( $before->post_title, $after->post_title );
+		$this->assertSame( $before->post_content, $after->post_content );
+		$this->assertSame( $before->post_status, $after->post_status );
+	}
+
+	/**
+	 * Managed inventory bypasses WP_Query and uses one indexed meta-key lookup.
+	 *
+	 * @return void
+	 */
+	public function test_managed_inventory_uses_an_exact_unfiltered_meta_lookup(): void {
+		$key_post    = wp_insert_post(
+			array(
+				'post_title'  => 'Managed Key',
+				'post_status' => 'draft',
+				'post_type'   => 'page',
+			)
+		);
+		$source_post = wp_insert_post(
+			array(
+				'post_title'  => 'Managed Source',
+				'post_status' => 'private',
+				'post_type'   => 'post',
+			)
+		);
+		update_post_meta( $key_post, '_blockstudio_page_key', 'managed-key' );
+		update_post_meta( $source_post, '_blockstudio_page_source', '/managed/source' );
+
+		$wp_query_filters = 0;
+		$inventory_query  = '';
+		$clauses          = static function ( array $sql ) use ( &$wp_query_filters ): array {
+			++$wp_query_filters;
+			return $sql;
+		};
+		$query            = static function ( string $sql ) use ( &$inventory_query ): string {
+			if ( str_contains( $sql, '_blockstudio_page_key' ) && str_contains( $sql, '_blockstudio_page_source' ) ) {
+				$inventory_query = $sql;
+			}
+
+			return $sql;
+		};
+
+		add_filter( 'posts_clauses', $clauses );
+		add_filter( 'query', $query );
+
+		$posts = ( new Page_Sync() )->managed_posts();
+
+		remove_filter( 'posts_clauses', $clauses );
+		remove_filter( 'query', $query );
+
+		$this->assertSame( 0, $wp_query_filters );
+		$this->assertNotSame( '', $inventory_query );
+		$this->assertStringContainsString( 'FROM ' . $GLOBALS['wpdb']->postmeta, $inventory_query );
+		$this->assertStringContainsString( 'meta_key IN', $inventory_query );
+		$this->assertStringNotContainsString( ' JOIN ', strtoupper( $inventory_query ) );
+		$this->assertSame(
+			array( $key_post, $source_post ),
+			array_values(
+				array_intersect(
+					array_map( static fn ( WP_Post $post ): int => $post->ID, $posts ),
+					array( $key_post, $source_post )
+				)
+			)
+		);
 	}
 
 	/**
@@ -398,7 +789,7 @@ class PageReconciliationTest extends TestCase {
 	 *
 	 * @param string $name  Page name.
 	 * @param string $title Page title/content.
-	 * @param bool   $sync  Whether automatic synchronization is enabled.
+	 * @param bool   $sync  Whether explicit synchronization updates this page.
 	 *
 	 * @return void
 	 */
@@ -462,18 +853,8 @@ class PageReconciliationTest extends TestCase {
 	 * @return void
 	 */
 	private function delete_managed_posts(): void {
-		$posts = get_posts(
-			array(
-				'post_type'      => 'any',
-				'post_status'    => array_values( get_post_stati( array(), 'names' ) ),
-				'posts_per_page' => -1,
-				'fields'         => 'ids',
-				'meta_key'       => '_blockstudio_page_key',
-			)
-		);
-
-		foreach ( $posts as $post_id ) {
-			wp_delete_post( (int) $post_id, true );
+		foreach ( ( new Page_Sync() )->managed_posts() as $post ) {
+			wp_delete_post( $post->ID, true );
 		}
 	}
 

@@ -36,7 +36,7 @@ namespace Blockstudio;
  * - ui/enabled: Enable bundled UI components
  * - githooks/commit: Enable the Blockstudio-owned PHPStan commit hook
  * - phpstan/*: Configure the canonical Blockstudio PHPStan command
- * - themeDefaults/*: Configure generic theme setup and development page sync
+ * - themeDefaults/*: Configure generic theme setup
  * - performance/*: Configure generic runtime profiles, media, and measurements
  * - blockEditor/enhance: Add Blockstudio editor hover and selection affordances
  * - blockEditor/blocks: Configure global block inserter policy
@@ -120,7 +120,6 @@ class Settings {
 		'themeDefaults' => array(
 			'titleTag'                 => false,
 			'suppressDirectoryUpdates' => false,
-			'syncPagesInDevelopment'   => false,
 		),
 		'performance'   => array(
 			'profile'         => 'compat',

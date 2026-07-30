@@ -35,8 +35,8 @@ route: /docs/general/settings
 file: docs/docs/general/settings.md
 purpose: Configure Blockstudio with blockstudio.json or filters.
 settings: ai, assets/enqueue, blockEditor/blocks, blockEditor/media, blockEditor/patterns, blockTags, cache/path, content, dev, editor/formatOnSave, githooks, performance/measurement, performance/media/lazy, performance/media/rootMargin, performance/staticPrerender/ttl, phpstan, tailwind, themeDefaults, ui/enabled, users/roles
-hooks: blockstudio/cache/context, blockstudio/cache/dir, blockstudio/cache/site_key, blockstudio/editor/canvas/body_class, blockstudio/performance/config, blockstudio/performance/measurement_enabled, blockstudio/settings/assets/enqueue, blockstudio/settings/block_editor/patterns/remote, blockstudio/settings/cache/path, blockstudio/settings/editor/formatOnSave, blockstudio/settings/ui/enabled, blockstudio/theme_defaults/sync_pages_in_development
-php: Blockstudio\Pages, Blockstudio\Patterns, Blockstudio\Performance_Measurement, Blockstudio\Runtime_Settings, Blockstudio\Settings, Performance_Measurement::snapshot(), Runtime_Settings::current(), Settings::errors(), Settings::fingerprint(), Settings::get_array(), Settings::get_bool(), Settings::get_int(), Settings::get_raw(), Settings::get_string(), Settings::reload(), bs_media_image()
+hooks: blockstudio/cache/context, blockstudio/cache/dir, blockstudio/cache/site_key, blockstudio/editor/canvas/body_class, blockstudio/performance/config, blockstudio/performance/measurement_enabled, blockstudio/settings/assets/enqueue, blockstudio/settings/block_editor/patterns/remote, blockstudio/settings/cache/path, blockstudio/settings/editor/formatOnSave, blockstudio/settings/ui/enabled
+php: Blockstudio\Patterns, Blockstudio\Performance_Measurement, Blockstudio\Runtime_Settings, Blockstudio\Settings, Performance_Measurement::snapshot(), Runtime_Settings::current(), Settings::errors(), Settings::fingerprint(), Settings::get_array(), Settings::get_bool(), Settings::get_int(), Settings::get_raw(), Settings::get_string(), Settings::reload(), bs_media_image()
 cli: wp bs content, wp bs settings
 
 ## Docs / Blocks / Block Definition
@@ -375,10 +375,11 @@ php: Block_Tags::parse_inner_blocks(), Blockstudio\Block_Tags
 ### Pages
 route: /docs/pages-and-patterns/pages
 file: docs/docs/pages-and-patterns/pages.md
-purpose: Create WordPress pages from file templates with automatic syncing.
+purpose: Create WordPress pages from file templates with explicit, deployment-safe syncing.
 settings: content
 hooks: blockstudio/pages/allow_external_loader_path, blockstudio/pages/collection_post_type_args, blockstudio/pages/create_post_data, blockstudio/pages/docs_allowed_html, blockstudio/pages/manifest_scan_interval, blockstudio/pages/orphan_action, blockstudio/pages/paths, blockstudio/pages/post_created, blockstudio/pages/post_updated, blockstudio/pages/reconciled, blockstudio/pages/serve_markdown, blockstudio/pages/sync_engine_inputs, blockstudio/pages/synced, blockstudio/pages/template_candidates, blockstudio/pages/update_post_data
-php: Blockstudio\Pages, Pages::children(), Pages::collection(), Pages::force_sync(), Pages::force_sync_all(), Pages::get_page(), Pages::get_post_id(), Pages::in_collection(), Pages::lock(), Pages::pages(), Pages::permalink(), Pages::reconcile(), Pages::store_successful_source_identity(), Pages::tree(), Pages::unlock()
+php: Blockstudio\Pages, Pages::children(), Pages::collection(), Pages::force_sync(), Pages::force_sync_all(), Pages::get_page(), Pages::get_post_id(), Pages::in_collection(), Pages::init(), Pages::lock(), Pages::pages(), Pages::reconcile(), Pages::store_successful_source_identity(), Pages::tree(), Pages::unlock()
+cli: wp bs pages sync
 
 ### Patterns
 route: /docs/pages-and-patterns/patterns
@@ -400,7 +401,8 @@ file: docs/docs/pages-and-patterns/template-hooks.md
 purpose: PHP filters and actions for pages, patterns, Site Templates, and the HTML parser.
 settings: content
 hooks: blockstudio/block_tags/builders, blockstudio/block_tags/renderers, blockstudio/pages/create_post_data, blockstudio/pages/manifest_scan_interval, blockstudio/pages/paths, blockstudio/pages/post_created, blockstudio/pages/post_updated, blockstudio/pages/synced, blockstudio/pages/update_post_data, blockstudio/parser/element_mapping, blockstudio/parser/renderers, blockstudio/patterns/paths, blockstudio/patterns/registered, blockstudio/site_templates/discovered, blockstudio/site_templates/parser, blockstudio/site_templates/part_content, blockstudio/site_templates/part_paths, blockstudio/site_templates/parts, blockstudio/site_templates/paths, blockstudio/site_templates/registered, blockstudio/site_templates/template_candidates, blockstudio/site_templates/template_content, blockstudio/site_templates/template_paths, blockstudio/site_templates/templates
-php: Block_Tags::parse_inner_blocks(), Blockstudio\Block_Tags, Blockstudio\Html_Parser
+php: Block_Tags::parse_inner_blocks(), Blockstudio\Block_Tags, Blockstudio\Html_Parser, Blockstudio\Pages, Pages::reconcile()
+cli: wp bs pages sync
 
 ## Docs / Pages & Patterns / Project Files
 
@@ -500,9 +502,9 @@ hooks: blockstudio/settings/dev/grab/enabled
 ### CLI
 route: /docs/dev/cli
 file: docs/docs/dev/cli.md
-purpose: Manage Blockstudio blocks, database, RPC, and cron from the command line via WP-CLI.
+purpose: Manage Blockstudio blocks, pages, database, RPC, and cron from the command line via WP-CLI.
 settings: assets/enqueue, tailwind/enabled
-cli: wp bs assets list, wp bs blocks list, wp bs content pull, wp bs content push, wp bs content status, wp bs cron list, wp bs cron run, wp bs db create, wp bs db delete, wp bs db get, wp bs db list, wp bs db migrate, wp bs db schemas, wp bs db update, wp bs fields list, wp bs prerender purge, wp bs prerender status, wp bs prerender warm, wp bs rpc call, wp bs rpc list, wp bs scss compile, wp bs settings get, wp bs settings list, wp bs tailwind cache, wp bs tailwind compile, wp bs teardown
+cli: wp bs assets list, wp bs blocks list, wp bs content pull, wp bs content push, wp bs content status, wp bs cron list, wp bs cron run, wp bs db create, wp bs db delete, wp bs db get, wp bs db list, wp bs db migrate, wp bs db schemas, wp bs db update, wp bs fields list, wp bs pages sync, wp bs prerender purge, wp bs prerender status, wp bs prerender warm, wp bs rpc call, wp bs rpc list, wp bs scss compile, wp bs settings get, wp bs settings list, wp bs tailwind cache, wp bs tailwind compile, wp bs teardown
 
 ## Docs / Dev / Integrations
 
@@ -552,7 +554,7 @@ file: docs/guides/vibecoding.md
 purpose: How to build WordPress blocks, pages, and full sites using AI coding agents. Practical patterns for getting the most out of Blockstudio's file-based architecture.
 settings: ai, dev
 hooks: blockstudio/team-member/
-cli: vendor/bin/blockstudio-agents
+cli: vendor/bin/blockstudio-agents, wp bs pages sync
 
 ### Migrating from ACF Blocks
 route: /guides/migrating-from-acf
@@ -570,7 +572,8 @@ route: /guides/file-based-pages
 file: docs/guides/file-based-pages.md
 purpose: Create WordPress pages from code. A practical guide to template locking, block editing modes, keyed merging, and controlling exactly what clients can edit.
 settings: content
-php: Blockstudio\Pages, Pages::force_sync(), Pages::force_sync_all(), Pages::lock(), Pages::unlock()
+php: Blockstudio\Pages, Pages::force_sync(), Pages::lock(), Pages::reconcile(), Pages::unlock()
+cli: wp bs pages sync
 
 ### Block Context and Communication
 route: /guides/block-context
@@ -592,6 +595,7 @@ purpose: Build a complete set of section blocks with Tailwind CSS. Project setup
 settings: assets, dev, tailwind/config
 hooks: blockstudio/sections/, blockstudio/settings/tailwind/config
 php: $a
+cli: wp bs pages sync
 
 ### Full-Stack Blocks
 route: /guides/full-stack-blocks

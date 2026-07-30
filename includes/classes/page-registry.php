@@ -112,10 +112,10 @@ final class Page_Registry {
 	/**
 	 * Hydrate the registry from synced posts when it has not been populated by discovery.
 	 *
-	 * Discovery and sync run only in admin and WP-CLI. On the frontend the registry is
-	 * otherwise empty, so read APIs hydrate lazily from the posts that sync already wrote,
+	 * Full discovery and synchronization run only through explicit API or CLI calls.
+	 * Ordinary requests hydrate read APIs lazily from posts that an earlier sync wrote,
 	 * using their stored Blockstudio page meta. This keeps Pages::tree(), in_collection(),
-	 * current_page(), and layout rendering working on the frontend without a filesystem sync.
+	 * current_page(), and layout rendering working without implicit synchronization.
 	 *
 	 * @return void
 	 */
@@ -153,29 +153,67 @@ final class Page_Registry {
 			if ( '' === $key || isset( $this->pages[ $key ] ) ) {
 				continue;
 			}
-			$parent_key  = (string) get_post_meta( $post->ID, '_blockstudio_page_parent_key', true );
-			$collection  = (string) get_post_meta( $post->ID, '_blockstudio_page_collection', true );
-			$layout_path = (string) get_post_meta( $post->ID, '_blockstudio_page_layout', true );
-			$stored_meta = get_post_meta( $post->ID, '_blockstudio_page_meta', true );
+			$parent_key         = (string) get_post_meta( $post->ID, '_blockstudio_page_parent_key', true );
+			$collection         = (string) get_post_meta( $post->ID, '_blockstudio_page_collection', true );
+			$layout_path        = (string) get_post_meta( $post->ID, '_blockstudio_page_layout', true );
+			$content_type       = (string) get_post_meta( $post->ID, '_blockstudio_page_content_type', true );
+			$source_path        = (string) get_post_meta( $post->ID, '_blockstudio_page_source', true );
+			$template_path      = (string) get_post_meta( $post->ID, '_blockstudio_page_template_path', true );
+			$directory          = (string) get_post_meta( $post->ID, '_blockstudio_page_directory', true );
+			$content_path       = (string) get_post_meta( $post->ID, '_blockstudio_page_content_path', true );
+			$template_for       = (string) get_post_meta( $post->ID, '_blockstudio_page_template_for', true );
+			$template_lock      = get_post_meta( $post->ID, '_blockstudio_template_lock', true );
+			$block_editing_mode = get_post_meta( $post->ID, '_blockstudio_block_editing_mode', true );
+			$stored_meta        = get_post_meta( $post->ID, '_blockstudio_page_meta', true );
+			$sync               = metadata_exists( 'post', $post->ID, '_blockstudio_page_sync' )
+				? (bool) get_post_meta( $post->ID, '_blockstudio_page_sync', true )
+				: true;
+
+			if ( '' === $template_path && 'markdown' === $content_type ) {
+				$template_path = $content_path;
+			}
+			if ( '' === $directory && '' !== $template_path ) {
+				$directory = dirname( $template_path );
+			}
 
 			$this->pages[ $key ] = array(
-				'name'        => (string) get_post_meta( $post->ID, '_blockstudio_page_name', true ),
-				'key'         => $key,
-				'title'       => get_the_title( $post ),
-				'slug'        => $post->post_name,
-				'path'        => (string) get_post_meta( $post->ID, '_blockstudio_page_path', true ),
-				'collection'  => '' !== $collection ? $collection : null,
-				'parent_key'  => '' !== $parent_key ? $parent_key : null,
-				'layout_path' => '' !== $layout_path ? $layout_path : null,
-				'contentType' => (string) get_post_meta( $post->ID, '_blockstudio_page_content_type', true ),
-				'post_id'     => (int) $post->ID,
-				'post_parent' => (int) $post->post_parent,
-				'permalink'   => (string) get_permalink( $post ),
-				'order'       => (int) $post->menu_order,
-				'generated'   => (bool) get_post_meta( $post->ID, '_blockstudio_page_generated', true ),
-				'children'    => array(),
-				'meta'        => is_array( $stored_meta ) ? $stored_meta : array(),
+				'name'             => (string) get_post_meta( $post->ID, '_blockstudio_page_name', true ),
+				'key'              => $key,
+				'title'            => get_the_title( $post ),
+				'slug'             => $post->post_name,
+				'path'             => (string) get_post_meta( $post->ID, '_blockstudio_page_path', true ),
+				'collection'       => '' !== $collection ? $collection : null,
+				'parent_key'       => '' !== $parent_key ? $parent_key : null,
+				'layout_path'      => '' !== $layout_path ? $layout_path : null,
+				'source_path'      => $source_path,
+				'template_path'    => '' !== $template_path ? $template_path : null,
+				'content_path'     => '' !== $content_path ? $content_path : null,
+				'directory'        => '' !== $directory ? $directory : null,
+				'contentType'      => $content_type,
+				'is_twig'          => 'twig' === $content_type,
+				'is_blade'         => 'blade' === $content_type,
+				'is_markdown'      => 'markdown' === $content_type,
+				'postType'         => $post->post_type,
+				'postStatus'       => $post->post_status,
+				'templateLock'     => '' !== $template_lock ? $template_lock : false,
+				'templateFor'      => '' !== $template_for ? $template_for : null,
+				'blockEditingMode' => '' !== $block_editing_mode ? $block_editing_mode : null,
+				'sync'             => $sync,
+				'post_id'          => (int) $post->ID,
+				'post_parent'      => (int) $post->post_parent,
+				'permalink'        => (string) get_permalink( $post ),
+				'order'            => (int) $post->menu_order,
+				'generated'        => (bool) get_post_meta( $post->ID, '_blockstudio_page_generated', true ),
+				'children'         => array(),
+				'meta'             => is_array( $stored_meta ) ? $stored_meta : array(),
 			);
+
+			if ( '' !== $source_path ) {
+				$this->synced_posts[ $source_path ] = (int) $post->ID;
+			}
+			if ( '' !== $template_for ) {
+				$this->template_for[ $template_for ] = $this->pages[ $key ];
+			}
 		}
 	}
 
