@@ -531,7 +531,7 @@ final class Build_Cache {
 				static fn( string $file ): bool => $file !== $keep_file
 			)
 		);
-		$mtimes = array();
+		$mtimes    = array();
 		foreach ( $files as $file ) {
 			$file_mtime      = @filemtime( $file ); // phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged -- Concurrent prunes can remove files between listing and stat.
 			$mtimes[ $file ] = false === $file_mtime ? 0 : (int) $file_mtime;

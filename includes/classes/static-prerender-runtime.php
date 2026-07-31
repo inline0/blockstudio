@@ -463,7 +463,7 @@ final class Static_Prerender_Runtime {
 			return false;
 		}
 
-		$ttl = (int) self::value( 'staticPrerender/ttl', 86400 );
+		$ttl   = (int) self::value( 'staticPrerender/ttl', 86400 );
 		$mtime = @filemtime( $path ); // phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged -- Concurrent cleanups can remove the file between listing and stat.
 		if ( $ttl > 0 && ( false === $mtime || (int) $mtime < time() - $ttl ) ) {
 			self::record_outcome( 'miss-stale' );
