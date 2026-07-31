@@ -3,7 +3,7 @@ Contributors: dnnsjsk
 Requires at least: 6.7
 Tested up to: 7.0.0
 Requires PHP: 8.2
-Stable tag: 7.6.2
+Stable tag: 7.6.3
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -53,6 +53,9 @@ Download the latest release zip from [GitHub Releases](https://github.com/inline
 * [Getting Started](https://blockstudio.dev/docs/getting-started)
 
 == Changelog ==
+
+= 7.6.3 =
+* Fix: runtime cache ttl checks treat files removed by concurrent prunes as stale instead of printing stat warnings into rendered responses
 
 = 7.6.2 =
 * New: `wp bs pages sync` is the explicit deployment command for file-backed page reconciliation, with authoritative, full, and JSON output options
