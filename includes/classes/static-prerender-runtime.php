@@ -1373,14 +1373,19 @@ final class Static_Prerender_Runtime {
 			return false;
 		}
 
-		if ( ! Single_Flight::publish( self::cache_file( $key ), $html ) ) {
+		$file      = self::cache_file( $key );
+		$published = Single_Flight::publish( $file, $html ) || Single_Flight::publish( $file, $html );
+
+		if ( $published ) {
+			Runtime_Cache::prune( 'static-prerender', $file );
+			self::record_outcome( 'write' );
+		} elseif ( is_file( $file ) ) {
+			self::record_outcome( 'write-peer' );
+		} else {
 			self::record_outcome( 'write-failure' );
 
 			return false;
 		}
-
-		Runtime_Cache::prune( 'static-prerender', self::cache_file( $key ) );
-		self::record_outcome( 'write' );
 
 		if ( null !== $url ) {
 			self::write_index_record(
