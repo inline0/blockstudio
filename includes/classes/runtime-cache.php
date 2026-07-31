@@ -549,7 +549,7 @@ final class Runtime_Cache {
 		$now             = time();
 		$temporary_files = glob( $directory . '/*.tmp-*' );
 		foreach ( is_array( $temporary_files ) ? $temporary_files : array() as $temporary ) {
-			$mtime = is_file( $temporary ) ? (int) filemtime( $temporary ) : 0;
+			$mtime = (int) ( @filemtime( $temporary ) ); // phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged -- Concurrent cleanups can remove the file between listing and stat.
 			if ( $mtime > 0 && $mtime < $now - HOUR_IN_SECONDS ) {
 				wp_delete_file( $temporary );
 			}
@@ -589,7 +589,7 @@ final class Runtime_Cache {
 		);
 		usort(
 			$objects,
-			static fn( string $left, string $right ): int => (int) filemtime( $right ) <=> (int) filemtime( $left )
+			static fn( string $left, string $right ): int => (int) ( @filemtime( $right ) ) <=> (int) ( @filemtime( $left ) ) // phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged -- Concurrent cleanups can remove files between listing and stat.
 		);
 
 		$maximum = max(

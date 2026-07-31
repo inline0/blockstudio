@@ -510,7 +510,7 @@ final class Build_Cache {
 					continue;
 				}
 
-				$mtime = (int) filemtime( $file );
+				$mtime = (int) ( @filemtime( $file ) ); // phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged -- Concurrent cleanups can remove the file between listing and stat.
 
 				if ( $mtime > 0 && time() - $mtime > HOUR_IN_SECONDS ) {
 					wp_delete_file( $file );
@@ -531,9 +531,14 @@ final class Build_Cache {
 				static fn( string $file ): bool => $file !== $keep_file
 			)
 		);
+		$mtimes = array();
+		foreach ( $files as $file ) {
+			$file_mtime      = @filemtime( $file ); // phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged -- Concurrent prunes can remove files between listing and stat.
+			$mtimes[ $file ] = false === $file_mtime ? 0 : (int) $file_mtime;
+		}
 		usort(
 			$files,
-			static fn( string $a, string $b ): int => (int) filemtime( $b ) <=> (int) filemtime( $a )
+			static fn( string $a, string $b ): int => $mtimes[ $b ] <=> $mtimes[ $a ]
 		);
 
 		foreach ( array_slice( $files, max( 0, $max_files - 1 ) ) as $file ) {
@@ -711,8 +716,8 @@ final class Build_Cache {
 
 		return array(
 			'exists' => true,
-			'mtime'  => filemtime( $path ),
-			'size'   => filesize( $path ),
+			'mtime'  => @filemtime( $path ), // phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged -- Concurrent cleanups can remove the file between check and stat.
+			'size'   => @filesize( $path ), // phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged -- Concurrent cleanups can remove the file between check and stat.
 		);
 	}
 
@@ -734,7 +739,7 @@ final class Build_Cache {
 
 		return array(
 			'exists' => true,
-			'mtime'  => filemtime( $path ),
+			'mtime'  => @filemtime( $path ), // phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged -- Concurrent cleanups can remove the directory between check and stat.
 		);
 	}
 

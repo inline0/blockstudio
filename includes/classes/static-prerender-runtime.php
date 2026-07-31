@@ -464,7 +464,8 @@ final class Static_Prerender_Runtime {
 		}
 
 		$ttl = (int) self::value( 'staticPrerender/ttl', 86400 );
-		if ( $ttl > 0 && (int) filemtime( $path ) < time() - $ttl ) {
+		$mtime = @filemtime( $path ); // phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged -- Concurrent cleanups can remove the file between listing and stat.
+		if ( $ttl > 0 && ( false === $mtime || (int) $mtime < time() - $ttl ) ) {
 			self::record_outcome( 'miss-stale' );
 
 			return false;
@@ -1213,7 +1214,7 @@ final class Static_Prerender_Runtime {
 		$files = is_array( $files ) ? $files : array();
 		$bytes = 0;
 		foreach ( $files as $file ) {
-			$bytes += is_file( $file ) ? (int) filesize( $file ) : 0;
+			$bytes += (int) ( @filesize( $file ) ); // phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged -- Concurrent cleanups can remove the file between listing and stat.
 		}
 
 		return array(
@@ -1933,7 +1934,9 @@ final class Static_Prerender_Runtime {
 
 		$ttl = (int) self::value( 'staticPrerender/ttl', 86400 );
 
-		return $ttl > 0 && (int) filemtime( $file ) < time() - $ttl;
+		$mtime = @filemtime( $file ); // phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged -- Concurrent cleanups can remove the file between listing and stat.
+
+		return $ttl > 0 && ( false === $mtime || (int) $mtime < time() - $ttl );
 	}
 
 	/**

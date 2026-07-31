@@ -23,7 +23,7 @@ final class Static_Prerender_Early_Serve {
 	 *
 	 * @var int
 	 */
-	public const DROPIN_VERSION = 1;
+	public const DROPIN_VERSION = 2;
 
 	/**
 	 * Ownership marker for the generated map.
@@ -398,7 +398,8 @@ function blockstudio_early_serve_static_prerender(): void {
 	}
 
 	\$ttl = (int) ( \$entry['ttl'] ?? 86400 );
-	if ( \$ttl > 0 && (int) filemtime( \$file ) < time() - \$ttl ) {
+	\$mtime = @filemtime( \$file );
+	if ( \$ttl > 0 && ( false === \$mtime || (int) \$mtime < time() - \$ttl ) ) {
 		return;
 	}
 

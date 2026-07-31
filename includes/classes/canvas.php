@@ -1181,7 +1181,7 @@ class Canvas {
 				continue;
 			}
 
-			$mtimes[ $pathname ] = is_file( $pathname ) ? filemtime( $pathname ) : false;
+			$mtimes[ $pathname ] = @filemtime( $pathname ); // phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged -- Concurrent cleanups can remove the file between listing and stat.
 		}
 	}
 }

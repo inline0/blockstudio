@@ -291,7 +291,7 @@ final class Static_Prerender_Warm_Queue {
 		$paths  = glob( $this->records_root . '/*.json' );
 
 		foreach ( is_array( $paths ) ? $paths : array() as $path ) {
-			$bytes += is_file( $path ) ? (int) filesize( $path ) : 0;
+			$bytes += (int) ( @filesize( $path ) ); // phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged -- Concurrent cleanups can remove the file between listing and stat.
 		}
 
 		return array_merge(

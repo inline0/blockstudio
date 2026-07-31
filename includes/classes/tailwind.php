@@ -356,7 +356,7 @@ class Tailwind {
 
 		usort(
 			$files,
-			static fn( string $a, string $b ): int => (int) filemtime( $b ) <=> (int) filemtime( $a )
+			static fn( string $a, string $b ): int => (int) ( @filemtime( $b ) ) <=> (int) ( @filemtime( $a ) ) // phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged -- Concurrent cleanups can remove files between listing and stat.
 		);
 
 		foreach ( $files as $file ) {
@@ -398,7 +398,7 @@ class Tailwind {
 				continue;
 			}
 
-			$mtime = (int) filemtime( $file );
+			$mtime = (int) ( @filemtime( $file ) ); // phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged -- Concurrent cleanups can remove the file between listing and stat.
 
 			if ( $mtime > 0 && time() - $mtime > HOUR_IN_SECONDS ) {
 				wp_delete_file( $file );
@@ -445,7 +445,7 @@ class Tailwind {
 			);
 
 			foreach ( $files as $index => $file ) {
-				$mtime = (int) filemtime( $file );
+				$mtime = (int) ( @filemtime( $file ) ); // phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged -- Concurrent cleanups can remove the file between listing and stat.
 
 				if ( $mtime > 0 && time() - $mtime > $max_age ) {
 					wp_delete_file( $file );
@@ -456,7 +456,7 @@ class Tailwind {
 			$files = array_values( $files );
 			usort(
 				$files,
-				static fn( string $a, string $b ): int => (int) filemtime( $b ) <=> (int) filemtime( $a )
+				static fn( string $a, string $b ): int => (int) ( @filemtime( $b ) ) <=> (int) ( @filemtime( $a ) ) // phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged -- Concurrent cleanups can remove files between listing and stat.
 			);
 
 			foreach ( array_slice( $files, max( 0, $max_files - 1 ) ) as $file ) {
