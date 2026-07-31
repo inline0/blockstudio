@@ -184,7 +184,7 @@ final class Runtime_Cache {
 			return null;
 		}
 
-		if ( $ttl > 0 && (int) filemtime( $path ) < time() - $ttl ) {
+		if ( self::is_stale_file( $path, $ttl ) ) {
 			self::record( $scope, 'miss-stale' );
 
 			return null;
@@ -230,7 +230,7 @@ final class Runtime_Cache {
 	): array {
 		$path     = self::path( $scope, $key, $extension );
 		$current  = self::read_file( $path );
-		$is_stale = null !== $current && $ttl > 0 && (int) filemtime( $path ) < time() - $ttl;
+		$is_stale = null !== $current && self::is_stale_file( $path, $ttl );
 
 		if ( null !== $current && ! $is_stale && self::valid( $current, $validate ) ) {
 			self::record( $scope, 'hit' );
@@ -253,7 +253,7 @@ final class Runtime_Cache {
 					if ( null === $value ) {
 						return null;
 					}
-					if ( $ttl > 0 && (int) filemtime( $path ) < time() - $ttl ) {
+					if ( self::is_stale_file( $path, $ttl ) ) {
 						return null;
 					}
 
@@ -295,7 +295,7 @@ final class Runtime_Cache {
 			$peer = self::read_file( $path );
 			if (
 				null !== $peer &&
-				( 0 === $ttl || (int) filemtime( $path ) >= time() - $ttl ) &&
+				! self::is_stale_file( $path, $ttl ) &&
 				self::valid( $peer, $validate )
 			) {
 				self::record( $scope, 'hit-peer' );
@@ -472,6 +472,28 @@ final class Runtime_Cache {
 	}
 
 	/**
+	 * Whether a cache file is older than its ttl.
+	 *
+	 * Prune sweeps run concurrently with readers, so a file can vanish
+	 * between the existence check and the stat; a failed stat therefore
+	 * counts as stale instead of raising a warning into the response.
+	 *
+	 * @param string $path Cache file path.
+	 * @param int    $ttl  Time to live in seconds.
+	 *
+	 * @return bool Whether the entry must be treated as expired.
+	 */
+	private static function is_stale_file( string $path, int $ttl ): bool {
+		if ( $ttl <= 0 ) {
+			return false;
+		}
+
+		$mtime = @filemtime( $path ); // phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged -- Concurrent prunes can remove the file between check and stat.
+
+		return false === $mtime || (int) $mtime < time() - $ttl;
+	}
+
+	/**
 	 * Newest modification time anywhere beneath a directory.
 	 *
 	 * @param string $directory Directory to scan.
@@ -483,7 +505,8 @@ final class Runtime_Cache {
 			return 0;
 		}
 
-		$newest = (int) filemtime( $directory );
+		$directory_mtime = @filemtime( $directory ); // phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged -- Concurrent prunes can remove entries between check and stat.
+		$newest          = false === $directory_mtime ? 0 : (int) $directory_mtime;
 
 		try {
 			$iterator = new \RecursiveIteratorIterator(

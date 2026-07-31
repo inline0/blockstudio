@@ -396,10 +396,14 @@ final class Build_Cache {
 		$ttl   = self::get_watch_debounce();
 
 		if ( $ttl > 0 && is_file( $stamp ) ) {
-			$age = time() - (int) filemtime( $stamp );
+			$mtime = @filemtime( $stamp ); // phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged -- The stamp can vanish between check and stat.
 
-			if ( $age >= 0 && $age < $ttl ) {
-				return $payload;
+			if ( false !== $mtime ) {
+				$age = time() - (int) $mtime;
+
+				if ( $age >= 0 && $age < $ttl ) {
+					return $payload;
+				}
 			}
 		}
 
