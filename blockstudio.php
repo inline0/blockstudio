@@ -4,7 +4,7 @@
  * Plugin URI: https://blockstudio.dev
  * Description: The block framework for WordPress.
  * Author: Blockstudio
- * Version: 7.6.5
+ * Version: 7.6.6
  * Requires at least: 6.7
  * Requires PHP: 8.2
  * License: GPL2+
@@ -92,7 +92,7 @@ function blockstudio_resolve_plugin_url( string $plugin_dir, array $locations ):
 	return null;
 }
 
-define( 'BLOCKSTUDIO_VERSION', '7.6.5' );
+define( 'BLOCKSTUDIO_VERSION', '7.6.6' );
 define( 'BLOCKSTUDIO_FILE', __FILE__ );
 define( 'BLOCKSTUDIO_DIR', __DIR__ );
 

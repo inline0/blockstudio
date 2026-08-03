@@ -10904,6 +10904,12 @@ If several source files exist, Blockstudio uses this order:
 3. `index.twig`
 4. `index.html`
 
+WordPress also discovers `.html` files recursively and normally exposes a
+nested `index.html` under its path-derived slug, such as `header/index`.
+When that file belongs to a Blockstudio manifest, Blockstudio removes the
+path-derived duplicate and exposes only the manifest's declared `slug`.
+Nested native `.html` templates without a Blockstudio manifest are unchanged.
+
 The source is compiled once into native WordPress block markup. It should not
 depend on the current request or the current post. Put runtime behavior inside
 dynamic blocks.

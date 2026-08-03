@@ -3,7 +3,7 @@ Contributors: dnnsjsk
 Requires at least: 6.7
 Tested up to: 7.0.0
 Requires PHP: 8.2
-Stable tag: 7.6.5
+Stable tag: 7.6.6
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -53,6 +53,9 @@ Download the latest release zip from [GitHub Releases](https://github.com/inline
 * [Getting Started](https://blockstudio.dev/docs/getting-started)
 
 == Changelog ==
+
+= 7.6.6 =
+* Fix: manifest-owned nested HTML Site Templates and Template Parts expose only their declared slug instead of also leaking WordPress's path-derived `folder/index` entry
 
 = 7.6.5 =
 * Fix: prerender publishes retry once and count a peer's already-published copy as success, so mass rebuilds no longer fail a whole deploy over one transient write race

@@ -60,6 +60,13 @@ final class Site_Templates {
 	);
 
 	/**
+	 * Native path-based aliases owned by manifest HTML sources.
+	 *
+	 * @var array<string, array<string, true>>
+	 */
+	private static array $native_html_aliases = array();
+
+	/**
 	 * Initialize the Site Editor template provider.
 	 *
 	 * @return void
@@ -95,12 +102,20 @@ final class Site_Templates {
 
 		self::ensure_loaded();
 
+		$registry         = Site_Template_Registry::instance();
 		$items            = 'wp_template' === $template_type ? self::templates() : self::parts();
+		$registered_items = 'wp_template' === $template_type ? $registry->get_templates() : $registry->get_parts();
+		$native_aliases   = self::native_html_aliases( $registered_items, $template_type );
 		$existing_slugs   = array();
 		$append_templates = ! isset( $query['wp_id'] );
 
-		foreach ( $templates as $template ) {
+		foreach ( $templates as $index => $template ) {
 			if ( is_object( $template ) && isset( $template->slug ) ) {
+				if ( isset( $native_aliases[ self::template_object_id( $template ) ] ) ) {
+					unset( $templates[ $index ] );
+					continue;
+				}
+
 				$slug             = self::template_object_slug( $template );
 				$existing_slugs[] = $slug;
 
@@ -109,6 +124,8 @@ final class Site_Templates {
 				}
 			}
 		}
+
+		$templates = array_values( $templates );
 
 		if ( ! $append_templates ) {
 			return $templates;
@@ -172,6 +189,23 @@ final class Site_Templates {
 	}
 
 	/**
+	 * Build a comparable ID for a WordPress template object.
+	 *
+	 * @param object $template Template object.
+	 *
+	 * @return string Template ID.
+	 */
+	private static function template_object_id( object $template ): string {
+		if ( is_scalar( $template->id ?? null ) && str_contains( (string) $template->id, '//' ) ) {
+			return (string) $template->id;
+		}
+
+		$theme = is_scalar( $template->theme ?? null ) ? (string) $template->theme : get_stylesheet();
+
+		return $theme . '//' . self::template_object_slug( $template );
+	}
+
+	/**
 	 * Return a Blockstudio file-backed template when WordPress has no native file.
 	 *
 	 * @param mixed  $block_template Template object or null.
@@ -181,7 +215,24 @@ final class Site_Templates {
 	 * @return mixed Template object or original value.
 	 */
 	public static function filter_block_file_template( $block_template, string $id, string $template_type ) {
-		if ( null !== $block_template || ! in_array( $template_type, array( 'wp_template', 'wp_template_part' ), true ) ) {
+		if ( ! in_array( $template_type, array( 'wp_template', 'wp_template_part' ), true ) ) {
+			return $block_template;
+		}
+
+		self::ensure_loaded();
+
+		$registry       = Site_Template_Registry::instance();
+		$items          = 'wp_template' === $template_type ? $registry->get_templates() : $registry->get_parts();
+		$native_aliases = self::native_html_aliases( $items, $template_type );
+		$template_id    = is_object( $block_template ) && isset( $block_template->slug )
+			? self::template_object_id( $block_template )
+			: $id;
+
+		if ( isset( $native_aliases[ $template_id ] ) ) {
+			return null;
+		}
+
+		if ( null !== $block_template ) {
 			return $block_template;
 		}
 
@@ -190,8 +241,6 @@ final class Site_Templates {
 		if ( 2 !== count( $parts ) || get_stylesheet() !== $parts[0] ) {
 			return $block_template;
 		}
-
-		self::ensure_loaded();
 
 		$item = 'wp_template' === $template_type
 			? Site_Template_Registry::instance()->get_template( $parts[1] )
@@ -202,6 +251,125 @@ final class Site_Templates {
 		}
 
 		return self::build_template_object( $item ) ?? $block_template;
+	}
+
+	/**
+	 * Get native path-based IDs created from manifest-owned HTML sources.
+	 *
+	 * @param array  $items         Discovered templates or parts.
+	 * @param string $template_type Template type.
+	 *
+	 * @return array<string, true> Native IDs indexed for lookup.
+	 */
+	private static function native_html_aliases( array $items, string $template_type ): array {
+		if ( isset( self::$native_html_aliases[ $template_type ] ) ) {
+			return self::$native_html_aliases[ $template_type ];
+		}
+
+		$roots   = self::native_template_roots( $template_type );
+		$aliases = array();
+
+		foreach ( $items as $item ) {
+			if ( ! is_array( $item ) || 'html' !== ( $item['source_type'] ?? '' ) || ! is_scalar( $item['source_path'] ?? null ) ) {
+				continue;
+			}
+
+			$source_path = self::comparable_path( (string) $item['source_path'] );
+
+			foreach ( $roots as $root ) {
+				$relative_path = self::path_relative_to( $source_path, $root );
+
+				if ( null === $relative_path || ! str_ends_with( $relative_path, '.html' ) ) {
+					continue;
+				}
+
+				$native_slug = substr( $relative_path, 0, -5 );
+				$item_slug   = is_scalar( $item['slug'] ?? null ) ? (string) $item['slug'] : '';
+
+				if ( '' === $native_slug || $native_slug === $item_slug ) {
+					break;
+				}
+
+				foreach ( $roots as $candidate_root ) {
+					$candidate = $candidate_root . '/' . $native_slug . '.html';
+
+					if ( ! is_file( $candidate ) ) {
+						continue;
+					}
+
+					if ( self::comparable_path( $candidate ) === $source_path ) {
+						$aliases[ get_stylesheet() . '//' . $native_slug ] = true;
+					}
+
+					break;
+				}
+
+				break;
+			}
+		}
+
+		self::$native_html_aliases[ $template_type ] = $aliases;
+
+		return $aliases;
+	}
+
+	/**
+	 * Get active theme roots WordPress scans for one template type.
+	 *
+	 * @param string $template_type Template type.
+	 *
+	 * @return array<int, string> Native template roots in Core precedence order.
+	 */
+	private static function native_template_roots( string $template_type ): array {
+		$themes = array(
+			get_stylesheet() => get_stylesheet_directory(),
+			get_template()   => get_template_directory(),
+		);
+		$roots  = array();
+
+		foreach ( $themes as $theme => $directory ) {
+			$folders = function_exists( 'get_block_theme_folders' )
+				? get_block_theme_folders( $theme )
+				: array();
+			$folders = is_array( $folders ) ? $folders : array();
+			$folder  = is_scalar( $folders[ $template_type ] ?? null )
+				? (string) $folders[ $template_type ]
+				: ( 'wp_template' === $template_type ? 'templates' : 'parts' );
+			$root    = self::comparable_path( $directory . '/' . trim( $folder, '/\\' ) );
+
+			if ( ! in_array( $root, $roots, true ) ) {
+				$roots[] = $root;
+			}
+		}
+
+		return $roots;
+	}
+
+	/**
+	 * Return a path relative to a containing root.
+	 *
+	 * @param string $path Absolute path.
+	 * @param string $root Absolute root path.
+	 *
+	 * @return string|null Relative path or null when outside the root.
+	 */
+	private static function path_relative_to( string $path, string $root ): ?string {
+		$prefix = trailingslashit( $root );
+
+		return str_starts_with( $path, $prefix ) ? substr( $path, strlen( $prefix ) ) : null;
+	}
+
+	/**
+	 * Normalize a path and resolve symlinks when possible.
+	 *
+	 * @param string $path Filesystem path.
+	 *
+	 * @return string Comparable path.
+	 */
+	private static function comparable_path( string $path ): string {
+		$resolved = realpath( $path );
+
+		return Site_Template_Discovery::normalize_path( false === $resolved ? $path : $resolved );
 	}
 
 	/**
@@ -400,9 +568,10 @@ final class Site_Templates {
 	 */
 	public static function reset(): void {
 		Site_Template_Registry::reset();
-		self::$loaded           = false;
-		self::$discovery_runs   = 0;
-		self::$selection_errors = array(
+		self::$loaded              = false;
+		self::$discovery_runs      = 0;
+		self::$native_html_aliases = array();
+		self::$selection_errors    = array(
 			'templates' => array(),
 			'parts'     => array(),
 		);

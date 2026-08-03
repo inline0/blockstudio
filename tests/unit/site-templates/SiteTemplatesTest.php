@@ -142,6 +142,60 @@ class SiteTemplatesTest extends TestCase {
 		$this->assertSame( array(), wp_list_pluck( $footer_parts, 'slug' ) );
 	}
 
+	public function test_manifest_owned_html_sources_do_not_create_native_path_aliases(): void {
+		$template_slugs = wp_list_pluck(
+			get_block_templates(
+				array(
+					'slug__in' => array( 'blockstudio-html-repro', 'blockstudio-html-repro/index' ),
+				),
+				'wp_template'
+			),
+			'slug'
+		);
+		$part_slugs     = wp_list_pluck(
+			get_block_templates(
+				array(
+					'slug__in' => array( 'blockstudio-html-repro', 'blockstudio-html-repro/index' ),
+				),
+				'wp_template_part'
+			),
+			'slug'
+		);
+		$template       = get_block_template( get_stylesheet() . '//blockstudio-html-repro', 'wp_template' );
+		$part           = get_block_template( get_stylesheet() . '//blockstudio-html-repro', 'wp_template_part' );
+
+		$this->assertSame( array( 'blockstudio-html-repro' ), $template_slugs );
+		$this->assertSame( array( 'blockstudio-html-repro' ), $part_slugs );
+		$this->assertInstanceOf( WP_Block_Template::class, $template );
+		$this->assertInstanceOf( WP_Block_Template::class, $part );
+		$this->assertStringContainsString( 'Blockstudio nested HTML template.', $template->content );
+		$this->assertStringContainsString( 'Blockstudio nested HTML template part.', $part->content );
+		$this->assertNull(
+			get_block_template( get_stylesheet() . '//blockstudio-html-repro/index', 'wp_template' )
+		);
+		$this->assertNull(
+			get_block_template( get_stylesheet() . '//blockstudio-html-repro/index', 'wp_template_part' )
+		);
+	}
+
+	public function test_unmanaged_nested_html_sources_remain_native_templates(): void {
+		$templates = get_block_templates(
+			array(
+				'slug__in' => array( 'native-html/index' ),
+			),
+			'wp_template'
+		);
+		$parts     = get_block_templates(
+			array(
+				'slug__in' => array( 'native-html/index' ),
+			),
+			'wp_template_part'
+		);
+
+		$this->assertSame( array( 'native-html/index' ), wp_list_pluck( $templates, 'slug' ) );
+		$this->assertSame( array( 'native-html/index' ), wp_list_pluck( $parts, 'slug' ) );
+	}
+
 	public function test_database_template_customization_wins_over_file_source(): void {
 		$post_id = $this->create_template_post(
 			'wp_template',
