@@ -59,6 +59,20 @@ use BlockstudioVendor\ScssPhp\ScssPhp\Exception\SassException;
 class Assets {
 
 	/**
+	 * Shared runtime instance.
+	 *
+	 * @var Assets|null
+	 */
+	private static ?Assets $instance = null;
+
+	/**
+	 * Whether settings-driven hooks have registered.
+	 *
+	 * @var bool
+	 */
+	private bool $configured_hooks_registered = false;
+
+	/**
 	 * Selector placeholder for block CSS assets.
 	 *
 	 * @var string
@@ -101,6 +115,19 @@ class Assets {
 	 * @var bool
 	 */
 	public static bool $force_editor_screen = false;
+
+	/**
+	 * Get the shared asset runtime instance.
+	 *
+	 * @return Assets Runtime instance.
+	 */
+	public static function init(): Assets {
+		if ( null === self::$instance ) {
+			self::$instance = new self();
+		}
+
+		return self::$instance;
+	}
 
 	/**
 	 * Reset request-local asset state for in-process batch rendering.
@@ -198,14 +225,6 @@ class Assets {
 	public function __construct() {
 		add_action( 'template_redirect', array( $this, 'maybe_buffer_output' ), 3 );
 		add_filter( 'blockstudio/buffer/output', array( $this, 'parse_output' ), 1000000 );
-		add_action( 'wp_enqueue_scripts', array( $this, 'maybe_reset_styles' ), 999 );
-		add_action( 'admin_enqueue_scripts', array( $this, 'maybe_reset_styles' ), 999 );
-		add_action( 'enqueue_block_editor_assets', array( $this, 'maybe_reset_styles' ), 999 );
-		add_action( 'admin_head', array( $this, 'render_parent_editor_enhancement_styles' ) );
-		add_filter( 'admin_body_class', array( $this, 'add_parent_editor_enhancement_body_class' ) );
-		add_filter( 'block_editor_settings_all', array( $this, 'maybe_reset_editor_styles' ) );
-		add_filter( 'block_editor_settings_all', array( $this, 'add_canvas_body_classes' ) );
-		add_filter( 'block_editor_settings_all', array( $this, 'maybe_fullwidth_editor' ), 10, 2 );
 		add_filter(
 			'block_editor_settings_all',
 			function ( $settings ) {
@@ -252,6 +271,42 @@ class Assets {
 				$this->get_admin_and_editor_assets();
 			}
 		);
+	}
+
+	/**
+	 * Register hooks for configured editor and reset features only.
+	 *
+	 * @return void
+	 */
+	public function register_configured_hooks(): void {
+		if ( $this->configured_hooks_registered ) {
+			return;
+		}
+
+		$this->configured_hooks_registered = true;
+		$reset                             = self::is_reset_enabled();
+		$enhance                           = Settings::get_bool( 'blockEditor/enhance', false );
+		$full_width                        = Settings::get_array( 'assets/reset/fullWidth' );
+
+		if ( $reset ) {
+			add_action( 'wp_enqueue_scripts', array( $this, 'maybe_reset_styles' ), 999 );
+			add_action( 'admin_enqueue_scripts', array( $this, 'maybe_reset_styles' ), 999 );
+			add_action( 'enqueue_block_editor_assets', array( $this, 'maybe_reset_styles' ), 999 );
+			add_filter( 'block_editor_settings_all', array( $this, 'add_canvas_body_classes' ) );
+		}
+
+		if ( $enhance ) {
+			add_action( 'admin_head', array( $this, 'render_parent_editor_enhancement_styles' ) );
+			add_filter( 'admin_body_class', array( $this, 'add_parent_editor_enhancement_body_class' ) );
+		}
+
+		if ( $reset || $enhance ) {
+			add_filter( 'block_editor_settings_all', array( $this, 'maybe_reset_editor_styles' ) );
+		}
+
+		if ( array() !== $full_width ) {
+			add_filter( 'block_editor_settings_all', array( $this, 'maybe_fullwidth_editor' ), 10, 2 );
+		}
 	}
 
 	/**
@@ -2060,4 +2115,4 @@ class Assets {
 	}
 }
 
-new Assets();
+Assets::init();

@@ -497,6 +497,11 @@ The `compat` profile leaves generic WordPress behavior unchanged. `speed` and
 `strict` enable the same opt-in frontend defaults; every child setting can
 override its profile value.
 
+Opt-in settings are registration gates. When an optional feature is `false`,
+Blockstudio does not attach that feature's frontend, admin, editor, REST, or
+scheduled callbacks. Disabling Early Serve or scheduled warming after using it
+performs its owned cleanup once; later requests remain inert.
+
 | Option                     | Type    | Compat default | Speed/strict default | Description                                      |
 | -------------------------- | ------- | -------------- | -------------------- | ------------------------------------------------ |
 | `profile`                  | string  | `"compat"`     | —                    | `compat`, `speed`, or `strict`                   |
@@ -527,10 +532,12 @@ override its profile value.
 | `staticPrerender.warm.concurrency` | integer | `2`   | `2`                  | Maximum jobs processed by one warm pass          |
 | `staticPrerender.warm.transport` | string | `"http"` | `"http"`             | Use `http` or a host-provided `internal` renderer |
 
-Static prerendering remains disabled unless explicitly enabled. Signature mode
-uses a cheap activated identity on ordinary requests. Graph mode is intended
-for explicit builds: it records per-page source dependencies so changing one
-page does not invalidate unrelated documents. See
+Static prerendering remains disabled unless explicitly enabled. A disabled
+master switch registers no prerender request hooks, and disabled `earlyServe`
+and `warm.enabled` switches register no admin or cron hooks. Signature mode uses
+a cheap activated identity on ordinary requests. Graph mode is intended for
+explicit builds: it records per-page source dependencies so changing one page
+does not invalidate unrelated documents. See
 Static Prerendering for warming,
 deployment, early serving, and safety details.
 
@@ -10904,6 +10911,12 @@ If several source files exist, Blockstudio uses this order:
 3. `index.twig`
 4. `index.html`
 
+WordPress also discovers `.html` files recursively and normally exposes a
+nested `index.html` under its path-derived slug, such as `header/index`.
+When that file belongs to a Blockstudio manifest, Blockstudio removes the
+path-derived duplicate and exposes only the manifest's declared `slug`.
+Nested native `.html` templates without a Blockstudio manifest are unchanged.
+
 The source is compiled once into native WordPress block markup. It should not
 depend on the current request or the current post. Put runtime behavior inside
 dynamic blocks.
@@ -12475,7 +12488,11 @@ Logged-in users can consume an existing hit only when `serveLoggedIn` is true;
 personalized responses never create cache entries. Dynamic paths use path
 boundaries, so `/account` matches `/account/orders` but not `/accounting`.
 
-While the feature is disabled it writes no files and installs no drop-in.
+While the feature is disabled it writes no files, installs no drop-in, and
+registers no request or admin hooks. `earlyServe: false` likewise registers no
+Early Serve admin callback, and `warm.enabled: false` registers no cron callback
+or schedule. Turning either feature off removes previously owned state once;
+subsequent requests do no filesystem or cron cleanup checks.
 
 ## Signature and graph modes
 
@@ -12600,9 +12617,10 @@ A reasonable adoption order:
 3. Enable `performance.staticPrerender` with `earlyServe` off, verify hits with
    `wp bs prerender status`, then turn `earlyServe` on.
 
-Rolling back is per feature: `staticPrerender.enabled` to `false` undoes this
-layer, `performance.profile` back to `compat` undoes the profile, and each
-leaves the others in place.
+Rolling back is per feature: setting `staticPrerender.enabled` to `false`
+removes Blockstudio-owned Early Serve state and warm schedules once, then leaves
+the prerender runtime unregistered. Setting `performance.profile` back to
+`compat` undoes the profile. Each leaves the other layers in place.
 
 > Performance
 >

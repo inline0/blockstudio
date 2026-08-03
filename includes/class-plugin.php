@@ -20,6 +20,13 @@ class Plugin {
 	private static ?Plugin $instance = null;
 
 	/**
+	 * Whether configured optional features have initialized.
+	 *
+	 * @var bool
+	 */
+	private bool $configured_features_initialized = false;
+
+	/**
 	 * Get the singleton instance.
 	 *
 	 * @return Plugin
@@ -239,20 +246,14 @@ class Plugin {
 			Runtime::init();
 		}
 
-		if ( class_exists( 'Blockstudio\Ui' ) ) {
-			Ui::init();
-		}
-
-		if ( class_exists( 'Blockstudio\Block_Editor_Policy' ) ) {
-			Block_Editor_Policy::init();
-		}
-
-		if ( class_exists( 'Blockstudio\Build_Cache' ) ) {
-			Build_Cache::init();
-		}
-
 		if ( class_exists( 'Blockstudio\Islands' ) ) {
 			Islands::init();
+		}
+
+		if ( did_action( 'after_setup_theme' ) ) {
+			$this->init_configured_features();
+		} else {
+			add_action( 'after_setup_theme', array( $this, 'init_configured_features' ), PHP_INT_MAX );
 		}
 
 		add_action(
@@ -294,26 +295,6 @@ class Plugin {
 		add_action(
 			'init',
 			function () {
-				if ( class_exists( 'Blockstudio\Block_Tags' ) ) {
-					Block_Tags::init();
-				}
-			},
-			PHP_INT_MAX
-		);
-
-		add_action(
-			'init',
-			function () {
-				if ( class_exists( 'Blockstudio\Patterns' ) ) {
-					Patterns::init();
-				}
-			},
-			PHP_INT_MAX
-		);
-
-		add_action(
-			'init',
-			function () {
 				if ( class_exists( 'Blockstudio\Site_Templates' ) ) {
 					Site_Templates::init();
 				}
@@ -346,6 +327,69 @@ class Plugin {
 		}
 
 		do_action( 'blockstudio_init', $this );
+	}
+
+	/**
+	 * Register only optional features enabled by the resolved settings.
+	 *
+	 * Running after theme setup keeps theme filters available while ensuring
+	 * disabled features add none of their request, admin, editor, or REST
+	 * callbacks.
+	 *
+	 * @return void
+	 */
+	public function init_configured_features(): void {
+		if ( $this->configured_features_initialized ) {
+			return;
+		}
+
+		$this->configured_features_initialized = true;
+
+		if ( class_exists( 'Blockstudio\Assets' ) ) {
+			Assets::init()->register_configured_hooks();
+		}
+
+		if ( class_exists( 'Blockstudio\Block_Editor_Policy' ) ) {
+			Block_Editor_Policy::init();
+		}
+
+		if ( class_exists( 'Blockstudio\Build_Cache' ) && Build_Cache::is_enabled() ) {
+			Build_Cache::init();
+		}
+
+		if ( class_exists( 'Blockstudio\Ui' ) && Ui::enabled() ) {
+			Ui::init();
+		}
+
+		if ( class_exists( 'Blockstudio\Tailwind' ) && Settings::get_bool( 'tailwind/enabled', false ) ) {
+			new Tailwind();
+		}
+
+		if ( class_exists( 'Blockstudio\LLM' ) && Settings::get_bool( 'ai/enableContextGeneration', false ) ) {
+			new LLM();
+		}
+
+		if ( class_exists( 'Blockstudio\Devtools' ) && Settings::get_bool( 'dev/grab/enabled', false ) ) {
+			new Devtools();
+		}
+
+		if ( class_exists( 'Blockstudio\Canvas' ) && Settings::get_bool( 'dev/canvas/enabled', false ) ) {
+			new Canvas();
+		}
+
+		if ( class_exists( 'Blockstudio\Block_Tags' ) && Settings::get_bool( 'blockTags/enabled', false ) ) {
+			Block_Tags::init();
+		}
+
+		if ( class_exists( 'Blockstudio\Patterns' ) && Settings::get_bool( 'blockEditor/patterns/blockstudio', true ) ) {
+			add_action(
+				'init',
+				static function (): void {
+					Patterns::init();
+				},
+				PHP_INT_MAX
+			);
+		}
 	}
 
 	/**

@@ -63,37 +63,21 @@ final class Static_Prerender_Early_Serve {
 	/**
 	 * Synchronize the current site's map entry and shared drop-in.
 	 *
-	 * While the feature is disabled the lock is taken only when this class owns
-	 * installed state, so a disabled site creates and reads no files at all.
+	 * Disabled settings return before any filesystem access. Cleanup after a
+	 * setting transition is owned by Static_Prerender_Runtime.
 	 *
 	 * @return void
 	 */
 	public static function maybe_sync(): void {
-		$content_dir = self::content_dir();
-		if ( null === $content_dir || ! is_dir( $content_dir ) ) {
-			return;
-		}
-
 		if (
 			! Runtime_Settings::current()->enabled( 'staticPrerender/enabled' ) ||
 			! Runtime_Settings::current()->enabled( 'staticPrerender/earlyServe' )
 		) {
-			if (
-				! self::file_contains_marker( self::map_path(), self::MAP_MARKER ) &&
-				! self::file_contains_marker( self::dropin_path(), self::DROPIN_MARKER )
-			) {
-				return;
-			}
+			return;
+		}
 
-			self::with_exclusive_lock(
-				self::map_path() . '.lock',
-				static function (): bool {
-					self::remove_current_site_locked();
-
-					return true;
-				}
-			);
-
+		$content_dir = self::content_dir();
+		if ( null === $content_dir || ! is_dir( $content_dir ) ) {
 			return;
 		}
 
@@ -180,6 +164,12 @@ final class Static_Prerender_Early_Serve {
 	public static function remove_current_site(): void {
 		$content_dir = self::content_dir();
 		if ( null === $content_dir || ! is_dir( $content_dir ) ) {
+			return;
+		}
+		if (
+			! self::file_contains_marker( self::map_path(), self::MAP_MARKER ) &&
+			! self::file_contains_marker( self::dropin_path(), self::DROPIN_MARKER )
+		) {
 			return;
 		}
 
@@ -961,8 +951,17 @@ PHP;
 	 * @return bool Whether owned.
 	 */
 	private static function file_contains_marker( string $path, string $marker ): bool {
-		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents, WordPress.PHP.NoSilencedErrors.Discouraged -- Reads only an ownership header and treats failures as foreign/absent.
-		$head = @file_get_contents( $path, false, null, 0, 400 );
+		if ( ! is_file( $path ) ) {
+			return false;
+		}
+
+		set_error_handler( static fn(): bool => true ); // phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_set_error_handler -- Concurrent removal and unreadable foreign files are supported ownership misses.
+		try {
+			// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Reads only an ownership header.
+			$head = file_get_contents( $path, false, null, 0, 400 );
+		} finally {
+			restore_error_handler();
+		}
 
 		return is_string( $head ) && str_contains( $head, $marker );
 	}

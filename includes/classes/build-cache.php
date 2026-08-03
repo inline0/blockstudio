@@ -58,7 +58,7 @@ final class Build_Cache {
 	 * @return void
 	 */
 	public static function init(): void {
-		if ( self::$hooks_registered ) {
+		if ( self::$hooks_registered || ! self::is_enabled() ) {
 			return;
 		}
 
@@ -961,18 +961,23 @@ final class Build_Cache {
 		}
 
 		$directories = array( wp_normalize_path( $path ) );
-		$iterator    = new \RecursiveIteratorIterator(
-			new \RecursiveDirectoryIterator(
-				$path,
-				\FilesystemIterator::SKIP_DOTS
-			),
-			\RecursiveIteratorIterator::SELF_FIRST
-		);
 
-		foreach ( $iterator as $file ) {
-			if ( $file->isDir() ) {
-				$directories[] = wp_normalize_path( $file->getPathname() );
+		try {
+			$iterator = new \RecursiveIteratorIterator(
+				new \RecursiveDirectoryIterator(
+					$path,
+					\FilesystemIterator::SKIP_DOTS
+				),
+				\RecursiveIteratorIterator::SELF_FIRST
+			);
+
+			foreach ( $iterator as $file ) {
+				if ( $file->isDir() ) {
+					$directories[] = wp_normalize_path( $file->getPathname() );
+				}
 			}
+		} catch ( \Throwable $error ) {
+			unset( $error );
 		}
 
 		return $directories;

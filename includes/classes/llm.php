@@ -16,6 +16,10 @@ class LLM {
 	 * Constructor.
 	 */
 	public function __construct() {
+		if ( ! Settings::get_bool( 'ai/enableContextGeneration', false ) ) {
+			return;
+		}
+
 		add_action( 'template_redirect', array( $this, 'serve' ) );
 	}
 
@@ -88,5 +92,3 @@ class LLM {
 		die();
 	}
 }
-
-new LLM();

@@ -325,7 +325,7 @@ class MigrateTest extends TestCase {
 		$this->assertFalse( $prop->getValue( $migrator ) );
 	}
 
-	public function test_migrations_array_contains_520(): void {
+	public function test_migrations_array_contains_registered_versions(): void {
 		$migrator = new Migrate();
 		$ref      = new ReflectionClass( $migrator );
 
@@ -337,6 +337,9 @@ class MigrateTest extends TestCase {
 		$this->assertIsArray( $migrations['5.2.0'] );
 		$this->assertSame( $migrator, $migrations['5.2.0'][0] );
 		$this->assertSame( 'migrate_to_520', $migrations['5.2.0'][1] );
+		$this->assertArrayHasKey( '7.6.6', $migrations );
+		$this->assertSame( $migrator, $migrations['7.6.6'][0] );
+		$this->assertSame( 'migrate_to_766', $migrations['7.6.6'][1] );
 	}
 
 	// Idempotency

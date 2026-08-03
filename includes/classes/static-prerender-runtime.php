@@ -36,6 +36,11 @@ final class Static_Prerender_Runtime {
 	private const CRON_SCHEDULE = 'blockstudio_static_prerender_interval';
 
 	/**
+	 * Last configured side-effecting prerender features.
+	 */
+	private const FEATURE_STATE_OPTION = 'blockstudio_static_prerender_feature_state';
+
+	/**
 	 * Warm-request server key.
 	 *
 	 * @var string
@@ -103,27 +108,27 @@ final class Static_Prerender_Runtime {
 
 		self::$registered = true;
 		self::register_wp_cli_commands();
-		add_action( 'admin_init', array( Static_Prerender_Early_Serve::class, 'maybe_sync' ), 50 );
+		self::reconcile_feature_state();
 
 		if ( ! self::enabled( 'staticPrerender/enabled' ) ) {
-			self::unschedule_cron();
-
 			return;
 		}
 
-		add_filter( 'cron_schedules', array( self::class, 'filter_cron_schedules' ) ); // phpcs:ignore WordPress.WP.CronInterval.ChangeDetected -- Interval is validated runtime configuration.
 		add_filter( 'status_header', array( self::class, 'record_status_header' ), 10, 2 );
 		add_action( 'template_redirect', array( self::class, 'maybe_serve_or_buffer' ), 0 );
 		add_action( 'save_post', array( self::class, 'handle_content_changed' ), 10, 3 );
 		add_action( 'deleted_post', array( self::class, 'handle_content_changed' ), 10, 2 );
 		add_action( 'switch_theme', array( self::class, 'handle_site_changed' ) );
 		add_action( 'blockstudio/runtime/changed', array( self::class, 'handle_site_changed' ) );
-		add_action( self::CRON_HOOK, array( self::class, 'run_cron_warmer' ) );
+
+		if ( self::enabled( 'staticPrerender/earlyServe' ) ) {
+			add_action( 'admin_init', array( Static_Prerender_Early_Serve::class, 'maybe_sync' ), 50 );
+		}
 
 		if ( self::warm_enabled() ) {
+			add_filter( 'cron_schedules', array( self::class, 'filter_cron_schedules' ) ); // phpcs:ignore WordPress.WP.CronInterval.ChangeDetected -- Interval is validated runtime configuration.
+			add_action( self::CRON_HOOK, array( self::class, 'run_cron_warmer' ) );
 			self::schedule_cron();
-		} else {
-			self::unschedule_cron();
 		}
 	}
 
@@ -136,10 +141,41 @@ final class Static_Prerender_Runtime {
 	 * @return void
 	 */
 	public static function deactivate(): void {
+		remove_filter( 'status_header', array( self::class, 'record_status_header' ), 10 );
+		remove_filter( 'cron_schedules', array( self::class, 'filter_cron_schedules' ) );
+		remove_action( 'template_redirect', array( self::class, 'maybe_serve_or_buffer' ), 0 );
+		remove_action( 'save_post', array( self::class, 'handle_content_changed' ), 10 );
+		remove_action( 'deleted_post', array( self::class, 'handle_content_changed' ), 10 );
+		remove_action( 'switch_theme', array( self::class, 'handle_site_changed' ) );
+		remove_action( 'blockstudio/runtime/changed', array( self::class, 'handle_site_changed' ) );
+		remove_action( 'admin_init', array( Static_Prerender_Early_Serve::class, 'maybe_sync' ), 50 );
+		remove_action( self::CRON_HOOK, array( self::class, 'run_cron_warmer' ) );
 		self::unschedule_cron();
 		self::reset_request_cache();
 		Static_Prerender_Early_Serve::remove_current_site();
+		delete_option( self::FEATURE_STATE_OPTION );
 		self::$registered = false;
+	}
+
+	/**
+	 * Clean side effects left by pre-7.6.6 disabled configurations once.
+	 *
+	 * Normal requests use the persisted transition state below; this method is
+	 * reserved for the version migration where no prior state option exists.
+	 *
+	 * @return void
+	 */
+	public static function migrate_inactive_features(): void {
+		if (
+			! self::enabled( 'staticPrerender/enabled' ) ||
+			! self::enabled( 'staticPrerender/earlyServe' )
+		) {
+			Static_Prerender_Early_Serve::remove_current_site();
+		}
+
+		if ( ! self::warm_enabled() ) {
+			self::unschedule_cron();
+		}
 	}
 
 	/**
@@ -584,7 +620,7 @@ final class Static_Prerender_Runtime {
 	 */
 	public static function handle_site_changed(): void {
 		Static_Prerender_Identity::rotate( 'site-change' );
-		if ( ! self::graph_enabled() ) {
+		if ( ! self::graph_enabled() && self::enabled( 'staticPrerender/earlyServe' ) ) {
 			Static_Prerender_Early_Serve::maybe_sync();
 		}
 
@@ -2167,7 +2203,9 @@ final class Static_Prerender_Runtime {
 	private static function warm_enabled(): bool {
 		// Graph artifacts are built and activated as one atomic unit. The
 		// per-URL warmer cannot safely edit their route map.
-		return ! self::graph_enabled() && self::enabled( 'staticPrerender/warm/enabled' );
+		return self::enabled( 'staticPrerender/enabled' )
+			&& ! self::graph_enabled()
+			&& self::enabled( 'staticPrerender/warm/enabled' );
 	}
 
 	/**
@@ -2197,6 +2235,53 @@ final class Static_Prerender_Runtime {
 		return 'internal' === self::value( 'staticPrerender/warm/transport', 'http' )
 			? 'internal'
 			: 'http';
+	}
+
+	/**
+	 * Reconcile cleanup only when an enabled side-effecting feature changes.
+	 *
+	 * Disabled sites perform one cached option lookup and no filesystem or cron
+	 * work. Early-serve files and warm schedules are cleaned once when their
+	 * previously enabled setting becomes inactive.
+	 *
+	 * @return void
+	 */
+	private static function reconcile_feature_state(): void {
+		$enabled = self::enabled( 'staticPrerender/enabled' );
+		$warm    = self::warm_enabled();
+		$current = array(
+			'earlyServe'   => $enabled && self::enabled( 'staticPrerender/earlyServe' ),
+			'warm'         => $warm,
+			'warmInterval' => $warm
+				? self::warm_interval()
+				: 0,
+		);
+		$stored  = get_option( self::FEATURE_STATE_OPTION, array() );
+		$stored  = is_array( $stored ) ? $stored : array();
+
+		if ( ! $current['earlyServe'] && ! empty( $stored['earlyServe'] ) ) {
+			Static_Prerender_Early_Serve::remove_current_site();
+		}
+
+		$warm_changed = ! empty( $stored['warm'] ) && (
+			! $current['warm'] ||
+			(int) ( $stored['warmInterval'] ?? 0 ) !== $current['warmInterval']
+		);
+		if ( $warm_changed ) {
+			self::unschedule_cron();
+		}
+
+		if ( $current['earlyServe'] || $current['warm'] ) {
+			if ( $stored !== $current ) {
+				update_option( self::FEATURE_STATE_OPTION, $current, true );
+			}
+
+			return;
+		}
+
+		if ( array() !== $stored ) {
+			delete_option( self::FEATURE_STATE_OPTION );
+		}
 	}
 
 	/**
