@@ -75,6 +75,7 @@ class Migrate {
 		$this->new_version     = BLOCKSTUDIO_VERSION;
 		$this->migrations      = array(
 			'5.2.0' => array( $this, 'migrate_to_520' ),
+			'7.6.6' => array( $this, 'migrate_to_766' ),
 		);
 	}
 
@@ -165,6 +166,17 @@ class Migrate {
 
 			update_option( 'blockstudio_settings', $new_settings );
 			delete_option( 'blockstudio_options' );
+		}
+	}
+
+	/**
+	 * Remove stale side effects from disabled prerender subfeatures once.
+	 *
+	 * @return void
+	 */
+	private function migrate_to_766(): void {
+		if ( class_exists( Static_Prerender_Runtime::class ) ) {
+			Static_Prerender_Runtime::migrate_inactive_features();
 		}
 	}
 }

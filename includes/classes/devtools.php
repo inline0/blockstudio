@@ -23,6 +23,10 @@ class Devtools {
 	 * Constructor.
 	 */
 	public function __construct() {
+		if ( ! Settings::get_bool( 'dev/grab/enabled', false ) ) {
+			return;
+		}
+
 		add_action( 'wp_enqueue_scripts', array( $this, 'enqueue' ) );
 	}
 
@@ -62,5 +66,3 @@ class Devtools {
 		);
 	}
 }
-
-new Devtools();

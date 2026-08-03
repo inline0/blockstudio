@@ -184,6 +184,10 @@ class Tailwind {
 	 * Constructor.
 	 */
 	public function __construct() {
+		if ( ! Settings::get_bool( 'tailwind/enabled', false ) ) {
+			return;
+		}
+
 		add_filter( 'blockstudio/buffer/output', array( $this, 'compile' ), 999999 );
 		add_filter( 'block_editor_settings_all', array( $this, 'inject_editor_styles' ), PHP_INT_MAX );
 	}
@@ -541,5 +545,3 @@ class Tailwind {
 		return Files::get_relative_url( $path );
 	}
 }
-
-new Tailwind();

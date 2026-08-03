@@ -56,6 +56,8 @@ Download the latest release zip from [GitHub Releases](https://github.com/inline
 
 = 7.6.6 =
 * Fix: manifest-owned nested HTML Site Templates and Template Parts expose only their declared slug instead of also leaking WordPress's path-derived `folder/index` entry
+* Fix: disabled opt-in features no longer register Tailwind, UI, Canvas, Devtools, AI context, Block Tags, Build Cache, Early Serve, or warm-queue callbacks
+* Fix: disabled Static Prerender and Early Serve checks no longer leave suppressed missing-file warnings in PHP's last-error state on admin requests
 
 = 7.6.5 =
 * Fix: prerender publishes retry once and count a peer's already-published copy as success, so mass rebuilds no longer fail a whole deploy over one transient write race

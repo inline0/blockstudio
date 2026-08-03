@@ -329,6 +329,11 @@ The `compat` profile leaves generic WordPress behavior unchanged. `speed` and
 `strict` enable the same opt-in frontend defaults; every child setting can
 override its profile value.
 
+Opt-in settings are registration gates. When an optional feature is `false`,
+Blockstudio does not attach that feature's frontend, admin, editor, REST, or
+scheduled callbacks. Disabling Early Serve or scheduled warming after using it
+performs its owned cleanup once; later requests remain inert.
+
 | Option                     | Type    | Compat default | Speed/strict default | Description                                      |
 | -------------------------- | ------- | -------------- | -------------------- | ------------------------------------------------ |
 | `profile`                  | string  | `"compat"`     | —                    | `compat`, `speed`, or `strict`                   |
@@ -359,10 +364,12 @@ override its profile value.
 | `staticPrerender.warm.concurrency` | integer | `2`   | `2`                  | Maximum jobs processed by one warm pass          |
 | `staticPrerender.warm.transport` | string | `"http"` | `"http"`             | Use `http` or a host-provided `internal` renderer |
 
-Static prerendering remains disabled unless explicitly enabled. Signature mode
-uses a cheap activated identity on ordinary requests. Graph mode is intended
-for explicit builds: it records per-page source dependencies so changing one
-page does not invalidate unrelated documents. See
+Static prerendering remains disabled unless explicitly enabled. A disabled
+master switch registers no prerender request hooks, and disabled `earlyServe`
+and `warm.enabled` switches register no admin or cron hooks. Signature mode uses
+a cheap activated identity on ordinary requests. Graph mode is intended for
+explicit builds: it records per-page source dependencies so changing one page
+does not invalidate unrelated documents. See
 [Static Prerendering](/docs/production/static-prerendering) for warming,
 deployment, early serving, and safety details.
 

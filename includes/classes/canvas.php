@@ -68,6 +68,10 @@ class Canvas {
 	 * Constructor.
 	 */
 	public function __construct() {
+		if ( ! Settings::get_bool( 'dev/canvas/enabled', false ) ) {
+			return;
+		}
+
 		add_action( 'admin_menu', array( $this, 'register_admin_page' ) );
 		add_action( 'admin_enqueue_scripts', array( $this, 'enqueue_admin_assets' ) );
 		add_action( 'rest_api_init', array( $this, 'register_endpoints' ) );
@@ -1185,5 +1189,3 @@ class Canvas {
 		}
 	}
 }
-
-new Canvas();

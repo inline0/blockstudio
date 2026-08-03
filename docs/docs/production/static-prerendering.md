@@ -42,7 +42,11 @@ Logged-in users can consume an existing hit only when `serveLoggedIn` is true;
 personalized responses never create cache entries. Dynamic paths use path
 boundaries, so `/account` matches `/account/orders` but not `/accounting`.
 
-While the feature is disabled it writes no files and installs no drop-in.
+While the feature is disabled it writes no files, installs no drop-in, and
+registers no request or admin hooks. `earlyServe: false` likewise registers no
+Early Serve admin callback, and `warm.enabled: false` registers no cron callback
+or schedule. Turning either feature off removes previously owned state once;
+subsequent requests do no filesystem or cron cleanup checks.
 
 ## Signature and graph modes
 
@@ -167,9 +171,10 @@ A reasonable adoption order:
 3. Enable `performance.staticPrerender` with `earlyServe` off, verify hits with
    `wp bs prerender status`, then turn `earlyServe` on.
 
-Rolling back is per feature: `staticPrerender.enabled` to `false` undoes this
-layer, `performance.profile` back to `compat` undoes the profile, and each
-leaves the others in place.
+Rolling back is per feature: setting `staticPrerender.enabled` to `false`
+removes Blockstudio-owned Early Serve state and warm schedules once, then leaves
+the prerender runtime unregistered. Setting `performance.profile` back to
+`compat` undoes the profile. Each leaves the other layers in place.
 
 > **[Performance](/docs/production/performance)**
 >

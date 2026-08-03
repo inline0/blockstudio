@@ -227,9 +227,11 @@ class StaticPrerenderEarlyServeTest extends TestCase {
 	public function test_disabled_early_serve_creates_no_files_and_reads_no_configuration(): void {
 		$this->disable_early_serve();
 		$before = $this->files();
+		error_clear_last();
 
 		Static_Prerender_Early_Serve::maybe_sync();
 
+		$this->assertNull( error_get_last() );
 		$this->assertSame( $before, $this->files() );
 		$this->assertFileDoesNotExist( Static_Prerender_Early_Serve::map_path() . '.lock' );
 		$this->assertSame( self::CONFIG_SOURCE, file_get_contents( $this->config ) );
@@ -251,12 +253,12 @@ class StaticPrerenderEarlyServeTest extends TestCase {
 		);
 	}
 
-	public function test_disabling_early_serve_removes_owned_state_and_the_owned_declaration(): void {
+	public function test_explicit_cleanup_removes_owned_state_after_early_serve_is_disabled(): void {
 		Static_Prerender_Early_Serve::maybe_sync();
 		$this->assertFileExists( Static_Prerender_Early_Serve::dropin_path() );
 
 		$this->disable_early_serve();
-		Static_Prerender_Early_Serve::maybe_sync();
+		Static_Prerender_Early_Serve::remove_current_site();
 
 		$this->assertFileDoesNotExist( Static_Prerender_Early_Serve::map_path() );
 		$this->assertFileDoesNotExist( Static_Prerender_Early_Serve::dropin_path() );
@@ -272,7 +274,7 @@ class StaticPrerenderEarlyServeTest extends TestCase {
 		$this->assertSame( $foreign, file_get_contents( $this->config ) );
 
 		$this->disable_early_serve();
-		Static_Prerender_Early_Serve::maybe_sync();
+		Static_Prerender_Early_Serve::remove_current_site();
 
 		$this->assertFileDoesNotExist( Static_Prerender_Early_Serve::dropin_path() );
 		$this->assertSame( $foreign, file_get_contents( $this->config ) );

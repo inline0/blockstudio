@@ -40,7 +40,7 @@ class Ui {
 	 * @return void
 	 */
 	public static function init(): void {
-		if ( self::$initialized ) {
+		if ( self::$initialized || ! self::enabled() ) {
 			return;
 		}
 

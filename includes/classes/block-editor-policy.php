@@ -15,24 +15,74 @@ namespace Blockstudio;
 class Block_Editor_Policy {
 
 	/**
+	 * Whether configured hooks have registered.
+	 *
+	 * @var bool
+	 */
+	private static bool $initialized = false;
+
+	/**
 	 * Initialize hooks.
 	 *
 	 * @return void
 	 */
 	public static function init(): void {
-		add_action( 'init', array( self::class, 'apply_early_init_policy' ), 0 );
-		add_action( 'init', array( self::class, 'apply_late_init_policy' ), PHP_INT_MAX );
-		add_action( 'enqueue_block_editor_assets', array( self::class, 'maybe_disable_block_directory' ), 0 );
+		if ( self::$initialized ) {
+			return;
+		}
 
-		add_filter( 'allowed_block_types_all', array( self::class, 'filter_allowed_block_types' ), 10, 2 );
-		add_filter( 'block_categories_all', array( self::class, 'filter_block_categories' ), 10, 2 );
-		add_filter( 'should_load_remote_block_patterns', array( self::class, 'filter_remote_patterns' ) );
-		add_filter( 'block_editor_settings_all', array( self::class, 'filter_editor_settings' ), 10, 2 );
-		add_filter( 'image_size_names_choose', array( self::class, 'filter_image_sizes' ) );
-		add_filter(
-			'widget_types_to_hide_from_legacy_widget_block',
-			array( self::class, 'filter_hidden_legacy_widgets' )
-		);
+		self::$initialized = true;
+
+		if (
+			false === self::setting( 'blockEditor/patterns/core' ) ||
+			false === self::setting( 'blockEditor/patterns/theme' )
+		) {
+			self::apply_early_init_policy();
+		}
+
+		if (
+			self::has_category_policy( 'blockEditor/patterns/categories' ) ||
+			! empty( self::setting( 'blockEditor/blocks/styles/deny' ) )
+		) {
+			add_action( 'init', array( self::class, 'apply_late_init_policy' ), PHP_INT_MAX );
+		}
+
+		if ( false === self::setting( 'blockEditor/blocks/directory' ) ) {
+			add_action( 'enqueue_block_editor_assets', array( self::class, 'maybe_disable_block_directory' ), 0 );
+		}
+
+		if (
+			array() !== self::string_list( self::setting( 'blockEditor/blocks/allow' ) ) ||
+			array() !== self::string_list( self::setting( 'blockEditor/blocks/deny' ) )
+		) {
+			add_filter( 'allowed_block_types_all', array( self::class, 'filter_allowed_block_types' ), 10, 2 );
+		}
+
+		if ( self::has_category_policy( 'blockEditor/blocks/categories' ) ) {
+			add_filter( 'block_categories_all', array( self::class, 'filter_block_categories' ), 10, 2 );
+		}
+
+		if ( false === self::setting( 'blockEditor/patterns/remote' ) ) {
+			add_filter( 'should_load_remote_block_patterns', array( self::class, 'filter_remote_patterns' ) );
+		}
+
+		if ( false === self::setting( 'blockEditor/media/openverse' ) ) {
+			add_filter( 'block_editor_settings_all', array( self::class, 'filter_editor_settings' ), 10, 2 );
+		}
+
+		if (
+			array() !== self::string_list( self::setting( 'blockEditor/media/imageSizes/allow' ) ) ||
+			array() !== self::string_list( self::setting( 'blockEditor/media/imageSizes/deny' ) )
+		) {
+			add_filter( 'image_size_names_choose', array( self::class, 'filter_image_sizes' ) );
+		}
+
+		if ( array() !== self::string_list( self::setting( 'blockEditor/blocks/legacyWidgets/hide' ) ) ) {
+			add_filter(
+				'widget_types_to_hide_from_legacy_widget_block',
+				array( self::class, 'filter_hidden_legacy_widgets' )
+			);
+		}
 	}
 
 	/**
@@ -401,6 +451,23 @@ class Block_Editor_Policy {
 			'rename' => self::setting( $path . '/rename' ),
 			'order'  => self::setting( $path . '/order' ),
 		);
+	}
+
+	/**
+	 * Whether a category policy contains any configured operation.
+	 *
+	 * @param string $path Setting path.
+	 *
+	 * @return bool Whether configured.
+	 */
+	private static function has_category_policy( string $path ): bool {
+		foreach ( self::category_policy( $path ) as $value ) {
+			if ( is_array( $value ) && array() !== $value ) {
+				return true;
+			}
+		}
+
+		return false;
 	}
 
 	/**
