@@ -100,6 +100,53 @@ class DiscoverySourceTest extends TestCase {
 	}
 
 	/**
+	 * Composed init files retain their physical identity beside an inherited manifest.
+	 *
+	 * @return void
+	 */
+	public function test_composed_block_keeps_each_init_file_and_canonical_block_entry(): void {
+		$parent  = $this->temporary_directory( 'parent-init' );
+		$overlay = $this->temporary_directory( 'overlay-init' );
+
+		$this->write(
+			$parent . '/zone/block.json',
+			wp_json_encode(
+				array(
+					'name'        => 'test/zone',
+					'title'       => 'Zone',
+					'blockstudio' => array( 'attributes' => array() ),
+				)
+			)
+		);
+		$this->write( $overlay . '/zone/index.php', '<?php echo "zone";' );
+		$this->write( $parent . '/zone/init.php', '<?php // parent init' );
+		$this->write( $overlay . '/zone/init-helpers.php', '<?php // overlay helpers' );
+
+		$source = $this->source(
+			$overlay,
+			array(
+				'zone/block.json'       => $parent . '/zone/block.json',
+				'zone/index.php'        => $overlay . '/zone/index.php',
+				'zone/init.php'         => $parent . '/zone/init.php',
+				'zone/init-helpers.php' => $overlay . '/zone/init-helpers.php',
+			)
+		);
+
+		$results      = ( new Block_Discovery() )->discover( $source, 'test-overlay' );
+		$init_path    = wp_normalize_path( $parent . '/zone/init.php' );
+		$helpers_path = wp_normalize_path( $overlay . '/zone/init-helpers.php' );
+
+		$this->assertArrayHasKey( 'test/zone', $results['store'] );
+		$this->assertArrayHasKey( $init_path, $results['store'] );
+		$this->assertArrayHasKey( $helpers_path, $results['store'] );
+		$this->assertFalse( $results['store']['test/zone']['init'] );
+		$this->assertSame( $parent . '/zone/block.json', $results['store']['test/zone']['path'] );
+		$this->assertSame( array( $init_path ), $results['store'][ $init_path ]['filesPaths'] );
+		$this->assertSame( array( $helpers_path ), $results['store'][ $helpers_path ]['filesPaths'] );
+		$this->assertSame( 'test/zone', $results['block_json_data']['test/zone']['name'] );
+	}
+
+	/**
 	 * A composed page inherits its collection and layout while shadowing content.
 	 *
 	 * @return void

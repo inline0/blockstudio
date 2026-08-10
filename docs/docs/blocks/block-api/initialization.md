@@ -13,9 +13,9 @@ meta_description: "Execute code during WordPress initialization."
 
 Block templates will only be executed when the block is rendered. This is enough for most blocks; however, sometimes you need to execute code during an earlier stage of execution. For example, you may want to register a new post type or do some other type of setup unrelated to the block.
 
-To do this, you can add a PHP file that starts with `init-`, like `init.php` or `init-post-types.php` to your block directory. This file is executed during the `init` action. For more information on this specific stage, see the [WordPress documentation](https://developer.wordpress.org/reference/hooks/init/).
+To do this, add one or more PHP files whose names start with `init`, such as `init.php`, `init-helpers.php`, or `init-post-types.php`, to your block directory. Every matching file executes once during the `init` action. For more information on this specific stage, see the [WordPress documentation](https://developer.wordpress.org/reference/hooks/init/).
 
-Any `init.php` file that is found within the block directory will be executed, regardless if it is part of a block context or not. This makes it perfect for organizing code snippets that are not related to any certain blocks.
+Init files can live beside a `block.json` or in a standalone directory. Beside a block, each init file is execution-only: the block remains the owner of sibling assets and `rpc.php`, `cron.php`, and `db.php` definitions. In a standalone directory, the init entry owns the directory's sibling assets, which supports file-based [code snippets](/docs/code-snippets).
 
 ## Example
 

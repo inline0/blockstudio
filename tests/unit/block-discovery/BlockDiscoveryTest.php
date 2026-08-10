@@ -426,6 +426,85 @@ class BlockDiscoveryTest extends TestCase {
 		$this->assertTrue( $found_init );
 	}
 
+	public function test_init_file_in_block_directory_does_not_replace_block_entry(): void {
+		$block_dir = $this->create_block( 'test/init-owner' );
+		$init_path = wp_normalize_path( $block_dir . '/init.php' );
+		file_put_contents( $init_path, '<?php // block init' );
+		file_put_contents( $block_dir . '/style.css', '.owner {}' );
+		file_put_contents( $block_dir . '/script.js', 'export {};' );
+		file_put_contents( $block_dir . '/rpc.php', '<?php return array();' );
+		file_put_contents( $block_dir . '/cron.php', '<?php return array();' );
+		file_put_contents( $block_dir . '/db.php', '<?php return array();' );
+
+		$results = $this->discovery->discover( $this->tmp_dir, 'test-instance' );
+		$block   = $results['store']['test/init-owner'];
+		$init    = $results['store'][ $init_path ];
+
+		$this->assertFalse( $block['init'] );
+		$this->assertSame( 'test/init-owner', $block['name'] );
+		$this->assertSame( wp_normalize_path( $block_dir . '/block.json' ), $block['path'] );
+		$this->assertSame( 'init-owner/block.json', $block['logicalPath'] );
+		$this->assertSame( 'test/init-owner', $results['block_json_data']['test/init-owner']['name'] );
+		$this->assertArrayHasKey( 'style.css', $block['filesMap'] );
+		$this->assertArrayHasKey( 'script.js', $block['filesMap'] );
+		$this->assertArrayHasKey( 'rpc.php', $block['filesMap'] );
+		$this->assertArrayHasKey( 'cron.php', $block['filesMap'] );
+		$this->assertArrayHasKey( 'db.php', $block['filesMap'] );
+
+		$this->assertTrue( $init['init'] );
+		$this->assertSame( $init_path, $init['name'] );
+		$this->assertSame( $init_path, $init['path'] );
+		$this->assertSame( array( 'init.php' ), $init['files'] );
+		$this->assertSame( array( 'init.php' => $init_path ), $init['filesMap'] );
+		$this->assertSame( array( $init_path ), $init['filesPaths'] );
+
+		$editor_results = $this->discovery->discover( $this->tmp_dir, 'test-instance', true );
+		$editor_init    = $editor_results['store'][ $init_path ];
+
+		$this->assertArrayHasKey( 'style.css', $editor_init['filesMap'] );
+		$this->assertArrayHasKey( 'script.js', $editor_init['filesMap'] );
+		$this->assertArrayHasKey( 'rpc.php', $editor_init['filesMap'] );
+		$this->assertArrayHasKey( 'cron.php', $editor_init['filesMap'] );
+		$this->assertArrayHasKey( 'db.php', $editor_init['filesMap'] );
+	}
+
+	public function test_multiple_init_files_in_block_directory_have_unique_entries(): void {
+		$block_dir    = $this->create_block( 'test/multiple-init' );
+		$helpers_path = wp_normalize_path( $block_dir . '/init-helpers.php' );
+		$init_path    = wp_normalize_path( $block_dir . '/init.php' );
+		file_put_contents( $helpers_path, '<?php // helpers' );
+		file_put_contents( $init_path, '<?php // init' );
+
+		$results = $this->discovery->discover( $this->tmp_dir, 'test-instance' );
+
+		$this->assertCount( 3, $results['store'] );
+		$this->assertArrayHasKey( 'test/multiple-init', $results['store'] );
+		$this->assertArrayHasKey( $helpers_path, $results['store'] );
+		$this->assertArrayHasKey( $init_path, $results['store'] );
+		$this->assertArrayHasKey( 'test/multiple-init', $results['registerable'] );
+		$this->assertCount( 1, $results['registerable'] );
+		$this->assertSame( 'test/multiple-init', $results['block_json_data']['test/multiple-init']['name'] );
+		$this->assertStringStartsWith( 'init-', $results['block_json_data'][ $helpers_path ]['name'] );
+		$this->assertStringStartsWith( 'init-', $results['block_json_data'][ $init_path ]['name'] );
+	}
+
+	public function test_standalone_init_file_retains_sibling_assets(): void {
+		$snippet_dir = $this->tmp_dir . '/snippet';
+		mkdir( $snippet_dir, 0755, true );
+
+		$init_path  = wp_normalize_path( $snippet_dir . '/init.php' );
+		$style_path = wp_normalize_path( $snippet_dir . '/global-style.css' );
+		file_put_contents( $init_path, '<?php // init' );
+		file_put_contents( $style_path, 'body {}' );
+
+		$results = $this->discovery->discover( $this->tmp_dir, 'test-instance' );
+		$init    = $results['store'][ $init_path ];
+
+		$this->assertContains( 'global-style.css', $init['files'] );
+		$this->assertSame( $style_path, $init['filesMap']['global-style.css'] );
+		$this->assertContains( $style_path, $init['filesPaths'] );
+	}
+
 	public function test_non_init_php_file_not_discovered_in_normal_mode(): void {
 		file_put_contents( $this->tmp_dir . '/helper.php', '<?php // helper' );
 

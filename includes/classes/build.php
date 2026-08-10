@@ -872,12 +872,7 @@ class Build {
 		}
 
 		$registry->merge_data( $store );
-
-		foreach ( $registry->get_data() as $file ) {
-			if ( $file['init'] ) {
-				include_once $file['path'];
-			}
-		}
+		self::include_init_files( $registry );
 
 		// Apply overrides.
 		Perf::measure(
@@ -980,12 +975,7 @@ class Build {
 		);
 
 		$registry->merge_data( $store );
-
-		foreach ( $registry->get_data() as $file ) {
-			if ( $file['init'] ) {
-				include_once $file['path'];
-			}
-		}
+		self::include_init_files( $registry );
 
 		Perf::measure(
 			'build:overrides:cached',
@@ -998,6 +988,28 @@ class Build {
 
 		do_action( 'blockstudio/init' );
 		do_action( "blockstudio/init/$instance" );
+	}
+
+	/**
+	 * Include valid init files from the runtime registry.
+	 *
+	 * A source can disappear after discovery or cache hydration. Treat stale
+	 * entries as absent instead of emitting a warning during the request.
+	 *
+	 * @param Block_Registry $registry Block registry.
+	 *
+	 * @return void
+	 */
+	private static function include_init_files( Block_Registry $registry ): void {
+		foreach ( $registry->get_data() as $file ) {
+			$path = $file['path'] ?? null;
+
+			if ( ! ( $file['init'] ?? false ) || ! is_string( $path ) || ! is_file( $path ) ) {
+				continue;
+			}
+
+			include_once $path;
+		}
 	}
 
 	/**
