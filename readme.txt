@@ -56,6 +56,8 @@ Download the latest release zip from [GitHub Releases](https://github.com/inline
 
 = 7.6.7 =
 * Fix: every `init*.php` file beside a `block.json` executes without replacing the block's metadata or duplicating its asset, RPC, cron, and database discovery
+* Fix: themes without a `blockstudio.json` file use saved or default settings without repeated filesystem warnings
+* Fix: frontend InnerBlocks rendering and nameless editor transformations avoid PHP 8.5 null-offset deprecations
 
 = 7.6.6 =
 * Fix: manifest-owned nested HTML Site Templates and Template Parts expose only their declared slug instead of also leaking WordPress's path-derived `folder/index` entry

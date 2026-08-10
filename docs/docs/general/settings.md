@@ -17,6 +17,8 @@ Blockstudio includes a powerful settings API, that allows setting options via a 
 
 If a `blockstudio.json` file is present inside your theme folder, it will be used to set the default options for the current site. A [JSON schema](https://blockstudio.dev/schema/blockstudio) is available to validate the file and help with autocompletion when used in an IDE.
 
+The file is optional. Without it, Blockstudio uses settings saved in the admin area on top of its built-in defaults. Adding, changing, or removing the file is detected automatically, so no cache clear or manual reload is required.
+
 The following properties are available:
 
 ```json title="blockstudio.json"
