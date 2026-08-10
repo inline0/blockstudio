@@ -888,7 +888,11 @@ class Settings {
 	private static function source_fingerprint(): string {
 		$path = self::json_path();
 		clearstatcache( true, $path );
-		$stat = @stat( $path ); // phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged -- A missing file is the options branch, not an error.
+		$stat = false;
+
+		if ( is_file( $path ) ) {
+			$stat = @stat( $path ); // phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged -- The file can disappear between the existence check and stat.
+		}
 
 		if ( false !== $stat ) {
 			$signature = $path . ':' . $stat['mtime'] . ':' . $stat['size'] . ':' . $stat['ino'];

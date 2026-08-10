@@ -554,6 +554,82 @@ class SettingsTest extends TestCase {
 		$this->assertStringContainsString( 'blockstudio.json', $json );
 	}
 
+	public function test_missing_json_uses_saved_options_without_stat_warning(): void {
+		$path     = trailingslashit( get_temp_dir() ) . 'missing-blockstudio-' . wp_generate_uuid4() . '.json';
+		$previous = get_option( 'blockstudio_settings', null );
+		$warnings = array();
+
+		$this->add_filter( 'blockstudio/settings/path', static fn(): string => $path );
+		update_option(
+			'blockstudio_settings',
+			array(
+				'ui' => array( 'enabled' => true ),
+			),
+			false
+		);
+
+		set_error_handler(
+			static function ( int $severity, string $message ) use ( &$warnings ): bool {
+				if ( E_WARNING === $severity && str_contains( $message, 'stat(): stat failed' ) ) {
+					$warnings[] = $message;
+					return true;
+				}
+
+				return false;
+			}
+		);
+
+		try {
+			Settings::reload();
+
+			$this->assertTrue( Settings::get_bool( 'ui/enabled' ) );
+			$this->assertSame( array(), $warnings );
+		} finally {
+			restore_error_handler();
+
+			if ( null === $previous ) {
+				delete_option( 'blockstudio_settings' );
+			} else {
+				update_option( 'blockstudio_settings', $previous, false );
+			}
+		}
+	}
+
+	public function test_json_appearing_and_disappearing_switches_sources_automatically(): void {
+		$path     = trailingslashit( get_temp_dir() ) . 'dynamic-blockstudio-' . wp_generate_uuid4() . '.json';
+		$previous = get_option( 'blockstudio_settings', null );
+
+		$this->add_filter( 'blockstudio/settings/path', static fn(): string => $path );
+		update_option(
+			'blockstudio_settings',
+			array(
+				'ui' => array( 'enabled' => false ),
+			),
+			false
+		);
+
+		try {
+			Settings::reload();
+			$this->assertFalse( Settings::get_bool( 'ui/enabled' ) );
+
+			file_put_contents( $path, '{"ui":{"enabled":true}}' . "\n" );
+			$this->assertTrue( Settings::get_bool( 'ui/enabled' ) );
+
+			unlink( $path );
+			$this->assertFalse( Settings::get_bool( 'ui/enabled' ) );
+		} finally {
+			if ( is_file( $path ) ) {
+				unlink( $path );
+			}
+
+			if ( null === $previous ) {
+				delete_option( 'blockstudio_settings' );
+			} else {
+				update_option( 'blockstudio_settings', $previous, false );
+			}
+		}
+	}
+
 	// Legacy filter migration
 	// When blockstudio.json exists, JSON values merge after migration,
 	// so the legacy filter only affects the pre-JSON layer. The JSON

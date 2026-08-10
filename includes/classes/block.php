@@ -400,10 +400,15 @@ class Block {
 				$attribute_map[ $attr_name ] = $attr_value;
 			}
 
-			$attr_key    = $attribute_map['attribute'] ?? null;
-			$attribute   = ( $attr_key && false !== strpos( $attr_key, '[' ) )
-				? self::resolve_attribute_path( $attr_key, $block_attributes )
-				: ( $block_attributes[ $attr_key ] ?? null );
+			$attr_key  = $attribute_map['attribute'] ?? null;
+			$attribute = null;
+
+			if ( is_string( $attr_key ) && '' !== $attr_key ) {
+				$attribute = false !== strpos( $attr_key, '[' )
+					? self::resolve_attribute_path( $attr_key, $block_attributes )
+					: ( $block_attributes[ $attr_key ] ?? null );
+			}
+
 			$element_tag =
 				$attribute_map['tag'] ?? ( 'InnerBlocks' === $type ? 'div' : 'p' );
 
@@ -1834,14 +1839,24 @@ class Block {
 		);
 
 		// Examples.
+		$example_attributes = null;
+
+		if ( is_string( $name ) && '' !== $name ) {
+			$registered_block = Build::blocks()[ $name ] ?? null;
+			$example          = is_object( $registered_block )
+				? ( $registered_block->example ?? null )
+				: null;
+
+			if ( is_array( $example ) && is_array( $example['attributes'] ?? null ) ) {
+				$example_attributes = $example['attributes'];
+			}
+		}
+
 		if (
-			isset( Build::blocks()[ $name ]->example['attributes'] ) &&
+			is_array( $example_attributes ) &&
 			( $editor || $is_preview )
 		) {
-			foreach (
-				Build::blocks()[ $name ]->example['attributes']
-				as $k => $v
-			) {
+			foreach ( $example_attributes as $k => $v ) {
 				if (
 					isset( $v['blockstudio'] ) &&
 					isset( $v['type'] ) &&

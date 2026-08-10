@@ -233,8 +233,13 @@ class Block_Discovery {
 		}
 
 		// Build level and structure info.
-		$level                     = '/' . $logical_path;
-		$directory_entries         = $this->source?->children( $logical_dir ) ?? array();
+		$level             = '/' . $logical_path;
+		$is_manifest_init  = $classification['is_init'] && ! $is_editor && null !== $manifest_entry;
+		$directory_entries = $is_manifest_init
+			? array( $entry )
+			: ( $this->source?->children( $logical_dir ) ?? array() );
+
+		// The manifest entry owns sibling resources; an init entry only owns its executable file.
 		$block_arr_files           = array_map( static fn( Discovery_Entry $item ): string => basename( $item->logical_path() ), $directory_entries );
 		$block_arr_files_paths     = array_map( static fn( Discovery_Entry $item ): string => $item->physical_path(), $directory_entries );
 		$block_arr_files_map       = array_combine( $block_arr_files, $block_arr_files_paths );
@@ -242,10 +247,10 @@ class Block_Discovery {
 			$block_arr_files,
 			array_map( static fn( Discovery_Entry $item ): array => $item->provenance(), $directory_entries )
 		);
-		$block_arr_folders         = $this->get_directory_folders( $logical_dir );
+		$block_arr_folders         = $is_manifest_init ? array() : $this->get_directory_folders( $logical_dir );
 		$block_arr_structure_array = $this->calculate_structure_array( $level, $path_info );
 		$block_arr_structure       = $logical_path;
-		$render_template           = $this->find_render_template( $logical_dir );
+		$render_template           = $is_manifest_init ? false : $this->find_render_template( $logical_dir );
 
 		// Handle init files.
 		if ( $classification['is_init'] ) {
@@ -469,7 +474,7 @@ class Block_Discovery {
 	 * @return string|array The block name.
 	 */
 	private function determine_name( array $block_json, string $file_path, array $classification, bool $is_editor ) {
-		if ( $is_editor ) {
+		if ( $is_editor || $classification['is_init'] ) {
 			return $file_path;
 		}
 

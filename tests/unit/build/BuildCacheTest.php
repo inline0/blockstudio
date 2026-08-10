@@ -101,6 +101,15 @@ class BuildCacheTest extends TestCase {
 	private function snapshot_runtime_registry( string $block_name ): array {
 		$registry = Block_Registry::instance();
 		$block    = $registry->get_block( $block_name );
+		$init     = array();
+
+		foreach ( $registry->get_data() as $key => $data ) {
+			if ( $data['init'] ?? false ) {
+				$init[ $key ] = wp_normalize_path( $data['path'] );
+			}
+		}
+
+		ksort( $init );
 
 		$this->assertInstanceOf( \WP_Block_Type::class, $block );
 
@@ -119,6 +128,7 @@ class BuildCacheTest extends TestCase {
 			'assets_admin'        => $registry->get_assets_admin(),
 			'assets_block_editor' => $registry->get_assets_block_editor(),
 			'assets_global'       => $registry->get_assets_global(),
+			'init'                => $init,
 		);
 	}
 
@@ -640,7 +650,10 @@ class BuildCacheTest extends TestCase {
 		$block_name = 'blockstudio-test/cache-parity';
 		$block_json = $block_directory . '/block.json';
 		$template   = $block_directory . '/index.php';
+		$helpers    = $block_directory . '/init-helpers.php';
+		$init       = $block_directory . '/init.php';
 		$style      = $block_directory . '/style.css';
+		$state_key  = 'blockstudio_cache_init_' . md5( $directory );
 
 		$this->write_file(
 			$block_json,
@@ -663,6 +676,14 @@ class BuildCacheTest extends TestCase {
 			)
 		);
 		$this->write_file( $template, '<?php echo esc_html( $a["text"] ?? "" );' );
+		$this->write_file(
+			$helpers,
+			'<?php $GLOBALS[' . var_export( $state_key, true ) . '][] = "helpers";'
+		);
+		$this->write_file(
+			$init,
+			'<?php $GLOBALS[' . var_export( $state_key, true ) . '][] = "init";'
+		);
 		$this->write_file( $style, '.cache-parity { color: red; }' );
 
 		$path     = wp_normalize_path( $directory );
@@ -678,6 +699,16 @@ class BuildCacheTest extends TestCase {
 			Build::init( array( 'dir' => $path ) );
 			$this->assertIsArray( Build_Cache::load_runtime( $path, $instance ) );
 			$cold = $this->snapshot_runtime_registry( $block_name );
+			$this->assertSame( array( 'helpers', 'init' ), $GLOBALS[ $state_key ] ?? array() );
+			$this->assertFalse( $cold['data']['init'] );
+			$this->assertSame( wp_normalize_path( $block_json ), $cold['data']['path'] );
+			$this->assertSame(
+				array(
+					wp_normalize_path( $helpers ) => wp_normalize_path( $helpers ),
+					wp_normalize_path( $init )    => wp_normalize_path( $init ),
+				),
+				$cold['init']
+			);
 
 			$registry->reset();
 
@@ -695,6 +726,7 @@ class BuildCacheTest extends TestCase {
 
 			$this->assertFalse( $method->invoke( null, $registry ) );
 		} finally {
+			unset( $GLOBALS[ $state_key ] );
 			$registry->reset();
 
 			$default_build_dir = Build::get_build_dir();

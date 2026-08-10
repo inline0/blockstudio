@@ -285,6 +285,57 @@ class BuildTest extends TestCase {
 		$this->assertFalse( $method->invoke( null, 'administration.css', 'admin' ) );
 	}
 
+	public function test_init_executor_runs_valid_files_and_ignores_stale_paths(): void {
+		$registry  = ( new ReflectionClass( Block_Registry::class ) )->newInstanceWithoutConstructor();
+		$state_key = 'blockstudio_init_executor_' . uniqid();
+		$init_path = sys_get_temp_dir() . '/' . $state_key . '.php';
+		$warnings  = array();
+
+		file_put_contents(
+			$init_path,
+			'<?php $GLOBALS[' . var_export( $state_key, true ) . '] = true;'
+		);
+		$registry->merge_data(
+			array(
+				'valid' => array(
+					'init' => true,
+					'path' => $init_path,
+				),
+				'stale' => array(
+					'init' => true,
+					'path' => $init_path . '.missing',
+				),
+				'block' => array(
+					'init' => false,
+					'path' => $init_path . '.block',
+				),
+			)
+		);
+
+		set_error_handler(
+			static function ( int $severity, string $message ) use ( &$warnings ): bool {
+				$warnings[] = compact( 'severity', 'message' );
+				return true;
+			}
+		);
+
+		try {
+			$method = new ReflectionMethod( Build::class, 'include_init_files' );
+			$method->setAccessible( true );
+			$method->invoke( null, $registry );
+
+			$this->assertTrue( $GLOBALS[ $state_key ] ?? false );
+			$this->assertSame( array(), $warnings );
+		} finally {
+			restore_error_handler();
+			unset( $GLOBALS[ $state_key ] );
+
+			if ( is_file( $init_path ) ) {
+				unlink( $init_path );
+			}
+		}
+	}
+
 	// blade()
 
 	public function test_blade_returns_array(): void {
@@ -494,6 +545,8 @@ class BuildTest extends TestCase {
 			)
 		);
 		file_put_contents( $missing_dir . '/index.php', '<?php // render' );
+		file_put_contents( $missing_dir . '/init-helpers.php', '<?php // helpers' );
+		file_put_contents( $missing_dir . '/init.php', '<?php // init' );
 
 		mkdir( $version_dir, 0755, true );
 		file_put_contents(

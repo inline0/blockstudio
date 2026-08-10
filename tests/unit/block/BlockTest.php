@@ -235,6 +235,64 @@ class BlockTest extends TestCase {
 		$this->assertSame( 'deep value', $result );
 	}
 
+	public function test_frontend_inner_blocks_without_attribute_avoids_null_offset_deprecation(): void {
+		$deprecations = array();
+
+		set_error_handler(
+			static function ( int $severity, string $message ) use ( &$deprecations ): bool {
+				if ( E_DEPRECATED === $severity && str_contains( $message, 'null as an array offset' ) ) {
+					$deprecations[] = $message;
+					return true;
+				}
+
+				return false;
+			}
+		);
+
+		try {
+			$output = Block::replace_components(
+				'<InnerBlocks />',
+				'Nested content',
+				false,
+				(object) array(),
+				array(),
+				array(),
+				array()
+			);
+		} finally {
+			restore_error_handler();
+		}
+
+		$this->assertSame( array(), $deprecations );
+		$this->assertStringContainsString( 'Nested content', $output );
+		$this->assertStringNotContainsString( '<InnerBlocks', $output );
+	}
+
+	public function test_transform_without_block_name_avoids_null_offset_deprecation(): void {
+		$attributes   = array( 'blockstudio' => array( 'attributes' => array() ) );
+		$block        = array();
+		$deprecations = array();
+
+		set_error_handler(
+			static function ( int $severity, string $message ) use ( &$deprecations ): bool {
+				if ( E_DEPRECATED === $severity && str_contains( $message, 'null as an array offset' ) ) {
+					$deprecations[] = $message;
+					return true;
+				}
+
+				return false;
+			}
+		);
+
+		try {
+			Block::transform( $attributes, $block, null, true, false, array() );
+		} finally {
+			restore_error_handler();
+		}
+
+		$this->assertSame( array(), $deprecations );
+	}
+
 	public function test_render_filter_output_resolves_richtext(): void {
 		$filter = function ( $html, $block ) {
 			if ( 'blockstudio/type-text' === ( $block->name ?? '' ) ) {
