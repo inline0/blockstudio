@@ -31,6 +31,9 @@ test.beforeAll(async ({ browser }) => {
 
 test.describe('repeater-wysiwyg', () => {
   test('wysiwyg editor values follow rows after reorder', async () => {
+    await page.evaluate(() => {
+      localStorage.removeItem('blockstudioRepeater');
+    });
     await addBlock(page, 'type-repeater');
     canvas = await getEditorCanvas(page);
     await count(canvas, '.is-root-container > .wp-block', 1);
@@ -63,18 +66,16 @@ test.describe('repeater-wysiwyg', () => {
     await page.keyboard.press('ControlOrMeta+A');
     await page.keyboard.type('Second row');
 
-    await expect.poll(repeaterWysiwygValues).toEqual([
-      '<p>First row</p>',
-      '<p>Second row</p>',
-    ]);
+    await expect
+      .poll(repeaterWysiwygValues)
+      .toEqual(['<p>First row</p>', '<p>Second row</p>']);
 
     await page.focus('[data-rfd-draggable-id="repeater[0]"]');
     await page.keyboard.press('ArrowDown');
 
-    await expect.poll(repeaterWysiwygValues).toEqual([
-      '<p>Second row</p>',
-      '<p>First row</p>',
-    ]);
+    await expect
+      .poll(repeaterWysiwygValues)
+      .toEqual(['<p>Second row</p>', '<p>First row</p>']);
 
     const editors = page.locator(
       '[data-rfd-draggable-id^="repeater["] .blockstudio-fields__field--wysiwyg .ProseMirror',
