@@ -256,6 +256,9 @@ class AssetsTest extends TestCase {
 		if ( $has_interactivity ) {
 			$this->assertStringContainsString( '<script', $result );
 			$this->assertStringContainsString( '@wordpress/interactivity', $result );
+			$this->assertStringContainsString( 'r(v(n),f(n));n.dataset.wpProcessed="1"', $result );
+			$this->assertStringContainsString( 'o.observe(document.documentElement', $result );
+			$this->assertStringNotContainsString( 'o.observe(document.body', $result );
 		} else {
 			$this->assertSame( '', $result );
 		}

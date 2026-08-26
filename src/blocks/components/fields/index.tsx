@@ -103,6 +103,40 @@ const remapRichTextAfterRepeaterRemove = (
   return nextEntries;
 };
 
+const remapRichTextAfterRepeaterSort = (
+  entries: Record<string, string>,
+  repeaterPath: string,
+  order: number[],
+): Record<string, string> => {
+  const nextEntries: Record<string, string> = {};
+  const pattern = new RegExp(
+    `^${escapeRegExp(repeaterPath)}\\[(\\d+)\\](\\..+)$`,
+  );
+  const reorderedIndexes = new Map(
+    order.map((previousIndex, nextIndex) => [previousIndex, nextIndex]),
+  );
+
+  Object.entries(entries).forEach(([key, value]) => {
+    const match = key.match(pattern);
+
+    if (!match) {
+      nextEntries[key] = value;
+      return;
+    }
+
+    const nextIndex = reorderedIndexes.get(Number(match[1]));
+
+    if (nextIndex === undefined) {
+      nextEntries[key] = value;
+      return;
+    }
+
+    nextEntries[`${repeaterPath}[${nextIndex}]${match[2]}`] = value;
+  });
+
+  return nextEntries;
+};
+
 export const Fields = ({
   attributes,
   block,
@@ -432,6 +466,9 @@ export const Fields = ({
     const sort: BlockstudioFieldsRepeaterSort = (order, id) => {
       const key = `blockstudio.attributes.${id}`;
       const newAttributes = JSON.parse(JSON.stringify(attributes));
+      const normalizedOrder = (Array.isArray(order) ? order : [order]).map(
+        Number,
+      );
       const values = ((result(newAttributes, key) || []) as Any[]).map(
         (e: Any, index: number) => {
           return {
@@ -442,17 +479,17 @@ export const Fields = ({
       );
       const sortedValues = values.sort(
         (a, b) =>
-          order.indexOf(
+          normalizedOrder.indexOf(
             (
               a as unknown as {
-                __BLOCKSTUDIO_INDEX: string;
+                __BLOCKSTUDIO_INDEX: number;
               }
             ).__BLOCKSTUDIO_INDEX,
           ) -
-          order.indexOf(
+          normalizedOrder.indexOf(
             (
               b as unknown as {
-                __BLOCKSTUDIO_INDEX: string;
+                __BLOCKSTUDIO_INDEX: number;
               }
             ).__BLOCKSTUDIO_INDEX,
           ),
@@ -466,6 +503,16 @@ export const Fields = ({
           __BLOCKSTUDIO_INDEX: undefined,
         })),
       );
+
+      if (richTextEntries) {
+        setRichText({
+          [clientId]: remapRichTextAfterRepeaterSort(
+            richTextEntries,
+            id,
+            normalizedOrder,
+          ),
+        });
+      }
 
       setRepeater(newAttributes, getRepeaterKey(id));
     };
