@@ -56,6 +56,7 @@ Download the latest release zip from [GitHub Releases](https://github.com/inline
 
 = 7.6.8 =
 * Fix: reordered repeater rows keep RichText sub-field values attached to their rows after saving
+* Fix: interactive blocks hydrate reliably in the editor when WordPress replaces the canvas body
 
 = 7.6.7 =
 * Fix: every `init*.php` file beside a `block.json` executes without replacing the block's metadata or duplicating its asset, RPC, cron, and database discovery

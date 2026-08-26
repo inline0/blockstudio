@@ -723,11 +723,11 @@ class Assets {
 			. 'var ss=n.dataset.wpServerState;'
 			. 'if(ss){var ns=n.dataset.wpInteractive;store(ns,{state:JSON.parse(ss)})}'
 			. 'fixTpl(n);'
-			. 'n.dataset.wpProcessed="1";r(v(n),f(n))})};'
+			. 'r(v(n),f(n));n.dataset.wpProcessed="1"})};'
 			. 'const o=new MutationObserver(()=>p());'
-			. 'if(document.body){o.observe(document.body,{childList:true,subtree:true});p()}'
+			. 'if(document.documentElement){o.observe(document.documentElement,{childList:true,subtree:true});p()}'
 			. 'else{document.addEventListener("DOMContentLoaded",()=>{'
-			. 'o.observe(document.body,{childList:true,subtree:true});p()})}'
+			. 'o.observe(document.documentElement,{childList:true,subtree:true});p()})}'
 			. '</script>';
 
 		// Inject bs.db / bs.fn / bs.mutate client scripts so interactive

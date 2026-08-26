@@ -38,7 +38,9 @@ test.describe('interactivity', () => {
     await save(page);
     await page.goto('http://localhost:8888/wp-admin/post.php?post=1483&action=edit', { waitUntil: 'domcontentloaded' });
     const canvas = await getEditorCanvas(page);
-    await canvas.locator('[data-wp-interactive="blockstudioTest"]').waitFor({ state: 'visible', timeout: 30000 });
+    await canvas
+      .locator('[data-wp-interactive="blockstudioTest"][data-wp-processed]')
+      .waitFor({ state: 'visible', timeout: 30000 });
   });
 
   test('editor: hidden content is initially hidden', async () => {
@@ -69,7 +71,9 @@ test.describe('interactivity', () => {
     const input = page.locator('.blockstudio-fields input[type="text"]').first();
     await input.fill('Changed value');
     await delay(2000);
-    await canvas.locator('[data-wp-interactive="blockstudioTest"]').waitFor({ state: 'visible', timeout: 10000 });
+    await canvas
+      .locator('[data-wp-interactive="blockstudioTest"][data-wp-processed]')
+      .waitFor({ state: 'visible', timeout: 10000 });
   });
 
   test('editor: directives work after re-render', async () => {
