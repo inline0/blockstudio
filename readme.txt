@@ -3,7 +3,7 @@ Contributors: dnnsjsk
 Requires at least: 6.7
 Tested up to: 7.0.0
 Requires PHP: 8.2
-Stable tag: 7.6.7
+Stable tag: 7.6.8
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -53,6 +53,9 @@ Download the latest release zip from [GitHub Releases](https://github.com/inline
 * [Getting Started](https://blockstudio.dev/docs/getting-started)
 
 == Changelog ==
+
+= 7.6.8 =
+* Fix: reordered repeater rows keep RichText sub-field values attached to their rows after saving
 
 = 7.6.7 =
 * Fix: every `init*.php` file beside a `block.json` executes without replacing the block's metadata or duplicating its asset, RPC, cron, and database discovery

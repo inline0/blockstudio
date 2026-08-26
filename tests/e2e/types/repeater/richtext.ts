@@ -1,4 +1,4 @@
-import { Frame, Page, test } from '@playwright/test';
+import { expect, Frame, Page, test } from '@playwright/test';
 import {
 	addBlock,
 	checkForLeftoverAttributes,
@@ -12,6 +12,42 @@ import {
 
 let page: Page;
 let canvas: Frame;
+
+const repeaterHeadings = async () =>
+	page.evaluate(() => {
+		const block = (window as any).wp.data
+			.select('core/block-editor')
+			.getBlocks()
+			.find(
+				(item: { name: string }) =>
+					item.name === 'blockstudio/type-repeater-richtext',
+			);
+
+		return (
+			block?.attributes?.blockstudio?.attributes?.items?.map(
+				(item: { heading?: string }) => item.heading,
+			) ?? []
+		);
+	});
+
+const savedRepeaterHeadings = async () =>
+	page.evaluate(async () => {
+		const post = await (window as any).wp.apiFetch({
+			path: '/wp/v2/posts/1483?context=edit',
+		});
+		const block = (window as any).wp.blocks
+			.parse(post.content.raw)
+			.find(
+				(item: { name: string }) =>
+					item.name === 'blockstudio/type-repeater-richtext',
+			);
+
+		return (
+			block?.attributes?.blockstudio?.attributes?.items?.map(
+				(item: { heading?: string }) => item.heading,
+			) ?? []
+		);
+	});
 
 test.describe.configure({ mode: 'serial' });
 
@@ -111,5 +147,50 @@ test.describe('repeater-richtext', () => {
 		await count(canvas, 'text=Hello Repeater', 1);
 		await count(canvas, 'text=Body text here', 1);
 		await count(canvas, 'text=Cannot delete this', 0);
+	});
+
+	test('reordering saved rows with richtext persists', async () => {
+		await canvas.locator('.repeater-heading').first().click();
+		await openSidebar(page);
+
+		await page.getByRole('button', { name: 'Add item' }).click();
+		await expect.poll(async () => (await repeaterHeadings()).length).toBe(2);
+		await page.getByRole('button', { name: 'Add item' }).click();
+		await expect.poll(async () => (await repeaterHeadings()).length).toBe(3);
+
+		canvas = await getEditorCanvas(page);
+		await count(canvas, '.repeater-heading', 3);
+		for (const [index, value] of ['A', 'B', 'C'].entries()) {
+			const heading = canvas.locator('.repeater-heading').nth(index);
+			await heading.click();
+			await page.keyboard.press('ControlOrMeta+A');
+			await page.keyboard.type(value);
+			await expect(heading).toHaveText(value);
+		}
+
+		await save(page);
+		await page.goto(
+			'http://localhost:8888/wp-admin/post.php?post=1483&action=edit',
+		);
+		canvas = await getEditorCanvas(page);
+		await canvas.waitForSelector('.repeater-heading', { timeout: 30000 });
+		await expect.poll(repeaterHeadings).toEqual(['A', 'B', 'C']);
+
+		await canvas.locator('.repeater-heading').first().click();
+		await openSidebar(page);
+		await page.focus('[data-rfd-draggable-id="items[2]"]');
+		await page.keyboard.press('ArrowUp');
+		await page.keyboard.press('ArrowUp');
+		await expect.poll(repeaterHeadings).toEqual(['C', 'A', 'B']);
+
+		await save(page);
+		await page.goto(
+			'http://localhost:8888/wp-admin/post.php?post=1483&action=edit',
+		);
+		canvas = await getEditorCanvas(page);
+		await canvas.waitForSelector('.repeater-heading', { timeout: 30000 });
+
+		await expect.poll(repeaterHeadings).toEqual(['C', 'A', 'B']);
+		await expect.poll(savedRepeaterHeadings).toEqual(['C', 'A', 'B']);
 	});
 });
