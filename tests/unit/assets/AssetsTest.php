@@ -3,6 +3,7 @@
 use Blockstudio\Assets;
 use Blockstudio\Block;
 use Blockstudio\Build;
+use Blockstudio\Single_Flight;
 use PHPUnit\Framework\Attributes\PreserveGlobalState;
 use PHPUnit\Framework\Attributes\RunInSeparateProcess;
 use PHPUnit\Framework\TestCase;
@@ -918,5 +919,99 @@ class AssetsTest extends TestCase {
 		}
 
 		$this->assertFalse( $started );
+	}
+
+	public function test_compile_once_publishes_a_cold_asset(): void {
+		$compiled = $this->temporary_compiled_path();
+		$calls    = 0;
+
+		$published = $this->compile_once(
+			$compiled,
+			static function () use ( &$calls ): string {
+				++$calls;
+
+				return '.cold { color: red; }';
+			}
+		);
+
+		$this->assertTrue( $published );
+		$this->assertSame( 1, $calls );
+		$this->assertFileExists( $compiled );
+		$this->assertSame( '.cold { color: red; }', file_get_contents( $compiled ) );
+	}
+
+	public function test_compile_once_skips_the_compiler_when_the_asset_is_already_published(): void {
+		$compiled = $this->temporary_compiled_path();
+		$calls    = 0;
+
+		wp_mkdir_p( dirname( $compiled ) );
+		file_put_contents( $compiled, '.published { color: red; }' );
+
+		$published = $this->compile_once(
+			$compiled,
+			static function () use ( &$calls ): string {
+				++$calls;
+
+				return '.duplicate { color: blue; }';
+			}
+		);
+
+		$this->assertTrue( $published );
+		$this->assertSame( 0, $calls );
+		$this->assertSame( '.published { color: red; }', file_get_contents( $compiled ) );
+	}
+
+	public function test_compile_once_skips_the_compiler_when_another_request_published_under_the_lock(): void {
+		$compiled = $this->temporary_compiled_path();
+		$calls    = 0;
+
+		wp_mkdir_p( dirname( $compiled ) );
+
+		// flock() locks an open file description, so a second acquire() contends
+		// here exactly as a concurrent request would.
+		$lock = Single_Flight::acquire( $compiled . '.lock' );
+		$this->assertIsResource( $lock );
+		$this->assertFalse( Single_Flight::acquire( $compiled . '.lock' ) );
+
+		file_put_contents( $compiled, '.published { color: red; }' );
+
+		$published = $this->compile_once(
+			$compiled,
+			static function () use ( &$calls ): string {
+				++$calls;
+
+				return '.duplicate { color: blue; }';
+			}
+		);
+
+		Single_Flight::release( $lock );
+
+		$this->assertTrue( $published );
+		$this->assertSame( 0, $calls );
+		$this->assertSame( '.published { color: red; }', file_get_contents( $compiled ) );
+	}
+
+	public function test_compile_once_releases_the_lock_after_publishing(): void {
+		$compiled = $this->temporary_compiled_path();
+
+		$this->compile_once( $compiled, static fn (): string => '.cold { color: red; }' );
+
+		$lock = Single_Flight::acquire( $compiled . '.lock' );
+
+		$this->assertIsResource( $lock );
+
+		Single_Flight::release( $lock );
+	}
+
+	private function temporary_compiled_path(): string {
+		$source = $this->create_temporary_asset( 'style.css', '.source { color: red; }' );
+
+		return dirname( $source ) . '/_dist/style.css';
+	}
+
+	private function compile_once( string $compiled_filename, callable $compiler ): bool {
+		$method = ( new \ReflectionClass( Assets::class ) )->getMethod( 'compile_once' );
+
+		return (bool) $method->invoke( null, $compiled_filename, $compiler );
 	}
 }

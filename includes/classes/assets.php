@@ -87,6 +87,17 @@ class Assets {
 	private const SELECTOR_PLACEHOLDER_CLASS = '__blockstudio-selector-placeholder__';
 
 	/**
+	 * Wait budget for requests contending on a cold compiled asset in ms.
+	 *
+	 * Mirrors the runtime build election in Build::init(): contending
+	 * requests wait this long for the elected compiler to publish, then
+	 * compile unguarded.
+	 *
+	 * @var int
+	 */
+	private const COMPILE_WAIT_BUDGET_MS = 5000;
+
+	/**
 	 * Loaded modules.
 	 *
 	 * @var array
@@ -1746,6 +1757,63 @@ class Assets {
 	}
 
 	/**
+	 * Compile a cold asset exactly once across concurrent requests.
+	 *
+	 * Single_Flight::publish() makes the write atomic, but the compile
+	 * itself was unguarded: N concurrent requests on a missing compiled
+	 * file each ran the full compile, then published identical bytes. One
+	 * request per compiled filename is elected via a Single_Flight lock
+	 * and runs the compiler; contending requests wait a bounded time for
+	 * the published file to appear instead of duplicating the work. A
+	 * request whose wait budget expires compiles unguarded so asset
+	 * processing always completes, matching the runtime build election in
+	 * Build::init().
+	 *
+	 * @param string   $compiled_filename The compiled file path.
+	 * @param callable $compiler          Returns the content to publish.
+	 *
+	 * @return bool Whether the compiled file is published.
+	 */
+	private static function compile_once( string $compiled_filename, callable $compiler ): bool {
+		$lock = Single_Flight::acquire( $compiled_filename . '.lock' );
+
+		if ( false === $lock ) {
+			$published = Single_Flight::wait(
+				static function () use ( $compiled_filename ): ?bool {
+					clearstatcache( true, $compiled_filename );
+
+					return file_exists( $compiled_filename ) ? true : null;
+				},
+				self::COMPILE_WAIT_BUDGET_MS
+			);
+
+			if ( true === $published ) {
+				return true;
+			}
+
+			$lock = Single_Flight::acquire( $compiled_filename . '.lock' );
+
+			if ( false === $lock ) {
+				$lock = null;
+			}
+		}
+
+		try {
+			clearstatcache( true, $compiled_filename );
+
+			if ( file_exists( $compiled_filename ) ) {
+				return true;
+			}
+
+			return Single_Flight::publish( $compiled_filename, (string) $compiler() );
+		} finally {
+			if ( is_resource( $lock ) ) {
+				Single_Flight::release( $lock );
+			}
+		}
+	}
+
+	/**
 	 * Transform CSS assets and print to file.
 	 *
 	 * @param string $path         The file path.
@@ -1776,26 +1844,33 @@ class Assets {
 			return;
 		}
 
-		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Reading local file.
-		$data = apply_filters( 'blockstudio/assets/process/css/content', file_get_contents( $path ) );
-		$data = self::replace_selector_placeholder( $data, $scoped_class, $scope_css );
+		$published = self::compile_once(
+			$compiled_filename,
+			static function () use ( $path, $scoped_class, $process_scss, $scope_css, $minify_css ): string {
+				// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Reading local file.
+				$data = apply_filters( 'blockstudio/assets/process/css/content', file_get_contents( $path ) );
+				$data = self::replace_selector_placeholder( $data, $scoped_class, $scope_css );
 
-		if ( $process_scss ) {
-			$data = self::compile_scss( $data, $path );
-		}
+				if ( $process_scss ) {
+					$data = self::compile_scss( $data, $path );
+				}
 
-		if ( $scope_css ) {
-			$data = self::prefix_css( $data, '.' . $scoped_class );
-			$data = self::resolve_scoped_selector_placeholder( $data, $scoped_class );
-		}
+				if ( $scope_css ) {
+					$data = self::prefix_css( $data, '.' . $scoped_class );
+					$data = self::resolve_scoped_selector_placeholder( $data, $scoped_class );
+				}
 
-		if ( $minify_css ) {
-			$minifier = new Minify\CSS();
-			$minifier->add( $data );
-			$data = $minifier->minify();
-		}
+				if ( $minify_css ) {
+					$minifier = new Minify\CSS();
+					$minifier->add( $data );
+					$data = $minifier->minify();
+				}
 
-		if ( ! Single_Flight::publish( $compiled_filename, $data ) ) {
+				return $data;
+			}
+		);
+
+		if ( ! $published ) {
 			return;
 		}
 
@@ -1851,17 +1926,22 @@ class Assets {
 			);
 		}
 
-		if ( $minify_js ) {
-			$minifier = new Minify\JS();
-			$minifier->add( $data );
-			$data = $minifier->minify();
-		}
+		if ( $minify_js || $has_es_modules || $has_css_modules ) {
+			$published = self::compile_once(
+				$compiled_filename,
+				static function () use ( $data, $minify_js ): string {
+					if ( ! $minify_js ) {
+						return $data;
+					}
 
-		if (
-			! file_exists( $compiled_filename ) &&
-			( $minify_js || $has_es_modules || $has_css_modules )
-		) {
-			if ( ! Single_Flight::publish( $compiled_filename, $data ) ) {
+					$minifier = new Minify\JS();
+					$minifier->add( $data );
+
+					return $minifier->minify();
+				}
+			);
+
+			if ( ! $published ) {
 				return;
 			}
 
