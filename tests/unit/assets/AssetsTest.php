@@ -2,6 +2,7 @@
 
 use Blockstudio\Assets;
 use Blockstudio\Block;
+use Blockstudio\Block_Registry;
 use Blockstudio\Build;
 use Blockstudio\Single_Flight;
 use PHPUnit\Framework\Attributes\PreserveGlobalState;
@@ -508,6 +509,46 @@ class AssetsTest extends TestCase {
 		$this->assertStringContainsString( '</head>', $result );
 		$this->assertStringContainsString( '</body>', $result );
 		$this->assertStringContainsString( '<p>Content</p>', $result );
+	}
+
+	public function test_parse_output_emits_each_bundled_ui_global_once(): void {
+		$name     = 'blockstudio-test/ui-global-dedupe';
+		$registry = Block_Registry::instance();
+		$path     = BLOCKSTUDIO_DIR . '/includes/ui/blocks/button/root/index.php';
+		$data     = array(
+			'name'   => $name,
+			'path'   => $path,
+			'file'   => array( 'dirname' => dirname( $path ) ),
+			'assets' => array(
+				'global-style.css' => array(
+					'path'   => BLOCKSTUDIO_DIR . '/includes/ui/blocks/global-style.css',
+					'type'   => 'file',
+					'editor' => false,
+				),
+				'global-script.js' => array(
+					'path'   => BLOCKSTUDIO_DIR . '/includes/ui/blocks/global-script.js',
+					'type'   => 'file',
+					'editor' => false,
+				),
+			),
+		);
+
+		$registry->register_block( $name, new \WP_Block_Type( $name ) );
+		$registry->set_block_data( $name, $data );
+		Assets::reset_request_state();
+
+		try {
+			$html   = '<html><head></head><body>' . Block::comment( $name ) . '<button data-bsui-button>Button</button></body></html>';
+			$output = ( new Assets() )->parse_output( $html );
+
+			$this->assertSame( 1, substr_count( $output, 'id="blockstudio-ui-global"' ) );
+			$this->assertSame( 1, substr_count( $output, 'id="blockstudio-ui-global-script"' ) );
+			$this->assertStringNotContainsString( 'global-style.css?', $output );
+			$this->assertStringNotContainsString( 'global-script.js?', $output );
+		} finally {
+			$registry->remove_block( $name );
+			Assets::reset_request_state();
+		}
 	}
 
 	public function test_parse_output_keeps_frontend_assets_when_render_filter_replaces_output(): void {

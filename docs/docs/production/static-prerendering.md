@@ -129,6 +129,14 @@ that retention pruning never touches, and files the map references are immune
 to eviction wherever they live, so live render traffic cannot age mapped
 routes out of early serving.
 
+Mapped graph routes always use the activated artifact. When a safe anonymous
+route is not in that map but WordPress has since rendered and persisted it,
+Early Serve falls back to the identity-keyed runtime store before booting
+WordPress. This supports generated or long-tail routes outside a deliberately
+bounded deployment graph. The fallback uses the activated graph identity and
+the same host, path normalization, TTL, cookie, header, query-string, dynamic
+path, feed, and search bypass rules as mapped routes.
+
 ## Warming, maintenance, and observability
 
 The warm queue is durable, URL-coalescing, single-flight, and recovers timed-out

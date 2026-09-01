@@ -247,8 +247,12 @@ class Tailwind {
 			}
 		);
 
+		$compiled_path = is_file( $cache_path ) ? $cache_path : '';
+
 		if ( null === $compiled ) {
-			$compiled = self::read_last_good_css();
+			$last_good     = self::read_last_good_css();
+			$compiled      = $last_good['css'] ?? null;
+			$compiled_path = $last_good['path'] ?? '';
 		}
 
 		if ( empty( $compiled ) ) {
@@ -259,7 +263,7 @@ class Tailwind {
 
 		return str_replace(
 			'</head>',
-			'<style id="blockstudio-tailwind">' . $compiled . "</style>\n</head>",
+			self::stylesheet_markup( $compiled, $compiled_path ) . "\n</head>",
 			$html
 		);
 	}
@@ -349,9 +353,9 @@ class Tailwind {
 	 * The near-match is not published under the cold key, so a later request
 	 * still compiles the exact CSS.
 	 *
-	 * @return string|null Most recent cached CSS, or null when none exists.
+	 * @return array{css:string,path:string}|null Most recent cached CSS, or null when none exists.
 	 */
-	private static function read_last_good_css(): ?string {
+	private static function read_last_good_css(): ?array {
 		$files = glob( self::get_cache_dir() . '/*.css' );
 
 		if ( ! is_array( $files ) || empty( $files ) ) {
@@ -368,11 +372,59 @@ class Tailwind {
 			$content = is_file( $file ) ? file_get_contents( $file ) : false;
 
 			if ( false !== $content && '' !== $content ) {
-				return $content;
+				return array(
+					'css'  => $content,
+					'path' => $file,
+				);
 			}
 		}
 
 		return null;
+	}
+
+	/**
+	 * Build the frontend stylesheet markup for compiled CSS.
+	 *
+	 * Inline output remains the compatibility default. Link output is used only
+	 * when the content-hashed cache file exists and resolves to a public URL.
+	 * Absolute private cache roots can provide that URL through the existing
+	 * blockstudio/files/url filter; otherwise output safely stays inline.
+	 *
+	 * @param string $compiled Compiled CSS.
+	 * @param string $path     Published cache file path.
+	 *
+	 * @return string Stylesheet markup.
+	 */
+	private static function stylesheet_markup( string $compiled, string $path ): string {
+		if ( 'link' === Settings::get_string( 'tailwind/output', 'inline' ) && '' !== $path && is_file( $path ) ) {
+			$url = self::cache_url( $path );
+
+			if ( '' !== $url ) {
+				// phpcs:ignore WordPress.WP.EnqueuedResources.NonEnqueuedStylesheet -- Intentional content-hashed runtime stylesheet output.
+				return '<link id="blockstudio-tailwind" rel="stylesheet" href="' . esc_url( $url ) . '">';
+			}
+		}
+
+		return '<style id="blockstudio-tailwind">' . $compiled . '</style>';
+	}
+
+	/**
+	 * Resolve the public URL for one Tailwind cache file.
+	 *
+	 * @param string $path Cache file path.
+	 *
+	 * @return string Public URL, or an empty string for a private cache root.
+	 */
+	private static function cache_url( string $path ): string {
+		$path        = wp_normalize_path( $path );
+		$content_dir = rtrim( wp_normalize_path( WP_CONTENT_DIR ), '/' );
+		$url         = '';
+
+		if ( str_starts_with( $path, $content_dir . '/' ) ) {
+			$url = rtrim( content_url(), '/' ) . substr( $path, strlen( $content_dir ) );
+		}
+
+		return Runtime_Context::file_url( $url, $path, 'tailwind' );
 	}
 
 	/**

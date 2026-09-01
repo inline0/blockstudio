@@ -319,6 +319,35 @@ class Ui {
 	}
 
 	/**
+	 * Check whether an asset is one of the shared bundled UI globals.
+	 *
+	 * These two files are emitted conditionally by global_assets(). The generic
+	 * block asset pipeline must skip them or every UI document receives both an
+	 * inline copy and an external copy.
+	 *
+	 * @param mixed $path Asset path.
+	 *
+	 * @return bool Whether the asset is owned by global_assets().
+	 */
+	public static function is_global_asset_path( mixed $path ): bool {
+		if ( ! is_string( $path ) || '' === $path ) {
+			return false;
+		}
+
+		$root = wp_normalize_path( BLOCKSTUDIO_DIR . '/includes/ui/blocks/' );
+		$path = wp_normalize_path( $path );
+
+		return in_array(
+			$path,
+			array(
+				$root . 'global-style.css',
+				$root . 'global-script.js',
+			),
+			true
+		);
+	}
+
+	/**
 	 * Normalize all bundled UI registrations.
 	 *
 	 * @return array<int, array{

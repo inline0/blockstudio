@@ -86,8 +86,11 @@ add_filter('blockstudio/cache/watch_debounce', function () {
 ```
 
 The debounce can delay automatic source-change detection by at most the
-configured number of seconds. Set it to `0` when a production-like environment
-is also used for active file authoring.
+configured number of seconds. Required compiled assets are still checked on
+every cache hit, so deleting an `_dist` directory invalidates the runtime
+payload immediately instead of serving raw CSS or dropping SCSS until the
+window expires. Set the debounce to `0` when a production-like environment is
+also used for active file authoring.
 
 ## Concurrency and retention
 
@@ -119,6 +122,15 @@ Unused namespaces are collected automatically instead of accumulating on every
 plugin activation and PHP or WordPress update. A deployment snippet that used
 to glob the old Tailwind cache directory should call
 `Blockstudio\Runtime_Cache::purge('tailwind')` instead.
+
+When an upgraded installation contains the pre-7.6 flat
+`cache/runtime` directory, Blockstudio atomically renames it out of the active
+path. A WP-Cron job then removes at most 500 filesystem entries per pass. This
+keeps old payload and `.build.lock` trees from consuming disk without making
+the request that detects a large directory recursively delete it. The cleanup
+runs only while `cache.enabled` is active; change its batch size with
+`blockstudio/cache/legacy_cleanup_batch_size` when a host needs smaller or
+larger passes.
 
 Disable the persistent caches in `blockstudio.json`:
 

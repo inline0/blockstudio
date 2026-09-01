@@ -660,6 +660,17 @@
           "descriptionFilter": "This filter allows you to add a custom Tailwind CSS configuration.",
           "element": "textarea",
           "example": "@theme { --color-primary: pink; }"
+        },
+        "output": {
+          "type": "string",
+          "enum": [
+            "inline",
+            "link"
+          ],
+          "default": "inline",
+          "description": "Emit compiled frontend Tailwind CSS inline or as a content-hashed stylesheet link.",
+          "descriptionFilter": "This filter allows you to choose inline or linked Tailwind CSS output.",
+          "example": "link"
         }
       },
       "additionalProperties": false

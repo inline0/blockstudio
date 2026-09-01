@@ -94,7 +94,7 @@ final class Render_Document {
 
 		$tailwind = self::matching_markup(
 			$document,
-			'#<style\b[^>]*\bid=(["\'])blockstudio-tailwind\1[^>]*>.*?</style>#is'
+			'#<(?:style\b(?=[^>]*\bid=(["\'])blockstudio-tailwind\1)[^>]*>.*?</style>|link\b(?=[^>]*\bid=(["\'])blockstudio-tailwind\2)[^>]*>)#is'
 		);
 		$styles   = self::matching_markup(
 			$document,
@@ -360,6 +360,7 @@ final class Render_Document {
 				if ( ! empty( $asset['editor'] )
 					|| str_starts_with( $asset_id, 'admin' )
 					|| str_starts_with( $asset_id, 'block-editor' )
+					|| Ui::is_global_asset_path( $asset['path'] ?? null )
 				) {
 					continue;
 				}

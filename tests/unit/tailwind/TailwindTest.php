@@ -97,6 +97,31 @@ class TailwindTest extends TestCase {
 		$this->assertStringContainsString( '</head>', $result );
 	}
 
+	public function test_compile_can_link_the_content_hashed_cache_file(): void {
+		if ( ! Settings::get( 'tailwind/enabled' ) ) {
+			$this->markTestSkipped( 'Tailwind is not enabled in test theme settings.' );
+		}
+
+		$output = static fn(): string => 'link';
+		add_filter( 'blockstudio/settings/tailwind/output', $output );
+		$this->reset_settings();
+		Tailwind::reset_request_state();
+
+		try {
+			$html   = '<html><head></head><body><p class="unit-linked-tailwind text-red-500">Linked</p></body></html>';
+			$result = ( new Tailwind() )->compile( $html );
+
+			$this->assertMatchesRegularExpression(
+				'#<link id="blockstudio-tailwind" rel="stylesheet" href="[^"]+/tailwind/[a-f0-9]{32}\.css">#',
+				$result
+			);
+			$this->assertStringNotContainsString( '<style id="blockstudio-tailwind">', $result );
+		} finally {
+			remove_filter( 'blockstudio/settings/tailwind/output', $output );
+			$this->reset_settings();
+		}
+	}
+
 	public function test_compile_does_not_run_twice(): void {
 		if ( ! Settings::get( 'tailwind/enabled' ) ) {
 			$this->markTestSkipped( 'Tailwind is not enabled in test theme settings.' );

@@ -3,7 +3,7 @@ Contributors: dnnsjsk
 Requires at least: 6.7
 Tested up to: 7.0.0
 Requires PHP: 8.2
-Stable tag: 7.6.9
+Stable tag: 7.6.10
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -53,6 +53,13 @@ Download the latest release zip from [GitHub Releases](https://github.com/inline
 * [Getting Started](https://blockstudio.dev/docs/getting-started)
 
 == Changelog ==
+
+= 7.6.10 =
+* New: Tailwind can emit its content-hashed runtime cache file as a reusable stylesheet with `tailwind.output: "link"`, while inline output remains the default
+* Fix: runtime cache hits immediately invalidate when a required compiled asset disappears, including inside the production watch debounce window
+* Fix: pre-7.6 flat runtime cache directories are atomically quarantined and removed in bounded WP-Cron batches instead of remaining on disk indefinitely
+* Fix: bundled UI global CSS and JavaScript are emitted exactly once per document
+* Fix: graph-mode Early Serve falls back to a matching identity-cached page when a safe route is absent from the deployed graph
 
 = 7.6.9 =
 * Fix: concurrent cold-cache requests elect one compiler per generated CSS or JavaScript output, avoiding duplicate SCSS and minification work

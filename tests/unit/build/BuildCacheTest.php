@@ -8,6 +8,7 @@
 use Blockstudio\Block_Registry;
 use Blockstudio\Build;
 use Blockstudio\Build_Cache;
+use Blockstudio\Assets;
 use Blockstudio\Files;
 use PHPUnit\Framework\TestCase;
 
@@ -62,7 +63,9 @@ class BuildCacheTest extends TestCase {
 	 * @return void
 	 */
 	private function track_cache_file( string $scope, string $key ): void {
-		$this->cache_files[] = Build_Cache::get_cache_dir( $scope ) . '/' . sanitize_file_name( $key ) . '.php';
+		$file                = Build_Cache::get_cache_dir( $scope ) . '/' . sanitize_file_name( $key ) . '.php';
+		$this->cache_files[] = $file;
+		$this->cache_files[] = $file . '.ok';
 	}
 
 	/**
@@ -455,6 +458,56 @@ class BuildCacheTest extends TestCase {
 		$this->write_file( $dependency, '$color: blue; $gap: 1rem;' );
 
 		$this->assertNull( Build_Cache::load_runtime( $directory, 'test-instance' ) );
+	}
+
+	/**
+	 * A fresh debounce stamp never hides a deleted compiled asset.
+	 *
+	 * @return void
+	 */
+	public function test_runtime_cache_checks_compiled_assets_inside_debounce_window(): void {
+		$directory = $this->create_temporary_directory();
+		$source    = $directory . '/style.scss';
+		$dist      = Assets::get_dist_folder( $source );
+		$compiled  = $dist . '/style-' . str_repeat( 'a', 32 ) . '.css';
+
+		wp_mkdir_p( $dist );
+		$this->write_file( $source, '.example { color: red; }' );
+		$this->write_file( $compiled, '.example{color:red}' );
+
+		$payload = array(
+			'store'        => array(
+				'blockstudio-test/debounce-assets' => array(
+					'name'   => 'blockstudio-test/debounce-assets',
+					'path'   => $directory . '/block.json',
+					'assets' => array(
+						'style.scss' => array(
+							'path' => $source,
+						),
+					),
+				),
+			),
+			'registerable' => array(),
+		);
+		$key     = Build_Cache::get_runtime_key( $directory, 'debounce-assets' );
+		$filter  = static fn(): int => 20;
+
+		add_filter( 'blockstudio/cache/watch_debounce', $filter );
+
+		try {
+			$this->track_cache_file( 'runtime', $key );
+			$this->assertTrue( Build_Cache::write_runtime( $directory, 'debounce-assets', $payload ) );
+
+			$cached = Build_Cache::load_runtime( $directory, 'debounce-assets' );
+			$this->assertIsArray( $cached );
+			$this->assertContains( wp_normalize_path( $compiled ), $cached['watch']['required'] ?? array() );
+
+			unlink( $compiled );
+
+			$this->assertNull( Build_Cache::load_runtime( $directory, 'debounce-assets' ) );
+		} finally {
+			remove_filter( 'blockstudio/cache/watch_debounce', $filter );
+		}
 	}
 
 	/**

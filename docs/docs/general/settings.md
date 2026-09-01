@@ -99,7 +99,8 @@ The following properties are available:
   },
   "tailwind": {
     "enabled": false,
-    "config": ""
+    "config": "",
+    "output": "inline"
   },
   "blockTags": {
     "enabled": false,
