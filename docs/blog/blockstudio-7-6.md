@@ -33,6 +33,14 @@ with exactly the assets that render used.
 > use `Pages::reconcile()` or the CLI. Opening Canvas still performs one
 > authenticated, explicit reconciliation for its authoring inventory.
 
+> **7.6.10 update:** Runtime cache hits now detect removed compiled assets even
+> inside the watch debounce, and pre-7.6 flat runtime caches are atomically
+> quarantined and deleted in bounded cron batches. Bundled UI globals emit once
+> per page. Graph-mode Early Serve can serve live-rendered routes outside the
+> deployed route map from the identity cache. Tailwind can optionally emit its
+> content-hashed cache file with `tailwind.output: "link"`; inline output remains
+> the default.
+
 The short version:
 
 - **Project inventory**: `Canvas::inventory()` returns every registered record
@@ -613,6 +621,11 @@ so the first request after upgrading is cold and old objects are pruned. The old
 Tailwind cache under `wp-content/uploads/blockstudio/tailwind/cache` can be
 deleted; a snippet that globbed it should call
 `Blockstudio\Runtime_Cache::purge('tailwind')` instead.
+
+The pre-7.6 flat `wp-content/blockstudio/cache/runtime` directory is renamed
+out of the active path automatically and removed by bounded WP-Cron passes.
+Large legacy lock-file trees therefore do not need to be deleted during a
+deployment request.
 
 **Generated files have owners.** `assets/media.json` belongs in version control
 or a build step. The route map, `advanced-cache.php` drop-in, and `WP_CACHE`

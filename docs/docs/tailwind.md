@@ -68,6 +68,48 @@ add_filter('blockstudio/settings/tailwind/enabled', '__return_true');
 
 When `enabled` is `true`, every frontend page will have Tailwind CSS compiled and injected automatically. You can use Tailwind utility classes anywhere: in block templates, theme templates, `the_content` filters, or any HTML that appears in the page output.
 
+### Frontend output
+
+Compiled CSS is inline by default, preserving the output used by earlier
+versions. Sites with many shared rules can opt into a content-hashed
+stylesheet instead:
+
+```json title="blockstudio.json"
+{
+  "tailwind": {
+    "enabled": true,
+    "output": "link"
+  }
+}
+```
+
+`"output": "link"` emits the existing
+`tailwind/{content-hash}.css` cache file as a `<link rel="stylesheet">`. The
+URL changes when the runtime identity, candidates, engine, or CSS input
+changes, so browsers and edge caches can safely retain old URLs. Configure the
+web server or CDN to send a long-lived `Cache-Control: public, immutable`
+header for this cache scope.
+
+The default cache root is public beneath `wp-content`. If `cache.path` points
+to a private absolute volume, Blockstudio falls back to inline CSS unless the
+existing `blockstudio/files/url` filter supplies a public URL for the
+`tailwind` scope:
+
+```php title="functions.php"
+add_filter(
+    'blockstudio/files/url',
+    function (string $url, string $path, string $scope): string {
+        if ('tailwind' !== $scope) {
+            return $url;
+        }
+
+        return 'https://static.example.com/blockstudio/' . basename($path);
+    },
+    10,
+    3
+);
+```
+
 ## Template composition helpers
 
 Blockstudio exposes the same bundled TailwindPHP engine to PHP templates. No
@@ -347,7 +389,7 @@ Frontend Request
   │   │   ├─ Yes → Read CSS from the shared runtime `tailwind/{hash}.css` scope
   │   │   └─ No  → TailwindPHP::generate() → Write to cache file
   │   │
-  │   └─ Inject <style id="blockstudio-tailwind"> before </head>
+  │   └─ Inject inline CSS, or link the content-hashed cache file when tailwind.output is "link"
   │
   └─ Browser receives HTML with compiled CSS
 

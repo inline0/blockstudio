@@ -368,6 +368,45 @@ class StaticPrerenderEarlyServeTest extends TestCase {
 		$this->assertSame( '', $this->serve_through_dropin( '/products/other/' ) );
 	}
 
+	public function test_graph_route_miss_falls_back_to_the_identity_cache(): void {
+		$site         = Static_Prerender_Early_Serve::current_site_identity();
+		$artifact_key = str_repeat( 'd', 64 );
+		$build_id     = str_repeat( 'e', 32 );
+		$html         = '<!doctype html><html><body>Identity fallback</body></html>';
+
+		file_put_contents( $this->cache . '/' . $artifact_key . '.html', '<html>Graph home</html>' );
+		$this->assertTrue(
+			Static_Prerender_Early_Serve::install_artifact_entry(
+				array(
+					'host'      => $site['host'],
+					'home_path' => $site['home_path'],
+					'build_id'  => $build_id,
+					'ttl'       => 3600,
+					'routes'    => array( $site['home_path'] => $artifact_key ),
+				),
+				$this->cache
+			)
+		);
+
+		$key = Static_Prerender_Runtime::cache_key_for_request(
+			array(
+				'HTTP_HOST'   => 'localhost:8888',
+				'REQUEST_URI' => '/live-only/',
+			)
+		);
+		$this->assertIsString( $key );
+		wp_mkdir_p( Static_Prerender_Runtime::cache_root_path() );
+		file_put_contents( Static_Prerender_Runtime::cache_root_path() . '/' . $key . '.html', $html );
+
+		$entries = Static_Prerender_Early_Serve::installed_map_entries();
+		$this->assertSame( $build_id, $entries[ $site['key'] ]['identity'] ?? null );
+		$this->assertSame(
+			rtrim( wp_normalize_path( Static_Prerender_Runtime::cache_root_path() ), '/' ),
+			rtrim( wp_normalize_path( $entries[ $site['key'] ]['runtime_dir'] ?? '' ), '/' )
+		);
+		$this->assertSame( $html, $this->serve_through_dropin( '/live-only/' ) );
+	}
+
 	public function test_generated_dropin_contains_the_same_anonymous_safety_boundaries(): void {
 		$source = Static_Prerender_Early_Serve::dropin_source();
 

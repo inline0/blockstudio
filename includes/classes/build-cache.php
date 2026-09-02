@@ -63,6 +63,7 @@ final class Build_Cache {
 		}
 
 		self::$hooks_registered = true;
+		Runtime_Cache::init();
 
 		add_action( 'save_post', array( __CLASS__, 'invalidate_populate_cache_for_post' ), 10, 1 );
 
@@ -198,10 +199,11 @@ final class Build_Cache {
 			return false;
 		}
 
-		$payload['watch'] = self::create_watch_snapshot(
+		$payload['watch']             = self::create_watch_snapshot(
 			self::collect_runtime_watch_paths( $path, $payload ),
 			self::collect_runtime_watch_dirs( $path, $payload )
 		);
+		$payload['watch']['required'] = self::collect_runtime_required_paths( $payload );
 
 		return self::write( 'runtime', self::get_runtime_key( $path, $instance ), $payload );
 	}
@@ -401,7 +403,7 @@ final class Build_Cache {
 			if ( false !== $mtime ) {
 				$age = time() - (int) $mtime;
 
-				if ( $age >= 0 && $age < $ttl ) {
+				if ( $age >= 0 && $age < $ttl && self::required_watch_paths_exist( $payload['watch'] ?? array() ) ) {
 					return $payload;
 				}
 			}
@@ -623,6 +625,27 @@ final class Build_Cache {
 	}
 
 	/**
+	 * Check cheap must-exist paths before trusting a debounced watch snapshot.
+	 *
+	 * Compiled assets can be removed independently from the runtime payload.
+	 * Checking only those files preserves the metadata-stat debounce while
+	 * preventing an uncompiled source path from reaching the response.
+	 *
+	 * @param array $watch Watch snapshot.
+	 *
+	 * @return bool Whether every required path still exists.
+	 */
+	private static function required_watch_paths_exist( array $watch ): bool {
+		foreach ( $watch['required'] ?? array() as $path ) {
+			if ( ! is_string( $path ) || '' === $path || ! is_file( $path ) ) {
+				return false;
+			}
+		}
+
+		return true;
+	}
+
+	/**
 	 * Get cache file path.
 	 *
 	 * @param string $scope Cache scope.
@@ -802,6 +825,37 @@ final class Build_Cache {
 				)
 			)
 		);
+	}
+
+	/**
+	 * Collect generated asset files that must exist for a runtime cache hit.
+	 *
+	 * @param array $payload Runtime payload.
+	 *
+	 * @return string[] Required compiled asset paths.
+	 */
+	private static function collect_runtime_required_paths( array $payload ): array {
+		$paths = array();
+
+		foreach ( $payload['store'] ?? array() as $data ) {
+			foreach ( $data['assets'] ?? array() as $asset ) {
+				if ( ! is_array( $asset ) || ! is_string( $asset['path'] ?? null ) || '' === $asset['path'] ) {
+					continue;
+				}
+
+				$source   = wp_normalize_path( $asset['path'] );
+				$resolved = self::resolve_asset_path( $source );
+
+				if ( $resolved !== $source && is_file( $resolved ) ) {
+					$paths[] = $resolved;
+				}
+			}
+		}
+
+		$paths = array_values( array_unique( $paths ) );
+		sort( $paths, SORT_STRING );
+
+		return $paths;
 	}
 
 	/**
@@ -999,6 +1053,7 @@ final class Build_Cache {
 			'blockEditor'       => Settings::get( 'blockEditor' ),
 			'tailwind/enabled'  => Settings::get( 'tailwind/enabled' ),
 			'tailwind/config'   => Settings::get( 'tailwind/config' ),
+			'tailwind/output'   => Settings::get( 'tailwind/output' ),
 			'ui/enabled'        => Settings::get( 'ui/enabled' ),
 			'blockTags/enabled' => Settings::get( 'blockTags/enabled' ),
 			'cache/enabled'     => Settings::get( 'cache/enabled' ),

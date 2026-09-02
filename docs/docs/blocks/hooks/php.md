@@ -532,6 +532,16 @@ add_filter('blockstudio/settings/tailwind/config', function() {
 });
 ```
 
+### tailwind/output
+
+This filter allows you to choose inline or linked Tailwind CSS output.
+
+```php title="functions.php"
+add_filter('blockstudio/settings/tailwind/output', function() {
+  return 'link';
+});
+```
+
 ### ui/enabled
 
 This filter allows you to enable/disable bundled UI components.

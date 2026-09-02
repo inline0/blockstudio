@@ -72,6 +72,18 @@ class UiTest extends TestCase {
 		$this->assertStringContainsString( '<script id="blockstudio-ui-global-script">', $assets['script'] );
 	}
 
+	public function test_global_asset_paths_are_owned_by_the_ui_emitter(): void {
+		$this->assertTrue(
+			Ui::is_global_asset_path( BLOCKSTUDIO_DIR . '/includes/ui/blocks/global-style.css' )
+		);
+		$this->assertTrue(
+			Ui::is_global_asset_path( BLOCKSTUDIO_DIR . '/includes/ui/blocks/global-script.js' )
+		);
+		$this->assertFalse(
+			Ui::is_global_asset_path( BLOCKSTUDIO_DIR . '/includes/ui/blocks/button/root/style.css' )
+		);
+	}
+
 	public function test_generated_examples_use_safe_source_urls(): void {
 		$this->add_filter(
 			'blockstudio/ui/inventory',

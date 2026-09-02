@@ -20,6 +20,27 @@ namespace Blockstudio;
 final class Runtime_Cache {
 
 	/**
+	 * Cron hook used to remove pre-7.6 flat runtime caches in bounded batches.
+	 *
+	 * @var string
+	 */
+	private const LEGACY_CLEANUP_HOOK = 'blockstudio/cache/cleanup_legacy_runtime';
+
+	/**
+	 * Prefix for atomically quarantined pre-7.6 runtime directories.
+	 *
+	 * @var string
+	 */
+	private const LEGACY_QUARANTINE_PREFIX = '.legacy-runtime-';
+
+	/**
+	 * Default number of filesystem entries removed by one cron invocation.
+	 *
+	 * @var int
+	 */
+	private const LEGACY_CLEANUP_BATCH_SIZE = 500;
+
+	/**
 	 * Default maximum number of objects retained per scope.
 	 *
 	 * @var int
@@ -49,6 +70,92 @@ final class Runtime_Cache {
 	 * @var array<string, array<string, int>>
 	 */
 	private static array $diagnostics = array();
+
+	/**
+	 * Register and stage cleanup of the pre-7.6 flat runtime directory.
+	 *
+	 * The rename is atomic and removes a potentially huge directory from the
+	 * active cache path immediately. Deletion then happens only from WP-Cron in
+	 * bounded batches, never during the page request that detected it.
+	 *
+	 * @return void
+	 */
+	public static function init(): void {
+		if ( ! Settings::get_bool( 'cache/enabled', true ) ) {
+			return;
+		}
+
+		if ( false === has_action( self::LEGACY_CLEANUP_HOOK, array( __CLASS__, 'cleanup_legacy_runtime_batch' ) ) ) {
+			add_action( self::LEGACY_CLEANUP_HOOK, array( __CLASS__, 'cleanup_legacy_runtime_batch' ) );
+		}
+
+		self::stage_legacy_runtime_cleanup();
+	}
+
+	/**
+	 * Move the legacy flat runtime directory aside and schedule its cleanup.
+	 *
+	 * @return bool Whether legacy cleanup work exists.
+	 */
+	public static function stage_legacy_runtime_cleanup(): bool {
+		$root       = self::root();
+		$legacy     = $root . '/runtime';
+		$quarantine = self::legacy_quarantine_directories();
+
+		if ( is_dir( $legacy ) ) {
+			$suffix      = gmdate( 'YmdHis' ) . '-' . substr( hash( 'sha256', wp_generate_uuid4() ), 0, 12 );
+			$destination = $root . '/' . self::LEGACY_QUARANTINE_PREFIX . $suffix;
+
+			if ( @rename( $legacy, $destination ) ) { // phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged, WordPress.WP.AlternativeFunctions.rename_rename -- Same-filesystem atomic quarantine; failure is retried by cron.
+				$quarantine[] = $destination;
+			}
+		}
+
+		$pending = is_dir( $legacy ) || array() !== array_values( array_filter( $quarantine, 'is_dir' ) );
+
+		if ( $pending ) {
+			self::schedule_legacy_cleanup();
+		}
+
+		return $pending;
+	}
+
+	/**
+	 * Remove a bounded number of entries from quarantined legacy caches.
+	 *
+	 * @return void
+	 */
+	public static function cleanup_legacy_runtime_batch(): void {
+		if ( ! Settings::get_bool( 'cache/enabled', true ) ) {
+			return;
+		}
+
+		$remaining = max(
+			1,
+			(int) apply_filters(
+				'blockstudio/cache/legacy_cleanup_batch_size',
+				self::LEGACY_CLEANUP_BATCH_SIZE
+			)
+		);
+		$paths     = self::legacy_quarantine_directories();
+		$legacy    = self::root() . '/runtime';
+
+		if ( is_dir( $legacy ) ) {
+			$paths[] = $legacy;
+		}
+
+		foreach ( array_values( array_unique( $paths ) ) as $path ) {
+			if ( $remaining <= 0 ) {
+				break;
+			}
+
+			$remaining -= self::delete_tree_batch( $path, $remaining );
+		}
+
+		if ( is_dir( $legacy ) || array() !== self::legacy_quarantine_directories() ) {
+			self::schedule_legacy_cleanup();
+		}
+	}
 
 	/**
 	 * Resolve the configured writable cache root.
@@ -604,6 +711,74 @@ final class Runtime_Cache {
 		foreach ( array_slice( $objects, max( 0, $maximum - ( '' === $keep_path ? 0 : 1 ) ) ) as $object ) {
 			wp_delete_file( $object );
 		}
+	}
+
+	/**
+	 * Find every atomically quarantined legacy runtime directory.
+	 *
+	 * @return string[] Directory paths.
+	 */
+	private static function legacy_quarantine_directories(): array {
+		$paths = glob( self::root() . '/' . self::LEGACY_QUARANTINE_PREFIX . '*', GLOB_ONLYDIR );
+
+		return is_array( $paths ) ? array_values( $paths ) : array();
+	}
+
+	/**
+	 * Schedule one cleanup pass unless one is already pending.
+	 *
+	 * @return void
+	 */
+	private static function schedule_legacy_cleanup(): void {
+		if ( false === wp_next_scheduled( self::LEGACY_CLEANUP_HOOK ) ) {
+			wp_schedule_single_event( time() + MINUTE_IN_SECONDS, self::LEGACY_CLEANUP_HOOK );
+		}
+	}
+
+	/**
+	 * Delete at most a fixed number of entries from one tree.
+	 *
+	 * @param string $directory Directory.
+	 * @param int    $limit     Maximum filesystem entries to remove.
+	 *
+	 * @return int Number of entries removed.
+	 */
+	private static function delete_tree_batch( string $directory, int $limit ): int {
+		if ( $limit <= 0 || ! is_dir( $directory ) ) {
+			return 0;
+		}
+
+		$removed = 0;
+
+		try {
+			$iterator = new \RecursiveIteratorIterator(
+				new \RecursiveDirectoryIterator( $directory, \FilesystemIterator::SKIP_DOTS ),
+				\RecursiveIteratorIterator::CHILD_FIRST
+			);
+
+			foreach ( $iterator as $item ) {
+				if ( $removed >= $limit ) {
+					break;
+				}
+
+				$path    = $item->getPathname();
+				$deleted = $item->isDir()
+					? @rmdir( $path ) // phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged, WordPress.WP.AlternativeFunctions.file_system_operations_rmdir -- Bounded cache cleanup tolerates concurrent removals.
+					: @unlink( $path ); // phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged, WordPress.WP.AlternativeFunctions.unlink_unlink -- Bounded cache cleanup tolerates concurrent removals.
+
+				if ( $deleted ) {
+					++$removed;
+				}
+			}
+		} catch ( \Throwable $error ) {
+			unset( $error );
+		}
+
+		if ( $removed < $limit && @rmdir( $directory ) ) { // phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged, WordPress.WP.AlternativeFunctions.file_system_operations_rmdir -- Removing an empty quarantine root.
+			++$removed;
+		}
+
+		return $removed;
 	}
 
 	/**

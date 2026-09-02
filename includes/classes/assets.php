@@ -553,7 +553,7 @@ class Assets {
 				$is_admin        = str_starts_with( $k, 'admin' );
 				$is_block_editor = str_starts_with( $k, 'block-editor' );
 
-				if ( $is_admin || $is_block_editor ) {
+				if ( $is_admin || $is_block_editor || Ui::is_global_asset_path( $v['path'] ?? null ) ) {
 					continue;
 				}
 

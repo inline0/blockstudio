@@ -23,7 +23,7 @@ final class Static_Prerender_Early_Serve {
 	 *
 	 * @var int
 	 */
-	public const DROPIN_VERSION = 2;
+	public const DROPIN_VERSION = 3;
 
 	/**
 	 * Ownership marker for the generated map.
@@ -368,17 +368,22 @@ function blockstudio_early_serve_static_prerender(): void {
 
 	\$route_path = strtolower( '/' . ltrim( (string) ( parse_url( \$uri, PHP_URL_PATH ) ?: '/' ), '/' ) );
 	\$route_path = (string) ( preg_replace( '#/+#', '/', \$route_path ) ?: '/' );
+	\$directory = rtrim( (string) ( \$entry['dir'] ?? '' ), '/' );
 	if ( 'graph' === ( \$entry['mode'] ?? null ) ) {
 		\$routes = is_array( \$entry['routes'] ?? null ) ? \$entry['routes'] : array();
 		\$key = isset( \$routes[ \$route_path ] ) && is_string( \$routes[ \$route_path ] ) ? \$routes[ \$route_path ] : '';
 		if ( ! preg_match( '/^[a-f0-9]{64}$/', \$key ) ) {
-			return;
+			\$identity = strtolower( (string) ( \$entry['identity'] ?? \$entry['build_id'] ?? '' ) );
+			\$directory = rtrim( (string) ( \$entry['runtime_dir'] ?? '' ), '/' );
+			if ( ! preg_match( '/^[a-f0-9]{32}$/', \$identity ) || '' === \$directory ) {
+				return;
+			}
+			\$key = hash( 'sha256', \$host . '|' . \$route_path . '|' . \$identity );
 		}
 	} else {
 		\$key = hash( 'sha256', \$host . '|' . \$route_path . '|' . (string) ( \$entry['signature'] ?? '' ) );
 	}
 
-	\$directory = rtrim( (string) ( \$entry['dir'] ?? '' ), '/' );
 	if ( '' === \$directory ) {
 		return;
 	}
@@ -427,9 +432,16 @@ PHP;
 				? $entries[ $site['key'] ]
 				: null;
 
-			return is_array( $active ) && 'graph' === ( $active['mode'] ?? null )
-				? $active
-				: null;
+			if ( ! is_array( $active ) || 'graph' !== ( $active['mode'] ?? null ) ) {
+				return null;
+			}
+
+			$active['identity']    = isset( $active['build_id'] ) && is_string( $active['build_id'] )
+				? $active['build_id']
+				: '';
+			$active['runtime_dir'] = Static_Prerender_Runtime::cache_root_path();
+
+			return $active;
 		}
 
 		$dynamic = self::dynamic_paths( $site['home_path'] );
@@ -582,6 +594,8 @@ PHP;
 			'dir'             => $artifact_dir,
 			'mode'            => 'graph',
 			'build_id'        => $build_id,
+			'identity'        => $build_id,
+			'runtime_dir'     => Static_Prerender_Runtime::cache_root_path(),
 			'signature'       => isset( $entry['signature'] ) && is_scalar( $entry['signature'] )
 				? (string) $entry['signature']
 				: '',

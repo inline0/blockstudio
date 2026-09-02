@@ -419,8 +419,8 @@ cli: wp bs content pull, wp bs content push, wp bs content status
 route: /docs/tailwind
 file: docs/docs/tailwind.md
 purpose: Server-side Tailwind CSS compilation with automatic caching.
-settings: assets/reset/enabled, cache/path, tailwind/config, tailwind/enabled
-hooks: blockstudio/buffer/enabled, blockstudio/buffer/output, blockstudio/settings/tailwind/config, blockstudio/settings/tailwind/enabled, blockstudio/tailwind/css
+settings: assets/reset/enabled, cache/path, tailwind/config, tailwind/enabled, tailwind/output
+hooks: blockstudio/buffer/enabled, blockstudio/buffer/output, blockstudio/files/url, blockstudio/settings/tailwind/config, blockstudio/settings/tailwind/enabled, blockstudio/tailwind/css
 php: Block_Registry::set_tailwind_active(), Blockstudio\Runtime_Cache, Runtime_Cache::purge(), Settings::get(), TailwindPHP::extractCandidates(), TailwindPHP::generate(), bs_tw_merge(), bs_tw_variants()
 
 ## Docs / Blocks / Project Files
@@ -454,7 +454,7 @@ route: /docs/production/caching
 file: docs/docs/production/caching.md
 purpose: The one file-backed cache directory that owns every generated runtime artifact.
 settings: cache/enabled, cache/path, tailwind
-hooks: blockstudio/cache/context, blockstudio/cache/dir, blockstudio/cache/max_files_per_scope, blockstudio/cache/protected_paths, blockstudio/cache/site_key, blockstudio/cache/watch_debounce, blockstudio/settings/cache/enabled, blockstudio/settings/cache/path, blockstudio/tailwind/cache_max_age, blockstudio/tailwind/cache_max_files
+hooks: blockstudio/cache/context, blockstudio/cache/dir, blockstudio/cache/legacy_cleanup_batch_size, blockstudio/cache/max_files_per_scope, blockstudio/cache/protected_paths, blockstudio/cache/site_key, blockstudio/cache/watch_debounce, blockstudio/settings/cache/enabled, blockstudio/settings/cache/path, blockstudio/tailwind/cache_max_age, blockstudio/tailwind/cache_max_files
 php: Blockstudio\Runtime_Cache, Runtime_Cache::purge()
 
 ### Media

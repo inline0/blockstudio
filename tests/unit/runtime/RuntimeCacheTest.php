@@ -34,6 +34,8 @@ class RuntimeCacheTest extends TestCase {
 		remove_filter( 'blockstudio/cache/dir', array( $this, 'filter_cache_root' ) );
 		remove_filter( 'blockstudio/cache/site_key', array( $this, 'filter_site_key' ) );
 		remove_all_filters( 'blockstudio/cache/max_files_per_scope' );
+		remove_all_filters( 'blockstudio/cache/legacy_cleanup_batch_size' );
+		wp_clear_scheduled_hook( 'blockstudio/cache/cleanup_legacy_runtime' );
 		Runtime_Cache::reset_diagnostics();
 		Settings::reset();
 		Runtime_Settings::reset();
@@ -179,6 +181,35 @@ class RuntimeCacheTest extends TestCase {
 		$this->assertFileExists( Runtime_Cache::path( 'bounded', 'three' ) );
 
 		remove_filter( 'blockstudio/cache/max_files_per_scope', $maximum );
+	}
+
+	public function test_legacy_runtime_is_quarantined_then_deleted_in_bounded_cron_batches(): void {
+		$legacy = $this->root . '/runtime';
+		wp_mkdir_p( $legacy . '/nested' );
+		file_put_contents( $legacy . '/one.build.lock', '' );
+		file_put_contents( $legacy . '/two.build.lock', '' );
+		file_put_contents( $legacy . '/nested/three.build.lock', '' );
+
+		$batch_size = static fn(): int => 1;
+		add_filter( 'blockstudio/cache/legacy_cleanup_batch_size', $batch_size );
+
+		$this->assertTrue( Runtime_Cache::stage_legacy_runtime_cleanup() );
+		$this->assertDirectoryDoesNotExist( $legacy );
+		$this->assertNotFalse( wp_next_scheduled( 'blockstudio/cache/cleanup_legacy_runtime' ) );
+
+		$quarantines = glob( $this->root . '/.legacy-runtime-*', GLOB_ONLYDIR );
+		$this->assertIsArray( $quarantines );
+		$this->assertCount( 1, $quarantines );
+
+		for ( $pass = 0; $pass < 10 && is_dir( $quarantines[0] ); ++$pass ) {
+			wp_clear_scheduled_hook( 'blockstudio/cache/cleanup_legacy_runtime' );
+			Runtime_Cache::cleanup_legacy_runtime_batch();
+		}
+
+		$this->assertDirectoryDoesNotExist( $quarantines[0] );
+		$this->assertDirectoryDoesNotExist( $legacy );
+
+		remove_filter( 'blockstudio/cache/legacy_cleanup_batch_size', $batch_size );
 	}
 
 	private function remove_directory( string $directory ): void {
