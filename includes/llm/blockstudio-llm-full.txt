@@ -12618,7 +12618,13 @@ remove again.
 Installing an artifact promotes its documents into a dedicated artifact scope
 that retention pruning never touches, and files the map references are immune
 to eviction wherever they live, so live render traffic cannot age mapped
-routes out of early serving.
+routes out of early serving. A route key is not fully content-addressed, so a
+re-render can change a document without changing its key; installation
+compares bytes and replaces a differing artifact document atomically, leaves
+identical documents untouched, and keeps an artifact document whose store copy
+has disappeared. `Static_Prerender_Early_Serve::last_promotion()` reports how
+many routes were promoted, replaced, skipped, or kept by the last install, so a
+deploy can log it.
 
 Mapped graph routes always use the activated artifact. When a safe anonymous
 route is not in that map but WordPress has since rendered and persisted it,

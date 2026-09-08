@@ -446,7 +446,7 @@ file: docs/docs/production/static-prerendering.md
 purpose: Serve anonymous pages as static HTML, optionally before WordPress boots.
 settings: performance/media/lazy, performance/profile, performance/staticPrerender
 hooks: blockstudio/cache/outcome, blockstudio/static_prerender/outcome, blockstudio/static_prerender/render_internal
-php: Blockstudio\Static_Prerender_Early_Serve, Blockstudio\Static_Prerender_Runtime, Static_Prerender_Batch_Renderer::is_rendering(), Static_Prerender_Batch_Renderer::parse_shard(), Static_Prerender_Batch_Renderer::render(), Static_Prerender_Early_Serve::install_artifact_entry(), Static_Prerender_Runtime::artifact_entry(), Static_Prerender_Runtime::build_plan(), Static_Prerender_Runtime::cache_root_path(), Static_Prerender_Runtime::garbage_collect(), Static_Prerender_Runtime::persist_built_response(), bs_media_image()
+php: Blockstudio\Static_Prerender_Early_Serve, Blockstudio\Static_Prerender_Runtime, Static_Prerender_Batch_Renderer::is_rendering(), Static_Prerender_Batch_Renderer::parse_shard(), Static_Prerender_Batch_Renderer::render(), Static_Prerender_Early_Serve::install_artifact_entry(), Static_Prerender_Early_Serve::last_promotion(), Static_Prerender_Runtime::artifact_entry(), Static_Prerender_Runtime::build_plan(), Static_Prerender_Runtime::cache_root_path(), Static_Prerender_Runtime::garbage_collect(), Static_Prerender_Runtime::persist_built_response(), bs_media_image()
 cli: wp bs prerender purge, wp bs prerender status, wp bs prerender warm, wp bs teardown
 
 ### Caching

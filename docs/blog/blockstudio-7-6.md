@@ -33,6 +33,11 @@ with exactly the assets that render used.
 > use `Pages::reconcile()` or the CLI. Opening Canvas still performs one
 > authenticated, explicit reconciliation for its authoring inventory.
 
+> **7.6.11 update:** Graph artifact installation now replaces a route's
+> document atomically when the store copy changed under the same key, keeps
+> identical documents untouched, and reports promoted, replaced, skipped, and
+> kept routes through `Static_Prerender_Early_Serve::last_promotion()`.
+
 > **7.6.10 update:** Runtime cache hits now detect removed compiled assets even
 > inside the watch debounce, and pre-7.6 flat runtime caches are atomically
 > quarantined and deleted in bounded cron batches. Bundled UI globals emit once
