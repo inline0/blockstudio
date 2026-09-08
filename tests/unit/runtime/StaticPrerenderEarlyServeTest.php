@@ -434,6 +434,91 @@ class StaticPrerenderEarlyServeTest extends TestCase {
 		);
 	}
 
+	public function test_promotion_replaces_artifact_bytes_when_the_store_changes_within_a_key(): void {
+		$key   = str_repeat( '1', 64 );
+		$entry = $this->graph_entry( $key );
+		file_put_contents( $this->cache . '/' . $key . '.html', '<html>First</html>' );
+
+		$this->assertTrue( Static_Prerender_Early_Serve::install_artifact_entry( $entry, $this->cache ) );
+		$artifact = \Blockstudio\Runtime_Cache::directory( 'static-prerender-artifact' ) . '/' . $key . '.html';
+		$this->assertSame( '<html>First</html>', file_get_contents( $artifact ) );
+		$this->assertSame(
+			array( 'promoted' => 1, 'replaced' => 0, 'skipped' => 0, 'kept' => 0 ),
+			Static_Prerender_Early_Serve::last_promotion()
+		);
+
+		file_put_contents( $this->cache . '/' . $key . '.html', '<html>Second render, same key</html>' );
+
+		$this->assertTrue( Static_Prerender_Early_Serve::install_artifact_entry( $entry, $this->cache ) );
+		$this->assertSame( '<html>Second render, same key</html>', file_get_contents( $artifact ) );
+		$this->assertSame(
+			array( 'promoted' => 0, 'replaced' => 1, 'skipped' => 0, 'kept' => 0 ),
+			Static_Prerender_Early_Serve::last_promotion()
+		);
+		$this->assertSame( array(), glob( dirname( $artifact ) . '/*.tmp-*' ) );
+	}
+
+	public function test_promotion_leaves_identical_artifact_bytes_untouched(): void {
+		$key   = str_repeat( '2', 64 );
+		$entry = $this->graph_entry( $key );
+		file_put_contents( $this->cache . '/' . $key . '.html', '<html>Same</html>' );
+
+		$this->assertTrue( Static_Prerender_Early_Serve::install_artifact_entry( $entry, $this->cache ) );
+		$artifact = \Blockstudio\Runtime_Cache::directory( 'static-prerender-artifact' ) . '/' . $key . '.html';
+		$past     = time() - 600;
+		touch( $artifact, $past );
+		clearstatcache( true, $artifact );
+
+		$this->assertTrue( Static_Prerender_Early_Serve::install_artifact_entry( $entry, $this->cache ) );
+		clearstatcache( true, $artifact );
+		$this->assertSame( $past, filemtime( $artifact ) );
+		$this->assertSame(
+			array( 'promoted' => 0, 'replaced' => 0, 'skipped' => 1, 'kept' => 0 ),
+			Static_Prerender_Early_Serve::last_promotion()
+		);
+	}
+
+	public function test_promotion_keeps_an_artifact_route_whose_store_file_disappeared(): void {
+		$key   = str_repeat( '3', 64 );
+		$entry = $this->graph_entry( $key );
+		file_put_contents( $this->cache . '/' . $key . '.html', '<html>Kept</html>' );
+
+		$this->assertTrue( Static_Prerender_Early_Serve::install_artifact_entry( $entry, $this->cache ) );
+		unlink( $this->cache . '/' . $key . '.html' );
+
+		$this->assertTrue( Static_Prerender_Early_Serve::install_artifact_entry( $entry, $this->cache ) );
+		$artifact = \Blockstudio\Runtime_Cache::directory( 'static-prerender-artifact' ) . '/' . $key . '.html';
+		$this->assertSame( '<html>Kept</html>', file_get_contents( $artifact ) );
+		$this->assertSame(
+			array( 'promoted' => 0, 'replaced' => 0, 'skipped' => 0, 'kept' => 1 ),
+			Static_Prerender_Early_Serve::last_promotion()
+		);
+
+		$missing = str_repeat( '4', 64 );
+		$this->assertFalse( Static_Prerender_Early_Serve::install_artifact_entry( $this->graph_entry( $missing ), $this->cache ) );
+	}
+
+	/**
+	 * @return array<string,mixed> Graph entry mapping the home route to one key.
+	 */
+	private function graph_entry( string $key ): array {
+		$site = Static_Prerender_Early_Serve::current_site_identity();
+		$this->assertIsArray( $site );
+
+		return array(
+			'host'            => $site['host'],
+			'home_path'       => $site['home_path'],
+			'site_id'         => get_current_blog_id(),
+			'mode'            => 'graph',
+			'build_id'        => str_repeat( 'b', 32 ),
+			'signature'       => str_repeat( 'c', 32 ),
+			'ttl'             => 3600,
+			'serve_logged_in' => false,
+			'dynamic'         => array(),
+			'routes'          => array( $site['home_path'] => $key ),
+		);
+	}
+
 	private function enable_early_serve(): void {
 		add_filter( 'blockstudio/performance/staticPrerender/enabled', '__return_true' );
 		add_filter( 'blockstudio/performance/staticPrerender/earlyServe', '__return_true' );

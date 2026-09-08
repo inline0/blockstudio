@@ -3,7 +3,7 @@ Contributors: dnnsjsk
 Requires at least: 6.7
 Tested up to: 7.0.0
 Requires PHP: 8.2
-Stable tag: 7.6.10
+Stable tag: 7.6.11
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -53,6 +53,9 @@ Download the latest release zip from [GitHub Releases](https://github.com/inline
 * [Getting Started](https://blockstudio.dev/docs/getting-started)
 
 == Changelog ==
+
+= 7.6.11 =
+* Fix: graph artifact installation replaces a route's artifact document atomically when the store copy changed under the same key, keeps identical documents untouched, tolerates a store file that disappeared while the artifact copy still serves the route, and reports promoted, replaced, skipped, and kept routes through `Static_Prerender_Early_Serve::last_promotion()`
 
 = 7.6.10 =
 * New: Tailwind can emit its content-hashed runtime cache file as a reusable stylesheet with `tailwind.output: "link"`, while inline output remains the default
