@@ -409,6 +409,74 @@ class Tailwind {
 	}
 
 	/**
+	 * Resolve the cache file a document's Tailwind stylesheet link points at.
+	 *
+	 * Inverse of cache_url() for the default content-directory mapping. A link
+	 * rewritten onto a CDN or a private root cannot be mapped back and returns
+	 * an empty string, which callers read as "nothing to verify".
+	 *
+	 * @param string $html Document markup.
+	 *
+	 * @return string Absolute cache path, or an empty string.
+	 */
+	public static function linked_cache_path( string $html ): string {
+		if ( ! str_contains( $html, 'id="blockstudio-tailwind"' ) ) {
+			return '';
+		}
+
+		if ( 1 !== preg_match( '#<link\b[^>]*\bid="blockstudio-tailwind"[^>]*>#i', $html, $tag ) ) {
+			return '';
+		}
+
+		if ( 1 !== preg_match( '#\bhref="([^"]*)"#i', $tag[0], $href ) ) {
+			return '';
+		}
+
+		return self::cache_path_for_url( html_entity_decode( $href[1], ENT_QUOTES, 'UTF-8' ) );
+	}
+
+	/**
+	 * Map one public cache URL back to its file path.
+	 *
+	 * @param string $url Stylesheet URL.
+	 *
+	 * @return string Absolute cache path, or an empty string.
+	 */
+	public static function cache_path_for_url( string $url ): string {
+		if ( 1 !== preg_match( '#/tailwind/[a-f0-9]{32}\.css$#', $url ) ) {
+			return '';
+		}
+
+		$content_url = rtrim( (string) content_url(), '/' );
+		$content_dir = rtrim( wp_normalize_path( (string) WP_CONTENT_DIR ), '/' );
+
+		if ( '' === $content_url || ! str_starts_with( $url, $content_url . '/' ) ) {
+			return '';
+		}
+
+		return $content_dir . substr( $url, strlen( $content_url ) );
+	}
+
+	/**
+	 * Check whether a document still resolves its Tailwind stylesheet.
+	 *
+	 * A cached document outlives the content-hashed file it links, and the
+	 * cached path never reaches the compiler, so a pruned or otherwise lost
+	 * cache file would serve an unstyled page for as long as the document
+	 * stays fresh. Callers treat an unresolved link as a cache miss and let a
+	 * live render republish both.
+	 *
+	 * @param string $html Document markup.
+	 *
+	 * @return bool Whether the document is safe to serve.
+	 */
+	public static function document_stylesheet_resolves( string $html ): bool {
+		$path = self::linked_cache_path( $html );
+
+		return '' === $path || is_file( $path );
+	}
+
+	/**
 	 * Resolve the public URL for one Tailwind cache file.
 	 *
 	 * @param string $path Cache file path.

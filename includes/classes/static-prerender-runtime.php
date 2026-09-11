@@ -515,6 +515,12 @@ final class Static_Prerender_Runtime {
 			return false;
 		}
 
+		if ( ! self::document_assets_resolve( $contents ) ) {
+			self::record_outcome( 'miss-assets' );
+
+			return false;
+		}
+
 		if ( ! headers_sent() ) {
 			header( 'Content-Type: text/html; charset=UTF-8' );
 			header( 'X-Blockstudio-Static-Prerender: HIT' );
@@ -524,6 +530,28 @@ final class Static_Prerender_Runtime {
 		self::record_outcome( 'hit' );
 
 		return true;
+	}
+
+	/**
+	 * Check whether a cached document still resolves its linked build assets.
+	 *
+	 * A stored document pins content-hashed cache files by URL while those
+	 * files keep their own retention. Serving a document whose stylesheet has
+	 * since been pruned renders the page unstyled, and the cached path never
+	 * reaches the compiler that would rebuild it, so the page stays broken
+	 * until something else invalidates it. Treating the document as a miss
+	 * lets one live render republish the asset and the document together.
+	 *
+	 * @param string $html Document markup.
+	 *
+	 * @return bool Whether the document is safe to serve.
+	 */
+	public static function document_assets_resolve( string $html ): bool {
+		if ( ! class_exists( Tailwind::class ) ) {
+			return true;
+		}
+
+		return Tailwind::document_stylesheet_resolves( $html );
 	}
 
 	/**
@@ -1286,7 +1314,8 @@ final class Static_Prerender_Runtime {
 				str_starts_with( strtolower( $trimmed ), '<!doctype html' ) ||
 				str_starts_with( strtolower( $trimmed ), '<html' )
 			)
-			&& ! str_contains( $html, '<!-- blockstudio:no-cache -->' );
+			&& ! str_contains( $html, '<!-- blockstudio:no-cache -->' )
+			&& self::document_assets_resolve( $html );
 
 		/**
 		 * Filter whether a complete response may be cached.
