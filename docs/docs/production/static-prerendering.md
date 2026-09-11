@@ -135,6 +135,14 @@ has disappeared. `Static_Prerender_Early_Serve::last_promotion()` reports how
 many routes were promoted, replaced, skipped, or kept by the last install, so a
 deploy can log it.
 
+A stored document pins the build assets it links by URL, and those files
+keep their own retention, so one can outlive the other. Before serving, both
+the PHP cache and the drop-in check that a linked content-hashed Tailwind
+stylesheet still exists on disk. A document whose stylesheet is gone is handed
+to WordPress instead of served unstyled, which republishes the stylesheet and
+the document together. The same check runs before a response is stored, so a
+document that could not be served is never written.
+
 Mapped graph routes always use the activated artifact. When a safe anonymous
 route is not in that map but WordPress has since rendered and persisted it,
 Early Serve falls back to the identity-keyed runtime store before booting

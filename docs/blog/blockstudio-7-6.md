@@ -33,6 +33,13 @@ with exactly the assets that render used.
 > use `Pages::reconcile()` or the CLI. Opening Canvas still performs one
 > authenticated, explicit reconciliation for its authoring inventory.
 
+> **7.6.12 update:** Editor stylesheets are now prefixed by a single
+> rewriting pass rather than a SASS compile per asset, so a cold editor build on
+> a site with many blocks no longer risks exhausting a modest memory limit. A
+> cached prerendered page whose content-hashed Tailwind stylesheet has been
+> evicted is re-rendered instead of served unstyled, through both the PHP cache
+> and the Early Serve drop-in.
+
 > **7.6.11 update:** Graph artifact installation now replaces a route's
 > document atomically when the store copy changed under the same key, keeps
 > identical documents untouched, and reports promoted, replaced, skipped, and
