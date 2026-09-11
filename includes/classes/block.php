@@ -1822,12 +1822,12 @@ class Block {
 			}
 		}
 		// Attributes written at the top level of the block's attributes, which
-		// is how a REST, WP-CLI or migration client naturally sends them — and
-		// how `render()` already reads them for the Islands marker. Scoped to
-		// ids the block declares, so WordPress' own attributes (`anchor`,
-		// `className`, `lock`, `metadata`, `style`) and Blockstudio's reserved
-		// keys can never enter. A value nested under `blockstudio.attributes`
-		// still wins, so nothing the editor saves changes.
+		// is how a REST, WP-CLI or migration client naturally sends them, and
+		// how render() already reads them for the Islands marker. Scoped to
+		// ids the block declares, so WordPress' own attributes (anchor,
+		// className, lock, metadata, style) and Blockstudio's reserved keys can
+		// never enter. A value nested under blockstudio.attributes still wins,
+		// so nothing the editor saves changes.
 		$attributes = array_merge(
 			$attr,
 			array_intersect_key( $attributes, $attr ),

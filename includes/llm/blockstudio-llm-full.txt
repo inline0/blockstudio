@@ -2618,6 +2618,26 @@ Inside template files, all attributes can be accessed using the `$attributes` or
 <h1>{{ a.message }}</h1>
 ```
 
+## Writing Attributes Programmatically
+
+The editor nests saved values under `blockstudio.attributes`. Anything writing a
+block outside the editor, such as the REST API, WP-CLI, a content migration or
+an MCP server, discovers the block from the attributes Blockstudio registers on
+the `WP_Block_Type` and writes them at the top level. Both shapes render:
+
+```php
+// Top level, as a programmatic writer produces it.
+echo do_blocks( '<!-- wp:acme/hero {"visual_type":"media"} /-->' );
+
+// Nested, as the editor saves it.
+echo do_blocks( '<!-- wp:acme/hero {"blockstudio":{"attributes":{"visual_type":"media"}}} /-->' );
+```
+
+Only ids the block declares are read from the top level, so WordPress' own
+attributes such as `anchor`, `className`, `lock`, `metadata` and `style` are
+never adopted as field values. When the same id appears in both places, the
+nested value wins.
+
 ## Empty Values
 
 Attribute values return `false` if the field is empty or no option has been selected.

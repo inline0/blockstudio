@@ -8,7 +8,7 @@ use PHPUnit\Framework\TestCase;
  * Attributes written at the top level of a block's attributes.
  *
  * The editor always nests values under `blockstudio.attributes`, but every
- * other writer — the REST API, WP-CLI, a content migration — discovers a
+ * other writer (the REST API, WP-CLI, a content migration) discovers a
  * block from the attributes Blockstudio registers on the `WP_Block_Type` and
  * writes them at the top level. Those values used to be stored, parsed back
  * byte-identically, and then dropped at render: the block showed its default

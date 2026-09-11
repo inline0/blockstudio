@@ -38,7 +38,9 @@ with exactly the assets that render used.
 > a site with many blocks no longer risks exhausting a modest memory limit. A
 > cached prerendered page whose content-hashed Tailwind stylesheet has been
 > evicted is re-rendered instead of served unstyled, through both the PHP cache
-> and the Early Serve drop-in.
+> and the Early Serve drop-in. Block attributes written at the top level are
+> read at render instead of being dropped, so the schema Blockstudio
+> registers on the `WP_Block_Type` is honoured by programmatic writers.
 
 > **7.6.11 update:** Graph artifact installation now replaces a route's
 > document atomically when the store copy changed under the same key, keeps
