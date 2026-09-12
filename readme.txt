@@ -3,7 +3,7 @@ Contributors: dnnsjsk
 Requires at least: 6.7
 Tested up to: 7.0.0
 Requires PHP: 8.2
-Stable tag: 7.6.11
+Stable tag: 7.6.12
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -53,6 +53,11 @@ Download the latest release zip from [GitHub Releases](https://github.com/inline
 * [Getting Started](https://blockstudio.dev/docs/getting-started)
 
 == Changelog ==
+
+= 7.6.12 =
+* Fix: editor stylesheets are prefixed by a single rewriting pass instead of a SASS compile per asset, so a cold editor build on a site with many blocks no longer exhausts modest memory limits and leaves the block editor fatally broken with nothing cached
+* Fix: a cached prerendered page whose content-hashed Tailwind stylesheet is missing is re-rendered instead of served unstyled, through both the PHP cache and the Early Serve drop-in
+* Fix: block attributes written at the top level, as the REST API, WP-CLI and content migrations produce them after discovering a block from the registry, are read at render instead of silently dropped in favour of the block's defaults; a value nested under `blockstudio.attributes` still wins (props @elliottmangham)
 
 = 7.6.11 =
 * Fix: graph artifact installation replaces a route's artifact document atomically when the store copy changed under the same key, keeps identical documents untouched, tolerates a store file that disappeared while the artifact copy still serves the route, and reports promoted, replaced, skipped, and kept routes through `Static_Prerender_Early_Serve::last_promotion()`

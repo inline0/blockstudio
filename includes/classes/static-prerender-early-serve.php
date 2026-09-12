@@ -23,7 +23,7 @@ final class Static_Prerender_Early_Serve {
 	 *
 	 * @var int
 	 */
-	public const DROPIN_VERSION = 3;
+	public const DROPIN_VERSION = 4;
 
 	/**
 	 * Ownership marker for the generated map.
@@ -279,6 +279,26 @@ final class Static_Prerender_Early_Serve {
 	}
 
 	/**
+	 * Resolve the content URL and directory a drop-in maps asset links with.
+	 *
+	 * The drop-in serves a stored document without booting WordPress, so it
+	 * carries the mapping needed to check that the document's content-hashed
+	 * build assets still exist on disk.
+	 *
+	 * @return array{content_url:string,content_dir:string} Scope.
+	 */
+	public static function content_scope(): array {
+		$directory = self::content_dir();
+
+		return array(
+			'content_url' => function_exists( 'content_url' )
+				? rtrim( (string) content_url(), '/' )
+				: '',
+			'content_dir' => null === $directory ? '' : $directory,
+		);
+	}
+
+	/**
 	 * Override the content directory in isolated tests.
 	 *
 	 * @param string|null $directory Directory or null to reset.
@@ -429,6 +449,27 @@ function blockstudio_early_serve_static_prerender(): void {
 		return;
 	}
 
+	// A stored document pins content-hashed build assets by URL while those
+	// files keep their own retention. Serving one whose stylesheet is gone
+	// renders the page unstyled for as long as the document stays fresh, and
+	// nothing here can rebuild it, so hand the request to WordPress instead.
+	\$content_url = rtrim( (string) ( \$entry['content_url'] ?? '' ), '/' );
+	\$content_dir = rtrim( (string) ( \$entry['content_dir'] ?? '' ), '/' );
+	if (
+		'' !== \$content_url && '' !== \$content_dir &&
+		str_contains( \$contents, 'id="blockstudio-tailwind"' ) &&
+		preg_match( '#<link\b[^>]*\bid="blockstudio-tailwind"[^>]*\bhref="([^"]*)"#i', \$contents, \$link )
+	) {
+		\$href = html_entity_decode( (string) \$link[1], ENT_QUOTES, 'UTF-8' );
+		if (
+			preg_match( '#/tailwind/[a-f0-9]{32}\.css\$#', \$href ) &&
+			str_starts_with( \$href, \$content_url . '/' ) &&
+			! is_file( \$content_dir . substr( \$href, strlen( \$content_url ) ) )
+		) {
+			return;
+		}
+	}
+
 	if ( ! headers_sent() ) {
 		header( 'Content-Type: text/html; charset=UTF-8' );
 		header( 'X-Blockstudio-Static-Prerender: HIT-EARLY' );
@@ -467,12 +508,12 @@ PHP;
 				: '';
 			$active['runtime_dir'] = Static_Prerender_Runtime::cache_root_path();
 
-			return $active;
+			return self::content_scope() + $active;
 		}
 
 		$dynamic = self::dynamic_paths( $site['home_path'] );
 
-		return array(
+		return self::content_scope() + array(
 			'host'            => $site['host'],
 			'home_path'       => $site['home_path'],
 			'site_id'         => function_exists( 'get_current_blog_id' ) ? (int) get_current_blog_id() : 0,
@@ -620,7 +661,7 @@ PHP;
 			);
 		}
 
-		$normalized = array(
+		$normalized = self::content_scope() + array(
 			'host'            => $host,
 			'home_path'       => $home_path,
 			'site_id'         => isset( $entry['site_id'] ) && is_numeric( $entry['site_id'] )

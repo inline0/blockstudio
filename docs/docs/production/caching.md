@@ -178,6 +178,13 @@ add_filter('blockstudio/tailwind/cache_max_age', function () {
 
 The minimum age is one hour.
 
+Cache files are content-hashed, and a cached page links one by URL, so eviction
+and a stored page can disagree about which files still matter. Prerendered
+documents are checked against their linked stylesheet before they are served,
+so an evicted file costs one re-render rather than an unstyled page. Raising
+`cache_max_files` past the number of distinct page-level keys avoids the
+re-render entirely.
+
 > **[Static Prerendering](/docs/production/static-prerendering)**
 >
 > The anonymous HTML cache that lives under this same root.

@@ -87,6 +87,31 @@ class Assets {
 	private const SELECTOR_PLACEHOLDER_CLASS = '__blockstudio-selector-placeholder__';
 
 	/**
+	 * At-rules whose block body holds style rules needing the same prefix.
+	 *
+	 * Every other at-rule carries descriptors or keyframe selectors, which a
+	 * prepended prefix would corrupt, so their bodies are copied verbatim.
+	 *
+	 * @var string[]
+	 */
+	private const NESTED_AT_RULES = array(
+		'media',
+		'supports',
+		'layer',
+		'container',
+		'scope',
+		'document',
+		'starting-style',
+	);
+
+	/**
+	 * Whether an editor stylesheet was emitted without its prefix.
+	 *
+	 * @var bool
+	 */
+	private static bool $prefix_degraded = false;
+
+	/**
 	 * Wait budget for requests contending on a cold compiled asset in ms.
 	 *
 	 * Mirrors the runtime build election in Build::init(): contending
@@ -1302,15 +1327,21 @@ class Assets {
 			return $cached['output'];
 		}
 
+		self::$prefix_degraded = false;
+
 		ob_start();
 		self::get_assets( 'editor' );
 		$output = ob_get_clean();
 
-		Build_Cache::write_editor_assets(
-			array(
-				'output' => $output,
-			)
-		);
+		// Degraded output is missing selector prefixes. Caching it would freeze
+		// a transient memory shortage into every later editor request.
+		if ( ! self::$prefix_degraded ) {
+			Build_Cache::write_editor_assets(
+				array(
+					'output' => $output,
+				)
+			);
+		}
 
 		return $output;
 	}
@@ -1511,7 +1542,15 @@ class Assets {
 	 * @return string The prefixed CSS.
 	 */
 	public static function prefix_editor_styles( $css ): string {
-		$css = self::prefix_css( $css, '.editor-styles-wrapper' );
+		$css = (string) $css;
+
+		if ( self::prefix_budget_exceeded( $css ) ) {
+			self::$prefix_degraded = true;
+
+			return $css;
+		}
+
+		$css = self::prefix_compiled_css( $css, '.editor-styles-wrapper' );
 		$css = preg_replace( '/\bbody(?=[\s{,]|$)/', '.editor-styles-wrapper', $css );
 		$css = str_replace( '.editor-styles-wrapper :root', ':root', $css );
 
@@ -1520,6 +1559,293 @@ class Assets {
 			'.editor-styles-wrapper',
 			$css
 		);
+	}
+
+	/**
+	 * Prefix every top-level selector of already-compiled CSS.
+	 *
+	 * A cold editor request prefixes one stylesheet per registered block in a
+	 * single pass of the batch. Nesting plain CSS by running it back through the
+	 * SASS compiler built a full stylesheet AST per asset, which exhausted
+	 * modest memory limits on sites with many blocks and left nothing cached, so
+	 * every following editor request repeated the same fatal. Selectors are
+	 * rewritten in one linear scan instead; declaration blocks, at-rule
+	 * descriptors, and nested rules are copied through byte for byte.
+	 *
+	 * @param string $css    Compiled CSS.
+	 * @param string $prefix Selector prefix.
+	 *
+	 * @return string Prefixed CSS.
+	 */
+	private static function prefix_compiled_css( string $css, string $prefix ): string {
+		$output = '';
+		$length = strlen( $css );
+		$index  = 0;
+		$start  = 0;
+
+		while ( $index < $length ) {
+			$char = $css[ $index ];
+
+			if ( '/' === $char && '*' === ( $css[ $index + 1 ] ?? '' ) ) {
+				$index = self::skip_css_comment( $css, $index );
+				continue;
+			}
+
+			if ( '"' === $char || "'" === $char ) {
+				$index = self::skip_css_string( $css, $index );
+				continue;
+			}
+
+			if ( '(' === $char ) {
+				$index = self::find_css_group_end( $css, $index, '(', ')' ) + 1;
+				continue;
+			}
+
+			if ( ';' === $char || '}' === $char ) {
+				$output .= substr( $css, $start, $index - $start + 1 );
+				$start   = ++$index;
+				continue;
+			}
+
+			if ( '{' !== $char ) {
+				++$index;
+				continue;
+			}
+
+			$end     = self::find_css_group_end( $css, $index, '{', '}' );
+			$closed  = $end < $length;
+			$output .= self::prefix_css_block(
+				substr( $css, $start, $index - $start ),
+				substr( $css, $index + 1, $end - $index - 1 ),
+				$prefix,
+				$closed
+			);
+			$start   = $closed ? $end + 1 : $length;
+			$index   = $start;
+		}
+
+		return $output . substr( $css, $start );
+	}
+
+	/**
+	 * Rewrite one CSS block for the prefix pass.
+	 *
+	 * @param string $prelude Selector list or at-rule prelude.
+	 * @param string $body    Block body.
+	 * @param string $prefix  Selector prefix.
+	 * @param bool   $closed  Whether the source block was closed.
+	 *
+	 * @return string The rewritten block.
+	 */
+	private static function prefix_css_block( string $prelude, string $body, string $prefix, bool $closed ): string {
+		$trimmed = ltrim( $prelude );
+		$lead    = substr( $prelude, 0, strlen( $prelude ) - strlen( $trimmed ) );
+		$close   = $closed ? '}' : '';
+
+		if ( str_starts_with( $trimmed, '@' ) ) {
+			$name = strtolower( (string) ( preg_split( '/[\s({]/', substr( $trimmed, 1 ), 2 )[0] ?? '' ) );
+			$name = (string) preg_replace( '/^-[a-z]+-/', '', $name );
+
+			if ( in_array( $name, self::NESTED_AT_RULES, true ) ) {
+				$body = self::prefix_compiled_css( $body, $prefix );
+			}
+
+			return $lead . $trimmed . '{' . $body . $close;
+		}
+
+		return $lead . self::prefix_css_selectors( $trimmed, $prefix ) . '{' . $body . $close;
+	}
+
+	/**
+	 * Prefix one comma-separated selector list.
+	 *
+	 * @param string $selectors Selector list.
+	 * @param string $prefix    Selector prefix.
+	 *
+	 * @return string The prefixed selector list.
+	 */
+	private static function prefix_css_selectors( string $selectors, string $prefix ): string {
+		$prefixed = array();
+
+		foreach ( self::split_css_list( $selectors ) as $selector ) {
+			$selector = trim( $selector );
+
+			if ( '' === $selector ) {
+				continue;
+			}
+
+			$prefixed[] = str_contains( $selector, '&' )
+				? str_replace( '&', $prefix, $selector )
+				: $prefix . ' ' . $selector;
+		}
+
+		return array() === $prefixed ? $prefix : implode( ',', $prefixed );
+	}
+
+	/**
+	 * Split a CSS list on its top-level commas.
+	 *
+	 * @param string $value The list.
+	 *
+	 * @return string[] The list items.
+	 */
+	private static function split_css_list( string $value ): array {
+		$parts  = array();
+		$length = strlen( $value );
+		$index  = 0;
+		$start  = 0;
+
+		while ( $index < $length ) {
+			$char = $value[ $index ];
+
+			if ( '/' === $char && '*' === ( $value[ $index + 1 ] ?? '' ) ) {
+				$index = self::skip_css_comment( $value, $index );
+				continue;
+			}
+
+			if ( '"' === $char || "'" === $char ) {
+				$index = self::skip_css_string( $value, $index );
+				continue;
+			}
+
+			if ( '(' === $char || '[' === $char ) {
+				$index = self::find_css_group_end( $value, $index, $char, '(' === $char ? ')' : ']' ) + 1;
+				continue;
+			}
+
+			if ( ',' === $char ) {
+				$parts[] = substr( $value, $start, $index - $start );
+				$start   = ++$index;
+				continue;
+			}
+
+			++$index;
+		}
+
+		$parts[] = substr( $value, $start );
+
+		return $parts;
+	}
+
+	/**
+	 * Get the index after a CSS comment.
+	 *
+	 * @param string $css   The CSS content.
+	 * @param int    $index Index of the opening slash.
+	 *
+	 * @return int The index after the comment.
+	 */
+	private static function skip_css_comment( string $css, int $index ): int {
+		$end = strpos( $css, '*/', $index + 2 );
+
+		return false === $end ? strlen( $css ) : $end + 2;
+	}
+
+	/**
+	 * Get the index after a quoted CSS string.
+	 *
+	 * @param string $css   The CSS content.
+	 * @param int    $index Index of the opening quote.
+	 *
+	 * @return int The index after the string.
+	 */
+	private static function skip_css_string( string $css, int $index ): int {
+		$quote  = $css[ $index ];
+		$length = strlen( $css );
+
+		for ( $cursor = $index + 1; $cursor < $length; $cursor++ ) {
+			if ( '\\' === $css[ $cursor ] ) {
+				++$cursor;
+				continue;
+			}
+
+			if ( $css[ $cursor ] === $quote ) {
+				return $cursor + 1;
+			}
+		}
+
+		return $length;
+	}
+
+	/**
+	 * Get the index of the delimiter closing the group at the given index.
+	 *
+	 * @param string $css   The CSS content.
+	 * @param int    $index Index of the opening delimiter.
+	 * @param string $open  Opening delimiter.
+	 * @param string $close Closing delimiter.
+	 *
+	 * @return int Index of the closing delimiter, or the length when unbalanced.
+	 */
+	private static function find_css_group_end( string $css, int $index, string $open, string $close ): int {
+		$length = strlen( $css );
+		$depth  = 0;
+
+		while ( $index < $length ) {
+			$char = $css[ $index ];
+
+			if ( '/' === $char && '*' === ( $css[ $index + 1 ] ?? '' ) ) {
+				$index = self::skip_css_comment( $css, $index );
+				continue;
+			}
+
+			if ( '"' === $char || "'" === $char ) {
+				$index = self::skip_css_string( $css, $index );
+				continue;
+			}
+
+			if ( $char === $open ) {
+				++$depth;
+			} elseif ( $char === $close ) {
+				--$depth;
+
+				if ( 0 === $depth ) {
+					return $index;
+				}
+			}
+
+			++$index;
+		}
+
+		return $length;
+	}
+
+	/**
+	 * Check whether prefixing a stylesheet risks exhausting the memory limit.
+	 *
+	 * Prefixing is cosmetic, a fatal is not: it takes down every block editor
+	 * screen and leaves nothing cached, so the next request repeats it. A host
+	 * already close to its ceiling gets unprefixed editor styles instead.
+	 *
+	 * @param string $css The stylesheet contents.
+	 *
+	 * @return bool Whether prefixing should be skipped.
+	 */
+	private static function prefix_budget_exceeded( string $css ): bool {
+		$limit = self::get_memory_limit_bytes();
+
+		if ( $limit <= 0 ) {
+			return false;
+		}
+
+		return memory_get_usage( true ) + ( strlen( $css ) * 4 ) > $limit;
+	}
+
+	/**
+	 * Get the PHP memory limit in bytes.
+	 *
+	 * @return int The limit, or zero when unlimited or unknown.
+	 */
+	private static function get_memory_limit_bytes(): int {
+		$limit = ini_get( 'memory_limit' );
+
+		if ( ! is_string( $limit ) || '' === $limit ) {
+			return 0;
+		}
+
+		$bytes = (int) wp_convert_hr_to_bytes( $limit );
+
+		return $bytes > 0 ? $bytes : 0;
 	}
 
 	/**

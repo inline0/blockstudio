@@ -2618,6 +2618,26 @@ Inside template files, all attributes can be accessed using the `$attributes` or
 <h1>{{ a.message }}</h1>
 ```
 
+## Writing Attributes Programmatically
+
+The editor nests saved values under `blockstudio.attributes`. Anything writing a
+block outside the editor, such as the REST API, WP-CLI, a content migration or
+an MCP server, discovers the block from the attributes Blockstudio registers on
+the `WP_Block_Type` and writes them at the top level. Both shapes render:
+
+```php
+// Top level, as a programmatic writer produces it.
+echo do_blocks( '<!-- wp:acme/hero {"visual_type":"media"} /-->' );
+
+// Nested, as the editor saves it.
+echo do_blocks( '<!-- wp:acme/hero {"blockstudio":{"attributes":{"visual_type":"media"}}} /-->' );
+```
+
+Only ids the block declares are read from the top level, so WordPress' own
+attributes such as `anchor`, `className`, `lock`, `metadata` and `style` are
+never adopted as field values. When the same id appears in both places, the
+nested value wins.
+
 ## Empty Values
 
 Attribute values return `false` if the field is empty or no option has been selected.
@@ -12626,6 +12646,14 @@ has disappeared. `Static_Prerender_Early_Serve::last_promotion()` reports how
 many routes were promoted, replaced, skipped, or kept by the last install, so a
 deploy can log it.
 
+A stored document pins the build assets it links by URL, and those files
+keep their own retention, so one can outlive the other. Before serving, both
+the PHP cache and the drop-in check that a linked content-hashed Tailwind
+stylesheet still exists on disk. A document whose stylesheet is gone is handed
+to WordPress instead of served unstyled, which republishes the stylesheet and
+the document together. The same check runs before a response is stored, so a
+document that could not be served is never written.
+
 Mapped graph routes always use the activated artifact. When a safe anonymous
 route is not in that map but WordPress has since rendered and persisted it,
 Early Serve falls back to the identity-keyed runtime store before booting
@@ -12858,6 +12886,13 @@ add_filter('blockstudio/tailwind/cache_max_age', function () {
 ```
 
 The minimum age is one hour.
+
+Cache files are content-hashed, and a cached page links one by URL, so eviction
+and a stored page can disagree about which files still matter. Prerendered
+documents are checked against their linked stylesheet before they are served,
+so an evicted file costs one re-render rather than an unstyled page. Raising
+`cache_max_files` past the number of distinct page-level keys avoids the
+re-render entirely.
 
 > Static Prerendering
 >
