@@ -3,7 +3,7 @@ Contributors: dnnsjsk
 Requires at least: 6.7
 Tested up to: 7.0.0
 Requires PHP: 8.2
-Stable tag: 7.6.12
+Stable tag: 7.6.13
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -53,6 +53,10 @@ Download the latest release zip from [GitHub Releases](https://github.com/inline
 * [Getting Started](https://blockstudio.dev/docs/getting-started)
 
 == Changelog ==
+
+= 7.6.13 =
+* Fix: `tailwind.output` is declared in the settings schema, so a configuration that sets it is no longer reported as an unknown setting in the admin notice while the runtime honours it
+* Fix: `dev.perf` is declared in the settings schema, so enabling the performance profiler from a configuration file is no longer reported as an unknown setting
 
 = 7.6.12 =
 * Fix: editor stylesheets are prefixed by a single rewriting pass instead of a SASS compile per asset, so a cold editor build on a site with many blocks no longer exhausts modest memory limits and leaves the block editor fatally broken with nothing cached
