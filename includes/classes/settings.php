@@ -185,6 +185,7 @@ class Settings {
 		'tailwind'      => array(
 			'enabled' => false,
 			'config'  => '',
+			'output'  => 'inline',
 		),
 		'ui'            => array(
 			'enabled' => false,
@@ -244,6 +245,7 @@ class Settings {
 			'grab'   => array(
 				'enabled' => false,
 			),
+			'perf'   => false,
 			'canvas' => array(
 				'enabled'  => false,
 				'adminBar' => true,
