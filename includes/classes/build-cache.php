@@ -25,7 +25,7 @@ final class Build_Cache {
 	 *
 	 * @var int
 	 */
-	private const VERSION = 5;
+	private const VERSION = 6;
 
 	/**
 	 * Option storing the database-backed populate cache version.
@@ -33,6 +33,26 @@ final class Build_Cache {
 	 * @var string
 	 */
 	private const POPULATE_CACHE_VERSION_OPTION = 'blockstudio_populate_cache_version';
+
+	/**
+	 * Seconds a burst of content writes is coalesced into one choice refresh.
+	 *
+	 * A translation sync or import writes meta rows continuously; refreshing
+	 * populated choices per language on every one of them is wasted load.
+	 * The first write after a quiet period refreshes immediately and the last
+	 * write of a burst is reflected once the window has passed.
+	 *
+	 * @var int
+	 */
+	private const POPULATE_DEBOUNCE = 30;
+
+	/**
+	 * Content writes seen by this process, so request-local memoization is
+	 * busted on every write even while the persisted version is held.
+	 *
+	 * @var int
+	 */
+	private static int $populate_write_sequence = 0;
 
 	/**
 	 * Whether content-change invalidation hooks have been registered.
@@ -146,7 +166,6 @@ final class Build_Cache {
 					'settings'     => self::$key_input_memo[ $blog ]['settings'],
 					'fieldTypes'   => self::$key_input_memo[ $blog ]['fieldTypes'],
 					'plugins'      => self::$key_input_memo[ $blog ]['plugins'],
-					'populate'     => self::get_populate_cache_version(),
 					'stylesheet'   => function_exists( 'get_stylesheet' ) ? get_stylesheet() : '',
 					'template'     => function_exists( 'get_template' ) ? get_template() : '',
 					'wpVersion'    => get_bloginfo( 'version' ),
@@ -170,6 +189,99 @@ final class Build_Cache {
 	}
 
 	/**
+	 * Get a fixed election path independent of content invalidation versions.
+	 *
+	 * @param string $path     Build path.
+	 * @param string $instance Build instance.
+	 * @return string Lock path.
+	 */
+	public static function get_runtime_lock_path( string $path, string $instance ): string {
+		$key = hash( 'sha256', wp_json_encode( array( wp_normalize_path( $path ), $instance ) ) );
+
+		return self::get_cache_dir( 'runtime' ) . '/locks/build-' . $key . '.lock';
+	}
+
+	/**
+	 * Refresh database-backed choices without rediscovering or compiling blocks.
+	 *
+	 * @param string   $path     Build path.
+	 * @param string   $instance Build instance.
+	 * @param array    $payload  Structurally valid runtime payload.
+	 * @param callable $refresh  Refreshes cached registration attributes.
+	 * @param bool     $persist  Whether this is a current payload safe to publish.
+	 * @return array Runtime payload with current choices.
+	 */
+	public static function refresh_runtime_populate( string $path, string $instance, array $payload, callable $refresh, bool $persist = true ): array {
+		$version = self::get_populate_cache_version();
+		if ( ( $payload['populateVersion'] ?? '0' ) === $version ) {
+			return $payload;
+		}
+
+		$lock      = null;
+		$unguarded = false;
+		if ( $persist ) {
+			$lock = Single_Flight::acquire( self::get_runtime_lock_path( $path, $instance ) );
+			// No advisory locks means no peer can be waited for or raced, so
+			// this request owns the refresh the same way Build::init owns an
+			// unguarded build, and publishes it so the next request hits.
+			$unguarded = null === $lock;
+		}
+		if ( false === $lock ) {
+			$file     = self::get_cache_file( 'runtime', self::get_runtime_key( $path, $instance ) );
+			$snapshot = null;
+			$peer     = Single_Flight::wait(
+				static function () use ( $path, $instance, $version, $file, &$snapshot ): ?array {
+					clearstatcache( true, $file );
+					$stat = @stat( $file ); // phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged -- A concurrent publisher can replace the file.
+					if ( false === $stat ) {
+						return null;
+					}
+					$current_snapshot = array( $stat['ino'], $stat['mtime'], $stat['size'] );
+					if ( $snapshot === $current_snapshot ) {
+						return null;
+					}
+					$snapshot = $current_snapshot;
+					$current  = self::load_runtime( $path, $instance );
+
+					return ( $current['populateVersion'] ?? null ) === $version ? $current : null;
+				},
+				max( 0, (int) apply_filters( 'blockstudio/cache/build_wait_budget', 4000 ) )
+			);
+			if ( is_array( $peer ) ) {
+				return $peer;
+			}
+		}
+
+		try {
+			if ( is_resource( $lock ) || $unguarded ) {
+				$peer = self::load_runtime( $path, $instance );
+				if ( ( $peer['populateVersion'] ?? null ) === $version ) {
+					return $peer;
+				}
+				if ( is_array( $peer ) ) {
+					$payload = $peer;
+				} else {
+					$persist = false;
+				}
+			}
+
+			$payload['registeredBlockTypes'] = $refresh( $payload['registeredBlockTypes'] ?? array() );
+			$payload['populateVersion']      = $version;
+
+			// A timed-out peer may refresh choices for this request, but must not race its publisher.
+			if ( ( is_resource( $lock ) || $unguarded ) && $persist ) {
+				self::write( 'runtime', self::get_runtime_key( $path, $instance ), $payload );
+			}
+
+			return $payload;
+		} finally {
+			if ( is_resource( $lock ) ) {
+				Single_Flight::release( $lock );
+			}
+		}
+	}
+
+	/**
 	 * Load runtime cache payload if it is still valid.
 	 *
 	 * @param string $path     Build path.
@@ -186,6 +298,36 @@ final class Build_Cache {
 	}
 
 	/**
+	 * Load last-good metadata while a peer rebuilds changed sources.
+	 *
+	 * Missing source files or compiled assets are never accepted as last-good.
+	 *
+	 * @param string $path     Build path.
+	 * @param string $instance Build instance.
+	 * @return array|null Safe last-good payload.
+	 */
+	public static function load_last_good_runtime( string $path, string $instance ): ?array {
+		if ( ! self::is_enabled() ) {
+			return null;
+		}
+		$file = self::get_cache_file( 'runtime', self::get_runtime_key( $path, $instance ) );
+		if ( ! is_file( $file ) ) {
+			return null;
+		}
+		$payload = include $file;
+		if ( ! is_array( $payload ) || ( $payload['cacheVersion'] ?? null ) !== self::VERSION || ! self::required_watch_paths_exist( $payload['watch'] ?? array() ) ) {
+			return null;
+		}
+		foreach ( $payload['watch']['files'] ?? array() as $source => $snapshot ) {
+			if ( ! empty( $snapshot['exists'] ) && ! is_file( $source ) ) {
+				return null;
+			}
+		}
+
+		return $payload;
+	}
+
+	/**
 	 * Write runtime cache payload.
 	 *
 	 * @param string $path     Build path.
@@ -199,6 +341,7 @@ final class Build_Cache {
 			return false;
 		}
 
+		$payload['populateVersion']   = $payload['populateVersion'] ?? self::get_populate_cache_version();
 		$payload['watch']             = self::create_watch_snapshot(
 			self::collect_runtime_watch_paths( $path, $payload ),
 			self::collect_runtime_watch_dirs( $path, $payload )
@@ -209,16 +352,95 @@ final class Build_Cache {
 	}
 
 	/**
+	 * Read the stored populate invalidation state.
+	 *
+	 * Releases before 7.6.14 stored a bare version string, which reads as a
+	 * settled state whose next write rotates immediately.
+	 *
+	 * @return array{version:string,rotated:int,dirty:int} Version, when it last rotated, and the last write it does not yet reflect.
+	 */
+	private static function get_populate_state(): array {
+		$stored = get_option( self::POPULATE_CACHE_VERSION_OPTION, '0' );
+
+		if ( is_array( $stored ) ) {
+			return array(
+				'version' => (string) ( $stored['version'] ?? '0' ),
+				'rotated' => (int) ( $stored['rotated'] ?? 0 ),
+				'dirty'   => (int) ( $stored['dirty'] ?? 0 ),
+			);
+		}
+
+		return array(
+			'version' => is_scalar( $stored ) ? (string) $stored : '0',
+			'rotated' => 0,
+			'dirty'   => 0,
+		);
+	}
+
+	/**
+	 * Get the populate debounce window in seconds.
+	 *
+	 * @return int Window; zero refreshes on every write.
+	 */
+	private static function get_populate_debounce(): int {
+		/**
+		 * Filter how long a burst of content writes is coalesced into one
+		 * populated-choice refresh.
+		 *
+		 * @since 7.6.14
+		 *
+		 * @param int $seconds Window in seconds. Zero refreshes on every write.
+		 */
+		return max( 0, (int) apply_filters( 'blockstudio/cache/populate_debounce', self::POPULATE_DEBOUNCE ) );
+	}
+
+	/**
 	 * Get the database-backed populate cache version.
+	 *
+	 * A burst that has been quiet for the whole window is reflected exactly
+	 * once here, on the trailing edge. The version derives from the last write
+	 * so concurrent readers agree instead of racing to different values.
+	 *
+	 * @param int|null $now Current time, injectable for tests.
 	 *
 	 * @return string Cache version.
 	 */
-	public static function get_populate_cache_version(): string {
-		return (string) get_option( self::POPULATE_CACHE_VERSION_OPTION, '0' );
+	public static function get_populate_cache_version( ?int $now = null ): string {
+		$state = self::get_populate_state();
+		$now   = $now ?? time();
+
+		if ( $state['dirty'] > $state['rotated'] && $now - $state['rotated'] >= self::get_populate_debounce() ) {
+			$state = array(
+				'version' => md5( 'populate:' . $state['dirty'] ),
+				'rotated' => $now,
+				'dirty'   => 0,
+			);
+			update_option( self::POPULATE_CACHE_VERSION_OPTION, $state, false );
+		}
+
+		return $state['version'];
+	}
+
+	/**
+	 * Get a signal that changes on every content write.
+	 *
+	 * Request-local memoization keys on this rather than the version, so an
+	 * in-request write is never served a stale query while the persisted
+	 * version is being held inside the debounce window.
+	 *
+	 * @return string Write signal.
+	 */
+	public static function get_populate_write_signal(): string {
+		$state = self::get_populate_state();
+
+		return $state['version'] . ':' . $state['dirty'] . ':' . self::$populate_write_sequence;
 	}
 
 	/**
 	 * Invalidate database-backed populate data stored in runtime cache payloads.
+	 *
+	 * Hooked directly to content, term, user and meta actions, so it must not
+	 * declare parameters: WordPress passes each hook's first argument.
 	 *
 	 * @return void
 	 */
@@ -227,11 +449,36 @@ final class Build_Cache {
 			return;
 		}
 
-		$version = function_exists( 'wp_generate_uuid4' )
-			? wp_generate_uuid4()
-			: uniqid( '', true );
+		self::mark_populate_cache_dirty( time() );
+	}
 
-		update_option( self::POPULATE_CACHE_VERSION_OPTION, $version, false );
+	/**
+	 * Record a content write.
+	 *
+	 * The first write after a quiet window rotates the version immediately so
+	 * choices refresh promptly. Writes inside the window only mark the state
+	 * dirty; get_populate_cache_version() rotates once more when the window
+	 * has passed, reflecting the last of them.
+	 *
+	 * @param int $now Current time, injectable for tests.
+	 *
+	 * @return void
+	 */
+	public static function mark_populate_cache_dirty( int $now ): void {
+		$state = self::get_populate_state();
+		++self::$populate_write_sequence;
+
+		if ( $now - $state['rotated'] >= self::get_populate_debounce() ) {
+			$state = array(
+				'version' => function_exists( 'wp_generate_uuid4' ) ? wp_generate_uuid4() : uniqid( '', true ),
+				'rotated' => $now,
+				'dirty'   => 0,
+			);
+		} else {
+			$state['dirty'] = $now;
+		}
+
+		update_option( self::POPULATE_CACHE_VERSION_OPTION, $state, false );
 	}
 
 	/**
@@ -281,7 +528,7 @@ final class Build_Cache {
 	 *
 	 * @return bool Whether populate is declared.
 	 */
-	private static function attributes_populate( array $attributes ): bool {
+	public static function attributes_populate( array $attributes ): bool {
 		foreach ( $attributes as $attribute ) {
 			if ( ! is_array( $attribute ) ) {
 				continue;
@@ -291,12 +538,10 @@ final class Build_Cache {
 				return true;
 			}
 
-			if (
-				! empty( $attribute['attributes'] ) &&
-				is_array( $attribute['attributes'] ) &&
-				self::attributes_populate( $attribute['attributes'] )
-			) {
-				return true;
+			foreach ( array( 'attributes', 'tabs' ) as $nested_key ) {
+				if ( ! empty( $attribute[ $nested_key ] ) && is_array( $attribute[ $nested_key ] ) && self::attributes_populate( $attribute[ $nested_key ] ) ) {
+					return true;
+				}
 			}
 		}
 
@@ -463,6 +708,7 @@ final class Build_Cache {
 
 		$payload['cacheVersion'] = self::VERSION;
 		$file                    = self::get_cache_file( $scope, $key );
+		$is_new                  = ! is_file( $file );
 		$tmp                     = $file . '.tmp-' . wp_generate_uuid4();
 		$contents                = self::export_payload( $payload );
 
@@ -484,7 +730,12 @@ final class Build_Cache {
 			@touch( $file . '.ok' ); // phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged, WordPress.WP.AlternativeFunctions.file_system_operations_touch -- Best-effort debounce stamp.
 		}
 
-		self::prune_scope( $scope, $file );
+		$prune_stamp = $dir . '/.pruned';
+		$last_prune  = is_file( $prune_stamp ) ? (int) @filemtime( $prune_stamp ) : 0; // phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged -- Concurrent scope purges can remove the stamp.
+		if ( $is_new || $last_prune < time() - HOUR_IN_SECONDS ) {
+			@touch( $prune_stamp ); // phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged, WordPress.WP.AlternativeFunctions.file_system_operations_touch -- Throttle periodic cleanup of orphaned temporary files.
+			self::prune_scope( $scope, $file );
+		}
 
 		return true;
 	}
@@ -494,8 +745,8 @@ final class Build_Cache {
 	 *
 	 * Temp files orphaned by a writer killed between write and rename are
 	 * swept after an hour of idleness; an active writer's temp file is
-	 * seconds old. Build lock files are path-keyed and bounded, so they are
-	 * never swept.
+	 * seconds old. Fixed build-path locks live separately under locks/ and
+	 * are never swept; legacy key-specific locks are collected by WP-Cron.
 	 *
 	 * @param string $scope     Cache scope.
 	 * @param string $keep_file File that must not be pruned.
@@ -515,7 +766,7 @@ final class Build_Cache {
 				$mtime = (int) ( @filemtime( $file ) ); // phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged -- Concurrent cleanups can remove the file between listing and stat.
 
 				if ( $mtime > 0 && time() - $mtime > HOUR_IN_SECONDS ) {
-					wp_delete_file( $file );
+					@unlink( $file ); // phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged, WordPress.WP.AlternativeFunctions.unlink_unlink -- Internal cache files must not invoke media-deletion filters.
 				}
 			}
 		}
@@ -544,10 +795,10 @@ final class Build_Cache {
 		);
 
 		foreach ( array_slice( $files, max( 0, $max_files - 1 ) ) as $file ) {
-			wp_delete_file( $file );
+			@unlink( $file ); // phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged, WordPress.WP.AlternativeFunctions.unlink_unlink -- Internal cache files must not invoke media-deletion filters.
 
 			if ( is_file( $file . '.ok' ) ) {
-				wp_delete_file( $file . '.ok' );
+				@unlink( $file . '.ok' ); // phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged, WordPress.WP.AlternativeFunctions.unlink_unlink -- Internal cache files must not invoke media-deletion filters.
 			}
 		}
 	}

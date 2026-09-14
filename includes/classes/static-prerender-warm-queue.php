@@ -319,7 +319,7 @@ final class Static_Prerender_Warm_Queue {
 						continue;
 					}
 
-					wp_delete_file( $path );
+					@unlink( $path ); // phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged, WordPress.WP.AlternativeFunctions.unlink_unlink -- Internal cache files must not invoke media-deletion filters.
 					if ( ! is_file( $path ) ) {
 						++$removed;
 					}
@@ -345,7 +345,7 @@ final class Static_Prerender_Warm_Queue {
 				foreach ( is_array( $paths ) ? $paths : array() as $path ) {
 					$id = basename( $path, '.json' );
 					if ( null === $this->read_record( $id ) ) {
-						wp_delete_file( $path );
+						@unlink( $path ); // phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged, WordPress.WP.AlternativeFunctions.unlink_unlink -- Internal cache files must not invoke media-deletion filters.
 						++$removed;
 					} else {
 						++$records;
@@ -528,7 +528,7 @@ final class Static_Prerender_Warm_Queue {
 		$path = $this->record_path( $id );
 
 		if ( is_file( $path ) ) {
-			wp_delete_file( $path );
+			@unlink( $path ); // phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged, WordPress.WP.AlternativeFunctions.unlink_unlink -- Internal cache files must not invoke media-deletion filters.
 		}
 	}
 

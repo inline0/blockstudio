@@ -40,6 +40,49 @@ final class Runtime_Cache {
 	 */
 	private const LEGACY_CLEANUP_BATCH_SIZE = 500;
 
+	private const BUILD_LOCK_CLEANUP_HOOK = 'blockstudio/cache/cleanup_legacy_build_locks';
+
+	/**
+	 * Legacy build locks removed per cron batch.
+	 *
+	 * A site that accumulated a million locks drains in about an hour and a
+	 * half at one batch a minute; the earlier 500 took more than a day.
+	 *
+	 * @var int
+	 */
+	private const BUILD_LOCK_CLEANUP_BATCH_SIZE = 10000;
+
+	/**
+	 * Wall-clock budget for one build-lock batch in seconds.
+	 *
+	 * Keeps a batch well inside any web-spawned cron execution limit even on
+	 * slow storage.
+	 *
+	 * @var int
+	 */
+	private const BUILD_LOCK_CLEANUP_BUDGET = 10;
+
+	/**
+	 * Transient that throttles the request-path sweep to once an hour.
+	 *
+	 * @var string
+	 */
+	private const INLINE_SWEEP_TRANSIENT = 'blockstudio_legacy_lock_sweep';
+
+	/**
+	 * Locks removed by one request-path sweep when cron is not firing.
+	 *
+	 * @var int
+	 */
+	private const INLINE_SWEEP_BATCH_SIZE = 1000;
+
+	/**
+	 * Wall-clock budget for one request-path sweep in seconds.
+	 *
+	 * @var float
+	 */
+	private const INLINE_SWEEP_BUDGET = 2.0;
+
 	/**
 	 * Default maximum number of objects retained per scope.
 	 *
@@ -90,6 +133,200 @@ final class Runtime_Cache {
 		}
 
 		self::stage_legacy_runtime_cleanup();
+		add_action( self::BUILD_LOCK_CLEANUP_HOOK, array( __CLASS__, 'cleanup_legacy_build_locks' ) );
+		$version = defined( 'BLOCKSTUDIO_VERSION' ) ? BLOCKSTUDIO_VERSION : '6';
+		if ( get_option( 'blockstudio_build_lock_cleanup_version', '' ) !== $version ) {
+			$scheduled = false !== wp_next_scheduled( self::BUILD_LOCK_CLEANUP_HOOK );
+			if ( ! $scheduled ) {
+				$scheduled = wp_schedule_single_event( time() + 5 * MINUTE_IN_SECONDS, self::BUILD_LOCK_CLEANUP_HOOK );
+			}
+			if ( $scheduled ) {
+				update_option( 'blockstudio_build_lock_cleanup_version', $version, false );
+			}
+		}
+
+		// A batch that is well past due means cron is not firing on this site.
+		// Make bounded progress from the request path once an hour so the
+		// drain never silently stalls; with a healthy cron this never runs.
+		$next = wp_next_scheduled( self::BUILD_LOCK_CLEANUP_HOOK );
+		if ( false !== $next && $next < time() - 10 * MINUTE_IN_SECONDS && false === get_transient( self::INLINE_SWEEP_TRANSIENT ) ) {
+			set_transient( self::INLINE_SWEEP_TRANSIENT, 1, HOUR_IN_SECONDS );
+			self::remove_legacy_build_locks( self::INLINE_SWEEP_BATCH_SIZE, self::INLINE_SWEEP_BUDGET );
+		}
+	}
+
+	/**
+	 * Run one legacy build-lock cleanup batch from WP-Cron.
+	 *
+	 * @return void
+	 */
+	public static function cleanup_legacy_build_locks(): void {
+		self::cleanup_legacy_build_locks_batch();
+	}
+
+	/**
+	 * Count key-specific build locks left by earlier releases on this site.
+	 *
+	 * @return array{locks:int,namespaces:int} Remaining locks and the namespaces holding them.
+	 */
+	public static function count_legacy_build_locks(): array {
+		$site_directory = self::root() . '/sites/' . self::site_key();
+		$locks          = 0;
+		$namespaces     = 0;
+		$candidates     = glob( $site_directory . '/*', GLOB_ONLYDIR );
+
+		foreach ( is_array( $candidates ) ? $candidates : array() as $namespace ) {
+			$directory = $namespace . '/runtime';
+			if ( ! is_dir( $directory ) || is_link( $namespace ) || is_link( $directory ) ) {
+				continue;
+			}
+			$found = 0;
+			try {
+				foreach ( new \DirectoryIterator( $directory ) as $entry ) {
+					if ( preg_match( '/^[a-f0-9]{32}\.build\.lock$/', $entry->getFilename() ) ) {
+						++$found;
+					}
+				}
+			} catch ( \UnexpectedValueException ) {
+				continue;
+			}
+			if ( $found > 0 ) {
+				++$namespaces;
+				$locks += $found;
+			}
+		}
+
+		return array(
+			'locks'      => $locks,
+			'namespaces' => $namespaces,
+		);
+	}
+
+	/**
+	 * Remove idle key-specific build locks left by earlier releases.
+	 *
+	 * New fixed-path locks are never candidates. The sweep uses native unlink
+	 * so media plugins do not query attachment metadata, and stops at the
+	 * given count or wall-clock budget, whichever comes first.
+	 *
+	 * @param int   $limit  Maximum locks to remove.
+	 * @param float $budget Wall-clock budget in seconds.
+	 *
+	 * @return array{removed:int,pending:bool,skipped:bool} Outcome; skipped when another sweep holds the site lock.
+	 */
+	private static function remove_legacy_build_locks( int $limit, float $budget ): array {
+		$result = array(
+			'removed' => 0,
+			'pending' => false,
+			'skipped' => false,
+		);
+		if ( ! Settings::get_bool( 'cache/enabled', true ) ) {
+			return $result;
+		}
+		$site_directory = self::root() . '/sites/' . self::site_key();
+		$lock           = Single_Flight::acquire( $site_directory . '/legacy-build-lock-cleanup.lock' );
+		if ( ! is_resource( $lock ) ) {
+			$result['skipped'] = true;
+
+			return $result;
+		}
+
+		$limit    = max( 1, $limit );
+		$deadline = microtime( true ) + max( 0.1, $budget );
+		try {
+			$namespaces = glob( $site_directory . '/*', GLOB_ONLYDIR );
+			foreach ( is_array( $namespaces ) ? $namespaces : array() as $namespace ) {
+				$directory = $namespace . '/runtime';
+				if ( ! is_dir( $directory ) || is_link( $namespace ) || is_link( $directory ) ) {
+					continue;
+				}
+				try {
+					$entries = new \DirectoryIterator( $directory );
+					foreach ( $entries as $entry ) {
+						if ( ! preg_match( '/^[a-f0-9]{32}\.build\.lock$/', $entry->getFilename() ) || ! $entry->isFile() || $entry->isLink() ) {
+							continue;
+						}
+						if ( $entry->getMTime() >= time() - HOUR_IN_SECONDS ) {
+							$result['pending'] = true;
+							continue;
+						}
+						$handle = @fopen( $entry->getPathname(), 'r+' ); // phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged, WordPress.WP.AlternativeFunctions.file_system_operations_fopen -- Existing idle lock; concurrent removal is harmless.
+						if ( false === $handle ) {
+							$result['pending'] = true;
+							continue;
+						}
+						try {
+							if ( ! flock( $handle, LOCK_EX | LOCK_NB ) ) {
+								$result['pending'] = true;
+								continue;
+							}
+							$stat = fstat( $handle );
+							if ( is_array( $stat ) && $stat['mtime'] < time() - HOUR_IN_SECONDS && @unlink( $entry->getPathname() ) ) { // phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged, WordPress.WP.AlternativeFunctions.unlink_unlink -- Retired idle build locks are not WordPress media.
+								++$result['removed'];
+							} else {
+								$result['pending'] = true;
+							}
+						} finally {
+							Single_Flight::release( $handle );
+						}
+						if ( $result['removed'] >= $limit || microtime( true ) >= $deadline ) {
+							$result['pending'] = true;
+							break 2;
+						}
+					}
+				} catch ( \UnexpectedValueException ) {
+					continue;
+				}
+			}
+		} finally {
+			Single_Flight::release( $lock );
+		}
+
+		return $result;
+	}
+
+	/**
+	 * Run one scheduled cleanup batch.
+	 *
+	 * Drains legacy locks, collects abandoned namespaces once the backlog is
+	 * gone, and arms the next batch. Namespace collection used to run only
+	 * from the static-prerender write path, so on every other site an
+	 * abandoned namespace lived forever; once the backlog is drained the trees
+	 * are small, so the sweep runs here and the batch keeps a daily tick.
+	 *
+	 * @return int Number of removed lock files.
+	 */
+	public static function cleanup_legacy_build_locks_batch(): int {
+		if ( ! Settings::get_bool( 'cache/enabled', true ) ) {
+			return 0;
+		}
+
+		// The next batch is armed before any work so a fatal partway through a
+		// cron run still yields a retry instead of stalling the drain until the
+		// next version bump.
+		if ( false === wp_next_scheduled( self::BUILD_LOCK_CLEANUP_HOOK ) ) {
+			wp_schedule_single_event( time() + MINUTE_IN_SECONDS, self::BUILD_LOCK_CLEANUP_HOOK );
+		}
+
+		$limit  = max( 1, (int) apply_filters( 'blockstudio/cache/legacy_cleanup_batch_size', self::BUILD_LOCK_CLEANUP_BATCH_SIZE ) );
+		$result = self::remove_legacy_build_locks( $limit, self::BUILD_LOCK_CLEANUP_BUDGET );
+
+		// Another sweep owns the site lock and will arm the next batch itself.
+		if ( $result['skipped'] ) {
+			return 0;
+		}
+
+		if ( ! $result['pending'] ) {
+			self::collect_stale_namespaces( self::directory( 'runtime' ) );
+		}
+		$next = wp_next_scheduled( self::BUILD_LOCK_CLEANUP_HOOK );
+		if ( false !== $next ) {
+			wp_unschedule_event( $next, self::BUILD_LOCK_CLEANUP_HOOK );
+		}
+		$delay = $result['pending'] ? ( $result['removed'] > 0 ? MINUTE_IN_SECONDS : HOUR_IN_SECONDS ) : DAY_IN_SECONDS;
+		wp_schedule_single_event( time() + $delay, self::BUILD_LOCK_CLEANUP_HOOK );
+
+		return $result['removed'];
 	}
 
 	/**
@@ -555,6 +792,16 @@ final class Runtime_Cache {
 			return;
 		}
 
+		// Every sibling tree is walked to find its newest file, which on a site
+		// carrying a large legacy backlog is the dominant cost, so one sweep per
+		// hour per site is enough.
+		$stamp = $site_directory . '/.namespaces-collected';
+		$last  = is_file( $stamp ) ? (int) @filemtime( $stamp ) : 0; // phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged -- Concurrent sweeps can remove the stamp.
+		if ( $last >= time() - HOUR_IN_SECONDS ) {
+			return;
+		}
+		@touch( $stamp ); // phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged, WordPress.WP.AlternativeFunctions.file_system_operations_touch -- Best-effort throttle stamp.
+
 		$siblings = glob( $site_directory . '/*', GLOB_ONLYDIR );
 
 		if ( ! is_array( $siblings ) ) {
@@ -658,7 +905,7 @@ final class Runtime_Cache {
 		foreach ( is_array( $temporary_files ) ? $temporary_files : array() as $temporary ) {
 			$mtime = (int) ( @filemtime( $temporary ) ); // phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged -- Concurrent cleanups can remove the file between listing and stat.
 			if ( $mtime > 0 && $mtime < $now - HOUR_IN_SECONDS ) {
-				wp_delete_file( $temporary );
+				@unlink( $temporary ); // phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged, WordPress.WP.AlternativeFunctions.unlink_unlink -- Internal cache files must not invoke media-deletion filters.
 			}
 		}
 
@@ -709,7 +956,7 @@ final class Runtime_Cache {
 		);
 
 		foreach ( array_slice( $objects, max( 0, $maximum - ( '' === $keep_path ? 0 : 1 ) ) ) as $object ) {
-			wp_delete_file( $object );
+			@unlink( $object ); // phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged, WordPress.WP.AlternativeFunctions.unlink_unlink -- Internal cache files must not invoke media-deletion filters.
 		}
 	}
 

@@ -10,6 +10,7 @@ use Blockstudio\Build;
 use Blockstudio\Build_Cache;
 use Blockstudio\Assets;
 use Blockstudio\Files;
+use Blockstudio\Single_Flight;
 use PHPUnit\Framework\TestCase;
 
 /**
@@ -276,7 +277,13 @@ class BuildCacheTest extends TestCase {
 		$this->temporary_directories[] = $dir;
 
 		$filter = static fn(): int => 2;
+		$deletions = 0;
+		$media = static function ( $file ) use ( &$deletions ) {
+			++$deletions;
+			return $file;
+		};
 		add_filter( 'blockstudio/cache/max_files_per_scope', $filter );
+		add_filter( 'wp_delete_file', $media );
 
 		try {
 			Build_Cache::write( $scope, 'one', array( 'watch' => array() ) );
@@ -287,8 +294,505 @@ class BuildCacheTest extends TestCase {
 			$this->assertIsArray( $files );
 			$this->assertLessThanOrEqual( 2, count( $files ) );
 			$this->assertFileExists( Build_Cache::get_cache_dir( $scope ) . '/three.php' );
+			$this->assertSame( 0, $deletions );
 		} finally {
 			remove_filter( 'blockstudio/cache/max_files_per_scope', $filter );
+			remove_filter( 'wp_delete_file', $media );
+		}
+	}
+
+	public function test_populate_versions_do_not_change_runtime_keys_or_lock_paths(): void {
+		$before = Build_Cache::get_populate_cache_version();
+		$key    = Build_Cache::get_runtime_key( '/fixed/blocks', 'default' );
+		$lock   = Build_Cache::get_runtime_lock_path( '/fixed/blocks', 'default' );
+		try {
+			for ( $i = 0; $i < 50; ++$i ) {
+				update_option( 'blockstudio_populate_cache_version', wp_generate_uuid4(), false );
+				$this->assertSame( $key, Build_Cache::get_runtime_key( '/fixed/blocks', 'default' ) );
+				$this->assertSame( $lock, Build_Cache::get_runtime_lock_path( '/fixed/blocks', 'default' ) );
+			}
+			$this->assertNotSame( $lock, Build_Cache::get_runtime_lock_path( '/other/blocks', 'default' ) );
+			$this->assertNotSame( $lock, Build_Cache::get_runtime_lock_path( '/fixed/blocks', 'other' ) );
+		} finally {
+			update_option( 'blockstudio_populate_cache_version', $before, false );
+		}
+	}
+
+	public function test_populate_refresh_keeps_one_payload_and_lock_without_media_filters(): void {
+		$directory = $this->create_temporary_directory();
+		$root      = static fn(): string => $directory;
+		$deletions = 0;
+		$media     = static function ( $file ) use ( &$deletions ) {
+			++$deletions;
+			return $file;
+		};
+		$before    = Build_Cache::get_populate_cache_version();
+		$prunes    = 0;
+		$retention = static function ( $maximum ) use ( &$prunes ) {
+			++$prunes;
+			return $maximum;
+		};
+		$refreshes = 0;
+		$refresh   = static function ( array $registered ) use ( &$refreshes ): array {
+			++$refreshes;
+			$registered['choices'] = $refreshes;
+			return $registered;
+		};
+		add_filter( 'blockstudio/cache/dir', $root );
+		add_filter( 'wp_delete_file', $media );
+		add_filter( 'blockstudio/cache/max_files_per_scope', $retention );
+		try {
+			Build_Cache::write_runtime( '/fixed/blocks', 'default', array( 'registeredBlockTypes' => array(), 'store' => array() ) );
+			$original = Build_Cache::load_runtime( '/fixed/blocks', 'default' );
+			for ( $i = 0; $i < 50; ++$i ) {
+				update_option( 'blockstudio_populate_cache_version', wp_generate_uuid4(), false );
+				$payload = Build_Cache::refresh_runtime_populate( '/fixed/blocks', 'default', Build_Cache::load_runtime( '/fixed/blocks', 'default' ), $refresh );
+				$this->assertSame( $original['watch'], $payload['watch'] );
+				$this->assertSame( $i + 1, $payload['registeredBlockTypes']['choices'] );
+				Build_Cache::refresh_runtime_populate( '/fixed/blocks', 'default', $payload, $refresh );
+			}
+			$this->assertSame( 50, $refreshes );
+			$this->assertCount( 1, glob( Build_Cache::get_cache_dir( 'runtime' ) . '/*.php' ) );
+			$this->assertCount( 1, glob( Build_Cache::get_cache_dir( 'runtime' ) . '/locks/*.lock' ) );
+			$this->assertSame( 0, $deletions );
+			$this->assertSame( 1, $prunes, 'Overwriting populated choices must not rescan the cache directory.' );
+			$stale = Build_Cache::get_cache_dir( 'runtime' ) . '/abandoned.php.tmp-old';
+			$this->write_file( $stale, 'abandoned writer' );
+			touch( $stale, time() - 2 * HOUR_IN_SECONDS );
+			touch( Build_Cache::get_cache_dir( 'runtime' ) . '/.pruned', time() - 2 * HOUR_IN_SECONDS );
+			clearstatcache();
+			Build_Cache::write( 'runtime', Build_Cache::get_runtime_key( '/fixed/blocks', 'default' ), $payload );
+			$this->assertFileDoesNotExist( $stale );
+			$this->assertSame( 2, $prunes, 'Periodic cleanup must still collect abandoned writers.' );
+			$this->assertSame( 0, $deletions );
+		} finally {
+			remove_filter( 'blockstudio/cache/dir', $root );
+			remove_filter( 'wp_delete_file', $media );
+			remove_filter( 'blockstudio/cache/max_files_per_scope', $retention );
+			update_option( 'blockstudio_populate_cache_version', $before, false );
+		}
+	}
+
+	public function test_failed_populate_refresh_releases_lock_and_retains_payload(): void {
+		$directory = $this->create_temporary_directory();
+		$root      = static fn(): string => $directory;
+		$before    = Build_Cache::get_populate_cache_version();
+		add_filter( 'blockstudio/cache/dir', $root );
+		try {
+			Build_Cache::write_runtime( '/fixed/blocks', 'default', array( 'registeredBlockTypes' => array(), 'store' => array() ) );
+			$original = Build_Cache::load_runtime( '/fixed/blocks', 'default' );
+			update_option( 'blockstudio_populate_cache_version', wp_generate_uuid4(), false );
+			try {
+				Build_Cache::refresh_runtime_populate( '/fixed/blocks', 'default', $original, static function (): array {
+					throw new RuntimeException( 'Populate failure' );
+				} );
+				$this->fail( 'The callback must fail.' );
+			} catch ( RuntimeException $exception ) {
+				$this->assertSame( 'Populate failure', $exception->getMessage() );
+			}
+			$this->assertSame( $original, Build_Cache::load_runtime( '/fixed/blocks', 'default' ) );
+			$lock = Single_Flight::acquire( Build_Cache::get_runtime_lock_path( '/fixed/blocks', 'default' ) );
+			$this->assertIsResource( $lock );
+			Single_Flight::release( $lock );
+		} finally {
+			remove_filter( 'blockstudio/cache/dir', $root );
+			update_option( 'blockstudio_populate_cache_version', $before, false );
+		}
+	}
+
+	public function test_last_good_populate_refresh_never_overwrites_the_builders_payload(): void {
+		$directory = $this->create_temporary_directory();
+		$root      = static fn(): string => $directory;
+		$before    = Build_Cache::get_populate_cache_version();
+		add_filter( 'blockstudio/cache/dir', $root );
+		try {
+			Build_Cache::write_runtime( '/fixed/blocks', 'default', array( 'registeredBlockTypes' => array(), 'store' => array() ) );
+			$original = Build_Cache::load_runtime( '/fixed/blocks', 'default' );
+			update_option( 'blockstudio_populate_cache_version', wp_generate_uuid4(), false );
+			$result = Build_Cache::refresh_runtime_populate( '/fixed/blocks', 'default', $original, static fn(): array => array( 'request-only' => true ), false );
+			$this->assertSame( array( 'request-only' => true ), $result['registeredBlockTypes'] );
+			$this->assertSame( $original, Build_Cache::load_runtime( '/fixed/blocks', 'default' ) );
+			$this->assertSame( array(), glob( Build_Cache::get_cache_dir( 'runtime' ) . '/locks/*.lock' ) );
+		} finally {
+			remove_filter( 'blockstudio/cache/dir', $root );
+			update_option( 'blockstudio_populate_cache_version', $before, false );
+		}
+	}
+
+	// Single_Flight::acquire() returns null, not false, when advisory locks
+	// are unavailable. Treating that like a timed-out peer discarded every
+	// refresh, so such hosts re-ran every populate query on every request.
+	public function test_populate_refresh_persists_without_advisory_locks(): void {
+		$directory = $this->create_temporary_directory();
+		$root      = static fn(): string => $directory;
+		$before    = Build_Cache::get_populate_cache_version();
+		$refreshes = 0;
+		$refresh   = static function ( array $registered ) use ( &$refreshes ): array {
+			++$refreshes;
+			$registered['choices'] = 'fresh';
+			return $registered;
+		};
+		add_filter( 'blockstudio/cache/dir', $root );
+		try {
+			Build_Cache::write_runtime( '/fixed/blocks', 'default', array( 'registeredBlockTypes' => array( 'choices' => 'stale' ), 'store' => array() ) );
+			$this->write_file( Build_Cache::get_cache_dir( 'runtime' ) . '/locks', 'a file where the lock directory belongs' );
+			$this->assertNull( Single_Flight::acquire( Build_Cache::get_runtime_lock_path( '/fixed/blocks', 'default' ) ) );
+
+			$version = wp_generate_uuid4();
+			update_option( 'blockstudio_populate_cache_version', $version, false );
+			$payload = Build_Cache::refresh_runtime_populate( '/fixed/blocks', 'default', Build_Cache::load_runtime( '/fixed/blocks', 'default' ), $refresh );
+
+			$this->assertSame( 'fresh', $payload['registeredBlockTypes']['choices'] );
+			$stored = Build_Cache::load_runtime( '/fixed/blocks', 'default' );
+			$this->assertSame( $version, $stored['populateVersion'] );
+			$this->assertSame( 'fresh', $stored['registeredBlockTypes']['choices'] );
+
+			Build_Cache::refresh_runtime_populate( '/fixed/blocks', 'default', $stored, $refresh );
+			$this->assertSame( 1, $refreshes, 'The persisted refresh must serve the next request.' );
+		} finally {
+			remove_filter( 'blockstudio/cache/dir', $root );
+			update_option( 'blockstudio_populate_cache_version', $before, false );
+		}
+	}
+
+	public function test_contended_populate_refresh_is_request_only_and_bounded(): void {
+		$directory = $this->create_temporary_directory();
+		$root      = static fn(): string => $directory;
+		$budget    = static fn(): int => 0;
+		$before    = Build_Cache::get_populate_cache_version();
+		$refreshes = 0;
+		$refresh   = static function ( array $registered ) use ( &$refreshes ): array {
+			++$refreshes;
+			$registered['choices'] = 'fresh';
+			return $registered;
+		};
+		add_filter( 'blockstudio/cache/dir', $root );
+		add_filter( 'blockstudio/cache/build_wait_budget', $budget );
+		$holder = null;
+		try {
+			Build_Cache::write_runtime( '/fixed/blocks', 'default', array( 'registeredBlockTypes' => array( 'choices' => 'stale' ), 'store' => array() ) );
+			$stale  = Build_Cache::load_runtime( '/fixed/blocks', 'default' );
+			$holder = Single_Flight::acquire( Build_Cache::get_runtime_lock_path( '/fixed/blocks', 'default' ) );
+			$this->assertIsResource( $holder );
+			update_option( 'blockstudio_populate_cache_version', wp_generate_uuid4(), false );
+
+			$started = microtime( true );
+			$payload = Build_Cache::refresh_runtime_populate( '/fixed/blocks', 'default', $stale, $refresh );
+
+			$this->assertLessThan( 1.0, microtime( true ) - $started );
+			$this->assertSame( 1, $refreshes );
+			$this->assertSame( 'fresh', $payload['registeredBlockTypes']['choices'] );
+			$this->assertSame( $stale, Build_Cache::load_runtime( '/fixed/blocks', 'default' ), 'A waiter that lost the election must not publish over the owner.' );
+		} finally {
+			if ( is_resource( $holder ) ) {
+				Single_Flight::release( $holder );
+			}
+			remove_filter( 'blockstudio/cache/dir', $root );
+			remove_filter( 'blockstudio/cache/build_wait_budget', $budget );
+			update_option( 'blockstudio_populate_cache_version', $before, false );
+		}
+	}
+
+	// A translation sync writes meta continuously. Refreshing every language's
+	// choices on each row is wasted load, so a burst coalesces into one refresh
+	// on its leading edge and one more once it has settled, never losing the
+	// last write.
+	public function test_populate_invalidation_coalesces_a_burst_and_reflects_its_last_write(): void {
+		$before = get_option( 'blockstudio_populate_cache_version', '0' );
+		try {
+			update_option( 'blockstudio_populate_cache_version', '0', false );
+
+			Build_Cache::mark_populate_cache_dirty( 1000 );
+			$leading = Build_Cache::get_populate_cache_version( 1000 );
+			$this->assertNotSame( '0', $leading, 'The first write after a quiet period rotates immediately.' );
+
+			Build_Cache::mark_populate_cache_dirty( 1005 );
+			Build_Cache::mark_populate_cache_dirty( 1020 );
+			$this->assertSame( $leading, Build_Cache::get_populate_cache_version( 1020 ), 'Writes inside the window are held.' );
+			$this->assertSame( $leading, Build_Cache::get_populate_cache_version( 1029 ) );
+
+			$trailing = Build_Cache::get_populate_cache_version( 1030 );
+			$this->assertNotSame( $leading, $trailing, 'The last write is reflected once the window has passed.' );
+			$this->assertSame( $trailing, Build_Cache::get_populate_cache_version( 1031 ), 'The trailing rotation happens exactly once.' );
+			$this->assertSame( $trailing, Build_Cache::get_populate_cache_version( 5000 ), 'A settled state never rotates again on its own.' );
+
+			// Racing readers derive the same trailing version from the same last write.
+			update_option( 'blockstudio_populate_cache_version', array( 'version' => $trailing, 'rotated' => 1030, 'dirty' => 1040 ), false );
+			$first = Build_Cache::get_populate_cache_version( 1060 );
+			update_option( 'blockstudio_populate_cache_version', array( 'version' => $trailing, 'rotated' => 1030, 'dirty' => 1040 ), false );
+			$this->assertSame( $first, Build_Cache::get_populate_cache_version( 1061 ) );
+
+			// A pending trailing rotation is subsumed by a leading one, never lost.
+			update_option( 'blockstudio_populate_cache_version', array( 'version' => 'held', 'rotated' => 2000, 'dirty' => 2010 ), false );
+			Build_Cache::mark_populate_cache_dirty( 2030 );
+			$this->assertNotSame( 'held', Build_Cache::get_populate_cache_version( 2030 ) );
+		} finally {
+			update_option( 'blockstudio_populate_cache_version', $before, false );
+		}
+	}
+
+	public function test_populate_debounce_can_be_disabled_and_reads_legacy_versions(): void {
+		$before = get_option( 'blockstudio_populate_cache_version', '0' );
+		$off    = static fn(): int => 0;
+		try {
+			update_option( 'blockstudio_populate_cache_version', 'legacy-uuid', false );
+			$this->assertSame( 'legacy-uuid', Build_Cache::get_populate_cache_version( 3000 ) );
+			Build_Cache::mark_populate_cache_dirty( 3000 );
+			$this->assertNotSame( 'legacy-uuid', Build_Cache::get_populate_cache_version( 3000 ), 'A legacy value reads as settled and rotates on the next write.' );
+
+			add_filter( 'blockstudio/cache/populate_debounce', $off );
+			Build_Cache::mark_populate_cache_dirty( 3001 );
+			$one = Build_Cache::get_populate_cache_version( 3001 );
+			Build_Cache::mark_populate_cache_dirty( 3001 );
+			$this->assertNotSame( $one, Build_Cache::get_populate_cache_version( 3001 ), 'A zero window refreshes on every write.' );
+		} finally {
+			remove_filter( 'blockstudio/cache/populate_debounce', $off );
+			update_option( 'blockstudio_populate_cache_version', $before, false );
+		}
+	}
+
+	public function test_populate_write_signal_changes_on_every_write_while_the_version_is_held(): void {
+		$before = get_option( 'blockstudio_populate_cache_version', '0' );
+		try {
+			update_option( 'blockstudio_populate_cache_version', '0', false );
+			Build_Cache::mark_populate_cache_dirty( 4000 );
+			$version = Build_Cache::get_populate_cache_version( 4001 );
+			$first   = Build_Cache::get_populate_write_signal();
+			Build_Cache::mark_populate_cache_dirty( 4001 );
+			$second = Build_Cache::get_populate_write_signal();
+			Build_Cache::mark_populate_cache_dirty( 4001 );
+			$third = Build_Cache::get_populate_write_signal();
+
+			$this->assertSame( $version, Build_Cache::get_populate_cache_version( 4002 ) );
+			$this->assertNotSame( $first, $second );
+			$this->assertNotSame( $second, $third, 'Two writes in the same second still bust request-local memoization.' );
+		} finally {
+			update_option( 'blockstudio_populate_cache_version', $before, false );
+		}
+	}
+
+	public function test_language_specific_cache_namespaces_remain_isolated_and_repeatable(): void {
+		$language = '';
+		$filter = static function ( string $url ) use ( &$language ): string {
+			return $url . $language;
+		};
+		add_filter( 'home_url', $filter );
+		try {
+			$english_key  = Build_Cache::get_runtime_key( '/fixed/blocks', 'default' );
+			$english_lock = Build_Cache::get_runtime_lock_path( '/fixed/blocks', 'default' );
+			$language = 'de/';
+			$this->assertNotSame( $english_key, Build_Cache::get_runtime_key( '/fixed/blocks', 'default' ) );
+			$this->assertNotSame( $english_lock, Build_Cache::get_runtime_lock_path( '/fixed/blocks', 'default' ) );
+			$language = '';
+			$this->assertSame( $english_key, Build_Cache::get_runtime_key( '/fixed/blocks', 'default' ) );
+			$this->assertSame( $english_lock, Build_Cache::get_runtime_lock_path( '/fixed/blocks', 'default' ) );
+		} finally {
+			remove_filter( 'home_url', $filter );
+		}
+	}
+
+	public function test_last_good_accepts_changed_sources_but_not_missing_sources_or_assets(): void {
+		$directory = $this->create_temporary_directory();
+		$root      = static fn(): string => $directory . '/cache';
+		$source    = $directory . '/block.json';
+		$asset     = $directory . '/style.css';
+		$this->write_file( $source, 'old' );
+		$this->write_file( $asset, '.old{}' );
+		add_filter( 'blockstudio/cache/dir', $root );
+		try {
+			$key   = Build_Cache::get_runtime_key( '/fixed/blocks', 'default' );
+			$watch = Build_Cache::create_watch_snapshot( array( $source ) );
+			$watch['required'] = array( $asset );
+			Build_Cache::write( 'runtime', $key, array( 'watch' => $watch ) );
+			$this->write_file( $source, 'changed-source' );
+			$this->assertNull( Build_Cache::load_runtime( '/fixed/blocks', 'default' ) );
+			$this->assertIsArray( Build_Cache::load_last_good_runtime( '/fixed/blocks', 'default' ) );
+			unlink( $asset );
+			$this->assertNull( Build_Cache::load_last_good_runtime( '/fixed/blocks', 'default' ) );
+			$this->write_file( $asset, '.new{}' );
+			unlink( $source );
+			$this->assertNull( Build_Cache::load_last_good_runtime( '/fixed/blocks', 'default' ) );
+		} finally {
+			remove_filter( 'blockstudio/cache/dir', $root );
+		}
+	}
+
+	public function test_query_populate_refreshes_on_cached_build_without_registration_or_asset_processing(): void {
+		Build_Cache::init();
+		$directory = $this->create_temporary_directory();
+		$cache     = $this->create_temporary_directory();
+		$root      = static fn(): string => $cache;
+		$marker    = 'Populate' . wp_generate_uuid4();
+		$post_id   = wp_insert_post( array( 'post_title' => $marker . ' Before', 'post_status' => 'publish' ) );
+		$field     = array(
+			'id' => 'choices', 'type' => 'select', 'default' => '',
+			'populate' => array( 'type' => 'query', 'query' => 'posts', 'arguments' => array( 's' => $marker, 'posts_per_page' => -1 ) ),
+		);
+		$tab_field = array_replace( $field, array( 'id' => 'tabChoice' ) );
+		$fields    = array(
+			$field,
+			array( 'id' => 'group', 'type' => 'group', 'attributes' => array( $field ) ),
+			array( 'id' => 'rows', 'type' => 'repeater', 'attributes' => array( $field ) ),
+			array( 'type' => 'tabs', 'tabs' => array( array( 'name' => 'Options', 'attributes' => array( $tab_field ) ) ) ),
+			array( 'id' => 'plain', 'type' => 'text', 'default' => 'Unchanged' ),
+		);
+		$name = 'blockstudio-test/cache-populate-refresh';
+		wp_mkdir_p( $directory . '/block' );
+		$this->write_file( $directory . '/block/block.json', wp_json_encode( array( 'name' => $name, 'title' => 'Populate Refresh', 'blockstudio' => array( 'attributes' => $fields ) ) ) );
+		$this->write_file( $directory . '/block/index.php', '<div></div>' );
+		$this->write_file( $directory . '/block/style.css', '.populate-refresh{}' );
+		$filters = 0;
+		$filter  = static function ( $attribute ) use ( &$filters ) {
+			++$filters;
+			return $attribute;
+		};
+		$assets  = 0;
+		$asset_filter = static function ( $css ) use ( &$assets ) {
+			++$assets;
+			return $css;
+		};
+		$registry = Block_Registry::instance();
+		$choice_labels = static function ( array $attributes ) use ( &$choice_labels ): array {
+			$labels = array();
+			foreach ( $attributes as $attribute ) {
+				if ( ! is_array( $attribute ) ) {
+					continue;
+				}
+				if ( isset( $attribute['populate'], $attribute['options'] ) ) {
+					$labels = array_merge( $labels, array_column( $attribute['options'], 'label' ) );
+				} else {
+					$labels = array_merge( $labels, $choice_labels( $attribute ) );
+				}
+			}
+			return $labels;
+		};
+		$no_debounce = static fn(): int => 0;
+		add_filter( 'blockstudio/cache/dir', $root );
+		add_filter( 'blockstudio/blocks/attributes', $filter );
+		add_filter( 'blockstudio/assets/process/css/content', $asset_filter );
+		add_filter( 'blockstudio/cache/populate_debounce', $no_debounce );
+		try {
+			$registry->reset();
+			Build::init( array( 'dir' => $directory ) );
+			$instance = Build::get_instance_name( $directory );
+			$original = Build_Cache::load_runtime( $directory, $instance );
+			$initial_filters = $filters;
+			$initial_assets  = $assets;
+			$this->assertGreaterThan( 0, $initial_filters );
+			$this->assertSame( $marker . ' Before', $registry->get_block( $name )->attributes['choices']['options'][0]['label'] );
+			wp_update_post( array( 'ID' => $post_id, 'post_title' => $marker . ' After' ) );
+			for ( $i = 0; $i < 5; ++$i ) {
+				update_post_meta( $post_id, '_unrelated_counter', $i );
+				$registry->reset();
+				Build::init( array( 'dir' => $directory ) );
+				$attributes = $registry->get_block( $name )->attributes;
+				$this->assertSame( $marker . ' After', $attributes['choices']['options'][0]['label'] );
+				$this->assertSame( array_fill( 0, 4, $marker . ' After' ), $choice_labels( $attributes ) );
+				$this->assertSame( 'Unchanged', $attributes['plain']['default'] );
+				$this->assertSame( $original['watch'], Build_Cache::load_runtime( $directory, $instance )['watch'] );
+			}
+			$this->assertSame( $initial_filters, $filters );
+			$this->assertSame( $initial_assets, $assets );
+			$this->assertCount( 1, glob( Build_Cache::get_cache_dir( 'runtime' ) . '/*.php' ) );
+			$this->assertCount( 1, glob( Build_Cache::get_cache_dir( 'runtime' ) . '/locks/*.lock' ) );
+		} finally {
+			remove_filter( 'blockstudio/cache/dir', $root );
+			remove_filter( 'blockstudio/blocks/attributes', $filter );
+			remove_filter( 'blockstudio/assets/process/css/content', $asset_filter );
+			remove_filter( 'blockstudio/cache/populate_debounce', $no_debounce );
+			wp_delete_post( $post_id, true );
+			if ( WP_Block_Type_Registry::get_instance()->is_registered( $name ) ) {
+				WP_Block_Type_Registry::get_instance()->unregister( $name );
+			}
+			$registry->reset();
+			Build::init( Build::get_build_dir() );
+		}
+	}
+
+	public function test_populate_refresh_preserves_filtered_options_and_registration_kinds(): void {
+		$filter = static fn(): array => array( 'unit' => array( array( 'value' => 'fresh', 'label' => 'Fresh' ) ) );
+		add_filter( 'blockstudio/blocks/attributes/populate', $filter );
+		try {
+			foreach ( array( 'block', 'extension', 'override' ) as $kind ) {
+				$item = array(
+					'kind' => $kind,
+					'block' => array( 'properties' => array( 'path' => '/retained/path', 'attributes' => array( 'anchor' => array( 'type' => 'string' ) ) ) ),
+					'populateFields' => array( array(
+						'id' => 'choice', 'type' => 'select', 'default' => 'fresh',
+						'options' => array( array( 'value' => 'filtered', 'label' => 'Filtered' ) ),
+						'populate' => array( 'type' => 'custom', 'custom' => 'unit' ),
+					) ),
+				);
+				$result = Build::refresh_cached_populate_attributes( array( $item ) )[0];
+				$this->assertSame( $kind, $result['kind'] );
+				$this->assertSame( '/retained/path', $result['block']['properties']['path'] );
+				$this->assertSame( array( 'type' => 'string' ), $result['block']['properties']['attributes']['anchor'] );
+				$this->assertSame( array( 'Filtered', 'Fresh' ), array_column( $result['block']['properties']['attributes']['choice']['options'], 'label' ) );
+			}
+		} finally {
+			remove_filter( 'blockstudio/blocks/attributes/populate', $filter );
+		}
+	}
+
+	public function test_runtime_wait_timeout_never_starts_a_second_builder(): void {
+		$cache = $this->create_temporary_directory();
+		$root  = static fn(): string => $cache;
+		$wait  = static fn(): int => 0;
+		$die   = static fn(): Closure => static function ( $message, $title, $args ): void {
+			throw new RuntimeException( 'HTTP ' . $args['response'] );
+		};
+		$registry = Block_Registry::instance();
+		add_filter( 'blockstudio/cache/dir', $root );
+		add_filter( 'blockstudio/cache/build_wait_budget', $wait );
+		add_filter( 'wp_die_handler', $die );
+		try {
+			foreach ( array( false, true ) as $warm ) {
+				$directory = $this->create_temporary_directory();
+				$name      = 'blockstudio-test/cache-contention-' . ( $warm ? 'warm' : 'cold' );
+				wp_mkdir_p( $directory . '/block' );
+				$definition = array( 'name' => $name, 'title' => 'Contention', 'blockstudio' => array( 'attributes' => array( array( 'id' => 'text', 'type' => 'text', 'default' => 'Before' ) ) ) );
+				$this->write_file( $directory . '/block/block.json', wp_json_encode( $definition ) );
+				$this->write_file( $directory . '/block/index.php', '<div></div>' );
+				$instance = Build::get_instance_name( $directory );
+				$file     = Build_Cache::get_cache_file( 'runtime', Build_Cache::get_runtime_key( $directory, $instance ) );
+				$registry->reset();
+				$original = null;
+				if ( $warm ) {
+					Build::init( array( 'dir' => $directory ) );
+					$original = file_get_contents( $file );
+					$definition['blockstudio']['attributes'][0]['default'] = 'After changed source';
+					$this->write_file( $directory . '/block/block.json', wp_json_encode( $definition ) );
+					$registry->reset();
+				}
+				$lock = Single_Flight::acquire( Build_Cache::get_runtime_lock_path( $directory, $instance ) );
+				$this->assertIsResource( $lock );
+				try {
+					try {
+						Build::init( array( 'dir' => $directory ) );
+						$this->assertTrue( $warm, 'A cold waiter must return a retryable 503.' );
+						$this->assertSame( 'Before', $registry->get_block( $name )->attributes['text']['default'] );
+						$this->assertSame( $original, file_get_contents( $file ) );
+					} catch ( RuntimeException $exception ) {
+						$this->assertFalse( $warm );
+						$this->assertSame( 'HTTP 503', $exception->getMessage() );
+						$this->assertFileDoesNotExist( $file );
+					}
+				} finally {
+					Single_Flight::release( $lock );
+				}
+				$registry->reset();
+				Build::init( array( 'dir' => $directory ) );
+				$this->assertSame( $warm ? 'After changed source' : 'Before', $registry->get_block( $name )->attributes['text']['default'] );
+				if ( WP_Block_Type_Registry::get_instance()->is_registered( $name ) ) {
+					WP_Block_Type_Registry::get_instance()->unregister( $name );
+				}
+			}
+		} finally {
+			remove_filter( 'blockstudio/cache/dir', $root );
+			remove_filter( 'blockstudio/cache/build_wait_budget', $wait );
+			remove_filter( 'wp_die_handler', $die );
+			$registry->reset();
+			Build::init( Build::get_build_dir() );
 		}
 	}
 
@@ -552,11 +1056,11 @@ class BuildCacheTest extends TestCase {
 	}
 
 	/**
-	 * Runtime cache keys change when database-backed populate sources change.
+	 * Runtime cache keys stay stable when database-backed populate sources change.
 	 *
 	 * @return void
 	 */
-	public function test_runtime_cache_key_tracks_populate_source_changes(): void {
+	public function test_runtime_cache_key_survives_populate_source_changes(): void {
 		Build_Cache::init();
 
 		$directory = $this->create_temporary_directory();
@@ -572,7 +1076,7 @@ class BuildCacheTest extends TestCase {
 
 		try {
 			$this->assertGreaterThan( 0, $post_id );
-			$this->assertNotSame(
+			$this->assertSame(
 				$before,
 				Build_Cache::get_runtime_key( $directory, $instance )
 			);
@@ -616,6 +1120,8 @@ class BuildCacheTest extends TestCase {
 				'The fixture block must register, or the gate falls back to invalidating.'
 			);
 
+			// Start from a settled state: the write under test is a leading edge.
+			update_option( 'blockstudio_populate_cache_version', '0', false );
 			$before = Build_Cache::get_populate_cache_version();
 
 			$post_id = wp_insert_post(
