@@ -35,7 +35,7 @@ route: /docs/general/settings
 file: docs/docs/general/settings.md
 purpose: Configure Blockstudio with blockstudio.json or filters.
 settings: ai, assets/enqueue, blockEditor/blocks, blockEditor/media, blockEditor/patterns, blockTags, cache/path, content, dev, editor/formatOnSave, githooks, performance/measurement, performance/media/lazy, performance/media/rootMargin, performance/staticPrerender/ttl, phpstan, tailwind, themeDefaults, ui/enabled, users/roles
-hooks: blockstudio/cache/context, blockstudio/cache/dir, blockstudio/cache/site_key, blockstudio/editor/canvas/body_class, blockstudio/performance/config, blockstudio/performance/measurement_enabled, blockstudio/settings/assets/enqueue, blockstudio/settings/block_editor/patterns/remote, blockstudio/settings/cache/path, blockstudio/settings/editor/formatOnSave, blockstudio/settings/ui/enabled
+hooks: blockstudio/cache/build_wait_budget, blockstudio/cache/context, blockstudio/cache/dir, blockstudio/cache/site_key, blockstudio/editor/canvas/body_class, blockstudio/performance/config, blockstudio/performance/measurement_enabled, blockstudio/settings/assets/enqueue, blockstudio/settings/block_editor/patterns/remote, blockstudio/settings/cache/path, blockstudio/settings/editor/formatOnSave, blockstudio/settings/ui/enabled
 php: Blockstudio\Patterns, Blockstudio\Performance_Measurement, Blockstudio\Runtime_Settings, Blockstudio\Settings, Performance_Measurement::snapshot(), Runtime_Settings::current(), Settings::errors(), Settings::fingerprint(), Settings::get_array(), Settings::get_bool(), Settings::get_int(), Settings::get_raw(), Settings::get_string(), Settings::reload(), bs_media_image()
 cli: wp bs content, wp bs settings
 

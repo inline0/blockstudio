@@ -40,6 +40,8 @@ final class Runtime_Cache {
 	 */
 	private const LEGACY_CLEANUP_BATCH_SIZE = 500;
 
+	private const BUILD_LOCK_CLEANUP_HOOK = 'blockstudio/cache/cleanup_legacy_build_locks';
+
 	/**
 	 * Default maximum number of objects retained per scope.
 	 *
@@ -90,6 +92,102 @@ final class Runtime_Cache {
 		}
 
 		self::stage_legacy_runtime_cleanup();
+		add_action( self::BUILD_LOCK_CLEANUP_HOOK, array( __CLASS__, 'cleanup_legacy_build_locks' ) );
+		$version = defined( 'BLOCKSTUDIO_VERSION' ) ? BLOCKSTUDIO_VERSION : '6';
+		if ( get_option( 'blockstudio_build_lock_cleanup_version', '' ) !== $version ) {
+			$scheduled = false !== wp_next_scheduled( self::BUILD_LOCK_CLEANUP_HOOK );
+			if ( ! $scheduled ) {
+				$scheduled = wp_schedule_single_event( time() + HOUR_IN_SECONDS, self::BUILD_LOCK_CLEANUP_HOOK );
+			}
+			if ( $scheduled ) {
+				update_option( 'blockstudio_build_lock_cleanup_version', $version, false );
+			}
+		}
+	}
+
+	/**
+	 * Run one legacy build-lock cleanup batch from WP-Cron.
+	 *
+	 * @return void
+	 */
+	public static function cleanup_legacy_build_locks(): void {
+		self::cleanup_legacy_build_locks_batch();
+	}
+
+	/**
+	 * Remove idle key-specific build locks left by earlier releases.
+	 *
+	 * New fixed-path locks are never candidates. Cleanup runs only in cron and
+	 * uses native unlink so media plugins do not query attachment metadata.
+	 *
+	 * @return int Number of removed lock files.
+	 */
+	public static function cleanup_legacy_build_locks_batch(): int {
+		if ( ! Settings::get_bool( 'cache/enabled', true ) ) {
+			return 0;
+		}
+		$site_directory = self::root() . '/sites/' . self::site_key();
+		$lock           = Single_Flight::acquire( $site_directory . '/legacy-build-lock-cleanup.lock' );
+		if ( ! is_resource( $lock ) ) {
+			return 0;
+		}
+
+		$removed = 0;
+		$pending = false;
+		$limit   = max( 1, (int) apply_filters( 'blockstudio/cache/legacy_cleanup_batch_size', self::LEGACY_CLEANUP_BATCH_SIZE ) );
+		try {
+			$namespaces = glob( $site_directory . '/*', GLOB_ONLYDIR );
+			foreach ( is_array( $namespaces ) ? $namespaces : array() as $namespace ) {
+				$directory = $namespace . '/runtime';
+				if ( ! is_dir( $directory ) || is_link( $namespace ) || is_link( $directory ) ) {
+					continue;
+				}
+				try {
+					$entries = new \DirectoryIterator( $directory );
+					foreach ( $entries as $entry ) {
+						if ( ! preg_match( '/^[a-f0-9]{32}\.build\.lock$/', $entry->getFilename() ) || ! $entry->isFile() || $entry->isLink() ) {
+							continue;
+						}
+						if ( $entry->getMTime() >= time() - HOUR_IN_SECONDS ) {
+							$pending = true;
+							continue;
+						}
+						$handle = @fopen( $entry->getPathname(), 'r+' ); // phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged, WordPress.WP.AlternativeFunctions.file_system_operations_fopen -- Existing idle lock; concurrent removal is harmless.
+						if ( false === $handle ) {
+							$pending = true;
+							continue;
+						}
+						try {
+							if ( ! flock( $handle, LOCK_EX | LOCK_NB ) ) {
+								$pending = true;
+								continue;
+							}
+							$stat = fstat( $handle );
+							if ( is_array( $stat ) && $stat['mtime'] < time() - HOUR_IN_SECONDS && @unlink( $entry->getPathname() ) ) { // phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged, WordPress.WP.AlternativeFunctions.unlink_unlink -- Retired idle build locks are not WordPress media.
+								++$removed;
+							} else {
+								$pending = true;
+							}
+						} finally {
+							Single_Flight::release( $handle );
+						}
+						if ( $removed >= $limit ) {
+							$pending = true;
+							break 2;
+						}
+					}
+				} catch ( \UnexpectedValueException ) {
+					continue;
+				}
+			}
+		} finally {
+			Single_Flight::release( $lock );
+		}
+		if ( $pending && false === wp_next_scheduled( self::BUILD_LOCK_CLEANUP_HOOK ) ) {
+			wp_schedule_single_event( time() + ( $removed >= $limit ? MINUTE_IN_SECONDS : HOUR_IN_SECONDS ), self::BUILD_LOCK_CLEANUP_HOOK );
+		}
+
+		return $removed;
 	}
 
 	/**
@@ -658,7 +756,7 @@ final class Runtime_Cache {
 		foreach ( is_array( $temporary_files ) ? $temporary_files : array() as $temporary ) {
 			$mtime = (int) ( @filemtime( $temporary ) ); // phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged -- Concurrent cleanups can remove the file between listing and stat.
 			if ( $mtime > 0 && $mtime < $now - HOUR_IN_SECONDS ) {
-				wp_delete_file( $temporary );
+				@unlink( $temporary ); // phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged, WordPress.WP.AlternativeFunctions.unlink_unlink -- Internal cache files must not invoke media-deletion filters.
 			}
 		}
 
@@ -709,7 +807,7 @@ final class Runtime_Cache {
 		);
 
 		foreach ( array_slice( $objects, max( 0, $maximum - ( '' === $keep_path ? 0 : 1 ) ) ) as $object ) {
-			wp_delete_file( $object );
+			@unlink( $object ); // phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged, WordPress.WP.AlternativeFunctions.unlink_unlink -- Internal cache files must not invoke media-deletion filters.
 		}
 	}
 

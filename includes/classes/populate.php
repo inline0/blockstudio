@@ -224,6 +224,7 @@ class Populate {
 		return md5(
 			wp_json_encode(
 				array(
+					'version'   => Build_Cache::get_populate_cache_version(),
 					'query'     => $query,
 					'arguments' => $arguments,
 					'extraIds'  => $extra_ids,

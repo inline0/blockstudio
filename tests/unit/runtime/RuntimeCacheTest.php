@@ -8,6 +8,7 @@
 use Blockstudio\Runtime_Cache;
 use Blockstudio\Runtime_Settings;
 use Blockstudio\Settings;
+use Blockstudio\Single_Flight;
 use PHPUnit\Framework\TestCase;
 
 /**
@@ -36,6 +37,7 @@ class RuntimeCacheTest extends TestCase {
 		remove_all_filters( 'blockstudio/cache/max_files_per_scope' );
 		remove_all_filters( 'blockstudio/cache/legacy_cleanup_batch_size' );
 		wp_clear_scheduled_hook( 'blockstudio/cache/cleanup_legacy_runtime' );
+		wp_clear_scheduled_hook( 'blockstudio/cache/cleanup_legacy_build_locks' );
 		Runtime_Cache::reset_diagnostics();
 		Settings::reset();
 		Runtime_Settings::reset();
@@ -106,6 +108,92 @@ class RuntimeCacheTest extends TestCase {
 		$this->assertSame( $first, $same );
 		$this->assertNotSame( $first, $other );
 		$this->assertMatchesRegularExpression( '/^[a-f0-9]{64}$/', $first );
+	}
+
+	public function test_legacy_build_lock_cleanup_is_batched_site_scoped_and_preserves_live_locks(): void {
+		$old = array();
+		foreach ( array( 'namespace-a', 'namespace-b' ) as $namespace ) {
+			$directory = $this->root . '/sites/' . $this->site_key . '/' . $namespace . '/runtime';
+			wp_mkdir_p( $directory . '/locks' );
+			for ( $i = 0; $i < 3; ++$i ) {
+				$file = $directory . '/' . md5( $namespace . $i ) . '.build.lock';
+				file_put_contents( $file, 'old' );
+				touch( $file, time() - 2 * HOUR_IN_SECONDS );
+				$old[] = $file;
+			}
+		}
+		$fresh = $directory . '/' . md5( 'fresh' ) . '.build.lock';
+		file_put_contents( $fresh, 'fresh' );
+		$held_path = $directory . '/' . md5( 'held' ) . '.build.lock';
+		$held      = Single_Flight::acquire( $held_path );
+		touch( $held_path, time() - 2 * HOUR_IN_SECONDS );
+		$fixed = $directory . '/locks/build-fixed.lock';
+		file_put_contents( $fixed, 'fixed' );
+		touch( $fixed, time() - 2 * HOUR_IN_SECONDS );
+		$payload = $directory . '/payload.php';
+		file_put_contents( $payload, '<?php return array();' );
+		$other = $this->root . '/sites/another-site/namespace/runtime/' . md5( 'other' ) . '.build.lock';
+		wp_mkdir_p( dirname( $other ) );
+		file_put_contents( $other, 'other' );
+		touch( $other, time() - 2 * HOUR_IN_SECONDS );
+		$deletions = 0;
+		$media = static function ( $file ) use ( &$deletions ) {
+			++$deletions;
+			return $file;
+		};
+		$limit = static fn(): int => 2;
+		add_filter( 'wp_delete_file', $media );
+		add_filter( 'blockstudio/cache/legacy_cleanup_batch_size', $limit );
+		try {
+			clearstatcache();
+			$this->assertSame( 2, Runtime_Cache::cleanup_legacy_build_locks_batch() );
+			$this->assertSame( 2, Runtime_Cache::cleanup_legacy_build_locks_batch() );
+			$this->assertSame( 2, Runtime_Cache::cleanup_legacy_build_locks_batch() );
+			$this->assertSame( 0, Runtime_Cache::cleanup_legacy_build_locks_batch() );
+			foreach ( $old as $file ) {
+				$this->assertFileDoesNotExist( $file );
+			}
+			foreach ( array( $fresh, $held_path, $fixed, $payload, $other ) as $file ) {
+				$this->assertFileExists( $file );
+			}
+			$this->assertSame( 0, $deletions );
+			$this->assertNotFalse( wp_next_scheduled( 'blockstudio/cache/cleanup_legacy_build_locks' ) );
+			Single_Flight::release( $held );
+			$held = null;
+			$this->assertSame( 1, Runtime_Cache::cleanup_legacy_build_locks_batch() );
+			$this->assertFileDoesNotExist( $held_path );
+		} finally {
+			if ( is_resource( $held ) ) {
+				Single_Flight::release( $held );
+			}
+			remove_filter( 'wp_delete_file', $media );
+			remove_filter( 'blockstudio/cache/legacy_cleanup_batch_size', $limit );
+		}
+	}
+
+	public function test_legacy_lock_cleanup_is_scheduled_once_per_version_and_disabled_cache_does_nothing(): void {
+		$before = get_option( 'blockstudio_build_lock_cleanup_version', '' );
+		delete_option( 'blockstudio_build_lock_cleanup_version' );
+		wp_clear_scheduled_hook( 'blockstudio/cache/cleanup_legacy_build_locks' );
+		$disabled = static fn(): bool => false;
+		try {
+			add_filter( 'blockstudio/settings/cache/enabled', $disabled );
+			Runtime_Cache::init();
+			$this->assertSame( '', get_option( 'blockstudio_build_lock_cleanup_version', '' ) );
+			$this->assertFalse( wp_next_scheduled( 'blockstudio/cache/cleanup_legacy_build_locks' ) );
+			$this->assertSame( 0, Runtime_Cache::cleanup_legacy_build_locks_batch() );
+			remove_filter( 'blockstudio/settings/cache/enabled', $disabled );
+			Settings::reset();
+			Runtime_Cache::init();
+			$this->assertSame( BLOCKSTUDIO_VERSION, get_option( 'blockstudio_build_lock_cleanup_version' ) );
+			$scheduled = wp_next_scheduled( 'blockstudio/cache/cleanup_legacy_build_locks' );
+			$this->assertNotFalse( $scheduled );
+			Runtime_Cache::init();
+			$this->assertSame( $scheduled, wp_next_scheduled( 'blockstudio/cache/cleanup_legacy_build_locks' ) );
+		} finally {
+			remove_filter( 'blockstudio/settings/cache/enabled', $disabled );
+			update_option( 'blockstudio_build_lock_cleanup_version', $before, false );
+		}
 	}
 
 	public function test_write_read_diagnostics_and_purge_use_the_same_boundary(): void {

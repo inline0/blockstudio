@@ -301,6 +301,29 @@ Runtime identities cover Blockstudio, settings, WordPress, PHP, the active
 theme, active plugins, logical discovery sources, host context, and explicit
 dependency hashes supplied by the owning operation.
 
+Content, term, user, and metadata changes invalidate populated field choices,
+not structural block discovery or compiled assets. Choices refresh separately
+under a fixed build-path lock. Source files and build settings still invalidate
+the structural cache normally. Overwriting choices does not rescan the cache
+directory on each content change; periodic pruning still collects orphaned
+temporary files. Language-specific runtime identities remain
+isolated; multiple cache namespace directories on a multilingual site are
+not, by themselves, evidence of a cache miss.
+
+Concurrent runtime rebuilds have one elected builder. Other requests wait up
+to five seconds, then reuse last-good block metadata when its source files and
+required compiled assets still exist. A cold request with no safe payload
+returns HTTP 503 with `Retry-After` instead of starting another build. The
+`blockstudio/cache/build_wait_budget` filter adjusts the wait in milliseconds.
+
+Idle key-specific `.build.lock` files left by earlier versions are collected
+across this site's cache namespaces by WP-Cron, starting an hour after the
+upgrade and removing at most 500 locks per batch. Recent or held locks are
+left alone, and the new fixed-path locks are never collected. Internal cache
+cleanup does not invoke WordPress attachment-deletion filters. Hosts with
+WP-Cron disabled should continue running their usual scheduled cron worker;
+do not indiscriminately delete live lock files to clear a backlog.
+
 The `blockstudio/settings/cache/path` setting filter changes the configured
 value. For deployment-specific path resolution, `blockstudio/cache/dir` filters
 the resolved base directory:

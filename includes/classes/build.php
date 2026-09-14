@@ -666,6 +666,7 @@ class Build {
 				$registry->set_blade_instance( $cached_instance, $cached_path );
 				self::hydrate_cached_runtime_build(
 					$cached_runtime,
+					$cached_path,
 					$cached_instance,
 					$registry
 				);
@@ -700,6 +701,7 @@ class Build {
 			if ( is_array( $cached_runtime ) ) {
 				self::hydrate_cached_runtime_build(
 					$cached_runtime,
+					$path,
 					$instance,
 					$registry
 				);
@@ -707,9 +709,7 @@ class Build {
 			}
 
 			if ( Build_Cache::is_enabled() ) {
-				$build_lock = Single_Flight::acquire(
-					Build_Cache::get_cache_dir( 'runtime' ) . '/' . Build_Cache::get_runtime_key( $path, $instance ) . '.build.lock'
-				);
+				$build_lock = Single_Flight::acquire( Build_Cache::get_runtime_lock_path( $path, $instance ) );
 
 				if ( is_resource( $build_lock ) ) {
 					$cached_runtime = Build_Cache::load_runtime( $path, $instance );
@@ -718,6 +718,7 @@ class Build {
 						Single_Flight::release( $build_lock );
 						self::hydrate_cached_runtime_build(
 							$cached_runtime,
+							$path,
 							$instance,
 							$registry
 						);
@@ -731,13 +732,35 @@ class Build {
 					if ( is_array( $cached_runtime ) ) {
 						self::hydrate_cached_runtime_build(
 							$cached_runtime,
+							$path,
 							$instance,
 							$registry
 						);
 						return;
 					}
 
-					$build_lock = null;
+					$build_lock = Single_Flight::acquire( Build_Cache::get_runtime_lock_path( $path, $instance ) );
+					if ( is_resource( $build_lock ) ) {
+						$cached_runtime = Build_Cache::load_runtime( $path, $instance );
+						if ( is_array( $cached_runtime ) ) {
+							Single_Flight::release( $build_lock );
+							self::hydrate_cached_runtime_build( $cached_runtime, $path, $instance, $registry );
+							return;
+						}
+					}
+					if ( false === $build_lock ) {
+						$last_good = Build_Cache::load_last_good_runtime( $path, $instance );
+						if ( is_array( $last_good ) ) {
+							self::hydrate_cached_runtime_build( $last_good, $path, $instance, $registry, true );
+							return;
+						}
+
+						if ( ! headers_sent() ) {
+							header( 'Retry-After: 5' );
+						}
+						wp_die( esc_html__( 'Blockstudio is preparing its block cache. Please retry shortly.', 'blockstudio' ), '', array( 'response' => 503 ) );
+						return;
+					}
 				}
 			}
 		}
@@ -825,6 +848,7 @@ class Build {
 		self::register_filtered_custom_fields();
 
 		// Phase 3: Register blocks.
+		$populate_version = Build_Cache::get_populate_cache_version();
 		if ( ! $editor ) {
 			$registered = Perf::measure(
 				'build:registration',
@@ -858,6 +882,7 @@ class Build {
 			$instance,
 			array(
 				'store'                => $store,
+				'populateVersion'      => $populate_version,
 				'registerable'         => self::filter_native_registerable( $registerable ),
 				'registeredBlockTypes' => $registered,
 				'bladeTemplates'       => $results['blade_templates'],
@@ -920,7 +945,11 @@ class Build {
 					return null;
 				}
 
-				$current = array( (int) filemtime( $file ), (int) filesize( $file ) );
+				$stat = @stat( $file ); // phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged -- A concurrent publisher can replace the file.
+				if ( false === $stat ) {
+					return null;
+				}
+				$current = array( $stat['ino'], $stat['mtime'], $stat['size'] );
 
 				if ( $current === $snapshot ) {
 					return null;
@@ -930,7 +959,7 @@ class Build {
 
 				return Build_Cache::load( 'runtime', $key );
 			},
-			self::BUILD_WAIT_BUDGET_MS
+			max( 0, (int) apply_filters( 'blockstudio/cache/build_wait_budget', self::BUILD_WAIT_BUDGET_MS ) )
 		);
 	}
 
@@ -938,15 +967,19 @@ class Build {
 	 * Hydrate a cached runtime build payload.
 	 *
 	 * @param array          $payload  Cached runtime payload.
+	 * @param string         $path     Build path.
 	 * @param string         $instance Build instance.
 	 * @param Block_Registry $registry Block registry.
+	 * @param bool           $last_good Whether a peer owns a replacement build.
 	 *
 	 * @return void
 	 */
 	private static function hydrate_cached_runtime_build(
 		array $payload,
+		string $path,
 		string $instance,
-		Block_Registry $registry
+		Block_Registry $registry,
+		bool $last_good = false
 	): void {
 		$store        = $payload['store'] ?? array();
 		$registerable = $payload['registerable'] ?? array();
@@ -960,6 +993,8 @@ class Build {
 		self::register_cached_assets( $store, $registry );
 		self::register_custom_field_definitions( $payload['fields'] ?? array() );
 		self::register_filtered_custom_fields();
+		$payload    = Build_Cache::refresh_runtime_populate( $path, $instance, $payload, array( __CLASS__, 'refresh_cached_populate_attributes' ), ! $last_good );
+		$registered = $payload['registeredBlockTypes'] ?? array();
 
 		Perf::measure(
 			'build:registration:cached',
@@ -2549,6 +2584,10 @@ class Build {
 
 		$override_config = $is_override ? json_decode( $contents, true ) : array();
 		$override_config = is_array( $override_config ) ? $override_config : array();
+		$populate_fields = array_filter(
+			$is_override ? ( $block_json['blockstudio']['attributes'] ?? array() ) : $filtered_attributes,
+			static fn( array $field ): bool => Build_Cache::attributes_populate( array( $field ) )
+		);
 
 		return array(
 			'kind'              => $is_override ? 'override' : ( $is_extend ? 'extension' : 'block' ),
@@ -2556,7 +2595,32 @@ class Build {
 			'block'             => self::serialize_block_type( $block ),
 			'overrideConfig'    => $override_config,
 			'storageAttributes' => $block_json['blockstudio']['attributes'] ?? array(),
+			'populateFields'    => self::normalize_cache_value( $populate_fields ),
 		);
+	}
+
+	/**
+	 * Rebuild only fields containing populate, retaining cached registration metadata.
+	 *
+	 * @param array $registered Cached block registrations.
+	 * @return array Refreshed registrations.
+	 */
+	public static function refresh_cached_populate_attributes( array $registered ): array {
+		foreach ( $registered as &$item ) {
+			if ( empty( $item['populateFields'] ) ) {
+				continue;
+			}
+
+			$is_extend  = 'extension' === ( $item['kind'] ?? '' );
+			$attributes = ( new Attribute_Builder() )->build( $item['populateFields'], false, $is_extend );
+			if ( ! $is_extend ) {
+				$attributes = self::remove_expanded_populate_options( $attributes );
+			}
+			$item['block']['properties']['attributes'] = array_replace( $item['block']['properties']['attributes'] ?? array(), self::normalize_cache_value( $attributes ) );
+		}
+		unset( $item );
+
+		return $registered;
 	}
 
 	/**

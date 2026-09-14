@@ -3,7 +3,7 @@ Contributors: dnnsjsk
 Requires at least: 6.7
 Tested up to: 7.0.0
 Requires PHP: 8.2
-Stable tag: 7.6.13
+Stable tag: 7.6.14
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -53,6 +53,13 @@ Download the latest release zip from [GitHub Releases](https://github.com/inline
 * [Getting Started](https://blockstudio.dev/docs/getting-started)
 
 == Changelog ==
+
+= 7.6.14 =
+* Fix: content and metadata changes refresh populated block choices without rebuilding block discovery or compiled assets
+* Fix: runtime build locks use fixed build paths instead of accumulating a new lock file for each content change
+* Fix: idle build locks left by earlier releases are removed across cache namespaces in bounded background batches
+* Fix: internal cache pruning no longer invokes WordPress media-deletion filters and their attachment queries
+* Fix: concurrent requests reuse safe last-good block metadata during slow rebuilds instead of starting duplicate builds
 
 = 7.6.13 =
 * Fix: `tailwind.output` is declared in the settings schema, so a configuration that sets it is no longer reported as an unknown setting in the admin notice while the runtime honours it

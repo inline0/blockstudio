@@ -25,7 +25,7 @@ final class Build_Cache {
 	 *
 	 * @var int
 	 */
-	private const VERSION = 5;
+	private const VERSION = 6;
 
 	/**
 	 * Option storing the database-backed populate cache version.
@@ -146,7 +146,6 @@ final class Build_Cache {
 					'settings'     => self::$key_input_memo[ $blog ]['settings'],
 					'fieldTypes'   => self::$key_input_memo[ $blog ]['fieldTypes'],
 					'plugins'      => self::$key_input_memo[ $blog ]['plugins'],
-					'populate'     => self::get_populate_cache_version(),
 					'stylesheet'   => function_exists( 'get_stylesheet' ) ? get_stylesheet() : '',
 					'template'     => function_exists( 'get_template' ) ? get_template() : '',
 					'wpVersion'    => get_bloginfo( 'version' ),
@@ -170,6 +169,91 @@ final class Build_Cache {
 	}
 
 	/**
+	 * Get a fixed election path independent of content invalidation versions.
+	 *
+	 * @param string $path     Build path.
+	 * @param string $instance Build instance.
+	 * @return string Lock path.
+	 */
+	public static function get_runtime_lock_path( string $path, string $instance ): string {
+		$key = hash( 'sha256', wp_json_encode( array( wp_normalize_path( $path ), $instance ) ) );
+
+		return self::get_cache_dir( 'runtime' ) . '/locks/build-' . $key . '.lock';
+	}
+
+	/**
+	 * Refresh database-backed choices without rediscovering or compiling blocks.
+	 *
+	 * @param string   $path     Build path.
+	 * @param string   $instance Build instance.
+	 * @param array    $payload  Structurally valid runtime payload.
+	 * @param callable $refresh  Refreshes cached registration attributes.
+	 * @param bool     $persist  Whether this is a current payload safe to publish.
+	 * @return array Runtime payload with current choices.
+	 */
+	public static function refresh_runtime_populate( string $path, string $instance, array $payload, callable $refresh, bool $persist = true ): array {
+		$version = self::get_populate_cache_version();
+		if ( ( $payload['populateVersion'] ?? '0' ) === $version ) {
+			return $payload;
+		}
+
+		$lock = $persist ? Single_Flight::acquire( self::get_runtime_lock_path( $path, $instance ) ) : null;
+		if ( false === $lock ) {
+			$file     = self::get_cache_file( 'runtime', self::get_runtime_key( $path, $instance ) );
+			$snapshot = null;
+			$peer     = Single_Flight::wait(
+				static function () use ( $path, $instance, $version, $file, &$snapshot ): ?array {
+					clearstatcache( true, $file );
+					$stat = @stat( $file ); // phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged -- A concurrent publisher can replace the file.
+					if ( false === $stat ) {
+						return null;
+					}
+					$current_snapshot = array( $stat['ino'], $stat['mtime'], $stat['size'] );
+					if ( $snapshot === $current_snapshot ) {
+						return null;
+					}
+					$snapshot = $current_snapshot;
+					$current  = self::load_runtime( $path, $instance );
+
+					return ( $current['populateVersion'] ?? null ) === $version ? $current : null;
+				},
+				4000
+			);
+			if ( is_array( $peer ) ) {
+				return $peer;
+			}
+		}
+
+		try {
+			if ( is_resource( $lock ) ) {
+				$peer = self::load_runtime( $path, $instance );
+				if ( ( $peer['populateVersion'] ?? null ) === $version ) {
+					return $peer;
+				}
+				if ( is_array( $peer ) ) {
+					$payload = $peer;
+				} else {
+					$persist = false;
+				}
+			}
+
+			$payload['registeredBlockTypes'] = $refresh( $payload['registeredBlockTypes'] ?? array() );
+			$payload['populateVersion']      = $version;
+
+			// A timed-out peer may refresh choices for this request, but must not race its publisher.
+			if ( is_resource( $lock ) && $persist ) {
+				self::write( 'runtime', self::get_runtime_key( $path, $instance ), $payload );
+			}
+
+			return $payload;
+		} finally {
+			if ( is_resource( $lock ) ) {
+				Single_Flight::release( $lock );
+			}
+		}
+	}
+
+	/**
 	 * Load runtime cache payload if it is still valid.
 	 *
 	 * @param string $path     Build path.
@@ -186,6 +270,36 @@ final class Build_Cache {
 	}
 
 	/**
+	 * Load last-good metadata while a peer rebuilds changed sources.
+	 *
+	 * Missing source files or compiled assets are never accepted as last-good.
+	 *
+	 * @param string $path     Build path.
+	 * @param string $instance Build instance.
+	 * @return array|null Safe last-good payload.
+	 */
+	public static function load_last_good_runtime( string $path, string $instance ): ?array {
+		if ( ! self::is_enabled() ) {
+			return null;
+		}
+		$file = self::get_cache_file( 'runtime', self::get_runtime_key( $path, $instance ) );
+		if ( ! is_file( $file ) ) {
+			return null;
+		}
+		$payload = include $file;
+		if ( ! is_array( $payload ) || ( $payload['cacheVersion'] ?? null ) !== self::VERSION || ! self::required_watch_paths_exist( $payload['watch'] ?? array() ) ) {
+			return null;
+		}
+		foreach ( $payload['watch']['files'] ?? array() as $source => $snapshot ) {
+			if ( ! empty( $snapshot['exists'] ) && ! is_file( $source ) ) {
+				return null;
+			}
+		}
+
+		return $payload;
+	}
+
+	/**
 	 * Write runtime cache payload.
 	 *
 	 * @param string $path     Build path.
@@ -199,6 +313,7 @@ final class Build_Cache {
 			return false;
 		}
 
+		$payload['populateVersion']   = $payload['populateVersion'] ?? self::get_populate_cache_version();
 		$payload['watch']             = self::create_watch_snapshot(
 			self::collect_runtime_watch_paths( $path, $payload ),
 			self::collect_runtime_watch_dirs( $path, $payload )
@@ -281,7 +396,7 @@ final class Build_Cache {
 	 *
 	 * @return bool Whether populate is declared.
 	 */
-	private static function attributes_populate( array $attributes ): bool {
+	public static function attributes_populate( array $attributes ): bool {
 		foreach ( $attributes as $attribute ) {
 			if ( ! is_array( $attribute ) ) {
 				continue;
@@ -291,12 +406,10 @@ final class Build_Cache {
 				return true;
 			}
 
-			if (
-				! empty( $attribute['attributes'] ) &&
-				is_array( $attribute['attributes'] ) &&
-				self::attributes_populate( $attribute['attributes'] )
-			) {
-				return true;
+			foreach ( array( 'attributes', 'tabs' ) as $nested_key ) {
+				if ( ! empty( $attribute[ $nested_key ] ) && is_array( $attribute[ $nested_key ] ) && self::attributes_populate( $attribute[ $nested_key ] ) ) {
+					return true;
+				}
 			}
 		}
 
@@ -463,6 +576,7 @@ final class Build_Cache {
 
 		$payload['cacheVersion'] = self::VERSION;
 		$file                    = self::get_cache_file( $scope, $key );
+		$is_new                  = ! is_file( $file );
 		$tmp                     = $file . '.tmp-' . wp_generate_uuid4();
 		$contents                = self::export_payload( $payload );
 
@@ -484,7 +598,12 @@ final class Build_Cache {
 			@touch( $file . '.ok' ); // phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged, WordPress.WP.AlternativeFunctions.file_system_operations_touch -- Best-effort debounce stamp.
 		}
 
-		self::prune_scope( $scope, $file );
+		$prune_stamp = $dir . '/.pruned';
+		$last_prune  = is_file( $prune_stamp ) ? (int) @filemtime( $prune_stamp ) : 0; // phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged -- Concurrent scope purges can remove the stamp.
+		if ( $is_new || $last_prune < time() - HOUR_IN_SECONDS ) {
+			@touch( $prune_stamp ); // phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged, WordPress.WP.AlternativeFunctions.file_system_operations_touch -- Throttle periodic cleanup of orphaned temporary files.
+			self::prune_scope( $scope, $file );
+		}
 
 		return true;
 	}
@@ -494,8 +613,8 @@ final class Build_Cache {
 	 *
 	 * Temp files orphaned by a writer killed between write and rename are
 	 * swept after an hour of idleness; an active writer's temp file is
-	 * seconds old. Build lock files are path-keyed and bounded, so they are
-	 * never swept.
+	 * seconds old. Fixed build-path locks live separately under locks/ and
+	 * are never swept; legacy key-specific locks are collected by WP-Cron.
 	 *
 	 * @param string $scope     Cache scope.
 	 * @param string $keep_file File that must not be pruned.
@@ -515,7 +634,7 @@ final class Build_Cache {
 				$mtime = (int) ( @filemtime( $file ) ); // phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged -- Concurrent cleanups can remove the file between listing and stat.
 
 				if ( $mtime > 0 && time() - $mtime > HOUR_IN_SECONDS ) {
-					wp_delete_file( $file );
+					@unlink( $file ); // phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged, WordPress.WP.AlternativeFunctions.unlink_unlink -- Internal cache files must not invoke media-deletion filters.
 				}
 			}
 		}
@@ -544,10 +663,10 @@ final class Build_Cache {
 		);
 
 		foreach ( array_slice( $files, max( 0, $max_files - 1 ) ) as $file ) {
-			wp_delete_file( $file );
+			@unlink( $file ); // phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged, WordPress.WP.AlternativeFunctions.unlink_unlink -- Internal cache files must not invoke media-deletion filters.
 
 			if ( is_file( $file . '.ok' ) ) {
-				wp_delete_file( $file . '.ok' );
+				@unlink( $file . '.ok' ); // phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged, WordPress.WP.AlternativeFunctions.unlink_unlink -- Internal cache files must not invoke media-deletion filters.
 			}
 		}
 	}
