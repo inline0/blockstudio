@@ -55,7 +55,7 @@ Download the latest release zip from [GitHub Releases](https://github.com/inline
 == Changelog ==
 
 = 7.6.14 =
-* Fix: content and metadata changes refresh populated block choices without rebuilding block discovery or compiled assets
+* Fix: content and metadata changes refresh populated block choices without rebuilding block discovery or compiled assets, and a burst of writes such as a translation sync coalesces into one refresh per thirty seconds, adjustable with `blockstudio/cache/populate_debounce`
 * Fix: runtime build locks use fixed build paths instead of accumulating a new lock file for each content change
 * Fix: idle build locks left by earlier releases are removed across cache namespaces in bounded background batches starting five minutes after upgrade, abandoned cache namespaces are collected by the same batch instead of only from static prerender writes, and `wp bs cache cleanup` drains the backlog on demand
 * Fix: populated choices persist on hosts without advisory file locks instead of being refreshed on every request

@@ -471,7 +471,12 @@ dependency hashes supplied by the owning operation.
 
 Content, term, user, and metadata changes invalidate populated field choices,
 not structural block discovery or compiled assets. Choices refresh separately
-under a fixed build-path lock. Source files and build settings still invalidate
+under a fixed build-path lock. A burst of writes, such as a translation sync
+or an import, is coalesced: the first write after a quiet period refreshes
+immediately and the last write of the burst is reflected once thirty seconds
+have passed, adjustable with `blockstudio/cache/populate_debounce`. The editor
+always queries live options, so the window only affects cached choices read
+at render time. Source files and build settings still invalidate
 the structural cache normally. Overwriting choices does not rescan the cache
 directory on each content change; periodic pruning still collects orphaned
 temporary files. Language-specific runtime identities remain
@@ -8705,6 +8710,31 @@ development environments and `20` elsewhere.
 ```php
 add_filter('blockstudio/cache/watch_debounce', function() {
   return 30;
+});
+```
+
+### blockstudio/cache/build_wait_budget
+
+Filters how long, in milliseconds, a request waits for a concurrent builder to
+publish the runtime cache or a populated-choice refresh before it degrades. The
+default is `5000` for structural rebuilds and `4000` for choice refreshes.
+
+```php
+add_filter('blockstudio/cache/build_wait_budget', function() {
+  return 2000;
+});
+```
+
+### blockstudio/cache/populate_debounce
+
+Filters how many seconds a burst of content, term, user, or meta writes is
+coalesced into one populated-choice refresh. The first write after a quiet
+period refreshes immediately; the last write of a burst is reflected once the
+window has passed. The default is `30`. Return `0` to refresh on every write.
+
+```php
+add_filter('blockstudio/cache/populate_debounce', function() {
+  return 120;
 });
 ```
 

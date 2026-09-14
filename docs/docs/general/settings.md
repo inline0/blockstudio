@@ -303,7 +303,12 @@ dependency hashes supplied by the owning operation.
 
 Content, term, user, and metadata changes invalidate populated field choices,
 not structural block discovery or compiled assets. Choices refresh separately
-under a fixed build-path lock. Source files and build settings still invalidate
+under a fixed build-path lock. A burst of writes, such as a translation sync
+or an import, is coalesced: the first write after a quiet period refreshes
+immediately and the last write of the burst is reflected once thirty seconds
+have passed, adjustable with `blockstudio/cache/populate_debounce`. The editor
+always queries live options, so the window only affects cached choices read
+at render time. Source files and build settings still invalidate
 the structural cache normally. Overwriting choices does not rescan the cache
 directory on each content change; periodic pruning still collects orphaned
 temporary files. Language-specific runtime identities remain

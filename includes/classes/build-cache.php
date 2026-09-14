@@ -35,6 +35,26 @@ final class Build_Cache {
 	private const POPULATE_CACHE_VERSION_OPTION = 'blockstudio_populate_cache_version';
 
 	/**
+	 * Seconds a burst of content writes is coalesced into one choice refresh.
+	 *
+	 * A translation sync or import writes meta rows continuously; refreshing
+	 * populated choices per language on every one of them is wasted load.
+	 * The first write after a quiet period refreshes immediately and the last
+	 * write of a burst is reflected once the window has passed.
+	 *
+	 * @var int
+	 */
+	private const POPULATE_DEBOUNCE = 30;
+
+	/**
+	 * Content writes seen by this process, so request-local memoization is
+	 * busted on every write even while the persisted version is held.
+	 *
+	 * @var int
+	 */
+	private static int $populate_write_sequence = 0;
+
+	/**
 	 * Whether content-change invalidation hooks have been registered.
 	 *
 	 * @var bool
@@ -332,16 +352,95 @@ final class Build_Cache {
 	}
 
 	/**
+	 * Read the stored populate invalidation state.
+	 *
+	 * Releases before 7.6.14 stored a bare version string, which reads as a
+	 * settled state whose next write rotates immediately.
+	 *
+	 * @return array{version:string,rotated:int,dirty:int} Version, when it last rotated, and the last write it does not yet reflect.
+	 */
+	private static function get_populate_state(): array {
+		$stored = get_option( self::POPULATE_CACHE_VERSION_OPTION, '0' );
+
+		if ( is_array( $stored ) ) {
+			return array(
+				'version' => (string) ( $stored['version'] ?? '0' ),
+				'rotated' => (int) ( $stored['rotated'] ?? 0 ),
+				'dirty'   => (int) ( $stored['dirty'] ?? 0 ),
+			);
+		}
+
+		return array(
+			'version' => is_scalar( $stored ) ? (string) $stored : '0',
+			'rotated' => 0,
+			'dirty'   => 0,
+		);
+	}
+
+	/**
+	 * Get the populate debounce window in seconds.
+	 *
+	 * @return int Window; zero refreshes on every write.
+	 */
+	private static function get_populate_debounce(): int {
+		/**
+		 * Filter how long a burst of content writes is coalesced into one
+		 * populated-choice refresh.
+		 *
+		 * @since 7.6.14
+		 *
+		 * @param int $seconds Window in seconds. Zero refreshes on every write.
+		 */
+		return max( 0, (int) apply_filters( 'blockstudio/cache/populate_debounce', self::POPULATE_DEBOUNCE ) );
+	}
+
+	/**
 	 * Get the database-backed populate cache version.
+	 *
+	 * A burst that has been quiet for the whole window is reflected exactly
+	 * once here, on the trailing edge. The version derives from the last write
+	 * so concurrent readers agree instead of racing to different values.
+	 *
+	 * @param int|null $now Current time, injectable for tests.
 	 *
 	 * @return string Cache version.
 	 */
-	public static function get_populate_cache_version(): string {
-		return (string) get_option( self::POPULATE_CACHE_VERSION_OPTION, '0' );
+	public static function get_populate_cache_version( ?int $now = null ): string {
+		$state = self::get_populate_state();
+		$now   = $now ?? time();
+
+		if ( $state['dirty'] > $state['rotated'] && $now - $state['rotated'] >= self::get_populate_debounce() ) {
+			$state = array(
+				'version' => md5( 'populate:' . $state['dirty'] ),
+				'rotated' => $now,
+				'dirty'   => 0,
+			);
+			update_option( self::POPULATE_CACHE_VERSION_OPTION, $state, false );
+		}
+
+		return $state['version'];
+	}
+
+	/**
+	 * Get a signal that changes on every content write.
+	 *
+	 * Request-local memoization keys on this rather than the version, so an
+	 * in-request write is never served a stale query while the persisted
+	 * version is being held inside the debounce window.
+	 *
+	 * @return string Write signal.
+	 */
+	public static function get_populate_write_signal(): string {
+		$state = self::get_populate_state();
+
+		return $state['version'] . ':' . $state['dirty'] . ':' . self::$populate_write_sequence;
 	}
 
 	/**
 	 * Invalidate database-backed populate data stored in runtime cache payloads.
+	 *
+	 * Hooked directly to content, term, user and meta actions, so it must not
+	 * declare parameters: WordPress passes each hook's first argument.
 	 *
 	 * @return void
 	 */
@@ -350,11 +449,36 @@ final class Build_Cache {
 			return;
 		}
 
-		$version = function_exists( 'wp_generate_uuid4' )
-			? wp_generate_uuid4()
-			: uniqid( '', true );
+		self::mark_populate_cache_dirty( time() );
+	}
 
-		update_option( self::POPULATE_CACHE_VERSION_OPTION, $version, false );
+	/**
+	 * Record a content write.
+	 *
+	 * The first write after a quiet window rotates the version immediately so
+	 * choices refresh promptly. Writes inside the window only mark the state
+	 * dirty; get_populate_cache_version() rotates once more when the window
+	 * has passed, reflecting the last of them.
+	 *
+	 * @param int $now Current time, injectable for tests.
+	 *
+	 * @return void
+	 */
+	public static function mark_populate_cache_dirty( int $now ): void {
+		$state = self::get_populate_state();
+		++self::$populate_write_sequence;
+
+		if ( $now - $state['rotated'] >= self::get_populate_debounce() ) {
+			$state = array(
+				'version' => function_exists( 'wp_generate_uuid4' ) ? wp_generate_uuid4() : uniqid( '', true ),
+				'rotated' => $now,
+				'dirty'   => 0,
+			);
+		} else {
+			$state['dirty'] = $now;
+		}
+
+		update_option( self::POPULATE_CACHE_VERSION_OPTION, $state, false );
 	}
 
 	/**

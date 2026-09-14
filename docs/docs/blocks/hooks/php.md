@@ -1078,6 +1078,31 @@ add_filter('blockstudio/cache/watch_debounce', function() {
 });
 ```
 
+### blockstudio/cache/build_wait_budget
+
+Filters how long, in milliseconds, a request waits for a concurrent builder to
+publish the runtime cache or a populated-choice refresh before it degrades. The
+default is `5000` for structural rebuilds and `4000` for choice refreshes.
+
+```php title="functions.php"
+add_filter('blockstudio/cache/build_wait_budget', function() {
+  return 2000;
+});
+```
+
+### blockstudio/cache/populate_debounce
+
+Filters how many seconds a burst of content, term, user, or meta writes is
+coalesced into one populated-choice refresh. The first write after a quiet
+period refreshes immediately; the last write of a burst is reflected once the
+window has passed. The default is `30`. Return `0` to refresh on every write.
+
+```php title="functions.php"
+add_filter('blockstudio/cache/populate_debounce', function() {
+  return 120;
+});
+```
+
 ### blockstudio/cache/max_files_per_scope
 
 Filters how many published payloads each runtime cache scope retains.

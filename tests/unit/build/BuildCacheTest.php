@@ -493,6 +493,84 @@ class BuildCacheTest extends TestCase {
 		}
 	}
 
+	// A translation sync writes meta continuously. Refreshing every language's
+	// choices on each row is wasted load, so a burst coalesces into one refresh
+	// on its leading edge and one more once it has settled, never losing the
+	// last write.
+	public function test_populate_invalidation_coalesces_a_burst_and_reflects_its_last_write(): void {
+		$before = get_option( 'blockstudio_populate_cache_version', '0' );
+		try {
+			update_option( 'blockstudio_populate_cache_version', '0', false );
+
+			Build_Cache::mark_populate_cache_dirty( 1000 );
+			$leading = Build_Cache::get_populate_cache_version( 1000 );
+			$this->assertNotSame( '0', $leading, 'The first write after a quiet period rotates immediately.' );
+
+			Build_Cache::mark_populate_cache_dirty( 1005 );
+			Build_Cache::mark_populate_cache_dirty( 1020 );
+			$this->assertSame( $leading, Build_Cache::get_populate_cache_version( 1020 ), 'Writes inside the window are held.' );
+			$this->assertSame( $leading, Build_Cache::get_populate_cache_version( 1029 ) );
+
+			$trailing = Build_Cache::get_populate_cache_version( 1030 );
+			$this->assertNotSame( $leading, $trailing, 'The last write is reflected once the window has passed.' );
+			$this->assertSame( $trailing, Build_Cache::get_populate_cache_version( 1031 ), 'The trailing rotation happens exactly once.' );
+			$this->assertSame( $trailing, Build_Cache::get_populate_cache_version( 5000 ), 'A settled state never rotates again on its own.' );
+
+			// Racing readers derive the same trailing version from the same last write.
+			update_option( 'blockstudio_populate_cache_version', array( 'version' => $trailing, 'rotated' => 1030, 'dirty' => 1040 ), false );
+			$first = Build_Cache::get_populate_cache_version( 1060 );
+			update_option( 'blockstudio_populate_cache_version', array( 'version' => $trailing, 'rotated' => 1030, 'dirty' => 1040 ), false );
+			$this->assertSame( $first, Build_Cache::get_populate_cache_version( 1061 ) );
+
+			// A pending trailing rotation is subsumed by a leading one, never lost.
+			update_option( 'blockstudio_populate_cache_version', array( 'version' => 'held', 'rotated' => 2000, 'dirty' => 2010 ), false );
+			Build_Cache::mark_populate_cache_dirty( 2030 );
+			$this->assertNotSame( 'held', Build_Cache::get_populate_cache_version( 2030 ) );
+		} finally {
+			update_option( 'blockstudio_populate_cache_version', $before, false );
+		}
+	}
+
+	public function test_populate_debounce_can_be_disabled_and_reads_legacy_versions(): void {
+		$before = get_option( 'blockstudio_populate_cache_version', '0' );
+		$off    = static fn(): int => 0;
+		try {
+			update_option( 'blockstudio_populate_cache_version', 'legacy-uuid', false );
+			$this->assertSame( 'legacy-uuid', Build_Cache::get_populate_cache_version( 3000 ) );
+			Build_Cache::mark_populate_cache_dirty( 3000 );
+			$this->assertNotSame( 'legacy-uuid', Build_Cache::get_populate_cache_version( 3000 ), 'A legacy value reads as settled and rotates on the next write.' );
+
+			add_filter( 'blockstudio/cache/populate_debounce', $off );
+			Build_Cache::mark_populate_cache_dirty( 3001 );
+			$one = Build_Cache::get_populate_cache_version( 3001 );
+			Build_Cache::mark_populate_cache_dirty( 3001 );
+			$this->assertNotSame( $one, Build_Cache::get_populate_cache_version( 3001 ), 'A zero window refreshes on every write.' );
+		} finally {
+			remove_filter( 'blockstudio/cache/populate_debounce', $off );
+			update_option( 'blockstudio_populate_cache_version', $before, false );
+		}
+	}
+
+	public function test_populate_write_signal_changes_on_every_write_while_the_version_is_held(): void {
+		$before = get_option( 'blockstudio_populate_cache_version', '0' );
+		try {
+			update_option( 'blockstudio_populate_cache_version', '0', false );
+			Build_Cache::mark_populate_cache_dirty( 4000 );
+			$version = Build_Cache::get_populate_cache_version( 4001 );
+			$first   = Build_Cache::get_populate_write_signal();
+			Build_Cache::mark_populate_cache_dirty( 4001 );
+			$second = Build_Cache::get_populate_write_signal();
+			Build_Cache::mark_populate_cache_dirty( 4001 );
+			$third = Build_Cache::get_populate_write_signal();
+
+			$this->assertSame( $version, Build_Cache::get_populate_cache_version( 4002 ) );
+			$this->assertNotSame( $first, $second );
+			$this->assertNotSame( $second, $third, 'Two writes in the same second still bust request-local memoization.' );
+		} finally {
+			update_option( 'blockstudio_populate_cache_version', $before, false );
+		}
+	}
+
 	public function test_language_specific_cache_namespaces_remain_isolated_and_repeatable(): void {
 		$language = '';
 		$filter = static function ( string $url ) use ( &$language ): string {
@@ -588,9 +666,11 @@ class BuildCacheTest extends TestCase {
 			}
 			return $labels;
 		};
+		$no_debounce = static fn(): int => 0;
 		add_filter( 'blockstudio/cache/dir', $root );
 		add_filter( 'blockstudio/blocks/attributes', $filter );
 		add_filter( 'blockstudio/assets/process/css/content', $asset_filter );
+		add_filter( 'blockstudio/cache/populate_debounce', $no_debounce );
 		try {
 			$registry->reset();
 			Build::init( array( 'dir' => $directory ) );
@@ -619,6 +699,7 @@ class BuildCacheTest extends TestCase {
 			remove_filter( 'blockstudio/cache/dir', $root );
 			remove_filter( 'blockstudio/blocks/attributes', $filter );
 			remove_filter( 'blockstudio/assets/process/css/content', $asset_filter );
+			remove_filter( 'blockstudio/cache/populate_debounce', $no_debounce );
 			wp_delete_post( $post_id, true );
 			if ( WP_Block_Type_Registry::get_instance()->is_registered( $name ) ) {
 				WP_Block_Type_Registry::get_instance()->unregister( $name );
@@ -1039,6 +1120,8 @@ class BuildCacheTest extends TestCase {
 				'The fixture block must register, or the gate falls back to invalidating.'
 			);
 
+			// Start from a settled state: the write under test is a leading edge.
+			update_option( 'blockstudio_populate_cache_version', '0', false );
 			$before = Build_Cache::get_populate_cache_version();
 
 			$post_id = wp_insert_post(

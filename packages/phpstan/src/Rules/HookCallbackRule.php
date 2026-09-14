@@ -65,6 +65,7 @@ final class HookCallbackRule implements Rule
         'blockstudio/cache/legacy_cleanup_batch_size',
         'blockstudio/cache/max_files_per_scope',
         'blockstudio/cache/outcome',
+        'blockstudio/cache/populate_debounce',
         'blockstudio/cache/protected_paths',
         'blockstudio/cache/site_key',
         'blockstudio/cache/watch_debounce',
