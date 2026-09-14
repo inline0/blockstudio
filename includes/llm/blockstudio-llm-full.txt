@@ -482,15 +482,25 @@ Concurrent runtime rebuilds have one elected builder. Other requests wait up
 to five seconds, then reuse last-good block metadata when its source files and
 required compiled assets still exist. A cold request with no safe payload
 returns HTTP 503 with `Retry-After` instead of starting another build. The
-`blockstudio/cache/build_wait_budget` filter adjusts the wait in milliseconds.
+`blockstudio/cache/build_wait_budget` filter adjusts the wait in milliseconds
+for both structural rebuilds and choice refreshes. A host without advisory
+file locks refreshes choices unguarded and still publishes them, so the next
+request hits.
 
 Idle key-specific `.build.lock` files left by earlier versions are collected
-across this site's cache namespaces by WP-Cron, starting an hour after the
-upgrade and removing at most 500 locks per batch. Recent or held locks are
-left alone, and the new fixed-path locks are never collected. Internal cache
-cleanup does not invoke WordPress attachment-deletion filters. Hosts with
-WP-Cron disabled should continue running their usual scheduled cron worker;
-do not indiscriminately delete live lock files to clear a backlog.
+across this site's cache namespaces by WP-Cron, starting five minutes after
+the upgrade and removing up to 10,000 locks per minute within a ten second
+budget. `wp bs cache status` reports the remaining count and `wp bs cache
+cleanup` drains the backlog immediately, and `wp bs cache clear` purges the
+runtime cache. If a scheduled batch is more than ten minutes overdue because
+cron is not firing, requests sweep a bounded number of locks once an hour so
+the drain cannot stall. Recent or held locks are
+left alone, and the new fixed-path locks are never collected. Once the backlog
+is drained the same batch collects abandoned cache namespaces that have been
+idle for a day, at most once an hour per site, and keeps a daily tick for it.
+Internal cache cleanup does not invoke WordPress attachment-deletion filters.
+Hosts with WP-Cron disabled should continue running their usual scheduled cron
+worker; do not indiscriminately delete live lock files to clear a backlog.
 
 The `blockstudio/settings/cache/path` setting filter changes the configured
 value. For deployment-specific path resolution, `blockstudio/cache/dir` filters
@@ -12883,6 +12893,29 @@ add_filter('blockstudio/settings/cache/enabled', '__return_false');
 The in-memory per-request render cache described under
 Performance is intentionally
 separate, but its persistent artifacts use this same filesystem boundary.
+
+## Draining a legacy lock backlog
+
+Releases before 7.6.14 left one `.build.lock` file behind for every content
+change, and a busy site can carry hundreds of thousands of them. After
+upgrading, WP-Cron removes them in bounded batches on its own. To drain the
+backlog immediately and hand your host a number, run the CLI:
+
+```bash
+wp bs cache status
+wp bs cache cleanup
+```
+
+`status` counts the remaining legacy locks and reports when the next batch
+runs. `cleanup` runs batches until nothing idle remains, then collects cache
+namespaces that have been idle for a day. Locks newer than an hour or still
+held by a running request are left for the next pass. Never delete lock files
+by hand while the site is serving traffic; a held lock is the election that
+keeps concurrent requests from building in parallel.
+
+`wp bs cache clear` purges the whole runtime cache for the current site, or
+one scope across every namespace with `--scope=runtime`. The next request
+rebuilds cold, so run it at low traffic.
 
 ## Tailwind cache
 

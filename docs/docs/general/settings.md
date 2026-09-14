@@ -314,15 +314,25 @@ Concurrent runtime rebuilds have one elected builder. Other requests wait up
 to five seconds, then reuse last-good block metadata when its source files and
 required compiled assets still exist. A cold request with no safe payload
 returns HTTP 503 with `Retry-After` instead of starting another build. The
-`blockstudio/cache/build_wait_budget` filter adjusts the wait in milliseconds.
+`blockstudio/cache/build_wait_budget` filter adjusts the wait in milliseconds
+for both structural rebuilds and choice refreshes. A host without advisory
+file locks refreshes choices unguarded and still publishes them, so the next
+request hits.
 
 Idle key-specific `.build.lock` files left by earlier versions are collected
-across this site's cache namespaces by WP-Cron, starting an hour after the
-upgrade and removing at most 500 locks per batch. Recent or held locks are
-left alone, and the new fixed-path locks are never collected. Internal cache
-cleanup does not invoke WordPress attachment-deletion filters. Hosts with
-WP-Cron disabled should continue running their usual scheduled cron worker;
-do not indiscriminately delete live lock files to clear a backlog.
+across this site's cache namespaces by WP-Cron, starting five minutes after
+the upgrade and removing up to 10,000 locks per minute within a ten second
+budget. `wp bs cache status` reports the remaining count and `wp bs cache
+cleanup` drains the backlog immediately, and `wp bs cache clear` purges the
+runtime cache. If a scheduled batch is more than ten minutes overdue because
+cron is not firing, requests sweep a bounded number of locks once an hour so
+the drain cannot stall. Recent or held locks are
+left alone, and the new fixed-path locks are never collected. Once the backlog
+is drained the same batch collects abandoned cache namespaces that have been
+idle for a day, at most once an hour per site, and keeps a daily tick for it.
+Internal cache cleanup does not invoke WordPress attachment-deletion filters.
+Hosts with WP-Cron disabled should continue running their usual scheduled cron
+worker; do not indiscriminately delete live lock files to clear a backlog.
 
 The `blockstudio/settings/cache/path` setting filter changes the configured
 value. For deployment-specific path resolution, `blockstudio/cache/dir` filters

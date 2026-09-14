@@ -197,7 +197,15 @@ final class Build_Cache {
 			return $payload;
 		}
 
-		$lock = $persist ? Single_Flight::acquire( self::get_runtime_lock_path( $path, $instance ) ) : null;
+		$lock      = null;
+		$unguarded = false;
+		if ( $persist ) {
+			$lock = Single_Flight::acquire( self::get_runtime_lock_path( $path, $instance ) );
+			// No advisory locks means no peer can be waited for or raced, so
+			// this request owns the refresh the same way Build::init owns an
+			// unguarded build, and publishes it so the next request hits.
+			$unguarded = null === $lock;
+		}
 		if ( false === $lock ) {
 			$file     = self::get_cache_file( 'runtime', self::get_runtime_key( $path, $instance ) );
 			$snapshot = null;
@@ -217,7 +225,7 @@ final class Build_Cache {
 
 					return ( $current['populateVersion'] ?? null ) === $version ? $current : null;
 				},
-				4000
+				max( 0, (int) apply_filters( 'blockstudio/cache/build_wait_budget', 4000 ) )
 			);
 			if ( is_array( $peer ) ) {
 				return $peer;
@@ -225,7 +233,7 @@ final class Build_Cache {
 		}
 
 		try {
-			if ( is_resource( $lock ) ) {
+			if ( is_resource( $lock ) || $unguarded ) {
 				$peer = self::load_runtime( $path, $instance );
 				if ( ( $peer['populateVersion'] ?? null ) === $version ) {
 					return $peer;
@@ -241,7 +249,7 @@ final class Build_Cache {
 			$payload['populateVersion']      = $version;
 
 			// A timed-out peer may refresh choices for this request, but must not race its publisher.
-			if ( is_resource( $lock ) && $persist ) {
+			if ( ( is_resource( $lock ) || $unguarded ) && $persist ) {
 				self::write( 'runtime', self::get_runtime_key( $path, $instance ), $payload );
 			}
 

@@ -38,6 +38,7 @@ class RuntimeCacheTest extends TestCase {
 		remove_all_filters( 'blockstudio/cache/legacy_cleanup_batch_size' );
 		wp_clear_scheduled_hook( 'blockstudio/cache/cleanup_legacy_runtime' );
 		wp_clear_scheduled_hook( 'blockstudio/cache/cleanup_legacy_build_locks' );
+		delete_transient( 'blockstudio_legacy_lock_sweep' );
 		Runtime_Cache::reset_diagnostics();
 		Settings::reset();
 		Runtime_Settings::reset();
@@ -167,6 +168,89 @@ class RuntimeCacheTest extends TestCase {
 				Single_Flight::release( $held );
 			}
 			remove_filter( 'wp_delete_file', $media );
+			remove_filter( 'blockstudio/cache/legacy_cleanup_batch_size', $limit );
+		}
+	}
+
+	// Namespace collection only ran from the static-prerender write path, so
+	// on every other site an abandoned namespace lived forever.
+	public function test_quiescent_lock_cleanup_collects_stale_namespaces_and_keeps_a_daily_tick(): void {
+		$site    = $this->root . '/sites/' . $this->site_key;
+		$current = Runtime_Cache::directory( 'runtime' );
+		$stale   = $site . '/stale-namespace';
+		$fresh   = $site . '/fresh-namespace';
+		wp_mkdir_p( $current );
+		file_put_contents( $current . '/payload.php', '<?php return array();' );
+		foreach ( array( $stale, $fresh ) as $namespace ) {
+			wp_mkdir_p( $namespace . '/runtime' );
+			file_put_contents( $namespace . '/runtime/payload.php', '<?php return array();' );
+		}
+		foreach ( array( $stale . '/runtime/payload.php', $stale . '/runtime', $stale ) as $path ) {
+			touch( $path, time() - 2 * DAY_IN_SECONDS );
+		}
+		clearstatcache();
+
+		$this->assertSame( 0, Runtime_Cache::cleanup_legacy_build_locks_batch() );
+
+		$this->assertDirectoryDoesNotExist( $stale );
+		$this->assertFileExists( $fresh . '/runtime/payload.php' );
+		$this->assertFileExists( $current . '/payload.php' );
+		$this->assertFileExists( $site . '/.namespaces-collected' );
+		$next = wp_next_scheduled( 'blockstudio/cache/cleanup_legacy_build_locks' );
+		$this->assertNotFalse( $next );
+		$this->assertGreaterThanOrEqual( time() + DAY_IN_SECONDS - MINUTE_IN_SECONDS, $next );
+	}
+
+	// With cron not firing, the batch stays overdue forever and nothing else
+	// would ever remove a lock, so the request path makes bounded progress.
+	public function test_overdue_cron_batch_triggers_a_bounded_inline_sweep_once_an_hour(): void {
+		$before    = get_option( 'blockstudio_build_lock_cleanup_version', '' );
+		$directory = $this->root . '/sites/' . $this->site_key . '/namespace/runtime';
+		$old       = static function ( string $name ) use ( $directory ): string {
+			$file = $directory . '/' . md5( $name ) . '.build.lock';
+			file_put_contents( $file, 'old' );
+			touch( $file, time() - 2 * HOUR_IN_SECONDS );
+			return $file;
+		};
+		wp_mkdir_p( $directory );
+		$locks = array( $old( 'a' ), $old( 'b' ), $old( 'c' ) );
+		update_option( 'blockstudio_build_lock_cleanup_version', BLOCKSTUDIO_VERSION, false );
+		delete_transient( 'blockstudio_legacy_lock_sweep' );
+		wp_schedule_single_event( time() - 20 * MINUTE_IN_SECONDS, 'blockstudio/cache/cleanup_legacy_build_locks' );
+		try {
+			clearstatcache();
+			Runtime_Cache::init();
+			foreach ( $locks as $file ) {
+				$this->assertFileDoesNotExist( $file );
+			}
+			$this->assertNotFalse( get_transient( 'blockstudio_legacy_lock_sweep' ) );
+
+			$later = $old( 'd' );
+			clearstatcache();
+			Runtime_Cache::init();
+			$this->assertFileExists( $later, 'A second request within the hour must not sweep again.' );
+		} finally {
+			update_option( 'blockstudio_build_lock_cleanup_version', $before, false );
+		}
+	}
+
+	public function test_a_batch_with_remaining_work_reschedules_within_a_minute(): void {
+		$directory = $this->root . '/sites/' . $this->site_key . '/namespace/runtime';
+		wp_mkdir_p( $directory );
+		for ( $i = 0; $i < 3; ++$i ) {
+			$file = $directory . '/' . md5( 'lock' . $i ) . '.build.lock';
+			file_put_contents( $file, 'old' );
+			touch( $file, time() - 2 * HOUR_IN_SECONDS );
+		}
+		$limit = static fn(): int => 2;
+		add_filter( 'blockstudio/cache/legacy_cleanup_batch_size', $limit );
+		try {
+			clearstatcache();
+			$this->assertSame( 2, Runtime_Cache::cleanup_legacy_build_locks_batch() );
+			$next = wp_next_scheduled( 'blockstudio/cache/cleanup_legacy_build_locks' );
+			$this->assertNotFalse( $next );
+			$this->assertLessThanOrEqual( time() + MINUTE_IN_SECONDS, $next );
+		} finally {
 			remove_filter( 'blockstudio/cache/legacy_cleanup_batch_size', $limit );
 		}
 	}

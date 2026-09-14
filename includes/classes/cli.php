@@ -34,6 +34,7 @@ class Cli {
 		\WP_CLI::add_command( 'bs fields', array( __CLASS__, 'fields' ) );
 		\WP_CLI::add_command( 'bs assets', array( __CLASS__, 'assets' ) );
 		\WP_CLI::add_command( 'bs teardown', array( __CLASS__, 'teardown' ) );
+		\WP_CLI::add_command( 'bs cache', array( __CLASS__, 'cache' ) );
 	}
 
 	/**
@@ -526,6 +527,70 @@ class Cli {
 		}
 
 		\WP_CLI\Utils\format_items( $format, $rows, array( 'block', 'function', 'public', 'capability', 'methods' ) );
+	}
+
+	// Cache.
+
+	/**
+	 * Inspect and drain the runtime cache maintenance backlog.
+	 *
+	 * ## OPTIONS
+	 *
+	 * <status|cleanup|clear>
+	 * : `status` counts legacy build locks, `cleanup` removes them to completion, `clear` purges the runtime cache.
+	 *
+	 * [--scope=<scope>]
+	 * : With `clear`, purge one scope such as `runtime` across every namespace instead of everything.
+	 *
+	 * ## EXAMPLES
+	 *
+	 *     wp bs cache status
+	 *     wp bs cache cleanup
+	 *     wp bs cache clear
+	 *     wp bs cache clear --scope=runtime
+	 *
+	 * @param array $args       Positional arguments.
+	 * @param array $assoc_args Associative arguments.
+	 *
+	 * @return void
+	 */
+	public static function cache( $args, $assoc_args ) {
+		$subcommand = $args[0] ?? 'status';
+
+		if ( 'status' === $subcommand ) {
+			$count = Runtime_Cache::count_legacy_build_locks();
+			\WP_CLI::log( sprintf( '%d legacy build lock(s) across %d cache namespace(s).', $count['locks'], $count['namespaces'] ) );
+			$next = wp_next_scheduled( 'blockstudio/cache/cleanup_legacy_build_locks' );
+			\WP_CLI::log( false === $next ? 'No cleanup batch is scheduled.' : sprintf( 'Next cleanup batch in %d second(s).', max( 0, $next - time() ) ) );
+			return;
+		}
+
+		if ( 'clear' === $subcommand ) {
+			$scope   = isset( $assoc_args['scope'] ) ? sanitize_key( (string) $assoc_args['scope'] ) : '';
+			$removed = '' === $scope ? Runtime_Cache::purge() : Runtime_Cache::purge_every_namespace( $scope );
+			\WP_CLI::success( sprintf( 'Removed %d cached file(s)%s. The next request rebuilds cold.', $removed, '' === $scope ? '' : " from the $scope scope" ) );
+			return;
+		}
+
+		if ( 'cleanup' !== $subcommand ) {
+			\WP_CLI::error( "Unknown subcommand: $subcommand. Use: status, cleanup, clear" );
+			return;
+		}
+
+		$before = Runtime_Cache::count_legacy_build_locks();
+		\WP_CLI::log( sprintf( 'Removing %d legacy build lock(s) across %d namespace(s)...', $before['locks'], $before['namespaces'] ) );
+
+		$total = 0;
+		do {
+			$removed = Runtime_Cache::cleanup_legacy_build_locks_batch();
+			$total  += $removed;
+			if ( $removed > 0 ) {
+				\WP_CLI::log( sprintf( '  removed %d (%d so far)', $removed, $total ) );
+			}
+		} while ( $removed > 0 );
+
+		$after = Runtime_Cache::count_legacy_build_locks();
+		\WP_CLI::success( sprintf( 'Removed %d lock(s). %d remain (recent or held locks are left for the next pass).', $total, $after['locks'] ) );
 	}
 
 	// Cron.

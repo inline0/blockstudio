@@ -59,6 +59,7 @@ final class HookCallbackRule implements Rule
         'blockstudio/blocks/topology_refreshed',
         'blockstudio/buffer/enabled',
         'blockstudio/buffer/output',
+        'blockstudio/cache/build_wait_budget',
         'blockstudio/cache/context',
         'blockstudio/cache/dir',
         'blockstudio/cache/legacy_cleanup_batch_size',

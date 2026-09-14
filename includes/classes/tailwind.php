@@ -525,7 +525,7 @@ class Tailwind {
 			$mtime = (int) ( @filemtime( $file ) ); // phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged -- Concurrent cleanups can remove the file between listing and stat.
 
 			if ( $mtime > 0 && time() - $mtime > HOUR_IN_SECONDS ) {
-				wp_delete_file( $file );
+				@unlink( $file ); // phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged, WordPress.WP.AlternativeFunctions.unlink_unlink -- Internal cache files must not invoke media-deletion filters.
 			}
 		}
 	}
@@ -572,7 +572,7 @@ class Tailwind {
 				$mtime = (int) ( @filemtime( $file ) ); // phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged -- Concurrent cleanups can remove the file between listing and stat.
 
 				if ( $mtime > 0 && time() - $mtime > $max_age ) {
-					wp_delete_file( $file );
+					@unlink( $file ); // phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged, WordPress.WP.AlternativeFunctions.unlink_unlink -- Internal cache files must not invoke media-deletion filters.
 					unset( $files[ $index ] );
 				}
 			}
@@ -584,7 +584,7 @@ class Tailwind {
 			);
 
 			foreach ( array_slice( $files, max( 0, $max_files - 1 ) ) as $file ) {
-				wp_delete_file( $file );
+				@unlink( $file ); // phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged, WordPress.WP.AlternativeFunctions.unlink_unlink -- Internal cache files must not invoke media-deletion filters.
 			}
 		} finally {
 			flock( $lock, LOCK_UN );

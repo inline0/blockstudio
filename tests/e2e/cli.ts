@@ -204,6 +204,18 @@ test.describe('CLI - cron', () => {
   });
 });
 
+test.describe('CLI - cache', () => {
+  test('reports the legacy lock backlog', () => {
+    const out = wp('bs cache status');
+    expect(out).toContain('legacy build lock');
+  });
+
+  test('drains the legacy lock backlog', () => {
+    const out = wp('bs cache cleanup');
+    expect(out).toContain('Removed');
+  });
+});
+
 test.describe('CLI - settings', () => {
   test('lists settings', () => {
     const out = wp('bs settings list');

@@ -419,6 +419,80 @@ class BuildCacheTest extends TestCase {
 		}
 	}
 
+	// Single_Flight::acquire() returns null, not false, when advisory locks
+	// are unavailable. Treating that like a timed-out peer discarded every
+	// refresh, so such hosts re-ran every populate query on every request.
+	public function test_populate_refresh_persists_without_advisory_locks(): void {
+		$directory = $this->create_temporary_directory();
+		$root      = static fn(): string => $directory;
+		$before    = Build_Cache::get_populate_cache_version();
+		$refreshes = 0;
+		$refresh   = static function ( array $registered ) use ( &$refreshes ): array {
+			++$refreshes;
+			$registered['choices'] = 'fresh';
+			return $registered;
+		};
+		add_filter( 'blockstudio/cache/dir', $root );
+		try {
+			Build_Cache::write_runtime( '/fixed/blocks', 'default', array( 'registeredBlockTypes' => array( 'choices' => 'stale' ), 'store' => array() ) );
+			$this->write_file( Build_Cache::get_cache_dir( 'runtime' ) . '/locks', 'a file where the lock directory belongs' );
+			$this->assertNull( Single_Flight::acquire( Build_Cache::get_runtime_lock_path( '/fixed/blocks', 'default' ) ) );
+
+			$version = wp_generate_uuid4();
+			update_option( 'blockstudio_populate_cache_version', $version, false );
+			$payload = Build_Cache::refresh_runtime_populate( '/fixed/blocks', 'default', Build_Cache::load_runtime( '/fixed/blocks', 'default' ), $refresh );
+
+			$this->assertSame( 'fresh', $payload['registeredBlockTypes']['choices'] );
+			$stored = Build_Cache::load_runtime( '/fixed/blocks', 'default' );
+			$this->assertSame( $version, $stored['populateVersion'] );
+			$this->assertSame( 'fresh', $stored['registeredBlockTypes']['choices'] );
+
+			Build_Cache::refresh_runtime_populate( '/fixed/blocks', 'default', $stored, $refresh );
+			$this->assertSame( 1, $refreshes, 'The persisted refresh must serve the next request.' );
+		} finally {
+			remove_filter( 'blockstudio/cache/dir', $root );
+			update_option( 'blockstudio_populate_cache_version', $before, false );
+		}
+	}
+
+	public function test_contended_populate_refresh_is_request_only_and_bounded(): void {
+		$directory = $this->create_temporary_directory();
+		$root      = static fn(): string => $directory;
+		$budget    = static fn(): int => 0;
+		$before    = Build_Cache::get_populate_cache_version();
+		$refreshes = 0;
+		$refresh   = static function ( array $registered ) use ( &$refreshes ): array {
+			++$refreshes;
+			$registered['choices'] = 'fresh';
+			return $registered;
+		};
+		add_filter( 'blockstudio/cache/dir', $root );
+		add_filter( 'blockstudio/cache/build_wait_budget', $budget );
+		$holder = null;
+		try {
+			Build_Cache::write_runtime( '/fixed/blocks', 'default', array( 'registeredBlockTypes' => array( 'choices' => 'stale' ), 'store' => array() ) );
+			$stale  = Build_Cache::load_runtime( '/fixed/blocks', 'default' );
+			$holder = Single_Flight::acquire( Build_Cache::get_runtime_lock_path( '/fixed/blocks', 'default' ) );
+			$this->assertIsResource( $holder );
+			update_option( 'blockstudio_populate_cache_version', wp_generate_uuid4(), false );
+
+			$started = microtime( true );
+			$payload = Build_Cache::refresh_runtime_populate( '/fixed/blocks', 'default', $stale, $refresh );
+
+			$this->assertLessThan( 1.0, microtime( true ) - $started );
+			$this->assertSame( 1, $refreshes );
+			$this->assertSame( 'fresh', $payload['registeredBlockTypes']['choices'] );
+			$this->assertSame( $stale, Build_Cache::load_runtime( '/fixed/blocks', 'default' ), 'A waiter that lost the election must not publish over the owner.' );
+		} finally {
+			if ( is_resource( $holder ) ) {
+				Single_Flight::release( $holder );
+			}
+			remove_filter( 'blockstudio/cache/dir', $root );
+			remove_filter( 'blockstudio/cache/build_wait_budget', $budget );
+			update_option( 'blockstudio_populate_cache_version', $before, false );
+		}
+	}
+
 	public function test_language_specific_cache_namespaces_remain_isolated_and_repeatable(): void {
 		$language = '';
 		$filter = static function ( string $url ) use ( &$language ): string {

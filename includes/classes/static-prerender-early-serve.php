@@ -754,7 +754,7 @@ PHP;
 		}
 		// phpcs:ignore WordPress.WP.AlternativeFunctions.rename_rename -- The rename makes the promoted document visible atomically.
 		if ( ! rename( $temporary, $destination ) ) {
-			wp_delete_file( $temporary );
+			@unlink( $temporary ); // phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged, WordPress.WP.AlternativeFunctions.unlink_unlink -- Internal cache files must not invoke media-deletion filters.
 
 			return false;
 		}
@@ -942,7 +942,7 @@ PHP;
 		$files = glob( $cache_dir . '/*.html' );
 		foreach ( is_array( $files ) ? $files : array() as $file ) {
 			if ( ! isset( $live[ basename( $file, '.html' ) ] ) ) {
-				wp_delete_file( $file );
+				@unlink( $file ); // phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged, WordPress.WP.AlternativeFunctions.unlink_unlink -- Internal cache files must not invoke media-deletion filters.
 			}
 		}
 	}

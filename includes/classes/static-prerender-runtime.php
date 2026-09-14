@@ -1161,7 +1161,7 @@ final class Static_Prerender_Runtime {
 					continue;
 				}
 
-				wp_delete_file( $file );
+				@unlink( $file ); // phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged, WordPress.WP.AlternativeFunctions.unlink_unlink -- Internal cache files must not invoke media-deletion filters.
 				if ( ! is_file( $file ) ) {
 					++$deleted_files;
 				}
@@ -1601,7 +1601,7 @@ final class Static_Prerender_Runtime {
 		$path = self::index_path( $id );
 
 		if ( is_file( $path ) ) {
-			wp_delete_file( $path );
+			@unlink( $path ); // phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged, WordPress.WP.AlternativeFunctions.unlink_unlink -- Internal cache files must not invoke media-deletion filters.
 		}
 		unset( self::$index_record_cache[ $id ] );
 
@@ -2020,14 +2020,14 @@ final class Static_Prerender_Runtime {
 		foreach ( self::unique_cacheable_urls( $urls ) as $url ) {
 			$key = self::cache_key_for_url( $url );
 			if ( null !== $key && is_file( self::cache_file( $key ) ) ) {
-				wp_delete_file( self::cache_file( $key ) );
+				@unlink( self::cache_file( $key ) ); // phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged, WordPress.WP.AlternativeFunctions.unlink_unlink -- Internal cache files must not invoke media-deletion filters.
 			}
 
 			$record = self::index_record_for_url( $url );
 			if ( is_array( $record ) && is_string( $record['cacheKey'] ?? null ) ) {
 				$file = self::cache_file( $record['cacheKey'] );
 				if ( is_file( $file ) ) {
-					wp_delete_file( $file );
+					@unlink( $file ); // phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged, WordPress.WP.AlternativeFunctions.unlink_unlink -- Internal cache files must not invoke media-deletion filters.
 				}
 			}
 			self::delete_index_record( $url );

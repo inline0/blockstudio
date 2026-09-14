@@ -152,6 +152,29 @@ The in-memory per-request render cache described under
 [Performance](/docs/production/performance#render-cache) is intentionally
 separate, but its persistent artifacts use this same filesystem boundary.
 
+## Draining a legacy lock backlog
+
+Releases before 7.6.14 left one `.build.lock` file behind for every content
+change, and a busy site can carry hundreds of thousands of them. After
+upgrading, WP-Cron removes them in bounded batches on its own. To drain the
+backlog immediately and hand your host a number, run the CLI:
+
+```bash
+wp bs cache status
+wp bs cache cleanup
+```
+
+`status` counts the remaining legacy locks and reports when the next batch
+runs. `cleanup` runs batches until nothing idle remains, then collects cache
+namespaces that have been idle for a day. Locks newer than an hour or still
+held by a running request are left for the next pass. Never delete lock files
+by hand while the site is serving traffic; a held lock is the election that
+keeps concurrent requests from building in parallel.
+
+`wp bs cache clear` purges the whole runtime cache for the current site, or
+one scope across every namespace with `--scope=runtime`. The next request
+rebuilds cold, so run it at low traffic.
+
 ## Tailwind cache
 
 Tailwind's compiled CSS cache uses the shared runtime root under its
