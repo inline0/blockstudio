@@ -454,9 +454,9 @@ wp bs wpml config --file=wp-content/themes/my-theme/wpml-config.xml
 ```
 
 Prints a `wpml-config.xml` that declares the text fields of every registered
-block for translation, or writes it with `--file`. In an existing file, only
-the section between the Blockstudio markers is replaced. See
-[WPML](/docs/dev/wpml) for what is declared and how to keep the file up to date.
+block for translation and its files fields as attachment IDs, or writes it with
+`--file`. In an existing file, only the section between the Blockstudio markers
+is replaced. See [WPML](/docs/dev/wpml) for what is declared and how to keep the file up to date.
 
 ## Block Tag Migration
 

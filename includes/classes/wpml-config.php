@@ -20,7 +20,9 @@ use WP_Error;
  * detection, which offers every string attribute for translation, including
  * select values, file names, and URLs. This class declares the text fields of
  * every registered Blockstudio block and declares blocks without text fields
- * with translate="0".
+ * with translate="0". Files fields are declared as attachment IDs, which WPML
+ * converts to the attachments of the page language on render, in blocks with
+ * and without text fields.
  *
  * Fields are read from the registered block definitions, after custom field
  * expansion, attribute filters, overrides, and matching extensions. Keys follow
@@ -30,8 +32,8 @@ use WP_Error;
  * matched with "*".
  *
  * A storage key can be defined more than once. Each definition is classified
- * as text (text, textarea, richtext, wysiwyg), link, repeater, or a value that
- * is not declared (every other built-in type, and hidden fields):
+ * as text (text, textarea, richtext, wysiwyg), link, files, repeater, or a
+ * value that is not declared (every other built-in type, and hidden fields):
  *
  * - Within the fields of the block, outside repeater rows, the attribute
  *   builder registers one attribute per storage key, and a later definition
@@ -55,7 +57,8 @@ use WP_Error;
  * that wrote it, so the key is not declared and section() reports it as a
  * conflict. Text, textarea, richtext, and wysiwyg fields all store a string
  * and get the same declaration (WPML chooses the editor for each string from
- * its content), so they never conflict with each other.
+ * its content), so they never conflict with each other. Files fields with and
+ * without multiple both store attachment IDs and do not conflict either.
  *
  * Nothing here runs on a regular request: the configuration is generated on
  * demand by `wp bs wpml config`.
@@ -108,7 +111,6 @@ final class Wpml_Config {
 		'color',
 		'date',
 		'datetime',
-		'files',
 		'gradient',
 		'html-tag',
 		'icon',
@@ -158,7 +160,8 @@ final class Wpml_Config {
 	 *
 	 * The section starts with START and ends with END. Between them, every
 	 * block gets one gutenberg-block element: translate="1" with a key for each
-	 * text field, or translate="0" when it has none.
+	 * text field, or translate="0" when it has none. Keys for the attachment IDs
+	 * of files fields are added in both cases.
 	 *
 	 * Example:
 	 *
@@ -202,9 +205,16 @@ final class Wpml_Config {
 				continue;
 			}
 
-			++$translated;
-			$title   = isset( $block['title'] ) && '' !== $block['title'] ? $block['title'] : $name;
-			$lines[] = "\t\t<gutenberg-block {$type} translate=\"1\" label=\"" . self::escape( $title ) . '">';
+			// WPML reads ID keys whatever translate says, so a block without text keeps translate="0".
+			if ( self::has_text( $keys ) ) {
+				++$translated;
+				$title   = isset( $block['title'] ) && '' !== $block['title'] ? $block['title'] : $name;
+				$lines[] = "\t\t<gutenberg-block {$type} translate=\"1\" label=\"" . self::escape( $title ) . '">';
+			} else {
+				++$untranslated;
+				$lines[] = "\t\t<gutenberg-block {$type} translate=\"0\">";
+			}
+
 			$lines   = array_merge(
 				$lines,
 				self::render(
@@ -437,7 +447,9 @@ final class Wpml_Config {
 	 *
 	 * Definitions of one key that classify differently (see kind()) are
 	 * reported as a conflict and not declared. Otherwise text fields become a
-	 * key, link fields a key with title and url, repeaters a key with one row
+	 * key, link fields a key with title and url, files fields a key with
+	 * type="post-ids" and sub-type="attachment" (on a level "*" when one of the
+	 * definitions has multiple), repeaters a key with one row
 	 * level matched with "*" (the row fields of all its definitions compared the
 	 * same way), and value fields nothing. The first definition, the block's own
 	 * where there is one, gives the label. Where the attribute builder stores
@@ -514,6 +526,18 @@ final class Wpml_Config {
 						),
 					),
 				);
+			} elseif ( 'files' === $kinds[0] ) {
+				// A multiple field stores a list, or the ID itself when one file is selected. WPML converts both under "*".
+				$ids     = array(
+					'type'     => 'post-ids',
+					'sub-type' => 'attachment',
+				);
+				$nodes[] = self::multiple( $entries )
+					? array(
+						'name' => $key,
+						'keys' => array( array( 'name' => '*' ) + $ids ),
+					)
+					: array( 'name' => $key ) + $ids;
 			} elseif ( 'value' !== $kinds[0] ) {
 				$skipped[] = sprintf( '%1$s: %2$s (%3$s)', $block, $label, (string) $field['type'] );
 			}
@@ -527,8 +551,8 @@ final class Wpml_Config {
 	 *
 	 * @param array{field: array, source: string, parents: array<int,string>, hidden: bool} $entry Definition.
 	 *
-	 * @return string "text", "link", "repeater", "value" for a value that is not declared, or "type:" followed by the
-	 *                type for an unknown type.
+	 * @return string "text", "link", "files", "repeater", "value" for a value that is not declared, or "type:" followed
+	 *                by the type for an unknown type.
 	 */
 	private static function kind( array $entry ): string {
 		$type = (string) $entry['field']['type'];
@@ -542,7 +566,41 @@ final class Wpml_Config {
 			return 'text';
 		}
 
-		return 'link' === $type || 'repeater' === $type ? $type : 'type:' . $type;
+		return in_array( $type, array( 'link', 'files', 'repeater' ), true ) ? $type : 'type:' . $type;
+	}
+
+	/**
+	 * Check whether one of the definitions of a files field allows several files.
+	 *
+	 * @param array<int, array{field: array, source: string, parents: array<int,string>, hidden: bool}> $entries Definitions.
+	 *
+	 * @return bool Whether one of them has multiple.
+	 */
+	private static function multiple( array $entries ): bool {
+		foreach ( $entries as $entry ) {
+			if ( ! empty( $entry['field']['multiple'] ) ) {
+				return true;
+			}
+		}
+
+		return false;
+	}
+
+	/**
+	 * Check whether key nodes declare text, that is any key other than attachment IDs.
+	 *
+	 * @param array<int, array> $nodes Key nodes.
+	 *
+	 * @return bool Whether one of the keys is text.
+	 */
+	private static function has_text( array $nodes ): bool {
+		foreach ( $nodes as $node ) {
+			if ( empty( $node['keys'] ) ? 'post-ids' !== ( $node['type'] ?? '' ) : self::has_text( $node['keys'] ) ) {
+				return true;
+			}
+		}
+
+		return false;
 	}
 
 	/**
@@ -584,7 +642,7 @@ final class Wpml_Config {
 		foreach ( $nodes as $node ) {
 			$attributes = ' name="' . self::escape( $node['name'] ) . '"';
 
-			foreach ( array( 'type', 'label' ) as $attribute ) {
+			foreach ( array( 'type', 'sub-type', 'label' ) as $attribute ) {
 				if ( isset( $node[ $attribute ] ) ) {
 					$attributes .= ' ' . $attribute . '="' . self::escape( $node[ $attribute ] ) . '"';
 				}

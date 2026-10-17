@@ -14,8 +14,8 @@ meta_description: "Generate the WPML language configuration that makes the text 
 WPML translates the attributes of a custom block only as far as a language
 configuration file declares them. Blockstudio stores every field value in the
 block comment under `blockstudio.attributes`, so each block needs an entry that
-points WPML at its text fields. The `wp bs wpml config` command writes these
-entries for every registered block.
+points WPML at its text fields and its attachment IDs. The `wp bs wpml config`
+command writes these entries for every registered block.
 
 ## Why blocks need a configuration
 
@@ -46,7 +46,7 @@ Or let the command write the file:
 wp bs wpml config --file=wp-content/themes/my-theme/wpml-config.xml
 ```
 
-A block with a text field, a link, and a repeater:
+A block with a text field, an image, a link, and a repeater:
 
 ```json title="block.json"
 {
@@ -55,6 +55,7 @@ A block with a text field, a link, and a repeater:
   "blockstudio": {
     "attributes": [
       { "id": "heading", "type": "text", "label": "Heading" },
+      { "id": "gallery", "type": "files", "label": "Gallery", "multiple": true },
       {
         "id": "style",
         "type": "select",
@@ -90,9 +91,13 @@ becomes:
 			<key name="blockstudio">
 				<key name="attributes">
 					<key name="heading" label="Heading" />
+					<key name="gallery">
+						<key name="*" type="post-ids" sub-type="attachment" />
+					</key>
 					<key name="cards">
 						<key name="*">
 							<key name="title" label="Cards: Title" />
+							<key name="image" type="post-ids" sub-type="attachment" />
 							<key name="link">
 								<key name="title" label="Cards: Button" />
 								<key name="url" type="link" label="Cards: Button: URL" />
@@ -107,8 +112,13 @@ becomes:
 </wpml-config>
 ```
 
-The `style` and `image` values are not declared, so WPML copies them into the
-translation unchanged.
+The `style` value is not declared, so WPML copies it into the translation
+unchanged. The `gallery` and `image` IDs are copied as well, and WPML replaces
+each one with the attachment of the page language when the block is rendered,
+so a translated image can have its own alt text. See "Automatically Converting
+IDs in Blocks" in
+[Make Custom Gutenberg Blocks Translatable](https://wpml.org/documentation/support/language-configuration-files/make-custom-gutenberg-blocks-translatable/).
+When an attachment has no translation, WPML keeps the original ID.
 
 ## What is declared
 
@@ -122,14 +132,16 @@ those blocks get their configuration from WPML or from their own plugin.
 | --- | --- |
 | `text`, `textarea`, `richtext`, `wysiwyg` | Translatable text. |
 | `link` | `title` as text and `url` with `type="link"`, so WPML replaces a link with its translation when one is available. |
+| `files` | The stored attachment ID with `type="post-ids"` and `sub-type="attachment"`. With `multiple`, a level named `*` for the list, which also matches the single ID that the field stores when one file is selected. |
 | `repeater` | A level named `*` that matches every row, with the declarations of the row fields. Nested repeaters work the same way. |
 | `group` with an `id` | The fields of the group, with the group ID as key prefix (`cta_text` for the field `text` in the group `cta`). |
 | `group` without an `id`, `tabs` | The fields, without a level of their own. |
 | Every other built-in type | Not declared. WPML copies the value unchanged. |
 
-A block without a declared field gets `translate="0"`. WPML then copies all of
-its values and offers nothing from it for translation. Inner blocks are
-translated as usual.
+A block without a declared text field gets `translate="0"`. WPML then copies
+all of its values and offers nothing from it for translation. Its `files`
+fields are still declared inside the entry, because WPML converts attachment
+IDs whatever `translate` says. Inner blocks are translated as usual.
 
 Not declared:
 
@@ -165,8 +177,9 @@ only when it is clear what is stored there:
   the extension is applied with its own field. The key is declared once when
   both fields need the same
   declaration: both are text fields (`text`, `textarea`, `richtext`, or
-  `wysiwyg`), both are links, or neither is declared, such as a `select` and a
-  `number`. Two repeaters are compared field by field in their rows. The label
+  `wysiwyg`), both are links, both are `files` fields (with `multiple` on
+  either, the key gets the `*` level), or neither is declared, such as a
+  `select` and a `number`. Two repeaters are compared field by field in their rows. The label
   comes from the block's field.
 - Two fields with the same `id` in the rows of one repeater both stay in effect
   as well, and are compared the same way.

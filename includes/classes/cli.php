@@ -196,10 +196,12 @@ class Cli {
 	 *
 	 * Prints a wpml-config.xml that declares the text fields of every
 	 * registered block for translation. Blocks without text fields are declared
-	 * with translate="0", so WPML copies their values unchanged. Fields of
-	 * unknown types, and storage keys whose fields have different types (a block
-	 * field and an extension field, or two fields in the rows of one repeater),
-	 * are not declared; the command prints a warning for each.
+	 * with translate="0", so WPML copies their values unchanged. Files fields
+	 * are declared as attachment IDs, so WPML renders the attachment of the
+	 * page language. Fields of unknown types, and storage keys whose fields
+	 * have different types (a block field and an extension field, or two fields
+	 * in the rows of one repeater), are not declared; the command prints a
+	 * warning for each.
 	 *
 	 * ## OPTIONS
 	 *

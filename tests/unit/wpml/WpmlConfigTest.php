@@ -43,7 +43,7 @@ class WpmlConfigTest extends TestCase {
 		return $paths;
 	}
 
-	private function builder_text_paths( array $attributes, string $path ): array {
+	private function builder_declared_paths( array $attributes, string $path ): array {
 		$paths = array();
 
 		foreach ( $attributes as $key => $attribute ) {
@@ -59,8 +59,10 @@ class WpmlConfigTest extends TestCase {
 			} elseif ( 'link' === $field ) {
 				$paths[] = $name . '/title';
 				$paths[] = $name . '/url';
+			} elseif ( 'files' === $field ) {
+				$paths[] = empty( $attribute['multiple'] ) ? $name : $name . '/*';
 			} elseif ( 'repeater' === $field ) {
-				$paths = array_merge( $paths, $this->builder_text_paths( $attribute['attributes'] ?? array(), $name . '/*/' ) );
+				$paths = array_merge( $paths, $this->builder_declared_paths( $attribute['attributes'] ?? array(), $name . '/*/' ) );
 			}
 		}
 
@@ -202,6 +204,7 @@ class WpmlConfigTest extends TestCase {
 			<key name="blockstudio">
 				<key name="attributes">
 					<key name="heading" label="Heading" />
+					<key name="image" type="post-ids" sub-type="attachment" />
 					<key name="intro" label="Intro" />
 					<key name="body" label="Body" />
 					<key name="note" label="Note" />
@@ -246,8 +249,8 @@ XML;
 					'title'  => 'Gallery',
 					'fields' => array(
 						array(
-							'id'   => 'images',
-							'type' => 'files',
+							'id'   => 'autoplay',
+							'type' => 'toggle',
 						),
 						array(
 							'id'   => 'columns',
@@ -258,8 +261,8 @@ XML;
 							'type'       => 'repeater',
 							'attributes' => array(
 								array(
-									'id'   => 'image',
-									'type' => 'files',
+									'id'   => 'icon',
+									'type' => 'icon',
 								),
 							),
 						),
@@ -375,11 +378,16 @@ XML;
 		}
 	}
 
-	public function test_declares_every_text_attribute_the_attribute_builder_registers(): void {
+	public function test_declares_every_text_and_files_attribute_the_attribute_builder_registers(): void {
 		$fields = array(
 			array(
 				'id'   => 'heading',
 				'type' => 'text',
+			),
+			array(
+				'id'       => 'gallery',
+				'type'     => 'files',
+				'multiple' => true,
 			),
 			array(
 				'type' => 'tabs',
@@ -492,11 +500,12 @@ XML;
 			),
 		);
 
-		$registered = $this->builder_text_paths( ( new Attribute_Builder() )->build( $fields ), '' );
+		$registered = $this->builder_declared_paths( ( new Attribute_Builder() )->build( $fields ), '' );
 
 		$this->assertSame(
 			array(
 				'heading',
+				'gallery/*',
 				'intro',
 				'meta_caption',
 				'cta_link/title',
@@ -509,6 +518,7 @@ XML;
 				'cards/*/button/title',
 				'cards/*/button/url',
 				'cards/*/items/*/text',
+				'cards/*/items/*/image',
 			),
 			$registered
 		);
@@ -662,7 +672,7 @@ XML;
 		$section = $this->section( array( $own ), array( $extension ) );
 
 		$this->assertSame( array( 'acme/example: items/*/title (text in the block, select in an extension)' ), $section['conflicts'] );
-		$this->assertSame( array( 'items/*/note', 'items/*/caption' ), $this->declared_paths( array( $own ), array( $extension ) ) );
+		$this->assertSame( array( 'items/*/image', 'items/*/note', 'items/*/caption' ), $this->declared_paths( array( $own ), array( $extension ) ) );
 		$this->assertStringContainsString( '<key name="note" label="Items: Note" />', $section['xml'] );
 		$this->assertStringContainsString( '<key name="caption" label="Entries: Caption" />', $section['xml'] );
 
@@ -705,6 +715,118 @@ XML;
 		$this->assertSame( array(), $this->section( array( $agreeing ) )['conflicts'] );
 		$this->assertSame( array( 'items/*/title' ), $this->declared_paths( array( $agreeing ) ) );
 		$this->assertStringContainsString( '<key name="title" label="Items: Title" />', $this->section( array( $agreeing ) )['xml'] );
+	}
+
+	public function test_declares_files_fields_as_attachment_ids(): void {
+		$fields = array(
+			array( 'id' => 'heading', 'type' => 'text', 'label' => 'Heading' ),
+			array( 'id' => 'image', 'type' => 'files', 'label' => 'Image', 'returnFormat' => 'url' ),
+			array( 'id' => 'gallery', 'type' => 'files', 'label' => 'Gallery', 'multiple' => true ),
+			array( 'id' => 'reference', 'type' => 'files', 'hidden' => true ),
+			array(
+				'id'         => 'hero',
+				'type'       => 'group',
+				'label'      => 'Hero',
+				'attributes' => array(
+					array( 'id' => 'poster', 'type' => 'files', 'label' => 'Poster' ),
+				),
+			),
+			array(
+				'id'         => 'slides',
+				'type'       => 'repeater',
+				'label'      => 'Slides',
+				'attributes' => array(
+					array( 'id' => 'image', 'type' => 'files', 'label' => 'Image' ),
+					array( 'id' => 'logos', 'type' => 'files', 'label' => 'Logos', 'multiple' => true ),
+				),
+			),
+		);
+
+		$expected = <<<'XML'
+		<gutenberg-block type="acme/example" translate="1" label="Example">
+			<key name="blockstudio">
+				<key name="attributes">
+					<key name="heading" label="Heading" />
+					<key name="image" type="post-ids" sub-type="attachment" />
+					<key name="gallery">
+						<key name="*" type="post-ids" sub-type="attachment" />
+					</key>
+					<key name="hero_poster" type="post-ids" sub-type="attachment" />
+					<key name="slides">
+						<key name="*">
+							<key name="image" type="post-ids" sub-type="attachment" />
+							<key name="logos">
+								<key name="*" type="post-ids" sub-type="attachment" />
+							</key>
+						</key>
+					</key>
+				</key>
+			</key>
+		</gutenberg-block>
+XML;
+
+		$section = $this->section( $fields );
+
+		$this->assertStringContainsString( $expected, $section['xml'] );
+		$this->assertSame( array(), $section['skipped'] );
+		$this->assertSame( array(), $section['conflicts'] );
+	}
+
+	public function test_a_block_with_only_files_fields_declares_the_ids_with_translate_0(): void {
+		$section = $this->section(
+			array(
+				array( 'id' => 'image', 'type' => 'files', 'label' => 'Image' ),
+				array( 'id' => 'columns', 'type' => 'select', 'options' => array( 'a' ) ),
+			)
+		);
+
+		$expected = <<<'XML'
+		<gutenberg-block type="acme/example" translate="0">
+			<key name="blockstudio">
+				<key name="attributes">
+					<key name="image" type="post-ids" sub-type="attachment" />
+				</key>
+			</key>
+		</gutenberg-block>
+XML;
+
+		$this->assertStringContainsString( $expected, $section['xml'] );
+		$this->assertSame( 0, $section['translated'] );
+		$this->assertSame( 1, $section['untranslated'] );
+		$this->assertSame( array(), Wpml_Config::validate( Wpml_Config::document( $section['xml'] ) ) );
+	}
+
+	public function test_files_fields_with_one_key_agree_with_each_other_and_conflict_with_other_types(): void {
+		$single   = array( 'id' => 'image', 'type' => 'files', 'label' => 'Image' );
+		$multiple = $single + array( 'multiple' => true );
+		$select   = array( 'id' => 'image', 'type' => 'select', 'label' => 'Image', 'options' => array( 'a' ) );
+
+		$this->assertSame( array( 'image' ), $this->declared_paths( array( $single ), array( $single ) ), 'single in both' );
+		$this->assertSame( array( 'image/*' ), $this->declared_paths( array( $single ), array( $multiple ) ), 'single in the block, multiple in an extension' );
+		$this->assertSame( array( 'image/*' ), $this->declared_paths( array( $multiple ), array( $single ) ), 'multiple in the block, single in an extension' );
+		$this->assertSame( array( 'image' ), $this->declared_paths( array( $multiple, $single ) ), 'a later single field replaces a multiple one' );
+		$this->assertSame( array(), $this->declared_paths( array( $single, $select ) ), 'a later select replaces a files field' );
+
+		$cases = array(
+			'files, then select'    => array( array( $single ), array( $select ), 'files in the block, select in an extension' ),
+			'select, then files'    => array( array( $select ), array( $multiple ), 'select in the block, files in an extension' ),
+			'hidden files, then files' => array( array( $single + array( 'hidden' => true ) ), array( $single ), 'hidden files in the block, files in an extension' ),
+		);
+
+		foreach ( $cases as $case => [ $own, $extension, $types ] ) {
+			$section = $this->section( $own, $extension );
+
+			$this->assertSame( array( "acme/example: image ($types)" ), $section['conflicts'], $case );
+			$this->assertSame( array(), $this->declared_paths( $own, $extension ), $case );
+		}
+
+		$rows = array(
+			'id'         => 'items',
+			'type'       => 'repeater',
+			'attributes' => array( $single, array( 'id' => 'image', 'type' => 'text' ) ),
+		);
+
+		$this->assertSame( array( 'acme/example: items/*/image (files and text in the block)' ), $this->section( array( $rows ) )['conflicts'] );
 	}
 
 	public function test_a_message_with_the_id_of_a_field_does_not_replace_it(): void {
