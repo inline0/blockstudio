@@ -219,3 +219,48 @@ Entries for Blockstudio blocks that were written by hand, such as
 `translate="0"` entries that hide technical values, are no longer needed once
 the generated section covers the block. The command warns about every block
 that is declared more than once, so these entries can be removed.
+
+## Image texts in translation jobs
+
+WPML puts the texts of the images that a page uses into the translation job of
+the page: title, alt text, caption, and description. When the job is
+completed, WPML writes the translated texts to the attachment of the target
+language and creates that attachment if there is none yet. See
+[How to Translate Media](https://wpml.org/documentation/translating-your-contents/media/).
+WPML finds the images in `<img>` tags in the content, in galleries, in the
+featured image, and in the blocks it knows. A Blockstudio block stores
+attachment IDs in the block comment, so WPML finds none of them.
+
+When WPML is active, Blockstudio adds the attachments that its fields store in
+the blocks of a page to the images WPML found:
+
+- `files` fields, including hidden ones, and `attributes` fields with `media`,
+  the same fields the block editor loads as media.
+- Fields in groups, tabs, repeater rows, and inner blocks.
+- Fields of [extensions](/docs/extensions), also on core blocks and blocks of
+  other plugins, because their values are stored in the attributes of the
+  extended block.
+
+Values that are not the ID of an attachment are left out. Nothing needs to be
+configured, and the `wpml-config.xml` is not involved. Without WPML, nothing is
+loaded.
+
+The texts are part of the job only when one of the image text options under
+WPML > Settings > Media Translation is enabled, "Automatically detect best
+options for translating image texts" or "Translate Media Library texts when
+translating content", as for images in core blocks.
+
+Blockstudio reports the images through the filter
+`wpml_ids_of_media_used_in_post`, which WPML applies to the media of a post in
+`PostWithMediaFiles`. To leave an image out of the jobs, remove its ID in a
+callback on the same filter with a priority above 10:
+
+```php
+add_filter(
+	'wpml_ids_of_media_used_in_post',
+	function ( $ids ) {
+		return array_values( array_diff( $ids, array( 42 ) ) );
+	},
+	20
+);
+```

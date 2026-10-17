@@ -317,7 +317,7 @@ class Blocks {
 			return array();
 		}
 
-		return $this->get_media_ids_from_attributes(
+		return self::get_media_ids_from_attributes(
 			$values,
 			$block_type->blockstudio['attributes']
 		);
@@ -326,13 +326,15 @@ class Blocks {
 	/**
 	 * Collect attachment IDs from attribute values using Blockstudio field definitions.
 	 *
+	 * Also used by Wpml_Media, so WPML gets the same media as the editor.
+	 *
 	 * @param array  $values Saved attribute values.
 	 * @param array  $fields Blockstudio field definitions.
 	 * @param string $prefix Field ID prefix for grouped attributes.
 	 *
 	 * @return array<int, int> Attachment IDs keyed by ID.
 	 */
-	private function get_media_ids_from_attributes( array $values, array $fields, string $prefix = '' ): array {
+	public static function get_media_ids_from_attributes( array $values, array $fields, string $prefix = '' ): array {
 		$ids = array();
 
 		foreach ( $fields as $field ) {
@@ -353,7 +355,7 @@ class Blocks {
 
 				$ids = array_replace(
 					$ids,
-					$this->get_media_ids_from_attributes( $values, $attributes, $group_prefix )
+					self::get_media_ids_from_attributes( $values, $attributes, $group_prefix )
 				);
 				continue;
 			}
@@ -363,7 +365,7 @@ class Blocks {
 					if ( ! empty( $tab['attributes'] ) && is_array( $tab['attributes'] ) ) {
 						$ids = array_replace(
 							$ids,
-							$this->get_media_ids_from_attributes( $values, $tab['attributes'], $prefix )
+							self::get_media_ids_from_attributes( $values, $tab['attributes'], $prefix )
 						);
 					}
 				}
@@ -378,7 +380,7 @@ class Blocks {
 			$field_exists = array_key_exists( $field_id, $values );
 
 			if ( 'files' === $field_type && $field_exists ) {
-				$this->add_media_ids_from_value( $values[ $field_id ], $ids );
+				self::add_media_ids_from_value( $values[ $field_id ], $ids );
 				continue;
 			}
 
@@ -390,7 +392,7 @@ class Blocks {
 			) {
 				foreach ( $values[ $field_id ] as $attribute_pair ) {
 					if ( is_array( $attribute_pair ) && isset( $attribute_pair['data']['media'] ) ) {
-						$this->add_media_ids_from_value( $attribute_pair['data']['media'], $ids );
+						self::add_media_ids_from_value( $attribute_pair['data']['media'], $ids );
 					}
 				}
 			}
@@ -405,7 +407,7 @@ class Blocks {
 					if ( is_array( $row ) ) {
 						$ids = array_replace(
 							$ids,
-							$this->get_media_ids_from_attributes( $row, $attributes )
+							self::get_media_ids_from_attributes( $row, $attributes )
 						);
 					}
 				}
@@ -423,22 +425,22 @@ class Blocks {
 	 *
 	 * @return void
 	 */
-	private function add_media_ids_from_value( $value, array &$ids ): void {
+	private static function add_media_ids_from_value( $value, array &$ids ): void {
 		if ( is_array( $value ) ) {
 			if ( isset( $value['id'] ) ) {
-				$this->add_media_ids_from_value( $value['id'], $ids );
+				self::add_media_ids_from_value( $value['id'], $ids );
 				return;
 			}
 
 			foreach ( $value as $item ) {
-				$this->add_media_ids_from_value( $item, $ids );
+				self::add_media_ids_from_value( $item, $ids );
 			}
 
 			return;
 		}
 
 		if ( is_object( $value ) && isset( $value->id ) ) {
-			$this->add_media_ids_from_value( $value->id, $ids );
+			self::add_media_ids_from_value( $value->id, $ids );
 			return;
 		}
 

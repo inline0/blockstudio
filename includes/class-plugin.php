@@ -256,6 +256,13 @@ class Plugin {
 			Islands::init();
 		}
 
+		// Wpml_Media is loaded only with WPML. Blockstudio can load after WPML, for example from a theme.
+		if ( did_action( 'wpml_loaded' ) ) {
+			Wpml_Media::register();
+		} else {
+			add_action( 'wpml_loaded', array( Wpml_Media::class, 'register' ) );
+		}
+
 		if ( did_action( 'after_setup_theme' ) ) {
 			$this->init_configured_features();
 		} else {
