@@ -40,6 +40,7 @@ All fields share these common properties:
 | `help`        | string  | Help text displayed as a tooltip next to the label                |
 | `hidden`      | boolean | Hide the field from the UI                                        |
 | `switch`      | boolean | Display a toggle that can disable the field. Defaults to `false`. |
+| `translate`   | boolean | Set to `false` to leave the field out of the [WPML configuration](/docs/dev/wpml) |
 | `conditions`  | array   | Conditional logic rules                                           |
 
 Files fields with `"returnFormat": "id"` preserve imported string references,

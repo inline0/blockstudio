@@ -146,6 +146,7 @@ IDs whatever `translate` says. Inner blocks are translated as usual.
 Not declared:
 
 - Fields with `hidden`, because their values are not written by editors.
+- Fields with `"translate": false`, see below.
 - Fields of [custom field types](/docs/blocks/attributes/custom-field-types).
   The command prints a warning for each, because only the field type knows
   whether its value holds text.
@@ -154,7 +155,30 @@ Not declared:
 - Storage keys whose fields have different types, see below.
 
 Every text field is declared, including one that holds a technical value such
-as a CSS class.
+as a CSS class, unless it sets `"translate": false`.
+
+### Leave a field out
+
+A text field can hold a value that must be the same in every language: an
+account handle, an email address, an anchor, a CSS class. WPML offers it for
+translation like any other text, and a translated value can break the block.
+Set `translate` to `false` to leave the field out of the configuration, so
+WPML copies its value into the translation unchanged:
+
+```json title="block.json"
+{
+  "id": "account",
+  "type": "text",
+  "label": "Account handle",
+  "translate": false
+}
+```
+
+On a `group`, `tabs`, or `repeater`, `"translate": false` applies to every
+field inside. On a `files` field, it leaves out the attachment IDs as well, so
+the translation keeps the original attachments. `true` is the default and
+changes nothing: the field type decides. Run the command again after changing
+the setting.
 
 The `label` of each key is the field label, preceded by the labels of the
 enclosing repeaters and groups with an ID. WPML shows it as the field name in

@@ -33,7 +33,9 @@ use WP_Error;
  *
  * A storage key can be defined more than once. Each definition is classified
  * as text (text, textarea, richtext, wysiwyg), link, files, repeater, or a
- * value that is not declared (every other built-in type, and hidden fields):
+ * value that is not declared (every other built-in type, hidden fields, and
+ * fields with "translate": false, which also applies to every field inside a
+ * group, tabs, or repeater that sets it):
  *
  * - Within the fields of the block, outside repeater rows, the attribute
  *   builder registers one attribute per storage key, and a later definition
@@ -190,8 +192,8 @@ final class Wpml_Config {
 
 		foreach ( $blocks as $name => $block ) {
 			$name       = (string) $name;
-			$fields     = is_array( $block['fields'] ?? null ) ? $block['fields'] : array();
-			$extensions = is_array( $block['extension_fields'] ?? null ) ? $block['extension_fields'] : array();
+			$fields     = self::inherit_translate( is_array( $block['fields'] ?? null ) ? $block['fields'] : array() );
+			$extensions = self::inherit_translate( is_array( $block['extension_fields'] ?? null ) ? $block['extension_fields'] : array() );
 			$candidates = self::combine(
 				self::latest( self::definitions( $fields, 'block' ) ),
 				self::latest( self::definitions( $extensions, 'extension' ) )
@@ -508,6 +510,48 @@ final class Wpml_Config {
 	}
 
 	/**
+	 * Pass "translate": false from groups, tabs, and repeaters to the fields inside them.
+	 *
+	 * Groups and tabs add no definition of their own, and the rows of a
+	 * repeater are classified field by field, so the setting has to reach
+	 * every field below the container that sets it.
+	 *
+	 * @param array $fields    Field definitions.
+	 * @param bool  $inherited Whether an enclosing container sets "translate": false.
+	 *
+	 * @return array The field definitions, with "translate": false on every field below such a container.
+	 */
+	private static function inherit_translate( array $fields, bool $inherited = false ): array {
+		foreach ( $fields as $index => $field ) {
+			if ( ! is_array( $field ) ) {
+				continue;
+			}
+
+			$off = $inherited || false === ( $field['translate'] ?? null );
+
+			if ( $off ) {
+				$field['translate'] = false;
+			}
+
+			if ( is_array( $field['attributes'] ?? null ) ) {
+				$field['attributes'] = self::inherit_translate( $field['attributes'], $off );
+			}
+
+			if ( is_array( $field['tabs'] ?? null ) ) {
+				foreach ( $field['tabs'] as $tab_index => $tab ) {
+					if ( is_array( $tab['attributes'] ?? null ) ) {
+						$field['tabs'][ $tab_index ]['attributes'] = self::inherit_translate( $tab['attributes'], $off );
+					}
+				}
+			}
+
+			$fields[ $index ] = $field;
+		}
+
+		return $fields;
+	}
+
+	/**
 	 * Classify a definition by the declaration its stored value needs.
 	 *
 	 * @param array{field: array, source: string, parents: array<int,string>, hidden: bool} $entry Definition.
@@ -519,7 +563,7 @@ final class Wpml_Config {
 		$type = (string) $entry['field']['type'];
 
 		// Hidden fields hold values that editors do not write, such as block field references.
-		if ( $entry['hidden'] || in_array( $type, self::VALUE_TYPES, true ) ) {
+		if ( $entry['hidden'] || false === ( $entry['field']['translate'] ?? null ) || in_array( $type, self::VALUE_TYPES, true ) ) {
 			return 'value';
 		}
 
@@ -576,7 +620,8 @@ final class Wpml_Config {
 
 		foreach ( $entries as $entry ) {
 			$where             = 'block' === $entry['source'] ? 'in the block' : 'in an extension';
-			$types[ $where ][] = ( $entry['hidden'] ? 'hidden ' : '' ) . (string) $entry['field']['type'];
+			$prefix            = $entry['hidden'] ? 'hidden ' : ( false === ( $entry['field']['translate'] ?? null ) ? 'untranslated ' : '' );
+			$types[ $where ][] = $prefix . (string) $entry['field']['type'];
 		}
 
 		$parts = array();

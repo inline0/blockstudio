@@ -4,9 +4,9 @@
   "blockstudio_ref": "819e0fae64db0da17737140e5afe72fcb93b12e0",
   "gutenberg_schema_url": "https://raw.githubusercontent.com/WordPress/gutenberg/trunk/schemas/json/block.json",
   "files": {
-    "block.json": "0ca3c3095e73ec6de1bf03c4cc12bdd2aa672f04aca2703e95850297e6237875",
+    "block.json": "b8f37ccc4c8177f749a39edcb5ec343928808437181dc437d8b2cc95a87adfec",
     "blockstudio.json": "e3874a2609e80fcc51f82cebac2b39dae83a3a7d32eecc4dc771229d8c0c3b5b",
-    "extend.json": "ca2d68e33a00f6627e06133ab8d54c9462383de124d56730518b432e731bf38c",
+    "extend.json": "3a7ed6474facbef52162b656be338a68e807bf34861981920884aa76ee95cccb",
     "field.json": "e92dfbd4f8232d363f97d91b0276fe6006c37df5056a22195ccfcb028883ef1e",
     "page.json": "5d871fc1ef86f8ae954ed3f7700dcedd162055c8e1d64279e794484b57ddcdf2"
   }
