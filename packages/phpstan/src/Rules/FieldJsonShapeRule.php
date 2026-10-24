@@ -116,7 +116,7 @@ final class FieldJsonShapeRule implements Rule
      * @param array<int, mixed> $attributes
      * @return list<\PHPStan\Rules\IdentifierRuleError>
      */
-    private function validateAttributes(array $attributes, string $path): array
+    private function validateAttributes(array $attributes, string $path, bool $inRepeater = false): array
     {
         $errors = [];
 
@@ -172,8 +172,26 @@ final class FieldJsonShapeRule implements Rule
                     ->build();
             }
 
+            if ($type === 'tabs' && $inRepeater) {
+                $errors[] = RuleErrorBuilder::message(sprintf(
+                    'field.json field "%s" of type "tabs" is not supported inside a repeater: %s',
+                    $this->getFieldLabel($field, $i),
+                    $this->scanner->relativePath($path)
+                ))
+                    ->identifier('blockstudio.fieldJson.nesting')
+                    ->file($path)
+                    ->build();
+            }
+
             if (($type === 'group' || $type === 'repeater') && isset($field['attributes']) && is_array($field['attributes'])) {
-                $errors = array_merge($errors, $this->validateAttributes($field['attributes'], $path));
+                $errors = array_merge(
+                    $errors,
+                    $this->validateAttributes(
+                        $field['attributes'],
+                        $path,
+                        $type === 'repeater' || ($inRepeater && !$this->hasFieldId($field))
+                    )
+                );
             }
 
             if ($type === 'tabs' && isset($field['tabs']) && is_array($field['tabs'])) {
@@ -186,6 +204,16 @@ final class FieldJsonShapeRule implements Rule
         }
 
         return $errors;
+    }
+
+    /**
+     * The editor renders a group without an id inline in its repeater row.
+     *
+     * @param array<string, mixed> $field
+     */
+    private function hasFieldId(array $field): bool
+    {
+        return is_string($field['id'] ?? null) && $field['id'] !== '';
     }
 
     private function requiresFieldId(string $type): bool

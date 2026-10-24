@@ -15877,6 +15877,7 @@ The extension validates every Blockstudio schema file in the project.
 - Unknown field types
 - `select`/`radio`/`checkbox` without `options` or `populate`
 - Duplicate field IDs
+- A `tabs` field inside a repeater, directly or inside a group without an `id`
 - Invalid `pluginDependencies` declarations
 
 Container fields like `group` and `tabs`, plus `custom/*` field references, can
@@ -15889,6 +15890,7 @@ omit `id` when they only expand or wrap other fields.
 - Invalid attribute objects or missing field `type`
 - Missing `id` on value fields that require one
 - Unknown field types
+- A `tabs` field inside a repeater, directly or inside a group without an `id`
 - Missing, ambiguous, invalid, or cyclic nested `custom/*` references
 
 **Extension JSON** (block extensions in `extensions/`):

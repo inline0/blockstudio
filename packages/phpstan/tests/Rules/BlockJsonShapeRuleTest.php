@@ -133,6 +133,54 @@ final class BlockJsonShapeRuleTest extends RuleTestCase
         $this->assertContainsErrorMessage('blockstudio.pluginDependencies.contact-form-7.version', $errors);
     }
 
+    public function test_tabs_in_repeater_reported(): void
+    {
+        $this->fixtureDir = __DIR__ . '/data/shape/repeater-tabs';
+        $this->assertSame(
+            ['block.json field "sections" of type "tabs" is not supported inside a repeater in blockstudio/bad/block.json'],
+            $this->gatherNestingErrors([$this->fixtureDir . '/blockstudio/bad/index.php'])
+        );
+    }
+
+    public function test_tabs_in_anonymous_group_in_repeater_reported(): void
+    {
+        $this->fixtureDir = __DIR__ . '/data/shape/repeater-group-tabs';
+        $this->assertSame(
+            ['block.json field "attributes[1]" of type "tabs" is not supported inside a repeater in blockstudio/bad/block.json'],
+            $this->gatherNestingErrors([$this->fixtureDir . '/blockstudio/bad/index.php'])
+        );
+    }
+
+    public function test_tabs_in_nested_repeater_reported(): void
+    {
+        $this->fixtureDir = __DIR__ . '/data/shape/repeater-nested-tabs';
+        $this->assertSame(
+            ['block.json field "attributes[0]" of type "tabs" is not supported inside a repeater in blockstudio/bad/block.json'],
+            $this->gatherNestingErrors([$this->fixtureDir . '/blockstudio/bad/index.php'])
+        );
+    }
+
+    public function test_tabs_outside_repeater_passes(): void
+    {
+        $this->fixtureDir = __DIR__ . '/data/shape/tabs-outside-repeater';
+        $this->analyse(
+            [$this->fixtureDir . '/blockstudio/good/index.php'],
+            []
+        );
+    }
+
+    /**
+     * @param list<string> $files
+     * @return list<string>
+     */
+    private function gatherNestingErrors(array $files): array
+    {
+        return array_values(array_filter(
+            $this->gatherErrors($files),
+            static fn(string $error): bool => str_contains($error, 'is not supported inside a repeater')
+        ));
+    }
+
     /**
      * @param list<string> $files
      * @return list<string>

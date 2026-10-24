@@ -1,0 +1,22 @@
+{
+  "name": "spacing",
+  "attributes": [
+    {
+      "id": "items",
+      "type": "repeater",
+      "attributes": [
+        { "id": "title", "type": "text" },
+        {
+          "id": "sections",
+          "type": "tabs",
+          "tabs": [
+            {
+              "title": "Details",
+              "attributes": [{ "id": "detail", "type": "text" }]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

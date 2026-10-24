@@ -481,7 +481,7 @@ Without `"context": "main"`, the condition would look for a `showDescriptions` f
 
 ### Tabs inside repeaters
 
-Tabs are not available inside repeaters: a `tabs` field inside a repeater row renders an empty row. Keep the fields of a row flat instead. For long rows, a custom row label (`textMinimized`) keeps collapsed rows readable, and conditions inside the row can hide fields that only some rows need, as shown in the patterns above.
+Tabs are not available inside repeaters: a `tabs` field inside a repeater row shows a notice in the editor instead of its fields, and the PHPStan extension reports it. Keep the fields of a row flat instead. For long rows, a custom row label (`textMinimized`) keeps collapsed rows readable, and conditions inside the row can hide fields that only some rows need, as shown in the patterns above.
 
 Set `"minimized": true` on a repeater to start existing rows collapsed. Newly
 added rows open immediately. Expanded exceptions are remembered in this browser

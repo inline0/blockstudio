@@ -1,0 +1,46 @@
+{
+  "name": "test/good",
+  "blockstudio": {
+    "attributes": [
+      {
+        "type": "tabs",
+        "tabs": [
+          {
+            "title": "First",
+            "attributes": [
+              { "id": "title", "type": "text" },
+              {
+                "type": "tabs",
+                "tabs": [
+                  {
+                    "title": "Nested",
+                    "attributes": [{ "id": "nested", "type": "text" }]
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "type": "group",
+        "attributes": [
+          {
+            "type": "tabs",
+            "tabs": [
+              {
+                "title": "Grouped",
+                "attributes": [{ "id": "grouped", "type": "text" }]
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "id": "items",
+        "type": "repeater",
+        "attributes": [{ "id": "label", "type": "text" }]
+      }
+    ]
+  }
+}

@@ -75,4 +75,53 @@ final class FieldJsonShapeRuleTest extends RuleTestCase
             'Expected a custom field cycle error. Got: ' . implode("\n", $errors)
         );
     }
+
+    public function test_tabs_in_repeater_reported(): void
+    {
+        $this->fixtureDir = __DIR__ . '/data/field-json/repeater-tabs';
+        $this->assertSame(
+            ['field.json field "sections" of type "tabs" is not supported inside a repeater: fields/spacing/field.json'],
+            $this->gatherNestingErrors()
+        );
+    }
+
+    public function test_tabs_in_anonymous_group_in_repeater_reported(): void
+    {
+        $this->fixtureDir = __DIR__ . '/data/field-json/repeater-group-tabs';
+        $this->assertSame(
+            ['field.json field "attributes[1]" of type "tabs" is not supported inside a repeater: fields/spacing/field.json'],
+            $this->gatherNestingErrors()
+        );
+    }
+
+    public function test_tabs_in_nested_repeater_reported(): void
+    {
+        $this->fixtureDir = __DIR__ . '/data/field-json/repeater-nested-tabs';
+        $this->assertSame(
+            ['field.json field "attributes[0]" of type "tabs" is not supported inside a repeater: fields/spacing/field.json'],
+            $this->gatherNestingErrors()
+        );
+    }
+
+    public function test_tabs_outside_repeater_passes(): void
+    {
+        $this->fixtureDir = __DIR__ . '/data/field-json/tabs-outside-repeater';
+        $this->analyse([$this->fixtureDir . '/blockstudio/hero/index.php'], []);
+    }
+
+    /**
+     * @return list<string>
+     */
+    private function gatherNestingErrors(): array
+    {
+        $errors = array_map(
+            static fn($e) => $e->getMessage(),
+            $this->gatherAnalyserErrors([$this->fixtureDir . '/blockstudio/hero/index.php'])
+        );
+
+        return array_values(array_filter(
+            $errors,
+            static fn(string $error): bool => str_contains($error, 'is not supported inside a repeater')
+        ));
+    }
 }

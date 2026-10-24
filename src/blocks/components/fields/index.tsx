@@ -137,6 +137,17 @@ export const Fields = ({
     if (item.type === 'message')
       return <Message {...{ attributes, block }} value={item.value ?? ''} />;
 
+    // Tabs render through El, which repeater rows bypass. Without this branch
+    // the field has no control and leaves an empty row.
+    if (item.type === 'tabs' && repeaterId !== '')
+      return (
+        <Base>
+          <div className="blockstudio-fields__unsupported">
+            Field type <code>tabs</code> is not supported inside a repeater.
+          </div>
+        </Base>
+      );
+
     const transformed = transform || (block.attributes as Any)?.[item.id ?? ''];
 
     if (item.type === 'group' || !item.id || !item.type) return false;

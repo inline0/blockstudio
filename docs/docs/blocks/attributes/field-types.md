@@ -746,6 +746,14 @@ removed after confirmation, including inside nested repeaters.
 For example, `"textRemove": "Remove this team member?"` changes the question.
 The existing `min` restriction still prevents removing rows below the minimum.
 
+## Repeater Nesting
+
+A repeater row accepts every field type except `tabs`. A `tabs` field in a row,
+also inside a group without an `id`, shows a notice in the editor instead of its
+fields. The [PHPStan extension](/docs/dev/phpstan) reports it for `block.json`
+and `field.json`. Keep the fields of the row flat, or move the tabs outside the
+repeater.
+
 ## WYSIWYG Links
 
 The WYSIWYG link toolbar inserts same-tab links without adding `target` or `rel`

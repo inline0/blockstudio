@@ -1,0 +1,28 @@
+{
+  "name": "test/bad",
+  "blockstudio": {
+    "attributes": [
+      {
+        "id": "items",
+        "type": "repeater",
+        "attributes": [
+          {
+            "id": "children",
+            "type": "repeater",
+            "attributes": [
+              {
+                "type": "tabs",
+                "tabs": [
+                  {
+                    "title": "Details",
+                    "attributes": [{ "id": "detail", "type": "text" }]
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  }
+}

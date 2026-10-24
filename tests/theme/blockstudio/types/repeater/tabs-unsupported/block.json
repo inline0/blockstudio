@@ -1,0 +1,52 @@
+{
+  "$schema": "https://blockstudio.dev/schema/block",
+  "name": "blockstudio/type-repeater-tabs-unsupported",
+  "title": "Native Repeater Tabs Unsupported",
+  "category": "blockstudio-test-native",
+  "icon": "star-filled",
+  "description": "Tests a tabs field inside a repeater, which the editor reports as unsupported.",
+  "keywords": ["native", "repeater", "tabs"],
+  "blockstudio": {
+    "conditions": [
+      [
+        {
+          "type": "postType",
+          "operator": "==",
+          "value": "post"
+        }
+      ]
+    ],
+    "attributes": [
+      {
+        "id": "items",
+        "type": "repeater",
+        "label": "Items",
+        "textButton": "Add item",
+        "textRemove": true,
+        "default": [{ "title": "First" }, { "title": "Second" }],
+        "attributes": [
+          {
+            "id": "title",
+            "type": "text",
+            "label": "Title"
+          },
+          {
+            "type": "tabs",
+            "tabs": [
+              {
+                "title": "Details",
+                "attributes": [
+                  {
+                    "id": "detail",
+                    "type": "text",
+                    "label": "Detail"
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  }
+}
