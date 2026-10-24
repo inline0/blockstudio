@@ -51,6 +51,11 @@ jobs:
 
       - run: composer install --no-interaction
 
+      - name: Composer security audit
+        run: |
+          composer audit --locked
+          composer audit --locked --working-dir=tests/theme
+
       - name: PHPCS
         run: composer cs
 
