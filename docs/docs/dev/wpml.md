@@ -136,6 +136,7 @@ those blocks get their configuration from WPML or from their own plugin.
 | `repeater` | A level named `*` that matches every row, with the declarations of the row fields. Nested repeaters work the same way. |
 | `group` with an `id` | The fields of the group, with the group ID as key prefix (`cta_text` for the field `text` in the group `cta`). |
 | `group` without an `id`, `tabs` | The fields, without a level of their own. |
+| Custom field type registered with `translate` set to `true` | Translatable text, like a `text` field. |
 | Every other built-in type | Not declared. WPML copies the value unchanged. |
 
 A block without a declared text field gets `translate="0"`. WPML then copies
@@ -146,21 +147,63 @@ IDs whatever `translate` says. Inner blocks are translated as usual.
 Not declared:
 
 - Fields with `hidden`, because their values are not written by editors.
-- Fields of [custom field types](/docs/blocks/attributes/custom-field-types).
-  The command prints a warning for each, because only the field type knows
-  whether its value holds text.
+- Fields with `"translate": false`, see below.
+- Fields of [custom field types](/docs/blocks/attributes/custom-field-types)
+  that do not set `translate` in their registration. The command prints a
+  warning for each, because only the field type knows whether its value holds
+  text. See below.
 - Attributes that a block declares in its native `attributes` instead of as
   Blockstudio fields.
 - Storage keys whose fields have different types, see below.
 
 Every text field is declared, including one that holds a technical value such
-as a CSS class.
+as a CSS class, unless it sets `"translate": false`.
+
+### Leave a field out
+
+A text field can hold a value that must be the same in every language: an
+account handle, an email address, an anchor, a CSS class. WPML offers it for
+translation like any other text, and a translated value can break the block.
+Set `translate` to `false` to leave the field out of the configuration, so
+WPML copies its value into the translation unchanged:
+
+```json title="block.json"
+{
+  "id": "account",
+  "type": "text",
+  "label": "Account handle",
+  "translate": false
+}
+```
+
+On a `group`, `tabs`, or `repeater`, `"translate": false` applies to every
+field inside. On a `files` field, it leaves out the attachment IDs as well, so
+the translation keeps the original attachments. `true` is the default and
+changes nothing: the field type decides. Run the command again after changing
+the setting.
 
 The `label` of each key is the field label, preceded by the labels of the
 enclosing repeaters and groups with an ID. WPML shows it as the field name in
 the translation editor. The two keys of a `link` field add `Link text` and
 `URL` to the label. These suffixes are translated into the site language, so
 run the command with the locale your translators work in.
+
+### Custom field types
+
+A field type that stores a plain string of text says so when it is registered.
+Set `translate` to `true` in the definition, which requires `attribute` to be
+`string`:
+
+```php title="functions.php"
+bs_register_field_type('acme/headline', [
+  'attribute' => 'string',
+  'translate' => true,
+]);
+```
+
+The command then declares every field of that type as translatable text. A
+field can still set `"translate": false` to leave itself out. Without the
+option, the fields of the type are left out and reported, as before.
 
 ### Change the labels
 

@@ -75,6 +75,34 @@ class FieldTypeRegistryTest extends TestCase {
 		);
 	}
 
+	/**
+	 * @dataProvider translate_provider
+	 */
+	public function test_translate_requires_a_boolean_and_a_string_attribute( mixed $attribute, mixed $translate, bool $valid ): void {
+		$this->assertSame(
+			$valid,
+			$this->registry->register(
+				'test/translated',
+				array(
+					'attribute' => $attribute,
+					'translate' => $translate,
+				)
+			)
+		);
+	}
+
+	public static function translate_provider(): array {
+		return array(
+			'string text'      => array( 'string', true, true ),
+			'string list text' => array( array( 'string' ), true, true ),
+			'object not text'  => array( 'object', false, true ),
+			'object text'      => array( 'object', true, false ),
+			'string or number' => array( array( 'string', 'number' ), true, false ),
+			'no attribute'     => array( null, true, false ),
+			'non boolean'      => array( 'string', 'yes', false ),
+		);
+	}
+
 	public function test_duplicate_registration_is_rejected(): void {
 		$definition = array( 'attribute' => 'string' );
 

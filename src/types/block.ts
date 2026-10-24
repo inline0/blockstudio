@@ -343,6 +343,12 @@ export interface BlockstudioAttribute {
    * Display a toggle that can disable the field. Defaults to false.
    */
   switch?: boolean;
+  /**
+   * Set to false to leave the field out of the WPML language configuration that wp bs wpml config
+   * generates, so WPML copies its value into translations unchanged. On a group, tabs, or repeater, it
+   * applies to every field inside.
+   */
+  translate?: boolean;
   type: FluffyType | string;
   /**
    * ID pattern for expanded custom fields. Use {id} as placeholder for the original field ID.
@@ -736,6 +742,12 @@ export interface AttributeAttribute {
    * Display a toggle that can disable the field. Defaults to false.
    */
   switch?: boolean;
+  /**
+   * Set to false to leave the field out of the WPML language configuration that wp bs wpml config
+   * generates, so WPML copies its value into translations unchanged. On a group, tabs, or repeater, it
+   * applies to every field inside.
+   */
+  translate?: boolean;
   type: PurpleType;
   /**
    * Default value that should be applied when first adding the block.
@@ -1143,6 +1155,12 @@ export interface Attribute {
    * Display a toggle that can disable the field. Defaults to false.
    */
   switch?: boolean;
+  /**
+   * Set to false to leave the field out of the WPML language configuration that wp bs wpml config
+   * generates, so WPML copies its value into translations unchanged. On a group, tabs, or repeater, it
+   * applies to every field inside.
+   */
+  translate?: boolean;
   type: AttributeType;
   /**
    * Default value that should be applied when first adding the block.
@@ -3547,6 +3565,7 @@ const typeMap: any = {
       { json: 'key', js: 'key', typ: u(undefined, '') },
       { json: 'label', js: 'label', typ: u(undefined, '') },
       { json: 'switch', js: 'switch', typ: u(undefined, true) },
+      { json: 'translate', js: 'translate', typ: u(undefined, true) },
       { json: 'type', js: 'type', typ: r('FluffyType') },
       {
         json: 'default',
@@ -3732,6 +3751,7 @@ const typeMap: any = {
       { json: 'key', js: 'key', typ: u(undefined, '') },
       { json: 'label', js: 'label', typ: u(undefined, '') },
       { json: 'switch', js: 'switch', typ: u(undefined, true) },
+      { json: 'translate', js: 'translate', typ: u(undefined, true) },
       { json: 'type', js: 'type', typ: r('PurpleType') },
       {
         json: 'default',
@@ -3939,6 +3959,7 @@ const typeMap: any = {
       { json: 'key', js: 'key', typ: u(undefined, '') },
       { json: 'label', js: 'label', typ: u(undefined, '') },
       { json: 'switch', js: 'switch', typ: u(undefined, true) },
+      { json: 'translate', js: 'translate', typ: u(undefined, true) },
       { json: 'type', js: 'type', typ: r('AttributeType') },
       {
         json: 'default',

@@ -137,6 +137,27 @@ add_filter('blockstudio/field_types', function (array $types): array {
 | `editor_style`       | string or array           | Registered style handle or handles to enqueue in the block editor when the type is used.                    |
 | `storage`            | array                     | Storage value type and REST schema hints for post meta and options.                                         |
 | `supports`           | array                     | Optional capability flags for your own control.                                                             |
+| `translate`          | boolean                   | Set to `true` when the value is text for WPML to translate. Requires `attribute` `string`.                  |
+
+A definition with a `translate` value that is not a boolean, or with
+`translate` set to `true` and an `attribute` other than `string`, is invalid.
+`bs_register_field_type()` returns `false` and the filter API ignores it.
+
+## WPML
+
+`wp bs wpml config` cannot tell from the registration alone whether the value
+of a custom field type is text, so it leaves such fields out and prints a
+warning for each. Set `translate` to `true` in the registration of a field type
+that stores a plain string of text, and the command declares its fields like
+`text` fields. A field can still opt out with `"translate": false`. See
+[WPML](/docs/dev/wpml).
+
+```php title="functions.php"
+bs_register_field_type('acme/headline', [
+    'attribute' => 'string',
+    'translate' => true,
+]);
+```
 
 ## JavaScript Registration
 

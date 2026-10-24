@@ -524,6 +524,17 @@ final class Field_Type_Registry {
 			return false;
 		}
 
+		if ( isset( $definition['translate'] ) ) {
+			if ( ! is_bool( $definition['translate'] ) ) {
+				return false;
+			}
+
+			// Only a string value can be text for WPML to translate.
+			if ( $definition['translate'] && array( 'string' ) !== (array) $definition['attribute'] ) {
+				return false;
+			}
+		}
+
 		return true;
 	}
 

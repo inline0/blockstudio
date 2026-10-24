@@ -75,6 +75,10 @@
           "type": "boolean",
           "description": "Whether to hide the field UI in the editor. This is handy when using the variations API."
         },
+        "translate": {
+          "type": "boolean",
+          "description": "Set to false to leave the field out of the WPML language configuration that wp bs wpml config generates, so WPML copies its value into translations unchanged. On a group, tabs, or repeater, it applies to every field inside."
+        },
         "storage": {
           "type": "object",
           "description": "Configure where the field value should be stored.",
@@ -3117,6 +3121,10 @@
                 "type": "boolean",
                 "description": "Whether to hide the field UI in the editor. This is handy when using the variations API."
               },
+              "translate": {
+                "type": "boolean",
+                "description": "Set to false to leave the field out of the WPML language configuration that wp bs wpml config generates, so WPML copies its value into translations unchanged. On a group, tabs, or repeater, it applies to every field inside."
+              },
               "storage": {
                 "type": "object",
                 "description": "Configure where the field value should be stored.",
@@ -3829,6 +3837,10 @@
                         "hidden": {
                           "type": "boolean",
                           "description": "Whether to hide the field UI in the editor. This is handy when using the variations API."
+                        },
+                        "translate": {
+                          "type": "boolean",
+                          "description": "Set to false to leave the field out of the WPML language configuration that wp bs wpml config generates, so WPML copies its value into translations unchanged. On a group, tabs, or repeater, it applies to every field inside."
                         },
                         "storage": {
                           "type": "object",

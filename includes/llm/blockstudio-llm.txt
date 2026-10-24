@@ -143,6 +143,7 @@ file: docs/docs/blocks/attributes/custom-field-types.md
 purpose: Register custom editor controls and structured attribute values.
 hooks: blockstudio/field_types
 php: bs_register_field_type(), bs_unregister_field_type()
+cli: wp bs wpml config
 
 ### Custom Fields
 route: /docs/blocks/attributes/custom-fields
@@ -563,6 +564,7 @@ route: /docs/dev/wpml
 file: docs/docs/dev/wpml.md
 purpose: Generate the WPML language configuration that makes the text fields of Blockstudio blocks translatable.
 hooks: blockstudio/wpml/config/label
+php: bs_register_field_type()
 cli: wp bs wpml config
 
 ## Docs / Dev / Migration
