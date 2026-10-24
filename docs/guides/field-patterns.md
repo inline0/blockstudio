@@ -325,9 +325,8 @@ When a block has many settings, tabs provide a cleaner organization than a long 
 ```json title="block.json (partial)"
 {
   "type": "tabs",
-  "attributes": [
+  "tabs": [
     {
-      "type": "group",
       "title": "Content",
       "attributes": [
         { "id": "title", "type": "text", "label": "Title" },
@@ -335,7 +334,6 @@ When a block has many settings, tabs provide a cleaner organization than a long 
       ]
     },
     {
-      "type": "group",
       "title": "Media",
       "attributes": [
         { "id": "image", "type": "files", "label": "Image", "multiple": false },
@@ -343,7 +341,6 @@ When a block has many settings, tabs provide a cleaner organization than a long 
       ]
     },
     {
-      "type": "group",
       "title": "Settings",
       "attributes": [
         { "id": "layout", "type": "select", "label": "Layout", "options": [
@@ -357,7 +354,7 @@ When a block has many settings, tabs provide a cleaner organization than a long 
 }
 ```
 
-Each tab's group children are accessed the same as anonymous groups: `$a['title']`, `$a['image']`, `$a['layout']`. Tabs are purely a UI container.
+The fields of each tab are accessed like top-level fields: `$a['title']`, `$a['image']`, `$a['layout']`. Tabs are purely a UI container.
 
 ## Repeater Patterns
 
