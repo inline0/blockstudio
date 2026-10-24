@@ -179,6 +179,33 @@ limited to static checks, builds, and focused non-E2E tests. `npm run check` is
 the CI aggregate, not a local preflight. CI also builds the WordPress assets and
 checks ZIP/Composer installations before a tooling candidate can be merged.
 
+### Browser tests without Docker
+
+CI runs the Playwright specs against wp-env. Contributors without Docker can
+run single specs against [WordPress Playground](https://wordpress.github.io/wordpress-playground/),
+which runs WordPress in WebAssembly. This is a local convenience, not a
+replacement for CI.
+
+```bash
+npx playwright install chromium                                   # once
+npm run test:e2e:playground -- tests/e2e/types/text.ts            # fresh site, run, stop
+npm run playground:start                                          # keep a seeded site on :8888, Ctrl-C stops it
+```
+
+The script installs the Composer dependencies of the plugin and `tests/theme`
+when they are missing (PHP and Composer are required), reads the port and
+`wp-config` constants from `tests/wp-env/.wp-env.json`, mounts the repository
+as the plugin and `tests/theme` as the `theme` theme, activates both, sets
+`/%postname%/` permalinks and calls the E2E seed endpoint. Every run starts from a
+new site and uses `playwright.wp-env.config.ts` unchanged. PHP 8.4 and the
+latest WordPress are the defaults; set `PLAYGROUND_PHP` or `PLAYGROUND_WP` to
+change them. The Playground CLI is pinned in `package.json`.
+
+Differences from wp-env: SQLite instead of MySQL, one site (no PHPUnit, empty or
+implementation environments), and no WP-CLI or Docker. `tests/e2e/cli.ts` and
+`tests/e2e/seo.ts` call `wp-env run cli` and therefore still need wp-env. Port
+8888 must be free.
+
 ## Translation Maintenance
 
 English strings are extracted into `languages/blockstudio.pot`. Existing German

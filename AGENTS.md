@@ -39,6 +39,10 @@ npx playwright test tests/e2e/types/text.ts --config=playwright.wp-env.config.ts
 
 **Test files:** `tests/e2e/**/*.ts`
 
+**Without Docker:** `npm run test:e2e:playground -- tests/e2e/types/text.ts` runs the given specs
+against WordPress Playground instead of wp-env (see README, "Browser tests without Docker").
+CI stays the source of truth.
+
 ## Project Structure
 
 ```
@@ -160,6 +164,8 @@ section markers in Markdown files.
 | `npm run wp-env:reset`   | Reset wp-env + seed test data                           |
 | `npm run test:unit`      | Run PHPUnit tests inside wp-env                         |
 | `npm run test:e2e`       | Run all E2E tests                                       |
+| `npm run test:e2e:playground` | Run given E2E specs on Playground, no Docker       |
+| `npm run playground:start` | Start a seeded Playground site (port 8888)            |
 | `npm run catalog:blocks` | Run catalog block test                                  |
 | `composer cs`            | Check PHPCS                                             |
 | `composer cs:fix`        | Auto-fix PHPCS issues                                   |
