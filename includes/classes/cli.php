@@ -311,8 +311,13 @@ class Cli {
 			return;
 		}
 
+		if ( 'render' === $subcommand ) {
+			self::blocks_render( array_slice( $args, 1 ), $assoc_args );
+			return;
+		}
+
 		if ( 'list' !== $subcommand ) {
-			\WP_CLI::error( "Unknown subcommand: $subcommand. Use: list or validate" );
+			\WP_CLI::error( "Unknown subcommand: $subcommand. Use: list, validate or render" );
 			return;
 		}
 
@@ -383,6 +388,92 @@ class Cli {
 		} else {
 			\WP_CLI::success( 'No stored field problems found.' );
 		}
+		if ( array() !== $rows ) {
+			\WP_CLI::halt( 1 );
+		}
+	}
+
+	/**
+	 * Render blocks and report the PHP problems they raise without modifying anything.
+	 *
+	 * @param array $names      Block names. Empty renders every registered block.
+	 * @param array $assoc_args Output and attribute options.
+	 * @return void
+	 */
+	private static function blocks_render( array $names, array $assoc_args ): void {
+		$format = $assoc_args['format'] ?? 'table';
+		if ( ! in_array( $format, array( 'table', 'json' ), true ) ) {
+			\WP_CLI::error( 'Invalid format. Use: table or json' );
+			return;
+		}
+
+		$registered = array_keys( Build::blocks() );
+		$unknown    = array_diff( $names, $registered );
+		if ( array() !== $unknown ) {
+			\WP_CLI::error( 'Unknown block: ' . implode( ', ', $unknown ) );
+			return;
+		}
+
+		$attributes = null;
+		if ( isset( $assoc_args['attributes'] ) ) {
+			if ( 1 !== count( $names ) ) {
+				\WP_CLI::error( 'Usage: wp bs blocks render <name> --attributes=<json>|@<file>' );
+				return;
+			}
+
+			$json = (string) $assoc_args['attributes'];
+			if ( str_starts_with( $json, '@' ) ) {
+				$file = substr( $json, 1 );
+				$json = is_readable( $file ) ? file_get_contents( $file ) : false; // phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents
+
+				if ( false === $json ) {
+					\WP_CLI::error( "Could not read $file." );
+					return;
+				}
+			}
+
+			$attributes = json_decode( $json, true );
+			if ( ! is_array( $attributes ) || ( array() !== $attributes && array_is_list( $attributes ) ) ) {
+				\WP_CLI::error( '--attributes must be a JSON object of field values.' );
+				return;
+			}
+		}
+
+		$names = array() === $names ? $registered : $names;
+		if ( array() === $names ) {
+			\WP_CLI::error( 'No blocks found.' );
+			return;
+		}
+
+		$results = array();
+		$rows    = array();
+		foreach ( $names as $name ) {
+			$result    = Render_Check::block( $name, $attributes );
+			$results[] = $result;
+			foreach ( $result['problems'] as $problem ) {
+				$rows[] = array(
+					'block' => $result['block'],
+					'case'  => $result['case'],
+				) + $problem;
+			}
+		}
+
+		if ( 'json' === $format ) {
+			\WP_CLI::line( (string) wp_json_encode( $results, JSON_PRETTY_PRINT ) );
+		} else {
+			foreach ( $results as $result ) {
+				if ( 'defaults' === $result['case'] ) {
+					\WP_CLI::log( $result['block'] . ': no example attributes, rendered with field defaults.' );
+				}
+			}
+
+			if ( array() !== $rows ) {
+				\WP_CLI\Utils\format_items( 'table', $rows, array( 'block', 'case', 'level', 'message', 'file', 'line' ) );
+			} else {
+				\WP_CLI::success( sprintf( 'Rendered %d block(s) without PHP problems.', count( $results ) ) );
+			}
+		}
+
 		if ( array() !== $rows ) {
 			\WP_CLI::halt( 1 );
 		}

@@ -531,7 +531,7 @@ file: docs/docs/dev/cli.md
 purpose: Manage Blockstudio blocks, pages, database, RPC, and cron from the command line via WP-CLI.
 settings: assets/enqueue, tailwind/enabled
 php: bs_validate_block()
-cli: wp bs assets list, wp bs blocks list, wp bs blocks validate, wp bs content pull, wp bs content push, wp bs content status, wp bs cron list, wp bs cron run, wp bs db create, wp bs db delete, wp bs db get, wp bs db list, wp bs db migrate, wp bs db schemas, wp bs db update, wp bs fields list, wp bs pages sync, wp bs prerender map, wp bs prerender purge, wp bs prerender status, wp bs prerender warm, wp bs rpc call, wp bs rpc list, wp bs scss compile, wp bs settings get, wp bs settings list, wp bs tailwind cache, wp bs tailwind compile, wp bs teardown, wp bs wpml config
+cli: wp bs assets list, wp bs blocks list, wp bs blocks render, wp bs blocks validate, wp bs content pull, wp bs content push, wp bs content status, wp bs cron list, wp bs cron run, wp bs db create, wp bs db delete, wp bs db get, wp bs db list, wp bs db migrate, wp bs db schemas, wp bs db update, wp bs fields list, wp bs pages sync, wp bs prerender map, wp bs prerender purge, wp bs prerender status, wp bs prerender warm, wp bs rpc call, wp bs rpc list, wp bs scss compile, wp bs settings get, wp bs settings list, wp bs tailwind cache, wp bs tailwind compile, wp bs teardown, wp bs wpml config
 
 ## Docs / Dev / Integrations
 

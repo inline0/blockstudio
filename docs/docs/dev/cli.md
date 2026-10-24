@@ -68,6 +68,79 @@ read it even when the command exits with `1`. Missing posts, missing IDs, and
 formats other than `table` or `json` are errors. All IDs are checked before
 validation begins.
 
+### Render blocks
+
+```bash
+wp bs blocks render
+wp bs blocks render my-theme/hero my-theme/card
+wp bs blocks render my-theme/card --attributes='{"variant":"wide"}'
+wp bs blocks render my-theme/card --attributes=@card.json --format=json
+```
+
+Renders registered blocks the way a page does and reports every PHP notice,
+warning, deprecation, and thrown error their templates raise. A theme can run
+the command in CI to smoke-test its blocks against the installed Blockstudio.
+Without names, every registered block is rendered, including components.
+
+Each block is rendered through `do_blocks()` from a block comment with
+`blockstudio.attributes`, the shape the editor stores, in a frontend context
+without a queried post. Nothing is written to the database by the command.
+
+The attributes of a render are chosen per block:
+
+| Case | Attributes |
+| --- | --- |
+| `example` | The `example.attributes` of the block's `block.json`, the values the [inserter preview](/docs/blocks/preview) uses. |
+| `defaults` | The `default` of each field. Used for blocks without `example.attributes`; the command prints a line for each. |
+| `attributes` | The values of `--attributes`, replacing the example. |
+
+`--attributes` takes a JSON object of field values keyed by storage key, or
+`@` and the path of a file that contains one, and needs exactly one block name.
+Use it to reach template branches that the example does not, such as a
+variant. Example values that only generate placeholder images in the inserter
+preview are skipped, and `innerBlocks` of the example are not rendered.
+
+```
++---------------------+----------+------------+-------------------------------------------------------------------------------+------------------------------------------------------------------------------+------+
+| block               | case     | level      | message                                                                       | file                                                                         | line |
++---------------------+----------+------------+-------------------------------------------------------------------------------+------------------------------------------------------------------------------+------+
+| smoke/deprecated    | defaults | Deprecated | strlen(): Passing null to parameter #1 ($string) of type string is deprecated | /wordpress/wp-content/themes/smoke-theme/blockstudio/deprecated/index.php    | 1    |
+| smoke/undefined-key | example  | Warning    | Undefined array key "subtitle"                                                | /wordpress/wp-content/themes/smoke-theme/blockstudio/undefined-key/index.php | 2    |
++---------------------+----------+------------+-------------------------------------------------------------------------------+------------------------------------------------------------------------------+------+
+```
+
+The table lists one row per problem. JSON output is a list with one entry per
+rendered block, including blocks without problems, so automation can read
+the case that was used:
+
+```json
+[
+  {
+    "block": "smoke/branch",
+    "case": "attributes",
+    "problems": [
+      {
+        "level": "Warning",
+        "message": "Undefined array key \"width\"",
+        "file": "/wordpress/wp-content/themes/smoke-theme/blockstudio/branch/index.php",
+        "line": 2
+      }
+    ]
+  }
+]
+```
+
+`level` is `Notice`, `Warning`, `Deprecated`, or `Error`. A problem that
+repeats at the same file and line, for example in a loop, is reported once per
+block. Problems silenced with `@` are not reported. WordPress raises its own
+deprecation notices, such as those of `_deprecated_function()`, only while
+`WP_DEBUG` is enabled.
+
+The command exits with `0` when no problems are found and `1` otherwise. Unknown
+block names, unreadable or invalid `--attributes`, and formats other than
+`table` or `json` are errors, and all names are checked before the first block
+is rendered.
+
 ## Pages
 
 File-backed page synchronization is explicit. Ordinary WordPress requests
