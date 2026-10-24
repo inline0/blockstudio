@@ -320,14 +320,13 @@ class Rest {
 		$set     = sanitize_text_field( $data['set'] ?? '' );
 		$sub_set = sanitize_text_field( $data['subSet'] ?? '' );
 
-		$path =
-			BLOCKSTUDIO_DIR .
-			'/includes/icons/' .
-			$set .
-			( $sub_set ? '-' . $sub_set : '' ) .
-			'.json';
+		$path = Utils::icon_set_path(
+			BLOCKSTUDIO_DIR . '/includes/icons',
+			$set . ( $sub_set ? '-' . $sub_set : '' )
+		);
 
 		if (
+			'' !== $path &&
 			$wp_filesystem->exists( $path ) &&
 			'json' === pathinfo( $path, PATHINFO_EXTENSION )
 		) {

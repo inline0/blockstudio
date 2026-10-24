@@ -347,7 +347,7 @@ if ( ! function_exists( 'bs_render_icon' ) ) {
 		$sub_set = isset( $args['subSet'] ) ? '-' . $args['subSet'] : '';
 		$icon    = $args['icon'];
 
-		$complete_path = "$path/$set$sub_set.json";
+		$complete_path = Utils::icon_set_path( $path, "$set$sub_set" );
 
 		$set_icon_transient_key =
 			'blockstudio_' . $icon_version . '_icon_set_' . md5( "$set$sub_set" );
