@@ -38,7 +38,6 @@ export default defineConfig({
     'packages/phpstan/tests/fixtures/',
     'packages/phpstan/tests/data/',
     'src/types/block.ts',
-    'src/types/blockstudio.ts',
     'src/tailwind/data/',
   ],
 });

@@ -155,7 +155,7 @@
     "oxlint-tsgolint": "7.0.2005",
     "php-parser": "3.7.0",
     "prettier": "^3.8.1",
-    "quicktype": "^23.0.0",
+    "quicktype": "^23.3.13",
     "remixicon": "^4.0.1",
     "simple-icons": "^16.7.0",
     "tailwindcss": "^4.1.0",

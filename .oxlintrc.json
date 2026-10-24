@@ -16,7 +16,6 @@
     "tests/implementations",
     "tests/ui/theme",
     "src/types/block.ts",
-    "src/types/blockstudio.ts",
     "src/tailwind/data"
   ],
   "rules": {
