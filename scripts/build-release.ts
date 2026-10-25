@@ -17,6 +17,7 @@ const excludedDirectories = new Set([
   'build',
   'packages',
   'prds',
+  'benchmarks',
   'scripts',
   'vendor',
 ]);

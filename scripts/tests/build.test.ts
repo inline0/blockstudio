@@ -102,6 +102,8 @@ test('release packaging excludes tooling and fixtures but includes runtime asset
     'src/ui/global-script.ts',
     'tests/theme/block/script.js',
     'docs/docs/pages.md',
+    'benchmarks/README.md',
+    'benchmarks/results/wp-env-unit.json',
     'packages/registry/src/index.ts',
   ])
     assert.equal(ships(file), false, file);
