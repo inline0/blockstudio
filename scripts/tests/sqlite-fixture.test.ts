@@ -4,7 +4,7 @@ import { existsSync, mkdtempSync, rmSync, statSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { DatabaseSync } from 'node:sqlite';
-import { keepSqliteFixtureOpen } from '../ci/sqlite-fixture.ts';
+import { keepSqliteFixtureOpen } from '../../tests/e2e/utils/sqlite-fixture.ts';
 
 test('real SQLite request connections can write without churning fixture-directory mtimes', (t) => {
   const directory = mkdtempSync(join(tmpdir(), 'blockstudio-sqlite-fixture-'));

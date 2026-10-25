@@ -92,12 +92,13 @@ initial native UI failure is Chromium's screenshot-capture protocol error, not
 a visual assertion failure. It is retained in the evidence, not counted as a
 successful speed sample.
 
-The candidate keeps a real native SQLite fixture connection open during main
-E2E runs. This prevents WAL/SHM sidecar creation/deletion at HTTP shutdown from
+The three native asset-cache tests keep a real SQLite fixture connection open
+for that file only. This prevents WAL/SHM creation/deletion at HTTP shutdown from
 changing an unrelated watched directory during the asset-cache assertion.
 Real database writes, cache assertions and source watching remain enabled.
 Focused tests verify writes, stable directory metadata while connected and
-normal sidecar cleanup after release. This is fixture isolation, not a change
+normal sidecar cleanup after release. Other browser/SQLite tests retain their
+original connection lifecycle. This is fixture isolation, not a change
 to production cache/storage behavior. Focused diagnostic runs record their
 explicit spec selection and are not complete-suite speed samples.
 

@@ -225,7 +225,12 @@ const test = (args: string[]) =>
         const { exitCode } = yield* command(
           resolve(root, 'node_modules/.bin/playwright'),
           ['test', '--config=playwright.wp-env.config.ts', ...specs],
-          { cwd: root, inherit: true, check: false },
+          {
+            cwd: root,
+            inherit: true,
+            check: false,
+            env: { BLOCKSTUDIO_PLAYGROUND_RUNTIME: '1' },
+          },
         );
         if (exitCode !== 0)
           return yield* Effect.fail(

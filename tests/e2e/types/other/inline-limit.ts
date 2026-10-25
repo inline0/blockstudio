@@ -1,4 +1,22 @@
 import { expect, test } from '@playwright/test';
+import { resolve } from 'node:path';
+import { keepSqliteFixtureOpen } from '../../utils/sqlite-fixture.ts';
+
+let releaseFixture: (() => void) | undefined;
+test.beforeAll(() => {
+  if (
+    process.env.BLOCKSTUDIO_PLAYGROUND_RUNTIME ||
+    process.env.BLOCKSTUDIO_PLAYGROUND_BRIDGE
+  )
+    return;
+  const database = keepSqliteFixtureOpen(
+    resolve('tests/theme/blockstudio/types/db/sqlite/db/default.sqlite'),
+  );
+  releaseFixture = () => database.close();
+});
+test.afterAll(() => {
+  releaseFixture?.();
+});
 
 for (const limit of [0, 40000]) {
   test(`cold and warm asset output matches with inline limit ${limit}`, async ({

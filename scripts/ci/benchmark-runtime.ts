@@ -11,10 +11,9 @@ import {
 } from '../playground.ts';
 import { command } from '../lib/command.ts';
 import { runCLI, type RunCLIServer } from '../lib/playground.ts';
-import { attempt, attemptPromise, main, ToolingError } from '../lib/runtime.ts';
+import { attemptPromise, main, ToolingError } from '../lib/runtime.ts';
 import { wpEnv } from '../wp-env.ts';
 import { recordSuiteOutcome } from './suite-outcome.ts';
-import { keepSqliteFixtureOpen } from './sqlite-fixture.ts';
 import {
   benchmarkOptions,
   playgroundArguments,
@@ -485,21 +484,6 @@ const native = Effect.gen(function* () {
     ),
   );
   report.environment = JSON.parse(probeValue(info.stdout, 'ENV'));
-  if (suite.startsWith('e2e-'))
-    yield* phase(
-      'sqlite-fixture',
-      Effect.acquireRelease(
-        attempt('Keep the real SQLite fixture connected', () =>
-          keepSqliteFixtureOpen(
-            resolve(
-              root,
-              'tests/theme/blockstudio/types/db/sqlite/db/default.sqlite',
-            ),
-          ),
-        ),
-        (database) => Effect.sync(() => database.close()),
-      ),
-    );
   if (suite.startsWith('e2e-'))
     yield* phase(
       'seo-install',
