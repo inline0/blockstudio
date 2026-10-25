@@ -1,12 +1,23 @@
 name: CI Runtime Benchmark
 
 on:
-  push:
-    branches: [ci-playground-benchmark]
   workflow_dispatch:
+    inputs:
+      runtimes:
+        description: JSON array of runtimes
+        default: '["wp-env", "playground"]'
+        required: true
+      suites:
+        description: JSON array of suites
+        default: '["unit", "e2e-1", "e2e-2", "e2e-3", "e2e-4", "ui", "empty", "plugin", "mu-plugin", "composer-theme", "composer-plugin"]'
+        required: true
+      npm_cache:
+        description: Restore the existing npm download cache
+        type: boolean
+        default: true
 
 concurrency:
-  group: runtime-benchmark-${{ github.ref }}
+  group: runtime-benchmark-${{ github.run_id }}
   cancel-in-progress: false
 
 jobs:
@@ -17,30 +28,19 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        runtime: [wp-env, playground]
-        suite:
-          [
-            unit,
-            e2e-1,
-            e2e-2,
-            e2e-3,
-            e2e-4,
-            ui,
-            empty,
-            plugin,
-            mu-plugin,
-            composer-theme,
-            composer-plugin,
-          ]
+        runtime: ${{ fromJSON(inputs.runtimes) }}
+        suite: ${{ fromJSON(inputs.suites) }}
     env:
       COMPOSE_PROJECT_NAME: blockstudio
       CI: true
+      BENCHMARK_RUNTIME: ${{ matrix.runtime }}
+      BENCHMARK_SUITE: ${{ matrix.suite }}
     steps:
       - uses: actions/checkout@v5
       - uses: actions/setup-node@v5
         with:
           node-version-file: .nvmrc
-          cache: npm
+          cache: ${{ inputs.npm_cache && 'npm' || '' }}
       - uses: shivammathur/setup-php@v2
         with:
           php-version: '8.4'
@@ -51,7 +51,7 @@ jobs:
       - if: startsWith(matrix.suite, 'e2e-') || matrix.suite == 'ui' || matrix.suite == 'empty'
         run: node_modules/.bin/playwright install --with-deps chromium
       - name: Measure complete suite on the selected runtime
-        run: node scripts/ci/benchmark-runtime.ts ${{ matrix.runtime }} ${{ matrix.suite }}
+        run: node scripts/ci/benchmark-runtime.ts "$BENCHMARK_RUNTIME" "$BENCHMARK_SUITE"
       - name: Upload benchmark evidence
         if: always()
         uses: actions/upload-artifact@v4

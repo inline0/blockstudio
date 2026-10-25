@@ -191,6 +191,10 @@ const playground = Effect.gen(function* () {
   const pluginPath = '/wordpress/wp-content/plugins/blockstudio';
   const mounts = [
     {
+      hostPath: resolve(root, 'benchmarks/results'),
+      vfsPath: '/benchmark-results',
+    },
+    {
       hostPath: resolve(root, theme),
       vfsPath: '/wordpress/wp-content/themes/theme',
     },
@@ -211,7 +215,10 @@ const playground = Effect.gen(function* () {
     });
   } else if (mode !== 'composer-theme')
     mounts.push({ hostPath: root, vfsPath: pluginPath });
-  const declaration = blueprint(config.config, session);
+  const declaration = blueprint(
+    { ...config.config, WP_DEBUG_LOG: `/benchmark-results/php-${suite}.log` },
+    session,
+  );
   const steps = (declaration.steps ?? []).filter(
     (step) =>
       step && typeof step === 'object' && step.step !== 'activatePlugin',
