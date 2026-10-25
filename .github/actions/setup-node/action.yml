@@ -1,0 +1,11 @@
+name: Set up Node
+description: Use the pinned Node version with an isolated, bounded download cache for this job.
+runs:
+  using: composite
+  steps:
+    - uses: actions/setup-node@v5
+      with:
+        node-version-file: .nvmrc
+        package-manager-cache: false
+    - shell: bash
+      run: echo "NPM_CONFIG_CACHE=$RUNNER_TEMP/blockstudio-npm" >> "$GITHUB_ENV"

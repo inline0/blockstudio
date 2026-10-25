@@ -142,6 +142,9 @@ section markers in Markdown files.
 
 - The complete CI suite runs on every push to `main`, `7.*`, and `tooling-upgrade`.
 - Main CI uses the existing self-hosted Blockstudio runners: four main-suite shards, empty-theme coverage, and UI regressions. Distribution and release packaging retain their existing runners.
+- PHP unit tests, main E2E and live-filesystem coverage use native wp-env. Loading-mode probes and the optional contributor smoke use Playground; do not replace native process, locking or OPcache coverage with WASM.
+- Main E2E shards balance whole files using recorded durations. New matching test files are included automatically; keep the default test selection intact.
+- CI setup actions reuse a suitable host PHP toolchain, share Composer dependencies within the same run and use a fresh bounded npm download cache. Do not add large archive restores without measuring their complete cost.
 - Commit-message tags such as `[all]`, `[e2e]`, and `[unit]` do not gate jobs. `[all]` remains a release-validation convention only.
 
 ## Key Rules for Agents

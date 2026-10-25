@@ -1,0 +1,22 @@
+name: Set up PHP
+description: Use the self-hosted PHP toolchain when it meets CI requirements, otherwise install it.
+runs:
+  using: composite
+  steps:
+    - id: preinstalled
+      shell: bash
+      run: |
+        if command -v php >/dev/null && command -v composer >/dev/null &&
+          php -r 'exit(PHP_MAJOR_VERSION === 8 && PHP_MINOR_VERSION === 4 && !array_diff(["ctype", "curl", "dom", "fileinfo", "iconv", "json", "mbstring", "phar", "simplexml", "tokenizer", "xml", "xmlwriter", "zip"], array_map("strtolower", get_loaded_extensions())) ? 0 : 1);' &&
+          composer --version --no-ansi | grep -q 'Composer version 2\.'; then
+          echo 'ready=true' >> "$GITHUB_OUTPUT"
+        fi
+    - if: steps.preinstalled.outputs.ready != 'true'
+      uses: shivammathur/setup-php@v2
+      with:
+        php-version: '8.4'
+        tools: composer:v2
+    - shell: bash
+      run: |
+        php --version
+        composer --version --no-ansi

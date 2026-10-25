@@ -3,6 +3,7 @@ name: CI
 on:
   push:
     branches: [main, '7.*', tooling-upgrade]
+  workflow_dispatch:
 
 concurrency:
   group: ci-${{ github.ref }}
@@ -11,6 +12,7 @@ concurrency:
 # Readable wp-env Docker project name for raw wp-env steps; the empty/impl npm scripts override it.
 env:
   COMPOSE_PROJECT_NAME: blockstudio
+  WP_ENV_PHP_VERSION: '8.3'
 
 jobs:
   lint:
@@ -19,10 +21,7 @@ jobs:
     steps:
       - uses: actions/checkout@v5
 
-      - uses: actions/setup-node@v5
-        with:
-          node-version-file: .nvmrc
-          cache: npm
+      - uses: ./.github/actions/setup-node
 
       - run: scripts/ci/npm-ci.sh
 
@@ -45,9 +44,7 @@ jobs:
     steps:
       - uses: actions/checkout@v5
 
-      - uses: shivammathur/setup-php@v2
-        with:
-          php-version: '8.4'
+      - uses: ./.github/actions/setup-php
 
       - run: composer install --no-interaction
 
@@ -62,26 +59,42 @@ jobs:
       - name: Private dependency isolation
         run: composer test:dependencies
 
+      - name: Prepare shared test dependencies
+        run: |
+          composer install --no-interaction --working-dir=tests/theme
+          tar -czf "$RUNNER_TEMP/php-dependencies.tar.gz" vendor tests/theme/vendor
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: php-dependencies
+          path: ${{ runner.temp }}/php-dependencies.tar.gz
+          compression-level: 0
+          overwrite: true
+          retention-days: 7
+
   phpstan:
     name: PHPStan (Runtime)
+    needs: phpcs
     runs-on: [self-hosted, Linux, X64, inline0-blockstudio]
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@v5
 
-      - uses: shivammathur/setup-php@v2
-        with:
-          php-version: '8.4'
+      - uses: ./.github/actions/setup-php
 
-      - run: composer install --no-interaction
+      - uses: ./.github/actions/php-dependencies
 
       - name: Analyse the runtime
         run: vendor/bin/phpstan analyse --no-progress --memory-limit=2G
 
   loading-modes:
     name: Loading Mode (${{ matrix.mode }})
+    needs: phpcs
     runs-on: [self-hosted, Linux, X64, inline0-blockstudio]
     timeout-minutes: 20
+    env:
+      BENCHMARK_PHP: '8.3'
+      PLAYGROUND_WORKERS: '6'
     strategy:
       fail-fast: false
       matrix:
@@ -89,56 +102,48 @@ jobs:
     steps:
       - uses: actions/checkout@v5
 
-      - uses: actions/setup-node@v5
-        with:
-          node-version-file: .nvmrc
-          cache: npm
+      - uses: ./.github/actions/setup-node
 
-      - uses: shivammathur/setup-php@v2
-        with:
-          php-version: '8.4'
+      - uses: ./.github/actions/setup-php
+        if: startsWith(matrix.mode, 'composer-')
 
       - run: scripts/ci/npm-ci.sh
-      - run: composer install --no-interaction
+      - uses: ./.github/actions/php-dependencies
 
-      - name: Start ${{ matrix.mode }} implementation
-        run: node scripts/ci/start-wp-env.ts ${{ matrix.mode }}
+      - name: Verify ${{ matrix.mode }} implementation on Playground
+        run: node scripts/ci/benchmark-runtime.ts playground '${{ matrix.mode }}'
 
-      - name: Verify ${{ matrix.mode }} implementation
-        run: npm run wp-env:implementations:${{ matrix.mode }}:verify
-
-      - name: Stop ${{ matrix.mode }} implementation
+      - name: Upload loading-mode measurements
         if: always()
-        run: npm run wp-env:implementations:${{ matrix.mode }}:stop
+        uses: actions/upload-artifact@v4
+        with:
+          name: loading-mode-${{ matrix.mode }}-${{ github.run_attempt }}
+          path: benchmarks/results/
+          retention-days: 7
 
   unit:
     name: Unit Tests
+    needs: phpcs
     runs-on: [self-hosted, Linux, X64, inline0-blockstudio]
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@v5
 
-      - uses: actions/setup-node@v5
-        with:
-          node-version-file: .nvmrc
-          cache: npm
-
-      - uses: shivammathur/setup-php@v2
-        with:
-          php-version: '8.4'
+      - uses: ./.github/actions/setup-node
 
       - run: scripts/ci/npm-ci.sh
-      - run: composer install --no-interaction
-      - run: composer install --no-interaction --working-dir=tests/theme
-
-      - name: Start wp-env
-        run: node scripts/ci/start-wp-env.ts
+      - uses: ./.github/actions/php-dependencies
 
       - name: Run unit tests
-        run: |
-          PLUGIN_DIR=$(cd tests/wp-env && npx @wordpress/env run cli -- wp eval 'echo BLOCKSTUDIO_DIR;' 2>/dev/null | tr -d '\r\n')
-          echo "Plugin dir: $PLUGIN_DIR"
-          cd tests/wp-env && npx @wordpress/env run cli --env-cwd="$PLUGIN_DIR" vendor/bin/phpunit --testdox --display-errors --display-warnings
+        run: node scripts/ci/benchmark-runtime.ts wp-env unit
+
+      - name: Upload unit results and measurements
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: unit-test-results-${{ github.run_attempt }}
+          path: benchmarks/results/
+          retention-days: 7
 
   phpstan-package:
     name: PHPStan Package Tests
@@ -147,9 +152,7 @@ jobs:
     steps:
       - uses: actions/checkout@v5
 
-      - uses: shivammathur/setup-php@v2
-        with:
-          php-version: '8.4'
+      - uses: ./.github/actions/setup-php
 
       - run: composer install --no-interaction --working-dir=packages/phpstan
       - run: packages/phpstan/vendor/bin/phpunit --configuration packages/phpstan/phpunit.xml.dist
@@ -159,6 +162,7 @@ jobs:
 
   e2e:
     name: E2E Tests (Shard ${{ matrix.shard }}/${{ matrix.total_shards }})
+    needs: phpcs
     runs-on: [self-hosted, Linux, X64, inline0-blockstudio]
     timeout-minutes: 45
     strategy:
@@ -169,103 +173,66 @@ jobs:
     steps:
       - uses: actions/checkout@v5
 
-      - uses: actions/setup-node@v5
-        with:
-          node-version-file: .nvmrc
-          cache: npm
-
-      - uses: shivammathur/setup-php@v2
-        with:
-          php-version: '8.4'
+      - uses: ./.github/actions/setup-node
 
       - run: scripts/ci/npm-ci.sh
-      - run: composer install --no-interaction
-      - run: composer install --no-interaction --working-dir=tests/theme
+      - uses: ./.github/actions/php-dependencies
 
       - name: Install Playwright browsers
         run: npx playwright install --with-deps chromium
 
-      - name: Start wp-env
-        run: node scripts/ci/start-wp-env.ts
-
-      - name: Install SEO plugins for E2E
-        run: |
-          cd tests/wp-env
-          npx wp-env run cli -- wp plugin is-installed wordpress-seo || npx wp-env run cli -- wp plugin install wordpress-seo
-          npx wp-env run cli -- wp plugin is-installed seo-by-rank-math || npx wp-env run cli -- wp plugin install seo-by-rank-math
-
       - name: Run E2E tests
-        run: npx playwright test --config=playwright.wp-env.config.ts --shard=${{ matrix.shard }}/${{ matrix.total_shards }}
-
-      - name: Stop main wp-env
-        if: always()
-        run: npm run wp-env:stop
+        run: node scripts/ci/benchmark-runtime.ts wp-env e2e-${{ matrix.shard }}
+        env:
+          BLOCKSTUDIO_E2E_SHARD: ${{ matrix.shard }}/${{ matrix.total_shards }}
 
       - name: Upload test artifacts
-        if: failure()
+        if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: e2e-test-results-shard-${{ matrix.shard }}
-          path: test-results/
+          name: e2e-test-results-shard-${{ matrix.shard }}-${{ github.run_attempt }}
+          path: |
+            test-results/
+            benchmarks/results/
           retention-days: 7
 
   ui-regressions:
     name: UI Regression Tests
+    needs: phpcs
     runs-on: [self-hosted, Linux, X64, inline0-blockstudio]
     timeout-minutes: 25
     env:
       COMPOSE_PROJECT_NAME: blockstudio-ui
     steps:
       - uses: actions/checkout@v5
-      - uses: actions/setup-node@v5
-        with:
-          node-version-file: .nvmrc
-          cache: npm
-      - uses: shivammathur/setup-php@v2
-        with:
-          php-version: '8.4'
+      - uses: ./.github/actions/setup-node
       - run: scripts/ci/npm-ci.sh
-      - run: composer install --no-interaction
+      - uses: ./.github/actions/php-dependencies
       - name: Install Playwright browsers
         run: npx playwright install --with-deps chromium
-      - name: Start UI regression site
-        working-directory: tests/ui
-        run: |
-          node ../../scripts/ci/start-wp-env.ts ui
-          npx wp-env run cli wp rewrite structure '/%postname%/' --hard
-          npx wp-env run cli wp bs pages sync
       - name: Run UI regressions
-        run: npm run test:e2e:ui:regressions
-      - name: Stop UI regression site
-        if: always()
-        working-directory: tests/ui
-        run: npx wp-env stop
+        run: node scripts/ci/benchmark-runtime.ts wp-env ui
       - name: Upload UI regression artifacts
-        if: failure()
+        if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: ui-regression-results
+          name: ui-regression-results-${{ github.run_attempt }}
           path: |
             test-results/
             tests/ui/test-results/
+            benchmarks/results/
           retention-days: 7
 
   playground-smoke:
     name: Playground Smoke Tests
+    needs: phpcs
     runs-on: [self-hosted, Linux, X64, inline0-blockstudio]
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@v5
-      - uses: actions/setup-node@v5
-        with:
-          node-version-file: .nvmrc
-          cache: npm
-      - uses: shivammathur/setup-php@v2
-        with:
-          php-version: '8.4'
+      - uses: ./.github/actions/setup-node
       - run: scripts/ci/npm-ci.sh
-      - run: composer install --no-interaction
-      - run: composer install --no-interaction --working-dir=tests/theme
+      - uses: ./.github/actions/php-dependencies
       - name: Install Playwright browsers
         run: node_modules/.bin/playwright install --with-deps chromium
       - name: Run optional Playground contributor workflow
@@ -274,46 +241,35 @@ jobs:
         if: failure()
         uses: actions/upload-artifact@v4
         with:
-          name: playground-smoke-results
+          name: playground-smoke-results-${{ github.run_attempt }}
           path: test-results/
           retention-days: 7
 
   e2e-empty:
     name: E2E Tests (Empty Theme)
+    needs: phpcs
     runs-on: [self-hosted, Linux, X64, inline0-blockstudio]
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@v5
 
-      - uses: actions/setup-node@v5
-        with:
-          node-version-file: .nvmrc
-          cache: npm
-
-      - uses: shivammathur/setup-php@v2
-        with:
-          php-version: '8.4'
+      - uses: ./.github/actions/setup-node
 
       - run: scripts/ci/npm-ci.sh
-      - run: composer install --no-interaction
+      - uses: ./.github/actions/php-dependencies
 
       - name: Install Playwright browsers
         run: npx playwright install --with-deps chromium
 
-      - name: Start empty wp-env
-        run: node scripts/ci/start-wp-env.ts empty
-
       - name: Run empty theme E2E tests
-        run: npm run test:e2e:empty
-
-      - name: Stop empty wp-env
-        if: always()
-        run: npm run wp-env:empty:stop
+        run: node scripts/ci/benchmark-runtime.ts wp-env empty
 
       - name: Upload test artifacts
-        if: failure()
+        if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: e2e-empty-test-results
-          path: test-results/
+          name: e2e-empty-test-results-${{ github.run_attempt }}
+          path: |
+            test-results/
+            benchmarks/results/
           retention-days: 7

@@ -1,0 +1,11 @@
+name: Restore PHP dependencies
+description: Restore the exact Composer dependencies prepared by this workflow run.
+runs:
+  using: composite
+  steps:
+    - uses: actions/download-artifact@v4
+      with:
+        name: php-dependencies
+        path: ${{ runner.temp }}/blockstudio-php-dependencies
+    - shell: bash
+      run: tar -xzf "$RUNNER_TEMP/blockstudio-php-dependencies/php-dependencies.tar.gz"

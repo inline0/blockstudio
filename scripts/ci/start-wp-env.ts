@@ -29,7 +29,7 @@ export const setup = (environment: string) =>
       cwd: fileURLToPath(new URL('../..', import.meta.url)),
       tee: true,
     });
-    // wp-env waits for mysql, not tests-mysql; retry only that known cold-start failure.
+    // Retry only the known database initialization race, not general setup failures.
     yield* start.pipe(
       Effect.catch((error) => {
         if (

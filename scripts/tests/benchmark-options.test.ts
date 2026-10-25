@@ -1,5 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
+import { globSync, readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
 import {
   benchmarkOptions,
   playgroundArguments,
@@ -13,6 +15,21 @@ test('benchmark options require an explicit runtime and complete suite', () => {
   });
   assert.throws(() => benchmarkOptions(['unknown', 'unit']));
   assert.throws(() => benchmarkOptions(['wp-env', 'unknown']));
+});
+
+test('WordPress suites use the development instance without an unused second database and site', () => {
+  const root = resolve(import.meta.dirname, '../..');
+  const configs = globSync(
+    ['tests/*/.wp-env.json', 'tests/implementations/*/.wp-env.json'],
+    { cwd: root },
+  );
+  assert.ok(configs.length > 0);
+  for (const config of configs)
+    assert.equal(
+      JSON.parse(readFileSync(resolve(root, config), 'utf8')).testsEnvironment,
+      false,
+      config,
+    );
 });
 
 test('benchmark probes ignore CLI banners and PHP notices', () => {

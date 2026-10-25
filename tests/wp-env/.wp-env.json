@@ -1,4 +1,5 @@
 {
+  "testsEnvironment": false,
   "plugins": ["../.."],
   "themes": ["../theme"],
   "config": {

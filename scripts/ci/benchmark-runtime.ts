@@ -53,10 +53,13 @@ const report: Record<string, unknown> = {
   suite,
   commit: process.env.GITHUB_SHA,
   run: process.env.GITHUB_RUN_ID,
+  attempt: process.env.GITHUB_RUN_ATTEMPT,
   runner: process.env.RUNNER_NAME,
   startedAt: new Date().toISOString(),
   phases: [] as { name: string; seconds: number }[],
   requestedPhp: php,
+  testsEnvironment:
+    runtime === 'wp-env' ? config.testsEnvironment !== false : undefined,
   driverVersion: JSON.parse(
     readFileSync(
       resolve(
@@ -410,7 +413,9 @@ const browserTests = (env: Record<string, string> = {}) =>
           ? ['--config=playwright.wp-env.empty.config.ts']
           : [
               '--config=playwright.wp-env.config.ts',
-              `--shard=${suite.slice(4)}/4`,
+              ...(process.env.BLOCKSTUDIO_E2E_SHARD
+                ? []
+                : [`--shard=${suite.slice(4)}/4`]),
             ];
     const result = yield* phase(
       'tests',
