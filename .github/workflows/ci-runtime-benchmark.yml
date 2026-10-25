@@ -15,6 +15,14 @@ on:
         description: Restore the existing npm download cache
         type: boolean
         default: true
+      php:
+        description: PHP minor version for both WordPress runtimes
+        default: '8.3'
+        required: true
+      playground_workers:
+        description: Playground PHP worker count
+        default: '1'
+        required: true
 
 concurrency:
   group: runtime-benchmark-${{ github.run_id }}
@@ -35,6 +43,9 @@ jobs:
       CI: true
       BENCHMARK_RUNTIME: ${{ matrix.runtime }}
       BENCHMARK_SUITE: ${{ matrix.suite }}
+      BENCHMARK_PHP: ${{ inputs.php }}
+      WP_ENV_PHP_VERSION: ${{ inputs.php }}
+      PLAYGROUND_WORKERS: ${{ inputs.playground_workers }}
     steps:
       - uses: actions/checkout@v5
       - uses: actions/setup-node@v5

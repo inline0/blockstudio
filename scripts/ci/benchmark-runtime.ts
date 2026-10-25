@@ -34,6 +34,7 @@ const { runCLI } = PlaygroundCli as unknown as {
   runCLI(args: Record<string, unknown>): Promise<RunCLIServer>;
 };
 const { runtime, suite } = benchmarkOptions(process.argv.slice(2));
+const php = process.env.BENCHMARK_PHP || '8.3';
 const mainSuite = suite.startsWith('e2e-') || suite === 'unit';
 const mode = mainSuite ? 'main' : suite;
 const directory =
@@ -55,6 +56,11 @@ const report: Record<string, unknown> = {
   runner: process.env.RUNNER_NAME,
   startedAt: new Date().toISOString(),
   phases: [] as { name: string; seconds: number }[],
+  requestedPhp: php,
+  playgroundWorkers:
+    runtime === 'playground'
+      ? Number(process.env.PLAYGROUND_WORKERS || 1)
+      : undefined,
 };
 const phases = report.phases as { name: string; seconds: number }[];
 const started = performance.now();
@@ -237,7 +243,7 @@ const playground = Effect.gen(function* () {
       attemptPromise('Boot Playground', () =>
         runCLI({
           command: 'server',
-          php: '8.3',
+          php,
           wp: 'latest',
           port: config.port,
           'site-url': `http://localhost:${config.port}`,
@@ -245,7 +251,7 @@ const playground = Effect.gen(function* () {
           mount: mounts,
           blueprint: {
             ...declaration,
-            preferredVersions: { php: '8.3', wp: 'latest' },
+            preferredVersions: { php, wp: 'latest' },
             extraLibraries: ['wp-cli'],
             steps,
           },
