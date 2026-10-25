@@ -431,11 +431,9 @@ const native = Effect.gen(function* () {
   );
   yield* phase(
     'boot-and-seed',
-    suite === 'ui'
-      ? run('npm', ['--prefix', 'tests/ui', 'run', 'wp-env:start'], {
-          COMPOSE_PROJECT_NAME: 'blockstudio-ui',
-        })
-      : wpEnv(mode, 'start'),
+    run(process.execPath, [resolve(root, 'scripts/ci/start-wp-env.ts'), mode], {
+      COMPOSE_PROJECT_NAME: suite === 'ui' ? 'blockstudio-ui' : 'blockstudio',
+    }),
   );
   const cwd = resolve(root, directory);
   const wp = (args: string[], inherit = true) =>
