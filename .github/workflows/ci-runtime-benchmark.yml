@@ -24,6 +24,9 @@ on:
         description: Playground PHP worker count
         default: '6'
         required: true
+      spec:
+        description: Optional exact E2E filename for a focused diagnostic, not a full-suite measurement
+        default: ''
 
 concurrency:
   group: runtime-benchmark-${{ github.run_id }}
@@ -47,19 +50,20 @@ jobs:
       BENCHMARK_PHP: ${{ inputs.php }}
       WP_ENV_PHP_VERSION: ${{ inputs.php }}
       PLAYGROUND_WORKERS: ${{ inputs.playground_workers }}
+      BENCHMARK_SPEC: ${{ inputs.spec }}
     steps:
       - uses: actions/checkout@v5
       - uses: actions/setup-node@v5
-        if: matrix.suite != 'smoke'
+        if: matrix.suite != 'smoke' && inputs.spec == ''
         with:
           node-version-file: .nvmrc
           cache: ${{ inputs.npm_cache && 'npm' || '' }}
-      - if: matrix.suite == 'smoke'
+      - if: matrix.suite == 'smoke' || inputs.spec != ''
         uses: ./.github/actions/setup-node
-      - if: matrix.suite == 'smoke'
+      - if: matrix.suite == 'smoke' || inputs.spec != ''
         uses: ./.github/actions/setup-php
       - uses: shivammathur/setup-php@v2
-        if: matrix.suite != 'smoke'
+        if: matrix.suite != 'smoke' && inputs.spec == ''
         with:
           php-version: '8.4'
       - run: scripts/ci/npm-ci.sh

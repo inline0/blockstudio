@@ -13,6 +13,7 @@ concurrency:
 env:
   COMPOSE_PROJECT_NAME: blockstudio
   WP_ENV_PHP_VERSION: '8.3'
+  BENCHMARK_SPEC: ''
 
 jobs:
   lint:

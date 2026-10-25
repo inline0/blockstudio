@@ -3,12 +3,18 @@ import { createServer, type Server } from 'node:http';
 import { randomUUID } from 'node:crypto';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
-import { blueprint, checkPort, requireSession } from '../playground.ts';
+import {
+  blueprint,
+  checkPort,
+  requireSession,
+  validateSpecs,
+} from '../playground.ts';
 import { command } from '../lib/command.ts';
 import { runCLI, type RunCLIServer } from '../lib/playground.ts';
-import { attemptPromise, main, ToolingError } from '../lib/runtime.ts';
+import { attempt, attemptPromise, main, ToolingError } from '../lib/runtime.ts';
 import { wpEnv } from '../wp-env.ts';
 import { recordSuiteOutcome } from './suite-outcome.ts';
+import { keepSqliteFixtureOpen } from './sqlite-fixture.ts';
 import {
   benchmarkOptions,
   playgroundArguments,
@@ -18,6 +24,7 @@ import {
 const root = resolve(import.meta.dirname, '../..');
 const { runtime, suite } = benchmarkOptions(process.argv.slice(2));
 const php = process.env.BENCHMARK_PHP || '8.3';
+const spec = process.env.BENCHMARK_SPEC || '';
 const mainSuite =
   suite.startsWith('e2e-') || suite === 'unit' || suite === 'smoke';
 const mode = mainSuite ? 'main' : suite;
@@ -42,6 +49,7 @@ const report: Record<string, unknown> = {
   startedAt: new Date().toISOString(),
   phases: [] as { name: string; seconds: number }[],
   requestedPhp: php,
+  spec: spec || undefined,
   testsEnvironment:
     runtime === 'wp-env' ? config.testsEnvironment !== false : undefined,
   driverVersion: JSON.parse(
@@ -389,6 +397,13 @@ const playground = Effect.gen(function* () {
 
 const browserTests = (env: Record<string, string> = {}) =>
   Effect.gen(function* () {
+    if (spec && !suite.startsWith('e2e-'))
+      return yield* Effect.fail(
+        new ToolingError({
+          message: 'Focused specs require a main E2E suite.',
+        }),
+      );
+    const selected = spec ? validateSpecs([spec]) : [];
     const args =
       suite === 'ui'
         ? [
@@ -399,7 +414,8 @@ const browserTests = (env: Record<string, string> = {}) =>
           ? ['--config=playwright.wp-env.empty.config.ts']
           : [
               '--config=playwright.wp-env.config.ts',
-              ...(process.env.BLOCKSTUDIO_E2E_SHARD
+              ...selected,
+              ...(selected.length || process.env.BLOCKSTUDIO_E2E_SHARD
                 ? []
                 : [`--shard=${suite.slice(4)}/4`]),
             ];
@@ -469,6 +485,21 @@ const native = Effect.gen(function* () {
     ),
   );
   report.environment = JSON.parse(probeValue(info.stdout, 'ENV'));
+  if (suite.startsWith('e2e-'))
+    yield* phase(
+      'sqlite-fixture',
+      Effect.acquireRelease(
+        attempt('Keep the real SQLite fixture connected', () =>
+          keepSqliteFixtureOpen(
+            resolve(
+              root,
+              'tests/theme/blockstudio/types/db/sqlite/db/default.sqlite',
+            ),
+          ),
+        ),
+        (database) => Effect.sync(() => database.close()),
+      ),
+    );
   if (suite.startsWith('e2e-'))
     yield* phase(
       'seo-install',
