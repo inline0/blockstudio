@@ -50,17 +50,23 @@ jobs:
     steps:
       - uses: actions/checkout@v5
       - uses: actions/setup-node@v5
+        if: matrix.suite != 'smoke'
         with:
           node-version-file: .nvmrc
           cache: ${{ inputs.npm_cache && 'npm' || '' }}
+      - if: matrix.suite == 'smoke'
+        uses: ./.github/actions/setup-node
+      - if: matrix.suite == 'smoke'
+        uses: ./.github/actions/setup-php
       - uses: shivammathur/setup-php@v2
+        if: matrix.suite != 'smoke'
         with:
           php-version: '8.4'
       - run: scripts/ci/npm-ci.sh
       - run: composer install --no-interaction
-      - if: startsWith(matrix.suite, 'e2e-') || matrix.suite == 'unit'
+      - if: startsWith(matrix.suite, 'e2e-') || matrix.suite == 'unit' || matrix.suite == 'smoke'
         run: composer install --no-interaction --working-dir=tests/theme
-      - if: startsWith(matrix.suite, 'e2e-') || matrix.suite == 'ui' || matrix.suite == 'empty'
+      - if: startsWith(matrix.suite, 'e2e-') || matrix.suite == 'ui' || matrix.suite == 'empty' || matrix.suite == 'smoke'
         run: node_modules/.bin/playwright install --with-deps chromium
       - name: Measure complete suite on the selected runtime
         run: node scripts/ci/benchmark-runtime.ts "$BENCHMARK_RUNTIME" "$BENCHMARK_SUITE"

@@ -11,10 +11,10 @@ Reject a complete Playground migration. Adopt a limited hybrid candidate:
   empty-theme live-filesystem coverage.
 - Playground for the four loading-mode probes and the existing optional
   contributor smoke. Native distribution installation tests remain unchanged.
-- The CI contributor smoke explicitly uses the same PHP 8.3 baseline as the
-  native suites. Its CLI flags and blueprint agree on versions, six workers are
-  explicit, and PHP failure logs persist as artifacts. The developer default
-  remains configurable; native PHP 8.4 distribution checks are retained.
+- The contributor smoke preserves its original PHP 8.4 coverage. It uses the
+  programmatic SDK lifecycle with explicit versions and six workers, rather
+  than a nested CLI subprocess, and PHP failure logs persist as artifacts.
+  The developer default remains configurable. Backend comparisons use PHP 8.3.
 - Pin wp-env 11.3.0 and explicitly set `testsEnvironment: false`.
   Docker still enables the extra instance by default. All suites use
   `cli`, not `tests-cli`; this removes no unit/E2E tests.

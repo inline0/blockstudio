@@ -13,6 +13,7 @@ export const suites = [
   'mu-plugin',
   'composer-theme',
   'composer-plugin',
+  'smoke',
 ] as const;
 export type BenchmarkRuntime = (typeof runtimes)[number];
 export type BenchmarkSuite = (typeof suites)[number];
@@ -20,7 +21,8 @@ export type BenchmarkSuite = (typeof suites)[number];
 export function benchmarkOptions(args: string[]) {
   if (
     !runtimes.includes(args[0] as BenchmarkRuntime) ||
-    !suites.includes(args[1] as BenchmarkSuite)
+    !suites.includes(args[1] as BenchmarkSuite) ||
+    (args[1] === 'smoke' && args[0] !== 'playground')
   )
     throw new Error('Expected a benchmark runtime and suite.');
   return {

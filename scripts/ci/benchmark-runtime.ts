@@ -1,11 +1,11 @@
 import { Effect, FileSystem } from 'effect';
-import * as PlaygroundCli from '@wp-playground/cli';
 import { createServer, type Server } from 'node:http';
 import { randomUUID } from 'node:crypto';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { blueprint, checkPort, requireSession } from '../playground.ts';
 import { command } from '../lib/command.ts';
+import { runCLI, type RunCLIServer } from '../lib/playground.ts';
 import { attemptPromise, main, ToolingError } from '../lib/runtime.ts';
 import { wpEnv } from '../wp-env.ts';
 import { recordSuiteOutcome } from './suite-outcome.ts';
@@ -16,27 +16,10 @@ import {
 } from './benchmark-options.ts';
 
 const root = resolve(import.meta.dirname, '../..');
-interface RunCLIServer {
-  serverUrl: string;
-  playground: {
-    cli(
-      argv: string[],
-      options?: { env?: Record<string, string> },
-    ): Promise<{
-      stdout: ReadableStream<Uint8Array>;
-      stderr: ReadableStream<Uint8Array>;
-      exitCode: Promise<number>;
-    }>;
-  };
-  [Symbol.asyncDispose](): Promise<void>;
-}
-// 3.1.60's declarations use extensionless ESM exports, which NodeNext cannot resolve.
-const { runCLI } = PlaygroundCli as unknown as {
-  runCLI(args: Record<string, unknown>): Promise<RunCLIServer>;
-};
 const { runtime, suite } = benchmarkOptions(process.argv.slice(2));
 const php = process.env.BENCHMARK_PHP || '8.3';
-const mainSuite = suite.startsWith('e2e-') || suite === 'unit';
+const mainSuite =
+  suite.startsWith('e2e-') || suite === 'unit' || suite === 'smoke';
 const mode = mainSuite ? 'main' : suite;
 const directory =
   mode === 'main'
@@ -74,7 +57,9 @@ const report: Record<string, unknown> = {
   ).version,
   playgroundWorkers:
     runtime === 'playground'
-      ? Number(process.env.PLAYGROUND_WORKERS || 6)
+      ? suite === 'smoke'
+        ? 6
+        : Number(process.env.PLAYGROUND_WORKERS || 6)
       : undefined,
 };
 const phases = report.phases as { name: string; seconds: number }[];
@@ -541,7 +526,22 @@ if (import.meta.main)
         yield* fs.makeDirectory(resolve(root, 'benchmarks/results'), {
           recursive: true,
         });
-        yield* runtime === 'playground' ? playground : native;
+        yield* suite === 'smoke'
+          ? phase(
+              'contributor-smoke',
+              run(
+                process.execPath,
+                [
+                  resolve(root, 'scripts/playground.ts'),
+                  'test',
+                  'tests/e2e/types/text.ts',
+                ],
+                { PLAYGROUND_PHP: php },
+              ),
+            )
+          : runtime === 'playground'
+            ? playground
+            : native;
       }),
       report,
     ).pipe(

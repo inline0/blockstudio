@@ -15,6 +15,11 @@ test('benchmark options require an explicit runtime and complete suite', () => {
   });
   assert.throws(() => benchmarkOptions(['unknown', 'unit']));
   assert.throws(() => benchmarkOptions(['wp-env', 'unknown']));
+  assert.deepEqual(benchmarkOptions(['playground', 'smoke']), {
+    runtime: 'playground',
+    suite: 'smoke',
+  });
+  assert.throws(() => benchmarkOptions(['wp-env', 'smoke']));
 });
 
 test('WordPress suites use the development instance without an unused second database and site', () => {

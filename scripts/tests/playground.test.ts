@@ -5,7 +5,7 @@ import {
   blueprint,
   checkPort,
   requireSession,
-  runtimeArguments,
+  runtimeOptions,
   validateSpecs,
 } from '../playground.ts';
 
@@ -35,11 +35,12 @@ test('the blueprint carries the wp-env constants and activates theme and plugin'
 
 test('the server and blueprint agree on versions and use the supported worker pool', () => {
   const { preferredVersions } = blueprint({}, 'test-session');
-  assert.deepEqual(runtimeArguments(), [
-    `--php=${preferredVersions.php}`,
-    `--wp=${preferredVersions.wp}`,
-    '--workers=6',
-  ]);
+  assert.deepEqual(runtimeOptions(), {
+    php: preferredVersions.php,
+    wp: preferredVersions.wp,
+    workers: 6,
+  });
+  assert.deepEqual(blueprint({}, 'test-session').extraLibraries, ['wp-cli']);
 });
 
 test('readiness refuses unrelated servers and missing identities', () => {
