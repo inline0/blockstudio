@@ -5,6 +5,7 @@ import {
   blueprint,
   checkPort,
   requireSession,
+  runtimeArguments,
   validateSpecs,
 } from '../playground.ts';
 
@@ -30,6 +31,15 @@ test('the blueprint carries the wp-env constants and activates theme and plugin'
   const identity = steps.find((step) => step.step === 'writeFile');
   assert.match(String(identity?.data), /X-Blockstudio-Playground-Session/);
   assert.match(String(identity?.data), /BLOCKSTUDIO_PLAYGROUND_SESSION/);
+});
+
+test('the server and blueprint agree on versions and use the supported worker pool', () => {
+  const { preferredVersions } = blueprint({}, 'test-session');
+  assert.deepEqual(runtimeArguments(), [
+    `--php=${preferredVersions.php}`,
+    `--wp=${preferredVersions.wp}`,
+    '--workers=6',
+  ]);
 });
 
 test('readiness refuses unrelated servers and missing identities', () => {

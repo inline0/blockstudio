@@ -11,6 +11,10 @@ Reject a complete Playground migration. Adopt a limited hybrid candidate:
   empty-theme live-filesystem coverage.
 - Playground for the four loading-mode probes and the existing optional
   contributor smoke. Native distribution installation tests remain unchanged.
+- The CI contributor smoke explicitly uses the same PHP 8.3 baseline as the
+  native suites. Its CLI flags and blueprint agree on versions, six workers are
+  explicit, and PHP failure logs persist as artifacts. The developer default
+  remains configurable; native PHP 8.4 distribution checks are retained.
 - Pin wp-env 11.3.0 and explicitly set `testsEnvironment: false`.
   Docker still enables the extra instance by default. All suites use
   `cli`, not `tests-cli`; this removes no unit/E2E tests.
@@ -163,6 +167,9 @@ distribution checks. Reports include runtime phases, JUnit, browser JSON and
 rerun-safe artifacts. Final validation compares the actual main-E2E union to
 all 3,524 baseline IDs, not just counts or smoke tests. The final handoff links
 the full gate and its measured duration.
+
+Suite success is recorded after teardown. Focused tests prove that test errors,
+cleanup errors and both together remain failures rather than false green runs.
 
 Separate workflow wall time, aggregate runner time, queue contention, setup
 and runtime savings. The historical full 7.7.9 run contains a retried unit job

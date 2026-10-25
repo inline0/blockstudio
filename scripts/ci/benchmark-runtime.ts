@@ -8,6 +8,7 @@ import { blueprint, checkPort, requireSession } from '../playground.ts';
 import { command } from '../lib/command.ts';
 import { attemptPromise, main, ToolingError } from '../lib/runtime.ts';
 import { wpEnv } from '../wp-env.ts';
+import { recordSuiteOutcome } from './suite-outcome.ts';
 import {
   benchmarkOptions,
   playgroundArguments,
@@ -279,7 +280,7 @@ const playground = Effect.gen(function* () {
         attemptPromise('Stop Playground', () =>
           instance[Symbol.asyncDispose](),
         ),
-      ).pipe(Effect.ignore),
+      ).pipe(Effect.orDie),
   );
   const bridge = yield* Effect.acquireRelease(
     attemptPromise('Create CLI bridge', () => cliBridge(server, session)),
@@ -450,7 +451,7 @@ const native = Effect.gen(function* () {
             COMPOSE_PROJECT_NAME: 'blockstudio-ui',
           })
         : wpEnv(mode, 'stop'),
-    ).pipe(Effect.ignore),
+    ).pipe(Effect.orDie),
   );
   yield* phase(
     'boot-and-seed',
@@ -530,7 +531,7 @@ const native = Effect.gen(function* () {
 
 if (import.meta.main)
   main(
-    Effect.scoped(
+    recordSuiteOutcome(
       Effect.gen(function* () {
         if (!process.env.CI)
           return yield* Effect.fail(
@@ -541,15 +542,9 @@ if (import.meta.main)
           recursive: true,
         });
         yield* runtime === 'playground' ? playground : native;
-        report.success = true;
       }),
+      report,
     ).pipe(
-      Effect.tapError((error) =>
-        Effect.sync(() => {
-          report.success = false;
-          report.error = String(error);
-        }),
-      ),
       Effect.ensuring(
         Effect.gen(function* () {
           const fs = yield* FileSystem.FileSystem;
