@@ -1,10 +1,15 @@
 name: CI Setup Benchmark
 
 on:
-  push:
-    branches: [ci-playground-benchmark]
-    paths: [.github/workflows/ci-setup-benchmark.yml]
   workflow_dispatch:
+    inputs:
+      caches:
+        description: JSON array of cache configurations
+        default: '["legacy","none","scoped","fresh"]'
+        type: string
+      dependency_ref:
+        description: Optional revision whose dependencies should be measured
+        type: string
 
 jobs:
   npm:
@@ -14,9 +19,11 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        cache: [legacy, none, scoped]
+        cache: ${{ fromJSON(inputs.caches) }}
     steps:
       - uses: actions/checkout@v5
+        with:
+          ref: ${{ inputs.dependency_ref || github.sha }}
       - name: Inspect existing toolchain
         run: |
           command -v node || true
@@ -25,13 +32,21 @@ jobs:
           php --version || true
           command -v composer || true
           composer --version || true
-      - if: matrix.cache == 'scoped'
+      - if: matrix.cache == 'scoped' || matrix.cache == 'fresh'
         name: Isolate the current lockfile's download cache
-        run: echo "NPM_CONFIG_CACHE=$HOME/.cache/blockstudio/npm" >> "$GITHUB_ENV"
+        env:
+          CACHE_MODE: ${{ matrix.cache }}
+        run: |
+          if [ "$CACHE_MODE" = fresh ]; then
+            echo "NPM_CONFIG_CACHE=$RUNNER_TEMP/blockstudio-npm" >> "$GITHUB_ENV"
+          else
+            echo "NPM_CONFIG_CACHE=$HOME/.cache/blockstudio/npm" >> "$GITHUB_ENV"
+          fi
       - uses: actions/setup-node@v5
         with:
           node-version-file: .nvmrc
           cache: ${{ matrix.cache == 'legacy' && 'npm' || '' }}
+          package-manager-cache: false
       - if: matrix.cache == 'scoped'
         uses: actions/cache@v4
         with:
