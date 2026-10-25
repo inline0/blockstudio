@@ -1,0 +1,42 @@
+name: CI Setup Benchmark
+
+on:
+  push:
+    branches: [ci-playground-benchmark]
+    paths: [.github/workflows/ci-setup-benchmark.yml]
+  workflow_dispatch:
+
+jobs:
+  npm:
+    name: npm / ${{ matrix.cache }}
+    runs-on: [self-hosted, Linux, X64, inline0-blockstudio]
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        cache: [legacy, none, scoped]
+    steps:
+      - uses: actions/checkout@v5
+      - name: Inspect existing toolchain
+        run: |
+          node --version
+          command -v php || true
+          php --version || true
+          command -v composer || true
+          composer --version || true
+      - if: matrix.cache == 'scoped'
+        name: Isolate the current lockfile's download cache
+        run: echo "NPM_CONFIG_CACHE=$HOME/.cache/blockstudio/npm" >> "$GITHUB_ENV"
+      - uses: actions/setup-node@v5
+        with:
+          node-version-file: .nvmrc
+          cache: ${{ matrix.cache == 'legacy' && 'npm' || '' }}
+      - if: matrix.cache == 'scoped'
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/blockstudio/npm
+          key: blockstudio-npm-scoped-v1-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
+      - name: Measure dependency installation
+        run: scripts/ci/npm-ci.sh
+      - name: Record resulting cache size
+        run: du -sk "$(npm config get cache)"
