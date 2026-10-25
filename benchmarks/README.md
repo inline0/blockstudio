@@ -25,5 +25,44 @@ The workflow is isolated to this branch. It is not a replacement release gate
 until coverage, failures and timings have been compared. Later measurements
 will validate the selected all-Playground, hybrid or native configuration.
 
-Results and the final recommendation will be added here after CI measurement.
-Raw generated reports are uploaded as artifacts and ignored in Git.
+## Completed Measurements
+
+These are first paired samples, not final medians. All samples below use the
+same product/test commit (`074a898d`), WordPress 7.1.3, PHP 8.3 and the existing
+two-slot self-hosted runner pool. Native PHP is 8.3.36; Playground's PHP build
+is 8.3.33. Playground uses six PHP workers, not six GitHub runners.
+
+Times are seconds, rounded to the nearest second. The cycle includes all
+runtime preparation, probes, SEO installation where applicable, tests and
+shutdown. GitHub action setup and queue time are not included in this table.
+
+| Suite | Runtime | Boot/Seed | Test Phase | Full Cycle | Result |
+| --- | --- | ---: | ---: | ---: | --- |
+| Unit | wp-env | 271 | 152 | 445 | 2,459 tests; no failures |
+| Unit | Playground | 27 | 125 | 155 | 6 errors, 26 failures, 1 skipped |
+| E2E shard 3 | wp-env | 210 | 307 | 540 | 774 passed, no retries |
+| E2E shard 3 | Playground | 27 | 421 | 463 | Same 774 test IDs passed, no retries |
+| E2E shard 2 | wp-env | 420 | 693 | 1,141 | 1,001 passed, no retries |
+| E2E shard 2 | Playground | 25 | 1,011 | 1,049 | 1,001 passed, no retries |
+
+Sources: [unit and shard 3 comparison](https://github.com/inline0/blockstudio/actions/runs/40190726710),
+[remaining suite comparison](https://github.com/inline0/blockstudio/actions/runs/40192644770).
+Raw JSON/JUnit reports, logs and failure artifacts are attached to those runs.
+Generated local copies are ignored in Git.
+
+The unit timing is not an acceptable replacement result: the Playground run
+has fewer assertions because failures short-circuit tests. Native-process,
+OPcache, locking, timestamp and filesystem tests must remain native. No test
+assertions were weakened or skipped to make the Playground result green.
+
+Playground's empty-theme run also fails live filesystem/SSE update coverage
+(one failure, one flaky test, two tests not reached). Its CI screenshot shows
+an unsupported block and a page failing to refresh after source changes.
+That case is not eligible for migration without equivalent native coverage.
+
+One-worker Playground boot failed with SCSS logger stderr errors on both PHP
+8.3 and 8.4. The six-worker configuration boots successfully. Those startup
+diagnostics are excluded from performance comparisons.
+
+The remaining measurements, repeat samples, setup/cache comparison and final
+adopted recommendation are still in progress.
