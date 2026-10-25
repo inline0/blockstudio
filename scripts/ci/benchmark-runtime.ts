@@ -59,7 +59,7 @@ const report: Record<string, unknown> = {
   requestedPhp: php,
   playgroundWorkers:
     runtime === 'playground'
-      ? Number(process.env.PLAYGROUND_WORKERS || 1)
+      ? Number(process.env.PLAYGROUND_WORKERS || 6)
       : undefined,
 };
 const phases = report.phases as { name: string; seconds: number }[];
@@ -99,14 +99,15 @@ async function cli(
     stream: ReadableStream<Uint8Array>,
     destination: NodeJS.WriteStream,
   ) => {
-    const chunks: Uint8Array[] = [];
+    const chunks: Buffer[] = [];
     const reader = stream.getReader();
     try {
       while (true) {
         const { value, done } = await reader.read();
         if (done) break;
-        chunks.push(value);
-        if (tee) destination.write(value);
+        const bytes = Buffer.from(value);
+        chunks.push(bytes);
+        if (tee) destination.write(bytes);
       }
     } finally {
       reader.releaseLock();
@@ -247,7 +248,7 @@ const playground = Effect.gen(function* () {
           wp: 'latest',
           port: config.port,
           'site-url': `http://localhost:${config.port}`,
-          workers: Number(process.env.PLAYGROUND_WORKERS || 1),
+          workers: Number(process.env.PLAYGROUND_WORKERS || 6),
           mount: mounts,
           blueprint: {
             ...declaration,
