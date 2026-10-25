@@ -135,7 +135,7 @@
     "@vscode/codicons": "^0.0.44",
     "@wordpress/babel-preset-default": "^8.22.0",
     "@wordpress/dependency-extraction-webpack-plugin": "^6.22.0",
-    "@wordpress/env": "^10.39.0",
+    "@wordpress/env": "11.3.0",
     "@wordpress/scripts": "^31.4.0",
     "@wp-playground/cli": "3.1.60",
     "ajv": "^8.17.1",

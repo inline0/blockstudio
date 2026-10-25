@@ -57,6 +57,17 @@ const report: Record<string, unknown> = {
   startedAt: new Date().toISOString(),
   phases: [] as { name: string; seconds: number }[],
   requestedPhp: php,
+  driverVersion: JSON.parse(
+    readFileSync(
+      resolve(
+        root,
+        runtime === 'playground'
+          ? 'node_modules/@wp-playground/cli/package.json'
+          : 'node_modules/@wordpress/env/package.json',
+      ),
+      'utf8',
+    ),
+  ).version,
   playgroundWorkers:
     runtime === 'playground'
       ? Number(process.env.PLAYGROUND_WORKERS || 6)
