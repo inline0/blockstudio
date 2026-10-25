@@ -1,0 +1,64 @@
+name: CI Runtime Benchmark
+
+on:
+  push:
+    branches: [ci-playground-benchmark]
+  workflow_dispatch:
+
+concurrency:
+  group: runtime-benchmark-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  compare:
+    name: ${{ matrix.runtime }} / ${{ matrix.suite }}
+    runs-on: [self-hosted, Linux, X64, inline0-blockstudio]
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        runtime: [wp-env, playground]
+        suite:
+          [
+            unit,
+            e2e-1,
+            e2e-2,
+            e2e-3,
+            e2e-4,
+            ui,
+            empty,
+            plugin,
+            mu-plugin,
+            composer-theme,
+            composer-plugin,
+          ]
+    env:
+      COMPOSE_PROJECT_NAME: blockstudio
+      CI: true
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+      - run: scripts/ci/npm-ci.sh
+      - run: composer install --no-interaction
+      - if: startsWith(matrix.suite, 'e2e-') || matrix.suite == 'unit'
+        run: composer install --no-interaction --working-dir=tests/theme
+      - if: startsWith(matrix.suite, 'e2e-') || matrix.suite == 'ui' || matrix.suite == 'empty'
+        run: node_modules/.bin/playwright install --with-deps chromium
+      - name: Measure complete suite on the selected runtime
+        run: node scripts/ci/benchmark-runtime.ts ${{ matrix.runtime }} ${{ matrix.suite }}
+      - name: Upload benchmark evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: benchmark-${{ matrix.runtime }}-${{ matrix.suite }}-${{ github.run_attempt }}
+          path: |
+            benchmarks/results/
+            test-results/
+            tests/ui/test-results/
+          retention-days: 14

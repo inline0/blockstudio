@@ -1,5 +1,4 @@
-import { execFileSync } from 'child_process';
-import * as path from 'path';
+import { wpCommand } from './utils/wp-cli';
 import { Page, expect, test } from '@playwright/test';
 import {
   addBlock,
@@ -11,22 +10,7 @@ import {
   resetPageState,
 } from './utils/playwright-utils';
 
-const wpEnvDir = path.join(process.cwd(), 'tests/wp-env');
-const wpEnvCli = path.join(
-  process.cwd(),
-  'node_modules/@wordpress/env/bin/wp-env',
-);
-const wpCli = (...args: string[]) =>
-  execFileSync(
-    process.execPath,
-    [wpEnvCli, 'run', 'cli', '--', 'wp', ...args],
-    {
-      cwd: wpEnvDir,
-      encoding: 'utf-8',
-      // Cold SEO plugin activation can exceed 30 seconds on the shared runner.
-      timeout: 60_000,
-    },
-  );
+const wpCli = (...args: string[]) => wpCommand(args, 60_000);
 
 let page: Page;
 

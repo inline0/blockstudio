@@ -6,7 +6,7 @@
  */
 
 // Load WordPress.
-$wp_load = '/var/www/html/wp-load.php';
+$wp_load = getenv( 'BLOCKSTUDIO_WP_LOAD' ) ?: '/var/www/html/wp-load.php';
 
 if ( ! file_exists( $wp_load ) ) {
 	echo "WordPress not found at {$wp_load}. Run tests inside wp-env.\n";

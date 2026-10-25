@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { execSync } from 'child_process';
+import { wpCommand } from './utils/wp-cli';
 import {
   existsSync,
   readFileSync,
@@ -24,10 +24,7 @@ const cleanWpOutput = (result: string) => {
 };
 
 const wp = (cmd: string) => {
-  const result = execSync(
-    `cd tests/wp-env && npx wp-env run cli -- wp ${cmd}`,
-    { encoding: 'utf-8', timeout: 30000 },
-  ).trim();
+  const result = wpCommand(cmd).trim();
 
   return cleanWpOutput(result);
 };
