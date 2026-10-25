@@ -19,7 +19,8 @@ jobs:
       - uses: actions/checkout@v5
       - name: Inspect existing toolchain
         run: |
-          node --version
+          command -v node || true
+          node --version || true
           command -v php || true
           php --version || true
           command -v composer || true
