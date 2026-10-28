@@ -478,7 +478,9 @@ class Block {
 			$pattern =
 				'/([a-zA-Z_][a-zA-Z0-9\-_:.]*)(?:\s*=\s*(?:"([^"]*)"|\'([^\']*)\'|([^ \/>]+)))?/';
 
-			preg_match_all( $pattern, $attributes, $matches, PREG_SET_ORDER );
+			// Unmatched groups as null, so the fallback below reaches the
+			// single-quoted and unquoted values instead of stopping at ''.
+			preg_match_all( $pattern, $attributes, $matches, PREG_SET_ORDER | PREG_UNMATCHED_AS_NULL );
 
 			foreach ( $matches as $match ) {
 				$attr_name                   = $match[1];
