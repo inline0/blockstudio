@@ -78,6 +78,7 @@ class BlockReplaceComponentsTest extends TestCase {
 		return array(
 			'single quoted'        => array( "<RichText attribute='title' tag='h2' class='heading' />" ),
 			'unquoted'             => array( '<RichText attribute=title tag=h2 class=heading />' ),
+			'unquoted multiline'   => array( "<RichText attribute=title\ntag=h2\tclass=heading />" ),
 			'spaced equals'        => array( "<RichText attribute = 'title' tag = h2 class = heading />" ),
 			'quoted angle'         => array( "<RichText title='A > B' attribute='title' tag='h2' class='heading' />" ),
 			'quoted fake selector' => array( "<RichText title=\"attribute='unused'\" attribute='title' tag='h2' class='heading' />" ),

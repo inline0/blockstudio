@@ -11,6 +11,7 @@ class BlockComponentTagTest extends TestCase {
 			'double quotes'         => array( '<RichText attribute="title" tag="h2" class="heading" />', '<h2 attribute="title" tag="h2" class="heading">Hello $1</h2>' ),
 			'single quotes'         => array( "<RichText attribute='title' tag='h2' class='heading' />", '<h2 attribute="title" tag="h2" class="heading">Hello $1</h2>' ),
 			'unquoted values'       => array( '<RichText attribute=title tag=h2 class=heading />', '<h2 attribute="title" tag="h2" class="heading">Hello $1</h2>' ),
+			'unquoted multiline'    => array( "<RichText attribute=title\ntag=h2\tclass=heading />", '<h2 attribute="title" tag="h2" class="heading">Hello $1</h2>' ),
 			'spaced assignments'    => array( "<RichText\n attribute = 'title' tag = h2 class = \"heading\" />", '<h2 attribute="title" tag="h2" class="heading">Hello $1</h2>' ),
 			'empty and boolean'     => array( "<RichText attribute='title' class='' hidden />", '<p attribute="title" class="" hidden>Hello $1</p>' ),
 			'quoted angle bracket'  => array( "<RichText title='A > B' attribute='title' tag='h2' />", '<h2 title="A &gt; B" attribute="title" tag="h2">Hello $1</h2>' ),

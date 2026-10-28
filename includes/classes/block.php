@@ -892,7 +892,7 @@ class Block {
 	 * @return array<string, string|true> Parsed attributes.
 	 */
 	private static function component_attributes( string $attributes ): array {
-		$pattern = '/([a-zA-Z_][a-zA-Z0-9\-_:.]*)(?:\s*=\s*(?:"([^"]*)"|\'([^\']*)\'|([^ \/>]+)))?/';
+		$pattern = '/([a-zA-Z_][a-zA-Z0-9\-_:.]*)(?:\s*=\s*(?:"([^"]*)"|\'([^\']*)\'|([^\s\/>]+)))?/';
 		// Empty quoted values must differ from unmatched quote alternatives.
 		preg_match_all( $pattern, $attributes, $matches, PREG_SET_ORDER | PREG_UNMATCHED_AS_NULL );
 		$parsed = array();
