@@ -1007,7 +1007,18 @@ final class Build_Cache {
 		}
 
 		foreach ( $watch['dirs'] ?? array() as $path => $snapshot ) {
-			if ( self::get_dir_snapshot( $path ) !== $snapshot ) {
+			if ( ! is_array( $snapshot ) ) {
+				return false;
+			}
+			$current  = self::get_dir_snapshot( $path );
+			$expected = $snapshot;
+			if ( isset( $expected['storageEntries'] ) ) {
+				unset( $expected['storageEntries'] );
+			}
+			if ( $current === $expected ) {
+				continue;
+			}
+			if ( empty( $snapshot['exists'] ) || empty( $current['exists'] ) || ! is_string( $snapshot['storageEntries'] ?? null ) || self::storage_directory_entries( $path ) !== $snapshot['storageEntries'] ) {
 				return false;
 			}
 		}
@@ -1110,6 +1121,12 @@ final class Build_Cache {
 
 			$dir               = wp_normalize_path( $dir );
 			$snapshots[ $dir ] = self::get_dir_snapshot( $dir );
+			if ( ! empty( $snapshots[ $dir ]['exists'] ) && 'db' === basename( $dir ) && is_file( dirname( $dir ) . '/db.php' ) ) {
+				$entries = self::storage_directory_entries( $dir );
+				if ( null !== $entries && self::get_dir_snapshot( $dir ) === $snapshots[ $dir ] ) {
+					$snapshots[ $dir ]['storageEntries'] = $entries;
+				}
+			}
 		}
 
 		return $snapshots;
@@ -1158,6 +1175,38 @@ final class Build_Cache {
 			'exists' => true,
 			'mtime'  => @filemtime( $path ), // phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged -- Concurrent cleanups can remove the directory between check and stat.
 		);
+	}
+
+	/**
+	 * Distinguish source additions from SQLite journal churn in data folders.
+	 *
+	 * Captured at cache publication and read again only when the directory's
+	 * timestamp changes. Ordinary directories retain their stat-only checks.
+	 *
+	 * @param string $path File-backed database directory.
+	 * @return string|null Entry fingerprint, or null when a reliable snapshot is unavailable.
+	 */
+	private static function storage_directory_entries( string $path ): ?string {
+		try {
+			$entries = array();
+			foreach ( new \FilesystemIterator( $path, \FilesystemIterator::SKIP_DOTS ) as $entry ) {
+				$name = $entry->getFilename();
+				if ( $entry->isFile() && ( str_ends_with( $name, '.sqlite-wal' ) || str_ends_with( $name, '.sqlite-shm' ) || str_ends_with( $name, '.sqlite-journal' ) ) ) {
+					continue;
+				}
+				$inode = $entry->getInode();
+				if ( ! is_int( $inode ) || $inode <= 0 ) {
+					return null;
+				}
+				$entries[ $name . ( $entry->isDir() ? '/' : '' ) ] = $inode;
+			}
+			ksort( $entries, SORT_STRING );
+			$encoded = wp_json_encode( $entries );
+			return false === $encoded ? null : hash( 'sha256', $encoded );
+		} catch ( \Throwable $error ) {
+			unset( $error );
+			return null;
+		}
 	}
 
 	/**

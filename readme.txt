@@ -58,6 +58,7 @@ Download the latest release zip from [GitHub Releases](https://github.com/inline
 * Performance: frontend asset and component processing avoids repeated full-markup searches for every registered block and field (#193)
 * New: saved-value validation reports unknown top-level attributes and misplaced values missing the blockstudio wrapper without changing stored content (#194)
 * Fix: RichText and InnerBlocks component tags preserve single-quoted, unquoted, empty, and boolean attributes, including nested RichText field paths (#195)
+* Fix: SQLite journal activity no longer invalidates warm block metadata caches while source-file changes remain detected
 
 = 7.7.10 =
 * Fix: field schemas and TypeScript definitions include the supported radio, checkbox, code, WYSIWYG, repeater, color, and gradient options (#191)

@@ -417,7 +417,8 @@ class BlockValidatorTest extends TestCase {
 
 	public function test_blocks_without_blockstudio_fields_do_not_check_top_level_keys(): void {
 		$this->assertSame( array(), bs_validate_block( 'core/paragraph', array( 'unregistered' => 'x', 'content' => 'Text' ) ) );
-		$this->assertNull( bs_validate_block( 'core/group', array( 'unregistered' => 'x' ) ) );
+		$this->assertSame( array(), bs_validate_block( 'core/group', array( 'unregistered' => 'x' ) ) );
+		$this->assertNull( bs_validate_block( 'validation-missing/unknown', array( 'unregistered' => 'x' ) ) );
 	}
 
 	public function test_parsed_blocks_report_unknown_top_level_attributes_with_their_block_path(): void {

@@ -546,6 +546,10 @@ temporary files. Language-specific runtime identities remain
 isolated; multiple cache namespace directories on a multilingual site are
 not, by themselves, evidence of a cache miss.
 
+SQLite journal activity inside a block's `db` data directory does not discard
+cached block metadata. Changes to `db.php`, watched source files, or the data
+directory's source-file and subdirectory structure still invalidate the cache.
+
 Concurrent runtime rebuilds have one elected builder. Other requests wait up
 to five seconds, then reuse last-good block metadata when its source files and
 required compiled assets still exist. A cold request with no safe payload
