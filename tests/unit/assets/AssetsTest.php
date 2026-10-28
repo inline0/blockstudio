@@ -593,6 +593,44 @@ class AssetsTest extends TestCase {
 		$this->assertStringContainsString( '<body><p>Content</p>', $result );
 	}
 
+	public function test_parse_output_keeps_comments_of_unregistered_blocks(): void {
+		$name = 'blockstudio/type-text';
+
+		if ( ! isset( Build::data()[ $name ] ) ) {
+			$this->markTestSkipped( "{$name} not registered." );
+		}
+
+		$comment      = Block::comment( $name );
+		$unregistered = '<!--blockstudio/not-registered/block-->';
+		$html         = '<html><head></head><body>' . $comment . '<p>a</p>' . $unregistered . $comment . '<p>b</p></body></html>';
+
+		$result = ( new Assets() )->parse_output( $html );
+
+		$this->assertStringNotContainsString( $comment, $result );
+		$this->assertSame( 1, substr_count( $result, $unregistered ) );
+		$this->assertStringContainsString( '<body><p>a</p>' . $unregistered . '<p>b</p>', $result );
+	}
+
+	public function test_parse_output_prints_block_assets_only_for_a_comment_on_the_page(): void {
+		$page = $this->inline_limit_page( array( 'one.css' => '.one { color: red; }' ) );
+
+		try {
+			$tag = Assets::render_tag( 'one.css', $page['assets']['one.css'], $page['data'] );
+
+			$this->assertStringContainsString( $tag . '</head>', $this->parse_inline_limit_page( $page ) );
+
+			foreach ( array( '', '<!--blockstudio/not-registered/block-->', '<!--blockstudio/' . $page['data']['name'] ) as $body ) {
+				Assets::reset_request_state();
+
+				$output = ( new Assets() )->parse_output( '<html><head></head><body>' . $body . '</body></html>' );
+
+				$this->assertStringNotContainsString( $tag, $output );
+			}
+		} finally {
+			$this->remove_inline_limit_page( $page );
+		}
+	}
+
 	public function test_parse_output_emits_each_bundled_ui_global_once(): void {
 		$name     = 'blockstudio-test/ui-global-dedupe';
 		$registry = Block_Registry::instance();
