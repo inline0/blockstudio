@@ -354,6 +354,81 @@ class BlockValidatorTest extends TestCase {
 		$this->assertSame( 'rows/0/data-example', $result[0]['path'] );
 	}
 
+	public function test_unknown_top_level_attributes_are_reported_and_never_reach_the_template(): void {
+		$attrs    = array( 'titl' => 'Typo' );
+		$findings = bs_validate_block( self::NAME, $attrs );
+		$this->assertSame( array( 'unknown_attribute' ), array_column( $findings, 'code' ) );
+		$this->assertSame( 'titl', $findings[0]['path'] );
+		$this->assertSame( 'block', $findings[0]['source'] );
+		$this->assertSame( 'Typo', $findings[0]['value'] );
+		$this->assertSame( array( 'code', 'path', 'source', 'message', 'value', 'expected' ), array_keys( $findings[0] ) );
+		foreach ( array( 'text', 'rows', 'meta_title', 'extra', 'className', 'lock', 'metadata', 'blockstudio' ) as $name ) {
+			$this->assertContains( $name, $findings[0]['expected'] );
+		}
+		$this->assertNotContains( 'titl', $findings[0]['expected'] );
+		$this->assertArrayNotHasKey( 'titl', $this->rendered( $attrs ) );
+	}
+
+	public function test_values_stored_without_the_blockstudio_wrapper_name_the_missing_container(): void {
+		$attrs    = array( 'attributes' => array( 'text' => 'Lost' ), 'disabled' => array( 'choice' ) );
+		$findings = bs_validate_block( self::NAME, $attrs );
+		$this->assertSame( array( 'missing_container', 'missing_container' ), array_column( $findings, 'code' ) );
+		$this->assertSame( array( 'attributes', 'disabled' ), array_column( $findings, 'path' ) );
+		$this->assertSame( array( 'blockstudio/attributes', 'blockstudio/disabled' ), array_column( $findings, 'expected' ) );
+		$this->assertStringContainsString( 'blockstudio', $findings[0]['message'] );
+		$this->assertSame( 'Kept', $this->rendered( array( 'text' => 'Kept' ) )['text'] );
+		$this->assertFalse( $this->rendered( $attrs )['text'] );
+	}
+
+	public function test_a_container_member_next_to_the_wrapper_is_a_plain_unknown_attribute(): void {
+		$attrs = array( 'blockstudio' => array( 'attributes' => array( 'text' => 'Kept' ) ), 'attributes' => array( 'text' => 'Lost' ) );
+		$this->assertSame( array( 'unknown_attribute' ), array_column( bs_validate_block( self::NAME, $attrs ), 'code' ) );
+		$this->assertSame( 'Kept', $this->rendered( $attrs )['text'] );
+	}
+
+	public function test_unknown_top_level_attributes_do_not_hide_container_findings(): void {
+		$findings = bs_validate_block( self::NAME, array( 'blockstudio' => 'wrong', 'titl' => 'Typo' ) );
+		$this->assertSame( array( 'unknown_attribute', 'invalid_container' ), array_column( $findings, 'code' ) );
+		$findings = bs_validate_block( self::NAME, array( 'titl' => 'Typo', 'blockstudio' => array( 'attributes' => array( 'choice' => 'unknown' ) ) ) );
+		$this->assertSame( array( 'unknown_attribute', 'unknown_option' ), array_column( $findings, 'code' ) );
+	}
+
+	public function test_attributes_wordpress_registers_or_blockstudio_forwards_are_not_unknown(): void {
+		$attrs = array(
+			'blockstudio'     => array( 'attributes' => array( 'text' => 'Nested' ) ),
+			'className'       => 'is-style-wide',
+			'anchor'          => 'section',
+			'lock'            => array( 'move' => true ),
+			'metadata'        => array( 'name' => 'Label' ),
+			'style'           => array( 'color' => array( 'text' => '#000' ) ),
+			'id'              => 'forwarded',
+			'title'           => 'Forwarded',
+			'data-example'    => 'Forwarded',
+			'html-data-extra' => 'Forwarded',
+			'aria-label'      => 'Label',
+			'key'             => 'stable-key',
+			'text'            => 'Declared',
+			'meta_title'      => 'Group child',
+			'extra'           => 'Extension field',
+		);
+		$unknown = array_filter( bs_validate_block( self::NAME, $attrs ), static fn( array $finding ): bool => in_array( $finding['code'], array( 'unknown_attribute', 'missing_container' ), true ) );
+		$this->assertSame( array(), $unknown );
+	}
+
+	public function test_blocks_without_blockstudio_fields_do_not_check_top_level_keys(): void {
+		$this->assertSame( array(), bs_validate_block( 'core/paragraph', array( 'unregistered' => 'x', 'content' => 'Text' ) ) );
+		$this->assertNull( bs_validate_block( 'core/group', array( 'unregistered' => 'x' ) ) );
+	}
+
+	public function test_parsed_blocks_report_unknown_top_level_attributes_with_their_block_path(): void {
+		$content  = '<!-- wp:' . self::NAME . ' {"attributes":{"text":"Lost"}} /--><!-- wp:' . self::NAME . ' {"blockstudio":{"attributes":{"text":"Kept"}}} /-->';
+		$findings = Block_Validator::blocks( parse_blocks( $content ) );
+		$this->assertCount( 1, $findings );
+		$this->assertSame( '0', $findings[0]['block_path'] );
+		$this->assertSame( self::NAME, $findings[0]['block_name'] );
+		$this->assertSame( 'missing_container', $findings[0]['code'] );
+	}
+
 	public function test_top_level_values_follow_wordpress_attribute_validation(): void {
 		$this->assertSame( array(), $this->validate( array( 'radio' => 'a' ) ) );
 		$this->assertSame( 'a', $this->rendered( $this->attrs( array( 'radio' => 'a' ) ) )['radio'] );

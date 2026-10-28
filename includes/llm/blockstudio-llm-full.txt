@@ -6203,7 +6203,18 @@ does not permit arbitrary keys in repeater rows or extensions of core blocks.
 | `definition_conflict` | Applicable definitions for one key require different storage shapes. | Source and field type of each definition. |
 | `shadowed_value` | A nested value overrides a different top-level field value. | The winning nested value. |
 | `extension_top_level` | The template can read a top-level value but extension bindings cannot. | Its required path under `blockstudio/attributes`. |
+| `unknown_attribute` | A top-level key of a Blockstudio block is not read by the render path and is dropped. | Registered attribute names, extension fields and `blockstudio`. |
+| `missing_container` | `attributes`, `disabled`, `name` or `editor` is stored at the top level and `blockstudio` is missing. | Its required path under `blockstudio`. |
 | `invalid_container` | `blockstudio` or `blockstudio.attributes` is not an object. | `object`. |
+
+A top-level key of a Blockstudio block that is neither a registered attribute
+(its fields, the attributes WordPress adds for `supports`, `lock` and
+`metadata`), nor a field of a matching extension, nor `blockstudio`, nor a
+bookkeeping key or forwarded HTML attribute is dropped before the template
+runs. Such a key, for example a mistyped field ID or a values object stored
+without its `blockstudio` wrapper, produces a finding because the block
+renders without that value. Blocks that only carry extension fields are not
+checked for top-level keys.
 
 The accepted shapes follow rendering: multiple selects and checkboxes can
 contain a list, one option object, or an imported scalar, including numeric
