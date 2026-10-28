@@ -28,6 +28,14 @@ msgid "This storage key is not declared by the block or its extensions."
 msgstr "Šī krātuves atslēga nav deklarēta blokā vai tā paplašinājumos."
 
 #: includes/classes/block-validator.php
+msgid "This top-level key is not an attribute of the block, so it is ignored."
+msgstr "Šī augstākā līmeņa atslēga nav bloka atribūts, tāpēc tiek ignorēta."
+
+#: includes/classes/block-validator.php
+msgid "This key is only read inside the blockstudio object, which is missing."
+msgstr "Šī atslēga tiek nolasīta tikai blockstudio objektā, kura trūkst."
+
+#: includes/classes/block-validator.php
 msgid "This value is not among the field options."
 msgstr "Šī vērtība nav starp lauka opcijām."
 

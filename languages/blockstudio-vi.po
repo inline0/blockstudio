@@ -28,6 +28,14 @@ msgid "This storage key is not declared by the block or its extensions."
 msgstr "Khóa lưu trữ này không được khối hoặc phần mở rộng của khối khai báo."
 
 #: includes/classes/block-validator.php
+msgid "This top-level key is not an attribute of the block, so it is ignored."
+msgstr "Khóa cấp cao nhất này không phải là thuộc tính của khối nên bị bỏ qua."
+
+#: includes/classes/block-validator.php
+msgid "This key is only read inside the blockstudio object, which is missing."
+msgstr "Khóa này chỉ được đọc bên trong đối tượng blockstudio, nhưng đối tượng này không tồn tại."
+
+#: includes/classes/block-validator.php
 msgid "This value is not among the field options."
 msgstr "Giá trị này không nằm trong các tùy chọn của trường."
 

@@ -28,6 +28,14 @@ msgid "This storage key is not declared by the block or its extensions."
 msgstr "Ev mifteya hilanînê ji hêla blokê an dirêjkerên wê ve nehatiye ragihandin."
 
 #: includes/classes/block-validator.php
+msgid "This top-level key is not an attribute of the block, so it is ignored."
+msgstr "Ev mifteya asta jor a blokê ne, ji ber vê yekê nayê hesibandin."
+
+#: includes/classes/block-validator.php
+msgid "This key is only read inside the blockstudio object, which is missing."
+msgstr "Ev mifte tenê di hundirê objekta blockstudio de tê xwendin, ku tune ye."
+
+#: includes/classes/block-validator.php
 msgid "This value is not among the field options."
 msgstr "Ev nirx di nav vebijarkên zeviyê de nîne."
 

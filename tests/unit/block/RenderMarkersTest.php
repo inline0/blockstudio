@@ -85,4 +85,56 @@ class RenderMarkersTest extends TestCase {
 		$this->assertSame( '', bs_strip_render_markers( '' ) );
 		$this->assertSame( '<div class="a">b</div>', bs_strip_render_markers( '<div class="a">b</div>' ) );
 	}
+
+	public function test_strip_removes_a_marker_that_follows_an_unclosed_block_comment(): void {
+		$comment = Block::comment( $this->name );
+
+		$this->assertSame(
+			'<p>a</p><!--blockstudio/unclosed <p>b</p>',
+			bs_strip_render_markers( '<p>a</p><!--blockstudio/unclosed ' . $comment . '<p>b</p>' )
+		);
+	}
+
+	public function test_strip_removes_only_the_registered_marker_between_unregistered_ones(): void {
+		$comment = Block::comment( $this->name );
+
+		$this->assertSame(
+			'<!--blockstudio/not-registered/a--><!--blockstudio/not-registered/b-->',
+			bs_strip_render_markers( '<!--blockstudio/not-registered/a-->' . $comment . '<!--blockstudio/not-registered/b-->' )
+		);
+	}
+
+	public function test_find_comments_lists_each_distinct_comment_once(): void {
+		$comment = Block::comment( $this->name );
+		$other   = '<!--blockstudio/not-registered/block-->';
+
+		$this->assertSame(
+			array( $comment, $other ),
+			array_keys( Block::find_comments( $comment . '<p>a</p>' . $other . $comment ) )
+		);
+	}
+
+	public function test_find_comments_ignores_other_markup(): void {
+		$this->assertSame( array(), Block::find_comments( '' ) );
+		$this->assertSame(
+			array(),
+			Block::find_comments( '<!--more--><!-- wp:paragraph --><p>blockstudio/x</p><!--blockstudio/open' )
+		);
+	}
+
+	public function test_marker_detection_and_removal_fall_back_when_pcre_limits_are_exhausted(): void {
+		$comment = Block::comment( $this->name );
+		$other   = '<!--blockstudio/not-registered/block-->';
+		$html    = $comment . $other . '<p>Kept</p>' . $comment;
+		$limit   = ini_get( 'pcre.backtrack_limit' );
+		try {
+			ini_set( 'pcre.backtrack_limit', '0' );
+			$found    = Block::find_comments( $html );
+			$stripped = Block::strip_comments( $html );
+		} finally {
+			ini_set( 'pcre.backtrack_limit', $limit );
+		}
+		$this->assertArrayHasKey( $comment, $found );
+		$this->assertSame( $other . '<p>Kept</p>', $stripped );
+	}
 }

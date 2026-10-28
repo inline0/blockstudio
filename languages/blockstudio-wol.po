@@ -28,6 +28,14 @@ msgid "This storage key is not declared by the block or its extensions."
 msgstr "Caabi denc bii waxuñu ko ci block bi walla ci yokkuteem."
 
 #: includes/classes/block-validator.php
+msgid "This top-level key is not an attribute of the block, so it is ignored."
+msgstr "Key bii ci kaw bokkul ci attribut yi ci block bi, moo tax ñu jëfandikoo ko."
+
+#: includes/classes/block-validator.php
+msgid "This key is only read inside the blockstudio object, which is missing."
+msgstr "Key bii dañu koy jàng rekk ci biir object blockstudio bi, te object boobu amul."
+
+#: includes/classes/block-validator.php
 msgid "This value is not among the field options."
 msgstr "Walu bii nekkul ci tànneefi waajal bi."
 

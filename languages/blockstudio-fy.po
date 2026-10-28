@@ -28,6 +28,14 @@ msgid "This storage key is not declared by the block or its extensions."
 msgstr "Dizze opslachkaai is net ferklearre troch it blok of syn útwreidingen."
 
 #: includes/classes/block-validator.php
+msgid "This top-level key is not an attribute of the block, so it is ignored."
+msgstr "Dizze kaai op it boppeste nivo is gjin attribút fan it blok en wurdt dêrom negearre."
+
+#: includes/classes/block-validator.php
+msgid "This key is only read inside the blockstudio object, which is missing."
+msgstr "Dizze kaai wurdt allinnich lêzen binnen it blockstudio-objekt, dat ûntbrekt."
+
+#: includes/classes/block-validator.php
 msgid "This value is not among the field options."
 msgstr "Dizze wearde komt net foar yn de fjildopsjes."
 

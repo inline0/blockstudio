@@ -28,6 +28,14 @@ msgid "This storage key is not declared by the block or its extensions."
 msgstr "Esta chave de armazenamento não foi declarada pelo bloco nem por suas extensões."
 
 #: includes/classes/block-validator.php
+msgid "This top-level key is not an attribute of the block, so it is ignored."
+msgstr "Esta chave de nível superior não é um atributo do bloco e, por isso, é ignorada."
+
+#: includes/classes/block-validator.php
+msgid "This key is only read inside the blockstudio object, which is missing."
+msgstr "Esta chave só é lida dentro do objeto blockstudio, que está ausente."
+
+#: includes/classes/block-validator.php
 msgid "This value is not among the field options."
 msgstr "Este valor não está entre as opções do campo."
 

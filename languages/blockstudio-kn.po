@@ -28,6 +28,14 @@ msgid "This storage key is not declared by the block or its extensions."
 msgstr "ಈ ಸಂಗ್ರಹಣಾ ಕೀಲಿಯನ್ನು ಬ್ಲಾಕ್ ಅಥವಾ ಅದರ ವಿಸ್ತರಣೆಗಳು ಘೋಷಿಸಿಲ್ಲ."
 
 #: includes/classes/block-validator.php
+msgid "This top-level key is not an attribute of the block, so it is ignored."
+msgstr "ಈ ಮೇಲ್ಮಟ್ಟದ ಕೀಲಿ ಬ್ಲಾಕ್‌ನ ಗುಣಲಕ್ಷಣವಲ್ಲ, ಆದ್ದರಿಂದ ಅದನ್ನು ನಿರ್ಲಕ್ಷಿಸಲಾಗುತ್ತದೆ."
+
+#: includes/classes/block-validator.php
+msgid "This key is only read inside the blockstudio object, which is missing."
+msgstr "ಈ ಕೀಲಿಯನ್ನು blockstudio ಆಬ್ಜೆಕ್ಟ್‌ನ ಒಳಗೆ ಮಾತ್ರ ಓದಲಾಗುತ್ತದೆ; ಆ ಆಬ್ಜೆಕ್ಟ್ ಕಾಣೆಯಾಗಿದೆ."
+
+#: includes/classes/block-validator.php
 msgid "This value is not among the field options."
 msgstr "ಈ ಮೌಲ್ಯವು ಕ್ಷೇತ್ರದ ಆಯ್ಕೆಗಳಲ್ಲಿ ಇಲ್ಲ."
 

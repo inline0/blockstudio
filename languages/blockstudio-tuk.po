@@ -28,6 +28,14 @@ msgid "This storage key is not declared by the block or its extensions."
 msgstr "Bu depolama anahtarı blokta veya uzantılarında tanımlanmamış."
 
 #: includes/classes/block-validator.php
+msgid "This top-level key is not an attribute of the block, so it is ignored."
+msgstr "Ýokarky derejedäki bu açar blokuň atributy däl, şonuň üçin äsgerilmeýär."
+
+#: includes/classes/block-validator.php
+msgid "This key is only read inside the blockstudio object, which is missing."
+msgstr "Bu açar diňe ýok bolan blockstudio obýektiniň içinde okalýar."
+
+#: includes/classes/block-validator.php
 msgid "This value is not among the field options."
 msgstr "Bu değer alan seçenekleri arasında değil."
 

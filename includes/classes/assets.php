@@ -573,7 +573,6 @@ class Assets {
 
 		$blocks         = Build::data();
 		$blocks_native  = Build::blocks();
-		$ids            = array();
 		$blocks_on_page = array();
 		$asset_ids      = &self::$parsed_asset_ids;
 		$inline_limit   = max( 0, Settings::get_int( 'assets/inlineLimit' ) );
@@ -590,11 +589,12 @@ class Assets {
 		$footer = implode( '', $script_matches[0] );
 		$html   = preg_replace( $script_pattern, '', $html );
 
-		foreach ( $blocks as $block ) {
-			$id    = Block::comment( $block['name'] );
-			$ids[] = $id;
+		$comments = Block::find_comments( $html );
 
-			if ( false !== stripos( $html, $id ) ) {
+		foreach ( $blocks as $block ) {
+			$on_page = isset( $comments[ Block::comment( $block['name'] ) ] );
+
+			if ( $on_page ) {
 				$blocks_on_page[ $block['name'] ] = $blocks_native[ $block['name'] ];
 			}
 
@@ -610,7 +610,7 @@ class Assets {
 				false
 			);
 
-			if ( false === strpos( $html, $id ) && ! $has_global ) {
+			if ( ! $on_page && ! $has_global ) {
 				continue;
 			}
 
@@ -625,7 +625,7 @@ class Assets {
 				}
 
 				$is_global = str_starts_with( $k, 'global' );
-				if ( false === strpos( $html, $id ) && ! $is_global ) {
+				if ( ! $on_page && ! $is_global ) {
 					continue;
 				}
 
@@ -691,7 +691,7 @@ class Assets {
 		$footer = apply_filters( 'blockstudio/render/footer', $footer, $blocks_on_page );
 
 		$output = strtr(
-			str_replace( $ids, '', $html ),
+			Block::strip_comments( $html ),
 			array(
 				'</body>' => $footer . '</body>',
 				'</head>' => $head . '</head>',

@@ -28,6 +28,14 @@ msgid "This storage key is not declared by the block or its extensions."
 msgstr "Furtuun kuusaa kun blockiin yookaan dheeressitoota isaatiin hin ibsamne."
 
 #: includes/classes/block-validator.php
+msgid "This top-level key is not an attribute of the block, so it is ignored."
+msgstr "Furtuun sadarkaa olaanaa kun amala bilookii miti; kanaaf hin ilaalamu."
+
+#: includes/classes/block-validator.php
+msgid "This key is only read inside the blockstudio object, which is missing."
+msgstr "Furtuun kun wanta blockstudio keessa jiru keessatti qofa dubbifama; wanti sun hin jiru."
+
+#: includes/classes/block-validator.php
 msgid "This value is not among the field options."
 msgstr "Gatiin kun filannoowwan dirree keessaa miti."
 

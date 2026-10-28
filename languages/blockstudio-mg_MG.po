@@ -28,6 +28,14 @@ msgid "This storage key is not declared by the block or its extensions."
 msgstr "Tsy voafaritra ao amin'ilay sakana na ny fanitarana azy ity lakilen'ny fitahirizana ity."
 
 #: includes/classes/block-validator.php
+msgid "This top-level key is not an attribute of the block, so it is ignored."
+msgstr "Tsy toetran'ny block ity fanalahidy ambaratonga ambony ity, ka tsy raharahina."
+
+#: includes/classes/block-validator.php
+msgid "This key is only read inside the blockstudio object, which is missing."
+msgstr "Ao anatin'ny zavatra blockstudio ihany no vakina ity fanalahidy ity, nefa tsy hita ilay izy."
+
+#: includes/classes/block-validator.php
 msgid "This value is not among the field options."
 msgstr "Tsy anisan'ny safidin'ity saha ity io sanda io."
 

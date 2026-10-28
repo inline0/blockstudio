@@ -28,6 +28,14 @@ msgid "This storage key is not declared by the block or its extensions."
 msgstr "Dieser Speicherschlüssel ist weder vom Block noch von seinen Erweiterungen definiert."
 
 #: includes/classes/block-validator.php
+msgid "This top-level key is not an attribute of the block, so it is ignored."
+msgstr "Dieser Schlüssel gehört nicht zu den Blockattributen auf oberster Ebene und wird deshalb ignoriert."
+
+#: includes/classes/block-validator.php
+msgid "This key is only read inside the blockstudio object, which is missing."
+msgstr "Dieser Schlüssel wird nur innerhalb des fehlenden blockstudio-Objekts gelesen."
+
+#: includes/classes/block-validator.php
 msgid "This value is not among the field options."
 msgstr "Dieser Wert ist nicht in den Feldoptionen enthalten."
 

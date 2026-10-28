@@ -322,6 +322,29 @@ class BlockTest extends TestCase {
 		$this->assertStringNotContainsString( '<richtext', strtolower( $result ), 'RichText should not appear as raw HTML element' );
 	}
 
+	public function test_replace_custom_tag_reads_single_quoted_attributes(): void {
+		$block = (object) array( 'name' => 'blockstudio/type-text' );
+
+		foreach ( array( '"', "'" ) as $quote ) {
+			$content = "<RichText attribute={$quote}text{$quote} tag={$quote}h2{$quote} class={$quote}heading{$quote} />";
+
+			Block::replace_custom_tag(
+				$content,
+				'',
+				$block,
+				array( 'text' => 'Hello World' ),
+				'RichText',
+				'text'
+			);
+
+			$this->assertSame(
+				'<h2 attribute="text" tag="h2" class="heading">Hello World</h2>',
+				$content,
+				"RichText with {$quote} quotes should render its attribute value"
+			);
+		}
+	}
+
 	public function test_component_cleanup_attribute_detection_ignores_plain_text_substrings(): void {
 		$method = new ReflectionMethod( Block::class, 'content_has_component_cleanup_attribute' );
 		$method->setAccessible( true );

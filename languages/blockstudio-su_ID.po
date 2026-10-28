@@ -28,6 +28,14 @@ msgid "This storage key is not declared by the block or its extensions."
 msgstr "Konci panyimpenan ieu teu ditangtukeun ku blok atawa éksténsina."
 
 #: includes/classes/block-validator.php
+msgid "This top-level key is not an attribute of the block, so it is ignored."
+msgstr "Konci tingkat luhur ieu lain atribut blok, jadi teu dipaliré."
+
+#: includes/classes/block-validator.php
+msgid "This key is only read inside the blockstudio object, which is missing."
+msgstr "Konci ieu ngan dibaca dina objék blockstudio, anu teu aya."
+
+#: includes/classes/block-validator.php
 msgid "This value is not among the field options."
 msgstr "Ieu nilai teu kaasup kana pilihan widang."
 

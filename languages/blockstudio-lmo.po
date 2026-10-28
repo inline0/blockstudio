@@ -28,6 +28,14 @@ msgid "This storage key is not declared by the block or its extensions."
 msgstr "Questa ciav de memorizzazion la minga dichiarada dal blocch o da i sò ampliament."
 
 #: includes/classes/block-validator.php
+msgid "This top-level key is not an attribute of the block, so it is ignored."
+msgstr "Sta ciav a livel principal la fa minga part di atribut del bloc, e la vegn ignorada."
+
+#: includes/classes/block-validator.php
+msgid "This key is only read inside the blockstudio object, which is missing."
+msgstr "Sta ciav la vegn leta doma dent l’oget blockstudio, che al manca."
+
+#: includes/classes/block-validator.php
 msgid "This value is not among the field options."
 msgstr "Questa valur la minga tra i opzion del camp."
 

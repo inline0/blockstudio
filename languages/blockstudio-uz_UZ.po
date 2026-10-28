@@ -28,6 +28,14 @@ msgid "This storage key is not declared by the block or its extensions."
 msgstr "Bu saqlash kaliti blok yoki uning kengaytmalari tomonidan e’lon qilinmagan."
 
 #: includes/classes/block-validator.php
+msgid "This top-level key is not an attribute of the block, so it is ignored."
+msgstr "Bu yuqori darajadagi kalit blok atributi emas, shuning uchun e’tiborga olinmaydi."
+
+#: includes/classes/block-validator.php
+msgid "This key is only read inside the blockstudio object, which is missing."
+msgstr "Bu kalit faqat mavjud bo‘lmagan blockstudio obyekti ichida o‘qiladi."
+
+#: includes/classes/block-validator.php
 msgid "This value is not among the field options."
 msgstr "Bu qiymat maydon variantlari orasida yo‘q."
 

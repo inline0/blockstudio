@@ -28,6 +28,14 @@ msgid "This storage key is not declared by the block or its extensions."
 msgstr "Lohko tai sen laajennukset eivät määritä tätä tallennusavainta."
 
 #: includes/classes/block-validator.php
+msgid "This top-level key is not an attribute of the block, so it is ignored."
+msgstr "Tämä ylimmän tason avain ei ole lohkon ominaisuus, joten se ohitetaan."
+
+#: includes/classes/block-validator.php
+msgid "This key is only read inside the blockstudio object, which is missing."
+msgstr "Tätä avainta luetaan vain blockstudio-objektin sisältä, mutta objekti puuttuu."
+
+#: includes/classes/block-validator.php
 msgid "This value is not among the field options."
 msgstr "Tämä arvo ei kuulu kentän vaihtoehtoihin."
 

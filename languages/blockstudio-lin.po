@@ -28,6 +28,14 @@ msgid "This storage key is not declared by the block or its extensions."
 msgstr "Klé ya ebombeli oyo etángisami te na block to na bilakiseli na yango."
 
 #: includes/classes/block-validator.php
+msgid "This top-level key is not an attribute of the block, so it is ignored."
+msgstr "Fungola oyo ezali na nivo ya likoló ezali attribut ya block te, yango wana etalelami te."
+
+#: includes/classes/block-validator.php
+msgid "This key is only read inside the blockstudio object, which is missing."
+msgstr "Fungola oyo etángamaka kaka na kati ya eloko ya blockstudio, oyo ezali te."
+
+#: includes/classes/block-validator.php
 msgid "This value is not among the field options."
 msgstr "Motuya oyo ezali na kati ya ba options ya champ te."
 

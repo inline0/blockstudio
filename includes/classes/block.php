@@ -8,6 +8,7 @@
 namespace Blockstudio;
 
 use DOMDocument;
+use DOMElement;
 use ErrorException;
 use Throwable;
 use Timber\Timber;
@@ -51,6 +52,16 @@ use WP_HTML_Tag_Processor;
  * @since 2.4.0
  */
 class Block {
+
+	/**
+	 * Shape of the identity comment comment() emits, without a registered name.
+	 *
+	 * The name stops at the next angle bracket, so a comment that was never
+	 * closed cannot swallow the registered one that follows it.
+	 *
+	 * @var string
+	 */
+	private const COMMENT_PATTERN = '/<!--blockstudio\/[^<>]*-->/';
 
 	/**
 	 * Global HTML attributes a block forwards to its root element when it does
@@ -165,10 +176,44 @@ class Block {
 		$comments = array();
 
 		foreach ( Build::data() as $block ) {
-			$comments[] = self::comment( $block['name'] );
+			$comments[ self::comment( $block['name'] ) ] = true;
 		}
 
-		return str_replace( $comments, '', $html );
+		return preg_replace_callback(
+			self::COMMENT_PATTERN,
+			static fn( array $match ): string => isset( $comments[ $match[0] ] ) ? '' : $match[0],
+			$html
+		) ?? str_replace( array_keys( $comments ), '', $html );
+	}
+
+	/**
+	 * Find the block identity comments present in rendered HTML.
+	 *
+	 * Reads the HTML once instead of searching it for every registered block.
+	 * Anything shaped like a block comment is returned, registered or not, so
+	 * callers compare the result against comment() for the blocks they know.
+	 *
+	 * @since 7.7.11
+	 * @internal
+	 *
+	 * @param string $html The rendered HTML.
+	 *
+	 * @return array<string, int> The distinct comments found, as keys.
+	 */
+	public static function find_comments( string $html ): array {
+		if ( false === preg_match_all( self::COMMENT_PATTERN, $html, $found ) ) {
+			// Preserve asset detection when a host's PCRE limits reject the page.
+			$comments = array();
+			foreach ( Build::data() as $block ) {
+				$comment = self::comment( $block['name'] );
+				if ( false !== strpos( $html, $comment ) ) {
+					$comments[ $comment ] = 0;
+				}
+			}
+			return $comments;
+		}
+
+		return array_flip( $found[0] );
 	}
 
 	/**
@@ -452,39 +497,13 @@ class Block {
 		$tag,
 		$type
 	) {
-		$regex =
-			'InnerBlocks' !== $type
-				? '/<' .
-					preg_quote( $tag, '/' ) .
-					'(?=[^>]*(\battribute=["\']' .
-					preg_quote( $type, '/' ) .
-					'["\']))\s*(.*?)\s*\/?>/s'
-				: '/<' . preg_quote( $tag, '/' ) . '\s*(.*?)\s*\/?>/s';
+		$regex = self::component_tag_pattern( $tag, 'InnerBlocks' === $type ? null : $type );
 
-		$replace = str_replace( '$', '\$', $replace );
-		preg_match( $regex, $content, $matches );
-
-		$has_match = count( $matches ) >= 2;
+		$replace   = str_replace( '$', '\$', $replace );
+		$has_match = 1 === preg_match( $regex, $content, $matches );
 
 		if ( $has_match ) {
-			$attribute_map = array();
-			$attributes    =
-				'InnerBlocks' === $tag
-					? $matches[1] ?? $matches[2]
-					: $matches[2] ?? $matches[1];
-
-			$attributes = str_replace( array( '"', '"' ), '"', $attributes );
-
-			$pattern =
-				'/([a-zA-Z_][a-zA-Z0-9\-_:.]*)(?:\s*=\s*(?:"([^"]*)"|\'([^\']*)\'|([^ \/>]+)))?/';
-
-			preg_match_all( $pattern, $attributes, $matches, PREG_SET_ORDER );
-
-			foreach ( $matches as $match ) {
-				$attr_name                   = $match[1];
-				$attr_value                  = $match[2] ?? ( $match[3] ?? ( $match[4] ?? true ) );
-				$attribute_map[ $attr_name ] = $attr_value;
-			}
+			$attribute_map = self::component_attributes( $matches[1] );
 
 			$attr_key  = $attribute_map['attribute'] ?? null;
 			$attribute = null;
@@ -656,18 +675,23 @@ class Block {
 			return self::mark_block_props_roots( $content );
 		}
 
-		self::replace_custom_tag(
-			$content,
-			$inner_blocks,
-			$block,
-			$attributes,
-			'InnerBlocks',
-			'InnerBlocks'
-		);
+		if ( false !== strpos( $content, '<InnerBlocks' ) ) {
+			self::replace_custom_tag(
+				$content,
+				$inner_blocks,
+				$block,
+				$attributes,
+				'InnerBlocks',
+				'InnerBlocks'
+			);
+		}
+
+		$rich_text_ids = self::rich_text_attribute_ids( $content );
 
 		foreach ( $block->attributes ?? array() as $attribute ) {
 			if (
 				isset( $attribute['id'] ) &&
+				isset( $rich_text_ids[ $attribute['id'] ] ) &&
 				isset( $attribute['type'] ) &&
 				'richtext' !== $attribute['type']
 			) {
@@ -683,22 +707,9 @@ class Block {
 		}
 
 		if ( false !== strpos( $content, '<RichText' ) ) {
-			preg_match_all(
-				'/<RichText\s+[^>]*attribute=["\']([^"\']*\[[^"\']*)["\'][^>]*\/?>/s',
-				$content,
-				$remaining_rich_texts
-			);
-
-			if ( ! empty( $remaining_rich_texts[1] ) ) {
-				foreach ( $remaining_rich_texts[1] as $rich_text_path ) {
-					self::replace_custom_tag(
-						$content,
-						$inner_blocks,
-						$block,
-						$attributes,
-						'RichText',
-						$rich_text_path
-					);
+			foreach ( array_keys( self::rich_text_attribute_ids( $content ) ) as $rich_text_path ) {
+				if ( false !== strpos( (string) $rich_text_path, '[' ) ) {
+					self::replace_custom_tag( $content, $inner_blocks, $block, $attributes, 'RichText', $rich_text_path );
 				}
 			}
 		}
@@ -738,8 +749,13 @@ class Block {
 				)
 			);
 			libxml_clear_errors();
-			$elements = $doc->getElementsByTagName( '*' );
+			$cleanup_names = array_flip( array_map( 'strtolower', $attributes_to_remove ) );
+			$elements      = $doc->getElementsByTagName( '*' );
 			foreach ( $elements as $element ) {
+				if ( ! self::has_any_attribute( $element, $cleanup_names ) ) {
+					continue;
+				}
+
 				if ( $element->hasAttribute( 'useblockprops' ) ) {
 					// Keep the legacy value on input and textarea elements, which bypass cleanup.
 					$element->setAttribute( 'useblockprops', 'true' );
@@ -816,6 +832,98 @@ class Block {
 		}
 
 		return $content;
+	}
+
+	/**
+	 * Collect the attribute ids that RichText tags in the content name.
+	 *
+	 * Lets the caller replace only the RichText tags the markup contains
+	 * instead of running one search per field of the block.
+	 *
+	 * @since 7.7.11
+	 *
+	 * @param string $content Rendered content.
+	 *
+	 * @return array<string, int> The attribute values, as keys.
+	 */
+	private static function rich_text_attribute_ids( string $content ): array {
+		$ids = array();
+
+		if ( false === strpos( $content, '<RichText' ) ) {
+			return $ids;
+		}
+
+		if ( false === preg_match_all( self::component_tag_pattern( 'RichText' ), $content, $tags ) ) {
+			return $ids;
+		}
+
+		foreach ( $tags[1] as $tag ) {
+			$attributes = self::component_attributes( $tag );
+			if ( is_string( $attributes['attribute'] ?? null ) ) {
+				$ids[ $attributes['attribute'] ] = 1;
+			}
+		}
+
+		return $ids;
+	}
+
+	/**
+	 * Match component tags without treating quoted angle brackets as tag ends.
+	 *
+	 * @param string      $tag          Component tag name.
+	 * @param string|null $attribute_id Optional field selector to match.
+	 * @return string The pattern with the tag's attributes in capture group one.
+	 */
+	private static function component_tag_pattern( string $tag, ?string $attribute_id = null ): string {
+		$attributes = '[^\'">]*(?:(?:"[^"]*"|\'[^\']*\')[^\'">]*)*';
+		$selector   = '';
+		if ( null !== $attribute_id ) {
+			$id       = preg_quote( $attribute_id, '/' );
+			$selector = '(?=' . $attributes . '\sattribute\s*=\s*(?:"' . $id . '"|\'' . $id . '\'|' . $id . '(?=[\s\/>])))';
+		}
+
+		return '/<' . preg_quote( $tag, '/' ) . '(?=[\s\/>])' . $selector . '\s*(' . $attributes . ')\s*\/?>/s';
+	}
+
+	/**
+	 * Keep component replacement and its field pre-scan on the same parser.
+	 *
+	 * @param string $attributes Component attribute markup.
+	 * @return array<string, string|true> Parsed attributes.
+	 */
+	private static function component_attributes( string $attributes ): array {
+		$pattern = '/([a-zA-Z_][a-zA-Z0-9\-_:.]*)(?:\s*=\s*(?:"([^"]*)"|\'([^\']*)\'|([^ \/>]+)))?/';
+		// Empty quoted values must differ from unmatched quote alternatives.
+		preg_match_all( $pattern, $attributes, $matches, PREG_SET_ORDER | PREG_UNMATCHED_AS_NULL );
+		$parsed = array();
+		foreach ( $matches as $match ) {
+			$parsed[ $match[1] ] = $match[2] ?? $match[3] ?? $match[4] ?? true;
+		}
+		return $parsed;
+	}
+
+	/**
+	 * Check whether a DOM element has at least one of the given attributes.
+	 *
+	 * @since 7.7.11
+	 *
+	 * @param DOMElement        $element The element.
+	 * @param array<string,int> $names   Lowercase attribute names, as keys.
+	 *
+	 * @return bool Whether one of the attributes is set.
+	 */
+	private static function has_any_attribute( DOMElement $element, array $names ): bool {
+		if ( ! $element->hasAttributes() ) {
+			return false;
+		}
+
+		foreach ( $element->attributes as $attribute ) {
+			if ( isset( $names[ $attribute->name ] ) ) {
+				return true;
+			}
+		}
+
+		return false;
 	}
 
 	/**

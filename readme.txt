@@ -3,7 +3,7 @@ Contributors: dnnsjsk
 Requires at least: 6.7
 Tested up to: 7.0.0
 Requires PHP: 8.2
-Stable tag: 7.7.10
+Stable tag: 7.7.11
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -53,6 +53,11 @@ Download the latest release zip from [GitHub Releases](https://github.com/inline
 * [Getting Started](https://blockstudio.dev/docs/getting-started)
 
 == Changelog ==
+
+= 7.7.11 =
+* Performance: frontend asset and component processing avoids repeated full-markup searches for every registered block and field (#193)
+* New: saved-value validation reports unknown top-level attributes and misplaced values missing the blockstudio wrapper without changing stored content (#194)
+* Fix: RichText and InnerBlocks component tags preserve single-quoted, unquoted, empty, and boolean attributes, including nested RichText field paths (#195)
 
 = 7.7.10 =
 * Fix: field schemas and TypeScript definitions include the supported radio, checkbox, code, WYSIWYG, repeater, color, and gradient options (#191)

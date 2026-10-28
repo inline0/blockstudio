@@ -28,6 +28,14 @@ msgid "This storage key is not declared by the block or its extensions."
 msgstr "Ta depozita klefo ne esas deklarita da la bloko o lua extensuri."
 
 #: includes/classes/block-validator.php
+msgid "This top-level key is not an attribute of the block, so it is ignored."
+msgstr "Ca klavo ye la maxim alta nivelo ne esas atributo di la bloko, do ol esas ignorata."
+
+#: includes/classes/block-validator.php
+msgid "This key is only read inside the blockstudio object, which is missing."
+msgstr "Ca klavo esas lektata nur interne di la objekto blockstudio, qua mankas."
+
+#: includes/classes/block-validator.php
 msgid "This value is not among the field options."
 msgstr "Ta valoro ne esas inter la opzioni di la kampo."
 

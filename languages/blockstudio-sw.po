@@ -28,6 +28,14 @@ msgid "This storage key is not declared by the block or its extensions."
 msgstr "Ufunguo huu wa hifadhi haujatangazwa na bloku au viendelezi vyake."
 
 #: includes/classes/block-validator.php
+msgid "This top-level key is not an attribute of the block, so it is ignored."
+msgstr "Ufunguo huu wa kiwango cha juu si sifa ya kizuizi, kwa hivyo unapuuziwa."
+
+#: includes/classes/block-validator.php
+msgid "This key is only read inside the blockstudio object, which is missing."
+msgstr "Ufunguo huu husomwa tu ndani ya kitu cha blockstudio, ambacho hakipo."
+
+#: includes/classes/block-validator.php
 msgid "This value is not among the field options."
 msgstr "Thamani hii haipo kwenye chaguo za sehemu."
 

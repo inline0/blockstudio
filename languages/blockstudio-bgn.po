@@ -28,6 +28,14 @@ msgid "This storage key is not declared by the block or its extensions."
 msgstr "اے ذخیرہ ءِ کلی هچ بلاک یا ءِ گڈیانی طرف ءَ بیان نہ بوتگ۔"
 
 #: includes/classes/block-validator.php
+msgid "This top-level key is not an attribute of the block, so it is ignored."
+msgstr "ای سرِ کلید بلاک ءِ صفت نہ اِنت، اے نادیده کننگ بیت۔"
+
+#: includes/classes/block-validator.php
+msgid "This key is only read inside the blockstudio object, which is missing."
+msgstr "ای کلید فقط blockstudio آبجیکٹ ءَ اندر خوانگ بیت، کہ اے موجود نہ اِنت۔"
+
+#: includes/classes/block-validator.php
 msgid "This value is not among the field options."
 msgstr "اے ارز فیلڈ ءِ اختیارانی منج ءَ نیست۔"
 

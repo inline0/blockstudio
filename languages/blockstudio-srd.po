@@ -28,6 +28,14 @@ msgid "This storage key is not declared by the block or its extensions."
 msgstr "Custa crae de archiviazione non est declarada dae su blocu o dae sas estensiones suas."
 
 #: includes/classes/block-validator.php
+msgid "This top-level key is not an attribute of the block, so it is ignored."
+msgstr "Custa crae de livellu superióre no est un'attributu de su blocu, duncas benit ignorada."
+
+#: includes/classes/block-validator.php
+msgid "This key is only read inside the blockstudio object, which is missing."
+msgstr "Custa crae benit lèghida isceti intro de s'oggetu blockstudio, chi mancat."
+
+#: includes/classes/block-validator.php
 msgid "This value is not among the field options."
 msgstr "Custa balore non est intre sas optziones de su campu."
 

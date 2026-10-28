@@ -28,6 +28,14 @@ msgid "This storage key is not declared by the block or its extensions."
 msgstr "Ин калиди нигоҳдорӣ аз ҷониби блок ё васеъкуниҳои он эълон нашудааст."
 
 #: includes/classes/block-validator.php
+msgid "This top-level key is not an attribute of the block, so it is ignored."
+msgstr "Ин калиди сатҳи болоӣ атрибути блок нест, бинобар ин нодида гирифта мешавад."
+
+#: includes/classes/block-validator.php
+msgid "This key is only read inside the blockstudio object, which is missing."
+msgstr "Ин калид танҳо дар дохили объекти blockstudio хонда мешавад, ки мавҷуд нест."
+
+#: includes/classes/block-validator.php
 msgid "This value is not among the field options."
 msgstr "Ин қимат дар байни имконоти майдон нест."
 

@@ -28,6 +28,14 @@ msgid "This storage key is not declared by the block or its extensions."
 msgstr "N’eo ket termenet an alc’hwez stokañ-mañ gant ar bloc’h pe gant e astennadoù."
 
 #: includes/classes/block-validator.php
+msgid "This top-level key is not an attribute of the block, so it is ignored."
+msgstr "N'eo ket an alc'hwez-mañ ur perzh eus ar bloc'h e live uhelañ, neuze e vez lezet a-gostez."
+
+#: includes/classes/block-validator.php
+msgid "This key is only read inside the blockstudio object, which is missing."
+msgstr "Lennet e vez an alc'hwez-mañ hepken e-barzh an ergorenn blockstudio, hag a vank."
+
+#: includes/classes/block-validator.php
 msgid "This value is not among the field options."
 msgstr "N’emañ ket ar werzh-mañ e-touez dibarzhioù ar maezienn."
 

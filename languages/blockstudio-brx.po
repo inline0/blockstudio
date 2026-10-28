@@ -28,6 +28,14 @@ msgid "This storage key is not declared by the block or its extensions."
 msgstr "बे स्टरेज कि-बो ब्लक एबा बेनि एक्सटेन्सनफोरा फोसावाखै।"
 
 #: includes/classes/block-validator.php
+msgid "This top-level key is not an attribute of the block, so it is ignored."
+msgstr "बे top-level key आ ब्लकनि attribute नङा, बेखायनो बेखौ इग्नोर खालामो।"
+
+#: includes/classes/block-validator.php
+msgid "This key is only read inside the blockstudio object, which is missing."
+msgstr "बे key खौल' blockstudio object नि सिङावनो फरायो, जाय गैया।"
+
+#: includes/classes/block-validator.php
 msgid "This value is not among the field options."
 msgstr "बे बेसेदआ फील्डनि अप्सनफोरनि गेजेराव गैया।"
 

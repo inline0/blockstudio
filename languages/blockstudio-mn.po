@@ -28,6 +28,14 @@ msgid "This storage key is not declared by the block or its extensions."
 msgstr "Энэ хадгалалтын түлхүүрийг блок эсвэл түүний өргөтгөлүүд зарлаагүй байна."
 
 #: includes/classes/block-validator.php
+msgid "This top-level key is not an attribute of the block, so it is ignored."
+msgstr "Энэ дээд түвшний түлхүүр нь блокийн атрибут биш тул үл тоомсорлоно."
+
+#: includes/classes/block-validator.php
+msgid "This key is only read inside the blockstudio object, which is missing."
+msgstr "Энэ түлхүүрийг зөвхөн байхгүй байгаа blockstudio объект дотор уншдаг."
+
+#: includes/classes/block-validator.php
 msgid "This value is not among the field options."
 msgstr "Энэ утга талбарын сонголтуудад байхгүй байна."
 
