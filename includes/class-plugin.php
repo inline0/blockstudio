@@ -177,6 +177,8 @@ class Plugin {
 		require_once $classes_dir . 'translations.php';
 
 		require_once $classes_dir . 'page-markdown.php';
+		require_once $classes_dir . 'page-paths.php';
+		require_once $classes_dir . 'page-renderers.php';
 		require_once $classes_dir . 'page-discovery.php';
 		require_once $classes_dir . 'page-registry.php';
 
@@ -212,6 +214,7 @@ class Plugin {
 		require_once $classes_dir . 'block-merger.php';
 		require_once $classes_dir . 'page-sync.php';
 		require_once $classes_dir . 'pages.php';
+		require_once $classes_dir . 'page-component.php';
 
 		require_once $classes_dir . 'pattern-discovery.php';
 		require_once $classes_dir . 'pattern-registry.php';
@@ -277,6 +280,8 @@ class Plugin {
 			},
 			1
 		);
+
+		add_action( 'init', array( Page_Component::class, 'register' ) );
 
 		add_action(
 			'init',

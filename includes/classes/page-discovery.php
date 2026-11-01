@@ -72,6 +72,13 @@ class Page_Discovery {
 	private array $logical_paths = array();
 
 	/**
+	 * Canonical filesystem paths computed during discovery.
+	 *
+	 * @var array<string, string>
+	 */
+	private static array $canonical_paths = array();
+
+	/**
 	 * Discover pages in a directory path.
 	 *
 	 * @param string|Discovery_Source $base_path Absolute path or logical discovery source.
@@ -79,19 +86,22 @@ class Page_Discovery {
 	 * @return array<string, array> Array of discovered page definitions.
 	 */
 	public function discover( string|Discovery_Source $base_path ): array {
-		$this->pages       = array();
-		$this->collections = array();
-		$this->errors      = array();
-		$this->path_index  = array();
-		$this->source      = is_string( $base_path )
+		$this->pages           = array();
+		$this->collections     = array();
+		$this->errors          = array();
+		$this->path_index      = array();
+		self::$canonical_paths = array();
+		$this->source          = is_string( $base_path )
 			? Discovery_Sources::for_path( 'pages', $base_path )
 			: $base_path;
 		$this->index_source_paths();
+		Page_Renderers::load();
 
 		$base_path           = self::normalize_filesystem_path( $this->source->root() );
 		$this->discover_base = $base_path;
 		$collection_roots    = array();
 		$claimed_roots       = array();
+		$site_collections    = array();
 		$manifest_entries    = self::find_manifest_entries( $this->source );
 
 		foreach ( $manifest_entries as $manifest_entry ) {
@@ -129,11 +139,25 @@ class Page_Discovery {
 				continue;
 			}
 
+			if ( ! empty( $collection['layout_conflict'] ) ) {
+				$this->add_layout_conflict_error( $collection['root'] );
+			}
+
 			$this->collections[ $collection['slug'] ] = $collection;
 			$collection_roots[]                       = $collection['logical_root'];
-			$claimed_roots[]                          = $collection['logical_root'];
+
+			if ( self::is_site_scope( $collection ) ) {
+				$site_collections[] = $collection;
+				continue;
+			}
+
+			$claimed_roots[] = $collection['logical_root'];
 
 			$this->discover_collection( $collection );
+		}
+
+		foreach ( $site_collections as $collection ) {
+			$this->discover_site_collection( $collection, $collection_roots );
 		}
 
 		$this->discover_legacy_pages( $base_path, $collection_roots );
@@ -179,7 +203,10 @@ class Page_Discovery {
 			}
 
 			$collections[ $collection['slug'] ] = $collection;
-			$claimed_roots[]                    = $collection['logical_root'];
+
+			if ( ! self::is_site_scope( $collection ) ) {
+				$claimed_roots[] = $collection['logical_root'];
+			}
 		}
 
 		return $collections;
@@ -326,6 +353,61 @@ class Page_Discovery {
 	}
 
 	/**
+	 * Discover the pages of a site collection.
+	 *
+	 * A site collection groups the standalone pages below its manifest. Its
+	 * pages keep the keys, logical paths, source identities and nearest
+	 * layouts they have without a manifest, so adopting one never re-keys or
+	 * re-creates posts. Collections nested below it keep their own manifests
+	 * and their subtrees are skipped here.
+	 *
+	 * @param array $collection       Site collection data.
+	 * @param array $collection_roots Logical roots of every discovered collection.
+	 *
+	 * @return void
+	 */
+	private function discover_site_collection( array $collection, array $collection_roots ): void {
+		$logical_root = (string) $collection['logical_root'];
+		$excluded     = array_values(
+			array_filter(
+				$collection_roots,
+				static fn( mixed $root ): bool => is_string( $root )
+					&& $root !== $logical_root
+					&& self::is_same_or_inside_logical_path( $root, $logical_root )
+			)
+		);
+
+		foreach ( $this->source?->entries( $logical_root ) ?? array() as $entry ) {
+			$file_path    = self::normalize_filesystem_path( $entry->physical_path() );
+			$logical_path = $entry->logical_path();
+
+			if ( array() !== $excluded && self::is_inside_any_logical_path( $logical_path, $excluded ) ) {
+				continue;
+			}
+
+			$basename = basename( $logical_path );
+
+			if ( 'page.json' === $basename ) {
+				$page_data = $this->process_page_json( $file_path, $this->discover_base, $collection, array(), array(), $logical_path, '' );
+
+				if ( $page_data ) {
+					$this->register_page_data( $page_data );
+				}
+
+				continue;
+			}
+
+			if ( 'index.md' === $basename && ! $this->resolve_logical_sibling( $logical_path, 'page.json' ) ) {
+				$page_data = $this->process_markdown_file( $file_path, $this->discover_base, $collection, true, array(), array(), $logical_path, '' );
+
+				if ( $page_data ) {
+					$this->register_page_data( $page_data );
+				}
+			}
+		}
+	}
+
+	/**
 	 * Discover original non-collection page.json pages.
 	 *
 	 * @param string $base_path        Base path.
@@ -391,11 +473,6 @@ class Page_Discovery {
 		$template_path = $this->find_template( $directory, $logical_dir );
 		$content_type  = $this->detect_content_type( $template_path, $page_json );
 
-		if ( ! $template_path && ! isset( $page_json['markdown'], $page_json['html'] ) ) {
-			$this->add_error( 'missing_template', 'Page source has no supported template or content.', array( 'path' => $json_path ) );
-			return null;
-		}
-
 		if ( $template_path && 'markdown' === $content_type ) {
 			// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Reading local markdown file.
 			$markdown_content = file_get_contents( $template_path );
@@ -409,10 +486,22 @@ class Page_Discovery {
 			}
 		}
 
+		$render = $this->resolve_page_render( $page_json, $collection, $directory, $logical_dir, $json_path, array( 'path' => $json_path ) );
+
+		if ( false === $render ) {
+			return null;
+		}
+
+		if ( null === $render && ! $template_path && ! isset( $page_json['markdown'], $page_json['html'] ) ) {
+			$this->add_error( 'missing_template', 'Page source has no supported template or content.', array( 'path' => $json_path ) );
+			return null;
+		}
+
+		$grouped      = self::is_grouped( $collection );
 		$relative_dir = null !== $logical_path
 			? self::relative_logical_path( $logical_base, $logical_dir )
 			: self::relative_path( $base_path, $directory );
-		$raw_path     = $page_json['path'] ?? ( $collection ? ( '' === $relative_dir ? '.' : $relative_dir ) : ( $page_json['slug'] ?? $relative_dir ) );
+		$raw_path     = $page_json['path'] ?? ( $grouped ? ( '' === $relative_dir ? '.' : $relative_dir ) : ( $page_json['slug'] ?? $relative_dir ) );
 		$path         = self::normalize_logical_path( $raw_path );
 
 		if ( null === $path ) {
@@ -432,7 +521,7 @@ class Page_Discovery {
 		$preserve_name = empty( $loader_context['prefix'] ) || ! empty( $loader_context['preserveNames'] );
 		$name          = $preserve_name && isset( $page_json['name'] ) && is_scalar( $page_json['name'] )
 			? sanitize_key( (string) $page_json['name'] )
-			: self::name_from_path( $path, $collection['slug'] ?? null );
+			: self::name_from_path( $path, $grouped ? ( $collection['slug'] ?? null ) : null );
 
 		if ( '' === $name ) {
 			$this->add_error( 'missing_name', 'Page has no valid name.', array( 'path' => $json_path ) );
@@ -457,8 +546,9 @@ class Page_Discovery {
 				'logical_path'       => $logical_path,
 				'source_id'          => $this->source?->id() ?? '',
 				'provenance'         => null !== $logical_path ? ( $this->source?->resolve( $logical_path )?->provenance() ?? array() ) : array(),
-				'source_path'        => $collection ? $this->collection_source_path( $collection, '' !== $relative_dir ? $relative_dir : basename( $logical_path ?? $json_path ), $loader_context ) : $relative_dir,
+				'source_path'        => $grouped ? $this->collection_source_path( $collection, '' !== $relative_dir ? $relative_dir : basename( $logical_path ?? $json_path ), $loader_context ) : $relative_dir,
 				'collection_data'    => $collection,
+				'render'             => $render,
 				'source_mtime_paths' => array_values(
 					array_filter(
 						array_merge(
@@ -472,14 +562,24 @@ class Page_Discovery {
 			$collection
 		);
 
+		$inline_type = null;
+
 		if ( ! empty( $page_json['markdown'] ) && is_string( $page_json['markdown'] ) ) {
 			$page_data['inline_content']   = $page_json['markdown'];
-			$page_data['contentType']      = 'markdown';
 			$page_data['sanitize_content'] = true;
+			$inline_type                   = 'markdown';
 		} elseif ( ! empty( $page_json['html'] ) && is_string( $page_json['html'] ) ) {
 			$page_data['inline_content']   = $page_json['html'];
-			$page_data['contentType']      = 'html';
 			$page_data['sanitize_content'] = true;
+			$inline_type                   = 'html';
+		}
+
+		if ( null !== $inline_type ) {
+			if ( 'component' === $page_data['contentType'] ) {
+				$page_data['slot_content_type'] = $inline_type;
+			} else {
+				$page_data['contentType'] = $inline_type;
+			}
 		}
 
 		return $page_data;
@@ -527,6 +627,7 @@ class Page_Discovery {
 		$default_path = $is_index ? ( '' === $relative_dir ? '.' : $relative_dir ) : preg_replace( '/\.md$/i', '', $relative );
 		$raw_path     = $frontmatter['path'] ?? $default_path;
 		$path         = self::normalize_logical_path( $raw_path );
+		$grouped      = self::is_grouped( $collection );
 
 		if ( null === $path ) {
 			$this->add_error(
@@ -545,9 +646,15 @@ class Page_Discovery {
 		$preserve_name = empty( $loader_context['prefix'] ) || ! empty( $loader_context['preserveNames'] );
 		$name          = $preserve_name && isset( $frontmatter['name'] ) && is_scalar( $frontmatter['name'] )
 			? sanitize_key( (string) $frontmatter['name'] )
-			: self::name_from_path( $path, $collection['slug'] ?? null );
+			: self::name_from_path( $path, $grouped ? ( $collection['slug'] ?? null ) : null );
 
 		if ( '' === $name ) {
+			return null;
+		}
+
+		$render = $this->resolve_page_render( $frontmatter, $is_index ? $collection : null, $directory, $logical_dir, $markdown_path, array( 'path' => $markdown_path ) );
+
+		if ( false === $render ) {
 			return null;
 		}
 
@@ -570,8 +677,9 @@ class Page_Discovery {
 				'logical_path'       => $logical_path,
 				'source_id'          => $this->source?->id() ?? '',
 				'provenance'         => null !== $logical_path ? ( $this->source?->resolve( $logical_path )?->provenance() ?? array() ) : array(),
-				'source_path'        => $collection ? $this->collection_source_path( $collection, $relative, $loader_context ) : ( '' === $relative_dir ? $name : $relative_dir ),
+				'source_path'        => $grouped ? $this->collection_source_path( $collection, $relative, $loader_context ) : ( '' === $relative_dir ? $name : $relative_dir ),
 				'collection_data'    => $collection,
+				'render'             => $render,
 				'source_mtime_paths' => array_values(
 					array_filter(
 						array_merge(
@@ -702,7 +810,26 @@ class Page_Discovery {
 			}
 		}
 
-		if ( null === $content_type ) {
+		$render = $this->resolve_page_render(
+			$loader_page,
+			$collection,
+			(string) $collection['root'],
+			(string) ( $collection['logical_root'] ?? '' ),
+			$loader_path,
+			array_merge(
+				$loader_page,
+				array(
+					'loader_path' => $loader_path,
+					'path_type'   => 'render',
+				)
+			)
+		);
+
+		if ( false === $render ) {
+			return null;
+		}
+
+		if ( null === $content_type && null === $render ) {
 			$this->add_error(
 				'invalid_loader_content',
 				'Loader page has no supported content.',
@@ -735,6 +862,7 @@ class Page_Discovery {
 				'directory'          => $template_path ? dirname( $template_path ) : $collection['root'],
 				'source_path'        => $collection['slug'] . '/loader.php:' . $name,
 				'collection_data'    => $collection,
+				'render'             => $render,
 				'content'            => $inline,
 				'inline_content'     => $inline,
 				'generated'          => $loader_page['generated'] ?? true,
@@ -1087,15 +1215,25 @@ class Page_Discovery {
 		$page_data = array_merge( $page_data, $overrides );
 
 		$collection_slug = $collection['slug'] ?? null;
+		$grouped         = self::is_grouped( $collection );
 		$name            = (string) $page_data['name'];
 		$path            = (string) $page_data['path'];
 
 		if ( empty( $page_data['slug'] ) ) {
-			if ( null !== $collection && ! $this->collection_uses_hierarchical_post_type( $collection ) && false !== strpos( $path, '/' ) ) {
+			if ( $grouped && ! $this->collection_uses_hierarchical_post_type( $collection ) && false !== strpos( $path, '/' ) ) {
 				$page_data['slug'] = str_replace( '/', '-', $path );
 			} else {
-				$page_data['slug'] = '.' === $path ? ( $collection_slug ?? $name ) : basename( $path );
+				$page_data['slug'] = '.' === $path ? ( $grouped ? $collection_slug : $name ) : basename( $path );
 			}
+		}
+
+		if ( isset( $page_data['render'] ) && is_array( $page_data['render'] ) ) {
+			$has_slot                       = ! empty( $page_data['template_path'] ) || isset( $page_data['inline_content'] );
+			$page_data['slot_content_type'] = $has_slot && is_string( $page_data['contentType'] ?? null ) ? $page_data['contentType'] : null;
+			$page_data['slot_path']         = is_string( $page_data['template_path'] ?? null ) ? $page_data['template_path'] : null;
+			$page_data['contentType']       = 'component';
+		} else {
+			unset( $page_data['render'] );
 		}
 
 		$page_data['slug'] = sanitize_title( (string) $page_data['slug'] );
@@ -1107,19 +1245,25 @@ class Page_Discovery {
 		$page_data['postType']    = sanitize_key( (string) ( $page_data['postType'] ?? 'page' ) );
 		$page_data['postStatus']  = sanitize_key( (string) ( $page_data['postStatus'] ?? 'draft' ) );
 		$page_data['collection']  = $collection_slug;
-		$page_data['key']         = self::page_key( $collection_slug, $name );
+		$page_data['key']         = self::page_key( $grouped ? $collection_slug : null, $name );
 		$page_data['is_twig']     = 'twig' === $page_data['contentType'];
 		$page_data['is_blade']    = 'blade' === $page_data['contentType'];
 		$page_data['is_markdown'] = 'markdown' === $page_data['contentType'];
 		$page_data['generated']   = (bool) ( $page_data['generated'] ?? false );
 		if ( null !== $collection ) {
+			$page_data['collection_scope'] = $grouped ? 'collection' : 'site';
+		}
+		if ( $grouped ) {
 			$page_data['layout_path'] = $collection['layout_path'] ?? null;
 		} else {
 			$directory                = isset( $page_data['directory'] ) && is_string( $page_data['directory'] ) ? $page_data['directory'] : '';
 			$logical_directory        = isset( $page_data['logical_directory'] ) && is_string( $page_data['logical_directory'] ) ? $page_data['logical_directory'] : null;
 			$page_data['layout_path'] = '' !== $directory ? $this->find_nearest_layout( $directory, $logical_directory ) : null;
 		}
-		$page_data['paths'] = array(
+		$page_data['layout_renderer'] = is_string( $page_data['layout_path'] ) && 'layout.php' !== basename( $page_data['layout_path'] )
+			? Page_Renderers::for_layout( $page_data['layout_path'] )
+			: null;
+		$page_data['paths']           = array(
 			'base'       => $collection['base_path'] ?? null,
 			'collection' => $collection['root'] ?? null,
 			'source'     => $page_data['template_path'] ?? $page_data['json_path'] ?? null,
@@ -1160,7 +1304,7 @@ class Page_Discovery {
 
 		if ( '' !== (string) $path ) {
 			if ( isset( $this->path_index[ $collection ][ $path ] ) ) {
-				if ( '' !== (string) $collection ) {
+				if ( '' !== (string) $collection && ! $this->is_site_collection( (string) $collection ) ) {
 					$this->add_error(
 						'duplicate_path',
 						'Duplicate collection page path.',
@@ -1191,7 +1335,7 @@ class Page_Discovery {
 			$collection = $page['collection'] ?? null;
 			$path       = $page['path'] ?? '.';
 
-			if ( ! $collection || '.' === $path || false === strpos( $path, '/' ) ) {
+			if ( ! $collection || '.' === $path || false === strpos( $path, '/' ) || $this->is_site_collection( (string) $collection ) ) {
 				continue;
 			}
 
@@ -1274,7 +1418,7 @@ class Page_Discovery {
 
 			if ( false !== strpos( $path, '/' ) ) {
 				$parent_path = dirname( $path );
-			} elseif ( '' !== $collection && isset( $this->path_index[ $collection ]['.'] ) ) {
+			} elseif ( '' !== $collection && ! $this->is_site_collection( $collection ) && isset( $this->path_index[ $collection ]['.'] ) ) {
 				$parent_path = '.';
 			}
 
@@ -1431,7 +1575,12 @@ class Page_Discovery {
 
 		$real            = self::normalize_filesystem_path( $real );
 		$collection_root = self::normalize_filesystem_path( $collection_root );
-		$allowed         = self::is_same_or_inside_path( $real, $collection_root );
+		$relative        = self::relative_inside( $collection_root, $real );
+		$allowed         = null !== $relative;
+
+		if ( null !== $relative ) {
+			$real = '' === $relative ? $collection_root : $collection_root . '/' . $relative;
+		}
 
 		/**
 		 * Filter whether a loader source path outside its collection root is allowed.
@@ -1444,6 +1593,226 @@ class Page_Discovery {
 		$allowed = (bool) apply_filters( 'blockstudio/pages/allow_external_loader_path', $allowed, $real, $collection_root, $loader_page );
 
 		return $allowed ? $real : null;
+	}
+
+	/**
+	 * Resolve the render definition of one page.
+	 *
+	 * An explicit `render` (string shorthand or `{entry, data, renderer}`) must
+	 * resolve, or discovery reports an error. A collection default applies only
+	 * when its entry exists for the page, and its data loader only when that
+	 * file exists too. `false` or `null` opts a page out of a default.
+	 *
+	 * @param array       $raw          Raw page source data.
+	 * @param array|null  $collection   Collection supplying defaults.
+	 * @param string      $directory    Physical directory paths resolve against.
+	 * @param string|null $logical_dir  Logical directory paths resolve against.
+	 * @param string      $error_path   Source path named in errors.
+	 * @param array       $context      Context passed to the external path filter.
+	 *
+	 * @return array{renderer:string,entry:string,data:string|null}|null|false Render definition, null without one, false after an error.
+	 */
+	private function resolve_page_render( array $raw, ?array $collection, string $directory, ?string $logical_dir, string $error_path, array $context ): array|null|false {
+		$explicit = array_key_exists( 'render', $raw );
+		$defaults = is_array( $collection['defaults'] ?? null ) ? $collection['defaults'] : array();
+		$value    = $explicit ? $raw['render'] : ( $defaults['render'] ?? null );
+
+		if ( null === $value || false === $value || '' === $value ) {
+			return null;
+		}
+
+		if ( is_string( $value ) ) {
+			$value = array( 'entry' => $value );
+		}
+
+		if (
+			! is_array( $value ) ||
+			! is_string( $value['entry'] ?? null ) || '' === trim( $value['entry'] ) ||
+			( isset( $value['data'] ) && ! is_string( $value['data'] ) ) ||
+			( isset( $value['renderer'] ) && ! is_string( $value['renderer'] ) )
+		) {
+			$this->add_error( 'invalid_render', 'Page render must be an entry path or an object with entry, data and renderer strings.', array( 'path' => $error_path ) );
+			return false;
+		}
+
+		$context = array_merge( $context, array( 'path_type' => 'render' ) );
+		$entry   = $this->resolve_render_path( $value['entry'], $directory, $logical_dir, $context );
+
+		if ( null === $entry ) {
+			if ( ! $explicit ) {
+				return null;
+			}
+
+			$this->add_error(
+				'missing_render_entry',
+				'Page render entry does not resolve to an allowed file.',
+				array(
+					'path'  => $error_path,
+					'value' => $value['entry'],
+				)
+			);
+			return false;
+		}
+
+		$data = null;
+
+		if ( isset( $value['data'] ) && '' !== trim( $value['data'] ) ) {
+			$data = $this->resolve_render_path( $value['data'], $directory, $logical_dir, $context );
+
+			if ( null === $data && $explicit ) {
+				$this->add_error(
+					'missing_render_data',
+					'Page render data loader does not resolve to an allowed file.',
+					array(
+						'path'  => $error_path,
+						'value' => $value['data'],
+					)
+				);
+				return false;
+			}
+		}
+
+		$renderer = isset( $value['renderer'] ) && '' !== $value['renderer']
+			? sanitize_key( $value['renderer'] )
+			: Page_Renderers::for_entry( $entry );
+
+		if ( null === $renderer || null === Page_Renderers::get( $renderer ) ) {
+			$this->add_error(
+				'unknown_renderer',
+				'No registered page renderer handles this entry.',
+				array(
+					'path'     => $error_path,
+					'entry'    => $entry,
+					'renderer' => $value['renderer'] ?? null,
+				)
+			);
+			return false;
+		}
+
+		return array(
+			'renderer' => $renderer,
+			'entry'    => $entry,
+			'data'     => $data,
+		);
+	}
+
+	/**
+	 * Resolve one render entry or data path.
+	 *
+	 * Relative paths resolve against the page directory, through the logical
+	 * source first so overlays apply. A file must lie inside the discovery
+	 * source unless `blockstudio/pages/allow_external_loader_path` allows it.
+	 *
+	 * @param string      $path        Requested path.
+	 * @param string      $directory   Physical base directory.
+	 * @param string|null $logical_dir Logical base directory.
+	 * @param array       $context     Filter context.
+	 *
+	 * @return string|null Resolved file path.
+	 */
+	private function resolve_render_path( string $path, string $directory, ?string $logical_dir, array $context ): ?string {
+		$path = trim( str_replace( '\\', '/', $path ) );
+
+		if ( '' === $path || str_contains( $path, "\0" ) || preg_match( '#^[A-Za-z][A-Za-z0-9+.-]*:(?!/)#', $path ) || preg_match( '#^[A-Za-z][A-Za-z0-9+.-]*://#', $path ) ) {
+			return null;
+		}
+
+		$absolute = str_starts_with( $path, '/' ) || 1 === preg_match( '#^[A-Za-z]:/#', $path );
+
+		if ( ! $absolute && null !== $logical_dir && $this->source ) {
+			$logical = self::join_logical_path( $logical_dir, $path );
+			$entry   = null !== $logical ? $this->source->resolve( $logical ) : null;
+
+			if ( $entry && is_file( $entry->physical_path() ) ) {
+				return self::normalize_filesystem_path( $entry->physical_path() );
+			}
+		}
+
+		$candidate = $absolute ? $path : self::normalize_filesystem_path( $directory ) . '/' . $path;
+		$real      = realpath( $candidate );
+
+		if ( false === $real || ! is_file( $real ) ) {
+			return null;
+		}
+
+		$real     = self::normalize_filesystem_path( $real );
+		$root     = self::normalize_filesystem_path( '' !== $this->discover_base ? $this->discover_base : (string) $this->source?->root() );
+		$relative = '' !== $root ? self::relative_inside( $root, $real ) : null;
+
+		if ( null !== $relative ) {
+			return '' === $relative ? $root : $root . '/' . $relative;
+		}
+
+		/** This filter is documented in includes/classes/page-discovery.php */
+		$allowed = (bool) apply_filters( 'blockstudio/pages/allow_external_loader_path', false, $real, $root, $context );
+
+		return $allowed ? $real : null;
+	}
+
+	/**
+	 * Join a relative path onto a logical directory without leaving the source.
+	 *
+	 * @param string $directory Logical directory.
+	 * @param string $path      Relative path.
+	 *
+	 * @return string|null Logical path, or null when it would climb above the source root.
+	 */
+	private static function join_logical_path( string $directory, string $path ): ?string {
+		$segments = '' === $directory ? array() : explode( '/', Discovery_Sources::normalize_logical_path( $directory ) );
+
+		foreach ( explode( '/', $path ) as $segment ) {
+			if ( '' === $segment || '.' === $segment ) {
+				continue;
+			}
+
+			if ( '..' === $segment ) {
+				if ( array() === $segments ) {
+					return null;
+				}
+
+				array_pop( $segments );
+				continue;
+			}
+
+			$segments[] = $segment;
+		}
+
+		return array() === $segments ? null : implode( '/', $segments );
+	}
+
+	/**
+	 * Whether collection data describes a site collection.
+	 *
+	 * @param array|null $collection Collection data.
+	 *
+	 * @return bool Whether the collection has site scope.
+	 */
+	private static function is_site_scope( ?array $collection ): bool {
+		return null !== $collection && 'site' === ( $collection['scope'] ?? 'collection' );
+	}
+
+	/**
+	 * Whether a page belongs to a collection that namespaces keys and paths.
+	 *
+	 * Site collections group standalone pages and keep their semantics.
+	 *
+	 * @param array|null $collection Collection data.
+	 *
+	 * @return bool Whether collection semantics apply.
+	 */
+	private static function is_grouped( ?array $collection ): bool {
+		return null !== $collection && ! self::is_site_scope( $collection );
+	}
+
+	/**
+	 * Whether a discovered collection slug has site scope.
+	 *
+	 * @param string $slug Collection slug.
+	 *
+	 * @return bool Whether the collection is a site collection.
+	 */
+	private function is_site_collection( string $slug ): bool {
+		return self::is_site_scope( $this->collections[ $slug ] ?? null );
 	}
 
 	/**
@@ -1533,6 +1902,8 @@ class Page_Discovery {
 			'postStatus',
 			'postType',
 			'postTypeArgs',
+			'render',
+			'scope',
 			'slug',
 			'source',
 			'source_fingerprint',
@@ -1610,7 +1981,7 @@ class Page_Discovery {
 			? (string) $manifest['title']
 			: self::title_from_value( $slug );
 
-		$known = array( 'collection', 'defaults', 'meta', 'name', 'order', 'postType', 'postTypeArgs', 'slug', 'source', 'title' );
+		$known = array( 'collection', 'defaults', 'meta', 'name', 'order', 'postType', 'postTypeArgs', 'scope', 'slug', 'source', 'title' );
 		$meta  = isset( $manifest['meta'] ) && is_array( $manifest['meta'] ) ? $manifest['meta'] : array();
 
 		foreach ( $manifest as $key => $value ) {
@@ -1619,27 +1990,113 @@ class Page_Discovery {
 			}
 		}
 
-		$layout_logical = '' === $logical_root ? 'layout.php' : $logical_root . '/layout.php';
-		$layout_entry   = $source->resolve( $layout_logical );
+		$scope = isset( $manifest['scope'] ) && is_scalar( $manifest['scope'] ) ? sanitize_key( (string) $manifest['scope'] ) : 'collection';
+
+		if ( ! in_array( $scope, array( 'collection', 'site' ), true ) ) {
+			return null;
+		}
+
+		$layout = self::directory_layout( $source, $logical_root );
 
 		return array(
-			'slug'          => $slug,
-			'title'         => $title,
-			'root'          => $root,
-			'logical_root'  => $logical_root,
-			'base_path'     => self::normalize_filesystem_path( $source->root() ),
-			'manifest_path' => self::normalize_filesystem_path( $manifest_path ),
-			'logical_path'  => $logical_path,
-			'source_id'     => $source->id(),
-			'provenance'    => $manifest_entry->provenance(),
-			'postType'      => $post_type,
-			'postTypeArgs'  => isset( $manifest['postTypeArgs'] ) && is_array( $manifest['postTypeArgs'] ) ? $manifest['postTypeArgs'] : array(),
-			'defaults'      => isset( $manifest['defaults'] ) && is_array( $manifest['defaults'] ) ? $manifest['defaults'] : array(),
-			'source'        => isset( $manifest['source'] ) && is_array( $manifest['source'] ) ? $manifest['source'] : array(),
-			'order'         => isset( $manifest['order'] ) && is_numeric( $manifest['order'] ) ? (int) $manifest['order'] : null,
-			'meta'          => $meta,
-			'layout_path'   => $layout_entry?->physical_path(),
+			'slug'            => $slug,
+			'title'           => $title,
+			'root'            => $root,
+			'logical_root'    => $logical_root,
+			'base_path'       => self::normalize_filesystem_path( $source->root() ),
+			'manifest_path'   => self::normalize_filesystem_path( $manifest_path ),
+			'logical_path'    => $logical_path,
+			'source_id'       => $source->id(),
+			'provenance'      => $manifest_entry->provenance(),
+			'postType'        => $post_type,
+			'postTypeArgs'    => isset( $manifest['postTypeArgs'] ) && is_array( $manifest['postTypeArgs'] ) ? $manifest['postTypeArgs'] : array(),
+			'defaults'        => isset( $manifest['defaults'] ) && is_array( $manifest['defaults'] ) ? $manifest['defaults'] : array(),
+			'source'          => isset( $manifest['source'] ) && is_array( $manifest['source'] ) ? $manifest['source'] : array(),
+			'order'           => isset( $manifest['order'] ) && is_numeric( $manifest['order'] ) ? (int) $manifest['order'] : null,
+			'meta'            => $meta,
+			'scope'           => $scope,
+			'layout_path'     => $layout['path'],
+			'layout_renderer' => $layout['renderer'],
+			'layout_conflict' => $layout['conflict'],
 		);
+	}
+
+	/**
+	 * Find the layout of one logical directory.
+	 *
+	 * A directory holds `layout.php` or one renderer layout, such as
+	 * `layout.tsx`. Holding both is a conflict; `layout.php` then wins so the
+	 * existing include path keeps working while discovery reports the error.
+	 *
+	 * @param Discovery_Source $source       Discovery source.
+	 * @param string           $logical_root Logical directory.
+	 *
+	 * @return array{path:string|null,renderer:string|null,conflict:bool} Layout.
+	 */
+	private static function directory_layout( Discovery_Source $source, string $logical_root ): array {
+		$found = array();
+
+		foreach ( array_merge( array( 'layout.php' => null ), Page_Renderers::layout_names() ) as $name => $renderer ) {
+			$entry = $source->resolve( '' === $logical_root ? (string) $name : $logical_root . '/' . $name );
+
+			if ( $entry ) {
+				$found[] = array(
+					'path'     => $entry->physical_path(),
+					'renderer' => $renderer,
+				);
+			}
+		}
+
+		return array(
+			'path'     => $found[0]['path'] ?? null,
+			'renderer' => $found[0]['renderer'] ?? null,
+			'conflict' => count( $found ) > 1,
+		);
+	}
+
+	/**
+	 * Find the layout of one physical directory.
+	 *
+	 * @param string $directory Physical directory.
+	 *
+	 * @return array{path:string|null,renderer:string|null,conflict:bool} Layout.
+	 */
+	private static function physical_directory_layout( string $directory ): array {
+		$found = array();
+
+		foreach ( array_merge( array( 'layout.php' => null ), Page_Renderers::layout_names() ) as $name => $renderer ) {
+			$candidate = $directory . '/' . $name;
+
+			if ( file_exists( $candidate ) ) {
+				$found[] = array(
+					'path'     => $candidate,
+					'renderer' => $renderer,
+				);
+			}
+		}
+
+		return array(
+			'path'     => $found[0]['path'] ?? null,
+			'renderer' => $found[0]['renderer'] ?? null,
+			'conflict' => count( $found ) > 1,
+		);
+	}
+
+	/**
+	 * Report a directory that holds more than one layout.
+	 *
+	 * @param string $directory Directory.
+	 *
+	 * @return void
+	 */
+	private function add_layout_conflict_error( string $directory ): void {
+		foreach ( $this->errors as $error ) {
+			if ( 'layout_conflict' === $error['code'] && ( $error['context']['path'] ?? null ) === $directory ) {
+				return;
+			}
+		}
+
+		$this->add_error( 'layout_conflict', 'A directory may hold layout.php or one renderer layout, not both.', array( 'path' => $directory ) );
 	}
 
 	/**
@@ -1735,7 +2192,11 @@ class Page_Discovery {
 	}
 
 	/**
-	 * Find the nearest layout.php for a non-collection page by walking up to the discovery base.
+	 * Find the nearest layout for a non-collection page by walking up to the discovery base.
+	 *
+	 * Directories are compared through their canonical paths, so a page read
+	 * through realpath() still finds the layouts of a symlinked discovery root.
+	 * Candidates keep the discovery root's form.
 	 *
 	 * @param string      $directory Physical page directory.
 	 * @param string|null $logical_directory Logical page directory.
@@ -1747,11 +2208,14 @@ class Page_Discovery {
 			$current = Discovery_Sources::normalize_logical_path( $logical_directory );
 
 			while ( true ) {
-				$logical_path = '' === $current ? 'layout.php' : $current . '/layout.php';
-				$entry        = $this->source->resolve( $logical_path );
+				$layout = self::directory_layout( $this->source, $current );
 
-				if ( $entry ) {
-					return $entry->physical_path();
+				if ( null !== $layout['path'] ) {
+					if ( $layout['conflict'] ) {
+						$this->add_layout_conflict_error( self::normalize_filesystem_path( dirname( $layout['path'] ) ) );
+					}
+
+					return $layout['path'];
 				}
 
 				if ( '' === $current ) {
@@ -1763,20 +2227,31 @@ class Page_Discovery {
 			}
 		}
 
-		$current = self::normalize_filesystem_path( $directory );
-		$base    = $this->discover_base;
+		$directory = self::normalize_filesystem_path( $directory );
+		$base      = $this->discover_base;
+		$relative  = '' !== $base ? self::relative_inside( $base, $directory ) : null;
 
-		if ( '' === $base || ! self::is_inside_any_path( $current, array( $base ) ) ) {
-			$candidate = $current . '/layout.php';
+		if ( null === $relative ) {
+			$layout = self::physical_directory_layout( $directory );
 
-			return file_exists( $candidate ) ? $candidate : null;
+			if ( $layout['conflict'] ) {
+				$this->add_layout_conflict_error( $directory );
+			}
+
+			return $layout['path'];
 		}
 
-		while ( true ) {
-			$candidate = $current . '/layout.php';
+		$current = '' === $relative ? $base : $base . '/' . $relative;
 
-			if ( file_exists( $candidate ) ) {
-				return $candidate;
+		while ( true ) {
+			$layout = self::physical_directory_layout( $current );
+
+			if ( null !== $layout['path'] ) {
+				if ( $layout['conflict'] ) {
+					$this->add_layout_conflict_error( $current );
+				}
+
+				return $layout['path'];
 			}
 
 			if ( $current === $base ) {
@@ -1796,18 +2271,59 @@ class Page_Discovery {
 	 * @return string Relative path.
 	 */
 	private static function relative_path( string $base, string $path ): string {
-		$base = self::normalize_filesystem_path( $base );
+		$relative = self::relative_inside( $base, $path );
+
+		return $relative ?? self::normalize_filesystem_path( $path );
+	}
+
+	/**
+	 * Get a path relative to a root when it lies at or below that root.
+	 *
+	 * Both sides are compared lexically first and then through their canonical
+	 * paths, so a symlinked root and its target describe the same directory.
+	 *
+	 * @param string $root Root path.
+	 * @param string $path Path.
+	 *
+	 * @return string|null Relative path, an empty string for the root itself, or null when outside.
+	 */
+	private static function relative_inside( string $root, string $path ): ?string {
+		$root = self::normalize_filesystem_path( $root );
 		$path = self::normalize_filesystem_path( $path );
 
-		if ( $base === $path ) {
+		foreach ( array( array( $root, $path ), array( self::canonical_path( $root ), self::canonical_path( $path ) ) ) as $pair ) {
+			if ( $pair[0] === $pair[1] ) {
+				return '';
+			}
+
+			if ( '' !== $pair[0] && str_starts_with( $pair[1], $pair[0] . '/' ) ) {
+				return substr( $pair[1], strlen( $pair[0] ) + 1 );
+			}
+		}
+
+		return null;
+	}
+
+	/**
+	 * Canonicalize a filesystem path.
+	 *
+	 * @param string $path Filesystem path.
+	 *
+	 * @return string The realpath() of an existing path, otherwise the normalized path.
+	 */
+	private static function canonical_path( string $path ): string {
+		$path = self::normalize_filesystem_path( $path );
+
+		if ( '' === $path ) {
 			return '';
 		}
 
-		if ( str_starts_with( $path, $base . '/' ) ) {
-			return substr( $path, strlen( $base ) + 1 );
+		if ( ! array_key_exists( $path, self::$canonical_paths ) ) {
+			$real                           = file_exists( $path ) ? realpath( $path ) : false;
+			self::$canonical_paths[ $path ] = false !== $real ? self::normalize_filesystem_path( $real ) : $path;
 		}
 
-		return $path;
+		return self::$canonical_paths[ $path ];
 	}
 
 	/**
@@ -1975,9 +2491,6 @@ class Page_Discovery {
 	 * @return bool Whether path is inside root.
 	 */
 	private static function is_same_or_inside_path( string $path, string $root ): bool {
-		$path = self::normalize_filesystem_path( $path );
-		$root = self::normalize_filesystem_path( $root );
-
-		return $path === $root || str_starts_with( $path, $root . '/' );
+		return null !== self::relative_inside( $root, $path );
 	}
 }

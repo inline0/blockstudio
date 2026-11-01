@@ -13,6 +13,13 @@ namespace Blockstudio;
 final class Page_Paths {
 
 	/**
+	 * Real paths of configured theme roots, indexed by configured root.
+	 *
+	 * @var array<string, string>
+	 */
+	private static array $real_roots = array();
+
+	/**
 	 * Store theme files independently of the current installation root.
 	 *
 	 * @param string $path Source path or logical page identity.
@@ -20,9 +27,9 @@ final class Page_Paths {
 	 */
 	public static function encode( string $path ): string {
 		$path = wp_normalize_path( $path );
-		foreach ( self::roots() as $prefix => $root ) {
-			if ( self::within( $path, $root ) ) {
-				return $prefix . ltrim( substr( $path, strlen( $root ) ), '/' );
+		foreach ( self::locations() as $location ) {
+			if ( self::within( $path, $location['root'] ) ) {
+				return $location['prefix'] . ltrim( substr( $path, strlen( $location['root'] ) ), '/' );
 			}
 		}
 		return $path;
@@ -48,8 +55,11 @@ final class Page_Paths {
 				$resolved = $root . ( '' !== substr( $path, strlen( $prefix ) ) ? '/' . ltrim( substr( $path, strlen( $prefix ) ), '/' ) : '' );
 				return self::allowed( $resolved ) ? $resolved : '';
 			}
-			if ( self::within( $path, $root ) ) {
-				return self::allowed( $path ) ? $path : '';
+		}
+		foreach ( self::locations() as $location ) {
+			if ( self::within( $path, $location['root'] ) ) {
+				$resolved = $location['configured'] . substr( $path, strlen( $location['root'] ) );
+				return self::allowed( $resolved ) ? $resolved : '';
 			}
 		}
 
@@ -96,6 +106,62 @@ final class Page_Paths {
 			'theme:'        => untrailingslashit( wp_normalize_path( get_stylesheet_directory() ) ),
 			'parent-theme:' => untrailingslashit( wp_normalize_path( get_template_directory() ) ),
 		);
+	}
+
+	/**
+	 * Get every directory that stands for a theme root.
+	 *
+	 * A theme directory can be a symlink into a checkout. Discovery reads some
+	 * sources through realpath(), so the target of the symlink maps to the same
+	 * prefix and resolves back to the configured root.
+	 *
+	 * @return array<int, array{prefix:string,root:string,configured:string}> Theme locations in match order.
+	 */
+	private static function locations(): array {
+		$locations = array();
+		foreach ( self::roots() as $prefix => $root ) {
+			$locations[] = array(
+				'prefix'     => $prefix,
+				'root'       => $root,
+				'configured' => $root,
+			);
+		}
+		foreach ( self::roots() as $prefix => $root ) {
+			$real = self::real_root( $root );
+			if ( '' !== $real && $real !== $root ) {
+				$locations[] = array(
+					'prefix'     => $prefix,
+					'root'       => $real,
+					'configured' => $root,
+				);
+			}
+		}
+		return $locations;
+	}
+
+	/**
+	 * Resolve the symlink target of a theme root once per request.
+	 *
+	 * @param string $root Configured theme root.
+	 * @return string Real root, or an empty string when it cannot be read.
+	 */
+	private static function real_root( string $root ): string {
+		if ( ! array_key_exists( $root, self::$real_roots ) ) {
+			$real                      = '' !== $root && self::allowed( $root ) ? realpath( $root ) : false;
+			self::$real_roots[ $root ] = false !== $real ? untrailingslashit( wp_normalize_path( $real ) ) : '';
+		}
+		return self::$real_roots[ $root ];
+	}
+
+	/**
+	 * Forget the resolved symlink targets of theme roots.
+	 *
+	 * @since 7.7.11
+	 *
+	 * @return void
+	 */
+	public static function reset(): void {
+		self::$real_roots = array();
 	}
 
 	/**

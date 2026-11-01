@@ -1,6 +1,7 @@
 import { subscribe, select, dispatch } from '@wordpress/data';
 import domReady from '@wordpress/dom-ready';
 import { addFilter } from '@wordpress/hooks';
+import { registerPageBlock } from './component';
 
 interface Block {
   clientId: string;
@@ -43,6 +44,8 @@ addFilter(
     return settings;
   },
 );
+
+registerPageBlock();
 
 function findAncestorsOfOverrides(
   blocks: Block[],

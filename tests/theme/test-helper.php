@@ -2212,3 +2212,45 @@ add_filter(
 		return $content;
 	}
 );
+
+add_action(
+	'blockstudio/pages/renderers',
+	function () {
+		\Blockstudio\Page_Renderers::register(
+			'fixture',
+			array(
+				'extensions' => array( 'fixture.php' ),
+				'layouts'    => array( 'layout.fixture.php' ),
+				'render'     => 'blockstudio_test_render_fixture',
+			)
+		);
+	}
+);
+
+/**
+ * Render a fixture page or layout entry.
+ *
+ * @param array $request Page render request.
+ *
+ * @return array Render result.
+ */
+function blockstudio_test_render_fixture( array $request ): array {
+	$data = array();
+
+	if ( is_string( $request['data'] ?? null ) && is_file( $request['data'] ) ) {
+		$loader = include $request['data'];
+		$data   = is_callable( $loader ) ? $loader( $request['page'] ) : ( is_array( $loader ) ? $loader : array() );
+	}
+
+	$render = static function ( array $request, array $data ): string {
+		ob_start();
+		include $request['entry'];
+
+		return (string) ob_get_clean();
+	};
+
+	return array(
+		'html'         => $render( $request, $data ),
+		'dependencies' => array_values( array_filter( array( $request['entry'], $request['data'] ) ) ),
+	);
+}

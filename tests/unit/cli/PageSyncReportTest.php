@@ -63,4 +63,22 @@ class PageSyncReportTest extends TestCase {
 		);
 		$this->assertCount( 6, $lines );
 	}
+
+	public function test_cli_names_the_content_type_of_reported_pages(): void {
+		$method = new ReflectionMethod( CLI::class, 'page_report_lines' );
+		$lines  = $method->invoke(
+			null,
+			array(
+				'pages' => array(
+					'legal-notice' => array(
+						'status'      => 'updated',
+						'contentType' => 'component',
+						'postId'      => 21,
+					),
+				),
+			)
+		);
+
+		$this->assertSame( 'legal-notice: updated (post 21, component)', $lines[0]['message'] );
+	}
 }

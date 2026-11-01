@@ -1873,7 +1873,9 @@ final class Static_Prerender_Runtime {
 	 *
 	 * Page content reaches the database through page synchronization, so the
 	 * page definition, template, content, and layout files stand in for the
-	 * stored content the render read.
+	 * stored content the render read. A component page adds its renderer
+	 * entry and data loader, so a route stays tied to them even when a render
+	 * fails before its renderer reports dependencies.
 	 *
 	 * @return string[] Existing source paths.
 	 */
@@ -1890,6 +1892,12 @@ final class Static_Prerender_Runtime {
 		$paths = array();
 		foreach ( array( '_blockstudio_page_template_path', '_blockstudio_page_content_path', '_blockstudio_page_layout' ) as $meta_key ) {
 			$paths[] = Page_Paths::from_meta( $post_id, $meta_key );
+		}
+
+		$render = Page_Sync::stored_render( $post_id );
+		if ( null !== $render ) {
+			$paths[] = $render['entry'];
+			$paths[] = (string) $render['data'];
 		}
 
 		$ids = get_post_meta( $post_id, '_blockstudio_page_dependencies', true );

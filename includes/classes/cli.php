@@ -162,7 +162,7 @@ class Cli {
 			if ( 'unchanged' !== $result['status'] || ! empty( $result['preserved'] ) ) {
 				$lines[] = array(
 					'level'   => 'line',
-					'message' => sprintf( '%1$s: %2$s (post %3$d)%4$s', $page, $result['status'], $result['postId'], ! empty( $result['preserved'] ) ? '; keyed editor content preserved' : '' ),
+					'message' => sprintf( '%1$s: %2$s (post %3$d%4$s)%5$s', $page, $result['status'], $result['postId'], ! empty( $result['contentType'] ) ? ', ' . $result['contentType'] : '', ! empty( $result['preserved'] ) ? '; keyed editor content preserved' : '' ),
 				);
 			}
 			if ( ! empty( $result['overwritten'] ) ) {

@@ -36,6 +36,42 @@ class PagePathsTest extends TestCase {
 		}
 	}
 
+	public function test_real_and_symlinked_theme_paths_encode_to_the_theme_prefix(): void {
+		$base = wp_normalize_path( get_temp_dir() ) . 'blockstudio-page-paths-symlink-' . wp_generate_uuid4();
+		$real = $base . '/checkout/theme';
+		$link = $base . '/themes/theme';
+		wp_mkdir_p( $real . '/assets/docs' );
+		wp_mkdir_p( dirname( $link ) );
+		file_put_contents( $real . '/assets/docs/index.md', '# Docs' );
+		symlink( $real, $link );
+		$real   = wp_normalize_path( (string) realpath( $real ) );
+		$filter = static fn(): string => $link;
+		add_filter( 'stylesheet_directory', $filter );
+		add_filter( 'template_directory', $filter );
+		Page_Paths::reset();
+		try {
+			$this->assertSame( 'theme:assets/docs/index.md', Page_Paths::encode( $real . '/assets/docs/index.md' ) );
+			$this->assertSame( 'theme:assets/docs/index.md', Page_Paths::encode( $link . '/assets/docs/index.md' ) );
+			$this->assertSame( 'theme:', Page_Paths::encode( $real ) );
+			$this->assertSame( $link . '/assets/docs/index.md', Page_Paths::resolve( 'theme:assets/docs/index.md' ) );
+			$this->assertSame( $link . '/assets/docs/index.md', Page_Paths::resolve( $real . '/assets/docs/index.md' ) );
+			$this->assertFileExists( Page_Paths::resolve( $real . '/assets/docs/index.md' ) );
+			$this->assertSame( $base . '/checkout/other/index.md', Page_Paths::encode( $base . '/checkout/other/index.md' ) );
+		} finally {
+			remove_filter( 'stylesheet_directory', $filter );
+			remove_filter( 'template_directory', $filter );
+			Page_Paths::reset();
+			unlink( $link );
+			unlink( $real . '/assets/docs/index.md' );
+			rmdir( $real . '/assets/docs' );
+			rmdir( $real . '/assets' );
+			rmdir( $real );
+			rmdir( dirname( $real ) );
+			rmdir( dirname( $link ) );
+			rmdir( $base );
+		}
+	}
+
 	public function test_rejects_traversal_streams_and_invalid_metadata(): void {
 		foreach ( array( 'theme:../private.php', 'theme:pages/../../private.php', 'parent-theme:./index.md', 'file:///etc/passwd', 'php://filter/resource=test', "theme:bad\0.php" ) as $path ) {
 			$this->assertSame( '', Page_Paths::resolve( $path ), $path );

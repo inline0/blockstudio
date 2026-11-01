@@ -160,7 +160,8 @@ class Block {
 	 *
 	 * Every registered block is matched with the same string comment() emits,
 	 * so the page buffer and callers that render outside of it strip exactly
-	 * the same markers and nothing else.
+	 * the same markers and nothing else. Asset owner markers from
+	 * Assets::register_owner() are removed as well.
 	 *
 	 * @since 7.7.7
 	 *
@@ -169,6 +170,8 @@ class Block {
 	 * @return string The HTML without block identity comments.
 	 */
 	public static function strip_comments( string $html ): string {
+		$html = Assets::strip_owner_markers( $html );
+
 		if ( ! str_contains( $html, '<!--blockstudio/' ) ) {
 			return $html;
 		}

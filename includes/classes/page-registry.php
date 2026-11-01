@@ -207,6 +207,19 @@ final class Page_Registry {
 				'meta'             => is_array( $stored_meta ) ? $stored_meta : array(),
 			);
 
+			$render = Page_Sync::stored_render( (int) $post->ID );
+
+			if ( null !== $render ) {
+				$this->pages[ $key ]['render']    = $render;
+				$this->pages[ $key ]['slot_path'] = $this->pages[ $key ]['template_path'];
+			}
+
+			$layout_renderer = (string) get_post_meta( $post->ID, '_blockstudio_page_layout_renderer', true );
+
+			if ( '' !== $layout_renderer ) {
+				$this->pages[ $key ]['layout_renderer'] = $layout_renderer;
+			}
+
 			if ( '' !== $source_path ) {
 				$this->synced_posts[ $source_path ] = (int) $post->ID;
 			}
