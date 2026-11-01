@@ -18,7 +18,7 @@
   },
   "require": {
     "php": "^8.2",
-    "phasis/phasis": "0.4.1",
+    "phasis/phasis": "0.13.0",
     "phpseclib/bcmath_compat": "^2.0.3",
     "phpstan/phpstan": "^2.1.47",
     "szepeviktor/phpstan-wordpress": "^2.0",

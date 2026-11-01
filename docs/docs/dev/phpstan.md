@@ -578,6 +578,15 @@ A probe can report a focused failure:
 Non-zero exits, timeouts, malformed JSON, and `ok: false` produce
 `blockstudio.wordpress.render`.
 
+`blockstudio.javascript.domContract` reports a `[data-*]` attribute selector
+that a script passes to `querySelector()`, `querySelectorAll()`, `closest()`, or
+`matches()` when no analysed markup carries that attribute. Markup is every
+PHP, Twig, Blade, and HTML file and every React `.tsx` and `.jsx` component
+under the analysed roots, minus the excluded paths. Components are parsed:
+JSX attribute names count, and so do the string keys of object literals, so
+an attribute object spread onto an element satisfies the selector, while
+class names and other attribute values do not.
+
 ### Diagnostic identifiers
 
 New preset diagnostics retain stable `blockstudio.*` IDs:

@@ -26,6 +26,19 @@ final class SettingsPathRuleTest extends RuleTestCase
         );
     }
 
+    public function test_cache_paths_include_namespace_grace(): void
+    {
+        $this->analyse(
+            [__DIR__ . '/data/settings-path-cache.php'],
+            [
+                [
+                    'Settings path "cache/namespaceGraces" is not a known Blockstudio setting. Did you mean "cache/namespaceGrace"?',
+                    8,
+                ],
+            ]
+        );
+    }
+
     public function test_unknown_path_reports_error(): void
     {
         $this->analyse(

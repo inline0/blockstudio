@@ -458,6 +458,15 @@ Non-zero exits, timeouts, malformed JSON, and an `ok: false` response use the
 
 ## Preset diagnostics
 
+`blockstudio.javascript.domContract` reports a `[data-*]` attribute selector
+that a script passes to `querySelector()`, `querySelectorAll()`, `closest()`, or
+`matches()` when no analysed markup carries that attribute. Markup is every
+PHP, Twig, Blade, and HTML file and every React `.tsx` and `.jsx` component
+under the analysed roots, minus the excluded paths. Components are parsed:
+JSX attribute names count, and so do the string keys of object literals, so
+an attribute object spread onto an element satisfies the selector, while
+class names and other attribute values do not.
+
 Every new diagnostic has a stable `blockstudio.*` identifier:
 
 - Theme roots and structure:

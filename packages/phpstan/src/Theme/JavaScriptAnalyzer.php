@@ -4,7 +4,15 @@ declare(strict_types=1);
 
 namespace Blockstudio\PHPStan\Theme;
 
+use Phasis\Ast\Expression\Literal;
+use Phasis\Ast\Expression\Property;
+use Phasis\Ast\Jsx\JsxAttribute;
+use Phasis\Ast\Jsx\JsxIdentifier;
+use Phasis\Ast\Node;
+use Phasis\Ast\Walker;
 use Phasis\Exceptions\SyntaxError;
+use Phasis\Parser\Jsx\JsxMode;
+use Phasis\Parser\Jsx\JsxOptions;
 use Phasis\Parser\Parser;
 
 final class JavaScriptAnalyzer
@@ -848,7 +856,79 @@ final class JavaScriptAnalyzer
             }
         }
 
+        foreach ($scanner->files(['tsx', 'jsx']) as $file) {
+            foreach ($this->componentDataTokens($file, $scanner->read($file)) as $token) {
+                $tokens[$token] = true;
+            }
+        }
+
         return $tokens;
+    }
+
+    /**
+     * @return list<string>
+     */
+    private function componentDataTokens(string $file, string $contents): array
+    {
+        if (stripos($contents, 'data-') === false) {
+            return [];
+        }
+
+        try {
+            $program = Parser::parseSource(
+                $contents,
+                'module',
+                new JsxOptions(JsxMode::Preserve),
+                $file
+            );
+        } catch (SyntaxError) {
+            return $this->dataTokensInText($contents);
+        }
+
+        $tokens = [];
+        Walker::walk(
+            $program,
+            function (Node $node) use (&$tokens): null {
+                $name = match (true) {
+                    $node instanceof JsxAttribute
+                        && $node->name instanceof JsxIdentifier
+                        => $node->name->name,
+                    $node instanceof Property
+                        && $node->key instanceof Literal
+                        && is_string($node->key->value)
+                        => $node->key->value,
+                    default => null,
+                };
+                if ($name !== null) {
+                    array_push($tokens, ...$this->dataTokensInText($name));
+                }
+
+                return null;
+            }
+        );
+
+        return array_values(array_unique($tokens));
+    }
+
+    /**
+     * @return list<string>
+     */
+    private function dataTokensInText(string $text): array
+    {
+        if (
+            preg_match_all(
+                '/(?<![a-z0-9-])(data-[a-z0-9][a-z0-9-]*)/i',
+                $text,
+                $matches
+            ) === false
+        ) {
+            return [];
+        }
+
+        return array_values(array_unique(array_map(
+            'strtolower',
+            $matches[1]
+        )));
     }
 
     /**

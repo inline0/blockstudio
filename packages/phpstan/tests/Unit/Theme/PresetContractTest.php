@@ -40,7 +40,7 @@ final class PresetContractTest extends TestCase
             ],
             $composer['bin'] ?? null
         );
-        $this->assertSame('0.4.1', $composer['require']['phasis/phasis'] ?? null);
+        $this->assertSame('0.13.0', $composer['require']['phasis/phasis'] ?? null);
         $this->assertSame(
             '^2.0.3',
             $composer['require']['phpseclib/bcmath_compat'] ?? null
