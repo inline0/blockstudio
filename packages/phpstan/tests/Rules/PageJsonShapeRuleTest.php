@@ -51,6 +51,27 @@ final class PageJsonShapeRuleTest extends RuleTestCase
         $this->assertTrue($found, 'Expected page.json errors. Got: ' . implode("\n", $errors));
     }
 
+    public function test_render_definitions_are_validated(): void
+    {
+        $this->fixtureDir = __DIR__ . '/data/page-json/render';
+        $errors = array_map(
+            static fn($e) => $e->getMessage(),
+            $this->gatherAnalyserErrors([$this->fixtureDir . '/blockstudio/hero/index.php'])
+        );
+        sort($errors);
+        $pages = $this->fixtureDir . '/pages';
+
+        $this->assertSame(
+            [
+                'page.json "render" must be an entry path or an object with "entry" and optional "data" and "renderer" strings: ' . $pages . '/shape/page.json',
+                'page.json render data "data.php" does not exist: ' . $pages . '/missing/page.json',
+                'page.json render entry "../../../outside.view" resolves outside the analysed root: ' . $pages . '/outside/page.json',
+                'page.json render entry "page.view" does not exist: ' . $pages . '/missing/page.json',
+            ],
+            $errors
+        );
+    }
+
     public function test_page_index_without_page_json_reports_error(): void
     {
         $this->fixtureDir = __DIR__ . '/data/page-json/missing';

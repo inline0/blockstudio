@@ -125,6 +125,8 @@ final class HookCallbackRule implements Rule
         'blockstudio/pages/post_created',
         'blockstudio/pages/post_updated',
         'blockstudio/pages/reconciled',
+        'blockstudio/pages/rendered',
+        'blockstudio/pages/renderers',
         'blockstudio/pages/serve_markdown',
         'blockstudio/pages/sync_engine_inputs',
         'blockstudio/pages/synced',
