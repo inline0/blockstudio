@@ -467,6 +467,19 @@ JSX attribute names count, and so do the string keys of object literals, so
 an attribute object spread onto an element satisfies the selector, while
 class names and other attribute values do not.
 
+The Interactivity API checks read the same React components. A
+`data-wp-interactive` namespace on a JSX element counts as a template reference
+for `blockstudio.interactivity.orphan`, and the `data-wp-*` directives inside it
+resolve against the nearest enclosing namespace, or a `namespace::` prefix in
+the value. Directives with a static string value, written as a JSX attribute or
+as a string key of an attribute object, must name existing store handlers and
+paths (`blockstudio.interactivity.handler`, `blockstudio.interactivity.binding`),
+and store code must not mutate the attributes and classes they bind
+(`blockstudio.interactivity.derivedState`). React escapes attribute values, so
+`data-wp-context` in a component is not reported, and dynamic values are not
+checked. Namespaces under `bsui/` belong to the bundled UI blocks, whose stores
+ship with Blockstudio outside the analysed roots, so they are never orphans.
+
 Every new diagnostic has a stable `blockstudio.*` identifier:
 
 - Theme roots and structure:
