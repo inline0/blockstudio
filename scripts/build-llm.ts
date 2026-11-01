@@ -31,6 +31,7 @@ export const buildLlm = attemptPromise('buildLlm', async () => {
     },
     { name: 'field', purpose: 'Reusable custom field definitions.' },
     { name: 'page', purpose: 'File-based page definitions.' },
+    { name: 'pages', purpose: 'Page collection manifests (pages.json).' },
   ];
   const packageNames = new Set([
     'blockstudio/blockstudio',
@@ -522,10 +523,24 @@ export const buildLlm = attemptPromise('buildLlm', async () => {
       },
       contentType: {
         type: 'string',
-        enum: ['php', 'blade', 'twig', 'markdown', 'html', 'generated'],
+        enum: [
+          'php',
+          'blade',
+          'twig',
+          'markdown',
+          'html',
+          'generated',
+          'component',
+        ],
         description:
-          'Detected or explicit source type. Markdown is converted to block content during sync.',
+          'Detected or explicit source type. Markdown is converted to block content during sync. Pages with a render definition are component pages.',
         example: 'markdown',
+      },
+      render: {
+        type: ['string', 'object', 'boolean'],
+        description:
+          'Render the page with a registered page renderer. A string is the entry path; an object names entry, optional data and optional renderer. Paths resolve against the page directory. Sync stores one blockstudio/page block whose inner blocks are the index.* slot source. false opts out of a collection default.',
+        example: { entry: 'page.tsx', data: 'data.php' },
       },
       markdown: {
         type: 'string',
@@ -597,7 +612,15 @@ export const buildLlm = attemptPromise('buildLlm', async () => {
       defaults: {
         type: 'object',
         description:
-          'Default page properties applied to every collection page.',
+          'Default page properties applied to every collection page. A default render applies only when its entry exists in the page directory.',
+      },
+      scope: {
+        type: 'string',
+        default: 'collection',
+        enum: ['collection', 'site'],
+        description:
+          'site groups the standalone pages below the manifest without changing their keys, paths, WordPress page URLs or nearest layouts; nested manifests keep their own collections.',
+        example: 'site',
       },
       source: {
         type: 'object',

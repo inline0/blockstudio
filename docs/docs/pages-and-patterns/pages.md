@@ -49,8 +49,9 @@ For a JSON-defined page, add a `page.json` configuration file:
 | `templateLock` | `string\|false` | `"all"` | Lock mode: `"all"`, `"insert"`, `"contentOnly"`, or `false` |
 | `templateFor` | `string\|null` | `null` | Set as default template for a post type |
 | `sync` | `boolean` | `true` | Whether normal explicit reconciliation may create or update the post |
+| `render` | `string\|object\|false` | - | Render the page with a registered page renderer (see [Component Pages](#component-pages)) |
 
-Across `page.json`, frontmatter, and loader entries, recognized keys include `blockEditingMode`, `collection`, `content`, `contentType`, `defaults`, `file`, `html`, `markdown`, `meta`, `name`, `order`, `path`, `postId`, `postStatus`, `postType`, `postTypeArgs`, `slug`, `template`, `templateFor`, `templateLock`, and `title`. Any key not listed above is stored under the page's `meta` array.
+Across `page.json`, frontmatter, and loader entries, recognized keys include `blockEditingMode`, `collection`, `content`, `contentType`, `defaults`, `file`, `html`, `markdown`, `meta`, `name`, `order`, `path`, `postId`, `postStatus`, `postType`, `postTypeArgs`, `render`, `slug`, `template`, `templateFor`, `templateLock`, and `title`. Any key not listed above is stored under the page's `meta` array.
 
 ## Content Sources
 
@@ -184,6 +185,149 @@ add_filter( 'blockstudio/pages/serve_markdown', '__return_false' );
 
 A `.md` URL that does not resolve to a Markdown-backed page returns a 404 only when the path falls inside a page collection. Outside every collection, Blockstudio leaves the request alone for WordPress and other plugins to handle.
 
+## Component Pages
+
+A component page is rendered by a page renderer instead of being stored as
+blocks. Blockstudio does not ship a renderer. A theme or plugin registers one
+for the entry files it handles, such as a React renderer for `page.tsx`, and
+Blockstudio calls it with the page, the WordPress post, and the rendered slot
+content.
+
+```text
+pages/legal-notice/
+  page.json
+  page.tsx
+  data.php
+```
+
+```json title="pages/legal-notice/page.json"
+{
+  "name": "legal-notice",
+  "title": "Legal Notice",
+  "slug": "legal-notice",
+  "postStatus": "publish",
+  "render": { "entry": "page.tsx", "data": "data.php" }
+}
+```
+
+`render` is explicit. A directory with an `index.php` and a `page.tsx` but no
+`render` stays an ordinary page, so adding a renderer never renders an
+existing page twice. The forms are:
+
+| Value | Meaning |
+| --- | --- |
+| `"page.tsx"` | Entry only, without a data loader |
+| `{ "entry": "page.tsx", "data": "data.php" }` | Entry and data loader |
+| `{ "entry": "page.tsx", "renderer": "react" }` | Entry with an explicit renderer id |
+| `false` | No renderer, even when a collection default names one |
+
+Paths resolve against the page directory, or against the collection root for
+loader entries. They must stay inside the discovery source unless
+`blockstudio/pages/allow_external_loader_path` allows them. Without
+`renderer`, the renderer that claims the entry's extension is used. A
+`render` that names a missing entry or data file, an unknown renderer, or an
+extension no renderer claims is a discovery error, which fails the
+reconciliation before anything is pruned.
+
+### What sync stores
+
+Sync stores one `blockstudio/page` block. When the page directory also has an
+`index.*` source, that source is parsed as any page source and becomes the
+block's inner blocks, its slot:
+
+```html
+<!-- wp:blockstudio/page /-->
+
+<!-- wp:blockstudio/page -->
+<!-- wp:paragraph -->
+<p>[download_checkout]</p>
+<!-- /wp:paragraph -->
+<!-- /wp:blockstudio/page -->
+```
+
+Keep WordPress-owned content, such as shortcodes, in the slot. It stays in
+`post_content`, so `has_shortcode()` checks see it, keyed slot blocks merge
+with editor changes as nested keyed blocks do, and `do_shortcode` expands the
+shortcodes once at its usual `the_content` priority, after the renderer framed
+them.
+
+The render definition is stored with the post as portable `theme:` paths. The
+page fingerprint covers the definition, not the bytes of the entry or data
+loader: editing `page.tsx` or `data.php` leaves the post unchanged and reaches
+visitors through rendering and the [static prerender
+graph](/docs/production/static-prerendering), which records the entry, the
+data loader, and every file the renderer reports.
+
+### Registering a renderer
+
+Register renderers on the `blockstudio/pages/renderers` action. It fires once
+per request, before the first discovery or render, so `wp bs pages sync` and
+frontend requests see the same registry.
+
+```php
+add_action(
+	'blockstudio/pages/renderers',
+	static function (): void {
+		Blockstudio\Page_Renderers::register(
+			'react',
+			array(
+				'extensions' => array( 'tsx' ),
+				'layouts'    => array( 'layout.tsx' ),
+				'render'     => 'my_theme_render_page',
+			)
+		);
+	}
+);
+```
+
+Renderer ids are lowercase. An extension or layout name can belong to one
+renderer only, and `layout.php` stays Blockstudio's own layout. The callable
+receives one request:
+
+| Key | Value |
+| --- | --- |
+| `kind` | `page`, or `layout` for a [renderer layout](#renderer-layouts) |
+| `renderer` | Renderer id |
+| `entry` | Absolute entry path |
+| `data` | Absolute data loader path, or `null` |
+| `page` | Canonical page data, including `meta` |
+| `post_id` | WordPress post ID |
+| `slot` | Rendered slot content, or the page content for a layout |
+| `context` | `frontend`, `rest`, `feed`, or `cli` |
+
+It returns the HTML, the files the render read, and optional assets:
+
+```php
+function my_theme_render_page( array $request ): array {
+	return array(
+		'html'         => '<main>...</main>',
+		'dependencies' => array( '/abs/path/to/a/file/the/render/read.tsx' ),
+		'assets'       => array( array( 'path' => '/abs/path/to/page.js' ) ),
+	);
+}
+```
+
+`context` comes from the request type and never from the visitor, so a
+renderer cannot break logged-in and anonymous byte parity by reading it. A
+renderer that fails throws: the page does not render an empty body. In a REST
+editor preview the block shows the error as a notice instead. After a
+successful render the `blockstudio/pages/rendered` action receives the page,
+the HTML, and its dependencies.
+
+`assets` lists script and style files the page needs. They get the processing
+of block assets (the `*.inline.*` convention, ES modules, minification and
+`?ver`), and the page prints them once, through the same buffer that prints
+block assets, so a prerendered page carries them. An asset may set `version`
+to replace its `?ver` value. Code outside a renderer can use the same channel
+through `Blockstudio\Assets::register_owner()`, which returns the marker
+comment to print.
+
+### Editor
+
+In the editor, `blockstudio/page` shows a server-rendered preview of the page
+with the slot as inner blocks, which follow the page's `templateLock`. The
+block cannot be inserted, duplicated, or nested in another block.
+
 ## Page Collections
 
 A collection is a folder with a `pages.json` manifest. It groups many page sources under one collection slug, applies defaults, supports nested paths, and can register a dedicated post type automatically.
@@ -228,7 +372,8 @@ pages/
 | `title` | `string` | Human-readable collection title. |
 | `postType` | `string` | Post type for generated pages. Defaults to `page`. If it does not exist, Blockstudio registers it. |
 | `postTypeArgs` | `object` | Arguments passed to `register_post_type()` when Blockstudio registers the collection post type. |
-| `defaults` | `object` | Default page properties applied to every page in the collection. |
+| `defaults` | `object` | Default page properties applied to every page in the collection. A default `render` applies to a page only when its entry exists in the page directory. |
+| `scope` | `string` | `collection` (default) or `site`. See [Site Collections](#site-collections). |
 | `meta` | `object` | Custom collection metadata. Unknown manifest keys are also stored in `meta`. |
 
 Collection page paths are logical paths. A page with `path: "guide/install"` is synced as a child of `guide`, and `guide` is synced as a child of the collection root when those parent pages exist.
@@ -254,6 +399,42 @@ This URL model works for both hierarchical and non-hierarchical collection post 
 Collection pages expose raw Markdown at the same URLs (see [Raw Markdown](#raw-markdown)).
 
 If you change a collection from `postType: "page"` to a custom post type, Blockstudio migrates already synced collection posts in place when their stored page identity matches. That preserves post IDs, metadata, and existing content while avoiding duplicate old-typed posts. Stale collection posts are cleaned up across all post statuses according to the `blockstudio/pages/orphan_action` filter.
+
+### Site Collections
+
+A manifest with `"scope": "site"` groups every page below it without turning
+them into collection pages. Use it at the root of a site's pages tree to
+apply shared defaults and to list the site's pages with
+`blockstudio_page_tree( 'my-site' )`.
+
+```json title="pages/pages.json"
+{
+  "collection": "my-site",
+  "title": "My Site",
+  "scope": "site",
+  "defaults": {
+    "postStatus": "publish",
+    "templateLock": "all",
+    "render": { "entry": "page.tsx", "data": "data.php" }
+  }
+}
+```
+
+Pages of a site collection keep exactly the identity they have without the
+manifest, so adding one to an existing tree updates no post rows and creates
+or trashes nothing:
+
+- Keys stay global: `Pages::get_page( 'home' )` and stored page keys keep
+  matching.
+- URLs stay WordPress page URLs. No collection rewrite rules, permalink filter,
+  or doubled-URL redirect apply, and no empty container pages are generated.
+- Logical paths, slugs, parents, and source identities are those of
+  standalone pages, and layouts resolve by nearest ancestor.
+- Nested `pages.json` manifests keep their own collections, and their
+  subtrees are left out of the site collection.
+- Defaults apply per page: a default `render` applies only to pages whose
+  directory holds its entry, so shortcode and Markdown pages keep their
+  sources.
 
 ## Collection Loaders
 
@@ -391,6 +572,18 @@ blockstudio_page_content();
 ```
 
 Nested non-collection pages can also inherit the nearest ancestor `layout.php` inside the `pages` tree. For collection pages, the collection root layout is stored on each synced post and watched as part of the page fingerprint, so layout changes are picked up on the next sync.
+
+### Renderer Layouts
+
+A layout can also be a renderer entry, such as `layout.tsx` for a renderer
+that registers `layouts: ["layout.tsx"]`. It is found in the same places as
+`layout.php`, and an optional `layout.data.php` beside it is its data loader.
+At render time the renderer receives `kind: "layout"` and the rendered page
+content as `slot`, at the same `the_content` priority as `layout.php`. A
+directory may hold `layout.php` or one renderer layout, not both; holding
+both is a discovery error. A layout failure fires
+`blockstudio/pages/layout_error` and leaves the page content unwrapped, as it
+does for `layout.php`.
 
 ## Block Editing Mode
 
@@ -530,6 +723,11 @@ Tailwind scanning, or prerender source tracking. Existing absolute theme paths
 are rebased on read when the theme directory name is unchanged. No sync,
 database migration, or request-time metadata write is required to read them;
 the next explicit sync stores the portable locations.
+
+A theme directory that is a symlink, for example into a development checkout,
+stores the same `theme:` locations whether a source was read through the
+symlink or through its target, and resolves them to the configured theme
+directory.
 
 Files outside the active child and parent themes remain supported at their
 configured absolute paths, subject to PHP's `open_basedir` restrictions. They
@@ -937,6 +1135,9 @@ Page discovery, sync, and collection routing expose these extension points:
 | `blockstudio/pages/post_updated` | Action | Runs after a synced page post is updated. |
 | `blockstudio/pages/synced` | Action | Runs after the page registry has finished syncing. |
 | `blockstudio/pages/reconciled` | Action | Runs after an explicit reconciliation with its machine-readable report. |
+| `blockstudio/pages/renderers` | Action | Register page renderers with `Blockstudio\Page_Renderers::register()`. Fires once per request. |
+| `blockstudio/pages/rendered` | Action | Runs after a component page rendered, with the page, its HTML, and its dependencies. |
+| `blockstudio/pages/layout_error` | Action | Runs when a layout cannot be rendered, with the error, the layout path, and the page. |
 
 ## PHP API
 
@@ -989,6 +1190,19 @@ Blockstudio\Pages::lock('about');
 
 // Unlock a page.
 Blockstudio\Pages::unlock('about');
+
+// Register a page renderer (inside the blockstudio/pages/renderers action).
+Blockstudio\Page_Renderers::register('react', [
+  'extensions' => ['tsx'],
+  'layouts' => ['layout.tsx'],
+  'render' => 'my_theme_render_page',
+]);
+
+// Find the renderer of an entry file.
+$renderer = Blockstudio\Page_Renderers::for_entry('page.tsx');
+
+// Register assets for rendered output and print the returned marker with it.
+$marker = Blockstudio\Assets::register_owner('page-home', [$scriptPath]);
 ```
 
 See [Deployment Reconciliation](#deployment-reconciliation) for argument

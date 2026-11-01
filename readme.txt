@@ -59,6 +59,12 @@ Download the latest release zip from [GitHub Releases](https://github.com/inline
 * New: saved-value validation reports unknown top-level attributes and misplaced values missing the blockstudio wrapper without changing stored content (#194)
 * Fix: RichText and InnerBlocks component tags preserve single-quoted, unquoted, empty, and boolean attributes, including nested RichText field paths (#195)
 * Fix: SQLite journal activity no longer invalidates warm block metadata caches while source-file changes remain detected
+* New: component pages: a `render` entry in `page.json`, frontmatter, loader entries, or collection defaults renders the page through a renderer registered with `Blockstudio\Page_Renderers`; sync stores one `blockstudio/page` block whose inner blocks are the page's `index.*` slot, and entry or data edits no longer count as page changes
+* New: renderer layouts such as `layout.tsx` with an optional `layout.data.php` wrap pages like `layout.php`
+* New: `"scope": "site"` collections group standalone pages and apply defaults without changing their keys, URLs, parents, or layouts, while nested collections keep their own manifests
+* New: `Assets::register_owner()` gives non-block output, such as renderer assets, block asset processing and once-per-page tags that prerendered documents keep
+* New: `schemas/pages.json` describes collection manifests, and PHPStan checks `page.json` render entries and data loaders
+* Fix: pages read through a symlinked theme directory keep their layouts and store portable `theme:` paths and prerender dependencies
 
 = 7.7.10 =
 * Fix: field schemas and TypeScript definitions include the supported radio, checkbox, code, WYSIWYG, repeater, color, and gradient options (#191)

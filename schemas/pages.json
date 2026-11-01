@@ -1,0 +1,61 @@
+{
+  "title": "JSON schema for Blockstudio page collection manifests",
+  "$schema": "http://json-schema.org/draft-04/schema#",
+  "type": "object",
+  "properties": {
+    "collection": {
+      "type": "string",
+      "description": "Collection slug. A collection with scope collection uses it as its URL base.",
+      "example": "docs"
+    },
+    "defaults": {
+      "type": "object",
+      "description": "Default page properties applied to every page of the collection, including render. A default render applies to a page only when its entry exists in the page directory.",
+      "example": {
+        "postStatus": "publish",
+        "render": {
+          "entry": "page.tsx",
+          "data": "data.php"
+        }
+      }
+    },
+    "meta": {
+      "type": "object",
+      "description": "Custom collection metadata. Unknown manifest keys are also stored here."
+    },
+    "order": {
+      "type": "integer",
+      "description": "Optional collection ordering metadata."
+    },
+    "postType": {
+      "type": "string",
+      "default": "page",
+      "description": "Post type inherited by collection pages. If missing, pages sync as normal WordPress pages.",
+      "example": "bs_docs"
+    },
+    "postTypeArgs": {
+      "type": "object",
+      "description": "register_post_type() arguments used when the collection registers its own post type. show_in_rest defaults to true."
+    },
+    "scope": {
+      "type": "string",
+      "default": "collection",
+      "enum": [
+        "collection",
+        "site"
+      ],
+      "description": "collection namespaces page keys and paths under the collection and routes them under its URL base. site groups the standalone pages below the manifest: their keys, paths, WordPress page URLs and nearest layouts stay as they are without a manifest, and nested pages.json manifests keep their own collections.",
+      "example": "site"
+    },
+    "source": {
+      "type": "object",
+      "description": "Source metadata for the collection."
+    },
+    "title": {
+      "type": "string",
+      "description": "Human-readable collection title.",
+      "example": "Documentation"
+    }
+  },
+  "additionalProperties": true
+}
