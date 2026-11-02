@@ -658,6 +658,23 @@ class Page_Discovery {
 			return null;
 		}
 
+		$markdown_render = null;
+
+		if ( null === $render && ! array_key_exists( 'render', $frontmatter ) && null !== ( $loader_context['render'] ?? null ) && is_array( $collection ) ) {
+			$markdown_render = $this->resolve_page_render(
+				array( 'render' => $loader_context['render'] ),
+				null,
+				(string) ( $collection['root'] ?? $directory ),
+				is_string( $collection['logical_root'] ?? null ) ? $collection['logical_root'] : null,
+				$markdown_path,
+				array( 'path' => $markdown_path )
+			);
+
+			if ( false === $markdown_render ) {
+				return null;
+			}
+		}
+
 		$defaults = $this->collection_page_defaults( $collection );
 
 		$page_data = wp_parse_args( $frontmatter, $defaults );
@@ -680,6 +697,7 @@ class Page_Discovery {
 				'source_path'        => $grouped ? $this->collection_source_path( $collection, $relative, $loader_context ) : ( '' === $relative_dir ? $name : $relative_dir ),
 				'collection_data'    => $collection,
 				'render'             => $render,
+				'markdown_render'    => $markdown_render,
 				'source_mtime_paths' => array_values(
 					array_filter(
 						array_merge(
@@ -722,9 +740,10 @@ class Page_Discovery {
 			return;
 		}
 
-		$loader_meta  = isset( $loaded['meta'] ) && is_array( $loaded['meta'] ) ? $loaded['meta'] : array();
-		$loader_paths = isset( $loaded['paths'] ) && is_array( $loaded['paths'] ) ? $loaded['paths'] : array();
-		$pages        = isset( $loaded['pages'] ) && is_array( $loaded['pages'] ) ? $loaded['pages'] : ( array_is_list( $loaded ) ? $loaded : array() );
+		$loader_meta   = isset( $loaded['meta'] ) && is_array( $loaded['meta'] ) ? $loaded['meta'] : array();
+		$loader_paths  = isset( $loaded['paths'] ) && is_array( $loaded['paths'] ) ? $loaded['paths'] : array();
+		$loader_render = $loaded['render'] ?? null;
+		$pages         = isset( $loaded['pages'] ) && is_array( $loaded['pages'] ) ? $loaded['pages'] : ( array_is_list( $loaded ) ? $loaded : array() );
 
 		foreach ( $pages as $index => $loader_page ) {
 			$page_data = $this->process_loader_page( $loader_page, $index, $loader_path, $collection, $loader_meta, $loader_paths );
@@ -734,7 +753,7 @@ class Page_Discovery {
 			}
 		}
 
-		$this->process_loader_paths( $loader_paths, $loader_path, $collection );
+		$this->process_loader_paths( $loader_paths, $loader_path, $collection, $loader_render );
 	}
 
 	/**
@@ -880,19 +899,28 @@ class Page_Discovery {
 	/**
 	 * Discover local page directories returned by a collection loader.
 	 *
+	 * A loader `render` definition, or one on a path entry, renders every
+	 * Markdown page found there through a component instead of storing the
+	 * Markdown as blocks.
+	 *
 	 * @param array  $paths       Loader paths.
 	 * @param string $loader_path Loader file path.
 	 * @param array  $collection  Collection data.
+	 * @param mixed  $render      Render definition for the Markdown pages these paths hold.
 	 *
 	 * @return void
 	 */
-	private function process_loader_paths( array $paths, string $loader_path, array $collection ): void {
+	private function process_loader_paths( array $paths, string $loader_path, array $collection, mixed $render = null ): void {
 		foreach ( $paths as $path ) {
 			$path_config = $this->normalize_loader_path_config( $path, $loader_path );
 
 			if ( null === $path_config ) {
 				$this->add_error( 'invalid_loader_path', 'Loader path must be a local filesystem path.', array( 'path' => $loader_path ) );
 				continue;
+			}
+
+			if ( null === $path_config['render'] ) {
+				$path_config['render'] = $render;
 			}
 
 			$logical_root = $this->resolve_loader_logical_directory(
@@ -1075,6 +1103,7 @@ class Page_Discovery {
 	 * - prefix/pathPrefix: logical collection path prefix for discovered pages.
 	 * - preserveNames: keep source names instead of deriving names from prefixed paths.
 	 * - meta: metadata merged into each discovered page.
+	 * - render: render definition for the Markdown pages found there.
 	 *
 	 * @param mixed  $entry       Loader path entry.
 	 * @param string $loader_path Loader file path.
@@ -1088,6 +1117,7 @@ class Page_Discovery {
 				'prefix'        => '',
 				'preserveNames' => true,
 				'meta'          => array(),
+				'render'        => null,
 			);
 		}
 
@@ -1131,6 +1161,7 @@ class Page_Discovery {
 			'prefix'        => $prefix,
 			'preserveNames' => $preserve_names,
 			'meta'          => isset( $entry['meta'] ) && is_array( $entry['meta'] ) ? $entry['meta'] : array(),
+			'render'        => $entry['render'] ?? null,
 		);
 	}
 

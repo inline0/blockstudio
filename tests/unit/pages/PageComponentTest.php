@@ -308,6 +308,104 @@ class PageComponentTest extends TestCase {
 		$this->assertSame( $this->pages_path . '/layout.tsx', get_post_meta( $post_id, '_blockstudio_page_layout', true ) );
 	}
 
+	public function test_loader_render_renders_markdown_pages_through_a_component(): void {
+		$collection_root = $this->pages_path . '/component-probe-docs';
+		$external_root   = $this->pages_path . '/component-probe-source';
+		wp_mkdir_p( $collection_root );
+		wp_mkdir_p( $external_root );
+		file_put_contents(
+			$collection_root . '/pages.json',
+			wp_json_encode(
+				array(
+					'collection' => 'component-probe-docs',
+					'title'      => 'Docs',
+					'postType'   => 'page',
+					'defaults'   => array( 'postStatus' => 'publish' ),
+				)
+			)
+		);
+		file_put_contents( $collection_root . '/document.tsx', 'export default () => null' );
+		file_put_contents( $collection_root . '/document.php', '<?php return array();' );
+		file_put_contents(
+			$collection_root . '/loader.php',
+			"<?php\nreturn array(\n\t'paths' => array( " . var_export( $external_root, true ) . " ),\n\t'render' => array( 'entry' => 'document.tsx', 'data' => 'document.php' ),\n);\n"
+		);
+		file_put_contents( $external_root . '/guide.md', "---\ntitle: Guide\n---\n\n# Guide\n\nText [bs_component_count]" );
+		file_put_contents( $external_root . '/plain.md', "---\ntitle: Plain\nrender: false\n---\n\n# Plain" );
+
+		add_filter( 'blockstudio/pages/allow_external_loader_path', '__return_true' );
+
+		try {
+			$discovery = new Page_Discovery();
+			$pages     = $discovery->discover( $collection_root );
+			$this->assertSame( array(), $discovery->get_errors() );
+
+			$guide = $pages['component-probe-docs:component-probe-docs-guide'] ?? $this->first_page_with_path( $pages, 'guide' );
+			$plain = $this->first_page_with_path( $pages, 'plain' );
+			$this->assertSame( 'markdown', $guide['contentType'] );
+			$this->assertSame( $collection_root . '/document.tsx', $guide['markdown_render']['entry'] );
+			$this->assertSame( $collection_root . '/document.php', $guide['markdown_render']['data'] );
+			$this->assertSame( 'unit', $guide['markdown_render']['renderer'] );
+			$this->assertNull( $plain['markdown_render'] );
+
+			$sync     = new Page_Sync();
+			$guide_id = $sync->sync( $guide );
+			$plain_id = $sync->sync( $plain );
+			$this->assertIsInt( $guide_id );
+			$this->assertIsInt( $plain_id );
+		} finally {
+			remove_filter( 'blockstudio/pages/allow_external_loader_path', '__return_true' );
+		}
+
+		$content = (string) get_post_field( 'post_content', $guide_id );
+		$this->assertStringStartsWith( '<!-- wp:blockstudio/page -->', $content );
+		$this->assertStringContainsString( '<h1 id="guide">Guide</h1>', $content );
+		$this->assertStringNotContainsString( 'wp:heading', $content );
+		$this->assertStringNotContainsString( 'wp:paragraph', $content );
+		$this->assertSame( 'markdown', get_post_meta( $guide_id, '_blockstudio_page_content_type', true ) );
+		$this->assertStringEndsWith( 'guide.md', (string) get_post_meta( $guide_id, '_blockstudio_page_content_path', true ) );
+		$this->assertSame( $collection_root . '/document.tsx', Page_Sync::stored_render( $guide_id )['entry'] ?? null );
+		$this->assertNull( Page_Sync::stored_render( $plain_id ) );
+		$this->assertStringContainsString( 'wp:heading', (string) get_post_field( 'post_content', $plain_id ) );
+
+		$registry = Page_Registry::instance();
+		$registry->register( $guide['key'], $guide );
+		$registry->update_page_data( $guide['key'], 'post_id', $guide_id );
+		$this->requests = array();
+		$html           = $this->render_post_content( $guide_id, 'the_content' );
+
+		$this->assertCount( 1, $this->requests );
+		$this->assertSame( $collection_root . '/document.tsx', $this->requests[0]['entry'] );
+		$this->assertSame( $collection_root . '/document.php', $this->requests[0]['data'] );
+		$this->assertStringContainsString( '<h1 id="guide">Guide</h1>', $this->requests[0]['slot'] );
+		$this->assertStringContainsString( 'Text [bs_component_count]', $this->requests[0]['slot'] );
+		$this->assertStringStartsWith( '<main class="component">', $html );
+		$this->assertStringContainsString( '<span class="expanded">1</span>', $html );
+		$this->assertSame( 1, $this->shortcodes );
+
+		foreach ( array( $guide_id, $plain_id ) as $post_id ) {
+			wp_delete_post( $post_id, true );
+		}
+	}
+
+	/**
+	 * Find a discovered page by its logical path.
+	 *
+	 * @param array<string, array> $pages Discovered pages.
+	 * @param string               $path  Logical path.
+	 *
+	 * @return array Page data.
+	 */
+	private function first_page_with_path( array $pages, string $path ): array {
+		foreach ( $pages as $page ) {
+			if ( $path === ( $page['path'] ?? null ) ) {
+				return $page;
+			}
+		}
+
+		$this->fail( 'No page with path ' . $path );
+	}
+
 	/**
 	 * Write and sync the component page fixture.
 	 *

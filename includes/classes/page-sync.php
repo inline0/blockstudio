@@ -248,7 +248,7 @@ class Page_Sync {
 			}
 		}
 
-		$render = is_array( $page_data['render'] ?? null ) ? $page_data['render'] : array();
+		$render = self::render_definition( $page_data ) ?? array();
 
 		foreach ( array( 'entry', 'data' ) as $role ) {
 			if ( ! is_string( $render[ $role ] ?? null ) || '' === $render[ $role ] ) {
@@ -493,6 +493,10 @@ class Page_Sync {
 			if ( ! empty( $page_data['sanitize_content'] ) ) {
 				$template_content = Page_Markdown::sanitize_docs_html( $template_content );
 			}
+
+			if ( is_array( $page_data['markdown_render'] ?? null ) ) {
+				return array( $this->markdown_component_block( $template_content ) );
+			}
 		} elseif ( 'html' === $content_type && ! empty( $page_data['sanitize_content'] ) ) {
 			$template_content = Page_Markdown::sanitize_docs_html( $template_content );
 		}
@@ -534,6 +538,31 @@ class Page_Sync {
 			'innerBlocks'  => $inner,
 			'innerHTML'    => implode( '', array_filter( $inner_content, 'is_string' ) ),
 			'innerContent' => $inner_content,
+		);
+	}
+
+	/**
+	 * Build the stored block of a Markdown page that a component renders.
+	 *
+	 * The Markdown stays the page's source. Its HTML is the block's inner
+	 * HTML rather than parsed blocks, so `post_content` keeps the document
+	 * text and the renderer receives it as the slot.
+	 *
+	 * @since 7.7.11
+	 *
+	 * @param string $html Converted Markdown.
+	 *
+	 * @return array Parsed `blockstudio/page` block.
+	 */
+	private function markdown_component_block( string $html ): array {
+		$html = '' === trim( $html ) ? '' : "\n" . trim( $html ) . "\n";
+
+		return array(
+			'blockName'    => Page_Component::BLOCK_NAME,
+			'attrs'        => array(),
+			'innerBlocks'  => array(),
+			'innerHTML'    => $html,
+			'innerContent' => '' === $html ? array() : array( $html ),
 		);
 	}
 
@@ -1169,7 +1198,7 @@ class Page_Sync {
 	 * @return array{renderer:string,entry:string,data:string}|null Portable render definition.
 	 */
 	public static function encoded_render( array $page_data ): ?array {
-		$render = $page_data['render'] ?? null;
+		$render = self::render_definition( $page_data );
 
 		if ( ! is_array( $render ) || ! is_string( $render['renderer'] ?? null ) || ! is_string( $render['entry'] ?? null ) ) {
 			return null;
@@ -1180,6 +1209,26 @@ class Page_Sync {
 			'entry'    => Page_Paths::encode( $render['entry'] ),
 			'data'     => is_string( $render['data'] ?? null ) && '' !== $render['data'] ? Page_Paths::encode( $render['data'] ) : '',
 		);
+	}
+
+	/**
+	 * The render definition of a component page or a component-rendered
+	 * Markdown page.
+	 *
+	 * @since 7.7.11
+	 *
+	 * @param array $page_data Page data.
+	 *
+	 * @return array|null Render definition.
+	 */
+	private static function render_definition( array $page_data ): ?array {
+		foreach ( array( 'render', 'markdown_render' ) as $key ) {
+			if ( is_array( $page_data[ $key ] ?? null ) ) {
+				return $page_data[ $key ];
+			}
+		}
+
+		return null;
 	}
 
 	/**

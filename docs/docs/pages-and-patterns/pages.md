@@ -486,6 +486,7 @@ A loader can return an array with `pages`, `meta`, and `paths` keys:
 | `pages` | A list of page arrays. Each page supports the same recognized keys as `page.json` and Markdown frontmatter. |
 | `meta` | Metadata merged into every loader-generated page's `meta` array. |
 | `paths` | Extra local directories to discover as part of this collection. Entries can be strings or path objects. |
+| `render` | A [render definition](#component-pages) for every Markdown page discovered from `paths`. |
 
 As a shorthand, the loader may return a bare list of page arrays.
 
@@ -529,6 +530,33 @@ Path object properties:
 | `prefix` | `string` | Optional logical path prefix inside the collection. |
 | `preserveNames` | `boolean` | Keep explicit page names instead of generating names from the prefixed path. Defaults to `false` when `prefix` is set. |
 | `meta` | `object` | Metadata merged into every page discovered from this path. Page-level metadata wins on duplicate keys. |
+| `render` | `string\|object` | A render definition for the Markdown pages of this path, overriding the loader's `render`. |
+
+### Rendering Markdown through a component
+
+With `render`, the Markdown pages a loader discovers render through a page
+renderer instead of being stored as blocks:
+
+```php title="pages/docs/loader.php"
+<?php
+
+return array(
+  'paths'  => array( __DIR__ . '/external-docs' ),
+  'render' => array(
+    'entry' => __DIR__ . '/document.tsx',
+    'data'  => __DIR__ . '/document.php',
+  ),
+);
+```
+
+They stay Markdown pages: the content type, the content path, the `.md`
+responses and the frontmatter are unchanged. Sync stores one
+`blockstudio/page` block whose inner HTML is the converted Markdown, sanitized
+when the collection sanitizes its content, instead of parsed blocks, so
+`post_content` keeps the document text. The renderer receives that HTML as the
+slot and can read the source from `page.content_path`. Relative paths resolve
+from the collection root; the external path filter applies as for the paths. A
+page whose frontmatter sets its own `render`, or `render: false`, is left out.
 
 ## Layouts
 
