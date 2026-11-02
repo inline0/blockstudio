@@ -1424,6 +1424,58 @@ class PagesTest extends TestCase {
 		$this->assertSame( 'API', $pages['docs:docs-reference']['meta']['section'] ?? null );
 	}
 
+	public function test_page_by_post_id_reads_one_post_as_hydration_would(): void {
+		$post_id = Pages::get_post_id( 'docs-install' );
+		$this->assertGreaterThan( 0, $post_id );
+
+		$registry = Page_Registry::instance();
+		$registry->reset();
+		$single = $registry->get_page_by_post_id( $post_id );
+
+		$registry->reset();
+		$registry->hydrate_from_posts();
+		$hydrated = $registry->get_pages();
+
+		$registry->reset();
+		$registry->get_page_by_post_id( $post_id );
+
+		$this->assertIsArray( $single );
+		$this->assertSame( $hydrated['docs:docs-install'], $single );
+		$this->assertSame( $hydrated, $registry->get_pages() );
+	}
+
+	public function test_page_by_post_id_hydrates_when_another_post_claims_the_key(): void {
+		$post_id = Pages::get_post_id( 'docs-install' );
+		$this->assertGreaterThan( 0, $post_id );
+
+		$claimant = wp_insert_post(
+			array(
+				'post_type'   => 'page',
+				'post_status' => 'publish',
+				'post_title'  => 'Blockstudio Duplicate Key',
+				'menu_order'  => -100,
+				'meta_input'  => array(
+					'_blockstudio_page_key'  => '',
+					'_blockstudio_page_name' => 'docs:docs-install',
+				),
+			)
+		);
+		$this->assertIsInt( $claimant );
+
+		try {
+			$registry = Page_Registry::instance();
+			$registry->reset();
+			$page = $registry->get_page_by_post_id( $post_id );
+
+			$this->assertIsArray( $page );
+			$this->assertSame( $claimant, $page['post_id'] );
+			$this->assertArrayHasKey( 'docs:docs-reference', $registry->get_pages() );
+		} finally {
+			wp_delete_post( $claimant, true );
+			Page_Registry::instance()->reset();
+		}
+	}
+
 	public function test_maybe_hydrate_does_not_override_discovered_pages(): void {
 		$registry = Page_Registry::instance();
 		$before   = $registry->get_pages();
