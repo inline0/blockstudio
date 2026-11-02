@@ -205,6 +205,17 @@ class BlockValidatorTest extends TestCase {
 		$this->assertNotSame( '', $findings[0]['message'] );
 	}
 
+	public function test_unknown_field_message_names_the_closest_key_at_its_level(): void {
+		$findings = $this->validate( array( 'txt' => 'x', 'Choice' => 'a', 'misspelled' => 'y', 'rows' => array( array( 'titel' => 'z' ) ) ) );
+		$messages = array_column( $findings, 'message', 'path' );
+		$this->assertSame( array( 'txt', 'Choice', 'misspelled', 'rows/0/titel' ), array_keys( $messages ) );
+		$this->assertStringEndsWith( ' Did you mean "text"?', $messages['txt'] );
+		$this->assertStringEndsWith( ' Did you mean "choice"?', $messages['Choice'] );
+		$this->assertStringEndsWith( ' Did you mean "title"?', $messages['rows/0/titel'] );
+		$this->assertStringNotContainsString( 'Did you mean', $messages['misspelled'] );
+		$this->assertSame( array( 'code', 'path', 'source', 'message', 'value', 'expected' ), array_keys( $findings[0] ) );
+	}
+
 	public static function invalid_values(): array {
 		return array(
 			'unknown root field' => array( array( 'misspelled' => 'x' ), 'unknown_field', 'misspelled' ),
