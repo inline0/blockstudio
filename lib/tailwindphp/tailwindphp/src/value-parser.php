@@ -299,7 +299,7 @@ function walkImplementation(array &$ast, ?callable $enter = null, ?callable $exi
         // Enter phase (offsets are non-negative)
         if ($offset >= 0) {
             $node =& $nodes[$offset];
-            $result = $enter !== null ? $enter($node) : WalkAction::Continue;
+            $result = $enter !== null ? $enter($node, ['parent' => $parent]) : WalkAction::Continue;
             if ($result === null) {
                 $result = WalkAction::Continue;
             }
@@ -337,7 +337,7 @@ function walkImplementation(array &$ast, ?callable $enter = null, ?callable $exi
         // Exit phase
         $index = ~$offset;
         $node =& $nodes[$index];
-        $result = $exit !== null ? $exit($node) : WalkAction::Continue;
+        $result = $exit !== null ? $exit($node, ['parent' => $parent]) : WalkAction::Continue;
         if ($result === null) {
             $result = WalkAction::Continue;
         }

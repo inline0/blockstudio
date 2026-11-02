@@ -36,6 +36,7 @@ const ZERO = 48;
 const NINE = 57;
 const DASH = 45;
 const UNDERSCORE = 95;
+const NON_ASCII = 128;
 /**
  * Parse an attribute selector string.
  *
@@ -77,6 +78,10 @@ function parse(string $input): ?array
             continue;
         }
         if ($currentChar === DASH || $currentChar === UNDERSCORE) {
+            continue;
+        }
+        // Non-ASCII code points are valid in a CSS ident, e.g.: `[data-état]`
+        if ($currentChar >= NON_ASCII) {
             continue;
         }
         break;

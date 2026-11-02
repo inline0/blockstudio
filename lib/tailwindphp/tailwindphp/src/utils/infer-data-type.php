@@ -170,7 +170,7 @@ function isLengthValue(string $value): bool
 {
     $unitsPattern = implode('|', LENGTH_UNITS);
     $pattern = '/^' . HAS_NUMBER_PATTERN . '(' . $unitsPattern . ')$/';
-    return (bool) preg_match($pattern, $value) || hasMathFn($value);
+    return (bool) preg_match($pattern, $value) || (bool) preg_match('/^(--spacing)\(/i', $value) || hasMathFn($value);
 }
 /**
  * Check if value is a valid CSS background-position.

@@ -2,7 +2,7 @@
 
 declare (strict_types=1);
 /**
- * Port of: https://github.com/dcastil/tailwind-merge/blob/main/src/lib/class-group-utils.ts
+ * Port of: https://github.com/dcastil/tailwind-merge/blob/main/packages/tailwind-merge/src/lib/class-group-utils.ts
  *
  * Utilities for building and querying the class group map.
  *

@@ -3,6 +3,7 @@
 declare (strict_types=1);
 namespace BlockstudioVendor\TailwindPHP\Utilities;
 
+use function BlockstudioVendor\TailwindPHP\Ast\atRoot;
 use function BlockstudioVendor\TailwindPHP\Ast\decl;
 use BlockstudioVendor\TailwindPHP\Theme;
 use function BlockstudioVendor\TailwindPHP\Utils\isPositiveInteger;
@@ -83,25 +84,34 @@ function registerTransitionsUtilities(UtilityBuilder $builder): void
     // ==================================================
     // Duration
     // ==================================================
-    $builder->staticUtility('duration-initial', [['--tw-duration', 'initial']]);
+    // Registers --tw-duration with @property so the `transition` utility's
+    // `var(--tw-duration, <default>)` fallback composes with duration-*.
+    $transitionDurationProperty = function () {
+        return atRoot([property('--tw-duration')]);
+    };
+    $builder->staticUtility('duration-initial', [$transitionDurationProperty, ['--tw-duration', 'initial']]);
     $builder->functionalUtility('duration', ['themeKeys' => ['--transition-duration'], 'defaultValue' => null, 'handleBareValue' => function ($value) {
         if (!isPositiveInteger($value['value'])) {
             return null;
         }
         return msToSeconds((int) $value['value']);
-    }, 'handle' => function ($value) {
+    }, 'handle' => function ($value) use ($transitionDurationProperty) {
         // Convert [300ms] arbitrary values to .3s format
         if (preg_match('/^(\d+)ms$/', $value, $m)) {
             $value = msToSeconds((int) $m[1]);
         }
-        return [decl('--tw-duration', $value), decl('transition-duration', $value)];
+        return [$transitionDurationProperty(), decl('--tw-duration', $value), decl('transition-duration', $value)];
     }]);
     // ==================================================
     // Ease (Timing Function)
     // ==================================================
-    $builder->functionalUtility('ease', ['themeKeys' => ['--ease'], 'defaultValue' => null, 'handle' => function ($value) {
-        return [decl('--tw-ease', $value), decl('transition-timing-function', $value)];
-    }, 'staticValues' => ['initial' => [decl('--tw-ease', 'initial')], 'linear' => [decl('--tw-ease', 'linear'), decl('transition-timing-function', 'linear')]]]);
+    // Registers --tw-ease with @property.
+    $transitionTimingFunctionProperty = function () {
+        return atRoot([property('--tw-ease')]);
+    };
+    $builder->functionalUtility('ease', ['themeKeys' => ['--ease'], 'defaultValue' => null, 'handle' => function ($value) use ($transitionTimingFunctionProperty) {
+        return [$transitionTimingFunctionProperty(), decl('--tw-ease', $value), decl('transition-timing-function', $value)];
+    }, 'staticValues' => ['initial' => [$transitionTimingFunctionProperty(), decl('--tw-ease', 'initial')], 'linear' => [$transitionTimingFunctionProperty(), decl('--tw-ease', 'linear'), decl('transition-timing-function', 'linear')]]]);
     // ==================================================
     // Will Change
     // ==================================================

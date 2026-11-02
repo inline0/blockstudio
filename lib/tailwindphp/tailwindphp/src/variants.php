@@ -421,16 +421,16 @@ class Variants implements VariantsInterface
      */
     private function createSelectorApplyFn(string|array $selector): callable
     {
-        return function (array $ast) use ($selector): ?array {
+        return function (array &$node) use ($selector): void {
             // Handle multiple selectors
             $selectors = is_array($selector) ? $selector : [$selector];
             $nodes = [];
             foreach ($selectors as $sel) {
                 // Replace & with the actual selector
                 $ruleSelector = str_contains($sel, '&') ? $sel : "{$sel} &";
-                $nodes[] = rule($ruleSelector, $ast);
+                $nodes[] = rule($ruleSelector, $node['nodes']);
             }
-            return $nodes;
+            $node['nodes'] = $nodes;
         };
     }
     /**
@@ -481,11 +481,13 @@ function compoundsForSelectors(array $selectors): int
 function substituteAtSlot(array &$ast, array $nodes): void
 {
     walk($ast, function (&$node) use ($nodes) {
+        // Replace `@slot` with rule nodes
         if ($node['kind'] === 'at-rule' && $node['name'] === '@slot') {
-            $node['kind'] = 'rule';
-            $node['selector'] = '&';
-            $node['nodes'] = $nodes;
-            unset($node['name'], $node['params']);
+            return \BlockstudioVendor\TailwindPHP\Walk\WalkAction::ReplaceSkip($nodes);
+        }
+        // Wrap `@keyframes` and `@property` in `AtRoot` nodes
+        if ($node['kind'] === 'at-rule' && ($node['name'] === '@keyframes' || $node['name'] === '@property')) {
+            $node = \BlockstudioVendor\TailwindPHP\Ast\atRoot([\BlockstudioVendor\TailwindPHP\Ast\atRule($node['name'], $node['params'] ?? '', $node['nodes'] ?? [])]);
             return \BlockstudioVendor\TailwindPHP\Walk\WalkAction::Skip;
         }
     });
@@ -493,39 +495,56 @@ function substituteAtSlot(array &$ast, array $nodes): void
 /**
  * Substitute @variant references.
  *
+ * Handles comma-separated compound variants (`@variant hover, focus`) and
+ * stacked variants (`@variant hover:focus`), applying each parsed variant via
+ * applyVariant() exactly like the reference implementation.
+ *
  * @param array &$ast
  * @param object $designSystem
- * @return void
+ * @return int Feature flags (FEATURE_VARIANTS when a variant was substituted)
  */
-function substituteAtVariant(array &$ast, object $designSystem): void
+function substituteAtVariant(array &$ast, object $designSystem): int
 {
-    // Keep substituting until no more @variant rules are found
-    $maxIterations = 100;
-    // Prevent infinite loops
-    $iterations = 0;
-    do {
-        $foundVariant = \false;
-        $iterations++;
-        walk($ast, function (&$node) use ($designSystem, &$foundVariant) {
-            if ($node['kind'] === 'at-rule' && $node['name'] === '@variant') {
-                $variantName = trim($node['params']);
-                $variant = $designSystem->getVariants()->get($variantName);
-                if ($variant) {
-                    // Create a wrapper rule with the inner nodes
-                    $wrapperRule = ['kind' => 'rule', 'selector' => '&', 'nodes' => $node['nodes'] ?? []];
-                    // Apply the variant transformation
-                    $applyFn = $variant['applyFn'];
-                    $applyFn($wrapperRule);
-                    // Replace this node with the transformed result
-                    $node['kind'] = 'context';
-                    $node['nodes'] = $wrapperRule['nodes'];
-                    unset($node['name'], $node['params']);
-                    $foundVariant = \true;
+    $features = 0;
+    walk($ast, function (&$variantNode) use ($designSystem, &$features) {
+        if ($variantNode['kind'] !== 'at-rule' || $variantNode['name'] !== '@variant') {
+            return;
+        }
+        $nodes = [];
+        $compoundVariants = segment($variantNode['params'], ',');
+        $lastIdx = count($compoundVariants) - 1;
+        foreach ($compoundVariants as $idx => $compoundVariant) {
+            // Starting with the `&` rule node
+            //
+            // Only clone the nodes when we have multiple compound variants to
+            // deal with. The last one can use the original nodes.
+            $node = \BlockstudioVendor\TailwindPHP\Ast\styleRule('&', $idx === $lastIdx ? $variantNode['nodes'] ?? [] : array_map('BlockstudioVendor\TailwindPHP\Ast\cloneAstNode', $variantNode['nodes'] ?? []));
+            $stackedVariants = segment($compoundVariant, ':');
+            for ($i = count($stackedVariants) - 1; $i >= 0; $i--) {
+                $variant = trim($stackedVariants[$i]);
+                if ($variant === '') {
+                    throw new \Exception('Cannot use `@variant` with empty variant');
                 }
-                return \BlockstudioVendor\TailwindPHP\Walk\WalkAction::Skip;
+                $variantAst = $designSystem->parseVariant($variant);
+                if ($variantAst === null) {
+                    throw new \Exception("Cannot use `@variant` with unknown variant: {$variant}");
+                }
+                $result = \BlockstudioVendor\TailwindPHP\Compile\applyVariant($node, $variantAst, $designSystem->getVariants());
+                if ($result === \false) {
+                    throw new \Exception("Cannot use `@variant` with variant: {$variant}");
+                }
             }
-        });
-    } while ($foundVariant && $iterations < $maxIterations);
+            if ($node['selector'] === '&') {
+                array_push($nodes, ...$node['nodes']);
+            } else {
+                $nodes[] = $node;
+            }
+        }
+        // Update the variant at-rule node, to be the `&` rule node
+        $features |= \BlockstudioVendor\TailwindPHP\FEATURE_VARIANTS;
+        return \BlockstudioVendor\TailwindPHP\Walk\WalkAction::Replace($nodes);
+    });
+    return $features;
 }
 /**
  * Quote attribute values in selectors.
@@ -569,25 +588,51 @@ function quoteAttributeValue(string $input): string
 function negateConditions(string $ruleName, array $conditions): array
 {
     return array_map(function ($condition) use ($ruleName) {
-        $condition = trim($condition);
-        $parts = segment($condition, ' ');
-        // @media not {query}
-        // @supports not {query}
-        // @container not {query}
-        if (count($parts) > 0 && $parts[0] === 'not') {
-            return implode(' ', array_slice($parts, 1));
-        }
-        if ($ruleName === '@container') {
-            // @container {query}
-            if (strlen($parts[0]) > 0 && $parts[0][0] === '(') {
+        switch ($ruleName) {
+            case '@container':
+                $ast = \BlockstudioVendor\TailwindPHP\ValueParser\parse(trim($condition));
+                // @container {query}
+                //            ^^^^^^^
+                // ast        0
+                if (count($ast) >= 1 && $ast[0]['kind'] === 'function') {
+                    return "not {$condition}";
+                }
+                // @container not   {query}
+                //            ^^^ ^ ^^^^^^^
+                // ast        0   1 2
+                if (count($ast) >= 3 && $ast[0]['kind'] === 'word' && $ast[0]['value'] === 'not' && $ast[2]['kind'] === 'function') {
+                    // Drop the leading `not` (ast[0]) and separator (ast[1])
+                    array_splice($ast, 0, 2);
+                    return \BlockstudioVendor\TailwindPHP\ValueParser\toCss($ast);
+                }
+                // @container {name}   not   {query}
+                //            ^^^^^^ ^ ^^^ ^ ^^^^^^^
+                // ast        0      1 2   3 4
+                if (count($ast) >= 5 && $ast[0]['kind'] === 'word' && $ast[2]['kind'] === 'word' && $ast[2]['value'] === 'not' && $ast[4]['kind'] === 'function') {
+                    // Drop the `not` (ast[2]) and separator (ast[3])
+                    array_splice($ast, 2, 2);
+                    return \BlockstudioVendor\TailwindPHP\ValueParser\toCss($ast);
+                }
+                // @container {name}   {query}
+                //            ^^^^^^ ^ ^^^^^^^
+                // ast        0      1 2
+                if (count($ast) >= 3 && $ast[0]['kind'] === 'word' && $ast[0]['value'] !== 'not' && $ast[2]['kind'] === 'function') {
+                    // Inject a separator and a `not`, after the `name` (ast[0])
+                    array_splice($ast, 1, 0, [['kind' => 'separator', 'value' => ' '], ['kind' => 'word', 'value' => 'not']]);
+                    return \BlockstudioVendor\TailwindPHP\ValueParser\toCss($ast);
+                }
+                // Fallback
                 return "not {$condition}";
-            } elseif (count($parts) > 1 && $parts[1] === 'not') {
-                return "{$parts[0]} " . implode(' ', array_slice($parts, 2));
-            } else {
-                return "{$parts[0]} not " . implode(' ', array_slice($parts, 1));
-            }
+            default:
+                $condition = trim($condition);
+                $parts = segment($condition, ' ');
+                // @media not {query}
+                // @supports not {query}
+                if (count($parts) > 0 && $parts[0] === 'not') {
+                    return implode(' ', array_slice($parts, 1));
+                }
+                return "not {$condition}";
         }
-        return "not {$condition}";
     }, $conditions);
 }
 /**
@@ -619,18 +664,105 @@ function negateAtRule(array $rule): ?array
  * @param string $selector
  * @return string|null
  */
+/**
+ * Serialize selector combinators with surrounding spaces the way lightningcss
+ * does (`*>img` -> `* > img`, relative `>img` -> ` > img`). Combinators inside
+ * parentheses (`:nth-child(2n+1)`) or attribute brackets (`[foo~="bar"]`) are
+ * left untouched.
+ *
+ * @param string $selector
+ * @return string
+ */
+function normalizeSelectorCombinators(string $selector): string
+{
+    $result = '';
+    $parenDepth = 0;
+    $inBrackets = \false;
+    $len = strlen($selector);
+    for ($i = 0; $i < $len; $i++) {
+        $char = $selector[$i];
+        if ($char === '[') {
+            $inBrackets = \true;
+        } elseif ($char === ']') {
+            $inBrackets = \false;
+        } elseif ($char === '(') {
+            $parenDepth++;
+        } elseif ($char === ')') {
+            $parenDepth--;
+        } elseif (($char === '>' || $char === '+' || $char === '~') && $parenDepth === 0 && !$inBrackets) {
+            $result = rtrim($result) . ' ' . $char . ' ';
+            // Skip following whitespace; the combinator already added one space
+            while ($i + 1 < $len && $selector[$i + 1] === ' ') {
+                $i++;
+            }
+            continue;
+        }
+        $result .= $char;
+    }
+    return $result;
+}
+function quoteSelectorAttributeValues(string $selector): string
+{
+    return preg_replace_callback('/(?<!\\\\)\[\s*([^\s\]~|^$*=\'"]+)\s*([~|^$*]?=)\s*(?:"([^"]*)"|\'([^\']*)\'|([^\s\]"\']+))(?:\s+([iIsS]))?\s*\]/', function (array $m): string {
+        $value = $m[3] !== '' ? $m[3] : (($m[4] ?? '') !== '' ? $m[4] : $m[5] ?? '');
+        $flag = isset($m[6]) && $m[6] !== '' ? ' ' . strtolower($m[6]) : '';
+        return '[' . $m[1] . $m[2] . '"' . $value . '"' . $flag . ']';
+    }, $selector) ?? $selector;
+}
+function isSingleCompoundSelector(string $selector): bool
+{
+    $depth = 0;
+    $inBrackets = \false;
+    $len = strlen($selector);
+    for ($i = 0; $i < $len; $i++) {
+        $char = $selector[$i];
+        if ($char === '\\') {
+            $i++;
+            continue;
+        }
+        if ($char === '[') {
+            $inBrackets = \true;
+        } elseif ($char === ']') {
+            $inBrackets = \false;
+        } elseif ($char === '(') {
+            $depth++;
+        } elseif ($char === ')') {
+            $depth--;
+        } elseif ($depth === 0 && !$inBrackets && ($char === ',' || $char === '>' || $char === '+' || $char === '~' || ctype_space($char))) {
+            return \false;
+        }
+    }
+    return \true;
+}
+function unwrapLoneIsSelector(string $selector): string
+{
+    if (!preg_match('/^:is\((.+)\)$/s', $selector, $m)) {
+        return $selector;
+    }
+    $inner = $m[1];
+    if (!isSingleCompoundSelector($inner) || !preg_match('/^[.#\[:]/', $inner)) {
+        return $selector;
+    }
+    return $inner;
+}
 function negateSelector(string $selector): ?string
 {
     if (strpos($selector, '::') !== \false) {
         return null;
     }
     $selectors = array_map(function ($sel) {
+        $sel = trim($sel);
         // For selectors like &:is(...), just remove the & prefix
         // For other selectors, replace & with *
         if (str_starts_with($sel, '&:is(') || str_starts_with($sel, '&:')) {
-            return substr($sel, 1);
+            $sel = substr($sel, 1);
+            return quoteSelectorAttributeValues(unwrapLoneIsSelector($sel));
         }
-        return str_replace('&', '*', $sel);
+        // Replace `&` with `*`; lightningcss drops the redundant universal
+        // selector when it is compounded (`*[aria-selected="true"]` ->
+        // `[aria-selected="true"]`), so mirror that here.
+        $sel = str_replace('&', '*', $sel);
+        return quoteSelectorAttributeValues(preg_replace('/(^|[\s(,>+~])\*(?=[:.#\[])/', '$1', $sel));
     }, segment($selector, ','));
     return '&:not(' . implode(', ', $selectors) . ')';
 }
@@ -753,8 +885,11 @@ function createVariants(\BlockstudioVendor\TailwindPHP\Theme $theme): Variants
             $node['selector'] = "&:is({$selector} *)";
             $didApply = \true;
         });
-        // Copy back the modified node
-        $ruleNode['selector'] = $nodes[0]['selector'];
+        // Copy back the modified node (walk() operates on an array copy);
+        // when the wrapped node is an at-rule there is no selector to copy
+        if (isset($nodes[0]['selector'])) {
+            $ruleNode['selector'] = $nodes[0]['selector'];
+        }
         $ruleNode['nodes'] = $nodes[0]['nodes'];
         if (!$didApply) {
             return \false;
@@ -790,8 +925,11 @@ function createVariants(\BlockstudioVendor\TailwindPHP\Theme $theme): Variants
             $node['selector'] = "&:is({$selector} ~ *)";
             $didApply = \true;
         });
-        // Copy back the modified node
-        $ruleNode['selector'] = $nodes[0]['selector'];
+        // Copy back the modified node (walk() operates on an array copy);
+        // when the wrapped node is an at-rule there is no selector to copy
+        if (isset($nodes[0]['selector'])) {
+            $ruleNode['selector'] = $nodes[0]['selector'];
+        }
         $ruleNode['nodes'] = $nodes[0]['nodes'];
         if (!$didApply) {
             return \false;
@@ -799,9 +937,13 @@ function createVariants(\BlockstudioVendor\TailwindPHP\Theme $theme): Variants
     });
     $variants->suggest('peer', fn() => array_filter($variants->keys(), fn($name) => $variants->compoundsWith('peer', $name)));
     // Pseudo-element variants
-    // Use single colon for these pseudo-elements (legacy CSS2 syntax, matches lightningcss output)
-    $staticVariant('first-letter', ['&:first-letter']);
-    $staticVariant('first-line', ['&:first-line']);
+    // Use single colon for these pseudo-elements (legacy CSS2 syntax, matches
+    // lightningcss output). The reference registers them with `::`, which the
+    // compounds detection recognizes as pseudo-elements; since the single
+    // colon evades that check, mark them COMPOUNDS_NEVER explicitly so
+    // compound variants like `not-first-letter` stay invalid.
+    $staticVariant('first-letter', ['&:first-letter'], ['compounds' => COMPOUNDS_NEVER]);
+    $staticVariant('first-line', ['&:first-line'], ['compounds' => COMPOUNDS_NEVER]);
     $staticVariant('marker', ['& ::marker', '&::marker', '& ::-webkit-details-marker', '&::-webkit-details-marker']);
     $staticVariant('selection', ['& *::selection', '&::selection']);
     $staticVariant('file', ['&::file-selector-button']);
@@ -908,8 +1050,11 @@ function createVariants(\BlockstudioVendor\TailwindPHP\Theme $theme): Variants
             $node['selector'] = ':where(' . $parentSelector . ') &';
             $didApply = \true;
         });
-        // Copy back the modified node
-        $ruleNode['selector'] = $nodes[0]['selector'];
+        // Copy back the modified node (walk() operates on an array copy);
+        // when the wrapped node is an at-rule there is no selector to copy
+        if (isset($nodes[0]['selector'])) {
+            $ruleNode['selector'] = $nodes[0]['selector'];
+        }
         $ruleNode['nodes'] = $nodes[0]['nodes'];
         if (!$didApply) {
             return \false;
@@ -933,9 +1078,26 @@ function createVariants(\BlockstudioVendor\TailwindPHP\Theme $theme): Variants
                     return \BlockstudioVendor\TailwindPHP\Walk\WalkAction::Stop;
                 }
             }
-            $node['selector'] = '&:has(' . str_replace('&', '*', $node['selector']) . ')';
+            // Replace `&` in target variant with `*`, so variants like
+            // `&:hover` become `&:has(*:hover)`. lightningcss then drops the
+            // redundant universal selector when it is compounded with another
+            // simple selector (`*:hover` -> `:hover`), so mirror that here.
+            $inner = str_replace('&', '*', $node['selector']);
+            $inner = preg_replace('/(^|[\s(,>+~])\*(?=[:.#\[])/', '$1', $inner);
+            // lightningcss serializes combinators with surrounding spaces
+            // (`*>img` -> `* > img`, relative `>img` -> ` > img`). Only pad
+            // combinators outside of parentheses and attribute brackets.
+            $inner = normalizeSelectorCombinators($inner);
+            $inner = quoteSelectorAttributeValues(unwrapLoneIsSelector($inner));
+            $node['selector'] = "&:has({$inner})";
             $didApply = \true;
         });
+        // Copy back the modified node (walk() operates on an array copy);
+        // when the wrapped node is an at-rule there is no selector to copy
+        if (isset($nodes[0]['selector'])) {
+            $ruleNode['selector'] = $nodes[0]['selector'];
+        }
+        $ruleNode['nodes'] = $nodes[0]['nodes'];
         if (!$didApply) {
             return \false;
         }
@@ -948,9 +1110,17 @@ function createVariants(\BlockstudioVendor\TailwindPHP\Theme $theme): Variants
         }
         $value = $variant['value'];
         if ($value['kind'] === 'arbitrary') {
-            $ruleNode['nodes'] = [\BlockstudioVendor\TailwindPHP\Ast\styleRule('&[aria-' . quoteAttributeValue($value['value']) . ']', $ruleNode['nodes'])];
+            $selector = '[aria-' . quoteAttributeValue($value['value']) . ']';
+            if (\BlockstudioVendor\TailwindPHP\AttributeSelectorParser\parse($selector) === null) {
+                return \false;
+            }
+            $ruleNode['nodes'] = [\BlockstudioVendor\TailwindPHP\Ast\styleRule("&{$selector}", $ruleNode['nodes'])];
         } else {
-            $ruleNode['nodes'] = [\BlockstudioVendor\TailwindPHP\Ast\styleRule("&[aria-{$value['value']}=\"true\"]", $ruleNode['nodes'])];
+            $selector = "[aria-{$value['value']}=\"true\"]";
+            if (\BlockstudioVendor\TailwindPHP\AttributeSelectorParser\parse($selector) === null) {
+                return \false;
+            }
+            $ruleNode['nodes'] = [\BlockstudioVendor\TailwindPHP\Ast\styleRule("&{$selector}", $ruleNode['nodes'])];
         }
     });
     $variants->suggest('aria', fn() => ['busy', 'checked', 'disabled', 'expanded', 'hidden', 'pressed', 'readonly', 'required', 'selected']);
@@ -958,7 +1128,11 @@ function createVariants(\BlockstudioVendor\TailwindPHP\Theme $theme): Variants
         if (!isset($variant['value']) || isset($variant['modifier'])) {
             return \false;
         }
-        $ruleNode['nodes'] = [\BlockstudioVendor\TailwindPHP\Ast\styleRule('&[data-' . quoteAttributeValue($variant['value']['value']) . ']', $ruleNode['nodes'])];
+        $selector = '[data-' . quoteAttributeValue($variant['value']['value']) . ']';
+        if (\BlockstudioVendor\TailwindPHP\AttributeSelectorParser\parse($selector) === null) {
+            return \false;
+        }
+        $ruleNode['nodes'] = [\BlockstudioVendor\TailwindPHP\Ast\styleRule("&{$selector}", $ruleNode['nodes'])];
     });
     // Helper to normalize nth values (2n+1 → odd, used by lightningcss)
     $normalizeNthValue = function (string $value): string {

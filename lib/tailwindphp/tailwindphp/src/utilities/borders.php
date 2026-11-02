@@ -35,8 +35,8 @@ function registerBorderUtilities(UtilityBuilder $builder): void
     // Border Radius
     // ==================================================
     // Helper function to create radius utility
-    $createRadiusUtility = function (string $name, array $properties, bool $hasDefault = \false) use ($builder) {
-        $builder->functionalUtility($name, ['themeKeys' => ['--radius'], 'defaultValue' => $hasDefault ? 'var(--radius)' : null, 'handle' => function ($value) use ($properties) {
+    $createRadiusUtility = function (string $name, array $properties) use ($builder) {
+        $builder->functionalUtility($name, ['themeKeys' => ['--radius'], 'handle' => function ($value) use ($properties) {
             $decls = [];
             foreach ($properties as $prop) {
                 $decls[] = decl($prop, $value);
@@ -45,29 +45,29 @@ function registerBorderUtilities(UtilityBuilder $builder): void
         }, 'staticValues' => ['none' => array_map(fn($p) => decl($p, '0'), $properties), 'full' => array_map(fn($p) => decl($p, RADIUS_FULL_DEFAULT), $properties)]]);
     };
     // rounded (all corners)
-    $createRadiusUtility('rounded', ['border-radius'], \true);
+    $createRadiusUtility('rounded', ['border-radius']);
     // rounded-s (start corners: top-left and bottom-left in LTR)
-    $createRadiusUtility('rounded-s', ['border-start-start-radius', 'border-end-start-radius'], \true);
+    $createRadiusUtility('rounded-s', ['border-start-start-radius', 'border-end-start-radius']);
     // rounded-e (end corners)
-    $createRadiusUtility('rounded-e', ['border-start-end-radius', 'border-end-end-radius'], \true);
+    $createRadiusUtility('rounded-e', ['border-start-end-radius', 'border-end-end-radius']);
     // rounded-t (top corners)
-    $createRadiusUtility('rounded-t', ['border-top-left-radius', 'border-top-right-radius'], \true);
+    $createRadiusUtility('rounded-t', ['border-top-left-radius', 'border-top-right-radius']);
     // rounded-r (right corners)
-    $createRadiusUtility('rounded-r', ['border-top-right-radius', 'border-bottom-right-radius'], \true);
+    $createRadiusUtility('rounded-r', ['border-top-right-radius', 'border-bottom-right-radius']);
     // rounded-b (bottom corners)
-    $createRadiusUtility('rounded-b', ['border-bottom-right-radius', 'border-bottom-left-radius'], \true);
+    $createRadiusUtility('rounded-b', ['border-bottom-right-radius', 'border-bottom-left-radius']);
     // rounded-l (left corners)
-    $createRadiusUtility('rounded-l', ['border-top-left-radius', 'border-bottom-left-radius'], \true);
+    $createRadiusUtility('rounded-l', ['border-top-left-radius', 'border-bottom-left-radius']);
     // Individual corners (logical)
-    $createRadiusUtility('rounded-ss', ['border-start-start-radius'], \true);
-    $createRadiusUtility('rounded-se', ['border-start-end-radius'], \true);
-    $createRadiusUtility('rounded-ee', ['border-end-end-radius'], \true);
-    $createRadiusUtility('rounded-es', ['border-end-start-radius'], \true);
+    $createRadiusUtility('rounded-ss', ['border-start-start-radius']);
+    $createRadiusUtility('rounded-se', ['border-start-end-radius']);
+    $createRadiusUtility('rounded-ee', ['border-end-end-radius']);
+    $createRadiusUtility('rounded-es', ['border-end-start-radius']);
     // Individual corners (physical)
-    $createRadiusUtility('rounded-tl', ['border-top-left-radius'], \true);
-    $createRadiusUtility('rounded-tr', ['border-top-right-radius'], \true);
-    $createRadiusUtility('rounded-br', ['border-bottom-right-radius'], \true);
-    $createRadiusUtility('rounded-bl', ['border-bottom-left-radius'], \true);
+    $createRadiusUtility('rounded-tl', ['border-top-left-radius']);
+    $createRadiusUtility('rounded-tr', ['border-top-right-radius']);
+    $createRadiusUtility('rounded-br', ['border-bottom-right-radius']);
+    $createRadiusUtility('rounded-bl', ['border-bottom-left-radius']);
     // ==================================================
     // Border Width and Color (combined utility like Tailwind 4)
     // ==================================================

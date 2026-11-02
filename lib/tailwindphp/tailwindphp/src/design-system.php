@@ -7,6 +7,7 @@ use function BlockstudioVendor\TailwindPHP\Ast\toCss;
 use BlockstudioVendor\TailwindPHP\Candidate\DesignSystemInterface as CandidateDesignSystemInterface;
 use function BlockstudioVendor\TailwindPHP\Candidate\parseCandidate;
 use function BlockstudioVendor\TailwindPHP\Candidate\parseVariant;
+use function BlockstudioVendor\TailwindPHP\Compat\registerLegacyUtilities;
 use function BlockstudioVendor\TailwindPHP\Compile\compileAstNodes;
 use function BlockstudioVendor\TailwindPHP\Compile\compileCandidates;
 use BlockstudioVendor\TailwindPHP\Theme;
@@ -90,7 +91,27 @@ class DesignSystem implements DesignSystemInterface, CandidateDesignSystemInterf
         });
         $this->compiledAstNodes = new DefaultMap(function ($flags) use ($designSystem) {
             return new DefaultMap(function ($candidate) use ($designSystem, $flags) {
-                return compileAstNodes($candidate, $designSystem, $flags);
+                $ast = compileAstNodes($candidate, $designSystem, $flags);
+                try {
+                    // Arbitrary values (`text-[theme(--color-red-500)]`) and
+                    // compiled utility bodies can contain CSS functions
+                    // (`--spacing(4)`), so evaluate any functions found here
+                    // that weren't in the source CSS. JS plugins might also
+                    // contain an `@variant` inside a generated utility.
+                    $nodes = array_map(fn($entry) => $entry['node'], $ast);
+                    \BlockstudioVendor\TailwindPHP\substituteFunctions($nodes, $designSystem);
+                    \BlockstudioVendor\TailwindPHP\Variants\substituteAtVariant($nodes, $designSystem);
+                    foreach ($nodes as $index => $node) {
+                        $ast[$index]['node'] = $node;
+                    }
+                } catch (\Throwable $err) {
+                    // If substitution fails then the candidate likely contains
+                    // a call to `theme()` that is invalid, so mark the whole
+                    // candidate as invalid.
+                    $designSystem->addInvalidCandidate($designSystem->printCandidate($candidate));
+                    return [];
+                }
+                return $ast;
             });
         });
         $this->trackUsedVariables = new DefaultMap(function ($raw) use ($designSystem) {
@@ -222,7 +243,9 @@ function buildDesignSystem(Theme $theme): DesignSystem
 {
     $utilities = createUtilities($theme);
     $variants = createVariants($theme);
-    return new DesignSystem($theme, $utilities, $variants);
+    $designSystem = new DesignSystem($theme, $utilities, $variants);
+    registerLegacyUtilities($designSystem);
+    return $designSystem;
 }
 /**
  * Apply opacity to a color using `color-mix`.

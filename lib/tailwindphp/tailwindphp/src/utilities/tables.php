@@ -3,6 +3,7 @@
 declare (strict_types=1);
 namespace BlockstudioVendor\TailwindPHP\Utilities;
 
+use function BlockstudioVendor\TailwindPHP\Ast\atRoot;
 use function BlockstudioVendor\TailwindPHP\Ast\decl;
 /**
  * Tables Utilities
@@ -41,16 +42,22 @@ function registerTablesUtilities(UtilityBuilder $builder): void
     // ==================================================
     // Border Spacing
     // ==================================================
+    // Registers the composed --tw-border-spacing-* group with @property
+    // (<length>, initial 0) so a single-axis utility still produces a valid
+    // `border-spacing` shorthand.
+    $borderSpacingProperties = function () {
+        return atRoot([property('--tw-border-spacing-x', '0', '<length>'), property('--tw-border-spacing-y', '0', '<length>')]);
+    };
     // border-spacing-*
-    $builder->spacingUtility('border-spacing', ['--border-spacing', '--spacing'], function ($value) {
-        return [decl('--tw-border-spacing-x', $value), decl('--tw-border-spacing-y', $value), decl('border-spacing', 'var(--tw-border-spacing-x) var(--tw-border-spacing-y)')];
+    $builder->spacingUtility('border-spacing', ['--border-spacing', '--spacing'], function ($value) use ($borderSpacingProperties) {
+        return [$borderSpacingProperties(), decl('--tw-border-spacing-x', $value), decl('--tw-border-spacing-y', $value), decl('border-spacing', 'var(--tw-border-spacing-x) var(--tw-border-spacing-y)')];
     });
     // border-spacing-x-*
-    $builder->spacingUtility('border-spacing-x', ['--border-spacing', '--spacing'], function ($value) {
-        return [decl('--tw-border-spacing-x', $value), decl('border-spacing', 'var(--tw-border-spacing-x) var(--tw-border-spacing-y)')];
+    $builder->spacingUtility('border-spacing-x', ['--border-spacing', '--spacing'], function ($value) use ($borderSpacingProperties) {
+        return [$borderSpacingProperties(), decl('--tw-border-spacing-x', $value), decl('border-spacing', 'var(--tw-border-spacing-x) var(--tw-border-spacing-y)')];
     });
     // border-spacing-y-*
-    $builder->spacingUtility('border-spacing-y', ['--border-spacing', '--spacing'], function ($value) {
-        return [decl('--tw-border-spacing-y', $value), decl('border-spacing', 'var(--tw-border-spacing-x) var(--tw-border-spacing-y)')];
+    $builder->spacingUtility('border-spacing-y', ['--border-spacing', '--spacing'], function ($value) use ($borderSpacingProperties) {
+        return [$borderSpacingProperties(), decl('--tw-border-spacing-y', $value), decl('border-spacing', 'var(--tw-border-spacing-x) var(--tw-border-spacing-y)')];
     });
 }

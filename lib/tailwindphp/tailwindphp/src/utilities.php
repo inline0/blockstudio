@@ -275,15 +275,12 @@ class Utilities implements UtilitiesInterface
 function property(string $ident, ?string $initialValue = null, ?string $syntax = null): array
 {
     $nodes = [decl('syntax', $syntax ? "\"{$syntax}\"" : '"*"'), decl('inherits', 'false')];
-    // initial-value must come after inherits
+    // initial-value must come after inherits. The authored value is kept
+    // verbatim here; the zero-length unit strip that lightningcss applies to
+    // the printed @property block happens at emission time so the fallback
+    // declarations can still echo the authored form (`0px` vs `0`).
     if ($initialValue !== null) {
-        // For <length> syntax, LightningCSS strips units from zero values
-        // e.g., "0px" -> "0"
-        $optimizedValue = $initialValue;
-        if ($syntax === '<length>' && preg_match('/^0(px|rem|em|%)$/', $initialValue)) {
-            $optimizedValue = '0';
-        }
-        $nodes[] = decl('initial-value', $optimizedValue);
+        $nodes[] = decl('initial-value', $initialValue);
     }
     return atRule('@property', $ident, $nodes);
 }
@@ -657,24 +654,24 @@ class UtilityBuilder
         }
         $this->utilities->static("{$name}-px", fn() => $handle('1px'));
         $this->functionalUtility($name, ['themeKeys' => $themeKeys, 'supportsFractions' => $supportsFractions, 'supportsNegative' => $supportsNegative, 'defaultValue' => null, 'handleBareValue' => function ($value) use ($theme) {
-            // Fallback: if no theme value found, use calc(var(--spacing) * N)
-            $multiplier = $theme->resolve(null, ['--spacing']);
-            if ($multiplier === null) {
+            // Bare values emit a `--spacing(N)` marker that the CSS
+            // function substitution pass resolves against the theme
+            // (v4.3.3 behavior; enables the 0/1 spacing optimizations)
+            if ($theme->resolve(null, ['--spacing']) === null) {
                 return null;
             }
             if (!isValidSpacingMultiplier($value['value'])) {
                 return null;
             }
-            return "calc({$multiplier} * {$value['value']})";
+            return "--spacing({$value['value']})";
         }, 'handleNegativeBareValue' => function ($value) use ($theme) {
-            $multiplier = $theme->resolve(null, ['--spacing']);
-            if ($multiplier === null) {
+            if ($theme->resolve(null, ['--spacing']) === null) {
                 return null;
             }
             if (!isValidSpacingMultiplier($value['value'])) {
                 return null;
             }
-            return "calc({$multiplier} * -{$value['value']})";
+            return "--spacing(-{$value['value']})";
         }, 'staticValues' => $staticValues, 'handle' => $handle]);
     }
     /**

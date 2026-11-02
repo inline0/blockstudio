@@ -187,7 +187,7 @@ const NAMED_COLORS = [
     'accentcolor',
     'accentcolortext',
 ];
-const IS_COLOR_FN_PATTERN = '/^(rgba?|hsla?|hwb|color|(ok)?(lab|lch)|light-dark|color-mix)\(/i';
+const IS_COLOR_FN_PATTERN = '/^(rgba?|hsla?|hwb|color|(ok)?(lab|lch)|light-dark|color-mix|--alpha)\(/i';
 /**
  * Determine if a value is a color.
  *
@@ -200,4 +200,14 @@ function isColor(string $value): bool
         return \false;
     }
     return ord($value[0]) === HASH_CHAR || (bool) preg_match(IS_COLOR_FN_PATTERN, $value) || in_array(strtolower($value), NAMED_COLORS, \true);
+}
+/**
+ * Determine if a value is one of the CSS named colors.
+ *
+ * @param string $value
+ * @return bool
+ */
+function isNamedColor(string $value): bool
+{
+    return in_array(strtolower($value), NAMED_COLORS, \true);
 }

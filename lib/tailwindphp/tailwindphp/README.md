@@ -1,8 +1,8 @@
 <p align="center">
   <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="./docs/public/logo-dark.svg">
-    <source media="(prefers-color-scheme: light)" srcset="./docs/public/logo-light.svg">
-    <img alt="TailwindPHP" src="./docs/public/logo-light.svg" height="56">
+    <source media="(prefers-color-scheme: dark)" srcset="./.github/logo-dark.svg">
+    <source media="(prefers-color-scheme: light)" srcset="./.github/logo-light.svg">
+    <img alt="TailwindPHP" src="./.github/logo-light.svg" height="56">
   </picture>
 </p>
 
@@ -20,19 +20,19 @@
 
 ## What is TailwindPHP?
 
-TailwindPHP is a 1:1 port of TailwindCSS 4.x to PHP. It scans your markup for class names and generates the exact same utility CSS that TailwindCSS produces — entirely in PHP, with no Node.js, no build step, and no extensions beyond a standard PHP 8.2+ build.
+TailwindPHP is a 1:1 port of TailwindCSS 4.x to PHP. It scans your markup for class names and generates the utility CSS that TailwindCSS v4.3.3 produces, checked against TailwindCSS's own test suites — entirely in PHP, with no Node.js and no build step. It needs PHP 8.2+ with the `ctype` and `mbstring` extensions.
 
 **The problem:** TailwindCSS is written in TypeScript and runs on Node.js. Any PHP project that wants Tailwind inherits a second runtime, an `npm install`, and a build step in CI and Docker. For WordPress plugins, framework packages, and apps that generate CSS at runtime, that's friction — or a dealbreaker.
 
 **TailwindPHP solves this** by implementing the Tailwind compiler natively in PHP:
 
-- The complete **TailwindCSS v4.3** surface — all 364 utilities, every variant (hover, focus, responsive, dark mode, container queries, arbitrary values), and byte-for-byte output
+- The **TailwindCSS v4.3.3** surface — the full utility set (including `container`, scrollbar, `zoom-*` and `tab-*`), every variant (hover, focus, responsive, dark mode, container queries, arbitrary values), and output that matches the reference apart from the [documented differences](./docs/advanced/compatibility.md)
 - The full directive set — `@import`, `@theme`, `@apply`, `@utility`, `@custom-variant`, `@layer`, `@plugin`, and `@source`
 - Tailwind's CSS functions — `theme()`, `--theme()`, `--spacing()`, `--alpha()` — plus `color-mix()` → `oklab()` and the transforms Tailwind delegates to LightningCSS
 - **Batteries included** — PHP ports of [clsx](https://github.com/lukeed/clsx), [tailwind-merge](https://github.com/dcastil/tailwind-merge), and [CVA](https://github.com/joe-bell/cva) as `cn()`, `merge()`, `join()`, and `variants()`
 - **Plugins** — `@tailwindcss/typography` and `@tailwindcss/forms` ported in full, plus a PHP plugin API for your own
-- A **CLI** (`bin/tailwindphp`) that mirrors `@tailwindcss/cli`, plus file-based caching and a CSS minifier
-- **4,000+ tests** — output is verified against TailwindCSS's own test suites, extracted from the TypeScript source and re-run on every push
+- A **CLI** (`bin/tailwindphp`) with the `@tailwindcss/cli` build options, plus file-based caching, a persistent compiler state cache, and a CSS minifier
+- **4,400+ tests** — output is verified against TailwindCSS's own test suites, extracted from the TypeScript source and re-run on every push
 
 ## Quick Start
 
@@ -54,7 +54,7 @@ $css = tw::generate(
 
 // Inspect a class without rendering a full stylesheet
 tw::computedProperties('p-4');      // ['padding' => '1rem']
-tw::computedValue('text-blue-500'); // 'oklch(.546 .245 262.881)'
+tw::computedValue('text-blue-500'); // 'oklch(62.3% .214 259.815)'
 ```
 
 Build conditional class strings and resolve conflicts (clsx + tailwind-merge):
@@ -85,7 +85,7 @@ $button(['size' => 'lg']); // 'inline-flex … bg-blue-500 text-white h-11 px-8'
 
 ## CLI
 
-A drop-in port of `@tailwindcss/cli` — same options, no Node.js:
+`bin/tailwindphp` takes the `@tailwindcss/cli` build options (`-i`, `-o`, `-w`, `-m`, `--optimize`, `--cwd`), with no Node.js. Source maps (`--map`) are not supported:
 
 ```bash
 # Build CSS from an input file
@@ -98,16 +98,11 @@ A drop-in port of `@tailwindcss/cli` — same options, no Node.js:
 ./vendor/bin/tailwindphp -i ./src/app.css -o ./dist/styles.css --minify
 ```
 
-Point `@source` at the templates to scan in your input CSS:
-
-```css
-@import "tailwindcss";
-@source "./templates";
-```
+The CLI honours `@source` file paths, directories, globs, and exclusions relative to the input CSS file. Without positive file sources it scans the working directory, skipping `.git`, `vendor`, and `node_modules`. It extracts class names from `class` and `className` attributes; see the [CLI docs](./docs/cli.md) for supported content formats.
 
 ## Documentation
 
-Full documentation lives at [tailwindphp.com](https://tailwindphp.com) (or in [`docs/`](./docs) if you're reading the repo).
+Full documentation lives at [tailwindphp.inline0.dev/docs](https://tailwindphp.inline0.dev/docs/) (or in [`docs/`](./docs) if you're reading the repo).
 
 - [Getting Started](./docs/getting-started.md) — install and generate your first stylesheet
 - [Usage](./docs/usage/) — content scanning, theme, directives, imports, and `@source`
@@ -129,3 +124,19 @@ TailwindPHP ports:
 ## License
 
 MIT
+
+## Development tooling
+
+Repository tooling uses Node.js 26.12.0 (pinned in `.nvmrc`), pnpm 12.14
+and Effect 4.0.5. Install with `pnpm install --frozen-lockfile`. Run `pnpm typecheck`, `pnpm test:scripts`
+and `pnpm docs:check` for the TypeScript gate. Scripts run directly as
+`node scripts/<name>.ts`; the shared runtime provides typed CLI failures,
+filesystem services and scoped subprocesses that close on interruption.
+These are development dependencies only; PHP consumers keep the same runtime
+requirements and Composer archives exclude the Node tooling.
+
+The upstream generators bundle the checked-out reference TypeScript into a
+scoped temporary module with esbuild, preserving const enums, extensionless
+imports and validator names without changing upstream files. Run
+`pnpm generate:merge` and `pnpm generate:utilities` after reference changes;
+`pnpm versions` inspects the checked-out versions without fetching.

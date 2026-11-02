@@ -3,7 +3,10 @@
 declare (strict_types=1);
 namespace BlockstudioVendor\TailwindPHP\Utilities;
 
+use function BlockstudioVendor\TailwindPHP\Ast\atRoot;
+use function BlockstudioVendor\TailwindPHP\Ast\atRule;
 use function BlockstudioVendor\TailwindPHP\Ast\decl;
+use function BlockstudioVendor\TailwindPHP\Utils\compareBreakpoints;
 use function BlockstudioVendor\TailwindPHP\Utils\isPositiveInteger;
 /**
  * Layout Utilities
@@ -144,31 +147,35 @@ function registerLayoutUtilities(UtilityBuilder $builder): void
     $builder->staticUtility('scheme-only-light', [['color-scheme', 'light only']]);
     // Contain
     $containVar = 'var(--tw-contain-size, ) var(--tw-contain-layout, ) var(--tw-contain-paint, ) var(--tw-contain-style, )';
+    // Registers the composed --tw-contain-* group with @property.
+    $cssContainProperties = function () {
+        return atRoot([property('--tw-contain-size'), property('--tw-contain-layout'), property('--tw-contain-paint'), property('--tw-contain-style')]);
+    };
     $builder->staticUtility('contain-none', [['contain', 'none']]);
     $builder->staticUtility('contain-content', [['contain', 'content']]);
     $builder->staticUtility('contain-strict', [['contain', 'strict']]);
-    $builder->staticUtility('contain-size', [['--tw-contain-size', 'size'], ['contain', $containVar]]);
-    $builder->staticUtility('contain-inline-size', [['--tw-contain-size', 'inline-size'], ['contain', $containVar]]);
-    $builder->staticUtility('contain-layout', [['--tw-contain-layout', 'layout'], ['contain', $containVar]]);
-    $builder->staticUtility('contain-paint', [['--tw-contain-paint', 'paint'], ['contain', $containVar]]);
-    $builder->staticUtility('contain-style', [['--tw-contain-style', 'style'], ['contain', $containVar]]);
+    $builder->staticUtility('contain-size', [$cssContainProperties, ['--tw-contain-size', 'size'], ['contain', $containVar]]);
+    $builder->staticUtility('contain-inline-size', [$cssContainProperties, ['--tw-contain-size', 'inline-size'], ['contain', $containVar]]);
+    $builder->staticUtility('contain-layout', [$cssContainProperties, ['--tw-contain-layout', 'layout'], ['contain', $containVar]]);
+    $builder->staticUtility('contain-paint', [$cssContainProperties, ['--tw-contain-paint', 'paint'], ['contain', $containVar]]);
+    $builder->staticUtility('contain-style', [$cssContainProperties, ['--tw-contain-style', 'style'], ['contain', $containVar]]);
     $builder->functionalUtility('contain', ['themeKeys' => [], 'handle' => function ($value) {
         return [decl('contain', $value)];
     }]);
     // Aspect Ratio
-    $builder->functionalUtility('aspect', ['themeKeys' => ['--aspect-ratio'], 'handleBareValue' => function ($value) {
+    $builder->functionalUtility('aspect', ['themeKeys' => ['--aspect'], 'handleBareValue' => function ($value) {
         // Handle fractions like 4/3
         $fraction = $value['fraction'] ?? null;
         if ($fraction !== null) {
             $parts = \BlockstudioVendor\TailwindPHP\Utils\segment($fraction, '/');
-            if (count($parts) === 2 && isPositiveInteger($parts[0]) && isPositiveInteger($parts[1])) {
+            if (count($parts) === 2 && \BlockstudioVendor\TailwindPHP\Utils\isValidSpacingMultiplier($parts[0]) && \BlockstudioVendor\TailwindPHP\Utils\isValidSpacingMultiplier($parts[1])) {
                 return $fraction;
             }
         }
         return null;
     }, 'handle' => function ($value, $dataType) {
         return [decl('aspect-ratio', $value)];
-    }, 'staticValues' => ['auto' => [decl('aspect-ratio', 'auto')], 'square' => [decl('aspect-ratio', '1 / 1')], 'video' => [decl('aspect-ratio', '16 / 9')]]]);
+    }, 'staticValues' => ['auto' => [decl('aspect-ratio', 'auto')], 'square' => [decl('aspect-ratio', '1 / 1')]]]);
     // Columns
     $builder->functionalUtility('columns', ['handleBareValue' => function ($value) {
         if (!isPositiveInteger($value['value'])) {
@@ -233,13 +240,35 @@ function registerLayoutUtilities(UtilityBuilder $builder): void
     $builder->staticUtility('object-none', [['object-fit', 'none']]);
     $builder->staticUtility('object-scale-down', [['object-fit', 'scale-down']]);
     // Object Position
-    $objectPositions = ['bottom' => 'bottom', 'bottom-left' => 'left bottom', 'bottom-right' => 'right bottom', 'center' => 'center', 'left' => 'left', 'left-bottom' => 'left bottom', 'left-top' => 'left top', 'right' => 'right', 'right-bottom' => 'right bottom', 'right-top' => 'right top', 'top' => 'top', 'top-left' => 'left top', 'top-right' => 'right top'];
+    $objectPositions = ['bottom' => 'bottom', 'bottom-left' => 'left bottom', 'bottom-right' => 'right bottom', 'center' => 'center', 'left' => 'left', 'right' => 'right', 'top' => 'top', 'top-left' => 'left top', 'top-right' => 'right top'];
     foreach ($objectPositions as $name => $value) {
         $builder->staticUtility("object-{$name}", [['object-position', $value]]);
     }
     $builder->functionalUtility('object', ['themeKeys' => ['--object-position'], 'handle' => function ($value, $dataType) {
         return [decl('object-position', $value)];
     }]);
+    // Container (the layout component, not container queries)
+    //
+    // Emits `width: 100%` followed by one `@media (width >= <breakpoint>)`
+    // rule per `--breakpoint-*` value in the theme, each capping `max-width`
+    // at that breakpoint. Breakpoints are read from the theme namespace so a
+    // custom `@theme { --breakpoint-* }` is honoured, and sorted ascending by
+    // unit then value via compareBreakpoints(). The `--tw-sort` declaration is
+    // an internal sort hint (stripped from output) that keeps `.container`
+    // ordered before width utilities, matching the reference implementation.
+    //
+    // Registered directly on the utilities registry because staticUtility()
+    // only accepts flat property/value pairs and cannot emit the nested
+    // @media at-rules this utility requires.
+    $builder->getUtilities()->static('container', function () use ($builder) {
+        $breakpoints = array_values($builder->getTheme()->namespace('--breakpoint'));
+        usort($breakpoints, fn($a, $z) => compareBreakpoints($a, $z, 'asc'));
+        $decls = [decl('--tw-sort', '--tw-container-component'), decl('width', '100%')];
+        foreach ($breakpoints as $breakpoint) {
+            $decls[] = atRule('@media', "(width >= {$breakpoint})", [decl('max-width', $breakpoint)]);
+        }
+        return $decls;
+    });
     // Container Queries (@container)
     // @container -> container-type: inline-size
     // @container-normal -> container-type: normal

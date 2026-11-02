@@ -35,7 +35,11 @@ use BlockstudioVendor\TailwindPHP\Tailwind;
  */
 class Application
 {
-    public const VERSION = '1.0.0';
+    /**
+     * Tracks the TailwindPHP package version (the latest CHANGELOG release);
+     * CliTest asserts the two stay in sync, so bump this on every release.
+     */
+    public const VERSION = '1.8.4';
     public const NAME = 'tailwindphp';
     private Input $input;
     private Output $output;
@@ -89,7 +93,7 @@ class Application
      */
     private function hasAnyOption(): bool
     {
-        return $this->input->hasOption('input') || $this->input->hasOption('i') || $this->input->hasOption('output') || $this->input->hasOption('o') || $this->input->hasOption('watch') || $this->input->hasOption('w') || $this->input->hasOption('minify') || $this->input->hasOption('m');
+        return $this->input->hasOption('input') || $this->input->hasOption('i') || $this->input->hasOption('output') || $this->input->hasOption('o') || $this->input->hasOption('watch') || $this->input->hasOption('w') || $this->input->hasOption('minify') || $this->input->hasOption('m') || $this->input->hasOption('optimize') || $this->input->hasOption('cwd');
     }
     /**
      * Build CSS (the implicit default command).
@@ -105,7 +109,6 @@ class Application
         $outputFile = $this->getStringOption('output', 'o', '-');
         $watch = $this->input->hasOption('watch') || $this->input->hasOption('w');
         $minify = $this->input->hasOption('minify') || $this->input->hasOption('m');
-        $optimize = $this->input->hasOption('optimize');
         $cwd = $this->getStringOption('cwd', '', '.');
         // Change to specified working directory
         if ($cwd !== '.') {
@@ -135,15 +138,11 @@ class Application
         // Compile
         $compiled = \BlockstudioVendor\TailwindPHP\compile($css, ['base' => $inputFile !== '' && $inputFile !== '-' ? dirname(realpath($inputFile)) : getcwd()]);
         // Get sources for content scanning
-        $sources = $compiled['sources'] ?? [];
-        // If no sources from @source directive, scan current directory
-        if (empty($sources)) {
-            $sources = [['base' => getcwd(), 'pattern' => '**/*', 'negated' => \false]];
-        }
+        $sources = $this->prepareSources($compiled['sources'] ?? []);
         // Scan for candidates
         $candidates = $this->scanSources($sources);
         // Build CSS, minified during serialization when requested
-        $result = $compiled['build']($candidates, $minify || $optimize);
+        $result = $compiled['build']($candidates, $minify);
         // Write output
         if ($outputFile === '-') {
             // Write to stdout
@@ -160,22 +159,20 @@ class Application
         $this->output->writeErrorln("Done in {$duration}ms");
         // Watch mode
         if ($watch) {
-            return $this->watchLoop($inputFile, $outputFile, $sources, $minify || $optimize);
+            return $this->watchLoop($inputFile, $outputFile, $sources, $minify);
         }
         return 0;
     }
     /**
      * Watch for changes and rebuild.
      *
-     * @param array<array{base: string, pattern: string, negated: bool}> $sources
+     * @param array<array{base: string, pattern: string, negated: bool, automatic?: bool}> $sources
      */
     private function watchLoop(string $inputFile, string $outputFile, array $sources, bool $minify): int
     {
-        $this->output->writeErrorln();
-        $this->output->writeErrorln('Watching for changes...');
         // Track file modification times
         $fileTimes = [];
-        $watchFiles = $this->getWatchFiles($sources);
+        $watchFiles = $this->getWatchFiles($sources, $outputFile);
         foreach ($watchFiles as $file) {
             if (file_exists($file)) {
                 $fileTimes[$file] = filemtime($file) ?: 0;
@@ -195,9 +192,12 @@ class Application
                 $running = \false;
             });
         }
+        $this->output->writeErrorln();
+        $this->output->writeErrorln('Watching for changes...');
         $pollInterval = 500000;
         // 500ms in microseconds
         while ($running) {
+            clearstatcache();
             if (function_exists('pcntl_signal_dispatch')) {
                 pcntl_signal_dispatch();
             }
@@ -205,6 +205,8 @@ class Application
             // Check for changes
             foreach ($fileTimes as $file => $oldTime) {
                 if (!file_exists($file)) {
+                    $changed = \true;
+                    unset($fileTimes[$file]);
                     continue;
                 }
                 $newTime = filemtime($file) ?: 0;
@@ -214,7 +216,7 @@ class Application
                 }
             }
             // Check for new files
-            $currentFiles = $this->getWatchFiles($sources);
+            $currentFiles = $this->getWatchFiles($sources, $outputFile);
             foreach ($currentFiles as $file) {
                 if (!isset($fileTimes[$file]) && file_exists($file)) {
                     $changed = \true;
@@ -232,10 +234,7 @@ class Application
                     // Recompile
                     $compiled = \BlockstudioVendor\TailwindPHP\compile($css, ['base' => $inputFile !== '' && $inputFile !== '-' ? dirname(realpath($inputFile)) : getcwd()]);
                     // Update sources
-                    $newSources = $compiled['sources'] ?? [];
-                    if (!empty($newSources)) {
-                        $sources = $newSources;
-                    }
+                    $sources = $this->prepareSources($compiled['sources'] ?? []);
                     // Scan and build, minified during serialization when requested
                     $candidates = $this->scanSources($sources);
                     $result = $compiled['build']($candidates, $minify);
@@ -257,26 +256,18 @@ class Application
     /**
      * Scan source patterns for candidates.
      *
-     * @param array<array{base: string, pattern: string, negated: bool}> $sources
+     * @param array<array{base: string, pattern: string, negated: bool, automatic?: bool}> $sources
      * @return array<string>
      */
     private function scanSources(array $sources): array
     {
         $candidates = [];
         $extensions = ['php', 'html', 'htm', 'twig', 'blade.php', 'vue', 'jsx', 'tsx', 'svelte', 'astro', 'mdx'];
-        foreach ($sources as $source) {
-            if ($source['negated']) {
-                continue;
-            }
-            $base = $source['base'] ?: getcwd();
-            $pattern = $source['pattern'];
-            $files = $this->globRecursive($base, $pattern, $extensions);
-            foreach ($files as $file) {
-                $content = file_get_contents($file);
-                if ($content !== \false) {
-                    $extracted = Tailwind::extractCandidates($content);
-                    $candidates = array_merge($candidates, $extracted);
-                }
+        foreach ($this->sourceFiles($sources, $extensions) as $file) {
+            $content = file_get_contents($file);
+            if ($content !== \false) {
+                $extracted = Tailwind::extractCandidates($content);
+                $candidates = array_merge($candidates, $extracted);
             }
         }
         return array_unique($candidates);
@@ -284,22 +275,50 @@ class Application
     /**
      * Get files to watch.
      *
-     * @param array<array{base: string, pattern: string, negated: bool}> $sources
+     * @param array<array{base: string, pattern: string, negated: bool, automatic?: bool}> $sources
      * @return array<string>
      */
-    private function getWatchFiles(array $sources): array
+    private function getWatchFiles(array $sources, string $outputFile = ''): array
+    {
+        $extensions = ['php', 'html', 'htm', 'twig', 'blade.php', 'vue', 'jsx', 'tsx', 'svelte', 'astro', 'mdx', 'css'];
+        $files = $this->sourceFiles($sources, $extensions);
+        if ($outputFile !== '' && $outputFile !== '-') {
+            $outputPath = realpath($outputFile);
+            $files = array_values(array_filter($files, static fn($file) => realpath($file) !== $outputPath));
+        }
+        return $files;
+    }
+    /**
+     * @param array<array{base: string, pattern: string, negated: bool}> $sources
+     * @return array<array{base: string, pattern: string, negated: bool, automatic?: bool}>
+     */
+    private function prepareSources(array $sources): array
+    {
+        if (empty(array_filter($sources, static fn($source) => !$source['negated']))) {
+            array_unshift($sources, ['base' => getcwd(), 'pattern' => '**/*', 'negated' => \false, 'automatic' => \true]);
+        }
+        return $sources;
+    }
+    /**
+     * @param array<array{base: string, pattern: string, negated: bool, automatic?: bool}> $sources
+     * @param list<string> $extensions
+     * @return list<string>
+     */
+    private function sourceFiles(array $sources, array $extensions): array
     {
         $files = [];
-        $extensions = ['php', 'html', 'htm', 'twig', 'blade.php', 'vue', 'jsx', 'tsx', 'svelte', 'astro', 'mdx', 'css'];
+        $excluded = [];
         foreach ($sources as $source) {
-            if ($source['negated']) {
-                continue;
+            $matches = $this->globRecursive($source['base'] ?: getcwd(), $source['pattern'], $extensions, $source['automatic'] ?? \false);
+            foreach ($matches as $file) {
+                if ($source['negated']) {
+                    $excluded[$file] = \true;
+                } else {
+                    $files[$file] = \true;
+                }
             }
-            $base = $source['base'] ?: getcwd();
-            $pattern = $source['pattern'];
-            $files = array_merge($files, $this->globRecursive($base, $pattern, $extensions));
         }
-        return array_unique($files);
+        return array_keys(array_diff_key($files, $excluded));
     }
     /**
      * Recursively glob for files.
@@ -307,33 +326,91 @@ class Application
      * @param array<string> $extensions
      * @return array<string>
      */
-    private function globRecursive(string $base, string $pattern, array $extensions): array
+    private function globRecursive(string $base, string $pattern, array $extensions, bool $automatic = \false): array
     {
         $files = [];
-        if (!is_dir($base)) {
-            return [];
-        }
-        $iterator = new \RecursiveIteratorIterator(new \RecursiveDirectoryIterator($base, \RecursiveDirectoryIterator::SKIP_DOTS));
-        foreach ($iterator as $file) {
-            if (!$file->isFile()) {
+        foreach (\BlockstudioVendor\TailwindPHP\Utils\expand($pattern) as $expanded) {
+            $absolute = $this->normalizeSourcePath(str_starts_with($expanded, '/') || strlen($expanded) > 2 && $expanded[1] === ':' ? $expanded : $base . '/' . $expanded);
+            if (is_file($absolute)) {
+                $files[] = $absolute;
                 continue;
             }
-            $ext = $file->getExtension();
-            $filename = $file->getFilename();
-            // Check for compound extensions like .blade.php
-            foreach ($extensions as $allowedExt) {
-                if (str_contains($allowedExt, '.')) {
-                    if (str_ends_with($filename, '.' . $allowedExt)) {
-                        $files[] = $file->getPathname();
-                        continue 2;
+            if (is_dir($absolute)) {
+                $root = $absolute;
+                $absolute .= '/**/*';
+            } else {
+                $wildcard = strcspn($absolute, '*?[');
+                $prefix = substr($absolute, 0, $wildcard);
+                $root = str_ends_with($prefix, '/') ? rtrim($prefix, '/') ?: '/' : dirname($prefix);
+            }
+            if (!is_dir($root)) {
+                continue;
+            }
+            $regex = $this->sourceGlobRegex($absolute);
+            $directory = new \RecursiveDirectoryIterator($root, \FilesystemIterator::SKIP_DOTS);
+            $filter = new \RecursiveCallbackFilterIterator($directory, static function ($entry) use ($automatic): bool {
+                return !$automatic || !in_array($entry->getFilename(), ['.git', 'vendor', 'node_modules'], \true);
+            });
+            foreach (new \RecursiveIteratorIterator($filter) as $file) {
+                if (!$file->isFile() || preg_match('~^' . $regex . '$~D', $this->normalizeSourcePath($file->getPathname())) !== 1) {
+                    continue;
+                }
+                foreach ($extensions as $extension) {
+                    if (str_ends_with($file->getFilename(), '.' . $extension)) {
+                        $files[] = $this->normalizeSourcePath($file->getPathname());
+                        break;
                     }
-                } elseif ($ext === $allowedExt) {
-                    $files[] = $file->getPathname();
-                    continue 2;
                 }
             }
         }
-        return $files;
+        return array_values(array_unique($files));
+    }
+    private function sourceGlobRegex(string $pattern): string
+    {
+        $regex = '';
+        for ($index = 0, $length = strlen($pattern); $index < $length; $index++) {
+            $char = $pattern[$index];
+            if ($char === '*') {
+                if (($pattern[$index + 1] ?? '') === '*') {
+                    $index++;
+                    if (($pattern[$index + 1] ?? '') === '/') {
+                        $index++;
+                        $regex .= '(?:.*/)?';
+                    } else {
+                        $regex .= '.*';
+                    }
+                } else {
+                    $regex .= '[^/]*';
+                }
+            } elseif ($char === '?') {
+                $regex .= '[^/]';
+            } elseif ($char === '[' && ($end = strpos($pattern, ']', $index + 1)) !== \false && $end > $index + 1) {
+                $class = substr($pattern, $index + 1, $end - $index - 1);
+                if ($class[0] === '!') {
+                    $class = '^/' . substr($class, 1);
+                }
+                $regex .= '[' . str_replace('~', '\~', $class) . ']';
+                $index = $end;
+            } else {
+                $regex .= preg_quote($char, '~');
+            }
+        }
+        return $regex;
+    }
+    private function normalizeSourcePath(string $path): string
+    {
+        $parts = [];
+        foreach (explode('/', str_replace('\\', '/', $path)) as $part) {
+            if ($part === '' || $part === '.') {
+                continue;
+            }
+            if ($part === '..') {
+                array_pop($parts);
+            } else {
+                $parts[] = $part;
+            }
+        }
+        return (str_starts_with($path, '/') ? '/' : '') . implode('/', $parts);
     }
     /**
      * Get a string option with short alias support.
@@ -342,11 +419,17 @@ class Application
     {
         if ($short !== '' && $this->input->hasOption($short)) {
             $value = $this->input->getOption($short);
-            return is_string($value) ? $value : $default;
+            if (!is_string($value)) {
+                throw new \InvalidArgumentException("Option -{$short} requires a value.");
+            }
+            return $value;
         }
         if ($this->input->hasOption($long)) {
             $value = $this->input->getOption($long);
-            return is_string($value) ? $value : $default;
+            if (!is_string($value)) {
+                throw new \InvalidArgumentException("Option --{$long} requires a value.");
+            }
+            return $value;
         }
         return $default;
     }

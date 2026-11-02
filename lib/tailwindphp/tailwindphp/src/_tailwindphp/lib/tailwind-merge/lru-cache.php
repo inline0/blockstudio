@@ -2,7 +2,7 @@
 
 declare (strict_types=1);
 /**
- * Port of: https://github.com/dcastil/tailwind-merge/blob/main/src/lib/lru-cache.ts
+ * Port of: https://github.com/dcastil/tailwind-merge/blob/main/packages/tailwind-merge/src/lib/lru-cache.ts
  *
  * LRU cache implementation using plain arrays.
  *

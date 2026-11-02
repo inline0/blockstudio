@@ -2,7 +2,7 @@
 
 declare (strict_types=1);
 /**
- * Port of: https://github.com/dcastil/tailwind-merge/blob/main/src/lib/sort-modifiers.ts
+ * Port of: https://github.com/dcastil/tailwind-merge/blob/main/packages/tailwind-merge/src/lib/sort-modifiers.ts
  *
  * Sorts modifiers for consistent class comparison.
  *
