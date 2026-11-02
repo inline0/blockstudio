@@ -97,6 +97,7 @@ test.describe('component-richtext-default', () => {
     await page.goto('http://localhost:8888/native-single/');
     await checkForLeftoverAttributes(page);
     await count(page, 'text=Test text', 2);
+    await count(page, 'h1.blockstudio-test__block.test.test2.test3', 1);
   });
 
   test('check content in editor', async () => {

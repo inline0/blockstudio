@@ -152,6 +152,60 @@ test.describe('CLI - blocks', () => {
       wp(`post delete ${ids.join(' ')} --force`);
     }
   });
+
+  test('reports unknown top-level values and missing wrappers without changing posts', () => {
+    const attributes = [
+      { text: 'Valid', className: 'custom-class' },
+      { txt: 'Unknown field' },
+      { attributes: { text: 'Missing wrapper' } },
+    ];
+    const encoded = Buffer.from(JSON.stringify(attributes)).toString('base64');
+    const ids: number[] = JSON.parse(
+      wp(
+        `eval '$ids = array(); foreach (json_decode(base64_decode("${encoded}"), true) as $attrs) { $block = array("blockName" => "blockstudio/type-text", "attrs" => $attrs, "innerBlocks" => array(), "innerHTML" => "", "innerContent" => array()); $ids[] = wp_insert_post(wp_slash(array("post_type" => "post", "post_status" => "draft", "post_title" => "Top-level validation CLI", "post_content" => serialize_block($block)))); } echo wp_json_encode($ids);'`,
+      ),
+    );
+    try {
+      const before = ids.map((id) =>
+        JSON.parse(wp(`post get ${id} --format=json`)),
+      );
+      expect(
+        JSON.parse(wp(`bs blocks validate ${ids[0]} --format=json`)),
+      ).toEqual([]);
+      let failure: { status: number; stdout: string } | undefined;
+      try {
+        wp(`bs blocks validate ${ids.join(' ')} --format=json`);
+      } catch (error) {
+        failure = error as typeof failure;
+      }
+      expect(failure?.status).toBe(1);
+      const findings = JSON.parse(cleanWpOutput(failure!.stdout));
+      expect(findings).toHaveLength(2);
+      expect(findings[0]).toMatchObject({
+        post_id: ids[1],
+        block_name: 'blockstudio/type-text',
+        block_path: '0',
+        code: 'unknown_attribute',
+        source: 'block',
+        path: 'txt',
+        value: 'Unknown field',
+      });
+      expect(findings[0].expected).toContain('text');
+      expect(findings[1]).toMatchObject({
+        post_id: ids[2],
+        block_name: 'blockstudio/type-text',
+        block_path: '0',
+        code: 'missing_container',
+        path: 'attributes',
+        expected: 'blockstudio/attributes',
+      });
+      expect(
+        ids.map((id) => JSON.parse(wp(`post get ${id} --format=json`))),
+      ).toEqual(before);
+    } finally {
+      wp(`post delete ${ids.join(' ')} --force`);
+    }
+  });
 });
 
 test.describe('CLI - server defaults', () => {

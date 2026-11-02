@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Blockstudio\PHPStan\Tests\Unit\Theme;
 
+use Blockstudio\PHPStan\Rules\DiagnosticRuleErrorFactory;
 use Blockstudio\PHPStan\Theme\ProjectScanner;
 use Blockstudio\PHPStan\Theme\StructureAnalyzer;
 use PHPUnit\Framework\TestCase;
@@ -55,6 +56,37 @@ final class StructureAnalyzerTest extends TestCase
                 $analyzer->analyse()
             )
         );
+    }
+
+    public function test_scan_limit_is_reported_against_a_file(): void
+    {
+        $root = $this->fixture('theme-valid');
+        $analyzer = new StructureAnalyzer(new ProjectScanner($root, [], [], 1));
+        $diagnostics = array_values(array_filter(
+            $analyzer->analyse(),
+            static fn($diagnostic): bool => $diagnostic->identifier === 'blockstudio.theme.scanLimit'
+        ));
+
+        $this->assertCount(1, $diagnostics);
+        $this->assertFileExists($diagnostics[0]->file);
+        $this->assertFalse(is_dir($diagnostics[0]->file));
+    }
+
+    public function test_diagnostics_without_a_file_become_rule_errors(): void
+    {
+        $root = $this->fixture('missing-theme');
+        $analyzer = new StructureAnalyzer(
+            new ProjectScanner(dirname($root), [$root])
+        );
+        $errors = array_map(
+            [DiagnosticRuleErrorFactory::class, 'build'],
+            $analyzer->analyse()
+        );
+
+        $this->assertSame(['blockstudio.theme.root.missing'], array_map(
+            static fn($error): string => $error->getIdentifier(),
+            $errors
+        ));
     }
 
     private function fixture(string $name): string

@@ -12,7 +12,7 @@ export const checkSchemas = attempt('checkSchemas', () => {
   const manifest = JSON.parse(
     readFileSync(resolve(schemasRoot, 'manifest.json'), 'utf8'),
   );
-  const expected = ['block', 'blockstudio', 'extend', 'field', 'page'];
+  const expected = ['block', 'blockstudio', 'extend', 'field', 'page', 'pages'];
   const problems = [];
 
   for (const name of expected) {
@@ -55,9 +55,7 @@ export const checkSchemas = attempt('checkSchemas', () => {
   const manifestFiles = Object.keys(manifest.files ?? {}).sort();
   const expectedFiles = expected.map((name) => `${name}.json`).sort();
   if (JSON.stringify(manifestFiles) !== JSON.stringify(expectedFiles)) {
-    problems.push(
-      'manifest.json does not list exactly the five public schemas',
-    );
+    problems.push('manifest.json does not list exactly the six public schemas');
   }
 
   if (problems.length) {
@@ -65,7 +63,7 @@ export const checkSchemas = attempt('checkSchemas', () => {
     throw new Error('Validation failed.');
   }
 
-  console.log('Schema check passed: five valid, checksum-pinned JSON schemas.');
+  console.log('Schema check passed: six valid, checksum-pinned JSON schemas.');
 });
 
 if (import.meta.main) runMain(checkSchemas);

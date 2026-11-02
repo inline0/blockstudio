@@ -33,6 +33,7 @@ use function BlockstudioVendor\TailwindPHP\Utils\isPositiveInteger;
  */
 function registerFlexboxUtilities(UtilityBuilder $builder): void
 {
+    $theme = $builder->getTheme();
     // Flex Direction
     $builder->staticUtility('flex-row', [['flex-direction', 'row']]);
     $builder->staticUtility('flex-row-reverse', [['flex-direction', 'row-reverse']]);
@@ -145,7 +146,7 @@ function registerFlexboxUtilities(UtilityBuilder $builder): void
         return [decl('grid-row', "span {$value} / span {$value}")];
     }, 'staticValues' => ['full' => [decl('grid-row', '1 / -1')]]]);
     // Col Start/End
-    $builder->functionalUtility('col-start', ['handleBareValue' => function ($value) {
+    $builder->functionalUtility('col-start', ['supportsNegative' => \true, 'handleBareValue' => function ($value) {
         if (isPositiveInteger($value['value'])) {
             return $value['value'];
         }
@@ -153,7 +154,7 @@ function registerFlexboxUtilities(UtilityBuilder $builder): void
     }, 'themeKeys' => ['--grid-column-start'], 'handle' => function ($value, $dataType) {
         return [decl('grid-column-start', $value)];
     }, 'staticValues' => ['auto' => [decl('grid-column-start', 'auto')]]]);
-    $builder->functionalUtility('col-end', ['handleBareValue' => function ($value) {
+    $builder->functionalUtility('col-end', ['supportsNegative' => \true, 'handleBareValue' => function ($value) {
         if (isPositiveInteger($value['value'])) {
             return $value['value'];
         }
@@ -162,7 +163,7 @@ function registerFlexboxUtilities(UtilityBuilder $builder): void
         return [decl('grid-column-end', $value)];
     }, 'staticValues' => ['auto' => [decl('grid-column-end', 'auto')]]]);
     // Row Start/End
-    $builder->functionalUtility('row-start', ['handleBareValue' => function ($value) {
+    $builder->functionalUtility('row-start', ['supportsNegative' => \true, 'handleBareValue' => function ($value) {
         if (isPositiveInteger($value['value'])) {
             return $value['value'];
         }
@@ -170,7 +171,7 @@ function registerFlexboxUtilities(UtilityBuilder $builder): void
     }, 'themeKeys' => ['--grid-row-start'], 'handle' => function ($value, $dataType) {
         return [decl('grid-row-start', $value)];
     }, 'staticValues' => ['auto' => [decl('grid-row-start', 'auto')]]]);
-    $builder->functionalUtility('row-end', ['handleBareValue' => function ($value) {
+    $builder->functionalUtility('row-end', ['supportsNegative' => \true, 'handleBareValue' => function ($value) {
         if (isPositiveInteger($value['value'])) {
             return $value['value'];
         }
@@ -179,11 +180,27 @@ function registerFlexboxUtilities(UtilityBuilder $builder): void
         return [decl('grid-row-end', $value)];
     }, 'staticValues' => ['auto' => [decl('grid-row-end', 'auto')]]]);
     // Auto Columns
-    $builder->functionalUtility('auto-cols', ['themeKeys' => ['--grid-auto-columns'], 'handle' => function ($value, $dataType) {
+    $builder->functionalUtility('auto-cols', ['themeKeys' => ['--grid-auto-columns'], 'handleBareValue' => function ($value) use ($theme) {
+        if ($theme->resolve(null, ['--spacing']) === null) {
+            return null;
+        }
+        if (!\BlockstudioVendor\TailwindPHP\Utils\isValidSpacingMultiplier($value['value'])) {
+            return null;
+        }
+        return "--spacing({$value['value']})";
+    }, 'handle' => function ($value, $dataType) {
         return [decl('grid-auto-columns', $value)];
     }, 'staticValues' => ['auto' => [decl('grid-auto-columns', 'auto')], 'min' => [decl('grid-auto-columns', 'min-content')], 'max' => [decl('grid-auto-columns', 'max-content')], 'fr' => [decl('grid-auto-columns', 'minmax(0, 1fr)')]]]);
     // Auto Rows
-    $builder->functionalUtility('auto-rows', ['themeKeys' => ['--grid-auto-rows'], 'handle' => function ($value, $dataType) {
+    $builder->functionalUtility('auto-rows', ['themeKeys' => ['--grid-auto-rows'], 'handleBareValue' => function ($value) use ($theme) {
+        if ($theme->resolve(null, ['--spacing']) === null) {
+            return null;
+        }
+        if (!\BlockstudioVendor\TailwindPHP\Utils\isValidSpacingMultiplier($value['value'])) {
+            return null;
+        }
+        return "--spacing({$value['value']})";
+    }, 'handle' => function ($value, $dataType) {
         return [decl('grid-auto-rows', $value)];
     }, 'staticValues' => ['auto' => [decl('grid-auto-rows', 'auto')], 'min' => [decl('grid-auto-rows', 'min-content')], 'max' => [decl('grid-auto-rows', 'max-content')], 'fr' => [decl('grid-auto-rows', 'minmax(0, 1fr)')]]]);
     // Gap

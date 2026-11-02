@@ -30,7 +30,7 @@
     },
     "contentType": {
       "type": "string",
-      "description": "Content format, such as html or markdown."
+      "description": "Content format, such as html or markdown. Discovery sets component for pages with a render definition."
     },
     "defaults": {
       "type": "object",
@@ -95,6 +95,51 @@
     "postTypeArgs": {
       "type": "object",
       "description": "Arguments used when the collection registers its own post type."
+    },
+    "render": {
+      "description": "Render the page with a registered page renderer instead of storing its source as blocks. A string is the entry path; an object names the entry, an optional data loader and an optional renderer id. Paths resolve against the page directory. Page sync stores one blockstudio/page block, and an index.* source in the same directory becomes its slot. false opts a page out of a collection default.",
+      "oneOf": [
+        {
+          "type": "string",
+          "description": "Entry path, such as page.tsx.",
+          "example": "page.tsx"
+        },
+        {
+          "type": "object",
+          "required": [
+            "entry"
+          ],
+          "properties": {
+            "data": {
+              "type": "string",
+              "description": "Data loader returning the component props, such as data.php.",
+              "example": "data.php"
+            },
+            "entry": {
+              "type": "string",
+              "description": "Entry file the renderer renders, such as page.tsx.",
+              "example": "page.tsx"
+            },
+            "renderer": {
+              "type": "string",
+              "description": "Registered renderer id. Defaults to the renderer that claims the entry's extension.",
+              "example": "react"
+            }
+          },
+          "additionalProperties": false
+        },
+        {
+          "type": "boolean",
+          "enum": [
+            false
+          ],
+          "description": "Opt out of a collection default render."
+        }
+      ],
+      "example": {
+        "entry": "page.tsx",
+        "data": "data.php"
+      }
     },
     "slug": {
       "type": "string",

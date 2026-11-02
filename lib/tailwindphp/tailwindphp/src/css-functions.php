@@ -491,6 +491,27 @@ function handleSpacing(array $node, object $designSystem): ?string
     if ($multiplier === null) {
         return null;
     }
+    // Optimization:
+    //
+    // - We know that at this point the `--spacing` value must be set.
+    // - We know that `--spacing` must be set to a `<length>` unit, such as `0.25rem`
+    // - We can assume that the `--spacing` value is not set to a `0`-like value.
+    //   Otherwise `p-<anything>` would calculate as `0` which wouldn't make sense.
+    //
+    // - That means that a value of `0` can be replaced by `0px`. It's important
+    //   to keep the unit so the value stays a `<length>`, e.g. when assigned to
+    //   a custom property and later used inside `calc(…)`.
+    // - That means that a value of `1` can be replaced by `multiplier`
+    $valueDimension = \BlockstudioVendor\TailwindPHP\Utils\Dimensions::get($argsStr);
+    if ($valueDimension !== null) {
+        if ($valueDimension[0] == 0.0) {
+            return '0px';
+        }
+        if ($valueDimension[0] == 1.0) {
+            return $multiplier;
+        }
+    }
+    // No known optimizations available, use full calculation
     return "calc({$multiplier} * {$argsStr})";
 }
 /**

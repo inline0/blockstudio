@@ -76,6 +76,13 @@ final class Page_Registry {
 	private bool $hydrated = false;
 
 	/**
+	 * Pages read for single post IDs before a full hydration, indexed by post ID.
+	 *
+	 * @var array<int, array>
+	 */
+	private array $post_pages = array();
+
+	/**
 	 * Get singleton instance.
 	 *
 	 * @return Page_Registry The singleton instance.
@@ -106,6 +113,7 @@ final class Page_Registry {
 		$this->collections  = array();
 		$this->errors       = array();
 		$this->hydrated     = false;
+		$this->post_pages   = array();
 	}
 
 	/**
@@ -133,79 +141,16 @@ final class Page_Registry {
 	 */
 	public function hydrate_from_posts(): void {
 		$this->hydrated = true;
-		$posts          = get_posts(
-			array(
-				'post_type'        => 'any',
-				'post_status'      => 'publish',
-				'numberposts'      => -1,
-				'orderby'          => 'menu_order',
-				'order'            => 'ASC',
-				'meta_key'         => '_blockstudio_page_key', // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_key
-				'suppress_filters' => false,
-			)
-		);
+		$posts          = get_posts( self::page_post_query() );
 		foreach ( $posts as $post ) {
-			$key = (string) get_post_meta( $post->ID, '_blockstudio_page_key', true );
-			if ( '' === $key ) {
-				$key = (string) get_post_meta( $post->ID, '_blockstudio_page_name', true );
-			}
+			$key = self::page_post_key( (int) $post->ID );
 			if ( '' === $key || isset( $this->pages[ $key ] ) ) {
 				continue;
 			}
-			$parent_key         = (string) get_post_meta( $post->ID, '_blockstudio_page_parent_key', true );
-			$collection         = (string) get_post_meta( $post->ID, '_blockstudio_page_collection', true );
-			$layout_path        = Page_Paths::from_meta( $post->ID, '_blockstudio_page_layout' );
-			$content_type       = (string) get_post_meta( $post->ID, '_blockstudio_page_content_type', true );
-			$source_path        = Page_Paths::from_meta( $post->ID, '_blockstudio_page_source' );
-			$template_path      = Page_Paths::from_meta( $post->ID, '_blockstudio_page_template_path' );
-			$directory          = Page_Paths::from_meta( $post->ID, '_blockstudio_page_directory' );
-			$content_path       = Page_Paths::from_meta( $post->ID, '_blockstudio_page_content_path' );
-			$template_for       = (string) get_post_meta( $post->ID, '_blockstudio_page_template_for', true );
-			$template_lock      = get_post_meta( $post->ID, '_blockstudio_template_lock', true );
-			$block_editing_mode = get_post_meta( $post->ID, '_blockstudio_block_editing_mode', true );
-			$stored_meta        = get_post_meta( $post->ID, '_blockstudio_page_meta', true );
-			$sync               = metadata_exists( 'post', $post->ID, '_blockstudio_page_sync' )
-				? (bool) get_post_meta( $post->ID, '_blockstudio_page_sync', true )
-				: true;
 
-			if ( '' === $template_path && 'markdown' === $content_type ) {
-				$template_path = $content_path;
-			}
-			if ( '' === $directory && '' !== $template_path ) {
-				$directory = dirname( $template_path );
-			}
-
-			$this->pages[ $key ] = array(
-				'name'             => (string) get_post_meta( $post->ID, '_blockstudio_page_name', true ),
-				'key'              => $key,
-				'title'            => get_the_title( $post ),
-				'slug'             => $post->post_name,
-				'path'             => (string) get_post_meta( $post->ID, '_blockstudio_page_path', true ),
-				'collection'       => '' !== $collection ? $collection : null,
-				'parent_key'       => '' !== $parent_key ? $parent_key : null,
-				'layout_path'      => '' !== $layout_path ? $layout_path : null,
-				'source_path'      => $source_path,
-				'template_path'    => '' !== $template_path ? $template_path : null,
-				'content_path'     => '' !== $content_path ? $content_path : null,
-				'directory'        => '' !== $directory ? $directory : null,
-				'contentType'      => $content_type,
-				'is_twig'          => 'twig' === $content_type,
-				'is_blade'         => 'blade' === $content_type,
-				'is_markdown'      => 'markdown' === $content_type,
-				'postType'         => $post->post_type,
-				'postStatus'       => $post->post_status,
-				'templateLock'     => '' !== $template_lock ? $template_lock : false,
-				'templateFor'      => '' !== $template_for ? $template_for : null,
-				'blockEditingMode' => '' !== $block_editing_mode ? $block_editing_mode : null,
-				'sync'             => $sync,
-				'post_id'          => (int) $post->ID,
-				'post_parent'      => (int) $post->post_parent,
-				'permalink'        => (string) get_permalink( $post ),
-				'order'            => (int) $post->menu_order,
-				'generated'        => (bool) get_post_meta( $post->ID, '_blockstudio_page_generated', true ),
-				'children'         => array(),
-				'meta'             => is_array( $stored_meta ) ? $stored_meta : array(),
-			);
+			$this->pages[ $key ] = $this->page_from_post( $post, $key );
+			$source_path         = (string) $this->pages[ $key ]['source_path'];
+			$template_for        = (string) ( $this->pages[ $key ]['templateFor'] ?? '' );
 
 			if ( '' !== $source_path ) {
 				$this->synced_posts[ $source_path ] = (int) $post->ID;
@@ -214,6 +159,121 @@ final class Page_Registry {
 				$this->template_for[ $template_for ] = $this->pages[ $key ];
 			}
 		}
+	}
+
+	/**
+	 * Arguments of the query that selects synced page posts in hydration order.
+	 *
+	 * @param array<string, mixed> $extra Additional query arguments.
+	 *
+	 * @return array<string, mixed> Query arguments.
+	 */
+	private static function page_post_query( array $extra = array() ): array {
+		return array_merge(
+			array(
+				'post_type'        => 'any',
+				'post_status'      => 'publish',
+				'numberposts'      => -1,
+				'orderby'          => 'menu_order',
+				'order'            => 'ASC',
+				'meta_key'         => '_blockstudio_page_key', // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_key
+				'suppress_filters' => false,
+			),
+			$extra
+		);
+	}
+
+	/**
+	 * Read the registry key a synced post hydrates under.
+	 *
+	 * @param int $post_id Post ID.
+	 *
+	 * @return string Page key, or an empty string.
+	 */
+	private static function page_post_key( int $post_id ): string {
+		$key = (string) get_post_meta( $post_id, '_blockstudio_page_key', true );
+
+		return '' !== $key ? $key : (string) get_post_meta( $post_id, '_blockstudio_page_name', true );
+	}
+
+	/**
+	 * Build the registry entry of one synced post.
+	 *
+	 * @param \WP_Post $post Post.
+	 * @param string   $key  Page key.
+	 *
+	 * @return array Page data.
+	 */
+	private function page_from_post( \WP_Post $post, string $key ): array {
+		$parent_key         = (string) get_post_meta( $post->ID, '_blockstudio_page_parent_key', true );
+		$collection         = (string) get_post_meta( $post->ID, '_blockstudio_page_collection', true );
+		$layout_path        = Page_Paths::from_meta( $post->ID, '_blockstudio_page_layout' );
+		$content_type       = (string) get_post_meta( $post->ID, '_blockstudio_page_content_type', true );
+		$source_path        = Page_Paths::from_meta( $post->ID, '_blockstudio_page_source' );
+		$template_path      = Page_Paths::from_meta( $post->ID, '_blockstudio_page_template_path' );
+		$directory          = Page_Paths::from_meta( $post->ID, '_blockstudio_page_directory' );
+		$content_path       = Page_Paths::from_meta( $post->ID, '_blockstudio_page_content_path' );
+		$template_for       = (string) get_post_meta( $post->ID, '_blockstudio_page_template_for', true );
+		$template_lock      = get_post_meta( $post->ID, '_blockstudio_template_lock', true );
+		$block_editing_mode = get_post_meta( $post->ID, '_blockstudio_block_editing_mode', true );
+		$stored_meta        = get_post_meta( $post->ID, '_blockstudio_page_meta', true );
+		$sync               = metadata_exists( 'post', $post->ID, '_blockstudio_page_sync' )
+			? (bool) get_post_meta( $post->ID, '_blockstudio_page_sync', true )
+			: true;
+
+		if ( '' === $template_path && 'markdown' === $content_type ) {
+			$template_path = $content_path;
+		}
+		if ( '' === $directory && '' !== $template_path ) {
+			$directory = dirname( $template_path );
+		}
+
+		$page = array(
+			'name'             => (string) get_post_meta( $post->ID, '_blockstudio_page_name', true ),
+			'key'              => $key,
+			'title'            => get_the_title( $post ),
+			'slug'             => $post->post_name,
+			'path'             => (string) get_post_meta( $post->ID, '_blockstudio_page_path', true ),
+			'collection'       => '' !== $collection ? $collection : null,
+			'parent_key'       => '' !== $parent_key ? $parent_key : null,
+			'layout_path'      => '' !== $layout_path ? $layout_path : null,
+			'source_path'      => $source_path,
+			'template_path'    => '' !== $template_path ? $template_path : null,
+			'content_path'     => '' !== $content_path ? $content_path : null,
+			'directory'        => '' !== $directory ? $directory : null,
+			'contentType'      => $content_type,
+			'is_twig'          => 'twig' === $content_type,
+			'is_blade'         => 'blade' === $content_type,
+			'is_markdown'      => 'markdown' === $content_type,
+			'postType'         => $post->post_type,
+			'postStatus'       => $post->post_status,
+			'templateLock'     => '' !== $template_lock ? $template_lock : false,
+			'templateFor'      => '' !== $template_for ? $template_for : null,
+			'blockEditingMode' => '' !== $block_editing_mode ? $block_editing_mode : null,
+			'sync'             => $sync,
+			'post_id'          => (int) $post->ID,
+			'post_parent'      => (int) $post->post_parent,
+			'permalink'        => (string) get_permalink( $post ),
+			'order'            => (int) $post->menu_order,
+			'generated'        => (bool) get_post_meta( $post->ID, '_blockstudio_page_generated', true ),
+			'children'         => array(),
+			'meta'             => is_array( $stored_meta ) ? $stored_meta : array(),
+		);
+
+		$render = Page_Sync::stored_render( (int) $post->ID );
+
+		if ( null !== $render ) {
+			$page['render']    = $render;
+			$page['slot_path'] = $page['template_path'];
+		}
+
+		$layout_renderer = (string) get_post_meta( $post->ID, '_blockstudio_page_layout_renderer', true );
+
+		if ( '' !== $layout_renderer ) {
+			$page['layout_renderer'] = $layout_renderer;
+		}
+
+		return $page;
 	}
 
 	/**
@@ -536,6 +596,14 @@ final class Page_Registry {
 	 * @return array|null Page data.
 	 */
 	public function get_page_by_post_id( int $post_id ): ?array {
+		if ( ! $this->hydrated && empty( $this->pages ) ) {
+			$page = $this->single_post_page( $post_id );
+
+			if ( null !== $page ) {
+				return $page;
+			}
+		}
+
 		$this->maybe_hydrate();
 		foreach ( $this->pages as $page ) {
 			if ( (int) ( $page['post_id'] ?? 0 ) === $post_id ) {
@@ -552,6 +620,57 @@ final class Page_Registry {
 		$name = (string) get_post_meta( $post_id, '_blockstudio_page_name', true );
 
 		return '' !== $name ? $this->get_page( $name ) : null;
+	}
+
+	/**
+	 * Read the page of one synced post without hydrating every page.
+	 *
+	 * Returns the entry a full hydration would return for the post, or null when
+	 * only a full hydration can answer: the post has no key, is not a published
+	 * page post, or shares its key with another page post.
+	 *
+	 * @param int $post_id Post ID.
+	 *
+	 * @return array|null Page data.
+	 */
+	private function single_post_page( int $post_id ): ?array {
+		if ( array_key_exists( $post_id, $this->post_pages ) ) {
+			return $this->post_pages[ $post_id ];
+		}
+
+		global $wpdb;
+
+		$key  = self::page_post_key( $post_id );
+		$page = null;
+
+		if ( '' !== $key ) {
+			$candidates = array_map(
+				'intval',
+				$wpdb->get_col( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+					$wpdb->prepare(
+						"SELECT DISTINCT post_id FROM {$wpdb->postmeta} WHERE meta_key IN ( '_blockstudio_page_key', '_blockstudio_page_name' ) AND meta_value = %s",
+						$key
+					)
+				)
+			);
+			$claims     = array();
+
+			if ( in_array( $post_id, $candidates, true ) ) {
+				foreach ( get_posts( self::page_post_query( array( 'post__in' => $candidates ) ) ) as $candidate ) {
+					if ( self::page_post_key( (int) $candidate->ID ) === $key ) {
+						$claims[] = $candidate;
+					}
+				}
+			}
+
+			if ( 1 === count( $claims ) && $post_id === (int) $claims[0]->ID ) {
+				$page = $this->page_from_post( $claims[0], $key );
+			}
+		}
+
+		$this->post_pages[ $post_id ] = $page;
+
+		return $page;
 	}
 
 	/**

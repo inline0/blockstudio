@@ -305,7 +305,7 @@ purpose: Access post meta data in your block templates.
 route: /docs/blocks/rendering
 file: docs/docs/blocks/rendering.md
 purpose: Render Blockstudio blocks programmatically via PHP functions or HTML tags.
-settings: assets, blockTags, content, tailwind, ui
+settings: assets, blockTags, content, editor, tailwind, ui
 hooks: blockstudio/attributes, blockstudio/block_tags/allow, blockstudio/block_tags/builders, blockstudio/block_tags/deny, blockstudio/block_tags/prefixes, blockstudio/block_tags/render, blockstudio/block_tags/renderers, blockstudio/block_tags/tag_aliases, blockstudio/blocks/attributes/validate, blockstudio/parser/element_mapping, blockstudio/parser/renderers, blockstudio/settings/block_tags/enabled
 php: $a, Batch_Render::reset(), Block_Tags::parse_inner_blocks(), Blockstudio\Batch_Render, Blockstudio\Block_Tags, Blockstudio\Render, Canvas::documents(), Render::composition(), Render::content(), Render::document(), Render::document_from_html(), Render::normalize(), bs_block(), bs_block_assets(), bs_block_extension_fields(), bs_block_fields(), bs_block_values(), bs_render_block(), bs_strip_render_markers(), bs_validate_block()
 cli: wp bs blocks validate
@@ -400,9 +400,9 @@ cli: wp bs pages sync
 route: /docs/pages-and-patterns/pages
 file: docs/docs/pages-and-patterns/pages.md
 purpose: Create WordPress pages from file templates with explicit, deployment-safe syncing.
-settings: content
-hooks: blockstudio/pages/allow_external_loader_path, blockstudio/pages/collection_post_type_args, blockstudio/pages/create_post_data, blockstudio/pages/docs_allowed_html, blockstudio/pages/manifest_scan_interval, blockstudio/pages/orphan_action, blockstudio/pages/paths, blockstudio/pages/post_created, blockstudio/pages/post_updated, blockstudio/pages/reconciled, blockstudio/pages/serve_markdown, blockstudio/pages/sync_engine_inputs, blockstudio/pages/synced, blockstudio/pages/template_candidates, blockstudio/pages/update_post_data
-php: Blockstudio\Pages, Blockstudio\Virtual_Routes, Pages::children(), Pages::collection(), Pages::force_sync(), Pages::force_sync_all(), Pages::get_page(), Pages::get_post_id(), Pages::in_collection(), Pages::init(), Pages::lock(), Pages::negotiates_markdown(), Pages::pages(), Pages::reconcile(), Pages::store_successful_source_identity(), Pages::tree(), Pages::unlock(), Virtual_Routes::match(), Virtual_Routes::register(), Virtual_Routes::urls()
+settings: assets, content
+hooks: blockstudio/page, blockstudio/pages/allow_external_loader_path, blockstudio/pages/collection_post_type_args, blockstudio/pages/create_post_data, blockstudio/pages/docs_allowed_html, blockstudio/pages/layout_error, blockstudio/pages/manifest_scan_interval, blockstudio/pages/orphan_action, blockstudio/pages/paths, blockstudio/pages/post_created, blockstudio/pages/post_updated, blockstudio/pages/reconciled, blockstudio/pages/rendered, blockstudio/pages/renderers, blockstudio/pages/serve_markdown, blockstudio/pages/sync_engine_inputs, blockstudio/pages/synced, blockstudio/pages/template_candidates, blockstudio/pages/update_post_data
+php: Assets::register_owner(), Blockstudio\Assets, Blockstudio\Page_Renderers, Blockstudio\Pages, Blockstudio\Virtual_Routes, Page_Renderers::for_entry(), Page_Renderers::register(), Pages::children(), Pages::collection(), Pages::force_sync(), Pages::force_sync_all(), Pages::get_page(), Pages::get_post_id(), Pages::in_collection(), Pages::init(), Pages::lock(), Pages::negotiates_markdown(), Pages::pages(), Pages::reconcile(), Pages::store_successful_source_identity(), Pages::tree(), Pages::unlock(), Virtual_Routes::match(), Virtual_Routes::register(), Virtual_Routes::urls()
 cli: wp bs pages sync
 
 ### Patterns
@@ -848,3 +848,8 @@ purpose: Reusable custom field definitions.
 route: /schema/page
 file: schemas/page.json
 purpose: File-based page definitions.
+
+### pages.json
+route: /schema/pages
+file: schemas/pages.json
+purpose: Page collection manifests (pages.json).

@@ -28,6 +28,14 @@ msgid "This storage key is not declared by the block or its extensions."
 msgstr "Bul saqlaw giltı blok yamasa onıń keńeytpeleri tárepinen járiyalanbaǵan."
 
 #: includes/classes/block-validator.php
+msgid "This top-level key is not an attribute of the block, so it is ignored."
+msgstr "Bul joqarı dárejedegi gilt blok atributı bolmaǵanı ushın esapqa alınbaydı."
+
+#: includes/classes/block-validator.php
+msgid "This key is only read inside the blockstudio object, which is missing."
+msgstr "Bul gilt tek blockstudio obyekti ishinde oqıladı, al ol joq."
+
+#: includes/classes/block-validator.php
 msgid "This value is not among the field options."
 msgstr "Bul mánis maydan parametrleri arasında joq."
 

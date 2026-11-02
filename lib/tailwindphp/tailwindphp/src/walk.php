@@ -74,6 +74,8 @@ class VisitContext
 {
     public ?array $parent = null;
     public int $depth = 0;
+    public int $index = 0;
+    public array $siblings = [];
     private array $stack;
     public function __construct(array &$stack)
     {
@@ -143,8 +145,10 @@ function walkImplementation(array &$ast, ?callable $enter = null, ?callable $exi
         }
         $ctx->parent = $parent;
         $ctx->depth = $depth;
+        $ctx->siblings = $nodes;
         // Enter phase (offsets are non-negative)
         if ($offset >= 0) {
+            $ctx->index = $offset;
             // Pass node by reference to allow in-place modifications
             $node =& $nodes[$offset];
             $result = $enter !== null ? $enter($node, $ctx) : WalkAction::Continue;
@@ -191,6 +195,7 @@ function walkImplementation(array &$ast, ?callable $enter = null, ?callable $exi
         // Exit phase for nodes[~offset]
         $index = ~$offset;
         // Two's complement to get original offset
+        $ctx->index = $index;
         $node =& $nodes[$index];
         $result = $exit !== null ? $exit($node, $ctx) : WalkAction::Continue;
         if ($result === null) {

@@ -28,6 +28,14 @@ msgid "This storage key is not declared by the block or its extensions."
 msgstr "እዚ ቁልፊ ማኽዘን ብብሎኩ ወይ ብተወሳኺታቱ ኣይተኣወጀን።"
 
 #: includes/classes/block-validator.php
+msgid "This top-level key is not an attribute of the block, so it is ignored."
+msgstr "እዚ ናይ ላዕለዋይ ደረጃ ቁልፊ ናይቲ ብሎክ ባህሪ ኣይኮነን፣ ስለዚ ኣይጥቀመሉን።"
+
+#: includes/classes/block-validator.php
+msgid "This key is only read inside the blockstudio object, which is missing."
+msgstr "እዚ ቁልፊ ኣብ ዘይርከብ `blockstudio` ነገር ውሽጢ ጥራይ ይንበብ።"
+
+#: includes/classes/block-validator.php
 msgid "This value is not among the field options."
 msgstr "እዚ እሴት ኣብ ኣማራጺታት እቲ መስክ የለን።"
 

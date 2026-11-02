@@ -229,6 +229,20 @@ class BlockTagsHtmlParsingTest extends TestCase {
 		$this->assertStringContainsString( 'Just plain text', $blocks[0]['innerHTML'] );
 	}
 
+	public function test_a_lone_shortcode_stays_a_shortcode(): void {
+		$blocks = Block_Tags::parse_all_elements( "\n[download_checkout]\n" );
+		$this->assertCount( 1, $blocks );
+		$this->assertSame( 'core/shortcode', $blocks[0]['blockName'] );
+		$this->assertSame( '[download_checkout]', $blocks[0]['innerHTML'] );
+		$this->assertSame( array( '[download_checkout]' ), $blocks[0]['innerContent'] );
+
+		$attributes = Block_Tags::parse_all_elements( '[sleek-view-widget id="3" theme="light"]' );
+		$this->assertSame( 'core/shortcode', $attributes[0]['blockName'] );
+
+		$text = Block_Tags::parse_all_elements( 'Read [download_checkout] first' );
+		$this->assertSame( 'core/paragraph', $text[0]['blockName'] );
+	}
+
 	public function test_text_between_blocks(): void {
 		$blocks = Block_Tags::parse_all_elements( '<h1>Title</h1>Some text<p>Paragraph</p>' );
 		$this->assertCount( 3, $blocks );

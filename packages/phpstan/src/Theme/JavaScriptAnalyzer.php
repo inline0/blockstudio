@@ -4,7 +4,18 @@ declare(strict_types=1);
 
 namespace Blockstudio\PHPStan\Theme;
 
+use Phasis\Ast\Expression\Literal;
+use Phasis\Ast\Expression\Property;
+use Phasis\Ast\Expression\TemplateLiteral;
+use Phasis\Ast\Jsx\JsxAttribute;
+use Phasis\Ast\Jsx\JsxElement;
+use Phasis\Ast\Jsx\JsxExpressionContainer;
+use Phasis\Ast\Jsx\JsxIdentifier;
+use Phasis\Ast\Node;
+use Phasis\Ast\Walker;
 use Phasis\Exceptions\SyntaxError;
+use Phasis\Parser\Jsx\JsxMode;
+use Phasis\Parser\Jsx\JsxOptions;
 use Phasis\Parser\Parser;
 
 final class JavaScriptAnalyzer
@@ -27,7 +38,11 @@ final class JavaScriptAnalyzer
         $diagnostics = [];
         $handlers = $this->handlerIndex($scanner);
         $stores = $this->storeIndex($scanner);
-        $templateNamespaces = $this->templateNamespaces($scanner);
+        $componentDirectives = $this->componentDirectives($scanner);
+        $templateNamespaces = $this->templateNamespaces(
+            $scanner,
+            $componentDirectives
+        );
         $templateDataTokens = $this->templateDataTokens($scanner);
 
         foreach ($scanner->files(['js']) as $file) {
@@ -56,7 +71,8 @@ final class JavaScriptAnalyzer
                 $this->derivedBindingDiagnostics(
                     $scanner,
                     $file,
-                    $contents
+                    $contents,
+                    $componentDirectives
                 )
             );
         }
@@ -83,6 +99,10 @@ final class JavaScriptAnalyzer
         return array_merge(
             $diagnostics,
             $this->interactivityTemplateDiagnostics($scanner, $stores),
+            $this->interactivityComponentDiagnostics(
+                $stores,
+                $componentDirectives
+            ),
             $this->interactivityOrphanDiagnostics(
                 $stores,
                 $templateNamespaces
@@ -670,12 +690,20 @@ final class JavaScriptAnalyzer
     }
 
     /**
+     * @param list<array{
+     *   file:string,
+     *   line:int,
+     *   name:string,
+     *   value:?string,
+     *   namespace:?string
+     * }> $componentDirectives
      * @return list<Diagnostic>
      */
     private function derivedBindingDiagnostics(
         ProjectScanner $scanner,
         string $file,
-        string $contents
+        string $contents,
+        array $componentDirectives
     ): array {
         if (preg_match('/\bstore\s*\(/', $contents) !== 1) {
             return [];
@@ -683,6 +711,37 @@ final class JavaScriptAnalyzer
 
         $attributes = [];
         $classes = [];
+        $namespaces = [];
+        if (
+            preg_match_all(
+                '/\bstore\s*\(\s*([\'"])([a-z0-9-]+\/[a-z0-9-]+)\1/',
+                $contents,
+                $registered
+            ) !== false
+        ) {
+            $namespaces = array_fill_keys($registered[2], true);
+        }
+
+        foreach ($componentDirectives as $directive) {
+            if (
+                $directive['namespace'] === null
+                || !isset($namespaces[$directive['namespace']])
+                || preg_match(
+                    '/^data-wp-(bind|class)--([a-z0-9-]+)$/',
+                    $directive['name'],
+                    $binding
+                ) !== 1
+            ) {
+                continue;
+            }
+
+            if ($binding[1] === 'class') {
+                $classes[$binding[2]] = true;
+            } else {
+                $attributes[$binding[2]] = true;
+            }
+        }
+
         $directory = dirname($file) . '/';
         foreach (
             $scanner->files(['php', 'twig', 'blade.php', 'html'])
@@ -848,7 +907,79 @@ final class JavaScriptAnalyzer
             }
         }
 
+        foreach ($scanner->files(['tsx', 'jsx']) as $file) {
+            foreach ($this->componentDataTokens($file, $scanner->read($file)) as $token) {
+                $tokens[$token] = true;
+            }
+        }
+
         return $tokens;
+    }
+
+    /**
+     * @return list<string>
+     */
+    private function componentDataTokens(string $file, string $contents): array
+    {
+        if (stripos($contents, 'data-') === false) {
+            return [];
+        }
+
+        try {
+            $program = Parser::parseSource(
+                $contents,
+                'module',
+                new JsxOptions(JsxMode::Preserve),
+                $file
+            );
+        } catch (SyntaxError) {
+            return $this->dataTokensInText($contents);
+        }
+
+        $tokens = [];
+        Walker::walk(
+            $program,
+            function (Node $node) use (&$tokens): null {
+                $name = match (true) {
+                    $node instanceof JsxAttribute
+                        && $node->name instanceof JsxIdentifier
+                        => $node->name->name,
+                    $node instanceof Property
+                        && $node->key instanceof Literal
+                        && is_string($node->key->value)
+                        => $node->key->value,
+                    default => null,
+                };
+                if ($name !== null) {
+                    array_push($tokens, ...$this->dataTokensInText($name));
+                }
+
+                return null;
+            }
+        );
+
+        return array_values(array_unique($tokens));
+    }
+
+    /**
+     * @return list<string>
+     */
+    private function dataTokensInText(string $text): array
+    {
+        if (
+            preg_match_all(
+                '/(?<![a-z0-9-])(data-[a-z0-9][a-z0-9-]*)/i',
+                $text,
+                $matches
+            ) === false
+        ) {
+            return [];
+        }
+
+        return array_values(array_unique(array_map(
+            'strtolower',
+            $matches[1]
+        )));
     }
 
     /**
@@ -900,15 +1031,39 @@ final class JavaScriptAnalyzer
     }
 
     /**
+     * @param list<array{
+     *   file:string,
+     *   line:int,
+     *   name:string,
+     *   value:?string,
+     *   namespace:?string
+     * }> $componentDirectives
      * @return array<string, list<array{
      *   file:string,
      *   line:int,
      *   directory:string
      * }>>
      */
-    private function templateNamespaces(ProjectScanner $scanner): array
-    {
+    private function templateNamespaces(
+        ProjectScanner $scanner,
+        array $componentDirectives
+    ): array {
         $namespaces = [];
+        foreach ($componentDirectives as $directive) {
+            if (
+                $directive['name'] !== 'data-wp-interactive'
+                || $directive['namespace'] === null
+            ) {
+                continue;
+            }
+
+            $namespaces[$directive['namespace']][] = [
+                'file' => $directive['file'],
+                'line' => $directive['line'],
+                'directory' => dirname($directive['file']),
+            ];
+        }
+
         foreach (
             $scanner->files(['php', 'twig', 'blade.php', 'html'])
             as $file
@@ -1018,78 +1173,18 @@ final class JavaScriptAnalyzer
                 ) !== false
             ) {
                 foreach ($directives[1] as $index => $nameMatch) {
-                    $name = strtolower($nameMatch[0]);
-                    $value = $directives[3][$index][0];
-                    $value = preg_replace(
-                        '/^[a-z0-9-]+\/[a-z0-9-]+::!?/i',
-                        '',
-                        $value
-                    ) ?? $value;
-                    $value = ltrim($value, '!');
-                    $segments = explode('.', $value);
-                    $group = $segments[0];
-                    $path = implode('.', array_slice($segments, 1));
-                    $line = ProjectScanner::lineForOffset(
-                        $contents,
-                        $nameMatch[1]
+                    $diagnostic = $this->directiveDiagnostic(
+                        $file,
+                        ProjectScanner::lineForOffset(
+                            $contents,
+                            $nameMatch[1]
+                        ),
+                        strtolower($nameMatch[0]),
+                        $directives[3][$index][0],
+                        $store
                     );
-
-                    $behavior = str_starts_with($name, 'data-wp-on')
-                        || in_array(
-                            $name,
-                            ['data-wp-watch', 'data-wp-init'],
-                            true
-                        );
-                    if (
-                        $behavior
-                        && !in_array(
-                            $group,
-                            ['actions', 'callbacks'],
-                            true
-                        )
-                    ) {
-                        $diagnostics[] = new Diagnostic(
-                            sprintf(
-                                '%s must reference actions.* or callbacks.*.',
-                                $name
-                            ),
-                            'blockstudio.interactivity.handler',
-                            $file,
-                            $line
-                        );
-                        continue;
-                    }
-
-                    $binding = str_starts_with($name, 'data-wp-bind')
-                        || str_starts_with($name, 'data-wp-class')
-                        || str_starts_with($name, 'data-wp-style')
-                        || $name === 'data-wp-text';
-                    if (
-                        !$binding
-                        || !in_array(
-                            $group,
-                            ['state', 'actions', 'callbacks'],
-                            true
-                        )
-                        || $store === null
-                    ) {
-                        continue;
-                    }
-
-                    if (
-                        $path === ''
-                        || !isset($store['groups'][$group][$path])
-                    ) {
-                        $diagnostics[] = new Diagnostic(
-                            sprintf(
-                                '%s references missing store path "%s".',
-                                $name,
-                                $value
-                            ),
-                            'blockstudio.interactivity.binding',
-                            $file,
-                            $line
-                        );
+                    if ($diagnostic !== null) {
+                        $diagnostics[] = $diagnostic;
                     }
                 }
             }
@@ -1129,6 +1224,369 @@ final class JavaScriptAnalyzer
     }
 
     /**
+     * @param array{
+     *   file:string,
+     *   line:int,
+     *   directory:string,
+     *   groups:array<string, array<string, true>>
+     * }|null $store
+     */
+    private function directiveDiagnostic(
+        string $file,
+        int $line,
+        string $name,
+        string $value,
+        ?array $store,
+        bool $checkHandlers = false
+    ): ?Diagnostic {
+        $value = preg_replace(
+            '/^[a-z0-9-]+\/[a-z0-9-]+::!?/i',
+            '',
+            $value
+        ) ?? $value;
+        $value = ltrim($value, '!');
+        $segments = explode('.', $value);
+        $group = $segments[0];
+        $path = implode('.', array_slice($segments, 1));
+
+        $behavior = str_starts_with($name, 'data-wp-on')
+            || in_array($name, ['data-wp-watch', 'data-wp-init'], true);
+        if ($behavior) {
+            if (!in_array($group, ['actions', 'callbacks'], true)) {
+                return new Diagnostic(
+                    sprintf(
+                        '%s must reference actions.* or callbacks.*.',
+                        $name
+                    ),
+                    'blockstudio.interactivity.handler',
+                    $file,
+                    $line
+                );
+            }
+
+            if (
+                $checkHandlers
+                && $store !== null
+                && !isset($store['groups'][$group][$path])
+            ) {
+                return new Diagnostic(
+                    sprintf(
+                        'Interactivity directive references missing %s handler "%s".',
+                        $group,
+                        $path
+                    ),
+                    'blockstudio.interactivity.handler',
+                    $file,
+                    $line
+                );
+            }
+
+            return null;
+        }
+
+        $binding = str_starts_with($name, 'data-wp-bind')
+            || str_starts_with($name, 'data-wp-class')
+            || str_starts_with($name, 'data-wp-style')
+            || $name === 'data-wp-text';
+        if (
+            !$binding
+            || !in_array($group, ['state', 'actions', 'callbacks'], true)
+            || $store === null
+            || ($path !== '' && isset($store['groups'][$group][$path]))
+        ) {
+            return null;
+        }
+
+        return new Diagnostic(
+            sprintf(
+                '%s references missing store path "%s".',
+                $name,
+                $value
+            ),
+            'blockstudio.interactivity.binding',
+            $file,
+            $line
+        );
+    }
+
+    /**
+     * @param array<string, array{
+     *   file:string,
+     *   line:int,
+     *   directory:string,
+     *   groups:array<string, array<string, true>>
+     * }> $stores
+     * @param list<array{
+     *   file:string,
+     *   line:int,
+     *   name:string,
+     *   value:?string,
+     *   namespace:?string
+     * }> $directives
+     * @return list<Diagnostic>
+     */
+    private function interactivityComponentDiagnostics(
+        array $stores,
+        array $directives
+    ): array {
+        $fileNamespaces = [];
+        foreach ($directives as $directive) {
+            if (
+                $directive['name'] === 'data-wp-interactive'
+                && $directive['namespace'] !== null
+            ) {
+                $fileNamespaces[$directive['file']]
+                    ??= $directive['namespace'];
+            }
+        }
+
+        $diagnostics = [];
+        foreach ($directives as $directive) {
+            if (
+                $directive['value'] === null
+                || in_array(
+                    $directive['name'],
+                    ['data-wp-interactive', 'data-wp-context'],
+                    true
+                )
+            ) {
+                continue;
+            }
+
+            $namespace = preg_match(
+                '/^([a-z0-9-]+\/[a-z0-9-]+)::/',
+                $directive['value'],
+                $prefix
+            ) === 1
+                ? $prefix[1]
+                : ($directive['namespace']
+                    ?? $fileNamespaces[$directive['file']]
+                    ?? null);
+            $store = $namespace !== null
+                ? ($stores[$namespace] ?? null)
+                : null;
+            $directory = dirname($directive['file']);
+            if ($store === null && $namespace === null) {
+                foreach ($stores as $candidate) {
+                    if ($candidate['directory'] === $directory) {
+                        $store = $candidate;
+                        break;
+                    }
+                }
+            }
+
+            $diagnostic = $this->directiveDiagnostic(
+                $directive['file'],
+                $directive['line'],
+                $directive['name'],
+                $directive['value'],
+                $store,
+                true
+            );
+            if ($diagnostic !== null) {
+                $diagnostics[] = $diagnostic;
+            }
+        }
+
+        return $diagnostics;
+    }
+
+    /**
+     * @return list<array{
+     *   file:string,
+     *   line:int,
+     *   name:string,
+     *   value:?string,
+     *   namespace:?string
+     * }>
+     */
+    private function componentDirectives(ProjectScanner $scanner): array
+    {
+        $directives = [];
+        foreach ($scanner->files(['tsx', 'jsx']) as $file) {
+            $contents = $scanner->read($file);
+            if (stripos($contents, 'data-wp-') === false) {
+                continue;
+            }
+
+            array_push(
+                $directives,
+                ...$this->fileComponentDirectives($file, $contents)
+            );
+        }
+
+        return $directives;
+    }
+
+    /**
+     * @return list<array{
+     *   file:string,
+     *   line:int,
+     *   name:string,
+     *   value:?string,
+     *   namespace:?string
+     * }>
+     */
+    private function fileComponentDirectives(
+        string $file,
+        string $contents
+    ): array {
+        try {
+            $program = Parser::parseSource(
+                $contents,
+                'module',
+                new JsxOptions(JsxMode::Preserve),
+                $file
+            );
+        } catch (SyntaxError) {
+            return $this->textComponentDirectives($file, $contents);
+        }
+
+        $directives = [];
+        $scopes = [];
+        Walker::walk(
+            $program,
+            function (Node $node) use ($file, &$directives, &$scopes): null {
+                if ($node instanceof JsxElement) {
+                    $namespace = null;
+                    foreach ($node->openingElement->attributes as $attribute) {
+                        if (
+                            $attribute instanceof JsxAttribute
+                            && $attribute->name instanceof JsxIdentifier
+                            && strtolower($attribute->name->name)
+                                === 'data-wp-interactive'
+                        ) {
+                            $value = $this->staticString($attribute->value);
+                            $namespace = $value !== null
+                                ? $this->normaliseTemplateNamespace($value)
+                                : null;
+                        }
+                    }
+                    $scopes[] = $namespace ?? $this->innermostScope($scopes);
+
+                    return null;
+                }
+
+                [$name, $value] = match (true) {
+                    $node instanceof JsxAttribute
+                        && $node->name instanceof JsxIdentifier
+                        => [$node->name->name, $node->value],
+                    $node instanceof Property
+                        && $node->key instanceof Literal
+                        && is_string($node->key->value)
+                        => [$node->key->value, $node->value],
+                    default => [null, null],
+                };
+                $name = $name !== null ? strtolower($name) : '';
+                if (!str_starts_with($name, 'data-wp-')) {
+                    return null;
+                }
+
+                $string = $this->staticString($value);
+                $namespace = match (true) {
+                    $name === 'data-wp-interactive' => $string !== null
+                        ? $this->normaliseTemplateNamespace($string)
+                        : null,
+                    $node instanceof JsxAttribute
+                        => $this->innermostScope($scopes),
+                    default => null,
+                };
+                $directives[] = [
+                    'file' => $file,
+                    'line' => $node->location->line,
+                    'name' => $name,
+                    'value' => $string,
+                    'namespace' => $namespace,
+                ];
+
+                return null;
+            },
+            function (Node $node) use (&$scopes): void {
+                if ($node instanceof JsxElement) {
+                    array_pop($scopes);
+                }
+            }
+        );
+
+        return $directives;
+    }
+
+    /**
+     * @return list<array{
+     *   file:string,
+     *   line:int,
+     *   name:string,
+     *   value:?string,
+     *   namespace:?string
+     * }>
+     */
+    private function textComponentDirectives(
+        string $file,
+        string $contents
+    ): array {
+        if (
+            preg_match_all(
+                '/\b(data-wp-[a-z0-9-]+(?:--[a-z0-9-]+)?)\s*=\s*([\'"])([^\'"]*)\2/i',
+                $contents,
+                $matches,
+                PREG_OFFSET_CAPTURE
+            ) === false
+        ) {
+            return [];
+        }
+
+        $directives = [];
+        foreach ($matches[1] as $index => $match) {
+            $name = strtolower($match[0]);
+            $value = $matches[3][$index][0];
+            $directives[] = [
+                'file' => $file,
+                'line' => ProjectScanner::lineForOffset($contents, $match[1]),
+                'name' => $name,
+                'value' => $value,
+                'namespace' => $name === 'data-wp-interactive'
+                    ? $this->normaliseTemplateNamespace($value)
+                    : null,
+            ];
+        }
+
+        return $directives;
+    }
+
+    /**
+     * @param list<?string> $scopes
+     */
+    private function innermostScope(array $scopes): ?string
+    {
+        return $scopes === [] ? null : $scopes[array_key_last($scopes)];
+    }
+
+    private function staticString(?Node $node): ?string
+    {
+        if ($node instanceof JsxExpressionContainer) {
+            $node = $node->expression;
+        }
+
+        if ($node instanceof Literal) {
+            return is_string($node->value) ? $node->value : null;
+        }
+
+        if ($node instanceof TemplateLiteral && $node->expressions === []) {
+            $value = '';
+            foreach ($node->quasis as $quasi) {
+                if ($quasi->cookedValue === null) {
+                    return null;
+                }
+                $value .= $quasi->cookedValue;
+            }
+
+            return $value;
+        }
+
+        return null;
+    }
+
+    /**
      * @param array<string, array{
      *   file:string,
      *   line:int,
@@ -1148,7 +1606,10 @@ final class JavaScriptAnalyzer
     ): array {
         $diagnostics = [];
         foreach ($templates as $namespace => $references) {
-            if (isset($stores[$namespace])) {
+            if (
+                isset($stores[$namespace])
+                || str_starts_with($namespace, 'bsui/')
+            ) {
                 continue;
             }
 

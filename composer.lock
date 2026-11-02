@@ -5083,19 +5083,21 @@
         },
         {
             "name": "tailwindphp/tailwindphp",
-            "version": "v1.6.0",
+            "version": "v1.8.4",
             "source": {
                 "type": "git",
                 "url": "https://github.com/inline0/tailwindphp.git",
-                "reference": "f6787320e97877e2945e5a8c34233b2e18c83442"
+                "reference": "590c3f183b05cdec20cf86f107b103238ce0d92b"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/inline0/tailwindphp/zipball/f6787320e97877e2945e5a8c34233b2e18c83442",
-                "reference": "f6787320e97877e2945e5a8c34233b2e18c83442",
+                "url": "https://api.github.com/repos/inline0/tailwindphp/zipball/590c3f183b05cdec20cf86f107b103238ce0d92b",
+                "reference": "590c3f183b05cdec20cf86f107b103238ce0d92b",
                 "shasum": ""
             },
             "require": {
+                "ext-ctype": "*",
+                "ext-mbstring": "*",
                 "php": "^8.2"
             },
             "require-dev": {
@@ -5142,6 +5144,7 @@
                     "src/utilities.php",
                     "src/variants.php",
                     "src/design-system.php",
+                    "src/compat/legacy-utilities.php",
                     "src/apply.php",
                     "src/at-import.php",
                     "src/css-functions.php",
@@ -5165,7 +5168,7 @@
                 }
             ],
             "description": "A full port of TailwindCSS 4.x to PHP",
-            "homepage": "https://github.com/dnnsjsk/tailwindphp",
+            "homepage": "https://github.com/inline0/tailwindphp",
             "keywords": [
                 "css",
                 "php",
@@ -5174,10 +5177,10 @@
                 "utility-css"
             ],
             "support": {
-                "issues": "https://github.com/dnnsjsk/tailwindphp/issues",
-                "source": "https://github.com/dnnsjsk/tailwindphp"
+                "issues": "https://github.com/inline0/tailwindphp/issues",
+                "source": "https://github.com/inline0/tailwindphp"
             },
-            "time": "2026-07-22T06:45:43+00:00"
+            "time": "2026-11-02T00:08:58+00:00"
         },
         {
             "name": "thecodingmachine/safe",

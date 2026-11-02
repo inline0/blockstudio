@@ -3,7 +3,7 @@ Contributors: dnnsjsk
 Requires at least: 6.7
 Tested up to: 7.0.0
 Requires PHP: 8.2
-Stable tag: 7.7.10
+Stable tag: 7.7.11
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -53,6 +53,25 @@ Download the latest release zip from [GitHub Releases](https://github.com/inline
 * [Getting Started](https://blockstudio.dev/docs/getting-started)
 
 == Changelog ==
+
+= 7.7.11 =
+* Performance: frontend asset and component processing avoids repeated full-markup searches for every registered block and field (#193)
+* New: saved-value validation reports unknown top-level attributes and misplaced values missing the blockstudio wrapper without changing stored content (#194)
+* Fix: RichText and InnerBlocks component tags preserve single-quoted, unquoted, empty, and boolean attributes, including nested RichText field paths (#195)
+* Fix: SQLite journal activity no longer invalidates warm block metadata caches while source-file changes remain detected
+* New: component pages: a `render` entry in `page.json`, frontmatter, loader entries, or collection defaults renders the page through a renderer registered with `Blockstudio\Page_Renderers`; sync stores one `blockstudio/page` block whose inner blocks are the page's `index.*` slot, and entry or data edits no longer count as page changes
+* New: renderer layouts such as `layout.tsx` with an optional `layout.data.php` wrap pages like `layout.php`
+* New: `"scope": "site"` collections group standalone pages and apply defaults without changing their keys, URLs, parents, or layouts, while nested collections keep their own manifests
+* New: `Assets::register_owner()` gives non-block output, such as renderer assets, block asset processing and once-per-page tags that prerendered documents keep
+* New: `schemas/pages.json` describes collection manifests, and PHPStan checks `page.json` render entries and data loaders
+* Fix: pages read through a symlinked theme directory keep their layouts and store portable `theme:` paths and prerender dependencies
+* New: loader-discovered Markdown pages can share a registered page renderer with loader-level and per-path render defaults
+* New: PHPStan checks DOM attribute selectors and Interactivity API directives in React components, including attribute objects
+* Fix: PHPStan theme-level diagnostics no longer abort analysis when a missing root or scan limit points to a directory
+* Fix: PHPStan recognizes the `cache/namespaceGrace` setting
+* Fix: sources containing a single shortcode are stored as a Shortcode block without extra paragraph markup
+* Fix: bundled TailwindPHP 1.8.4 improves utility compatibility, class extraction, variant output, and class merging
+* Performance: rendering one component page loads only its page data instead of hydrating all synced pages
 
 = 7.7.10 =
 * Fix: field schemas and TypeScript definitions include the supported radio, checkbox, code, WYSIWYG, repeater, color, and gradient options (#191)

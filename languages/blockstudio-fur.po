@@ -28,6 +28,14 @@ msgid "This storage key is not declared by the block or its extensions."
 msgstr "Cheste clâf di archiviazion no je declarade dal bloc o des sôs estensions."
 
 #: includes/classes/block-validator.php
+msgid "This top-level key is not an attribute of the block, so it is ignored."
+msgstr "Cheste clâf di nivel superiôr no je un atribût dal bloc, duncje e ven ignorade."
+
+#: includes/classes/block-validator.php
+msgid "This key is only read inside the blockstudio object, which is missing."
+msgstr "Cheste clâf e ven lete dome dentri dal ogjet blockstudio, che al mancje."
+
+#: includes/classes/block-validator.php
 msgid "This value is not among the field options."
 msgstr "Cheste valôr no je tra lis opzions dal cjamp."
 

@@ -2,7 +2,7 @@
 
 declare (strict_types=1);
 /**
- * Port of: https://github.com/dcastil/tailwind-merge/blob/main/src/lib/parse-class-name.ts
+ * Port of: https://github.com/dcastil/tailwind-merge/blob/main/packages/tailwind-merge/src/lib/parse-class-name.ts
  *
  * Parses class names into their component parts.
  *

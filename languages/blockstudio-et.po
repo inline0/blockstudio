@@ -28,6 +28,14 @@ msgid "This storage key is not declared by the block or its extensions."
 msgstr "See salvestusvõti pole ploki ega selle laienduste poolt deklareeritud."
 
 #: includes/classes/block-validator.php
+msgid "This top-level key is not an attribute of the block, so it is ignored."
+msgstr "See tipptaseme võti ei ole ploki atribuut, seega seda eiratakse."
+
+#: includes/classes/block-validator.php
+msgid "This key is only read inside the blockstudio object, which is missing."
+msgstr "Seda võtit loetakse ainult puuduva blockstudio-objekti sees."
+
+#: includes/classes/block-validator.php
 msgid "This value is not among the field options."
 msgstr "See väärtus ei kuulu välja valikute hulka."
 

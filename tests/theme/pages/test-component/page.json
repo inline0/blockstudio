@@ -1,0 +1,9 @@
+{
+  "name": "blockstudio-component-test",
+  "title": "Blockstudio Component Test Page",
+  "slug": "blockstudio-component-test",
+  "postType": "page",
+  "postStatus": "publish",
+  "templateLock": "all",
+  "render": { "entry": "page.fixture.php", "data": "data.php" }
+}

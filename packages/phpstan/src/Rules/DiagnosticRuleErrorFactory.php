@@ -12,10 +12,14 @@ final class DiagnosticRuleErrorFactory
 {
     public static function build(Diagnostic $diagnostic): IdentifierRuleError
     {
-        return RuleErrorBuilder::message($diagnostic->message)
+        $builder = RuleErrorBuilder::message($diagnostic->message)
             ->identifier($diagnostic->identifier)
-            ->file($diagnostic->file)
-            ->line(max(1, $diagnostic->line))
-            ->build();
+            ->line(max(1, $diagnostic->line));
+
+        if (is_file($diagnostic->file)) {
+            $builder = $builder->file($diagnostic->file);
+        }
+
+        return $builder->build();
     }
 }

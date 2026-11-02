@@ -28,6 +28,14 @@ msgid "This storage key is not declared by the block or its extensions."
 msgstr "Chan eil an iuchair-stòraidh seo dearbhte leis a’ bhloc no leis na leudachain aige."
 
 #: includes/classes/block-validator.php
+msgid "This top-level key is not an attribute of the block, so it is ignored."
+msgstr "Thèid dearmad a dhèanamh air an iuchair aig an ìre as àirde seo oir chan eil i na buadh den bhlog."
+
+#: includes/classes/block-validator.php
+msgid "This key is only read inside the blockstudio object, which is missing."
+msgstr "Cha tèid an iuchair seo a leughadh ach taobh a-staigh an nì blockstudio, a tha a dhìth."
+
+#: includes/classes/block-validator.php
 msgid "This value is not among the field options."
 msgstr "Chan eil an luach seo am measg roghainnean an raoin."
 

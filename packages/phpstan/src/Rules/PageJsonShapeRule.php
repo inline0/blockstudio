@@ -177,6 +177,10 @@ final class PageJsonShapeRule implements Rule
                 ->build();
         }
 
+        if (array_key_exists('render', $data)) {
+            $errors = array_merge($errors, $this->validateRender($data['render'], $path));
+        }
+
         $validStatuses = ['publish', 'draft', 'private', 'pending', 'future', 'trash'];
         if (isset($data['postStatus']) && is_string($data['postStatus']) && !in_array($data['postStatus'], $validStatuses, true)) {
             $errors[] = RuleErrorBuilder::message(sprintf(
@@ -191,5 +195,93 @@ final class PageJsonShapeRule implements Rule
         }
 
         return $errors;
+    }
+
+    /**
+     * Validate a page render definition: its shape, that its entry and data
+     * files exist, and that they stay inside the analysed root.
+     *
+     * @return list<\PHPStan\Rules\IdentifierRuleError>
+     */
+    private function validateRender(mixed $render, string $path): array
+    {
+        if ($render === null || $render === false) {
+            return [];
+        }
+
+        if (is_string($render)) {
+            $render = ['entry' => $render];
+        }
+
+        if (
+            !is_array($render)
+            || !isset($render['entry'])
+            || !is_string($render['entry'])
+            || trim($render['entry']) === ''
+            || (isset($render['data']) && !is_string($render['data']))
+            || (isset($render['renderer']) && !is_string($render['renderer']))
+            || array_diff(array_keys($render), ['entry', 'data', 'renderer']) !== []
+        ) {
+            return [
+                RuleErrorBuilder::message(sprintf(
+                    'page.json "render" must be an entry path or an object with "entry" and optional "data" and "renderer" strings: %s',
+                    $path
+                ))
+                    ->identifier('blockstudio.pageJson.render')
+                    ->file($path)
+                    ->build(),
+            ];
+        }
+
+        $errors = [];
+        $files = ['entry' => $render['entry']];
+        if (isset($render['data']) && trim($render['data']) !== '') {
+            $files['data'] = $render['data'];
+        }
+
+        foreach ($files as $role => $file) {
+            $candidate = str_starts_with($file, '/') ? $file : dirname($path) . '/' . $file;
+            $resolved = realpath($candidate);
+
+            if ($resolved === false || !is_file($resolved)) {
+                $errors[] = RuleErrorBuilder::message(sprintf(
+                    'page.json render %s "%s" does not exist: %s',
+                    $role,
+                    $file,
+                    $path
+                ))
+                    ->identifier('blockstudio.pageJson.render' . ucfirst($role))
+                    ->file($path)
+                    ->build();
+                continue;
+            }
+
+            if (!$this->isInsideAnalysedRoot($resolved)) {
+                $errors[] = RuleErrorBuilder::message(sprintf(
+                    'page.json render %s "%s" resolves outside the analysed root: %s',
+                    $role,
+                    $file,
+                    $path
+                ))
+                    ->identifier('blockstudio.pageJson.renderPath')
+                    ->file($path)
+                    ->build();
+            }
+        }
+
+        return $errors;
+    }
+
+    private function isInsideAnalysedRoot(string $resolved): bool
+    {
+        $root = realpath($this->currentWorkingDirectory);
+        if ($root === false) {
+            return true;
+        }
+
+        $root = rtrim(str_replace('\\', '/', $root), '/');
+        $resolved = str_replace('\\', '/', $resolved);
+
+        return $resolved === $root || str_starts_with($resolved, $root . '/');
     }
 }

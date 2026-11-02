@@ -2,7 +2,7 @@
 
 declare (strict_types=1);
 /**
- * Port of: https://github.com/dcastil/tailwind-merge/blob/main/src/lib/create-tailwind-merge.ts
+ * Port of: https://github.com/dcastil/tailwind-merge/blob/main/packages/tailwind-merge/src/lib/create-tailwind-merge.ts
  *
  * Factory for creating custom tailwind-merge instances.
  *
@@ -41,7 +41,7 @@ function createTailwindMerge(callable $createConfigFirst, callable ...$createCon
         $parseClassName = new ParseClassName($config);
         $sortModifiers = new SortModifiers($config);
         $classGroupUtils = new ClassGroupUtils($config);
-        $configUtils = ['cache' => $cache, 'parseClassName' => fn(string $cn) => $parseClassName->parse($cn), 'sortModifiers' => fn(array $mods) => $sortModifiers->sort($mods), 'getClassGroupId' => fn(string $cn) => $classGroupUtils->getClassGroupId($cn), 'getConflictingClassGroupIds' => fn(string $id, bool $hasPostfix) => $classGroupUtils->getConflictingClassGroupIds($id, $hasPostfix)];
+        $configUtils = ['cache' => $cache, 'postfixLookupClassGroupIds' => array_fill_keys($config['postfixLookupClassGroups'] ?? [], \true), 'parseClassName' => fn(string $cn) => $parseClassName->parse($cn), 'sortModifiers' => fn(array $mods) => $sortModifiers->sort($mods), 'getClassGroupId' => fn(string $cn) => $classGroupUtils->getClassGroupId($cn), 'getConflictingClassGroupIds' => fn(string $id, bool $hasPostfix) => $classGroupUtils->getConflictingClassGroupIds($id, $hasPostfix)];
         // Switch to the real merge function
         $functionToCall = $tailwindMerge;
         return $tailwindMerge($classList);

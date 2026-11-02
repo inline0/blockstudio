@@ -28,6 +28,14 @@ msgid "This storage key is not declared by the block or its extensions."
 msgstr "E yave di almacenamentu aki no ta deklará pa e blok ni su ekstensionnan."
 
 #: includes/classes/block-validator.php
+msgid "This top-level key is not an attribute of the block, so it is ignored."
+msgstr "E yabi aki na nivel superior no ta un atributo di e blok, p'esey ta wòrdu ignorá."
+
+#: includes/classes/block-validator.php
+msgid "This key is only read inside the blockstudio object, which is missing."
+msgstr "E yabi aki ta wòrdu lesa solamente den e objeto blockstudio, ku ta falta."
+
+#: includes/classes/block-validator.php
 msgid "This value is not among the field options."
 msgstr "E balor aki no ta un di e opshonnan di e campo."
 

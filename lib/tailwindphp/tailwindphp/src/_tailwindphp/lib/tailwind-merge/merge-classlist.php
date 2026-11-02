@@ -2,7 +2,7 @@
 
 declare (strict_types=1);
 /**
- * Port of: https://github.com/dcastil/tailwind-merge/blob/main/src/lib/merge-classlist.ts
+ * Port of: https://github.com/dcastil/tailwind-merge/blob/main/packages/tailwind-merge/src/lib/merge-classlist.ts
  *
  * Merges a class list, removing conflicting classes.
  *
@@ -42,7 +42,16 @@ function mergeClassList(string $classList, array $configUtils): string
             continue;
         }
         $hasPostfixModifier = $maybePostfixModifierPosition !== null;
-        $classGroupId = $getClassGroupId($hasPostfixModifier ? substr($baseClassName, 0, $maybePostfixModifierPosition) : $baseClassName);
+        if ($hasPostfixModifier) {
+            $classGroupId = $getClassGroupId(substr($baseClassName, 0, $maybePostfixModifierPosition));
+            $classGroupIdWithPostfix = $classGroupId !== null && isset($configUtils['postfixLookupClassGroupIds'][$classGroupId]) ? $getClassGroupId($baseClassName) : null;
+            if ($classGroupIdWithPostfix !== null && $classGroupIdWithPostfix !== $classGroupId) {
+                $classGroupId = $classGroupIdWithPostfix;
+                $hasPostfixModifier = \false;
+            }
+        } else {
+            $classGroupId = $getClassGroupId($baseClassName);
+        }
         if ($classGroupId === null) {
             if (!$hasPostfixModifier) {
                 // Not a Tailwind class

@@ -139,6 +139,18 @@ class Assets {
 	private static array $parsed_asset_ids = array();
 
 	/**
+	 * Asset owners registered during this request, indexed by owner id.
+	 *
+	 * @var array<string, array{name:string,path:string,assets:array<string,array>}>
+	 */
+	private static array $owners = array();
+
+	/**
+	 * Pattern of asset owner marker comments.
+	 */
+	private const OWNER_PATTERN = '/<!--blockstudio-assets\/([a-z0-9_.-]+)-->/';
+
+	/**
 	 * Whether the current frontend response is buffered.
 	 *
 	 * Set by maybe_buffer_output() at template_redirect, the one place that
@@ -183,7 +195,197 @@ class Assets {
 	public static function reset_request_state(): void {
 		self::$modules             = array();
 		self::$parsed_asset_ids    = array();
+		self::$owners              = array();
 		self::$force_editor_screen = false;
+	}
+
+	/**
+	 * Register asset files that belong to something other than a block.
+	 *
+	 * The files get the processing of block assets: the inline and scoped
+	 * naming conventions, ES module and minification output, and the `?ver`
+	 * block assets carry. The returned marker comment goes into the rendered
+	 * HTML. The page buffer replaces it with the asset tags once per page, as
+	 * it does for a block identity, and Block::strip_comments() removes it.
+	 *
+	 * @since 7.7.11
+	 *
+	 * @param string $id    Owner id, such as `page-home`.
+	 * @param array  $files Asset paths, or arrays with `path`, an optional
+	 *                      `type` (`inline` forces an inline tag) and an
+	 *                      optional `version` for the `?ver` value.
+	 *
+	 * @return string Marker comment, or an empty string when no file exists.
+	 */
+	public static function register_owner( string $id, array $files ): string {
+		$id = self::owner_id( $id );
+
+		if ( '' === $id ) {
+			return '';
+		}
+
+		$owner = self::$owners[ $id ] ?? array(
+			'name'   => 'owner-' . $id,
+			'path'   => '',
+			'assets' => array(),
+		);
+
+		foreach ( $files as $file ) {
+			$file = is_string( $file ) ? array( 'path' => $file ) : $file;
+
+			if ( ! is_array( $file ) || ! is_string( $file['path'] ?? null ) ) {
+				continue;
+			}
+
+			$path = wp_normalize_path( $file['path'] );
+
+			if ( ! is_file( $path ) || ( ! self::is_css( $path ) && ! str_ends_with( $path, '.js' ) ) ) {
+				continue;
+			}
+
+			if (
+				false === apply_filters(
+					'blockstudio/assets/enable',
+					true,
+					array(
+						'file' => pathinfo( $path ),
+						'path' => $path,
+						'url'  => Files::get_relative_url( $path ),
+						'type' => self::is_css( $path ) ? 'css' : 'js',
+					)
+				)
+			) {
+				continue;
+			}
+
+			self::process( $path, '' );
+
+			$basename = basename( $path );
+			$inline   = 'inline' === ( $file['type'] ?? null ) || 1 === preg_match( '/[.-]inline\.(?:css|scss|js)$/', $basename );
+			$key      = strtolower( preg_replace( '/(?<!^)[A-Z]/', '-$0', $basename ) ?? $basename );
+
+			if ( isset( $owner['assets'][ $key ] ) && $owner['assets'][ $key ]['path'] !== $path ) {
+				$key = substr( md5( Page_Paths::encode( $path ) ), 0, 8 ) . '-' . $key;
+			}
+			$asset = array(
+				'type'     => $inline ? 'inline' : 'external',
+				'path'     => $path,
+				'url'      => Files::get_relative_url( $path ),
+				'editor'   => false,
+				'instance' => $id,
+				'key'      => self::get_asset_version( $path ),
+				'mtime'    => (int) filemtime( $path ),
+				'file'     => pathinfo( $path ),
+			);
+
+			if ( is_scalar( $file['version'] ?? null ) && '' !== (string) $file['version'] ) {
+				$asset['version'] = (string) $file['version'];
+			}
+
+			if ( '' === $owner['path'] ) {
+				$owner['path'] = $path;
+			}
+
+			$owner['assets'][ $key ] = $asset;
+		}
+
+		if ( array() === $owner['assets'] ) {
+			return '';
+		}
+
+		self::$owners[ $id ] = $owner;
+
+		return self::owner_marker( $id );
+	}
+
+	/**
+	 * Build the marker comment of an asset owner.
+	 *
+	 * @since 7.7.11
+	 *
+	 * @param string $id Owner id.
+	 *
+	 * @return string Marker comment.
+	 */
+	public static function owner_marker( string $id ): string {
+		return '<!--blockstudio-assets/' . self::owner_id( $id ) . '-->';
+	}
+
+	/**
+	 * Remove asset owner markers from rendered HTML.
+	 *
+	 * @since 7.7.11
+	 *
+	 * @param string $html Rendered HTML.
+	 *
+	 * @return string HTML without owner markers.
+	 */
+	public static function strip_owner_markers( string $html ): string {
+		if ( ! str_contains( $html, '<!--blockstudio-assets/' ) ) {
+			return $html;
+		}
+
+		return preg_replace( self::OWNER_PATTERN, '', $html ) ?? $html;
+	}
+
+	/**
+	 * Normalize an asset owner id.
+	 *
+	 * @param string $id Raw owner id.
+	 *
+	 * @return string Owner id.
+	 */
+	private static function owner_id( string $id ): string {
+		return trim( (string) preg_replace( '/[^a-z0-9_.-]+/', '-', strtolower( $id ) ), '-' );
+	}
+
+	/**
+	 * Emit the asset tags of the owners whose markers a page contains.
+	 *
+	 * @param string $html      Page HTML.
+	 * @param array  $asset_ids Already emitted asset paths.
+	 * @param string $head      Head tags.
+	 * @param string $footer    Footer tags.
+	 *
+	 * @return void
+	 */
+	private static function emit_owner_assets( string $html, array &$asset_ids, string &$head, string &$footer ): void {
+		if ( array() === self::$owners || ! str_contains( $html, '<!--blockstudio-assets/' ) || ! preg_match_all( self::OWNER_PATTERN, $html, $matches ) ) {
+			return;
+		}
+
+		foreach ( array_unique( $matches[1] ) as $id ) {
+			$owner = self::$owners[ $id ] ?? null;
+
+			if ( null === $owner ) {
+				continue;
+			}
+
+			foreach ( $owner['assets'] as $key => $asset ) {
+				if ( in_array( $asset['path'], $asset_ids, true ) ) {
+					continue;
+				}
+
+				$asset_ids[] = $asset['path'];
+				$is_css      = self::is_css( $key );
+
+				if ( 'inline' === $asset['type'] ) {
+					$tag = self::render_inline( $key, $asset, $owner, true );
+				} else {
+					$tag = self::render_tag( $key, $asset, $owner );
+				}
+
+				if ( ! is_string( $tag ) ) {
+					continue;
+				}
+
+				if ( $is_css ) {
+					$head .= $tag;
+				} else {
+					$footer .= $tag;
+				}
+			}
+		}
 	}
 
 	/**
@@ -573,7 +775,6 @@ class Assets {
 
 		$blocks         = Build::data();
 		$blocks_native  = Build::blocks();
-		$ids            = array();
 		$blocks_on_page = array();
 		$asset_ids      = &self::$parsed_asset_ids;
 		$inline_limit   = max( 0, Settings::get_int( 'assets/inlineLimit' ) );
@@ -590,11 +791,12 @@ class Assets {
 		$footer = implode( '', $script_matches[0] );
 		$html   = preg_replace( $script_pattern, '', $html );
 
-		foreach ( $blocks as $block ) {
-			$id    = Block::comment( $block['name'] );
-			$ids[] = $id;
+		$comments = Block::find_comments( $html );
 
-			if ( false !== stripos( $html, $id ) ) {
+		foreach ( $blocks as $block ) {
+			$on_page = isset( $comments[ Block::comment( $block['name'] ) ] );
+
+			if ( $on_page ) {
 				$blocks_on_page[ $block['name'] ] = $blocks_native[ $block['name'] ];
 			}
 
@@ -610,7 +812,7 @@ class Assets {
 				false
 			);
 
-			if ( false === strpos( $html, $id ) && ! $has_global ) {
+			if ( ! $on_page && ! $has_global ) {
 				continue;
 			}
 
@@ -625,7 +827,7 @@ class Assets {
 				}
 
 				$is_global = str_starts_with( $k, 'global' );
-				if ( false === strpos( $html, $id ) && ! $is_global ) {
+				if ( ! $on_page && ! $is_global ) {
 					continue;
 				}
 
@@ -669,6 +871,8 @@ class Assets {
 			$head = strtr( $head, self::resolve_inline_slots( $inline_slots, $inline_limit ) );
 		}
 
+		self::emit_owner_assets( $html, $asset_ids, $head, $footer );
+
 		$interactivity_importmap = self::get_interactivity_importmap( $blocks_on_page, $html );
 		if ( '' !== $interactivity_importmap ) {
 			$head = $interactivity_importmap . $head;
@@ -691,7 +895,7 @@ class Assets {
 		$footer = apply_filters( 'blockstudio/render/footer', $footer, $blocks_on_page );
 
 		$output = strtr(
-			str_replace( $ids, '', $html ),
+			Block::strip_comments( $html ),
 			array(
 				'</body>' => $footer . '</body>',
 				'</head>' => $head . '</head>',
@@ -2802,7 +3006,7 @@ class Assets {
 			return null;
 		}
 
-		$key       = $output['sourceMtime'];
+		$key       = is_scalar( $data['version'] ?? null ) && '' !== (string) $data['version'] ? rawurlencode( (string) $data['version'] ) : $output['sourceMtime'];
 		$processed = $output['processed'] ? 'data-processed' : '';
 
 		if ( self::is_css( $type ) ) {

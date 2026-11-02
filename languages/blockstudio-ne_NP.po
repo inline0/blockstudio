@@ -28,6 +28,14 @@ msgid "This storage key is not declared by the block or its extensions."
 msgstr "यो भण्डारण कुञ्जी ब्लक वा यसको विस्तारहरूले घोषणा गरेको छैन।"
 
 #: includes/classes/block-validator.php
+msgid "This top-level key is not an attribute of the block, so it is ignored."
+msgstr "यो शीर्ष-स्तरीय कुञ्जी ब्लकको एट्रिब्युट होइन, त्यसैले यसलाई बेवास्ता गरिन्छ।"
+
+#: includes/classes/block-validator.php
+msgid "This key is only read inside the blockstudio object, which is missing."
+msgstr "यो कुञ्जी blockstudio वस्तुभित्र मात्र पढिन्छ, जुन अनुपस्थित छ।"
+
+#: includes/classes/block-validator.php
 msgid "This value is not among the field options."
 msgstr "यो मान फिल्डका विकल्पहरूमा छैन।"
 

@@ -17,3 +17,16 @@ Blockstudio provides template components that map to native WordPress editor fea
 - [InnerBlocks](/docs/blocks/react-components/innerblocks):Allow nested blocks within your block
 - [RichText](/docs/blocks/react-components/richtext):Inline rich text editing
 - [MediaPlaceholder](/docs/blocks/react-components/mediaplaceholder):Media upload and selection
+
+## Attribute Syntax
+
+`RichText` and `InnerBlocks` accept single-quoted and double-quoted attributes in PHP, Twig, and Blade templates:
+
+```html
+<RichText attribute='myRichText' tag='h2' />
+<InnerBlocks tag="section" class="content" />
+```
+
+Unquoted values such as `tag=h2` also work. Quote values containing spaces or JSON, and escape dynamic values for HTML attributes. Empty quoted values stay empty, while an attribute without a value is boolean.
+
+RichText field selectors also support [nested repeater paths](/docs/blocks/react-components/richtext#repeater-fields), such as `attribute="items[0].heading"`.

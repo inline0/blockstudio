@@ -28,6 +28,14 @@ msgid "This storage key is not declared by the block or its extensions."
 msgstr "ཉར་ཚགས་ཀྱི་ལྡེ་མིག་འདི་བཀོད་དུམ་ངམ་དེའི་རྒྱ་སྐྱེད་ཁག་གིས་གསལ་བསྒྲགས་བྱས་མེད།"
 
 #: includes/classes/block-validator.php
+msgid "This top-level key is not an attribute of the block, so it is ignored."
+msgstr "འདི་རིམ་མཐོའི་ལྡེ་མིག་དེ་ block གི་ཁྱད་ཆོས་ཤིག་མིན་པས། སྣང་མེད་དུ་བཞག་ཡོད།"
+
+#: includes/classes/block-validator.php
+msgid "This key is only read inside the blockstudio object, which is missing."
+msgstr "ལྡེ་མིག་འདི་ blockstudio དངོས་པོའི་ནང་ཁོ་ནར་ཀློག་བྱེད། དངོས་པོ་དེ་མེད།"
+
+#: includes/classes/block-validator.php
 msgid "This value is not among the field options."
 msgstr "རིན་ཐང་འདི་ས་ཞིང་གདམ་གའི་ནང་མེད།"
 

@@ -28,6 +28,14 @@ msgid "This storage key is not declared by the block or its extensions."
 msgstr "Tento kľúč úložiska nie je deklarovaný blokom ani jeho rozšíreniami."
 
 #: includes/classes/block-validator.php
+msgid "This top-level key is not an attribute of the block, so it is ignored."
+msgstr "Tento kľúč najvyššej úrovne nie je atribútom bloku, preto sa ignoruje."
+
+#: includes/classes/block-validator.php
+msgid "This key is only read inside the blockstudio object, which is missing."
+msgstr "Tento kľúč sa číta iba v objekte blockstudio, ktorý chýba."
+
+#: includes/classes/block-validator.php
 msgid "This value is not among the field options."
 msgstr "Táto hodnota nie je medzi možnosťami poľa."
 

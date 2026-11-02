@@ -2,7 +2,7 @@
 
 declare (strict_types=1);
 /**
- * Port of: https://github.com/dcastil/tailwind-merge/blob/main/src/lib/validators.ts
+ * Port of: https://github.com/dcastil/tailwind-merge/blob/main/packages/tailwind-merge/src/lib/validators.ts
  *
  * Validation functions for Tailwind class values.
  *
@@ -95,14 +95,30 @@ function isTshirtSize(string $value): bool
 {
     return Validators::isTshirtSize($value);
 }
+function isNamedContainerQuery(string $value): bool
+{
+    return Validators::isNamedContainerQuery($value);
+}
+function isArbitraryWeight(string $value): bool
+{
+    return Validators::isArbitraryWeight($value);
+}
+function isArbitraryFamilyName(string $value): bool
+{
+    return Validators::isArbitraryFamilyName($value);
+}
+function isArbitraryVariableWeight(string $value): bool
+{
+    return Validators::isArbitraryVariableWeight($value);
+}
 class Validators
 {
     private const ARBITRARY_VALUE_REGEX = '/^\[(?:(\w[\w-]*):)?(.+)\]$/i';
     private const ARBITRARY_VARIABLE_REGEX = '/^\((?:(\w[\w-]*):)?(.+)\)$/i';
-    private const FRACTION_REGEX = '/^\d+\/\d+$/';
+    private const FRACTION_REGEX = '/^\d+(?:\.\d+)?\/\d+(?:\.\d+)?$/';
     private const TSHIRT_UNIT_REGEX = '/^(\d+(\.\d+)?)?(xs|sm|md|lg|xl)$/';
     private const LENGTH_UNIT_REGEX = '/\d+(%|px|r?em|[sdl]?v([hwib]|min|max)|pt|pc|in|cm|mm|cap|ch|ex|r?lh|cq(w|h|i|b|min|max))|\b(calc|min|max|clamp)\(.+\)|^0$/';
-    private const COLOR_FUNCTION_REGEX = '/^(rgba?|hsla?|hwb|(ok)?(lab|lch)|color-mix)\(.+\)$/';
+    private const COLOR_FUNCTION_REGEX = '/^(rgba?|hsla?|hwb|(ok)?(lab|lch)|color-mix|color|light-dark)\(.+\)$/';
     private const SHADOW_REGEX = '/^(inset_)?-?((\d+)?\.?(\d+)[a-z]+|0)_-?((\d+)?\.?(\d+)[a-z]+|0)/';
     private const IMAGE_REGEX = '/^(url|image|image-set|cross-fade|element|(repeating-)?(linear|radial|conic)-gradient)\(.+\)$/';
     public static function isFraction(string $value): bool
@@ -115,7 +131,7 @@ class Validators
     }
     public static function isInteger(string $value): bool
     {
-        return $value !== '' && ctype_digit(ltrim($value, '-'));
+        return self::isNumber($value) && is_finite((float) $value) && floor((float) $value) === (float) $value;
     }
     public static function isPercent(string $value): bool
     {
@@ -189,6 +205,22 @@ class Validators
     {
         return self::getIsArbitraryVariable($value, 'isLabelShadow', \true);
     }
+    public static function isNamedContainerQuery(string $value): bool
+    {
+        return str_starts_with($value, '@container') && (str_starts_with(substr($value, 10), '/') && strlen($value) > 11 || str_starts_with(substr($value, 10), '-size/') && strlen($value) > 16 || str_starts_with(substr($value, 10), '-normal/') && strlen($value) > 18);
+    }
+    public static function isArbitraryWeight(string $value): bool
+    {
+        return self::getIsArbitraryValue($value, 'isLabelWeight', 'isAny');
+    }
+    public static function isArbitraryFamilyName(string $value): bool
+    {
+        return self::getIsArbitraryValue($value, 'isLabelFamilyName', 'isNever');
+    }
+    public static function isArbitraryVariableWeight(string $value): bool
+    {
+        return self::getIsArbitraryVariable($value, 'isLabelWeight', \true);
+    }
     // Helper methods
     private static function getIsArbitraryValue(string $value, string $testLabel, string $testValue): bool
     {
@@ -234,6 +266,10 @@ class Validators
     private static function isLabelFamilyName(string $label): bool
     {
         return $label === 'family-name';
+    }
+    private static function isLabelWeight(string $label): bool
+    {
+        return $label === 'number' || $label === 'weight';
     }
     private static function isLabelShadow(string $label): bool
     {

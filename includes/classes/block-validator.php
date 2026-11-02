@@ -7,6 +7,7 @@
 
 namespace Blockstudio;
 
+use WP_Block_Type;
 use WP_Block_Type_Registry;
 
 /**
@@ -15,6 +16,13 @@ use WP_Block_Type_Registry;
  * @since 7.7.5
  */
 final class Block_Validator {
+
+	/**
+	 * Keys Blockstudio reads from the `blockstudio` attribute.
+	 *
+	 * @var string[]
+	 */
+	private const CONTAINER_KEYS = array( 'attributes', 'disabled', 'name', 'editor' );
 
 	/**
 	 * Validate one block's complete parsed attrs object.
@@ -39,7 +47,7 @@ final class Block_Validator {
 		$extended    = self::compiled( Field_Definitions::latest( Field_Definitions::collect( $extensions, 'extension' ) ), $extended );
 		$definitions = Field_Definitions::combine( $own, $extended );
 		$source      = null === $fields ? 'extension' : 'block';
-		$findings    = array();
+		$findings    = null === $fields ? array() : self::unknown_attributes( $name, $attrs, array_merge( array_keys( ( $block->attributes ?? array() ) + WP_Block_Type::GLOBAL_ATTRIBUTES ), array_keys( $definitions ) ) );
 		$settings    = array();
 		$values      = array();
 
@@ -106,6 +114,39 @@ final class Block_Validator {
 		self::values( $values, $definitions, '', $source, $disabled, $findings );
 
 		return self::filter( $findings, $name, $attrs );
+	}
+
+	/**
+	 * Report top-level keys that a Blockstudio block neither reads nor forwards.
+	 *
+	 * A template receives the block's registered attributes, which include the
+	 * ones WordPress adds for `supports` (`className`, `anchor`, `style`) and
+	 * for every block (`lock`, `metadata`), plus the fields of matching
+	 * extensions. Any other key is dropped, so a mistyped field ID or a values
+	 * object stored without its `blockstudio` wrapper renders as an empty block.
+	 *
+	 * @param string   $name  Registered block name.
+	 * @param array    $attrs Attributes as returned by parse_blocks().
+	 * @param string[] $known Attribute names the render path reads.
+	 * @return array Findings.
+	 */
+	private static function unknown_attributes( string $name, array $attrs, array $known ): array {
+		$known     = array_values( array_unique( array_merge( array_map( 'strval', $known ), array( 'blockstudio' ) ) ) );
+		$unknown   = array_diff_key( $attrs, array_flip( $known ) );
+		$unhandled = array_fill_keys( Block::unhandled_attributes( $name, $unknown ), true );
+		$findings  = array();
+		foreach ( $unknown as $key => $value ) {
+			if ( ! isset( $unhandled[ $key ] ) ) {
+				continue;
+			}
+			// A container member next to a missing wrapper is the likely cause.
+			if ( ! array_key_exists( 'blockstudio', $attrs ) && in_array( (string) $key, self::CONTAINER_KEYS, true ) ) {
+				$findings[] = self::finding( 'missing_container', self::path( '', $key ), 'block', $value, self::path( 'blockstudio', $key ) );
+				continue;
+			}
+			$findings[] = self::finding( 'unknown_attribute', self::path( '', $key ), 'block', $value, $known );
+		}
+		return $findings;
 	}
 
 	/**
@@ -457,6 +498,8 @@ final class Block_Validator {
 	private static function finding( string $code, string $path, string $source, mixed $value, mixed $expected ): array {
 		$message = match ( $code ) {
 			'unknown_field' => __( 'This storage key is not declared by the block or its extensions.', 'blockstudio' ),
+			'unknown_attribute' => __( 'This top-level key is not an attribute of the block, so it is ignored.', 'blockstudio' ),
+			'missing_container' => __( 'This key is only read inside the blockstudio object, which is missing.', 'blockstudio' ),
 			'unknown_option' => __( 'This value is not among the field options.', 'blockstudio' ),
 			'wrong_type' => __( 'This value has an unsupported shape for the field.', 'blockstudio' ),
 			'too_few_rows' => __( 'This repeater has fewer rows than its minimum.', 'blockstudio' ),

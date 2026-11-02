@@ -1539,7 +1539,7 @@ class Block_Tags {
 			if ( false === $tag_pos ) {
 				$text = trim( substr( $content, $offset ) );
 				if ( '' !== $text ) {
-					$blocks[] = self::build_paragraph( array(), $text );
+					$blocks[] = self::build_text( $text );
 				}
 				break;
 			}
@@ -1547,7 +1547,7 @@ class Block_Tags {
 			if ( $tag_pos > $offset ) {
 				$text = trim( substr( $content, $offset, $tag_pos - $offset ) );
 				if ( '' !== $text ) {
-					$blocks[] = self::build_paragraph( array(), $text );
+					$blocks[] = self::build_text( $text );
 				}
 			}
 
@@ -2033,6 +2033,31 @@ class Block_Tags {
 			'innerHTML'    => '',
 			'innerContent' => $inner_content_arr,
 		);
+	}
+
+	/**
+	 * Build the block of loose top-level text.
+	 *
+	 * Text that is exactly one shortcode stays that shortcode, a
+	 * core/shortcode block, so `the_content` expands it without a paragraph
+	 * around its output. Other text becomes a paragraph.
+	 *
+	 * @param string $text Trimmed text.
+	 *
+	 * @return array Block array.
+	 */
+	private static function build_text( string $text ): array {
+		if ( 1 === preg_match( '/^\[[A-Za-z0-9_-]+(?:\s[^\[\]]*)?\]$/D', $text ) ) {
+			return array(
+				'blockName'    => 'core/shortcode',
+				'attrs'        => array(),
+				'innerBlocks'  => array(),
+				'innerHTML'    => $text,
+				'innerContent' => array( $text ),
+			);
+		}
+
+		return self::build_paragraph( array(), $text );
 	}
 
 	/**

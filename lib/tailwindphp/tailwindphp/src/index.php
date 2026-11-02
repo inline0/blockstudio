@@ -5,6 +5,7 @@ namespace BlockstudioVendor\TailwindPHP;
 
 use function BlockstudioVendor\TailwindPHP\Ast\atRule;
 use function BlockstudioVendor\TailwindPHP\Ast\decl;
+use function BlockstudioVendor\TailwindPHP\Ast\handleNesting;
 use function BlockstudioVendor\TailwindPHP\Ast\styleRule;
 use function BlockstudioVendor\TailwindPHP\Ast\toCss;
 use function BlockstudioVendor\TailwindPHP\CssParser\parse;
@@ -62,10 +63,34 @@ const VIRTUAL_MODULES = ['tailwindcss', 'tailwindcss/theme', 'tailwindcss/theme.
  * rather than on every function call. This avoids repeated regex compilation
  * overhead in hot paths like extractCandidates() and theme value resolution.
  */
-const REGEX_CLASS_ATTR = '/class\s*=\s*["\']([^"\']+)["\']/';
-const REGEX_CLASSNAME_ATTR = '/className\s*=\s*["\']([^"\']+)["\']/';
+// The attribute value runs to the matching quote of the one that opened it,
+// so arbitrary values containing the other quote (class="content-['*']") are
+// kept intact
+const REGEX_CLASS_ATTR = '/class\s*=\s*(["\'])(.*?)\1/s';
+const REGEX_CLASSNAME_ATTR = '/className\s*=\s*(["\'])(.*?)\1/s';
+const REGEX_CLASS_METHOD = '/(?:\?->|->)\s*class\s*\(\s*(["\'])((?:\\\\.|(?!\1)[^\\\\])*)\1\s*\)/s';
 const REGEX_WHITESPACE = '/\s+/';
 const REGEX_UNESCAPE = '/\\\\(.)/';
+/**
+ * Return the nearest non-context ancestor from a walk context.
+ *
+ * The reference implementation's CSS walks (ast.ts cssContext) filter context
+ * nodes out of the visit path, so nodes wrapped only in context nodes (e.g.
+ * the reference context produced by `@media reference`) count as top-level.
+ *
+ * @param object $ctx Walk VisitContext
+ * @return array|null
+ */
+function nonContextParent(object $ctx): ?array
+{
+    $parent = null;
+    foreach ($ctx->path() as $ancestor) {
+        if (($ancestor['kind'] ?? '') !== 'context') {
+            $parent = $ancestor;
+        }
+    }
+    return $parent;
+}
 const REGEX_THEME_CALL = '/--theme\(([^)]+)\)/';
 const REGEX_THEME_CALL_FULL = '/^--theme\(([^)]+)\)$/';
 const REGEX_VAR_EXTRACT = '/var\(\s*(--[^\s\)\'\",]+)/';
@@ -440,7 +465,7 @@ function loadDefaultTheme(): Theme
  * @return array{
  *     build: callable(array<string>, bool=): string,
  *     buildExact: callable(array<string>, bool=): string,
- *     sources: array<string>,
+ *     sources: list<array{base: string, pattern: string, negated: bool}>,
  *     root: array,
  *     features: int,
  *     designSystem: \TailwindPHP\DesignSystem\DesignSystem
@@ -505,6 +530,8 @@ function compileParsed(array &$ast, array $result, array $options = []): array
     $utilitiesNodePath = $result['utilitiesNodePath'];
     $features = $result['features'];
     $inlineCandidates = $result['inlineCandidates'];
+    // Substitute `@variant` at-rules used directly in the author's CSS
+    $features |= \BlockstudioVendor\TailwindPHP\Variants\substituteAtVariant($ast, $designSystem);
     // Substitute CSS functions (theme(), --theme(), --spacing(), --alpha())
     $features |= substituteFunctions($ast, $designSystem);
     // Process @apply directives first (this also handles @utility with @apply inside)
@@ -536,7 +563,7 @@ function compileParsed(array &$ast, array $result, array $options = []): array
     $updateUtilitiesNode = function (array &$ast, array $newNodes) {
         walk($ast, function (&$node) use ($newNodes) {
             // Find the context node that was converted from @tailwind utilities
-            if ($node['kind'] === 'context' && isset($node['context']) && is_array($node['context'])) {
+            if ($node['kind'] === 'context' && !empty($node['context']['utilities'])) {
                 $node['nodes'] = $newNodes;
                 return WalkAction::Stop;
             }
@@ -710,6 +737,11 @@ function parseCssState(array &$ast, array $options = []): array
             if ($utilitiesNodePath !== null) {
                 return WalkAction::Replace([]);
             }
+            foreach ($ctx->path() as $ancestor) {
+                if (($ancestor['kind'] ?? '') === 'context' && !empty($ancestor['context']['reference'])) {
+                    return WalkAction::Replace([]);
+                }
+            }
             // Store the path to this node for later modification
             $utilitiesNodePath = $ctx->path();
             $utilitiesNodePath[] = $node;
@@ -718,7 +750,7 @@ function parseCssState(array &$ast, array $options = []): array
             // Convert the @tailwind node to a context node in place
             // This is how the TypeScript does it - mutate in place
             $node['kind'] = 'context';
-            $node['context'] = [];
+            $node['context'] = ['utilities' => \true];
             $node['nodes'] = [];
             unset($node['name']);
             unset($node['params']);
@@ -728,6 +760,14 @@ function parseCssState(array &$ast, array $options = []): array
         if ($node['name'] === '@theme') {
             $features |= FEATURE_AT_THEME;
             [$themeOptions, $themePrefix] = parseThemeOptions($node['params']);
+            // A theme inside a reference context (e.g. `@media reference`)
+            // only contributes values, never emitted CSS
+            foreach ($ctx->path() as $ancestor) {
+                if (($ancestor['kind'] ?? '') === 'context' && !empty($ancestor['context']['reference'])) {
+                    $themeOptions |= Theme::OPTIONS_REFERENCE;
+                    break;
+                }
+            }
             // Validate and apply prefix
             if ($themePrefix !== null) {
                 if (!preg_match(IS_VALID_PREFIX, $themePrefix)) {
@@ -763,8 +803,8 @@ function parseCssState(array &$ast, array $options = []): array
             if (!empty($node['nodes'])) {
                 throw new \Exception('`@source` cannot have a body.');
             }
-            // Validate: @source cannot be nested
-            if ($ctx->parent !== null) {
+            // Validate: @source cannot be nested (context wrappers are transparent)
+            if (nonContextParent($ctx) !== null) {
                 throw new \Exception('`@source` cannot be nested.');
             }
             $not = \false;
@@ -775,10 +815,10 @@ function parseCssState(array &$ast, array $options = []): array
                 $not = \true;
                 $path = substr($path, 4);
             }
-            // Check for 'inline()' wrapper
+            // Check for 'inline()' wrapper (whitespace around the argument is allowed)
             if (str_starts_with($path, 'inline(') && str_ends_with($path, ')')) {
                 $inline = \true;
-                $path = substr($path, 7, -1);
+                $path = trim(substr($path, 7, -1));
             }
             // Validate: paths must be quoted
             if ($path[0] === '"' && $path[strlen($path) - 1] !== '"' || $path[0] === "'" && $path[strlen($path) - 1] !== "'" || $path[0] !== "'" && $path[0] !== '"') {
@@ -816,11 +856,18 @@ function parseCssState(array &$ast, array $options = []): array
                 // Deduplicate virtual module imports (tailwindcss, tailwindcss/*)
                 // This applies to all virtual module imports, not just file-based ones
                 if (isVirtualModule($importPath)) {
-                    if (isset($seenVirtualModules[$importPath])) {
+                    $referenceImport = in_array('reference', \BlockstudioVendor\TailwindPHP\Utils\segment($modifiers, ' '), \true);
+                    foreach ($ctx->path() as $ancestor) {
+                        if (($ancestor['kind'] ?? '') === 'context' && !empty($ancestor['context']['reference'])) {
+                            $referenceImport = \true;
+                        }
+                    }
+                    $moduleKey = ($referenceImport ? 'reference:' : 'emit:') . $importPath;
+                    if (isset($seenVirtualModules[$moduleKey])) {
                         // Already imported - remove duplicate
                         return WalkAction::Replace([]);
                     }
-                    $seenVirtualModules[$importPath] = \true;
+                    $seenVirtualModules[$moduleKey] = \true;
                 }
                 // Handle 'tailwindcss' virtual module - full Tailwind CSS (theme + preflight + utilities)
                 if ($importPath === 'tailwindcss') {
@@ -838,23 +885,27 @@ function parseCssState(array &$ast, array $options = []): array
                     }
                     // Match Tailwind's canonical index.css expansion so cascade layer priority is preserved.
                     $fullContent = [atRule('@layer', 'theme, base, components, utilities', []), atRule('@layer', 'theme', $themeAst), atRule('@layer', 'base', $preflightAst), atRule('@layer', 'utilities', [$utilitiesNode])];
+                    if (in_array('reference', \BlockstudioVendor\TailwindPHP\Utils\segment($modifiers, ' '), \true)) {
+                        $fullContent = [atRule('@media', 'reference', $fullContent)];
+                    }
                     return WalkAction::Replace($fullContent);
                 }
                 // Handle 'tailwindcss/theme' or 'tailwindcss/theme.css' - theme variables
                 if ($importPath === 'tailwindcss/theme' || $importPath === 'tailwindcss/theme.css') {
                     $themeCss = readResourceFile('theme.css');
                     $themeAst = parse($themeCss);
+                    if (in_array('reference', \BlockstudioVendor\TailwindPHP\Utils\segment($modifiers, ' '), \true)) {
+                        $themeAst = [atRule('@media', 'reference', $themeAst)];
+                    }
                     // Check for prefix() modifier
                     if (preg_match(REGEX_PREFIX_MOD, $modifiers, $prefixMatch)) {
                         $themeAst = [atRule('@media', 'prefix(' . $prefixMatch[1] . ')', $themeAst)];
                     }
-                    // Check for theme(static) modifier - theme values always included
-                    if (str_contains($modifiers, 'theme(static)')) {
-                        $themeAst = [atRule('@media', 'theme(static)', $themeAst)];
-                    }
-                    // Check for theme(inline) modifier - theme values inlined, not as variables
-                    if (str_contains($modifiers, 'theme(inline)')) {
-                        $themeAst = [atRule('@media', 'theme(inline)', $themeAst)];
+                    // Apply any theme(...) modifier (static, inline, reference,
+                    // default, or combinations) by wrapping in @media theme(...),
+                    // which the @media walk expands onto the @theme blocks
+                    if (preg_match('/theme\([^)]*\)/', $modifiers, $themeMatch)) {
+                        $themeAst = [atRule('@media', $themeMatch[0], $themeAst)];
                     }
                     // source(none) is a no-op in TailwindPHP since we don't do file scanning
                     // It's accepted for compatibility with official Tailwind CSS syntax
@@ -867,6 +918,9 @@ function parseCssState(array &$ast, array $options = []): array
                 // Handle 'tailwindcss/utilities' or 'tailwindcss/utilities.css'
                 if ($importPath === 'tailwindcss/utilities' || $importPath === 'tailwindcss/utilities.css') {
                     $utilityNode = atRule('@tailwind', 'utilities', []);
+                    if (in_array('reference', \BlockstudioVendor\TailwindPHP\Utils\segment($modifiers, ' '), \true)) {
+                        $utilityNode = atRule('@media', 'reference', [$utilityNode]);
+                    }
                     // If there's an 'important' modifier
                     if (str_contains($modifiers, 'important')) {
                         $utilityNode = atRule('@media', 'important', [$utilityNode]);
@@ -885,6 +939,9 @@ function parseCssState(array &$ast, array $options = []): array
                 if ($importPath === 'tailwindcss/preflight' || $importPath === 'tailwindcss/preflight.css') {
                     $preflightCss = readResourceFile('preflight.css');
                     $preflightAst = parse($preflightCss);
+                    if (in_array('reference', \BlockstudioVendor\TailwindPHP\Utils\segment($modifiers, ' '), \true)) {
+                        $preflightAst = [atRule('@media', 'reference', $preflightAst)];
+                    }
                     // Check for layer(base) modifier
                     if (str_contains($modifiers, 'layer(base)')) {
                         return WalkAction::Replace([atRule('@layer', 'base', $preflightAst)]);
@@ -925,18 +982,52 @@ function parseCssState(array &$ast, array $options = []): array
             // For other imports, leave as-is (will be output in final CSS)
             return WalkAction::Continue;
         }
+        // Handle @variant
+        if ($node['name'] === '@variant') {
+            // Legacy `@variant` at-rules containing `@slot` or without a body
+            // should be considered a `@custom-variant` at-rule.
+            if ($ctx->parent === null) {
+                // Body-less `@variant`, e.g.: `@variant foo (…);`
+                if (empty($node['nodes'])) {
+                    $node['name'] = '@custom-variant';
+                } else {
+                    // Using `@slot`:
+                    //
+                    // ```css
+                    // @variant foo {
+                    //   &:hover {
+                    //     @slot;
+                    //   }
+                    // }
+                    // ```
+                    $renameToCustomVariant = \false;
+                    walk($node['nodes'], function (&$child) use (&$renameToCustomVariant) {
+                        if ($child['kind'] === 'at-rule' && $child['name'] === '@slot') {
+                            $renameToCustomVariant = \true;
+                            return WalkAction::Stop;
+                        }
+                    });
+                    if ($renameToCustomVariant) {
+                        $node['name'] = '@custom-variant';
+                    }
+                }
+            }
+            // Regular `@variant` at-rules are substituted later, once all
+            // variants are registered in the system. If it became a
+            // `@custom-variant`, fall through to the handling below.
+        }
         // Handle @utility - validate name but don't register yet
         // Registration happens AFTER @apply processing in compileAst
         if ($node['name'] === '@utility') {
-            if ($ctx->parent !== null) {
+            if (nonContextParent($ctx) !== null) {
                 throw new \Exception('`@utility` cannot be nested.');
             }
             if (empty($node['nodes'])) {
                 throw new \Exception("`@utility {$node['params']}` is empty. Utilities should include at least one property.");
             }
-            // Validate utility name
-            $name = $node['params'];
-            if (!preg_match(IS_VALID_FUNCTIONAL_UTILITY_NAME, $name) && !preg_match(IS_VALID_STATIC_UTILITY_NAME, $name)) {
+            // Validate utility name (allow escaped characters, e.g. `foo-1\/2`)
+            $name = preg_replace(REGEX_UNESCAPE, '$1', $node['params']);
+            if (!isValidFunctionalUtilityName($name) && !isValidStaticUtilityName($name)) {
                 if (str_ends_with($name, '-*')) {
                     throw new \Exception("`@utility {$name}` defines an invalid utility name. Utilities should be alphanumeric and start with a lowercase letter.");
                 } elseif (str_contains($name, '*')) {
@@ -951,7 +1042,7 @@ function parseCssState(array &$ast, array $options = []): array
         }
         // Handle @custom-variant
         if ($node['name'] === '@custom-variant') {
-            if ($ctx->parent !== null) {
+            if (nonContextParent($ctx) !== null) {
                 throw new \Exception('`@custom-variant` cannot be nested.');
             }
             $params = $node['params'] ?? '';
@@ -972,7 +1063,7 @@ function parseCssState(array &$ast, array $options = []): array
         }
         // Handle @plugin
         if ($node['name'] === '@plugin') {
-            if ($ctx->parent !== null) {
+            if (nonContextParent($ctx) !== null) {
                 throw new \Exception('`@plugin` cannot be nested.');
             }
             // Extract plugin name from params (remove quotes)
@@ -987,7 +1078,14 @@ function parseCssState(array &$ast, array $options = []): array
                     $pluginOptions[$child['property']] = parsePluginOptionValue($child['value'] ?? '');
                 }
             }
-            $plugins[] = ['name' => $pluginName, 'options' => $pluginOptions];
+            $referenceMode = \false;
+            foreach ($ctx->path() as $ancestor) {
+                if (($ancestor['kind'] ?? '') === 'context' && !empty($ancestor['context']['reference'])) {
+                    $referenceMode = \true;
+                    break;
+                }
+            }
+            $plugins[] = ['name' => $pluginName, 'options' => $pluginOptions, 'reference' => $referenceMode];
             $features |= FEATURE_JS_PLUGIN_COMPAT;
             return WalkAction::ReplaceSkip([]);
         }
@@ -1044,6 +1142,8 @@ function parseCssState(array &$ast, array $options = []): array
                     if (!empty($prefixValue) && preg_match(IS_VALID_PREFIX, $prefixValue)) {
                         $theme->prefix = $prefixValue;
                     }
+                } elseif ($param === 'reference') {
+                    $node['nodes'] = [['kind' => 'context', 'context' => ['reference' => \true], 'nodes' => $node['nodes'] ?? []]];
                 } else {
                     $unknownParams[] = $param;
                 }
@@ -1083,9 +1183,11 @@ function parseCssState(array &$ast, array $options = []): array
             }
             return WalkAction::Continue;
         });
-        // Add keyframes to the AST (they get hoisted to top level during output)
+        // Add keyframes to the AST as at-root nodes so they hoist to the end
+        // of the stylesheet after the @property registrations, matching the
+        // reference output order
         foreach ($theme->getKeyframes() as $keyframes) {
-            $ast[] = $keyframes;
+            $ast[] = \BlockstudioVendor\TailwindPHP\Ast\atRoot([$keyframes]);
         }
     }
     return ['theme' => $theme, 'features' => $features, 'utilitiesNodePath' => $utilitiesNodePath, 'sources' => $sources, 'root' => $root, 'inlineCandidates' => $inlineCandidates, 'ignoredCandidates' => $ignoredCandidates, 'important' => $important, 'customVariants' => $customVariants, 'plugins' => $plugins, 'files' => array_keys($seenFiles)];
@@ -1159,8 +1261,12 @@ function finalizeCssState(array &$ast, array $state, array $options = []): array
                     }
                 }
             }
-            // Execute the plugin
+            // Reference plugins still register utilities, but never emit base CSS.
+            $baseOffset = count($api->getBaseStyles());
             $pluginManager->execute($pluginName, $api, $pluginOptions);
+            if (empty($pluginRef['reference'])) {
+                $ast = array_merge($ast, $api->getBaseAst($baseOffset));
+            }
         }
     }
     // Register custom variants
@@ -1228,19 +1334,20 @@ function registerCustomVariant($designSystem, string $name, ?string $selector, a
                 $styleRuleSelectors[] = $sel;
             }
         }
-        // Build the variant apply function
+        // Build the variant apply function. Style rule selectors are grouped
+        // into a single style rule; every at-rule becomes its own parallel
+        // branch wrapping the slotted nodes.
         $variants->static($name, function (&$r) use ($atRuleParams, $styleRuleSelectors) {
-            // Wrap in style rule selectors first
+            $newNodes = [];
             if (!empty($styleRuleSelectors)) {
-                $r['nodes'] = [styleRule(implode(', ', $styleRuleSelectors), $r['nodes'])];
+                $newNodes[] = styleRule(implode(', ', $styleRuleSelectors), $r['nodes']);
             }
-            // Then wrap in at-rules
-            foreach (array_reverse($atRuleParams) as $atRuleParam) {
-                // Parse at-rule name and params
+            foreach ($atRuleParams as $atRuleParam) {
                 if (preg_match(REGEX_AT_RULE_PARAM, $atRuleParam, $m)) {
-                    $r['nodes'] = [atRule($m[1], $m[2], $r['nodes'])];
+                    $newNodes[] = atRule($m[1], $m[2], $r['nodes']);
                 }
             }
+            $r['nodes'] = $newNodes;
         }, ['compounds' => \BlockstudioVendor\TailwindPHP\Variants\compoundsForSelectors($selectors)]);
     } elseif (!empty($nodes)) {
         $variants->fromAst($name, $nodes, $designSystem);
@@ -1248,42 +1355,443 @@ function registerCustomVariant($designSystem, string $name, ?string $selector, a
         throw new \Exception("`@custom-variant {$name}` has no selector or body.");
     }
 }
-// Regex patterns for utility name validation
+// Regex patterns for utility name validation (kept for reference; validation
+// now uses isValidStaticUtilityName()/isValidFunctionalUtilityName() below)
 const IS_VALID_STATIC_UTILITY_NAME = '/^-?[a-z][a-zA-Z0-9\/%._-]*$/';
 const IS_VALID_FUNCTIONAL_UTILITY_NAME = '/^-?[a-z][a-zA-Z0-9\/%._-]*-\*$/';
+/** Root of an @utility name: `-?[a-z][a-zA-Z0-9_-]*` */
+const UTILITY_ROOT_PATTERN = '/^-?[a-z][a-zA-Z0-9_-]*/';
+/**
+ * Validate a static @utility name.
+ *
+ * Port of `isValidStaticUtilityName` from packages/tailwindcss/src/utilities.ts:
+ * the value portion may contain digits, letters, `_` and `-`; a `%` only at
+ * the end after a digit; `.` only between digits; and at most one `/`.
+ *
+ * @param string $name
+ * @return bool
+ */
+function isValidStaticUtilityName(string $name): bool
+{
+    if (!preg_match(UTILITY_ROOT_PATTERN, $name, $match)) {
+        return \false;
+        // Invalid root
+    }
+    $root = $match[0];
+    $value = substr($name, strlen($root));
+    // Root should not end in `-` if there is no value
+    if ($value === '' && str_ends_with($root, '-')) {
+        return \false;
+    }
+    // No remaining value is valid
+    if ($value === '') {
+        return \true;
+    }
+    $seenSlash = \false;
+    $len = strlen($value);
+    for ($i = 0; $i < $len; $i++) {
+        $char = $value[$i];
+        if ($char === '%') {
+            // A percentage is only valid at the end of the value
+            if ($i !== $len - 1) {
+                return \false;
+            }
+            // A percent is only valid when preceded by a digit
+            $previousChar = $i > 0 ? $value[$i - 1] : ($root !== '' ? $root[strlen($root) - 1] : '');
+            if (!ctype_digit($previousChar)) {
+                return \false;
+            }
+            continue;
+        }
+        if ($char === '/') {
+            // A slash must be followed by at least 1 character
+            if ($i === $len - 1) {
+                return \false;
+            }
+            // A slash can only appear once. E.g.: `foo/bar/baz` is invalid
+            if ($seenSlash) {
+                return \false;
+            }
+            $seenSlash = \true;
+            continue;
+        }
+        if ($char === '.') {
+            // Dots are only allowed between digits. E.g.: `p-1.a` is invalid
+            $previousChar = $i > 0 ? $value[$i - 1] : ($root !== '' ? $root[strlen($root) - 1] : '');
+            if (!ctype_digit($previousChar)) {
+                return \false;
+            }
+            if (!ctype_digit($value[$i + 1] ?? '')) {
+                return \false;
+            }
+            continue;
+        }
+        if ($char === '_' || $char === '-' || ctype_alnum($char)) {
+            continue;
+        }
+        // Everything else is invalid
+        return \false;
+    }
+    return \true;
+}
+/**
+ * Validate a functional @utility name (`tab-size-*`).
+ *
+ * Port of `isValidFunctionalUtilityName` from packages/tailwindcss/src/utilities.ts.
+ *
+ * @param string $name
+ * @return bool
+ */
+function isValidFunctionalUtilityName(string $name): bool
+{
+    if (!str_ends_with($name, '-*')) {
+        return \false;
+        // Missing '-*' suffix
+    }
+    $name = substr($name, 0, -2);
+    if (!preg_match(UTILITY_ROOT_PATTERN, $name, $match)) {
+        return \false;
+        // Invalid root
+    }
+    // Backwards compatibility: a root ending in `-` was valid and correctly
+    // scanned by Oxide, so `foo--*` stays valid. Any other remaining value
+    // (e.g. `tab-size-[…]-*`) is invalid.
+    return substr($name, strlen($match[0])) === '';
+}
 /**
  * Create a CSS utility from an @utility at-rule.
  *
  * @param array $node The @utility at-rule node
  * @return callable|null Returns a callback to register the utility, or null if invalid
  */
+/** Data types allowed for bare values in `--value(…)` / `--modifier(…)` */
+const BARE_VALUE_DATA_TYPES = [
+    'number',
+    // 2.5
+    'integer',
+    // 8
+    'ratio',
+    // 2/3
+    'percentage',
+];
 function createCssUtility(array $node): ?callable
 {
-    $name = $node['params'];
+    // Allow escaped characters in the name for compatibility with formatters
+    // and other parsers, to ensure valid CSS syntax. E.g.: `@utility foo-1\/2`.
+    $name = preg_replace(REGEX_UNESCAPE, '$1', $node['params']);
     // Functional utilities. E.g.: `tab-size-*`
-    if (preg_match(IS_VALID_FUNCTIONAL_UTILITY_NAME, $name)) {
-        // For now, just support static functional utilities (no --value/--modifier)
+    if (isValidFunctionalUtilityName($name)) {
+        // API:
+        //
+        // - `--value('literal')`         resolves a literal named value
+        // - `--value(number)`            resolves a bare value of type number
+        // - `--value([number])`          resolves an arbitrary value of type number
+        // - `--value(--color)`           resolves a theme value in the `color` namespace
+        // - `--value(--default(4))`      resolves to a default value when only the
+        //                                root of the functional utility was used.
+        // - `--value(number, [number])`  resolves a bare value of type number or an
+        //                                arbitrary value of type number in order.
         return function (DesignSystem $designSystem) use ($name, $node) {
-            $utilityName = substr($name, 0, -2);
-            // Remove trailing -*
-            $designSystem->getUtilities()->functional($utilityName, function (array $candidate) use ($node) {
-                // A value is required for functional utilities
-                if (!isset($candidate['value'])) {
+            // Pre-process the AST: normalize the arguments of `--value(…)` and
+            // `--modifier(…)` so formatter-mangled forms resolve identically:
+            //
+            // - `--value(--spacing)`                 -> `--value(--spacing-*)`
+            // - `--value(--spacing- *)`              -> `--value(--spacing-*)`
+            // - `--value(--text- * --line-height)`   -> `--value(--text-*--line-height)`
+            // - `--value(--text --line-height)`      -> `--value(--text-*--line-height)`
+            // - `--value(--text-\\* --line-height)`  -> `--value(--text-*--line-height)`
+            // - `--value([ *])`                      -> `--value([*])`
+            $node = cloneAstNode($node);
+            normalizeCssUtilityValueFunctions($node['nodes']);
+            $designSystem->getUtilities()->functional(substr($name, 0, -2), function (array $candidate) use ($node, $designSystem) {
+                $atRule = cloneAstNode($node);
+                $value = $candidate['value'] ?? null;
+                $modifier = $candidate['modifier'] ?? null;
+                // Whether `--value(…)` / `--modifier(…)` were used and resolved
+                $usedValueFn = \false;
+                $resolvedValueFn = \false;
+                $usedModifierFn = \false;
+                $resolvedModifierFn = \false;
+                // Whether `--value(ratio)` was resolved
+                $resolvedRatioValue = \false;
+                $substitute = function (array &$nodes) use (&$substitute, &$usedValueFn, &$resolvedValueFn, &$usedModifierFn, &$resolvedModifierFn, &$resolvedRatioValue, $value, $modifier, $designSystem) {
+                    foreach ($nodes as $index => &$child) {
+                        if (($child['kind'] === 'rule' || $child['kind'] === 'at-rule') && !empty($child['nodes'])) {
+                            $substitute($child['nodes']);
+                            continue;
+                        }
+                        if ($child['kind'] !== 'declaration' || empty($child['value'])) {
+                            continue;
+                        }
+                        $shouldRemoveDeclaration = \false;
+                        $declarationResolvedNonRatio = \false;
+                        $valueAst = ValueParser\parse($child['value']);
+                        ValueParser\walk($valueAst, function ($fnNode) use (&$usedValueFn, &$resolvedValueFn, &$usedModifierFn, &$resolvedModifierFn, &$resolvedRatioValue, &$shouldRemoveDeclaration, &$declarationResolvedNonRatio, $value, $modifier, $designSystem) {
+                            if ($fnNode['kind'] !== 'function') {
+                                return ValueParser\WalkAction::Continue;
+                            }
+                            // Value function, e.g.: `--value(integer)`
+                            if ($fnNode['value'] === '--value') {
+                                $usedValueFn = \true;
+                                $resolved = resolveValueFunction($value, $fnNode, $designSystem);
+                                if ($resolved !== null) {
+                                    $resolvedValueFn = \true;
+                                    if ($resolved['ratio'] ?? \false) {
+                                        $resolvedRatioValue = \true;
+                                    } else {
+                                        $declarationResolvedNonRatio = \true;
+                                    }
+                                    return ValueParser\WalkAction::ReplaceSkip($resolved['nodes']);
+                                }
+                                // Drop the declaration in case we couldn't resolve the value
+                                $shouldRemoveDeclaration = \true;
+                                return ValueParser\WalkAction::Stop;
+                            }
+                            // Modifier function, e.g.: `--modifier(integer)`
+                            if ($fnNode['value'] === '--modifier') {
+                                $usedModifierFn = \true;
+                                $resolved = resolveValueFunction($modifier, $fnNode, $designSystem);
+                                if ($resolved !== null) {
+                                    $resolvedModifierFn = \true;
+                                    return ValueParser\WalkAction::ReplaceSkip($resolved['nodes']);
+                                }
+                                // Drop the declaration in case we couldn't resolve the value
+                                $shouldRemoveDeclaration = \true;
+                                return ValueParser\WalkAction::Stop;
+                            }
+                            return ValueParser\WalkAction::Continue;
+                        });
+                        if ($shouldRemoveDeclaration) {
+                            unset($nodes[$index]);
+                            continue;
+                        }
+                        $child['value'] = ValueParser\toCss($valueAst);
+                        // Track declarations that resolved a non-ratio `--value(…)`
+                        // so they can be removed when `--value(ratio)` resolves.
+                        if ($declarationResolvedNonRatio) {
+                            $child['__nonRatioResolved'] = \true;
+                        }
+                    }
+                    unset($child);
+                    $nodes = array_values($nodes);
+                };
+                $substitute($atRule['nodes']);
+                // Functional CSS utilities require `--value(…)`, and one of those
+                // branches must resolve for the candidate to be valid.
+                if (!$usedValueFn || !$resolvedValueFn) {
                     return null;
                 }
-                // Return all nodes (declarations, nested rules, etc.)
-                // Deep clone to avoid mutation
-                return array_map(fn($child) => cloneAstNode($child), $node['nodes'] ?? []);
+                // Used `--modifier(…)` but nothing resolved
+                if ($usedModifierFn && !$resolvedModifierFn && $modifier !== null) {
+                    return null;
+                }
+                // Resolved `--value(ratio)` and `--modifier(…)`, which is invalid
+                if ($resolvedRatioValue && $resolvedModifierFn) {
+                    return null;
+                }
+                // When a candidate has a modifier, then the `--modifier(…)` must
+                // resolve correctly or the `--value(ratio)` must resolve correctly.
+                if ($modifier !== null && !$resolvedRatioValue && !$resolvedModifierFn) {
+                    return null;
+                }
+                // Resolved `--value(ratio)`, so all other declarations that didn't
+                // use `--value(ratio)` should be removed. E.g.: `--value(number)`
+                // would otherwise resolve for `foo-1/2`.
+                $cleanup = function (array $nodes) use (&$cleanup, $resolvedRatioValue) {
+                    $result = [];
+                    foreach ($nodes as $child) {
+                        if ($resolvedRatioValue && !empty($child['__nonRatioResolved'])) {
+                            continue;
+                        }
+                        unset($child['__nonRatioResolved']);
+                        if (!empty($child['nodes'])) {
+                            $child['nodes'] = $cleanup($child['nodes']);
+                        }
+                        $result[] = $child;
+                    }
+                    return $result;
+                };
+                return $cleanup($atRule['nodes']);
             });
         };
     }
     // Static utilities. E.g.: `my-utility`
-    if (preg_match(IS_VALID_STATIC_UTILITY_NAME, $name)) {
+    if (isValidStaticUtilityName($name)) {
         return function (DesignSystem $designSystem) use ($name, $node) {
             // Return all nodes (declarations, nested rules, etc.)
             // Deep clone to avoid mutation
             $designSystem->getUtilities()->static($name, fn() => array_map(fn($child) => cloneAstNode($child), $node['nodes'] ?? []));
         };
+    }
+    return null;
+}
+/**
+ * Normalize `--value(…)` / `--modifier(…)` arguments inside an @utility body.
+ *
+ * @param array &$nodes The @utility body nodes, mutated in place
+ * @return void
+ */
+function normalizeCssUtilityValueFunctions(array &$nodes): void
+{
+    foreach ($nodes as &$child) {
+        if (($child['kind'] === 'rule' || $child['kind'] === 'at-rule') && !empty($child['nodes'])) {
+            normalizeCssUtilityValueFunctions($child['nodes']);
+            continue;
+        }
+        if ($child['kind'] !== 'declaration' || empty($child['value'])) {
+            continue;
+        }
+        if (!str_contains($child['value'], '--value(') && !str_contains($child['value'], '--modifier(')) {
+            continue;
+        }
+        $declarationValueAst = ValueParser\parse($child['value']);
+        ValueParser\walk($declarationValueAst, function (&$fn) {
+            if ($fn['kind'] !== 'function') {
+                return ValueParser\WalkAction::Continue;
+            }
+            if ($fn['value'] !== '--value' && $fn['value'] !== '--modifier') {
+                return ValueParser\WalkAction::Continue;
+            }
+            $args = \BlockstudioVendor\TailwindPHP\Utils\segment(ValueParser\toCss($fn['nodes']), ',');
+            foreach ($args as $idx => $arg) {
+                // Transform escaped `\*` -> `*`
+                $arg = str_replace('\*', '*', $arg);
+                // Ensure `--value(--foo --bar)` becomes `--value(--foo-*--bar)`
+                $arg = preg_replace('/--(.*?)\s--(.*?)/', '--$1-*--$2', $arg);
+                // Remove whitespace, e.g.: `--value([ *])` -> `--value([*])`
+                $arg = preg_replace('/\s+/', '', $arg);
+                // Ensure multiple `-*` becomes a single `-*`
+                $arg = preg_replace('/(-\*){2,}/', '-*', $arg);
+                // Ensure trailing `-*` exists if `-*` isn't present yet
+                if (($arg[0] ?? '') === '-' && ($arg[1] ?? '') === '-' && !str_contains($arg, '(') && !str_contains($arg, '-*')) {
+                    $arg .= '-*';
+                }
+                $args[$idx] = $arg;
+            }
+            $fn['nodes'] = ValueParser\parse(implode(',', $args));
+            return ValueParser\WalkAction::Continue;
+        });
+        $child['value'] = ValueParser\toCss($declarationValueAst);
+    }
+    unset($child);
+}
+/**
+ * Resolve a `--value(…)` / `--modifier(…)` function against a candidate value
+ * or modifier.
+ *
+ * @param array|null $value The candidate value or modifier (null when omitted)
+ * @param array $fn The parsed value function node
+ * @param DesignSystem $designSystem
+ * @return array{nodes: array, ratio?: bool}|null
+ */
+function resolveValueFunction(?array $value, array $fn, DesignSystem $designSystem): ?array
+{
+    // No value provided, we can try `--default(…)`
+    if ($value === null) {
+        foreach ($fn['nodes'] as $arg) {
+            // Resolve default value, e.g.: `--default(…)`
+            if ($arg['kind'] === 'function' && $arg['value'] === '--default') {
+                return ['nodes' => $arg['nodes']];
+            }
+        }
+        return null;
+    }
+    foreach ($fn['nodes'] as $arg) {
+        // Resolve literal value, e.g.: `--modifier('closest-side')`
+        if ($value['kind'] === 'named' && $arg['kind'] === 'word' && (($arg['value'][0] ?? '') === "'" || ($arg['value'][0] ?? '') === '"') && $arg['value'][strlen($arg['value']) - 1] === $arg['value'][0] && substr($arg['value'], 1, -1) === $value['value']) {
+            return ['nodes' => ValueParser\parse($value['value'])];
+        }
+        // Resolving theme value, e.g.: `--value(--color)`
+        if ($value['kind'] === 'named' && $arg['kind'] === 'word' && str_starts_with($arg['value'], '--')) {
+            $themeKey = $arg['value'];
+            // Resolve the theme value, e.g.: `--value(--color)`
+            if (str_ends_with($themeKey, '-*')) {
+                // Without `-*` postfix
+                $themeKey = substr($themeKey, 0, -2);
+                $resolved = $designSystem->getTheme()->resolve($value['value'], [$themeKey]);
+                if ($resolved !== null) {
+                    return ['nodes' => ValueParser\parse($resolved)];
+                }
+            } else {
+                $nestedKeys = explode('-*', $themeKey);
+                if (count($nestedKeys) <= 1) {
+                    continue;
+                }
+                // Resolve theme values with nested keys, e.g.: `--value(--text-*--line-height)`
+                $themeKeys = [array_shift($nestedKeys)];
+                $resolved = $designSystem->getTheme()->resolveWith($value['value'], $themeKeys, $nestedKeys);
+                if ($resolved !== null) {
+                    $options = $resolved[1] ?? [];
+                    // Resolve the value from the `options`
+                    if (is_array($options)) {
+                        $optionValue = $options[array_pop($nestedKeys)] ?? null;
+                        if ($optionValue !== null) {
+                            return ['nodes' => ValueParser\parse($optionValue)];
+                        }
+                    }
+                }
+            }
+            continue;
+        }
+        // Bare value, e.g.: `--value(integer)`
+        if ($value['kind'] === 'named' && $arg['kind'] === 'word') {
+            // Limit the bare value types, to prevent new syntax that we
+            // don't want to support. E.g.: `text-#000` is something we
+            // don't want to support, but could be built this way.
+            if (!in_array($arg['value'], BARE_VALUE_DATA_TYPES, \true)) {
+                continue;
+            }
+            $resolved = $arg['value'] === 'ratio' && array_key_exists('fraction', $value) ? $value['fraction'] : $value['value'];
+            if (!$resolved) {
+                continue;
+            }
+            $type = \BlockstudioVendor\TailwindPHP\Utils\inferDataType($resolved, [$arg['value']]);
+            if ($type === null) {
+                continue;
+            }
+            // Ratio must be a valid fraction, e.g.: <integer>/<integer>
+            if ($type === 'ratio') {
+                $parts = \BlockstudioVendor\TailwindPHP\Utils\segment($resolved, '/');
+                [$lhs, $rhs] = [$parts[0] ?? '', $parts[1] ?? ''];
+                if (!\BlockstudioVendor\TailwindPHP\Utils\isPositiveInteger($lhs) || !\BlockstudioVendor\TailwindPHP\Utils\isPositiveInteger($rhs)) {
+                    continue;
+                }
+            } elseif ($type === 'number' && !\BlockstudioVendor\TailwindPHP\Utils\isValidSpacingMultiplier($resolved)) {
+                continue;
+            } elseif ($type === 'percentage' && !\BlockstudioVendor\TailwindPHP\Utils\isPositiveInteger(substr($resolved, 0, -1))) {
+                continue;
+            }
+            if ($type === 'ratio') {
+                $parts = \BlockstudioVendor\TailwindPHP\Utils\segment($resolved, '/');
+                return ['nodes' => ValueParser\parse(trim($parts[0]) . ' / ' . trim($parts[1])), 'ratio' => \true];
+            }
+            return ['nodes' => ValueParser\parse($resolved), 'ratio' => \false];
+        }
+        // Arbitrary value, e.g.: `--value([integer])`
+        if ($value['kind'] === 'arbitrary' && $arg['kind'] === 'word' && str_starts_with($arg['value'], '[') && str_ends_with($arg['value'], ']')) {
+            $dataType = substr($arg['value'], 1, -1);
+            // Allow any data type, e.g.: `--value([*])`
+            if ($dataType === '*') {
+                return ['nodes' => ValueParser\parse($value['value'])];
+            }
+            // The forced arbitrary value hint must match the expected data type.
+            //
+            // Given a candidate like `tab-(color:var(--my-value))`, it should
+            // not match `--value([integer])` because `color` and `integer`
+            // don't match.
+            if (($value['dataType'] ?? null) !== null && $value['dataType'] !== $dataType) {
+                continue;
+            }
+            // Use the provided data type hint
+            if (($value['dataType'] ?? null) !== null) {
+                return ['nodes' => ValueParser\parse($value['value'])];
+            }
+            // No data type hint provided, so we have to infer it
+            $type = \BlockstudioVendor\TailwindPHP\Utils\inferDataType($value['value'], [$dataType]);
+            if ($type !== null) {
+                return ['nodes' => ValueParser\parse($value['value'])];
+            }
+        }
     }
     return null;
 }
@@ -1309,15 +1817,20 @@ function cloneAstNode(array $node): array
  * @param array &$usedKeyframeNames
  * @return void
  */
-function optimizeAstCollectUsed(array $nodes, array &$usedVariables, array &$usedKeyframeNames): void
+function optimizeAstCollectUsed(array $nodes, array &$usedVariables, array &$usedKeyframeNames, bool $inThemeRoot = \false): void
 {
     foreach ($nodes as $node) {
         if ($node['kind'] === 'declaration') {
             $value = $node['value'] ?? '';
+            // Declaring another theme variable does not count as usage: a
+            // `--x: var(--y)` definition inside the theme's `:root, :host`
+            // rule only keeps `--y` alive when `--x` itself is used
+            // (optimizeAstExpandThemeUsed propagates through the theme).
+            $isThemeVariableDefinition = $inThemeRoot && str_starts_with($node['property'] ?? '', '--');
             // Extract variables from var() functions
             // The regex matches CSS custom property names which can contain
             // any character except whitespace, quotes, closing parens, or commas
-            if (preg_match_all(REGEX_VAR_EXTRACT, $value, $matches)) {
+            if (!$isThemeVariableDefinition && preg_match_all(REGEX_VAR_EXTRACT, $value, $matches)) {
                 foreach ($matches[1] as $var) {
                     // Unescape the variable name (e.g., --width-1\/2 -> --width-1/2)
                     $usedVariables[preg_replace(REGEX_UNESCAPE, '$1', $var)] = \true;
@@ -1331,7 +1844,8 @@ function optimizeAstCollectUsed(array $nodes, array &$usedVariables, array &$use
             }
         }
         if (!empty($node['nodes'])) {
-            optimizeAstCollectUsed($node['nodes'], $usedVariables, $usedKeyframeNames);
+            $childInThemeRoot = $inThemeRoot || $node['kind'] === 'rule' && trim($node['selector'] ?? '') === ':root, :host';
+            optimizeAstCollectUsed($node['nodes'], $usedVariables, $usedKeyframeNames, $childInThemeRoot);
         }
     }
 }
@@ -1349,11 +1863,24 @@ function optimizeAstExpandThemeUsed(Theme $theme, array &$usedVariables, array &
     do {
         $changed = \false;
         foreach ($theme->entries() as [$key, $value]) {
-            if (isset($usedVariables[$key])) {
-                // Extract variables this value depends on
+            if (isset($usedVariables[$key]) || $theme->getOptions($key) & Theme::OPTIONS_STATIC) {
+                // Extract variables this value depends on. Theme entries keep
+                // their raw form, so a lazily-evaluated `--theme(--x, …)`
+                // reference (which emits as `var(--x)` when `--x` exists)
+                // counts as a dependency too — the reference tracks this via
+                // the emitted declaration's `var(…)` in ast.ts
+                // (variableDependencies + isVariableUsed).
                 if (preg_match_all(REGEX_VAR_SIMPLE, $value['value'], $matches)) {
                     foreach ($matches[1] as $var) {
                         if (!isset($usedVariables[$var])) {
+                            $usedVariables[$var] = \true;
+                            $changed = \true;
+                        }
+                    }
+                }
+                if (preg_match_all('/--theme\(\s*(--[a-zA-Z0-9_-]+)/', $value['value'], $matches)) {
+                    foreach ($matches[1] as $var) {
+                        if (!isset($usedVariables[$var]) && $theme->get([$var]) !== null) {
                             $usedVariables[$var] = \true;
                             $changed = \true;
                         }
@@ -1423,6 +1950,18 @@ function optimizeAstTransformNodes(array $nodes, Theme $theme, array $usedVariab
             }
             return;
         }
+        // Collect user-authored @property rules so they join the hoisted ones:
+        // deduplicated, appended after the main output, and contributing to
+        // the @layer properties fallback block
+        if ($node['kind'] === 'at-rule' && $node['name'] === '@property') {
+            $propName = trim($node['params'] ?? '');
+            if (isset($seenAtProperties[$propName])) {
+                return;
+            }
+            $seenAtProperties[$propName] = \true;
+            $atRoots[] = normalizeAtPropertyQuotes($node);
+            return;
+        }
         // Skip --tw-sort declarations (internal sorting only)
         if ($node['kind'] === 'declaration' && ($node['property'] ?? '') === '--tw-sort') {
             return;
@@ -1484,7 +2023,7 @@ function optimizeAstTransformNodes(array $nodes, Theme $theme, array $usedVariab
             // Skip empty rules (no declarations or nested rules)
             // But keep @layer, @charset, @custom-media, @namespace, @import (they can be empty)
             $name = $node['name'] ?? '';
-            if (empty($children) && !in_array($name, ['@layer', '@charset', '@custom-media', '@namespace', '@import'])) {
+            if (empty($children) && !in_array($name, ['@layer', '@charset', '@custom-media', '@namespace', '@import', '@apply'])) {
                 return;
             }
         }
@@ -1518,6 +2057,26 @@ function optimizeAstOptimizeValues(array &$nodes): void
     }
 }
 /**
+ * Normalize string quotes inside an @property rule the way lightningcss
+ * serializes them (`syntax: '*'` -> `syntax: "*"`).
+ *
+ * @param array $node The @property at-rule
+ * @return array
+ */
+function normalizeAtPropertyQuotes(array $node): array
+{
+    foreach ($node['nodes'] ?? [] as $i => $decl) {
+        if ($decl['kind'] !== 'declaration') {
+            continue;
+        }
+        $value = $decl['value'] ?? '';
+        if (strlen($value) >= 2 && $value[0] === "'" && $value[strlen($value) - 1] === "'") {
+            $node['nodes'][$i]['value'] = '"' . substr($value, 1, -1) . '"';
+        }
+    }
+    return $node;
+}
+/**
  * Split hoisted at-root nodes into the @property fallback block and the
  * nodes to append after the main result.
  *
@@ -1540,41 +2099,82 @@ function optimizeAstProcessAtRoots(array $atRoots, int $polyfills): array
     $fallback = null;
     // If we have @property rules, wrap their fallbacks in @layer properties + @supports
     if (!empty($atPropertyRules) && $polyfills & POLYFILL_AT_PROPERTY) {
-        // Extract initial values for fallback declarations
-        $fallbackDeclarations = [];
+        // Extract initial values for fallback declarations. Inherited
+        // properties fall back on `:root`, non-inherited ones on the
+        // universal selector, matching the reference's propertyFallbacksRoot
+        // and propertyFallbacksUniversal buckets.
+        $fallbackDeclarationsRoot = [];
+        $fallbackDeclarationsUniversal = [];
         foreach ($atPropertyRules as $property) {
             $propName = trim($property['params'] ?? '');
             $initialValue = null;
             $syntax = null;
+            $inherits = \false;
             foreach ($property['nodes'] ?? [] as $decl) {
                 if ($decl['kind'] === 'declaration') {
                     if ($decl['property'] === 'initial-value') {
                         $initialValue = $decl['value'] ?? '';
                     } elseif ($decl['property'] === 'syntax') {
                         $syntax = $decl['value'] ?? '';
+                    } elseif ($decl['property'] === 'inherits') {
+                        $inherits = ($decl['value'] ?? '') === 'true';
                     }
                 }
             }
-            // For <length> syntax with bare "0", add "px" unit in fallback
-            // This is because @property strips units from zero but fallbacks need them
+            // The fallback echoes the authored initial value verbatim
+            // (`0px` stays `0px`, `0` stays `0`)
             $fallbackValue = $initialValue ?? 'initial';
-            if ($fallbackValue === '0' && $syntax === '"<length>"') {
-                $fallbackValue = '0px';
+            if ($inherits) {
+                $fallbackDeclarationsRoot[] = decl($propName, $fallbackValue);
+            } else {
+                $fallbackDeclarationsUniversal[] = decl($propName, $fallbackValue);
             }
-            $fallbackDeclarations[] = decl($propName, $fallbackValue);
         }
-        if (!empty($fallbackDeclarations)) {
+        if (!empty($fallbackDeclarationsRoot) || !empty($fallbackDeclarationsUniversal)) {
             // Create @layer properties with @supports fallback
             // @supports (((-webkit-hyphens: none)) and (not (margin-trim: inline))) or ((-moz-orient: inline) and (not (color:rgb(from red r g b))))
             // Note: Extra parens around -webkit-hyphens test for specificity
             $supportsCondition = '(((-webkit-hyphens: none)) and (not (margin-trim: inline))) or ((-moz-orient: inline) and (not (color: rgb(from red r g b))))';
-            $universalSelector = '*, :before, :after, ::backdrop';
-            $fallbackRule = Ast\styleRule($universalSelector, $fallbackDeclarations);
-            $supportsRule = Ast\atRule('@supports', $supportsCondition, [$fallbackRule]);
+            $fallbackRules = [];
+            if (!empty($fallbackDeclarationsRoot)) {
+                $fallbackRules[] = Ast\styleRule(':root, :host', $fallbackDeclarationsRoot);
+            }
+            if (!empty($fallbackDeclarationsUniversal)) {
+                $fallbackRules[] = Ast\styleRule('*, :before, :after, ::backdrop', $fallbackDeclarationsUniversal);
+            }
+            $supportsRule = Ast\atRule('@supports', $supportsCondition, $fallbackRules);
             $fallback = Ast\atRule('@layer', 'properties', [$supportsRule]);
         }
     }
-    return ['fallback' => $fallback, 'append' => array_merge($otherAtRoots, $atPropertyRules)];
+    // lightningcss strips the unit from zero-length initial values in the
+    // printed @property block (`0px` -> `0`); the fallback declarations above
+    // keep the authored form
+    foreach ($atPropertyRules as &$property) {
+        $syntax = null;
+        foreach ($property['nodes'] ?? [] as $decl) {
+            if ($decl['kind'] === 'declaration' && $decl['property'] === 'syntax') {
+                $syntax = $decl['value'] ?? '';
+            }
+        }
+        if ($syntax === '"<length>"') {
+            foreach ($property['nodes'] as &$decl) {
+                if ($decl['kind'] === 'declaration' && $decl['property'] === 'initial-value' && preg_match('/^[+-]?0(?:\.0+)?[a-z%]+$/i', $decl['value'] ?? '')) {
+                    $decl['value'] = '0';
+                }
+            }
+            unset($decl);
+        }
+    }
+    unset($property);
+    // @property registrations come before other hoisted at-roots such as
+    // @keyframes, matching the reference output order. The non-@property
+    // nodes join the result after the main value-optimization pass, so run
+    // it here; @property initial values print as authored (`black` stays
+    // `black`). Keyframe blocks get the same lightningcss declaration
+    // reordering as style rules.
+    $otherAtRoots = LightningCss::reorderDeclarations($otherAtRoots);
+    optimizeAstOptimizeValues($otherAtRoots);
+    return ['fallback' => $fallback, 'append' => array_merge($atPropertyRules, $otherAtRoots)];
 }
 /**
  * Optimize AST by flattening context nodes and other optimizations.
@@ -1597,16 +2197,26 @@ function optimizeAst(array $ast, DesignSystem $designSystem, int $polyfills = PO
     optimizeAstCollectUsed($ast, $usedVariables, $usedKeyframeNames);
     optimizeAstExpandThemeUsed($theme, $usedVariables, $usedKeyframeNames);
     $result = optimizeAstTransformNodes($ast, $theme, $usedVariables, $usedKeyframeNames, $atRoots, $seenAtProperties);
-    // Transform CSS nesting (flatten & selectors, hoist @media)
+    // Flatten nesting the way the reference does (handleNesting in ast.ts):
+    // substitute `&` with `:is(…)` semantics, hoist conditional at-rules,
+    // keep native nesting below the first declaration-carrying level
+    $result = handleNesting($result);
+    // Downlevel the remaining native nesting (lightningcss equivalent)
     $result = LightningCss::transformNesting($result);
+    // Reorder declarations per lightningcss's handler model (typed values
+    // flush at the end of each block in handler-chain order)
+    $result = LightningCss::reorderDeclarations($result);
     // Add vendor prefixes to declarations that need them
     $result = LightningCss::addVendorPrefixes($result);
-    // Apply LightningCSS value optimizations to all declarations
-    optimizeAstOptimizeValues($result);
-    // Apply color-mix polyfill - convert color-mix with variables to @supports fallback
+    // Apply color-mix polyfill - convert color-mix with variables to @supports
+    // fallback. Runs before value optimization so the raw declaration value
+    // decides which color-mix colorspaces are rewritten to srgb (formatting
+    // is significant: a leading separator keeps the colorspace untouched).
     if ($polyfills & POLYFILL_COLOR_MIX) {
         $result = applyColorMixPolyfill($result, $designSystem);
     }
+    // Apply LightningCSS value optimizations to all declarations
+    optimizeAstOptimizeValues($result);
     $roots = optimizeAstProcessAtRoots($atRoots, $polyfills);
     if ($roots['fallback'] !== null) {
         // Prepend to result
@@ -1614,11 +2224,14 @@ function optimizeAst(array $ast, DesignSystem $designSystem, int $polyfills = PO
     }
     // Append other atRoots (non-@property) and @property rules
     $result = array_merge($result, $roots['append']);
-    // Merge adjacent rules with same declarations (selector merging)
     // Process @custom-media definitions and substitute them
     $result = LightningCss::processCustomMedia($result);
     // Transform media query range syntax (width >= X → min-width: X)
     $result = LightningCss::processQueryRangeSyntax($result);
+    // Merge directly adjacent siblings (same-condition at-rules and
+    // same-selector rules), then join selectors of adjacent rules that share
+    // identical declarations
+    $result = LightningCss::mergeAdjacentNodes($result);
     $result = LightningCss::mergeRulesWithSameDeclarations($result);
     return $result;
 }
@@ -1748,7 +2361,7 @@ function optimizeAstPrepareIncremental(array $ast, DesignSystem $designSystem, i
     $sentinelValue = '__tailwindphp_utilities_sentinel_' . bin2hex(random_bytes(8));
     $probe = $ast;
     walk($probe, function (&$node) use ($sentinelValue) {
-        if ($node['kind'] === 'context' && isset($node['context']) && is_array($node['context'])) {
+        if ($node['kind'] === 'context' && !empty($node['context']['utilities'])) {
             $node['nodes'] = [['kind' => 'comment', 'value' => $sentinelValue]];
             return WalkAction::Stop;
         }
@@ -1796,13 +2409,15 @@ function optimizeAstPrepareIncremental(array $ast, DesignSystem $designSystem, i
         $atRoots = [];
         $seenAtProperties = [];
         $stage = optimizeAstTransformNodes([$chunk['node']], $theme, [], [], $atRoots, $seenAtProperties);
+        $stage = handleNesting($stage);
         $chunkAtRules = [];
         $flat = LightningCss::flattenNodes($stage, $chunkAtRules);
+        $flat = LightningCss::reorderDeclarations($flat);
         $flat = LightningCss::addVendorPrefixes($flat);
-        optimizeAstOptimizeValues($flat);
         if ($polyfills & POLYFILL_COLOR_MIX) {
             $flat = applyColorMixPolyfill($flat, $designSystem);
         }
+        optimizeAstOptimizeValues($flat);
         $flat = LightningCss::processQueryRangeSyntax($flat);
         $declKeys = [];
         foreach ($flat as &$node) {
@@ -1820,10 +2435,10 @@ function optimizeAstPrepareIncremental(array $ast, DesignSystem $designSystem, i
     // so the whole merge-plus-value pipeline is invariant too.
     $staticMergedAtRules = LightningCss::mergeCollectedAtRules($staticAtRules);
     $staticMergedAtRules = LightningCss::addVendorPrefixes($staticMergedAtRules);
-    optimizeAstOptimizeValues($staticMergedAtRules);
     if ($polyfills & POLYFILL_COLOR_MIX) {
         $staticMergedAtRules = applyColorMixPolyfill($staticMergedAtRules, $designSystem);
     }
+    optimizeAstOptimizeValues($staticMergedAtRules);
     $staticMergedAtRules = LightningCss::processQueryRangeSyntax($staticMergedAtRules);
     foreach ($staticMergedAtRules as &$node) {
         if ($node['kind'] === 'at-rule' && isset($node['nodes'])) {
@@ -1893,16 +2508,18 @@ function optimizeAstIncremental(array $cache, array $utilityNodes, DesignSystem 
             unset($target);
         }
         $stage = optimizeAstTransformNodes([$node], $theme, $usedVariables, $usedKeyframeNames, $atRoots, $seenAtProperties);
+        $stage = handleNesting($stage);
         $atRulesBefore = count($atRules);
         $flat = LightningCss::flattenNodes($stage, $atRules);
         if (count($atRules) !== $atRulesBefore) {
             $hasFreshAtRules = \true;
         }
+        $flat = LightningCss::reorderDeclarations($flat);
         $flat = LightningCss::addVendorPrefixes($flat);
-        optimizeAstOptimizeValues($flat);
         if ($polyfills & POLYFILL_COLOR_MIX) {
             $flat = applyColorMixPolyfill($flat, $designSystem);
         }
+        optimizeAstOptimizeValues($flat);
         foreach ($flat as $flatNode) {
             $result[] = $flatNode;
             $fresh[] = \true;
@@ -1914,10 +2531,10 @@ function optimizeAstIncremental(array $cache, array $utilityNodes, DesignSystem 
         // run the value stages on them, matching the full pipeline's order.
         $merged = LightningCss::mergeCollectedAtRules($atRules);
         $merged = LightningCss::addVendorPrefixes($merged);
-        optimizeAstOptimizeValues($merged);
         if ($polyfills & POLYFILL_COLOR_MIX) {
             $merged = applyColorMixPolyfill($merged, $designSystem);
         }
+        optimizeAstOptimizeValues($merged);
         foreach ($merged as $node) {
             $result[] = $node;
             $fresh[] = \true;
@@ -1949,39 +2566,13 @@ function optimizeAstIncremental(array $cache, array $utilityNodes, DesignSystem 
             $result[$i] = LightningCss::processQueryRangeSyntax([$node])[0];
         }
     }
-    // Final pass: replay mergeRulesWithSameDeclarations' top-level scan,
-    // recursing only into fresh at-rules; cached chunks are pre-merged and
-    // carry precomputed declaration keys.
-    $final = [];
-    $lastDeclKey = null;
-    $lastIndex = -1;
-    $lastSelectors = [];
-    foreach ($result as $i => $node) {
-        if ($node['kind'] === 'rule') {
-            $declKey = $declKeys[$i] ?? LightningCss::serializeDeclarations($node['nodes'] ?? []);
-            $currentSelector = $node['selector'];
-            if ($lastDeclKey === $declKey && $lastIndex === count($final) - 1 && $lastIndex >= 0) {
-                if (!isset($lastSelectors[$currentSelector])) {
-                    $final[$lastIndex]['selector'] .= ', ' . $currentSelector;
-                    $lastSelectors[$currentSelector] = \true;
-                }
-            } else {
-                $final[] = $node;
-                $lastDeclKey = $declKey;
-                $lastIndex = count($final) - 1;
-                $lastSelectors = [$currentSelector => \true];
-            }
-        } else {
-            if ($node['kind'] === 'at-rule' && isset($node['nodes']) && $fresh[$i]) {
-                $node['nodes'] = LightningCss::mergeRulesWithSameDeclarations($node['nodes']);
-            }
-            $final[] = $node;
-            $lastDeclKey = null;
-            $lastIndex = -1;
-            $lastSelectors = [];
-        }
-    }
-    return $final;
+    // Final passes matching the full pipeline's tail exactly: merge directly
+    // adjacent siblings across chunk boundaries, then join selectors of
+    // adjacent rules with identical declarations. (Since conditional
+    // at-rules emit in place, adjacency can span chunk boundaries, so the
+    // cached per-chunk declaration keys can no longer shortcut this scan.)
+    $result = LightningCss::mergeAdjacentNodes($result);
+    return LightningCss::mergeRulesWithSameDeclarations($result);
 }
 /**
  * Extract keyframe names from an animation CSS value.
@@ -2230,6 +2821,26 @@ function clearCache(string|bool|null $cache = \true): int
     }
     return $deleted;
 }
+function trimCandidateBoundaries(string $token): string
+{
+    while ($token !== '') {
+        $first = $token[0];
+        if ($first === "'" || $first === '"' || $first === '`') {
+            $token = substr($token, 1);
+            continue;
+        }
+        $last = $token[strlen($token) - 1];
+        if (in_array($last, ["'", '"', '`', ',', ';'], \true)) {
+            $rest = substr($token, 0, -1);
+            if (substr_count($rest, '[') === substr_count($rest, ']') && substr_count($rest, '(') === substr_count($rest, ')')) {
+                $token = $rest;
+                continue;
+            }
+        }
+        break;
+    }
+    return $token;
+}
 /**
  * Extract class name candidates from HTML content.
  *
@@ -2242,13 +2853,26 @@ function extractCandidates(string $html): array
     // Extract from class and className attributes
     foreach ([REGEX_CLASS_ATTR, REGEX_CLASSNAME_ATTR] as $pattern) {
         if (preg_match_all($pattern, $html, $matches)) {
-            foreach ($matches[1] as $classAttr) {
+            foreach ($matches[2] as $classAttr) {
                 $classAttr = html_entity_decode($classAttr, \ENT_QUOTES | \ENT_HTML5, 'UTF-8');
                 foreach (preg_split(REGEX_WHITESPACE, $classAttr) as $class) {
-                    $class = trim($class);
+                    $class = trimCandidateBoundaries(trim($class));
                     if ($class !== '') {
                         $candidates[] = $class;
                     }
+                }
+            }
+        }
+    }
+    // Only complete string arguments are static candidates; concatenations and
+    // dynamic expressions belong to the caller's explicit candidate extraction.
+    if (preg_match_all(REGEX_CLASS_METHOD, $html, $matches)) {
+        foreach ($matches[2] as $index => $classAttr) {
+            $quote = $matches[1][$index];
+            $classAttr = str_replace(['\\' . $quote, '\\\\'], [$quote, '\\'], $classAttr);
+            foreach (preg_split(REGEX_WHITESPACE, trim($classAttr)) as $class) {
+                if ($class !== '') {
+                    $candidates[] = $class;
                 }
             }
         }
@@ -2384,10 +3008,16 @@ function resolveThemeCallsInValue(string $value, Theme $theme): string
 /**
  * Apply color-mix polyfill to AST.
  *
- * When color-mix() contains CSS variables (like var(--opacity)), browsers that don't
- * support color-mix need a fallback. This creates:
- * 1. A fallback declaration with just the base color
- * 2. An @supports block with the color-mix version
+ * Port of the `Polyfills.ColorMix` fallback pass in
+ * packages/tailwindcss/src/ast.ts (optimizeAst): usages of `color-mix(…)`
+ * that reference variables or `currentcolor` get a statically analyzable
+ * fallback declaration, and the original declaration is preserved behind
+ * `@supports (color: color-mix(in lab, red, red))`.
+ *
+ * @port-deviation:structure The reference splices the fallback + nested
+ * `@supports` into the rule before nesting is flattened; PHP runs after
+ * flattening, so the `@supports` block is emitted as a sibling that wraps the
+ * rule's selector. The flattened output is identical.
  *
  * @param array $ast The AST to process
  * @param DesignSystem $designSystem The design system for theme lookups
@@ -2398,66 +3028,42 @@ function applyColorMixPolyfill(array $ast, DesignSystem $designSystem): array
     $result = [];
     foreach ($ast as $node) {
         if ($node['kind'] === 'rule') {
-            // Process each declaration in the rule
-            $newNodes = [];
-            $supportsDeclarations = [];
-            foreach ($node['nodes'] ?? [] as $decl) {
-                if ($decl['kind'] === 'declaration' && isset($decl['value'])) {
-                    $value = $decl['value'];
-                    // Check if this declaration has color-mix that needs polyfill
-                    // Pattern 1: color-mix with var() in opacity position
-                    // Pattern 2: color-mix with var() in color position (from --theme)
-                    $needsPolyfill = \false;
-                    $fallbackColor = null;
-                    // Pattern: color-mix(in oklab, COLOR VAR_OPACITY, transparent)
-                    if (preg_match(REGEX_COLOR_MIX_VAR, $value, $match)) {
-                        $needsPolyfill = \true;
-                        $fallbackColor = trim($match[1]);
-                        $fallbackColor = LightningCss::optimizeValue($fallbackColor, $decl['property']);
-                    } elseif (preg_match(REGEX_COLOR_MIX_OPACITY, $value, $match)) {
-                        $needsPolyfill = \true;
-                        $varName = '--' . ltrim(trim($match[1]), '-');
-                        $opacityStr = $match[2];
-                        // Get the color value from theme
-                        $theme = $designSystem->getTheme();
-                        $colorValue = $theme->get([$varName]);
-                        if ($colorValue !== null) {
-                            // Calculate hex with alpha
-                            $opacity = floatval(rtrim($opacityStr, '%'));
-                            if ($opacity > 1) {
-                                $opacity = $opacity / 100;
-                            }
-                            $fallbackColor = LightningCss::colorWithAlpha($colorValue, $opacity);
-                        } else {
-                            // Unknown variable (arbitrary property) - fallback to just the variable
-                            $fallbackColor = "var({$varName})";
-                        }
-                    }
-                    if ($needsPolyfill && $fallbackColor !== null) {
-                        // Create fallback with the computed color
-                        $fallbackDecl = ['kind' => 'declaration', 'property' => $decl['property'], 'value' => $fallbackColor, 'important' => $decl['important'] ?? \false];
-                        $newNodes[] = $fallbackDecl;
-                        // Keep original for @supports
-                        $supportsDeclarations[] = $decl;
-                    } else {
-                        $newNodes[] = $decl;
-                    }
-                } else {
-                    $newNodes[] = $decl;
+            // Process each declaration in the rule. A polyfilled declaration
+            // is replaced by its fallback and the original is emitted right
+            // after it behind @supports, splitting the rule the same way the
+            // reference's in-rule splice does after nesting is flattened.
+            $segment = [];
+            $flushSegment = function () use (&$segment, &$result, $node) {
+                if (!empty($segment)) {
+                    $segmentRule = $node;
+                    $segmentRule['nodes'] = $segment;
+                    $result[] = $segmentRule;
+                    $segment = [];
                 }
+            };
+            foreach ($node['nodes'] ?? [] as $decl) {
+                if ($decl['kind'] === 'declaration' && isset($decl['value']) && str_contains($decl['value'], 'color-mix(')) {
+                    $fallbackValue = polyfillColorMixValue($decl['value'], $designSystem);
+                    if ($fallbackValue !== null) {
+                        // Create fallback with the inlined / reduced value
+                        $segment[] = ['kind' => 'declaration', 'property' => $decl['property'], 'value' => $fallbackValue, 'important' => $decl['important'] ?? \false];
+                        $flushSegment();
+                        // Keep original for @supports
+                        $supportsRule = ['kind' => 'rule', 'selector' => $node['selector'], 'nodes' => [$decl]];
+                        $result[] = Ast\atRule('@supports', '(color: color-mix(in lab, red, red))', [$supportsRule]);
+                        continue;
+                    }
+                }
+                $segment[] = $decl;
             }
-            // Add the rule with fallback declarations
-            if (!empty($newNodes)) {
-                $fallbackRule = $node;
-                $fallbackRule['nodes'] = $newNodes;
-                $result[] = $fallbackRule;
-            }
-            // Add @supports block if we have color-mix declarations
-            if (!empty($supportsDeclarations)) {
-                $supportsRule = ['kind' => 'rule', 'selector' => $node['selector'], 'nodes' => $supportsDeclarations];
-                $supports = Ast\atRule('@supports', '(color: color-mix(in lab, red, red))', [$supportsRule]);
-                $result[] = $supports;
-            }
+            $flushSegment();
+        } elseif ($node['kind'] === 'at-rule' && $node['name'] === '@supports' && str_contains($node['params'] ?? '', 'color-mix(')) {
+            // Declarations inside a `@supports (…color-mix…)` block already
+            // gate on color-mix support and must not be polyfilled again
+            $result[] = $node;
+        } elseif ($node['kind'] === 'at-rule' && $node['name'] === '@keyframes') {
+            // Keyframes are excluded from the polyfill
+            $result[] = $node;
         } elseif (isset($node['nodes'])) {
             // Recursively process nested nodes
             $node['nodes'] = applyColorMixPolyfill($node['nodes'], $designSystem);
@@ -2467,6 +3073,112 @@ function applyColorMixPolyfill(array $ast, DesignSystem $designSystem): array
         }
     }
     return $result;
+}
+/**
+ * Build the statically analyzable fallback value for a declaration containing
+ * `color-mix(…)`, or return null when no polyfill is required.
+ *
+ * Mirrors the per-declaration walk in packages/tailwindcss/src/ast.ts:
+ * - Theme variable chains inside `color-mix(…)` are inlined.
+ * - When a `color-mix(…)` contains unresolvable variables or `currentcolor`,
+ *   the whole function is replaced by its first color value.
+ * - Otherwise the colorspace is switched to `srgb` (Safari <16 support) when
+ *   the colorspace ident sits at the exact node position the reference reads.
+ *
+ * @param string $value The declaration value
+ * @param DesignSystem $designSystem
+ * @return string|null The fallback value, or null when no polyfill is needed
+ */
+function polyfillColorMixValue(string $value, DesignSystem $designSystem): ?string
+{
+    $requiresPolyfill = \false;
+    $valueAst = ValueParser\parse($value);
+    ValueParser\walk($valueAst, function (&$node) use (&$requiresPolyfill, $designSystem) {
+        if ($node['kind'] !== 'function' || $node['value'] !== 'color-mix') {
+            return ValueParser\WalkAction::Continue;
+        }
+        $containsUnresolvableVars = \false;
+        $containsCurrentcolor = \false;
+        ValueParser\walk($node['nodes'], function ($child) use (&$containsUnresolvableVars, &$containsCurrentcolor, &$requiresPolyfill, $designSystem) {
+            if ($child['kind'] === 'word' && strtolower($child['value']) === 'currentcolor') {
+                $containsCurrentcolor = \true;
+                $requiresPolyfill = \true;
+                return ValueParser\WalkAction::Continue;
+            }
+            $varNode = $child;
+            $inlinedColor = null;
+            $seenVariables = [];
+            do {
+                if ($varNode['kind'] !== 'function' || $varNode['value'] !== 'var') {
+                    return ValueParser\WalkAction::Continue;
+                }
+                $firstChild = $varNode['nodes'][0] ?? null;
+                if ($firstChild === null || $firstChild['kind'] !== 'word') {
+                    return ValueParser\WalkAction::Continue;
+                }
+                $variableName = $firstChild['value'];
+                if (isset($seenVariables[$variableName])) {
+                    $containsUnresolvableVars = \true;
+                    return ValueParser\WalkAction::Continue;
+                }
+                $seenVariables[$variableName] = \true;
+                $requiresPolyfill = \true;
+                $inlinedColor = $designSystem->getTheme()->get([$variableName]);
+                if ($inlinedColor === null) {
+                    $containsUnresolvableVars = \true;
+                    return ValueParser\WalkAction::Continue;
+                }
+                if (strtolower($inlinedColor) === 'currentcolor') {
+                    $containsCurrentcolor = \true;
+                    return ValueParser\WalkAction::Continue;
+                }
+                if (str_starts_with($inlinedColor, 'var(')) {
+                    $subAst = ValueParser\parse($inlinedColor);
+                    $varNode = $subAst[0] ?? null;
+                } else {
+                    $varNode = null;
+                }
+            } while ($varNode !== null);
+            return ValueParser\WalkAction::Replace([ValueParser\word($inlinedColor)]);
+        });
+        if ($containsUnresolvableVars || $containsCurrentcolor) {
+            // Replace the whole color-mix with its first color value
+            $separatorIndex = -1;
+            foreach ($node['nodes'] as $i => $argNode) {
+                if ($argNode['kind'] === 'separator' && str_contains(trim($argNode['value']), ',')) {
+                    $separatorIndex = $i;
+                    break;
+                }
+            }
+            if ($separatorIndex === -1) {
+                return ValueParser\WalkAction::Continue;
+            }
+            $firstColorValue = $node['nodes'][$separatorIndex + 1] ?? null;
+            if ($firstColorValue === null) {
+                return ValueParser\WalkAction::Continue;
+            }
+            return ValueParser\WalkAction::Replace([$firstColorValue]);
+        }
+        if ($requiresPolyfill) {
+            // Change the colorspace to `srgb` since the fallback values should
+            // not be represented as `oklab(…)` functions again as their
+            // support in Safari <16 is very limited.
+            $colorspace = $node['nodes'][2] ?? null;
+            if ($colorspace !== null && $colorspace['kind'] === 'word' && in_array($colorspace['value'], ['oklab', 'oklch', 'lab', 'lch'], \true)) {
+                $node['nodes'][2]['value'] = 'srgb';
+            }
+        }
+        return ValueParser\WalkAction::Continue;
+    });
+    if (!$requiresPolyfill) {
+        return null;
+    }
+    $fallbackValue = ValueParser\toCss($valueAst);
+    // lightningcss serializes the standalone keyword as `currentColor`
+    if (strcasecmp(trim($fallbackValue), 'currentcolor') === 0) {
+        return 'currentColor';
+    }
+    return $fallbackValue;
 }
 // ==================================================
 // Plugin System
@@ -3216,7 +3928,7 @@ class Tailwind
             $candidates[] = "h-{$f}";
         }
         // Inset
-        foreach (['inset', 'inset-x', 'inset-y', 'top', 'right', 'bottom', 'left', 'start', 'end'] as $prefix) {
+        foreach (['inset', 'inset-x', 'inset-y', 'top', 'right', 'bottom', 'left', 'inset-s', 'inset-e'] as $prefix) {
             foreach (['0', 'px', '0.5', '1', '2', '3', '4', '5', '6', '8', '10', '12', '16', '20', 'auto', 'full', '1/2'] as $val) {
                 $candidates[] = "{$prefix}-{$val}";
             }

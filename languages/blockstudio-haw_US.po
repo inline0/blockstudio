@@ -28,6 +28,14 @@ msgid "This storage key is not declared by the block or its extensions."
 msgstr "ʻAʻole i kūkala ʻia kēia kī waihona e ka poloka a i ʻole kona mau hoʻonui."
 
 #: includes/classes/block-validator.php
+msgid "This top-level key is not an attribute of the block, so it is ignored."
+msgstr "ʻAʻole kēia kī pae luna he ʻano o ka poloka, no laila nānā ʻole ʻia."
+
+#: includes/classes/block-validator.php
+msgid "This key is only read inside the blockstudio object, which is missing."
+msgstr "Heluhelu ʻia kēia kī ma loko wale nō o ka mea blockstudio, akā ua nalowale ia."
+
+#: includes/classes/block-validator.php
 msgid "This value is not among the field options."
 msgstr "ʻAʻole kēia waiwai i waena o nā koho kahua."
 

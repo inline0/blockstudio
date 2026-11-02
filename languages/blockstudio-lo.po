@@ -28,6 +28,14 @@ msgid "This storage key is not declared by the block or its extensions."
 msgstr "ຄີຈັດເກັບນີ້ບໍ່ໄດ້ຖືກປະກາດໂດຍບລັອກ ຫຼື ສ່ວນຂະຫຍາຍຂອງມັນ."
 
 #: includes/classes/block-validator.php
+msgid "This top-level key is not an attribute of the block, so it is ignored."
+msgstr "ຄີລະດັບເທິງນີ້ບໍ່ແມ່ນແອດທຣິບິວຂອງບລັອກ ຈຶ່ງຖືກຂ້າມ."
+
+#: includes/classes/block-validator.php
+msgid "This key is only read inside the blockstudio object, which is missing."
+msgstr "ຄີນີ້ຈະຖືກອ່ານພຽງແຕ່ພາຍໃນອອບເຈັກຕ໌ blockstudio ເຊິ່ງຂາດຫາຍໄປ."
+
+#: includes/classes/block-validator.php
 msgid "This value is not among the field options."
 msgstr "ຄ່ານີ້ບໍ່ຢູ່ໃນຕົວເລືອກຂອງຟິວ."
 

@@ -39,6 +39,7 @@ final class SettingsGetReturnType implements DynamicStaticMethodReturnTypeExtens
             'assets/inlineLimit' => new IntegerType(),
             'cache/enabled' => new BooleanType(),
             'cache/path' => new StringType(),
+            'cache/namespaceGrace' => new IntegerType(),
             'githooks/commit' => new BooleanType(),
             'phpstan/preset' => new StringType(),
             'phpstan/roots' => new ArrayType(new IntegerType(), new StringType()),

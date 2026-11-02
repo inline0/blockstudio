@@ -236,6 +236,7 @@ class Pages {
 				++$report[ $status ];
 				$report['pages'][ $name ] = array(
 					'status'      => $status,
+					'contentType' => is_scalar( $page_data['contentType'] ?? null ) ? (string) $page_data['contentType'] : 'php',
 					'postId'      => $result['post_id'],
 					'locked'      => $result['locked'],
 					'preserved'   => $result['preserved'],
@@ -723,7 +724,7 @@ class Pages {
 		$post_type = isset( $collection['postType'] ) ? (string) $collection['postType'] : 'page';
 		$slug      = isset( $collection['slug'] ) ? (string) $collection['slug'] : '';
 
-		if ( 'page' === $post_type || '' === $slug ) {
+		if ( 'page' === $post_type || '' === $slug || self::is_site_collection( $collection ) ) {
 			return;
 		}
 
@@ -847,7 +848,7 @@ class Pages {
 
 		foreach ( $collections as $collection ) {
 			$post_type = isset( $collection['postType'] ) ? (string) $collection['postType'] : 'page';
-			if ( 'page' === $post_type ) {
+			if ( 'page' === $post_type || self::is_site_collection( $collection ) ) {
 				continue;
 			}
 
@@ -901,7 +902,7 @@ class Pages {
 
 		$collection = self::get_collection_manifest( $collection_slug );
 
-		if ( ! $collection || 'page' === ( $collection['postType'] ?? 'page' ) || ( $collection['postType'] ?? '' ) !== $post->post_type ) {
+		if ( ! $collection || self::is_site_collection( $collection ) || 'page' === ( $collection['postType'] ?? 'page' ) || ( $collection['postType'] ?? '' ) !== $post->post_type ) {
 			return $post_link;
 		}
 
@@ -973,7 +974,7 @@ class Pages {
 		$collection_slug = sanitize_key( $segments[0] );
 		$collection      = self::get_collection_manifest( $collection_slug );
 
-		if ( ! $collection || 'page' === ( $collection['postType'] ?? 'page' ) ) {
+		if ( ! $collection || self::is_site_collection( $collection ) || 'page' === ( $collection['postType'] ?? 'page' ) ) {
 			return;
 		}
 
@@ -992,6 +993,20 @@ class Pages {
 
 		wp_safe_redirect( $target, 301 );
 		exit;
+	}
+
+	/**
+	 * Whether collection data describes a site collection.
+	 *
+	 * Site collections group pages that keep their WordPress page URLs, so no
+	 * collection routing applies to them.
+	 *
+	 * @param array $collection Collection data.
+	 *
+	 * @return bool Whether the collection has site scope.
+	 */
+	private static function is_site_collection( array $collection ): bool {
+		return 'site' === ( $collection['scope'] ?? 'collection' );
 	}
 
 	/**
@@ -1277,7 +1292,7 @@ class Pages {
 	private static function find_collection_post_by_path( string $collection_slug, string $path, bool $markdown_only = false ): ?\WP_Post {
 		$collection = self::get_collection_manifest( $collection_slug );
 
-		if ( ! $collection ) {
+		if ( ! $collection || self::is_site_collection( $collection ) ) {
 			return null;
 		}
 
@@ -1342,7 +1357,7 @@ class Pages {
 		foreach ( self::get_collection_manifests() as $collection ) {
 			$slug = (string) ( $collection['slug'] ?? '' );
 
-			if ( '' === $slug ) {
+			if ( '' === $slug || self::is_site_collection( $collection ) ) {
 				continue;
 			}
 
@@ -1909,7 +1924,7 @@ class Pages {
 		foreach ( self::get_collection_manifests() as $collection ) {
 			$slug = trim( (string) ( $collection['slug'] ?? '' ), '/' );
 
-			if ( '' === $slug ) {
+			if ( '' === $slug || self::is_site_collection( $collection ) ) {
 				continue;
 			}
 
@@ -1959,8 +1974,9 @@ class Pages {
 
 		$collection_slug = (string) get_post_meta( $post->ID, '_blockstudio_page_collection', true );
 		$path            = (string) get_post_meta( $post->ID, '_blockstudio_page_path', true );
+		$collection      = '' !== $collection_slug ? self::get_collection_manifest( $collection_slug ) : null;
 
-		if ( '' !== $collection_slug ) {
+		if ( '' !== $collection_slug && ! ( is_array( $collection ) && self::is_site_collection( $collection ) ) ) {
 			return self::collection_page_url( $collection_slug, '' === $path ? '.' : $path );
 		}
 
@@ -1975,6 +1991,9 @@ class Pages {
 	 * This is the programmatic counterpart to the frontend `the_content`
 	 * integration. It exposes the same `page_content()` and `current_page()`
 	 * context to `layout.php` without requiring a singular WordPress request.
+	 * A renderer layout, such as `layout.tsx`, is rendered by its registered
+	 * page renderer with the content as its slot and an optional
+	 * `layout.data.php` beside it as its data loader.
 	 *
 	 * @since 7.6.0
 	 *
@@ -1996,6 +2015,15 @@ class Pages {
 			return $content;
 		}
 
+		$renderer = self::layout_renderer( $layout_path, $page );
+
+		if ( null === $renderer && 'php' !== strtolower( pathinfo( $layout_path, PATHINFO_EXTENSION ) ) ) {
+			/** This action is documented in includes/classes/pages.php */
+			do_action( 'blockstudio/pages/layout_error', new \RuntimeException( sprintf( 'No registered page renderer handles the layout %s.', basename( $layout_path ) ) ), $layout_path, $page );
+
+			return $content;
+		}
+
 		$previous_rendering_layout = self::$rendering_layout;
 		$previous_current_page     = self::$current_page;
 		$previous_page_content     = self::$current_page_content;
@@ -2005,6 +2033,10 @@ class Pages {
 			self::$rendering_layout     = true;
 			self::$current_page         = $page;
 			self::$current_page_content = $content;
+
+			if ( null !== $renderer ) {
+				return self::render_renderer_layout( $content, $page, $layout_path, $renderer );
+			}
 
 			ob_start();
 			include $layout_path;
@@ -2033,6 +2065,61 @@ class Pages {
 			self::$current_page         = $previous_current_page;
 			self::$current_page_content = $previous_page_content;
 		}
+	}
+
+	/**
+	 * Find the renderer of a layout file.
+	 *
+	 * @param string $layout_path Layout path.
+	 * @param array  $page        Page data.
+	 *
+	 * @return string|null Renderer id, or null for a PHP layout.
+	 */
+	private static function layout_renderer( string $layout_path, array $page ): ?string {
+		if ( 'layout.php' === basename( $layout_path ) ) {
+			return null;
+		}
+
+		$renderer = Page_Renderers::for_layout( $layout_path );
+
+		if ( null === $renderer && is_string( $page['layout_renderer'] ?? null ) && '' !== $page['layout_renderer'] && null !== Page_Renderers::get( $page['layout_renderer'] ) ) {
+			$renderer = $page['layout_renderer'];
+		}
+
+		return $renderer;
+	}
+
+	/**
+	 * Render a renderer layout around page content.
+	 *
+	 * @param string $content     Rendered page content.
+	 * @param array  $page        Page data.
+	 * @param string $layout_path Layout entry.
+	 * @param string $renderer    Renderer id.
+	 *
+	 * @return string Rendered layout.
+	 */
+	private static function render_renderer_layout( string $content, array $page, string $layout_path, string $renderer ): string {
+		$data   = wp_normalize_path( dirname( $layout_path ) . '/layout.data.php' );
+		$data   = is_file( $data ) ? $data : null;
+		$result = Page_Renderers::render(
+			array(
+				'kind'     => 'layout',
+				'renderer' => $renderer,
+				'entry'    => $layout_path,
+				'data'     => $data,
+				'page'     => $page,
+				'post_id'  => isset( $page['post_id'] ) && is_numeric( $page['post_id'] ) ? (int) $page['post_id'] : 0,
+				'slot'     => $content,
+				'context'  => Page_Component::request_context(),
+			)
+		);
+
+		Static_Prerender_Runtime::record_dependencies( array_merge( $result['dependencies'], array_filter( array( $layout_path, $data ) ) ) );
+
+		$owner = is_scalar( $page['key'] ?? null ) && '' !== (string) $page['key'] ? (string) $page['key'] : md5( $layout_path );
+
+		return Page_Component::with_assets( 'layout-' . $owner, $result['assets'] ) . $result['html'];
 	}
 
 	/**

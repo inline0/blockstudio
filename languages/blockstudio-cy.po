@@ -28,6 +28,14 @@ msgid "This storage key is not declared by the block or its extensions."
 msgstr "Nid yw’r allwedd storio hon wedi’i datgan gan y bloc na’i estyniadau."
 
 #: includes/classes/block-validator.php
+msgid "This top-level key is not an attribute of the block, so it is ignored."
+msgstr "Anwybyddir yr allwedd lefel uchaf hon gan nad yw’n briodoledd o’r bloc."
+
+#: includes/classes/block-validator.php
+msgid "This key is only read inside the blockstudio object, which is missing."
+msgstr "Darllenir yr allwedd hon yn unig y tu mewn i’r gwrthrych blockstudio, sydd ar goll."
+
+#: includes/classes/block-validator.php
 msgid "This value is not among the field options."
 msgstr "Nid yw’r gwerth hwn ymhlith opsiynau’r maes."
 

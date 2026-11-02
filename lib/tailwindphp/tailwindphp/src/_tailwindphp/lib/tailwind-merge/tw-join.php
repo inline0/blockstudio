@@ -2,7 +2,7 @@
 
 declare (strict_types=1);
 /**
- * Port of: https://github.com/dcastil/tailwind-merge/blob/main/src/lib/tw-join.ts
+ * Port of: https://github.com/dcastil/tailwind-merge/blob/main/packages/tailwind-merge/src/lib/tw-join.ts
  *
  * The code in this file is copied from https://github.com/lukeed/clsx
  * and modified to suit the needs of tailwind-merge better.

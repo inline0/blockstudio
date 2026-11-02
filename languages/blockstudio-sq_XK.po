@@ -28,6 +28,14 @@ msgid "This storage key is not declared by the block or its extensions."
 msgstr "Ky çelës ruajtjeje nuk është deklaruar nga blloku ose zgjerimet e tij."
 
 #: includes/classes/block-validator.php
+msgid "This top-level key is not an attribute of the block, so it is ignored."
+msgstr "Ky çelës i nivelit të sipërm nuk është atribut i bllokut, ndaj shpërfillet."
+
+#: includes/classes/block-validator.php
+msgid "This key is only read inside the blockstudio object, which is missing."
+msgstr "Ky çelës lexohet vetëm brenda objektit blockstudio, i cili mungon."
+
+#: includes/classes/block-validator.php
 msgid "This value is not among the field options."
 msgstr "Kjo vlerë nuk është ndër opsionet e fushës."
 

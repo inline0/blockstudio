@@ -58,13 +58,17 @@ class Input
         for ($i = 0; $i < $count; $i++) {
             $arg = $args[$i];
             if (str_starts_with($arg, '--')) {
-                // Long option: --name or --name=value
-                $this->parseLongOption($arg);
+                $name = substr($arg, 2);
+                if (in_array($name, ['input', 'output', 'cwd'], \true) && isset($args[$i + 1]) && ($args[$i + 1] === '-' || !str_starts_with($args[$i + 1], '-'))) {
+                    $this->options[$name] = $args[++$i];
+                } else {
+                    $this->parseLongOption($arg);
+                }
             } elseif (str_starts_with($arg, '-') && $arg !== '-' && strlen($arg) === 2) {
                 // Short option with potential value: -c value or -c=value
                 $char = $arg[1];
                 // Check if next arg is a value (not starting with -)
-                if ($i + 1 < $count && !str_starts_with($args[$i + 1], '-')) {
+                if ($i + 1 < $count && (!str_starts_with($args[$i + 1], '-') || $args[$i + 1] === '-' && in_array($char, ['i', 'o'], \true))) {
                     $this->options[$char] = $args[$i + 1];
                     $i++;
                     // Skip the value

@@ -28,6 +28,14 @@ msgid "This storage key is not declared by the block or its extensions."
 msgstr "此儲存金鑰未由區塊或其擴充功能宣告。"
 
 #: includes/classes/block-validator.php
+msgid "This top-level key is not an attribute of the block, so it is ignored."
+msgstr "這個頂層鍵並非區塊的屬性，因此會被忽略。"
+
+#: includes/classes/block-validator.php
+msgid "This key is only read inside the blockstudio object, which is missing."
+msgstr "只有在 blockstudio 物件內才會讀取此鍵，但該物件不存在。"
+
+#: includes/classes/block-validator.php
 msgid "This value is not among the field options."
 msgstr "此值不在欄位選項之中。"
 

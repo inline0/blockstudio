@@ -28,6 +28,14 @@ msgid "This storage key is not declared by the block or its extensions."
 msgstr "คีย์พื้นที่จัดเก็บนี้ไม่ได้ประกาศโดยบล็อกหรือส่วนขยาย"
 
 #: includes/classes/block-validator.php
+msgid "This top-level key is not an attribute of the block, so it is ignored."
+msgstr "คีย์ระดับบนสุดนี้ไม่ใช่แอตทริบิวต์ของบล็อก จึงถูกละเว้น"
+
+#: includes/classes/block-validator.php
+msgid "This key is only read inside the blockstudio object, which is missing."
+msgstr "คีย์นี้จะถูกอ่านเฉพาะภายในออบเจ็กต์ blockstudio ซึ่งไม่มีอยู่"
+
+#: includes/classes/block-validator.php
 msgid "This value is not among the field options."
 msgstr "ค่านี้ไม่อยู่ในตัวเลือกของฟิลด์"
 

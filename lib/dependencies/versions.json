@@ -27,6 +27,6 @@
     "symfony/string": "v8.0.4",
     "symfony/var-dumper": "v7.4.4",
     "symfony/yaml": "v7.4.21",
-    "tailwindphp/tailwindphp": "v1.6.0",
+    "tailwindphp/tailwindphp": "v1.8.4",
     "yahnis-elsts/plugin-update-checker": "v5.6"
 }

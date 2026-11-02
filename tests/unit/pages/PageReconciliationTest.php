@@ -8,6 +8,7 @@
 // phpcs:disable WordPress.WP.AlternativeFunctions,WordPress.DB.SlowDBQuery
 
 use Blockstudio\Canvas;
+use Blockstudio\Page_Renderers;
 use Blockstudio\Page_Sync;
 use Blockstudio\Pages;
 use Blockstudio\Utils;
@@ -46,6 +47,14 @@ class PageReconciliationTest extends TestCase {
 		delete_option( 'blockstudio_pages_template_for' );
 		delete_option( 'blockstudio_collection_post_types_signature' );
 		Pages::reset();
+		Page_Renderers::reset();
+		Page_Renderers::register(
+			'unit',
+			array(
+				'extensions' => array( 'tsx' ),
+				'render'     => static fn( array $request ): array => array( 'html' => '<main>' . $request['slot'] . '</main>' ),
+			)
+		);
 		add_filter( 'blockstudio/pages/paths', array( $this, 'filter_paths' ), PHP_INT_MAX );
 	}
 
@@ -64,6 +73,7 @@ class PageReconciliationTest extends TestCase {
 		delete_option( 'blockstudio_pages_template_for' );
 		delete_option( 'blockstudio_collection_post_types_signature' );
 		Pages::reset();
+		Page_Renderers::reset();
 	}
 
 	/**
@@ -906,6 +916,290 @@ class PageReconciliationTest extends TestCase {
 		} finally {
 			remove_filter( 'blockstudio/pages/orphan_action', $filter, 10 );
 		}
+	}
+
+	/**
+	 * Converting a page to a component page keeps its post and updates it once.
+	 *
+	 * @return void
+	 */
+	public function test_php_page_converts_to_a_component_page_in_place(): void {
+		$this->write_page( 'alpha', 'Alpha' );
+		$first   = $this->reconcile( true );
+		$post_id = $first['pages']['alpha']['postId'];
+		Pages::store_successful_source_identity( $first['sourceIdentity'] );
+
+		$this->write_component( 'alpha', 'Alpha' );
+		$second = $this->reconcile();
+
+		$this->assertSame( 'updated', $second['pages']['alpha']['status'] );
+		$this->assertSame( 'component', $second['pages']['alpha']['contentType'] );
+		$this->assertSame( $post_id, $second['pages']['alpha']['postId'] );
+		$this->assertSame( 0, $second['created'] );
+		$this->assertSame( 0, $second['removed'] );
+		$content = (string) get_post_field( 'post_content', $post_id );
+		$blocks  = array_values( array_filter( parse_blocks( $content ), static fn( array $block ): bool => null !== $block['blockName'] ) );
+		$this->assertStringStartsWith( "<!-- wp:blockstudio/page -->\n", $content );
+		$this->assertStringEndsWith( "\n<!-- /wp:blockstudio/page -->", $content );
+		$this->assertCount( 1, $blocks );
+		$this->assertSame( 'blockstudio/page', $blocks[0]['blockName'] );
+		$this->assertCount( 1, $blocks[0]['innerBlocks'] );
+		$this->assertStringContainsString( 'Alpha</h1>', $blocks[0]['innerBlocks'][0]['innerHTML'] );
+		Pages::store_successful_source_identity( $second['sourceIdentity'] );
+
+		$third = $this->reconcile();
+		$this->assertSame( 'unchanged', $third['pages']['alpha']['status'] );
+		$this->assertSame( 0, $third['updated'] );
+	}
+
+	/**
+	 * A component page without a slot source stores one self-closing block.
+	 *
+	 * @return void
+	 */
+	public function test_component_page_without_slot_stores_a_self_closing_block(): void {
+		$this->write_component( 'beta', 'Beta', false );
+		$report = $this->reconcile( true );
+
+		$this->assertSame( 'created', $report['pages']['beta']['status'] );
+		$this->assertSame( '<!-- wp:blockstudio/page /-->', get_post_field( 'post_content', $report['pages']['beta']['postId'] ) );
+	}
+
+	/**
+	 * Entry and data edits reach visitors through the render graph, not page sync.
+	 *
+	 * @return void
+	 */
+	public function test_entry_and_data_edits_leave_the_post_unchanged(): void {
+		$this->write_component( 'alpha', 'Alpha' );
+		$first   = $this->reconcile( true );
+		$post_id = $first['pages']['alpha']['postId'];
+		Pages::store_successful_source_identity( $first['sourceIdentity'] );
+		$before = get_post( $post_id );
+
+		file_put_contents( $this->pages_path . '/alpha/page.tsx', 'export default () => "changed"' );
+		file_put_contents( $this->pages_path . '/alpha/data.php', '<?php return array( "changed" => true );' );
+
+		$writes    = 0;
+		$save_post = static function ( int $saved_id ) use ( &$writes, $post_id ): void {
+			if ( $saved_id === $post_id ) {
+				++$writes;
+			}
+		};
+		add_action( 'save_post', $save_post );
+		$second = $this->reconcile();
+		remove_action( 'save_post', $save_post );
+
+		$after = get_post( $post_id );
+		$this->assertSame( 'unchanged', $second['pages']['alpha']['status'] );
+		$this->assertSame( 0, $writes );
+		$this->assertSame( $first['sourceIdentity']['inventoryHash'], $second['sourceIdentity']['inventoryHash'] );
+		$this->assertInstanceOf( WP_Post::class, $before );
+		$this->assertInstanceOf( WP_Post::class, $after );
+		$this->assertSame( $before->post_modified_gmt, $after->post_modified_gmt );
+	}
+
+	/**
+	 * Keyed slot blocks keep their editor content through a preserving sync.
+	 *
+	 * @return void
+	 */
+	public function test_keyed_slot_blocks_are_preserved_by_a_non_authoritative_sync(): void {
+		$this->write_component( 'alpha', 'Alpha' );
+		file_put_contents( $this->pages_path . '/alpha/index.php', '<p key="intro">Default intro</p><p>Unkeyed</p>' );
+		$first   = $this->reconcile( true );
+		$post_id = $first['pages']['alpha']['postId'];
+
+		wp_update_post(
+			array(
+				'ID'           => $post_id,
+				'post_content' => str_replace( 'Default intro', 'Edited intro', (string) get_post_field( 'post_content', $post_id ) ),
+			)
+		);
+		file_put_contents( $this->pages_path . '/alpha/index.php', '<p key="intro">Default intro</p><p>Unkeyed changed</p>' );
+
+		$second  = Pages::reconcile(
+			array(
+				'full'       => true,
+				'plan_valid' => true,
+			)
+		);
+		$content = (string) get_post_field( 'post_content', $post_id );
+
+		$this->assertSame( 'updated', $second['pages']['alpha']['status'] );
+		$this->assertTrue( $second['pages']['alpha']['preserved'] );
+		$this->assertStringStartsWith( '<!-- wp:blockstudio/page -->', $content );
+		$this->assertStringContainsString( 'Edited intro', $content );
+		$this->assertStringContainsString( 'Unkeyed changed', $content );
+	}
+
+	/**
+	 * Stored render paths are portable theme paths.
+	 *
+	 * @return void
+	 */
+	public function test_stored_render_definition_is_theme_relative(): void {
+		$theme = fn(): string => $this->pages_path;
+		add_filter( 'stylesheet_directory', $theme );
+		add_filter( 'template_directory', $theme );
+
+		try {
+			$this->write_component( 'alpha', 'Alpha' );
+			$report  = $this->reconcile( true );
+			$post_id = $report['pages']['alpha']['postId'];
+			$stored  = get_post_meta( $post_id, '_blockstudio_page_render', true );
+			$deps    = get_post_meta( $post_id, '_blockstudio_page_dependencies', true );
+			$render  = Page_Sync::stored_render( $post_id );
+		} finally {
+			remove_filter( 'stylesheet_directory', $theme );
+			remove_filter( 'template_directory', $theme );
+		}
+
+		$this->assertSame(
+			array(
+				'renderer' => 'unit',
+				'entry'    => 'theme:alpha/page.tsx',
+				'data'     => 'theme:alpha/data.php',
+			),
+			$stored
+		);
+		$this->assertContains( 'theme:alpha/page.tsx', $deps );
+		$this->assertContains( 'theme:alpha/data.php', $deps );
+		$this->assertContains( 'page:entry:page.tsx', $deps );
+		$this->assertSame( 'theme:alpha/index.php', get_post_meta( $post_id, '_blockstudio_page_template_path', true ) );
+		$this->assertIsArray( $render );
+		$this->assertSame( 'unit', $render['renderer'] );
+	}
+
+	/**
+	 * Adopting a site manifest keeps every post, key, slug, parent and URL.
+	 *
+	 * @return void
+	 */
+	public function test_adding_a_site_manifest_keeps_post_identity(): void {
+		$this->write_page( 'home', 'Home' );
+		$this->write_page( 'account', 'Account' );
+		$this->write_nested_page( 'account/purchases', 'account-purchases', 'Purchases', 'account/purchases' );
+		$first  = $this->reconcile( true );
+		$before = $this->identity( $first );
+		Pages::store_successful_source_identity( $first['sourceIdentity'] );
+
+		file_put_contents(
+			$this->pages_path . '/pages.json',
+			wp_json_encode(
+				array(
+					'collection' => 'acme',
+					'scope'      => 'site',
+					'postType'   => 'page',
+				)
+			)
+		);
+		$second = $this->reconcile();
+		$after  = $this->identity( $second );
+
+		$this->assertSame( $before, $after );
+		$this->assertSame( 0, $second['created'] );
+		$this->assertSame( 0, $second['removed'] );
+		$this->assertSame( 0, $second['failed'] );
+		$this->assertSame( array(), get_posts( array( 'post_type' => 'page', 'post_status' => 'trash', 'numberposts' => -1 ) ) );
+		$this->assertSame( 'acme', get_post_meta( $after['account-purchases']['postId'], '_blockstudio_page_collection', true ) );
+		$this->assertSame( 'account', get_post_meta( $after['account-purchases']['postId'], '_blockstudio_page_parent_key', true ) );
+		$this->assertCount( 3, Pages::pages( 'acme' ) );
+	}
+
+	/**
+	 * Collect the managed identity of every reconciled page.
+	 *
+	 * @param array $report Reconciliation report.
+	 *
+	 * @return array<string, array> Identity by page.
+	 */
+	private function identity( array $report ): array {
+		$identity = array();
+
+		foreach ( $report['pages'] as $name => $result ) {
+			$post_id           = (int) $result['postId'];
+			$identity[ $name ] = array(
+				'postId'    => $post_id,
+				'key'       => get_post_meta( $post_id, '_blockstudio_page_key', true ),
+				'slug'      => get_post_field( 'post_name', $post_id ),
+				'parent'    => (int) get_post_field( 'post_parent', $post_id ),
+				'permalink' => get_permalink( $post_id ),
+				'status'    => get_post_status( $post_id ),
+			);
+		}
+
+		ksort( $identity );
+
+		return $identity;
+	}
+
+	/**
+	 * Write one component page fixture.
+	 *
+	 * @param string $name  Page name.
+	 * @param string $title Page title.
+	 * @param bool   $slot  Whether the page keeps an index.php slot.
+	 *
+	 * @return void
+	 */
+	private function write_component( string $name, string $title, bool $slot = true ): void {
+		$directory = $this->pages_path . '/' . $name;
+		wp_mkdir_p( $directory );
+		file_put_contents(
+			$directory . '/page.json',
+			wp_json_encode(
+				array(
+					'name'       => $name,
+					'title'      => $title,
+					'slug'       => $name,
+					'postType'   => 'page',
+					'postStatus' => 'publish',
+					'render'     => array(
+						'entry' => 'page.tsx',
+						'data'  => 'data.php',
+					),
+				),
+				JSON_PRETTY_PRINT
+			)
+		);
+		file_put_contents( $directory . '/page.tsx', 'export default () => null' );
+		file_put_contents( $directory . '/data.php', '<?php return array();' );
+
+		if ( $slot ) {
+			file_put_contents( $directory . '/index.php', '<h1>' . esc_html( $title ) . '</h1>' );
+		} elseif ( file_exists( $directory . '/index.php' ) ) {
+			unlink( $directory . '/index.php' );
+		}
+	}
+
+	/**
+	 * Write one nested standalone page fixture.
+	 *
+	 * @param string $directory_path Relative directory.
+	 * @param string $name           Page name.
+	 * @param string $title          Page title.
+	 * @param string $path           Logical path.
+	 *
+	 * @return void
+	 */
+	private function write_nested_page( string $directory_path, string $name, string $title, string $path ): void {
+		$directory = $this->pages_path . '/' . $directory_path;
+		wp_mkdir_p( $directory );
+		file_put_contents(
+			$directory . '/page.json',
+			wp_json_encode(
+				array(
+					'name'       => $name,
+					'title'      => $title,
+					'slug'       => basename( $path ),
+					'path'       => $path,
+					'postType'   => 'page',
+					'postStatus' => 'publish',
+				)
+			)
+		);
+		file_put_contents( $directory . '/index.php', '<h1>' . esc_html( $title ) . '</h1>' );
 	}
 
 	/**

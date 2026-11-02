@@ -5,7 +5,9 @@
  * @package Blockstudio
  */
 
+use Blockstudio\Assets;
 use Blockstudio\Block;
+use Blockstudio\Page_Renderers;
 use Blockstudio\Runtime_Cache;
 use Blockstudio\Runtime_Settings;
 use Blockstudio\Settings;
@@ -37,6 +39,13 @@ class StaticPrerenderDependencyGraphTest extends TestCase {
 	private array $requests = array();
 
 	private bool $report = true;
+
+	/**
+	 * Component page the simulated request renders through its post content.
+	 *
+	 * @var int
+	 */
+	private int $component_id = 0;
 
 	protected function setUp(): void {
 		$this->root = trailingslashit( get_temp_dir() ) . 'blockstudio-prerender-dependencies-' . wp_generate_uuid4();
@@ -158,19 +167,27 @@ class StaticPrerenderDependencyGraphTest extends TestCase {
 			ob_start();
 			Static_Prerender_Runtime::maybe_serve_or_buffer();
 			apply_filters( 'template_include', $this->root . '/fixtures/page.php' );
-			echo '<!doctype html><html><body>';
-			echo Block::render( // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
-				array(
-					'blockstudio' => array(
-						'name'       => 'blockstudio/type-text',
-						'attributes' => array( 'text' => 'Graph' ),
+			if ( $this->component_id > 0 && url_to_postid( $url ) === $this->component_id ) {
+				Assets::init()->maybe_buffer_output();
+				$GLOBALS['post'] = get_post( $this->component_id ); // phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited
+				echo '<!doctype html><html><head></head><body>';
+				echo do_blocks( (string) get_post_field( 'post_content', $this->component_id ) ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
+				echo '</body></html>';
+			} else {
+				echo '<!doctype html><html><body>';
+				echo Block::render( // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
+					array(
+						'blockstudio' => array(
+							'name'       => 'blockstudio/type-text',
+							'attributes' => array( 'text' => 'Graph' ),
+						),
 					),
-				),
-				'',
-				'',
-				''
-			);
-			echo '</body></html>';
+					'',
+					'',
+					''
+				);
+				echo '</body></html>';
+			}
 			while ( ob_get_level() > $level + 1 ) {
 				ob_end_flush();
 			}
@@ -277,6 +294,70 @@ class StaticPrerenderDependencyGraphTest extends TestCase {
 		$this->assertSame( array(), $this->dependency_paths( $url ) );
 	}
 
+	public function test_a_component_page_records_its_entry_data_and_assets_in_the_stored_document(): void {
+		$component = $this->root . '/fixtures/component';
+		$asset     = WP_CONTENT_DIR . '/blockstudio-prerender-component-' . wp_generate_uuid4();
+		wp_mkdir_p( $component );
+		wp_mkdir_p( $asset );
+		file_put_contents( $component . '/page.tsx', 'export default () => null' );
+		file_put_contents( $component . '/data.php', '<?php return array();' );
+		file_put_contents( $component . '/props.json', '{}' );
+		file_put_contents( $asset . '/page.js', 'console.log("component");' );
+
+		Page_Renderers::reset();
+		Page_Renderers::register(
+			'unit',
+			array(
+				'extensions' => array( 'tsx' ),
+				'render'     => static fn( array $request ): array => array(
+					'html'         => '<main data-component="' . esc_attr( (string) $request['post_id'] ) . '">Component</main>',
+					'dependencies' => array( dirname( $request['entry'] ) . '/props.json' ),
+					'assets'       => array( array( 'path' => $asset . '/page.js' ) ),
+				),
+			)
+		);
+
+		$this->component_id = (int) wp_insert_post(
+			array(
+				'post_title'   => 'dependency-graph-component',
+				'post_name'    => 'dependency-graph-component',
+				'post_status'  => 'publish',
+				'post_type'    => 'page',
+				'post_content' => '<!-- wp:blockstudio/page /-->',
+			)
+		);
+		update_post_meta(
+			$this->component_id,
+			'_blockstudio_page_render',
+			array(
+				'renderer' => 'unit',
+				'entry'    => $component . '/page.tsx',
+				'data'     => $component . '/data.php',
+			)
+		);
+
+		try {
+			$url    = get_permalink( $this->component_id );
+			$report = Static_Prerender_Batch_Renderer::render( array( $url ) );
+			$paths  = $this->dependency_paths( $url );
+			$html   = $this->stored_document( $url );
+		} finally {
+			wp_delete_post( $this->component_id, true );
+			$this->component_id = 0;
+			Page_Renderers::reset();
+			Assets::reset_request_state();
+			$this->remove_directory( $asset );
+		}
+
+		$this->assertSame( 1, $report['rendered'], wp_json_encode( $report ) );
+		$this->assertContains( wp_normalize_path( $component . '/page.tsx' ), $paths );
+		$this->assertContains( wp_normalize_path( $component . '/data.php' ), $paths );
+		$this->assertContains( wp_normalize_path( $component . '/props.json' ), $paths );
+		$this->assertStringContainsString( '<main data-component="', $html );
+		$this->assertStringNotContainsString( '<!--blockstudio-assets/', $html );
+		$this->assertMatchesRegularExpression( "#<script type='module'[^>]*id='blockstudio-owner-page-[^']*-page-js'[^>]*src='[^']*/page[^']*\.js\?ver=\d+'></script></body>#", $html );
+	}
+
 	/**
 	 * @param array<string,mixed> $args Request arguments.
 	 *
@@ -315,6 +396,16 @@ class StaticPrerenderDependencyGraphTest extends TestCase {
 		$paths  = is_array( $record['dependencyPaths'] ?? null ) ? $record['dependencyPaths'] : array();
 
 		return array_values( array_map( 'wp_normalize_path', $paths ) );
+	}
+
+	/**
+	 * @return string The stored HTML document of a route.
+	 */
+	private function stored_document( string $url ): string {
+		$record = ( new ReflectionMethod( Static_Prerender_Runtime::class, 'index_record_for_url' ) )->invoke( null, $url );
+		$file   = ( new ReflectionMethod( Static_Prerender_Runtime::class, 'cache_file' ) )->invoke( null, (string) ( $record['cacheKey'] ?? '' ) );
+
+		return is_file( $file ) ? (string) file_get_contents( $file ) : '';
 	}
 
 	/**

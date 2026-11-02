@@ -4,6 +4,8 @@ declare (strict_types=1);
 namespace BlockstudioVendor\TailwindPHP\Utilities;
 
 use function BlockstudioVendor\TailwindPHP\Ast\decl;
+use function BlockstudioVendor\TailwindPHP\Utils\inferDataType;
+use function BlockstudioVendor\TailwindPHP\Utils\isPositiveInteger;
 /**
  * SVG Utilities
  *
@@ -33,13 +35,28 @@ function registerSvgUtilities(UtilityBuilder $builder): void
     // Stroke
     // ==================================================
     $builder->staticUtility('stroke-none', [['stroke', 'none']]);
-    // stroke color utility (functional to handle both color and width)
-    $builder->colorUtility('stroke', ['themeKeys' => ['--stroke', '--color'], 'handle' => function ($value) {
-        return [decl('stroke', $value)];
-    }]);
-    // stroke-width values (0, 1, 2)
-    foreach (['0', '1', '2'] as $value) {
-        $width = $value === '0' ? '0' : "{$value}px";
-        $builder->staticUtility("stroke-{$value}", [['stroke-width', $width]]);
-    }
+    $builder->getUtilities()->functional('stroke', function (array $candidate) use ($theme) {
+        if (!isset($candidate['value'])) {
+            return null;
+        }
+        $modifier = $candidate['modifier'] ?? null;
+        $value = $candidate['value']['value'];
+        if ($candidate['value']['kind'] === 'arbitrary') {
+            $type = $candidate['value']['dataType'] ?? inferDataType($value, ['color', 'number', 'length', 'percentage']);
+            if (in_array($type, ['number', 'length', 'percentage'], \true)) {
+                return $modifier === null ? [decl('stroke-width', $value)] : null;
+            }
+            $value = asColor($value, $modifier, $theme);
+            return $value !== null ? [decl('stroke', $value)] : null;
+        }
+        $color = resolveThemeColor($candidate, $theme, ['--stroke', '--color']);
+        if ($color !== null) {
+            return [decl('stroke', $color)];
+        }
+        $width = $theme->resolve($value, ['--stroke-width']);
+        if ($width !== null) {
+            return [decl('stroke-width', $width)];
+        }
+        return isPositiveInteger($value) ? [decl('stroke-width', $value)] : null;
+    });
 }

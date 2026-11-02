@@ -86,19 +86,19 @@ function substituteAtApply(array &$ast, DesignSystem $designSystem): int
     // For @utility nodes: substitute @apply first (recursively), then register immediately
     // This ensures dependencies are registered before dependents try to use them
     foreach ($sorted as $pathKey) {
+        // Recursively substitute every @apply in the node's subtree. Matching
+        // apply.ts, each parent gets a full `walk()` over its children so nested
+        // rules are handled in place; we cannot defer nested rules to their own
+        // path entry because substituting a multi-declaration @apply shifts the
+        // indices of the following siblings, invalidating their tracked paths.
+        substituteApplyInNode($root['nodes'], $pathKey, $designSystem);
         if (isset($utilityNodes[$pathKey])) {
-            // For @utility: substitute @apply recursively (handles nested rules like &:hover)
-            substituteApplyInNode($root['nodes'], $pathKey, $designSystem, recursive: \true);
             // Register the utility immediately after substitution
             $node = getNodeAtPath($root['nodes'], (string) $pathKey);
             if ($node !== null) {
                 registerCssUtility($node, $designSystem);
             }
             $processedUtilities[$pathKey] = \true;
-        } else {
-            // For non-@utility nodes: only substitute direct children @apply
-            // Nested @apply rules will be handled when their parent path is processed
-            substituteApplyInNode($root['nodes'], $pathKey, $designSystem, recursive: \false);
         }
     }
     // Register any @utility nodes that weren't processed (those without @apply)
@@ -153,22 +153,11 @@ function registerCssUtility(array $node, DesignSystem $designSystem): void
     if ($node['kind'] !== 'at-rule' || $node['name'] !== '@utility') {
         return;
     }
-    $name = $node['params'];
-    // Get all nodes (declarations, nested rules, etc.)
-    $nodes = $node['nodes'] ?? [];
-    // Functional utilities end with -*
-    if (str_ends_with($name, '-*')) {
-        $utilityName = substr($name, 0, -2);
-        $designSystem->getUtilities()->functional($utilityName, function (array $candidate) use ($nodes) {
-            if (!isset($candidate['value'])) {
-                return null;
-            }
-            // Deep clone to avoid mutation
-            return array_map(fn($child) => cloneUtilityNode($child), $nodes);
-        });
-    } else {
-        // Static utility - return all nodes (declarations, nested rules, etc.)
-        $designSystem->getUtilities()->static($name, fn() => array_map(fn($child) => cloneUtilityNode($child), $nodes));
+    // Delegate to createCssUtility so functional utilities get the full
+    // `--value(…)` / `--modifier(…)` / `--default(…)` resolution engine.
+    $register = createCssUtility($node);
+    if ($register !== null) {
+        $register($designSystem);
     }
 }
 /**
@@ -218,6 +207,18 @@ function collectApplyInfo(array &$ast, array $currentPath, array &$parentsWithAp
                                 $dependencies[$pathKey] = [];
                             }
                             $dependencies[$pathKey][$dependency] = \true;
+                            // Mark every ancestor rule that also uses @apply as
+                            // depending on this utility, mirroring apply.ts's
+                            // walk over ctx.path(). Because substitution is
+                            // recursive, an ancestor's pass resolves this nested
+                            // @apply, so the ancestor must be topologically
+                            // sorted after the utility it depends on.
+                            for ($ancestorDepth = count($nodePath) - 1; $ancestorDepth >= 1; $ancestorDepth--) {
+                                $ancestorKey = implode('.', array_slice($nodePath, 0, $ancestorDepth));
+                                if (isset($parentsWithApply[$ancestorKey])) {
+                                    $dependencies[$ancestorKey][$dependency] = \true;
+                                }
+                            }
                         }
                     }
                 }
@@ -282,15 +283,15 @@ function collectApplyInfo(array &$ast, array $currentPath, array &$parentsWithAp
 /**
  * Substitute @apply rules in a node at the given path.
  *
- * For regular nodes, only substitutes @apply rules that are DIRECT children.
- * This is because nested @apply rules will be handled when their parent path is processed.
+ * Recursively substitutes every @apply at-rule in the node's subtree via
+ * walk(), so nested child rules are resolved in place. This mirrors apply.ts,
+ * which runs a single walk() per sorted parent.
  *
  * @param array &$ast The AST (the nodes array, not wrapped)
  * @param string $pathKey The path to the node (e.g., "0" or "0.1.2")
  * @param DesignSystem $designSystem
- * @param bool $recursive Whether to recursively process nested @apply rules
  */
-function substituteApplyInNode(array &$ast, string $pathKey, DesignSystem $designSystem, bool $recursive = \false): void
+function substituteApplyInNode(array &$ast, string $pathKey, DesignSystem $designSystem): void
 {
     $path = explode('.', $pathKey);
     $path = array_map('intval', $path);
@@ -312,31 +313,41 @@ function substituteApplyInNode(array &$ast, string $pathKey, DesignSystem $desig
     if (!isset($current['nodes'])) {
         return;
     }
-    if ($recursive) {
-        // For @utility nodes, use walk to recursively find and replace all @apply rules
-        walk($current['nodes'], function (&$child) use ($designSystem) {
-            if (!isset($child['kind']) || $child['kind'] !== 'at-rule' || $child['name'] !== '@apply') {
-                return WalkAction::Continue;
-            }
-            $newNodes = compileApplyAtRule($child, $designSystem);
-            return WalkAction::Replace($newNodes);
-        });
-    } else {
-        // For regular nodes, only substitute direct children @apply rules
-        $newNodes = [];
-        foreach ($current['nodes'] as $child) {
-            if (!isset($child['kind']) || $child['kind'] !== 'at-rule' || $child['name'] !== '@apply') {
-                $newNodes[] = $child;
-                continue;
-            }
-            // Substitute this @apply
-            $replacements = compileApplyAtRule($child, $designSystem);
-            foreach ($replacements as $node) {
-                $newNodes[] = $node;
+    // Use walk to recursively find and replace all @apply rules in the subtree
+    walk($current['nodes'], function (&$child) use ($designSystem) {
+        if (!isset($child['kind']) || $child['kind'] !== 'at-rule' || $child['name'] !== '@apply') {
+            return WalkAction::Continue;
+        }
+        // Categorize the applied names: dashed idents indicate CSS mixins
+        // (https://drafts.csswg.org/css-mixins-1/#apply-rule)
+        $parts = array_values(array_filter(preg_split('/\s+/', trim($child['params'])), fn($p) => $p !== ''));
+        $normalIdents = [];
+        $dashedIdents = [];
+        foreach ($parts as $part) {
+            if (str_starts_with($part, '--')) {
+                $dashedIdents[] = $part;
+            } else {
+                $normalIdents[] = $part;
             }
         }
-        $current['nodes'] = $newNodes;
-    }
+        if (!empty($dashedIdents)) {
+            // An `@apply` consisting only of dashed idents is a CSS mixin;
+            // these are not utilities and must be emitted literally.
+            if (empty($normalIdents)) {
+                return WalkAction::Skip;
+            }
+            // Mixing mixins and our `@apply` behavior is invalid; the rules
+            // must be written separately.
+            $list = implode(' ', $dashedIdents);
+            throw new \Exception("You cannot use `@apply` with both mixins and utilities. Please move `@apply {$list}` into a separate rule.");
+        }
+        if (!empty($child['nodes']) && !empty($normalIdents)) {
+            $list = implode(' ', $normalIdents);
+            throw new \Exception("The rule `@apply {$list}` must not have a body.");
+        }
+        $newNodes = compileApplyAtRule($child, $designSystem);
+        return WalkAction::Replace($newNodes);
+    });
 }
 /**
  * Compile an @apply at-rule and return replacement nodes.

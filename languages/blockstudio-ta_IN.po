@@ -28,6 +28,14 @@ msgid "This storage key is not declared by the block or its extensions."
 msgstr "இந்த சேமிப்பக விசை பிளாக் அல்லது அதன் நீட்டிப்புகளால் அறிவிக்கப்படவில்லை."
 
 #: includes/classes/block-validator.php
+msgid "This top-level key is not an attribute of the block, so it is ignored."
+msgstr "இந்த மேல்நிலை விசை தொகுதியின் பண்புக்கூறு அல்ல; எனவே புறக்கணிக்கப்படுகிறது."
+
+#: includes/classes/block-validator.php
+msgid "This key is only read inside the blockstudio object, which is missing."
+msgstr "இந்த விசை blockstudio பொருளுக்குள் மட்டுமே படிக்கப்படுகிறது; அந்தப் பொருள் இல்லை."
+
+#: includes/classes/block-validator.php
 msgid "This value is not among the field options."
 msgstr "இந்த மதிப்பு புல விருப்பங்களில் இல்லை."
 

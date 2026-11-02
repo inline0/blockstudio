@@ -32,8 +32,11 @@ function constantFoldDeclaration(string $input, ?int $rem = null): string
 {
     $folded = \false;
     $valueAst = ValueParser\parse($input);
-    ValueParser\walk($valueAst, ['exit' => function (&$valueNode) use (&$folded, $rem) {
-        // Canonicalize dimensions to their simplest form
+    ValueParser\walk($valueAst, ['exit' => function (&$valueNode, $ctx) use (&$folded, $rem) {
+        // Canonicalize dimensions to their simplest form. This includes:
+        // - Convert `-0`, `+0`, `0.0`, … to `0`
+        // - Convert `-0px`, `+0em`, `0.0rem`, … to `0<unit>`
+        // - Convert units to an equivalent unit
         if ($valueNode['kind'] === 'word' && $valueNode['value'] !== '0') {
             $canonical = canonicalizeDimension($valueNode['value'], $rem);
             if ($canonical === null) {
@@ -43,6 +46,24 @@ function constantFoldDeclaration(string $input, ?int $rem = null): string
             if ($canonical === $valueNode['value']) {
                 return;
                 // Already in canonical form
+            }
+            // We need to be careful with `0` because `0<unit>` can only be
+            // converted to `0` if we're dealing with a `<length>` type.
+            if ($canonical === '0') {
+                // When used inside of a function such as `calc(…)`, then
+                // this isn't always safe to convert to `0`.
+                //
+                // E.g.:
+                // - `calc(0px + 1rem)` -> `calc(0 + 1rem)` goes from valid to invalid
+                // - `calc(0px * 1rem)` -> `calc(0 * 1rem)` goes from invalid to valid
+                if (($ctx['parent']['kind'] ?? null) === 'function') {
+                    $withUnit = canonicalizeDimension($valueNode['value'], $rem, \false);
+                    if ($withUnit === null) {
+                        return;
+                    }
+                    $folded = \true;
+                    return ValueParser\WalkAction::ReplaceSkip(ValueParser\word($withUnit));
+                }
             }
             $folded = \true;
             return ValueParser\WalkAction::ReplaceSkip(ValueParser\word($canonical));
@@ -66,6 +87,24 @@ function constantFoldDeclaration(string $input, ?int $rem = null): string
             // Nullify entire expression when multiplying by `0`
             if ($operator === '*' && ($lhs !== null && $lhs[0] === 0.0 && $lhs[1] === null || $rhs !== null && $rhs[0] === 0.0 && $rhs[1] === null)) {
                 $folded = \true;
+                return ValueParser\WalkAction::ReplaceSkip(ValueParser\word('0'));
+            }
+            // Fold `0<unit> * something-without-unit` to just `0<unit>`,
+            // inside of a function such as `calc(…)`
+            if ($operator === '*' && $lhs !== null && $lhs[0] == 0.0 && $lhs[1] !== null && $rhs !== null && $rhs[1] === null) {
+                $folded = \true;
+                if (($ctx['parent']['kind'] ?? null) === 'function') {
+                    return ValueParser\WalkAction::ReplaceSkip(ValueParser\word("0{$lhs[1]}"));
+                }
+                return ValueParser\WalkAction::ReplaceSkip(ValueParser\word('0'));
+            }
+            // Fold `something-without-unit * 0<unit>` to just `0<unit>`,
+            // inside of a function such as `calc(…)`
+            if ($operator === '*' && $rhs !== null && $rhs[0] == 0.0 && $rhs[1] !== null && $lhs !== null && $lhs[1] === null) {
+                $folded = \true;
+                if (($ctx['parent']['kind'] ?? null) === 'function') {
+                    return ValueParser\WalkAction::ReplaceSkip(ValueParser\word("0{$rhs[1]}"));
+                }
                 return ValueParser\WalkAction::ReplaceSkip(ValueParser\word('0'));
             }
             // We're not dealing with dimensions, so we can't fold this
@@ -101,10 +140,18 @@ function constantFoldDeclaration(string $input, ?int $rem = null): string
                     break;
                 case '/':
                     if ($rhs[0] != 0 && ($lhs[1] === null && $rhs[1] === null || $lhs[1] !== null && $rhs[1] === null)) {
+                        $computed = $lhs[0] / $rhs[0];
+                        // Only fold with .xx precision, anything beyond
+                        // that might be a bit too much.
+                        //
+                        // E.g. 100% / 3.5 = 28.571428571428573%, which is
+                        //      correct but not as user friendly.
+                        if (round($computed * 100) / 100 != $computed) {
+                            break;
+                        }
                         $folded = \true;
-                        $result = $lhs[0] / $rhs[0];
                         $unit = $lhs[1] ?? '';
-                        return ValueParser\WalkAction::ReplaceSkip(ValueParser\word("{$result}{$unit}"));
+                        return ValueParser\WalkAction::ReplaceSkip(ValueParser\word("{$computed}{$unit}"));
                     }
                     break;
             }
@@ -119,7 +166,7 @@ function constantFoldDeclaration(string $input, ?int $rem = null): string
  * @param int|null $rem The root font size in pixels
  * @return string|null The canonicalized dimension or null
  */
-function canonicalizeDimension(string $input, ?int $rem = null): ?string
+function canonicalizeDimension(string $input, ?int $rem = null, bool $normalizeUnit = \true): ?string
 {
     $dimension = Dimensions::get($input);
     if ($dimension === null) {
@@ -140,7 +187,15 @@ function canonicalizeDimension(string $input, ?int $rem = null): ?string
     }
     // Replace `0<length>` units with just `0`
     if ($value == 0.0 && isLength($input)) {
-        return '0';
+        if ($normalizeUnit) {
+            return '0';
+        }
+        return "0{$unit}";
+        // Keep unit
+    }
+    // Only normalize into base units when necessary
+    if (!$normalizeUnit) {
+        return $input;
     }
     // Convert to canonical units
     switch (strtolower($unit)) {

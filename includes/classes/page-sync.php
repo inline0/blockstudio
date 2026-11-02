@@ -23,7 +23,7 @@ class Page_Sync {
 	/**
 	 * Version of the page serialization and managed-meta contract.
 	 */
-	public const SYNC_ENGINE_VERSION = '5';
+	public const SYNC_ENGINE_VERSION = '6';
 
 	/**
 	 * The HTML parser instance.
@@ -248,6 +248,20 @@ class Page_Sync {
 			}
 		}
 
+		$render = self::render_definition( $page_data ) ?? array();
+
+		foreach ( array( 'entry', 'data' ) as $role ) {
+			if ( ! is_string( $render[ $role ] ?? null ) || '' === $render[ $role ] ) {
+				continue;
+			}
+
+			$dependencies[] = 'page:' . $role . ':' . basename( wp_normalize_path( $render[ $role ] ) );
+			$portable_path  = $this->portable_theme_path( $render[ $role ] );
+			if ( null !== $portable_path ) {
+				$dependencies[] = $portable_path;
+			}
+		}
+
 		return array_values( array_unique( $dependencies ) );
 	}
 
@@ -426,12 +440,15 @@ class Page_Sync {
 	 * @return array Normalized page data.
 	 */
 	private function prepare_page_data( array $page_data ): array {
+		$site_scope = 'site' === ( $page_data['collection_scope'] ?? null );
+
 		if ( ! empty( $page_data['name'] ) ) {
-			$collection       = ! empty( $page_data['collection'] ) ? (string) $page_data['collection'] : null;
+			$collection       = ! empty( $page_data['collection'] ) && ! $site_scope ? (string) $page_data['collection'] : null;
 			$page_data['key'] = Page_Discovery::page_key( $collection, (string) $page_data['name'] );
 		}
 
 		if (
+			! $site_scope &&
 			! empty( $page_data['collection'] ) &&
 			! empty( $page_data['path'] ) &&
 			'.' !== $page_data['path'] &&
@@ -463,6 +480,10 @@ class Page_Sync {
 	 * @return array The parsed block array.
 	 */
 	private function get_parsed_blocks( array $page_data ): array {
+		if ( 'component' === ( $page_data['contentType'] ?? null ) ) {
+			return array( $this->component_block( $page_data ) );
+		}
+
 		$template_content = $this->get_template_content( $page_data );
 		$content_type     = $page_data['contentType'] ?? 'php';
 
@@ -472,6 +493,10 @@ class Page_Sync {
 			if ( ! empty( $page_data['sanitize_content'] ) ) {
 				$template_content = Page_Markdown::sanitize_docs_html( $template_content );
 			}
+
+			if ( is_array( $page_data['markdown_render'] ?? null ) ) {
+				return array( $this->markdown_component_block( $template_content ) );
+			}
 		} elseif ( 'html' === $content_type && ! empty( $page_data['sanitize_content'] ) ) {
 			$template_content = Page_Markdown::sanitize_docs_html( $template_content );
 		}
@@ -480,6 +505,65 @@ class Page_Sync {
 		$this->dropped_attributes = self::dropped_attributes( $blocks );
 
 		return $this->apply_template_overrides( $blocks );
+	}
+
+	/**
+	 * Build the stored block of a component page.
+	 *
+	 * A component page stores one `blockstudio/page` block. A slot source, the
+	 * page's `index.*` file or inline content, is parsed as any page source and
+	 * becomes its inner blocks.
+	 *
+	 * @param array $page_data Page data.
+	 *
+	 * @return array Parsed `blockstudio/page` block.
+	 */
+	private function component_block( array $page_data ): array {
+		$inner     = array();
+		$slot_type = $page_data['slot_content_type'] ?? null;
+
+		if ( is_string( $slot_type ) && '' !== $slot_type ) {
+			$slot                = $page_data;
+			$slot['contentType'] = $slot_type;
+			$inner               = $this->get_parsed_blocks( $slot );
+		}
+
+		$inner_content = array() === $inner
+			? array()
+			: array_merge( array_merge( ...array_fill( 0, count( $inner ), array( "\n", null ) ) ), array( "\n" ) );
+
+		return array(
+			'blockName'    => Page_Component::BLOCK_NAME,
+			'attrs'        => array(),
+			'innerBlocks'  => $inner,
+			'innerHTML'    => implode( '', array_filter( $inner_content, 'is_string' ) ),
+			'innerContent' => $inner_content,
+		);
+	}
+
+	/**
+	 * Build the stored block of a Markdown page that a component renders.
+	 *
+	 * The Markdown stays the page's source. Its HTML is the block's inner
+	 * HTML rather than parsed blocks, so `post_content` keeps the document
+	 * text and the renderer receives it as the slot.
+	 *
+	 * @since 7.7.11
+	 *
+	 * @param string $html Converted Markdown.
+	 *
+	 * @return array Parsed `blockstudio/page` block.
+	 */
+	private function markdown_component_block( string $html ): array {
+		$html = '' === trim( $html ) ? '' : "\n" . trim( $html ) . "\n";
+
+		return array(
+			'blockName'    => Page_Component::BLOCK_NAME,
+			'attrs'        => array(),
+			'innerBlocks'  => array(),
+			'innerHTML'    => $html,
+			'innerContent' => '' === $html ? array() : array( $html ),
+		);
 	}
 
 	/**
@@ -1086,6 +1170,95 @@ class Page_Sync {
 		} else {
 			delete_post_meta( $post_id, '_blockstudio_page_layout' );
 		}
+
+		$layout_renderer = is_string( $page_data['layout_renderer'] ?? null ) && '' !== $layout_path ? $page_data['layout_renderer'] : '';
+
+		if ( '' !== $layout_renderer ) {
+			update_post_meta( $post_id, '_blockstudio_page_layout_renderer', $layout_renderer );
+		} else {
+			delete_post_meta( $post_id, '_blockstudio_page_layout_renderer' );
+		}
+
+		$render = self::encoded_render( $page_data );
+
+		if ( null !== $render ) {
+			update_post_meta( $post_id, '_blockstudio_page_render', $render );
+		} else {
+			delete_post_meta( $post_id, '_blockstudio_page_render' );
+		}
+	}
+
+	/**
+	 * Encode the render definition of a component page for storage.
+	 *
+	 * @since 7.7.11
+	 *
+	 * @param array $page_data Page data.
+	 *
+	 * @return array{renderer:string,entry:string,data:string}|null Portable render definition.
+	 */
+	public static function encoded_render( array $page_data ): ?array {
+		$render = self::render_definition( $page_data );
+
+		if ( ! is_array( $render ) || ! is_string( $render['renderer'] ?? null ) || ! is_string( $render['entry'] ?? null ) ) {
+			return null;
+		}
+
+		return array(
+			'renderer' => $render['renderer'],
+			'entry'    => Page_Paths::encode( $render['entry'] ),
+			'data'     => is_string( $render['data'] ?? null ) && '' !== $render['data'] ? Page_Paths::encode( $render['data'] ) : '',
+		);
+	}
+
+	/**
+	 * The render definition of a component page or a component-rendered
+	 * Markdown page.
+	 *
+	 * @since 7.7.11
+	 *
+	 * @param array $page_data Page data.
+	 *
+	 * @return array|null Render definition.
+	 */
+	private static function render_definition( array $page_data ): ?array {
+		foreach ( array( 'render', 'markdown_render' ) as $key ) {
+			if ( is_array( $page_data[ $key ] ?? null ) ) {
+				return $page_data[ $key ];
+			}
+		}
+
+		return null;
+	}
+
+	/**
+	 * Read the stored render definition of a component page.
+	 *
+	 * @since 7.7.11
+	 *
+	 * @param int $post_id Post ID.
+	 *
+	 * @return array{renderer:string,entry:string,data:string|null}|null Render definition with current paths.
+	 */
+	public static function stored_render( int $post_id ): ?array {
+		$render = get_post_meta( $post_id, '_blockstudio_page_render', true );
+
+		if ( ! is_array( $render ) || ! is_string( $render['renderer'] ?? null ) || ! is_string( $render['entry'] ?? null ) ) {
+			return null;
+		}
+
+		$entry = Page_Paths::resolve( $render['entry'] );
+		$data  = is_string( $render['data'] ?? null ) && '' !== $render['data'] ? Page_Paths::resolve( $render['data'] ) : '';
+
+		if ( '' === $entry ) {
+			return null;
+		}
+
+		return array(
+			'renderer' => $render['renderer'],
+			'entry'    => $entry,
+			'data'     => '' !== $data ? $data : null,
+		);
 	}
 
 	/**
@@ -1373,6 +1546,13 @@ class Page_Sync {
 			'meta'         => $this->normalize_fingerprint_value( $page_data['meta'] ?? array() ),
 			'files'        => $this->fingerprint_files( $page_data ),
 		);
+
+		$render = self::encoded_render( $page_data );
+
+		if ( null !== $render ) {
+			$parts['render'] = $this->normalize_fingerprint_value( $render );
+			$parts['slot']   = $page_data['slot_content_type'] ?? null;
+		}
 
 		$encoded = wp_json_encode( $parts );
 

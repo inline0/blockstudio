@@ -1,7 +1,9 @@
 <?php
 
 use Blockstudio\Page_Discovery;
+use Blockstudio\Page_Paths;
 use Blockstudio\Page_Registry;
+use Blockstudio\Page_Renderers;
 use Blockstudio\Page_Sync;
 use Blockstudio\Pages;
 use PHPUnit\Framework\Attributes\PreserveGlobalState;
@@ -53,6 +55,7 @@ class PagesTest extends TestCase {
 
 	protected function tearDown(): void {
 		Pages::reset();
+		Page_Renderers::reset();
 	}
 
 	// pages()
@@ -270,7 +273,7 @@ class PagesTest extends TestCase {
 	}
 
 	public function test_page_data_has_required_keys(): void {
-		$page = Pages::get_page( 'blockstudio-e2e-test' );
+		$page          = Pages::get_page( 'blockstudio-e2e-test' );
 		$expected_keys = array( 'name', 'title', 'slug', 'postType', 'templateLock', 'template_path', 'json_path', 'directory', 'source_path' );
 
 		foreach ( $expected_keys as $key ) {
@@ -616,13 +619,27 @@ class PagesTest extends TestCase {
 
 		file_put_contents(
 			$parent_root . '/page.json',
-			wp_json_encode( array( 'name' => 'account', 'title' => 'Account', 'slug' => 'account', 'path' => 'account' ) )
+			wp_json_encode(
+				array(
+					'name'  => 'account',
+					'title' => 'Account',
+					'slug'  => 'account',
+					'path'  => 'account',
+				)
+			)
 		);
 		file_put_contents( $parent_root . '/index.php', '<h1>Account</h1>' );
 
 		file_put_contents(
 			$child_root . '/page.json',
-			wp_json_encode( array( 'name' => 'account-purchases', 'title' => 'Purchases', 'slug' => 'purchases', 'path' => 'account/purchases' ) )
+			wp_json_encode(
+				array(
+					'name'  => 'account-purchases',
+					'title' => 'Purchases',
+					'slug'  => 'purchases',
+					'path'  => 'account/purchases',
+				)
+			)
 		);
 		file_put_contents( $child_root . '/index.php', '<h1>Purchases</h1>' );
 
@@ -720,12 +737,12 @@ class PagesTest extends TestCase {
 
 		$this->assertSame( $signature, $signature_method->invoke( null, $collections ) );
 
-		$post_type_changed                 = $collections;
+		$post_type_changed                = $collections;
 		$post_type_changed[0]['postType'] = $post_type_changed[0]['postType'] . '_next';
 
 		$this->assertNotSame( $signature, $signature_method->invoke( null, $post_type_changed ) );
 
-		$rewrite_changed                                      = $collections;
+		$rewrite_changed                                       = $collections;
 		$rewrite_changed[0]['postTypeArgs']['rewrite']['slug'] = ( $rewrite_changed[0]['postTypeArgs']['rewrite']['slug'] ?? $rewrite_changed[0]['slug'] ) . '-next';
 
 		$this->assertNotSame( $signature, $signature_method->invoke( null, $rewrite_changed ) );
@@ -779,7 +796,7 @@ class PagesTest extends TestCase {
 	}
 
 	#[RunInSeparateProcess]
-	#[PreserveGlobalState(false)]
+	#[PreserveGlobalState( false )]
 	public function test_cli_rewrite_generation_preserves_collection_routes(): void {
 		define( 'WP_CLI', true );
 
@@ -946,8 +963,8 @@ class PagesTest extends TestCase {
 		$keep_post_id = Pages::get_post_id( 'docs-getting-started' );
 		$sync         = new Page_Sync();
 		$fingerprint  = $sync->fingerprint( $page_data );
-		$engine        = Page_Sync::engine_fingerprint();
-		$duplicate_id  = wp_insert_post(
+		$engine       = Page_Sync::engine_fingerprint();
+		$duplicate_id = wp_insert_post(
 			array(
 				'post_title'   => $page_data['title'],
 				'post_name'    => $page_data['slug'],
@@ -1029,9 +1046,9 @@ class PagesTest extends TestCase {
 
 	public function test_portable_and_legacy_page_paths_hydrate_without_sync_or_writes(): void {
 		$post_id = Pages::get_post_id( 'docs-install' );
-		$root = wp_normalize_path( get_stylesheet_directory() );
-		$keys = array( '_blockstudio_page_template_path', '_blockstudio_page_content_path', '_blockstudio_page_layout', '_blockstudio_page_directory' );
-		$stored = array();
+		$root    = wp_normalize_path( get_stylesheet_directory() );
+		$keys    = array( '_blockstudio_page_template_path', '_blockstudio_page_content_path', '_blockstudio_page_layout', '_blockstudio_page_directory' );
+		$stored  = array();
 		foreach ( $keys as $key ) {
 			$stored[ $key ] = get_post_meta( $post_id, $key, true );
 			$this->assertStringStartsWith( 'theme:', $stored[ $key ] );
@@ -1039,7 +1056,7 @@ class PagesTest extends TestCase {
 			update_post_meta( $post_id, $key, '/old-server/wp-content/themes/' . basename( $root ) . substr( $absolute, strlen( $root ) ) );
 		}
 		$writes = 0;
-		$track = static function ( mixed $meta_id, int $id ) use ( &$writes, $post_id ): void {
+		$track  = static function ( mixed $meta_id, int $id ) use ( &$writes, $post_id ): void {
 			if ( $id === $post_id ) {
 				++$writes;
 			}
@@ -1066,34 +1083,39 @@ class PagesTest extends TestCase {
 
 	public function test_legacy_paths_reach_frontend_layout_and_prerender_dependency_consumers(): void {
 		$post_id = Pages::get_post_id( 'docs-install' );
-		$root = wp_normalize_path( get_stylesheet_directory() );
-		$stored = array();
+		$root    = wp_normalize_path( get_stylesheet_directory() );
+		$stored  = array();
 		foreach ( array( '_blockstudio_page_template_path', '_blockstudio_page_content_path', '_blockstudio_page_layout' ) as $key ) {
 			$stored[ $key ] = get_post_meta( $post_id, $key, true );
-			$current = \Blockstudio\Page_Paths::resolve( $stored[ $key ] );
+			$current        = \Blockstudio\Page_Paths::resolve( $stored[ $key ] );
 			update_post_meta( $post_id, $key, '/old-server/wp-content/themes/' . basename( $root ) . substr( $current, strlen( $root ) ) );
 		}
-		$query = $GLOBALS['wp_query'];
+		$query      = $GLOBALS['wp_query'];
 		$main_query = $GLOBALS['wp_the_query'];
-		$post = $GLOBALS['post'] ?? null;
-		$screen = $GLOBALS['current_screen'] ?? null;
+		$post       = $GLOBALS['post'] ?? null;
+		$screen     = $GLOBALS['current_screen'] ?? null;
 		try {
 			unset( $GLOBALS['current_screen'] );
 			Pages::reset();
-			$GLOBALS['wp_query'] = new WP_Query( array( 'p' => $post_id, 'post_type' => 'bs_docs' ) );
-			$GLOBALS['wp_the_query'] = $GLOBALS['wp_query'];
+			$GLOBALS['wp_query']              = new WP_Query(
+				array(
+					'p'         => $post_id,
+					'post_type' => 'bs_docs',
+				)
+			);
+			$GLOBALS['wp_the_query']          = $GLOBALS['wp_query'];
 			$GLOBALS['wp_query']->in_the_loop = true;
-			$GLOBALS['post'] = get_post( $post_id );
+			$GLOBALS['post']                  = get_post( $post_id );
 			$this->assertStringContainsString( 'data-docs-layout', Pages::render_layout_content( '<p>Legacy content</p>' ) );
-			$method = new ReflectionMethod( \Blockstudio\Static_Prerender_Runtime::class, 'page_source_dependencies' );
+			$method       = new ReflectionMethod( \Blockstudio\Static_Prerender_Runtime::class, 'page_source_dependencies' );
 			$dependencies = $method->invoke( null );
 			$this->assertContains( $root . '/pages/docs/guide/install/index.md', $dependencies );
 			$this->assertContains( $root . '/pages/docs/layout.php', $dependencies );
 			$this->assertContains( $root . '/pages/docs/pages.json', $dependencies );
 		} finally {
-			$GLOBALS['wp_query'] = $query;
-			$GLOBALS['wp_the_query'] = $main_query;
-			$GLOBALS['post'] = $post;
+			$GLOBALS['wp_query']       = $query;
+			$GLOBALS['wp_the_query']   = $main_query;
+			$GLOBALS['post']           = $post;
 			$GLOBALS['current_screen'] = $screen;
 			foreach ( $stored as $key => $value ) {
 				update_post_meta( $post_id, $key, $value );
@@ -1103,13 +1125,21 @@ class PagesTest extends TestCase {
 	}
 
 	public function test_explicit_sync_migrates_legacy_locations_in_place(): void {
-		$page = Pages::get_page( 'docs-install' );
+		$page    = Pages::get_page( 'docs-install' );
 		$post_id = Pages::get_post_id( 'docs-install' );
-		$root = wp_normalize_path( get_stylesheet_directory() );
+		$root    = wp_normalize_path( get_stylesheet_directory() );
 		update_post_meta( $post_id, '_blockstudio_page_template_path', '/old-server/wp-content/themes/' . basename( $root ) . '/pages/docs/guide/install/index.md' );
 		$this->assertSame( $post_id, ( new Page_Sync() )->force_sync( $page ) );
 		$this->assertSame( 'theme:pages/docs/guide/install/index.md', get_post_meta( $post_id, '_blockstudio_page_template_path', true ) );
-		$posts = get_posts( array( 'post_type' => 'any', 'post_status' => 'any', 'numberposts' => -1, 'meta_key' => '_blockstudio_page_key', 'meta_value' => 'docs:docs-install' ) );
+		$posts = get_posts(
+			array(
+				'post_type'   => 'any',
+				'post_status' => 'any',
+				'numberposts' => -1,
+				'meta_key'    => '_blockstudio_page_key',
+				'meta_value'  => 'docs:docs-install',
+			)
+		);
 		$this->assertCount( 1, $posts );
 		$this->assertSame( $post_id, $posts[0]->ID );
 	}
@@ -1394,6 +1424,58 @@ class PagesTest extends TestCase {
 		$this->assertSame( 'API', $pages['docs:docs-reference']['meta']['section'] ?? null );
 	}
 
+	public function test_page_by_post_id_reads_one_post_as_hydration_would(): void {
+		$post_id = Pages::get_post_id( 'docs-install' );
+		$this->assertGreaterThan( 0, $post_id );
+
+		$registry = Page_Registry::instance();
+		$registry->reset();
+		$single = $registry->get_page_by_post_id( $post_id );
+
+		$registry->reset();
+		$registry->hydrate_from_posts();
+		$hydrated = $registry->get_pages();
+
+		$registry->reset();
+		$registry->get_page_by_post_id( $post_id );
+
+		$this->assertIsArray( $single );
+		$this->assertSame( $hydrated['docs:docs-install'], $single );
+		$this->assertSame( $hydrated, $registry->get_pages() );
+	}
+
+	public function test_page_by_post_id_hydrates_when_another_post_claims_the_key(): void {
+		$post_id = Pages::get_post_id( 'docs-install' );
+		$this->assertGreaterThan( 0, $post_id );
+
+		$claimant = wp_insert_post(
+			array(
+				'post_type'   => 'page',
+				'post_status' => 'publish',
+				'post_title'  => 'Blockstudio Duplicate Key',
+				'menu_order'  => -100,
+				'meta_input'  => array(
+					'_blockstudio_page_key'  => '',
+					'_blockstudio_page_name' => 'docs:docs-install',
+				),
+			)
+		);
+		$this->assertIsInt( $claimant );
+
+		try {
+			$registry = Page_Registry::instance();
+			$registry->reset();
+			$page = $registry->get_page_by_post_id( $post_id );
+
+			$this->assertIsArray( $page );
+			$this->assertSame( $claimant, $page['post_id'] );
+			$this->assertArrayHasKey( 'docs:docs-reference', $registry->get_pages() );
+		} finally {
+			wp_delete_post( $claimant, true );
+			Page_Registry::instance()->reset();
+		}
+	}
+
 	public function test_maybe_hydrate_does_not_override_discovered_pages(): void {
 		$registry = Page_Registry::instance();
 		$before   = $registry->get_pages();
@@ -1606,6 +1688,628 @@ class PagesTest extends TestCase {
 
 			$this->remove_dir( $temp_dir );
 		}
+	}
+
+	// Component pages and site collections
+
+	/**
+	 * Register a renderer for `.tsx` entries and `layout.tsx` layouts.
+	 *
+	 * @return void
+	 */
+	private function register_unit_renderer(): void {
+		Page_Renderers::reset();
+		Page_Renderers::register(
+			'unit',
+			array(
+				'extensions' => array( 'tsx' ),
+				'layouts'    => array( 'layout.tsx' ),
+				'render'     => static fn( array $request ): array => array( 'html' => '<main>' . $request['slot'] . '</main>' ),
+			)
+		);
+	}
+
+	/**
+	 * Write a temporary page tree.
+	 *
+	 * @param array<string, string> $files File contents by relative path.
+	 *
+	 * @return string Root path.
+	 */
+	private function write_tree( array $files ): string {
+		$root = wp_normalize_path( sys_get_temp_dir() . '/blockstudio-component-pages-' . uniqid() );
+
+		foreach ( $files as $path => $contents ) {
+			wp_mkdir_p( dirname( $root . '/' . $path ) );
+			file_put_contents( $root . '/' . $path, $contents );
+		}
+
+		return $root;
+	}
+
+	/**
+	 * Discover a tree and return its pages, errors and collections.
+	 *
+	 * @param string $root Root path.
+	 *
+	 * @return array{pages:array,errors:array,collections:array} Discovery result.
+	 */
+	private function discover_tree( string $root ): array {
+		$discovery = new Page_Discovery();
+		$pages     = $discovery->discover( $root );
+
+		return array(
+			'pages'       => $pages,
+			'errors'      => $discovery->get_errors(),
+			'collections' => $discovery->get_collections(),
+		);
+	}
+
+	/**
+	 * Encode a page definition.
+	 *
+	 * @param array $definition Page definition.
+	 *
+	 * @return string JSON.
+	 */
+	private function page_json( array $definition ): string {
+		return (string) wp_json_encode(
+			array_merge(
+				array(
+					'title'      => ucfirst( (string) $definition['name'] ),
+					'postStatus' => 'publish',
+				),
+				$definition
+			)
+		);
+	}
+
+	public function test_page_json_render_resolves_entry_data_and_renderer(): void {
+		$this->register_unit_renderer();
+		$root = $this->write_tree(
+			array(
+				'about/page.json' => $this->page_json(
+					array(
+						'name'   => 'about',
+						'slug'   => 'about',
+						'render' => array(
+							'entry' => 'page.tsx',
+							'data'  => 'data.php',
+						),
+					)
+				),
+				'about/page.tsx'  => 'export default () => null',
+				'about/data.php'  => '<?php return array();',
+			)
+		);
+
+		try {
+			$result = $this->discover_tree( $root );
+		} finally {
+			$this->remove_dir( $root );
+		}
+
+		$page = $result['pages']['about'];
+		$this->assertSame( array(), $result['errors'] );
+		$this->assertSame( 'component', $page['contentType'] );
+		$this->assertSame(
+			array(
+				'renderer' => 'unit',
+				'entry'    => $root . '/about/page.tsx',
+				'data'     => $root . '/about/data.php',
+			),
+			$page['render']
+		);
+		$this->assertNull( $page['slot_path'] );
+		$this->assertNull( $page['slot_content_type'] );
+		$this->assertSame( array( $root . '/about/page.json' ), array_map( 'wp_normalize_path', $page['source_mtime_paths'] ) );
+		$this->assertArrayNotHasKey( 'render', $page['meta'] );
+	}
+
+	public function test_render_shorthand_keeps_the_index_source_as_slot(): void {
+		$this->register_unit_renderer();
+		$root = $this->write_tree(
+			array(
+				'checkout/page.json' => $this->page_json(
+					array(
+						'name'   => 'checkout',
+						'slug'   => 'checkout',
+						'render' => 'page.tsx',
+					)
+				),
+				'checkout/page.tsx'  => 'export default () => null',
+				'checkout/index.php' => '<p>[download_checkout]</p>',
+			)
+		);
+
+		try {
+			$result = $this->discover_tree( $root );
+		} finally {
+			$this->remove_dir( $root );
+		}
+
+		$page = $result['pages']['checkout'];
+		$this->assertSame( 'component', $page['contentType'] );
+		$this->assertSame( 'unit', $page['render']['renderer'] );
+		$this->assertNull( $page['render']['data'] );
+		$this->assertSame( $root . '/checkout/index.php', wp_normalize_path( (string) $page['slot_path'] ) );
+		$this->assertSame( 'php', $page['slot_content_type'] );
+		$this->assertContains( $root . '/checkout/index.php', array_map( 'wp_normalize_path', $page['source_mtime_paths'] ) );
+		$this->assertNotContains( $root . '/checkout/page.tsx', array_map( 'wp_normalize_path', $page['source_mtime_paths'] ) );
+	}
+
+	public function test_explicit_render_reports_missing_files_and_unknown_renderers(): void {
+		$this->register_unit_renderer();
+		$root = $this->write_tree(
+			array(
+				'no-entry/page.json' => $this->page_json(
+					array(
+						'name'   => 'no-entry',
+						'slug'   => 'no-entry',
+						'render' => 'page.tsx',
+					)
+				),
+				'no-entry/index.php' => '<p>Kept</p>',
+				'no-data/page.json'  => $this->page_json(
+					array(
+						'name'   => 'no-data',
+						'slug'   => 'no-data',
+						'render' => array(
+							'entry' => 'page.tsx',
+							'data'  => 'data.php',
+						),
+					)
+				),
+				'no-data/page.tsx'   => 'export default () => null',
+				'vue/page.json'      => $this->page_json(
+					array(
+						'name'   => 'vue',
+						'slug'   => 'vue',
+						'render' => 'page.vue',
+					)
+				),
+				'vue/page.vue'       => '<template />',
+				'named/page.json'    => $this->page_json(
+					array(
+						'name'   => 'named',
+						'slug'   => 'named',
+						'render' => array(
+							'entry'    => 'page.tsx',
+							'renderer' => 'missing',
+						),
+					)
+				),
+				'named/page.tsx'     => 'export default () => null',
+				'shape/page.json'    => $this->page_json(
+					array(
+						'name'   => 'shape',
+						'slug'   => 'shape',
+						'render' => array( 'data' => 'data.php' ),
+					)
+				),
+			)
+		);
+
+		try {
+			$result = $this->discover_tree( $root );
+		} finally {
+			$this->remove_dir( $root );
+		}
+
+		$codes = array_column( $result['errors'], 'code' );
+		sort( $codes );
+		$this->assertSame( array( 'invalid_render', 'missing_render_data', 'missing_render_entry', 'unknown_renderer', 'unknown_renderer' ), $codes );
+		$this->assertSame( array(), $result['pages'] );
+	}
+
+	public function test_render_paths_outside_the_discovery_source_need_the_external_filter(): void {
+		$this->register_unit_renderer();
+		$base  = $this->write_tree(
+			array(
+				'pages/shared/page.json' => $this->page_json(
+					array(
+						'name'   => 'shared',
+						'slug'   => 'shared',
+						'render' => '../../components/page.tsx',
+					)
+				),
+				'components/page.tsx'    => 'export default () => null',
+			)
+		);
+		$allow = static fn(): bool => true;
+
+		try {
+			$blocked = $this->discover_tree( $base . '/pages' );
+			add_filter( 'blockstudio/pages/allow_external_loader_path', $allow );
+			$allowed = $this->discover_tree( $base . '/pages' );
+		} finally {
+			remove_filter( 'blockstudio/pages/allow_external_loader_path', $allow );
+			$this->remove_dir( $base );
+		}
+
+		$this->assertSame( array( 'missing_render_entry' ), array_column( $blocked['errors'], 'code' ) );
+		$this->assertSame( array(), $allowed['errors'] );
+		$this->assertSame( wp_normalize_path( (string) realpath( sys_get_temp_dir() ) ) . substr( $base, strlen( wp_normalize_path( sys_get_temp_dir() ) ) ) . '/components/page.tsx', $allowed['pages']['shared']['render']['entry'] );
+	}
+
+	public function test_index_and_page_entry_without_render_stay_a_php_page(): void {
+		$this->register_unit_renderer();
+		$root = $this->write_tree(
+			array(
+				'legacy/page.json' => $this->page_json(
+					array(
+						'name' => 'legacy',
+						'slug' => 'legacy',
+					)
+				),
+				'legacy/index.php' => '<section reactPage="pages/legacy"></section>',
+				'legacy/page.tsx'  => 'export default () => null',
+			)
+		);
+
+		try {
+			$result = $this->discover_tree( $root );
+		} finally {
+			$this->remove_dir( $root );
+		}
+
+		$this->assertSame( 'php', $result['pages']['legacy']['contentType'] );
+		$this->assertArrayNotHasKey( 'render', $result['pages']['legacy'] );
+	}
+
+	public function test_markdown_frontmatter_render_uses_the_markdown_as_slot(): void {
+		$this->register_unit_renderer();
+		$root = $this->write_tree(
+			array(
+				'guide/index.md' => "---\nname: guide\ntitle: Guide\nrender: page.tsx\n---\n\n# Guide\n",
+				'guide/page.tsx' => 'export default () => null',
+				'notes/index.md' => "---\nname: notes\ntitle: Notes\nrender:\n  entry: page.tsx\n---\n\n# Notes\n",
+			)
+		);
+
+		try {
+			$result = $this->discover_tree( $root );
+		} finally {
+			$this->remove_dir( $root );
+		}
+
+		$page = $result['pages']['guide'];
+		$this->assertSame( 'component', $page['contentType'] );
+		$this->assertSame( 'markdown', $page['slot_content_type'] );
+		$this->assertSame( $root . '/guide/index.md', wp_normalize_path( (string) $page['slot_path'] ) );
+		$this->assertSame( array( 'missing_render_entry' ), array_column( $result['errors'], 'code' ) );
+		$this->assertArrayNotHasKey( 'notes', $result['pages'] );
+	}
+
+	public function test_loader_render_resolves_against_the_collection_root(): void {
+		$this->register_unit_renderer();
+		$root = $this->write_tree(
+			array(
+				'tools/pages.json'            => (string) wp_json_encode(
+					array(
+						'collection' => 'tools',
+						'postType'   => 'page',
+					)
+				),
+				'tools/loader.php'            => '<?php return array( array( "name" => "tool-alpha", "path" => "alpha", "title" => "Alpha", "render" => array( "entry" => "entries/tool.tsx", "data" => "entries/tool.data.php" ), "meta" => array( "tool" => "alpha" ) ) );',
+				'tools/entries/tool.tsx'      => 'export default () => null',
+				'tools/entries/tool.data.php' => '<?php return array();',
+			)
+		);
+
+		try {
+			$result = $this->discover_tree( $root );
+		} finally {
+			$this->remove_dir( $root );
+		}
+
+		$page = $result['pages']['tools:tool-alpha'];
+		$this->assertSame( array(), $result['errors'] );
+		$this->assertSame( 'component', $page['contentType'] );
+		$this->assertSame( $root . '/tools/entries/tool.tsx', $page['render']['entry'] );
+		$this->assertSame( $root . '/tools/entries/tool.data.php', $page['render']['data'] );
+		$this->assertSame( 'alpha', $page['meta']['tool'] );
+		$this->assertNull( $page['slot_content_type'] );
+	}
+
+	public function test_collection_default_render_applies_per_page_when_its_files_exist(): void {
+		$this->register_unit_renderer();
+		$root = $this->write_tree(
+			array(
+				'pages.json'          => (string) wp_json_encode(
+					array(
+						'collection' => 'site',
+						'scope'      => 'site',
+						'defaults'   => array(
+							'postStatus' => 'publish',
+							'render'     => array(
+								'entry' => 'page.tsx',
+								'data'  => 'data.php',
+							),
+						),
+					)
+				),
+				'full/page.json'      => $this->page_json( array( 'name' => 'full' ) ),
+				'full/page.tsx'       => 'export default () => null',
+				'full/data.php'       => '<?php return array();',
+				'entry/page.json'     => $this->page_json( array( 'name' => 'entry' ) ),
+				'entry/page.tsx'      => 'export default () => null',
+				'shortcode/page.json' => $this->page_json( array( 'name' => 'shortcode' ) ),
+				'shortcode/index.php' => '<p>[purchase_history]</p>',
+				'opted/page.json'     => $this->page_json(
+					array(
+						'name'   => 'opted',
+						'render' => false,
+					)
+				),
+				'opted/index.php'     => '<p>Opted out</p>',
+				'opted/page.tsx'      => 'export default () => null',
+				'docs/index.md'       => "---\nname: docs-home\ntitle: Docs\n---\n\n# Docs\n",
+			)
+		);
+
+		try {
+			$result = $this->discover_tree( $root );
+		} finally {
+			$this->remove_dir( $root );
+		}
+
+		$pages = $result['pages'];
+		$this->assertSame( array(), $result['errors'] );
+		$this->assertSame( 'component', $pages['full']['contentType'] );
+		$this->assertSame( $root . '/full/data.php', $pages['full']['render']['data'] );
+		$this->assertSame( 'component', $pages['entry']['contentType'] );
+		$this->assertNull( $pages['entry']['render']['data'] );
+		$this->assertSame( 'php', $pages['shortcode']['contentType'] );
+		$this->assertSame( 'php', $pages['opted']['contentType'] );
+		$this->assertSame( 'markdown', $pages['docs-home']['contentType'] );
+		$this->assertSame( 'publish', $pages['shortcode']['postStatus'] );
+	}
+
+	public function test_site_collection_keeps_standalone_identity_and_nested_manifests(): void {
+		$files = array(
+			'home/page.json'              => $this->page_json(
+				array(
+					'name' => 'home',
+					'slug' => 'home',
+				)
+			),
+			'home/index.php'              => '<p>Home</p>',
+			'account/page.json'           => $this->page_json(
+				array(
+					'name' => 'account',
+					'slug' => 'account',
+				)
+			),
+			'account/index.php'           => '<p>Account</p>',
+			'account/layout.php'          => '<?php echo Blockstudio\\Pages::page_content();',
+			'account/purchases/page.json' => $this->page_json(
+				array(
+					'name' => 'account-purchases',
+					'slug' => 'purchases',
+					'path' => 'account/purchases',
+				)
+			),
+			'account/purchases/index.php' => '<p>Purchases</p>',
+			'deep/nested/leaf/page.json'  => $this->page_json(
+				array(
+					'name' => 'leaf',
+					'path' => 'deep/nested/leaf',
+				)
+			),
+			'deep/nested/leaf/index.php'  => '<p>Leaf</p>',
+			'notes/index.md'              => "---\nname: notes\ntitle: Notes\n---\n\n# Notes\n",
+			'notes/readme.md'             => "# Not a page\n",
+			'docs/pages.json'             => (string) wp_json_encode(
+				array(
+					'collection' => 'handbook',
+					'postType'   => 'page',
+				)
+			),
+			'docs/index.md'               => "---\nname: handbook-home\ntitle: Handbook\n---\n\n# Handbook\n",
+			'docs/guide.md'               => "---\ntitle: Guide\n---\n\n# Guide\n",
+			'docs/nested/pages.json'      => (string) wp_json_encode( array( 'collection' => 'ignored' ) ),
+		);
+
+		$standalone_root = $this->write_tree( $files );
+		$site_root       = $this->write_tree(
+			array_merge(
+				$files,
+				array(
+					'pages.json' => (string) wp_json_encode(
+						array(
+							'collection' => 'acme',
+							'title'      => 'Acme',
+							'scope'      => 'site',
+							'postType'   => 'page',
+							'defaults'   => array( 'templateLock' => 'insert' ),
+						)
+					),
+				)
+			)
+		);
+
+		try {
+			$standalone = $this->discover_tree( $standalone_root );
+			$site       = $this->discover_tree( $site_root );
+		} finally {
+			$this->remove_dir( $standalone_root );
+			$this->remove_dir( $site_root );
+		}
+
+		$this->assertSame( array(), $site['errors'] );
+		$this->assertSame( array( 'acme', 'handbook' ), array_keys( $site['collections'] ) );
+		$this->assertSame( 'site', $site['collections']['acme']['scope'] );
+		$this->assertArrayNotHasKey( 'ignored', $site['collections'] );
+		$this->assertSame( array_keys( $standalone['pages'] ), array_keys( $site['pages'] ) );
+
+		foreach ( array( 'home', 'account', 'account-purchases', 'leaf', 'notes' ) as $key ) {
+			$before = $standalone['pages'][ $key ];
+			$after  = $site['pages'][ $key ];
+			$this->assertSame( 'acme', $after['collection'], $key );
+			$this->assertSame( 'site', $after['collection_scope'], $key );
+			$this->assertNull( $before['collection'], $key );
+
+			foreach ( array( 'key', 'name', 'slug', 'path', 'source_path', 'contentType' ) as $field ) {
+				$this->assertSame( $before[ $field ], $after[ $field ], $key . ' ' . $field );
+			}
+
+			$this->assertSame( $before['parent_key'] ?? null, $after['parent_key'] ?? null, $key . ' parent' );
+			$this->assertSame(
+				null === $before['layout_path'] ? null : substr( wp_normalize_path( $before['layout_path'] ), strlen( $standalone_root ) ),
+				null === $after['layout_path'] ? null : substr( wp_normalize_path( $after['layout_path'] ), strlen( $site_root ) ),
+				$key . ' layout'
+			);
+			$this->assertSame( 'insert', $after['templateLock'], $key );
+		}
+
+		$this->assertSame( 'account', $site['pages']['account-purchases']['parent_key'] );
+		$this->assertStringEndsWith( '/account/layout.php', wp_normalize_path( (string) $site['pages']['account-purchases']['layout_path'] ) );
+		$this->assertNull( $site['pages']['home']['layout_path'] );
+		$this->assertArrayNotHasKey( 'parent_key', $site['pages']['leaf'] );
+		$this->assertSame(
+			array(),
+			array_filter( $site['pages'], static fn( array $page ): bool => ! empty( $page['generated'] ) && 'acme' === $page['collection'] )
+		);
+		$this->assertSame( 'handbook', $site['pages']['handbook:handbook-home']['collection'] );
+		$this->assertArrayHasKey( 'handbook:handbook-guide', $site['pages'] );
+	}
+
+	public function test_site_collections_register_no_collection_routes(): void {
+		$routes     = new ReflectionMethod( Pages::class, 'add_collection_rewrite_rules' );
+		$signature  = new ReflectionMethod( Pages::class, 'collection_rewrite_signature' );
+		$site       = array(
+			'slug'     => 'acme',
+			'postType' => 'acme_page',
+			'scope'    => 'site',
+		);
+		$collection = array_merge( $site, array( 'scope' => 'collection' ) );
+
+		global $wp_rewrite;
+		$before = $wp_rewrite->extra_rules_top;
+		$routes->invoke( null, $site );
+		$this->assertSame( $before, $wp_rewrite->extra_rules_top );
+
+		$this->assertSame( $signature->invoke( null, array() ), $signature->invoke( null, array( $site ) ) );
+		$this->assertNotSame( $signature->invoke( null, array() ), $signature->invoke( null, array( $collection ) ) );
+	}
+
+	public function test_renderer_layouts_are_discovered_and_conflicts_are_reported(): void {
+		$this->register_unit_renderer();
+		$root = $this->write_tree(
+			array(
+				'account/layout.tsx'       => 'export default () => null',
+				'account/layout.data.php'  => '<?php return array();',
+				'account/page.json'        => $this->page_json(
+					array(
+						'name' => 'account',
+						'slug' => 'account',
+					)
+				),
+				'account/index.php'        => '<p>Account</p>',
+				'account/orders/page.json' => $this->page_json(
+					array(
+						'name' => 'orders',
+						'path' => 'account/orders',
+					)
+				),
+				'account/orders/index.php' => '<p>Orders</p>',
+				'docs/pages.json'          => (string) wp_json_encode( array( 'collection' => 'docs' ) ),
+				'docs/layout.tsx'          => 'export default () => null',
+				'docs/index.md'            => "---\ntitle: Docs\n---\n\n# Docs\n",
+				'mixed/layout.php'         => '<?php echo Blockstudio\\Pages::page_content();',
+				'mixed/layout.tsx'         => 'export default () => null',
+				'mixed/page.json'          => $this->page_json(
+					array(
+						'name' => 'mixed',
+						'slug' => 'mixed',
+					)
+				),
+				'mixed/index.php'          => '<p>Mixed</p>',
+			)
+		);
+
+		try {
+			$result = $this->discover_tree( $root );
+		} finally {
+			$this->remove_dir( $root );
+		}
+
+		$pages = $result['pages'];
+		$this->assertSame( $root . '/account/layout.tsx', wp_normalize_path( (string) $pages['account']['layout_path'] ) );
+		$this->assertSame( 'unit', $pages['account']['layout_renderer'] );
+		$this->assertSame( $root . '/account/layout.tsx', wp_normalize_path( (string) $pages['orders']['layout_path'] ) );
+		$this->assertSame( 'unit', $pages['docs:docs-home']['layout_renderer'] );
+		$this->assertSame( $root . '/docs/layout.tsx', wp_normalize_path( (string) $result['collections']['docs']['layout_path'] ) );
+		$this->assertSame( $root . '/mixed/layout.php', wp_normalize_path( (string) $pages['mixed']['layout_path'] ) );
+		$this->assertNull( $pages['mixed']['layout_renderer'] );
+		$this->assertSame( array( 'layout_conflict' ), array_column( $result['errors'], 'code' ) );
+		$this->assertSame( $root . '/mixed', $result['errors'][0]['context']['path'] );
+	}
+
+	public function test_symlinked_pages_root_keeps_layouts_and_theme_paths(): void {
+		$base  = wp_normalize_path( (string) realpath( sys_get_temp_dir() ) ) . '/blockstudio-symlinked-theme-' . uniqid();
+		$real  = $base . '/checkout/theme';
+		$link  = $base . '/themes/theme';
+		$files = array(
+			'pages/account/layout.php'          => '<?php echo Blockstudio\\Pages::page_content();',
+			'pages/account/purchases/page.json' => $this->page_json(
+				array(
+					'name' => 'account-purchases',
+					'slug' => 'purchases',
+					'path' => 'account/purchases',
+				)
+			),
+			'pages/account/purchases/index.php' => '<p>Purchases</p>',
+			'pages/docs/pages.json'             => (string) wp_json_encode( array( 'collection' => 'docs' ) ),
+			'pages/docs/layout.php'             => '<?php echo Blockstudio\\Pages::page_content();',
+			'pages/docs/loader.php'             => '<?php return array( "paths" => array( "../../content/docs" ) );',
+			'content/docs/intro.md'             => "---\ntitle: Intro\n---\n\n# Intro\n",
+		);
+
+		foreach ( $files as $path => $contents ) {
+			wp_mkdir_p( dirname( $real . '/' . $path ) );
+			file_put_contents( $real . '/' . $path, $contents );
+		}
+
+		wp_mkdir_p( dirname( $link ) );
+		symlink( $real, $link );
+
+		$theme = static fn(): string => $link;
+		$allow = static fn(): bool => true;
+		add_filter( 'stylesheet_directory', $theme );
+		add_filter( 'template_directory', $theme );
+		add_filter( 'blockstudio/pages/allow_external_loader_path', $allow );
+		Page_Paths::reset();
+
+		try {
+			$discovery     = new Page_Discovery();
+			$pages         = $discovery->discover( $link . '/pages' );
+			$errors        = $discovery->get_errors();
+			$nearest       = new ReflectionMethod( Page_Discovery::class, 'find_nearest_layout' );
+			$real_hit      = $nearest->invoke( $discovery, $real . '/pages/account/purchases', null );
+			$sync          = new Page_Sync();
+			$intro         = $pages['docs:docs-intro'] ?? array();
+			$purchases     = $pages['account-purchases'] ?? array();
+			$intro_ids     = $sync->dependency_ids( $intro );
+			$purchases_ids = $sync->dependency_ids( $purchases );
+			$layout        = Page_Paths::encode( (string) ( $purchases['layout_path'] ?? '' ) );
+		} finally {
+			remove_filter( 'stylesheet_directory', $theme );
+			remove_filter( 'template_directory', $theme );
+			remove_filter( 'blockstudio/pages/allow_external_loader_path', $allow );
+			Page_Paths::reset();
+			unlink( $link );
+			$this->remove_dir( $base );
+		}
+
+		$this->assertSame( array(), $errors );
+		$this->assertSame( 'theme:pages/account/layout.php', $layout );
+		$this->assertSame( $link . '/pages/account/layout.php', wp_normalize_path( (string) $real_hit ) );
+		$this->assertSame( $real . '/content/docs/intro.md', wp_normalize_path( (string) $intro['template_path'] ) );
+		$this->assertContains( 'theme:content/docs/intro.md', $intro_ids );
+		$this->assertContains( 'theme:pages/docs/layout.php', $intro_ids );
+		$this->assertContains( 'theme:pages/account/purchases/index.php', $purchases_ids );
 	}
 
 	private function clear_collection_manifest_cache(): void {
