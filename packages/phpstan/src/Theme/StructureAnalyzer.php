@@ -54,11 +54,22 @@ final class StructureAnalyzer
                     $this->scanner->scanLimit()
                 ),
                 'blockstudio.theme.scanLimit',
-                $root
+                $this->anchor($root)
             );
         }
 
         return $this->stable($diagnostics);
+    }
+
+    private function anchor(string $root): string
+    {
+        foreach (['style.css', 'blockstudio.json', 'functions.php', 'composer.json'] as $name) {
+            if (is_file($root . '/' . $name)) {
+                return $root . '/' . $name;
+            }
+        }
+
+        return $root;
     }
 
     /**
