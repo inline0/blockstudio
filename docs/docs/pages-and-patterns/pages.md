@@ -245,7 +245,9 @@ block's inner blocks, its slot:
 <!-- /wp:blockstudio/page -->
 ```
 
-Keep WordPress-owned content, such as shortcodes, in the slot. It stays in
+Keep WordPress-owned content, such as shortcodes, in the slot. A source that is only one shortcode, such as `[download_checkout]`,
+is stored as a `core/shortcode` block, so its output gets no paragraph
+around it. It stays in
 `post_content`, so `has_shortcode()` checks see it, keyed slot blocks merge
 with editor changes as nested keyed blocks do, and `do_shortcode` expands the
 shortcodes once at its usual `the_content` priority, after the renderer framed
