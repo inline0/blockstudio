@@ -2692,6 +2692,28 @@ Customize individual fields per-instance using `overrides`. Keys are the origina
 
 Override properties are merged on top of the original field definition. An `id` override bypasses the `idStructure` pattern. In the example above, `enabled` becomes `active` instead of `hero_enabled`.
 
+The merge is one level deep: a property you override replaces the original
+property as a whole. An `options` override is the complete option list, not an
+addition to it, and the same holds for `conditions` and for the `attributes` of
+a group. Conditions on the reference are still added afterwards.
+
+```json
+{
+  "type": "custom/background",
+  "overrides": {
+    "background": {
+      "options": [
+        { "value": "white", "label": "White" },
+        { "value": "grey", "label": "Grey" }
+      ]
+    }
+  }
+}
+```
+
+This block offers only White and Grey, however many options the definition
+lists.
+
 ## Conditions
 
 Conditions inside custom field definitions are automatically rewritten when
@@ -6236,6 +6258,14 @@ does not permit arbitrary keys in repeater rows or extensions of core blocks.
 | `unknown_attribute` | A top-level key of a Blockstudio block is not read by the render path and is dropped. | Registered attribute names, extension fields and `blockstudio`. |
 | `missing_container` | `attributes`, `disabled`, `name` or `editor` is stored at the top level and `blockstudio` is missing. | Its required path under `blockstudio`. |
 | `invalid_container` | `blockstudio` or `blockstudio.attributes` is not an object. | `object`. |
+
+The message of an `unknown_field` finding names the closest storage key at the
+same level when it is within three edits, the rule unknown settings use:
+`This storage key is not declared by the block or its extensions. Did you mean "title"?`
+`expected` still lists every known key.
+Matching ignores case and only considers storage keys from that container.
+Messages are translated; integrations should use `code`, `path`, and
+`expected` rather than parsing the message text.
 
 A top-level key of a Blockstudio block that is neither a registered attribute
 (its fields, the attributes WordPress adds for `supports`, `lock` and
@@ -11169,6 +11199,49 @@ Loader entries can use `markdown`, `html`, or `content` with `contentType`. They
 
 Supported `contentType` values are `php`, `blade`, `twig`, `markdown`, and `html`. Markdown is converted to HTML first, then parsed into native WordPress blocks. PHP, Blade, Twig, and HTML sources go through the normal Blockstudio page parser.
 
+### Classes on core blocks
+
+A `class` on an HTML element mapped to a core block becomes its `className`.
+An explicit core block tag can use `className` directly. Both forms preserve
+the classes on the block's saved wrapper, alongside the classes WordPress
+generates:
+
+```html
+<p class="intro">Introduction</p>
+<block name="core/group" className="feature">
+  <h2 class="title">Feature</h2>
+</block>
+```
+
+If both properties are present, `className` takes precedence. This conversion
+only applies to core blocks: a custom block mapping keeps its `class` field
+unchanged. Button style classes, such as `is-style-outline`, belong to the
+button wrapper, not its link.
+
+Run `wp bs pages sync` to apply parser corrections to previously synced
+pages. Parser upgrades are recognized by the next explicit sync without a
+source-file edit. Locked pages and pages with `sync: false` retain their
+normal protections; frontend requests never perform this synchronization.
+
+### Serialized WordPress blocks
+
+Page and pattern sources can also contain serialized blocks copied from the
+WordPress code editor:
+
+```html
+<!-- wp:paragraph {"className":"intro"} -->
+<p class="intro">Introduction</p>
+<!-- /wp:paragraph -->
+```
+
+When the source contains a `<!-- wp:... -->` block delimiter, Blockstudio
+uses WordPress's native block parser for the entire source. Attributes,
+nested blocks, dynamic blocks such as Query Loop, and Blockstudio blocks
+keep their serialized structure. HTML outside the block comments stays
+native freeform HTML; it is not mapped into additional blocks. Do not mix
+Blockstudio's HTML block tags with this format and expect them to be
+converted. Ordinary HTML comments do not select serialized-block mode.
+
 ## Markdown Pages
 
 Use Markdown when prose should live in files but still become editable WordPress block content after sync. Markdown source is converted to block markup during sync. The synced post stores blocks, not the raw Markdown body.
@@ -11321,7 +11394,9 @@ block's inner blocks, its slot:
 <!-- /wp:blockstudio/page -->
 ```
 
-Keep WordPress-owned content, such as shortcodes, in the slot. It stays in
+Keep WordPress-owned content, such as shortcodes, in the slot. A source that is only one shortcode, such as `[download_checkout]`,
+is stored as a `core/shortcode` block, so its output gets no paragraph
+around it. It stays in
 `post_content`, so `has_shortcode()` checks see it, keyed slot blocks merge
 with editor changes as nested keyed blocks do, and `do_shortcode` expands the
 shortcodes once at its usual `the_content` priority, after the renderer framed
@@ -11562,6 +11637,7 @@ A loader can return an array with `pages`, `meta`, and `paths` keys:
 | `pages` | A list of page arrays. Each page supports the same recognized keys as `page.json` and Markdown frontmatter. |
 | `meta` | Metadata merged into every loader-generated page's `meta` array. |
 | `paths` | Extra local directories to discover as part of this collection. Entries can be strings or path objects. |
+| `render` | A render definition for every Markdown page discovered from `paths`. |
 
 As a shorthand, the loader may return a bare list of page arrays.
 
@@ -11605,6 +11681,33 @@ Path object properties:
 | `prefix` | `string` | Optional logical path prefix inside the collection. |
 | `preserveNames` | `boolean` | Keep explicit page names instead of generating names from the prefixed path. Defaults to `false` when `prefix` is set. |
 | `meta` | `object` | Metadata merged into every page discovered from this path. Page-level metadata wins on duplicate keys. |
+| `render` | `string\|object` | A render definition for the Markdown pages of this path, overriding the loader's `render`. |
+
+### Rendering Markdown through a component
+
+With `render`, the Markdown pages a loader discovers render through a page
+renderer instead of being stored as blocks:
+
+```php
+<?php
+
+return array(
+  'paths'  => array( __DIR__ . '/external-docs' ),
+  'render' => array(
+    'entry' => __DIR__ . '/document.tsx',
+    'data'  => __DIR__ . '/document.php',
+  ),
+);
+```
+
+They stay Markdown pages: the content type, the content path, the `.md`
+responses and the frontmatter are unchanged. Sync stores one
+`blockstudio/page` block whose inner HTML is the converted Markdown, sanitized
+when the collection sanitizes its content, instead of parsed blocks, so
+`post_content` keeps the document text. The renderer receives that HTML as the
+slot and can read the source from `page.content_path`. Relative paths resolve
+from the collection root; the external path filter applies as for the paths. A
+page whose frontmatter sets its own `render`, or `render: false`, is left out.
 
 ## Layouts
 
@@ -16554,6 +16657,28 @@ A probe can report a focused failure:
 
 Non-zero exits, timeouts, malformed JSON, and `ok: false` produce
 `blockstudio.wordpress.render`.
+
+`blockstudio.javascript.domContract` reports a `[data-*]` attribute selector
+that a script passes to `querySelector()`, `querySelectorAll()`, `closest()`, or
+`matches()` when no analysed markup carries that attribute. Markup is every
+PHP, Twig, Blade, and HTML file and every React `.tsx` and `.jsx` component
+under the analysed roots, minus the excluded paths. Components are parsed:
+JSX attribute names count, and so do the string keys of object literals, so
+an attribute object spread onto an element satisfies the selector, while
+class names and other attribute values do not.
+
+The Interactivity API checks read the same React components. A
+`data-wp-interactive` namespace on a JSX element counts as a template reference
+for `blockstudio.interactivity.orphan`, and the `data-wp-*` directives inside it
+resolve against the nearest enclosing namespace, or a `namespace::` prefix in
+the value. Directives with a static string value, written as a JSX attribute or
+as a string key of an attribute object, must name existing store handlers and
+paths (`blockstudio.interactivity.handler`, `blockstudio.interactivity.binding`),
+and store code must not mutate the attributes and classes they bind
+(`blockstudio.interactivity.derivedState`). React escapes attribute values, so
+`data-wp-context` in a component is not reported, and dynamic values are not
+checked. Namespaces under `bsui/` belong to the bundled UI blocks, whose stores
+ship with Blockstudio outside the analysed roots, so they are never orphans.
 
 ### Diagnostic identifiers
 

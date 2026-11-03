@@ -1980,6 +1980,14 @@ class Block_Tags {
 	 * @return array WordPress block array.
 	 */
 	public static function build_block_array( string $block_name, array $attrs, string $inner_content = '' ): array {
+		$is_core = str_starts_with( $block_name, 'core/' );
+		if ( $is_core && array_key_exists( 'class', $attrs ) ) {
+			if ( ! array_key_exists( 'className', $attrs ) && is_string( $attrs['class'] ) ) {
+				$attrs['className'] = $attrs['class'];
+			}
+			unset( $attrs['class'] );
+		}
+
 		// Keyed block merging reads __BLOCKSTUDIO_KEY rather than the authored key.
 		if (
 			array_key_exists( 'key', $attrs ) &&
@@ -1992,7 +2000,9 @@ class Block_Tags {
 
 		$renderers = self::get_renderers( new Html_Parser() );
 		if ( isset( $renderers[ $block_name ] ) ) {
-			return call_user_func( $renderers[ $block_name ], $attrs, $inner_content );
+			$block = call_user_func( $renderers[ $block_name ], $attrs, $inner_content );
+
+			return $is_core ? self::with_core_class_name( $block ) : $block;
 		}
 
 		$inner_blocks      = self::parse_inner_blocks( $inner_content );
@@ -2033,6 +2043,46 @@ class Block_Tags {
 			'innerHTML'    => '',
 			'innerContent' => $inner_content_arr,
 		);
+	}
+
+	/**
+	 * Keep core className attributes and both saved HTML representations aligned.
+	 *
+	 * @param array $block Built core block.
+	 * @return array Block with custom classes on its root, not its children.
+	 */
+	private static function with_core_class_name( array $block ): array {
+		$class_name = $block['attrs']['className'] ?? null;
+		if ( ! is_string( $class_name ) || '' === trim( $class_name ) ) {
+			return $block;
+		}
+
+		$classes = preg_split( '/[\t\n\f\r ]+/', $class_name, -1, PREG_SPLIT_NO_EMPTY );
+		$classes = is_array( $classes ) ? $classes : array();
+		$apply   = static function ( string $html ) use ( $classes ): ?string {
+			$processor = new \WP_HTML_Tag_Processor( $html );
+			if ( ! $processor->next_tag() ) {
+				return null;
+			}
+			foreach ( $classes as $class ) {
+				$processor->add_class( $class );
+			}
+			return $processor->get_updated_html();
+		};
+
+		$block['innerHTML'] = $apply( $block['innerHTML'] ) ?? $block['innerHTML'];
+		foreach ( $block['innerContent'] as $index => $fragment ) {
+			if ( ! is_string( $fragment ) ) {
+				continue;
+			}
+			$updated = $apply( $fragment );
+			if ( null !== $updated ) {
+				$block['innerContent'][ $index ] = $updated;
+				break;
+			}
+		}
+
+		return $block;
 	}
 
 	/**

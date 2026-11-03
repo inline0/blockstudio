@@ -107,9 +107,15 @@ test.describe('CLI - blocks', () => {
   });
 
   test('validates nested stored fields with JSON, exit codes and no post writes', () => {
+    const values = [
+      { defaultValueLabel: 'one' },
+      { defaultValueLabel: 'unknown-option' },
+      { defaultValueLable: 'one' },
+    ];
+    const encoded = Buffer.from(JSON.stringify(values)).toString('base64');
     const ids = JSON.parse(
       wp(
-        `eval '$ids = array(); foreach (array("one", "unknown-option") as $value) { $block = array("blockName" => "blockstudio/type-select", "attrs" => array("blockstudio" => array("attributes" => array("defaultValueLabel" => $value))), "innerBlocks" => array(), "innerHTML" => "", "innerContent" => array()); $content = "<!-- wp:group -->" . serialize_block($block) . "<!-- /wp:group -->"; $ids[] = wp_insert_post(wp_slash(array("post_type" => "post", "post_status" => "draft", "post_title" => "Validation CLI", "post_content" => $content))); } echo wp_json_encode($ids);'`,
+        `eval '$ids = array(); foreach (json_decode(base64_decode("${encoded}"), true) as $value) { $block = array("blockName" => "blockstudio/type-select", "attrs" => array("blockstudio" => array("attributes" => $value)), "innerBlocks" => array(), "innerHTML" => "", "innerContent" => array()); $content = "<!-- wp:group -->" . serialize_block($block) . "<!-- /wp:group -->"; $ids[] = wp_insert_post(wp_slash(array("post_type" => "post", "post_status" => "draft", "post_title" => "Validation CLI", "post_content" => $content))); } echo wp_json_encode($ids);'`,
       ),
     );
     try {
@@ -130,7 +136,7 @@ test.describe('CLI - blocks', () => {
       }
       expect(failure?.status).toBe(1);
       const findings = JSON.parse(cleanWpOutput(failure!.stdout));
-      expect(findings).toHaveLength(1);
+      expect(findings).toHaveLength(2);
       expect(findings[0]).toMatchObject({
         post_id: ids[1],
         block_path: '0/0',
@@ -141,6 +147,18 @@ test.describe('CLI - blocks', () => {
         value: 'unknown-option',
       });
       expect(findings[0].expected).toEqual(['one', 'two', 'three']);
+      expect(findings[1]).toMatchObject({
+        post_id: ids[2],
+        block_path: '0/0',
+        block_name: 'blockstudio/type-select',
+        code: 'unknown_field',
+        path: 'defaultValueLable',
+        value: 'one',
+      });
+      expect(findings[1].message).toContain(
+        'Did you mean "defaultValueLabel"?',
+      );
+      expect(findings[1].expected).toContain('defaultValueLabel');
       expect(() => wp(`bs blocks validate ${ids[1]}`)).toThrow();
       expect(() => wp('bs blocks validate')).toThrow();
       expect(() => wp('bs blocks validate 0 --format=json')).toThrow();

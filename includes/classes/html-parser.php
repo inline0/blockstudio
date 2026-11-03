@@ -52,15 +52,7 @@ class Html_Parser {
 	 * @return string Serialized WordPress blocks.
 	 */
 	public function parse( string $html ): string {
-		$html = trim( $html );
-
-		if ( empty( $html ) ) {
-			return '';
-		}
-
-		$html = preg_replace( '/<\?php[\s\S]*?\?>/i', '', $html );
-
-		return serialize_blocks( Block_Tags::parse_all_elements( $html ) );
+		return serialize_blocks( $this->parse_to_array( $html ) );
 	}
 
 	/**
@@ -78,6 +70,10 @@ class Html_Parser {
 		}
 
 		$html = preg_replace( '/<\?php[\s\S]*?\?>/i', '', $html );
+
+		if ( has_blocks( $html ) ) {
+			return parse_blocks( $html );
+		}
 
 		return Block_Tags::parse_all_elements( $html );
 	}

@@ -248,6 +248,14 @@ does not permit arbitrary keys in repeater rows or extensions of core blocks.
 | `missing_container` | `attributes`, `disabled`, `name` or `editor` is stored at the top level and `blockstudio` is missing. | Its required path under `blockstudio`. |
 | `invalid_container` | `blockstudio` or `blockstudio.attributes` is not an object. | `object`. |
 
+The message of an `unknown_field` finding names the closest storage key at the
+same level when it is within three edits, the rule unknown settings use:
+`This storage key is not declared by the block or its extensions. Did you mean "title"?`
+`expected` still lists every known key.
+Matching ignores case and only considers storage keys from that container.
+Messages are translated; integrations should use `code`, `path`, and
+`expected` rather than parsing the message text.
+
 A top-level key of a Blockstudio block that is neither a registered attribute
 (its fields, the attributes WordPress adds for `supports`, `lock` and
 `metadata`), nor a field of a matching extension, nor `blockstudio`, nor a

@@ -382,6 +382,45 @@ class PageReconciliationTest extends TestCase {
 		$this->assertSame( 1, $third['unchanged'] );
 	}
 
+	public function test_parser_upgrade_repairs_saved_classes_once_without_source_changes(): void {
+		$this->write_page( 'alpha', 'Alpha' );
+		file_put_contents( $this->pages_path . '/alpha/index.php', '<p class="restored">Alpha</p>' );
+		$legacy = static function ( array $inputs ): array {
+			$inputs['htmlParser'] = '1';
+			$inputs['blockTags']  = '2';
+			return $inputs;
+		};
+		add_filter( 'blockstudio/pages/sync_engine_inputs', $legacy );
+		try {
+			$first = $this->reconcile( true );
+			Pages::store_successful_source_identity( $first['sourceIdentity'] );
+		} finally {
+			remove_filter( 'blockstudio/pages/sync_engine_inputs', $legacy );
+		}
+		$post_id = $first['pages']['alpha']['postId'];
+		// Emulate the old parser's saved HTML without changing deployed source bytes.
+		wp_update_post( wp_slash( array( 'ID' => $post_id, 'post_content' => '<!-- wp:paragraph {"class":"restored"} --><p>Alpha</p><!-- /wp:paragraph -->' ) ) );
+		$second = $this->reconcile();
+		$this->assertTrue( $second['fullReconciliation'] );
+		$this->assertSame( 1, $second['updated'] );
+		$this->assertSame( $post_id, $second['pages']['alpha']['postId'] );
+		$this->assertStringContainsString( '<p class="restored">Alpha</p>', get_post_field( 'post_content', $post_id ) );
+		Pages::store_successful_source_identity( $second['sourceIdentity'] );
+		$third = $this->reconcile();
+		$this->assertFalse( $third['fullReconciliation'] );
+		$this->assertSame( 0, $third['updated'] );
+		$this->assertSame( 1, $third['unchanged'] );
+	}
+
+	public function test_serialized_page_sources_keep_queries_and_blockstudio_attributes(): void {
+		$this->write_page( 'alpha', 'Alpha' );
+		$source = '<aside class="raw">Before</aside><!-- wp:query {"query":{"perPage":3,"postType":"post"}} --><div class="wp-block-query"><!-- wp:post-template --><!-- wp:post-title /--><!-- /wp:post-template --></div><!-- /wp:query --><!-- wp:blockstudio/type-text {"blockstudio":{"attributes":{"text":"Saved"}}} /-->';
+		file_put_contents( $this->pages_path . '/alpha/index.php', $source );
+		$report = $this->reconcile( true );
+		$this->assertSame( 1, $report['created'] );
+		$this->assertSame( parse_blocks( $source ), parse_blocks( get_post_field( 'post_content', $report['pages']['alpha']['postId'] ) ) );
+	}
+
 	/**
 	 * Dirty deployed bytes participate in identity without moving success state.
 	 *

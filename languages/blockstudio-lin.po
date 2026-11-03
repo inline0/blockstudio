@@ -23,6 +23,12 @@ msgstr "Blockstudio"
 msgid "The \"%1$s\" attribute on a %2$s block tag is dropped because the block declares no field with that id. Declare the field, or write it as a data-, aria- or html- attribute to put it on the root element."
 msgstr "Attribut \"%1$s\" na elemá ya block %2$s elongolami mpo ete block etángisi champ moko te na ID yango. Tángisa champ yango, to komá yango lokola attribut data-, aria- to html- mpo etyama na elemá ya libándá."
 
+#. translators: %s: Closest storage key the block declares.
+#: includes/classes/block-validator.php
+#, php-format
+msgid "Did you mean \"%s\"?"
+msgstr "Olingaki koloba «%s»?"
+
 #: includes/classes/block-validator.php
 msgid "This storage key is not declared by the block or its extensions."
 msgstr "Klé ya ebombeli oyo etángisami te na block to na bilakiseli na yango."

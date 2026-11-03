@@ -93,6 +93,49 @@ Loader entries can use `markdown`, `html`, or `content` with `contentType`. They
 
 Supported `contentType` values are `php`, `blade`, `twig`, `markdown`, and `html`. Markdown is converted to HTML first, then parsed into native WordPress blocks. PHP, Blade, Twig, and HTML sources go through the normal Blockstudio page parser.
 
+### Classes on core blocks
+
+A `class` on an HTML element mapped to a core block becomes its `className`.
+An explicit core block tag can use `className` directly. Both forms preserve
+the classes on the block's saved wrapper, alongside the classes WordPress
+generates:
+
+```html
+<p class="intro">Introduction</p>
+<block name="core/group" className="feature">
+  <h2 class="title">Feature</h2>
+</block>
+```
+
+If both properties are present, `className` takes precedence. This conversion
+only applies to core blocks: a custom block mapping keeps its `class` field
+unchanged. Button style classes, such as `is-style-outline`, belong to the
+button wrapper, not its link.
+
+Run `wp bs pages sync` to apply parser corrections to previously synced
+pages. Parser upgrades are recognized by the next explicit sync without a
+source-file edit. Locked pages and pages with `sync: false` retain their
+normal protections; frontend requests never perform this synchronization.
+
+### Serialized WordPress blocks
+
+Page and pattern sources can also contain serialized blocks copied from the
+WordPress code editor:
+
+```html
+<!-- wp:paragraph {"className":"intro"} -->
+<p class="intro">Introduction</p>
+<!-- /wp:paragraph -->
+```
+
+When the source contains a `<!-- wp:... -->` block delimiter, Blockstudio
+uses WordPress's native block parser for the entire source. Attributes,
+nested blocks, dynamic blocks such as Query Loop, and Blockstudio blocks
+keep their serialized structure. HTML outside the block comments stays
+native freeform HTML; it is not mapped into additional blocks. Do not mix
+Blockstudio's HTML block tags with this format and expect them to be
+converted. Ordinary HTML comments do not select serialized-block mode.
+
 ## Markdown Pages
 
 Use Markdown when prose should live in files but still become editable WordPress block content after sync. Markdown source is converted to block markup during sync. The synced post stores blocks, not the raw Markdown body.

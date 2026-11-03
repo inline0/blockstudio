@@ -23,6 +23,12 @@ msgstr "Blockstudio"
 msgid "The \"%1$s\" attribute on a %2$s block tag is dropped because the block declares no field with that id. Declare the field, or write it as a data-, aria- or html- attribute to put it on the root element."
 msgstr "%2$s 區塊標籤上的「%1$s」屬性已捨棄，因為此區塊未宣告具有該 ID 的欄位。請宣告此欄位，或將其寫成 data-、aria- 或 html- 屬性，以加入根元素。"
 
+#. translators: %s: Closest storage key the block declares.
+#: includes/classes/block-validator.php
+#, php-format
+msgid "Did you mean \"%s\"?"
+msgstr "您是指「%s」嗎？"
+
 #: includes/classes/block-validator.php
 msgid "This storage key is not declared by the block or its extensions."
 msgstr "此儲存索引鍵未由區塊或其擴充功能宣告。"

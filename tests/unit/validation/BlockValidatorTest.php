@@ -205,6 +205,35 @@ class BlockValidatorTest extends TestCase {
 		$this->assertNotSame( '', $findings[0]['message'] );
 	}
 
+	public function test_unknown_field_message_names_the_closest_key_at_its_level(): void {
+		$findings = $this->validate( array( 'txt' => 'x', 'Choice' => 'a', 'misspelled' => 'y', 'rows' => array( array( 'titel' => 'z' ) ) ) );
+		$messages = array_column( $findings, 'message', 'path' );
+		$this->assertSame( array( 'txt', 'Choice', 'misspelled', 'rows/0/titel' ), array_keys( $messages ) );
+		$this->assertStringEndsWith( ' Did you mean "text"?', $messages['txt'] );
+		$this->assertStringEndsWith( ' Did you mean "choice"?', $messages['Choice'] );
+		$this->assertStringEndsWith( ' Did you mean "title"?', $messages['rows/0/titel'] );
+		$this->assertStringNotContainsString( 'Did you mean', $messages['misspelled'] );
+		$this->assertSame( array( 'code', 'path', 'source', 'message', 'value', 'expected' ), array_keys( $findings[0] ) );
+	}
+
+	public function test_suggestions_include_extensions_but_never_parent_storage_keys(): void {
+		$values = array(
+			'exrta' => 'Extension',
+			'meta' => array( 'titel' => 'Group' ),
+			'rows' => array( array( 'choic' => 'Not a row field', 'items' => array( array( 'txet' => 'Nested' ) ) ) ),
+		);
+		$attrs = $this->attrs( $values );
+		$before = $attrs;
+		$findings = bs_validate_block( self::NAME, $attrs );
+		$by_path = array_column( $findings, null, 'path' );
+		$this->assertStringEndsWith( ' Did you mean "extra"?', $by_path['exrta']['message'] );
+		$this->assertStringEndsWith( ' Did you mean "title"?', $by_path['meta/titel']['message'] );
+		$this->assertStringEndsWith( ' Did you mean "text"?', $by_path['rows/0/items/0/txet']['message'] );
+		$this->assertNotContains( 'choice', $by_path['rows/0/choic']['expected'] );
+		$this->assertStringNotContainsString( 'Did you mean "choice"?', $by_path['rows/0/choic']['message'] );
+		$this->assertSame( $before, $attrs );
+	}
+
 	public static function invalid_values(): array {
 		return array(
 			'unknown root field' => array( array( 'misspelled' => 'x' ), 'unknown_field', 'misspelled' ),

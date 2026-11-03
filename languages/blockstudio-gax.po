@@ -23,6 +23,12 @@ msgstr "Blockstudio"
 msgid "The \"%1$s\" attribute on a %2$s block tag is dropped because the block declares no field with that id. Declare the field, or write it as a data-, aria- or html- attribute to put it on the root element."
 msgstr "Mallattoo \"%1$s\" jedhu mallattoo block %2$s irratti, block sun id sanaan dirree waan hin ibsineef haqameera. Dirree sana ibsi, yookaan elementii hundee irratti galchuuf akka amalata data-, aria- yookaan html-tti barreessi."
 
+#. translators: %s: Closest storage key the block declares.
+#: includes/classes/block-validator.php
+#, php-format
+msgid "Did you mean \"%s\"?"
+msgstr "“%s” jechuu barbaaddee?"
+
 #: includes/classes/block-validator.php
 msgid "This storage key is not declared by the block or its extensions."
 msgstr "Furtuun kuusaa kun blockiin yookaan dheeressitoota isaatiin hin ibsamne."

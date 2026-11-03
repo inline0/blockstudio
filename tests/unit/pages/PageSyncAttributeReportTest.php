@@ -85,7 +85,8 @@ class PageSyncAttributeReportTest extends TestCase {
 		Page_Sync::engine_fingerprint();
 		remove_filter( 'blockstudio/pages/sync_engine_inputs', $capture, PHP_INT_MAX );
 
-		$this->assertSame( '2', $captured['blockTags'] ?? null );
+		$this->assertSame( '2', $captured['htmlParser'] ?? null );
+		$this->assertSame( '3', $captured['blockTags'] ?? null );
 	}
 
 	private function reconcile(): array {
