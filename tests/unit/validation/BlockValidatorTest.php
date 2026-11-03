@@ -219,7 +219,7 @@ class BlockValidatorTest extends TestCase {
 	public function test_suggestions_include_extensions_but_never_parent_storage_keys(): void {
 		$values = array(
 			'exrta' => 'Extension',
-			'meta' => array( 'titel' => 'Group' ),
+			'meta_titel' => 'Group',
 			'rows' => array( array( 'choic' => 'Not a row field', 'items' => array( array( 'txet' => 'Nested' ) ) ) ),
 		);
 		$attrs = $this->attrs( $values );
@@ -227,7 +227,7 @@ class BlockValidatorTest extends TestCase {
 		$findings = bs_validate_block( self::NAME, $attrs );
 		$by_path = array_column( $findings, null, 'path' );
 		$this->assertStringEndsWith( ' Did you mean "extra"?', $by_path['exrta']['message'] );
-		$this->assertStringEndsWith( ' Did you mean "title"?', $by_path['meta/titel']['message'] );
+		$this->assertStringEndsWith( ' Did you mean "meta_title"?', $by_path['meta_titel']['message'] );
 		$this->assertStringEndsWith( ' Did you mean "text"?', $by_path['rows/0/items/0/txet']['message'] );
 		$this->assertNotContains( 'choice', $by_path['rows/0/choic']['expected'] );
 		$this->assertStringNotContainsString( 'Did you mean "choice"?', $by_path['rows/0/choic']['message'] );

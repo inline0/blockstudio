@@ -15,6 +15,7 @@ class BlockValidatorSuggestionTest extends TestCase {
 	public static function suggestions(): array {
 		return array(
 			'typo' => array( 'titel', array( 'title', 'description' ), 'title' ),
+			'prefixed group storage key' => array( 'meta_titel', array( 'meta_title', 'meta_note' ), 'meta_title' ),
 			'case' => array( 'TITLE', array( 'title' ), 'title' ),
 			'equal distances keep definition order' => array( 'cit', array( 'cat', 'cut' ), 'cat' ),
 			'exact case match beats an earlier near match' => array( 'Choice', array( 'choices', 'choice' ), 'choice' ),
