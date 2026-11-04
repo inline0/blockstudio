@@ -148,6 +148,28 @@ Customize individual fields per-instance using `overrides`. Keys are the origina
 
 Override properties are merged on top of the original field definition. An `id` override bypasses the `idStructure` pattern. In the example above, `enabled` becomes `active` instead of `hero_enabled`.
 
+The merge is one level deep: a property you override replaces the original
+property as a whole. An `options` override is the complete option list, not an
+addition to it, and the same holds for `conditions` and for the `attributes` of
+a group. Conditions on the reference are still added afterwards.
+
+```json title="block.json"
+{
+  "type": "custom/background",
+  "overrides": {
+    "background": {
+      "options": [
+        { "value": "white", "label": "White" },
+        { "value": "grey", "label": "Grey" }
+      ]
+    }
+  }
+}
+```
+
+This block offers only White and Grey, however many options the definition
+lists.
+
 ## Conditions
 
 Conditions inside custom field definitions are automatically rewritten when

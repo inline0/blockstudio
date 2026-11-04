@@ -222,7 +222,13 @@ final class Block_Validator {
 		}
 		foreach ( $values as $key => $value ) {
 			if ( ! isset( $known[ $key ] ) ) {
-				$findings[] = self::finding( 'unknown_field', self::path( $path, $key ), $source, $value, array_keys( $known ) );
+				$finding    = self::finding( 'unknown_field', self::path( $path, $key ), $source, $value, array_keys( $known ) );
+				$suggestion = self::closest_key( (string) $key, array_keys( $known ) );
+				if ( null !== $suggestion ) {
+					/* translators: %s: Closest storage key the block declares. */
+					$finding['message'] .= ' ' . sprintf( __( 'Did you mean "%s"?', 'blockstudio' ), $suggestion );
+				}
+				$findings[] = $finding;
 			}
 		}
 		foreach ( $definitions as $key => $entries ) {
@@ -483,6 +489,34 @@ final class Block_Validator {
 	private static function path( string $parent, int|string $key ): string {
 		$segment = str_replace( array( '~', '/' ), array( '~0', '~1' ), (string) $key );
 		return '' === $parent ? $segment : $parent . '/' . $segment;
+	}
+
+	/**
+	 * Closest known storage key to a misspelled one, the rule Settings uses for unknown settings.
+	 *
+	 * @param string                 $key   Unknown storage key.
+	 * @param array<int, int|string> $known Known storage keys at the same level.
+	 * @return string|null Suggestion, or null when nothing is within three edits.
+	 */
+	private static function closest_key( string $key, array $known ): ?string {
+		$best     = null;
+		$distance = PHP_INT_MAX;
+		$key      = strtolower( $key );
+		foreach ( $known as $candidate ) {
+			$candidate = (string) $candidate;
+			if ( abs( strlen( $key ) - strlen( $candidate ) ) > 3 ) {
+				continue;
+			}
+			$current = levenshtein( $key, strtolower( $candidate ) );
+			if ( $current < $distance ) {
+				$distance = $current;
+				$best     = $candidate;
+				if ( 0 === $distance ) {
+					break;
+				}
+			}
+		}
+		return $distance <= 3 ? $best : null;
 	}
 
 	/**

@@ -23,6 +23,12 @@ msgstr "Blockstudio"
 msgid "The \"%1$s\" attribute on a %2$s block tag is dropped because the block declares no field with that id. Declare the field, or write it as a data-, aria- or html- attribute to put it on the root element."
 msgstr "แอตทริบิวต์ \"%1$s\" บนแท็กบล็อก %2$s ถูกละทิ้งเนื่องจากบล็อกไม่ได้ประกาศฟิลด์ที่มีรหัสดังกล่าว ให้ประกาศฟิลด์ หรือเขียนเป็นแอตทริบิวต์ data-, aria- หรือ html- เพื่อใส่ไว้บนองค์ประกอบราก"
 
+#. translators: %s: Closest storage key the block declares.
+#: includes/classes/block-validator.php
+#, php-format
+msgid "Did you mean \"%s\"?"
+msgstr "คุณหมายถึง “%s” ใช่ไหม?"
+
 #: includes/classes/block-validator.php
 msgid "This storage key is not declared by the block or its extensions."
 msgstr "คีย์พื้นที่จัดเก็บนี้ไม่ได้ประกาศโดยบล็อกหรือส่วนขยาย"

@@ -197,8 +197,8 @@ class Page_Sync {
 		$inputs = array(
 			'pageSync'      => self::SYNC_ENGINE_VERSION,
 			'pageDiscovery' => '1',
-			'htmlParser'    => '1',
-			'blockTags'     => '2',
+			'htmlParser'    => '2',
+			'blockTags'     => '3',
 		);
 
 		/**

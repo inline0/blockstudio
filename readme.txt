@@ -3,7 +3,7 @@ Contributors: dnnsjsk
 Requires at least: 6.7
 Tested up to: 7.0.0
 Requires PHP: 8.2
-Stable tag: 7.7.11
+Stable tag: 7.7.12
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -53,6 +53,12 @@ Download the latest release zip from [GitHub Releases](https://github.com/inline
 * [Getting Started](https://blockstudio.dev/docs/getting-started)
 
 == Changelog ==
+
+= 7.7.12 =
+* Fix: file-backed pages preserve custom CSS classes in core block attributes and saved HTML, including mapped headings, groups, and button styles, on their next explicit sync (#196)
+* Fix: page and pattern sources containing serialized WordPress blocks preserve attributes, nested blocks, and dynamic blocks instead of being reparsed as HTML (#196)
+* New: saved-value validation suggests the closest storage key for unknown fields while preserving its machine-readable finding format (#198)
+* Fix: custom-field documentation clarifies that override properties replace complete option, condition, and nested-field lists (#197)
 
 = 7.7.11 =
 * Performance: frontend asset and component processing avoids repeated full-markup searches for every registered block and field (#193)
