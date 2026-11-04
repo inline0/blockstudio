@@ -220,6 +220,30 @@ if ( ! function_exists( 'bs_validate_block' ) ) {
 	}
 }
 
+if ( ! function_exists( 'bs_block_schema' ) ) {
+	/**
+	 * Describe the values a block stores as a JSON Schema.
+	 *
+	 * Call after block registration. The schema describes the object stored in
+	 * blockstudio.attributes, including the fields of matching extensions, in
+	 * the simplest form bs_validate_block() accepts. A value that matches the
+	 * schema passes bs_validate_block() without findings. Constraints use only
+	 * keywords that rest_validate_value_from_schema() checks.
+	 *
+	 * @since 7.7.13
+	 *
+	 * @param string $name Block name, including extended core or third-party blocks.
+	 * @return array|null JSON Schema, or null for an unmanaged block.
+	 * @example $schema = bs_block_schema( 'theme/card' );
+	 *
+	 * @phpcs:disable WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedFunctionFound -- Public API function.
+	 */
+	function bs_block_schema( string $name ): ?array {
+		// phpcs:enable WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedFunctionFound
+		return \Blockstudio\Block_Validator::schema( $name );
+	}
+}
+
 if ( ! function_exists( 'bs_block_values' ) ) {
 	/**
 	 * Get the values of a stored block as its template receives them.

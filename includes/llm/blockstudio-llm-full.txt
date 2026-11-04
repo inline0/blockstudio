@@ -6164,7 +6164,9 @@ copy: changing it does not change the registered block.
 
 These are definitions, not saved values. To validate saved markup, use
 `bs_validate_block()` instead of maintaining a
-separate field walker. WordPress-owned attributes remain separate.
+separate field walker. To describe the values a block accepts, use
+`bs_block_schema()`. WordPress-owned attributes
+remain separate.
 
 Fields added by extensions are not part of
 `bs_block_fields()`. Use `bs_block_extension_fields()` to get them. It matches
@@ -6334,6 +6336,75 @@ add_filter('blockstudio/blocks/attributes/validate', function($findings, $name, 
 
 Always return a list of findings; returning `[]` accepts the block. This
 filter runs only for managed blocks, never for the `null` result.
+
+### Describing stored values
+
+Use `bs_block_schema()` after block registration (`init` or later) to describe
+the values a block stores, for example to generate block markup in a tool or
+an AI integration, or to check input in a REST route:
+
+```php
+$schema = bs_block_schema('theme/card');
+
+if ($schema === null) {
+  // No Blockstudio fields or matching extensions apply.
+}
+```
+
+The result is a JSON Schema of the object saved in
+`attrs.blockstudio.attributes`. It covers the block's fields and the fields of
+matching extensions, with the storage keys validation uses: a top-level group
+prefixes its children, anonymous groups and tabs add no level, and a files
+field adds its `<id>__size` companion. Repeaters are lists of row objects with
+`minItems` and `maxItems` from `min` and `max`. `additionalProperties` is
+`false` on every level. A block without fields has no `properties`, so only an
+empty object matches.
+
+Each field is described in the simplest form `bs_validate_block()` accepts, so
+a value that matches the schema produces no findings:
+
+| Field | Schema |
+| --- | --- |
+| `text`, `textarea`, `richtext`, `wysiwyg`, `code`, `date`, `datetime`, `unit`, `classes`, `html-tag`, `block` | A string. |
+| `number`, `range` | A number, with `minimum` and `maximum` from `min` and `max`. |
+| `toggle` | A boolean. |
+| `select`, `radio`, `checkbox` | An option value, or a list of option values for `checkbox` and `multiple`, with `enum`. |
+| `color`, `gradient` | A string, with `enum` when `disableCustomColors` or `disableCustomGradients` is set. |
+| `token` | A list of strings. |
+| `files` | An attachment ID, or a list of IDs with `multiple`. |
+| `link` | An object with `url`, `title` and `opensInNewTab`; `url` is required. |
+| `icon` | An object with `set`, `subSet` and `icon`; `set` and `icon` are required. |
+| `attributes` | A list of objects with a non-empty `attribute` and a scalar `value`. |
+| `repeater` | A list of row objects. |
+| Custom field types | Their registered attribute type. |
+
+`enum` lists the options validation checks: static options and populate
+options already resolved at registration. Remote `fetch` options and populate
+arguments containing `{attributes.*}` have no `enum`. A key with definitions of
+different storage shapes is left out, because validation reports every value
+stored under it. When a block field and an extension field share a key, `enum`
+lists the values both accept. Within repeater rows, the first field with a
+matching ID applies, as on render.
+
+A field's `label` becomes `title`, its `help` becomes `description`, and its
+`default` is kept as an annotation. The schema's own `title` is the block
+title. Fields are never required, and conditional logic is not part of the
+schema.
+
+Constraints use only keywords that `rest_validate_value_from_schema()` checks,
+so the schema works as the input schema of a REST route or an ability as it is:
+
+```php
+$values = $block['attrs']['blockstudio']['attributes'] ?? [];
+$result = rest_validate_value_from_schema($values, bs_block_schema($block['blockName']));
+```
+
+The schema describes one form per field; validation also accepts imported
+shapes such as option objects, numeric strings, and ID objects. Use
+`bs_validate_block()` to check stored content. Sites with a custom render-time
+resolver can adapt the schema with the
+`blockstudio/blocks/attributes/schema`
+filter.
 
 ## PHP Functions
 
@@ -9430,6 +9501,21 @@ add_filter('blockstudio/blocks/attributes/validate', function($findings, $name, 
 ```
 
 Return a list of findings. The filter is not called when the block has no
+Blockstudio fields or matching extensions (`null`).
+
+### attributes/schema
+
+Adjust the JSON Schema returned by
+`bs_block_schema()`, for
+example when a custom render filter resolves stored references.
+
+```php
+add_filter('blockstudio/blocks/attributes/schema', function($schema, $name) {
+  return $schema;
+}, 10, 2);
+```
+
+Return the schema array. The filter is not called when the block has no
 Blockstudio fields or matching extensions (`null`).
 
 ### attributes/populate

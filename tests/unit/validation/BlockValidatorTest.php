@@ -532,6 +532,122 @@ class BlockValidatorTest extends TestCase {
 		$this->assertSame( 'unknown', $findings[0]['value'] );
 	}
 
+	public function test_schema_is_null_for_unmanaged_blocks_and_closed_for_empty_ones(): void {
+		$this->assertNull( bs_block_schema( 'validation-missing/unknown' ) );
+		$schema = bs_block_schema( 'validation-test/empty' );
+		$this->assertSame( 'object', $schema['type'] );
+		$this->assertFalse( $schema['additionalProperties'] );
+		$this->assertArrayNotHasKey( 'properties', $schema );
+		$this->assertTrue( rest_validate_value_from_schema( array(), $schema ) );
+		$this->assertInstanceOf( WP_Error::class, rest_validate_value_from_schema( array( 'any' => 'value' ), $schema ) );
+	}
+
+	public function test_schema_describes_each_field_in_its_simplest_stored_form(): void {
+		$schema = bs_block_schema( self::NAME );
+		$fields = $schema['properties'];
+		$this->assertSame( 'Validation', $schema['title'] );
+		$this->assertSame( array( 'type' => 'string' ), $fields['text'] );
+		$this->assertSame( array( 'type' => 'number' ), $fields['number'] );
+		$this->assertSame( array( 'type' => 'boolean' ), $fields['toggle'] );
+		$this->assertSame( array( 'type' => 'string', 'enum' => array( 'a', 'b', '0' ) ), $fields['choice'] );
+		$this->assertSame( array( 'type' => 'string', 'enum' => array( 'a', 'b' ), 'default' => 'b' ), $fields['presetChoice'] );
+		$this->assertSame( array( 'type' => 'array', 'items' => array( 'type' => 'string', 'enum' => array( 'a', 'b', '0' ) ) ), $fields['many'] );
+		$this->assertSame( array( 'type' => 'array', 'items' => array( 'type' => array( 'string', 'number' ), 'enum' => array( 'a', 'b', 0 ) ) ), $fields['checks'] );
+		$this->assertSame( array( 'type' => 'string' ), $fields['color'] );
+		$this->assertSame( array( 'type' => 'string', 'enum' => array( '#fff' ) ), $fields['closedColor'] );
+		$this->assertSame( array( 'type' => 'integer' ), $fields['image'] );
+		$this->assertSame( array( 'type' => 'string' ), $fields['image__size'] );
+		$this->assertSame( array( 'type' => 'array', 'items' => array( 'type' => 'integer' ) ), $fields['gallery'] );
+		$this->assertSame( array( 'url' ), $fields['link']['required'] );
+		$this->assertSame( 'object', $fields['custom']['type'] );
+		$this->assertSame( array( 'type' => 'string', 'enum' => array( 'resolved', 'alternate' ) ), $fields['loaded'] );
+		$this->assertSame( array( $this->post_id ), $fields['queried']['enum'] );
+		$this->assertArrayNotHasKey( 'enum', $fields['remote'] );
+		$this->assertArrayNotHasKey( 'enum', $fields['dynamic'] );
+		$this->assertSame( array( 'type' => 'string', 'enum' => array( 'b' ) ), $fields['later'], 'The later extension definition applies.' );
+		$this->assertSame( array( 'type' => 'string' ), $fields['extra'] );
+		// Groups prefix their keys, anonymous groups and tabs add no level, display-only fields store nothing.
+		$this->assertArrayHasKey( 'meta_title', $fields );
+		$this->assertArrayHasKey( 'meta_note', $fields );
+		$this->assertArrayHasKey( 'tabText', $fields );
+		foreach ( array( 'meta', 'meta_dropped_title', 'notice', 'display' ) as $key ) {
+			$this->assertArrayNotHasKey( $key, $fields );
+		}
+		$rows = $fields['rows'];
+		$this->assertSame( array( 1, 2 ), array( $rows['minItems'], $rows['maxItems'] ) );
+		$this->assertFalse( $rows['items']['additionalProperties'] );
+		$this->assertSame( array( 'title', 'style', 'photo', 'photo__size', 'note', 'items' ), array_keys( $rows['items']['properties'] ) );
+		$this->assertSame( array( 'a', 'b' ), $rows['items']['properties']['style']['enum'] );
+		$this->assertSame( array( 'a' ), $fields['duplicates']['items']['properties']['choice']['enum'], 'The first row field with an ID is read.' );
+	}
+
+	public function test_values_matching_the_schema_pass_validation_and_wordpress_schema_checks(): void {
+		$schema = bs_block_schema( self::NAME );
+		$values = array(
+			'text' => 'Text',
+			'number' => 3,
+			'toggle' => true,
+			'choice' => 'a',
+			'presetChoice' => 'b',
+			'many' => array( 'a', 'b' ),
+			'checks' => array( 'a', 0 ),
+			'radio' => 'b',
+			'tokens' => array( 'one' ),
+			'color' => '#123456',
+			'closedColor' => '#fff',
+			'gradient' => 'linear-gradient(red, blue)',
+			'image' => 12,
+			'image__size' => 'large',
+			'gallery' => array( 12, 13 ),
+			'link' => array( 'url' => 'https://example.test/', 'title' => 'Example', 'opensInNewTab' => false ),
+			'icon' => array( 'set' => 'lucide', 'icon' => 'star' ),
+			'html' => array( array( 'attribute' => 'data-x', 'value' => '1' ) ),
+			'duplicates' => array( array( 'choice' => 'a' ) ),
+			'custom' => array( 'key' => 'value' ),
+			'meta_title' => 'Title',
+			'meta_note' => 'Note',
+			'tabText' => 'Tab',
+			'rows' => array( array( 'title' => 'Row', 'style' => 'a', 'photo' => 5, 'photo__size' => 'thumbnail', 'note' => 'Note', 'items' => array( array( 'text' => 'Item' ) ) ) ),
+			'loaded' => 'resolved',
+			'queried' => $this->post_id,
+			'remote' => 'anything',
+			'dynamic' => 'anything',
+			'extra' => 'Extra',
+			'later' => 'b',
+		);
+		$this->assertTrue( rest_validate_value_from_schema( $values, $schema ) );
+		$this->assertSame( array(), $this->validate( $values ) );
+
+		$invalid = array(
+			'unknown_field' => array( 'titel' => 'Text' ),
+			'unknown_option' => array( 'choice' => 'c' ),
+			'too_many_rows' => array( 'rows' => array( array( 'title' => 'A' ), array( 'title' => 'B' ), array( 'title' => 'C' ) ) ),
+		);
+		foreach ( $invalid as $code => $value ) {
+			$this->assertInstanceOf( WP_Error::class, rest_validate_value_from_schema( array_replace( $values, $value ), $schema ), $code );
+			$this->assertSame( array( $code ), array_column( $this->validate( array_replace( $values, $value ) ), 'code' ) );
+		}
+	}
+
+	public function test_schema_leaves_out_conflicting_definitions_and_covers_extension_only_blocks(): void {
+		$schema = bs_block_schema( 'validation-test/conflicts' );
+		$this->assertArrayNotHasKey( 'tone', $schema['properties'] );
+		$this->assertSame( array( 'type' => 'string' ), $schema['properties']['note'] );
+		$this->assertArrayNotHasKey( 'properties', $schema['properties']['rows']['items'], 'Both row fields named duplicate conflict.' );
+		$paragraph = bs_block_schema( 'core/paragraph' );
+		$this->assertSame( array( 'extra', 'later', 'html' ), array_keys( $paragraph['properties'] ) );
+	}
+
+	public function test_schema_filter_adapts_the_result(): void {
+		$filter = static function ( array $schema, string $name ): array {
+			$schema['description'] = $name;
+			return $schema;
+		};
+		add_filter( 'blockstudio/blocks/attributes/schema', $filter, 10, 2 );
+		$this->assertSame( self::NAME, bs_block_schema( self::NAME )['description'] );
+		remove_filter( 'blockstudio/blocks/attributes/schema', $filter, 10 );
+	}
+
 	public function test_validation_does_not_query_attachments_or_rerun_populate(): void {
 		$queries = $GLOBALS['wpdb']->num_queries;
 		$calls = $GLOBALS['blockstudio_validation_populate_calls'];
