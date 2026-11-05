@@ -3,7 +3,7 @@ Contributors: dnnsjsk
 Requires at least: 6.7
 Tested up to: 7.0.0
 Requires PHP: 8.2
-Stable tag: 7.7.12
+Stable tag: 7.7.13
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -53,6 +53,12 @@ Download the latest release zip from [GitHub Releases](https://github.com/inline
 * [Getting Started](https://blockstudio.dev/docs/getting-started)
 
 == Changelog ==
+
+= 7.7.13 =
+* New: `bs_block_schema()` describes canonical stored field values as JSON Schema, including matching extensions, groups, repeaters, and resolved options (#199)
+* Fix: post meta storage preserves literal backslashes, quotes, and nested values when saving and resaving block fields (#200)
+* Fix: meta-backed and custom-post-type database records preserve backslashes across creates, updates, and unrelated record rewrites (#200)
+* Security: bundled Symfony YAML and Filesystem libraries are updated to 7.4.23 (#201)
 
 = 7.7.12 =
 * Fix: file-backed pages preserve custom CSS classes in core block attributes and saved HTML, including mapped headings, groups, and button styles, on their next explicit sync (#196)

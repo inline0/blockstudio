@@ -91,6 +91,22 @@ function writeContentSyncSettings(original: string) {
 }
 
 test.describe('CLI - blocks', () => {
+  test('describes stored values with the public schema helper after registration', () => {
+    const result = JSON.parse(
+      wp(
+        'eval \'$name = "blockstudio/type-select"; $schema = bs_block_schema($name); $valid = array("defaultValueLabel" => "one"); $invalid = array("defaultValueLabel" => "missing-option"); echo wp_json_encode(array("type" => $schema["type"], "closed" => $schema["additionalProperties"], "valid" => rest_validate_value_from_schema($valid, $schema), "findings" => bs_validate_block($name, array("blockstudio" => array("attributes" => $valid))), "invalid" => is_wp_error(rest_validate_value_from_schema($invalid, $schema)), "unmanaged" => bs_block_schema("unmanaged/missing")));\'',
+      ),
+    );
+    expect(result).toEqual({
+      type: 'object',
+      closed: false,
+      valid: true,
+      findings: [],
+      invalid: true,
+      unmanaged: null,
+    });
+  });
+
   test('lists blocks', () => {
     const out = wp('bs blocks list --format=json');
     const blocks = JSON.parse(out);

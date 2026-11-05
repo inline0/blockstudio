@@ -89,6 +89,10 @@ Add the `storage` property to any field definition:
 
 Autosaves and revisions do not sync either storage location. Draft, pending, private, and scheduled posts can update their own post meta, but do not change live site options. A scheduled post syncs options when WordPress publishes it.
 
+Values are copied literally, including backslashes, quotes, and nested repeater values. Do not add escaping to field values to compensate for WordPress meta storage; Blockstudio handles that boundary. Site options keep the same literal values without additional slashing.
+
+If an earlier version stripped backslashes from a post's meta copy, save the post again after upgrading. The original field value in its block attributes is used to refresh the meta copy.
+
 ### Saving Site Options
 
 Options are shared across the entire site. Publishing a new block writes the option fields supplied in its saved attributes. Later saves compare each field with the previous saved version of that block and write only changed values. Saving a post's title, or an unchanged older copy of the block on another post, does not overwrite a newer option value.

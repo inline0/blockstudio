@@ -38,14 +38,11 @@ final class Block_Validator {
 			return null;
 		}
 
-		$block    = WP_Block_Type_Registry::get_instance()->get_registered( $name );
-		$own      = self::compiled( Field_Definitions::latest( Field_Definitions::collect( $fields ?? array(), 'block' ) ), $block->attributes ?? array() );
-		$extended = array();
-		foreach ( Extensions::get_matches( $name, Build::extensions() ) as $extension ) {
-			$extended = array_replace( $extended, $extension->attributes ?? array() );
-		}
-		$extended    = self::compiled( Field_Definitions::latest( Field_Definitions::collect( $extensions, 'extension' ) ), $extended );
-		$definitions = Field_Definitions::combine( $own, $extended );
+		$block       = WP_Block_Type_Registry::get_instance()->get_registered( $name );
+		$sets        = self::definition_sets( $name, $block, $fields, $extensions );
+		$own         = $sets[0];
+		$extended    = $sets[1];
+		$definitions = $sets[2];
 		$source      = null === $fields ? 'extension' : 'block';
 		$findings    = null === $fields ? array() : self::unknown_attributes( $name, $attrs, array_merge( array_keys( ( $block->attributes ?? array() ) + WP_Block_Type::GLOBAL_ATTRIBUTES ), array_keys( $definitions ) ) );
 		$settings    = array();
@@ -114,6 +111,334 @@ final class Block_Validator {
 		self::values( $values, $definitions, '', $source, $disabled, $findings );
 
 		return self::filter( $findings, $name, $attrs );
+	}
+
+	/**
+	 * Describe the values a block stores in blockstudio.attributes as a JSON Schema.
+	 *
+	 * Built from the definitions validate() uses. Each field is described in the
+	 * simplest stored form validate() accepts: an option value instead of an
+	 * option object, attachment IDs instead of file objects. Only keywords that
+	 * rest_validate_value_from_schema() checks are used for constraints, so the
+	 * schema works as a REST or ability input schema as it is.
+	 *
+	 * @param string $name Registered block name.
+	 * @return array|null Schema, or null when Blockstudio has no fields for this block.
+	 */
+	public static function schema( string $name ): ?array {
+		$fields     = \bs_block_fields( $name );
+		$extensions = \bs_block_extension_fields( $name );
+		if ( null === $fields && array() === $extensions ) {
+			return null;
+		}
+
+		$block  = WP_Block_Type_Registry::get_instance()->get_registered( $name );
+		$schema = array( '$schema' => 'https://json-schema.org/draft/2020-12/schema' )
+			+ ( is_string( $block->title ?? null ) && '' !== $block->title ? array( 'title' => $block->title ) : array() )
+			+ self::object_schema( self::definition_sets( $name, $block, $fields, $extensions )[2] );
+
+		/**
+		 * Filter the schema of a block's stored field values.
+		 *
+		 * @since 7.7.13
+		 * @param array  $schema JSON Schema of blockstudio.attributes.
+		 * @param string $name   Block name.
+		 */
+		return apply_filters( 'blockstudio/blocks/attributes/schema', $schema, $name );
+	}
+
+	/**
+	 * Compile the block's own and its extensions' storage definitions.
+	 *
+	 * @param string              $name       Block name.
+	 * @param \WP_Block_Type|null $block      Registered block type.
+	 * @param array|null          $fields     Own field definitions.
+	 * @param array               $extensions Extension field definitions.
+	 * @return array{0: array, 1: array, 2: array} Own, extension and combined definitions.
+	 */
+	private static function definition_sets( string $name, ?WP_Block_Type $block, ?array $fields, array $extensions ): array {
+		$own      = self::compiled( Field_Definitions::latest( Field_Definitions::collect( $fields ?? array(), 'block' ) ), $block->attributes ?? array() );
+		$extended = array();
+		foreach ( Extensions::get_matches( $name, Build::extensions() ) as $extension ) {
+			$extended = array_replace( $extended, $extension->attributes ?? array() );
+		}
+		$extended = self::compiled( Field_Definitions::latest( Field_Definitions::collect( $extensions, 'extension' ) ), $extended );
+		return array( $own, $extended, Field_Definitions::combine( $own, $extended ) );
+	}
+
+	/**
+	 * Schema of one storage level: a block's values or one repeater row.
+	 *
+	 * Keys with conflicting definitions are left out, because validate()
+	 * reports every value stored under them.
+	 *
+	 * @param array $definitions Compiled definitions by storage key.
+	 * @return array Object schema.
+	 */
+	private static function object_schema( array $definitions ): array {
+		$properties = array();
+		foreach ( $definitions as $key => $entries ) {
+			if ( count( array_unique( array_map( static fn( array $entry ): string => self::shape( $entry['field'] ), $entries ) ) ) > 1 ) {
+				continue;
+			}
+			// Only the first definition of each source is read, as in values().
+			$effective = array();
+			foreach ( $entries as $entry ) {
+				$effective[ $entry['source'] ] ??= $entry;
+			}
+			$schemas = array_map( array( self::class, 'field_schema' ), array_values( $effective ) );
+			$schema  = array_shift( $schemas );
+			foreach ( $schemas as $other ) {
+				$schema = self::narrow( $schema, $other );
+			}
+			if ( 'repeater' === $entries[0]['field']['type'] && count( $effective ) > 1 ) {
+				$schema['items'] = self::object_schema( self::repeater_definitions( array_values( $effective ) ) );
+			}
+			$properties[ (string) $key ] = $schema;
+			if ( 'files' === $entries[0]['field']['type'] && ! isset( $definitions[ $key . '__size' ] ) ) {
+				$properties[ $key . '__size' ] = array( 'type' => 'string' );
+			}
+		}
+		// Without fields there is no properties keyword: an empty PHP array would
+		// encode as a JSON list, and WordPress reads properties as an array.
+		return array( 'type' => 'object' )
+			+ ( array() === $properties ? array() : array( 'properties' => $properties ) )
+			+ array( 'additionalProperties' => false );
+	}
+
+	/**
+	 * Intersect option sets and bounds from two definitions of one key.
+	 *
+	 * @param array $schema First field schema.
+	 * @param array $other  Second field schema of the same storage shape.
+	 * @return array Schema accepted by both.
+	 */
+	private static function narrow( array $schema, array $other ): array {
+		if ( 'null' === ( $schema['type'] ?? null ) || 'null' === ( $other['type'] ?? null ) ) {
+			unset( $schema['enum'] );
+			$schema['type'] = 'null';
+			return $schema;
+		}
+		if ( isset( $schema['enum'], $other['enum'] ) ) {
+			$schema['enum'] = array_values( array_filter( $schema['enum'], static fn( $value ): bool => false !== Block::get_option_value( array( 'options' => $other['enum'] ), 'both', $value ) ) );
+		} elseif ( isset( $other['enum'] ) ) {
+			$schema['enum'] = $other['enum'];
+		}
+		if ( isset( $schema['items'], $other['items'] ) ) {
+			$schema['items'] = self::narrow( $schema['items'], $other['items'] );
+		}
+		foreach ( array( 'minimum', 'minItems' ) as $bound ) {
+			if ( isset( $other[ $bound ] ) ) {
+				$schema[ $bound ] = isset( $schema[ $bound ] ) ? max( $schema[ $bound ], $other[ $bound ] ) : $other[ $bound ];
+			}
+		}
+		foreach ( array( 'maximum', 'maxItems' ) as $bound ) {
+			if ( isset( $other[ $bound ] ) ) {
+				$schema[ $bound ] = isset( $schema[ $bound ] ) ? min( $schema[ $bound ], $other[ $bound ] ) : $other[ $bound ];
+			}
+		}
+		// WordPress ignores an empty enum. Limit unavailable choices to a clear.
+		if ( isset( $schema['enum'] ) && array() === $schema['enum'] ) {
+			unset( $schema['enum'] );
+			$schema['type'] = 'null';
+			return $schema;
+		}
+		if ( 'array' === ( $schema['type'] ?? null ) && 'null' === ( $schema['items']['type'] ?? null ) ) {
+			$schema['maxItems'] = 0;
+		}
+		return $schema;
+	}
+
+	/**
+	 * Schema of one field's stored value in its simplest accepted form.
+	 *
+	 * @param array $entry Compiled definition.
+	 * @return array Field schema.
+	 */
+	private static function field_schema( array $entry ): array {
+		$field  = $entry['field'];
+		$type   = $field['type'];
+		$schema = match ( true ) {
+			in_array( $type, Field_Type_Config::STRING_TYPES, true ), in_array( $type, array( 'html-tag', 'block' ), true ) => array( 'type' => 'string' ),
+			in_array( $type, array( 'number', 'range' ), true ) => array( 'type' => 'number' ) + array_filter(
+				array(
+					'minimum' => $field['min'] ?? null,
+					'maximum' => $field['max'] ?? null,
+				),
+				'is_numeric'
+			),
+			'toggle' === $type => array( 'type' => 'boolean' ),
+			in_array( $type, array( 'select', 'radio', 'checkbox', 'color', 'gradient' ), true ) => self::option_schema( $entry ),
+			'token' === $type => array(
+				'type'  => 'array',
+				'items' => array( 'type' => 'string' ),
+			),
+			'files' === $type => empty( $field['multiple'] ) ? array(
+				'type'    => 'integer',
+				'minimum' => 0,
+			) : array(
+				'type'  => 'array',
+				'items' => array(
+					'type'    => 'integer',
+					'minimum' => 0,
+				),
+			),
+			'link' === $type => array(
+				'type'       => 'object',
+				'properties' => array(
+					'url'           => array( 'type' => 'string' ),
+					'title'         => array( 'type' => 'string' ),
+					'opensInNewTab' => array( 'type' => 'boolean' ),
+				),
+				'required'   => array( 'url' ),
+			),
+			'icon' === $type => array(
+				'type'       => 'object',
+				'properties' => array(
+					'set'    => array( 'type' => 'string' ),
+					'subSet' => array( 'type' => 'string' ),
+					'icon'   => array( 'type' => 'string' ),
+				),
+				'required'   => array( 'set', 'icon' ),
+			),
+			'attributes' === $type => array(
+				'type'  => 'array',
+				'items' => array(
+					'type'       => 'object',
+					'properties' => array(
+						'attribute' => array(
+							'type'      => 'string',
+							'minLength' => 1,
+						),
+						'value'     => array( 'type' => array( 'string', 'number', 'boolean' ) ),
+					),
+					'required'   => array( 'attribute', 'value' ),
+				),
+			),
+			'repeater' === $type => self::repeater_schema( $entry ),
+			default => array( 'type' => self::json_types( Field_Type_Config::get_attribute_type( $type ) ) ),
+		};
+
+		$annotations = array(
+			'label' => 'title',
+			'help'  => 'description',
+		);
+		foreach ( $annotations as $property => $keyword ) {
+			if ( is_string( $field[ $property ] ?? null ) && '' !== trim( $field[ $property ] ) ) {
+				$schema[ $keyword ] = trim( $field[ $property ] );
+			}
+		}
+		if ( array_key_exists( 'default', $field ) ) {
+			$schema['default'] = $field['default'];
+		}
+		return $schema;
+	}
+
+	/**
+	 * Option values of a select, radio, checkbox, color, or gradient field.
+	 *
+	 * Uses the options validate() checks against. Remote and attribute-dependent
+	 * populate options, and palettes that allow custom values, have no fixed list.
+	 *
+	 * @param array $entry Compiled definition.
+	 * @return array Field schema.
+	 */
+	private static function option_schema( array $entry ): array {
+		$field    = $entry['field'];
+		$type     = $field['type'];
+		$populate = $field['populate'] ?? array();
+		$multiple = Field_Type_Config::is_multiple_options( $type, $field );
+		$value    = array( 'type' => in_array( $type, array( 'color', 'gradient' ), true ) ? 'string' : array( 'string', 'number' ) );
+
+		$open = ( 'color' === $type && empty( $field['disableCustomColors'] ) ) ||
+			( 'gradient' === $type && empty( $field['disableCustomGradients'] ) ) ||
+			'fetch' === ( $populate['type'] ?? '' ) || ! empty( $populate['fetch'] ) || Populate::has_dynamic_arguments( $populate );
+		if ( ! $open ) {
+			$options = array() !== $populate
+				? ( $entry['compiled']['options'] ?? $field['options'] ?? array() )
+				: ( $field['options'] ?? $entry['compiled']['options'] ?? array() );
+			$values  = array_values(
+				array_filter(
+					array_map( static fn( $option ) => is_array( $option ) ? ( $option['value'] ?? null ) : $option, $options ),
+					'is_scalar'
+				)
+			);
+			$types   = array_values( array_unique( array_map( static fn( $option ): string => is_bool( $option ) ? 'boolean' : ( is_string( $option ) ? 'string' : 'number' ), $values ) ) );
+			$value   = array(
+				'type' => array() === $types ? $value['type'] : self::json_types( $types ),
+				'enum' => $values,
+			);
+		}
+
+		if ( isset( $value['enum'] ) && array() === $value['enum'] ) {
+			return $multiple
+				? array(
+					'type'     => 'array',
+					'items'    => array( 'type' => 'null' ),
+					'maxItems' => 0,
+				)
+				: array( 'type' => 'null' );
+		}
+
+		return $multiple
+			? array(
+				'type'  => 'array',
+				'items' => $value,
+			)
+			: $value;
+	}
+
+	/**
+	 * Rows of a repeater: an object per row, within the field's bounds.
+	 *
+	 * @param array $entry Compiled definition.
+	 * @return array Field schema.
+	 */
+	private static function repeater_schema( array $entry ): array {
+		$field = $entry['field'];
+
+		return array(
+			'type'  => 'array',
+			'items' => self::object_schema( self::repeater_definitions( array( $entry ) ) ),
+		) + array_filter(
+			array(
+				'minItems' => isset( $field['min'] ) ? (int) $field['min'] : null,
+				'maxItems' => isset( $field['max'] ) ? (int) $field['max'] : null,
+			),
+			'is_int'
+		);
+	}
+
+	/**
+	 * Combine the compiled row definitions read by every applicable render path.
+	 *
+	 * @param array $entries Effective repeater definitions.
+	 * @return array Row definitions by storage key.
+	 */
+	private static function repeater_definitions( array $entries ): array {
+		$children = array();
+		foreach ( $entries as $entry ) {
+			$inner = Field_Definitions::collect( Field_Definitions::children( $entry['field']['attributes'] ?? array() ), $entry['source'] );
+			$built = array();
+			foreach ( $entry['compiled']['attributes'] ?? array() as $attribute ) {
+				if ( is_array( $attribute ) && isset( $attribute['id'] ) && ! empty( $attribute['blockstudio'] ) ) {
+					$built[ $attribute['id'] ] ??= $attribute;
+				}
+			}
+			$children = Field_Definitions::combine( $children, self::compiled( $inner, $built ) );
+		}
+		return $children;
+	}
+
+	/**
+	 * JSON types for a declared WordPress attribute type.
+	 *
+	 * @param string|array|null $types Declared type or types; null accepts any type.
+	 * @return string|array JSON type or types.
+	 */
+	private static function json_types( string|array|null $types ): string|array {
+		$types = null === $types ? array( 'string', 'number', 'boolean', 'object', 'array', 'null' ) : array_values( (array) $types );
+		return 1 === count( $types ) ? $types[0] : $types;
 	}
 
 	/**
@@ -256,17 +581,7 @@ final class Block_Validator {
 			if ( 'repeater' !== ( $entries[0]['field']['type'] ?? '' ) || ! is_array( $value ) || ! array_is_list( $value ) ) {
 				continue;
 			}
-			$children = array();
-			foreach ( $entries as $entry ) {
-				$inner = Field_Definitions::collect( Field_Definitions::children( $entry['field']['attributes'] ?? array() ), $entry['source'] );
-				$built = array();
-				foreach ( $entry['compiled']['attributes'] ?? array() as $attribute ) {
-					if ( is_array( $attribute ) && isset( $attribute['id'] ) && ! empty( $attribute['blockstudio'] ) ) {
-						$built[ $attribute['id'] ] ??= $attribute;
-					}
-				}
-				$children = Field_Definitions::combine( $children, self::compiled( $inner, $built ) );
-			}
+			$children = self::repeater_definitions( $entries );
 			foreach ( $value as $index => $row ) {
 				$row_values = self::object_values( $row );
 				if ( null === $row_values ) {

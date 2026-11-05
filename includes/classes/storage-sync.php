@@ -317,7 +317,7 @@ class Storage_Sync {
 				if ( null === $value ) {
 					delete_post_meta( $post_id, $key );
 				} else {
-					update_post_meta( $post_id, $key, $value );
+					update_post_meta( $post_id, $key, wp_slash( $value ) );
 				}
 			} elseif ( 'option' === $type && $write_option ) {
 				if ( null === $value ) {
