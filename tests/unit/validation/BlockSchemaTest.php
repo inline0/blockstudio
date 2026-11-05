@@ -1,6 +1,7 @@
 <?php
 
 use Blockstudio\Block_Validator;
+use Blockstudio\Field_Type_Registry;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 
@@ -114,5 +115,27 @@ class BlockSchemaTest extends TestCase {
 		$this->assertSame( 'number', $schema['properties']['image__size']['type'] );
 		$this->assertTrue( rest_validate_value_from_schema( array( 'image' => 12, 'image__size' => 1 ), $schema ) );
 		$this->assertInstanceOf( WP_Error::class, rest_validate_value_from_schema( array( 'image__size' => 'large' ), $schema ) );
+	}
+
+	#[DataProvider( 'array_definition_order' )]
+	public function test_shared_custom_arrays_keep_item_constraints_in_either_order( bool $custom_first ): void {
+		$registry = Field_Type_Registry::instance();
+		$this->assertTrue( $registry->register( 'schema-test/list', array( 'attribute' => 'array' ) ) );
+		try {
+			$custom = array( 'type' => 'schema-test/list' );
+			$attributes = array( 'type' => 'attributes' );
+			$schema = $this->schema( array( 'pairs' => array(
+				$this->entry( $custom_first ? $custom : $attributes ),
+				$this->entry( $custom_first ? $attributes : $custom, 'extension' ),
+			) ) );
+			$this->assertTrue( rest_validate_value_from_schema( array( 'pairs' => array( array( 'attribute' => 'data-x', 'value' => 'x' ) ) ), $schema ) );
+			$this->assertInstanceOf( WP_Error::class, rest_validate_value_from_schema( array( 'pairs' => array( 'not an attribute pair' ) ), $schema ) );
+		} finally {
+			$registry->unregister( 'schema-test/list' );
+		}
+	}
+
+	public static function array_definition_order(): array {
+		return array( 'custom field first' => array( true ), 'custom field last' => array( false ) );
 	}
 }

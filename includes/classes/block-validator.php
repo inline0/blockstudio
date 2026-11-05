@@ -224,8 +224,8 @@ final class Block_Validator {
 		} elseif ( isset( $other['enum'] ) ) {
 			$schema['enum'] = $other['enum'];
 		}
-		if ( isset( $schema['items'], $other['items'] ) ) {
-			$schema['items'] = self::narrow( $schema['items'], $other['items'] );
+		if ( isset( $other['items'] ) ) {
+			$schema['items'] = isset( $schema['items'] ) ? self::narrow( $schema['items'], $other['items'] ) : $other['items'];
 		}
 		foreach ( array( 'minimum', 'minItems' ) as $bound ) {
 			if ( isset( $other[ $bound ] ) ) {
