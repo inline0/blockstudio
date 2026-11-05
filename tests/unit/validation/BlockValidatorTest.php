@@ -18,6 +18,7 @@ class BlockValidatorTest extends TestCase {
 	private const NAME = 'validation-test/fields';
 	private string $directory;
 	private array $registry_state = array();
+	private array $paragraph_schema_keys = array();
 	private int $post_id;
 
 	protected function setUp(): void {
@@ -28,6 +29,8 @@ class BlockValidatorTest extends TestCase {
 				$this->registry_state[ $property->getName() ] = $property->getValue( $registry );
 			}
 		}
+		$paragraph = bs_block_schema( 'core/paragraph' );
+		$this->paragraph_schema_keys = array_keys( $paragraph['properties'] ?? array() );
 		$GLOBALS['blockstudio_validation_populate_calls'] = 0;
 		Field_Type_Registry::instance()->register( 'validation/object', array( 'attribute' => 'object' ) );
 		Field_Type_Registry::instance()->register( 'validation/display', array( 'attribute' => null, 'produces_attribute' => false ) );
@@ -635,7 +638,10 @@ class BlockValidatorTest extends TestCase {
 		$this->assertSame( array( 'type' => 'string' ), $schema['properties']['note'] );
 		$this->assertArrayNotHasKey( 'properties', $schema['properties']['rows']['items'], 'Both row fields named duplicate conflict.' );
 		$paragraph = bs_block_schema( 'core/paragraph' );
-		$this->assertSame( array( 'extra', 'later', 'html' ), array_keys( $paragraph['properties'] ) );
+		$this->assertSame( array_values( array_unique( array_merge( $this->paragraph_schema_keys, array( 'extra', 'later', 'html' ) ) ) ), array_keys( $paragraph['properties'] ) );
+		$this->assertSame( array( 'type' => 'string' ), $paragraph['properties']['extra'] );
+		$this->assertSame( array( 'b' ), $paragraph['properties']['later']['enum'] );
+		$this->assertSame( 'array', $paragraph['properties']['html']['type'] );
 	}
 
 	public function test_schema_filter_adapts_the_result(): void {
