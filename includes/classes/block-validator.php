@@ -120,7 +120,8 @@ final class Block_Validator {
 	 * simplest stored form validate() accepts: an option value instead of an
 	 * option object, attachment IDs instead of file objects. Only keywords that
 	 * rest_validate_value_from_schema() checks are used for constraints, so the
-	 * schema works as a REST or ability input schema as it is.
+	 * schema works as a REST or ability input schema as it is. The example values
+	 * from block.json become `examples` when they match the schema.
 	 *
 	 * @param string $name Registered block name.
 	 * @return array|null Schema, or null when Blockstudio has no fields for this block.
@@ -136,6 +137,11 @@ final class Block_Validator {
 		$schema = array( '$schema' => 'https://json-schema.org/draft/2020-12/schema' )
 			+ ( is_string( $block->title ?? null ) && '' !== $block->title ? array( 'title' => $block->title ) : array() )
 			+ self::object_schema( self::definition_sets( $name, $block, $fields, $extensions )[2] );
+
+		$example = Render_Check::example( $name );
+		if ( array() !== $example && true === rest_validate_value_from_schema( $example, $schema ) ) {
+			$schema['examples'] = array( $example );
+		}
 
 		/**
 		 * Filter the schema of a block's stored field values.

@@ -644,6 +644,19 @@ class BlockValidatorTest extends TestCase {
 		$this->assertSame( 'array', $paragraph['properties']['html']['type'] );
 	}
 
+	public function test_schema_lists_the_block_example_when_it_matches(): void {
+		$block = Build::blocks()[ self::NAME ];
+		$block->example = array( 'attributes' => array( 'text' => 'Hello', 'choice' => 'b', 'image' => array( 'blockstudio' => true, 'type' => 'image' ) ) );
+		$schema = bs_block_schema( self::NAME );
+		$this->assertSame( array( array( 'text' => 'Hello', 'choice' => 'b' ) ), $schema['examples'] );
+		$this->assertTrue( rest_validate_value_from_schema( $schema['examples'][0], $schema ) );
+
+		$block->example = array( 'attributes' => array( 'choice' => 'c' ) );
+		$this->assertArrayNotHasKey( 'examples', bs_block_schema( self::NAME ) );
+		$block->example = array();
+		$this->assertArrayNotHasKey( 'examples', bs_block_schema( self::NAME ) );
+	}
+
 	public function test_schema_filter_adapts_the_result(): void {
 		$filter = static function ( array $schema, string $name ): array {
 			$schema['description'] = $name;
