@@ -3,6 +3,8 @@ import { login, getEditorCanvas } from '../utils/playwright-utils';
 
 const BASE = 'http://localhost:8888';
 const ROUTE = `${BASE}/wp-json/blockstudio/v1/db/blockstudio-type-db-meta/default`;
+const originalValue = 'blue\\path "quoted"';
+const updatedValue = 'red\\\\path and trailing\\';
 
 let page: Page;
 let nonce: string;
@@ -28,19 +30,19 @@ test.describe('DB Meta Storage', () => {
 
   test('create', async () => {
     const r = await page.evaluate(
-      async ({ route, nonce }) => {
+      async ({ route, nonce, value }) => {
         const res = await fetch(route, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', 'X-WP-Nonce': nonce },
-          body: JSON.stringify({ key: 'color', value: 'blue' }),
+          body: JSON.stringify({ key: 'color', value }),
         });
         return { s: res.status, b: await res.json() };
       },
-      { route: ROUTE, nonce },
+      { route: ROUTE, nonce, value: originalValue },
     );
     expect(r.s).toBe(200);
     expect(r.b.key).toBe('color');
-    expect(r.b.value).toBe('blue');
+    expect(r.b.value).toBe(originalValue);
     expect(r.b.id).toBeDefined();
     id = Number(r.b.id);
   });
@@ -58,6 +60,7 @@ test.describe('DB Meta Storage', () => {
     );
     expect(r.s).toBe(200);
     expect(r.b.key).toBe('color');
+    expect(r.b.value).toBe(originalValue);
   });
 
   test('list', async () => {
@@ -93,18 +96,23 @@ test.describe('DB Meta Storage', () => {
 
   test('update', async () => {
     const r = await page.evaluate(
-      async ({ route, nonce, id }) => {
+      async ({ route, nonce, id, value }) => {
         const res = await fetch(`${route}/${id}`, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json', 'X-WP-Nonce': nonce },
-          body: JSON.stringify({ value: 'red' }),
+          body: JSON.stringify({ value }),
         });
-        return { s: res.status, b: await res.json() };
+        const body = await res.json();
+        const saved = await fetch(`${route}/${id}`, {
+          headers: { 'X-WP-Nonce': nonce },
+        });
+        return { s: res.status, b: body, saved: await saved.json() };
       },
-      { route: ROUTE, nonce, id },
+      { route: ROUTE, nonce, id, value: updatedValue },
     );
     expect(r.s).toBe(200);
-    expect(r.b.value).toBe('red');
+    expect(r.b.value).toBe(updatedValue);
+    expect(r.saved.value).toBe(updatedValue);
     expect(r.b.key).toBe('color');
   });
 

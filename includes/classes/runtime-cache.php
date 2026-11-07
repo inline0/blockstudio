@@ -988,6 +988,9 @@ final class Runtime_Cache {
 	/**
 	 * Prune old objects and abandoned temporary files in one scope.
 	 *
+	 * Response headers stored beside a prerendered document do not count as
+	 * objects; they are removed with the document they belong to.
+	 *
 	 * @param string $scope     Cache scope.
 	 * @param string $keep_path Object that must remain.
 	 *
@@ -1032,13 +1035,16 @@ final class Runtime_Cache {
 			}
 		}
 
+		$headers     = class_exists( '\Blockstudio\Static_Prerender_Headers' );
 		$scope_files = glob( $directory . '/*' );
+		$scope_files = is_array( $scope_files ) ? $scope_files : array();
 		$objects     = array_values(
 			array_filter(
-				is_array( $scope_files ) ? $scope_files : array(),
+				$scope_files,
 				static fn( string $path ): bool => is_file( $path )
 					&& ! str_ends_with( $path, '.lock' )
 					&& ! str_contains( basename( $path ), '.tmp-' )
+					&& ! ( $headers && Static_Prerender_Headers::is_header_file( $path ) )
 					&& $path !== $keep_path
 					&& ! isset( $protected_map[ wp_normalize_path( $path ) ] )
 			)
@@ -1059,6 +1065,9 @@ final class Runtime_Cache {
 
 		foreach ( array_slice( $objects, max( 0, $maximum - ( '' === $keep_path ? 0 : 1 ) ) ) as $object ) {
 			@unlink( $object ); // phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged, WordPress.WP.AlternativeFunctions.unlink_unlink -- Internal cache files must not invoke media-deletion filters.
+			if ( $headers && str_ends_with( $object, '.html' ) ) {
+				Static_Prerender_Headers::remove( $object );
+			}
 		}
 	}
 

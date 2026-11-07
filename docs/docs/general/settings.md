@@ -421,6 +421,7 @@ performs its owned cleanup once; later requests remain inert.
 | `staticPrerender.earlyServe` | boolean | `false`      | `false`              | Serve safe hits before WordPress boots           |
 | `staticPrerender.serveLoggedIn` | boolean | `false`   | `false`              | Permit users to consume, never author, cache hits |
 | `staticPrerender.dynamicPaths` | array | `[]`         | `[]`                 | Path prefixes that must remain dynamic           |
+| `staticPrerender.replayHeaders` | array | `["Link"]`  | `["Link"]`           | Response headers stored with and sent on cache hits |
 | `staticPrerender.warm.enabled` | boolean | `false`    | `false`              | Enable the durable scheduled warm queue          |
 | `staticPrerender.warm.interval` | integer | `3600`    | `3600`               | Warm interval in seconds                         |
 | `staticPrerender.warm.concurrency` | integer | `2`   | `2`                  | Maximum jobs processed by one warm pass          |

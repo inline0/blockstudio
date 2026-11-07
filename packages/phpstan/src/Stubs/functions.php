@@ -17,6 +17,13 @@ function bs_render_block(array $args): string {}
 function bs_validate_block(string $name, array $attrs): ?array {}
 
 /**
+ * Describe the values a block stores in blockstudio.attributes as a JSON Schema.
+ *
+ * @return array<string, mixed>|null
+ */
+function bs_block_schema(string $name): ?array {}
+
+/**
  * Get a stored block's values as its template receives them, without rendering.
  *
  * @param array<string, mixed> $attrs

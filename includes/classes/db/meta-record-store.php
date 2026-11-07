@@ -51,7 +51,7 @@ class Meta_Record_Store extends Record_Store {
 	 * @return void
 	 */
 	private function write( array $entries ): void {
-		update_post_meta( $this->post_id(), self::meta_key_for_key( $this->key ), $entries );
+		update_post_meta( $this->post_id(), self::meta_key_for_key( $this->key ), wp_slash( $entries ) );
 	}
 
 	/**

@@ -192,7 +192,8 @@ final class Static_Prerender_Batch_Renderer {
 				'user-agent'  => 'Blockstudio static prerender batch renderer',
 			)
 		);
-		$dependencies = Static_Prerender_Runtime::take_dependency_report( $token );
+		$report       = Static_Prerender_Runtime::take_render_report( $token );
+		$dependencies = $report['files'];
 
 		if ( function_exists( 'is_wp_error' ) && is_wp_error( $response ) ) {
 			return array(
@@ -234,7 +235,8 @@ final class Static_Prerender_Batch_Renderer {
 			$dependencies,
 			array(),
 			self::string_option( $options, 'targetHost' ),
-			self::string_option( $options, 'targetHome' )
+			self::string_option( $options, 'targetHome' ),
+			$report['headers'] ?? self::headers( wp_remote_retrieve_headers( $response ) )
 		);
 
 		return $persisted
@@ -261,8 +263,9 @@ final class Static_Prerender_Batch_Renderer {
 		/**
 		 * Filter an internal static-prerender result.
 		 *
-		 * Return an array with `html`, optional `status`, `dependencies`, and
-		 * `virtualHashes`, or null when the host does not provide this transport.
+		 * Return an array with `html`, optional `status`, `dependencies`,
+		 * `virtualHashes`, and `headers` (`Name: value` lines or a name to
+		 * value map), or null when the host does not provide this transport.
 		 *
 		 * @since 7.6.0
 		 *
@@ -313,7 +316,8 @@ final class Static_Prerender_Batch_Renderer {
 			$dependencies,
 			$virtual,
 			self::string_option( $options, 'targetHost' ),
-			self::string_option( $options, 'targetHome' )
+			self::string_option( $options, 'targetHome' ),
+			self::headers( $result['headers'] ?? array() )
 		)
 			? array(
 				'status'       => 'rendered',
@@ -324,6 +328,17 @@ final class Static_Prerender_Batch_Renderer {
 				'status' => 'failed',
 				'error'  => 'Rendered HTML could not be persisted.',
 			);
+	}
+
+	/**
+	 * Read rendered response headers in a shape the runtime accepts.
+	 *
+	 * @param mixed $headers Headers from the HTTP client or the internal transport.
+	 *
+	 * @return iterable<mixed> Headers, or an empty list.
+	 */
+	private static function headers( mixed $headers ): iterable {
+		return is_iterable( $headers ) ? $headers : array();
 	}
 
 	/**

@@ -70,6 +70,7 @@ final class SettingsGetReturnType implements DynamicStaticMethodReturnTypeExtens
             'performance/staticPrerender/earlyServe' => new BooleanType(),
             'performance/staticPrerender/serveLoggedIn' => new BooleanType(),
             'performance/staticPrerender/dynamicPaths' => new ArrayType(new IntegerType(), new StringType()),
+            'performance/staticPrerender/replayHeaders' => new ArrayType(new IntegerType(), new StringType()),
             'performance/staticPrerender/warm/enabled' => new BooleanType(),
             'performance/staticPrerender/warm/interval' => new IntegerType(),
             'performance/staticPrerender/warm/concurrency' => new IntegerType(),

@@ -369,23 +369,23 @@ order gives the reading sequence, which is all previous and next links need.
 
 `blockstudio_page_content()` prints the page body that WordPress would render
 through `the_content`. Leave it out and the content is hidden. On
-`/docs/guide/install/` the layout renders this (trimmed, host omitted from the
-links):
+`/docs/guide/install/` of a site at `https://example.com` the layout renders
+this (trimmed):
 
 ```html
 <nav class="docs-sidebar" aria-label="Documentation">
-  <ul><li><a href=".../docs/">Introduction</a><ul>
-    <li><a href=".../docs/getting-started/">Getting Started</a></li>
-    <li><a href=".../docs/guide/">Guide</a><ul>
-      <li><a href=".../docs/guide/install/" aria-current="page">Installation</a></li>
-      <li><a href=".../docs/guide/configure/">Configuration</a></li>
+  <ul><li><a href="https://example.com/docs/">Introduction</a><ul>
+    <li><a href="https://example.com/docs/getting-started/">Getting Started</a></li>
+    <li><a href="https://example.com/docs/guide/">Guide</a><ul>
+      <li><a href="https://example.com/docs/guide/install/" aria-current="page">Installation</a></li>
+      <li><a href="https://example.com/docs/guide/configure/">Configuration</a></li>
     </ul></li>
-    <li><a href=".../docs/changelog/">Changelog</a></li>
+    <li><a href="https://example.com/docs/changelog/">Changelog</a></li>
   </ul></li></ul>
 </nav>
 ...
-<a rel="prev" href=".../docs/guide/">Guide</a>
-<a rel="next" href=".../docs/guide/configure/">Configuration</a>
+<a rel="prev" href="https://example.com/docs/guide/">Guide</a>
+<a rel="next" href="https://example.com/docs/guide/configure/">Configuration</a>
 ```
 
 The layout only runs on singular frontend requests in the main loop. It does

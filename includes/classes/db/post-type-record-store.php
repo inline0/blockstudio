@@ -216,7 +216,7 @@ class Post_Type_Record_Store extends Record_Store {
 		$post_id = wp_insert_post( $post_data );
 
 		foreach ( $data as $field => $value ) {
-			update_post_meta( $post_id, $field, $value );
+			update_post_meta( $post_id, $field, wp_slash( $value ) );
 		}
 
 		return $this->to_record( get_post( $post_id ) );
@@ -260,7 +260,7 @@ class Post_Type_Record_Store extends Record_Store {
 		);
 
 		foreach ( $data as $field => $value ) {
-			update_post_meta( $id, $field, $value );
+			update_post_meta( $id, $field, wp_slash( $value ) );
 		}
 
 		clean_post_cache( $id );

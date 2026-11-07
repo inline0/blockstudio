@@ -153,7 +153,9 @@ copy: changing it does not change the registered block.
 
 These are definitions, not saved values. To validate saved markup, use
 [`bs_validate_block()`](#validating-stored-values) instead of maintaining a
-separate field walker. WordPress-owned attributes remain separate.
+separate field walker. To describe the values a block accepts, use
+[`bs_block_schema()`](#describing-stored-values). WordPress-owned attributes
+remain separate.
 
 Fields added by [extensions](/docs/extensions) are not part of
 `bs_block_fields()`. Use `bs_block_extension_fields()` to get them. It matches
@@ -323,6 +325,89 @@ add_filter('blockstudio/blocks/attributes/validate', function($findings, $name, 
 
 Always return a list of findings; returning `[]` accepts the block. This
 filter runs only for managed blocks, never for the `null` result.
+
+### Describing stored values
+
+Use `bs_block_schema()` after block registration (`init` or later) to describe
+the values a block stores, for example to generate block markup in a tool or
+an AI integration, or to check input in a REST route:
+
+```php
+$schema = bs_block_schema('theme/card');
+
+if ($schema === null) {
+  // No Blockstudio fields or matching extensions apply.
+}
+```
+
+The result is a JSON Schema of the object saved in
+`attrs.blockstudio.attributes`. It covers the block's fields and the fields of
+matching extensions, with the storage keys validation uses: a top-level group
+prefixes its children, anonymous groups and tabs add no level, and a files
+field adds its `<id>__size` companion. Repeaters are lists of row objects with
+`minItems` and `maxItems` from `min` and `max`. `additionalProperties` is
+`false` at the field-storage root and in repeater rows. Object-valued fields
+such as links and custom objects can carry their own metadata. A block without
+fields has no `properties`, so only an empty object matches.
+
+Each field is described in a canonical form accepted by `bs_validate_block()`:
+
+| Field | Schema |
+| --- | --- |
+| `text`, `textarea`, `richtext`, `wysiwyg`, `code`, `date`, `datetime`, `unit`, `classes`, `html-tag`, `block` | A string. |
+| `number`, `range` | A number, with `minimum` and `maximum` from `min` and `max`. |
+| `toggle` | A boolean. |
+| `select`, `radio`, `checkbox` | An option value, or a list of option values for `checkbox` and `multiple`, with `enum`. |
+| `color`, `gradient` | A string, with `enum` when `disableCustomColors` or `disableCustomGradients` is set. |
+| `token` | A list of strings. |
+| `files` | A non-negative integer attachment ID, or a list of IDs with `multiple`. |
+| `link` | An object with `url`, `title` and `opensInNewTab`; `url` is required. |
+| `icon` | An object with `set`, `subSet` and `icon`; `set` and `icon` are required. |
+| `attributes` | A list of objects with a non-empty `attribute` and a scalar `value`. |
+| `repeater` | A list of row objects. |
+| Custom field types | Their registered attribute type. |
+
+`enum` lists the options validation checks: static options and populate
+options already resolved at registration. Remote `fetch` options and populate
+arguments containing `{attributes.*}` have no `enum`. A key with definitions of
+different storage shapes is left out, because validation reports every value
+stored under it. When a block field and an extension field share a key, `enum`
+lists the values both accept. Shared repeaters combine their child fields and
+apply the stricter row bounds from both definitions. Within repeater rows, the
+first field with a matching ID in each source applies, as on render. An
+explicit field named `<id>__size` takes precedence over an automatically added
+file-size companion.
+
+When a closed field has no available choices, or two applicable option sets
+have no overlap, its canonical value is `null` for a single selection or an
+empty list for multiple selections. An empty option list does not turn into
+an unrestricted field. Remote and attribute-dependent choices remain open.
+
+A field's `label` becomes `title`, its `help` becomes `description`, and its
+`default` is kept as an annotation. The schema's own `title` is the block
+title. Fields are never required, and conditional logic is not part of the
+schema.
+
+Constraints use only keywords that `rest_validate_value_from_schema()` checks,
+so the schema works as the input schema of a REST route or an ability as it is:
+
+```php
+$values = $block['attrs']['blockstudio']['attributes'] ?? [];
+$schema = bs_block_schema($block['blockName']);
+if ($schema !== null) {
+  $result = rest_validate_value_from_schema($values, $schema);
+}
+```
+
+The schema describes one form per field; validation also accepts imported
+shapes such as option objects, numeric strings, and ID objects. It does not
+replace `bs_validate_block()`: definition conflicts are configuration problems
+and can still produce findings even when the conflicting key is omitted.
+Validation filters can also impose site-specific rules. Use
+`bs_validate_block()` to check stored content. Sites with a custom render-time
+resolver can adapt the schema with the
+[`blockstudio/blocks/attributes/schema`](/docs/blocks/hooks/php#attributesschema)
+filter.
 
 ## PHP Functions
 

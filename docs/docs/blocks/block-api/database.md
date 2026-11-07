@@ -30,6 +30,11 @@ handles structured data with zero boilerplate.
 
 No migrations, no controllers, no route registration.
 
+Pass literal values to the REST and PHP APIs. The `meta` and `post_type`
+backends handle WordPress meta slashing internally, preserving backslashes and
+quoted strings in both scalar values and nested objects or arrays. Do not
+pre-slash database record values.
+
 ## Defining schemas
 
 ### Single schema

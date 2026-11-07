@@ -187,6 +187,21 @@ add_filter('blockstudio/blocks/attributes/validate', function($findings, $name, 
 Return a list of findings. The filter is not called when the block has no
 Blockstudio fields or matching extensions (`null`).
 
+### attributes/schema
+
+Adjust the JSON Schema returned by
+[`bs_block_schema()`](/docs/blocks/rendering#describing-stored-values), for
+example when a custom render filter resolves stored references.
+
+```php title="functions.php"
+add_filter('blockstudio/blocks/attributes/schema', function($schema, $name) {
+  return $schema;
+}, 10, 2);
+```
+
+Return the schema array. The filter is not called when the block has no
+Blockstudio fields or matching extensions (`null`).
+
 ### attributes/populate
 
 This filter allows you to add custom data to the options of a `checkbox`,
@@ -1309,7 +1324,9 @@ the filter did not run.
 
 This filter implements the optional in-process batch transport. Return a
 normalized result array or leave the value unchanged to let the renderer use
-its configured HTTP fallback.
+its configured HTTP fallback. The result carries `html` and optionally
+`status`, `dependencies`, `virtualHashes`, and `headers`; the headers named in
+`performance.staticPrerender.replayHeaders` are stored with the document.
 
 ```php title="functions.php"
 add_filter(

@@ -26,6 +26,19 @@ final class HookCallbackRuleTest extends RuleTestCase
         );
     }
 
+    public function test_schema_hook_passes_and_misspellings_are_reported(): void
+    {
+        $this->analyse(
+            [__DIR__ . '/data/hook-callback-schema.php'],
+            [
+                [
+                    'Unknown Blockstudio hook "blockstudio/blocks/attributes/scheam". Did you mean "blockstudio/blocks/attributes/schema"?',
+                    4,
+                ],
+            ]
+        );
+    }
+
     public function test_unknown_hook_reports_error(): void
     {
         $this->analyse(

@@ -23,7 +23,7 @@ final class Static_Prerender_Early_Serve {
 	 *
 	 * @var int
 	 */
-	public const DROPIN_VERSION = 6;
+	public const DROPIN_VERSION = 7;
 
 	/**
 	 * Ownership marker for the generated map.
@@ -503,6 +503,7 @@ final class Static_Prerender_Early_Serve {
 	public static function dropin_source(): string {
 		$marker  = self::DROPIN_MARKER;
 		$version = self::DROPIN_VERSION;
+		$never   = "array( '" . implode( "', '", Static_Prerender_Headers::NEVER ) . "' )";
 
 		return <<<PHP
 <?php
@@ -645,14 +646,51 @@ function blockstudio_early_serve_static_prerender(): void {
 		}
 	}
 
+	\$replay = blockstudio_early_serve_static_prerender_headers( \$entry, \$file );
+
 	if ( ! headers_sent() ) {
 		header( 'Content-Type: text/html; charset=UTF-8' );
 		header( 'Vary: Accept', false );
 		header( 'X-Blockstudio-Static-Prerender: HIT-EARLY' );
+		foreach ( \$replay as \$line ) {
+			header( \$line, false );
+		}
 	}
 
 	echo \$contents;
 	exit;
+}
+
+function blockstudio_early_serve_static_prerender_headers( array \$entry, string \$file ): array {
+	\$allowed = array();
+	foreach ( (array) ( \$entry['replay_headers'] ?? array() ) as \$name ) {
+		if ( is_string( \$name ) && '' !== \$name ) {
+			\$allowed[ strtolower( \$name ) ] = true;
+		}
+	}
+	foreach ( {$never} as \$name ) {
+		unset( \$allowed[ \$name ] );
+	}
+
+	\$path = substr( \$file, 0, -5 ) . '.headers.json';
+	if ( array() === \$allowed || ! is_file( \$path ) || ! is_readable( \$path ) ) {
+		return array();
+	}
+
+	\$stored = json_decode( (string) file_get_contents( \$path ), true );
+	\$lines = array();
+	foreach ( is_array( \$stored['headers'] ?? null ) ? \$stored['headers'] : array() as \$header ) {
+		if (
+			is_array( \$header ) && is_string( \$header[0] ?? null ) && is_string( \$header[1] ?? null ) &&
+			isset( \$allowed[ strtolower( \$header[0] ) ] ) &&
+			1 === preg_match( '/^[A-Za-z0-9!#\$%&\'*+.^_`|~-]+\$/', \$header[0] ) &&
+			'' !== trim( \$header[1] ) && false === strpbrk( \$header[1], "\\r\\n\\0" )
+		) {
+			\$lines[] = \$header[0] . ': ' . trim( \$header[1] );
+		}
+	}
+
+	return \$lines;
 }
 
 PHP;
@@ -679,10 +717,11 @@ PHP;
 				return null;
 			}
 
-			$active['identity']    = isset( $active['build_id'] ) && is_string( $active['build_id'] )
+			$active['identity']       = isset( $active['build_id'] ) && is_string( $active['build_id'] )
 				? $active['build_id']
 				: '';
-			$active['runtime_dir'] = Static_Prerender_Runtime::cache_root_path();
+			$active['runtime_dir']    = Static_Prerender_Runtime::cache_root_path();
+			$active['replay_headers'] = Static_Prerender_Headers::allowed();
 
 			return self::content_scope() + $active;
 		}
@@ -699,6 +738,7 @@ PHP;
 			'ttl'             => (int) Runtime_Settings::current()->value( 'staticPrerender/ttl', 86400 ),
 			'serve_logged_in' => Runtime_Settings::current()->enabled( 'staticPrerender/serveLoggedIn' ),
 			'dynamic'         => $dynamic,
+			'replay_headers'  => Static_Prerender_Headers::allowed(),
 		);
 	}
 
@@ -869,6 +909,7 @@ PHP;
 				is_array( $entry['dynamic'] ?? null ) ? $entry['dynamic'] : array(),
 				$home_path
 			),
+			'replay_headers'  => Static_Prerender_Headers::allowed(),
 			'routes'          => $routes,
 		);
 		$entries    = self::owned_map_entries();
@@ -901,6 +942,8 @@ PHP;
 	 * through a temporary file and a rename so early serve never reads a
 	 * partial document. Identical bytes are left untouched, and a store file
 	 * that disappeared keeps the artifact copy that already serves the route.
+	 * The stored response headers follow the store copy in every case where
+	 * the store file exists, before the document itself.
 	 *
 	 * @param string $source      Store file.
 	 * @param string $destination Artifact file.
@@ -917,6 +960,10 @@ PHP;
 			++self::$last_promotion['kept'];
 
 			return true;
+		}
+
+		if ( ! Static_Prerender_Headers::promote( $source, $destination ) ) {
+			return false;
 		}
 
 		if ( $has_destination ) {
@@ -1153,6 +1200,7 @@ PHP;
 				@unlink( $file ); // phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged, WordPress.WP.AlternativeFunctions.unlink_unlink -- Internal cache files must not invoke media-deletion filters.
 			}
 		}
+		Static_Prerender_Headers::collect_orphans( $cache_dir );
 	}
 
 	/**

@@ -199,6 +199,35 @@ class RuntimeSettingsTest extends TestCase {
 		}
 	}
 
+	public function test_explicit_lists_replace_list_defaults(): void {
+		$this->assertSame( array( 'Link' ), Runtime_Settings::current()->value( 'staticPrerender/replayHeaders' ) );
+
+		$this->write(
+			array(
+				'performance' => array(
+					'staticPrerender' => array(
+						'replayHeaders' => array(),
+						'warm'          => array(),
+					),
+				),
+			)
+		);
+		$this->assertSame( array(), Runtime_Settings::current()->value( 'staticPrerender/replayHeaders' ) );
+		$this->assertSame( 3600, Runtime_Settings::current()->value( 'staticPrerender/warm/interval' ) );
+
+		$this->write(
+			array(
+				'performance' => array(
+					'staticPrerender' => array(
+						'replayHeaders' => array( 'X-Robots-Tag' ),
+					),
+				),
+			)
+		);
+		$this->assertSame( array( 'X-Robots-Tag' ), Runtime_Settings::current()->value( 'staticPrerender/replayHeaders' ) );
+		$this->assertSame( array(), Runtime_Settings::current()->errors() );
+	}
+
 	public function test_configuration_hash_changes_after_source_invalidation(): void {
 		$before = Runtime_Settings::current()->hash();
 		$this->write(

@@ -30,6 +30,7 @@ cached like any other page.
       "earlyServe": true,
       "serveLoggedIn": false,
       "dynamicPaths": ["/account", "/checkout"],
+      "replayHeaders": ["Link"],
       "warm": {
         "enabled": true,
         "interval": 900,
@@ -211,6 +212,53 @@ bounded deployment graph. The fallback uses the activated graph identity and
 the same host, path normalization, TTL, cookie, header, query-string, dynamic
 path, and feed bypass rules as mapped routes, and it only finds documents the
 runtime stored, which never include search results.
+
+## Response headers
+
+A stored document is replayed without the request that rendered it, so a
+header a theme or plugin sends with `header()` would be missing from every
+hit. Blockstudio stores the headers named in `replayHeaders` with each document
+and sends them again from both the PHP cache and the early-serve drop-in. The
+default, `["Link"]`, covers headers such as a Markdown alternate
+(`rel="alternate"; type="text/markdown"`), `rel="describedby"`, or
+`rel="canonical"`. Names match case-insensitively, and the setting filter
+changes the list like any other value:
+
+```php title="functions.php"
+add_filter('blockstudio/settings/performance/staticPrerender/replayHeaders', function (array $headers): array {
+    $headers[] = 'X-Robots-Tag';
+
+    return $headers;
+});
+```
+
+Set `replayHeaders` to `[]` to disable header replay. An explicit list replaces
+the default, so include `Link` when adding other header names if you still
+want to replay link headers.
+
+Headers are captured in the process that renders the page: from
+`headers_list()` when a live miss is stored, and from the warm request itself
+when a build or the warmer renders over HTTP, so a header the web server adds
+on its own, and adds again to every served document, is never stored. Only
+when an HTTP render writes no report are the headers of its response used. The
+`internal` transport returns them as `headers` in its result, and
+`persist_built_response()` takes them as its last argument, either as
+`Name: value` lines or as a name to value map.
+
+They are written to `<key>.headers.json` beside the document, follow it
+through artifact promotion, garbage collection, and retention pruning, and are
+removed when a re-render sends none. Cookie, caching, and transport headers are
+never stored or replayed, even when listed: `Set-Cookie`, `Cache-Control`,
+`Expires`, `Pragma`, `Age`, `ETag`, `Last-Modified`, `Vary`, `Content-Type`,
+`Content-Length`, `Content-Encoding`, `Transfer-Encoding`, `Location`,
+`Status`, `Date`, and the hop-by-hop and authentication headers. A served
+document sets its own `Content-Type` and `Vary`.
+
+Stored headers are checked against the list again when they are sent. The PHP
+cache reads the current setting; the drop-in reads the copy in the site's map
+entry, which the next artifact install or map sync refreshes. Documents stored
+before an upgrade have no header file and are served exactly as before until
+they are rendered again.
 
 ## Warming, maintenance, and observability
 

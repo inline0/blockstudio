@@ -251,6 +251,7 @@ final class Runtime_Settings {
 				'earlyServe'    => false,
 				'serveLoggedIn' => false,
 				'dynamicPaths'  => array(),
+				'replayHeaders' => array( 'Link' ),
 				'warm'          => array(
 					'enabled'     => false,
 					'interval'    => 3600,
@@ -466,7 +467,7 @@ final class Runtime_Settings {
 
 		self::known_keys(
 			$value,
-			array( 'enabled', 'ttl', 'invalidate', 'earlyServe', 'serveLoggedIn', 'dynamicPaths', 'warm' ),
+			array( 'enabled', 'ttl', 'invalidate', 'earlyServe', 'serveLoggedIn', 'dynamicPaths', 'replayHeaders', 'warm' ),
 			'performance.staticPrerender',
 			$errors
 		);
@@ -492,6 +493,18 @@ final class Runtime_Settings {
 				foreach ( $value['dynamicPaths'] as $path ) {
 					if ( ! is_string( $path ) || '' === trim( $path ) ) {
 						$errors[] = 'performance.staticPrerender.dynamicPaths entries must be non-empty strings.';
+						break;
+					}
+				}
+			}
+		}
+		if ( array_key_exists( 'replayHeaders', $value ) ) {
+			if ( ! is_array( $value['replayHeaders'] ) || ! array_is_list( $value['replayHeaders'] ) ) {
+				$errors[] = 'performance.staticPrerender.replayHeaders must be a list.';
+			} else {
+				foreach ( $value['replayHeaders'] as $name ) {
+					if ( ! is_string( $name ) || ! Static_Prerender_Headers::is_name( $name ) ) {
+						$errors[] = 'performance.staticPrerender.replayHeaders entries must be header names.';
 						break;
 					}
 				}
@@ -576,6 +589,9 @@ final class Runtime_Settings {
 	/**
 	 * Deep merge configuration arrays.
 	 *
+	 * Objects merge key by key. A list replaces the value it overrides as a
+	 * whole, so an explicit empty list clears a non-empty default.
+	 *
 	 * @param array<string, mixed> $base      Base configuration.
 	 * @param array<string, mixed> $overrides Overrides.
 	 *
@@ -583,8 +599,14 @@ final class Runtime_Settings {
 	 */
 	private static function merge( array $base, array $overrides ): array {
 		foreach ( $overrides as $key => $value ) {
-			if ( is_array( $value ) && is_array( $base[ $key ] ?? null ) ) {
-				$base[ $key ] = self::merge( $base[ $key ], $value );
+			$current = $base[ $key ] ?? null;
+			if (
+				is_array( $value ) &&
+				is_array( $current ) &&
+				! ( array() !== $current && array_is_list( $current ) ) &&
+				! ( array() !== $value && array_is_list( $value ) )
+			) {
+				$base[ $key ] = self::merge( $current, $value );
 			} else {
 				$base[ $key ] = $value;
 			}
