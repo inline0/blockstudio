@@ -14648,6 +14648,10 @@ add_filter('blockstudio/settings/performance/staticPrerender/replayHeaders', fun
 });
 ```
 
+Set `replayHeaders` to `[]` to disable header replay. An explicit list replaces
+the default, so include `Link` when adding other header names if you still
+want to replay link headers.
+
 Headers are captured in the process that renders the page: from
 `headers_list()` when a live miss is stored, and from the warm request itself
 when a build or the warmer renders over HTTP, so a header the web server adds

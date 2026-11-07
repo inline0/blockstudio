@@ -56,10 +56,10 @@ Download the latest release zip from [GitHub Releases](https://github.com/inline
 
 = 7.7.13 =
 * New: `bs_block_schema()` describes canonical stored field values as JSON Schema, including matching extensions, groups, repeaters, and resolved options (#199)
-* Fix: post meta storage preserves literal backslashes, quotes, and nested values when saving and resaving block fields (#200)
+* Fix: post meta storage preserves literal backslashes, quotes, and nested values when saving and resaving block fields (#200, #202)
 * Fix: meta-backed and custom-post-type database records preserve backslashes across creates, updates, and unrelated record rewrites (#200)
 * Security: bundled Symfony YAML and Filesystem libraries are updated to 7.4.23 (#201)
-* New: static prerendering stores the response headers named in `performance.staticPrerender.replayHeaders`, `Link` by default, with each document and sends them again from the PHP cache and the early-serve drop-in; cookie, caching, and transport headers are never replayed, and documents stored earlier are served unchanged
+* Fix: prerender cache hits retain `Link` headers and other explicitly allowed response headers through `performance.staticPrerender.replayHeaders`
 
 = 7.7.12 =
 * Fix: file-backed pages preserve custom CSS classes in core block attributes and saved HTML, including mapped headings, groups, and button styles, on their next explicit sync (#196)

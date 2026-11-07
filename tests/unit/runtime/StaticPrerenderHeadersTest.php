@@ -287,6 +287,79 @@ class StaticPrerenderHeadersTest extends TestCase {
 		$this->assertSame( array(), Static_Prerender_Runtime::take_dependency_report( 'invalid' ) );
 	}
 
+	public function test_http_builds_prefer_reported_headers_even_when_none_were_sent(): void {
+		foreach ( array( array( array( 'Link', self::MARKDOWN_LINK ) ), array() ) as $index => $headers ) {
+			$report_path = '';
+			$response = function ( $pre, array $args ) use ( $headers, &$report_path ): array {
+				$report_path = $this->write_render_report( $args, $headers );
+				return array(
+					'headers'  => array( 'link' => self::DESCRIBED_LINK ),
+					'body'     => self::DOCUMENT,
+					'response' => array( 'code' => 200, 'message' => 'OK' ),
+				);
+			};
+			add_filter( 'pre_http_request', $response, 10, 2 );
+			$url = home_url( '/headers/reported-' . $index . '/' );
+			try {
+				$report = Static_Prerender_Batch_Renderer::render( array( $url ) );
+			} finally {
+				remove_filter( 'pre_http_request', $response, 10 );
+			}
+
+			$this->assertSame( 1, $report['rendered'] );
+			$this->assertSame(
+				array() === $headers ? array() : array( 'Link: ' . self::MARKDOWN_LINK ),
+				Static_Prerender_Headers::replay( $this->document_for( $url ) )
+			);
+			$this->assertFileDoesNotExist( $report_path );
+		}
+	}
+
+	public function test_the_warmer_preserves_headers_from_the_signed_render_report(): void {
+		$url = home_url( '/headers/warmed/' );
+		$response = function ( $pre, array $args ): array {
+			$this->assertSame( '1', $args['headers'][ Static_Prerender_Runtime::WARM_HEADER ] );
+			$this->write_render_report( $args, array( array( 'Link', self::MARKDOWN_LINK ), array( 'Set-Cookie', 'session=secret' ) ) );
+			return array(
+				'headers'  => array( 'link' => self::DESCRIBED_LINK ),
+				'body'     => self::DOCUMENT,
+				'response' => array( 'code' => 200, 'message' => 'OK' ),
+			);
+		};
+		add_filter( 'pre_http_request', $response, 10, 2 );
+		try {
+			$this->assertTrue( Static_Prerender_Runtime::prerender_url( $url ) );
+		} finally {
+			remove_filter( 'pre_http_request', $response, 10 );
+		}
+
+		$this->assertSame(
+			array( 'Link: ' . self::MARKDOWN_LINK ),
+			Static_Prerender_Headers::replay( $this->document_for( $url ) )
+		);
+	}
+
+	public function test_the_internal_transport_persists_allowlisted_headers(): void {
+		$url = home_url( '/headers/internal/' );
+		$render = static fn(): array => array(
+			'html'    => self::DOCUMENT,
+			'headers' => array( 'Link' => array( self::MARKDOWN_LINK, self::DESCRIBED_LINK ), 'Set-Cookie' => 'session=secret' ),
+		);
+		add_filter( 'blockstudio/static_prerender/render_internal', $render );
+		try {
+			$report = Static_Prerender_Batch_Renderer::render( array( $url ), array( 'transport' => 'internal', 'fallback' => 'none' ) );
+		} finally {
+			remove_filter( 'blockstudio/static_prerender/render_internal', $render );
+		}
+
+		$this->assertSame( 1, $report['rendered'] );
+		$this->assertSame( 0, $report['failed'] );
+		$this->assertSame(
+			array( 'Link: ' . self::MARKDOWN_LINK, 'Link: ' . self::DESCRIBED_LINK ),
+			Static_Prerender_Headers::replay( $this->document_for( $url ) )
+		);
+	}
+
 	public function test_artifact_promotion_carries_headers_and_the_dropin_replays_them(): void {
 		$url = home_url( '/headers/early/' );
 		$this->assertTrue(
@@ -413,6 +486,16 @@ class StaticPrerenderHeadersTest extends TestCase {
 			$this->assertFileExists( $document );
 			$this->assertFileExists( Static_Prerender_Headers::path( $document ) );
 		}
+	}
+
+	private function write_render_report( array $args, array $headers ): string {
+		$token = $args['headers'][ Static_Prerender_Runtime::DEPENDENCY_HEADER ] ?? '';
+		$this->assertMatchesRegularExpression( '/^[a-f0-9]{32}\.[a-f0-9]{32}$/', $token );
+		$directory = ( new ReflectionMethod( Static_Prerender_Runtime::class, 'dependency_report_directory' ) )->invoke( null );
+		wp_mkdir_p( $directory );
+		$path = $directory . '/' . explode( '.', $token )[0] . '.json';
+		file_put_contents( $path, wp_json_encode( array( 'files' => array(), 'headers' => $headers ) ) );
+		return $path;
 	}
 
 	private function document_for( string $url ): string {
