@@ -130,6 +130,7 @@ class Plugin {
 		require_once $classes_dir . 'static-prerender-content-hasher.php';
 		require_once $classes_dir . 'static-prerender-identity.php';
 		require_once $classes_dir . 'static-prerender-miss-lock.php';
+		require_once $classes_dir . 'static-prerender-headers.php';
 		require_once $classes_dir . 'static-prerender-warm-queue.php';
 		require_once $classes_dir . 'static-prerender-batch-renderer.php';
 		require_once $classes_dir . 'static-prerender-early-serve.php';

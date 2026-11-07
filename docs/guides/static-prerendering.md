@@ -180,6 +180,10 @@ A few rules keep this safe on shared hosting and multisite:
   not, the request goes to WordPress instead of being served unstyled.
 - Multisite entries share one map but are isolated by host, home path, and
   site ID.
+- Response headers named in `replayHeaders`, `Link` by default, are stored
+  with each document and sent again on every hit, so a `Link` header a page
+  sends with `header()` survives early serving. Cookie and caching headers are
+  never replayed.
 
 Early hits carry `X-Blockstudio-Static-Prerender: HIT-EARLY`. Turning
 `earlyServe` or `enabled` off removes the state Blockstudio owns once, and

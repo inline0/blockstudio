@@ -1324,7 +1324,9 @@ the filter did not run.
 
 This filter implements the optional in-process batch transport. Return a
 normalized result array or leave the value unchanged to let the renderer use
-its configured HTTP fallback.
+its configured HTTP fallback. The result carries `html` and optionally
+`status`, `dependencies`, `virtualHashes`, and `headers`; the headers named in
+`performance.staticPrerender.replayHeaders` are stored with the document.
 
 ```php title="functions.php"
 add_filter(

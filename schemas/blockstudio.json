@@ -542,6 +542,21 @@
                 "/account"
               ]
             },
+            "replayHeaders": {
+              "type": "array",
+              "default": [
+                "Link"
+              ],
+              "items": {
+                "type": "string",
+                "pattern": "^[A-Za-z0-9!#$%&'*+.^_`|~-]+$"
+              },
+              "description": "Response header names stored with each prerendered document and sent again when it is served. Cookie, caching, and transport headers are never replayed.",
+              "example": [
+                "Link",
+                "X-Robots-Tag"
+              ]
+            },
             "warm": {
               "type": "object",
               "description": "Background prerender warming.",

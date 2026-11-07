@@ -162,6 +162,7 @@ class Settings {
 				'earlyServe'    => false,
 				'serveLoggedIn' => false,
 				'dynamicPaths'  => array(),
+				'replayHeaders' => array( 'Link' ),
 				'warm'          => array(
 					'enabled'     => false,
 					'interval'    => 3600,
