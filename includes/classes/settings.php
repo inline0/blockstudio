@@ -620,6 +620,10 @@ class Settings {
 	 * @return array The merged array.
 	 */
 	protected function array_deep_merge( array $base, array $merge ): array {
+		if ( array_is_list( $base ) && array_is_list( $merge ) ) {
+			return $merge;
+		}
+
 		foreach ( $merge as $key => $value ) {
 			if (
 				isset( $base[ $key ] ) &&

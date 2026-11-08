@@ -153,6 +153,13 @@ Retention never evicts a file the installed early-serve map references, and
 the `blockstudio/cache/protected_paths` filter marks additional paths that
 pruning must leave alone.
 
+Before a PHP cache file is pruned or a cache tree is deleted, Blockstudio
+force-invalidates that file in OPcache when its API is available. This prevents
+deleted generations from remaining valid compiled scripts. Invalidation applies
+to the calling process's OPcache instance: a CLI purge cannot clear a separate
+PHP-FPM cache. OPcache reclaims invalidated memory through its normal restart
+cycle, not necessarily immediately on deletion.
+
 Unused namespaces are collected automatically instead of accumulating on every
 plugin activation and PHP or WordPress update. A deployment snippet that used
 to glob the old Tailwind cache directory should call

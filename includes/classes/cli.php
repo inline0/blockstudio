@@ -1032,7 +1032,7 @@ class Cli {
 					$files = glob( $cache_dir . '/*' );
 					foreach ( $files as $file ) {
 						if ( is_file( $file ) ) {
-							unlink( $file ); // phpcs:ignore WordPress.WP.AlternativeFunctions.unlink_unlink
+							Runtime_Cache::delete_file( $file );
 						}
 					}
 					\WP_CLI::success( 'Tailwind cache cleared.' );

@@ -844,7 +844,7 @@ final class Build_Cache {
 		);
 
 		foreach ( array_slice( $files, max( 0, $max_files - 1 ) ) as $file ) {
-			@unlink( $file ); // phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged, WordPress.WP.AlternativeFunctions.unlink_unlink -- Internal cache files must not invoke media-deletion filters.
+			Runtime_Cache::delete_file( $file );
 
 			if ( is_file( $file . '.ok' ) ) {
 				@unlink( $file . '.ok' ); // phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged, WordPress.WP.AlternativeFunctions.unlink_unlink -- Internal cache files must not invoke media-deletion filters.

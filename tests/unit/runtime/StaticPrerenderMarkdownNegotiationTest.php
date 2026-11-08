@@ -115,20 +115,28 @@ class StaticPrerenderMarkdownNegotiationTest extends TestCase {
 		$method = new ReflectionMethod( Pages::class, 'markdown_response_headers' );
 		$method->setAccessible( true );
 
-		$negotiated = $method->invoke( null, true, 'https://example.test/docs/page/' );
+		$negotiated = $method->invoke( null, true, 'https://example.test/docs/page/', '# Markdown' );
 		$this->assertSame(
 			array(
 				'Content-Type: text/markdown; charset=utf-8'               => true,
 				'X-Robots-Tag: noindex'                                    => true,
+				'X-Markdown-Tokens: 3'                                    => true,
 				'Vary: Accept'                                             => false,
 				'Link: <https://example.test/docs/page/>; rel="canonical"' => false,
 			),
 			$negotiated
 		);
 
-		$extension = $method->invoke( null, false, '' );
+		$extension = $method->invoke( null, false, '', '' );
+		$this->assertArrayHasKey( 'X-Markdown-Tokens: 0', $extension );
 		$this->assertArrayNotHasKey( 'Vary: Accept', $extension );
 		$this->assertSame( true, $extension['Content-Type: text/markdown; charset=utf-8'] );
+	}
+
+	public function test_markdown_token_estimate_uses_source_unicode_characters(): void {
+		$method  = new ReflectionMethod( Pages::class, 'markdown_response_headers' );
+		$headers = $method->invoke( null, false, '', str_repeat( "\u{1F600}", 5 ) );
+		$this->assertArrayHasKey( 'X-Markdown-Tokens: 2', $headers );
 	}
 
 	public function test_served_documents_vary_on_accept_and_old_drop_ins_are_replaced(): void {

@@ -15,6 +15,11 @@ Blockstudio includes built-in Tailwind CSS v4 support. When enabled, every front
 
 No build step, no CLI, no Node.js required.
 
+The bundled TailwindPHP 1.8.6 compiler preserves zero-length units inside CSS
+functions when minifying, including `var(--x, 0px)` and `max(0px, 1rem)`.
+Quoted strings, URLs, and selectors retain their literal values. Ordinary
+declaration values such as `margin: 0px` can still shorten to `margin: 0`.
+
 ## How It Works
 
 Blockstudio uses two separate compilation strategies depending on the context:

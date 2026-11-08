@@ -39,7 +39,7 @@ class Application
      * Tracks the TailwindPHP package version (the latest CHANGELOG release);
      * CliTest asserts the two stay in sync, so bump this on every release.
      */
-    public const VERSION = '1.8.4';
+    public const VERSION = '1.8.6';
     public const NAME = 'tailwindphp';
     private Input $input;
     private Output $output;

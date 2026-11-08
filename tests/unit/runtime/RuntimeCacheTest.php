@@ -53,6 +53,61 @@ class RuntimeCacheTest extends TestCase {
 		return $this->site_key;
 	}
 
+	public static function opcache_cleanup_provider(): array {
+		return array(
+			'runtime retention' => array( 'runtime' ),
+			'build retention'   => array( 'build' ),
+			'tree deletion'     => array( 'tree' ),
+			'bounded deletion'  => array( 'batch' ),
+			'no OPcache API'    => array( 'tree', false ),
+		);
+	}
+
+	#[\PHPUnit\Framework\Attributes\DataProvider( 'opcache_cleanup_provider' )]
+	public function test_cleanup_invalidates_php_before_unlinking( string $mode, bool $api_available = true ): void {
+		if ( ! function_exists( 'opcache_compile_file' ) ) {
+			$this->markTestSkipped( 'OPcache is required for this integration probe.' );
+		}
+		$command = array( PHP_BINARY );
+		foreach ( array( 'opcache.enable=1', 'opcache.enable_cli=1', 'opcache.file_update_protection=0', 'opcache.validate_timestamps=0', 'opcache.file_cache_only=0', 'opcache.max_file_size=0', 'opcache.restrict_api=', 'opcache.blacklist_filename=' ) as $ini ) {
+			$command[] = '-d';
+			$command[] = $ini;
+		}
+		if ( ! $api_available ) {
+			$command[] = '-d';
+			$command[] = 'disable_functions=opcache_invalidate';
+		}
+		$command = array_merge( $command, array( BLOCKSTUDIO_DIR . '/tests/fixtures/cache-opcache-delete.php', $mode, $this->root . '/probe', ABSPATH . 'wp-load.php' ) );
+		$process = proc_open( $command, array( 1 => array( 'pipe', 'w' ), 2 => array( 'pipe', 'w' ) ), $pipes );
+		$this->assertIsResource( $process );
+		$output = stream_get_contents( $pipes[1] );
+		$error  = stream_get_contents( $pipes[2] );
+		fclose( $pipes[1] );
+		fclose( $pipes[2] );
+		$this->assertSame( 0, proc_close( $process ), $error );
+		$result = json_decode( $output, true, 512, JSON_THROW_ON_ERROR );
+		$this->assertTrue( $result['compiled'] );
+		$this->assertTrue( $result['cachedBefore'] );
+		$this->assertSame( ! $api_available, $result['cachedAfter'] );
+		$this->assertTrue( $result['deleted'] );
+		if ( ! $api_available ) {
+			$this->assertSame( array(), $result['invalidations'] );
+			return;
+		}
+		$files = array();
+		foreach ( $result['invalidations'] as [ $file, $force, $exists, $invalidated ] ) {
+			$this->assertStringEndsWith( '.php', $file );
+			$this->assertTrue( $force );
+			$this->assertTrue( $exists, 'Invalidation must precede unlink.' );
+			$this->assertTrue( $invalidated );
+			$files[] = basename( $file );
+		}
+		$this->assertContains( 'retired.php', $files );
+		if ( in_array( $mode, array( 'runtime', 'build' ), true ) ) {
+			$this->assertSame( array( 'retired.php' ), $files );
+		}
+	}
+
 	public function test_scopes_share_one_root_but_keep_site_and_runtime_namespaces(): void {
 		$runtime = Runtime_Cache::directory( 'runtime' );
 		$assets  = Runtime_Cache::directory( 'editor-assets' );

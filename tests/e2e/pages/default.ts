@@ -298,6 +298,22 @@ test.describe('File-based Pages', () => {
         expect(response.headers()['x-robots-tag'], path).toContain('noindex');
         expect(response.headers().link, path).toContain('rel="canonical"');
         expect(await response.text(), path).toContain(text);
+        const head = await context.request.head(`${BASE}${path}`);
+        expect(head.status(), path).toBe(200);
+        for (const header of [
+          'content-type',
+          'x-robots-tag',
+          'link',
+          'x-markdown-tokens',
+        ]) {
+          expect(head.headers()[header], `${path}: ${header}`).toBe(
+            response.headers()[header],
+          );
+        }
+        expect(Number(head.headers()['x-markdown-tokens']), path).toBe(
+          Math.ceil(Array.from(await response.text()).length / 4),
+        );
+        expect(await head.body(), path).toHaveLength(0);
       }
     });
 
@@ -313,6 +329,30 @@ test.describe('File-based Pages', () => {
       expect(await response.text()).toContain(
         'Welcome to the generated documentation home.',
       );
+      const head = await context.request.head(`${BASE}/docs/`, {
+        headers: { Accept: 'text/markdown' },
+      });
+      expect(head.status()).toBe(200);
+      for (const header of [
+        'content-type',
+        'x-robots-tag',
+        'link',
+        'vary',
+        'x-markdown-tokens',
+      ]) {
+        expect(head.headers()[header], header).toBe(response.headers()[header]);
+      }
+      expect(Number(head.headers()['x-markdown-tokens'])).toBe(
+        Math.ceil(Array.from(await response.text()).length / 4),
+      );
+      expect(await head.body()).toHaveLength(0);
+    });
+
+    test('missing collection markdown HEAD returns 404 without a body', async () => {
+      const response = await context.request.head(`${BASE}/docs/not-a-page.md`);
+      expect(response.status()).toBe(404);
+      expect(response.headers()['x-markdown-tokens']).toBeUndefined();
+      expect(await response.body()).toHaveLength(0);
     });
 
     test('collection markdown serving can be disabled by filter', async () => {
@@ -327,6 +367,10 @@ test.describe('File-based Pages', () => {
         expect(response.headers()['content-type']).not.toContain(
           'text/markdown',
         );
+        const head = await context.request.head(`${BASE}/docs.md`);
+        expect(head.status()).toBe(404);
+        expect(head.headers()['x-markdown-tokens']).toBeUndefined();
+        expect(await head.body()).toHaveLength(0);
       } finally {
         await apiPost('blockstudio-test/v1/pages/markdown-serving', {
           disabled: false,

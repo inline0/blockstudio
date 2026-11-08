@@ -5,6 +5,40 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.8.6] - 2026-11-08
+
+### Fixed
+
+- The zero-unit fix from 1.8.5 now applies to every minify path. `generate()` with `minify` enabled, `$compiled['build']($candidates, true)`, `cssExact($candidates, true)` and the CLI's `--minify` serialize through `LightningCss::minifyValue()`, which still stripped every zero unit, so `max-h-[calc(100vh-10rem-var(--offset,0px))]` kept minifying to `var(--offset, 0)` and `pb-[max(0px,env(safe-area-inset-bottom))]` to `max(0, …)`. Both minifiers now share one context-aware scanner: zero units stay inside `calc()`, `var()`, `env()`, `attr()`, `min()`, `max()`, `clamp()`, `calc-size()`, `atan2()`, `progress()` and the other math functions, and in custom properties and `@property` `initial-value` declarations.
+- Minifying no longer rewrites quoted strings or `url()` arguments. `content-['0px']` kept generating `"0"`, `bg-[url('/img/0px.png')]` pointed at `/img/0.png`, and a fragment reference such as `url(#ffffff)` was shortened.
+- `tw::minify()` and `TailwindCompiler::minify()` no longer rewrite selectors or at-rule preludes. `.top-\[0px\]` became `.top-\[0\]` and `.bg-\[\#ffffff\]` became `.bg-\[\#fff\]`, so the rules stopped matching their classes, and `[data-w=0px]` changed its attribute value. Zero units and hex colors are shortened only in declaration values.
+- Function names that contain digits, such as `atan2()`, are recognized, so their arguments keep their units.
+- The `tw::minify()` scanner from 1.8.5 ran in quadratic time: a 483 KB stylesheet took 12.5 s and a 1.9 MB one did not finish within two minutes. Minifying is linear again; a 2 MB stylesheet takes about 0.2 s.
+
+### Testing
+
+- Cover `generate()` and `cssExact()` with minify enabled for `var(--x, 0px)`, `max(0px, 1rem)`, `atan2()`, custom properties, strings and URLs, and the plain values that still lose their unit.
+- Cover selectors, attribute values, `url()` arguments, strings, `atan2()`, `calc-size()`, `progress()`, `initial-value`, nested rules, keyframes and `!important` in `tw::minify()`.
+- Assert that a 2 MB stylesheet and a 2 MB declaration value minify in well under a second.
+
+### Upgrade notes
+
+- Clear generated CSS caches after upgrading. Minified output keeps a few more `0px` units and leaves strings, URLs and selectors byte-identical; unminified output is unchanged.
+
+## [1.8.5] - 2026-11-07
+
+### Fixed
+
+- `tw::minify()` and `TailwindCompiler::minify()` keep the unit on zero lengths inside `calc()`, `min()`, `max()`, `clamp()`, `var()`, `env()` and the other CSS math functions, and in custom property values. Correction: these notes first said minified CSS in general keeps the units, but this release did not change the compiler's own minify path (`generate()` with `minify` enabled, compiled builds, `cssExact()` and the CLI's `--minify`), which kept turning `max-h-[calc(100vh-10rem-var(--offset,0px))]` into `var(--offset, 0)`. The new `tw::minify()` scanner was also quadratic in the input size. 1.8.6 fixes both.
+
+### Testing
+
+- Cover zero lengths in a `var()` fallback inside `calc()`, in math functions, in custom properties and in strings for `tw::minify()`, and the plain values that still lose their unit.
+
+### Upgrade notes
+
+- Skip this release and upgrade to 1.8.6.
+
 ## [1.8.4] - 2026-11-02
 
 ### Fixed

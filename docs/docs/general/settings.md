@@ -19,6 +19,11 @@ If a `blockstudio.json` file is present inside your theme folder, it will be use
 
 The file is optional. Without it, Blockstudio uses settings saved in the admin area on top of its built-in defaults. Adding, changing, or removing the file is detected automatically, so no cache clear or manual reload is required.
 
+Nested settings objects merge, preserving keys you leave out. Lists replace the
+previous list completely rather than merging by index. Use an empty list (`[]`)
+to clear a default, for example `performance.staticPrerender.replayHeaders: []`
+to disable replaying optional cached response headers.
+
 The following properties are available:
 
 ```json title="blockstudio.json"

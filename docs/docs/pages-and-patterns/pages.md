@@ -210,6 +210,13 @@ curl -H "Accept: text/markdown" https://example.com/docs/reference/
 
 Frontmatter is removed from the response. Successful raw Markdown responses send `Content-Type: text/markdown`, `X-Robots-Tag: noindex`, and a canonical `Link` header back to the HTML page. Missing `.md` routes return a real 404.
 
+Both `GET` and `HEAD` are supported, through either the `.md` suffix or the
+`Accept` header. `HEAD` returns the same status and representation headers as
+`GET`, without a response body. `X-Markdown-Tokens` estimates the source size as
+the number of Unicode characters divided by four, rounded up. It excludes
+frontmatter and is computed from the Markdown even for `HEAD`; it is not a
+model-specific tokenizer count.
+
 Negotiation works with [static prerendering](/docs/production/static-prerendering): a request whose `Accept` header contains `text/markdown` is never answered from the prerender store or the early-serve drop-in, so it reaches WordPress and the Markdown handler. Prerendered HTML responses, the HTML of a page that also negotiates Markdown, and the Markdown answered through `Accept` send `Vary: Accept`, so caches that honour `Vary` keep the two apart. A CDN that keys its cache on the URL alone needs its own rule to bypass the cache for such requests. `Pages::negotiates_markdown( $post_id )` reports whether a page answers Markdown requests.
 
 Collection Markdown keeps the same URL shape for raw Markdown:

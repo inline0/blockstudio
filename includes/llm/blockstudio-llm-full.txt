@@ -236,6 +236,11 @@ If a `blockstudio.json` file is present inside your theme folder, it will be use
 
 The file is optional. Without it, Blockstudio uses settings saved in the admin area on top of its built-in defaults. Adding, changing, or removing the file is detected automatically, so no cache clear or manual reload is required.
 
+Nested settings objects merge, preserving keys you leave out. Lists replace the
+previous list completely rather than merging by index. Use an empty list (`[]`)
+to clear a default, for example `performance.staticPrerender.replayHeaders: []`
+to disable replaying optional cached response headers.
+
 The following properties are available:
 
 ```json
@@ -11428,6 +11433,13 @@ curl -H "Accept: text/markdown" https://example.com/docs/reference/
 
 Frontmatter is removed from the response. Successful raw Markdown responses send `Content-Type: text/markdown`, `X-Robots-Tag: noindex`, and a canonical `Link` header back to the HTML page. Missing `.md` routes return a real 404.
 
+Both `GET` and `HEAD` are supported, through either the `.md` suffix or the
+`Accept` header. `HEAD` returns the same status and representation headers as
+`GET`, without a response body. `X-Markdown-Tokens` estimates the source size as
+the number of Unicode characters divided by four, rounded up. It excludes
+frontmatter and is computed from the Markdown even for `HEAD`; it is not a
+model-specific tokenizer count.
+
 Negotiation works with static prerendering: a request whose `Accept` header contains `text/markdown` is never answered from the prerender store or the early-serve drop-in, so it reaches WordPress and the Markdown handler. Prerendered HTML responses, the HTML of a page that also negotiates Markdown, and the Markdown answered through `Accept` send `Vary: Accept`, so caches that honour `Vary` keep the two apart. A CDN that keys its cache on the URL alone needs its own rule to bypass the cache for such requests. `Pages::negotiates_markdown( $post_id )` reports whether a page answers Markdown requests.
 
 Collection Markdown keeps the same URL shape for raw Markdown:
@@ -13244,6 +13256,11 @@ Blockstudio includes built-in Tailwind CSS v4 support. When enabled, every front
 
 No build step, no CLI, no Node.js required.
 
+The bundled TailwindPHP 1.8.6 compiler preserves zero-length units inside CSS
+functions when minifying, including `var(--x, 0px)` and `max(0px, 1rem)`.
+Quoted strings, URLs, and selectors retain their literal values. Ordinary
+declaration values such as `margin: 0px` can still shorten to `margin: 0`.
+
 ## How It Works
 
 Blockstudio uses two separate compilation strategies depending on the context:
@@ -14895,6 +14912,13 @@ add_filter(
 Retention never evicts a file the installed early-serve map references, and
 the `blockstudio/cache/protected_paths` filter marks additional paths that
 pruning must leave alone.
+
+Before a PHP cache file is pruned or a cache tree is deleted, Blockstudio
+force-invalidates that file in OPcache when its API is available. This prevents
+deleted generations from remaining valid compiled scripts. Invalidation applies
+to the calling process's OPcache instance: a CLI purge cannot clear a separate
+PHP-FPM cache. OPcache reclaims invalidated memory through its normal restart
+cycle, not necessarily immediately on deletion.
 
 Unused namespaces are collected automatically instead of accumulating on every
 plugin activation and PHP or WordPress update. A deployment snippet that used

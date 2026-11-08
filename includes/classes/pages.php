@@ -1765,7 +1765,8 @@ class Pages {
 			return;
 		}
 
-		if ( 'GET' !== strtoupper( sanitize_text_field( wp_unslash( $_SERVER['REQUEST_METHOD'] ?? 'GET' ) ) ) ) {
+		$method = strtoupper( sanitize_text_field( wp_unslash( $_SERVER['REQUEST_METHOD'] ?? 'GET' ) ) );
+		if ( ! in_array( $method, array( 'GET', 'HEAD' ), true ) ) {
 			return;
 		}
 
@@ -1826,11 +1827,13 @@ class Pages {
 
 		nocache_headers();
 		status_header( 200 );
-		foreach ( self::markdown_response_headers( $wants_accept, self::canonical_url_for_markdown_post( $post ) ) as $line => $replace ) {
+		foreach ( self::markdown_response_headers( $wants_accept, self::canonical_url_for_markdown_post( $post ), $markdown ) as $line => $replace ) {
 			header( $line, $replace );
 		}
 
-		echo $markdown; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
+		if ( 'HEAD' !== $method ) {
+			echo $markdown; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
+		}
 		exit;
 	}
 
@@ -1843,13 +1846,15 @@ class Pages {
 	 *
 	 * @param bool   $negotiated Whether the request asked through `Accept`.
 	 * @param string $canonical  Canonical HTML URL, or an empty string.
+	 * @param string $markdown   Source Markdown, without frontmatter.
 	 *
 	 * @return array<string,bool> Header lines.
 	 */
-	private static function markdown_response_headers( bool $negotiated, string $canonical ): array {
+	private static function markdown_response_headers( bool $negotiated, string $canonical, string $markdown ): array {
 		$headers = array(
 			'Content-Type: text/markdown; charset=utf-8' => true,
 			'X-Robots-Tag: noindex'                      => true,
+			'X-Markdown-Tokens: ' . (int) ceil( mb_strlen( $markdown, 'UTF-8' ) / 4 ) => true,
 		);
 
 		if ( $negotiated ) {
@@ -1950,6 +1955,9 @@ class Pages {
 
 		status_header( 404 );
 		nocache_headers();
+		if ( 'HEAD' === strtoupper( sanitize_text_field( wp_unslash( $_SERVER['REQUEST_METHOD'] ?? 'GET' ) ) ) ) {
+			exit;
+		}
 
 		$template = get_404_template();
 

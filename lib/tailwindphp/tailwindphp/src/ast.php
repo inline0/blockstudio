@@ -243,13 +243,15 @@ function stringifyNodesMinified(array $nodes, array &$parts): void
                 } elseif (($value === 'normal' || $value === 'bold') && ($property === 'font-weight' || str_ends_with($property, '-font-weight'))) {
                     $value = $value === 'normal' ? '400' : '700';
                 } else {
-                    $cached = $valueCache[$value] ?? null;
+                    $keepZeroUnits = LightningCss::keepsZeroUnits($property);
+                    $key = $keepZeroUnits ? "\x00" . $value : $value;
+                    $cached = $valueCache[$key] ?? null;
                     if ($cached === null) {
-                        $cached = minifyValueFragment($value);
+                        $cached = minifyValueFragment($value, $keepZeroUnits);
                         if (count($valueCache) >= MINIFY_CACHE_CAP) {
                             $valueCache = [];
                         }
-                        $valueCache[$value] = $cached;
+                        $valueCache[$key] = $cached;
                     }
                     $value = $cached;
                 }
@@ -304,10 +306,10 @@ function stringifyNodesMinified(array $nodes, array &$parts): void
  * @param string $value
  * @return string
  */
-function minifyValueFragment(string $value): string
+function minifyValueFragment(string $value, bool $keepZeroUnits = \false): string
 {
     if (strpbrk($value, '#0') !== \false) {
-        $value = LightningCss::minifyValue($value);
+        $value = LightningCss::minifyValueTokens($value, !$keepZeroUnits);
     }
     if (strpos($value, ', ') !== \false || strpos($value, ' ,') !== \false) {
         $value = stripTopLevelCommaSpaces($value);

@@ -735,6 +735,37 @@ class SettingsTest extends TestCase {
 		}
 	}
 
+	public function test_configured_lists_replace_saved_lists_and_defaults(): void {
+		$path     = wp_tempnam( 'blockstudio-settings-lists' );
+		$previous = get_option( 'blockstudio_settings', null );
+		$this->assertIsString( $path );
+		$this->add_filter( 'blockstudio/settings/path', static fn(): string => $path );
+
+		try {
+			update_option( 'blockstudio_settings', array( 'performance' => array( 'staticPrerender' => array( 'replayHeaders' => array( 'Link', 'X-Robots-Tag' ) ) ) ), false );
+			file_put_contents( $path, '{"performance":{"staticPrerender":{"replayHeaders":["Link"]}}}' );
+			Settings::reload();
+			$this->assertSame( array( 'Link' ), Settings::get( 'performance/staticPrerender/replayHeaders' ) );
+			$this->assertSame( 86400, Settings::get( 'performance/staticPrerender/ttl' ) );
+
+			file_put_contents( $path, '{"performance":{"staticPrerender":{"replayHeaders":[]}}}' );
+			Settings::reload();
+			$this->assertSame( array(), Settings::get( 'performance/staticPrerender/replayHeaders' ) );
+
+			delete_option( 'blockstudio_settings' );
+			Settings::reload();
+			$this->assertSame( array(), Settings::get( 'performance/staticPrerender/replayHeaders' ) );
+		} finally {
+			unlink( $path );
+			if ( null === $previous ) {
+				delete_option( 'blockstudio_settings' );
+			} else {
+				update_option( 'blockstudio_settings', $previous, false );
+			}
+			Settings::reload();
+		}
+	}
+
 	public function test_phpstan_block_tag_maps_are_not_reported_as_unknown_settings(): void {
 		$path = (string) tempnam( sys_get_temp_dir(), 'blockstudio-settings-block-tags' );
 		$this->add_filter( 'blockstudio/settings/path', static fn(): string => $path );

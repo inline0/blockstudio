@@ -1064,11 +1064,26 @@ final class Runtime_Cache {
 		);
 
 		foreach ( array_slice( $objects, max( 0, $maximum - ( '' === $keep_path ? 0 : 1 ) ) ) as $object ) {
-			@unlink( $object ); // phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged, WordPress.WP.AlternativeFunctions.unlink_unlink -- Internal cache files must not invoke media-deletion filters.
+			self::delete_file( $object );
 			if ( $headers && str_ends_with( $object, '.html' ) ) {
 				Static_Prerender_Headers::remove( $object );
 			}
 		}
+	}
+
+	/**
+	 * Remove a cache file, evicting compiled PHP before its path disappears.
+	 *
+	 * @param string $path Cache file path.
+	 *
+	 * @return bool Whether the file was removed.
+	 */
+	public static function delete_file( string $path ): bool {
+		if ( str_ends_with( strtolower( $path ), '.php' ) && function_exists( 'opcache_invalidate' ) ) {
+			@opcache_invalidate( $path, true ); // phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged -- Restricted OPcache APIs must not prevent filesystem cleanup.
+		}
+
+		return @unlink( $path ); // phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged, WordPress.WP.AlternativeFunctions.unlink_unlink -- Internal cache files must not invoke media-deletion filters; concurrent removals are harmless.
 	}
 
 	/**
@@ -1122,7 +1137,7 @@ final class Runtime_Cache {
 				$path    = $item->getPathname();
 				$deleted = $item->isDir()
 					? @rmdir( $path ) // phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged, WordPress.WP.AlternativeFunctions.file_system_operations_rmdir -- Bounded cache cleanup tolerates concurrent removals.
-					: @unlink( $path ); // phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged, WordPress.WP.AlternativeFunctions.unlink_unlink -- Bounded cache cleanup tolerates concurrent removals.
+					: self::delete_file( $path );
 
 				if ( $deleted ) {
 					++$removed;
@@ -1263,7 +1278,7 @@ final class Runtime_Cache {
 				$path = $item->getPathname();
 				if ( $item->isDir() ) {
 					@rmdir( $path ); // phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged, WordPress.WP.AlternativeFunctions.file_system_operations_rmdir
-				} elseif ( @unlink( $path ) ) { // phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged, WordPress.WP.AlternativeFunctions.unlink_unlink
+				} elseif ( self::delete_file( $path ) ) {
 					++$removed;
 				}
 			}

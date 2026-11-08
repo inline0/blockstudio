@@ -148,14 +148,149 @@ class LightningCss
                 return '700';
             }
         }
-        if (str_contains($value, '#')) {
-            $value = preg_replace_callback('/#([0-9a-fA-F])\1([0-9a-fA-F])\2([0-9a-fA-F])\3\b/', fn($m) => '#' . strtolower($m[1] . $m[2] . $m[3]), $value);
+        if (strpbrk($value, '#0') === \false) {
+            return $value;
         }
-        if (str_contains($value, '0')) {
-            $value = preg_replace('/\b0(px|rem|em|ex|ch|vw|vh|vmin|vmax|cm|mm|in|pt|pc)\b/', '0', $value);
-        }
-        return $value;
+        return self::minifyValueTokens($value, !self::keepsZeroUnits($property));
     }
+    public static function keepsZeroUnits(string $property): bool
+    {
+        return str_starts_with($property, '--') || strcasecmp($property, 'initial-value') === 0;
+    }
+    public static function minifyValueTokens(string $value, bool $stripZeroUnits = \true): string
+    {
+        $length = strlen($value);
+        $out = '';
+        $copied = 0;
+        $stack = [];
+        $sensitive = 0;
+        $i = 0;
+        while ($i < $length) {
+            $i += strcspn($value, "\"'\\()#0", $i);
+            if ($i >= $length) {
+                break;
+            }
+            $ch = $value[$i];
+            if ($ch === '\\') {
+                $i += 2;
+                continue;
+            }
+            if ($ch === '"' || $ch === "'") {
+                $i = self::skipString($value, $i, $length);
+                continue;
+            }
+            if ($ch === '(') {
+                $nameStart = $i;
+                while ($nameStart > 0 && self::isIdentByte($value[$nameStart - 1])) {
+                    $nameStart--;
+                }
+                $name = strtolower(substr($value, $nameStart, $i - $nameStart));
+                if ($name === 'url' || $name === 'src') {
+                    $i = self::skipParenthesized($value, $i + 1, $length);
+                    continue;
+                }
+                $isSensitive = isset(self::UNIT_SENSITIVE_FUNCTIONS[$name]);
+                $stack[] = $isSensitive;
+                if ($isSensitive) {
+                    $sensitive++;
+                }
+                $i++;
+                continue;
+            }
+            if ($ch === ')') {
+                if ($stack !== [] && array_pop($stack)) {
+                    $sensitive--;
+                }
+                $i++;
+                continue;
+            }
+            if ($ch === '#') {
+                $short = self::shortHex($value, $i, $length);
+                if ($short !== null) {
+                    $out .= substr($value, $copied, $i - $copied) . $short;
+                    $i += 7;
+                    $copied = $i;
+                    continue;
+                }
+                $i++;
+                continue;
+            }
+            if ($stripZeroUnits && $sensitive === 0 && ($i === 0 || !(ctype_alnum($value[$i - 1]) || strpos('-_.#\\', $value[$i - 1]) !== \false || $value[$i - 1] >= "\x80"))) {
+                $unitLength = strspn($value, 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ', $i + 1);
+                $end = $i + 1 + $unitLength;
+                if ($unitLength > 0 && isset(self::ZERO_STRIPPABLE_UNITS[strtolower(substr($value, $i + 1, $unitLength))]) && ($end >= $length || !self::isIdentByte($value[$end]) && $value[$end] !== '%' && $value[$end] !== '\\')) {
+                    $out .= substr($value, $copied, $i + 1 - $copied);
+                    $i = $end;
+                    $copied = $i;
+                    continue;
+                }
+            }
+            $i++;
+        }
+        if ($copied === 0) {
+            return $value;
+        }
+        return $out . substr($value, $copied);
+    }
+    private static function skipString(string $value, int $i, int $length): int
+    {
+        $quote = $value[$i];
+        $i++;
+        while ($i < $length) {
+            $i += strcspn($value, $quote . '\\', $i);
+            if ($i >= $length) {
+                return $length;
+            }
+            if ($value[$i] === '\\') {
+                $i += 2;
+                continue;
+            }
+            return $i + 1;
+        }
+        return $length;
+    }
+    private static function skipParenthesized(string $value, int $i, int $length): int
+    {
+        $depth = 1;
+        while ($i < $length) {
+            $i += strcspn($value, "()\"'\\", $i);
+            if ($i >= $length) {
+                return $length;
+            }
+            $ch = $value[$i];
+            if ($ch === '\\') {
+                $i += 2;
+            } elseif ($ch === '"' || $ch === "'") {
+                $i = self::skipString($value, $i, $length);
+            } elseif ($ch === '(') {
+                $depth++;
+                $i++;
+            } else {
+                $i++;
+                if (--$depth === 0) {
+                    return $i;
+                }
+            }
+        }
+        return $length;
+    }
+    private static function shortHex(string $value, int $i, int $length): ?string
+    {
+        if ($i + 6 >= $length) {
+            return null;
+        }
+        $hex = substr($value, $i + 1, 6);
+        if (strspn($hex, '0123456789abcdefABCDEF') !== 6 || $hex[0] !== $hex[1] || $hex[2] !== $hex[3] || $hex[4] !== $hex[5] || $i + 7 < $length && (self::isIdentByte($value[$i + 7]) || $value[$i + 7] === '\\')) {
+            return null;
+        }
+        return '#' . strtolower($hex[0] . $hex[2] . $hex[4]);
+    }
+    private static function isIdentByte(string $ch): bool
+    {
+        return ctype_alnum($ch) || $ch === '-' || $ch === '_' || $ch >= "\x80";
+    }
+    private const ZERO_STRIPPABLE_UNITS = ['px' => \true, 'rem' => \true, 'em' => \true, 'ex' => \true, 'ch' => \true, 'vw' => \true, 'vh' => \true, 'vmin' => \true, 'vmax' => \true, 'cm' => \true, 'mm' => \true, 'in' => \true, 'pt' => \true, 'pc' => \true];
+    private const UNIT_SENSITIVE_FUNCTIONS = ['calc' => \true, '-webkit-calc' => \true, '-moz-calc' => \true, 'calc-size' => \true, 'min' => \true, 'max' => \true, 'clamp' => \true, 'round' => \true, 'mod' => \true, 'rem' => \true, 'abs' => \true, 'sign' => \true, 'hypot' => \true, 'atan2' => \true, 'sin' => \true, 'cos' => \true, 'tan' => \true, 'asin' => \true, 'acos' => \true, 'atan' => \true, 'pow' => \true, 'sqrt' => \true, 'log' => \true, 'exp' => \true, 'progress' => \true, 'media-progress' => \true, 'container-progress' => \true, 'random' => \true, 'var' => \true, 'env' => \true, 'attr' => \true, 'if' => \true];
     /**
      * Normalize URL quoting.
      *

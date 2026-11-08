@@ -3,6 +3,7 @@
 declare (strict_types=1);
 namespace BlockstudioVendor\TailwindPHP\Minifier;
 
+use BlockstudioVendor\TailwindPHP\LightningCss\LightningCss;
 /**
  * CSS Minifier - Reduces CSS file size while preserving functionality.
  *
@@ -30,9 +31,7 @@ class CssMinifier
     {
         $css = self::removeComments($css);
         $css = self::removeWhitespace($css);
-        $css = self::shortenHexColors($css);
-        $css = self::removeZeroUnits($css);
-        $css = self::shortenFontWeight($css);
+        $css = self::minifyDeclarations($css);
         $css = self::removeEmptyRules($css);
         return trim($css);
     }
@@ -53,6 +52,14 @@ class CssMinifier
         $depth = 0;
         $len = strlen($css);
         for ($i = 0; $i < $len; $i++) {
+            $run = strcspn($css, '() ', $i);
+            if ($run > 0) {
+                $out .= substr($css, $i, $run);
+                $i += $run;
+                if ($i >= $len) {
+                    break;
+                }
+            }
             $ch = $css[$i];
             if ($ch === '(') {
                 $depth++;
@@ -87,35 +94,105 @@ class CssMinifier
         }
         return str_replace(';}', '}', $out);
     }
-    /**
-     * Shorten 6-digit hex colors to 3-digit where possible.
-     * #ffffff → #fff, #aabbcc → #abc
-     */
-    private static function shortenHexColors(string $css): string
+    private static function minifyDeclarations(string $css): string
     {
-        return preg_replace_callback('/#([0-9a-fA-F])\1([0-9a-fA-F])\2([0-9a-fA-F])\3\b/', fn($m) => '#' . strtolower($m[1] . $m[2] . $m[3]), $css);
+        $length = strlen($css);
+        $out = '';
+        $copied = 0;
+        $depth = 0;
+        $parens = 0;
+        $segmentStart = 0;
+        $colon = -1;
+        $i = 0;
+        while ($i < $length) {
+            $i += strcspn($css, "{};:()\"'\\", $i);
+            if ($i >= $length) {
+                break;
+            }
+            $ch = $css[$i];
+            if ($ch === '\\') {
+                $i += 2;
+                continue;
+            }
+            if ($ch === '"' || $ch === "'") {
+                $quote = $ch;
+                $i++;
+                while ($i < $length) {
+                    $i += strcspn($css, $quote . '\\', $i);
+                    if ($i < $length && $css[$i] === '\\') {
+                        $i += 2;
+                        continue;
+                    }
+                    $i++;
+                    break;
+                }
+                continue;
+            }
+            if ($ch === '(') {
+                $parens++;
+                $i++;
+                continue;
+            }
+            if ($ch === ')') {
+                if ($parens > 0) {
+                    $parens--;
+                }
+                $i++;
+                continue;
+            }
+            if ($ch === ':') {
+                if ($parens === 0 && $colon < 0) {
+                    $colon = $i;
+                }
+                $i++;
+                continue;
+            }
+            if ($ch === '{') {
+                if ($parens === 0) {
+                    $depth++;
+                    $segmentStart = $i + 1;
+                    $colon = -1;
+                }
+                $i++;
+                continue;
+            }
+            if ($ch === ';' && $parens > 0) {
+                $i++;
+                continue;
+            }
+            $valueLength = $i - $colon - 1;
+            if ($depth > 0 && $colon > $segmentStart && ($valueLength <= 20 || strcspn($css, '#0', $colon + 1, $valueLength) < $valueLength)) {
+                $property = trim(substr($css, $segmentStart, $colon - $segmentStart));
+                if ($property !== '' && $property[0] !== '@') {
+                    $value = substr($css, $colon + 1, $i - $colon - 1);
+                    $minified = self::minifyDeclarationValue($property, $value);
+                    if ($minified !== $value) {
+                        $out .= substr($css, $copied, $colon + 1 - $copied) . $minified;
+                        $copied = $i;
+                    }
+                }
+            }
+            if ($ch === '}') {
+                $depth = max(0, $depth - 1);
+                $parens = 0;
+            }
+            $segmentStart = $i + 1;
+            $colon = -1;
+            $i++;
+        }
+        if ($copied === 0) {
+            return $css;
+        }
+        return $out . substr($css, $copied);
     }
-    /**
-     * Remove units from zero values.
-     * 0px → 0, 0rem → 0, 0em → 0
-     *
-     * Exceptions: 0s and 0ms (time values need units in animations)
-     */
-    private static function removeZeroUnits(string $css): string
+    private static function minifyDeclarationValue(string $property, string $value): string
     {
-        // Match 0 followed by a unit, but not 0s or 0ms (time units)
-        // Also preserve 0% in some contexts (gradients, etc.)
-        return preg_replace('/\b0(px|rem|em|ex|ch|vw|vh|vmin|vmax|cm|mm|in|pt|pc)\b/', '0', $css);
-    }
-    /**
-     * Shorten font-weight keywords to numeric values.
-     * normal → 400, bold → 700
-     */
-    private static function shortenFontWeight(string $css): string
-    {
-        $css = preg_replace('/font-weight:normal\b/', 'font-weight:400', $css);
-        $css = preg_replace('/font-weight:bold\b/', 'font-weight:700', $css);
-        return $css;
+        $important = '';
+        if (str_contains($value, '!') && preg_match('/\s*!\s*important\s*$/i', $value, $match, \PREG_OFFSET_CAPTURE)) {
+            $important = $match[0][0];
+            $value = substr($value, 0, $match[0][1]);
+        }
+        return LightningCss::minifyValue($value, strtolower($property)) . $important;
     }
     /**
      * Remove empty rules.
