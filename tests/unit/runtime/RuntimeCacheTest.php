@@ -59,6 +59,8 @@ class RuntimeCacheTest extends TestCase {
 			'build retention'   => array( 'build' ),
 			'tree deletion'     => array( 'tree' ),
 			'bounded deletion'  => array( 'batch' ),
+			'early-serve map'   => array( 'map' ),
+			'owned drop-in'     => array( 'dropin' ),
 			'no OPcache API'    => array( 'tree', false ),
 		);
 	}
@@ -102,7 +104,7 @@ class RuntimeCacheTest extends TestCase {
 			$this->assertTrue( $invalidated );
 			$files[] = basename( $file );
 		}
-		$this->assertContains( 'retired.php', $files );
+		$this->assertContains( $result['file'], $files );
 		if ( in_array( $mode, array( 'runtime', 'build' ), true ) ) {
 			$this->assertSame( array( 'retired.php' ), $files );
 		}

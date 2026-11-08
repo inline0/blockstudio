@@ -1373,6 +1373,9 @@ PHP;
 	private static function remove_shared_artifacts(): void {
 		$dropin = self::dropin_path();
 		if ( is_file( $dropin ) && self::file_contains_marker( $dropin, self::DROPIN_MARKER ) ) {
+			if ( function_exists( 'opcache_invalidate' ) ) {
+				@opcache_invalidate( $dropin, true ); // phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged -- Restricted OPcache APIs must not prevent owned artifact cleanup.
+			}
 			wp_delete_file( $dropin );
 		}
 
@@ -1387,8 +1390,8 @@ PHP;
 	private static function remove_owned_map(): void {
 		$map = self::map_path();
 		if ( is_file( $map ) && self::file_contains_marker( $map, self::MAP_MARKER ) ) {
-			wp_delete_file( $map );
 			self::forget_compiled_map();
+			wp_delete_file( $map );
 		}
 	}
 
