@@ -346,7 +346,8 @@ test('identical children keep their own inherited context across cached renders'
     await expect(preloadedParents.nth(1).locator(child)).toHaveText(
       'Text: Second provider',
     );
-    await page.waitForLoadState('networkidle');
+    // Observe past the 500ms render debounce; editor blob URLs may stay open.
+    await page.waitForTimeout(1000);
     expect(requests).toEqual([]);
   } finally {
     page.off('request', recordRequest);
