@@ -15,7 +15,7 @@ env:
 jobs:
   lint:
     name: Lint
-    runs-on: [self-hosted, Linux, X64, inline0-blockstudio]
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
 
@@ -41,7 +41,7 @@ jobs:
 
   phpcs:
     name: PHPCS
-    runs-on: [self-hosted, Linux, X64, inline0-blockstudio]
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
 
@@ -64,7 +64,7 @@ jobs:
 
   phpstan:
     name: PHPStan (Runtime)
-    runs-on: [self-hosted, Linux, X64, inline0-blockstudio]
+    runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@v5
@@ -80,7 +80,7 @@ jobs:
 
   loading-modes:
     name: Loading Mode (${{ matrix.mode }})
-    runs-on: [self-hosted, Linux, X64, inline0-blockstudio]
+    runs-on: ubuntu-latest
     timeout-minutes: 20
     strategy:
       fail-fast: false
@@ -113,7 +113,7 @@ jobs:
 
   unit:
     name: Unit Tests
-    runs-on: [self-hosted, Linux, X64, inline0-blockstudio]
+    runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@v5
@@ -142,7 +142,7 @@ jobs:
 
   phpstan-package:
     name: PHPStan Package Tests
-    runs-on: [self-hosted, Linux, X64, inline0-blockstudio]
+    runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@v5
@@ -159,7 +159,7 @@ jobs:
 
   e2e:
     name: E2E Tests (Shard ${{ matrix.shard }}/${{ matrix.total_shards }})
-    runs-on: [self-hosted, Linux, X64, inline0-blockstudio]
+    runs-on: ubuntu-latest
     timeout-minutes: 45
     strategy:
       fail-fast: false
@@ -211,7 +211,7 @@ jobs:
 
   ui-regressions:
     name: UI Regression Tests
-    runs-on: [self-hosted, Linux, X64, inline0-blockstudio]
+    runs-on: ubuntu-latest
     timeout-minutes: 25
     env:
       COMPOSE_PROJECT_NAME: blockstudio-ui
@@ -252,7 +252,7 @@ jobs:
 
   playground-smoke:
     name: Playground Smoke Tests
-    runs-on: [self-hosted, Linux, X64, inline0-blockstudio]
+    runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@v5
@@ -282,7 +282,7 @@ jobs:
 
   e2e-empty:
     name: E2E Tests (Empty Theme)
-    runs-on: [self-hosted, Linux, X64, inline0-blockstudio]
+    runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@v5

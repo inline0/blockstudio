@@ -141,7 +141,7 @@ section markers in Markdown files.
 ## CI
 
 - The complete CI suite runs on every push to `main`, `7.*`, and `tooling-upgrade`.
-- Main CI uses the existing self-hosted Blockstudio runners: four main-suite shards, empty-theme coverage, and UI regressions. Distribution and release packaging retain their existing runners.
+- All CI, distribution, package-split, and release jobs use standard GitHub-hosted Ubuntu runners (`ubuntu-latest`). Main CI retains four main-suite shards, empty-theme coverage, and UI regressions.
 - Commit-message tags such as `[all]`, `[e2e]`, and `[unit]` do not gate jobs. `[all]` remains a release-validation convention only.
 
 ## Key Rules for Agents
