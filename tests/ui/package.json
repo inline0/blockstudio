@@ -11,7 +11,7 @@
     "seed": "node seed.ts"
   },
   "devDependencies": {
-    "@playwright/test": "^1.58.2",
+    "@playwright/test": "^1.60.0",
     "@wordpress/env": "^11.3.0"
   }
 }
