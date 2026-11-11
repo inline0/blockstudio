@@ -421,7 +421,7 @@ class StaticPrerenderRuntimeTest extends TestCase {
 			$this->assertFileDoesNotExist( $content . '/blockstudio-static-prerender-map.php' );
 			$this->assertFileDoesNotExist( $content . '/advanced-cache.php' );
 			$this->assertFalse( wp_next_scheduled( 'blockstudio_static_prerender_warm' ) );
-			$this->assertFalse( get_option( 'blockstudio_static_prerender_feature_state', false ) );
+			$this->assertSame( array(), get_option( 'blockstudio_static_prerender_feature_state', false ) );
 			$this->assertFalse(
 				has_action( 'admin_init', array( Static_Prerender_Early_Serve::class, 'maybe_sync' ) )
 			);

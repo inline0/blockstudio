@@ -399,11 +399,16 @@ class Plugin {
 	}
 
 	/**
-	 * Load the options read during every request with one query.
+	 * Load the options read during every request with at most one query.
 	 *
-	 * These options are not autoloaded, and some of them usually do not exist,
-	 * so without an object cache each read would be its own query. Priming also
-	 * records missing options, which get_option() then answers from cache.
+	 * Since 7.7.14 the migration stores every one of these options, autoloaded
+	 * where WordPress allows it, so priming finds them among the autoloaded
+	 * options and returns without a query. The query remains for rows that are
+	 * not autoloaded or do not exist: page manifests or templates too large to
+	 * autoload, the populate version on a site with a persistent object cache,
+	 * and sites where the migration has not run. Without an object cache each
+	 * of those reads would be its own query. Priming also records missing
+	 * options, which get_option() then answers from cache.
 	 *
 	 * @return void
 	 */

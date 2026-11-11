@@ -438,7 +438,7 @@ final class Build_Cache {
 				'rotated' => $now,
 				'dirty'   => 0,
 			);
-			update_option( self::POPULATE_CACHE_VERSION_OPTION, $state, false );
+			update_option( self::POPULATE_CACHE_VERSION_OPTION, $state, self::autoload_populate_state() );
 		}
 
 		return $state['version'];
@@ -501,7 +501,21 @@ final class Build_Cache {
 			$state['dirty'] = $now;
 		}
 
-		update_option( self::POPULATE_CACHE_VERSION_OPTION, $state, false );
+		update_option( self::POPULATE_CACHE_VERSION_OPTION, $state, self::autoload_populate_state() );
+	}
+
+	/**
+	 * Whether the populate invalidation state is stored autoloaded.
+	 *
+	 * Autoloading saves the query for it on every request without a persistent
+	 * object cache. With one, the option is cached by itself, and every write
+	 * of an autoloaded option would replace the whole cached set of autoloaded
+	 * options; this state is written on every content change.
+	 *
+	 * @return bool Whether to autoload the option.
+	 */
+	public static function autoload_populate_state(): bool {
+		return ! wp_using_ext_object_cache();
 	}
 
 	/**

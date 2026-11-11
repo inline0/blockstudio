@@ -168,7 +168,7 @@ class StaticPrerenderThemeFilterTest extends TestCase {
 
 		$this->assertFileDoesNotExist( $this->root . '/content/blockstudio-static-prerender-map.php' );
 		$this->assertFileDoesNotExist( $this->root . '/content/advanced-cache.php' );
-		$this->assertFalse( get_option( 'blockstudio_static_prerender_feature_state', false ) );
+		$this->assertSame( array(), get_option( 'blockstudio_static_prerender_feature_state', false ) );
 	}
 
 	public function test_without_theme_filters_the_configured_hooks_are_registered_after_setup(): void {

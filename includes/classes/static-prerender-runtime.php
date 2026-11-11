@@ -2705,7 +2705,9 @@ final class Static_Prerender_Runtime {
 	 *
 	 * Disabled sites perform one cached option lookup and no filesystem or cron
 	 * work. Early-serve files and warm schedules are cleaned once when their
-	 * previously enabled setting becomes inactive.
+	 * previously enabled setting becomes inactive. An inactive state is stored
+	 * as an empty array instead of deleting the row: a missing option is not
+	 * autoloaded, so every request without an object cache would query for it.
 	 *
 	 * @return void
 	 */
@@ -2743,7 +2745,7 @@ final class Static_Prerender_Runtime {
 		}
 
 		if ( array() !== $stored ) {
-			delete_option( self::FEATURE_STATE_OPTION );
+			update_option( self::FEATURE_STATE_OPTION, array(), true );
 		}
 	}
 

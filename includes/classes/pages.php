@@ -806,7 +806,7 @@ class Pages {
 			return;
 		}
 
-		update_option( $option, $signature, false );
+		update_option( $option, $signature, true );
 		self::schedule_collection_rewrite_flush();
 	}
 
@@ -1204,7 +1204,7 @@ class Pages {
 		$cache_key = self::collection_manifests_cache_key( $paths );
 		wp_cache_set( $cache_key, $payload, 'blockstudio', HOUR_IN_SECONDS );
 		set_transient( $cache_key, $payload, HOUR_IN_SECONDS );
-		update_option( self::COLLECTION_MANIFESTS_OPTION, $payload, false );
+		update_option( self::COLLECTION_MANIFESTS_OPTION, $payload );
 	}
 
 	/**
@@ -1524,7 +1524,7 @@ class Pages {
 			);
 		}
 
-		update_option( self::TEMPLATE_FOR_OPTION, $configuration, false );
+		update_option( self::TEMPLATE_FOR_OPTION, $configuration );
 	}
 
 	/**
