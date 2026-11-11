@@ -3,7 +3,7 @@ Contributors: dnnsjsk
 Requires at least: 6.7
 Tested up to: 7.0.0
 Requires PHP: 8.2
-Stable tag: 7.7.14
+Stable tag: 7.7.15
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -53,6 +53,9 @@ Download the latest release zip from [GitHub Releases](https://github.com/inline
 * [Getting Started](https://blockstudio.dev/docs/getting-started)
 
 == Changelog ==
+
+= 7.7.15 =
+* Fix: imported block comments with flat field values retain selections and hydrate the editor correctly, saving subsequent edits in the existing nested format without changing WordPress-owned attributes (#208)
 
 = 7.7.14 =
 * New: `bs_block_schema()` includes matching saved-value examples from block definitions, excluding editor-only image placeholders (#203)

@@ -181,11 +181,60 @@ class BlockValuesTest extends TestCase {
 		$this->assertSame( 'only top level', $values['subtitle'] );
 	}
 
-	public function test_top_level_values_failing_the_registered_type_are_dropped(): void {
+	public function test_top_level_scalar_selections_are_imported(): void {
 		$values = bs_block_values( self::NAME, array( 'variantLabel' => 'b', 'subtitle' => 'kept' ) );
 
-		$this->assertFalse( $values['variantLabel'] );
+		$this->assertSame( 'Beta', $values['variantLabel'] );
 		$this->assertSame( 'kept', $values['subtitle'] );
+	}
+
+	public function test_imported_comment_fields_match_the_frontend_and_do_not_mutate_the_input(): void {
+		$attrs = array( 'title' => 'Hello', 'variant' => 'b', 'variantLabel' => array( 'value' => 'a', 'label' => 'Alpha' ), 'rows' => array( array( 'heading' => 'Row', 'kind' => 'b' ) ), 'className' => 'kept', 'anchor' => 'anchor' );
+		$before = $attrs;
+		$normalized = \Blockstudio\Block::normalize_imported_attributes( self::NAME, $attrs );
+		$this->assertSame( $before, $attrs );
+		$this->assertSame( 'b', $normalized['blockstudio']['attributes']['variant'] );
+		$this->assertSame( 'kept', $normalized['className'] );
+		$this->assertSame( 'anchor', $normalized['anchor'] );
+		$this->assertArrayNotHasKey( 'variant', $normalized );
+		$this->assertSame( $normalized, \Blockstudio\Block::normalize_imported_attributes( self::NAME, $normalized ) );
+		$rendered = $this->rendered( $attrs );
+		$this->assertSame( 'Hello', $rendered['title'] );
+		$this->assertSame( 'b', $rendered['variant'] );
+		$this->assertSame( 'Alpha', $rendered['variantLabel'] );
+		$this->assertSame( 'Beta', $rendered['rows'][0]['kind'] );
+		$this->assertEquals( $rendered, $this->json( bs_block_values( self::NAME, $attrs ) ) );
+	}
+
+	public function test_import_normalization_keeps_explicit_nested_values_and_bookkeeping(): void {
+		foreach ( array( '', false, 0, null, array(), array( 'value' => 'a', 'label' => 'Alpha' ) ) as $value ) {
+			$attrs = array( 'title' => 'Imported', 'variant' => 'b', 'blockstudio' => array( 'attributes' => array( 'variant' => $value ), 'disabled' => array( 'variant' ), 'editor' => true ) );
+			$result = \Blockstudio\Block::normalize_imported_attributes( self::NAME, $attrs );
+			$this->assertSame( $value, $result['blockstudio']['attributes']['variant'] );
+			$this->assertSame( 'Imported', $result['blockstudio']['attributes']['title'] );
+			$this->assertSame( array( 'variant' ), $result['blockstudio']['disabled'] );
+			$this->assertTrue( $result['blockstudio']['editor'] );
+		}
+	}
+
+	public function test_import_normalization_does_not_adopt_invalid_ordinary_fields_or_foreign_attributes(): void {
+		$invalid = array( 'title' => array( 'invalid' ), 'count' => array( 'invalid' ), 'className' => 'kept' );
+		$this->assertSame( $invalid, \Blockstudio\Block::normalize_imported_attributes( self::NAME, $invalid ) );
+		$this->assertSame( 'Untitled', $this->rendered( $invalid )['title'] );
+		foreach ( array( 'core/paragraph', 'values-test/foreign', 'missing/block' ) as $name ) {
+			$attrs = array( 'title' => 'Native', 'extra' => 'Do not adopt', 'className' => 'kept' );
+			$this->assertSame( $attrs, \Blockstudio\Block::normalize_imported_attributes( $name, $attrs ) );
+		}
+	}
+
+	public function test_imported_block_inside_a_core_container_is_normalized(): void {
+		$content = '<!-- wp:group --><div class="wp-block-group"><!-- wp:' . self::NAME . ' {"title":"Child","variant":"b"} /--></div><!-- /wp:group -->';
+		$html = do_blocks( $content );
+		$tags = new WP_HTML_Tag_Processor( $html );
+		$this->assertTrue( $tags->next_tag( array( 'class_name' => 'values-result' ) ) );
+		$values = json_decode( $tags->get_attribute( 'data-values' ), true );
+		$this->assertSame( 'Child', $values['title'] );
+		$this->assertSame( 'b', $values['variant'] );
 	}
 
 	public function test_undeclared_top_level_keys_are_not_adopted(): void {
