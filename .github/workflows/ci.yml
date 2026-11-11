@@ -159,7 +159,7 @@ jobs:
 
   e2e:
     name: E2E Tests (Shard ${{ matrix.shard }}/${{ matrix.total_shards }})
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 45
     strategy:
       fail-fast: false
@@ -211,7 +211,7 @@ jobs:
 
   ui-regressions:
     name: UI Regression Tests
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 25
     env:
       COMPOSE_PROJECT_NAME: blockstudio-ui
@@ -252,7 +252,7 @@ jobs:
 
   playground-smoke:
     name: Playground Smoke Tests
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@v5
@@ -282,7 +282,7 @@ jobs:
 
   e2e-empty:
     name: E2E Tests (Empty Theme)
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@v5
