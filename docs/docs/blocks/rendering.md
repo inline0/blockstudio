@@ -388,6 +388,11 @@ A field's `label` becomes `title`, its `help` becomes `description`, and its
 title. Fields are never required, and conditional logic is not part of the
 schema.
 
+When the block's [`example`](/docs/blocks/preview#custom-data) has
+`attributes` that match the schema, they are listed under `examples`, without
+image placeholders, so a tool sees one complete value next to the field
+descriptions. An example that does not match the schema is left out.
+
 Constraints use only keywords that `rest_validate_value_from_schema()` checks,
 so the schema works as the input schema of a REST route or an ability as it is:
 

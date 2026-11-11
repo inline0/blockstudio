@@ -45,6 +45,9 @@ It is also possible to provide structured data in the `example` key, so any cust
 }
 ```
 
+Example attributes that match the block's stored-value schema are also
+returned as `examples` by
+[`bs_block_schema()`](/docs/blocks/rendering#describing-stored-values).
 
 ### PHP
 

@@ -644,6 +644,19 @@ class BlockValidatorTest extends TestCase {
 		$this->assertSame( 'array', $paragraph['properties']['html']['type'] );
 	}
 
+	public function test_schema_lists_the_block_example_when_it_matches(): void {
+		$block = Build::blocks()[ self::NAME ];
+		$block->example = array( 'attributes' => array( 'text' => 'Hello', 'choice' => 'b', 'image' => array( 'blockstudio' => true, 'type' => 'image' ) ) );
+		$schema = bs_block_schema( self::NAME );
+		$this->assertSame( array( array( 'text' => 'Hello', 'choice' => 'b' ) ), $schema['examples'] );
+		$this->assertTrue( rest_validate_value_from_schema( $schema['examples'][0], $schema ) );
+
+		$block->example = array( 'attributes' => array( 'choice' => 'c' ) );
+		$this->assertArrayNotHasKey( 'examples', bs_block_schema( self::NAME ) );
+		$block->example = array();
+		$this->assertArrayNotHasKey( 'examples', bs_block_schema( self::NAME ) );
+	}
+
 	public function test_schema_filter_adapts_the_result(): void {
 		$filter = static function ( array $schema, string $name ): array {
 			$schema['description'] = $name;
@@ -652,6 +665,37 @@ class BlockValidatorTest extends TestCase {
 		add_filter( 'blockstudio/blocks/attributes/schema', $filter, 10, 2 );
 		$this->assertSame( self::NAME, bs_block_schema( self::NAME )['description'] );
 		remove_filter( 'blockstudio/blocks/attributes/schema', $filter, 10 );
+	}
+
+	#[DataProvider( 'invalid_schema_examples' )]
+	public function test_schema_leaves_out_examples_that_are_not_stored_values( array $values ): void {
+		Build::blocks()[ self::NAME ]->example = array( 'attributes' => $values );
+
+		$this->assertArrayNotHasKey( 'examples', bs_block_schema( self::NAME ) );
+	}
+
+	public static function invalid_schema_examples(): array {
+		return array(
+			'unknown field' => array( array( 'unknown' => 'value' ) ),
+			'option object' => array( array( 'choice' => array( 'value' => 'b', 'label' => 'B' ) ) ),
+			'file object' => array( array( 'image' => array( 'ID' => 123 ) ) ),
+			'only image placeholder' => array( array( 'image' => array( 'blockstudio' => true, 'type' => 'image' ) ) ),
+		);
+	}
+
+	public function test_schema_filter_can_remove_examples(): void {
+		Build::blocks()[ self::NAME ]->example = array( 'attributes' => array( 'choice' => 'b' ) );
+		$filter = static function ( array $schema ): array {
+			unset( $schema['examples'] );
+			return $schema;
+		};
+		add_filter( 'blockstudio/blocks/attributes/schema', $filter );
+
+		try {
+			$this->assertArrayNotHasKey( 'examples', bs_block_schema( self::NAME ) );
+		} finally {
+			remove_filter( 'blockstudio/blocks/attributes/schema', $filter );
+		}
 	}
 
 	public function test_schema_does_not_query_or_repeat_populate_and_does_not_filter_unmanaged_blocks(): void {

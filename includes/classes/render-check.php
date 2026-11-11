@@ -114,10 +114,12 @@ final class Render_Check {
 	/**
 	 * Read the renderable example values of a block.
 	 *
+	 * Image placeholders are left out: they only exist in editor previews.
+	 *
 	 * @param string $name Registered block name.
 	 * @return array<string, mixed> Field values keyed by storage key.
 	 */
-	private static function example( string $name ): array {
+	public static function example( string $name ): array {
 		$example = Build::blocks()[ $name ]->example ?? null;
 		$values  = is_array( $example ) && is_array( $example['attributes'] ?? null ) ? $example['attributes'] : array();
 

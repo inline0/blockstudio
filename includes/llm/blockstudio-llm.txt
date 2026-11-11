@@ -266,6 +266,7 @@ route: /docs/blocks/preview
 file: docs/docs/blocks/preview.md
 purpose: Enable block previews in the block inserter.
 settings: content
+php: bs_block_schema()
 
 ### Loading
 route: /docs/blocks/loading
