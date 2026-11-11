@@ -1,5 +1,4 @@
 type Attributes = Record<string, unknown>;
-type Definition = { blockstudio?: boolean; field?: string; type?: unknown };
 
 const object = (value: unknown): value is Attributes =>
   value !== null && typeof value === 'object' && !Array.isArray(value);
@@ -7,8 +6,9 @@ const object = (value: unknown): value is Attributes =>
 export const normalizeImportedAttributes = (
   parsed: Attributes,
   raw: Attributes,
-  definitions: Record<string, Definition>,
+  definitions: unknown,
 ): Attributes => {
+  if (!object(definitions)) return parsed;
   if ('blockstudio' in raw && !object(raw.blockstudio)) return parsed;
   const settings = object(raw.blockstudio) ? raw.blockstudio : {};
   if ('attributes' in settings && !object(settings.attributes)) return parsed;
@@ -23,7 +23,12 @@ export const normalizeImportedAttributes = (
   for (const [key, value] of Object.entries(raw)) {
     if (!Object.prototype.hasOwnProperty.call(definitions, key)) continue;
     const definition = definitions[key];
-    if (!definition?.blockstudio || !definition.field) continue;
+    if (
+      !object(definition) ||
+      !definition.blockstudio ||
+      typeof definition.field !== 'string'
+    )
+      continue;
     if (Object.prototype.hasOwnProperty.call(explicit, key)) continue;
 
     // Core has already checked ordinary attributes. Recover scalar selections

@@ -79,6 +79,19 @@ test('nested-only and malformed imports are not rewritten', () => {
   }
 });
 
+test('missing or malformed definitions do not adopt fields', () => {
+  const raw = { heading: 'Hello' };
+  for (const schema of [
+    undefined,
+    null,
+    [],
+    { heading: null },
+    { heading: { blockstudio: true } },
+  ]) {
+    assert.equal(normalize(raw, raw, schema), raw);
+  }
+});
+
 test('repeaters retain row values and unknown or core keys are not adopted', () => {
   const rows = [{ side: 'left', heading: 'Nested' }];
   const raw = { rows, className: 'keep', unknown: 'ignore' };
