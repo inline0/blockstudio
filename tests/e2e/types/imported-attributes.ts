@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test';
+import { parse } from '@wordpress/block-serialization-default-parser';
 import { login, getEditorCanvas } from '../utils/playwright-utils';
 
 const name = 'blockstudio/issue-208';
@@ -84,10 +85,8 @@ for (const [label, fields] of Object.entries(cases)) {
       );
       expect(saved.ok()).toBe(true);
       const raw = (await saved.json()).content.raw;
-      const stored = await page.evaluate(
-        (value) => (window as any).wp.blocks.parse(value)[0].attributes,
-        raw,
-      );
+      // Inspect storage without invoking the hydration filter under test.
+      const stored = parse(raw)[0].attrs!;
       expect(raw).toContain('Edited heading');
       expect(stored.blockstudio.attributes.heading).toBe('Edited heading');
       expect(stored.blockstudio.attributes.side.value).toBe('right');
