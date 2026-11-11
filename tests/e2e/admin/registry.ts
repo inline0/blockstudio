@@ -219,3 +219,43 @@ test.describe('Admin Page - Registry Data', () => {
     expect(data.version).toBeTruthy();
   });
 });
+
+test.describe('Admin Page - Databases', () => {
+  const ROUTE = 'blockstudio/v1/db/blockstudio-type-db-table/default';
+
+  test('database tab shows its records after opening and reopening', async () => {
+    await page.goto(ADMIN_PAGE);
+    await page.waitForSelector('#blockstudio-admin');
+
+    const title = `Admin records ${Date.now()}`;
+    const created = await apiPost(ROUTE, { title });
+    expect(created.status).toBe(200);
+
+    try {
+      for (let visit = 0; visit < 2; visit++) {
+        await page.getByRole('button', { name: 'Databases' }).click();
+        await page
+          .getByRole('tab', { name: 'blockstudio/type-db-table', exact: true })
+          .click();
+
+        const panel = page.getByRole('tabpanel');
+        await expect(panel.locator('table')).toBeVisible();
+        await expect(panel.getByText(title)).toBeVisible();
+        await page.getByRole('button', { name: 'Overview' }).click();
+      }
+    } finally {
+      const wpNonce = await getNonce();
+      const deleted = await page.evaluate(
+        async ({ url, n }: { url: string; n: string }) => {
+          const response = await fetch(url, {
+            method: 'DELETE',
+            headers: { 'X-WP-Nonce': n },
+          });
+          return response.ok;
+        },
+        { url: `${BASE}/wp-json/${ROUTE}/${created.body.id}`, n: wpNonce },
+      );
+      expect(deleted).toBe(true);
+    }
+  });
+});

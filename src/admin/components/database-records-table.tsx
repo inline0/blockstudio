@@ -219,6 +219,7 @@ export const DatabaseRecordsTable = ({
           view={resolvedView}
         >
           <>
+            <DataViews.Layout />
             <DataViews.Footer />
           </>
         </DataViews>
