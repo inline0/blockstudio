@@ -9,12 +9,13 @@ addFilter(
   'blocks.getBlockAttributes',
   'blockstudio/imported-attributes',
   (attributes, block, _content, raw) => {
-    if (!Object.hasOwn(blocks, block.name)) return attributes;
+    if (!Object.prototype.hasOwnProperty.call(blocks, block.name))
+      return attributes;
     // Use the owned definition, not merged extension schemas or core fields.
     return normalizeImportedAttributes(
       attributes,
       raw,
-      blocks[block.name].attributes,
+      blocks[block.name].attributes ?? {},
     );
   },
 );

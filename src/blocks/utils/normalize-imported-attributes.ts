@@ -21,10 +21,10 @@ export const normalizeImportedAttributes = (
   let changed = false;
 
   for (const [key, value] of Object.entries(raw)) {
-    if (!Object.hasOwn(definitions, key)) continue;
+    if (!Object.prototype.hasOwnProperty.call(definitions, key)) continue;
     const definition = definitions[key];
     if (!definition?.blockstudio || !definition.field) continue;
-    if (Object.hasOwn(explicit, key)) continue;
+    if (Object.prototype.hasOwnProperty.call(explicit, key)) continue;
 
     // Core has already checked ordinary attributes. Recover scalar selections
     // from the original comment, not the default object core substituted.
