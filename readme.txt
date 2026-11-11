@@ -55,10 +55,14 @@ Download the latest release zip from [GitHub Releases](https://github.com/inline
 == Changelog ==
 
 = 7.7.14 =
+* New: `bs_block_schema()` includes matching saved-value examples from block definitions, excluding editor-only image placeholders (#203)
+* Fix: the admin Databases view displays its records table when opening and revisiting schema tabs (#205, #206)
+* Fix: version migrations also run for Composer packages loaded by the theme
 * Fix: pruning PHP cache files and deleting retired cache trees invalidates their compiled scripts in OPcache before removal
 * Fix: configured settings lists replace defaults completely, including empty lists and shorter lists
 * Fix: raw Markdown pages support HEAD with matching GET headers, a source-based token estimate, and no response body
 * Fix: bundled TailwindPHP 1.8.6 preserves zero units in minified CSS functions and avoids quadratic minifier scanning
+* Performance: frequently read options use autoloaded values where appropriate, while large collection configurations and persistent populate-cache versions retain separate caching (#204, #207)
 
 = 7.7.13 =
 * New: `bs_block_schema()` describes canonical stored field values as JSON Schema, including matching extensions, groups, repeaters, and resolved options (#199)

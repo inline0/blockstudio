@@ -806,7 +806,7 @@ class Pages {
 			return;
 		}
 
-		update_option( $option, $signature, false );
+		update_option( $option, $signature, true );
 		self::schedule_collection_rewrite_flush();
 	}
 
@@ -1204,7 +1204,22 @@ class Pages {
 		$cache_key = self::collection_manifests_cache_key( $paths );
 		wp_cache_set( $cache_key, $payload, 'blockstudio', HOUR_IN_SECONDS );
 		set_transient( $cache_key, $payload, HOUR_IN_SECONDS );
-		update_option( self::COLLECTION_MANIFESTS_OPTION, $payload, false );
+		self::store_collection_option( self::COLLECTION_MANIFESTS_OPTION, $payload );
+	}
+
+	/**
+	 * Persist collection configuration with WordPress's size-aware autoload policy.
+	 *
+	 * Explicit metadata lets an option grow or shrink after an in-place
+	 * migration without deleting its value or locking in its old policy.
+	 *
+	 * @param string $option Option name.
+	 * @param array  $value  Collection configuration.
+	 * @return void
+	 */
+	private static function store_collection_option( string $option, array $value ): void {
+		$autoload = wp_determine_option_autoload_value( $option, $value, maybe_serialize( $value ), null );
+		update_option( $option, $value, in_array( $autoload, wp_autoload_values_to_autoload(), true ) );
 	}
 
 	/**
@@ -1524,7 +1539,7 @@ class Pages {
 			);
 		}
 
-		update_option( self::TEMPLATE_FOR_OPTION, $configuration, false );
+		self::store_collection_option( self::TEMPLATE_FOR_OPTION, $configuration );
 	}
 
 	/**

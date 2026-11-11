@@ -77,6 +77,10 @@ If your project registers any `db.php` schemas, the admin page shows a
 **Databases** view. Each schema gets its own tab and displays actual records
 inside a DataViews table.
 
+The table is read-only. It shows the schema's fields and lets you page through
+the results. Switching between schemas or returning from another admin view
+loads the selected table again; no separate resize or refresh is needed.
+
 The screen does not serialize all records into the initial admin payload.
 Instead:
 

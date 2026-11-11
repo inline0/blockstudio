@@ -86,7 +86,7 @@ export const wpEnv = (mode: string, action: string, args: string[] = []) =>
         'cli',
         'wp',
         'eval',
-        'if (!defined("BLOCKSTUDIO_VERSION")) { exit(1); } echo BLOCKSTUDIO_VERSION;',
+        'if (!defined("BLOCKSTUDIO_VERSION") || get_option("blockstudio_version") !== BLOCKSTUDIO_VERSION) { exit(1); } echo BLOCKSTUDIO_VERSION;',
       );
       if (mode === 'composer-theme')
         yield* run(

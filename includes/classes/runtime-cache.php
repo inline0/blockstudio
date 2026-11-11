@@ -150,7 +150,7 @@ final class Runtime_Cache {
 				$scheduled = wp_schedule_single_event( time() + 5 * MINUTE_IN_SECONDS, self::BUILD_LOCK_CLEANUP_HOOK );
 			}
 			if ( $scheduled ) {
-				update_option( 'blockstudio_build_lock_cleanup_version', $version, false );
+				update_option( 'blockstudio_build_lock_cleanup_version', $version, true );
 			}
 		}
 

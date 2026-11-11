@@ -14855,6 +14855,27 @@ Unchanged resolved settings also reuse their fingerprint within the request.
 Reloading or changing settings invalidates it; mutable object or reference
 values are rehashed rather than reusing a potentially stale fingerprint.
 
+### Request options
+
+Blockstudio stores the small flags and versions read on every request as
+autoloaded WordPress options. Missing rows are initialized with their existing
+fallback values during activation or the version migration. With no persistent
+object cache and small collection configuration, these reads use WordPress's
+already-loaded options instead of a separate option-priming query.
+
+Collection manifests and template mappings follow WordPress's size-aware
+autoload policy, including when their values grow or shrink. Large configurations
+stay out of the autoloaded options. On sites with a persistent object cache, the
+frequently changed populate-cache version stays separate to avoid repeatedly
+invalidating the shared autoloaded-options cache. Options that are not autoloaded
+are still primed together with at most one query, rather than queried one by one.
+
+The migration runs automatically for plugin, must-use plugin, and Composer
+installs, including packages loaded by the theme. It updates existing autoload
+metadata without deleting cached configuration. No manual migration is needed.
+
+### File watching and payloads
+
 In `production` and `staging`, a validated watch snapshot is trusted for 20
 seconds before Blockstudio stats its files and directories again. `local` and
 `development` environments default to zero so source edits are visible
@@ -15243,6 +15264,10 @@ configuration format.
 If your project registers any `db.php` schemas, the admin page shows a
 **Databases** view. Each schema gets its own tab and displays actual records
 inside a DataViews table.
+
+The table is read-only. It shows the schema's fields and lets you page through
+the results. Switching between schemas or returning from another admin view
+loads the selected table again; no separate resize or refresh is needed.
 
 The screen does not serialize all records into the initial admin payload.
 Instead:
