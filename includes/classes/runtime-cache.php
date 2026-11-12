@@ -1036,23 +1036,21 @@ final class Runtime_Cache {
 		}
 
 		$headers     = class_exists( '\Blockstudio\Static_Prerender_Headers' );
-		$scope_files = glob( $directory . '/*' );
-		$scope_files = is_array( $scope_files ) ? $scope_files : array();
-		$objects     = array_values(
-			array_filter(
-				$scope_files,
-				static fn( string $path ): bool => is_file( $path )
-					&& ! str_ends_with( $path, '.lock' )
-					&& ! str_contains( basename( $path ), '.tmp-' )
-					&& ! ( $headers && Static_Prerender_Headers::is_header_file( $path ) )
-					&& $path !== $keep_path
-					&& ! isset( $protected_map[ wp_normalize_path( $path ) ] )
-			)
-		);
-		usort(
-			$objects,
-			static fn( string $left, string $right ): int => (int) ( @filemtime( $right ) ) <=> (int) ( @filemtime( $left ) ) // phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged -- Concurrent cleanups can remove files between listing and stat.
-		);
+		$scope_files = glob( $directory . '/*', GLOB_MARK );
+		$objects     = array();
+		foreach ( is_array( $scope_files ) ? $scope_files : array() as $path ) {
+			if (
+				str_ends_with( $path, '/' )
+				|| str_ends_with( $path, '.lock' )
+				|| str_contains( basename( $path ), '.tmp-' )
+				|| ( $headers && Static_Prerender_Headers::is_header_file( $path ) )
+				|| $path === $keep_path
+				|| isset( $protected_map[ wp_normalize_path( $path ) ] )
+			) {
+				continue;
+			}
+			$objects[] = $path;
+		}
 
 		$maximum = max(
 			1,
@@ -1062,12 +1060,41 @@ final class Runtime_Cache {
 				$scope
 			)
 		);
+		$retain  = max( 0, $maximum - ( '' === $keep_path ? 0 : 1 ) );
 
-		foreach ( array_slice( $objects, max( 0, $maximum - ( '' === $keep_path ? 0 : 1 ) ) ) as $object ) {
-			self::delete_file( $object );
-			if ( $headers && str_ends_with( $object, '.html' ) ) {
-				Static_Prerender_Headers::remove( $object );
+		if ( count( $objects ) <= $retain ) {
+			return;
+		}
+
+		$lock = @fopen( $directory . '/.prune.lock', 'c' ); // phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged, WordPress.WP.AlternativeFunctions.file_system_operations_fopen -- Best-effort eviction lock.
+		if ( false === $lock ) {
+			return;
+		}
+		if ( ! flock( $lock, LOCK_EX | LOCK_NB ) ) {
+			fclose( $lock ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_fclose -- Eviction lock handle.
+
+			return;
+		}
+
+		try {
+			$mtimes = array();
+			foreach ( $objects as $object ) {
+				$mtime = @filemtime( $object ); // phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged -- Concurrent cleanups can remove files between listing and stat.
+				if ( false !== $mtime ) {
+					$mtimes[ $object ] = (int) $mtime;
+				}
 			}
+			arsort( $mtimes, SORT_NUMERIC );
+
+			foreach ( array_slice( array_keys( $mtimes ), $retain ) as $object ) {
+				self::delete_file( $object );
+				if ( $headers && str_ends_with( $object, '.html' ) ) {
+					Static_Prerender_Headers::remove( $object );
+				}
+			}
+		} finally {
+			flock( $lock, LOCK_UN );
+			fclose( $lock ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_fclose -- Eviction lock handle.
 		}
 	}
 
