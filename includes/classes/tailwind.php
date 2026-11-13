@@ -71,6 +71,27 @@ class Tailwind {
 	private static array $compilers = array();
 
 	/**
+	 * Whether a candidate compiles, per CSS input hash.
+	 *
+	 * @var array<string, array<string, bool>>
+	 */
+	private static array $validity = array();
+
+	/**
+	 * Scanned source candidates for this process, keyed by source list.
+	 *
+	 * @var array<string, array{list: string[], set: array<string, true>}|null>
+	 */
+	private static array $source_scopes = array();
+
+	/**
+	 * File extensions scanned for source candidates.
+	 *
+	 * @var string[]
+	 */
+	private const SOURCE_EXTENSIONS = array( 'php', 'tsx', 'ts', 'jsx', 'js', 'twig', 'html', 'vue', 'svelte' );
+
+	/**
 	 * Allow every long-lived Tailwind instance to compile the next request.
 	 *
 	 * @return void
@@ -207,6 +228,242 @@ class Tailwind {
 	}
 
 	/**
+	 * Widen a page's candidates to the candidates of its sources.
+	 *
+	 * When the blockstudio/tailwind/sources filter names source files or
+	 * directories, every page links one stylesheet built from the candidates
+	 * found in those sources. A page whose utilities are not all among them
+	 * links that set plus its own extra utilities, so its stylesheet always
+	 * covers the page.
+	 *
+	 * @param string[] $candidates Sorted page candidates.
+	 * @param string   $css_input  The CSS input string.
+	 *
+	 * @return string[] Sorted candidates the page stylesheet compiles.
+	 */
+	private static function scoped_candidates( array $candidates, string $css_input ): array {
+		$scope = self::source_candidates();
+		if ( null === $scope ) {
+			return $candidates;
+		}
+
+		$unknown = array();
+		foreach ( $candidates as $candidate ) {
+			if ( ! isset( $scope['set'][ $candidate ] ) ) {
+				$unknown[] = $candidate;
+			}
+		}
+
+		$extra = self::valid_candidates( $unknown, $css_input );
+		if ( array() === $extra ) {
+			return $scope['list'];
+		}
+
+		$merged = array_merge( $scope['list'], $extra );
+		sort( $merged );
+
+		return $merged;
+	}
+
+	/**
+	 * Keep the candidates that produce CSS.
+	 *
+	 * @param string[] $candidates Candidates outside the source set.
+	 * @param string   $css_input  The CSS input string.
+	 *
+	 * @return string[] Candidates the design system compiles.
+	 */
+	private static function valid_candidates( array $candidates, string $css_input ): array {
+		if ( array() === $candidates ) {
+			return array();
+		}
+
+		$key = md5( $css_input );
+		if ( ! isset( self::$validity[ $key ] ) ) {
+			self::$validity[ $key ] = array();
+		}
+
+		$pending = array();
+		foreach ( $candidates as $candidate ) {
+			if ( ! isset( self::$validity[ $key ][ $candidate ] ) ) {
+				$pending[] = $candidate;
+			}
+		}
+
+		if ( array() !== $pending ) {
+			$css = array();
+			try {
+				$design = self::get_compiler( $css_input )->getDesignSystem();
+				if ( $design instanceof \BlockstudioVendor\TailwindPHP\DesignSystem\DesignSystemInterface ) {
+					$css = $design->candidatesToCss( $pending );
+				}
+			} catch ( \Throwable ) {
+				$css = array();
+			}
+			foreach ( $pending as $index => $candidate ) {
+				$value                                = $css[ $index ] ?? null;
+				self::$validity[ $key ][ $candidate ] = array() === $css || ( is_string( $value ) && '' !== $value );
+			}
+		}
+
+		$valid = array();
+		foreach ( $candidates as $candidate ) {
+			if ( self::$validity[ $key ][ $candidate ] ) {
+				$valid[] = $candidate;
+			}
+		}
+
+		return $valid;
+	}
+
+	/**
+	 * Resolve the candidates of the sources the current site names.
+	 *
+	 * The scan is cached on disk under a signature of every source file's
+	 * path, size and modification time, so a request pays a directory walk
+	 * and one small read once the sources were scanned.
+	 *
+	 * @return array{list: string[], set: array<string, true>}|null Candidates, or null without sources.
+	 */
+	private static function source_candidates(): ?array {
+		/**
+		 * Filter the source files and directories whose candidates every
+		 * page stylesheet includes.
+		 *
+		 * @param string[] $sources Absolute file or directory paths.
+		 */
+		$sources = apply_filters( 'blockstudio/tailwind/sources', array() );
+		if ( ! is_array( $sources ) ) {
+			return null;
+		}
+		$sources = array_values( array_filter( $sources, static fn( $source ): bool => is_string( $source ) && '' !== $source ) );
+		if ( array() === $sources ) {
+			return null;
+		}
+		sort( $sources );
+
+		$memo = md5( implode( "\n", $sources ) );
+		if ( array_key_exists( $memo, self::$source_scopes ) ) {
+			return self::$source_scopes[ $memo ];
+		}
+
+		$files = self::source_files( $sources );
+		if ( array() === $files ) {
+			self::$source_scopes[ $memo ] = null;
+
+			return null;
+		}
+
+		$signature = hash( 'xxh128', self::get_engine_version() . "\n" . implode( "\n", $files ) );
+		$path      = Build_Cache::get_cache_dir( 'tailwind-sources' ) . '/' . $signature . '.json';
+		$list      = self::read_source_candidates( $path );
+
+		if ( null === $list ) {
+			$found = array();
+			foreach ( array_keys( $files ) as $file ) {
+				$source = @file_get_contents( $file ); // phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged, WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- A source removed during the scan only drops its candidates.
+				if ( ! is_string( $source ) ) {
+					continue;
+				}
+				foreach ( TailwindPHP::extractCandidatesFromStrings( $source ) as $candidate ) {
+					$found[ $candidate ] = true;
+				}
+			}
+			$list = self::filter_candidates( array_map( 'strval', array_keys( $found ) ) );
+			sort( $list );
+			self::write_source_candidates( $path, $list );
+		}
+
+		self::$source_scopes[ $memo ] = array(
+			'list' => $list,
+			'set'  => array_fill_keys( $list, true ),
+		);
+
+		return self::$source_scopes[ $memo ];
+	}
+
+	/**
+	 * List the source files with their size and modification time.
+	 *
+	 * @param string[] $sources Absolute file or directory paths.
+	 *
+	 * @return array<string, string> Signature line per file path.
+	 */
+	private static function source_files( array $sources ): array {
+		$files = array();
+		foreach ( $sources as $source ) {
+			if ( is_file( $source ) ) {
+				$files[ $source ] = $source . '|' . (string) filesize( $source ) . '|' . (string) filemtime( $source );
+				continue;
+			}
+			if ( ! is_dir( $source ) ) {
+				continue;
+			}
+			$iterator = new \RecursiveIteratorIterator(
+				new \RecursiveCallbackFilterIterator(
+					new \RecursiveDirectoryIterator( $source, \FilesystemIterator::SKIP_DOTS ),
+					static fn( \SplFileInfo $entry ): bool => ! $entry->isDir() || ( 'node_modules' !== $entry->getFilename() && ! str_starts_with( $entry->getFilename(), '.' ) )
+				)
+			);
+			foreach ( $iterator as $entry ) {
+				if ( ! $entry instanceof \SplFileInfo || ! $entry->isFile() || ! in_array( strtolower( $entry->getExtension() ), self::SOURCE_EXTENSIONS, true ) ) {
+					continue;
+				}
+				$file           = $entry->getPathname();
+				$files[ $file ] = $file . '|' . (string) $entry->getSize() . '|' . (string) $entry->getMTime();
+			}
+		}
+		ksort( $files, SORT_STRING );
+
+		return $files;
+	}
+
+	/**
+	 * Read a cached source scan.
+	 *
+	 * @param string $path Cache file.
+	 *
+	 * @return string[]|null Candidates, or null when absent or unreadable.
+	 */
+	private static function read_source_candidates( string $path ): ?array {
+		if ( ! is_file( $path ) ) {
+			return null;
+		}
+		$decoded = json_decode( (string) @file_get_contents( $path ), true ); // phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged, WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- A concurrent prune can remove the file after the check.
+		if ( ! is_array( $decoded ) ) {
+			return null;
+		}
+
+		return array_values( array_filter( $decoded, 'is_string' ) );
+	}
+
+	/**
+	 * Publish a source scan atomically.
+	 *
+	 * @param string   $path       Cache file.
+	 * @param string[] $candidates Candidates.
+	 *
+	 * @return void
+	 */
+	private static function write_source_candidates( string $path, array $candidates ): void {
+		$encoded = wp_json_encode( $candidates, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE );
+		if ( ! is_string( $encoded ) ) {
+			return;
+		}
+		$directory = dirname( $path );
+		if ( ! is_dir( $directory ) && ! wp_mkdir_p( $directory ) ) {
+			return;
+		}
+		$temporary = $directory . '/.tmp-' . bin2hex( random_bytes( 6 ) );
+		if ( false === @file_put_contents( $temporary, $encoded ) ) { // phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged, WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents -- A full disk leaves the scan uncached.
+			return;
+		}
+		if ( ! @rename( $temporary, $path ) ) { // phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged, WordPress.WP.AlternativeFunctions.rename_rename -- A concurrent publish of the same scan wins.
+			@unlink( $temporary ); // phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged, WordPress.WP.AlternativeFunctions.unlink_unlink -- Cleanup of a temporary file.
+		}
+	}
+
+	/**
 	 * Build the warm compiler for the current CSS input ahead of a batch.
 	 *
 	 * Forked batch renders inherit the parent's memory, so a compiler built
@@ -223,6 +480,7 @@ class Tailwind {
 
 		try {
 			self::get_compiler( self::build_css_input() );
+			self::source_candidates();
 		} catch ( \Throwable ) {
 			return;
 		}
@@ -255,6 +513,7 @@ class Tailwind {
 		$css_input  = self::build_css_input();
 		$candidates = self::filter_candidates( TailwindPHP::extractCandidates( $html ) );
 		sort( $candidates );
+		$candidates = self::scoped_candidates( $candidates, $css_input );
 		$cache_key  = md5( Runtime_Context::hash( 'tailwind', array( 'blocks', 'pages' ) ) . self::get_engine_version() . implode( ',', $candidates ) . $css_input );
 		$cache_path = self::get_cache_dir() . '/' . $cache_key . '.css';
 

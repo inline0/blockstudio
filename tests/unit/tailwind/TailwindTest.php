@@ -122,6 +122,43 @@ class TailwindTest extends TestCase {
 		}
 	}
 
+	public function test_sources_give_pages_one_stylesheet_and_keep_extra_utilities(): void {
+		if ( ! Settings::get( 'tailwind/enabled' ) ) {
+			$this->markTestSkipped( 'Tailwind is not enabled in test theme settings.' );
+		}
+
+		$directory = sys_get_temp_dir() . '/bs-tailwind-sources-' . bin2hex( random_bytes( 4 ) );
+		mkdir( $directory );
+		file_put_contents( $directory . '/view.tsx', '<div className="grid gap-4">x</div>' );
+		$sources = static fn(): array => array( $directory );
+		add_filter( 'blockstudio/tailwind/sources', $sources );
+
+		try {
+			$style = static function ( string $classes ): string {
+				Tailwind::reset_request_state();
+				$result = ( new Tailwind() )->compile( '<html><head></head><body><p class="' . $classes . '">x</p></body></html>' );
+				preg_match( '#<style id="blockstudio-tailwind">(.*?)</style>#s', $result, $match );
+
+				return $match[1] ?? '';
+			};
+
+			$first  = $style( 'grid' );
+			$second = $style( 'gap-4 unit-not-a-utility' );
+			$extra  = $style( 'grid flex' );
+
+			$this->assertNotSame( '', $first );
+			$this->assertSame( $first, $second );
+			$this->assertStringContainsString( '.gap-4', $first );
+			$this->assertStringContainsString( '.flex', $extra );
+			$this->assertStringContainsString( '.gap-4', $extra );
+			$this->assertStringNotContainsString( '.flex', $first );
+		} finally {
+			remove_filter( 'blockstudio/tailwind/sources', $sources );
+			unlink( $directory . '/view.tsx' );
+			rmdir( $directory );
+		}
+	}
+
 	public function test_compile_does_not_run_twice(): void {
 		if ( ! Settings::get( 'tailwind/enabled' ) ) {
 			$this->markTestSkipped( 'Tailwind is not enabled in test theme settings.' );

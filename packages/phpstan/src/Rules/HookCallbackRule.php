@@ -173,6 +173,7 @@ final class HookCallbackRule implements Rule
         'blockstudio/tailwind/cache_max_age',
         'blockstudio/tailwind/cache_max_files',
         'blockstudio/tailwind/css',
+        'blockstudio/tailwind/sources',
         'blockstudio/ui/directories',
         'blockstudio/ui/examples',
         'blockstudio/ui/inventory',
