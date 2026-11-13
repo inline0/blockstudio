@@ -50,6 +50,7 @@ final class Static_Prerender_Batch_Renderer {
 		self::$rendering = true;
 
 		if ( 'fork' === $transport ) {
+			Tailwind::warm();
 			do_action( 'blockstudio/static_prerender/fork_prepare', $urls, $options );
 		}
 

@@ -207,6 +207,28 @@ class Tailwind {
 	}
 
 	/**
+	 * Build the warm compiler for the current CSS input ahead of a batch.
+	 *
+	 * Forked batch renders inherit the parent's memory, so a compiler built
+	 * once in the parent serves every child without a state file read.
+	 *
+	 * @return void
+	 */
+	public static function warm(): void {
+		if ( ! Settings::get_bool( 'tailwind/enabled', false ) ) {
+			return;
+		}
+
+		self::load_autoloader();
+
+		try {
+			self::get_compiler( self::build_css_input() );
+		} catch ( \Throwable ) {
+			return;
+		}
+	}
+
+	/**
 	 * Compile Tailwind CSS from the buffered HTML output.
 	 *
 	 * Extracts CSS class candidates, checks the file cache, compiles on miss,
