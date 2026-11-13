@@ -397,13 +397,18 @@ final class Static_Prerender_Batch_Renderer {
 	 */
 	private static function render_child( array $parts, string $token, $socket ): void {
 		self::$rendering = false;
+		gc_disable();
 
 		$path  = is_string( $parts['path'] ?? null ) && '' !== $parts['path'] ? $parts['path'] : '/';
 		$query = is_string( $parts['query'] ?? null ) ? $parts['query'] : '';
 		$https = 'https' === ( $parts['scheme'] ?? 'https' );
 		$host  = (string) $parts['host'];
 		$port  = is_int( $parts['port'] ?? null ) ? $parts['port'] : ( $https ? 443 : 80 );
-		$uri   = $path . ( '' !== $query ? '?' . $query : '' );
+		$uri   = (string) preg_replace_callback(
+			'/[^\x21-\x7E]/',
+			static fn( array $byte ): string => '%' . strtoupper( bin2hex( $byte[0] ) ),
+			$path . ( '' !== $query ? '?' . $query : '' )
+		);
 		$get   = array();
 		parse_str( $query, $get );
 
