@@ -120,7 +120,7 @@ final class Static_Prerender_Runtime {
 	/**
 	 * Dependency chunks read in this process, by content hash.
 	 *
-	 * @var array<string,array<string,string>|null>
+	 * @var array<string,array{hashes:array<string,string>,paths:array<string,string>}|null>
 	 */
 	private static array $dependency_set_cache = array();
 
@@ -1897,7 +1897,11 @@ final class Static_Prerender_Runtime {
 	}
 
 	/**
-	 * Read every valid graph record.
+	 * Read every valid graph record as stored.
+	 *
+	 * Every caller reads URLs, cache keys and chunk hashes only, so the
+	 * dependency maps stay unrestored; index_record_for_url() restores them
+	 * for the one record that needs them.
 	 *
 	 * @return array<int,array<string,mixed>> Records.
 	 */
@@ -1909,13 +1913,8 @@ final class Static_Prerender_Runtime {
 		foreach ( is_array( $paths ) ? $paths : array() as $path ) {
 			// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Reading local graph state.
 			$decoded = json_decode( (string) file_get_contents( $path ), true );
-			$decoded = is_array( $decoded ) ? self::inflate_index_record( $decoded ) : null;
 			if ( is_array( $decoded ) ) {
 				$records[] = $decoded;
-				$url       = is_string( $decoded['url'] ?? null ) ? $decoded['url'] : '';
-				if ( '' !== $url ) {
-					self::$index_record_cache[ self::url_hash( $url ) ] = $decoded;
-				}
 			}
 		}
 
@@ -1988,8 +1987,7 @@ final class Static_Prerender_Runtime {
 			if ( ! is_file( $path ) && ! Single_Flight::publish( $path, $encoded . "\n" ) ) {
 				return null;
 			}
-			self::$dependency_set_cache[ $hash ] = $group;
-			$chunks[]                            = $hash;
+			$chunks[] = $hash;
 		}
 		$overrides = array();
 		foreach ( $paths as $id => $path ) {
@@ -2021,17 +2019,33 @@ final class Static_Prerender_Runtime {
 	}
 
 	/**
-	 * Read one dependency chunk.
+	 * Read one dependency chunk with the paths its IDs name, derived once per chunk.
 	 *
 	 * @param string $hash Chunk content hash.
 	 *
-	 * @return array<string,string>|null Chunk, or null when it is gone.
+	 * @return array{hashes:array<string,string>,paths:array<string,string>}|null Chunk, or null when it is gone.
 	 */
 	private static function dependency_chunk( string $hash ): ?array {
 		if ( ! array_key_exists( $hash, self::$dependency_set_cache ) ) {
-			$path                                = self::dependency_set_path( $hash );
-			$decoded                             = is_file( $path ) ? json_decode( (string) file_get_contents( $path ), true ) : null; // phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Reading local graph state.
-			self::$dependency_set_cache[ $hash ] = is_array( $decoded ) ? self::string_map( $decoded ) : null;
+			$path    = self::dependency_set_path( $hash );
+			$decoded = is_file( $path ) ? json_decode( (string) file_get_contents( $path ), true ) : null; // phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Reading local graph state.
+			if ( ! is_array( $decoded ) ) {
+				self::$dependency_set_cache[ $hash ] = null;
+			} else {
+				$hashes = self::string_map( $decoded );
+				$paths  = array();
+				$root   = self::theme_root();
+				foreach ( array_keys( $hashes ) as $id ) {
+					$resolved = Static_Prerender_Content_Hasher::path_for_id( (string) $id, $root );
+					if ( null !== $resolved ) {
+						$paths[ $id ] = $resolved;
+					}
+				}
+				self::$dependency_set_cache[ $hash ] = array(
+					'hashes' => $hashes,
+					'paths'  => $paths,
+				);
+			}
 		}
 
 		return self::$dependency_set_cache[ $hash ];
@@ -2052,19 +2066,13 @@ final class Static_Prerender_Runtime {
 		$virtual = is_array( $record['virtualHashes'] ?? null ) ? self::string_map( $record['virtualHashes'] ) : array();
 		$hashes  = $virtual;
 		$paths   = array();
-		$root    = self::theme_root();
 		foreach ( $chunks as $hash ) {
 			$chunk = is_string( $hash ) ? self::dependency_chunk( $hash ) : null;
 			if ( null === $chunk ) {
 				return null;
 			}
-			foreach ( $chunk as $id => $value ) {
-				$hashes[ $id ] = $value;
-				$path          = Static_Prerender_Content_Hasher::path_for_id( $id, $root );
-				if ( null !== $path ) {
-					$paths[ $id ] = $path;
-				}
-			}
+			$hashes = array_merge( $hashes, $chunk['hashes'] );
+			$paths  = array_merge( $paths, $chunk['paths'] );
 		}
 		$overrides = is_array( $record['dependencyPathOverrides'] ?? null ) ? self::string_map( $record['dependencyPathOverrides'] ) : array();
 		foreach ( $overrides as $id => $path ) {
