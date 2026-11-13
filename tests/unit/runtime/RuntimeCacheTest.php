@@ -397,6 +397,25 @@ class RuntimeCacheTest extends TestCase {
 		$this->assertSame( '<section>Hero</section>', $stale['value'] );
 	}
 
+	public function test_pruning_trims_below_the_cap_and_skips_listings_until_it_is_reached(): void {
+		$maximum = static fn(): int => 40;
+		add_filter( 'blockstudio/cache/max_files_per_scope', $maximum );
+
+		try {
+			for ( $i = 0; $i < 41; $i++ ) {
+				Runtime_Cache::write( 'estimated', 'object-' . $i, 'value' );
+			}
+			$this->assertCount( 38, glob( Runtime_Cache::directory( 'estimated' ) . '/*.cache' ) );
+			$this->assertFileExists( Runtime_Cache::path( 'estimated', 'object-40' ) );
+
+			Runtime_Cache::write( 'estimated', 'object-41', 'value' );
+			$this->assertCount( 39, glob( Runtime_Cache::directory( 'estimated' ) . '/*.cache' ) );
+			$this->assertStringStartsWith( '39 ', (string) file_get_contents( Runtime_Cache::directory( 'estimated' ) . '/.prune.estimate' ) );
+		} finally {
+			remove_filter( 'blockstudio/cache/max_files_per_scope', $maximum );
+		}
+	}
+
 	public function test_pruning_is_bounded_and_preserves_the_new_object(): void {
 		$maximum = static fn(): int => 2;
 		add_filter( 'blockstudio/cache/max_files_per_scope', $maximum );
