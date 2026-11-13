@@ -207,6 +207,39 @@ final class Static_Prerender_Content_Hasher {
 	}
 
 	/**
+	 * Resolve the local path a portable dependency ID names, as dependency_id() built it.
+	 *
+	 * @param string      $id         Dependency ID.
+	 * @param string|null $theme_root Theme root.
+	 *
+	 * @return string|null Path, or null for IDs that do not name a root.
+	 */
+	public static function path_for_id( string $id, ?string $theme_root ): ?string {
+		$roots = array();
+		if ( null !== $theme_root && '' !== trim( $theme_root ) ) {
+			$roots['theme'] = wp_normalize_path( $theme_root );
+		}
+		if ( defined( 'WP_PLUGIN_DIR' ) ) {
+			$roots['plugins'] = wp_normalize_path( (string) WP_PLUGIN_DIR );
+		}
+		if ( defined( 'WPMU_PLUGIN_DIR' ) ) {
+			$roots['mu-plugins'] = wp_normalize_path( (string) WPMU_PLUGIN_DIR );
+		}
+		if ( defined( 'ABSPATH' ) ) {
+			$roots['wordpress'] = wp_normalize_path( (string) ABSPATH );
+		}
+		$slash  = strpos( $id, '/' );
+		$prefix = false === $slash ? '' : substr( $id, 0, $slash );
+		if ( ! isset( $roots[ $prefix ] ) ) {
+			return null;
+		}
+		$rest = (string) substr( $id, $slash + 1 );
+		$root = rtrim( $roots[ $prefix ], '/' );
+
+		return '' === $rest ? $root : $root . '/' . $rest;
+	}
+
+	/**
 	 * Build a portable dependency ID.
 	 *
 	 * @param string      $path       File path.

@@ -459,7 +459,7 @@ class StaticPrerenderRuntimeTest extends TestCase {
 		);
 	}
 
-	public function test_routes_with_the_same_dependencies_share_one_stored_set(): void {
+	public function test_routes_with_the_same_dependencies_share_their_stored_chunks(): void {
 		$dependency = $this->root . '/fixtures/shared.php';
 		file_put_contents( $dependency, 'shared-v1' );
 		$html = '<!doctype html><html><body>Rendered</body></html>';
@@ -473,8 +473,9 @@ class StaticPrerenderRuntimeTest extends TestCase {
 		$this->assertCount( 1, $sets );
 		foreach ( glob( $state . '/url-index/*.json' ) as $file ) {
 			$stored = json_decode( (string) file_get_contents( $file ), true );
-			$this->assertSame( basename( $sets[0], '.json' ), $stored['dependencySet'] );
+			$this->assertSame( array( basename( $sets[0], '.json' ) ), $stored['dependencyChunks'] );
 			$this->assertArrayNotHasKey( 'dependencyPaths', $stored );
+			$this->assertArrayNotHasKey( 'dependencyHashes', $stored );
 		}
 
 		Static_Prerender_Runtime::reset_request_cache();

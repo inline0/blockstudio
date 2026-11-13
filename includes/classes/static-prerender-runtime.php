@@ -118,9 +118,9 @@ final class Static_Prerender_Runtime {
 	private static array $index_record_cache = array();
 
 	/**
-	 * Dependency sets read in this process, by content hash.
+	 * Dependency chunks read in this process, by content hash.
 	 *
-	 * @var array<string,array{hashes:array<string,string>,paths:array<string,string>}|null>
+	 * @var array<string,array<string,string>|null>
 	 */
 	private static array $dependency_set_cache = array();
 
@@ -1431,8 +1431,10 @@ final class Static_Prerender_Runtime {
 				if ( '' !== $key ) {
 					$live_keys[ $key ] = true;
 				}
-				if ( is_string( $record['dependencySet'] ?? null ) ) {
-					$live_sets[ $record['dependencySet'] ] = true;
+				foreach ( is_array( $record['dependencyChunks'] ?? null ) ? $record['dependencyChunks'] : array() as $chunk ) {
+					if ( is_string( $chunk ) ) {
+						$live_sets[ $chunk ] = true;
+					}
 				}
 			}
 			self::collect_dependency_sets( $live_sets );
@@ -1946,76 +1948,141 @@ final class Static_Prerender_Runtime {
 	}
 
 	/**
-	 * Store a record's dependency maps once per distinct set.
+	 * Store a record's dependency hashes in shared chunks.
 	 *
-	 * Routes of one family share nearly the same dependency files, so each
-	 * set is written once under its content hash and records name the hash.
+	 * Routes of one family read nearly the same files, so the hashes are
+	 * split by directory into content-addressed chunks that many records
+	 * name, paths are derived from their IDs, and only paths that differ from
+	 * that derivation stay in the record.
 	 *
 	 * @param array<string,mixed> $record Record with inline dependency maps.
 	 *
-	 * @return array<string,mixed>|null Record to store, or null when the set could not be written.
+	 * @return array<string,mixed>|null Record to store, or null when a chunk could not be written.
 	 */
 	private static function deflate_index_record( array $record ): ?array {
-		unset( $record['dependencySet'] );
+		unset( $record['dependencySet'], $record['dependencyChunks'], $record['dependencyPathOverrides'] );
 		if ( ! is_array( $record['dependencyHashes'] ?? null ) || ! is_array( $record['dependencyPaths'] ?? null ) ) {
 			return $record;
 		}
-		$set     = array(
-			'hashes' => self::string_map( $record['dependencyHashes'] ),
-			'paths'  => self::string_map( $record['dependencyPaths'] ),
-		);
-		$encoded = wp_json_encode( $set, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE );
-		if ( ! is_string( $encoded ) ) {
-			return null;
+		$hashes  = self::string_map( $record['dependencyHashes'] );
+		$paths   = self::string_map( $record['dependencyPaths'] );
+		$virtual = is_array( $record['virtualHashes'] ?? null ) ? self::string_map( $record['virtualHashes'] ) : array();
+		$root    = self::theme_root();
+		$groups  = array();
+		foreach ( $hashes as $id => $hash ) {
+			if ( isset( $virtual[ $id ] ) && $virtual[ $id ] === $hash && ! isset( $paths[ $id ] ) ) {
+				continue;
+			}
+			$groups[ self::dependency_group( $id ) ][ $id ] = $hash;
 		}
-		$hash = hash( 'sha256', $encoded );
-		$path = self::dependency_set_path( $hash );
-		if ( ! is_file( $path ) && ! Single_Flight::publish( $path, $encoded . "\n" ) ) {
-			return null;
+		ksort( $groups, SORT_STRING );
+		$chunks = array();
+		foreach ( $groups as $group ) {
+			ksort( $group, SORT_STRING );
+			$encoded = wp_json_encode( $group, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE );
+			if ( ! is_string( $encoded ) ) {
+				return null;
+			}
+			$hash = hash( 'sha256', $encoded );
+			$path = self::dependency_set_path( $hash );
+			if ( ! is_file( $path ) && ! Single_Flight::publish( $path, $encoded . "\n" ) ) {
+				return null;
+			}
+			self::$dependency_set_cache[ $hash ] = $group;
+			$chunks[]                            = $hash;
 		}
-		self::$dependency_set_cache[ $hash ] = $set;
+		$overrides = array();
+		foreach ( $paths as $id => $path ) {
+			if ( Static_Prerender_Content_Hasher::path_for_id( $id, $root ) !== wp_normalize_path( $path ) ) {
+				$overrides[ $id ] = $path;
+			}
+		}
 		unset( $record['dependencyHashes'], $record['dependencyPaths'] );
-		$record['dependencySet'] = $hash;
+		$record['dependencyChunks'] = $chunks;
+		if ( array() !== $overrides ) {
+			$record['dependencyPathOverrides'] = $overrides;
+		}
 
 		return $record;
 	}
 
 	/**
-	 * Restore a stored record's dependency maps from its set.
+	 * Group a dependency ID by its directory, at most four segments deep.
 	 *
-	 * @param array<string,mixed> $record Stored record.
+	 * @param string $id Dependency ID.
 	 *
-	 * @return array<string,mixed>|null Record with inline maps and its set hash, or null when its set is gone.
+	 * @return string Group.
 	 */
-	private static function inflate_index_record( array $record ): ?array {
-		$hash = $record['dependencySet'] ?? null;
-		if ( ! is_string( $hash ) ) {
-			return $record;
-		}
+	private static function dependency_group( string $id ): string {
+		$segments = explode( '/', $id );
+		array_pop( $segments );
+
+		return implode( '/', array_slice( $segments, 0, 4 ) );
+	}
+
+	/**
+	 * Read one dependency chunk.
+	 *
+	 * @param string $hash Chunk content hash.
+	 *
+	 * @return array<string,string>|null Chunk, or null when it is gone.
+	 */
+	private static function dependency_chunk( string $hash ): ?array {
 		if ( ! array_key_exists( $hash, self::$dependency_set_cache ) ) {
 			$path                                = self::dependency_set_path( $hash );
 			$decoded                             = is_file( $path ) ? json_decode( (string) file_get_contents( $path ), true ) : null; // phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Reading local graph state.
-			self::$dependency_set_cache[ $hash ] = is_array( $decoded ) && is_array( $decoded['hashes'] ?? null ) && is_array( $decoded['paths'] ?? null )
-				? array(
-					'hashes' => self::string_map( $decoded['hashes'] ),
-					'paths'  => self::string_map( $decoded['paths'] ),
-				)
-				: null;
+			self::$dependency_set_cache[ $hash ] = is_array( $decoded ) ? self::string_map( $decoded ) : null;
 		}
-		$set = self::$dependency_set_cache[ $hash ];
-		if ( null === $set ) {
-			return null;
+
+		return self::$dependency_set_cache[ $hash ];
+	}
+
+	/**
+	 * Restore a stored record's dependency maps from its chunks.
+	 *
+	 * @param array<string,mixed> $record Stored record.
+	 *
+	 * @return array<string,mixed>|null Record with inline maps, or null when a chunk is gone.
+	 */
+	private static function inflate_index_record( array $record ): ?array {
+		$chunks = $record['dependencyChunks'] ?? null;
+		if ( ! is_array( $chunks ) ) {
+			return $record;
 		}
-		$record['dependencyHashes'] = $set['hashes'];
-		$record['dependencyPaths']  = $set['paths'];
+		$virtual = is_array( $record['virtualHashes'] ?? null ) ? self::string_map( $record['virtualHashes'] ) : array();
+		$hashes  = $virtual;
+		$paths   = array();
+		$root    = self::theme_root();
+		foreach ( $chunks as $hash ) {
+			$chunk = is_string( $hash ) ? self::dependency_chunk( $hash ) : null;
+			if ( null === $chunk ) {
+				return null;
+			}
+			foreach ( $chunk as $id => $value ) {
+				$hashes[ $id ] = $value;
+				$path          = Static_Prerender_Content_Hasher::path_for_id( $id, $root );
+				if ( null !== $path ) {
+					$paths[ $id ] = $path;
+				}
+			}
+		}
+		$overrides = is_array( $record['dependencyPathOverrides'] ?? null ) ? self::string_map( $record['dependencyPathOverrides'] ) : array();
+		foreach ( $overrides as $id => $path ) {
+			$paths[ $id ] = $path;
+		}
+		ksort( $hashes, SORT_STRING );
+		ksort( $paths, SORT_STRING );
+		unset( $record['dependencyPathOverrides'] );
+		$record['dependencyHashes'] = $hashes;
+		$record['dependencyPaths']  = $paths;
 
 		return $record;
 	}
 
 	/**
-	 * Delete dependency sets no record names, once they are an hour old.
+	 * Delete dependency chunks no record names, once they are an hour old.
 	 *
-	 * @param array<string,true> $live Set hashes the live records name.
+	 * @param array<string,true> $live Chunk hashes the live records name.
 	 */
 	private static function collect_dependency_sets( array $live ): void {
 		$paths  = glob( self::state_root() . '/dependency-sets/*.json' );
@@ -2029,9 +2096,9 @@ final class Static_Prerender_Runtime {
 	}
 
 	/**
-	 * Resolve one dependency set path.
+	 * Resolve one dependency chunk path.
 	 *
-	 * @param string $hash Set content hash.
+	 * @param string $hash Chunk content hash.
 	 *
 	 * @return string Path.
 	 */
