@@ -1268,7 +1268,12 @@ final class Static_Prerender_Runtime {
 		$shared    = Static_Prerender_Content_Hasher::shared_snapshot( $theme_root );
 		$key       = self::cache_key_for_url_hashes( $target_url, $shared['hash'], $page_hash );
 
-		if ( null === $key || ! self::persist_prerendered_html( $key, $html, null, $headers ) ) {
+		$persisted = null !== $key && (
+			Static_Prerender_Batch_Renderer::is_rendering()
+				? self::persist_build_artifact( $key, $html, $headers )
+				: self::persist_prerendered_html( $key, $html, null, $headers )
+		);
+		if ( null === $key || ! $persisted ) {
 			return false;
 		}
 
@@ -1436,7 +1441,7 @@ final class Static_Prerender_Runtime {
 		foreach ( self::all_index_records() as $record ) {
 			$url = is_string( $record['url'] ?? null ) ? $record['url'] : '';
 			$key = is_string( $record['cacheKey'] ?? null ) ? $record['cacheKey'] : '';
-			if ( ! isset( $live[ $url ] ) || '' === $key || ! is_file( self::cache_file( $key ) ) ) {
+			if ( ! isset( $live[ $url ] ) || '' === $key || ( ! is_file( self::cache_file( $key ) ) && ! is_file( self::artifact_file( $key ) ) ) ) {
 				continue;
 			}
 
@@ -1725,6 +1730,54 @@ final class Static_Prerender_Runtime {
 		}
 
 		return true;
+	}
+
+	/**
+	 * Publish one build render straight into the uncapped artifact scope.
+	 *
+	 * @param string $key     Cache key.
+	 * @param string $html    HTML.
+	 * @param mixed  $headers Response headers.
+	 *
+	 * @return bool Whether published.
+	 */
+	private static function persist_build_artifact( string $key, string $html, mixed $headers = array() ): bool {
+		$file = self::artifact_file( $key );
+		$dir  = dirname( $file );
+		if ( ! is_dir( $dir ) && ! wp_mkdir_p( $dir ) ) {
+			self::record_outcome( 'write-failure' );
+
+			return false;
+		}
+		if ( ! Static_Prerender_Headers::store( $file, Static_Prerender_Headers::select( $headers ) ) ) {
+			self::record_outcome( 'write-failure' );
+
+			return false;
+		}
+		if ( Single_Flight::publish( $file, $html ) || Single_Flight::publish( $file, $html ) ) {
+			self::record_outcome( 'write' );
+
+			return true;
+		}
+		if ( is_file( $file ) ) {
+			self::record_outcome( 'write-peer' );
+
+			return true;
+		}
+		self::record_outcome( 'write-failure' );
+
+		return false;
+	}
+
+	/**
+	 * Resolve one build artifact path.
+	 *
+	 * @param string $key Cache key.
+	 *
+	 * @return string Path.
+	 */
+	private static function artifact_file( string $key ): string {
+		return rtrim( wp_normalize_path( Runtime_Cache::directory( 'static-prerender-artifact' ) ), '/' ) . '/' . sanitize_file_name( $key ) . '.html';
 	}
 
 	/**
