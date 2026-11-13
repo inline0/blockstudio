@@ -34,15 +34,18 @@ final class Static_Prerender_Batch_Renderer {
 	 * @return array<string,mixed> Batch report.
 	 */
 	public static function render( array $urls, array $options = array() ): array {
-		$transport = 'internal' === ( $options['transport'] ?? null ) ? 'internal' : 'http';
-		$fallback  = 'none' !== ( $options['fallback'] ?? 'http' );
-		$shard     = self::parse_shard( is_string( $options['shard'] ?? null ) ? $options['shard'] : null );
-		$urls      = self::select_shard( $urls, $shard[0], $shard[1] );
-		$started   = hrtime( true );
-		$results   = array();
-		$rendered  = 0;
-		$skipped   = 0;
-		$failed    = 0;
+		$transport = in_array( $options['transport'] ?? null, array( 'internal', 'fork' ), true ) ? (string) $options['transport'] : 'http';
+		if ( 'fork' === $transport && ! self::can_fork() ) {
+			$transport = 'http';
+		}
+		$fallback = 'none' !== ( $options['fallback'] ?? 'http' );
+		$shard    = self::parse_shard( is_string( $options['shard'] ?? null ) ? $options['shard'] : null );
+		$urls     = self::select_shard( $urls, $shard[0], $shard[1] );
+		$started  = hrtime( true );
+		$results  = array();
+		$rendered = 0;
+		$skipped  = 0;
+		$failed   = 0;
 
 		self::$rendering = true;
 
@@ -57,6 +60,13 @@ final class Static_Prerender_Batch_Renderer {
 						'status' => 'skipped',
 						'reason' => 'dynamic-path',
 					);
+				} elseif ( 'fork' === $transport ) {
+					$item = self::render_fork( $url, $options );
+
+					if ( 'failed' === ( $item['status'] ?? null ) && $fallback ) {
+						$item             = self::render_http( $url, $options );
+						$item['fallback'] = 'http';
+					}
 				} elseif ( 'internal' === $transport ) {
 					$item = self::render_internal( $url, $options );
 
@@ -249,6 +259,226 @@ final class Static_Prerender_Batch_Renderer {
 				'status' => 'failed',
 				'error'  => 'Rendered HTML could not be persisted.',
 			);
+	}
+
+		/**
+		 * Whether this process can render in forked children.
+		 *
+		 * @return bool Whether forking is available.
+		 */
+	public static function can_fork(): bool {
+		return function_exists( 'pcntl_fork' ) && function_exists( 'pcntl_waitpid' ) && function_exists( 'posix_kill' ) && function_exists( 'stream_socket_pair' ) && defined( 'ABSPATH' );
+	}
+
+	/**
+	 * Render one URL in a child forked from this booted process.
+	 *
+	 * @param string              $url     URL.
+	 * @param array<string,mixed> $options Options.
+	 *
+	 * @return array<string,mixed> Item result.
+	 */
+	private static function render_fork( string $url, array $options ): array {
+		$parts = wp_parse_url( $url );
+		if ( ! is_array( $parts ) || ! is_string( $parts['host'] ?? null ) ) {
+			return array(
+				'status' => 'failed',
+				'error'  => 'The URL has no host.',
+			);
+		}
+
+		$token = Static_Prerender_Runtime::dependency_report_token();
+		$pair  = stream_socket_pair( STREAM_PF_UNIX, STREAM_SOCK_STREAM, STREAM_IPPROTO_IP );
+		if ( false === $pair ) {
+			return array(
+				'status' => 'failed',
+				'error'  => 'The render socket pair could not be created.',
+			);
+		}
+
+		$pid = pcntl_fork();
+		if ( -1 === $pid ) {
+			fclose( $pair[0] ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_fclose -- Render socket.
+			fclose( $pair[1] ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_fclose -- Render socket.
+
+			return array(
+				'status' => 'failed',
+				'error'  => 'The render child could not be forked.',
+			);
+		}
+
+		if ( 0 === $pid ) {
+			fclose( $pair[0] ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_fclose -- Render socket.
+			self::render_child( $parts, $token, $pair[1] );
+		}
+
+		fclose( $pair[1] ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_fclose -- Render socket.
+		$payload = stream_get_contents( $pair[0] );
+		fclose( $pair[0] ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_fclose -- Render socket.
+		pcntl_waitpid( $pid, $child_status );
+
+		$result = is_string( $payload ) && '' !== $payload ? json_decode( $payload, true ) : null;
+		if ( ! is_array( $result ) ) {
+			return array(
+				'status' => 'failed',
+				'error'  => 'The render child returned no result.',
+			);
+		}
+
+		$report       = Static_Prerender_Runtime::take_render_report( $token );
+		$dependencies = $report['files'];
+		$code         = is_numeric( $result['code'] ?? null ) ? (int) $result['code'] : 200;
+		$html         = is_string( $result['html'] ?? null ) ? $result['html'] : '';
+		$headers      = is_array( $result['headers'] ?? null ) ? $result['headers'] : array();
+
+		if ( 200 === $code && '' === $html ) {
+			return array(
+				'status' => 'failed',
+				'error'  => 'The render child produced no document.',
+			);
+		}
+
+		if ( 200 !== $code || ! Static_Prerender_Runtime::cacheable_html( $html ) ) {
+			$reason = 200 !== $code ? 'http-status' : 'not-html';
+
+			return Static_Prerender_Runtime::persist_skipped_response(
+				$url,
+				$reason,
+				$code,
+				$dependencies,
+				array(),
+				self::string_option( $options, 'targetHost' ),
+				self::string_option( $options, 'targetHome' )
+			)
+				? array(
+					'status'   => 'skipped',
+					'httpCode' => $code,
+					'reason'   => $reason,
+				)
+				: array(
+					'status' => 'failed',
+					'error'  => 'Skipped response metadata could not be persisted.',
+				);
+		}
+
+		return Static_Prerender_Runtime::persist_built_response(
+			$url,
+			$html,
+			$dependencies,
+			array(),
+			self::string_option( $options, 'targetHost' ),
+			self::string_option( $options, 'targetHome' ),
+			$report['headers'] ?? $headers
+		)
+			? array(
+				'status'       => 'rendered',
+				'httpCode'     => $code,
+				'dependencies' => count( $dependencies ),
+			)
+			: array(
+				'status' => 'failed',
+				'error'  => 'Rendered HTML could not be persisted.',
+			);
+	}
+
+	/**
+	 * Run one front-end request in a forked child and report it to the parent.
+	 *
+	 * @param array<string,mixed> $parts  Parsed URL.
+	 * @param string              $token  Dependency report token.
+	 * @param resource            $socket Socket to the parent.
+	 *
+	 * @return never
+	 */
+	private static function render_child( array $parts, string $token, $socket ): void {
+		self::$rendering = false;
+
+		$path  = is_string( $parts['path'] ?? null ) && '' !== $parts['path'] ? $parts['path'] : '/';
+		$query = is_string( $parts['query'] ?? null ) ? $parts['query'] : '';
+		$https = 'https' === ( $parts['scheme'] ?? 'https' );
+		$host  = (string) $parts['host'];
+		$port  = is_int( $parts['port'] ?? null ) ? $parts['port'] : ( $https ? 443 : 80 );
+		$uri   = $path . ( '' !== $query ? '?' . $query : '' );
+		$get   = array();
+		parse_str( $query, $get );
+
+		$_SERVER['REQUEST_METHOD']     = 'GET';
+		$_SERVER['REQUEST_URI']        = $uri;
+		$_SERVER['QUERY_STRING']       = $query;
+		$_SERVER['HTTP_HOST']          = $host;
+		$_SERVER['SERVER_NAME']        = $host;
+		$_SERVER['SERVER_PORT']        = (string) $port;
+		$_SERVER['HTTPS']              = $https ? 'on' : '';
+		$_SERVER['SCRIPT_NAME']        = '/index.php';
+		$_SERVER['PHP_SELF']           = '/index.php';
+		$_SERVER['SCRIPT_FILENAME']    = ABSPATH . 'index.php';
+		$_SERVER['REMOTE_ADDR']        = '127.0.0.1';
+		$_SERVER['HTTP_USER_AGENT']    = 'Blockstudio static prerender batch renderer';
+		$_SERVER['REQUEST_TIME']       = time();
+		$_SERVER['REQUEST_TIME_FLOAT'] = microtime( true );
+		$_SERVER[ 'HTTP_' . strtoupper( str_replace( '-', '_', Static_Prerender_Runtime::WARM_HEADER ) ) ]       = '1';
+		$_SERVER[ 'HTTP_' . strtoupper( str_replace( '-', '_', Static_Prerender_Runtime::DEPENDENCY_HEADER ) ) ] = $token;
+		$_GET     = $get;
+		$_POST    = array();
+		$_COOKIE  = array();
+		$_REQUEST = $get;
+
+		$state = array(
+			'code'     => 200,
+			'html'     => '',
+			'headers'  => array(),
+			'location' => '',
+		);
+
+		add_filter(
+			'status_header',
+			static function ( $header, $code ) use ( &$state ) {
+				$state['code'] = (int) $code;
+
+				return $header;
+			},
+			PHP_INT_MAX,
+			2
+		);
+		add_filter(
+			'wp_redirect',
+			static function ( $location, $code ) use ( &$state ) {
+				$state['code']     = (int) $code;
+				$state['location'] = is_string( $location ) ? $location : '';
+
+				return $location;
+			},
+			PHP_INT_MAX,
+			2
+		);
+
+		register_shutdown_function(
+			static function () use ( &$state, $socket ): void {
+				while ( ob_get_level() > 0 ) {
+					$state['html'] .= (string) ob_get_clean();
+				}
+				$headers          = apply_filters( 'blockstudio/static_prerender/child_headers', array(), $state );
+				$state['headers'] = is_array( $headers ) ? $headers : array();
+				$encoded          = wp_json_encode( $state );
+				fwrite( $socket, is_string( $encoded ) ? $encoded : '' ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_fwrite -- Render socket.
+				fclose( $socket ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_fclose -- Render socket.
+				posix_kill( getmypid(), SIGKILL );
+			}
+		);
+
+		ob_start(
+			static function ( string $buffer ) use ( &$state ): string {
+				$state['html'] .= $buffer;
+
+				return '';
+			}
+		);
+
+		add_filter( 'wp_using_themes', '__return_true', PHP_INT_MAX );
+		wp();
+		require ABSPATH . WPINC . '/template-loader.php';
+
+		exit;
 	}
 
 	/**
