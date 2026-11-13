@@ -50,6 +50,9 @@ final class Static_Prerender_Batch_Renderer {
 		self::$rendering = true;
 
 		if ( 'fork' === $transport ) {
+			if ( function_exists( 'proc_nice' ) ) {
+				@proc_nice( 10 ); // phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged -- A renderer that cannot lower its priority still renders.
+			}
 			Tailwind::warm();
 			do_action( 'blockstudio/static_prerender/fork_prepare', $urls, $options );
 		}
