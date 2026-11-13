@@ -43,6 +43,13 @@ final class Static_Prerender_Content_Hasher {
 	private static ?array $engine_assets = null;
 
 	/**
+	 * Request-local shared snapshots by theme root.
+	 *
+	 * @var array<string,array{hash:string,hashes:array<string,string>,paths:array<string,string>}>
+	 */
+	private static array $shared_snapshots = array();
+
+	/**
 	 * Hash one file once per request.
 	 *
 	 * @param string $path File path.
@@ -105,6 +112,11 @@ final class Static_Prerender_Content_Hasher {
 	 * @return array{hash:string,hashes:array<string,string>,paths:array<string,string>}
 	 */
 	public static function shared_snapshot( ?string $theme_root ): array {
+		$memo = (string) $theme_root;
+		if ( isset( self::$shared_snapshots[ $memo ] ) ) {
+			return self::$shared_snapshots[ $memo ];
+		}
+
 		$paths            = null !== $theme_root && is_dir( $theme_root )
 			? self::shared_paths( $theme_root )
 			: array();
@@ -118,6 +130,8 @@ final class Static_Prerender_Content_Hasher {
 			)
 		);
 		$snapshot['hash'] = hash( 'xxh128', self::encode( $identity ) );
+
+		self::$shared_snapshots[ $memo ] = $snapshot;
 
 		return $snapshot;
 	}
@@ -173,10 +187,11 @@ final class Static_Prerender_Content_Hasher {
 	 * @return void
 	 */
 	public static function reset(): void {
-		self::$file_hashes     = array();
-		self::$file_reads      = 0;
-		self::$directory_scans = 0;
-		self::$engine_assets   = null;
+		self::$file_hashes      = array();
+		self::$file_reads       = 0;
+		self::$directory_scans  = 0;
+		self::$engine_assets    = null;
+		self::$shared_snapshots = array();
 	}
 
 	/**
