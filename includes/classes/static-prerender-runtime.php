@@ -125,6 +125,13 @@ final class Static_Prerender_Runtime {
 	private static ?string $dependency_report = null;
 
 	/**
+	 * Whether this request leaves persistence to the batch renderer.
+	 *
+	 * @var bool
+	 */
+	private static bool $capture_suppressed = false;
+
+	/**
 	 * Files the current warm request read, keyed by path.
 	 *
 	 * @var array<string,true>
@@ -517,6 +524,15 @@ final class Static_Prerender_Runtime {
 	}
 
 	/**
+	 * Leave this request's persistence to the batch renderer that forked it.
+	 *
+	 * @return void
+	 */
+	public static function suppress_capture(): void {
+		self::$capture_suppressed = true;
+	}
+
+	/**
 	 * Persist a captured anonymous response.
 	 *
 	 * @param string $buffer Response buffer.
@@ -535,6 +551,7 @@ final class Static_Prerender_Runtime {
 			self::finish_dependency_report();
 
 			if (
+				self::$capture_suppressed ||
 				null === $key ||
 				! self::cacheable_html( $buffer, is_int( $status ) && $status > 0 ? $status : null )
 			) {

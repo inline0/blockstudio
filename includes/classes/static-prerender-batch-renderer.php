@@ -398,6 +398,7 @@ final class Static_Prerender_Batch_Renderer {
 	private static function render_child( array $parts, string $token, $socket ): void {
 		self::$rendering = false;
 		gc_disable();
+		Static_Prerender_Runtime::suppress_capture();
 
 		$path  = is_string( $parts['path'] ?? null ) && '' !== $parts['path'] ? $parts['path'] : '/';
 		$query = is_string( $parts['query'] ?? null ) ? $parts['query'] : '';
