@@ -1431,9 +1431,8 @@ final class Static_Prerender_Runtime {
 				if ( '' !== $key ) {
 					$live_keys[ $key ] = true;
 				}
-				$set = self::deflate_index_record( $record );
-				if ( is_array( $set ) && is_string( $set['dependencySet'] ?? null ) ) {
-					$live_sets[ $set['dependencySet'] ] = true;
+				if ( is_string( $record['dependencySet'] ?? null ) ) {
+					$live_sets[ $record['dependencySet'] ] = true;
 				}
 			}
 			self::collect_dependency_sets( $live_sets );
@@ -1957,6 +1956,7 @@ final class Static_Prerender_Runtime {
 	 * @return array<string,mixed>|null Record to store, or null when the set could not be written.
 	 */
 	private static function deflate_index_record( array $record ): ?array {
+		unset( $record['dependencySet'] );
 		if ( ! is_array( $record['dependencyHashes'] ?? null ) || ! is_array( $record['dependencyPaths'] ?? null ) ) {
 			return $record;
 		}
@@ -1985,7 +1985,7 @@ final class Static_Prerender_Runtime {
 	 *
 	 * @param array<string,mixed> $record Stored record.
 	 *
-	 * @return array<string,mixed>|null Record with inline maps, or null when its set is gone.
+	 * @return array<string,mixed>|null Record with inline maps and its set hash, or null when its set is gone.
 	 */
 	private static function inflate_index_record( array $record ): ?array {
 		$hash = $record['dependencySet'] ?? null;
@@ -2006,7 +2006,6 @@ final class Static_Prerender_Runtime {
 		if ( null === $set ) {
 			return null;
 		}
-		unset( $record['dependencySet'] );
 		$record['dependencyHashes'] = $set['hashes'];
 		$record['dependencyPaths']  = $set['paths'];
 
@@ -2020,7 +2019,7 @@ final class Static_Prerender_Runtime {
 	 */
 	private static function collect_dependency_sets( array $live ): void {
 		$paths  = glob( self::state_root() . '/dependency-sets/*.json' );
-		$cutoff = time() - HOUR_IN_SECONDS;
+		$cutoff = time() - 3600;
 		foreach ( is_array( $paths ) ? $paths : array() as $path ) {
 			if ( isset( $live[ basename( $path, '.json' ) ] ) || (int) filemtime( $path ) > $cutoff ) {
 				continue;
