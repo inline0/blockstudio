@@ -118,6 +118,13 @@ final class Static_Prerender_Runtime {
 	private static array $index_record_cache = array();
 
 	/**
+	 * Dependency sets read in this process, by content hash.
+	 *
+	 * @var array<string,array{hashes:array<string,string>,paths:array<string,string>}|null>
+	 */
+	private static array $dependency_set_cache = array();
+
+	/**
 	 * Report ID of the dependency report the current warm request writes.
 	 *
 	 * @var string|null
@@ -1418,12 +1425,18 @@ final class Static_Prerender_Runtime {
 			}
 
 			$live_keys = array();
+			$live_sets = array();
 			foreach ( self::all_index_records() as $record ) {
 				$key = is_string( $record['cacheKey'] ?? null ) ? $record['cacheKey'] : '';
 				if ( '' !== $key ) {
 					$live_keys[ $key ] = true;
 				}
+				$set = self::deflate_index_record( $record );
+				if ( is_array( $set ) && is_string( $set['dependencySet'] ?? null ) ) {
+					$live_sets[ $set['dependencySet'] ] = true;
+				}
 			}
+			self::collect_dependency_sets( $live_sets );
 
 			$deleted_files = 0;
 			$files         = glob( self::cache_root() . '/*.html' );
@@ -1694,6 +1707,7 @@ final class Static_Prerender_Runtime {
 		self::$response_status      = null;
 		self::$warm_queue           = null;
 		self::$index_record_cache   = array();
+		self::$dependency_set_cache = array();
 		self::$dependency_report    = null;
 		self::$dependencies         = array();
 		self::$search_path_prefixes = array();
@@ -1875,7 +1889,7 @@ final class Static_Prerender_Runtime {
 
 		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Reading local graph state.
 		$decoded                         = json_decode( (string) file_get_contents( $path ), true );
-		$record                          = is_array( $decoded ) ? $decoded : null;
+		$record                          = is_array( $decoded ) ? self::inflate_index_record( $decoded ) : null;
 		self::$index_record_cache[ $id ] = $record;
 
 		return $record;
@@ -1894,6 +1908,7 @@ final class Static_Prerender_Runtime {
 		foreach ( is_array( $paths ) ? $paths : array() as $path ) {
 			// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Reading local graph state.
 			$decoded = json_decode( (string) file_get_contents( $path ), true );
+			$decoded = is_array( $decoded ) ? self::inflate_index_record( $decoded ) : null;
 			if ( is_array( $decoded ) ) {
 				$records[] = $decoded;
 				$url       = is_string( $decoded['url'] ?? null ) ? $decoded['url'] : '';
@@ -1915,8 +1930,12 @@ final class Static_Prerender_Runtime {
 	 * @return bool Whether published.
 	 */
 	private static function write_index_record( string $url, array $record ): bool {
-		$id      = self::url_hash( $url );
-		$encoded = wp_json_encode( $record, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE );
+		$id     = self::url_hash( $url );
+		$stored = self::deflate_index_record( $record );
+		if ( null === $stored ) {
+			return false;
+		}
+		$encoded = wp_json_encode( $stored, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE );
 
 		if ( ! is_string( $encoded ) || ! Single_Flight::publish( self::index_path( $id ), $encoded . "\n" ) ) {
 			return false;
@@ -1925,6 +1944,105 @@ final class Static_Prerender_Runtime {
 		self::$index_record_cache[ $id ] = $record;
 
 		return true;
+	}
+
+	/**
+	 * Store a record's dependency maps once per distinct set.
+	 *
+	 * Routes of one family share nearly the same dependency files, so each
+	 * set is written once under its content hash and records name the hash.
+	 *
+	 * @param array<string,mixed> $record Record with inline dependency maps.
+	 *
+	 * @return array<string,mixed>|null Record to store, or null when the set could not be written.
+	 */
+	private static function deflate_index_record( array $record ): ?array {
+		if ( ! is_array( $record['dependencyHashes'] ?? null ) || ! is_array( $record['dependencyPaths'] ?? null ) ) {
+			return $record;
+		}
+		$set     = array(
+			'hashes' => self::string_map( $record['dependencyHashes'] ),
+			'paths'  => self::string_map( $record['dependencyPaths'] ),
+		);
+		$encoded = wp_json_encode( $set, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE );
+		if ( ! is_string( $encoded ) ) {
+			return null;
+		}
+		$hash = hash( 'sha256', $encoded );
+		$path = self::dependency_set_path( $hash );
+		if ( ! is_file( $path ) && ! Single_Flight::publish( $path, $encoded . "\n" ) ) {
+			return null;
+		}
+		self::$dependency_set_cache[ $hash ] = $set;
+		unset( $record['dependencyHashes'], $record['dependencyPaths'] );
+		$record['dependencySet'] = $hash;
+
+		return $record;
+	}
+
+	/**
+	 * Restore a stored record's dependency maps from its set.
+	 *
+	 * @param array<string,mixed> $record Stored record.
+	 *
+	 * @return array<string,mixed>|null Record with inline maps, or null when its set is gone.
+	 */
+	private static function inflate_index_record( array $record ): ?array {
+		$hash = $record['dependencySet'] ?? null;
+		if ( ! is_string( $hash ) ) {
+			return $record;
+		}
+		if ( ! array_key_exists( $hash, self::$dependency_set_cache ) ) {
+			$path                                = self::dependency_set_path( $hash );
+			$decoded                             = is_file( $path ) ? json_decode( (string) file_get_contents( $path ), true ) : null; // phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Reading local graph state.
+			self::$dependency_set_cache[ $hash ] = is_array( $decoded ) && is_array( $decoded['hashes'] ?? null ) && is_array( $decoded['paths'] ?? null )
+				? array(
+					'hashes' => self::string_map( $decoded['hashes'] ),
+					'paths'  => self::string_map( $decoded['paths'] ),
+				)
+				: null;
+		}
+		$set = self::$dependency_set_cache[ $hash ];
+		if ( null === $set ) {
+			return null;
+		}
+		unset( $record['dependencySet'] );
+		$record['dependencyHashes'] = $set['hashes'];
+		$record['dependencyPaths']  = $set['paths'];
+
+		return $record;
+	}
+
+	/**
+	 * Delete dependency sets no record names, once they are an hour old.
+	 *
+	 * @param array<string,true> $live Set hashes the live records name.
+	 */
+	private static function collect_dependency_sets( array $live ): void {
+		$paths  = glob( self::state_root() . '/dependency-sets/*.json' );
+		$cutoff = time() - HOUR_IN_SECONDS;
+		foreach ( is_array( $paths ) ? $paths : array() as $path ) {
+			if ( isset( $live[ basename( $path, '.json' ) ] ) || (int) filemtime( $path ) > $cutoff ) {
+				continue;
+			}
+			@unlink( $path ); // phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged, WordPress.WP.AlternativeFunctions.unlink_unlink -- Internal cache files must not invoke media-deletion filters.
+		}
+	}
+
+	/**
+	 * Resolve one dependency set path.
+	 *
+	 * @param string $hash Set content hash.
+	 *
+	 * @return string Path.
+	 */
+	private static function dependency_set_path( string $hash ): string {
+		$root = self::state_root() . '/dependency-sets';
+		if ( ! is_dir( $root ) ) {
+			wp_mkdir_p( $root );
+		}
+
+		return $root . '/' . sanitize_file_name( $hash ) . '.json';
 	}
 
 	/**

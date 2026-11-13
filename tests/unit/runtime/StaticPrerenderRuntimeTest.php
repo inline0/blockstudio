@@ -459,6 +459,32 @@ class StaticPrerenderRuntimeTest extends TestCase {
 		);
 	}
 
+	public function test_routes_with_the_same_dependencies_share_one_stored_set(): void {
+		$dependency = $this->root . '/fixtures/shared.php';
+		file_put_contents( $dependency, 'shared-v1' );
+		$html = '<!doctype html><html><body>Rendered</body></html>';
+
+		foreach ( array( '/one/', '/two/' ) as $path ) {
+			$this->assertTrue( Static_Prerender_Runtime::persist_built_response( home_url( $path ), $html, array( $dependency ), array() ) );
+		}
+
+		$state = Runtime_Cache::directory( 'static-prerender-state' );
+		$sets  = glob( $state . '/dependency-sets/*.json' );
+		$this->assertCount( 1, $sets );
+		foreach ( glob( $state . '/url-index/*.json' ) as $file ) {
+			$stored = json_decode( (string) file_get_contents( $file ), true );
+			$this->assertSame( basename( $sets[0], '.json' ), $stored['dependencySet'] );
+			$this->assertArrayNotHasKey( 'dependencyPaths', $stored );
+		}
+
+		Static_Prerender_Runtime::reset_request_cache();
+		$record = ( new ReflectionMethod( Static_Prerender_Runtime::class, 'index_record_for_url' ) )->invoke( null, home_url( '/two/' ) );
+		$this->assertContains( wp_normalize_path( $dependency ), array_map( 'wp_normalize_path', $record['dependencyPaths'] ) );
+
+		$plan = Static_Prerender_Runtime::build_plan( array( home_url( '/one/' ), home_url( '/two/' ) ) );
+		$this->assertSame( 2, $plan['unchanged'] );
+	}
+
 	public function test_changed_only_graph_build_does_not_invalidate_an_unrelated_page(): void {
 		$alpha_dependency = $this->root . '/fixtures/alpha.php';
 		$beta_dependency  = $this->root . '/fixtures/beta.php';
