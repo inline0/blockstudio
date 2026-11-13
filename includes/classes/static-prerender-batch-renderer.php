@@ -49,6 +49,10 @@ final class Static_Prerender_Batch_Renderer {
 
 		self::$rendering = true;
 
+		if ( 'fork' === $transport ) {
+			do_action( 'blockstudio/static_prerender/fork_prepare', $urls, $options );
+		}
+
 		try {
 			foreach ( $urls as $url ) {
 				$item_started = hrtime( true );
@@ -422,6 +426,8 @@ final class Static_Prerender_Batch_Renderer {
 		$_POST    = array();
 		$_COOKIE  = array();
 		$_REQUEST = $get;
+
+		do_action( 'blockstudio/static_prerender/fork_child', $uri );
 
 		$state = array(
 			'code'     => 200,
