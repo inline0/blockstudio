@@ -19,6 +19,20 @@ use BlockstudioVendor\Symfony\Component\Yaml\Yaml;
 class Page_Markdown {
 
 	/**
+	 * Cached results for this process, by key.
+	 *
+	 * @var array<string, string>
+	 */
+	private static array $memo = array();
+
+	/**
+	 * Identity of the code behind cached results.
+	 *
+	 * @var string|null
+	 */
+	private static ?string $identity = null;
+
+	/**
 	 * Split optional YAML frontmatter from a markdown document.
 	 *
 	 * @param string $content Markdown content.
@@ -71,6 +85,17 @@ class Page_Markdown {
 	 * @return string HTML.
 	 */
 	public static function to_html( string $markdown ): string {
+		return self::cached( 'html', $markdown, static fn(): string => self::convert( $markdown ) );
+	}
+
+	/**
+	 * Convert markdown to HTML without the content-addressed cache.
+	 *
+	 * @param string $markdown Markdown body.
+	 *
+	 * @return string HTML.
+	 */
+	private static function convert( string $markdown ): string {
 		if ( class_exists( GithubFlavoredMarkdownConverter::class ) ) {
 			try {
 				$converter = new GithubFlavoredMarkdownConverter(
@@ -97,6 +122,82 @@ class Page_Markdown {
 	 * @return string Sanitized HTML.
 	 */
 	public static function sanitize_docs_html( string $html ): string {
+		return self::cached( 'sanitized', $html, static fn(): string => self::sanitize( $html ) );
+	}
+
+	/**
+	 * Return a cached transformation of an input, building it once per input.
+	 *
+	 * Results are content addressed by the input and the identity of the code
+	 * that produces them, so unchanged documents cost one small read on later
+	 * renders and builds, in any process.
+	 *
+	 * @param string             $kind  Transformation name.
+	 * @param string             $input Input text.
+	 * @param callable(): string $build Builder for a miss.
+	 *
+	 * @return string Result.
+	 */
+	private static function cached( string $kind, string $input, callable $build ): string {
+		if ( ! function_exists( 'wp_mkdir_p' ) ) {
+			return $build();
+		}
+		$key = hash( 'xxh128', $kind . "\0" . self::cache_identity() . "\0" . $input );
+		if ( isset( self::$memo[ $key ] ) ) {
+			return self::$memo[ $key ];
+		}
+		$result = Runtime_Cache::read( 'page-markdown', $key );
+		if ( null === $result ) {
+			$result = $build();
+			if ( '' !== $result ) {
+				Runtime_Cache::write( 'page-markdown', $key, $result );
+			}
+		}
+		if ( count( self::$memo ) >= 256 ) {
+			self::$memo = array();
+		}
+		self::$memo[ $key ] = $result;
+
+		return $result;
+	}
+
+	/**
+	 * Identify the code behind cached markdown results.
+	 *
+	 * @return string Identity.
+	 */
+	private static function cache_identity(): string {
+		if ( null !== self::$identity ) {
+			return self::$identity;
+		}
+		$files    = array( __FILE__ );
+		$versions = dirname( __DIR__, 2 ) . '/lib/dependencies/versions.json';
+		if ( is_file( $versions ) ) {
+			$files[] = $versions;
+		}
+		if ( class_exists( GithubFlavoredMarkdownConverter::class ) ) {
+			$converter = ( new \ReflectionClass( GithubFlavoredMarkdownConverter::class ) )->getFileName();
+			if ( is_string( $converter ) ) {
+				$files[] = $converter;
+			}
+		}
+		$parts = array( isset( $GLOBALS['wp_version'] ) && is_string( $GLOBALS['wp_version'] ) ? $GLOBALS['wp_version'] : '' );
+		foreach ( $files as $file ) {
+			$parts[] = (string) hash_file( 'xxh128', $file );
+		}
+		self::$identity = hash( 'xxh128', implode( '|', $parts ) );
+
+		return self::$identity;
+	}
+
+	/**
+	 * Sanitize generated external docs HTML without the cache.
+	 *
+	 * @param string $html HTML.
+	 *
+	 * @return string Sanitized HTML.
+	 */
+	private static function sanitize( string $html ): string {
 		$allowed = array(
 			'a'          => array(
 				'href'   => true,
