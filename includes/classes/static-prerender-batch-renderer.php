@@ -72,8 +72,10 @@ final class Static_Prerender_Batch_Renderer {
 					$item = self::render_fork( $url, $options );
 
 					if ( 'failed' === ( $item['status'] ?? null ) && $fallback ) {
-						$item             = self::render_http( $url, $options );
-						$item['fallback'] = 'http';
+						$fork              = $item;
+						$item              = self::render_http( $url, $options );
+						$item['fallback']  = 'http';
+						$item['forkError'] = is_string( $fork['error'] ?? null ) ? $fork['error'] : '';
 					}
 				} elseif ( 'internal' === $transport ) {
 					$item = self::render_internal( $url, $options );

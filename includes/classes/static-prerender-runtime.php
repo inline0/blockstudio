@@ -1869,7 +1869,11 @@ final class Static_Prerender_Runtime {
 	}
 
 	/**
-	 * Read a graph record for a URL.
+	 * Read a graph record for a URL with its dependency maps restored.
+	 *
+	 * The request cache holds records as stored, so a plan over tens of
+	 * thousands of routes keeps a few hundred bytes per route in memory and
+	 * restores each record's maps from the shared chunk cache when read.
 	 *
 	 * @param string $url URL.
 	 *
@@ -1878,7 +1882,9 @@ final class Static_Prerender_Runtime {
 	private static function index_record_for_url( string $url ): ?array {
 		$id = self::url_hash( $url );
 		if ( array_key_exists( $id, self::$index_record_cache ) ) {
-			return self::$index_record_cache[ $id ];
+			$cached = self::$index_record_cache[ $id ];
+
+			return null === $cached ? null : self::inflate_index_record( $cached );
 		}
 
 		$path = self::index_path( $id );
@@ -1889,11 +1895,17 @@ final class Static_Prerender_Runtime {
 		}
 
 		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Reading local graph state.
-		$decoded                         = json_decode( (string) file_get_contents( $path ), true );
-		$record                          = is_array( $decoded ) ? self::inflate_index_record( $decoded ) : null;
-		self::$index_record_cache[ $id ] = $record;
+		$decoded = json_decode( (string) file_get_contents( $path ), true );
+		if ( ! is_array( $decoded ) ) {
+			self::$index_record_cache[ $id ] = null;
 
-		return $record;
+			return null;
+		}
+		if ( ! array_key_exists( 'dependencyHashes', $decoded ) ) {
+			self::$index_record_cache[ $id ] = $decoded;
+		}
+
+		return self::inflate_index_record( $decoded );
 	}
 
 	/**
@@ -1941,7 +1953,7 @@ final class Static_Prerender_Runtime {
 			return false;
 		}
 
-		self::$index_record_cache[ $id ] = $record;
+		self::$index_record_cache[ $id ] = $stored;
 
 		return true;
 	}
