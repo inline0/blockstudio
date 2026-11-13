@@ -503,7 +503,9 @@ class StaticPrerenderHeadersTest extends TestCase {
 		$path   = strtolower( (string) wp_parse_url( $url, PHP_URL_PATH ) );
 		$this->assertArrayHasKey( $path, $routes );
 
-		return Static_Prerender_Runtime::cache_root_path() . '/' . $routes[ $path ] . '.html';
+		$artifact = rtrim( wp_normalize_path( Runtime_Cache::directory( 'static-prerender-artifact' ) ), '/' ) . '/' . $routes[ $path ] . '.html';
+
+		return is_file( $artifact ) ? $artifact : Static_Prerender_Runtime::cache_root_path() . '/' . $routes[ $path ] . '.html';
 	}
 
 	/**

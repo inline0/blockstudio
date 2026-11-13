@@ -403,7 +403,11 @@ class StaticPrerenderDependencyGraphTest extends TestCase {
 	 */
 	private function stored_document( string $url ): string {
 		$record = ( new ReflectionMethod( Static_Prerender_Runtime::class, 'index_record_for_url' ) )->invoke( null, $url );
-		$file   = ( new ReflectionMethod( Static_Prerender_Runtime::class, 'cache_file' ) )->invoke( null, (string) ( $record['cacheKey'] ?? '' ) );
+		$key    = (string) ( $record['cacheKey'] ?? '' );
+		$file   = ( new ReflectionMethod( Static_Prerender_Runtime::class, 'artifact_file' ) )->invoke( null, $key );
+		if ( ! is_file( $file ) ) {
+			$file = ( new ReflectionMethod( Static_Prerender_Runtime::class, 'cache_file' ) )->invoke( null, $key );
+		}
 
 		return is_file( $file ) ? (string) file_get_contents( $file ) : '';
 	}

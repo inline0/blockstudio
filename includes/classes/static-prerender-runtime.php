@@ -1049,7 +1049,7 @@ final class Static_Prerender_Runtime {
 						null === $desired_key ||
 						$key !== $desired_key ||
 						'' === $key ||
-						! is_file( self::cache_file( $key ) )
+						( ! is_file( self::cache_file( $key ) ) && ! is_file( self::artifact_file( $key ) ) )
 					) {
 						$url_reasons[] = 'cache';
 					}
