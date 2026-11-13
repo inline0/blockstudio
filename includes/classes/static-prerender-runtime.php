@@ -255,12 +255,21 @@ final class Static_Prerender_Runtime {
 	}
 
 	/**
+	 * Whether the current request renders inside a batch prerender.
+	 *
+	 * @return bool
+	 */
+	private static function in_batch_render(): bool {
+		return class_exists( Static_Prerender_Batch_Renderer::class, false ) && Static_Prerender_Batch_Renderer::is_rendering();
+	}
+
+	/**
 	 * Serve a warm hit or begin capturing a cold anonymous response.
 	 *
 	 * @return void
 	 */
 	public static function maybe_serve_or_buffer(): void {
-		if ( Static_Prerender_Batch_Renderer::is_rendering() ) {
+		if ( self::in_batch_render() ) {
 			return;
 		}
 
@@ -1269,7 +1278,7 @@ final class Static_Prerender_Runtime {
 		$key       = self::cache_key_for_url_hashes( $target_url, $shared['hash'], $page_hash );
 
 		$persisted = null !== $key && (
-			Static_Prerender_Batch_Renderer::is_rendering()
+			self::in_batch_render()
 				? self::persist_build_artifact( $key, $html, $headers )
 				: self::persist_prerendered_html( $key, $html, null, $headers )
 		);
