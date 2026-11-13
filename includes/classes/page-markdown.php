@@ -139,7 +139,7 @@ class Page_Markdown {
 	 * @return string Result.
 	 */
 	private static function cached( string $kind, string $input, callable $build ): string {
-		if ( ! function_exists( 'wp_mkdir_p' ) ) {
+		if ( ! function_exists( 'wp_mkdir_p' ) || ! class_exists( Runtime_Cache::class ) ) {
 			return $build();
 		}
 		$key = hash( 'xxh128', $kind . "\0" . self::cache_identity() . "\0" . $input );
