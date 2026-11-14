@@ -7,6 +7,7 @@ import {
   statSync,
   existsSync,
 } from 'fs';
+import { createHash } from 'node:crypto';
 import { parse } from 'node-html-parser';
 import { dirname, resolve, join, basename, extname } from 'path';
 import { fileURLToPath } from 'url';
@@ -171,6 +172,20 @@ export const generateIcons = attempt('generateIcons', () => {
       console.log(`Processing: ${source.package}`);
       processIconSource(source);
     }
+
+    // The release ZIP ships these checksums instead of the sets themselves.
+    const checksums: Record<string, string> = {};
+    for (const file of readdirSync(iconsOutputDir).sort()) {
+      if (file.endsWith('.json')) {
+        checksums[basename(file, '.json')] = createHash('sha256')
+          .update(readFileSync(join(iconsOutputDir, file)))
+          .digest('hex');
+      }
+    }
+    writeFileSync(
+      `${iconsOutputDir}.json`,
+      `${JSON.stringify(checksums, null, 2)}\n`,
+    );
 
     console.log('\nDone!');
   }
