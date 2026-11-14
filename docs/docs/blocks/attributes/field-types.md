@@ -698,8 +698,11 @@ refocusing the picker retries a failed request.
 `tabler-icons` supports `outline` and `filled`. A subset explicitly configured
 for the chosen set takes precedence; otherwise the picker uses `solid` when
 available, or the set's first subset. Sets without subsets omit `subSet`.
-Set names resolve only to bundled files. Frontend rendering caches individual
-icons rather than storing full icon sets in database transients.
+Set names resolve only to set files in the
+[icon directory](/docs/blocks/hooks/php#blockstudioiconsdir) outside the plugin
+or, when a set is not stored there, in the plugin folder. Frontend rendering
+caches individual icons rather than storing full icon sets in database
+transients.
 
 ## Imported Option Values
 
