@@ -1385,6 +1385,21 @@ add_filter('blockstudio/tailwind/cache_max_age', function() {
 });
 ```
 
+### blockstudio/tailwind/sources
+
+Filters the source files and directories whose class candidates every page
+stylesheet includes. With sources, pages link one stylesheet built from the
+candidates found in them, so a site shares a single cached file instead of one
+per page. A page that uses utilities outside the sources links that set plus
+its own extra utilities. The scan is cached under a signature of each file's
+path, size and modification time.
+
+```php title="functions.php"
+add_filter('blockstudio/tailwind/sources', function() {
+  return [get_template_directory() . '/src'];
+});
+```
+
 ## Admin
 
 ### enabled

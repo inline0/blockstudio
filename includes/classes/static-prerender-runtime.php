@@ -118,11 +118,25 @@ final class Static_Prerender_Runtime {
 	private static array $index_record_cache = array();
 
 	/**
+	 * Dependency chunks read in this process, by content hash.
+	 *
+	 * @var array<string,array{hashes:array<string,string>,paths:array<string,string>}|null>
+	 */
+	private static array $dependency_set_cache = array();
+
+	/**
 	 * Report ID of the dependency report the current warm request writes.
 	 *
 	 * @var string|null
 	 */
 	private static ?string $dependency_report = null;
+
+	/**
+	 * Whether this request leaves persistence to the batch renderer.
+	 *
+	 * @var bool
+	 */
+	private static bool $capture_suppressed = false;
 
 	/**
 	 * Files the current warm request read, keyed by path.
@@ -255,12 +269,21 @@ final class Static_Prerender_Runtime {
 	}
 
 	/**
+	 * Whether the current request renders inside a batch prerender.
+	 *
+	 * @return bool
+	 */
+	private static function in_batch_render(): bool {
+		return class_exists( Static_Prerender_Batch_Renderer::class, false ) && Static_Prerender_Batch_Renderer::is_rendering();
+	}
+
+	/**
 	 * Serve a warm hit or begin capturing a cold anonymous response.
 	 *
 	 * @return void
 	 */
 	public static function maybe_serve_or_buffer(): void {
-		if ( Static_Prerender_Batch_Renderer::is_rendering() ) {
+		if ( self::in_batch_render() ) {
 			return;
 		}
 
@@ -508,6 +531,15 @@ final class Static_Prerender_Runtime {
 	}
 
 	/**
+	 * Leave this request's persistence to the batch renderer that forked it.
+	 *
+	 * @return void
+	 */
+	public static function suppress_capture(): void {
+		self::$capture_suppressed = true;
+	}
+
+	/**
 	 * Persist a captured anonymous response.
 	 *
 	 * @param string $buffer Response buffer.
@@ -526,6 +558,7 @@ final class Static_Prerender_Runtime {
 			self::finish_dependency_report();
 
 			if (
+				self::$capture_suppressed ||
 				null === $key ||
 				! self::cacheable_html( $buffer, is_int( $status ) && $status > 0 ? $status : null )
 			) {
@@ -1049,7 +1082,7 @@ final class Static_Prerender_Runtime {
 						null === $desired_key ||
 						$key !== $desired_key ||
 						'' === $key ||
-						! is_file( self::cache_file( $key ) )
+						( ! is_file( self::cache_file( $key ) ) && ! is_file( self::artifact_file( $key ) ) )
 					) {
 						$url_reasons[] = 'cache';
 					}
@@ -1268,7 +1301,12 @@ final class Static_Prerender_Runtime {
 		$shared    = Static_Prerender_Content_Hasher::shared_snapshot( $theme_root );
 		$key       = self::cache_key_for_url_hashes( $target_url, $shared['hash'], $page_hash );
 
-		if ( null === $key || ! self::persist_prerendered_html( $key, $html, null, $headers ) ) {
+		$persisted = null !== $key && (
+			self::in_batch_render()
+				? self::persist_build_artifact( $key, $html, $headers )
+				: self::persist_prerendered_html( $key, $html, null, $headers )
+		);
+		if ( null === $key || ! $persisted ) {
 			return false;
 		}
 
@@ -1387,12 +1425,19 @@ final class Static_Prerender_Runtime {
 			}
 
 			$live_keys = array();
+			$live_sets = array();
 			foreach ( self::all_index_records() as $record ) {
 				$key = is_string( $record['cacheKey'] ?? null ) ? $record['cacheKey'] : '';
 				if ( '' !== $key ) {
 					$live_keys[ $key ] = true;
 				}
+				foreach ( is_array( $record['dependencyChunks'] ?? null ) ? $record['dependencyChunks'] : array() as $chunk ) {
+					if ( is_string( $chunk ) ) {
+						$live_sets[ $chunk ] = true;
+					}
+				}
 			}
+			self::collect_dependency_sets( $live_sets );
 
 			$deleted_files = 0;
 			$files         = glob( self::cache_root() . '/*.html' );
@@ -1436,7 +1481,7 @@ final class Static_Prerender_Runtime {
 		foreach ( self::all_index_records() as $record ) {
 			$url = is_string( $record['url'] ?? null ) ? $record['url'] : '';
 			$key = is_string( $record['cacheKey'] ?? null ) ? $record['cacheKey'] : '';
-			if ( ! isset( $live[ $url ] ) || '' === $key || ! is_file( self::cache_file( $key ) ) ) {
+			if ( ! isset( $live[ $url ] ) || '' === $key || ( ! is_file( self::cache_file( $key ) ) && ! is_file( self::artifact_file( $key ) ) ) ) {
 				continue;
 			}
 
@@ -1663,6 +1708,7 @@ final class Static_Prerender_Runtime {
 		self::$response_status      = null;
 		self::$warm_queue           = null;
 		self::$index_record_cache   = array();
+		self::$dependency_set_cache = array();
 		self::$dependency_report    = null;
 		self::$dependencies         = array();
 		self::$search_path_prefixes = array();
@@ -1728,6 +1774,54 @@ final class Static_Prerender_Runtime {
 	}
 
 	/**
+	 * Publish one build render straight into the uncapped artifact scope.
+	 *
+	 * @param string $key     Cache key.
+	 * @param string $html    HTML.
+	 * @param mixed  $headers Response headers.
+	 *
+	 * @return bool Whether published.
+	 */
+	private static function persist_build_artifact( string $key, string $html, mixed $headers = array() ): bool {
+		$file = self::artifact_file( $key );
+		$dir  = dirname( $file );
+		if ( ! is_dir( $dir ) && ! wp_mkdir_p( $dir ) ) {
+			self::record_outcome( 'write-failure' );
+
+			return false;
+		}
+		if ( ! Static_Prerender_Headers::store( $file, Static_Prerender_Headers::select( $headers ) ) ) {
+			self::record_outcome( 'write-failure' );
+
+			return false;
+		}
+		if ( Single_Flight::publish( $file, $html ) || Single_Flight::publish( $file, $html ) ) {
+			self::record_outcome( 'write' );
+
+			return true;
+		}
+		if ( is_file( $file ) ) {
+			self::record_outcome( 'write-peer' );
+
+			return true;
+		}
+		self::record_outcome( 'write-failure' );
+
+		return false;
+	}
+
+	/**
+	 * Resolve one build artifact path.
+	 *
+	 * @param string $key Cache key.
+	 *
+	 * @return string Path.
+	 */
+	private static function artifact_file( string $key ): string {
+		return rtrim( wp_normalize_path( Runtime_Cache::directory( 'static-prerender-artifact' ) ), '/' ) . '/' . sanitize_file_name( $key ) . '.html';
+	}
+
+	/**
 	 * Resolve one HTML object path.
 	 *
 	 * @param string $key Cache key.
@@ -1775,7 +1869,11 @@ final class Static_Prerender_Runtime {
 	}
 
 	/**
-	 * Read a graph record for a URL.
+	 * Read a graph record for a URL with its dependency maps restored.
+	 *
+	 * The request cache holds records as stored, so a plan over tens of
+	 * thousands of routes keeps a few hundred bytes per route in memory and
+	 * restores each record's maps from the shared chunk cache when read.
 	 *
 	 * @param string $url URL.
 	 *
@@ -1784,7 +1882,9 @@ final class Static_Prerender_Runtime {
 	private static function index_record_for_url( string $url ): ?array {
 		$id = self::url_hash( $url );
 		if ( array_key_exists( $id, self::$index_record_cache ) ) {
-			return self::$index_record_cache[ $id ];
+			$cached = self::$index_record_cache[ $id ];
+
+			return null === $cached ? null : self::inflate_index_record( $cached );
 		}
 
 		$path = self::index_path( $id );
@@ -1795,15 +1895,25 @@ final class Static_Prerender_Runtime {
 		}
 
 		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Reading local graph state.
-		$decoded                         = json_decode( (string) file_get_contents( $path ), true );
-		$record                          = is_array( $decoded ) ? $decoded : null;
-		self::$index_record_cache[ $id ] = $record;
+		$decoded = json_decode( (string) file_get_contents( $path ), true );
+		if ( ! is_array( $decoded ) ) {
+			self::$index_record_cache[ $id ] = null;
 
-		return $record;
+			return null;
+		}
+		if ( ! array_key_exists( 'dependencyHashes', $decoded ) ) {
+			self::$index_record_cache[ $id ] = $decoded;
+		}
+
+		return self::inflate_index_record( $decoded );
 	}
 
 	/**
-	 * Read every valid graph record.
+	 * Read every valid graph record as stored.
+	 *
+	 * Every caller reads URLs, cache keys and chunk hashes only, so the
+	 * dependency maps stay unrestored; index_record_for_url() restores them
+	 * for the one record that needs them.
 	 *
 	 * @return array<int,array<string,mixed>> Records.
 	 */
@@ -1817,10 +1927,6 @@ final class Static_Prerender_Runtime {
 			$decoded = json_decode( (string) file_get_contents( $path ), true );
 			if ( is_array( $decoded ) ) {
 				$records[] = $decoded;
-				$url       = is_string( $decoded['url'] ?? null ) ? $decoded['url'] : '';
-				if ( '' !== $url ) {
-					self::$index_record_cache[ self::url_hash( $url ) ] = $decoded;
-				}
 			}
 		}
 
@@ -1836,16 +1942,193 @@ final class Static_Prerender_Runtime {
 	 * @return bool Whether published.
 	 */
 	private static function write_index_record( string $url, array $record ): bool {
-		$id      = self::url_hash( $url );
-		$encoded = wp_json_encode( $record, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE );
+		$id     = self::url_hash( $url );
+		$stored = self::deflate_index_record( $record );
+		if ( null === $stored ) {
+			return false;
+		}
+		$encoded = wp_json_encode( $stored, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE );
 
 		if ( ! is_string( $encoded ) || ! Single_Flight::publish( self::index_path( $id ), $encoded . "\n" ) ) {
 			return false;
 		}
 
-		self::$index_record_cache[ $id ] = $record;
+		self::$index_record_cache[ $id ] = $stored;
 
 		return true;
+	}
+
+	/**
+	 * Store a record's dependency hashes in shared chunks.
+	 *
+	 * Routes of one family read nearly the same files, so the hashes are
+	 * split by directory into content-addressed chunks that many records
+	 * name, paths are derived from their IDs, and only paths that differ from
+	 * that derivation stay in the record.
+	 *
+	 * @param array<string,mixed> $record Record with inline dependency maps.
+	 *
+	 * @return array<string,mixed>|null Record to store, or null when a chunk could not be written.
+	 */
+	private static function deflate_index_record( array $record ): ?array {
+		unset( $record['dependencySet'], $record['dependencyChunks'], $record['dependencyPathOverrides'] );
+		if ( ! is_array( $record['dependencyHashes'] ?? null ) || ! is_array( $record['dependencyPaths'] ?? null ) ) {
+			return $record;
+		}
+		$hashes  = self::string_map( $record['dependencyHashes'] );
+		$paths   = self::string_map( $record['dependencyPaths'] );
+		$virtual = is_array( $record['virtualHashes'] ?? null ) ? self::string_map( $record['virtualHashes'] ) : array();
+		$root    = self::theme_root();
+		$groups  = array();
+		foreach ( $hashes as $id => $hash ) {
+			if ( isset( $virtual[ $id ] ) && $virtual[ $id ] === $hash && ! isset( $paths[ $id ] ) ) {
+				continue;
+			}
+			$groups[ self::dependency_group( $id ) ][ $id ] = $hash;
+		}
+		ksort( $groups, SORT_STRING );
+		$chunks = array();
+		foreach ( $groups as $group ) {
+			ksort( $group, SORT_STRING );
+			$encoded = wp_json_encode( $group, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE );
+			if ( ! is_string( $encoded ) ) {
+				return null;
+			}
+			$hash = hash( 'sha256', $encoded );
+			$path = self::dependency_set_path( $hash );
+			if ( ! is_file( $path ) && ! Single_Flight::publish( $path, $encoded . "\n" ) ) {
+				return null;
+			}
+			$chunks[] = $hash;
+		}
+		$overrides = array();
+		foreach ( $paths as $id => $path ) {
+			if ( Static_Prerender_Content_Hasher::path_for_id( $id, $root ) !== wp_normalize_path( $path ) ) {
+				$overrides[ $id ] = $path;
+			}
+		}
+		unset( $record['dependencyHashes'], $record['dependencyPaths'] );
+		$record['dependencyChunks'] = $chunks;
+		if ( array() !== $overrides ) {
+			$record['dependencyPathOverrides'] = $overrides;
+		}
+
+		return $record;
+	}
+
+	/**
+	 * Group a dependency ID by its directory, at most four segments deep.
+	 *
+	 * @param string $id Dependency ID.
+	 *
+	 * @return string Group.
+	 */
+	private static function dependency_group( string $id ): string {
+		$segments = explode( '/', $id );
+		array_pop( $segments );
+
+		return implode( '/', array_slice( $segments, 0, 4 ) );
+	}
+
+	/**
+	 * Read one dependency chunk with the paths its IDs name, derived once per chunk.
+	 *
+	 * @param string $hash Chunk content hash.
+	 *
+	 * @return array{hashes:array<string,string>,paths:array<string,string>}|null Chunk, or null when it is gone.
+	 */
+	private static function dependency_chunk( string $hash ): ?array {
+		if ( ! array_key_exists( $hash, self::$dependency_set_cache ) ) {
+			$path    = self::dependency_set_path( $hash );
+			$decoded = is_file( $path ) ? json_decode( (string) file_get_contents( $path ), true ) : null; // phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Reading local graph state.
+			if ( ! is_array( $decoded ) ) {
+				self::$dependency_set_cache[ $hash ] = null;
+			} else {
+				$hashes = self::string_map( $decoded );
+				$paths  = array();
+				$root   = self::theme_root();
+				foreach ( array_keys( $hashes ) as $id ) {
+					$resolved = Static_Prerender_Content_Hasher::path_for_id( (string) $id, $root );
+					if ( null !== $resolved ) {
+						$paths[ $id ] = $resolved;
+					}
+				}
+				self::$dependency_set_cache[ $hash ] = array(
+					'hashes' => $hashes,
+					'paths'  => $paths,
+				);
+			}
+		}
+
+		return self::$dependency_set_cache[ $hash ];
+	}
+
+	/**
+	 * Restore a stored record's dependency maps from its chunks.
+	 *
+	 * @param array<string,mixed> $record Stored record.
+	 *
+	 * @return array<string,mixed>|null Record with inline maps, or null when a chunk is gone.
+	 */
+	private static function inflate_index_record( array $record ): ?array {
+		$chunks = $record['dependencyChunks'] ?? null;
+		if ( ! is_array( $chunks ) ) {
+			return $record;
+		}
+		$virtual = is_array( $record['virtualHashes'] ?? null ) ? self::string_map( $record['virtualHashes'] ) : array();
+		$hashes  = $virtual;
+		$paths   = array();
+		foreach ( $chunks as $hash ) {
+			$chunk = is_string( $hash ) ? self::dependency_chunk( $hash ) : null;
+			if ( null === $chunk ) {
+				return null;
+			}
+			$hashes = array_merge( $hashes, $chunk['hashes'] );
+			$paths  = array_merge( $paths, $chunk['paths'] );
+		}
+		$overrides = is_array( $record['dependencyPathOverrides'] ?? null ) ? self::string_map( $record['dependencyPathOverrides'] ) : array();
+		foreach ( $overrides as $id => $path ) {
+			$paths[ $id ] = $path;
+		}
+		ksort( $hashes, SORT_STRING );
+		ksort( $paths, SORT_STRING );
+		unset( $record['dependencyPathOverrides'] );
+		$record['dependencyHashes'] = $hashes;
+		$record['dependencyPaths']  = $paths;
+
+		return $record;
+	}
+
+	/**
+	 * Delete dependency chunks no record names, once they are an hour old.
+	 *
+	 * @param array<string,true> $live Chunk hashes the live records name.
+	 */
+	private static function collect_dependency_sets( array $live ): void {
+		$paths  = glob( self::state_root() . '/dependency-sets/*.json' );
+		$cutoff = time() - 3600;
+		foreach ( is_array( $paths ) ? $paths : array() as $path ) {
+			if ( isset( $live[ basename( $path, '.json' ) ] ) || (int) filemtime( $path ) > $cutoff ) {
+				continue;
+			}
+			@unlink( $path ); // phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged, WordPress.WP.AlternativeFunctions.unlink_unlink -- Internal cache files must not invoke media-deletion filters.
+		}
+	}
+
+	/**
+	 * Resolve one dependency chunk path.
+	 *
+	 * @param string $hash Chunk content hash.
+	 *
+	 * @return string Path.
+	 */
+	private static function dependency_set_path( string $hash ): string {
+		$root = self::state_root() . '/dependency-sets';
+		if ( ! is_dir( $root ) ) {
+			wp_mkdir_p( $root );
+		}
+
+		return $root . '/' . sanitize_file_name( $hash ) . '.json';
 	}
 
 	/**

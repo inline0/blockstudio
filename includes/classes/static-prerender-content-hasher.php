@@ -43,6 +43,13 @@ final class Static_Prerender_Content_Hasher {
 	private static ?array $engine_assets = null;
 
 	/**
+	 * Request-local shared snapshots by theme root.
+	 *
+	 * @var array<string,array{hash:string,hashes:array<string,string>,paths:array<string,string>}>
+	 */
+	private static array $shared_snapshots = array();
+
+	/**
 	 * Hash one file once per request.
 	 *
 	 * @param string $path File path.
@@ -105,6 +112,11 @@ final class Static_Prerender_Content_Hasher {
 	 * @return array{hash:string,hashes:array<string,string>,paths:array<string,string>}
 	 */
 	public static function shared_snapshot( ?string $theme_root ): array {
+		$memo = (string) $theme_root;
+		if ( isset( self::$shared_snapshots[ $memo ] ) ) {
+			return self::$shared_snapshots[ $memo ];
+		}
+
 		$paths            = null !== $theme_root && is_dir( $theme_root )
 			? self::shared_paths( $theme_root )
 			: array();
@@ -118,6 +130,8 @@ final class Static_Prerender_Content_Hasher {
 			)
 		);
 		$snapshot['hash'] = hash( 'xxh128', self::encode( $identity ) );
+
+		self::$shared_snapshots[ $memo ] = $snapshot;
 
 		return $snapshot;
 	}
@@ -173,10 +187,11 @@ final class Static_Prerender_Content_Hasher {
 	 * @return void
 	 */
 	public static function reset(): void {
-		self::$file_hashes     = array();
-		self::$file_reads      = 0;
-		self::$directory_scans = 0;
-		self::$engine_assets   = null;
+		self::$file_hashes      = array();
+		self::$file_reads       = 0;
+		self::$directory_scans  = 0;
+		self::$engine_assets    = null;
+		self::$shared_snapshots = array();
 	}
 
 	/**
@@ -189,6 +204,39 @@ final class Static_Prerender_Content_Hasher {
 			'fileReads'      => self::$file_reads,
 			'directoryScans' => self::$directory_scans,
 		);
+	}
+
+	/**
+	 * Resolve the local path a portable dependency ID names, as dependency_id() built it.
+	 *
+	 * @param string      $id         Dependency ID.
+	 * @param string|null $theme_root Theme root.
+	 *
+	 * @return string|null Path, or null for IDs that do not name a root.
+	 */
+	public static function path_for_id( string $id, ?string $theme_root ): ?string {
+		$roots = array();
+		if ( null !== $theme_root && '' !== trim( $theme_root ) ) {
+			$roots['theme'] = wp_normalize_path( $theme_root );
+		}
+		if ( defined( 'WP_PLUGIN_DIR' ) ) {
+			$roots['plugins'] = wp_normalize_path( (string) WP_PLUGIN_DIR );
+		}
+		if ( defined( 'WPMU_PLUGIN_DIR' ) ) {
+			$roots['mu-plugins'] = wp_normalize_path( (string) WPMU_PLUGIN_DIR );
+		}
+		if ( defined( 'ABSPATH' ) ) {
+			$roots['wordpress'] = wp_normalize_path( (string) ABSPATH );
+		}
+		$slash  = strpos( $id, '/' );
+		$prefix = false === $slash ? '' : substr( $id, 0, $slash );
+		if ( ! isset( $roots[ $prefix ] ) ) {
+			return null;
+		}
+		$rest = (string) substr( $id, $slash + 1 );
+		$root = rtrim( $roots[ $prefix ], '/' );
+
+		return '' === $rest ? $root : $root . '/' . $rest;
 	}
 
 	/**
