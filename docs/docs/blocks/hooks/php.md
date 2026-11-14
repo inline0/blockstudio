@@ -1115,6 +1115,29 @@ add_filter(
 );
 ```
 
+## Icons
+
+### blockstudio/icons/dir
+
+This filter changes the directory icon sets are stored in outside the plugin.
+The default is `wp-content/blockstudio/icons`. The icon picker and
+`bs_render_icon()` look for a set there first and in the plugin folder second.
+On activation and after each update, Blockstudio copies the sets it ships to
+this directory, about 22 MB, and skips the ones already stored unchanged.
+
+```php title="functions.php"
+add_filter('blockstudio/icons/dir', function(string $directory) {
+  return WP_CONTENT_DIR . '/uploads/blockstudio-icons';
+});
+```
+
+Return an empty string to store nothing and read icon sets from the plugin
+folder only, for example on a site that uses no icon fields:
+
+```php title="functions.php"
+add_filter('blockstudio/icons/dir', '__return_empty_string');
+```
+
 ## Runtime Cache
 
 ### blockstudio/cache/dir

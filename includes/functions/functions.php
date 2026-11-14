@@ -13,6 +13,7 @@ use Blockstudio\Extensions;
 use Blockstudio\Pages;
 use Blockstudio\Site_Templates;
 use Blockstudio\Field_Type_Registry;
+use Blockstudio\Icons;
 use Blockstudio\Utils;
 use Blockstudio\Media;
 use Blockstudio\Error_Handler;
@@ -368,7 +369,6 @@ if ( ! function_exists( 'bs_render_icon' ) ) {
 		}
 		static $sets = array();
 
-		$path            = BLOCKSTUDIO_DIR . '/includes/icons';
 		$icon_version    = '1';
 		$expiration_time = 30 * DAY_IN_SECONDS;
 
@@ -376,7 +376,7 @@ if ( ! function_exists( 'bs_render_icon' ) ) {
 		$sub_set = isset( $args['subSet'] ) ? '-' . $args['subSet'] : '';
 		$icon    = $args['icon'];
 
-		$complete_path = Utils::icon_set_path( $path, "$set$sub_set" );
+		$complete_path = Icons::set_path( "$set$sub_set" );
 		if ( '' === $complete_path ) {
 			return;
 		}
