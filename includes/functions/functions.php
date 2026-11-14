@@ -378,6 +378,7 @@ if ( ! function_exists( 'bs_render_icon' ) ) {
 
 		$complete_path = Icons::set_path( "$set$sub_set" );
 		if ( '' === $complete_path ) {
+			Icons::request( "$set$sub_set" );
 			return;
 		}
 

@@ -97,6 +97,7 @@ final class HookCallbackRule implements Rule
         'blockstudio/files/url',
         'blockstudio/generated_output/path',
         'blockstudio/icons/dir',
+        'blockstudio/icons/url',
         'blockstudio/init',
         'blockstudio/init/before',
         'blockstudio/islands/allowed',

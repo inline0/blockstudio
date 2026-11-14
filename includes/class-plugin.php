@@ -297,6 +297,7 @@ class Plugin {
 		);
 
 		Perf::init();
+		Icons::init();
 
 		add_filter( 'the_content', array( Block::class, 'prime_content_attachments' ), 8 );
 

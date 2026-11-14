@@ -1122,8 +1122,9 @@ add_filter(
 This filter changes the directory icon sets are stored in outside the plugin.
 The default is `wp-content/blockstudio/icons`. The icon picker and
 `bs_render_icon()` look for a set there first and in the plugin folder second.
-On activation and after each update, Blockstudio copies the sets it ships to
-this directory, about 22 MB, and skips the ones already stored unchanged.
+The plugin ZIP ships no icon sets: a set is downloaded into this directory when
+it is first needed. See
+[Icon Loading](/docs/blocks/attributes/field-types#icon-loading).
 
 ```php title="functions.php"
 add_filter('blockstudio/icons/dir', function(string $directory) {
@@ -1131,11 +1132,24 @@ add_filter('blockstudio/icons/dir', function(string $directory) {
 });
 ```
 
-Return an empty string to store nothing and read icon sets from the plugin
-folder only, for example on a site that uses no icon fields:
+Return an empty string to store and download nothing, for example on a site
+that uses no icon fields:
 
 ```php title="functions.php"
 add_filter('blockstudio/icons/dir', '__return_empty_string');
+```
+
+### blockstudio/icons/url
+
+This filter changes the URL an icon set is downloaded from. The default is the
+set file attached to the GitHub release of the installed version. Use it to
+serve the files from your own host when the server cannot reach GitHub. A
+download that does not match the checksum shipped with the plugin is discarded.
+
+```php title="functions.php"
+add_filter('blockstudio/icons/url', function(string $url, string $name) {
+  return 'https://assets.example.com/blockstudio-icons/' . $name . '.json';
+}, 10, 2);
 ```
 
 ## Runtime Cache

@@ -149,6 +149,7 @@ class Migrate {
 		if ( version_compare( $this->current_version, $this->new_version, '<' ) ) {
 			$this->run_migrations();
 			Icons::store_bundled_sets();
+			Icons::request_missing();
 			update_option( 'blockstudio_version', $this->new_version );
 		}
 	}

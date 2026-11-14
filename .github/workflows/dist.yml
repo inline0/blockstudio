@@ -44,7 +44,7 @@ jobs:
       - name: Verify required files exist
         run: |
           cd build/blockstudio
-          for f in blockstudio.php bootstrap.php readme.txt vendor/autoload.php lib/runtime-autoload.php lib/tailwindphp-autoload.php includes/class-plugin.php includes/admin/assets/blocks/index.tsx.js includes/admin/assets/blocks/prettier.js includes/admin/assets/blocks/prettier-html.js includes/admin/assets/blocks/prettier-postcss.js; do
+          for f in blockstudio.php bootstrap.php readme.txt includes/icons.json vendor/autoload.php lib/runtime-autoload.php lib/tailwindphp-autoload.php includes/class-plugin.php includes/admin/assets/blocks/index.tsx.js includes/admin/assets/blocks/prettier.js includes/admin/assets/blocks/prettier-html.js includes/admin/assets/blocks/prettier-postcss.js; do
             if [ ! -f "$f" ]; then
               echo "MISSING: $f"
               exit 1
@@ -61,7 +61,7 @@ jobs:
       - name: Verify no dev files leaked
         run: |
           cd build/blockstudio
-          for f in node_modules tests docs evals .github _reference AGENTS.md scoper.inc.php prds scripts; do
+          for f in node_modules tests docs evals .github _reference AGENTS.md scoper.inc.php prds scripts includes/icons; do
             if [ -e "$f" ]; then
               echo "LEAKED: $f"
               exit 1

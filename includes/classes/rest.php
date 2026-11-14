@@ -320,7 +320,12 @@ class Rest {
 		$set     = sanitize_text_field( $data['set'] ?? '' );
 		$sub_set = sanitize_text_field( $data['subSet'] ?? '' );
 
-		$path = Icons::set_path( $set . ( $sub_set ? '-' . $sub_set : '' ) );
+		$name = $set . ( $sub_set ? '-' . $sub_set : '' );
+		$path = Icons::set_path( $name );
+
+		if ( '' === $path && Icons::fetch( $name ) ) {
+			$path = Icons::set_path( $name );
+		}
 
 		if (
 			'' !== $path &&

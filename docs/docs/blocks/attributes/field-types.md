@@ -704,6 +704,18 @@ or, when a set is not stored there, in the plugin folder. Frontend rendering
 caches individual icons rather than storing full icon sets in database
 transients.
 
+The plugin ZIP does not contain the icon sets. A set is downloaded from the
+GitHub release of the installed version and stored in the icon directory the
+first time its picker is opened. `bs_render_icon()` never waits for a download:
+an icon of a set that is not stored renders nothing, and the set is fetched by
+WP-Cron for the next request. After an update, sets that are missing on an
+existing site are fetched the same way. Every download is checked against a
+checksum shipped with the plugin. If the server cannot reach GitHub, an admin
+notice says so and the download is retried hourly; the
+[`blockstudio/icons/url`](/docs/blocks/hooks/php#blockstudioiconsurl) filter
+points it at another host. Source checkouts and Composer installs still contain
+the sets and download nothing.
+
 ## Imported Option Values
 
 Checkboxes and selects with `"multiple": true` normally store an array of
