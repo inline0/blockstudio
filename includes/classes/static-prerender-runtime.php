@@ -153,6 +153,13 @@ final class Static_Prerender_Runtime {
 	private static array $search_path_prefixes = array();
 
 	/**
+	 * How the most recent build render reached its artifact document.
+	 *
+	 * @var string
+	 */
+	private static string $last_artifact_write = '';
+
+	/**
 	 * Register runtime hooks.
 	 *
 	 * @return void
@@ -1774,7 +1781,32 @@ final class Static_Prerender_Runtime {
 	}
 
 	/**
+	 * Report and forget how the last build render reached its artifact.
+	 *
+	 * `unchanged` means the artifact already held these exact bytes and was
+	 * not written again, `new` that no document existed under the key, and
+	 * `rewritten` that a document with the same key held different bytes:
+	 * the key's inputs did not change while the output did, so something
+	 * the dependency graph does not record moved the page.
+	 *
+	 * @since 7.7.15
+	 *
+	 * @return string `unchanged`, `new`, `rewritten`, or an empty string.
+	 */
+	public static function take_artifact_write(): string {
+		$write                     = self::$last_artifact_write;
+		self::$last_artifact_write = '';
+
+		return $write;
+	}
+
+	/**
 	 * Publish one build render straight into the uncapped artifact scope.
+	 *
+	 * A document whose bytes and headers equal the stored ones is not written
+	 * again: only its modification time moves, because early serve measures
+	 * a document's freshness against the TTL by it, so a render that
+	 * reproduces production keeps every artifact file's inode and bytes.
 	 *
 	 * @param string $key     Cache key.
 	 * @param string $html    HTML.
@@ -1783,8 +1815,9 @@ final class Static_Prerender_Runtime {
 	 * @return bool Whether published.
 	 */
 	private static function persist_build_artifact( string $key, string $html, mixed $headers = array() ): bool {
-		$file = self::artifact_file( $key );
-		$dir  = dirname( $file );
+		self::$last_artifact_write = '';
+		$file                      = self::artifact_file( $key );
+		$dir                       = dirname( $file );
 		if ( ! is_dir( $dir ) && ! wp_mkdir_p( $dir ) ) {
 			self::record_outcome( 'write-failure' );
 
@@ -1795,12 +1828,21 @@ final class Static_Prerender_Runtime {
 
 			return false;
 		}
+		$existed = is_file( $file );
+		if ( $existed && self::document_equals( $file, $html ) && touch( $file ) ) { // phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_touch -- Early serve dates the cached document by its modification time.
+			self::$last_artifact_write = 'unchanged';
+			self::record_outcome( 'write-unchanged' );
+
+			return true;
+		}
 		if ( Single_Flight::publish( $file, $html ) || Single_Flight::publish( $file, $html ) ) {
+			self::$last_artifact_write = $existed ? 'rewritten' : 'new';
 			self::record_outcome( 'write' );
 
 			return true;
 		}
 		if ( is_file( $file ) ) {
+			self::$last_artifact_write = $existed ? 'rewritten' : 'new';
 			self::record_outcome( 'write-peer' );
 
 			return true;
@@ -1808,6 +1850,25 @@ final class Static_Prerender_Runtime {
 		self::record_outcome( 'write-failure' );
 
 		return false;
+	}
+
+	/**
+	 * Whether a stored document holds exactly these bytes.
+	 *
+	 * @param string $file Stored document.
+	 * @param string $html Rendered HTML.
+	 *
+	 * @return bool Whether equal.
+	 */
+	private static function document_equals( string $file, string $html ): bool {
+		$size = @filesize( $file ); // phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged -- A concurrent prune can remove the file between check and stat.
+		if ( false === $size || strlen( $html ) !== $size ) {
+			return false;
+		}
+
+		$stored = @file_get_contents( $file ); // phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged, WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- A local cache file a concurrent prune can remove between check and read.
+
+		return is_string( $stored ) && $stored === $html;
 	}
 
 	/**

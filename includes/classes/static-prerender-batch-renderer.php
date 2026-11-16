@@ -38,14 +38,19 @@ final class Static_Prerender_Batch_Renderer {
 		if ( 'fork' === $transport && ! self::can_fork() ) {
 			$transport = 'http';
 		}
-		$fallback = 'none' !== ( $options['fallback'] ?? 'http' );
-		$shard    = self::parse_shard( is_string( $options['shard'] ?? null ) ? $options['shard'] : null );
-		$urls     = self::select_shard( $urls, $shard[0], $shard[1] );
-		$started  = hrtime( true );
-		$results  = array();
-		$rendered = 0;
-		$skipped  = 0;
-		$failed   = 0;
+		$fallback  = 'none' !== ( $options['fallback'] ?? 'http' );
+		$shard     = self::parse_shard( is_string( $options['shard'] ?? null ) ? $options['shard'] : null );
+		$urls      = self::select_shard( $urls, $shard[0], $shard[1] );
+		$started   = hrtime( true );
+		$results   = array();
+		$rendered  = 0;
+		$skipped   = 0;
+		$failed    = 0;
+		$artifacts = array(
+			'unchanged' => 0,
+			'new'       => 0,
+			'rewritten' => 0,
+		);
 
 		self::$rendering = true;
 
@@ -59,6 +64,7 @@ final class Static_Prerender_Batch_Renderer {
 
 		try {
 			foreach ( $urls as $url ) {
+				Static_Prerender_Runtime::take_artifact_write();
 				$item_started = hrtime( true );
 				$parsed_path  = wp_parse_url( $url, PHP_URL_PATH );
 				$path         = is_string( $parsed_path ) && '' !== $parsed_path ? $parsed_path : '/';
@@ -88,6 +94,12 @@ final class Static_Prerender_Batch_Renderer {
 					$item = self::render_http( $url, $options );
 				}
 
+				$write = Static_Prerender_Runtime::take_artifact_write();
+				if ( 'rendered' === ( $item['status'] ?? null ) && isset( $artifacts[ $write ] ) ) {
+					$item['artifact'] = $write;
+					++$artifacts[ $write ];
+				}
+
 				$item['url'] = $url;
 				$item['ms']  = round( ( hrtime( true ) - $item_started ) / 1_000_000, 2 );
 				$results[]   = $item;
@@ -115,6 +127,7 @@ final class Static_Prerender_Batch_Renderer {
 			'rendered'   => $rendered,
 			'skipped'    => $skipped,
 			'failed'     => $failed,
+			'artifacts'  => $artifacts,
 			'durationMs' => $duration_ms,
 			'msPerPage'  => $processed > 0 ? round( $duration_ms / $processed, 2 ) : 0.0,
 			'results'    => $results,
