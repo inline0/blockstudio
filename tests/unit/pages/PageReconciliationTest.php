@@ -8,6 +8,8 @@
 // phpcs:disable WordPress.WP.AlternativeFunctions,WordPress.DB.SlowDBQuery
 
 use Blockstudio\Canvas;
+use Blockstudio\Page_Discovery;
+use Blockstudio\Page_Registry;
 use Blockstudio\Page_Renderers;
 use Blockstudio\Page_Sync;
 use Blockstudio\Pages;
@@ -672,6 +674,184 @@ class PageReconciliationTest extends TestCase {
 		$this->assertSame( 0, $report['removed'] );
 		$this->assertSame( 'publish', get_post_status( $orphan_id ) );
 		$this->assertSame( '', get_post_meta( $orphan_id, '_blockstudio_page_stale', true ) );
+	}
+
+	public function test_failed_parent_holds_descendants_and_retry_creates_the_correct_hierarchy(): void {
+		foreach ( array( 'parent-page', 'parent-page/child-page', 'parent-page/child-page/grandchild' ) as $path ) {
+			$directory = $this->pages_path . '/' . $path;
+			wp_mkdir_p( $directory );
+			file_put_contents(
+				$directory . '/page.json',
+				wp_json_encode(
+					array(
+						'name'       => basename( $path ),
+						'title'      => basename( $path ),
+						'postStatus' => 'publish',
+					)
+				)
+			);
+			file_put_contents( $directory . '/index.php', '<!-- wp:paragraph --><p>Hello</p><!-- /wp:paragraph -->' );
+		}
+		$this->write_page( 'unrelated', 'Unrelated' );
+		$old_parent = wp_insert_post(
+			array(
+				'post_type'   => 'page',
+				'post_title'  => 'Old parent',
+				'post_name'   => 'parent-page',
+				'post_status' => 'publish',
+			),
+			true
+		);
+		$this->assertIsInt( $old_parent );
+		$old_child = wp_insert_post(
+			array(
+				'post_type'   => 'page',
+				'post_title'  => 'Old child',
+				'post_name'   => 'child-page',
+				'post_parent' => $old_parent,
+				'post_status' => 'publish',
+			),
+			true
+		);
+		$this->assertIsInt( $old_child );
+
+		try {
+			$before = get_post( $old_child )->to_array();
+			$report = $this->reconcile( true );
+			$this->assertSame( 3, $report['failed'] );
+			$this->assertSame( 1, $report['created'] );
+			$this->assertSame( 'created', $report['pages']['unrelated']['status'] );
+			$errors = array_column( $report['errors'], null, 'page' );
+			$this->assertSame( 'reconcile_failed', $errors['parent-page']['code'] );
+			foreach ( array(
+				'child-page' => 'parent-page',
+				'grandchild' => 'child-page',
+			) as $child => $parent ) {
+				$this->assertSame( 'failed', $report['pages'][ $child ]['status'] );
+				$this->assertSame( 0, $report['pages'][ $child ]['postId'] );
+				$this->assertSame( 'parent_unavailable', $errors[ $child ]['code'] );
+				$this->assertStringContainsString( $parent, $errors[ $child ]['message'] );
+				$this->assertNull( get_page_by_path( $child ) );
+			}
+			$this->assertSame( $before, get_post( $old_child )->to_array() );
+			$this->assertSame( '', get_post_meta( $old_child, '_blockstudio_page_key', true ) );
+
+			wp_update_post(
+				array(
+					'ID'        => $old_parent,
+					'post_name' => 'archived-parent',
+				)
+			);
+			$retry = $this->reconcile( true );
+			$this->assertSame( 0, $retry['failed'] );
+			$this->assertSame( 3, $retry['created'] );
+			$parent_id     = $retry['pages']['parent-page']['postId'];
+			$child_id      = $retry['pages']['child-page']['postId'];
+			$grandchild_id = $retry['pages']['grandchild']['postId'];
+			$this->assertSame( $parent_id, (int) get_post_field( 'post_parent', $child_id ) );
+			$this->assertSame( $child_id, (int) get_post_field( 'post_parent', $grandchild_id ) );
+			$this->assertSame( 'parent-page/child-page', get_page_uri( $child_id ) );
+			$this->assertSame( 'parent-page/child-page/grandchild', get_page_uri( $grandchild_id ) );
+			$this->assertSame( $before, get_post( $old_child )->to_array() );
+		} finally {
+			wp_delete_post( $old_child, true );
+			wp_delete_post( $old_parent, true );
+		}
+	}
+
+	public function test_unavailable_parent_does_not_reparent_or_unlock_an_existing_child(): void {
+		$this->write_nested_page( 'parent', 'parent', 'Parent', 'parent' );
+		$this->write_nested_page( 'parent/child', 'child', 'Child', 'parent/child' );
+		$initial = $this->reconcile( true );
+		$this->assertSame( 0, $initial['failed'] );
+		$child_id           = $initial['pages']['child']['postId'];
+		$page               = Pages::get_page( 'child' );
+		$page['parent_key'] = 'missing-parent';
+		$page['title']      = 'Must not be written';
+		$sync               = new Page_Sync();
+
+		foreach ( array( false, true ) as $locked ) {
+			if ( $locked ) {
+				update_post_meta( $child_id, '_blockstudio_page_locked', true );
+			}
+			$before = get_post( $child_id )->to_array();
+			$meta   = get_post_meta( $child_id );
+			$result = $sync->reconcile( $page, array( 'authoritative' => true ) );
+			$this->assertSame( 'failed', $result['status'] );
+			$this->assertSame( $child_id, $result['post_id'] );
+			$this->assertSame( 'parent_unavailable', $result['error']->get_error_code() );
+			$this->assertSame( $before, get_post( $child_id )->to_array() );
+			$this->assertSame( $meta, get_post_meta( $child_id ) );
+		}
+		$result = $sync->reconcile( $page );
+		$this->assertSame( 'unchanged', $result['status'] );
+		$this->assertTrue( $result['locked'] );
+	}
+
+	public function test_invalid_registry_parent_ids_do_not_allow_child_creation(): void {
+		$this->write_page( 'child', 'Child' );
+		$page               = ( new Page_Discovery() )->discover( $this->pages_path )['child'];
+		$page['parent_key'] = 'missing-parent';
+		$registry           = Page_Registry::instance();
+		$foreign            = wp_insert_post(
+			array(
+				'post_type'   => 'post',
+				'post_title'  => 'Foreign parent',
+				'post_status' => 'publish',
+			),
+			true
+		);
+		$trashed            = wp_insert_post(
+			array(
+				'post_type'   => 'page',
+				'post_title'  => 'Trashed parent',
+				'post_status' => 'trash',
+			),
+			true
+		);
+		$deleted            = wp_insert_post(
+			array(
+				'post_type'   => 'page',
+				'post_title'  => 'Deleted parent',
+				'post_status' => 'publish',
+			),
+			true
+		);
+		$this->assertIsInt( $foreign );
+		$this->assertIsInt( $trashed );
+		$this->assertIsInt( $deleted );
+		wp_delete_post( $deleted, true );
+
+		try {
+			foreach ( array( $foreign, $trashed, $deleted ) as $post_id ) {
+				$registry->register(
+					'missing-parent',
+					array(
+						'name'    => 'missing-parent',
+						'post_id' => $post_id,
+					)
+				);
+				$result = ( new Page_Sync() )->reconcile( $page );
+				$this->assertSame( 'failed', $result['status'] );
+				$this->assertSame( 'parent_unavailable', $result['error']->get_error_code() );
+				$this->assertNull( get_page_by_path( 'child' ) );
+			}
+		} finally {
+			wp_delete_post( $foreign, true );
+			wp_delete_post( $trashed, true );
+		}
+	}
+
+	public function test_non_hierarchical_pages_do_not_require_parent_posts(): void {
+		$this->write_page( 'flat-child', 'Flat child' );
+		$page               = ( new Page_Discovery() )->discover( $this->pages_path )['flat-child'];
+		$page['parent_key'] = 'missing-parent';
+		$page['postType']   = 'post';
+		$result             = ( new Page_Sync() )->reconcile( $page );
+
+		$this->assertSame( 'created', $result['status'] );
+		$this->assertSame( 'post', get_post_type( $result['post_id'] ) );
+		$this->assertSame( 0, (int) get_post_field( 'post_parent', $result['post_id'] ) );
 	}
 
 	/**

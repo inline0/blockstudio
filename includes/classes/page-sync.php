@@ -115,16 +115,29 @@ class Page_Sync {
 			return $this->reconcile_result( 'unchanged', $existing ? $existing->ID : 0 );
 		}
 
+		$is_locked = $existing && (bool) get_post_meta( $existing->ID, '_blockstudio_page_locked', true );
+		if ( $existing && $is_locked && empty( $args['authoritative'] ) ) {
+			$this->update_runtime_post_meta( $existing->ID, $page_data );
+			return $this->reconcile_result( 'unchanged', $existing->ID, null, true );
+		}
+
+		// A missing parent is not a root page. Fail before unlocking, writing or pruning a child.
+		if ( ! empty( $page_data['parent_key'] ) && is_post_type_hierarchical( $page_data['postType'] ) && 0 === $this->resolve_parent_id( $page_data ) ) {
+			return $this->reconcile_result(
+				'failed',
+				$existing ? $existing->ID : 0,
+				new WP_Error(
+					'parent_unavailable',
+					sprintf( 'The parent page "%s" must be synced before "%s" can be reconciled.', $page_data['parent_key'], $page_data['key'] ?? $page_data['name'] )
+				)
+			);
+		}
+
 		$file_mtime         = $this->get_source_mtime( $page_data );
 		$fingerprint        = isset( $args['fingerprint'] ) && is_string( $args['fingerprint'] ) ? $args['fingerprint'] : $this->build_fingerprint( $page_data );
 		$engine_fingerprint = isset( $args['engine_fingerprint'] ) && is_string( $args['engine_fingerprint'] ) ? $args['engine_fingerprint'] : self::engine_fingerprint();
 
 		if ( $existing ) {
-			$is_locked = (bool) get_post_meta( $existing->ID, '_blockstudio_page_locked', true );
-			if ( $is_locked && empty( $args['authoritative'] ) ) {
-				$this->update_runtime_post_meta( $existing->ID, $page_data );
-				return $this->reconcile_result( 'unchanged', $existing->ID, null, true );
-			}
 			if ( $is_locked ) {
 				delete_post_meta( $existing->ID, '_blockstudio_page_locked' );
 			}
@@ -1457,7 +1470,10 @@ class Page_Sync {
 
 		$parent = Page_Registry::instance()->get_page( (string) $page_data['parent_key'] );
 		if ( ! empty( $parent['post_id'] ) ) {
-			return (int) $parent['post_id'];
+			$post = get_post( (int) $parent['post_id'] );
+			if ( $post && $post->post_type === $page_data['postType'] && ! in_array( $post->post_status, array( 'trash', 'auto-draft' ), true ) ) {
+				return $post->ID;
+			}
 		}
 
 		$posts = get_posts(

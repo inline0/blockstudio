@@ -184,6 +184,12 @@ class Cli {
 				'message' => sprintf( '%1$s: %2$s (post %3$d)', '' !== $removed['name'] ? $removed['name'] : $removed['key'], $removed['action'], $removed['postId'] ),
 			);
 		}
+		foreach ( $report['errors'] ?? array() as $error ) {
+			$lines[] = array(
+				'level'   => 'warning',
+				'message' => sprintf( '%1$s%2$s: %3$s', ! empty( $error['page'] ) ? $error['page'] . ': ' : '', $error['code'] ?? 'reconcile_failed', $error['message'] ?? 'The managed page could not be reconciled.' ),
+			);
+		}
 		return $lines;
 	}
 

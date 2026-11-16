@@ -56,6 +56,7 @@ Download the latest release zip from [GitHub Releases](https://github.com/inline
 
 = 7.7.15 =
 * Fix: imported block comments with flat field values retain selections and hydrate the editor correctly, saving subsequent edits in the existing nested format without changing WordPress-owned attributes (#208)
+* Fix: page sync reports children whose parent is unavailable instead of creating them at the top level or reparenting existing pages (#212)
 
 = 7.7.14 =
 * New: `bs_block_schema()` includes matching saved-value examples from block definitions, excluding editor-only image placeholders (#203)
