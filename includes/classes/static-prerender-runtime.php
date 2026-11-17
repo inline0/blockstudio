@@ -2102,6 +2102,7 @@ final class Static_Prerender_Runtime {
 		if (
 			64 === strlen( $name ) &&
 			64 === strspn( $name, '0123456789abcdef' ) &&
+			function_exists( 'has_filter' ) &&
 			false === has_filter( 'sanitize_file_name' ) &&
 			false === has_filter( 'sanitize_file_name_chars' ) &&
 			false === has_filter( 'mime_types' )
