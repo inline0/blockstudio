@@ -50,6 +50,13 @@ final class Static_Prerender_Content_Hasher {
 	private static array $shared_snapshots = array();
 
 	/**
+	 * How often the request-local hash state was reset.
+	 *
+	 * @var int
+	 */
+	private static int $generation = 0;
+
+	/**
 	 * Hash one file once per request.
 	 *
 	 * @param string $path File path.
@@ -57,6 +64,10 @@ final class Static_Prerender_Content_Hasher {
 	 * @return string Content hash or a stable failure sentinel.
 	 */
 	public static function file_hash( string $path ): string {
+		if ( isset( self::$file_hashes[ $path ] ) ) {
+			return self::$file_hashes[ $path ];
+		}
+
 		$path = wp_normalize_path( $path );
 
 		if ( isset( self::$file_hashes[ $path ] ) ) {
@@ -192,6 +203,19 @@ final class Static_Prerender_Content_Hasher {
 		self::$directory_scans  = 0;
 		self::$engine_assets    = null;
 		self::$shared_snapshots = array();
+		++self::$generation;
+	}
+
+	/**
+	 * Identify the current request-local hash state.
+	 *
+	 * Results derived from file hashes stay valid until the next reset,
+	 * which may follow a change to the files.
+	 *
+	 * @return int Generation.
+	 */
+	public static function generation(): int {
+		return self::$generation;
 	}
 
 	/**
