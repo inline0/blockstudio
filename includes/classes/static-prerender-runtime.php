@@ -69,6 +69,34 @@ final class Static_Prerender_Runtime {
 	private const QUEUE_TIMEOUT_SECONDS = 300;
 
 	/**
+	 * Chunks with more IDs than this count as shared when a page hash is derived.
+	 *
+	 * @var int
+	 */
+	private const CHUNK_BASE_MIN_IDS = 8;
+
+	/**
+	 * How many shared chunk lists keep their sorted hashes.
+	 *
+	 * @var int
+	 */
+	private const CHUNK_BASE_LIMIT = 32;
+
+	/**
+	 * How many chunk lists requested once are remembered.
+	 *
+	 * @var int
+	 */
+	private const CHUNK_BASE_REQUEST_LIMIT = 256;
+
+	/**
+	 * How many hashes of small chunks are inserted into a shared list before sorting them all is cheaper.
+	 *
+	 * @var int
+	 */
+	private const CHUNK_INSERT_LIMIT = 64;
+
+	/**
 	 * Whether hooks were registered.
 	 *
 	 * @var bool
@@ -139,6 +167,23 @@ final class Static_Prerender_Runtime {
 	private static int $dependency_chunk_generation = -1;
 
 	/**
+	 * Sorted file hashes of the large chunks recent records share, by chunk list.
+	 *
+	 * Null where those chunks name one ID twice. Holds the latest
+	 * CHUNK_BASE_LIMIT lists only, taken from the chunks this process read.
+	 *
+	 * @var array<string,array{ids:array<string,string>,sorted:list<string>,joined:string,offsets:list<int>,plain:bool}|null>
+	 */
+	private static array $chunk_bases = array();
+
+	/**
+	 * Chunk lists requested once, which a second request turns into a base.
+	 *
+	 * @var array<string,true>
+	 */
+	private static array $chunk_base_requests = array();
+
+	/**
 	 * Cache scope directories resolved once while a whole-site pass runs.
 	 *
 	 * Null outside such a pass, so every other caller resolves its scope
@@ -147,6 +192,15 @@ final class Static_Prerender_Runtime {
 	 * @var array<string,string>|null
 	 */
 	private static ?array $scope_directories = null;
+
+	/**
+	 * Directories made ready and the home path, resolved once while a whole-site pass runs.
+	 *
+	 * Null outside such a pass, like the scope directories they derive from.
+	 *
+	 * @var array<string,string>|null
+	 */
+	private static ?array $pass_values = null;
 
 	/**
 	 * Report ID of the dependency report the current warm request writes.
@@ -495,12 +549,34 @@ final class Static_Prerender_Runtime {
 			return false;
 		}
 
+		return self::path_has_prefix( $path, $prefixes, self::dynamic_home_path() );
+	}
+
+	/**
+	 * Resolve the home path dynamic prefixes are relative to.
+	 *
+	 * @return string Home path with a trailing slash.
+	 */
+	private static function dynamic_home_path(): string {
 		$home_path = function_exists( 'home_url' )
 			? self::url_path( (string) home_url( '/' ) )
 			: '/';
 		$home_path = '/' . trim( $home_path, '/' );
-		$home_path = '/' === $home_path ? '/' : $home_path . '/';
-		$path      = strtolower( '/' . ltrim( $path, '/' ) );
+
+		return '/' === $home_path ? '/' : $home_path . '/';
+	}
+
+	/**
+	 * Whether a path falls under one of the dynamic prefixes.
+	 *
+	 * @param string       $path      Request path.
+	 * @param array<mixed> $prefixes  Dynamic path prefixes.
+	 * @param string       $home_path Home path with a trailing slash.
+	 *
+	 * @return bool Whether dynamic.
+	 */
+	private static function path_has_prefix( string $path, array $prefixes, string $home_path ): bool {
+		$path = strtolower( '/' . ltrim( $path, '/' ) );
 
 		foreach ( $prefixes as $prefix ) {
 			if ( ! is_string( $prefix ) || '' === trim( $prefix ) ) {
@@ -969,16 +1045,7 @@ final class Static_Prerender_Runtime {
 		}
 
 		$urls = array_merge( $urls, self::public_post_urls(), self::public_term_urls() );
-		$urls = array_values(
-			array_filter(
-				self::unique_cacheable_urls( $urls ),
-				static function ( string $url ): bool {
-					$path = self::url_path( $url );
-
-					return ! self::is_dynamic_path( $path ) && ! self::is_bypassed_path( $path );
-				}
-			)
-		);
+		$urls = self::routable_urls( self::unique_cacheable_urls( $urls ) );
 
 		/**
 		 * Filter public URLs included by static prerender builds.
@@ -992,13 +1059,30 @@ final class Static_Prerender_Runtime {
 			is_array( $filtered ) ? array_values( array_filter( $filtered, 'is_string' ) ) : $urls
 		);
 
+		return self::routable_urls( $filtered );
+	}
+
+	/**
+	 * Keep the URLs whose paths are neither dynamic nor bypassed.
+	 *
+	 * The dynamic prefixes and the home path are read once for the list
+	 * rather than once per URL.
+	 *
+	 * @param string[] $urls URLs.
+	 *
+	 * @return string[] URLs.
+	 */
+	private static function routable_urls( array $urls ): array {
+		$prefixes  = (array) self::value( 'staticPrerender/dynamicPaths', array() );
+		$home_path = array() === $prefixes ? '/' : self::dynamic_home_path();
+
 		return array_values(
 			array_filter(
-				$filtered,
-				static function ( string $url ): bool {
+				$urls,
+				static function ( string $url ) use ( $prefixes, $home_path ): bool {
 					$path = self::url_path( $url );
 
-					return ! self::is_dynamic_path( $path ) && ! self::is_bypassed_path( $path );
+					return ! self::path_has_prefix( $path, $prefixes, $home_path ) && ! self::is_bypassed_path( $path );
 				}
 			)
 		);
@@ -1139,7 +1223,7 @@ final class Static_Prerender_Runtime {
 						null === $desired_key ||
 						$key !== $desired_key ||
 						'' === $key ||
-						( ! is_file( self::cache_file( $key ) ) && ! is_file( self::artifact_file( $key ) ) )
+						( ! is_file( self::artifact_file( $key ) ) && ! is_file( self::cache_file( $key ) ) )
 					) {
 						$url_reasons[] = 'cache';
 					}
@@ -1716,9 +1800,10 @@ final class Static_Prerender_Runtime {
 			return null;
 		}
 
-		$source_home = function_exists( 'home_url' )
-			? self::url_path( (string) home_url( '/' ) )
-			: '/';
+		$source_home = self::pass_value(
+			'home',
+			static fn(): string => function_exists( 'home_url' ) ? self::url_path( (string) home_url( '/' ) ) : '/'
+		);
 		$source_home = '/' . trim( $source_home, '/' );
 		$source_home = '/' === $source_home ? '/' : $source_home . '/';
 		$source_path = '/' . ltrim( (string) ( $source_parts['path'] ?? '/' ), '/' );
@@ -1769,7 +1854,10 @@ final class Static_Prerender_Runtime {
 		self::$index_record_cache     = array();
 		self::$dependency_set_cache   = array();
 		self::$dependency_chunk_clean = array();
+		self::$chunk_bases            = array();
+		self::$chunk_base_requests    = array();
 		self::$scope_directories      = null;
+		self::$pass_values            = null;
 		self::$dependency_report      = null;
 		self::$dependencies           = array();
 		self::$search_path_prefixes   = array();
@@ -1933,7 +2021,12 @@ final class Static_Prerender_Runtime {
 	 * @return string Path.
 	 */
 	private static function artifact_file( string $key ): string {
-		return rtrim( wp_normalize_path( self::scope_directory( 'static-prerender-artifact' ) ), '/' ) . '/' . sanitize_file_name( $key ) . '.html';
+		$root = self::pass_value(
+			'artifact',
+			static fn(): string => rtrim( wp_normalize_path( self::scope_directory( 'static-prerender-artifact' ) ), '/' )
+		);
+
+		return $root . '/' . self::file_name( $key ) . '.html';
 	}
 
 	/**
@@ -1966,13 +2059,57 @@ final class Static_Prerender_Runtime {
 	 */
 	private static function with_scope_directories( callable $pass ): mixed {
 		$outer                     = self::$scope_directories;
+		$outer_values              = self::$pass_values;
 		self::$scope_directories ??= array();
+		self::$pass_values       ??= array();
 
 		try {
 			return $pass();
 		} finally {
 			self::$scope_directories = $outer;
+			self::$pass_values       = $outer_values;
 		}
+	}
+
+	/**
+	 * Resolve one value no route of a whole-site pass changes, once per pass.
+	 *
+	 * @param string             $name    Value name within the pass.
+	 * @param callable(): string $resolve Resolver, which may create a directory it names.
+	 *
+	 * @return string Value.
+	 */
+	private static function pass_value( string $name, callable $resolve ): string {
+		if ( null === self::$pass_values ) {
+			return $resolve();
+		}
+
+		return self::$pass_values[ $name ] ??= $resolve();
+	}
+
+	/**
+	 * Turn a cache key or content hash into its file name.
+	 *
+	 * A lowercase SHA-256 hex string is a name sanitize_file_name() returns
+	 * unchanged, so it skips the sanitizer and the mime type scan that runs
+	 * for names without a dot, as long as no filter can change that result.
+	 *
+	 * @param string $name Name.
+	 *
+	 * @return string File name.
+	 */
+	private static function file_name( string $name ): string {
+		if (
+			64 === strlen( $name ) &&
+			64 === strspn( $name, '0123456789abcdef' ) &&
+			false === has_filter( 'sanitize_file_name' ) &&
+			false === has_filter( 'sanitize_file_name_chars' ) &&
+			false === has_filter( 'mime_types' )
+		) {
+			return $name;
+		}
+
+		return sanitize_file_name( $name );
 	}
 
 	/**
@@ -1983,7 +2120,7 @@ final class Static_Prerender_Runtime {
 	 * @return string Path.
 	 */
 	private static function cache_file( string $key ): string {
-		return self::cache_root() . '/' . sanitize_file_name( $key ) . '.html';
+		return self::cache_root() . '/' . self::file_name( $key ) . '.html';
 	}
 
 	/**
@@ -2001,12 +2138,22 @@ final class Static_Prerender_Runtime {
 	 * @return string Root.
 	 */
 	private static function state_root(): string {
-		$root = self::scope_directory( 'static-prerender-state' );
-		if ( ! is_dir( $root ) ) {
-			wp_mkdir_p( $root );
+		return self::pass_value( 'state', static fn(): string => self::ready_directory( self::scope_directory( 'static-prerender-state' ) ) );
+	}
+
+	/**
+	 * Create a directory when it is missing.
+	 *
+	 * @param string $directory Directory.
+	 *
+	 * @return string Directory.
+	 */
+	private static function ready_directory( string $directory ): string {
+		if ( ! is_dir( $directory ) ) {
+			wp_mkdir_p( $directory );
 		}
 
-		return $root;
+		return $directory;
 	}
 
 	/**
@@ -2051,15 +2198,15 @@ final class Static_Prerender_Runtime {
 			return self::$index_record_cache[ $id ];
 		}
 
-		$path = self::index_path( $id );
-		if ( ! is_file( $path ) || ! is_readable( $path ) ) {
+		$path     = self::index_path( $id );
+		$contents = is_file( $path ) ? @file_get_contents( $path ) : false; // phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged, WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Reading local graph state that may be unreadable.
+		if ( false === $contents ) {
 			self::$index_record_cache[ $id ] = null;
 
 			return null;
 		}
 
-		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Reading local graph state.
-		$decoded = json_decode( (string) file_get_contents( $path ), true );
+		$decoded = json_decode( $contents, true );
 		if ( ! is_array( $decoded ) ) {
 			self::$index_record_cache[ $id ] = null;
 
@@ -2130,13 +2277,148 @@ final class Static_Prerender_Runtime {
 			if ( null === $chunk ) {
 				return null;
 			}
-			$maps[] = $chunk['hashes'];
+			$maps[ $hash ] = $chunk['hashes'];
 		}
 
 		return array(
-			'pageHash'     => Static_Prerender_Content_Hasher::content_hash( array_merge( ...$maps ) ),
+			'pageHash'     => count( $maps ) === count( $chunks )
+				? self::chunks_content_hash( $maps )
+				: Static_Prerender_Content_Hasher::content_hash( array_merge( ...array_values( $maps ) ) ),
 			'changedFiles' => array(),
 		);
+	}
+
+	/**
+	 * Derive the content hash of distinct chunks' merged dependency hashes.
+	 *
+	 * The page hash sorts every file hash a route reads, and routes of one
+	 * family share most of their chunks. The large chunks are merged and
+	 * sorted once per chunk list, and the hashes of the small route-specific
+	 * chunks are inserted in order, which yields the same sorted list
+	 * whenever no ID appears twice. Anything else merges and sorts in full.
+	 *
+	 * @param array<string,array<string,string>> $maps Dependency hashes by chunk hash, in record order.
+	 *
+	 * @return string Content hash.
+	 */
+	private static function chunks_content_hash( array $maps ): string {
+		$shared = array();
+		$small  = array();
+		$count  = 0;
+		foreach ( $maps as $hash => $map ) {
+			if ( count( $map ) > self::CHUNK_BASE_MIN_IDS ) {
+				$shared[ $hash ] = $map;
+			} else {
+				$small[] = $map;
+				$count  += count( $map );
+			}
+		}
+		$base = $count > self::CHUNK_INSERT_LIMIT ? null : self::chunk_base( $shared );
+		if ( null === $base ) {
+			return Static_Prerender_Content_Hasher::content_hash( array_merge( ...array_values( $maps ) ) );
+		}
+
+		$values = array();
+		$seen   = array();
+		foreach ( $small as $map ) {
+			foreach ( $map as $id => $value ) {
+				if ( isset( $base['ids'][ $id ] ) || isset( $seen[ $id ] ) ) {
+					return Static_Prerender_Content_Hasher::content_hash( array_merge( ...array_values( $maps ) ) );
+				}
+				$seen[ $id ] = true;
+				$values[]    = $value;
+			}
+		}
+		sort( $values, SORT_STRING );
+
+		$sorted  = $base['sorted'];
+		$size    = count( $sorted );
+		$plain   = $base['plain'] && $size + count( $values ) > 0;
+		$pieces  = array();
+		$offsets = $base['offsets'];
+		$start   = 0;
+		foreach ( $values as $value ) {
+			$plain = $plain && strlen( $value ) === strspn( $value, Static_Prerender_Content_Hasher::PLAIN_CHARACTERS );
+			$low   = $start;
+			$high  = $size;
+			while ( $low < $high ) {
+				$middle = ( $low + $high ) >> 1;
+				if ( strcmp( $sorted[ $middle ], $value ) < 0 ) {
+					$low = $middle + 1;
+				} else {
+					$high = $middle;
+				}
+			}
+			if ( $low > $start ) {
+				$pieces[] = substr( $base['joined'], $offsets[ $start ], $offsets[ $low ] - $offsets[ $start ] - 3 );
+			}
+			$pieces[] = $value;
+			$start    = $low;
+		}
+		if ( $start < $size ) {
+			$pieces[] = substr( $base['joined'], $offsets[ $start ] );
+		}
+
+		return $plain
+			? Static_Prerender_Content_Hasher::joined_content_hash( implode( '","', $pieces ) )
+			: Static_Prerender_Content_Hasher::content_hash( array_merge( ...array_values( $maps ) ) );
+	}
+
+	/**
+	 * Merge and sort the hashes of one list of large chunks, once per list.
+	 *
+	 * @param array<string,array<string,string>> $maps Dependency hashes by chunk hash.
+	 *
+	 * @return array{ids:array<string,string>,sorted:list<string>,joined:string,offsets:list<int>,plain:bool}|null Base, or null when an ID appears twice.
+	 */
+	private static function chunk_base( array $maps ): ?array {
+		$key = implode( ',', array_keys( $maps ) );
+		if ( array_key_exists( $key, self::$chunk_bases ) ) {
+			return self::$chunk_bases[ $key ];
+		}
+		if ( ! isset( self::$chunk_base_requests[ $key ] ) ) {
+			if ( count( self::$chunk_base_requests ) >= self::CHUNK_BASE_REQUEST_LIMIT ) {
+				unset( self::$chunk_base_requests[ array_key_first( self::$chunk_base_requests ) ] );
+			}
+			self::$chunk_base_requests[ $key ] = true;
+
+			return null;
+		}
+		unset( self::$chunk_base_requests[ $key ] );
+
+		$ids   = array() === $maps ? array() : array_merge( ...array_values( $maps ) );
+		$total = 0;
+		foreach ( $maps as $map ) {
+			$total += count( $map );
+		}
+		$base = null;
+		if ( count( $ids ) === $total ) {
+			$sorted = array_values( $ids );
+			sort( $sorted, SORT_STRING );
+			$joined  = implode( '","', $sorted );
+			$offsets = array( 0 );
+			$offset  = 0;
+			foreach ( $sorted as $value ) {
+				$offset   += strlen( $value ) + 3;
+				$offsets[] = $offset;
+			}
+			$base = array(
+				'ids'     => $ids,
+				'sorted'  => $sorted,
+				'joined'  => $joined,
+				'offsets' => $offsets,
+				'plain'   => array() === $sorted || (
+					strlen( $joined ) === strspn( $joined, Static_Prerender_Content_Hasher::PLAIN_CHARACTERS . '"' ) &&
+					substr_count( $joined, '"' ) === 2 * ( count( $sorted ) - 1 )
+				),
+			);
+		}
+		if ( count( self::$chunk_bases ) >= self::CHUNK_BASE_LIMIT ) {
+			unset( self::$chunk_bases[ array_key_first( self::$chunk_bases ) ] );
+		}
+		self::$chunk_bases[ $key ] = $base;
+
+		return $base;
 	}
 
 	/**
@@ -2385,12 +2667,9 @@ final class Static_Prerender_Runtime {
 	 * @return string Path.
 	 */
 	private static function dependency_set_path( string $hash ): string {
-		$root = self::state_root() . '/dependency-sets';
-		if ( ! is_dir( $root ) ) {
-			wp_mkdir_p( $root );
-		}
+		$root = self::pass_value( 'dependency-sets', static fn(): string => self::ready_directory( self::state_root() . '/dependency-sets' ) );
 
-		return $root . '/' . sanitize_file_name( $hash ) . '.json';
+		return $root . '/' . self::file_name( $hash ) . '.json';
 	}
 
 	/**
@@ -2420,12 +2699,9 @@ final class Static_Prerender_Runtime {
 	 * @return string Path.
 	 */
 	private static function index_path( string $id ): string {
-		$root = self::state_root() . '/url-index';
-		if ( ! is_dir( $root ) ) {
-			wp_mkdir_p( $root );
-		}
+		$root = self::pass_value( 'url-index', static fn(): string => self::ready_directory( self::state_root() . '/url-index' ) );
 
-		return $root . '/' . sanitize_file_name( $id ) . '.json';
+		return $root . '/' . self::file_name( $id ) . '.json';
 	}
 
 	/**

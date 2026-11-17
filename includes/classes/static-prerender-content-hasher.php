@@ -15,6 +15,13 @@ namespace Blockstudio;
 final class Static_Prerender_Content_Hasher {
 
 	/**
+	 * Characters of a dependency hash the encoder writes into JSON unchanged.
+	 *
+	 * @var string
+	 */
+	public const PLAIN_CHARACTERS = '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ,';
+
+	/**
 	 * Request-local file hash memo.
 	 *
 	 * @var array<string,string>
@@ -55,6 +62,13 @@ final class Static_Prerender_Content_Hasher {
 	 * @var int
 	 */
 	private static int $generation = 0;
+
+	/**
+	 * Normalized dependency ID roots by theme root.
+	 *
+	 * @var array<string,array<string,string>>
+	 */
+	private static array $roots = array();
 
 	/**
 	 * Hash one file once per request.
@@ -193,6 +207,22 @@ final class Static_Prerender_Content_Hasher {
 	}
 
 	/**
+	 * Hash dependency contents that are already sorted and joined.
+	 *
+	 * Gives what content_hash() gives for a map whose values, sorted as
+	 * strings, joined by `","` make this string, provided the map has at
+	 * least one value and every value consists of PLAIN_CHARACTERS only,
+	 * because the encoder writes such a list as exactly these bytes.
+	 *
+	 * @param string $joined Sorted dependency hashes joined by `","`.
+	 *
+	 * @return string Hash.
+	 */
+	public static function joined_content_hash( string $joined ): string {
+		return hash( 'xxh128', '["' . $joined . '"]' );
+	}
+
+	/**
 	 * Reset request-local hash state.
 	 *
 	 * @return void
@@ -239,19 +269,7 @@ final class Static_Prerender_Content_Hasher {
 	 * @return string|null Path, or null for IDs that do not name a root.
 	 */
 	public static function path_for_id( string $id, ?string $theme_root ): ?string {
-		$roots = array();
-		if ( null !== $theme_root && '' !== trim( $theme_root ) ) {
-			$roots['theme'] = wp_normalize_path( $theme_root );
-		}
-		if ( defined( 'WP_PLUGIN_DIR' ) ) {
-			$roots['plugins'] = wp_normalize_path( (string) WP_PLUGIN_DIR );
-		}
-		if ( defined( 'WPMU_PLUGIN_DIR' ) ) {
-			$roots['mu-plugins'] = wp_normalize_path( (string) WPMU_PLUGIN_DIR );
-		}
-		if ( defined( 'ABSPATH' ) ) {
-			$roots['wordpress'] = wp_normalize_path( (string) ABSPATH );
-		}
+		$roots  = self::roots( $theme_root );
 		$slash  = strpos( $id, '/' );
 		$prefix = false === $slash ? '' : substr( $id, 0, $slash );
 		if ( ! isset( $roots[ $prefix ] ) ) {
@@ -273,8 +291,32 @@ final class Static_Prerender_Content_Hasher {
 	 */
 	private static function dependency_id( string $path, ?string $theme_root ): string {
 		$path  = wp_normalize_path( $path );
-		$roots = array();
+		$roots = self::roots( $theme_root );
 
+		foreach ( $roots as $prefix => $root ) {
+			$root = rtrim( $root, '/' );
+			if ( $path === $root || str_starts_with( $path, $root . '/' ) ) {
+				return $prefix . '/' . ltrim( substr( $path, strlen( $root ) ), '/' );
+			}
+		}
+
+		return 'external/' . basename( $path );
+	}
+
+	/**
+	 * Resolve the normalized roots dependency IDs are relative to, once per theme root.
+	 *
+	 * @param string|null $theme_root Theme root.
+	 *
+	 * @return array<string,string> Roots by ID prefix.
+	 */
+	private static function roots( ?string $theme_root ): array {
+		$memo = null === $theme_root ? "\0" : $theme_root;
+		if ( isset( self::$roots[ $memo ] ) ) {
+			return self::$roots[ $memo ];
+		}
+
+		$roots = array();
 		if ( null !== $theme_root && '' !== trim( $theme_root ) ) {
 			$roots['theme'] = wp_normalize_path( $theme_root );
 		}
@@ -288,14 +330,9 @@ final class Static_Prerender_Content_Hasher {
 			$roots['wordpress'] = wp_normalize_path( (string) ABSPATH );
 		}
 
-		foreach ( $roots as $prefix => $root ) {
-			$root = rtrim( $root, '/' );
-			if ( $path === $root || str_starts_with( $path, $root . '/' ) ) {
-				return $prefix . '/' . ltrim( substr( $path, strlen( $root ) ), '/' );
-			}
-		}
+		self::$roots[ $memo ] = $roots;
 
-		return 'external/' . basename( $path );
+		return $roots;
 	}
 
 	/**
