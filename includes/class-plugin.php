@@ -298,6 +298,7 @@ class Plugin {
 		Perf::init();
 
 		add_filter( 'the_content', array( Block::class, 'prime_content_attachments' ), 8 );
+		add_filter( 'render_block_data', array( Block::class, 'normalize_imported_block' ) );
 
 		add_action(
 			'init',

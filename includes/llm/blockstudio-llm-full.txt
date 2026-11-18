@@ -6300,17 +6300,33 @@ objects; custom field types use their registered attribute type.
 An `attributes` field holds a list of pairs with a non-empty `attribute` name
 and a scalar `value`; optional metadata such as `data.media` is preserved.
 
-WordPress validates registered top-level attributes before rendering, which
-can reject a shape accepted inside `blockstudio.attributes`. For example, a
-radio value of `"a"` works in the nested object but is dropped at the top level,
-where its registered type is `object`. Such a value produces `wrong_type`.
-Use the nested object for the same storage shape the editor writes.
+For Blockstudio-owned blocks, imported comment fields are normalized into
+`blockstudio.attributes` before rendering and when the editor parses the
+comment. Scalar select, radio, and checkbox values are accepted without being
+replaced by WordPress's object or array defaults. Other flat fields still have
+to satisfy their registered WordPress type. Explicit nested values always win,
+including `null`, `false`, `0`, empty strings, and empty arrays. WordPress-owned
+attributes and core or third-party blocks are not rewritten.
+
+Use the nested object when generating content. It is the actual saved field
+container, not a second copy that must accompany flat fields:
+
+```html
+<!-- wp:acme/example {"blockstudio":{"attributes":{"heading":"Hello","side":"left"}}} /-->
+```
+
+Existing nested content and option objects remain supported. Normalization
+does not update posts in the database or run a migration. An editor save writes
+imported fields using the existing nested format. Direct requests to WordPress's
+block-renderer REST endpoint should also use this canonical nested payload;
+that endpoint validates its request before the block-rendering pipeline runs.
 
 Missing fields are not required. Empty nested values (`null`, `false`, `''`,
 `[]`) and disabled fields do not produce value errors. An explicitly empty
 repeater is still checked against `min`; an absent or disabled repeater is not.
-An empty top-level value is reported if WordPress drops it and restores a
-non-empty default instead. The same value in the nested object can clear it.
+An empty flat selection also clears the field rather than restoring its default.
+Other invalid top-level shapes still produce `wrong_type` when WordPress would
+drop them; normalization does not bypass ordinary field type checks.
 Definition conflicts are reported even when the key has no saved value.
 
 Static options and populate options already resolved at registration are
@@ -10115,6 +10131,21 @@ add_filter('blockstudio/tailwind/cache_max_age', function() {
 });
 ```
 
+### blockstudio/tailwind/sources
+
+Filters the source files and directories whose class candidates every page
+stylesheet includes. With sources, pages link one stylesheet built from the
+candidates found in them, so a site shares a single cached file instead of one
+per page. A page that uses utilities outside the sources links that set plus
+its own extra utilities. The scan is cached under a signature of each file's
+path, size and modification time.
+
+```php
+add_filter('blockstudio/tailwind/sources', function() {
+  return [get_template_directory() . '/src'];
+});
+```
+
 ## Admin
 
 ### enabled
@@ -12107,6 +12138,14 @@ pages. `removedPages` lists each removed page's `name`, `key`, `postId`, and
 actual `action` (`trash` or `delete`); kept or already-trashed posts are not
 counted as newly removed. CLI table output also names created, updated,
 locked, removed, and content-preserved pages with their post IDs.
+
+For hierarchical post types, a child with an unresolved parent is reported as
+`failed` with a `parent_unavailable` error naming the parent. Sync does not create
+it as a top-level page or reparent an existing child. Fix the parent's failure
+(for example, an unrelated page occupying its slug), then run sync again.
+Parents are processed before their children, so the retry restores the intended
+hierarchy. Non-hierarchical post types do not require a parent post. CLI table
+output includes error codes and messages; JSON output retains them in `errors`.
 
 After parsing and keyed merging, an identical final post does not call
 `wp_update_post()`, change `post_modified`, create a revision, or fire post

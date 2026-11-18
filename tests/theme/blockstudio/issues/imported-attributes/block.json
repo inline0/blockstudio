@@ -1,0 +1,16 @@
+{
+  "$schema": "https://blockstudio.dev/schema/block",
+  "name": "blockstudio/issue-208",
+  "title": "Imported attributes",
+  "category": "blockstudio-test-native",
+  "supports": { "align": true },
+  "blockstudio": {
+    "attributes": [
+      { "id": "heading", "type": "text", "label": "Heading" },
+      { "id": "side", "type": "select", "label": "Side", "options": [
+        { "value": "left", "label": "Left" },
+        { "value": "right", "label": "Right" }
+      ], "default": "right" }
+    ]
+  }
+}

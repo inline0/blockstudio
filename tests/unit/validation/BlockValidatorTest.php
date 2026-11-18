@@ -462,14 +462,12 @@ class BlockValidatorTest extends TestCase {
 		$this->assertSame( 'missing_container', $findings[0]['code'] );
 	}
 
-	public function test_top_level_values_follow_wordpress_attribute_validation(): void {
+	public function test_top_level_selections_are_normalized_before_wordpress_validation(): void {
 		$this->assertSame( array(), $this->validate( array( 'radio' => 'a' ) ) );
 		$this->assertSame( 'a', $this->rendered( $this->attrs( array( 'radio' => 'a' ) ) )['radio'] );
 		$findings = bs_validate_block( self::NAME, array( 'radio' => 'a' ) );
-		$this->assertSame( array( 'wrong_type' ), array_column( $findings, 'code' ) );
-		$this->assertSame( 'radio', $findings[0]['path'] );
-		$this->assertSame( 'object', $findings[0]['expected'] );
-		$this->assertFalse( $this->rendered( array( 'radio' => 'a' ) )['radio'] );
+		$this->assertSame( array(), $findings );
+		$this->assertSame( 'a', $this->rendered( array( 'radio' => 'a' ) )['radio'] );
 		$this->assertSame( array(), bs_validate_block( self::NAME, array( 'radio' => array( 'value' => 'a', 'label' => 'A' ) ) ) );
 		$this->assertSame( array(), bs_validate_block( self::NAME, array( 'radio' => '', 'blockstudio' => array( 'disabled' => array( 'radio' ) ) ) ) );
 	}
@@ -487,11 +485,11 @@ class BlockValidatorTest extends TestCase {
 		$this->assertSame( array(), $this->validate( array( 'extra' => 'Nested' ) ) );
 	}
 
-	public function test_empty_top_level_values_report_when_wordpress_restores_a_default(): void {
+	public function test_empty_top_level_selections_clear_instead_of_restoring_defaults(): void {
 		$attrs = array( 'presetChoice' => false );
 		$findings = bs_validate_block( self::NAME, $attrs );
-		$this->assertSame( 'wrong_type', $findings[0]['code'] );
-		$this->assertSame( 'b', $this->rendered( $attrs )['presetChoice'] );
+		$this->assertSame( array(), $findings );
+		$this->assertFalse( $this->rendered( $attrs )['presetChoice'] );
 		$this->assertSame( array(), $this->validate( array( 'presetChoice' => false ) ) );
 		$this->assertFalse( $this->rendered( $this->attrs( array( 'presetChoice' => false ) ) )['presetChoice'] );
 	}

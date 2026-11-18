@@ -15,6 +15,13 @@ namespace Blockstudio;
 final class Static_Prerender_Content_Hasher {
 
 	/**
+	 * Characters of a dependency hash the encoder writes into JSON unchanged.
+	 *
+	 * @var string
+	 */
+	public const PLAIN_CHARACTERS = '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ,';
+
+	/**
 	 * Request-local file hash memo.
 	 *
 	 * @var array<string,string>
@@ -43,6 +50,27 @@ final class Static_Prerender_Content_Hasher {
 	private static ?array $engine_assets = null;
 
 	/**
+	 * Request-local shared snapshots by theme root.
+	 *
+	 * @var array<string,array{hash:string,hashes:array<string,string>,paths:array<string,string>}>
+	 */
+	private static array $shared_snapshots = array();
+
+	/**
+	 * How often the request-local hash state was reset.
+	 *
+	 * @var int
+	 */
+	private static int $generation = 0;
+
+	/**
+	 * Normalized dependency ID roots by theme root.
+	 *
+	 * @var array<string,array<string,string>>
+	 */
+	private static array $roots = array();
+
+	/**
 	 * Hash one file once per request.
 	 *
 	 * @param string $path File path.
@@ -50,6 +78,10 @@ final class Static_Prerender_Content_Hasher {
 	 * @return string Content hash or a stable failure sentinel.
 	 */
 	public static function file_hash( string $path ): string {
+		if ( isset( self::$file_hashes[ $path ] ) ) {
+			return self::$file_hashes[ $path ];
+		}
+
 		$path = wp_normalize_path( $path );
 
 		if ( isset( self::$file_hashes[ $path ] ) ) {
@@ -105,6 +137,11 @@ final class Static_Prerender_Content_Hasher {
 	 * @return array{hash:string,hashes:array<string,string>,paths:array<string,string>}
 	 */
 	public static function shared_snapshot( ?string $theme_root ): array {
+		$memo = (string) $theme_root;
+		if ( isset( self::$shared_snapshots[ $memo ] ) ) {
+			return self::$shared_snapshots[ $memo ];
+		}
+
 		$paths            = null !== $theme_root && is_dir( $theme_root )
 			? self::shared_paths( $theme_root )
 			: array();
@@ -118,6 +155,8 @@ final class Static_Prerender_Content_Hasher {
 			)
 		);
 		$snapshot['hash'] = hash( 'xxh128', self::encode( $identity ) );
+
+		self::$shared_snapshots[ $memo ] = $snapshot;
 
 		return $snapshot;
 	}
@@ -168,15 +207,45 @@ final class Static_Prerender_Content_Hasher {
 	}
 
 	/**
+	 * Hash dependency contents that are already sorted and joined.
+	 *
+	 * Gives what content_hash() gives for a map whose values, sorted as
+	 * strings, joined by `","` make this string, provided the map has at
+	 * least one value and every value consists of PLAIN_CHARACTERS only,
+	 * because the encoder writes such a list as exactly these bytes.
+	 *
+	 * @param string $joined Sorted dependency hashes joined by `","`.
+	 *
+	 * @return string Hash.
+	 */
+	public static function joined_content_hash( string $joined ): string {
+		return hash( 'xxh128', '["' . $joined . '"]' );
+	}
+
+	/**
 	 * Reset request-local hash state.
 	 *
 	 * @return void
 	 */
 	public static function reset(): void {
-		self::$file_hashes     = array();
-		self::$file_reads      = 0;
-		self::$directory_scans = 0;
-		self::$engine_assets   = null;
+		self::$file_hashes      = array();
+		self::$file_reads       = 0;
+		self::$directory_scans  = 0;
+		self::$engine_assets    = null;
+		self::$shared_snapshots = array();
+		++self::$generation;
+	}
+
+	/**
+	 * Identify the current request-local hash state.
+	 *
+	 * Results derived from file hashes stay valid until the next reset,
+	 * which may follow a change to the files.
+	 *
+	 * @return int Generation.
+	 */
+	public static function generation(): int {
+		return self::$generation;
 	}
 
 	/**
@@ -192,6 +261,27 @@ final class Static_Prerender_Content_Hasher {
 	}
 
 	/**
+	 * Resolve the local path a portable dependency ID names, as dependency_id() built it.
+	 *
+	 * @param string      $id         Dependency ID.
+	 * @param string|null $theme_root Theme root.
+	 *
+	 * @return string|null Path, or null for IDs that do not name a root.
+	 */
+	public static function path_for_id( string $id, ?string $theme_root ): ?string {
+		$roots  = self::roots( $theme_root );
+		$slash  = strpos( $id, '/' );
+		$prefix = false === $slash ? '' : substr( $id, 0, $slash );
+		if ( ! isset( $roots[ $prefix ] ) ) {
+			return null;
+		}
+		$rest = (string) substr( $id, $slash + 1 );
+		$root = rtrim( $roots[ $prefix ], '/' );
+
+		return '' === $rest ? $root : $root . '/' . $rest;
+	}
+
+	/**
 	 * Build a portable dependency ID.
 	 *
 	 * @param string      $path       File path.
@@ -201,8 +291,32 @@ final class Static_Prerender_Content_Hasher {
 	 */
 	private static function dependency_id( string $path, ?string $theme_root ): string {
 		$path  = wp_normalize_path( $path );
-		$roots = array();
+		$roots = self::roots( $theme_root );
 
+		foreach ( $roots as $prefix => $root ) {
+			$root = rtrim( $root, '/' );
+			if ( $path === $root || str_starts_with( $path, $root . '/' ) ) {
+				return $prefix . '/' . ltrim( substr( $path, strlen( $root ) ), '/' );
+			}
+		}
+
+		return 'external/' . basename( $path );
+	}
+
+	/**
+	 * Resolve the normalized roots dependency IDs are relative to, once per theme root.
+	 *
+	 * @param string|null $theme_root Theme root.
+	 *
+	 * @return array<string,string> Roots by ID prefix.
+	 */
+	private static function roots( ?string $theme_root ): array {
+		$memo = null === $theme_root ? "\0" : $theme_root;
+		if ( isset( self::$roots[ $memo ] ) ) {
+			return self::$roots[ $memo ];
+		}
+
+		$roots = array();
 		if ( null !== $theme_root && '' !== trim( $theme_root ) ) {
 			$roots['theme'] = wp_normalize_path( $theme_root );
 		}
@@ -216,14 +330,9 @@ final class Static_Prerender_Content_Hasher {
 			$roots['wordpress'] = wp_normalize_path( (string) ABSPATH );
 		}
 
-		foreach ( $roots as $prefix => $root ) {
-			$root = rtrim( $root, '/' );
-			if ( $path === $root || str_starts_with( $path, $root . '/' ) ) {
-				return $prefix . '/' . ltrim( substr( $path, strlen( $root ) ), '/' );
-			}
-		}
+		self::$roots[ $memo ] = $roots;
 
-		return 'external/' . basename( $path );
+		return $roots;
 	}
 
 	/**

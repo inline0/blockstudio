@@ -2473,6 +2473,62 @@ class Block {
 	}
 
 	/**
+	 * Normalize imported comments before WordPress validates field attributes.
+	 *
+	 * @param array $parsed Parsed block.
+	 * @return array Parsed block with canonical field storage.
+	 * @internal
+	 */
+	public static function normalize_imported_block( array $parsed ): array {
+		if ( is_string( $parsed['blockName'] ?? null ) && is_array( $parsed['attrs'] ?? null ) ) {
+			$parsed['attrs'] = self::normalize_imported_attributes( $parsed['blockName'], $parsed['attrs'] );
+		}
+		return $parsed;
+	}
+
+	/**
+	 * Adopt declared flat fields without changing existing nested values.
+	 *
+	 * Only Blockstudio-owned blocks accept this shorthand. Core attributes and
+	 * extension-only blocks retain their native schemas and storage semantics.
+	 *
+	 * @param string $name  Block name.
+	 * @param array  $attrs Original comment attributes, before default expansion.
+	 * @return array Canonical attributes. Does not mutate stored content.
+	 * @internal
+	 */
+	public static function normalize_imported_attributes( string $name, array $attrs ): array {
+		$block = Build::blocks()[ $name ] ?? null;
+		if ( ! is_object( $block ) || ( array_key_exists( 'blockstudio', $attrs ) && ! is_array( $attrs['blockstudio'] ) ) ) {
+			return $attrs;
+		}
+		$settings = $attrs['blockstudio'] ?? array();
+		if ( array_key_exists( 'attributes', $settings ) && ! is_array( $settings['attributes'] ) ) {
+			return $attrs;
+		}
+		$values = $settings['attributes'] ?? array();
+		foreach ( $attrs as $key => $value ) {
+			$definition = $block->attributes[ $key ] ?? array();
+			if ( empty( $definition['blockstudio'] ) || empty( $definition['field'] ) ) {
+				continue;
+			}
+			if ( array_key_exists( $key, $values ) ) {
+				// Leave shadowed flat values intact for existing diagnostics.
+				continue;
+			}
+			$is_option = in_array( $definition['field'], array( 'select', 'radio', 'checkbox' ), true );
+			if ( ! ( $is_option && ( is_scalar( $value ) || null === $value ) ) && is_wp_error( rest_validate_value_from_schema( $value, $definition ) ) ) {
+				continue;
+			}
+			$values[ $key ]                     = $value;
+			$attrs['blockstudio']               = $settings + array( 'attributes' => array() );
+			$attrs['blockstudio']['attributes'] = $values;
+			unset( $attrs[ $key ] );
+		}
+		return $attrs;
+	}
+
+	/**
 	 * Resolve the values of a stored block as its template receives them.
 	 *
 	 * Runs the render-time steps without rendering: WordPress' check of the
@@ -2504,6 +2560,7 @@ class Block {
 		if ( is_object( $own ) ) {
 			// WordPress drops top-level values that fail the registered type
 			// and adds registered defaults before any render sees the attributes.
+			$attrs      = self::normalize_imported_attributes( $name, $attrs );
 			$registered = WP_Block_Type_Registry::get_instance()->get_registered( $name );
 			$attrs      = $registered ? $registered->prepare_attributes_for_render( $attrs ) : $attrs;
 		} else {

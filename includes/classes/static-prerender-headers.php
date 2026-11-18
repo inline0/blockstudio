@@ -217,7 +217,16 @@ final class Static_Prerender_Headers {
 			JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE
 		);
 
-		return is_string( $encoded ) && Single_Flight::publish( self::path( $document ), $encoded );
+		if ( ! is_string( $encoded ) ) {
+			return false;
+		}
+
+		$path = self::path( $document );
+		if ( is_file( $path ) && @file_get_contents( $path ) === $encoded ) { // phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged, WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- A local cache file a concurrent prune can remove between check and read.
+			return true;
+		}
+
+		return Single_Flight::publish( $path, $encoded );
 	}
 
 	/**

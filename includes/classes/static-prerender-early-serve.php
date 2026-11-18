@@ -409,10 +409,14 @@ final class Static_Prerender_Early_Serve {
 
 		return self::with_exclusive_lock(
 			$cache_dir . '/.build.lock',
-			static fn(): bool => self::with_exclusive_lock(
-				self::map_path() . '.lock',
-				static fn(): bool => self::install_artifact_entry_locked( $entry, $cache_dir )
-			)
+			static function () use ( $entry, $cache_dir ): bool {
+				$prepared = self::prepare_artifact_entry( $entry, $cache_dir );
+
+				return null !== $prepared && self::with_exclusive_lock(
+					self::map_path() . '.lock',
+					static fn(): bool => self::publish_artifact_entry( $prepared )
+				);
+			}
 		);
 	}
 
@@ -806,14 +810,18 @@ PHP;
 	}
 
 	/**
-	 * Install a graph entry while both locks are held.
+	 * Validate a graph entry and promote its route files under the build lock.
+	 *
+	 * Promotion only touches this site's artifact directory, so it runs
+	 * before the shared map lock is taken and the activations of several
+	 * sites no longer wait for each other's route files.
 	 *
 	 * @param array<string,mixed> $entry     Entry.
 	 * @param string              $cache_dir Cache directory.
 	 *
-	 * @return bool Whether installed.
+	 * @return array{key:string,entry:array<string,mixed>,build_id:string,dir:string}|null Map key, normalized entry, build id and artifact directory, or null when it cannot be installed.
 	 */
-	private static function install_artifact_entry_locked( array $entry, string $cache_dir ): bool {
+	private static function prepare_artifact_entry( array $entry, string $cache_dir ): ?array {
 		$host      = isset( $entry['host'] ) && is_scalar( $entry['host'] )
 			? strtolower( trim( (string) $entry['host'] ) )
 			: '';
@@ -832,7 +840,7 @@ PHP;
 		);
 
 		if ( '' === $host || str_contains( $host, '/' ) || str_contains( $host, "\0" ) ) {
-			return false;
+			return null;
 		}
 
 		$artifact_dir = rtrim( wp_normalize_path( Runtime_Cache::directory( 'static-prerender-artifact' ) ), '/' );
@@ -840,14 +848,14 @@ PHP;
 
 		foreach ( is_array( $entry['routes'] ?? null ) ? $entry['routes'] : array() as $path => $key ) {
 			if ( ! is_string( $path ) || ! is_string( $key ) || 1 !== preg_match( '/^[a-f0-9]{64}$/', $key ) ) {
-				return false;
+				return null;
 			}
 
 			$path = strtolower( '/' . ltrim( self::url_path( $path ), '/' ) );
 			$path = preg_replace( '#/+#', '/', $path );
 			$path = is_string( $path ) && '' !== $path ? $path : '/';
 			if ( ! str_starts_with( $path . '/', $home_path ) ) {
-				return false;
+				return null;
 			}
 
 			$source = $cache_dir . '/' . $key . '.html';
@@ -855,7 +863,7 @@ PHP;
 				( ! is_file( $source ) || ! is_readable( $source ) ) &&
 				( ! $promote || ! is_file( $artifact_dir . '/' . $key . '.html' ) )
 			) {
-				return false;
+				return null;
 			}
 
 			$routes[ $path ] = $key;
@@ -863,16 +871,16 @@ PHP;
 
 		ksort( $routes, SORT_STRING );
 		if ( array() === $routes ) {
-			return false;
+			return null;
 		}
 
 		if ( ! is_dir( $artifact_dir ) && ! wp_mkdir_p( $artifact_dir ) ) {
-			return false;
+			return null;
 		}
 		if ( $promote ) {
 			foreach ( $routes as $key ) {
 				if ( ! self::promote_route( $cache_dir . '/' . $key . '.html', $artifact_dir . '/' . $key . '.html' ) ) {
-					return false;
+					return null;
 				}
 			}
 		}
@@ -912,22 +920,39 @@ PHP;
 			'replay_headers'  => Static_Prerender_Headers::allowed(),
 			'routes'          => $routes,
 		);
-		$entries    = self::owned_map_entries();
+
+		return array(
+			'key'      => $host . '|' . $home_path,
+			'entry'    => $normalized,
+			'build_id' => $build_id,
+			'dir'      => $artifact_dir,
+		);
+	}
+
+	/**
+	 * Write a prepared graph entry into the map while the map lock is held.
+	 *
+	 * @param array{key:string,entry:array<string,mixed>,build_id:string,dir:string} $prepared Result of prepare_artifact_entry().
+	 *
+	 * @return bool Whether installed.
+	 */
+	private static function publish_artifact_entry( array $prepared ): bool {
+		$entries = self::owned_map_entries();
 
 		if ( null === $entries ) {
 			return false;
 		}
 
-		$entries[ $host . '|' . $home_path ] = $normalized;
+		$entries[ $prepared['key'] ] = $prepared['entry'];
 		if (
 			! self::ensure_dropin() ||
 			! self::write_map( $entries ) ||
-			! Static_Prerender_Identity::activate( $build_id )
+			! Static_Prerender_Identity::activate( $prepared['build_id'] )
 		) {
 			return false;
 		}
 
-		self::garbage_collect_after_swap( $entries, $artifact_dir );
+		self::garbage_collect_after_swap( $entries, $prepared['dir'] );
 
 		return true;
 	}

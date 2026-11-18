@@ -71,7 +71,9 @@ final class Block_Validator {
 
 		// Only a Blockstudio render reads declared top-level fields. An
 		// extension of a core/third-party block reads the nested object only.
-		$top = null === $fields ? array() : array_intersect_key( $attrs, $definitions );
+		$top             = null === $fields ? array() : array_intersect_key( $attrs, $definitions );
+		$imported        = Block::normalize_imported_attributes( $name, $attrs );
+		$imported_values = $imported['blockstudio']['attributes'] ?? array();
 		foreach ( $top as $key => $value ) {
 			if ( array_key_exists( $key, $values ) ) {
 				if ( $value !== $values[ $key ] ) {
@@ -87,7 +89,7 @@ final class Block_Validator {
 				( 0 === $value && ! Field_Type_Config::is_multiple_options( $entry['field']['type'], $entry['field'] ) );
 			// WordPress checks registered top-level attributes before Blockstudio
 			// sees them. The nested object is not subject to those field schemas.
-			if ( isset( $own[ $key ] ) && is_wp_error( rest_validate_value_from_schema( $value, $own[ $key ][0]['compiled'], (string) $key ) ) ) {
+			if ( isset( $own[ $key ] ) && ! array_key_exists( $key, $imported_values ) && is_wp_error( rest_validate_value_from_schema( $value, $own[ $key ][0]['compiled'], (string) $key ) ) ) {
 				if ( ! $empty || ! empty( $own[ $key ][0]['compiled']['default'] ) ) {
 					$findings[] = self::finding( 'wrong_type', self::path( '', $key ), 'block', $value, $own[ $key ][0]['compiled']['type'] ?? 'value' );
 				}

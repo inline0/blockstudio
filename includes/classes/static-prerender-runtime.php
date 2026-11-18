@@ -69,6 +69,34 @@ final class Static_Prerender_Runtime {
 	private const QUEUE_TIMEOUT_SECONDS = 300;
 
 	/**
+	 * Chunks with more IDs than this count as shared when a page hash is derived.
+	 *
+	 * @var int
+	 */
+	private const CHUNK_BASE_MIN_IDS = 8;
+
+	/**
+	 * How many shared chunk lists keep their sorted hashes.
+	 *
+	 * @var int
+	 */
+	private const CHUNK_BASE_LIMIT = 32;
+
+	/**
+	 * How many chunk lists requested once are remembered.
+	 *
+	 * @var int
+	 */
+	private const CHUNK_BASE_REQUEST_LIMIT = 256;
+
+	/**
+	 * How many hashes of small chunks are inserted into a shared list before sorting them all is cheaper.
+	 *
+	 * @var int
+	 */
+	private const CHUNK_INSERT_LIMIT = 64;
+
+	/**
 	 * Whether hooks were registered.
 	 *
 	 * @var bool
@@ -118,11 +146,75 @@ final class Static_Prerender_Runtime {
 	private static array $index_record_cache = array();
 
 	/**
+	 * Dependency chunks read in this process, by content hash.
+	 *
+	 * @var array<string,array{hashes:array<string,string>,paths:array<string,string>}|null>
+	 */
+	private static array $dependency_set_cache = array();
+
+	/**
+	 * Whether every file a dependency chunk names still has the hash it records, by chunk hash.
+	 *
+	 * @var array<string,bool>
+	 */
+	private static array $dependency_chunk_clean = array();
+
+	/**
+	 * The content hasher generation the chunk results were taken in.
+	 *
+	 * @var int
+	 */
+	private static int $dependency_chunk_generation = -1;
+
+	/**
+	 * Sorted file hashes of the large chunks recent records share, by chunk list.
+	 *
+	 * Null where those chunks name one ID twice. Holds the latest
+	 * CHUNK_BASE_LIMIT lists only, taken from the chunks this process read.
+	 *
+	 * @var array<string,array{ids:array<string,string>,sorted:list<string>,joined:string,offsets:list<int>,plain:bool}|null>
+	 */
+	private static array $chunk_bases = array();
+
+	/**
+	 * Chunk lists requested once, which a second request turns into a base.
+	 *
+	 * @var array<string,true>
+	 */
+	private static array $chunk_base_requests = array();
+
+	/**
+	 * Cache scope directories resolved once while a whole-site pass runs.
+	 *
+	 * Null outside such a pass, so every other caller resolves its scope
+	 * from the current runtime context.
+	 *
+	 * @var array<string,string>|null
+	 */
+	private static ?array $scope_directories = null;
+
+	/**
+	 * Directories made ready and the home path, resolved once while a whole-site pass runs.
+	 *
+	 * Null outside such a pass, like the scope directories they derive from.
+	 *
+	 * @var array<string,string>|null
+	 */
+	private static ?array $pass_values = null;
+
+	/**
 	 * Report ID of the dependency report the current warm request writes.
 	 *
 	 * @var string|null
 	 */
 	private static ?string $dependency_report = null;
+
+	/**
+	 * Whether this request leaves persistence to the batch renderer.
+	 *
+	 * @var bool
+	 */
+	private static bool $capture_suppressed = false;
 
 	/**
 	 * Files the current warm request read, keyed by path.
@@ -137,6 +229,13 @@ final class Static_Prerender_Runtime {
 	 * @var array<int,string>
 	 */
 	private static array $search_path_prefixes = array();
+
+	/**
+	 * How the most recent build render reached its artifact document.
+	 *
+	 * @var string
+	 */
+	private static string $last_artifact_write = '';
 
 	/**
 	 * Register runtime hooks.
@@ -255,12 +354,21 @@ final class Static_Prerender_Runtime {
 	}
 
 	/**
+	 * Whether the current request renders inside a batch prerender.
+	 *
+	 * @return bool
+	 */
+	private static function in_batch_render(): bool {
+		return class_exists( Static_Prerender_Batch_Renderer::class, false ) && Static_Prerender_Batch_Renderer::is_rendering();
+	}
+
+	/**
 	 * Serve a warm hit or begin capturing a cold anonymous response.
 	 *
 	 * @return void
 	 */
 	public static function maybe_serve_or_buffer(): void {
-		if ( Static_Prerender_Batch_Renderer::is_rendering() ) {
+		if ( self::in_batch_render() ) {
 			return;
 		}
 
@@ -441,12 +549,34 @@ final class Static_Prerender_Runtime {
 			return false;
 		}
 
+		return self::path_has_prefix( $path, $prefixes, self::dynamic_home_path() );
+	}
+
+	/**
+	 * Resolve the home path dynamic prefixes are relative to.
+	 *
+	 * @return string Home path with a trailing slash.
+	 */
+	private static function dynamic_home_path(): string {
 		$home_path = function_exists( 'home_url' )
 			? self::url_path( (string) home_url( '/' ) )
 			: '/';
 		$home_path = '/' . trim( $home_path, '/' );
-		$home_path = '/' === $home_path ? '/' : $home_path . '/';
-		$path      = strtolower( '/' . ltrim( $path, '/' ) );
+
+		return '/' === $home_path ? '/' : $home_path . '/';
+	}
+
+	/**
+	 * Whether a path falls under one of the dynamic prefixes.
+	 *
+	 * @param string       $path      Request path.
+	 * @param array<mixed> $prefixes  Dynamic path prefixes.
+	 * @param string       $home_path Home path with a trailing slash.
+	 *
+	 * @return bool Whether dynamic.
+	 */
+	private static function path_has_prefix( string $path, array $prefixes, string $home_path ): bool {
+		$path = strtolower( '/' . ltrim( $path, '/' ) );
 
 		foreach ( $prefixes as $prefix ) {
 			if ( ! is_string( $prefix ) || '' === trim( $prefix ) ) {
@@ -508,6 +638,15 @@ final class Static_Prerender_Runtime {
 	}
 
 	/**
+	 * Leave this request's persistence to the batch renderer that forked it.
+	 *
+	 * @return void
+	 */
+	public static function suppress_capture(): void {
+		self::$capture_suppressed = true;
+	}
+
+	/**
 	 * Persist a captured anonymous response.
 	 *
 	 * @param string $buffer Response buffer.
@@ -526,6 +665,7 @@ final class Static_Prerender_Runtime {
 			self::finish_dependency_report();
 
 			if (
+				self::$capture_suppressed ||
 				null === $key ||
 				! self::cacheable_html( $buffer, is_int( $status ) && $status > 0 ? $status : null )
 			) {
@@ -905,16 +1045,7 @@ final class Static_Prerender_Runtime {
 		}
 
 		$urls = array_merge( $urls, self::public_post_urls(), self::public_term_urls() );
-		$urls = array_values(
-			array_filter(
-				self::unique_cacheable_urls( $urls ),
-				static function ( string $url ): bool {
-					$path = self::url_path( $url );
-
-					return ! self::is_dynamic_path( $path ) && ! self::is_bypassed_path( $path );
-				}
-			)
-		);
+		$urls = self::routable_urls( self::unique_cacheable_urls( $urls ) );
 
 		/**
 		 * Filter public URLs included by static prerender builds.
@@ -928,13 +1059,30 @@ final class Static_Prerender_Runtime {
 			is_array( $filtered ) ? array_values( array_filter( $filtered, 'is_string' ) ) : $urls
 		);
 
+		return self::routable_urls( $filtered );
+	}
+
+	/**
+	 * Keep the URLs whose paths are neither dynamic nor bypassed.
+	 *
+	 * The dynamic prefixes and the home path are read once for the list
+	 * rather than once per URL.
+	 *
+	 * @param string[] $urls URLs.
+	 *
+	 * @return string[] URLs.
+	 */
+	private static function routable_urls( array $urls ): array {
+		$prefixes  = (array) self::value( 'staticPrerender/dynamicPaths', array() );
+		$home_path = array() === $prefixes ? '/' : self::dynamic_home_path();
+
 		return array_values(
 			array_filter(
-				$filtered,
-				static function ( string $url ): bool {
+				$urls,
+				static function ( string $url ) use ( $prefixes, $home_path ): bool {
 					$path = self::url_path( $url );
 
-					return ! self::is_dynamic_path( $path ) && ! self::is_bypassed_path( $path );
+					return ! self::path_has_prefix( $path, $prefixes, $home_path ) && ! self::is_bypassed_path( $path );
 				}
 			)
 		);
@@ -983,6 +1131,27 @@ final class Static_Prerender_Runtime {
 		?string $target_home = null,
 		bool $force = false
 	): array {
+		return self::with_scope_directories(
+			static fn(): array => self::plan_routes( $source_urls, $target_host, $target_home, $force )
+		);
+	}
+
+	/**
+	 * Compute the build plan inside one whole-site pass.
+	 *
+	 * @param string[]    $source_urls Source URLs.
+	 * @param string|null $target_host Optional target host.
+	 * @param string|null $target_home Optional target home path.
+	 * @param bool        $force       Force every URL.
+	 *
+	 * @return array<string,mixed> Build plan.
+	 */
+	private static function plan_routes(
+		array $source_urls,
+		?string $target_host,
+		?string $target_home,
+		bool $force
+	): array {
 		$source_urls = self::unique_cacheable_urls( $source_urls );
 		sort( $source_urls, SORT_STRING );
 		$live          = array();
@@ -991,6 +1160,7 @@ final class Static_Prerender_Runtime {
 		$changed_files = array();
 		$reasons       = array();
 		$shared        = Static_Prerender_Content_Hasher::shared_snapshot( self::theme_root() );
+		$ttl           = (int) self::value( 'staticPrerender/ttl', 86400 );
 
 		foreach ( $source_urls as $source_url ) {
 			$target_url = self::target_url( $source_url, $target_host, $target_home );
@@ -999,7 +1169,9 @@ final class Static_Prerender_Runtime {
 			}
 
 			$live[ $target_url ] = $source_url;
-			$record              = self::index_record_for_url( $target_url );
+			$stored              = self::stored_index_record( self::url_hash( $target_url ) );
+			$state               = null === $stored ? null : self::unchanged_graph_state( $stored );
+			$record              = null === $stored || null !== $state ? $stored : self::inflate_index_record( $stored );
 			$url_reasons         = array();
 
 			if ( $force ) {
@@ -1008,7 +1180,7 @@ final class Static_Prerender_Runtime {
 			if ( null === $record ) {
 				$url_reasons[] = 'new';
 			} else {
-				$state = self::graph_state_for_record( $record );
+				$state ??= self::graph_state_for_record( $record );
 
 				foreach ( $state['changedFiles'] as $file ) {
 					$changed_files[ $file ] = true;
@@ -1017,9 +1189,11 @@ final class Static_Prerender_Runtime {
 				$previous_shared = is_array( $record['sharedHashes'] ?? null )
 					? self::string_map( $record['sharedHashes'] )
 					: array();
-				foreach ( array_unique( array_merge( array_keys( $previous_shared ), array_keys( $shared['hashes'] ) ) ) as $file ) {
-					if ( ( $previous_shared[ $file ] ?? null ) !== ( $shared['hashes'][ $file ] ?? null ) ) {
-						$changed_files[ $file ] = true;
+				if ( $previous_shared !== $shared['hashes'] ) {
+					foreach ( array_unique( array_merge( array_keys( $previous_shared ), array_keys( $shared['hashes'] ) ) ) as $file ) {
+						if ( ( $previous_shared[ $file ] ?? null ) !== ( $shared['hashes'][ $file ] ?? null ) ) {
+							$changed_files[ $file ] = true;
+						}
 					}
 				}
 
@@ -1049,13 +1223,12 @@ final class Static_Prerender_Runtime {
 						null === $desired_key ||
 						$key !== $desired_key ||
 						'' === $key ||
-						! is_file( self::cache_file( $key ) )
+						( ! is_file( self::artifact_file( $key ) ) && ! is_file( self::cache_file( $key ) ) )
 					) {
 						$url_reasons[] = 'cache';
 					}
 				}
 
-				$ttl         = (int) self::value( 'staticPrerender/ttl', 86400 );
 				$last_warmed = is_numeric( $record['lastWarmed'] ?? null )
 					? (int) $record['lastWarmed']
 					: 0;
@@ -1076,8 +1249,7 @@ final class Static_Prerender_Runtime {
 		$removed = array();
 		$scope   = self::target_scope( $source_urls, $target_host, $target_home );
 
-		foreach ( self::all_index_records() as $record ) {
-			$url = is_string( $record['url'] ?? null ) ? $record['url'] : '';
+		foreach ( self::index_record_urls() as $url ) {
 			if ( '' !== $url && self::url_in_scope( $url, $scope ) && ! isset( $live[ $url ] ) ) {
 				$removed[] = $url;
 			}
@@ -1268,7 +1440,12 @@ final class Static_Prerender_Runtime {
 		$shared    = Static_Prerender_Content_Hasher::shared_snapshot( $theme_root );
 		$key       = self::cache_key_for_url_hashes( $target_url, $shared['hash'], $page_hash );
 
-		if ( null === $key || ! self::persist_prerendered_html( $key, $html, null, $headers ) ) {
+		$persisted = null !== $key && (
+			self::in_batch_render()
+				? self::persist_build_artifact( $key, $html, $headers )
+				: self::persist_prerendered_html( $key, $html, null, $headers )
+		);
+		if ( null === $key || ! $persisted ) {
 			return false;
 		}
 
@@ -1387,12 +1564,19 @@ final class Static_Prerender_Runtime {
 			}
 
 			$live_keys = array();
+			$live_sets = array();
 			foreach ( self::all_index_records() as $record ) {
 				$key = is_string( $record['cacheKey'] ?? null ) ? $record['cacheKey'] : '';
 				if ( '' !== $key ) {
 					$live_keys[ $key ] = true;
 				}
+				foreach ( is_array( $record['dependencyChunks'] ?? null ) ? $record['dependencyChunks'] : array() as $chunk ) {
+					if ( is_string( $chunk ) ) {
+						$live_sets[ $chunk ] = true;
+					}
+				}
 			}
+			self::collect_dependency_sets( $live_sets );
 
 			$deleted_files = 0;
 			$files         = glob( self::cache_root() . '/*.html' );
@@ -1430,23 +1614,27 @@ final class Static_Prerender_Runtime {
 	 * @return array<string,string> Path to cache key.
 	 */
 	public static function route_map( array $live_target_urls ): array {
-		$live   = array_fill_keys( self::unique_cacheable_urls( $live_target_urls ), true );
-		$routes = array();
+		return self::with_scope_directories(
+			static function () use ( $live_target_urls ): array {
+				$live   = array_fill_keys( self::unique_cacheable_urls( $live_target_urls ), true );
+				$routes = array();
 
-		foreach ( self::all_index_records() as $record ) {
-			$url = is_string( $record['url'] ?? null ) ? $record['url'] : '';
-			$key = is_string( $record['cacheKey'] ?? null ) ? $record['cacheKey'] : '';
-			if ( ! isset( $live[ $url ] ) || '' === $key || ! is_file( self::cache_file( $key ) ) ) {
-				continue;
+				foreach ( self::all_index_records() as $record ) {
+					$url = is_string( $record['url'] ?? null ) ? $record['url'] : '';
+					$key = is_string( $record['cacheKey'] ?? null ) ? $record['cacheKey'] : '';
+					if ( ! isset( $live[ $url ] ) || '' === $key || ( ! is_file( self::cache_file( $key ) ) && ! is_file( self::artifact_file( $key ) ) ) ) {
+						continue;
+					}
+
+					$path            = strtolower( '/' . ltrim( self::url_path( $url ), '/' ) );
+					$routes[ $path ] = $key;
+				}
+
+				ksort( $routes, SORT_STRING );
+
+				return $routes;
 			}
-
-			$path            = strtolower( '/' . ltrim( self::url_path( $url ), '/' ) );
-			$routes[ $path ] = $key;
-		}
-
-		ksort( $routes, SORT_STRING );
-
-		return $routes;
+		);
 	}
 
 	/**
@@ -1612,9 +1800,10 @@ final class Static_Prerender_Runtime {
 			return null;
 		}
 
-		$source_home = function_exists( 'home_url' )
-			? self::url_path( (string) home_url( '/' ) )
-			: '/';
+		$source_home = self::pass_value(
+			'home',
+			static fn(): string => function_exists( 'home_url' ) ? self::url_path( (string) home_url( '/' ) ) : '/'
+		);
 		$source_home = '/' . trim( $source_home, '/' );
 		$source_home = '/' === $source_home ? '/' : $source_home . '/';
 		$source_path = '/' . ltrim( (string) ( $source_parts['path'] ?? '/' ), '/' );
@@ -1658,14 +1847,20 @@ final class Static_Prerender_Runtime {
 	 * @return void
 	 */
 	public static function reset_request_cache(): void {
-		self::$buffer_key           = null;
-		self::$buffer_url           = null;
-		self::$response_status      = null;
-		self::$warm_queue           = null;
-		self::$index_record_cache   = array();
-		self::$dependency_report    = null;
-		self::$dependencies         = array();
-		self::$search_path_prefixes = array();
+		self::$buffer_key             = null;
+		self::$buffer_url             = null;
+		self::$response_status        = null;
+		self::$warm_queue             = null;
+		self::$index_record_cache     = array();
+		self::$dependency_set_cache   = array();
+		self::$dependency_chunk_clean = array();
+		self::$chunk_bases            = array();
+		self::$chunk_base_requests    = array();
+		self::$scope_directories      = null;
+		self::$pass_values            = null;
+		self::$dependency_report      = null;
+		self::$dependencies           = array();
+		self::$search_path_prefixes   = array();
 		remove_filter( 'template_include', array( self::class, 'record_template_dependency' ), PHP_INT_MAX );
 		Static_Prerender_Identity::reset();
 		Static_Prerender_Content_Hasher::reset();
@@ -1728,6 +1923,197 @@ final class Static_Prerender_Runtime {
 	}
 
 	/**
+	 * Report and forget how the last build render reached its artifact.
+	 *
+	 * `unchanged` means the artifact already held these exact bytes and was
+	 * not written again, `new` that no document existed under the key, and
+	 * `rewritten` that a document with the same key held different bytes:
+	 * the key's inputs did not change while the output did, so something
+	 * the dependency graph does not record moved the page.
+	 *
+	 * @since 7.7.15
+	 *
+	 * @return string `unchanged`, `new`, `rewritten`, or an empty string.
+	 */
+	public static function take_artifact_write(): string {
+		$write                     = self::$last_artifact_write;
+		self::$last_artifact_write = '';
+
+		return $write;
+	}
+
+	/**
+	 * Publish one build render straight into the uncapped artifact scope.
+	 *
+	 * A document whose bytes and headers equal the stored ones is not written
+	 * again: only its modification time moves, because early serve measures
+	 * a document's freshness against the TTL by it, so a render that
+	 * reproduces production keeps every artifact file's inode and bytes.
+	 *
+	 * @param string $key     Cache key.
+	 * @param string $html    HTML.
+	 * @param mixed  $headers Response headers.
+	 *
+	 * @return bool Whether published.
+	 */
+	private static function persist_build_artifact( string $key, string $html, mixed $headers = array() ): bool {
+		self::$last_artifact_write = '';
+		$file                      = self::artifact_file( $key );
+		$dir                       = dirname( $file );
+		if ( ! is_dir( $dir ) && ! wp_mkdir_p( $dir ) ) {
+			self::record_outcome( 'write-failure' );
+
+			return false;
+		}
+		if ( ! Static_Prerender_Headers::store( $file, Static_Prerender_Headers::select( $headers ) ) ) {
+			self::record_outcome( 'write-failure' );
+
+			return false;
+		}
+		$existed = is_file( $file );
+		if ( $existed && self::document_equals( $file, $html ) && touch( $file ) ) { // phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_touch -- Early serve dates the cached document by its modification time.
+			self::$last_artifact_write = 'unchanged';
+			self::record_outcome( 'write-unchanged' );
+
+			return true;
+		}
+		if ( Single_Flight::publish( $file, $html ) || Single_Flight::publish( $file, $html ) ) {
+			self::$last_artifact_write = $existed ? 'rewritten' : 'new';
+			self::record_outcome( 'write' );
+
+			return true;
+		}
+		if ( is_file( $file ) ) {
+			self::$last_artifact_write = $existed ? 'rewritten' : 'new';
+			self::record_outcome( 'write-peer' );
+
+			return true;
+		}
+		self::record_outcome( 'write-failure' );
+
+		return false;
+	}
+
+	/**
+	 * Whether a stored document holds exactly these bytes.
+	 *
+	 * @param string $file Stored document.
+	 * @param string $html Rendered HTML.
+	 *
+	 * @return bool Whether equal.
+	 */
+	private static function document_equals( string $file, string $html ): bool {
+		$size = @filesize( $file ); // phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged -- A concurrent prune can remove the file between check and stat.
+		if ( false === $size || strlen( $html ) !== $size ) {
+			return false;
+		}
+
+		$stored = @file_get_contents( $file ); // phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged, WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- A local cache file a concurrent prune can remove between check and read.
+
+		return is_string( $stored ) && $stored === $html;
+	}
+
+	/**
+	 * Resolve one build artifact path.
+	 *
+	 * @param string $key Cache key.
+	 *
+	 * @return string Path.
+	 */
+	private static function artifact_file( string $key ): string {
+		$root = self::pass_value(
+			'artifact',
+			static fn(): string => rtrim( wp_normalize_path( self::scope_directory( 'static-prerender-artifact' ) ), '/' )
+		);
+
+		return $root . '/' . self::file_name( $key ) . '.html';
+	}
+
+	/**
+	 * Resolve one cache scope directory, once per whole-site pass.
+	 *
+	 * @param string $scope Cache scope.
+	 *
+	 * @return string Directory.
+	 */
+	private static function scope_directory( string $scope ): string {
+		if ( null === self::$scope_directories ) {
+			return Runtime_Cache::directory( $scope );
+		}
+
+		return self::$scope_directories[ $scope ] ??= Runtime_Cache::directory( $scope );
+	}
+
+	/**
+	 * Run a pass over every route with its cache scope directories resolved once.
+	 *
+	 * Resolving a scope hashes the runtime context, which no route of one
+	 * pass changes, so a plan over tens of thousands of routes no longer
+	 * repeats it several times per route.
+	 *
+	 * @template T
+	 *
+	 * @param callable(): T $pass Pass.
+	 *
+	 * @return T Result of the pass.
+	 */
+	private static function with_scope_directories( callable $pass ): mixed {
+		$outer                     = self::$scope_directories;
+		$outer_values              = self::$pass_values;
+		self::$scope_directories ??= array();
+		self::$pass_values       ??= array();
+
+		try {
+			return $pass();
+		} finally {
+			self::$scope_directories = $outer;
+			self::$pass_values       = $outer_values;
+		}
+	}
+
+	/**
+	 * Resolve one value no route of a whole-site pass changes, once per pass.
+	 *
+	 * @param string             $name    Value name within the pass.
+	 * @param callable(): string $resolve Resolver, which may create a directory it names.
+	 *
+	 * @return string Value.
+	 */
+	private static function pass_value( string $name, callable $resolve ): string {
+		if ( null === self::$pass_values ) {
+			return $resolve();
+		}
+
+		return self::$pass_values[ $name ] ??= $resolve();
+	}
+
+	/**
+	 * Turn a cache key or content hash into its file name.
+	 *
+	 * A lowercase SHA-256 hex string is a name sanitize_file_name() returns
+	 * unchanged, so it skips the sanitizer and the mime type scan that runs
+	 * for names without a dot, as long as no filter can change that result.
+	 *
+	 * @param string $name Name.
+	 *
+	 * @return string File name.
+	 */
+	private static function file_name( string $name ): string {
+		if (
+			64 === strlen( $name ) &&
+			64 === strspn( $name, '0123456789abcdef' ) &&
+			function_exists( 'has_filter' ) &&
+			false === has_filter( 'sanitize_file_name' ) &&
+			false === has_filter( 'sanitize_file_name_chars' ) &&
+			false === has_filter( 'mime_types' )
+		) {
+			return $name;
+		}
+
+		return sanitize_file_name( $name );
+	}
+
+	/**
 	 * Resolve one HTML object path.
 	 *
 	 * @param string $key Cache key.
@@ -1735,7 +2121,7 @@ final class Static_Prerender_Runtime {
 	 * @return string Path.
 	 */
 	private static function cache_file( string $key ): string {
-		return self::cache_root() . '/' . sanitize_file_name( $key ) . '.html';
+		return self::cache_root() . '/' . self::file_name( $key ) . '.html';
 	}
 
 	/**
@@ -1744,7 +2130,7 @@ final class Static_Prerender_Runtime {
 	 * @return string Root.
 	 */
 	private static function cache_root(): string {
-		return Runtime_Cache::directory( 'static-prerender' );
+		return self::scope_directory( 'static-prerender' );
 	}
 
 	/**
@@ -1753,12 +2139,22 @@ final class Static_Prerender_Runtime {
 	 * @return string Root.
 	 */
 	private static function state_root(): string {
-		$root = Runtime_Cache::directory( 'static-prerender-state' );
-		if ( ! is_dir( $root ) ) {
-			wp_mkdir_p( $root );
+		return self::pass_value( 'state', static fn(): string => self::ready_directory( self::scope_directory( 'static-prerender-state' ) ) );
+	}
+
+	/**
+	 * Create a directory when it is missing.
+	 *
+	 * @param string $directory Directory.
+	 *
+	 * @return string Directory.
+	 */
+	private static function ready_directory( string $directory ): string {
+		if ( ! is_dir( $directory ) ) {
+			wp_mkdir_p( $directory );
 		}
 
-		return $root;
+		return $directory;
 	}
 
 	/**
@@ -1775,35 +2171,294 @@ final class Static_Prerender_Runtime {
 	}
 
 	/**
-	 * Read a graph record for a URL.
+	 * Read a graph record for a URL with its dependency maps restored.
+	 *
+	 * The request cache holds records as stored, so a plan over tens of
+	 * thousands of routes keeps a few hundred bytes per route in memory and
+	 * restores each record's maps from the shared chunk cache when read.
 	 *
 	 * @param string $url URL.
 	 *
 	 * @return array<string,mixed>|null Record.
 	 */
 	private static function index_record_for_url( string $url ): ?array {
-		$id = self::url_hash( $url );
+		$stored = self::stored_index_record( self::url_hash( $url ) );
+
+		return null === $stored ? null : self::inflate_index_record( $stored );
+	}
+
+	/**
+	 * Read one graph record as stored, without restoring its dependency maps.
+	 *
+	 * @param string $id URL hash.
+	 *
+	 * @return array<string,mixed>|null Stored record.
+	 */
+	private static function stored_index_record( string $id ): ?array {
 		if ( array_key_exists( $id, self::$index_record_cache ) ) {
 			return self::$index_record_cache[ $id ];
 		}
 
-		$path = self::index_path( $id );
-		if ( ! is_file( $path ) || ! is_readable( $path ) ) {
+		$path     = self::index_path( $id );
+		$contents = is_file( $path ) ? @file_get_contents( $path ) : false; // phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged, WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Reading local graph state that may be unreadable.
+		if ( false === $contents ) {
 			self::$index_record_cache[ $id ] = null;
 
 			return null;
 		}
 
-		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Reading local graph state.
-		$decoded                         = json_decode( (string) file_get_contents( $path ), true );
-		$record                          = is_array( $decoded ) ? $decoded : null;
-		self::$index_record_cache[ $id ] = $record;
+		$decoded = json_decode( $contents, true );
+		if ( ! is_array( $decoded ) ) {
+			self::$index_record_cache[ $id ] = null;
 
-		return $record;
+			return null;
+		}
+		if ( ! array_key_exists( 'dependencyHashes', $decoded ) ) {
+			self::$index_record_cache[ $id ] = $decoded;
+		}
+
+		return $decoded;
 	}
 
 	/**
-	 * Read every valid graph record.
+	 * List the URL of every graph record.
+	 *
+	 * A record read earlier in this process names the same URL its file
+	 * does, because the file name is the hash of that URL, so only records
+	 * not read yet are read from disk.
+	 *
+	 * @return string[] URLs.
+	 */
+	private static function index_record_urls(): array {
+		$urls  = array();
+		$paths = glob( self::state_root() . '/url-index/*.json' );
+
+		foreach ( is_array( $paths ) ? $paths : array() as $path ) {
+			$record = self::$index_record_cache[ basename( $path, '.json' ) ] ?? null;
+			if ( null === $record ) {
+				// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Reading local graph state.
+				$decoded = json_decode( (string) file_get_contents( $path ), true );
+				$record  = is_array( $decoded ) ? $decoded : null;
+			}
+			if ( is_array( $record ) && is_string( $record['url'] ?? null ) ) {
+				$urls[] = $record['url'];
+			}
+		}
+
+		return $urls;
+	}
+
+	/**
+	 * Recognize a stored record whose dependencies all still hash as recorded.
+	 *
+	 * Such a record's restored dependency maps would equal the current file
+	 * hashes, so it has no changed files and its page hash is the content
+	 * hash of its chunks. Checking each shared chunk once replaces restoring
+	 * and rehashing thousands of dependencies per route. Records with path
+	 * overrides, virtual hashes or inline maps take the full comparison.
+	 *
+	 * @param array<string,mixed> $record Stored record.
+	 *
+	 * @return array{pageHash:string,changedFiles:string[]}|null State, or null when the full comparison must decide.
+	 */
+	private static function unchanged_graph_state( array $record ): ?array {
+		$chunks = $record['dependencyChunks'] ?? null;
+		if (
+			! is_array( $chunks ) ||
+			array_key_exists( 'dependencyHashes', $record ) ||
+			array() !== ( $record['dependencyPathOverrides'] ?? array() ) ||
+			array() !== ( $record['virtualHashes'] ?? array() )
+		) {
+			return null;
+		}
+
+		$maps = array();
+		foreach ( $chunks as $hash ) {
+			$chunk = is_string( $hash ) && self::dependency_chunk_clean( $hash ) ? self::dependency_chunk( $hash ) : null;
+			if ( null === $chunk ) {
+				return null;
+			}
+			$maps[ $hash ] = $chunk['hashes'];
+		}
+
+		return array(
+			'pageHash'     => count( $maps ) === count( $chunks )
+				? self::chunks_content_hash( $maps )
+				: Static_Prerender_Content_Hasher::content_hash( array_merge( ...array_values( $maps ) ) ),
+			'changedFiles' => array(),
+		);
+	}
+
+	/**
+	 * Derive the content hash of distinct chunks' merged dependency hashes.
+	 *
+	 * The page hash sorts every file hash a route reads, and routes of one
+	 * family share most of their chunks. The large chunks are merged and
+	 * sorted once per chunk list, and the hashes of the small route-specific
+	 * chunks are inserted in order, which yields the same sorted list
+	 * whenever no ID appears twice. Anything else merges and sorts in full.
+	 *
+	 * @param array<string,array<string,string>> $maps Dependency hashes by chunk hash, in record order.
+	 *
+	 * @return string Content hash.
+	 */
+	private static function chunks_content_hash( array $maps ): string {
+		$shared = array();
+		$small  = array();
+		$count  = 0;
+		foreach ( $maps as $hash => $map ) {
+			if ( count( $map ) > self::CHUNK_BASE_MIN_IDS ) {
+				$shared[ $hash ] = $map;
+			} else {
+				$small[] = $map;
+				$count  += count( $map );
+			}
+		}
+		$base = $count > self::CHUNK_INSERT_LIMIT ? null : self::chunk_base( $shared );
+		if ( null === $base ) {
+			return Static_Prerender_Content_Hasher::content_hash( array_merge( ...array_values( $maps ) ) );
+		}
+
+		$values = array();
+		$seen   = array();
+		foreach ( $small as $map ) {
+			foreach ( $map as $id => $value ) {
+				if ( isset( $base['ids'][ $id ] ) || isset( $seen[ $id ] ) ) {
+					return Static_Prerender_Content_Hasher::content_hash( array_merge( ...array_values( $maps ) ) );
+				}
+				$seen[ $id ] = true;
+				$values[]    = $value;
+			}
+		}
+		sort( $values, SORT_STRING );
+
+		$sorted  = $base['sorted'];
+		$size    = count( $sorted );
+		$plain   = $base['plain'] && $size + count( $values ) > 0;
+		$pieces  = array();
+		$offsets = $base['offsets'];
+		$start   = 0;
+		foreach ( $values as $value ) {
+			$plain = $plain && strlen( $value ) === strspn( $value, Static_Prerender_Content_Hasher::PLAIN_CHARACTERS );
+			$low   = $start;
+			$high  = $size;
+			while ( $low < $high ) {
+				$middle = ( $low + $high ) >> 1;
+				if ( strcmp( $sorted[ $middle ], $value ) < 0 ) {
+					$low = $middle + 1;
+				} else {
+					$high = $middle;
+				}
+			}
+			if ( $low > $start ) {
+				$pieces[] = substr( $base['joined'], $offsets[ $start ], $offsets[ $low ] - $offsets[ $start ] - 3 );
+			}
+			$pieces[] = $value;
+			$start    = $low;
+		}
+		if ( $start < $size ) {
+			$pieces[] = substr( $base['joined'], $offsets[ $start ] );
+		}
+
+		return $plain
+			? Static_Prerender_Content_Hasher::joined_content_hash( implode( '","', $pieces ) )
+			: Static_Prerender_Content_Hasher::content_hash( array_merge( ...array_values( $maps ) ) );
+	}
+
+	/**
+	 * Merge and sort the hashes of one list of large chunks, once per list.
+	 *
+	 * @param array<string,array<string,string>> $maps Dependency hashes by chunk hash.
+	 *
+	 * @return array{ids:array<string,string>,sorted:list<string>,joined:string,offsets:list<int>,plain:bool}|null Base, or null when an ID appears twice.
+	 */
+	private static function chunk_base( array $maps ): ?array {
+		$key = implode( ',', array_keys( $maps ) );
+		if ( array_key_exists( $key, self::$chunk_bases ) ) {
+			return self::$chunk_bases[ $key ];
+		}
+		if ( ! isset( self::$chunk_base_requests[ $key ] ) ) {
+			if ( count( self::$chunk_base_requests ) >= self::CHUNK_BASE_REQUEST_LIMIT ) {
+				unset( self::$chunk_base_requests[ array_key_first( self::$chunk_base_requests ) ] );
+			}
+			self::$chunk_base_requests[ $key ] = true;
+
+			return null;
+		}
+		unset( self::$chunk_base_requests[ $key ] );
+
+		$ids   = array() === $maps ? array() : array_merge( ...array_values( $maps ) );
+		$total = 0;
+		foreach ( $maps as $map ) {
+			$total += count( $map );
+		}
+		$base = null;
+		if ( count( $ids ) === $total ) {
+			$sorted = array_values( $ids );
+			sort( $sorted, SORT_STRING );
+			$joined  = implode( '","', $sorted );
+			$offsets = array( 0 );
+			$offset  = 0;
+			foreach ( $sorted as $value ) {
+				$offset   += strlen( $value ) + 3;
+				$offsets[] = $offset;
+			}
+			$base = array(
+				'ids'     => $ids,
+				'sorted'  => $sorted,
+				'joined'  => $joined,
+				'offsets' => $offsets,
+				'plain'   => array() === $sorted || (
+					strlen( $joined ) === strspn( $joined, Static_Prerender_Content_Hasher::PLAIN_CHARACTERS . '"' ) &&
+					substr_count( $joined, '"' ) === 2 * ( count( $sorted ) - 1 )
+				),
+			);
+		}
+		if ( count( self::$chunk_bases ) >= self::CHUNK_BASE_LIMIT ) {
+			unset( self::$chunk_bases[ array_key_first( self::$chunk_bases ) ] );
+		}
+		self::$chunk_bases[ $key ] = $base;
+
+		return $base;
+	}
+
+	/**
+	 * Whether every file one dependency chunk names still has its recorded hash.
+	 *
+	 * @param string $hash Chunk content hash.
+	 *
+	 * @return bool Whether the chunk is unchanged; false when it is gone or names an ID without a path.
+	 */
+	private static function dependency_chunk_clean( string $hash ): bool {
+		$generation = Static_Prerender_Content_Hasher::generation();
+		if ( self::$dependency_chunk_generation !== $generation ) {
+			self::$dependency_chunk_clean      = array();
+			self::$dependency_chunk_generation = $generation;
+		}
+		if ( ! array_key_exists( $hash, self::$dependency_chunk_clean ) ) {
+			$chunk = self::dependency_chunk( $hash );
+			$clean = null !== $chunk;
+			if ( null !== $chunk ) {
+				foreach ( $chunk['hashes'] as $id => $file_hash ) {
+					$path = $chunk['paths'][ $id ] ?? null;
+					if ( null === $path || Static_Prerender_Content_Hasher::file_hash( $path ) !== $file_hash ) {
+						$clean = false;
+						break;
+					}
+				}
+			}
+			self::$dependency_chunk_clean[ $hash ] = $clean;
+		}
+
+		return self::$dependency_chunk_clean[ $hash ];
+	}
+
+	/**
+	 * Read every valid graph record as stored.
+	 *
+	 * Every caller reads URLs, cache keys and chunk hashes only, so the
+	 * dependency maps stay unrestored; index_record_for_url() restores them
+	 * for the one record that needs them.
 	 *
 	 * @return array<int,array<string,mixed>> Records.
 	 */
@@ -1817,10 +2472,6 @@ final class Static_Prerender_Runtime {
 			$decoded = json_decode( (string) file_get_contents( $path ), true );
 			if ( is_array( $decoded ) ) {
 				$records[] = $decoded;
-				$url       = is_string( $decoded['url'] ?? null ) ? $decoded['url'] : '';
-				if ( '' !== $url ) {
-					self::$index_record_cache[ self::url_hash( $url ) ] = $decoded;
-				}
 			}
 		}
 
@@ -1836,16 +2487,190 @@ final class Static_Prerender_Runtime {
 	 * @return bool Whether published.
 	 */
 	private static function write_index_record( string $url, array $record ): bool {
-		$id      = self::url_hash( $url );
-		$encoded = wp_json_encode( $record, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE );
+		$id     = self::url_hash( $url );
+		$stored = self::deflate_index_record( $record );
+		if ( null === $stored ) {
+			return false;
+		}
+		$encoded = wp_json_encode( $stored, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE );
 
 		if ( ! is_string( $encoded ) || ! Single_Flight::publish( self::index_path( $id ), $encoded . "\n" ) ) {
 			return false;
 		}
 
-		self::$index_record_cache[ $id ] = $record;
+		self::$index_record_cache[ $id ] = $stored;
 
 		return true;
+	}
+
+	/**
+	 * Store a record's dependency hashes in shared chunks.
+	 *
+	 * Routes of one family read nearly the same files, so the hashes are
+	 * split by directory into content-addressed chunks that many records
+	 * name, paths are derived from their IDs, and only paths that differ from
+	 * that derivation stay in the record.
+	 *
+	 * @param array<string,mixed> $record Record with inline dependency maps.
+	 *
+	 * @return array<string,mixed>|null Record to store, or null when a chunk could not be written.
+	 */
+	private static function deflate_index_record( array $record ): ?array {
+		unset( $record['dependencySet'], $record['dependencyChunks'], $record['dependencyPathOverrides'] );
+		if ( ! is_array( $record['dependencyHashes'] ?? null ) || ! is_array( $record['dependencyPaths'] ?? null ) ) {
+			return $record;
+		}
+		$hashes  = self::string_map( $record['dependencyHashes'] );
+		$paths   = self::string_map( $record['dependencyPaths'] );
+		$virtual = is_array( $record['virtualHashes'] ?? null ) ? self::string_map( $record['virtualHashes'] ) : array();
+		$root    = self::theme_root();
+		$groups  = array();
+		foreach ( $hashes as $id => $hash ) {
+			if ( isset( $virtual[ $id ] ) && $virtual[ $id ] === $hash && ! isset( $paths[ $id ] ) ) {
+				continue;
+			}
+			$groups[ self::dependency_group( $id ) ][ $id ] = $hash;
+		}
+		ksort( $groups, SORT_STRING );
+		$chunks = array();
+		foreach ( $groups as $group ) {
+			ksort( $group, SORT_STRING );
+			$encoded = wp_json_encode( $group, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE );
+			if ( ! is_string( $encoded ) ) {
+				return null;
+			}
+			$hash = hash( 'sha256', $encoded );
+			$path = self::dependency_set_path( $hash );
+			if ( ! is_file( $path ) && ! Single_Flight::publish( $path, $encoded . "\n" ) ) {
+				return null;
+			}
+			$chunks[] = $hash;
+		}
+		$overrides = array();
+		foreach ( $paths as $id => $path ) {
+			if ( Static_Prerender_Content_Hasher::path_for_id( $id, $root ) !== wp_normalize_path( $path ) ) {
+				$overrides[ $id ] = $path;
+			}
+		}
+		unset( $record['dependencyHashes'], $record['dependencyPaths'] );
+		$record['dependencyChunks'] = $chunks;
+		if ( array() !== $overrides ) {
+			$record['dependencyPathOverrides'] = $overrides;
+		}
+
+		return $record;
+	}
+
+	/**
+	 * Group a dependency ID by its directory, at most four segments deep.
+	 *
+	 * @param string $id Dependency ID.
+	 *
+	 * @return string Group.
+	 */
+	private static function dependency_group( string $id ): string {
+		$segments = explode( '/', $id );
+		array_pop( $segments );
+
+		return implode( '/', array_slice( $segments, 0, 4 ) );
+	}
+
+	/**
+	 * Read one dependency chunk with the paths its IDs name, derived once per chunk.
+	 *
+	 * @param string $hash Chunk content hash.
+	 *
+	 * @return array{hashes:array<string,string>,paths:array<string,string>}|null Chunk, or null when it is gone.
+	 */
+	private static function dependency_chunk( string $hash ): ?array {
+		if ( ! array_key_exists( $hash, self::$dependency_set_cache ) ) {
+			$path    = self::dependency_set_path( $hash );
+			$decoded = is_file( $path ) ? json_decode( (string) file_get_contents( $path ), true ) : null; // phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Reading local graph state.
+			if ( ! is_array( $decoded ) ) {
+				self::$dependency_set_cache[ $hash ] = null;
+			} else {
+				$hashes = self::string_map( $decoded );
+				$paths  = array();
+				$root   = self::theme_root();
+				foreach ( array_keys( $hashes ) as $id ) {
+					$resolved = Static_Prerender_Content_Hasher::path_for_id( (string) $id, $root );
+					if ( null !== $resolved ) {
+						$paths[ $id ] = $resolved;
+					}
+				}
+				self::$dependency_set_cache[ $hash ] = array(
+					'hashes' => $hashes,
+					'paths'  => $paths,
+				);
+			}
+		}
+
+		return self::$dependency_set_cache[ $hash ];
+	}
+
+	/**
+	 * Restore a stored record's dependency maps from its chunks.
+	 *
+	 * @param array<string,mixed> $record Stored record.
+	 *
+	 * @return array<string,mixed>|null Record with inline maps, or null when a chunk is gone.
+	 */
+	private static function inflate_index_record( array $record ): ?array {
+		$chunks = $record['dependencyChunks'] ?? null;
+		if ( ! is_array( $chunks ) ) {
+			return $record;
+		}
+		$virtual = is_array( $record['virtualHashes'] ?? null ) ? self::string_map( $record['virtualHashes'] ) : array();
+		$hashes  = $virtual;
+		$paths   = array();
+		foreach ( $chunks as $hash ) {
+			$chunk = is_string( $hash ) ? self::dependency_chunk( $hash ) : null;
+			if ( null === $chunk ) {
+				return null;
+			}
+			$hashes = array_merge( $hashes, $chunk['hashes'] );
+			$paths  = array_merge( $paths, $chunk['paths'] );
+		}
+		$overrides = is_array( $record['dependencyPathOverrides'] ?? null ) ? self::string_map( $record['dependencyPathOverrides'] ) : array();
+		foreach ( $overrides as $id => $path ) {
+			$paths[ $id ] = $path;
+		}
+		ksort( $hashes, SORT_STRING );
+		ksort( $paths, SORT_STRING );
+		unset( $record['dependencyPathOverrides'] );
+		$record['dependencyHashes'] = $hashes;
+		$record['dependencyPaths']  = $paths;
+
+		return $record;
+	}
+
+	/**
+	 * Delete dependency chunks no record names, once they are an hour old.
+	 *
+	 * @param array<string,true> $live Chunk hashes the live records name.
+	 */
+	private static function collect_dependency_sets( array $live ): void {
+		$paths  = glob( self::state_root() . '/dependency-sets/*.json' );
+		$cutoff = time() - 3600;
+		foreach ( is_array( $paths ) ? $paths : array() as $path ) {
+			if ( isset( $live[ basename( $path, '.json' ) ] ) || (int) filemtime( $path ) > $cutoff ) {
+				continue;
+			}
+			@unlink( $path ); // phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged, WordPress.WP.AlternativeFunctions.unlink_unlink -- Internal cache files must not invoke media-deletion filters.
+		}
+	}
+
+	/**
+	 * Resolve one dependency chunk path.
+	 *
+	 * @param string $hash Chunk content hash.
+	 *
+	 * @return string Path.
+	 */
+	private static function dependency_set_path( string $hash ): string {
+		$root = self::pass_value( 'dependency-sets', static fn(): string => self::ready_directory( self::state_root() . '/dependency-sets' ) );
+
+		return $root . '/' . self::file_name( $hash ) . '.json';
 	}
 
 	/**
@@ -1875,12 +2700,9 @@ final class Static_Prerender_Runtime {
 	 * @return string Path.
 	 */
 	private static function index_path( string $id ): string {
-		$root = self::state_root() . '/url-index';
-		if ( ! is_dir( $root ) ) {
-			wp_mkdir_p( $root );
-		}
+		$root = self::pass_value( 'url-index', static fn(): string => self::ready_directory( self::state_root() . '/url-index' ) );
 
-		return $root . '/' . sanitize_file_name( $id ) . '.json';
+		return $root . '/' . self::file_name( $id ) . '.json';
 	}
 
 	/**

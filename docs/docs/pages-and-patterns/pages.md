@@ -876,6 +876,14 @@ actual `action` (`trash` or `delete`); kept or already-trashed posts are not
 counted as newly removed. CLI table output also names created, updated,
 locked, removed, and content-preserved pages with their post IDs.
 
+For hierarchical post types, a child with an unresolved parent is reported as
+`failed` with a `parent_unavailable` error naming the parent. Sync does not create
+it as a top-level page or reparent an existing child. Fix the parent's failure
+(for example, an unrelated page occupying its slug), then run sync again.
+Parents are processed before their children, so the retry restores the intended
+hierarchy. Non-hierarchical post types do not require a parent post. CLI table
+output includes error codes and messages; JSON output retains them in `errors`.
+
 After parsing and keyed merging, an identical final post does not call
 `wp_update_post()`, change `post_modified`, create a revision, or fire post
 update hooks. Its result is `unchanged`. When the source's content differs

@@ -81,4 +81,33 @@ class PageSyncReportTest extends TestCase {
 
 		$this->assertSame( 'legal-notice: updated (post 21, component)', $lines[0]['message'] );
 	}
+
+	public function test_cli_names_unavailable_parents_and_discovery_errors(): void {
+		$method = new ReflectionMethod( CLI::class, 'page_report_lines' );
+		$lines  = $method->invoke(
+			null,
+			array(
+				'pages'  => array( 'child-page' => array( 'status' => 'failed', 'postId' => 0 ) ),
+				'errors' => array(
+					array(
+						'page'    => 'child-page',
+						'code'    => 'parent_unavailable',
+						'message' => 'The parent page "parent-page" must be synced before "child-page" can be reconciled.',
+					),
+					array( 'code' => 'no_page_paths', 'message' => 'No valid page discovery path was available; managed posts were preserved.' ),
+				),
+			)
+		);
+
+		$this->assertSame( 'child-page: failed (post 0)', $lines[0]['message'] );
+		$this->assertSame(
+			array(
+				'level'   => 'warning',
+				'message' => 'child-page: parent_unavailable: The parent page "parent-page" must be synced before "child-page" can be reconciled.',
+			),
+			$lines[1]
+		);
+		$this->assertSame( 'warning', $lines[2]['level'] );
+		$this->assertSame( 'no_page_paths: No valid page discovery path was available; managed posts were preserved.', $lines[2]['message'] );
+	}
 }
