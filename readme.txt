@@ -57,6 +57,11 @@ Download the latest release zip from [GitHub Releases](https://github.com/inline
 = 7.7.15 =
 * Fix: imported block comments with flat field values retain selections and hydrate the editor correctly, saving subsequent edits in the existing nested format without changing WordPress-owned attributes (#208)
 * Fix: page sync reports children whose parent is unavailable instead of creating them at the top level or reparenting existing pages (#212)
+* Performance: static prerender plans reuse shared dependency hashes and leave unchanged build artifacts in place
+* Performance: optional forked batch prerendering reuses a single WordPress bootstrap, with HTTP fallback
+* Performance: cache writes and eviction avoid unnecessary directory scans and filesystem checks
+* Performance: Markdown conversion and documentation sanitization reuse cached output for unchanged input
+* New: the `blockstudio/tailwind/sources` filter lets pages share a cached stylesheet built from configured source files and directories
 
 = 7.7.14 =
 * New: `bs_block_schema()` includes matching saved-value examples from block definitions, excluding editor-only image placeholders (#203)
