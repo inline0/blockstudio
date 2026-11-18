@@ -154,6 +154,7 @@ class Plugin {
 		require_once $classes_dir . 'llm.php';
 		require_once $classes_dir . 'admin-page.php';
 		require_once $classes_dir . 'utils.php';
+		require_once $classes_dir . 'icons.php';
 		require_once $classes_dir . 'blade-renderer.php';
 		require_once $classes_dir . 'template-compiler.php';
 		require_once $classes_dir . 'admin.php';
