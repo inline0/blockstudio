@@ -698,8 +698,23 @@ refocusing the picker retries a failed request.
 `tabler-icons` supports `outline` and `filled`. A subset explicitly configured
 for the chosen set takes precedence; otherwise the picker uses `solid` when
 available, or the set's first subset. Sets without subsets omit `subSet`.
-Set names resolve only to bundled files. Frontend rendering caches individual
-icons rather than storing full icon sets in database transients.
+Set names resolve only to set files in the
+[icon directory](/docs/blocks/hooks/php#blockstudioiconsdir) outside the plugin
+or, when a set is not stored there, in the plugin folder. Frontend rendering
+caches individual icons rather than storing full icon sets in database
+transients.
+
+The plugin ZIP does not contain the icon sets. A set is downloaded from the
+GitHub release of the installed version and stored in the icon directory the
+first time its picker is opened. `bs_render_icon()` never waits for a download:
+an icon of a set that is not stored renders nothing, and the set is fetched by
+WP-Cron for the next request. After an update, sets that are missing on an
+existing site are fetched the same way. Every download is checked against a
+checksum shipped with the plugin. If the server cannot reach GitHub, an admin
+notice says so and the download is retried hourly; the
+[`blockstudio/icons/url`](/docs/blocks/hooks/php#blockstudioiconsurl) filter
+points it at another host. Source checkouts and Composer installs still contain
+the sets and download nothing.
 
 ## Imported Option Values
 

@@ -38,6 +38,7 @@ const excludedFiles = new Set([
 export const ships = (path: string) =>
   !excludedDirectories.has(path.split('/')[0]) &&
   !excludedFiles.has(path) &&
+  !path.startsWith('includes/icons/') &&
   !/(^|\/)\.env|\.config\.|(^|\/)tsconfig|(^|\/)\.prettierrc|(^|\/)eslint|(^|\/)phpcs\.xml/.test(
     path,
   );
@@ -81,6 +82,18 @@ export const buildRelease = Effect.scoped(
       'tests/distribution/dependencies.php',
       relative(root, directory),
     ]);
+    // Icon sets are release assets, downloaded on demand and checked against
+    // includes/icons.json, which does ship.
+    const assets = resolve(root, 'build/icons');
+    yield* fs.remove(assets, { recursive: true, force: true });
+    yield* fs.makeDirectory(assets, { recursive: true });
+    for (const path of files.filter(
+      (file) => file.startsWith('includes/icons/') && file.endsWith('.json'),
+    ))
+      yield* fs.copyFile(
+        resolve(root, path),
+        resolve(assets, `blockstudio-icons-${path.split('/').pop()}`),
+      );
     yield* fs.remove(resolve(root, 'blockstudio.zip'), { force: true });
     yield* run(
       'zip',

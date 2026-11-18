@@ -33,7 +33,7 @@ jobs:
       - name: Create release zip
         run: npm run build:release
 
-      - name: Upload release asset
-        run: gh release upload "${{ github.event.release.tag_name }}" blockstudio.zip --clobber
+      - name: Upload release assets
+        run: gh release upload "${{ github.event.release.tag_name }}" blockstudio.zip build/icons/*.json --clobber
         env:
           GH_TOKEN: ${{ github.token }}
