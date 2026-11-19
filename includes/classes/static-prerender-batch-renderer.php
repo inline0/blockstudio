@@ -28,12 +28,54 @@ final class Static_Prerender_Batch_Renderer {
 	 * reuse its already-booted request environment without Blockstudio knowing
 	 * that host's orchestration model.
 	 *
+	 * Pass the plan's stateRoot as expectedStateRoot to reject environments
+	 * that do not match the original plan.
+	 *
 	 * @param string[]            $urls    URLs.
-	 * @param array<string,mixed> $options Options: transport, shard, fallback.
+	 * @param array<string,mixed> $options Options: transport, shard, fallback, expectedStateRoot.
+	 *
+	 * @return array<string,mixed> Batch report with stateRoots and mismatch details on failure.
+	 */
+	public static function render( array $urls, array $options = array() ): array {
+		$expected_state_root = null;
+		if ( array_key_exists( 'expectedStateRoot', $options ) ) {
+			$expected_state_root = is_string( $options['expectedStateRoot'] ) ? $options['expectedStateRoot'] : '';
+		}
+
+		$report = Static_Prerender_Runtime::with_build_state(
+			$expected_state_root,
+			static fn(): array => self::render_shard( $urls, $options )
+		);
+
+		$report['stateRoots'] = array( $report['stateRoot'] );
+		if ( isset( $report['error'] ) ) {
+			$report += array(
+				'processed' => 0,
+				'rendered'  => 0,
+				'skipped'   => 0,
+				'failed'    => 1,
+				'results'   => array(
+					array(
+						'status' => 'failed',
+						'reason' => $report['error'],
+						'error'  => $report['message'],
+					),
+				),
+			);
+		}
+
+		return $report;
+	}
+
+	/**
+	 * Render a shard within the validated cache directories.
+	 *
+	 * @param string[]            $urls    URLs.
+	 * @param array<string,mixed> $options Batch options.
 	 *
 	 * @return array<string,mixed> Batch report.
 	 */
-	public static function render( array $urls, array $options = array() ): array {
+	private static function render_shard( array $urls, array $options ): array {
 		$transport = in_array( $options['transport'] ?? null, array( 'internal', 'fork' ), true ) ? (string) $options['transport'] : 'http';
 		if ( 'fork' === $transport && ! self::can_fork() ) {
 			$transport = 'http';
@@ -54,15 +96,15 @@ final class Static_Prerender_Batch_Renderer {
 
 		self::$rendering = true;
 
-		if ( 'fork' === $transport ) {
-			if ( function_exists( 'proc_nice' ) ) {
-				@proc_nice( 10 ); // phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged -- A renderer that cannot lower its priority still renders.
-			}
-			Tailwind::warm();
-			do_action( 'blockstudio/static_prerender/fork_prepare', $urls, $options );
-		}
-
 		try {
+			if ( 'fork' === $transport ) {
+				if ( function_exists( 'proc_nice' ) ) {
+					@proc_nice( 10 ); // phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged -- A renderer that cannot lower its priority still renders.
+				}
+				Tailwind::warm();
+				do_action( 'blockstudio/static_prerender/fork_prepare', $urls, $options );
+			}
+
 			foreach ( $urls as $url ) {
 				Static_Prerender_Runtime::take_artifact_write();
 				$item_started = hrtime( true );

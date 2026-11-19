@@ -117,6 +117,26 @@ transport is supplied by the generic
 `blockstudio/static_prerender/render_internal` filter; optional HTTP fallback
 uses the normal warm header.
 
+### Builds across processes
+
+Keep `stateRoot` from the original `build_plan()` result with the stored plan.
+Pass it as `expectedStateRoot` in the options for every call to
+`Static_Prerender_Batch_Renderer::render()`, alongside the same target host and
+home path. The shard report lists its graph-state directory in `stateRoots`.
+
+In the assembly process, pass `expected_state_root: $plan['stateRoot']` to
+the completeness check with `build_plan()`, to `garbage_collect()`, and to
+`artifact_entry()`. Check each result for `error` before proceeding. The
+artifact entry also reports `stateRoot`.
+
+If WordPress, PHP, plugins, or another part of the runtime identity changes,
+these operations return `state_root_mismatch` with `expectedStateRoot`, the
+currently resolved `stateRoot`, and a message naming both directories. They
+do not read or write graph state in the other directory. Restart at planning
+after the environment stabilizes; do not substitute the new path into an old
+plan. The expectation is optional for existing callers and is never used as
+a filesystem override.
+
 ### What graph mode tracks
 
 With the default HTTP transport, `Static_Prerender_Batch_Renderer::render()`
@@ -135,6 +155,10 @@ sources of Blockstudio's bundled UI assets). The shared signature hashes
 sources, never compiled output, so the `_dist` files that a build's first
 render compiles do not move it: `artifact_entry()` derives the build id from
 the same signature that `build_plan()` saw before rendering.
+
+A route with no graph record has the plan reason `new`. If a route's record
+exists but one of its dependency chunks cannot be loaded, the reason is
+`missing-dependency-chunk`. Both routes need rendering.
 
 Content that lives only in the database is not a file and is not tracked:
 posts edited in the admin, options, generated rows, or prices. A build that has

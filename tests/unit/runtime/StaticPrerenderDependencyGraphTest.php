@@ -222,8 +222,11 @@ class StaticPrerenderDependencyGraphTest extends TestCase {
 	public function test_an_http_graph_build_records_page_sources_block_templates_and_filtered_files(): void {
 		$url    = get_permalink( $this->page_id );
 		$other  = get_permalink( $this->other_id );
-		$report = Static_Prerender_Batch_Renderer::render( array( $url, $other ) );
+		$plan   = Static_Prerender_Runtime::build_plan( array( $url, $other ) );
+		$report = Static_Prerender_Batch_Renderer::render( $plan['affectedUrls'], array( 'expectedStateRoot' => $plan['stateRoot'] ) );
 
+		$this->assertSame( Runtime_Cache::directory( 'static-prerender-state' ), $plan['stateRoot'] );
+		$this->assertSame( array( $plan['stateRoot'] ), $report['stateRoots'] );
 		$this->assertSame( 2, $report['rendered'], wp_json_encode( $report ) );
 		$this->assertCount( 2, $this->requests );
 		$this->assertArrayHasKey( self::DEPENDENCY_HEADER, $this->requests[0] );
@@ -242,6 +245,108 @@ class StaticPrerenderDependencyGraphTest extends TestCase {
 		);
 		$this->assertNotContains( wp_normalize_path( $this->root . '/fixtures/data.json' ), $this->dependency_paths( $other ) );
 		$this->assertSame( array(), $this->dependency_reports(), 'Reports are consumed by the batch renderer.' );
+
+		Static_Prerender_Runtime::reset_request_cache();
+		$targets   = array_keys( $plan['live'] );
+		$remaining = Static_Prerender_Runtime::build_plan( $targets, expected_state_root: $plan['stateRoot'] );
+		$this->assertSame( 0, $remaining['affected'] );
+		$entry = Static_Prerender_Runtime::artifact_entry( $targets, expected_state_root: $plan['stateRoot'] );
+		$this->assertSame( $plan['stateRoot'], $entry['stateRoot'] );
+		$this->assertCount( 2, $entry['routes'] );
+	}
+
+	public function test_batch_refuses_a_wordpress_version_change_after_planning(): void {
+		$url  = get_permalink( $this->page_id );
+		$plan = Static_Prerender_Runtime::build_plan( array( $url ) );
+		Static_Prerender_Runtime::reset_request_cache();
+		$update = static fn( array $identity ): array => array_replace( $identity, array( 'wordpress' => 'updated-core' ) );
+		add_filter( 'blockstudio/runtime/identity', $update );
+		try {
+			$current = Runtime_Cache::directory( 'static-prerender-state' );
+			$this->assertNotSame( $plan['stateRoot'], $current );
+			$report = Static_Prerender_Batch_Renderer::render( $plan['affectedUrls'], array( 'expectedStateRoot' => $plan['stateRoot'] ) );
+			$this->assertSame( 'state_root_mismatch', $report['error'] );
+			$this->assertSame( $plan['stateRoot'], $report['expectedStateRoot'] );
+			$this->assertSame( array( $current ), $report['stateRoots'] );
+			$this->assertSame( 0, $report['processed'] );
+			$this->assertSame( 1, $report['failed'] );
+			$this->assertStringContainsString( $current, $report['results'][0]['error'] );
+			$this->assertStringContainsString( $plan['stateRoot'], $report['results'][0]['error'] );
+			$this->assertSame( array(), $this->requests );
+			$this->assertDirectoryDoesNotExist( $current );
+			$this->assertDirectoryDoesNotExist( Runtime_Cache::directory( 'static-prerender-artifact' ) );
+		} finally {
+			remove_filter( 'blockstudio/runtime/identity', $update );
+		}
+	}
+
+	public function test_assembly_refuses_a_wordpress_version_change_after_rendering(): void {
+		$url      = get_permalink( $this->page_id );
+		$plan     = Static_Prerender_Runtime::build_plan( array( $url ) );
+		$expected = $plan['stateRoot'];
+		$report   = Static_Prerender_Batch_Renderer::render( $plan['affectedUrls'], array( 'expectedStateRoot' => $expected ) );
+		$this->assertSame( 1, $report['rendered'] );
+		Static_Prerender_Runtime::reset_request_cache();
+		$update = static fn( array $identity ): array => array_replace( $identity, array( 'wordpress' => 'updated-core' ) );
+		add_filter( 'blockstudio/runtime/identity', $update );
+		try {
+			$current = Runtime_Cache::directory( 'static-prerender-state' );
+			$this->assertNotSame( $expected, $current );
+			foreach ( array(
+				Static_Prerender_Runtime::build_plan( array( $url ), expected_state_root: $expected ),
+				Static_Prerender_Runtime::garbage_collect( array( $url ), $expected ),
+				Static_Prerender_Runtime::artifact_entry( array( $url ), expected_state_root: $expected ),
+			) as $result ) {
+				$this->assertSame( 'state_root_mismatch', $result['error'] );
+				$this->assertSame( $expected, $result['expectedStateRoot'] );
+				$this->assertSame( $current, $result['stateRoot'] );
+				$this->assertStringContainsString( $expected, $result['message'] );
+				$this->assertStringContainsString( $current, $result['message'] );
+				$this->assertArrayNotHasKey( 'routes', $result );
+				$this->assertArrayNotHasKey( 'reasons', $result );
+			}
+			$this->assertDirectoryDoesNotExist( $current );
+		} finally {
+			remove_filter( 'blockstudio/runtime/identity', $update );
+		}
+
+		$entry = Static_Prerender_Runtime::artifact_entry( array( $url ), expected_state_root: $expected );
+		$this->assertSame( $expected, $entry['stateRoot'] );
+		$this->assertCount( 1, $entry['routes'] );
+	}
+
+	public function test_a_render_callback_cannot_move_an_active_build_to_another_state_root(): void {
+		$url    = get_permalink( $this->page_id );
+		$plan   = Static_Prerender_Runtime::build_plan( array( $url ) );
+		$update = static fn( array $identity ): array => array_replace( $identity, array( 'wordpress' => 'updated-core' ) );
+		$render = static function () use ( $update ): array {
+			add_filter( 'blockstudio/runtime/identity', $update );
+			Static_Prerender_Runtime::reset_request_cache();
+
+			return array( 'html' => '<!doctype html><html><body>Ready</body></html>' );
+		};
+		add_filter( 'blockstudio/static_prerender/render_internal', $render );
+		try {
+			$report = Static_Prerender_Batch_Renderer::render(
+				$plan['affectedUrls'],
+				array(
+					'expectedStateRoot' => $plan['stateRoot'],
+					'transport'         => 'internal',
+					'fallback'          => 'none',
+				)
+			);
+			$this->assertSame( 1, $report['rendered'] );
+			$this->assertSame( array( $plan['stateRoot'] ), $report['stateRoots'] );
+			$this->assertNotSame( $plan['stateRoot'], Runtime_Cache::directory( 'static-prerender-state' ) );
+			$this->assertDirectoryDoesNotExist( Runtime_Cache::directory( 'static-prerender-state' ) );
+			$this->assertDirectoryDoesNotExist( Runtime_Cache::directory( 'static-prerender-artifact' ) );
+		} finally {
+			remove_filter( 'blockstudio/static_prerender/render_internal', $render );
+			remove_filter( 'blockstudio/runtime/identity', $update );
+		}
+
+		$entry = Static_Prerender_Runtime::artifact_entry( array( $url ), expected_state_root: $plan['stateRoot'] );
+		$this->assertCount( 1, $entry['routes'] );
 	}
 
 	public function test_build_plan_marks_exactly_the_route_whose_page_source_changed(): void {

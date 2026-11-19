@@ -486,6 +486,29 @@ class StaticPrerenderRuntimeTest extends TestCase {
 		$this->assertSame( 2, $plan['unchanged'] );
 	}
 
+	public function test_planning_distinguishes_new_routes_from_missing_dependency_chunks(): void {
+		$dependency = $this->root . '/fixtures/shared.php';
+		file_put_contents( $dependency, 'shared-v1' );
+		$existing = home_url( '/existing/' );
+		$new      = home_url( '/new/' );
+		$html     = '<!doctype html><html><body>Rendered</body></html>';
+		$this->assertTrue( Static_Prerender_Runtime::persist_built_response( $existing, $html, array( $dependency ), array() ) );
+		$plan = Static_Prerender_Runtime::build_plan( array( $existing, $new ) );
+		$this->assertSame( array( $existing ), $plan['unchangedUrls'] );
+		$this->assertSame( array( 'new' ), $plan['reasons'][ $new ] );
+
+		$chunks = glob( $plan['stateRoot'] . '/dependency-sets/*.json' );
+		$this->assertCount( 1, $chunks );
+		$this->assertTrue( unlink( $chunks[0] ) );
+		Static_Prerender_Runtime::reset_request_cache();
+
+		$replan = Static_Prerender_Runtime::build_plan( array( $existing, $new ), expected_state_root: $plan['stateRoot'] );
+		$this->assertSame( array( $existing, $new ), $replan['affectedUrls'] );
+		$this->assertSame( array( 'missing-dependency-chunk' ), $replan['reasons'][ $existing ] );
+		$this->assertSame( array( 'new' ), $replan['reasons'][ $new ] );
+		$this->assertCount( 1, glob( $plan['stateRoot'] . '/url-index/*.json' ) );
+	}
+
 	public function test_changed_only_graph_build_does_not_invalidate_an_unrelated_page(): void {
 		$alpha_dependency = $this->root . '/fixtures/alpha.php';
 		$beta_dependency  = $this->root . '/fixtures/beta.php';
