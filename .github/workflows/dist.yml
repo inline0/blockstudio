@@ -27,7 +27,7 @@ jobs:
           php-version: '8.4'
           extensions: dom, json, zip, simplexml, libxml, iconv
 
-      - uses: actions/setup-node@v5
+      - uses: actions/setup-node@v7.1.0
         with:
           node-version-file: .nvmrc
           cache: npm
@@ -118,7 +118,7 @@ jobs:
           "
 
       - name: Upload zip artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: blockstudio-zip
           path: blockstudio.zip
@@ -134,7 +134,7 @@ jobs:
           path: repo
 
       - name: Download zip artifact
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: blockstudio-zip
 
