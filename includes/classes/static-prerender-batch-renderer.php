@@ -34,15 +34,15 @@ final class Static_Prerender_Batch_Renderer {
 	 * @param string[]            $urls    URLs.
 	 * @param array<string,mixed> $options Options: transport, shard, fallback, expectedStateRoot.
 	 *
-	 * @return array<string,mixed> Batch report with stateRoots and mismatch details on failure.
+	 * @return array<string,mixed> Batch report, with stateRoots and any mismatch details when guarded.
 	 */
 	public static function render( array $urls, array $options = array() ): array {
-		$expected_state_root = null;
-		if ( array_key_exists( 'expectedStateRoot', $options ) ) {
-			$expected_state_root = is_string( $options['expectedStateRoot'] ) ? $options['expectedStateRoot'] : '';
+		if ( ! array_key_exists( 'expectedStateRoot', $options ) ) {
+			return self::render_shard( $urls, $options );
 		}
 
-		$report = Static_Prerender_Runtime::with_build_state(
+		$expected_state_root = is_string( $options['expectedStateRoot'] ) ? $options['expectedStateRoot'] : '';
+		$report              = Static_Prerender_Runtime::with_build_state(
 			$expected_state_root,
 			static fn(): array => self::render_shard( $urls, $options )
 		);
@@ -68,7 +68,7 @@ final class Static_Prerender_Batch_Renderer {
 	}
 
 	/**
-	 * Render a shard within the validated cache directories.
+	 * Render a shard using the current build context.
 	 *
 	 * @param string[]            $urls    URLs.
 	 * @param array<string,mixed> $options Batch options.

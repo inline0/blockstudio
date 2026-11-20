@@ -496,6 +496,7 @@ class StaticPrerenderRuntimeTest extends TestCase {
 		$plan = Static_Prerender_Runtime::build_plan( array( $existing, $new ) );
 		$this->assertSame( array( $existing ), $plan['unchangedUrls'] );
 		$this->assertSame( array( 'new' ), $plan['reasons'][ $new ] );
+		$this->assertSame( array(), $plan['reasonDetails'] );
 
 		$chunks = glob( $plan['stateRoot'] . '/dependency-sets/*.json' );
 		$this->assertCount( 1, $chunks );
@@ -504,8 +505,9 @@ class StaticPrerenderRuntimeTest extends TestCase {
 
 		$replan = Static_Prerender_Runtime::build_plan( array( $existing, $new ), expected_state_root: $plan['stateRoot'] );
 		$this->assertSame( array( $existing, $new ), $replan['affectedUrls'] );
-		$this->assertSame( array( 'missing-dependency-chunk' ), $replan['reasons'][ $existing ] );
+		$this->assertSame( array( 'new' ), $replan['reasons'][ $existing ] );
 		$this->assertSame( array( 'new' ), $replan['reasons'][ $new ] );
+		$this->assertSame( array( $existing => 'missing-dependency-chunk' ), $replan['reasonDetails'] );
 		$this->assertCount( 1, glob( $plan['stateRoot'] . '/url-index/*.json' ) );
 	}
 
@@ -553,9 +555,11 @@ class StaticPrerenderRuntimeTest extends TestCase {
 		$this->assertSame( 2, count( glob( Static_Prerender_Runtime::cache_root_path() . '/*.html' ) ) );
 
 		$collected = Static_Prerender_Runtime::garbage_collect( array( $alpha ) );
-		$this->assertSame( 1, $collected['deletedRecords'] );
-		$this->assertSame( 1, $collected['deletedFiles'] );
-		$this->assertSame( 1, $collected['liveFiles'] );
+		$this->assertSame(
+			array( 'deletedFiles' => 1, 'deletedRecords' => 1, 'liveFiles' => 1 ),
+			$collected
+		);
+		$this->assertArrayNotHasKey( 'stateRoot', Static_Prerender_Runtime::artifact_entry( array( $alpha ) ) );
 	}
 
 	public function test_runtime_status_reports_shared_storage_and_diagnostics(): void {

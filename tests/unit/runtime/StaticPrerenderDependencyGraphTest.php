@@ -315,6 +315,39 @@ class StaticPrerenderDependencyGraphTest extends TestCase {
 		$this->assertCount( 1, $entry['routes'] );
 	}
 
+	public function test_unguarded_batches_keep_the_cache_directory_selected_by_existing_hooks(): void {
+		$default_state = Runtime_Cache::directory( 'static-prerender-state' );
+		$render_state  = '';
+		$artifacts     = '';
+		$cache_dir     = static fn( string $path ): string => Static_Prerender_Batch_Renderer::is_rendering() ? $path . '-batch' : $path;
+		$render        = static function () use ( &$render_state, &$artifacts ): array {
+			$render_state = Runtime_Cache::directory( 'static-prerender-state' );
+			$artifacts    = Runtime_Cache::directory( 'static-prerender-artifact' );
+
+			return array( 'html' => '<!doctype html><html><body>Ready</body></html>' );
+		};
+		add_filter( 'blockstudio/cache/dir', $cache_dir, 20 );
+		add_filter( 'blockstudio/static_prerender/render_internal', $render );
+		try {
+			$report = Static_Prerender_Batch_Renderer::render(
+				array( get_permalink( $this->page_id ) ),
+				array(
+					'transport' => 'internal',
+					'fallback'  => 'none',
+				)
+			);
+			$this->assertSame( 1, $report['rendered'] );
+			$this->assertNotSame( $default_state, $render_state );
+			$this->assertCount( 1, glob( $render_state . '/url-index/*.json' ) );
+			$this->assertCount( 1, glob( $artifacts . '/*.html' ) );
+			$this->assertSame( array(), glob( $default_state . '/url-index/*.json' ) );
+			$this->assertArrayNotHasKey( 'stateRoots', $report );
+		} finally {
+			remove_filter( 'blockstudio/static_prerender/render_internal', $render );
+			remove_filter( 'blockstudio/cache/dir', $cache_dir, 20 );
+		}
+	}
+
 	public function test_a_render_callback_cannot_move_an_active_build_to_another_state_root(): void {
 		$url    = get_permalink( $this->page_id );
 		$plan   = Static_Prerender_Runtime::build_plan( array( $url ) );
