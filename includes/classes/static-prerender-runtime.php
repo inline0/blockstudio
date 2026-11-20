@@ -54,6 +54,8 @@ final class Static_Prerender_Runtime {
 	 */
 	public const DEPENDENCY_HEADER = 'X-Blockstudio-Static-Prerender-Dependencies';
 
+	private const STATE_SCOPE = 'static-prerender-state';
+
 	/**
 	 * Dependency-report server key.
 	 *
@@ -192,6 +194,13 @@ final class Static_Prerender_Runtime {
 	 * @var array<string,string>|null
 	 */
 	private static ?array $scope_directories = null;
+
+	/**
+	 * Whether the current step opted into the planned cache directories.
+	 *
+	 * @var bool
+	 */
+	private static bool $build_state_pinned = false;
 
 	/**
 	 * Directories made ready and the home path, resolved once while a whole-site pass runs.
@@ -1122,18 +1131,22 @@ final class Static_Prerender_Runtime {
 	 * @param string|null $target_host Optional target host.
 	 * @param string|null $target_home Optional target home path.
 	 * @param bool        $force       Force every URL.
+	 * @param string|null $expected_state_root State root from the original plan, when checking a build in another process.
 	 *
-	 * @return array<string,mixed> Build plan.
+	 * @return array<string,mixed> Build plan with stateRoot, or a state_root_mismatch error.
 	 */
 	public static function build_plan(
 		array $source_urls,
 		?string $target_host = null,
 		?string $target_home = null,
-		bool $force = false
+		bool $force = false,
+		?string $expected_state_root = null
 	): array {
-		return self::with_scope_directories(
-			static fn(): array => self::plan_routes( $source_urls, $target_host, $target_home, $force )
-		);
+		$plan = static fn(): array => self::plan_routes( $source_urls, $target_host, $target_home, $force );
+
+		return null === $expected_state_root
+			? self::with_scope_directories( $plan )
+			: self::with_build_state( $expected_state_root, $plan );
 	}
 
 	/**
@@ -1154,13 +1167,14 @@ final class Static_Prerender_Runtime {
 	): array {
 		$source_urls = self::unique_cacheable_urls( $source_urls );
 		sort( $source_urls, SORT_STRING );
-		$live          = array();
-		$affected      = array();
-		$unchanged     = array();
-		$changed_files = array();
-		$reasons       = array();
-		$shared        = Static_Prerender_Content_Hasher::shared_snapshot( self::theme_root() );
-		$ttl           = (int) self::value( 'staticPrerender/ttl', 86400 );
+		$live           = array();
+		$affected       = array();
+		$unchanged      = array();
+		$changed_files  = array();
+		$reasons        = array();
+		$reason_details = array();
+		$shared         = Static_Prerender_Content_Hasher::shared_snapshot( self::theme_root() );
+		$ttl            = (int) self::value( 'staticPrerender/ttl', 86400 );
 
 		foreach ( $source_urls as $source_url ) {
 			$target_url = self::target_url( $source_url, $target_host, $target_home );
@@ -1179,6 +1193,9 @@ final class Static_Prerender_Runtime {
 			}
 			if ( null === $record ) {
 				$url_reasons[] = 'new';
+				if ( null !== $stored ) {
+					$reason_details[ $source_url ] = 'missing-dependency-chunk';
+				}
 			} else {
 				$state ??= self::graph_state_for_record( $record );
 
@@ -1246,10 +1263,11 @@ final class Static_Prerender_Runtime {
 			}
 		}
 
-		$removed = array();
-		$scope   = self::target_scope( $source_urls, $target_host, $target_home );
+		$removed    = array();
+		$scope      = self::target_scope( $source_urls, $target_host, $target_home );
+		$state_root = self::state_root();
 
-		foreach ( self::index_record_urls() as $url ) {
+		foreach ( self::index_record_urls( $state_root ) as $url ) {
 			if ( '' !== $url && self::url_in_scope( $url, $scope ) && ! isset( $live[ $url ] ) ) {
 				$removed[] = $url;
 			}
@@ -1275,6 +1293,8 @@ final class Static_Prerender_Runtime {
 			'live'          => $live,
 			'targetHost'    => $scope['host'],
 			'targetHome'    => $scope['home'],
+			'stateRoot'     => $state_root,
+			'reasonDetails' => $reason_details,
 		);
 	}
 
@@ -1534,11 +1554,23 @@ final class Static_Prerender_Runtime {
 	/**
 	 * Garbage collect removed graph records and unreferenced HTML.
 	 *
+	 * @param string[]    $live_target_urls   Live targets.
+	 * @param string|null $expected_state_root State root from the original build plan.
+	 *
+	 * @return array<string,mixed> Collection counts, or a state_root_mismatch error. Guarded results include stateRoot.
+	 */
+	public static function garbage_collect( array $live_target_urls, ?string $expected_state_root = null ): array {
+		return self::with_build_state( $expected_state_root, static fn(): array => self::collect_garbage( $live_target_urls ) );
+	}
+
+	/**
+	 * Collect graph state in the current build context.
+	 *
 	 * @param string[] $live_target_urls Live targets.
 	 *
 	 * @return array{deletedFiles:int,deletedRecords:int,liveFiles:int}
 	 */
-	public static function garbage_collect( array $live_target_urls ): array {
+	private static function collect_garbage( array $live_target_urls ): array {
 		$lock = Single_Flight::acquire( self::state_root() . '/.build.lock' );
 		if ( false === $lock ) {
 			return array(
@@ -1643,13 +1675,35 @@ final class Static_Prerender_Runtime {
 	 * @param string[]    $live_target_urls Live targets.
 	 * @param string|null $target_host      Optional target host.
 	 * @param string|null $target_home      Optional target home.
+	 * @param string|null $expected_state_root State root from the original build plan.
 	 *
-	 * @return array<string,mixed> Entry.
+	 * @return array<string,mixed> Entry, or a state_root_mismatch error. Guarded results include stateRoot.
 	 */
 	public static function artifact_entry(
 		array $live_target_urls,
 		?string $target_host = null,
-		?string $target_home = null
+		?string $target_home = null,
+		?string $expected_state_root = null
+	): array {
+		return self::with_build_state(
+			$expected_state_root,
+			static fn(): array => self::build_artifact_entry( $live_target_urls, $target_host, $target_home )
+		);
+	}
+
+	/**
+	 * Assemble an artifact entry in the current build context.
+	 *
+	 * @param string[]    $live_target_urls Live targets.
+	 * @param string|null $target_host      Optional target host.
+	 * @param string|null $target_home      Optional target home.
+	 *
+	 * @return array<string,mixed> Entry.
+	 */
+	private static function build_artifact_entry(
+		array $live_target_urls,
+		?string $target_host,
+		?string $target_home
 	): array {
 		$scope   = null !== $target_host || null !== $target_home
 			? self::target_scope( self::public_urls(), $target_host, $target_home )
@@ -1856,11 +1910,16 @@ final class Static_Prerender_Runtime {
 		self::$dependency_chunk_clean = array();
 		self::$chunk_bases            = array();
 		self::$chunk_base_requests    = array();
-		self::$scope_directories      = null;
-		self::$pass_values            = null;
+		self::$pass_values            = self::$build_state_pinned ? array() : null;
 		self::$dependency_report      = null;
 		self::$dependencies           = array();
 		self::$search_path_prefixes   = array();
+
+		// A request reset must not release directories the caller explicitly pinned.
+		if ( ! self::$build_state_pinned ) {
+			self::$scope_directories = null;
+		}
+
 		remove_filter( 'template_include', array( self::class, 'record_template_dependency' ), PHP_INT_MAX );
 		Static_Prerender_Identity::reset();
 		Static_Prerender_Content_Hasher::reset();
@@ -2045,6 +2104,47 @@ final class Static_Prerender_Runtime {
 	}
 
 	/**
+	 * Run one build step in the planned graph namespace or report a mismatch.
+	 *
+	 * @internal The public build APIs pass their operations through this guard.
+	 *
+	 * @param string|null $expected_state_root State root from the plan, if supplied.
+	 * @param callable    $step                Build step.
+	 * @phpstan-param callable(): array<string,mixed> $step
+	 *
+	 * @return array<string,mixed> Step report. With an expectation, includes stateRoot or mismatch details.
+	 */
+	public static function with_build_state( ?string $expected_state_root, callable $step ): array {
+		if ( null === $expected_state_root ) {
+			return $step();
+		}
+
+		return self::with_scope_directories(
+			static function () use ( $expected_state_root, $step ): array {
+				$state_root = self::scope_directory( self::STATE_SCOPE );
+				if ( rtrim( wp_normalize_path( $expected_state_root ), '/' ) !== $state_root ) {
+					return array(
+						'error'             => 'state_root_mismatch',
+						'message'           => sprintf( 'Static prerender state directory changed: plan used "%1$s", but this process resolves "%2$s". Restart the build from planning.', $expected_state_root, $state_root ),
+						'expectedStateRoot' => $expected_state_root,
+						'stateRoot'         => $state_root,
+					);
+				}
+
+				// Resolve the HTML directories before a render callback can change the context.
+				self::scope_directory( 'static-prerender' );
+				self::scope_directory( 'static-prerender-artifact' );
+
+				$result              = $step();
+				$result['stateRoot'] = $state_root;
+
+				return $result;
+			},
+			true
+		);
+	}
+
+	/**
 	 * Run a pass over every route with its cache scope directories resolved once.
 	 *
 	 * Resolving a scope hashes the runtime context, which no route of one
@@ -2054,20 +2154,24 @@ final class Static_Prerender_Runtime {
 	 * @template T
 	 *
 	 * @param callable(): T $pass Pass.
+	 * @param bool          $pin  Keep resolved directories across request resets.
 	 *
 	 * @return T Result of the pass.
 	 */
-	private static function with_scope_directories( callable $pass ): mixed {
+	private static function with_scope_directories( callable $pass, bool $pin = false ): mixed {
 		$outer                     = self::$scope_directories;
 		$outer_values              = self::$pass_values;
+		$outer_pin                 = self::$build_state_pinned;
 		self::$scope_directories ??= array();
 		self::$pass_values       ??= array();
+		self::$build_state_pinned = $outer_pin || $pin;
 
 		try {
 			return $pass();
 		} finally {
-			self::$scope_directories = $outer;
-			self::$pass_values       = $outer_values;
+			self::$scope_directories  = $outer;
+			self::$pass_values        = $outer_values;
+			self::$build_state_pinned = $outer_pin;
 		}
 	}
 
@@ -2139,7 +2243,7 @@ final class Static_Prerender_Runtime {
 	 * @return string Root.
 	 */
 	private static function state_root(): string {
-		return self::pass_value( 'state', static fn(): string => self::ready_directory( self::scope_directory( 'static-prerender-state' ) ) );
+		return self::pass_value( 'state', static fn(): string => self::ready_directory( self::scope_directory( self::STATE_SCOPE ) ) );
 	}
 
 	/**
@@ -2227,11 +2331,13 @@ final class Static_Prerender_Runtime {
 	 * does, because the file name is the hash of that URL, so only records
 	 * not read yet are read from disk.
 	 *
+	 * @param string $state_root Directory for the graph being planned.
+	 *
 	 * @return string[] URLs.
 	 */
-	private static function index_record_urls(): array {
+	private static function index_record_urls( string $state_root ): array {
 		$urls  = array();
-		$paths = glob( self::state_root() . '/url-index/*.json' );
+		$paths = glob( $state_root . '/url-index/*.json' );
 
 		foreach ( is_array( $paths ) ? $paths : array() as $path ) {
 			$record = self::$index_record_cache[ basename( $path, '.json' ) ] ?? null;
@@ -2788,7 +2894,7 @@ final class Static_Prerender_Runtime {
 
 		$ids = get_post_meta( $post_id, '_blockstudio_page_dependencies', true );
 		foreach ( is_array( $ids ) ? $ids : array() as $id ) {
-			if ( ! is_string( $id ) || ! ( str_starts_with( $id, 'theme:' ) || str_starts_with( $id, 'parent-theme:' ) ) ) {
+			if ( ! is_string( $id ) || ! Page_Paths::is_portable( $id ) ) {
 				continue;
 			}
 			$resolved = Page_Paths::resolve( $id );

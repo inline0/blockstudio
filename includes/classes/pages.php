@@ -529,7 +529,7 @@ class Pages {
 		$path = wp_normalize_path( is_scalar( $path ) ? (string) $path : '' );
 		$path = preg_replace( '#^\./#', '', $path ) ?? $path;
 
-		if ( str_starts_with( $path, 'theme:' ) ) {
+		if ( Page_Paths::is_portable( $path ) ) {
 			return $path;
 		}
 
