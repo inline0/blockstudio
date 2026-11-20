@@ -32,7 +32,35 @@ final class Page_Paths {
 				return $location['prefix'] . ltrim( substr( $path, strlen( $location['root'] ) ), '/' );
 			}
 		}
+		$install = self::install_root();
+		if ( '' !== $install && self::within( $path, $install ) ) {
+			return self::INSTALL_PREFIX . ltrim( substr( $path, strlen( $install ) ), '/' );
+		}
 		return $path;
+	}
+
+	/**
+	 * Prefix of portable paths inside the WordPress installation but outside the themes.
+	 */
+	public const INSTALL_PREFIX = 'wordpress:';
+
+	/**
+	 * Return the normalized WordPress installation root.
+	 *
+	 * @return string Root without a trailing slash, or an empty string.
+	 */
+	private static function install_root(): string {
+		return defined( 'ABSPATH' ) ? untrailingslashit( wp_normalize_path( (string) ABSPATH ) ) : '';
+	}
+
+	/**
+	 * Whether a stored location is portable.
+	 *
+	 * @param string $path Stored location.
+	 * @return bool Whether it names a theme or installation root.
+	 */
+	public static function is_portable( string $path ): bool {
+		return str_starts_with( $path, 'theme:' ) || str_starts_with( $path, 'parent-theme:' ) || str_starts_with( $path, self::INSTALL_PREFIX );
 	}
 
 	/**
@@ -56,11 +84,20 @@ final class Page_Paths {
 				return self::allowed( $resolved ) ? $resolved : '';
 			}
 		}
+		$install = self::install_root();
+		if ( '' !== $install && str_starts_with( $path, self::INSTALL_PREFIX ) ) {
+			$relative = ltrim( substr( $path, strlen( self::INSTALL_PREFIX ) ), '/' );
+			$resolved = $install . ( '' !== $relative ? '/' . $relative : '' );
+			return self::allowed( $resolved ) ? $resolved : '';
+		}
 		foreach ( self::locations() as $location ) {
 			if ( self::within( $path, $location['root'] ) ) {
 				$resolved = $location['configured'] . substr( $path, strlen( $location['root'] ) );
 				return self::allowed( $resolved ) ? $resolved : '';
 			}
+		}
+		if ( '' !== $install && self::within( $path, $install ) ) {
+			return self::allowed( $path ) ? $path : '';
 		}
 
 		if ( str_starts_with( $path, '/' ) || preg_match( '#^[a-z]:/#i', $path ) ) {

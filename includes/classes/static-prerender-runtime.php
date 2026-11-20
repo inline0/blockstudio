@@ -2894,7 +2894,7 @@ final class Static_Prerender_Runtime {
 
 		$ids = get_post_meta( $post_id, '_blockstudio_page_dependencies', true );
 		foreach ( is_array( $ids ) ? $ids : array() as $id ) {
-			if ( ! is_string( $id ) || ! ( str_starts_with( $id, 'theme:' ) || str_starts_with( $id, 'parent-theme:' ) ) ) {
+			if ( ! is_string( $id ) || ! Page_Paths::is_portable( $id ) ) {
 				continue;
 			}
 			$resolved = Page_Paths::resolve( $id );
