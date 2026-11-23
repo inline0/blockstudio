@@ -91,6 +91,58 @@ class PagePathsTest extends TestCase {
 		$this->assertSame( $path, Page_Paths::resolve( $path ) );
 	}
 
+	public function test_legacy_theme_paths_inside_wordpress_rebase_to_the_relocated_theme(): void {
+		$content = untrailingslashit( wp_normalize_path( WP_CONTENT_DIR ) );
+		$name    = 'blockstudio-legacy-' . wp_generate_uuid4();
+		$old     = $content . '/themes/' . $name;
+		$current = $content . '/relocated-themes/' . $name;
+		$filter  = static fn(): string => $current;
+		wp_mkdir_p( $old );
+		file_put_contents( $old . '/layout.php', '<?php return;' );
+		add_filter( 'stylesheet_directory', $filter );
+		add_filter( 'template_directory', $filter );
+		try {
+			$this->assertSame( $current . '/layout.php', Page_Paths::resolve( $old . '/layout.php' ) );
+			$this->assertSame( $current, Page_Paths::resolve( $old ) );
+			$this->assertSame( $current . '/layout.php', Page_Paths::resolve( $content . '/retired-custom-themes/' . $name . '/layout.php' ) );
+		} finally {
+			remove_filter( 'stylesheet_directory', $filter );
+			remove_filter( 'template_directory', $filter );
+			Page_Paths::reset();
+			unlink( $old . '/layout.php' );
+			rmdir( $old );
+		}
+	}
+
+	public function test_installation_sources_do_not_rebase_on_incidental_theme_names(): void {
+		$install   = untrailingslashit( wp_normalize_path( ABSPATH ) );
+		$name      = basename( $install );
+		$content   = untrailingslashit( wp_normalize_path( WP_CONTENT_DIR ) );
+		$project   = $content . '/blockstudio-install-source-' . wp_generate_uuid4();
+		$directory = $project . '/' . $name;
+		$source    = $directory . '/index.md';
+		$filter    = static fn(): string => $content . '/themes/' . $name;
+		wp_mkdir_p( $directory );
+		file_put_contents( $source, '# Project docs' );
+		add_filter( 'stylesheet_directory', $filter );
+		add_filter( 'template_directory', $filter );
+		try {
+			$stored = 'wordpress:' . substr( $source, strlen( $install ) + 1 );
+			$this->assertSame( $stored, Page_Paths::encode( $source ) );
+			$this->assertTrue( Page_Paths::is_portable( $stored ) );
+			$this->assertSame( $source, Page_Paths::resolve( $stored ) );
+			$this->assertSame( $source, Page_Paths::resolve( $source ) );
+			$this->assertSame( $project . '/uncreated.md', Page_Paths::resolve( $project . '/uncreated.md' ) );
+		} finally {
+			remove_filter( 'stylesheet_directory', $filter );
+			remove_filter( 'template_directory', $filter );
+			Page_Paths::reset();
+			unlink( $source );
+			rmdir( $directory );
+			rmdir( $project );
+		}
+	}
+
 	#[RunInSeparateProcess]
 	#[PreserveGlobalState(false)]
 	public function test_jailed_legacy_paths_are_rebased_before_open_basedir_probes(): void {
