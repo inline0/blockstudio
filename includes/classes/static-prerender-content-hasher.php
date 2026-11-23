@@ -292,6 +292,12 @@ final class Static_Prerender_Content_Hasher {
 	private static function dependency_id( string $path, ?string $theme_root ): string {
 		$path  = wp_normalize_path( $path );
 		$roots = self::roots( $theme_root );
+		if ( null !== $theme_root && '' !== trim( $theme_root ) ) {
+			$configured = rtrim( wp_normalize_path( $theme_root ), '/' );
+			if ( ( $roots['theme'] ?? '' ) !== $configured && ( $path === $configured || str_starts_with( $path, $configured . '/' ) ) ) {
+				$path = rtrim( $roots['theme'], '/' ) . substr( $path, strlen( $configured ) );
+			}
+		}
 
 		foreach ( $roots as $prefix => $root ) {
 			$root = rtrim( $root, '/' );
@@ -318,7 +324,8 @@ final class Static_Prerender_Content_Hasher {
 
 		$roots = array();
 		if ( null !== $theme_root && '' !== trim( $theme_root ) ) {
-			$roots['theme'] = wp_normalize_path( $theme_root );
+			$real           = realpath( $theme_root );
+			$roots['theme'] = wp_normalize_path( false === $real ? $theme_root : $real );
 		}
 		if ( defined( 'WP_PLUGIN_DIR' ) ) {
 			$roots['plugins'] = wp_normalize_path( (string) WP_PLUGIN_DIR );

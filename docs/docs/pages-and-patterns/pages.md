@@ -809,10 +809,16 @@ stores the same `theme:` locations whether a source was read through the
 symlink or through its target, and resolves them to the configured theme
 directory.
 
-Files outside the active child and parent themes remain supported at their
-configured absolute paths, subject to PHP's `open_basedir` restrictions. They
-are not automatically relocatable: after moving an external source, update
-its configured path and run an explicit sync.
+Sources inside the WordPress installation but outside the active themes are
+stored relative to `ABSPATH` with a `wordpress:` prefix. This includes page
+files kept in a project alongside a symlinked theme. An existing absolute
+project source still resolves to its own file even if a folder shares the
+theme's name. An old path under the WordPress themes directory still resolves
+to the active theme when that theme was moved.
+
+Sources outside the installation and both themes keep their configured
+absolute paths, subject to PHP's `open_basedir` restrictions. After moving one
+of these sources, update its configured path and run an explicit sync.
 
 ### Post Field Ownership
 

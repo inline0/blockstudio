@@ -32,14 +32,43 @@ final class Page_Paths {
 				return $location['prefix'] . ltrim( substr( $path, strlen( $location['root'] ) ), '/' );
 			}
 		}
+		$install = self::install_root();
+		if ( '' !== $install && self::within( $path, $install ) ) {
+			return self::INSTALL_PREFIX . ltrim( substr( $path, strlen( $install ) ), '/' );
+		}
 		return $path;
+	}
+
+	/**
+	 * Prefix of portable paths inside the WordPress installation but outside the themes.
+	 */
+	public const INSTALL_PREFIX = 'wordpress:';
+
+	/**
+	 * Return the normalized WordPress installation root.
+	 *
+	 * @return string Root without a trailing slash, or an empty string.
+	 */
+	private static function install_root(): string {
+		return defined( 'ABSPATH' ) ? untrailingslashit( wp_normalize_path( (string) ABSPATH ) ) : '';
+	}
+
+	/**
+	 * Whether a stored location is portable.
+	 *
+	 * @param string $path Stored location.
+	 * @return bool Whether it names a theme or installation root.
+	 */
+	public static function is_portable( string $path ): bool {
+		return str_starts_with( $path, 'theme:' ) || str_starts_with( $path, 'parent-theme:' ) || str_starts_with( $path, self::INSTALL_PREFIX );
 	}
 
 	/**
 	 * Resolve a stored source before any filesystem operation.
 	 *
-	 * Legacy absolute theme paths are rebased lexically, never probed first.
-	 * External paths remain supported when allowed by the current PHP host.
+	 * Known legacy theme locations are rebased without probing the old host.
+	 * When a path inside this installation only resembles a theme location,
+	 * an existing source takes precedence over the legacy name match.
 	 *
 	 * @param string $path Stored source path or logical page identity.
 	 * @return string Current path, or an empty string for unsafe locations.
@@ -56,23 +85,45 @@ final class Page_Paths {
 				return self::allowed( $resolved ) ? $resolved : '';
 			}
 		}
+		$install = self::install_root();
+		if ( '' !== $install && str_starts_with( $path, self::INSTALL_PREFIX ) ) {
+			$relative = ltrim( substr( $path, strlen( self::INSTALL_PREFIX ) ), '/' );
+			$resolved = $install . ( '' !== $relative ? '/' . $relative : '' );
+			return self::allowed( $resolved ) ? $resolved : '';
+		}
 		foreach ( self::locations() as $location ) {
 			if ( self::within( $path, $location['root'] ) ) {
 				$resolved = $location['configured'] . substr( $path, strlen( $location['root'] ) );
 				return self::allowed( $resolved ) ? $resolved : '';
 			}
 		}
-
 		if ( str_starts_with( $path, '/' ) || preg_match( '#^[a-z]:/#i', $path ) ) {
+			$inside_install = '' !== $install && self::within( $path, $install );
+			if ( $inside_install && defined( 'WP_CONTENT_DIR' ) ) {
+				$default_themes = untrailingslashit( wp_normalize_path( (string) WP_CONTENT_DIR ) ) . '/themes';
+				foreach ( $roots as $root ) {
+					$legacy_root = $default_themes . '/' . basename( $root );
+					if ( self::within( $path, $legacy_root ) ) {
+						$resolved = $root . substr( $path, strlen( $legacy_root ) );
+						return self::allowed( $resolved ) ? $resolved : '';
+					}
+				}
+			}
+
+			// The installation directory can itself have the same name as the theme.
+			$legacy_path = $inside_install ? substr( $path, strlen( $install ) ) : $path;
 			foreach ( $roots as $root ) {
 				$marker   = '/' . basename( dirname( $root ) ) . '/' . basename( $root ) . '/';
-				$position = strpos( $path, $marker );
+				$position = strpos( $legacy_path, $marker );
 				if ( false === $position ) {
 					$marker   = '/' . basename( $root ) . '/';
-					$position = strpos( $path, $marker );
+					$position = strpos( $legacy_path, $marker );
 				}
-				if ( false !== $position || str_ends_with( $path, '/' . basename( $root ) ) ) {
-					$relative = false !== $position ? substr( $path, $position + strlen( $marker ) ) : '';
+				if ( false !== $position || str_ends_with( $legacy_path, '/' . basename( $root ) ) ) {
+					if ( $inside_install && self::allowed( $path ) && @file_exists( $path ) ) { // phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged -- An otherwise allowed path can contain a symlink outside open_basedir.
+						return $path;
+					}
+					$relative = false !== $position ? substr( $legacy_path, $position + strlen( $marker ) ) : '';
 					$resolved = $root . ( '' !== $relative ? '/' . $relative : '' );
 					return self::allowed( $resolved ) ? $resolved : '';
 				}

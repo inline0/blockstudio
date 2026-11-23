@@ -1704,6 +1704,6 @@ class Page_Sync {
 	 */
 	private function portable_theme_path( string $path ): ?string {
 		$portable = Page_Paths::encode( $path );
-		return str_starts_with( $portable, 'theme:' ) || str_starts_with( $portable, 'parent-theme:' ) ? $portable : null;
+		return Page_Paths::is_portable( $portable ) ? $portable : null;
 	}
 }
