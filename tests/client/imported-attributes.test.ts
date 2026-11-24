@@ -100,3 +100,56 @@ test('repeaters retain row values and unknown or core keys are not adopted', () 
   assert.equal(result.className, 'keep');
   assert.equal(result.unknown, 'ignore');
 });
+
+// Core parses a `source: 'html'` attribute from the block's markup, which is
+// empty for a dynamic block, so `parsed` never carries the comment value.
+const sourced = {
+  ...definitions,
+  title: {
+    blockstudio: true,
+    field: 'richtext',
+    type: 'string',
+    source: 'html',
+  },
+  body: { blockstudio: true, field: 'wysiwyg', type: 'string', source: 'html' },
+};
+const sourcedDefaults = { ...defaults, title: '', body: '' };
+
+test('rich text fields are imported from the comment instead of the empty block markup', () => {
+  const parsed = {
+    ...sourcedDefaults,
+    blockstudio: { attributes: sourcedDefaults },
+  };
+  const original = structuredClone(parsed);
+  const result = normalize(
+    parsed,
+    { title: 'Hello <em>world</em>', body: '<p>Text</p>', side: 'left' },
+    sourced,
+  );
+  assert.deepEqual(result.blockstudio, {
+    attributes: {
+      heading: '',
+      side: 'left',
+      title: 'Hello <em>world</em>',
+      body: '<p>Text</p>',
+    },
+  });
+  assert.equal('title' in result, false);
+  assert.equal('body' in result, false);
+  assert.deepEqual(parsed, original);
+});
+
+test('rich text fields keep explicit nested values and ignore values that are not strings', () => {
+  const nested = {
+    title: 'Stale',
+    blockstudio: { attributes: { title: '' } },
+  };
+  assert.deepEqual(
+    (normalize(nested, nested, sourced).blockstudio as any).attributes,
+    { title: '' },
+  );
+  for (const title of [7, true, null, ['a'], { a: 1 }]) {
+    const parsed = { title: '', blockstudio: { attributes: { title: '' } } };
+    assert.equal(normalize(parsed, { title }, sourced), parsed);
+  }
+});

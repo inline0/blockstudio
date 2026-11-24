@@ -36,7 +36,12 @@ export const normalizeImportedAttributes = (
     const option = ['select', 'radio', 'checkbox'].includes(definition.field);
     const scalar =
       value === null || ['string', 'number', 'boolean'].includes(typeof value);
-    const adopted = option && scalar ? value : parsed[key];
+    let adopted = parsed[key];
+    if (option && scalar) adopted = value;
+    // Core reads a sourced attribute (richtext, wysiwyg) from the block's
+    // markup and never from the comment, so the imported value is the raw one.
+    else if (typeof definition.source === 'string')
+      adopted = typeof value === 'string' ? value : undefined;
     if (adopted === undefined) continue;
     values[key] = adopted;
     delete result[key];
