@@ -98,6 +98,10 @@ msgstr ""
 msgid "Record not found."
 msgstr ""
 
+#: includes/classes/icons.php
+msgid "Blockstudio could not download icon sets that are missing on this site. Their icons are not shown until the hourly retry succeeds."
+msgstr ""
+
 #: includes/classes/islands.php
 msgid "Invalid islands request."
 msgstr ""

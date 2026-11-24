@@ -103,6 +103,7 @@ test('release packaging excludes tooling and fixtures but includes runtime asset
     'tests/theme/block/script.js',
     'docs/docs/pages.md',
     'packages/registry/src/index.ts',
+    'includes/icons/octicons.json',
   ])
     assert.equal(ships(file), false, file);
   for (const file of [
@@ -112,6 +113,7 @@ test('release packaging excludes tooling and fixtures but includes runtime asset
     'includes/ui/blocks/global-script.js',
     'includes/admin/assets/blocks/index.tsx.js',
     'schemas/block.json',
+    'includes/icons.json',
   ])
     assert.equal(ships(file), true, file);
 });
