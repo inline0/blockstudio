@@ -17567,6 +17567,13 @@ updated file with the theme or plugin. Regenerate configurations made before
 fields for translation once its original is updated, as described in the WPML
 guide above.
 
+WPML does not read the file at the moment it is written. Since WPML 5.4.0,
+WP-CLI and cron requests pick up a file that a deployment changed, and
+`wp wpml config reload` reads every `wpml-config.xml` file again at a step you
+choose, for example at the end of a deployment script. See the
+WPML 5.4.0 changelog. Until then WPML
+works with the declarations it read before.
+
 With `--file`, the command creates a missing file. In an existing file, it
 replaces only the text between `<!-- blockstudio:start -->` and
 `<!-- blockstudio:end -->`, so other sections and entries for other blocks stay
